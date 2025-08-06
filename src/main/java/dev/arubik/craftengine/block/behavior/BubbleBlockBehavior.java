@@ -3,8 +3,8 @@ package dev.arubik.craftengine.block.behavior;
 import java.util.Map;
 import java.util.concurrent.Callable;
 
+import dev.arubik.craftengine.util.MBlocks;
 import net.momirealms.craftengine.bukkit.nms.FastNMS;
-import net.momirealms.craftengine.bukkit.plugin.reflection.minecraft.MBlocks;
 import net.momirealms.craftengine.bukkit.plugin.reflection.minecraft.MFluids;
 import net.momirealms.craftengine.bukkit.util.LocationUtils;
 import net.momirealms.craftengine.core.block.BlockBehavior;
@@ -88,9 +88,9 @@ public class BubbleBlockBehavior extends BukkitBlockBehavior {
         }
     }
     
-    private void updateNeighbours(Object level, Object pos, Object thisBlock) {
-        World level = (World) args[1];
-        BlockPos blockPos = (BlockPos) args[2];
+    private void updateNeighbours(Object arg1, Object arg2, Object thisBlock) {
+        World level = (World) arg1;
+        BlockPos blockPos = (BlockPos) arg2;
         if (direction) {
                 BlockPos current = blockPos.above();
                 for (int i = 0; i < limit; i++) {
