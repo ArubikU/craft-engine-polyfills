@@ -43,7 +43,7 @@ tasks.processResources {
 bukkit {
     main = "dev.arubik.craftengine.CraftEnginePolyfills"
     version = rootProject.properties["project_version"] as String
-    name = "CraftEngine Polyfill"
+    name = "CraftEnginePolyfill"
     apiVersion = "1.20"
     author = "ArubikU"
     website = "https://github.com/ArubikU"
