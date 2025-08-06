@@ -15,6 +15,7 @@ import net.momirealms.craftengine.core.plugin.CraftEngine;
 import net.momirealms.craftengine.core.util.LazyReference;
 import net.momirealms.craftengine.core.world.BlockPos;
 import net.momirealms.craftengine.core.world.World;
+import net.momirealms.craftengine.bukkit.block.behavior.BukkitBlockBehavior;
 
 public class BubbleBlockBehavior extends BukkitBlockBehavior {
     public static final Factory FACTORY = new Factory();
