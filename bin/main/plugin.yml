@@ -1,0 +1,9 @@
+name: CraftEnginePolyfill
+version: 0.0.1
+main: dev.arubik.craftengine.CraftEnginePolyfills
+author: ArubikU
+website: https://github.com/ArubikU
+depend:
+  - CraftEngine
+api-version: "1.20"
+folia-supported: true

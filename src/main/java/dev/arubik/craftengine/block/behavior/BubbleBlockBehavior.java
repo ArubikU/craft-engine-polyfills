@@ -7,6 +7,9 @@ import dev.arubik.craftengine.util.MBlocks;
 import net.momirealms.craftengine.bukkit.nms.FastNMS;
 import net.momirealms.craftengine.bukkit.plugin.reflection.minecraft.MFluids;
 import net.momirealms.craftengine.bukkit.util.LocationUtils;
+import net.momirealms.craftengine.bukkit.util.BlockStateUtils;
+import net.momirealms.craftengine.bukkit.world.BukkitBlockInWorld;
+import net.momirealms.craftengine.bukkit.world.BukkitWorld;
 import net.momirealms.craftengine.core.block.BlockBehavior;
 import net.momirealms.craftengine.core.block.BlockStateWrapper;
 import net.momirealms.craftengine.core.block.CustomBlock;
@@ -46,24 +49,32 @@ public class BubbleBlockBehavior extends BukkitBlockBehavior {
 
     @Override
     public void tick(Object thisBlock, Object[] args, Callable<Object> superMethod) throws Exception {
-        World level = (World) args[1];
+        Object level = args[1];
         BlockPos blockPos = LocationUtils.fromBlockPos(args[2]);
+        BukkitWorld bukkitWorld = new BukkitWorld(FastNMS.INSTANCE.method$Level$getCraftWorld(level));
+        
         if (direction) {
                 BlockPos current = blockPos.above();
                 for (int i = 0; i < limit; i++) {
-                        current = (BlockPos) LocationUtils.above(current);
-                        if (FastNMS.INSTANCE.method$BlockGetter$getFluidState(level, blockPos) == MFluids.WATER) {
-                                level.setBlockAt(current.x(), current.y(), current.z(), this.blockState.get(), 3);
+                        current = current.above();
+            Object fs = FastNMS.INSTANCE.method$BlockGetter$getFluidState(level, LocationUtils.toBlockPos(current));
+            Object ft = FastNMS.INSTANCE.method$FluidState$getType(fs);
+                        if (ft == MFluids.WATER) {
+                                BukkitBlockInWorld blockInWorld = (BukkitBlockInWorld) bukkitWorld.getBlockAt(current);
+                                blockInWorld.block().setBlockData(BlockStateUtils.fromBlockData(this.blockState.get().handle()));
                         } else {
                                 break;
                         }
                 }
         } else {
-                BlockPos current = (BlockPos) LocationUtils.below(blockPos);
+                BlockPos current = blockPos.offset(0, -1, 0);
                 for (int i = 0; i < limit; i++) {
-                        current = (BlockPos) LocationUtils.below(current);
-                        if (FastNMS.INSTANCE.method$BlockGetter$getFluidState(level, blockPos) == MFluids.WATER) {
-                                level.setBlockAt(current.x(), current.y(), current.z(), this.blockState.get(), 3);
+                        current = current.offset(0, -1, 0);
+            Object fs = FastNMS.INSTANCE.method$BlockGetter$getFluidState(level, LocationUtils.toBlockPos(current));
+            Object ft = FastNMS.INSTANCE.method$FluidState$getType(fs);
+                        if (ft == MFluids.WATER) {
+                                BukkitBlockInWorld blockInWorld = (BukkitBlockInWorld) bukkitWorld.getBlockAt(current);
+                                blockInWorld.block().setBlockData(BlockStateUtils.fromBlockData(this.blockState.get().handle()));
                         } else {
                                 break;
                         }
@@ -91,19 +102,23 @@ public class BubbleBlockBehavior extends BukkitBlockBehavior {
     private void updateNeighbours(Object arg1, Object arg2, Object thisBlock) {
         World level = (World) arg1;
         BlockPos blockPos = (BlockPos) arg2;
+        BukkitWorld bukkitWorld = new BukkitWorld(FastNMS.INSTANCE.method$Level$getCraftWorld(level.serverWorld()));
+        
         if (direction) {
                 BlockPos current = blockPos.above();
                 for (int i = 0; i < limit; i++) {
-                        current = (BlockPos) LocationUtils.above(current);
-                        if (FastNMS.INSTANCE.method$BlockGetter$getBlockState(level, current) != MBlocks.BUBBLE_COLUMN) break;
-                        FastNMS.INSTANCE.method$LevelWriter$setBlock(level, current, MFluids.WATER, 3);
+                        current = current.above();
+                        if (FastNMS.INSTANCE.method$BlockGetter$getBlockState(level, LocationUtils.toBlockPos(current)) != MBlocks.BUBBLE_COLUMN) break;
+                        BukkitBlockInWorld blockInWorld = (BukkitBlockInWorld) bukkitWorld.getBlockAt(current);
+                        blockInWorld.block().setBlockData(BlockStateUtils.fromBlockData(MFluids.WATER));
                 }
         } else {
-                BlockPos current = (BlockPos) LocationUtils.below(blockPos);
+                BlockPos current = blockPos.offset(0, -1, 0);
                 for (int i = 0; i < limit; i++) {
-                        current = (BlockPos) LocationUtils.below(current);
-                        if (FastNMS.INSTANCE.method$BlockGetter$getBlockState(level, current) != MBlocks.BUBBLE_COLUMN) break;
-                        FastNMS.INSTANCE.method$LevelWriter$setBlock(level, current, MFluids.WATER, 3);
+                        current = current.offset(0, -1, 0);
+                        if (FastNMS.INSTANCE.method$BlockGetter$getBlockState(level, LocationUtils.toBlockPos(current)) != MBlocks.BUBBLE_COLUMN) break;
+                        BukkitBlockInWorld blockInWorld = (BukkitBlockInWorld) bukkitWorld.getBlockAt(current);
+                        blockInWorld.block().setBlockData(BlockStateUtils.fromBlockData(MFluids.WATER));
                 }
         }
     }
@@ -111,7 +126,7 @@ public class BubbleBlockBehavior extends BukkitBlockBehavior {
     private static class Factory implements BlockBehaviorFactory {
         @Override
         public BlockBehavior create(CustomBlock block, Map<String, Object> arguments) {
-                boolean direction = arguments.getOrDefault("direction", "down").toString().equalsIgnoreCase("down");
+                boolean direction = arguments.getOrDefault("direction", "up").toString().equalsIgnoreCase("up");
                 boolean drag = arguments.getOrDefault("drag", "up").toString().equalsIgnoreCase("up");
                 int limit = (int) Integer.valueOf(arguments.getOrDefault("limit", 100).toString());
                 return new BubbleBlockBehavior(block, drag, direction, limit);

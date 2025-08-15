@@ -2,70 +2,66 @@ package dev.arubik.craftengine.block.behavior;
 
 import net.momirealms.craftengine.bukkit.block.behavior.BukkitBlockBehavior;
 import net.momirealms.craftengine.bukkit.nms.FastNMS;
-import net.momirealms.craftengine.bukkit.plugin.reflection.minecraft.CoreReflections;
 import net.momirealms.craftengine.bukkit.plugin.reflection.minecraft.MBlocks;
-import net.momirealms.craftengine.bukkit.plugin.reflection.minecraft.MFluids;
 import net.momirealms.craftengine.bukkit.util.BlockStateUtils;
+import net.momirealms.craftengine.bukkit.util.BlockTags;
 import net.momirealms.craftengine.bukkit.util.LocationUtils;
-import net.momirealms.craftengine.bukkit.util.ParticleUtils;
 import net.momirealms.craftengine.bukkit.world.BukkitWorld;
+import net.momirealms.craftengine.bukkit.world.BukkitBlockInWorld;
 import net.momirealms.craftengine.core.block.BlockBehavior;
 import net.momirealms.craftengine.core.block.CustomBlock;
 import net.momirealms.craftengine.core.block.ImmutableBlockState;
-import net.momirealms.craftengine.core.block.UpdateOption;
 import net.momirealms.craftengine.core.block.behavior.BlockBehaviorFactory;
 import net.momirealms.craftengine.core.block.properties.IntegerProperty;
 import net.momirealms.craftengine.core.block.properties.Property;
-import net.momirealms.craftengine.core.entity.player.InteractionResult;
-import net.momirealms.craftengine.core.item.Item;
-import net.momirealms.craftengine.core.item.ItemKeys;
-import net.momirealms.craftengine.core.item.context.UseOnContext;
-import net.momirealms.craftengine.core.plugin.context.ContextHolder;
-import net.momirealms.craftengine.core.plugin.context.SimpleContext;
-import net.momirealms.craftengine.core.plugin.context.number.NumberProvider;
-import net.momirealms.craftengine.core.plugin.context.number.NumberProviders;
-import net.momirealms.craftengine.core.plugin.context.parameter.DirectContextParameters;
-import net.momirealms.craftengine.core.util.ItemUtils;
+import net.momirealms.craftengine.core.util.Key;
+import net.momirealms.craftengine.core.util.MiscUtils;
 import net.momirealms.craftengine.core.util.RandomUtils;
 import net.momirealms.craftengine.core.util.ResourceConfigUtils;
+import net.momirealms.craftengine.core.util.Tuple;
 import net.momirealms.craftengine.core.world.BlockPos;
-import net.momirealms.craftengine.core.world.Vec3d;
-import net.momirealms.craftengine.core.world.Vec3i;
-import net.momirealms.craftengine.core.world.World;
-import net.momirealms.craftengine.core.world.WorldPosition;
+import org.bukkit.Bukkit;
+import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
+import org.bukkit.Registry;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.block.data.type.PointedDripstone;
 
-import java.lang.reflect.InvocationTargetException;
+import dev.arubik.craftengine.CraftEnginePolyfills;
+
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.Callable;
 
 @SuppressWarnings("DuplicatedCode")
 public class TearingCropBlockBehavior extends BukkitBlockBehavior {
     public static final Factory FACTORY = new Factory();
-    private static final List<Object> WATER = List.of(MFluids.WATER, MFluids.FLOWING_WATER);
-    private static final List<Object> LAVA = List.of(MFluids.LAVA, MFluids.FLOWING_LAVA);
 
     private final boolean water; // true == water , false == lava
     private final IntegerProperty ageProperty;
     private final float growSpeed;
-    private final int minGrowLight;
-    private final boolean isBoneMealTarget;
-    private final NumberProvider boneMealBonus;
     private final int heightLimit;
+    protected final List<Object> tagsCanSurviveOn;
+    protected final Set<Object> blockStatesCanSurviveOn;
+    protected final Set<String> customBlocksCansSurviveOn;
+    protected final boolean blacklistMode;
 
-    public TearingCropBlockBehavior(CustomBlock block, Property<Integer> ageProperty, float growSpeed, int minGrowLight, boolean isBoneMealTarget, NumberProvider boneMealBonus, boolean water, int heightLimit) {
+    public TearingCropBlockBehavior(CustomBlock block, Property<Integer> ageProperty, float growSpeed, boolean water, int heightLimit, 
+            boolean blacklist, List<Object> tagsCanSurviveOn, Set<Object> blockStatesCanSurviveOn, Set<String> customBlocksCansSurviveOn) {
         super(block);
         this.ageProperty = (IntegerProperty) ageProperty;
         this.growSpeed = growSpeed;
-        this.minGrowLight = minGrowLight;
-        this.isBoneMealTarget = isBoneMealTarget;
-        this.boneMealBonus = boneMealBonus;
         this.water = water;
         this.heightLimit = heightLimit;
+        this.blacklistMode = blacklist;
+        this.tagsCanSurviveOn = tagsCanSurviveOn;
+        this.blockStatesCanSurviveOn = blockStatesCanSurviveOn;
+        this.customBlocksCansSurviveOn = customBlocksCansSurviveOn;
     }
 
     public final int getAge(ImmutableBlockState state) {
@@ -80,63 +76,79 @@ public class TearingCropBlockBehavior extends BukkitBlockBehavior {
         return growSpeed;
     }
 
-    public boolean isBoneMealTarget() {
-        return isBoneMealTarget;
+    protected boolean mayPlaceOn(Object belowState, Object world, Object belowPos) {
+        for (Object tag : this.tagsCanSurviveOn) {
+            if (FastNMS.INSTANCE.method$BlockStateBase$is(belowState, tag)) {
+                return !this.blacklistMode;
+            }
+        }
+        Optional<ImmutableBlockState> optionalCustomState = BlockStateUtils.getOptionalCustomBlockState(belowState);
+        if (optionalCustomState.isEmpty()) {
+            if (!this.blockStatesCanSurviveOn.isEmpty() && this.blockStatesCanSurviveOn.contains(belowState)) {
+                return !this.blacklistMode;
+            }
+        } else {
+            ImmutableBlockState belowCustomState = optionalCustomState.get();
+            if (this.customBlocksCansSurviveOn.contains(belowCustomState.owner().value().id().toString())) {
+                return !this.blacklistMode;
+            }
+            if (this.customBlocksCansSurviveOn.contains(belowCustomState.toString())) {
+                return !this.blacklistMode;
+            }
+        }
+        return this.blacklistMode;
     }
 
-    public NumberProvider boneMealBonus() {
-        return boneMealBonus;
-    }
 
-    public int minGrowLight() {
-        return minGrowLight;
-    }
-
-    private static int getRawBrightness(Object level, Object pos) throws InvocationTargetException, IllegalAccessException {
-        return (int) CoreReflections.method$BlockAndTintGetter$getRawBrightness.invoke(level, pos, 0);
-    }
-
-    private boolean hasSufficientLight(Object level, Object pos) throws InvocationTargetException, IllegalAccessException {
-        return getRawBrightness(level, pos) >= this.minGrowLight - 1;
-    }
-
-
-    public BlockPos getTearingDripstone(World level, BlockPos pos) {
+    public BlockPos getTearingDripstone(Object level, BlockPos pos) {
+        BukkitWorld world = new BukkitWorld(FastNMS.INSTANCE.method$Level$getCraftWorld(level));
+        int heightLimit = Math.min(this.heightLimit + pos.y(), 320);
         for (int y = pos.y(); y < heightLimit; y++) {
             BlockPos currentPos = new BlockPos(pos.x(), y, pos.z());
-            Object blockState = FastNMS.INSTANCE.method$BlockGetter$getBlockState(level, currentPos);
-            if (blockState == MBlocks.AIR$defaultState) continue;
-            
-            BlockData blockData = BlockStateUtils.fromBlockData(blockState);
-            if (!(blockData instanceof PointedDripstone pDripstone)) continue;
-            if (pDripstone.getVerticalDirection() != BlockFace.UP) continue;
-            
-            return currentPos;
+            BukkitBlockInWorld blockInWorld = (BukkitBlockInWorld) world.getBlockAt(currentPos);
+            if (blockInWorld == null || blockInWorld.block().getType() == Material.AIR) continue;
+            if(blockInWorld.block().getBlockData() instanceof PointedDripstone pDrip && pDrip.getVerticalDirection() == BlockFace.DOWN){
+                return currentPos;
+            }else{
+                continue;
+            }
         }
         return null;
     }
 
-    public boolean canTear(World level, BlockPos pos) {
-        Object relativeBlockState1 = FastNMS.INSTANCE.method$BlockGetter$getBlockState(level, pos);
-        BlockData blockData1 = BlockStateUtils.fromBlockData(relativeBlockState1);
+    public boolean canTear(BukkitWorld world, BlockPos pos) {
+        BukkitBlockInWorld blockInWorld = (BukkitBlockInWorld) world.getBlockAt(pos);
+        BlockData blockData = blockInWorld.block().getBlockData();
 
-        if (!(blockData1 instanceof PointedDripstone pDripstone)) return false;
+        if (!(blockData instanceof PointedDripstone pDripstone)) return false;
         if (pDripstone.getVerticalDirection() != BlockFace.DOWN) return false;
 
-        BlockPos highest = findHighestConnectedDripstone(pos, level);
+        BlockPos highest = findHighestConnectedDripstone(pos, world);
         
         if (highest == null) return false;
 
         BlockPos fluidPos = highest.above().above();
         
-        return (water && WATER.contains(FastNMS.INSTANCE.method$BlockGetter$getFluidState(level, fluidPos)) || !water && LAVA.contains(FastNMS.INSTANCE.method$BlockGetter$getFluidState(level, fluidPos)));
+        // Usar BukkitBlockInWorld para verificar el estado del fluido
+        BukkitBlockInWorld fluidBlock = (BukkitBlockInWorld) world.getBlockAt(fluidPos);
+        BlockData fluidBlockData = fluidBlock.block().getBlockData();
+        
+        // Verificar si es agua directa o waterlogged
+        boolean hasWater = fluidBlockData.getMaterial() == Material.WATER || 
+                          (fluidBlockData instanceof org.bukkit.block.data.Waterlogged waterlogged && waterlogged.isWaterlogged());
+        
+        // Verificar si es lava directa
+        boolean hasLava = fluidBlockData.getMaterial() == Material.LAVA;
+        
+        return (water && hasWater) || (!water && hasLava);
     }
 
-    public BlockPos findHighestConnectedDripstone(BlockPos start, World world) {
+    public BlockPos findHighestConnectedDripstone(BlockPos start, BukkitWorld world) {
         BlockPos pos = start;
         while (true) {
             BlockPos above = pos.above();
-            BlockData blockData = BlockStateUtils.fromBlockData(FastNMS.INSTANCE.method$BlockGetter$getBlockState(world, above));
+            BukkitBlockInWorld blockInWorld = (BukkitBlockInWorld) world.getBlockAt(above);
+            BlockData blockData = blockInWorld.block().getBlockData();
             if (!(blockData instanceof PointedDripstone pDripstone) || pDripstone.getVerticalDirection() != BlockFace.DOWN) break;
             pos = above;
         }
@@ -145,122 +157,84 @@ public class TearingCropBlockBehavior extends BukkitBlockBehavior {
 
     @Override
     public void randomTick(Object thisBlock, Object[] args, Callable<Object> superMethod) throws Exception {
-        Object state = args[0];
-        World level = (World) args[1];
-        BlockPos pos = (BlockPos) args[2];
+        if(RandomUtils.generateRandomFloat(0, 1) >= this.growSpeed) return;
+        Object level = args[1];
+        BlockPos pos = LocationUtils.fromBlockPos(args[2]);
+        
+        // Verificar si puede crecer en el bloque de abajo
+        int y = pos.y();
+        int x = pos.x();
+        int z = pos.z();
+        Object belowPos = FastNMS.INSTANCE.constructor$BlockPos(x, y - 1, z);
+        Object belowState = FastNMS.INSTANCE.method$BlockGetter$getBlockState(level, belowPos);
+        
+        if (!mayPlaceOn(belowState, level, belowPos)) {
+            return; // No puede crecer si no está en un bloque válido
+        }
+        BukkitWorld world = new BukkitWorld(FastNMS.INSTANCE.method$Level$getCraftWorld(level));
         BlockPos targetPos = pos.above();
         BlockPos tearing = getTearingDripstone(level, targetPos);
-        if (tearing == null) return;
-        if (!canTear(level, tearing)) return;
-        if (getRawBrightness(level, pos) >= this.minGrowLight) {
-            BlockStateUtils.getOptionalCustomBlockState(state).ifPresent(customState -> {
-                int age = this.getAge(customState);
-                if (age < this.ageProperty.max && RandomUtils.generateRandomFloat(0, 1) < this.growSpeed) {
-                    FastNMS.INSTANCE.method$LevelWriter$setBlock(level, pos, customState.with(this.ageProperty, age + 1).customBlockState().handle(), UpdateOption.UPDATE_ALL.flags());
-                }
-            });
-        }
-    }
-
-    @Override
-    public boolean canSurvive(Object thisBlock, Object[] args, Callable<Object> superMethod) throws Exception {
-        Object world = args[1];
-        Object pos = args[2];
-        return hasSufficientLight(world, pos);
-    }
-
-    @Override
-    public boolean isBoneMealSuccess(Object thisBlock, Object[] args) {
-        return true;
-    }
-
-    @Override
-    public boolean isValidBoneMealTarget(Object thisBlock, Object[] args) {
-        if (!this.isBoneMealTarget) return false;
-        Object state = args[2];
-        Optional<ImmutableBlockState> optionalState = BlockStateUtils.getOptionalCustomBlockState(state);
-        return optionalState.filter(immutableBlockState -> getAge(immutableBlockState) != this.ageProperty.max).isPresent();
-    }
-
-    @Override
-    public void performBoneMeal(Object thisBlock, Object[] args) throws Exception {
-        this.performBoneMeal(args[0], args[2], args[3]);
-    }
-
-    @Override
-    public InteractionResult useOnBlock(UseOnContext context, ImmutableBlockState state) {
-        Item<?> item = context.getItem();
-        if (ItemUtils.isEmpty(item) || !item.vanillaId().equals(ItemKeys.BONE_MEAL) || context.getPlayer().isAdventureMode())
-            return InteractionResult.PASS;
-        if (isMaxAge(state))
-            return InteractionResult.PASS;
-        boolean sendSwing = false;
-        Object visualState = state.vanillaBlockState().handle();
-        Object visualStateBlock = BlockStateUtils.getBlockOwner(visualState);
-        if (CoreReflections.clazz$BonemealableBlock.isInstance(visualStateBlock)) {
-            boolean is = FastNMS.INSTANCE.method$BonemealableBlock$isValidBonemealTarget(visualStateBlock, context.getLevel().serverWorld(), LocationUtils.toBlockPos(context.getClickedPos()), visualState);
-            if (!is) {
-                sendSwing = true;
-            }
-        } else {
-            sendSwing = true;
-        }
-        if (sendSwing) {
-            context.getPlayer().swingHand(context.getHand());
-        }
-        return InteractionResult.SUCCESS;
-    }
-
-    private void performBoneMeal(Object level, Object pos, Object state) {
-        Optional<ImmutableBlockState> optionalCustomState = BlockStateUtils.getOptionalCustomBlockState(state);
-        if (optionalCustomState.isEmpty()) {
+        if (tearing == null){
             return;
         }
-        ImmutableBlockState customState = optionalCustomState.get();
-        boolean sendParticles = false;
-        Object visualState = customState.vanillaBlockState().handle();
-        Object visualStateBlock = BlockStateUtils.getBlockOwner(visualState);
-        if (CoreReflections.clazz$BonemealableBlock.isInstance(visualStateBlock)) {
-            boolean is = FastNMS.INSTANCE.method$BonemealableBlock$isValidBonemealTarget(visualStateBlock, level, pos, visualState);
-            if (!is) {
-                sendParticles = true;
-            }
-        } else {
-            sendParticles = true;
+        if (!canTear(world, tearing)){
+            return;
         }
-        org.bukkit.World world = FastNMS.INSTANCE.method$Level$getCraftWorld(level);
-        int x = FastNMS.INSTANCE.field$Vec3i$x(pos);
-        int y = FastNMS.INSTANCE.field$Vec3i$y(pos);
-        int z = FastNMS.INSTANCE.field$Vec3i$z(pos);
-        int i = this.getAge(customState) + this.boneMealBonus.getInt(
-                SimpleContext.of(ContextHolder.builder()
-                            .withParameter(DirectContextParameters.CUSTOM_BLOCK_STATE, customState)
-                            .withParameter(DirectContextParameters.POSITION, new WorldPosition(new BukkitWorld(world), Vec3d.atCenterOf(new Vec3i(x, y, z))))
-                            .build())
-        );
-        int maxAge = this.ageProperty.max;
-        if (i > maxAge) {
-            i = maxAge;
-        }
-        FastNMS.INSTANCE.method$LevelWriter$setBlock(level, pos, customState.with(this.ageProperty, i).customBlockState().handle(), UpdateOption.UPDATE_ALL.flags());
-        if (sendParticles) {
-            world.spawnParticle(ParticleUtils.HAPPY_VILLAGER, x + 0.5, y + 0.5, z + 0.5, 15, 0.25, 0.25, 0.25);
+        
+        BukkitBlockInWorld block = (BukkitBlockInWorld) world.getBlockAt(pos);
+        
+        int age = this.getAge(block.customBlockState());
+        
+        if (age < this.ageProperty.max ) {
+            BukkitBlockInWorld blockInWorld = (BukkitBlockInWorld) world.getBlockAt(pos);
+            blockInWorld.block().setBlockData(BlockStateUtils.fromBlockData(block.customBlock().defaultState().with(this.ageProperty, age + 1).customBlockState().handle()));
         }
     }
 
+
     public static class Factory implements BlockBehaviorFactory {
+
+        public static Tuple<List<Object>, Set<Object>, Set<String>> readTagsAndState(Map<String, Object> arguments,
+                boolean aboveOrBelow) {
+            List<Object> mcTags = new ArrayList<>();
+            for (String tag : MiscUtils.getAsStringList(
+                    arguments.getOrDefault((aboveOrBelow ? "above" : "bottom") + "-block-tags", List.of()))) {
+                mcTags.add(BlockTags.getOrCreate(Key.of(tag)));
+            }
+            Set<Object> mcBlocks = new HashSet<>();
+            Set<String> customBlocks = new HashSet<>();
+            for (String blockStateStr : MiscUtils
+                    .getAsStringList(arguments.getOrDefault((aboveOrBelow ? "above" : "bottom") + "-blocks", List.of()))) {
+                int index = blockStateStr.indexOf('[');
+                Key blockType = index != -1 ? Key.from(blockStateStr.substring(0, index)) : Key.from(blockStateStr);
+                Material material = Registry.MATERIAL.get(new NamespacedKey(blockType.namespace(), blockType.value()));
+                if (material != null) {
+                    if (index == -1) {
+                        // vanilla
+                        mcBlocks.addAll(BlockStateUtils.getAllVanillaBlockStates(blockType));
+                    } else {
+                        mcBlocks.add(BlockStateUtils.blockDataToBlockState(Bukkit.createBlockData(blockStateStr)));
+                    }
+                } else {
+                    // custom maybe
+                    customBlocks.add(blockStateStr);
+                }
+            }
+            return new Tuple<>(mcTags, mcBlocks, customBlocks);
+        }
 
         @SuppressWarnings("unchecked")
         @Override
         public BlockBehavior create(CustomBlock block, Map<String, Object> arguments) {
             Property<Integer> ageProperty = (Property<Integer>) ResourceConfigUtils.requireNonNullOrThrow(block.getProperty("age"), "warning.config.block.behavior.crop.missing_age");
-            int minGrowLight = ResourceConfigUtils.getAsInt(arguments.getOrDefault("light-requirement", 9), "light-requirement");
             float growSpeed = ResourceConfigUtils.getAsFloat(arguments.getOrDefault("grow-speed", 0.125f), "grow-speed");
-            boolean isBoneMealTarget = ResourceConfigUtils.getAsBoolean(arguments.getOrDefault("is-bone-meal-target", true), "is-bone-meal-target");
-            NumberProvider boneMealAgeBonus = NumberProviders.fromObject(arguments.getOrDefault("bone-meal-age-bonus", 1));
             Boolean water = arguments.getOrDefault("liquid", "water").toString().equalsIgnoreCase("water");
             int heightLimit = Integer.parseInt(arguments.getOrDefault("heightLimit", 12).toString());
-            return new TearingCropBlockBehavior(block, ageProperty, growSpeed, minGrowLight, isBoneMealTarget, boneMealAgeBonus, water, heightLimit);
+            
+            Tuple<List<Object>, Set<Object>, Set<String>> tuple = readTagsAndState(arguments, false);
+            boolean blacklistMode = ResourceConfigUtils.getAsBoolean(arguments.getOrDefault("blacklist", false), "blacklist");
+            
+            return new TearingCropBlockBehavior(block, ageProperty, growSpeed, water, heightLimit, blacklistMode, tuple.left(), tuple.mid(), tuple.right());
         }
     }
 }

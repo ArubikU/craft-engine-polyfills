@@ -1,23 +1,26 @@
 package dev.arubik.craftengine.block.behavior;
 
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.Callable;
 
+import org.bukkit.Material;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.block.data.type.PointedDripstone;
 import org.bukkit.event.block.BlockFormEvent;
 
+import dev.arubik.craftengine.CraftEnginePolyfills;
 import net.momirealms.craftengine.bukkit.block.BukkitBlockManager;
 import net.momirealms.craftengine.bukkit.block.behavior.BukkitBlockBehavior;
 import net.momirealms.craftengine.bukkit.nms.FastNMS;
 import net.momirealms.craftengine.bukkit.plugin.reflection.bukkit.CraftBukkitReflections;
 import net.momirealms.craftengine.bukkit.plugin.reflection.minecraft.MBlocks;
-import net.momirealms.craftengine.bukkit.plugin.reflection.minecraft.MFluids;
 import net.momirealms.craftengine.bukkit.util.BlockStateUtils;
+import net.momirealms.craftengine.bukkit.util.LocationUtils;
+import net.momirealms.craftengine.bukkit.world.BukkitBlockInWorld;
+import net.momirealms.craftengine.bukkit.world.BukkitWorld;
 import net.momirealms.craftengine.core.block.BlockBehavior;
 import net.momirealms.craftengine.core.block.CustomBlock;
 import net.momirealms.craftengine.core.block.EmptyBlock;
@@ -27,12 +30,9 @@ import net.momirealms.craftengine.core.plugin.CraftEngine;
 import net.momirealms.craftengine.core.util.Key;
 import net.momirealms.craftengine.core.util.RandomUtils;
 import net.momirealms.craftengine.core.world.BlockPos;
-import net.momirealms.craftengine.core.world.World;
 
 public class TearingBlockSpawnBehavior extends BukkitBlockBehavior {
     public static final Factory FACTORY = new Factory();
-    private static final List<Object> WATER = List.of(MFluids.WATER, MFluids.FLOWING_WATER);
-    private static final List<Object> LAVA = List.of(MFluids.LAVA, MFluids.FLOWING_LAVA);
 
     private final boolean water; // true == water , false == lava
     private final Key toPlace;
@@ -59,7 +59,7 @@ public class TearingBlockSpawnBehavior extends BukkitBlockBehavior {
             this.defaultBlockState = customBlock.defaultState().customBlockState().handle();
             this.defaultImmutableBlockState = customBlock.defaultState();
         } else {
-            CraftEngine.instance().logger().warn("Failed to create solid block " + this.toPlace + " in ConcretePowderBlockBehavior");
+            CraftEngine.instance().logger().warn("Failed to create solid block " + this.toPlace + " in TearingBlockSpawnBehavior");
             this.defaultBlockState = MBlocks.STONE$defaultState;
             this.defaultImmutableBlockState = EmptyBlock.STATE;
         }
@@ -73,42 +73,55 @@ public class TearingBlockSpawnBehavior extends BukkitBlockBehavior {
         return this.defaultImmutableBlockState;
     }
 
-    public BlockPos getTearingDripstone(World level, BlockPos pos) {
+    public BlockPos getTearingDripstone(Object level, BlockPos pos) {
+        BukkitWorld world = new BukkitWorld(FastNMS.INSTANCE.method$Level$getCraftWorld(level));
+        int heightLimit = Math.min(this.heightLimit + pos.y(), 320);
         for (int y = pos.y(); y < heightLimit; y++) {
             BlockPos currentPos = new BlockPos(pos.x(), y, pos.z());
-            Object blockState = FastNMS.INSTANCE.method$BlockGetter$getBlockState(level, currentPos);
-            if (blockState == MBlocks.AIR$defaultState) continue;
-            
-            BlockData blockData = BlockStateUtils.fromBlockData(blockState);
-            if (!(blockData instanceof PointedDripstone pDripstone)) continue;
-            if (pDripstone.getVerticalDirection() != BlockFace.UP) continue;
-            
-            return currentPos;
+            BukkitBlockInWorld blockInWorld = (BukkitBlockInWorld) world.getBlockAt(currentPos);
+            if (blockInWorld == null || blockInWorld.block().getType() == Material.AIR) continue;
+            if(blockInWorld.block().getBlockData() instanceof PointedDripstone pDrip && pDrip.getVerticalDirection() == BlockFace.DOWN){
+                return currentPos;
+            }else{
+                continue;
+            }
         }
         return null;
     }
 
-    public boolean canTear(World level, BlockPos pos) {
-        Object relativeBlockState1 = FastNMS.INSTANCE.method$BlockGetter$getBlockState(level, pos);
-        BlockData blockData1 = BlockStateUtils.fromBlockData(relativeBlockState1);
+    public boolean canTear(BukkitWorld world, BlockPos pos) {
+        BukkitBlockInWorld blockInWorld = (BukkitBlockInWorld) world.getBlockAt(pos);
+        BlockData blockData = blockInWorld.block().getBlockData();
 
-        if (!(blockData1 instanceof PointedDripstone pDripstone)) return false;
+        if (!(blockData instanceof PointedDripstone pDripstone)) return false;
         if (pDripstone.getVerticalDirection() != BlockFace.DOWN) return false;
 
-        BlockPos highest = findHighestConnectedDripstone(pos, level);
+        BlockPos highest = findHighestConnectedDripstone(pos, world);
         
         if (highest == null) return false;
 
         BlockPos fluidPos = highest.above().above();
         
-        return (water && WATER.contains(FastNMS.INSTANCE.method$BlockGetter$getFluidState(level, fluidPos)) || !water && LAVA.contains(FastNMS.INSTANCE.method$BlockGetter$getFluidState(level, fluidPos)));
+        // Usar BukkitBlockInWorld para verificar el estado del fluido
+        BukkitBlockInWorld fluidBlock = (BukkitBlockInWorld) world.getBlockAt(fluidPos);
+        BlockData fluidBlockData = fluidBlock.block().getBlockData();
+        
+        // Verificar si es agua directa o waterlogged
+        boolean hasWater = fluidBlockData.getMaterial() == Material.WATER || 
+                          (fluidBlockData instanceof org.bukkit.block.data.Waterlogged waterlogged && waterlogged.isWaterlogged());
+        
+        // Verificar si es lava directa
+        boolean hasLava = fluidBlockData.getMaterial() == Material.LAVA;
+        
+        return (water && hasWater) || (!water && hasLava);
     }
 
-    public BlockPos findHighestConnectedDripstone(BlockPos start, World world) {
+    public BlockPos findHighestConnectedDripstone(BlockPos start, BukkitWorld world) {
         BlockPos pos = start;
         while (true) {
             BlockPos above = pos.above();
-            BlockData blockData = BlockStateUtils.fromBlockData(FastNMS.INSTANCE.method$BlockGetter$getBlockState(world, above));
+            BukkitBlockInWorld blockInWorld = (BukkitBlockInWorld) world.getBlockAt(above);
+            BlockData blockData = blockInWorld.block().getBlockData();
             if (!(blockData instanceof PointedDripstone pDripstone) || pDripstone.getVerticalDirection() != BlockFace.DOWN) break;
             pos = above;
         }
@@ -117,26 +130,35 @@ public class TearingBlockSpawnBehavior extends BukkitBlockBehavior {
 
     @Override
     public void randomTick(Object thisBlock, Object[] args, Callable<Object> superMethod) throws Exception {
-        World level = (World) args[0];
-        BlockPos pos = (BlockPos) args[1];
-        if (FastNMS.INSTANCE.method$BlockGetter$getBlockState(level, pos.above()) != MBlocks.AIR$defaultState) return;
+        Object level = args[1];
+        BlockPos pos = LocationUtils.fromBlockPos(args[2]);
         if (RandomUtils.generateRandomFloat(0, 1) > chance) return;
+        BukkitWorld world = new BukkitWorld(FastNMS.INSTANCE.method$Level$getCraftWorld(level));
         BlockPos targetPos = pos.above();
+        BukkitBlockInWorld blockInWorld = (BukkitBlockInWorld) world.getBlockAt(targetPos);
+        if(blockInWorld != null && (blockInWorld.block().getType() != Material.AIR || blockInWorld.block().getType() == Material.POINTED_DRIPSTONE)) {
+            return;
+        }
         BlockPos tearing = getTearingDripstone(level, targetPos);
-        if (tearing == null) return;
-        if (!canTear(level, tearing)) return;
+        if (tearing == null) {
+            return;
+        }
+        if (!canTear(world, tearing)) {
+            return;
+        }
         placeBlock(level, targetPos);
     }
 
-    public void placeBlock(World level, BlockPos pos) {
-        BlockState craftBlockState;
+    public void placeBlock(Object level, BlockPos pos) {
         try {
-            craftBlockState = (BlockState) CraftBukkitReflections.method$CraftBlockStates$getBlockState.invoke(null, level, pos);
+            BukkitBlockInWorld blockInWorld = (BukkitBlockInWorld) new BukkitWorld(FastNMS.INSTANCE.method$Level$getCraftWorld(level)).getBlockAt(pos);
             BlockData blockData = BlockStateUtils.fromBlockData(getDefaultBlockState());
             BlockState state = blockData.createBlockState();
-            BlockFormEvent event = new BlockFormEvent(craftBlockState.getBlock(), state);
+            BlockFormEvent event = new BlockFormEvent(blockInWorld.block(), state);
             if(!event.callEvent()) return;
-            level.setBlockAt(pos.x(), pos.y(), pos.z(), defaultImmutableBlockState.customBlockState(),3);
+
+            BukkitWorld world = new BukkitWorld(FastNMS.INSTANCE.method$Level$getCraftWorld(level));
+            world.setBlockAt(pos.x(), pos.y(), pos.z(), defaultImmutableBlockState.customBlockState(),3);
 
         } catch (Exception e) {
             CraftEngine.instance().logger().warn("Failed to update state for placement " + pos, e);
