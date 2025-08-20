@@ -2,7 +2,6 @@ package dev.arubik.craftengine.hopper;
 
 import dev.arubik.craftengine.util.SyncedGuiHolder;
 import net.bytebuddy.ByteBuddy;
-import net.bytebuddy.ClassFileVersion;
 import net.bytebuddy.dynamic.loading.ClassReloadingStrategy;
 import net.bytebuddy.implementation.MethodDelegation;
 import net.bytebuddy.matcher.ElementMatchers;
