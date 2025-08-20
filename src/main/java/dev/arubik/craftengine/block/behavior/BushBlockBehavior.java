@@ -69,6 +69,7 @@ public class BushBlockBehavior extends AbstractCanSurviveBlockBehavior {
             boolean ageDirection = ResourceConfigUtils.getAsBoolean(
                     arguments.getOrDefault("age-direction", "up").toString().equals("up"), "age-direction");
 
+            @SuppressWarnings("unchecked")
             Property<Integer> ageProperty = (Property<Integer>) ResourceConfigUtils
                     .requireNonNullOrThrow(block.getProperty("age"), "warning.config.block.behavior.crop.missing_age");
 

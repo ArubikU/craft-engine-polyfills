@@ -4,10 +4,11 @@ import java.util.Map;
 import java.util.concurrent.Callable;
 
 import dev.arubik.craftengine.util.MBlocks;
+import net.momirealms.craftengine.bukkit.block.behavior.BukkitBlockBehavior;
 import net.momirealms.craftengine.bukkit.nms.FastNMS;
 import net.momirealms.craftengine.bukkit.plugin.reflection.minecraft.MFluids;
-import net.momirealms.craftengine.bukkit.util.LocationUtils;
 import net.momirealms.craftengine.bukkit.util.BlockStateUtils;
+import net.momirealms.craftengine.bukkit.util.LocationUtils;
 import net.momirealms.craftengine.bukkit.world.BukkitBlockInWorld;
 import net.momirealms.craftengine.bukkit.world.BukkitWorld;
 import net.momirealms.craftengine.core.block.BlockBehavior;
@@ -18,7 +19,6 @@ import net.momirealms.craftengine.core.plugin.CraftEngine;
 import net.momirealms.craftengine.core.util.LazyReference;
 import net.momirealms.craftengine.core.world.BlockPos;
 import net.momirealms.craftengine.core.world.World;
-import net.momirealms.craftengine.bukkit.block.behavior.BukkitBlockBehavior;
 
 public class BubbleBlockBehavior extends BukkitBlockBehavior {
     public static final Factory FACTORY = new Factory();
@@ -44,7 +44,7 @@ public class BubbleBlockBehavior extends BukkitBlockBehavior {
     public void onPlace(Object thisBlock, Object[] args, Callable<Object> superMethod) {
         Object world = args[1];
         Object blockPos = args[2];
-        FastNMS.INSTANCE.method$ScheduledTickAccess$scheduleBlockTick(world, blockPos, thisBlock, 20);
+        FastNMS.INSTANCE.method$ScheduledTickAccess$scheduleBlockTick(world, blockPos, thisBlock, 6);
     }
 
     @Override
@@ -52,6 +52,7 @@ public class BubbleBlockBehavior extends BukkitBlockBehavior {
         Object level = args[1];
         BlockPos blockPos = LocationUtils.fromBlockPos(args[2]);
         BukkitWorld bukkitWorld = new BukkitWorld(FastNMS.INSTANCE.method$Level$getCraftWorld(level));
+        FastNMS.INSTANCE.method$ScheduledTickAccess$scheduleBlockTick(level, args[2], thisBlock, 6);
         
         if (direction) {
                 BlockPos current = blockPos.above();

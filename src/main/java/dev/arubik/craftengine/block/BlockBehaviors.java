@@ -12,6 +12,7 @@ public class BlockBehaviors {
     public static final Key POLYFILL_BUSH_BLOCK = Key.of("polyfills:bush_block");
     public static final Key POLYFILL_CHANGE_OVER_TIME_BLOCK = Key.of("polyfills:change_over_time_block");
     public static final Key POLYFILL_FAN_BLOCK = Key.of("polyfills:fan_block");
+    public static final Key POLYFILL_STORAGE_BLOCK = Key.of("polyfills:storage_block");
     public static void register() {
         RegistryUtils.registerBlockBehavior(POLYFILL_BUBBLE_BLOCK, BubbleBlockBehavior.FACTORY);
         RegistryUtils.registerBlockBehavior(POLYFILL_TEARING_CROP_BLOCK, TearingCropBlockBehavior.FACTORY);
@@ -20,5 +21,6 @@ public class BlockBehaviors {
         RegistryUtils.registerBlockBehavior(POLYFILL_CHANGE_OVER_TIME_BLOCK, ChangeOverTimeBlockBehavior.FACTORY);
         RegistryUtils.registerBlockBehavior(POLYFILL_BUSH_BLOCK, BushBlockBehavior.FACTORY);
         RegistryUtils.registerBlockBehavior(POLYFILL_FAN_BLOCK, FanBlockBehavior.FACTORY);
+        RegistryUtils.registerBlockBehavior(POLYFILL_STORAGE_BLOCK, StorageBlockBehavior.FACTORY);
     }
 }
