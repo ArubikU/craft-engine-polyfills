@@ -3,6 +3,8 @@ package dev.arubik.craftengine;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import dev.arubik.craftengine.block.BlockBehaviors;
+import dev.arubik.craftengine.hopper.Injection;
+import net.bytebuddy.agent.ByteBuddyAgent;
 import net.momirealms.craftengine.core.plugin.CraftEngine;
 
 public final class CraftEnginePolyfills extends JavaPlugin {
@@ -22,6 +24,7 @@ public final class CraftEnginePolyfills extends JavaPlugin {
 
     private void initPlugin() {
         BlockBehaviors.register();
+        Injection.inject();
     }
 
     public static CraftEnginePolyfills instance() {

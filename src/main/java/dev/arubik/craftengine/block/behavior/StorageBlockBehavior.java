@@ -5,11 +5,14 @@ import dev.arubik.craftengine.util.SyncedGuiHolder;
 import dev.arubik.craftengine.util.NmsBlockBehavior;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.Container;
+import net.minecraft.world.WorldlyContainer;
 import net.minecraft.world.entity.item.FallingBlockEntity;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
+import net.momirealms.craftengine.bukkit.block.behavior.BukkitBlockBehavior;
 import net.momirealms.craftengine.bukkit.plugin.user.BukkitServerPlayer;
 import net.momirealms.craftengine.bukkit.util.LocationUtils;
 import net.momirealms.craftengine.bukkit.world.BukkitWorld;
@@ -19,15 +22,17 @@ import net.momirealms.craftengine.core.block.ImmutableBlockState;
 import net.momirealms.craftengine.core.block.behavior.BlockBehaviorFactory;
 import net.momirealms.craftengine.core.entity.player.InteractionResult;
 import net.momirealms.craftengine.core.item.context.UseOnContext;
+import net.momirealms.craftengine.core.plugin.CraftEngine;
 
 import java.util.Map;
+import java.util.concurrent.Callable;
 
 import org.bukkit.entity.Player;
 
 /**
  * Simple storage block behavior backed by SyncedGuiHolder. Size and title are configurable.
  */
-public class StorageBlockBehavior extends NmsBlockBehavior {
+public class StorageBlockBehavior extends BukkitBlockBehavior {
     public static final Factory FACTORY = new Factory();
 
     private final int size;
@@ -55,7 +60,6 @@ public class StorageBlockBehavior extends NmsBlockBehavior {
     @Override
     public InteractionResult useWithoutItem(UseOnContext context, ImmutableBlockState state) {
         try {
-            
             Object levelHandle =((BukkitWorld) context.getLevel()).serverWorld();
             Object posHandle = LocationUtils.toBlockPos(context.getClickedPos());
 
@@ -69,50 +73,68 @@ public class StorageBlockBehavior extends NmsBlockBehavior {
                 if (level instanceof ServerLevel server) {
                     BlockEntityBehaviorController.register(server, pos);
                 }
-                return InteractionResult.SUCCESS;
+                return InteractionResult.SUCCESS_AND_CANCEL;
             }
         } catch (Throwable ignored) {}
         return InteractionResult.PASS;
     }
 
-    @Override
-    public void affectNeighborsAfterRemoval(Object thisBlock, Level level, BlockPos pos, BlockState state, java.util.concurrent.Callable<Object> superMethod) {
-        try { superMethod.call(); } catch (Exception ignored) {}
-        SyncedGuiHolder.closeAll(level, pos);
-        SyncedGuiHolder.get(level, pos).ifPresent(holder -> {
-            holder.closeViewers();
-            holder.dropInventoryContents(new Vec3(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5));
-        });
-        BlockEntityBehaviorController.unregister(level, pos);
+    public WorldlyContainer getContainer(Level level, BlockPos pos) {
+        return SyncedGuiHolder.getOrCreate(level, pos, size, title).getContainer();
     }
 
     @Override
-    public void onPlace(Object thisBlock, Level level, BlockPos pos, BlockState state, java.util.concurrent.Callable<Object> superMethod) {
+    public void affectNeighborsAfterRemoval(Object thisBlock, Object[] args, Callable<Object> superMethod) throws Exception {
+        Level level = (Level) args[1];
+        BlockPos pos = (BlockPos) args[2];
+        boolean movedByPiston = (Boolean) args[3];
+
+        CraftEngine.instance().logger().info("Removing storage block at " + pos + " in " + level.dimension().location());
+        if(!movedByPiston){
+        SyncedGuiHolder.get(level, pos).ifPresent(holder -> {
+            holder.closeViewers();
+            holder.dropInventoryContents(new Vec3(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5));
+            CraftEngine.instance().logger().info("Dropped inventory contents for storage block at " + pos + " in " + level.dimension().location());
+        });
+        BlockEntityBehaviorController.unregister(level, pos);
+        CraftEngine.instance().logger().info("Unregistered storage block at " + pos + " in " + level.dimension().location());
+        }superMethod.call();
+    }
+
+    @Override
+    public void onRemove(Object thisBlock, Object[] args, Callable<Object> superMethod) throws Exception {
+        BlockState state = (BlockState) args[0];
+        Level level = (Level) args[1];
+        BlockPos pos = (BlockPos) args[2];
+        BlockState newState = (BlockState) args[3];
+        CraftEngine.instance().logger().info("Removing storage block at " + pos + " in " + level.dimension().location());
+        
+        SyncedGuiHolder.get(level, pos).ifPresent(holder -> {
+            holder.closeViewers();
+            holder.dropInventoryContents(new Vec3(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5));
+            CraftEngine.instance().logger().info("Dropped inventory contents for storage block at " + pos + " in " + level.dimension().location());
+        });
+        BlockEntityBehaviorController.unregister(level, pos);
+        CraftEngine.instance().logger().info("Unregistered storage block at " + pos + " in " + level.dimension().location());
+        superMethod.call();
+    }
+
+
+    @Override
+    public void onPlace(Object thisBlock, Object[] args, Callable<Object> superMethod) {
         try { superMethod.call(); } catch (Exception ignored) {}
+        Level level = (Level) args[1];
+        BlockPos pos = (BlockPos) args[2];
         BlockEntityBehaviorController.register(level, pos);
     }
 
     @Override
-    public void tick(Object thisBlock, Level level, BlockPos pos, BlockState state, java.util.concurrent.Callable<Object> superMethod) {
+    public void tick(Object thisBlock, Object[] args, Callable<Object> superMethod) {
+        Level level = (Level) args[1];
+        BlockPos pos = (BlockPos) args[2];
         try { superMethod.call(); } catch (Exception ignored) {}
         // Process queued moves and keep state alive
         BlockEntityBehaviorController.tick(level, pos);
-    }
-
-    // 1.20.2+ LevelAccessor level, BlockPos pos, BlockState state
-    @Override
-    public Object pickupBlock(Object thisObj, LevelAccessor level, BlockPos pos, BlockState state, java.util.concurrent.Callable<Object> superMethod) {
-        try {
-            return superMethod.call();
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    // Level level, BlockPos pos, BlockState state, BlockState replaceableState, FallingBlockEntity fallingBlock
-    @Override
-    public void onLand(Object thisBlock, Level level, BlockPos pos, BlockState state, BlockState replaceableState, FallingBlockEntity fallingBlock) {
-        // no-op for storage block
     }
 
 }

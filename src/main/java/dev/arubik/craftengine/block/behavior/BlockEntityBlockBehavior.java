@@ -42,19 +42,12 @@ public abstract class BlockEntityBlockBehavior extends NmsBlockBehavior {
         BlockEntityBehaviorController.neighborChanged(level, pos);
     }
 
-    @Override
-    public void affectNeighborsAfterRemoval(Object thisBlock, Level level, BlockPos pos, BlockState state, Callable<Object> superMethod) {
-        try { superMethod.call(); } catch (Exception ignored) {}
-        BlockEntityBehaviorController.unregister(level, pos);
-    }
-
     // Newer NMS variant providing movedByPiston flag
     @Override
     public void affectNeighborsAfterRemoval(Object thisBlock, Level level, BlockPos pos, BlockState state, Boolean movedByPiston, Callable<Object> superMethod) {
         try { superMethod.call(); } catch (Exception ignored) {}
         if (Boolean.TRUE.equals(movedByPiston)) {
             // Do not unregister; state will be handled by piston move logic
-            BlockEntityBehaviorController.move(level, pos, pos);
         } else {
             BlockEntityBehaviorController.unregister(level, pos);
         }

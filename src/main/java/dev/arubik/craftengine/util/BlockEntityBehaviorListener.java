@@ -18,7 +18,10 @@ public class BlockEntityBehaviorListener implements Listener{
             BlockPos pos = new BlockPos(b.getLocation().getBlockX(), b.getLocation().getBlockY(), b.getLocation().getBlockZ());
             Block newBlock = b.getRelative(event.getDirection());
             BlockPos newPos = new BlockPos(newBlock.getX(), newBlock.getY(), newBlock.getZ());
-            BlockEntityBehaviorController.move(level, pos, newPos);
+            SyncedGuiHolder.get(level, pos).ifPresent(holder -> {
+                holder.closeViewers();
+                BlockEntityBehaviorController.move(level, pos, newPos);
+            });
         });
     }
 }

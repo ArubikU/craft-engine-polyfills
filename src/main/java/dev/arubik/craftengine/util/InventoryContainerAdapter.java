@@ -1,6 +1,8 @@
 package dev.arubik.craftengine.util;
 
+import net.minecraft.core.Direction;
 import net.minecraft.world.Container;
+import net.minecraft.world.WorldlyContainer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import org.bukkit.Location;
@@ -20,10 +22,18 @@ import java.util.List;
  * Adapter that implements NMS Container over a Bukkit Inventory.
  * This allows external NMS code to interact with a Bukkit inventory.
  */
-public class InventoryContainerAdapter implements Container {
+public class InventoryContainerAdapter implements WorldlyContainer {
 
     private final Inventory bukkitInventory;
     private final Runnable onChanged;
+
+    // Arrays for slot indices for inventories with 1 to 6 rows (9 slots per row)
+    private static final int[] SLOTS_1_ROW = {0, 1, 2, 3, 4, 5, 6, 7, 8};
+    private static final int[] SLOTS_2_ROWS = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17};
+    private static final int[] SLOTS_3_ROWS = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26};
+    private static final int[] SLOTS_4_ROWS = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34};
+    private static final int[] SLOTS_5_ROWS = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44};
+    private static final int[] SLOTS_6_ROWS = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53};
 
     public InventoryContainerAdapter(Inventory bukkitInventory, @Nullable Runnable onChanged) {
         this.bukkitInventory = bukkitInventory;
@@ -147,5 +157,28 @@ public class InventoryContainerAdapter implements Container {
     @Override
     public Location getLocation() {
         return bukkitInventory.getLocation();
+    }
+
+    @Override
+    public int[] getSlotsForFace(Direction side) {
+        return  switch (bukkitInventory.getSize()) {
+            case 9 -> SLOTS_1_ROW;
+            case 18 -> SLOTS_2_ROWS;
+            case 27 -> SLOTS_3_ROWS;
+            case 36 -> SLOTS_4_ROWS;
+            case 45 -> SLOTS_5_ROWS;
+            case 54 -> SLOTS_6_ROWS;
+            default -> new int[0]; // No slots for other sizes
+        };
+    }
+
+    @Override
+    public boolean canPlaceItemThroughFace(int index, ItemStack itemStack, @Nullable Direction direction) {
+        return true;
+    }
+
+    @Override
+    public boolean canTakeItemThroughFace(int index, ItemStack stack, Direction direction) {
+        return true;
     }
 }

@@ -1,10 +1,12 @@
 package dev.arubik.craftengine.util;
 
 import dev.arubik.craftengine.CraftEnginePolyfills;
+import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.Container;
+import net.minecraft.world.WorldlyContainer;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
@@ -19,6 +21,7 @@ import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.event.inventory.InventoryMoveItemEvent;
+import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
@@ -47,7 +50,7 @@ public class SyncedGuiHolder implements InventoryHolder {
     @SuppressWarnings("unused")
     private final String title;
     private final Inventory inventory;
-    private final Container containerAdapter;
+    private final WorldlyContainer containerAdapter;
 
     private static volatile boolean LISTENER_REGISTERED = false;
     private static final java.util.Map<String, SyncedGuiHolder> REGISTRY = new java.util.concurrent.ConcurrentHashMap<>();
@@ -58,7 +61,7 @@ public class SyncedGuiHolder implements InventoryHolder {
         this.size = size;
         this.title = title;
         // Use string-based title for broad Bukkit compatibility
-        this.inventory = Bukkit.createInventory(this, size, title);
+        this.inventory = Bukkit.createInventory(this, size, MiniMessage.miniMessage().deserialize(title));
     loadFromData();
     this.containerAdapter = new InventoryContainerAdapter(this.inventory, this::saveToData);
         ensureListenerRegistered(CraftEnginePolyfills.instance());
@@ -302,7 +305,7 @@ public class SyncedGuiHolder implements InventoryHolder {
         }
     }
 
-    public Container getContainer() {
+    public WorldlyContainer getContainer() {
         return containerAdapter;
     }
 

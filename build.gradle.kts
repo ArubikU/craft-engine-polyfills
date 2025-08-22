@@ -19,7 +19,8 @@ dependencies {
     compileOnly("net.momirealms:craft-engine-bukkit:${rootProject.properties["craftengine_version"]}")
     compileOnly("net.momirealms:craft-engine-nms-helper:${rootProject.properties["nms_helper_version"]}")
     compileOnly("it.unimi.dsi:fastutil:${rootProject.properties["fastutil_version"]}")
-    compileOnly("net.bytebuddy:byte-buddy:${rootProject.properties["byte_buddy_version"]}")
+    implementation("net.bytebuddy:byte-buddy:${rootProject.properties["byte_buddy_version"]}")
+    implementation("net.bytebuddy:byte-buddy-agent:${rootProject.properties["byte_buddy_version"]}")
 }
 
 java {
@@ -62,5 +63,11 @@ tasks {
     shadowJar {
         archiveFileName = "${rootProject.name}-${rootProject.properties["project_version"]}.jar"
         destinationDirectory.set(file("$rootDir/target"))
+    archiveClassifier.set("")
+    dependencies{
+        include { true }
+    }
+    relocate("net.bytebuddy", "dev.arubik.libs.bytebuddy") 
+    minimize()
     }
 }

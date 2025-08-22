@@ -138,10 +138,6 @@ public class VerticalCropBlockBehavior extends BukkitBlockBehavior {
         }
 
         BlockPos targetPos = direction ? currentPos.offset(0, 1, 0) : currentPos.offset(0, -1, 0);
-        CraftEnginePolyfills.log("Height: " + height);
-        CraftEnginePolyfills.log("Max Height: " + maxHeight);
-        CraftEnginePolyfills.log("Current Position: " + hPos);
-        CraftEnginePolyfills.log("Target Position: " + targetPos);
         if (!canGrow(level,targetPos, hPos))
             return;
         if (height >= maxHeight)
