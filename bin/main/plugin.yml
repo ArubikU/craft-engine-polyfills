@@ -1,9 +1,13 @@
 name: CraftEnginePolyfill
-version: 0.0.2
+version: 0.0.3
 main: dev.arubik.craftengine.CraftEnginePolyfills
 author: ArubikU
 website: https://github.com/ArubikU
 depend:
   - CraftEngine
+commands:
+  cepolyfill:
+    description: CraftEngine Polyfill main command
+    usage: /<command>
 api-version: "1.20"
 folia-supported: true

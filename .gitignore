@@ -1,6 +1,9 @@
 # User-specific stuff
 .idea/
 
+
+bin/*
+src\main\java\dev\arubik\craftengine\block\templates\*
 *.iml
 *.ipr
 *.iws

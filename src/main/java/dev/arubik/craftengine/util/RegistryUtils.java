@@ -1,6 +1,7 @@
 package dev.arubik.craftengine.util;
 
 import net.momirealms.craftengine.core.block.behavior.BlockBehaviorFactory;
+import net.momirealms.craftengine.core.item.behavior.ItemBehaviorFactory;
 import net.momirealms.craftengine.core.registry.BuiltInRegistries;
 import net.momirealms.craftengine.core.registry.Registries;
 import net.momirealms.craftengine.core.registry.WritableRegistry;
@@ -12,5 +13,10 @@ public class RegistryUtils {
     public static void registerBlockBehavior(Key key, BlockBehaviorFactory factory) {
         ((WritableRegistry<BlockBehaviorFactory>) BuiltInRegistries.BLOCK_BEHAVIOR_FACTORY)
                 .register(ResourceKey.create(Registries.BLOCK_BEHAVIOR_FACTORY.location(), key), factory);
+    }
+
+    public static void registerItemBehavior(Key key, ItemBehaviorFactory factory) {
+        ((WritableRegistry<ItemBehaviorFactory>) BuiltInRegistries.ITEM_BEHAVIOR_FACTORY)
+                .register(ResourceKey.create(Registries.ITEM_BEHAVIOR_FACTORY.location(), key), factory);
     }
 }

@@ -10,17 +10,22 @@ repositories {
     maven("https://repo.papermc.io/repository/maven-public/")
     maven("https://oss.sonatype.org/content/groups/public/")
     maven("https://repo.momirealms.net/releases/")
+    maven { url = uri("https://repo.codemc.io/repository/maven-releases/") }
+    maven { url = uri("https://repo.codemc.io/repository/maven-snapshots/") }
 }
 
 dependencies {
     paperweight.paperDevBundle("${rootProject.properties["paper_version"]}-R0.1-SNAPSHOT")
     compileOnly("io.papermc.paper:paper-api:${rootProject.properties["paper_version"]}-R0.1-SNAPSHOT")
-    compileOnly("net.momirealms:craft-engine-core:${rootProject.properties["craftengine_version"]}")
-    compileOnly("net.momirealms:craft-engine-bukkit:${rootProject.properties["craftengine_version"]}")
+    //compileOnly("net.momirealms:craft-engine-core:${rootProject.properties["craftengine_version"]}")
+    compileOnly(files("libs/craft-engine-paper-plugin-0.0.62.16.jar"))
+    //compileOnly("net.momirealms:craft-engine-bukkit:${rootProject.properties["craftengine_version"]}")
     compileOnly("net.momirealms:craft-engine-nms-helper:${rootProject.properties["nms_helper_version"]}")
     compileOnly("it.unimi.dsi:fastutil:${rootProject.properties["fastutil_version"]}")
-    implementation("net.bytebuddy:byte-buddy:${rootProject.properties["byte_buddy_version"]}")
-    implementation("net.bytebuddy:byte-buddy-agent:${rootProject.properties["byte_buddy_version"]}")
+    compileOnly("net.kyori:adventure-platform-bukkit:4.4.1")
+    compileOnly("com.github.retrooper:packetevents-spigot:2.9.5")
+    //implementation("net.bytebuddy:byte-buddy:${rootProject.properties["byte_buddy_version"]}")
+    //implementation("net.bytebuddy:byte-buddy-agent:${rootProject.properties["byte_buddy_version"]}")
 }
 
 java {
@@ -53,6 +58,12 @@ bukkit {
     website = "https://github.com/ArubikU"
     depend = listOf("CraftEngine")
     foliaSupported = true
+    commands {
+        create("cepolyfill") {
+            description = "CraftEngine Polyfill main command"
+            usage = "/<command>"
+        }
+    }
 }
 
 artifacts {
