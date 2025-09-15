@@ -40,4 +40,13 @@ public final class FluidKeys {
             }
     ));
 
+    // Cooldown por bloque para limitar frecuencia por tipo de fluido (ticks)
+    public static final TypedKey<Integer> FLUID_TICK_COOLDOWN = TypedKey.of("craftengine", "fluid_tick_cd", PersistentDataType.INTEGER);
+
+    // Cooldown independiente para operaciones de recolección desde bloques del mundo
+    public static final TypedKey<Integer> FLUID_BLOCK_COOLDOWN = TypedKey.of("craftengine", "fluid_block_cd", PersistentDataType.INTEGER);
+
+    // Cooldown independiente para operaciones de I/O con carriers (push y pull)
+    public static final TypedKey<Integer> FLUID_IO_COOLDOWN = TypedKey.of("craftengine", "fluid_io_cd", PersistentDataType.INTEGER);
+
 }

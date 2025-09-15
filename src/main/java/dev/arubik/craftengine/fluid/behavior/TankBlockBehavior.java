@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.Callable;
 
 import dev.arubik.craftengine.block.behavior.ConnectableBlockBehavior;
 import dev.arubik.craftengine.block.entity.BukkitBlockEntityTypes;
@@ -11,24 +12,34 @@ import dev.arubik.craftengine.block.entity.PersistentBlockEntity;
 import dev.arubik.craftengine.fluid.FluidKeys;
 import dev.arubik.craftengine.fluid.FluidStack;
 import dev.arubik.craftengine.fluid.FluidType;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.TranslatableComponent;
+import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.ExperienceOrb;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.DispenserBlock;
+import net.minecraft.world.level.block.entity.DispenserBlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
+import net.momirealms.craftengine.bukkit.nms.FastNMS;
+import net.momirealms.craftengine.bukkit.plugin.user.BukkitServerPlayer;
+import net.momirealms.craftengine.bukkit.util.BlockStateUtils;
+import net.momirealms.craftengine.bukkit.util.LocationUtils;
+import net.momirealms.craftengine.core.block.BlockBehavior;
 import net.momirealms.craftengine.core.block.CustomBlock;
 import net.momirealms.craftengine.core.block.ImmutableBlockState;
-import net.momirealms.craftengine.bukkit.nms.FastNMS;
-import net.momirealms.craftengine.bukkit.util.BlockStateUtils;
-import net.momirealms.craftengine.core.block.BlockBehavior;
 import net.momirealms.craftengine.core.block.behavior.BlockBehaviorFactory;
 import net.momirealms.craftengine.core.block.behavior.EntityBlockBehavior;
 import net.momirealms.craftengine.core.block.entity.BlockEntity;
 import net.momirealms.craftengine.core.block.entity.BlockEntityType;
 import net.momirealms.craftengine.core.block.properties.EnumProperty;
 import net.momirealms.craftengine.core.block.properties.IntegerProperty;
+import net.momirealms.craftengine.core.item.context.BlockPlaceContext;
+import net.momirealms.craftengine.core.item.context.UseOnContext;
 import net.momirealms.craftengine.core.util.Direction;
 import net.momirealms.craftengine.core.util.HorizontalDirection;
 
@@ -36,21 +47,21 @@ public class TankBlockBehavior extends ConnectableBlockBehavior implements Entit
 
     public static final Factory FACTORY = new Factory();
 
-
     public final EnumProperty<FluidType> fluidTypeProperty;
     public final IntegerProperty levelProperty; // puede ser null si no se registra realmente
 
-    public final Set<FluidType> acceptedFluids = Set.of(FluidType.WATER, FluidType.LAVA);
+    public final Set<FluidType> acceptedFluids = Set.of(FluidType.values());
     public final int MAX_CAPACITY = 5000; // 5 cubos (1000mb cada uno)
 
     public TankBlockBehavior(CustomBlock block,
             EnumProperty<HorizontalDirection> horizontalDirectionProperty,
             EnumProperty<Direction> verticalDirectionProperty,
-            EnumProperty<FluidType> fluidTypeProperty) {
+            EnumProperty<FluidType> fluidTypeProperty,
+            IntegerProperty levelProperty) {
         super(block,
                 List.of(Direction.UP, Direction.DOWN), horizontalDirectionProperty, verticalDirectionProperty);
         this.fluidTypeProperty = fluidTypeProperty;
-        this.levelProperty = null; // placeholder hasta conocer API correcta
+        this.levelProperty = levelProperty;
     }
 
     public static class Factory implements BlockBehaviorFactory {
@@ -58,70 +69,129 @@ public class TankBlockBehavior extends ConnectableBlockBehavior implements Entit
         @Override
         public BlockBehavior create(CustomBlock block, Map<String, Object> args) {
             EnumProperty<HorizontalDirection> h = (EnumProperty<HorizontalDirection>) args.get("horizontal");
-            EnumProperty<Direction> v = (EnumProperty<Direction>) args.get("vertical");
-            EnumProperty<FluidType> f = (EnumProperty<FluidType>) args.get("fluidType");
-            return new TankBlockBehavior(block, h, v, f);
+            EnumProperty<Direction> v = (EnumProperty<Direction>) block.getProperty("vertical");
+            EnumProperty<FluidType> f = (EnumProperty<FluidType>) block.getProperty("fluidtype");
+            IntegerProperty level = (IntegerProperty) block.getProperty("level");
+            return new TankBlockBehavior(block, h, v, f, level);
         }
     }
 
-    // --- Interacción jugador (cubos) ---
-    public InteractionResult use(Object thisBlock, Object[] args, java.util.concurrent.Callable<Object> superCall) throws Exception {
-        try { if (superCall != null) superCall.call(); } catch (Exception ignored) {}
-        Level level = (Level) args[0];
-        BlockPos pos = (BlockPos) args[1];
-        Player player = (Player) args[2];
-        InteractionHand hand = (InteractionHand) args[3];
-        // BlockHitResult hit = (BlockHitResult) args[4]; // no usado
-        if (level.isClientSide()) return InteractionResult.SUCCESS;
+    @Override
+    public net.momirealms.craftengine.core.entity.player.InteractionResult useWithoutItem(UseOnContext context,
+            ImmutableBlockState state) {
+
+        Level level = (Level) context.getLevel().serverWorld();
+        BlockPos pos = (BlockPos) LocationUtils.toBlockPos(context.getClickedPos());
+
+        BukkitServerPlayer bplayer = (BukkitServerPlayer) context.getPlayer();
+        Player player = (Player) bplayer.serverPlayer();
+        InteractionHand hand = context.getHand().equals(
+                net.momirealms.craftengine.core.entity.player.InteractionHand.MAIN_HAND) ? InteractionHand.MAIN_HAND
+                        : InteractionHand.OFF_HAND;
+        
+        if (level.isClientSide())
+            return net.momirealms.craftengine.core.entity.player.InteractionResult.SUCCESS;
 
         ItemStack held = player.getItemInHand(hand);
+
+        
+
         FluidStack stored = getStored(level, pos);
 
-        if (held.getItem() == Items.WATER_BUCKET) {
-            int accepted = insertFluid(level, pos, new FluidStack(FluidType.WATER, FluidType.MB_PER_BUCKET, 0));
-            if (accepted == FluidType.MB_PER_BUCKET) {
+
+        if (held == null || held.isEmpty() && player.isShiftKeyDown()) {
+            String fluidName = stored.isEmpty() ? "fluid.minecraft.empty" : "fluid.minecraft." + stored.getType().toString().toLowerCase();
+            Component msg = MiniMessage.miniMessage().deserialize("<lang:" + fluidName + "> " +
+                    "<gray>" + stored.getAmount() + "/" + MAX_CAPACITY + " mb</gray>");
+            player.getBukkitEntity().sendActionBar(msg);
+            return net.momirealms.craftengine.core.entity.player.InteractionResult.SUCCESS_AND_CANCEL;
+        }
+
+        // Try to collect fluid from the held item
+        var collectResult = FluidType.collectFromStack(held);
+        FluidStack inputFluid = collectResult.getFirst();
+        ItemStack remainingItem = collectResult.getSecond();
+
+        if (!inputFluid.isEmpty()) {
+            int accepted = insertFluid(level, pos, inputFluid);
+            if (accepted == inputFluid.getAmount()) {
                 if (!player.getAbilities().instabuild) {
                     held.shrink(1);
-                    player.addItem(new ItemStack(Items.BUCKET));
-                }
-                return InteractionResult.CONSUME;
-            }
-        } else if (held.getItem() == Items.LAVA_BUCKET) {
-            int accepted = insertFluid(level, pos, new FluidStack(FluidType.LAVA, FluidType.MB_PER_BUCKET, 0));
-            if (accepted == FluidType.MB_PER_BUCKET) {
-                if (!player.getAbilities().instabuild) {
-                    held.shrink(1);
-                    player.addItem(new ItemStack(Items.BUCKET));
-                }
-                return InteractionResult.CONSUME;
-            }
-        } else if (held.getItem() == Items.BUCKET && !stored.isEmpty() && stored.getAmount() >= FluidType.MB_PER_BUCKET) {
-            FluidType type = stored.getType();
-            if (type == FluidType.WATER || type == FluidType.LAVA) {
-                final FluidStack[] drained = { null };
-                extractFluid(level, pos, FluidType.MB_PER_BUCKET, f -> drained[0] = f);
-                if (drained[0] != null && drained[0].getAmount() == FluidType.MB_PER_BUCKET) {
-                    if (!player.getAbilities().instabuild) {
-                        held.shrink(1);
-                        if (type == FluidType.WATER) player.addItem(new ItemStack(Items.WATER_BUCKET));
-                        else if (type == FluidType.LAVA) player.addItem(new ItemStack(Items.LAVA_BUCKET));
+                    if (!remainingItem.isEmpty()) {
+                        player.addItem(remainingItem);
                     }
-                    return InteractionResult.CONSUME;
+                }
+                return net.momirealms.craftengine.core.entity.player.InteractionResult.SUCCESS_AND_CANCEL;
+            }
+        }
+
+        // Try to output fluid to the held item
+        if (!stored.isEmpty()) {
+            var outputResult = FluidType.collectToStack(held, stored, stored.getAmount());
+            ItemStack resultItem = outputResult.getFirst();
+            FluidStack remainingFluid = outputResult.getSecond();
+
+            if (!resultItem.isEmpty()) {
+                int drainedAmount = stored.getAmount() - remainingFluid.getAmount();
+                if (drainedAmount > 0) {
+                    final FluidStack[] drained = { null };
+                    extractFluid(level, pos, drainedAmount, f -> drained[0] = f);
+                    if (drained[0] != null && drained[0].getAmount() == drainedAmount) {
+                        if (!player.getAbilities().instabuild) {
+                            held.shrink(1);
+                            player.addItem(resultItem);
+                        }
+                        return net.momirealms.craftengine.core.entity.player.InteractionResult.SUCCESS_AND_CANCEL;
+                    }
+                }
+            }
+        }
+        
+        // Reacción a través de FluidType.reaction: p.ej. LAVA + WATER_BUCKET / WATER + LAVA_BUCKET
+        if (held != null && !held.isEmpty()) {
+            FluidType wanted = FluidType.EMPTY;
+            if (held.getItem() == Items.WATER_BUCKET) wanted = FluidType.LAVA;
+            else if (held.getItem() == Items.LAVA_BUCKET) wanted = FluidType.WATER;
+            if (wanted != FluidType.EMPTY) {
+                // Calcular disponible hasta 1 cubo sin modificar aún
+                int available = availableChain(level, pos, wanted, FluidType.MB_PER_BUCKET);
+                if (available > 0) {
+                    FluidStack input = new FluidStack(wanted, Math.min(available, FluidType.MB_PER_BUCKET), 0);
+                    var reaction = FluidType.reaction(input, held);
+                    FluidStack newStack = reaction.getFirst();
+                    var outputs = reaction.getSecond();
+                    int consumed = input.getAmount() - (newStack == null ? 0 : newStack.getAmount());
+                    if (consumed > 0 && !outputs.isEmpty()) {
+                        // Consumir exactamente lo indicado por la reacción
+                        Aggregator agg = new Aggregator(wanted);
+                        int moved = extractChain(level, pos, consumed, wanted, agg, 0);
+                        if (moved == consumed) {
+                            if (!player.getAbilities().instabuild) {
+                                held.shrink(1);
+                                for (ItemStack out : outputs) {
+                                    if (out != null && !out.isEmpty()) player.addItem(out);
+                                }
+                            }
+                            return net.momirealms.craftengine.core.entity.player.InteractionResult.SUCCESS_AND_CANCEL;
+                        }
+                    }
                 }
             }
         }
 
-        return InteractionResult.PASS;
+        return net.momirealms.craftengine.core.entity.player.InteractionResult.SUCCESS_AND_CANCEL;
     }
 
     public boolean canAccept(FluidStack fluid) {
-        if (fluid == null || fluid.isEmpty()) return false;
+        if (fluid == null || fluid.isEmpty())
+            return false;
         return acceptedFluids.contains(fluid.getType());
     }
 
     public FluidStack getStored(Level level, net.minecraft.core.BlockPos pos) {
         PersistentBlockEntity be = getBlockEntity(level, pos);
-        if (be == null) return new FluidStack(FluidType.EMPTY, 0, 0);
+        if (be == null)
+            return new FluidStack(FluidType.EMPTY, 0, 0);
         return be.getOrDefault(FluidKeys.FLUID, new FluidStack(FluidType.EMPTY, 0, 0));
     }
 
@@ -129,17 +199,30 @@ public class TankBlockBehavior extends ConnectableBlockBehavior implements Entit
         return insertFluidInternal(level, pos, stack, 0);
     }
 
-    // Inserción recursiva: intenta llenar primero el tanque más abajo (en línea recta) y luego este.
+    @Override
+    public ImmutableBlockState updateStateForPlacement(BlockPlaceContext context, ImmutableBlockState state) {
+        FluidType stores = state.get(fluidTypeProperty);
+        if (stores != null && stores != FluidType.EMPTY) {
+            int level = state.get(levelProperty);
+            executeBlockEntity((Level) context.getLevel().serverWorld(),
+                    (BlockPos) LocationUtils.toBlockPos(context.getClickedPos()), be -> {
+                        be.set(FluidKeys.FLUID, new FluidStack(stores,
+                                (int) Math.floor((level / (double) levelProperty.max) * MAX_CAPACITY), 0));
+                    });
+        }
+        return state;
+    }
+
+    // Inserción recursiva: intenta llenar primero el tanque más abajo (en línea
+    // recta) y luego este.
     private int insertFluidInternal(Level level, net.minecraft.core.BlockPos pos, FluidStack stack, int depth) {
-        if (stack == null || stack.isEmpty() || !canAccept(stack)) return 0;
-        if (depth > 256) return 0; // salvaguarda
+        if (stack == null || stack.isEmpty() || !canAccept(stack))
+            return 0;
+        if (depth > 256)
+            return 0; // salvaguarda
 
         int totalAccepted = 0;
 
-        // 1. Intentar pasar el fluido al tanque de abajo si:
-        //    - existe
-        //    - es un tanque del mismo tipo de bloque
-        //    - ambos están en modo "Straight" (orientación vertical adecuada)
         if (isTank(level, pos.below()) && isStraight(level, pos) && isStraight(level, pos.below())) {
             // Enviar todo el stack hacia abajo primero
             int acceptedDown = insertFluidInternal(level, pos.below(), stack, depth + 1);
@@ -184,9 +267,10 @@ public class TankBlockBehavior extends ConnectableBlockBehavior implements Entit
     }
 
     public boolean isStraight(Level level, BlockPos pos) {
-        if(verticalDirectionProperty != null) {
-            ImmutableBlockState state = BlockStateUtils.getOptionalCustomBlockState(level.getBlockState(pos)).orElse(null);
-            if(state != null) {
+        if (verticalDirectionProperty != null) {
+            ImmutableBlockState state = BlockStateUtils.getOptionalCustomBlockState(level.getBlockState(pos))
+                    .orElse(null);
+            if (state != null) {
                 Direction dir = state.get(verticalDirectionProperty);
                 return dir == Direction.UP || dir == Direction.DOWN;
             }
@@ -195,9 +279,10 @@ public class TankBlockBehavior extends ConnectableBlockBehavior implements Entit
     }
 
     public boolean isSameDirection(Level level, BlockPos pos, Direction dir) {
-        if(verticalDirectionProperty != null) {
-            ImmutableBlockState state = BlockStateUtils.getOptionalCustomBlockState(level.getBlockState(pos)).orElse(null);
-            if(state != null) {
+        if (verticalDirectionProperty != null) {
+            ImmutableBlockState state = BlockStateUtils.getOptionalCustomBlockState(level.getBlockState(pos))
+                    .orElse(null);
+            if (state != null) {
                 Direction current = state.get(verticalDirectionProperty);
                 return current == dir;
             }
@@ -207,44 +292,111 @@ public class TankBlockBehavior extends ConnectableBlockBehavior implements Entit
 
     public boolean isTank(Level level, BlockPos pos) {
         ImmutableBlockState state = BlockStateUtils.getOptionalCustomBlockState(level.getBlockState(pos)).orElse(null);
-        if(state != null) {
-           return  state.owner().value().id().equals(this.customBlock.id());
+        if (state != null) {
+            return state.owner().value().id().equals(this.customBlock.id());
         }
         return false;
     }
 
-    public int extractFluid(Level level, net.minecraft.core.BlockPos pos, int max, java.util.function.Consumer<FluidStack> drained) {
-        final int[] moved = { 0 };
+    public int extractFluid(Level level, net.minecraft.core.BlockPos pos, int max,
+            java.util.function.Consumer<FluidStack> drained) {
+        if (max <= 0) return 0;
+        // Determinar tipo objetivo buscando el primer tanque no vacío desde este hacia arriba
+        FluidType targetType = FluidType.EMPTY;
+        int scanDepth = 0;
+        net.minecraft.core.BlockPos scan = pos;
+        while (scanDepth <= 256) {
+            FluidStack s = getStored(level, scan);
+            if (!s.isEmpty()) { targetType = s.getType(); break; }
+            if (!isTank(level, scan.above()) || !isStraight(level, scan) || !isStraight(level, scan.above())) break;
+            scan = scan.above();
+            scanDepth++;
+        }
+        if (targetType == FluidType.EMPTY) return 0;
+
+        // Extraer en cadena respetando el tipo objetivo, de este tanque y luego hacia arriba
+        Aggregator agg = new Aggregator(targetType);
+        int moved = extractChain(level, pos, max, targetType, agg, 0);
+        if (moved > 0) {
+            drained.accept(new FluidStack(targetType, moved, agg.maxPressure));
+        }
+        return moved;
+    }
+
+    private static class Aggregator {
+        int maxPressure = 0;
+        Aggregator(FluidType t){ }
+        void add(int mb, int pressure){ if (pressure > maxPressure) maxPressure = pressure; }
+    }
+
+    private int extractChain(Level level, net.minecraft.core.BlockPos pos, int max, FluidType targetType, Aggregator agg, int depth){
+        if (max <= 0 || depth > 256) return 0;
+        int movedTotal = 0;
+        // 1) Extraer de este tanque si coincide el tipo
+        final int[] movedHere = {0};
+        final int[] pressureHere = {0};
         executeBlockEntity(level, pos, be -> {
             FluidStack stored = be.getOrDefault(FluidKeys.FLUID, new FluidStack(FluidType.EMPTY, 0, 0));
-            if (stored.isEmpty()) return;
+            if (stored.isEmpty() || stored.getType() != targetType) return;
             int mv = Math.min(max, stored.getAmount());
-            FluidStack out = new FluidStack(stored.getType(), mv, stored.getPressure());
+            pressureHere[0] = stored.getPressure();
             stored.removeAmount(mv);
             if (stored.isEmpty()) be.remove(FluidKeys.FLUID); else be.set(FluidKeys.FLUID, stored);
-            moved[0] = mv;
-            drained.accept(out);
+            movedHere[0] = mv;
         });
-        if (moved[0] > 0) updateShapeState(level, pos);
-        return moved[0];
+        if (movedHere[0] > 0){
+            movedTotal += movedHere[0];
+            agg.add(movedHere[0], pressureHere[0]);
+            updateShapeState(level, pos);
+        }
+        int remaining = max - movedTotal;
+        // 2) Si falta, intentar arriba en línea recta
+        if (remaining > 0 && isTank(level, pos.above()) && isStraight(level, pos) && isStraight(level, pos.above())){
+            movedTotal += extractChain(level, pos.above(), remaining, targetType, agg, depth+1);
+        }
+        return movedTotal;
+    }
+
+    // Cuenta cuánto fluido de 'type' hay disponible hacia arriba (en línea recta) sin modificar estado
+    private int availableChain(Level level, net.minecraft.core.BlockPos pos, FluidType type, int max){
+        int total = 0;
+        net.minecraft.core.BlockPos p = pos;
+        int depth = 0;
+        while (depth <= 256 && total < max){
+            FluidStack s = getStored(level, p);
+            if (!s.isEmpty() && s.getType() == type){
+                int canTake = Math.min(max - total, s.getAmount());
+                total += canTake;
+                if (total >= max) break;
+            }
+            if (!isTank(level, p.above()) || !isStraight(level, p) || !isStraight(level, p.above())) break;
+            p = p.above();
+            depth++;
+        }
+        return total;
     }
 
     private void updateShapeState(Level level, BlockPos pos) {
-        if (level.isClientSide()) return;
+        if (level.isClientSide())
+            return;
         FluidStack stored = getStored(level, pos);
-        if(levelProperty!=null) {
-            int lev = (int) Math.floor((stored.getAmount() / (double) MAX_CAPACITY) * levelProperty.max); // 0..10
+        if (levelProperty != null) {
+            int lev = (int) Math.ceil((stored.getAmount() / (double) MAX_CAPACITY) * levelProperty.max); // 0..10
+            lev = Math.max(stored.isEmpty() ? 0 : 1, Math.min(lev, levelProperty.max));
             Optional<ImmutableBlockState> state = BlockStateUtils.getOptionalCustomBlockState(level.getBlockState(pos));
             if (state.isPresent()) {
-                ImmutableBlockState newState = state.get().with(levelProperty, lev);
-                if (!newState.equals(state.get())) {
-                    FastNMS.INSTANCE.method$LevelWriter$setBlock(level, pos, newState.customBlockState().literalObject(), 3);
-                }
+                ImmutableBlockState newState = state.get().with(levelProperty, lev)
+                        .with(fluidTypeProperty, stored.getType());
+                FastNMS.INSTANCE.method$LevelWriter$setBlock(level, pos, newState.customBlockState().literalObject(),
+                        3);
+
             }
         }
     }
 
-    public FluidAccessMode getAccessMode() { return FluidAccessMode.ANYONE_CAN_TAKE; }
+    public FluidAccessMode getAccessMode() {
+        return FluidAccessMode.ANYONE_CAN_TAKE;
+    }
 
     public <T extends BlockEntity> BlockEntityType<T> blockEntityType() {
         @SuppressWarnings("unchecked")
@@ -252,18 +404,85 @@ public class TankBlockBehavior extends ConnectableBlockBehavior implements Entit
         return type;
     }
 
-    public BlockEntity createBlockEntity(net.momirealms.craftengine.core.world.BlockPos arg0, ImmutableBlockState arg1) {
+    public BlockEntity createBlockEntity(net.momirealms.craftengine.core.world.BlockPos arg0,
+            ImmutableBlockState arg1) {
         return new PersistentBlockEntity(arg0, arg1);
     }
 
     public PersistentBlockEntity getBlockEntity(Level world, net.minecraft.core.BlockPos pos) {
         BlockEntity be = BukkitBlockEntityTypes.getIfLoaded(world, pos);
-        if (be instanceof PersistentBlockEntity) return (PersistentBlockEntity) be;
+        if (be instanceof PersistentBlockEntity)
+            return (PersistentBlockEntity) be;
         return null;
     }
 
-    public void executeBlockEntity(Level world, net.minecraft.core.BlockPos pos, java.util.function.Consumer<PersistentBlockEntity> consumer) {
+    public void executeBlockEntity(Level world, net.minecraft.core.BlockPos pos,
+            java.util.function.Consumer<PersistentBlockEntity> consumer) {
         PersistentBlockEntity be = getBlockEntity(world, pos);
-        if (be != null) consumer.accept(be);
+        if (be != null)
+            consumer.accept(be);
     }
+
+    @Override
+    public int getAnalogOutputSignal(Object thisBlock, Object[] args) {
+        if (args.length < 1)
+            return 0;
+        Level level = (Level) args[1];
+        BlockPos pos = (BlockPos) args[2];
+        //check if it is experience tank
+        BlockState state = level.getBlockState(pos);
+        ImmutableBlockState ibs = BlockStateUtils.getOptionalCustomBlockState(state).orElse(null);
+        if (ibs == null || !ibs.owner().value().id().equals(this.customBlock.id()))
+            return 0;
+
+        FluidStack stored = getStored(level, pos);
+        if (stored.isEmpty())
+            return 0;
+        int signal = (int) Math.floor((stored.getAmount() / (double) MAX_CAPACITY) * 15); // 0..15
+        return Math.max(1, Math.min(signal, 15));
+    }
+
+    @Override
+    public boolean hasAnalogOutputSignal(Object thisBlock, Object[] args) {
+        return true;
+    }
+
+    //@Override
+    //public int getSignal(Object thisBlock, Object[] args, Callable<Object> superMethod) {
+    //    return getAnalogOutputSignal(thisBlock, args);
+    //}
+//
+    //@Override
+    //public int getDirectSignal(Object thisBlock, Object[] args, Callable<Object> superMethod) {
+    //    return getAnalogOutputSignal(thisBlock, args);
+    //}
+
+    // 1.21.5+ BlockState state, ServerLevel level, BlockPos pos, boolean
+    // movedByPiston
+    public void affectNeighborsAfterRemoval(Object thisBlock, Object[] args, Callable<Object> superMethod)
+            throws Exception {
+        boolean movedByPiston = false;
+        if (args.length >= 4 && args[3] instanceof Boolean) {
+            movedByPiston = (Boolean) args[3];
+        }
+        if (!movedByPiston) {
+            Level level = (Level) args[1];
+            BlockPos pos = (BlockPos) args[2];
+            //check if it is experience tank
+            FluidStack stored = getStored(level, pos);
+            if (stored.getType() == FluidType.EXPERIENCE) {
+                int amount = stored.getAmount();
+                int orbs = (int) Math.ceil(amount / 7.0);
+                while (orbs > 0) {
+                    int toSpawn = Math.min(orbs, 10);
+                    orbs -= toSpawn;
+                    ExperienceOrb orb = new ExperienceOrb(
+                            level, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, toSpawn);
+                    level.addFreshEntity(orb);
+                }
+            }
+        }
+
+    }
+
 }

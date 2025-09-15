@@ -1,7 +1,7 @@
 package dev.arubik.craftengine.fluid.behavior;
 
 import java.util.Map;
-import java.util.concurrent.Callable; // para compat legacy tick
+import java.util.concurrent.Callable;
 
 import dev.arubik.craftengine.block.entity.BukkitBlockEntityTypes;
 import dev.arubik.craftengine.block.entity.PersistentBlockEntity;
@@ -56,25 +56,13 @@ public class ValveBehavior extends PumpBehavior {
     }
 
     @Override
-    public void tick(Object thisBlock, Object[] args, Callable<Object> superMethod) throws Exception {
-        Level level = (Level) args[1];
-        BlockPos pos = (BlockPos) args[2];
-        if (level.isClientSide()) return;
-        if (!isOpen(level, pos)) return;
-        super.tick(thisBlock, args, superMethod);
-    }
-
-    @Override
     public <T extends BlockEntity> net.momirealms.craftengine.core.block.entity.tick.BlockEntityTicker<T> createBlockEntityTicker(net.momirealms.craftengine.core.world.CEWorld world, ImmutableBlockState state, BlockEntityType<T> type) {
         if (type != blockEntityType()) return null;
         return (lvl, cePos, ceState, be) -> {
             net.minecraft.world.level.Level level = (net.minecraft.world.level.Level) world.world().serverWorld();
             if (level == null || level.isClientSide()) return;
             BlockPos pos = BlockPos.of(cePos.asLong());
-            if (!isOpen(level, pos)) return; // cerrada => no flujo
-            // Reutiliza el ticker de Pump llamando manualmente a la lógica: simulamos un tick parcial
-            // Simplificamos replicando boost + transferencia a través de métodos heredados
-            // (Podríamos refactorizar a un método protegido común si se repite mucho)
+            if (!isOpen(level, pos)) return;
             PersistentBlockEntity pbe = getBE(level, pos);
             if (pbe != null) {
                 FluidStack s = pbe.getOrDefault(FluidKeys.FLUID, new FluidStack(FluidType.EMPTY,0,0));
@@ -82,15 +70,24 @@ public class ValveBehavior extends PumpBehavior {
                     pbe.set(FluidKeys.FLUID, new FluidStack(s.getType(), s.getAmount(), s.getPressure()+2));
                 }
             }
-            FluidStack stored = getStored(level, pos);
-            if (stored.isEmpty()) return;
-            // Orden igual a bomba. (En una versión futura podríamos filtrar una sola dirección si quisieras que la válvula bloquee sólo una cara específica.)
-            if (tryDirectional(level, pos, net.momirealms.craftengine.core.util.Direction.DOWN, stored)) return;
+            
+            // El valve usa la misma lógica que el pump pero solo si está abierto
+            // 1. PUMP (succionar) - intentar succionar fluidos del mundo o carriers
+            if (tryDirectional(level, pos, net.momirealms.craftengine.core.util.Direction.DOWN, PumpAction.PUMP)) return;
             for (var d : new net.momirealms.craftengine.core.util.Direction[]{net.momirealms.craftengine.core.util.Direction.NORTH, net.momirealms.craftengine.core.util.Direction.SOUTH, net.momirealms.craftengine.core.util.Direction.EAST, net.momirealms.craftengine.core.util.Direction.WEST}) {
-                if (tryDirectional(level, pos, d, stored)) return;
+                if (tryDirectional(level, pos, d, PumpAction.PUMP)) return;
             }
-            if (stored.getPressure() > 0) {
-                tryDirectional(level, pos, net.momirealms.craftengine.core.util.Direction.UP, stored);
+            
+            // 2. PUSH (empujar) - solo si tenemos fluido almacenado
+            FluidStack stored = getStored(level, pos);
+            if (!stored.isEmpty()) {
+                if (tryDirectional(level, pos, net.momirealms.craftengine.core.util.Direction.DOWN, PumpAction.PUSH)) return;
+                for (var d : new net.momirealms.craftengine.core.util.Direction[]{net.momirealms.craftengine.core.util.Direction.NORTH, net.momirealms.craftengine.core.util.Direction.SOUTH, net.momirealms.craftengine.core.util.Direction.EAST, net.momirealms.craftengine.core.util.Direction.WEST}) {
+                    if (tryDirectional(level, pos, d, PumpAction.PUSH)) return;
+                }
+                if (stored.getPressure() > 0) {
+                    tryDirectional(level, pos, net.momirealms.craftengine.core.util.Direction.UP, PumpAction.PUSH);
+                }
             }
         };
     }

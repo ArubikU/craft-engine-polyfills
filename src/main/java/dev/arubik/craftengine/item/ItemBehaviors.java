@@ -2,6 +2,8 @@ package dev.arubik.craftengine.item;
 
 import dev.arubik.craftengine.item.behavior.*;
 import dev.arubik.craftengine.util.RegistryUtils;
+import net.momirealms.craftengine.bukkit.item.behavior.BlockItemBehavior;
+import net.momirealms.craftengine.core.item.behavior.ItemBehavior;
 import net.momirealms.craftengine.core.util.Key;
 
 public class ItemBehaviors {

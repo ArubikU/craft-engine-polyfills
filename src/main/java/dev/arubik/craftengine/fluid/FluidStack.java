@@ -15,6 +15,10 @@ public class FluidStack {
         return type.isEmpty() || amount <= 0;
     }
 
+    public boolean isFull(int maxAmount) {
+        return !type.isEmpty() && amount >= maxAmount;
+    }
+
     public int getAmount() { return amount; }
     public FluidType getType() { return type; }
     public int getPressure() { return pressure; }

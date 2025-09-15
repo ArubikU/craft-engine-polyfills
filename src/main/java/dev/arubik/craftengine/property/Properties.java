@@ -1,5 +1,6 @@
 package dev.arubik.craftengine.property;
 
+import dev.arubik.craftengine.fluid.FluidType;
 import net.minecraft.world.level.block.state.properties.RedstoneSide;
 import net.momirealms.craftengine.core.block.properties.EnumProperty;
 import net.momirealms.craftengine.core.block.properties.Property;
@@ -10,11 +11,13 @@ public class Properties {
     public static final Key ATTACHED_FACE = Key.of("polyfills:attached_face");
     public static final Key REDSTONE_SIDE = Key.of("polyfills:redstone_side");
     public static final Key CONNECTED_FACE = Key.of("polyfills:connected_face");
+    public static final Key FLUID_TYPE = Key.of("polyfills:fluid_type");
     //floor wall ceiling
     public static void register() {
         net.momirealms.craftengine.core.block.properties.Properties.register(ATTACHED_FACE, new EnumProperty.Factory<>(AttachFace.class));
         net.momirealms.craftengine.core.block.properties.Properties.register(REDSTONE_SIDE, new EnumProperty.Factory<>(RedstoneSide.class));
         net.momirealms.craftengine.core.block.properties.Properties.register(CONNECTED_FACE, new EnumProperty.Factory<>(ConnectedFace.class));
+        net.momirealms.craftengine.core.block.properties.Properties.register(FLUID_TYPE, new EnumProperty.Factory<>(FluidType.class));
         Property.HARD_CODED_PLACEMENTS.put("face", (property -> {
             if (property.valueClass() == AttachFace.class) {
                 Property<AttachFace> faceProperty = (Property<AttachFace>) property;

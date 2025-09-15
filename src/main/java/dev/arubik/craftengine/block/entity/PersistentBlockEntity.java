@@ -103,12 +103,13 @@ public class PersistentBlockEntity extends BlockEntity {
         return byteArrayOutputStream.toByteArray();
     }
 
-    // Para integrarlo con el sistema NBT de CraftEngine
     @Override
     protected void saveCustomData(net.momirealms.craftengine.libraries.nbt.CompoundTag tag) {
-        tag = this.container;
+        this.container.keySet().forEach(key -> {
+            tag.put(key, container.get(key));
+        });
     }
-
+    
     @Override
     public void loadCustomData(net.momirealms.craftengine.libraries.nbt.CompoundTag tag) {
         this.container = tag;

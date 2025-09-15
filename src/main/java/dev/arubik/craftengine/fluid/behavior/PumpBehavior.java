@@ -1,7 +1,6 @@
 package dev.arubik.craftengine.fluid.behavior;
 
 import java.util.Map;
-import java.util.concurrent.Callable; // legado para compat manual tick (se podrá retirar tras migración completa)
 
 import dev.arubik.craftengine.block.behavior.ConnectableBlockBehavior;
 import dev.arubik.craftengine.block.entity.BukkitBlockEntityTypes;
@@ -9,13 +8,21 @@ import dev.arubik.craftengine.block.entity.PersistentBlockEntity;
 import dev.arubik.craftengine.fluid.FluidKeys;
 import dev.arubik.craftengine.fluid.FluidStack;
 import dev.arubik.craftengine.fluid.FluidType;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.momirealms.craftengine.bukkit.plugin.user.BukkitServerPlayer;
+import net.momirealms.craftengine.bukkit.util.LocationUtils;
 import net.momirealms.craftengine.core.block.CustomBlock;
 import net.momirealms.craftengine.core.block.ImmutableBlockState;
 import net.momirealms.craftengine.core.block.behavior.BlockBehaviorFactory;
 import net.momirealms.craftengine.core.block.entity.BlockEntity;
 import net.momirealms.craftengine.core.block.entity.BlockEntityType;
+import net.momirealms.craftengine.core.item.context.UseOnContext;
 import net.momirealms.craftengine.core.util.Direction;
 import net.momirealms.craftengine.core.util.HorizontalDirection;
 
@@ -25,50 +32,14 @@ import net.momirealms.craftengine.core.util.HorizontalDirection;
  */
 public class PumpBehavior extends ConnectableBlockBehavior implements FluidCarrier, net.momirealms.craftengine.core.block.behavior.EntityBlockBehavior {
     public static final Factory FACTORY = new Factory();
-    private static final int PRESSURE_BOOST = 2;
+    private static final int PRESSURE_BOOST = 8;
 
     private static final int CAPACITY = PipeBehavior.CAPACITY; // uniformidad
-    private static final int TRANSFER_PER_TICK = PipeBehavior.TRANSFER_PER_TICK;
+    private static final int TRANSFER_PER_TICK = PipeBehavior.TRANSFER_PER_TICK*10;
 
     public PumpBehavior(CustomBlock block, net.momirealms.craftengine.core.block.properties.EnumProperty<HorizontalDirection> horizontalDirectionProperty,
                         net.momirealms.craftengine.core.block.properties.EnumProperty<Direction> verticalDirectionProperty) {
         super(block, java.util.List.of(Direction.UP,Direction.DOWN), horizontalDirectionProperty, verticalDirectionProperty);
-    }
-
-    public void tick(Object thisBlock, Object[] args, Callable<Object> superMethod) throws Exception {
-        try { if (superMethod != null) superMethod.call(); } catch (Exception ignored) {}
-        Level level = (Level) args[1];
-        BlockPos pos = (BlockPos) args[2];
-        if (level.isClientSide()) return;
-
-        // Boost interno primero
-        PersistentBlockEntity be = getBE(level, pos);
-        if (be != null) {
-            FluidStack s = be.getOrDefault(FluidKeys.FLUID, new FluidStack(FluidType.EMPTY,0,0));
-            if (!s.isEmpty()) {
-                be.set(FluidKeys.FLUID, new FluidStack(s.getType(), s.getAmount(), s.getPressure()+PRESSURE_BOOST));
-            }
-        }
-
-        // Intentar empujar en orden (DOWN, horizontales, UP si presión>0)
-        FluidStack stored = getStored(level, pos);
-        // Si está vacío, intentar drenar bloque justo abajo (o frente en prioridad) usando collectLimited
-        if (stored.isEmpty()) {
-            BlockPos below = pos.below();
-            FluidStack drained = FluidType.collectLimited(below, level, TRANSFER_PER_TICK);
-            if (!drained.isEmpty()) {
-                insertFluid(level, pos, drained);
-                stored = getStored(level,pos);
-            }
-        }
-        if (stored.isEmpty()) return;
-        if (tryTransfer(level, pos, Direction.DOWN, stored)) return;
-        for (Direction d : new Direction[]{Direction.NORTH,Direction.SOUTH,Direction.EAST,Direction.WEST}) {
-            if (tryTransfer(level, pos, d, stored)) return;
-        }
-        if (stored.getPressure() > 0) {
-            tryTransfer(level, pos, Direction.UP, stored);
-        }
     }
 
     public static class Factory implements BlockBehaviorFactory {
@@ -79,12 +50,17 @@ public class PumpBehavior extends ConnectableBlockBehavior implements FluidCarri
             String horizontalDirectionProperty = null;
             String verticalDirectionProperty = null;
             
-            Object horizontalProp = arguments.get("horizontal-direction-property");
+            // Aceptar claves alternativas comunes
+            Object horizontalProp = arguments.getOrDefault("horizontal-direction-property",
+                    arguments.getOrDefault("horizontal_facing",
+                    arguments.getOrDefault("facing", arguments.get("horizontal"))));
             if (horizontalProp instanceof String) {
                 horizontalDirectionProperty = (String) horizontalProp;
             }
             
-            Object verticalProp = arguments.get("vertical-direction-property");
+            Object verticalProp = arguments.getOrDefault("vertical-direction-property",
+                    arguments.getOrDefault("vertical_facing",
+                    arguments.getOrDefault("direction", arguments.get("vertical"))));
             if (verticalProp instanceof String) {
                 verticalDirectionProperty = (String) verticalProp;
             }
@@ -94,7 +70,9 @@ public class PumpBehavior extends ConnectableBlockBehavior implements FluidCarri
 
             if (horizontalDirectionProperty != null) {
                 try {
-                    hProp = (net.momirealms.craftengine.core.block.properties.EnumProperty<HorizontalDirection>) block.getProperty(horizontalDirectionProperty);
+                    @SuppressWarnings("unchecked")
+                    var tmp = (net.momirealms.craftengine.core.block.properties.EnumProperty<HorizontalDirection>) block.getProperty(horizontalDirectionProperty);
+                    hProp = tmp;
                 } catch (ClassCastException ignored) {
                     // Property type mismatch, keep as null
                 }
@@ -102,7 +80,9 @@ public class PumpBehavior extends ConnectableBlockBehavior implements FluidCarri
             
             if (verticalDirectionProperty != null) {
                 try {
-                    vProp = (net.momirealms.craftengine.core.block.properties.EnumProperty<Direction>) block.getProperty(verticalDirectionProperty);
+                    @SuppressWarnings("unchecked")
+                    var tmp2 = (net.momirealms.craftengine.core.block.properties.EnumProperty<Direction>) block.getProperty(verticalDirectionProperty);
+                    vProp = tmp2;
                 } catch (ClassCastException ignored) {
                     // Property type mismatch, keep as null
                 }
@@ -130,78 +110,131 @@ public class PumpBehavior extends ConnectableBlockBehavior implements FluidCarri
             net.minecraft.world.level.Level level = (net.minecraft.world.level.Level) world.world().serverWorld();
             if (level == null || level.isClientSide()) return;
             BlockPos pos = BlockPos.of(cePos.asLong());
-
-            // Boost interno sólo si hay fluido
             PersistentBlockEntity pbe = getBE(level, pos);
             if (pbe != null) {
                 FluidStack s = pbe.getOrDefault(FluidKeys.FLUID, new FluidStack(FluidType.EMPTY,0,0));
                 if (!s.isEmpty()) {
-                    pbe.set(FluidKeys.FLUID, new FluidStack(s.getType(), s.getAmount(), s.getPressure()+PRESSURE_BOOST));
+                    pbe.set(FluidKeys.FLUID, new FluidStack(s.getType(), s.getAmount(), PRESSURE_BOOST));
                 }
             }
-
             FluidStack stored = getStored(level, pos);
-            if (stored.isEmpty()) {
-                BlockPos below = pos.below();
-                FluidStack drained = FluidType.collectLimited(below, level, TRANSFER_PER_TICK);
-                if (!drained.isEmpty()) {
-                    insertFluid(level, pos, drained);
-                    stored = getStored(level,pos);
-                }
+            // Dos cooldowns independientes: para recolección de bloques y para I/O con carriers
+            int blockCd = 0, ioCd = 0;
+            if (pbe != null) {
+                blockCd = pbe.getOrDefault(FluidKeys.FLUID_BLOCK_COOLDOWN, 0);
+                ioCd = pbe.getOrDefault(FluidKeys.FLUID_IO_COOLDOWN, 0);
+                if (blockCd > 0) pbe.set(FluidKeys.FLUID_BLOCK_COOLDOWN, blockCd - 1);
+                if (ioCd > 0) pbe.set(FluidKeys.FLUID_IO_COOLDOWN, ioCd - 1);
             }
-            if (stored.isEmpty()) return;
-
-            // DIRECCIONALIDAD: si la bomba tiene orientación (no implementado aún), aplicar prioridad.
-            // Mientras tanto usamos misma prioridad que Pipe.
-            if (tryDirectional(level, pos, Direction.DOWN, stored)) return;
-            for (Direction d : new Direction[]{Direction.NORTH,Direction.SOUTH,Direction.EAST,Direction.WEST}) {
-                if (tryDirectional(level, pos, d, stored)) return;
-            }
-            if (stored.getPressure() > 0) {
-                tryDirectional(level, pos, Direction.UP, stored);
-            }
+            // PUMP desde bloques solo si no hay cooldown de bloques y hay espacio
+            if(blockCd <= 0 && !stored.isFull(CAPACITY)) tryDirectional(level, pos, Direction.DOWN, PumpAction.PUMP);
+            // PUSH/IO solo si no hay cooldown de IO y hay contenido
+            if (ioCd <= 0 && !stored.isEmpty()) tryDirectional(level, pos, Direction.UP, PumpAction.PUSH);
         };
     }
-
-    // Transferencia adaptada: laterales actúan como extracción simple (no añaden presión adicional al paquete),
-    // hacia abajo mantiene/usa boost actual, hacia arriba requiere presión existente (>0) y mantiene la presión.
-    protected boolean tryDirectional(Level level, BlockPos from, Direction dir, FluidStack snapshot) {
-        if (snapshot.isEmpty()) return false;
+    
+    public enum PumpAction {
+        PUMP,
+        PUSH
+    }
+    protected boolean tryDirectional(Level level, BlockPos from, Direction dir, PumpAction action) {
         BlockPos target = offset(from, dir);
-        var opt = net.momirealms.craftengine.bukkit.util.BlockStateUtils.getOptionalCustomBlockState(level.getBlockState(target));
-        FluidCarrier carrier = opt.map(cs -> cs.behavior() instanceof FluidCarrier fc ? fc : null).orElse(null);
-        // Intentar como carrier primero; si no existe, colocar
-        if (carrier == null) {
-            if (snapshot.getAmount() >= snapshot.getType().mbPerFullBlock()) {
-                FluidStack temp = new FluidStack(snapshot.getType(), snapshot.getAmount(), snapshot.getPressure());
-                if (FluidType.place(temp, target, level)) {
-                    int placed = snapshot.getAmount() - temp.getAmount();
-                    if (placed > 0) {
-                        extractFluid(level, from, placed, f -> {});
-                        return true;
+        // Respetar orientación del bloque si existen propiedades de dirección
+        try {
+            net.minecraft.world.level.block.state.BlockState bs = level.getBlockState(from);
+            // redireccionar la dirección según el estado actual del bloque
+            dir = redirectDirection(dir, bs);
+            target = offset(from, dir);
+        } catch (Throwable ignored) {
+            // si algo falla, continuar con la dirección original
+        }
+        
+        if (action == PumpAction.PUMP) {
+            // Si el bloque objetivo es lava (o fuente compatible), intentar área para mejor recolección
+            FluidStack stored = getStored(level, from);
+            FluidType base = FluidType.getFluidTypeAt(target, level);
+            FluidStack collected = base == FluidType.LAVA
+                ? FluidType.collectArea(target, level, 32, TRANSFER_PER_TICK,stored.getType())
+                : FluidType.collectAt(target, level, TRANSFER_PER_TICK,stored.getType());
+            if (!collected.isEmpty()) {
+                int accepted = insertFluid(level, from, collected);
+                // setear cooldown según tipo recogido
+                if (accepted > 0) {
+                    int delay = FluidType.blockCollectDelay(collected.getType());
+                    PersistentBlockEntity pbe = getBE(level, from);
+                    if (pbe != null && delay > 1) pbe.set(FluidKeys.FLUID_BLOCK_COOLDOWN, delay);
+                }
+                return accepted > 0;
+            }
+            var opt = net.momirealms.craftengine.bukkit.util.BlockStateUtils.getOptionalCustomBlockState(level.getBlockState(target));
+            FluidCarrier carrier = opt.map(cs -> cs.behavior() instanceof FluidCarrier fc ? fc : null).orElse(null);
+            if (carrier != null && carrier.getAccessMode() == FluidAccessMode.ANYONE_CAN_TAKE) {
+                if (!stored.isEmpty()) {
+                    int move = Math.min(TRANSFER_PER_TICK, stored.getAmount());
+                    final FluidStack[] extracted = {null};
+                    int actualExtracted = FluidType.extractFromCarrier(carrier, level, target, move, f -> extracted[0] = f);
+                    if (actualExtracted > 0 && extracted[0] != null) {
+                        int accepted = insertFluid(level, from, extracted[0]);
+                        if (accepted < actualExtracted) {
+                            // Si no pudimos aceptar todo, devolver la diferencia
+                            FluidStack remainder = new FluidStack(extracted[0].getType(), 
+                                actualExtracted - accepted, extracted[0].getPressure());
+                            FluidType.depositToCarrier(carrier, level, target, remainder);
+                        }
+                        if (accepted > 0) {
+                            int delay = FluidType.carrierIODelay(extracted[0].getType());
+                            PersistentBlockEntity pbe = getBE(level, from);
+                            if (pbe != null && delay > 1) pbe.set(FluidKeys.FLUID_IO_COOLDOWN, delay);
+                        }
+                        return accepted > 0;
                     }
                 }
             }
-            return false;
-        }
-        int move = Math.min(TRANSFER_PER_TICK, snapshot.getAmount());
-        if (move <= 0) return false;
+            
+        } else if (action == PumpAction.PUSH) {
+            FluidStack stored = getStored(level, from);
+            if (stored.isEmpty()) return false;
 
-    int appliedPressure = snapshot.getPressure();
-        if (dir == Direction.DOWN) {
-            appliedPressure += PRESSURE_BOOST; // empuje descendente extra
-        } else if (dir == Direction.UP) {
-            if (snapshot.getPressure() <= 0) return false; // no subida sin presión
-            // mantener presión actual, sin boost adicional (ya se agregó al inicio de tick)
-        } else {
-            // horizontal: actuar como extractor plano, no sumar más presión.
+            if (level.getBlockState(target).isAir()) {
+                FluidStack temp = new FluidStack(stored.getType(), stored.getAmount(), stored.getPressure());
+                int dispersed = FluidType.disperseIntoAir(temp, target, level);
+                if (dispersed > 0) {
+                    extractFluid(level, from, dispersed, f -> {});
+                    int delay = FluidType.carrierIODelay(stored.getType());
+                    PersistentBlockEntity pbe = getBE(level, from);
+                    if (pbe != null && delay > 1) pbe.set(FluidKeys.FLUID_IO_COOLDOWN, delay);
+                    return true;
+                }
+                return false;
+            }
+            var opt = net.momirealms.craftengine.bukkit.util.BlockStateUtils.getOptionalCustomBlockState(level.getBlockState(target));
+            FluidCarrier carrier = opt.map(cs -> cs.behavior() instanceof FluidCarrier fc ? fc : null).orElse(null);
+            
+            if (carrier != null) {
+                int move = Math.min(TRANSFER_PER_TICK, stored.getAmount());
+                if (move <= 0) return false;
+
+                int appliedPressure = stored.getPressure();
+                if (dir == Direction.DOWN) {
+                    appliedPressure = PRESSURE_BOOST; // empuje descendente extra
+                } else if (dir == Direction.UP) {
+                    if (stored.getPressure() <= 0) return false; // no subida sin presión
+                    // mantener presión actual, sin boost adicional (ya se agregó al inicio de tick)
+                } else {
+                }
+                
+                FluidStack toSend = new FluidStack(stored.getType(), move, appliedPressure);
+                int accepted = FluidType.depositToCarrier(carrier, level, target, toSend);
+                if (accepted > 0) {
+                    FluidType.extractFromCarrier(this, level, from, accepted, f -> {});
+                    int delay = FluidType.carrierIODelay(stored.getType());
+                    PersistentBlockEntity pbe = getBE(level, from);
+                    if (pbe != null && delay > 1) pbe.set(FluidKeys.FLUID_IO_COOLDOWN, delay);
+                    return true;
+                }
+            }
         }
-        FluidStack toSend = new FluidStack(snapshot.getType(), move, appliedPressure);
-        int accepted = FluidType.depositToCarrier(carrier, level, target, toSend);
-        if (accepted > 0) {
-            FluidType.extractFromCarrier(this, level, from, accepted, f -> {});
-            return true;
-        }
+        
         return false;
     }
 
@@ -214,8 +247,6 @@ public class PumpBehavior extends ConnectableBlockBehavior implements FluidCarri
     private void withBE(Level level, BlockPos pos, java.util.function.Consumer<PersistentBlockEntity> c){
         PersistentBlockEntity p = getBE(level,pos); if (p!=null) c.accept(p);
     }
-
-    // --- FluidCarrier impl ---
     public FluidStack getStored(Level level, BlockPos pos){
         PersistentBlockEntity p = getBE(level,pos);
         if (p==null) return new FluidStack(FluidType.EMPTY,0,0);
@@ -226,7 +257,7 @@ public class PumpBehavior extends ConnectableBlockBehavior implements FluidCarri
         final int[] acc={0};
         withBE(level,pos,p->{
             FluidStack stored=p.getOrDefault(FluidKeys.FLUID,new FluidStack(FluidType.EMPTY,0,0));
-            FluidStack incoming = new FluidStack(stack.getType(), stack.getAmount(), stack.getPressure()+PRESSURE_BOOST);
+            FluidStack incoming = new FluidStack(stack.getType(), stack.getAmount(), PRESSURE_BOOST);
             if (stored.isEmpty()) {
                 int mv=Math.min(CAPACITY,incoming.getAmount());
                 p.set(FluidKeys.FLUID,new FluidStack(incoming.getType(),mv,incoming.getPressure()));
@@ -264,23 +295,36 @@ public class PumpBehavior extends ConnectableBlockBehavior implements FluidCarri
             case NORTH -> pos.north(); case SOUTH -> pos.south(); case EAST -> pos.east(); case WEST -> pos.west(); case UP -> pos.above(); case DOWN -> pos.below();
         }; }
 
-    private boolean tryTransfer(Level level, BlockPos from, Direction dir, FluidStack snapshot){
-        if (snapshot.isEmpty()) return false;
-        BlockPos target=offset(from,dir);
-        var opt = net.momirealms.craftengine.bukkit.util.BlockStateUtils.getOptionalCustomBlockState(level.getBlockState(target));
-        FluidCarrier carrier = opt.map(cs -> cs.behavior() instanceof FluidCarrier fc ? fc : null).orElse(null);
-        if (carrier==null) return false;
-        // Verificar si se permite extracción de ESTE (pump) y aceptación en destino
-        if (this.getAccessMode()==FluidAccessMode.PUMP_VALVE_CAN_TAKE || this.getAccessMode()==FluidAccessMode.ANYONE_CAN_TAKE){
-            int move=Math.min(TRANSFER_PER_TICK, snapshot.getAmount());
-            if (move<=0) return false;
-            FluidStack toSend=new FluidStack(snapshot.getType(), move, snapshot.getPressure()+PRESSURE_BOOST);
-            int accepted=FluidType.depositToCarrier(carrier, level,target,toSend);
-            if (accepted>0){
-                extractFluid(level,from,accepted,f->{});
-                return true;
-            }
+        
+    @Override
+    public net.momirealms.craftengine.core.entity.player.InteractionResult useWithoutItem(UseOnContext context,
+            ImmutableBlockState state) {
+
+        Level level = (Level) context.getLevel().serverWorld();
+        BlockPos pos = (BlockPos) LocationUtils.toBlockPos(context.getClickedPos());
+
+        BukkitServerPlayer bplayer = (BukkitServerPlayer) context.getPlayer();
+        Player player = (Player) bplayer.serverPlayer();
+        InteractionHand hand = context.getHand().equals(
+                net.momirealms.craftengine.core.entity.player.InteractionHand.MAIN_HAND) ? InteractionHand.MAIN_HAND
+                        : InteractionHand.OFF_HAND;
+        
+        if (level.isClientSide())
+            return net.momirealms.craftengine.core.entity.player.InteractionResult.SUCCESS;
+
+        ItemStack held = player.getItemInHand(hand);
+
+        
+
+        FluidStack stored = getStored(level, pos);
+
+        if (held == null || held.isEmpty() && player.isShiftKeyDown()) {
+            String fluidName = stored.isEmpty() ? "fluid.minecraft.empty" : "fluid.minecraft." + stored.getType().toString().toLowerCase();
+            Component msg = MiniMessage.miniMessage().deserialize("<lang:" + fluidName + "> " +
+                    "<gray>" + stored.getAmount() + "/" + CAPACITY + " mb</gray>");
+            player.getBukkitEntity().sendActionBar(msg);
+            return net.momirealms.craftengine.core.entity.player.InteractionResult.SUCCESS_AND_CANCEL;
         }
-        return false;
+        return net.momirealms.craftengine.core.entity.player.InteractionResult.PASS;
     }
 }

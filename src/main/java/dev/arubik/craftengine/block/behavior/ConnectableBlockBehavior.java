@@ -76,8 +76,9 @@ public class ConnectableBlockBehavior extends BukkitBlockBehavior {
      * @return true si esta cara puede conectarse
      */
     public boolean canConnectTo(Direction direction, BlockState blockState) {
-        Direction redirectedDirection = redirectDirection(direction, blockState);
-        return connectableFaces.contains(redirectedDirection);
+        // Convertir la dirección del mundo a la dirección local del bloque según su orientación
+        Direction localDirection = toLocalDirection(direction, blockState);
+        return connectableFaces.contains(localDirection);
     }
 
     /**
@@ -95,7 +96,8 @@ public class ConnectableBlockBehavior extends BukkitBlockBehavior {
      * @param blockState El estado del bloque para obtener sus propiedades
      * @return La dirección redirecionada basada en la orientación del bloque
      */
-    private Direction redirectDirection(Direction originalDirection, BlockState blockState) {
+    // Local -> Mundo: usa esto cuando el propio bloque quiere actuar hacia una dirección
+    protected Direction redirectDirection(Direction originalDirection, BlockState blockState) {
         if (blockState == null) return originalDirection;
         
         // Obtener el estado customizado del bloque
@@ -107,7 +109,7 @@ public class ConnectableBlockBehavior extends BukkitBlockBehavior {
         // Verificar que sea nuestro bloque
         if (customState.owner().value() != this.customBlock) return originalDirection;
         
-        // Manejar redirección horizontal
+        // Manejar redirección horizontal (local -> mundo)
         if (horizontalDirectionProperty != null) {
             try {
                 // Obtener la propiedad de dirección horizontal
@@ -120,7 +122,7 @@ public class ConnectableBlockBehavior extends BukkitBlockBehavior {
             }
         }
         
-        // Manejar redirección para bloques full directional
+        // Manejar redirección para bloques full directional (local -> mundo)
         if (verticalDirectionProperty != null) {
             try {
                 Direction directionProperty = customState.get(verticalDirectionProperty);
@@ -131,6 +133,35 @@ public class ConnectableBlockBehavior extends BukkitBlockBehavior {
         }
         
         return originalDirection;
+    }
+
+    // Mundo -> Local: usa esto para chequear si un vecino puede conectar a este bloque
+    protected Direction toLocalDirection(Direction worldDirection, BlockState blockState) {
+        if (blockState == null) return worldDirection;
+
+        Optional<ImmutableBlockState> customStateOpt = BlockStateUtils.getOptionalCustomBlockState(blockState);
+        if (customStateOpt.isEmpty()) return worldDirection;
+        ImmutableBlockState customState = customStateOpt.get();
+        if (customState.owner().value() != this.customBlock) return worldDirection;
+
+        // Horizontal: aplicar rotación inversa
+        if (horizontalDirectionProperty != null) {
+            try {
+                HorizontalDirection directionProperty = customState.get(horizontalDirectionProperty);
+                int rotationSteps = getRotationSteps(HorizontalDirection.NORTH, directionProperty);
+                int inverse = (4 - (rotationSteps % 4)) % 4;
+                return rotateDirection(worldDirection, inverse);
+            } catch (Exception ignored) {}
+        }
+
+        // Full directional: aplicar mapeo inverso
+        if (verticalDirectionProperty != null) {
+            try {
+                Direction directionProperty = customState.get(verticalDirectionProperty);
+                return inverseRedirectFullDirectional(worldDirection, directionProperty);
+            } catch (Exception ignored) {}
+        }
+        return worldDirection;
     }
     /**
      * Calcula los pasos de rotación necesarios entre dos direcciones horizontales.
@@ -241,6 +272,59 @@ public class ConnectableBlockBehavior extends BukkitBlockBehavior {
                 return originalDirection;
         }
         return originalDirection;
+    }
+
+    private Direction inverseRedirectFullDirectional(Direction worldDirection, Direction blockFacing) {
+        switch (blockFacing) {
+            case UP:
+                return worldDirection; // identidad
+            case DOWN:
+                return worldDirection.opposite(); // inversa de opposite es opposite
+            case NORTH:
+                // Inversa del caso NORTH en redirectFullDirectional
+                switch (worldDirection) {
+                    case NORTH -> { return Direction.UP; }
+                    case SOUTH -> { return Direction.DOWN; }
+                    case DOWN  -> { return Direction.NORTH; }
+                    case UP    -> { return Direction.SOUTH; }
+                    case EAST  -> { return Direction.EAST; }
+                    case WEST  -> { return Direction.WEST; }
+                }
+                break;
+            case SOUTH:
+                switch (worldDirection) {
+                    case SOUTH -> { return Direction.UP; }
+                    case NORTH -> { return Direction.DOWN; }
+                    case UP    -> { return Direction.NORTH; }
+                    case DOWN  -> { return Direction.SOUTH; }
+                    case WEST  -> { return Direction.EAST; }
+                    case EAST  -> { return Direction.WEST; }
+                }
+                break;
+            case EAST:
+                switch (worldDirection) {
+                    case EAST  -> { return Direction.UP; }
+                    case WEST  -> { return Direction.DOWN; }
+                    case NORTH -> { return Direction.NORTH; }
+                    case SOUTH -> { return Direction.SOUTH; }
+                    case DOWN  -> { return Direction.EAST; }
+                    case UP    -> { return Direction.WEST; }
+                }
+                break;
+            case WEST:
+                switch (worldDirection) {
+                    case WEST  -> { return Direction.UP; }
+                    case EAST  -> { return Direction.DOWN; }
+                    case NORTH -> { return Direction.NORTH; }
+                    case SOUTH -> { return Direction.SOUTH; }
+                    case UP    -> { return Direction.EAST; }
+                    case DOWN  -> { return Direction.WEST; }
+                }
+                break;
+            default:
+                return worldDirection;
+        }
+        return worldDirection;
     }
 
     /**

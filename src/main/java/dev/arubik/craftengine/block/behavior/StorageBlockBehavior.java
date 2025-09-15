@@ -73,6 +73,7 @@ public class StorageBlockBehavior extends BukkitBlockBehavior {
     return BlockContainer.getOrCreate(level, pos, this.size, this.title);
   }
   
+  @Override
   public int getAnalogOutputSignal(Object thisBlock, Object[] args) {
     Optional<BlockContainer> container = BlockContainer.get((Level)args[1], (BlockPos)args[2]);
     if (container.isEmpty())
@@ -80,6 +81,7 @@ public class StorageBlockBehavior extends BukkitBlockBehavior {
     return ((BlockContainer)container.get()).getAnalogOutput();
   }
   
+  @Override
   public boolean hasAnalogOutputSignal(Object thisBlock, Object[] args) {
     return true;
   }

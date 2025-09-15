@@ -131,13 +131,14 @@ public class ConnectedBlockBehavior extends BukkitBlockBehavior {
 
         if (customOpt.get().behavior() instanceof ConnectableBlockBehavior connectableBehavior) {
             Direction oppositeDirection = direction.opposite();
-            return connectableBehavior.canConnectTo(oppositeDirection);
+            // Respetar la orientación del bloque vecino al decidir si puede conectar de vuelta
+            return connectableBehavior.canConnectTo(oppositeDirection, neighborState);
         }
         if (customOpt.get().behavior() instanceof UnsafeCompositeBlockBehavior composite) {
             if (composite.getAs(ConnectableBlockBehavior.class).isPresent()) {
                 ConnectableBlockBehavior connectableBehavior = composite.getAs(ConnectableBlockBehavior.class).get();
                 Direction oppositeDirection = direction.opposite();
-                return connectableBehavior.canConnectTo(oppositeDirection);
+                return connectableBehavior.canConnectTo(oppositeDirection, neighborState);
             }
         }
         return true;
