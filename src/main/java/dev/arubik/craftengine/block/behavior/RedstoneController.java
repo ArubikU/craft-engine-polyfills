@@ -19,7 +19,7 @@ import net.momirealms.craftengine.bukkit.nms.FastNMS;
 import net.momirealms.craftengine.bukkit.util.BlockStateUtils;
 import net.momirealms.craftengine.bukkit.util.LocationUtils;
 import net.momirealms.craftengine.bukkit.world.BukkitWorld;
-import net.momirealms.craftengine.core.block.BlockBehavior;
+import net.momirealms.craftengine.core.block.behavior.BlockBehavior;
 import net.momirealms.craftengine.core.block.CustomBlock;
 import net.momirealms.craftengine.core.block.ImmutableBlockState;
 import net.momirealms.craftengine.core.block.UpdateOption.Flags;
@@ -35,7 +35,7 @@ public class RedstoneController extends DiodeBlockBehavior {
 
     public static Factory FACTORY = new Factory();
 
-    public static class Factory implements BlockBehaviorFactory {
+    public static class Factory implements BlockBehaviorFactory<BlockBehavior> {
         @Override
         public BlockBehavior create(CustomBlock block, Map<String, Object> arguments) {
             int delay = 0;
@@ -94,7 +94,7 @@ public class RedstoneController extends DiodeBlockBehavior {
                         WorldPosition position = new WorldPosition(world,
                                 Vec3d.atCenterOf(LocationUtils.fromBlockPos(blockPos)));
                         world.playBlockSound(position, customState.settings().sounds().breakSound());
-                        FastNMS.INSTANCE.method$Level$destroyBlock(level, blockPos, true);
+                        FastNMS.INSTANCE.method$LevelWriter$destroyBlock(level, blockPos, true);
                     }
 
                 });
@@ -155,7 +155,7 @@ public class RedstoneController extends DiodeBlockBehavior {
         BlockPos pos = (BlockPos) args[2];
 
         if (!state.canSurvive((LevelReader) level, pos)) {
-            FastNMS.INSTANCE.method$Level$destroyBlock(level, pos, true);
+            FastNMS.INSTANCE.method$LevelWriter$destroyBlock(level, pos, true);
             for (Direction dir : Direction.values())
                 level.updateNeighborsAt(pos.relative(dir), (Block) state.getBlock());
             return;
@@ -171,7 +171,7 @@ public class RedstoneController extends DiodeBlockBehavior {
         if (!player.getAbilities().mayBuild) {
             return InteractionResult.PASS;
         }
-        if (level.isClientSide) {
+        if (FastNMS.INSTANCE.method$LevelReader$isClientSide(level)) {
             return InteractionResult.SUCCESS;
         }
         ImmutableBlockState customState = BlockStateUtils.getOptionalCustomBlockState(blockState).orElseThrow();

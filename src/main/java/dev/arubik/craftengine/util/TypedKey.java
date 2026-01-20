@@ -4,6 +4,8 @@ import org.bukkit.NamespacedKey;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 
+import net.minecraft.nbt.CompoundTag;
+
 public class TypedKey<T> {
     private final NamespacedKey key;
     private final PersistentDataType<?, T> type;
@@ -90,6 +92,54 @@ public class TypedKey<T> {
         } else {
             return pdc.get(key.getKey(), key.getType());
         }
+    }
+
+
+    public static <T> T getOfCompound(TypedKey<T> key, net.momirealms.craftengine.libraries.nbt.CompoundTag tag) {
+        if (key.isCustom()) {
+            @SuppressWarnings("unchecked")
+            CustomDataType<T, Object> customType = (CustomDataType<T, Object>) key.getCustomType();
+            Object primitive = null;
+            if(key.getCustomType().getBaseType()==PersistentDataType.BOOLEAN){
+                primitive = tag.getBoolean(key.getKey().getKey());
+            }else if(key.getCustomType().getBaseType()==PersistentDataType.BYTE){
+                primitive = tag.getByte(key.getKey().getKey());
+            }else if(key.getCustomType().getBaseType()==PersistentDataType.BYTE_ARRAY){ 
+                primitive = tag.getByteArray(key.getKey().getKey());
+            }else if(key.getCustomType().getBaseType()==PersistentDataType.DOUBLE){
+                primitive = tag.getDouble(key.getKey().getKey());
+            }else if(key.getCustomType().getBaseType()==PersistentDataType.FLOAT){
+                primitive = tag.getFloat(key.getKey().getKey());
+            }else if(key.getCustomType().getBaseType()==PersistentDataType.INTEGER){
+                primitive = tag.getInt(key.getKey().getKey());
+            }else if(key.getCustomType().getBaseType()==PersistentDataType.LONG){
+                primitive = tag.getLong(key.getKey().getKey());
+            }else if(key.getCustomType().getBaseType()==PersistentDataType.SHORT){
+                primitive = tag.getShort(key.getKey().getKey());
+            }else if(key.getCustomType().getBaseType()==PersistentDataType.STRING){
+                primitive = tag.getString(key.getKey().getKey());
+            }
+            return primitive != null ? customType.getDeserializer().apply(primitive) : null;
+        } else {
+            if(key.getType() == PersistentDataType.BYTE_ARRAY){
+                return (T) tag.getByteArray(key.getKey().getKey());
+            }else if(key.getType() == PersistentDataType.STRING){
+                return (T) tag.getString(key.getKey().getKey());
+            }else if(key.getType() == PersistentDataType.INTEGER){
+                return (T) Integer.valueOf(tag.getInt(key.getKey().getKey()));
+            }else if(key.getType() == PersistentDataType.DOUBLE){
+                return (T) Double.valueOf(tag.getDouble(key.getKey().getKey()));
+            }else if(key.getType() == PersistentDataType.FLOAT){
+                return (T) Float.valueOf(tag.getFloat(key.getKey().getKey()));
+            }else if(key.getType() == PersistentDataType.LONG){
+                return (T) Long.valueOf(tag.getLong(key.getKey().getKey()));
+            }else if(key.getType() == PersistentDataType.SHORT){
+                return (T) Short.valueOf(tag.getShort(key.getKey().getKey()));
+            }else if(key.getType() == PersistentDataType.BYTE){
+                return (T) Byte.valueOf(tag.getByte(key.getKey().getKey()));
+            }
+        }
+        return null;
     }
 
 }

@@ -18,7 +18,7 @@ dependencies {
     paperweight.paperDevBundle("${rootProject.properties["paper_version"]}-R0.1-SNAPSHOT")
     compileOnly("io.papermc.paper:paper-api:${rootProject.properties["paper_version"]}-R0.1-SNAPSHOT")
     //compileOnly("net.momirealms:craft-engine-core:${rootProject.properties["craftengine_version"]}")
-    compileOnly(files("libs/craft-engine-paper-plugin-0.0.62.16.jar"))
+    compileOnly(files("libs/craft-engine-paper-plugin-0.0.66.26.jar"))
     //compileOnly("net.momirealms:craft-engine-bukkit:${rootProject.properties["craftengine_version"]}")
     compileOnly("net.momirealms:craft-engine-nms-helper:${rootProject.properties["nms_helper_version"]}")
     compileOnly("it.unimi.dsi:fastutil:${rootProject.properties["fastutil_version"]}")
@@ -26,7 +26,11 @@ dependencies {
     compileOnly("com.github.retrooper:packetevents-spigot:2.9.5")
     //implementation("net.bytebuddy:byte-buddy:${rootProject.properties["byte_buddy_version"]}")
     //implementation("net.bytebuddy:byte-buddy-agent:${rootProject.properties["byte_buddy_version"]}")
+    testImplementation("org.junit.jupiter:junit-jupiter:5.10.0")
+    testImplementation("org.mockito:mockito-core:5.11.0")
+    testImplementation("io.papermc.paper:paper-api:${rootProject.properties["paper_version"]}-R0.1-SNAPSHOT")
 }
+
 
 java {
     sourceCompatibility = JavaVersion.VERSION_21
@@ -40,6 +44,10 @@ tasks.withType<JavaCompile> {
     options.encoding = "UTF-8"
     options.release.set(21)
     dependsOn(tasks.clean)
+}
+
+tasks.test {
+    useJUnitPlatform()
 }
 
 tasks.processResources {

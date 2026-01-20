@@ -1,0 +1,14 @@
+{
+    "type": "test_machine",
+    "burnTime": 20000,
+    "input": {
+        "type": "item",
+        "id": "minecraft:lava_bucket",
+        "amount": 1
+    },
+    "output": {
+        "type": "item",
+        "id": "minecraft:bucket",
+        "amount": 1
+    }
+}

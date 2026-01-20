@@ -41,6 +41,8 @@ public final class CraftEnginePolyfills extends JavaPlugin {
         getCommand("cepolyfill").setTabCompleter(cepCommand);
         getLogger().info("CraftEngine Polyfills Enabled");
 
+        // Load Recipes
+        dev.arubik.craftengine.machine.recipe.loader.RecipeManager.loadRecipes();
 
     }
 

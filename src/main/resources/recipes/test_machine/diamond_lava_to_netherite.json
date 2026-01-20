@@ -1,0 +1,24 @@
+{
+    "type": "test_machine",
+    "time": 400,
+    "fuelRequired": true,
+    "inputs": [
+        {
+            "type": "item",
+            "id": "minecraft:diamond",
+            "amount": 1
+        },
+        {
+            "type": "fluid",
+            "id": "lava",
+            "amount": 1000
+        }
+    ],
+    "outputs": [
+        {
+            "type": "item",
+            "id": "minecraft:netherite_ingot",
+            "amount": 1
+        }
+    ]
+}

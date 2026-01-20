@@ -11,6 +11,16 @@ public class FluidStack {
         this.pressure = pressure;
     }
 
+    public FluidStack(FluidType type, int amount) {
+        this.type = type;
+        this.amount = amount;
+        this.pressure = 0;
+    }
+
+    public static FluidStack of(FluidType type, int amount) {
+        return new FluidStack(type, amount);
+    }
+
     public boolean isEmpty() {
         return type.isEmpty() || amount <= 0;
     }
@@ -19,12 +29,31 @@ public class FluidStack {
         return !type.isEmpty() && amount >= maxAmount;
     }
 
-    public int getAmount() { return amount; }
-    public FluidType getType() { return type; }
-    public int getPressure() { return pressure; }
+    public boolean isFluidEqual(FluidStack other) {
+        if (other == null)
+            return false;
+        return this.type == other.type && this.amount == other.amount;
+    }
 
-    public void addAmount(int mb) { this.amount += mb; }
-    public void removeAmount(int mb) { this.amount = Math.max(0, this.amount - mb); }
+    public int getAmount() {
+        return amount;
+    }
+
+    public FluidType getType() {
+        return type;
+    }
+
+    public int getPressure() {
+        return pressure;
+    }
+
+    public void addAmount(int mb) {
+        this.amount += mb;
+    }
+
+    public void removeAmount(int mb) {
+        this.amount = Math.max(0, this.amount - mb);
+    }
 
     public FluidStack increasePressure(int boost) {
         return new FluidStack(type, amount, pressure + boost);
@@ -48,15 +77,18 @@ public class FluidStack {
 
     @Override
     public boolean equals(Object obj) {
-        if (this == obj) return true;
-        if (!(obj instanceof FluidStack)) return false;
+        if (this == obj)
+            return true;
+        if (!(obj instanceof FluidStack))
+            return false;
 
         FluidStack other = (FluidStack) obj;
         return this.type == other.type && this.amount == other.amount && this.pressure == other.pressure;
     }
 
     public boolean equalsIgnorePressure(FluidStack other) {
-        if (other == null) return false;
+        if (other == null)
+            return false;
         return this.type == other.type && this.amount == other.amount;
     }
 

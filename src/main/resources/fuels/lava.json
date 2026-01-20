@@ -1,0 +1,9 @@
+{
+    "type": "test_machine",
+    "burnTime": 20000,
+    "input": {
+        "type": "fluid",
+        "id": "lava",
+        "amount": 1000
+    }
+}

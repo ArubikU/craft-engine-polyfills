@@ -50,7 +50,8 @@ public class CompoundPersistentDataContainer implements PersistentDataContainer 
     @Override
     public <P, C> @Nullable C get(NamespacedKey key, PersistentDataType<P, C> type) {
         String name = keyToString(key);
-        if (!tag.contains(name)) return null;
+        if (!tag.contains(name))
+            return null;
         P primitive = type.getPrimitiveType().cast(tag.get(name));
         return type.fromPrimitive(primitive, getAdapterContext());
     }
@@ -95,7 +96,8 @@ public class CompoundPersistentDataContainer implements PersistentDataContainer 
     }
 
     @SuppressWarnings("unchecked")
-    private <P, C> void setInternal(PersistentDataContainer container, NamespacedKey key, PersistentDataType<P, C> type, Object value) {
+    private <P, C> void setInternal(PersistentDataContainer container, NamespacedKey key, PersistentDataType<P, C> type,
+            Object value) {
         container.set(key, (PersistentDataType<P, C>) type, (C) value);
     }
 
@@ -138,8 +140,15 @@ public class CompoundPersistentDataContainer implements PersistentDataContainer 
 
     @Override
     public void readFromBytes(byte @NotNull [] bytes, boolean clear) throws IOException {
-        CompoundTag loaded = NbtIo.readCompressed(new ByteArrayInputStream(bytes), net.minecraft.nbt.NbtAccounter.unlimitedHeap());
-        if (clear) tag.keySet().forEach(tag::remove);
+        CompoundTag loaded = NbtIo.readCompressed(new ByteArrayInputStream(bytes),
+                net.minecraft.nbt.NbtAccounter.unlimitedHeap());
+        if (clear)
+            tag.keySet().forEach(tag::remove);
         tag.merge(loaded);
+    }
+
+    @Override
+    public int getSize() {
+        return tag.size();
     }
 }

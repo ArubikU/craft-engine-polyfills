@@ -1,0 +1,24 @@
+{
+    "type": "test_multiblock_machine",
+    "time": 150,
+    "fuelRequired": true,
+    "inputs": [
+        {
+            "type": "fluid",
+            "id": "lava",
+            "amount": 1000
+        }
+    ],
+    "outputs": [
+        {
+            "type": "item",
+            "id": "minecraft:obsidian",
+            "amount": 1
+        },
+        {
+            "type": "gas",
+            "id": "steam",
+            "amount": 500
+        }
+    ]
+}

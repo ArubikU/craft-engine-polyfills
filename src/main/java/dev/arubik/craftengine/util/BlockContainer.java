@@ -43,25 +43,20 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 
-public class BlockContainer implements WorldlyContainer, InventoryHolder, DataHolder {
-    private ItemStack[] inventory;
-    private Set<UUID> viewers;
+public class BlockContainer extends AbstractWorldlyContainer {
 
-    private final int size;
     private final String title;
-    private final BlockPos pos;
-    private final Level level;
-    private int maxStackSize = 64;
-    private boolean stillValid = true;
+    // Fields inventory, viewers, size, pos, level, maxStackSize, stillValid are
+    // inherited
 
     public BlockContainer(ItemStack[] inventory, Set<UUID> viewers, int size, String title, BlockPos pos,
             Level level) {
+        super(size, pos, level);
         this.inventory = inventory;
-        this.viewers = viewers;
-        this.size = size;
+        this.viewers.addAll(viewers); // Abstract initializes it, we add existing (or replace?)
+        // Abstract viewers is ConcurrentHashMap.newKeySet().
+        // BlockContainer passed viewers might be arbitrary set. safer to addAll.
         this.title = title;
-        this.pos = pos;
-        this.level = level;
 
         DataHolders.INSTANCE.addHolder(this);
     }
@@ -92,16 +87,8 @@ public class BlockContainer implements WorldlyContainer, InventoryHolder, DataHo
     }
 
     @Override
-    public void onUnload() {
-        saveToData();
+    protected void unregister() {
         remove(level, pos);
-        stillValid = false;
-    }
-
-    @Override
-    public void destroy() {
-        remove(level, pos);
-        stillValid = false;
     }
 
     public void destroy(boolean dropContents) {
@@ -114,7 +101,7 @@ public class BlockContainer implements WorldlyContainer, InventoryHolder, DataHo
                 }
             }
         }
-        inventory = new ItemStack[size];
+        this.inventory = new ItemStack[size];
         bukkitInventory = null;
         CustomBlockData.from(level, pos).clear();
         DataHolders.INSTANCE.destroyHolder(this);
@@ -133,55 +120,45 @@ public class BlockContainer implements WorldlyContainer, InventoryHolder, DataHo
         player.openInventory(bukkitInventory);
     }
 
-    @Override
-    public int getContainerSize() {
-        return size;
-    }
-
-    @Override
-    public boolean isEmpty() {
-        for (ItemStack stack : inventory) {
-            if (stack != null && !stack.isEmpty()) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    @Override
-    public ItemStack getItem(int slot) {
-        ItemStack toreturn = slot >= 0 && slot < inventory.length ? inventory[slot] : ItemStack.EMPTY;
-        if (toreturn == null)
-            return ItemStack.EMPTY;
-        return toreturn;
-    }
+    // WorldlyContainer methods are mostly inherited now.
+    // We override modifying ones to ensure syncToBukkit happens.
 
     @Override
     public ItemStack removeItem(int slot, int amount) {
-        ItemStack toreturn = slot >= 0 && slot < inventory.length && !inventory[slot].isEmpty() && amount > 0
-                ? inventory[slot].split(amount)
-                : ItemStack.EMPTY;
+        // We reuse logic but add sync. Or we just override completely to be safe.
+        // Super logic: result = inventory[slot].split(amount); setChanged();
+        // BlockContainer logic: result = ...; syncToBukkit(); setChanged();
+
+        // Let's defer to super for logic, but we need syncToBukkit BEFORE setChanged?
+        // setChanged() triggers viewer sync (openInventory).
+        // syncToBukkit() updates the Inventory view.
+        // If we use super.removeItem, inventory is updated.
+        // Then setChanged is called.
+        // We can override setChanged to call syncToBukkit first?
+        // But removing item logic in BlockContainer explicitly called syncToBukkit.
+
+        // Implementation:
+        ItemStack result = super.removeItem(slot, amount);
         syncToBukkit();
-        setChanged();
-        return toreturn;
+        return result;
     }
 
     @Override
     public ItemStack removeItemNoUpdate(int slot) {
-        ItemStack toreturn = slot >= 0 && slot < inventory.length ? inventory[slot] = ItemStack.EMPTY : ItemStack.EMPTY;
+        ItemStack result = super.removeItemNoUpdate(slot);
         syncToBukkit();
-        setChanged();
-        return toreturn;
+        return result;
     }
 
     @Override
     public void setItem(int slot, ItemStack stack) {
-        inventory[slot] = stack;
+        super.setItem(slot, stack);
         syncToBukkit();
-        setChanged();
         saveToData();
     }
 
+    // getMaxStackSize inherited but we have custom logic for CustomBlockData in
+    // BlockContainer
     @Override
     public int getMaxStackSize() {
         final int[] m = { maxStackSize };
@@ -283,20 +260,31 @@ public class BlockContainer implements WorldlyContainer, InventoryHolder, DataHo
         updateNeighbors();
     }
 
-    @Override
-    public boolean stillValid(Player player) {
-        if (!stillValid)
-            return false;
-        if (bukkitInventory == null)
-            return false;
-        CustomBlockData data = CustomBlockData.from(level, pos);
-        if (data.has(TypedKeys.CONTENTS))
-            return false;
-        return !player.isRemoved() && player.distanceToSqr(
-                pos.getX() + 0.5,
-                pos.getY() + 0.5,
-                pos.getZ() + 0.5) <= 64.0;
-    }
+    // stillValid inherited
+
+    // getContents inherited/duplicated -> Abstract returns List<ItemStack>,
+    // BlockContainer likely same.
+    // Abstract impl:
+    /*
+     * @Override
+     * public List<ItemStack> getContents() {
+     * // Implicit via Arrays.asList(inventory) or manual
+     * }
+     * Wait, Abstract didn't impl getContents() fully?
+     * Abstract does NOT implement getContents() in the provided code snippet I
+     * wrote?
+     * I checked the file write. I did NOT write getContents() in
+     * AbstractWorldlyContainer.
+     * So BlockContainer needs to keep it or I add it to Abstract.
+     * InventoryHolder (Bukkit) doesn't strictly require getContents?
+     * Wait, implemented method in BlockContainer was:
+     * public List<ItemStack> getContents()
+     * This is likely from WorldlyContainer or Container (NMS).
+     * Container defines `getContents()`.
+     * So Abstract should have implemented it if it implements Container.
+     * I missed `getContents` in Abstract.
+     * It will be abstract then? Or I implement it in BlockContainer.
+     */
 
     @Override
     public List<ItemStack> getContents() {
@@ -312,56 +300,36 @@ public class BlockContainer implements WorldlyContainer, InventoryHolder, DataHo
 
     @Override
     public void onOpen(CraftHumanEntity player) {
-        if (viewers.contains(player.getUniqueId()))
-            return;
-        viewers.add(player.getUniqueId());
-    }
-
-    @Override
-    public void stopOpen(Player player) {
-        closeViewer(player.getUUID());
+        super.onOpen(player);
     }
 
     @Override
     public void onClose(CraftHumanEntity player) {
-        if (!viewers.contains(player.getUniqueId()))
-            return;
-        viewers.remove(player.getUniqueId());
+        super.onClose(player);
     }
 
-    @Override
-    public List<HumanEntity> getViewers() {
-        return viewers.stream().map(Bukkit::getPlayer).filter(Objects::nonNull).collect(Collectors.toList());
-    }
+    // getViewers inherited
 
-    @Override
-    @Nullable
-    public InventoryHolder getOwner() {
-        return this;
-    }
+    // getOwner inherited
 
     @Override
     public void setMaxStackSize(int size) {
         if (bukkitInventory != null) {
             bukkitInventory.setMaxStackSize(size);
         }
+        super.setMaxStackSize(size); // updates inherited field
         CustomBlockData data = CustomBlockData.from(level, pos);
         data.set(TypedKeys.MAX_STACK_SIZE, size);
     }
 
-    @Override
-    @Nullable
-    public Location getLocation() {
-        return new Location(level.getWorld(), pos.getX(), pos.getY(), pos.getZ());
-    }
+    // getLocation inherited
 
     @Override
     public void clearContent() {
-        inventory = new ItemStack[inventory.length];
+        super.clearContent();
         if (bukkitInventory != null) {
             bukkitInventory.clear();
         }
-        setChanged();
     }
 
     public void logDifferences() {
@@ -419,25 +387,11 @@ public class BlockContainer implements WorldlyContainer, InventoryHolder, DataHo
         return bukkitInventory;
     }
 
-    @Override
-    public int[] getSlotsForFace(Direction side) {
-        int[] slots = new int[size * 9];
-        for (int i = 0; i < slots.length; i++) {
-            slots[i] = i;
-        }
-        return slots;
-    }
+    // getSlotsForFace inherited
+    // canPlaceItemThroughFace inherited
+    // canTakeItemThroughFace inherited
 
-    @Override
-    public boolean canPlaceItemThroughFace(int index, ItemStack itemStack, @Nullable Direction direction) {
-        return true;
-    }
-
-    @Override
-    public boolean canTakeItemThroughFace(int index, ItemStack stack, Direction direction) {
-        return true;
-    }
-
+    // Listener logic kept
     private static volatile boolean LISTENER_REGISTERED = false;
 
     public static void ensureListenerRegistered(Plugin plugin) {

@@ -1,0 +1,29 @@
+{
+    "type": "test_multiblock_machine",
+    "time": 120,
+    "fuelRequired": true,
+    "inputs": [
+        {
+            "type": "fluid",
+            "id": "water",
+            "amount": 500
+        },
+        {
+            "type": "fluid",
+            "id": "lava",
+            "amount": 500
+        }
+    ],
+    "outputs": [
+        {
+            "type": "item",
+            "id": "minecraft:netherrack",
+            "amount": 4
+        },
+        {
+            "type": "gas",
+            "id": "steam",
+            "amount": 2000
+        }
+    ]
+}

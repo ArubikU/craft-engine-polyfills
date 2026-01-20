@@ -1,0 +1,19 @@
+{
+    "type": "test_machine",
+    "time": 50,
+    "fuelRequired": true,
+    "inputs": [
+        {
+            "type": "fluid",
+            "id": "water",
+            "amount": 500
+        }
+    ],
+    "outputs": [
+        {
+            "type": "gas",
+            "id": "steam",
+            "amount": 1000
+        }
+    ]
+}

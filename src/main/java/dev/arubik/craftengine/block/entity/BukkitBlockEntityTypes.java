@@ -12,8 +12,16 @@ public class BukkitBlockEntityTypes {
     public static final BlockEntityType<PersistentBlockEntity> PERSISTENT_BLOCK_ENTITY_TYPE;
 
     static {
-        PERSISTENT_BLOCK_ENTITY_TYPE = net.momirealms.craftengine.bukkit.block.entity.BukkitBlockEntityTypes.register(Key.of("polyfills:persistent_block_entity"), PersistentBlockEntity::new);
+        PERSISTENT_BLOCK_ENTITY_TYPE = net.momirealms.craftengine.bukkit.block.entity.BukkitBlockEntityTypes
+                .register(Key.of("polyfills:persistent_block_entity"));
+        TEST_MACHINE = net.momirealms.craftengine.bukkit.block.entity.BukkitBlockEntityTypes
+                .register(Key.of("polyfills:test_machine"));
+        ABSTRACT_MACHINE = net.momirealms.craftengine.bukkit.block.entity.BukkitBlockEntityTypes
+                .register(Key.of("polyfills:abstract_machine"));
     }
+
+    public static final BlockEntityType<dev.arubik.craftengine.machine.examples.TestMachineBlockEntity> TEST_MACHINE;
+    public static final BlockEntityType<dev.arubik.craftengine.machine.block.entity.AbstractMachineBlockEntity> ABSTRACT_MACHINE;
 
     public static BlockEntity getIfLoaded(Level world, BlockPos pos) {
         CEWorld ceWorld = new BukkitWorld(world.getWorld()).storageWorld();

@@ -1,0 +1,19 @@
+{
+    "type": "test_multiblock_machine",
+    "time": 80,
+    "fuelRequired": true,
+    "inputs": [
+        {
+            "type": "gas",
+            "id": "steam",
+            "amount": 2000
+        }
+    ],
+    "outputs": [
+        {
+            "type": "fluid",
+            "id": "water",
+            "amount": 1000
+        }
+    ]
+}

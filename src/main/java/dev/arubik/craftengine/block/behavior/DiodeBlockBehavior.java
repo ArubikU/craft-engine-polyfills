@@ -29,15 +29,16 @@ import net.momirealms.craftengine.core.block.ImmutableBlockState;
 import net.momirealms.craftengine.core.block.UpdateOption.Flags;
 import net.momirealms.craftengine.core.block.properties.Property;
 import net.momirealms.craftengine.core.entity.player.InteractionResult;
-import net.momirealms.craftengine.core.item.context.BlockPlaceContext;
-import net.momirealms.craftengine.core.item.context.UseOnContext;
+import net.momirealms.craftengine.core.world.context.BlockPlaceContext;
+import net.momirealms.craftengine.core.world.context.UseOnContext;
 import net.momirealms.craftengine.core.util.HorizontalDirection;
 
 public class DiodeBlockBehavior extends AbstractCanSurviveBlockBehavior {
-    protected final Property<Boolean> POWERED ;
-    protected final Property<HorizontalDirection> FACING ;
+    protected final Property<Boolean> POWERED;
+    protected final Property<HorizontalDirection> FACING;
 
-    public DiodeBlockBehavior(CustomBlock arg0, int delay, Property<Boolean> powered, Property<HorizontalDirection> facing) {
+    public DiodeBlockBehavior(CustomBlock arg0, int delay, Property<Boolean> powered,
+            Property<HorizontalDirection> facing) {
         super(arg0, delay);
         this.POWERED = powered;
         this.FACING = facing;
@@ -115,7 +116,7 @@ public class DiodeBlockBehavior extends AbstractCanSurviveBlockBehavior {
                 FastNMS.INSTANCE.method$LevelWriter$setBlock(level, pos, customState.customBlockState().literalObject(),
                         Flags.UPDATE_CLIENTS);
                 if (!shouldTurnOn) {
-                    
+
                     level.scheduleTick(pos, state.getBlock(), this.getDelay(state), TickPriority.VERY_HIGH);
                 }
             }
@@ -152,16 +153,18 @@ public class DiodeBlockBehavior extends AbstractCanSurviveBlockBehavior {
         Direction clockWise = minecraftDirection.getClockWise();
         Direction counterClockWise = minecraftDirection.getCounterClockWise();
         boolean flag = this.sideInputDiodesOnly();
-        
+
         // Get alternate signal from sides (for comparators and similar blocks)
         int clockWiseSignal = this.getControlInputSignal(level, pos.relative(clockWise), clockWise, flag);
-        int counterClockWiseSignal = this.getControlInputSignal(level, pos.relative(counterClockWise), counterClockWise, flag);
-        
+        int counterClockWiseSignal = this.getControlInputSignal(level, pos.relative(counterClockWise), counterClockWise,
+                flag);
+
         return Math.max(clockWiseSignal, counterClockWiseSignal);
     }
 
     protected int getControlInputSignal(Level level, BlockPos pos, Direction direction, boolean flag) {
-        // For diode blocks, this is similar to getting signal but with specific logic for control inputs
+        // For diode blocks, this is similar to getting signal but with specific logic
+        // for control inputs
         int signal = level.getSignal(pos, direction);
         if (signal >= 15) {
             return signal;
@@ -205,7 +208,7 @@ public class DiodeBlockBehavior extends AbstractCanSurviveBlockBehavior {
         ImmutableBlockState customBlockState = BlockStateUtils.getOptionalCustomBlockState(blockState).orElse(null);
         return isDiode(blockState) && Utils.fromDirection(customBlockState.get(FACING)) != opposite;
     }
-    
+
     protected void checkTickOnNeighbor(Level level, BlockPos pos, BlockState state) {
         ImmutableBlockState customState = BlockStateUtils.getOptionalCustomBlockState(state).orElseThrow();
         Block block = state.getBlock();
@@ -219,12 +222,12 @@ public class DiodeBlockBehavior extends AbstractCanSurviveBlockBehavior {
                 } else if (poweredValue) {
                     tickPriority = TickPriority.VERY_HIGH;
                 }
-                
+
                 level.scheduleTick(pos, state.getBlock(), this.getDelay(state), tickPriority);
             }
         }
     }
-    
+
     @Override
     public ImmutableBlockState updateStateForPlacement(BlockPlaceContext context, ImmutableBlockState state) {
         // Set the facing direction based on the player's facing direction (opposite)
@@ -232,8 +235,9 @@ public class DiodeBlockBehavior extends AbstractCanSurviveBlockBehavior {
         HorizontalDirection blockFacing = getOppositeHorizontalDirection(playerDirection);
         return state.with(FACING, blockFacing);
     }
-    
-    private HorizontalDirection getOppositeHorizontalDirection(net.momirealms.craftengine.core.util.Direction direction) {
+
+    private HorizontalDirection getOppositeHorizontalDirection(
+            net.momirealms.craftengine.core.util.Direction direction) {
         return switch (direction) {
             case NORTH -> HorizontalDirection.SOUTH;
             case EAST -> HorizontalDirection.WEST;
@@ -242,27 +246,26 @@ public class DiodeBlockBehavior extends AbstractCanSurviveBlockBehavior {
             default -> HorizontalDirection.NORTH;
         };
     }
-    
-    
+
     @Override
     public void onPlace(Object thisBlock, Object[] args, Callable<Object> superMethod) {
         Level level = (Level) args[1];
         BlockPos pos = (BlockPos) args[2];
         BlockState state = (BlockState) args[0];
-        
+
         this.updateNeighborsInFront(level, pos, state);
         try {
             super.onPlace(thisBlock, args, superMethod);
         } catch (Exception e) {
         }
     }
-    
+
     protected void updateNeighborsInFront(Level level, BlockPos pos, BlockState state) {
         ImmutableBlockState customState = BlockStateUtils.getOptionalCustomBlockState(state).orElseThrow();
         HorizontalDirection facing = customState.get(FACING);
         Direction direction = Utils.fromDirection(facing);
         BlockPos frontPos = pos.relative(direction.getOpposite());
-        
+
         // Update neighbors using FastNMS methods
         level.updateNeighborsAt(frontPos, state.getBlock());
         for (Direction neighborDirection : Direction.values()) {
@@ -271,54 +274,56 @@ public class DiodeBlockBehavior extends AbstractCanSurviveBlockBehavior {
             }
         }
     }
-    
+
     @Override
     public void onRemove(Object thisBlock, Object[] args, Callable<Object> superMethod) throws Exception {
-        // args[0] = BlockState state, args[1] = Level level, args[2] = BlockPos pos  
+        // args[0] = BlockState state, args[1] = Level level, args[2] = BlockPos pos
         BlockState state = (BlockState) args[0];
         Level level = (Level) args[1];
         BlockPos pos = (BlockPos) args[2];
         BlockState newState = (BlockState) args[3];
         boolean movedByPiston = (boolean) args[4];
-        
+
         if (!movedByPiston && !state.is(newState.getBlock())) {
             this.updateNeighborsInFront(level, pos, state);
         }
-        
+
         super.onRemove(thisBlock, args, superMethod);
     }
-    
+
     @Override
     public void neighborChanged(Object thisBlock, Object[] args, Callable<Object> superMethod) {
         BlockState state = (BlockState) args[0];
         Level level = (Level) args[1];
         BlockPos pos = (BlockPos) args[2];
-        
+
         if (state.canSurvive(level, pos)) {
             this.checkTickOnNeighbor(level, pos, state);
         } else {
-            FastNMS.INSTANCE.method$Level$destroyBlock(level,pos,true);
+            FastNMS.INSTANCE.method$LevelWriter$destroyBlock(level, pos, true);
             for (Direction direction : Direction.values()) {
                 level.updateNeighborsAt(pos.relative(direction), state.getBlock());
             }
         }
     }
 
-    
-    
     @Override
     public InteractionResult useWithoutItem(UseOnContext context, ImmutableBlockState state) {
-       BlockState state2 =(BlockState) state.customBlockState().literalObject();
-       Level level = (Level) context.getLevel().serverWorld();
-       BlockPos blockPos = (BlockPos) LocationUtils.toBlockPos(context.getClickedPos());
-       BukkitServerPlayer player = (BukkitServerPlayer) context.getPlayer();
-       Player mcPlayer = (Player) player.serverPlayer();
-       InteractionHand hand = context.getHand().equals(net.momirealms.craftengine.core.entity.player.InteractionHand.MAIN_HAND) ? InteractionHand.MAIN_HAND : InteractionHand.OFF_HAND;
-       BlockHitResult hitResult = Utils.toBlockHitResult(context.getHitResult().getLocation(), context.getHitResult().getDirection(), context.getClickedPos());
-       return this.use(state2, level, blockPos, mcPlayer, hand, hitResult);
+        BlockState state2 = (BlockState) state.customBlockState().literalObject();
+        Level level = (Level) context.getLevel().serverWorld();
+        BlockPos blockPos = (BlockPos) LocationUtils.toBlockPos(context.getClickedPos());
+        BukkitServerPlayer player = (BukkitServerPlayer) context.getPlayer();
+        Player mcPlayer = (Player) player.serverPlayer();
+        InteractionHand hand = context.getHand().equals(
+                net.momirealms.craftengine.core.entity.player.InteractionHand.MAIN_HAND) ? InteractionHand.MAIN_HAND
+                        : InteractionHand.OFF_HAND;
+        BlockHitResult hitResult = Utils.toBlockHitResult(context.getHitResult().location(),
+                context.getHitResult().direction(), context.getClickedPos());
+        return this.use(state2, level, blockPos, mcPlayer, hand, hitResult);
     }
 
-    public InteractionResult use(BlockState blockState, Level level, BlockPos blockPos, Player player, InteractionHand interactionHand, BlockHitResult blockHitResult) {
+    public InteractionResult use(BlockState blockState, Level level, BlockPos blockPos, Player player,
+            InteractionHand interactionHand, BlockHitResult blockHitResult) {
         return InteractionResult.PASS;
     }
 }

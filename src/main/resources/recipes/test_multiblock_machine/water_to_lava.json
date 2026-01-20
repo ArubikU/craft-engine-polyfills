@@ -1,0 +1,24 @@
+{
+    "type": "test_multiblock_machine",
+    "time": 100,
+    "fuelRequired": true,
+    "inputs": [
+        {
+            "type": "fluid",
+            "id": "water",
+            "amount": 1000
+        }
+    ],
+    "outputs": [
+        {
+            "type": "fluid",
+            "id": "lava",
+            "amount": 1000
+        },
+        {
+            "type": "gas",
+            "id": "steam",
+            "amount": 1000
+        }
+    ]
+}

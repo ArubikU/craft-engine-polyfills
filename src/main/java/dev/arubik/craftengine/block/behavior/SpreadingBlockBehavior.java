@@ -19,12 +19,12 @@ import net.momirealms.craftengine.bukkit.nms.FastNMS;
 import net.momirealms.craftengine.bukkit.util.BlockStateUtils;
 import net.momirealms.craftengine.bukkit.util.BlockTags;
 import net.momirealms.craftengine.bukkit.util.LocationUtils;
-import net.momirealms.craftengine.core.block.BlockBehavior;
+import net.momirealms.craftengine.core.block.behavior.BlockBehavior;
 import net.momirealms.craftengine.core.block.CustomBlock;
 import net.momirealms.craftengine.core.block.ImmutableBlockState;
 import net.momirealms.craftengine.core.block.behavior.BlockBehaviorFactory;
 import net.momirealms.craftengine.core.util.Key;
-import net.momirealms.craftengine.core.util.RandomUtils;
+import net.momirealms.craftengine.core.util.random.RandomUtils;
 import net.momirealms.craftengine.core.world.BlockPos;
 
 @SuppressWarnings("DuplicatedCode")
@@ -38,10 +38,10 @@ public class SpreadingBlockBehavior extends BukkitBlockBehavior {
     private final List<ReplaceRule> rules;
 
     public SpreadingBlockBehavior(CustomBlock block,
-                                  double spreadChance,
-                                  int spreadRadius,
-                                  int maxPerTick,
-                                  List<ReplaceRule> rules) {
+            double spreadChance,
+            int spreadRadius,
+            int maxPerTick,
+            List<ReplaceRule> rules) {
         super(block);
         this.spreadChance = spreadChance;
         this.spreadRadius = spreadRadius;
@@ -51,7 +51,8 @@ public class SpreadingBlockBehavior extends BukkitBlockBehavior {
 
     @Override
     public void randomTick(Object thisBlock, Object[] args, Callable<Object> superMethod) throws Exception {
-        if (RandomUtils.generateRandomFloat(0, 1) >= this.spreadChance) return;
+        if (RandomUtils.generateRandomFloat(0, 1) >= this.spreadChance)
+            return;
 
         Object level = args[1];
         BlockPos pos = LocationUtils.fromBlockPos(args[2]);
@@ -60,15 +61,19 @@ public class SpreadingBlockBehavior extends BukkitBlockBehavior {
         Collections.shuffle(nearby);
 
         for (BlockPos targetPos : nearby) {
-            if (replaced >= maxPerTick) break;
+            if (replaced >= maxPerTick)
+                break;
 
-            Object targetState = FastNMS.INSTANCE.method$BlockGetter$getBlockState(level, LocationUtils.toBlockPos(targetPos));
+            Object targetState = FastNMS.INSTANCE.method$BlockGetter$getBlockState(level,
+                    LocationUtils.toBlockPos(targetPos));
 
             ReplaceRule matched = getRuleFor(targetState);
-            if (matched == null) continue;
+            if (matched == null)
+                continue;
 
             Object newState = matched.resolveReplacement();
-            if (newState == null) continue;
+            if (newState == null)
+                continue;
 
             FastNMS.INSTANCE.method$LevelWriter$setBlock(level, LocationUtils.toBlockPos(targetPos), newState, 3);
             replaced++;
@@ -89,7 +94,8 @@ public class SpreadingBlockBehavior extends BukkitBlockBehavior {
         for (int x = -radius; x <= radius; x++) {
             for (int y = -radius; y <= radius; y++) {
                 for (int z = -radius; z <= radius; z++) {
-                    if (x == 0 && y == 0 && z == 0) continue;
+                    if (x == 0 && y == 0 && z == 0)
+                        continue;
                     list.add(new BlockPos(origin.x() + x, origin.y() + y, origin.z() + z));
                 }
             }
@@ -114,10 +120,12 @@ public class SpreadingBlockBehavior extends BukkitBlockBehavior {
         boolean matches(Object state) {
             // Match por tags
             for (Object tag : tags) {
-                if (FastNMS.INSTANCE.method$BlockStateBase$is(state, tag)) return true;
+                if (FastNMS.INSTANCE.method$BlockStateBase$is(state, tag))
+                    return true;
             }
             // Match por vanilla blockstates
-            if (blockStates.contains(state)) return true;
+            if (blockStates.contains(state))
+                return true;
 
             // Match por custom
             Optional<ImmutableBlockState> customOpt = BlockStateUtils.getOptionalCustomBlockState(state);
@@ -135,7 +143,8 @@ public class SpreadingBlockBehavior extends BukkitBlockBehavior {
                 return BlockStateUtils.blockDataToBlockState(Bukkit.createBlockData(replacement));
             }
             // Custom
-            Optional<ImmutableBlockState> custom = BlockStateUtils.getOptionalCustomBlockState(BlockStateUtils.blockDataToBlockState(Bukkit.createBlockData(replacement)));
+            Optional<ImmutableBlockState> custom = BlockStateUtils.getOptionalCustomBlockState(
+                    BlockStateUtils.blockDataToBlockState(Bukkit.createBlockData(replacement)));
             if (custom.isPresent()) {
                 return custom.get().customBlockState().literalObject();
             }
@@ -143,7 +152,7 @@ public class SpreadingBlockBehavior extends BukkitBlockBehavior {
         }
     }
 
-    public static class Factory implements BlockBehaviorFactory {
+    public static class Factory implements BlockBehaviorFactory<BlockBehavior> {
         @SuppressWarnings("unchecked")
         @Override
         public BlockBehavior create(CustomBlock block, Map<String, Object> arguments) {
@@ -167,13 +176,14 @@ public class SpreadingBlockBehavior extends BukkitBlockBehavior {
                 } else {
                     int idx = key.indexOf('[');
                     Key blockType = idx != -1 ? Key.from(key.substring(0, idx)) : Key.from(key);
-                Material material = Registry.MATERIAL.get(new NamespacedKey(blockType.namespace(), blockType.value()));
-                if (material != null) {
+                    Material material = Registry.MATERIAL
+                            .get(new NamespacedKey(blockType.namespace(), blockType.value()));
+                    if (material != null) {
                         if (idx == -1) {
                             // todas las variantes
-                            blockStates.addAll(BlockStateUtils.getAllVanillaBlockStates(blockType));
+                            blockStates.addAll(BlockStateUtils.getPossibleBlockStates(blockType));
                         } else {
-                        blockStates.add(BlockStateUtils.blockDataToBlockState(Bukkit.createBlockData(key)));
+                            blockStates.add(BlockStateUtils.blockDataToBlockState(Bukkit.createBlockData(key)));
                         }
                     } else {
                         // custom block

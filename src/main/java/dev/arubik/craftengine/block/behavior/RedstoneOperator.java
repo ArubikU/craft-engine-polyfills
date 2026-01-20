@@ -20,7 +20,7 @@ import net.momirealms.craftengine.bukkit.nms.FastNMS;
 import net.momirealms.craftengine.bukkit.util.BlockStateUtils;
 import net.momirealms.craftengine.bukkit.util.LocationUtils;
 import net.momirealms.craftengine.bukkit.world.BukkitWorld;
-import net.momirealms.craftengine.core.block.BlockBehavior;
+import net.momirealms.craftengine.core.block.behavior.BlockBehavior;
 import net.momirealms.craftengine.core.block.CustomBlock;
 import net.momirealms.craftengine.core.block.ImmutableBlockState;
 import net.momirealms.craftengine.core.block.UpdateOption.Flags;
@@ -36,28 +36,31 @@ import net.momirealms.craftengine.core.world.WorldPosition;
 public class RedstoneOperator extends DiodeBlockBehavior {
 
     public static Factory FACTORY = new Factory();
-    public static class Factory implements BlockBehaviorFactory {
+
+    public static class Factory implements BlockBehaviorFactory<BlockBehavior> {
         @Override
         public BlockBehavior create(CustomBlock block, Map<String, Object> arguments) {
             int delay = 0;
             Object d = arguments.get("delay");
-            if (d instanceof Number n) delay = n.intValue();
+            if (d instanceof Number n)
+                delay = n.intValue();
             @SuppressWarnings("unchecked")
             Property<Boolean> powered = (Property<Boolean>) block.getProperty("powered");
             @SuppressWarnings("unchecked")
             Property<HorizontalDirection> facing = (Property<HorizontalDirection>) block.getProperty("facing");
             @SuppressWarnings("unchecked")
-            Property<Integer> mode = (Property<Integer>) block.getProperty("mode"); 
+            Property<Integer> mode = (Property<Integer>) block.getProperty("mode");
             @SuppressWarnings("unchecked")
             Property<Boolean> invert = (Property<Boolean>) block.getProperty("invert");
             return new RedstoneOperator(block, delay, powered, facing, mode, invert);
         }
     }
 
-    public final IntegerProperty MODE ;
+    public final IntegerProperty MODE;
     public final BooleanProperty INVERT;
 
-    public RedstoneOperator(CustomBlock arg0, int delay, Property<Boolean> powered, Property<HorizontalDirection> facing, Property<Integer> mode, Property<Boolean> invert) {
+    public RedstoneOperator(CustomBlock arg0, int delay, Property<Boolean> powered,
+            Property<HorizontalDirection> facing, Property<Integer> mode, Property<Boolean> invert) {
         super(arg0, delay, powered, facing);
         this.MODE = (IntegerProperty) mode;
         this.INVERT = (BooleanProperty) invert;
@@ -82,7 +85,7 @@ public class RedstoneOperator extends DiodeBlockBehavior {
         BlockPos pos = (BlockPos) args[2];
         if (!state.canSurvive((LevelReader) level, pos)) {
 
-            FastNMS.INSTANCE.method$Level$destroyBlock(level, pos, true);
+            FastNMS.INSTANCE.method$LevelWriter$destroyBlock(level, pos, true);
             for (Direction dir : Direction.values())
                 level.updateNeighborsAt(pos.relative(dir), (Block) state.getBlock());
             return;
@@ -110,7 +113,7 @@ public class RedstoneOperator extends DiodeBlockBehavior {
                         WorldPosition position = new WorldPosition(world,
                                 Vec3d.atCenterOf(LocationUtils.fromBlockPos(blockPos)));
                         world.playBlockSound(position, customState.settings().sounds().breakSound());
-                        FastNMS.INSTANCE.method$Level$destroyBlock(level, blockPos, true);
+                        FastNMS.INSTANCE.method$LevelWriter$destroyBlock(level, blockPos, true);
                     }
 
                 });
@@ -154,7 +157,7 @@ public class RedstoneOperator extends DiodeBlockBehavior {
             FastNMS.INSTANCE.method$LevelWriter$setBlock(level, pos, customState.customBlockState().literalObject(),
                     Flags.UPDATE_CLIENTS);
         }
-        //and or and xor
+        // and or and xor
         boolean invert = customState.get(INVERT);
         switch (customState.get(MODE)) {
             case 0:
@@ -178,11 +181,12 @@ public class RedstoneOperator extends DiodeBlockBehavior {
     }
 
     @Override
-    public InteractionResult use(BlockState blockState, Level level, BlockPos blockPos, Player player, InteractionHand interactionHand, BlockHitResult blockHitResult) {
+    public InteractionResult use(BlockState blockState, Level level, BlockPos blockPos, Player player,
+            InteractionHand interactionHand, BlockHitResult blockHitResult) {
         if (!player.getAbilities().mayBuild) {
             return InteractionResult.PASS;
         }
-        if (level.isClientSide) {
+        if (FastNMS.INSTANCE.method$LevelReader$isClientSide(level)) {
             return InteractionResult.SUCCESS;
         }
         ImmutableBlockState customState = BlockStateUtils.getOptionalCustomBlockState(blockState).orElseThrow();

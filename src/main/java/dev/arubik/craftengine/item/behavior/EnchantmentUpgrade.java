@@ -26,54 +26,58 @@ public class EnchantmentUpgrade extends ExtendedItemBehavior {
     public static final EnchantmentUpgradeFactory FACTORY = new EnchantmentUpgradeFactory();
 
     private final Map<Holder<Enchantment>, Integer> enchantments;
+
     public EnchantmentUpgrade(Map<Holder<Enchantment>, Integer> enchantments) {
         this.enchantments = enchantments;
     }
 
     @Override
     public ItemStack onRender(Entity holder, ItemStack stack, int slot) {
-        ItemEnchantments  enchants = stack.getComponents().getOrDefault(DataComponents.ENCHANTMENTS, ItemEnchantments.EMPTY);
+        ItemEnchantments enchants = stack.getComponents().getOrDefault(DataComponents.ENCHANTMENTS,
+                ItemEnchantments.EMPTY);
         ItemEnchantments.Mutable mutable = new ItemEnchantments.Mutable(enchants);
         ItemLore components = stack.getComponents().getOrDefault(DataComponents.LORE, ItemLore.EMPTY);
         boolean enchanted = false;
         for (Map.Entry<Holder<Enchantment>, Integer> entry : enchantments.entrySet()) {
-            int[] currentLevelArr = {0};
+            int[] currentLevelArr = { 0 };
             mutable.removeIf(e -> {
                 Bukkit.getConsoleSender().sendMessage(e.value().description().getString());
                 Bukkit.getConsoleSender().sendMessage(entry.getKey().value().description().getString());
 
-                if(e.value().description().getString().equals(entry.getKey().value().description().getString())){
+                if (e.value().description().getString().equals(entry.getKey().value().description().getString())) {
                     currentLevelArr[0] = mutable.getLevel(e);
                     return true;
-                }else{
+                } else {
                     return false;
                 }
             });
             int currentLevel = currentLevelArr[0];
-            if(currentLevel+entry.getValue() <=0) continue;
-            MinecraftComponent enchName = MinecraftComponent.fromMinecraft(Enchantment.getFullname(entry.getKey(), currentLevel).copy());
-            MinecraftComponent extraLevel ;
-            if(currentLevel==0){
-                extraLevel = MinecraftComponent.fromString("<green>(+"+entry.getValue()+")</green>");
-            }else{
-                extraLevel = MinecraftComponent.fromString("<green> (+"+entry.getValue()+")</green>");
+            if (currentLevel + entry.getValue() <= 0)
+                continue;
+            MinecraftComponent enchName = MinecraftComponent
+                    .fromMinecraft(Enchantment.getFullname(entry.getKey(), currentLevel).copy());
+            MinecraftComponent extraLevel;
+            if (currentLevel == 0) {
+                extraLevel = MinecraftComponent.fromString("<green>(+" + entry.getValue() + ")</green>");
+            } else {
+                extraLevel = MinecraftComponent.fromString("<green> (+" + entry.getValue() + ")</green>");
             }
-            components = components.withLineAdded(enchName.append(extraLevel).decorate(TextDecoration.ITALIC.withState(false)).toMinecraft());
+            components = components.withLineAdded(
+                    enchName.append(extraLevel).decorate(TextDecoration.ITALIC.withState(false)).toMinecraft());
             enchanted = true;
         }
-        
+
         enchanted = enchanted || !enchantments.isEmpty();
         stack.set(DataComponents.ENCHANTMENT_GLINT_OVERRIDE, enchanted);
-        stack.set(DataComponents.ENCHANTMENTS,mutable.toImmutable());
-        stack.set(DataComponents.LORE,components);
+        stack.set(DataComponents.ENCHANTMENTS, mutable.toImmutable());
+        stack.set(DataComponents.LORE, components);
         return stack;
     }
 
-    public static class EnchantmentUpgradeFactory implements ItemBehaviorFactory {
+    public static class EnchantmentUpgradeFactory implements ItemBehaviorFactory<ItemBehavior> {
 
-        @Override
         public ItemBehavior create(Pack arg0, Path arg1, Key arg2, Map<String, Object> arguments) {
-            if(arguments.containsKey("enchantments")){
+            if (arguments.containsKey("enchantments")) {
                 Object enchantsObj = arguments.get("enchantments");
                 if (!(enchantsObj instanceof Map<?, ?> enchantsRaw)) {
                     throw new IllegalArgumentException("'enchantments' must be a Map<String, Integer>");
@@ -86,19 +90,25 @@ public class EnchantmentUpgrade extends ExtendedItemBehavior {
                     enchants.put(key, value);
                 }
                 Map<Holder<Enchantment>, Integer> enchantments = enchants.entrySet().stream().collect(
-                    java.util.stream.Collectors.toMap(
-                        e -> {
-                            NamespacedKey key = NamespacedKey.fromString(e.getKey());
-                            if(key == null) throw new IllegalArgumentException("Invalid enchantment key: "+e.getKey());
-                            Enchantment ench = ((CraftEnchantment)io.papermc.paper.registry.RegistryAccess.registryAccess().getRegistry(RegistryKey.ENCHANTMENT).getOrThrow(key)).getHandle();
-                            return Holder.direct(ench);
-                        },
-                        Map.Entry::getValue
-                    )
-                );
+                        java.util.stream.Collectors.toMap(
+                                e -> {
+                                    NamespacedKey key = NamespacedKey.fromString(e.getKey());
+                                    if (key == null)
+                                        throw new IllegalArgumentException("Invalid enchantment key: " + e.getKey());
+                                    Enchantment ench = ((CraftEnchantment) io.papermc.paper.registry.RegistryAccess
+                                            .registryAccess().getRegistry(RegistryKey.ENCHANTMENT).getOrThrow(key))
+                                            .getHandle();
+                                    return Holder.direct(ench);
+                                },
+                                Map.Entry::getValue));
                 return new EnchantmentUpgrade(enchantments);
             }
             throw new UnsupportedOperationException("Unimplemented method 'create'");
+        }
+
+        @Override
+        public ItemBehavior create(Pack arg0, Path arg1, String arg2, Key arg3, Map<String, Object> arg4) {
+            return create(arg0, arg1, arg2, arg3, arg4);
         }
     }
 }

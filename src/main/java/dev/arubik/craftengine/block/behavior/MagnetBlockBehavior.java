@@ -15,7 +15,7 @@ import org.bukkit.util.Vector;
 import net.momirealms.craftengine.bukkit.block.behavior.BukkitBlockBehavior;
 import net.momirealms.craftengine.bukkit.util.LocationUtils;
 import net.momirealms.craftengine.bukkit.world.BukkitExistingBlock;
-import net.momirealms.craftengine.core.block.BlockBehavior;
+import net.momirealms.craftengine.core.block.behavior.BlockBehavior;
 import net.momirealms.craftengine.core.block.CustomBlock;
 import net.momirealms.craftengine.core.block.behavior.BlockBehaviorFactory;
 import net.momirealms.craftengine.core.world.BlockPos;
@@ -51,17 +51,22 @@ public class MagnetBlockBehavior extends BukkitBlockBehavior {
         World level = (World) args[1];
         BlockPos blockPos = (BlockPos) args[2];
 
-        BukkitExistingBlock blockInWorld = (BukkitExistingBlock) level.getBlockAt(LocationUtils.fromBlockPos(blockPos));
-        if (blockInWorld.block() == null) return;
+        BukkitExistingBlock blockInWorld = (BukkitExistingBlock) level.getBlock(blockPos.x(), blockPos.y(),
+                blockPos.z());
+        if (blockInWorld.block() == null)
+            return;
 
         Vector center = blockInWorld.block().getLocation().add(0.5, 0.5, 0.5).toVector();
 
-        for (Entity entity : blockInWorld.block().getWorld().getNearbyEntities(blockInWorld.block().getLocation(), radius, radius, radius)) {
-            if (!shouldAffect(entity)) continue;
+        for (Entity entity : blockInWorld.block().getWorld().getNearbyEntities(blockInWorld.block().getLocation(),
+                radius, radius, radius)) {
+            if (!shouldAffect(entity))
+                continue;
 
             Vector dir = center.clone().subtract(entity.getLocation().toVector());
             double distance = dir.length();
-            if (distance < 0.1) continue;
+            if (distance < 0.1)
+                continue;
 
             dir.normalize().multiply(strength / distance);
 
@@ -75,16 +80,22 @@ public class MagnetBlockBehavior extends BukkitBlockBehavior {
     }
 
     private boolean shouldAffect(Entity entity) {
-        if (flags.contains(MagnetFlag.ALL)) return true;
-        if (entity instanceof Item && flags.contains(MagnetFlag.ITEMS)) return true;
-        if (entity instanceof Player && flags.contains(MagnetFlag.PLAYERS)) return true;
-        if (entity instanceof LivingEntity && !(entity instanceof Player) && flags.contains(MagnetFlag.MOBS)) return true;
-        if (entity instanceof Projectile && flags.contains(MagnetFlag.PROJECTILES)) return true;
-        if (entity instanceof ExperienceOrb && flags.contains(MagnetFlag.EXPERIENCE)) return true;
+        if (flags.contains(MagnetFlag.ALL))
+            return true;
+        if (entity instanceof Item && flags.contains(MagnetFlag.ITEMS))
+            return true;
+        if (entity instanceof Player && flags.contains(MagnetFlag.PLAYERS))
+            return true;
+        if (entity instanceof LivingEntity && !(entity instanceof Player) && flags.contains(MagnetFlag.MOBS))
+            return true;
+        if (entity instanceof Projectile && flags.contains(MagnetFlag.PROJECTILES))
+            return true;
+        if (entity instanceof ExperienceOrb && flags.contains(MagnetFlag.EXPERIENCE))
+            return true;
         return false;
     }
 
-    public static class Factory implements BlockBehaviorFactory {
+    public static class Factory implements BlockBehaviorFactory<BlockBehavior> {
         @Override
         public BlockBehavior create(CustomBlock block, Map<String, Object> arguments) {
             double radius = Double.parseDouble(arguments.getOrDefault("radius", 5.0).toString());
@@ -95,7 +106,8 @@ public class MagnetBlockBehavior extends BukkitBlockBehavior {
             for (String flag : flagsStr.split(",")) {
                 try {
                     flags.add(MagnetFlag.valueOf(flag.trim().toUpperCase()));
-                } catch (IllegalArgumentException ignored) {}
+                } catch (IllegalArgumentException ignored) {
+                }
             }
 
             return new MagnetBlockBehavior(block, flags, radius, strength);

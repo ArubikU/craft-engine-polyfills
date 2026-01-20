@@ -1,0 +1,19 @@
+{
+    "type": "test_machine",
+    "time": 100,
+    "fuelRequired": true,
+    "inputs": [
+        {
+            "type": "item",
+            "id": "minecraft:cobblestone",
+            "amount": 1
+        }
+    ],
+    "outputs": [
+        {
+            "type": "item",
+            "id": "minecraft:stone",
+            "amount": 1
+        }
+    ]
+}

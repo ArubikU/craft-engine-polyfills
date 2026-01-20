@@ -12,7 +12,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.momirealms.craftengine.bukkit.block.behavior.BukkitBlockBehavior;
 import net.momirealms.craftengine.bukkit.nms.FastNMS;
 import net.momirealms.craftengine.bukkit.util.BlockStateUtils;
-import net.momirealms.craftengine.core.block.BlockBehavior;
+import net.momirealms.craftengine.core.block.behavior.BlockBehavior;
 import net.momirealms.craftengine.core.block.CustomBlock;
 import net.momirealms.craftengine.core.block.ImmutableBlockState;
 import net.momirealms.craftengine.core.block.behavior.BlockBehaviorFactory;
@@ -79,7 +79,7 @@ public class LightUpBlockBehavior extends BukkitBlockBehavior {
         }
     }
 
-    public static class Factory implements BlockBehaviorFactory {
+    public static class Factory implements BlockBehaviorFactory<BlockBehavior> {
         @Override
         public BlockBehavior create(CustomBlock block, Map<String, Object> arguments) {
             return new LightUpBlockBehavior(block);

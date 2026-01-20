@@ -1,0 +1,9 @@
+{
+    "type": "test_machine",
+    "burnTime": 1600,
+    "input": {
+        "type": "item",
+        "id": "minecraft:coal",
+        "amount": 1
+    }
+}

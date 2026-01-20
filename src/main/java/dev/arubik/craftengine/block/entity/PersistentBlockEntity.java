@@ -5,6 +5,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
 
 import org.bukkit.NamespacedKey;
 import org.bukkit.persistence.PersistentDataContainer;
@@ -14,20 +15,37 @@ import org.jetbrains.annotations.Nullable;
 
 import dev.arubik.craftengine.util.CustomDataType;
 import dev.arubik.craftengine.util.TypedKey;
+import net.minecraft.world.level.block.state.BlockState;
 import net.momirealms.craftengine.core.block.ImmutableBlockState;
 import net.momirealms.craftengine.core.block.entity.BlockEntity;
 import net.momirealms.craftengine.core.util.Key;
 import net.momirealms.craftengine.core.world.BlockPos;
+import net.momirealms.craftengine.core.world.CEWorld;
 import net.momirealms.craftengine.libraries.nbt.CompoundTag;
 
 public class PersistentBlockEntity extends BlockEntity {
 
     private CompoundTag container;
 
+    public Function<CompoundTag, Void> preRemoveHook = null;
+
     public PersistentBlockEntity(BlockPos pos, ImmutableBlockState blockState) {
         super(BukkitBlockEntityTypes.PERSISTENT_BLOCK_ENTITY_TYPE, pos, blockState);
         this.container = new CompoundTag();
     }
+
+    public void setPreRemoveHook(Function<CompoundTag, Void> hook) {
+        this.preRemoveHook = hook;
+    }
+
+    @Override
+    public void preRemove() {
+        if (this.preRemoveHook != null) {
+            this.preRemoveHook.apply(this.container);
+        }
+        super.preRemove();
+    }
+
     // Delegación de métodos
 
     public <P, C> boolean has(NamespacedKey key, PersistentDataType<P, C> type) {
@@ -109,7 +127,7 @@ public class PersistentBlockEntity extends BlockEntity {
             tag.put(key, container.get(key));
         });
     }
-    
+
     @Override
     public void loadCustomData(net.momirealms.craftengine.libraries.nbt.CompoundTag tag) {
         this.container = tag;
@@ -207,5 +225,9 @@ public class PersistentBlockEntity extends BlockEntity {
     public <T> T getOrDefault(TypedKey<T> key, T defaultValue) {
         T value = get(key);
         return value != null ? value : defaultValue;
+    }
+
+    public void set(NamespacedKey key, CustomDataType<BlockState, byte[]> BLOCK_STATE_TYPE, BlockState blockState) {
+        set(key, BLOCK_STATE_TYPE.getBaseType(), BLOCK_STATE_TYPE.getSerializer().apply(blockState));
     }
 }

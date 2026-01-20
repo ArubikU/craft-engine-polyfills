@@ -10,9 +10,11 @@ import dev.arubik.craftengine.block.entity.PersistentBlockEntity;
 import dev.arubik.craftengine.fluid.FluidKeys;
 import dev.arubik.craftengine.fluid.FluidStack;
 import dev.arubik.craftengine.fluid.FluidType;
+import dev.arubik.craftengine.fluid.FluidTransferHelper;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -21,7 +23,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.momirealms.craftengine.bukkit.plugin.user.BukkitServerPlayer;
 import net.momirealms.craftengine.bukkit.util.BlockStateUtils;
 import net.momirealms.craftengine.bukkit.util.LocationUtils;
-import net.momirealms.craftengine.core.block.BlockBehavior;
+import net.momirealms.craftengine.core.block.behavior.BlockBehavior;
 import net.momirealms.craftengine.core.block.CustomBlock;
 import net.momirealms.craftengine.core.block.ImmutableBlockState;
 import net.momirealms.craftengine.core.block.behavior.BlockBehaviorFactory;
@@ -29,9 +31,10 @@ import net.momirealms.craftengine.core.block.behavior.EntityBlockBehavior;
 import net.momirealms.craftengine.core.block.entity.BlockEntity;
 import net.momirealms.craftengine.core.block.entity.BlockEntityType;
 import net.momirealms.craftengine.core.block.entity.tick.BlockEntityTicker;
-import net.momirealms.craftengine.core.item.context.UseOnContext;
-import net.momirealms.craftengine.core.util.Direction;
+import net.momirealms.craftengine.core.world.context.UseOnContext;
 import net.momirealms.craftengine.core.world.CEWorld;
+import dev.arubik.craftengine.multiblock.IOConfiguration;
+import dev.arubik.craftengine.util.Utils;
 
 public class PipeBehavior extends ConnectedBlockBehavior implements EntityBlockBehavior, FluidCarrier {
 
@@ -42,6 +45,9 @@ public class PipeBehavior extends ConnectedBlockBehavior implements EntityBlockB
 
     protected final CustomBlock block;
 
+    // Round-robin caching: guardar última dirección exitosa por posición
+    private final java.util.Map<Long, Integer> lastSuccessfulDirection = new java.util.concurrent.ConcurrentHashMap<>();
+
     public PipeBehavior(CustomBlock block) {
         super(block, new java.util.ArrayList<>(), new HashSet<>(),
                 new HashSet<>(java.util.Arrays.asList("cml:iron_pump", "cml:copper_valve", "cml:copper_tank")), true);
@@ -49,6 +55,12 @@ public class PipeBehavior extends ConnectedBlockBehavior implements EntityBlockB
     }
 
     @Override
+    public <T extends BlockEntity> BlockEntityType<T> blockEntityType(ImmutableBlockState state) {
+        @SuppressWarnings("unchecked")
+        BlockEntityType<T> type = (BlockEntityType<T>) BukkitBlockEntityTypes.PERSISTENT_BLOCK_ENTITY_TYPE;
+        return type;
+    }
+
     public <T extends BlockEntity> BlockEntityType<T> blockEntityType() {
         @SuppressWarnings("unchecked")
         BlockEntityType<T> type = (BlockEntityType<T>) BukkitBlockEntityTypes.PERSISTENT_BLOCK_ENTITY_TYPE;
@@ -62,7 +74,7 @@ public class PipeBehavior extends ConnectedBlockBehavior implements EntityBlockB
     }
 
     @Override
-    public <T extends BlockEntity> BlockEntityTicker<T> createBlockEntityTicker(CEWorld world,
+    public <T extends BlockEntity> BlockEntityTicker<T> createAsyncBlockEntityTicker(CEWorld world,
             ImmutableBlockState state, BlockEntityType<T> type) {
         if (type != blockEntityType())
             return null;
@@ -76,25 +88,44 @@ public class PipeBehavior extends ConnectedBlockBehavior implements EntityBlockB
                 tryTransfer(level, mcPos, Direction.UP, TransferAction.PUMP);
                 stored = getStored(level, mcPos);
                 if (!stored.isEmpty()) {
-                    if (tryTransfer(level, mcPos, Direction.DOWN, TransferAction.PUSH))
-                        return;
-                    for (Direction dir : new Direction[] { Direction.NORTH, Direction.SOUTH, Direction.EAST,
-                            Direction.WEST }) {
-                        if (tryTransfer(level, mcPos, dir, TransferAction.PUSH))
+                    // Round-robin: empezar desde última dirección exitosa
+                    Direction[] pushDirs = { Direction.DOWN, Direction.NORTH, Direction.SOUTH, Direction.EAST,
+                            Direction.WEST };
+                    int startIdx = lastSuccessfulDirection.getOrDefault(mcPos.asLong(), 0);
+
+                    for (int i = 0; i < pushDirs.length; i++) {
+                        Direction dir = pushDirs[(startIdx + i) % pushDirs.length];
+                        if (tryTransfer(level, mcPos, dir, TransferAction.PUSH)) {
+                            lastSuccessfulDirection.put(mcPos.asLong(), (startIdx + i) % pushDirs.length);
                             return;
+                        }
                     }
                 }
-                for (Direction dir : new Direction[] { Direction.NORTH, Direction.SOUTH, Direction.EAST,
-                        Direction.WEST }) {
-                    tryTransfer(level, mcPos, dir, TransferAction.HOMOGENIZE);
+                // Round-robin homogenize
+                Direction[] horizDirs = { Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST };
+                int startIdx = lastSuccessfulDirection.getOrDefault(mcPos.asLong(), 0) % horizDirs.length;
+
+                for (int i = 0; i < horizDirs.length; i++) {
+                    Direction dir = horizDirs[(startIdx + i) % horizDirs.length];
+                    if (tryTransfer(level, mcPos, dir, TransferAction.HOMOGENIZE)) {
+                        lastSuccessfulDirection.put(mcPos.asLong(), (startIdx + i) % horizDirs.length);
+                    }
                 }
             } else {
                 if (tryTransfer(level, mcPos, Direction.UP, TransferAction.PUSH))
                     return;
-                for (Direction dir : new Direction[] { Direction.NORTH, Direction.SOUTH, Direction.EAST,
-                        Direction.WEST }) {
-                    tryTransfer(level, mcPos, dir, TransferAction.HOMOGENIZE);
+
+                // Round-robin homogenize (con presión)
+                Direction[] horizDirs = { Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST };
+                int startIdx = lastSuccessfulDirection.getOrDefault(mcPos.asLong(), 0) % horizDirs.length;
+
+                for (int i = 0; i < horizDirs.length; i++) {
+                    Direction dir = horizDirs[(startIdx + i) % horizDirs.length];
+                    if (tryTransfer(level, mcPos, dir, TransferAction.HOMOGENIZE)) {
+                        lastSuccessfulDirection.put(mcPos.asLong(), (startIdx + i) % horizDirs.length);
+                    }
                 }
+
                 stored = getStored(level, mcPos);
                 if (!stored.isEmpty()) {
                     tryTransfer(level, mcPos, Direction.DOWN, TransferAction.PUSH);
@@ -118,55 +149,18 @@ public class PipeBehavior extends ConnectedBlockBehavior implements EntityBlockB
 
     @Override
     public FluidStack getStored(Level level, BlockPos pos) {
-        PersistentBlockEntity p = getBE(level, pos);
-        if (p == null)
-            return new FluidStack(FluidType.EMPTY, 0, 0);
-        return p.getOrDefault(FluidKeys.FLUID, new FluidStack(FluidType.EMPTY, 0, 0));
+        return dev.arubik.craftengine.fluid.FluidCarrierImpl.getStored(level, pos);
     }
 
     @Override
-    public int insertFluid(Level level, BlockPos pos, FluidStack stack) {
-        if (stack == null || stack.isEmpty())
-            return 0;
-        final int[] accepted = { 0 };
-        withBE(level, pos, p -> {
-            FluidStack stored = p.getOrDefault(FluidKeys.FLUID, new FluidStack(FluidType.EMPTY, 0, 0));
-            if (stored.isEmpty()) {
-                int move = Math.min(CAPACITY, stack.getAmount());
-                p.set(FluidKeys.FLUID, new FluidStack(stack.getType(), move, stack.getPressure()));
-                accepted[0] = move;
-            } else if (stored.getType() == stack.getType()) {
-                int space = CAPACITY - stored.getAmount();
-                if (space > 0) {
-                    int move = Math.min(space, stack.getAmount());
-                    stored.addAmount(move);
-                    int pressure = Math.max(stored.getPressure(), stack.getPressure());
-                    p.set(FluidKeys.FLUID, new FluidStack(stored.getType(), stored.getAmount(), pressure));
-                    accepted[0] = move;
-                }
-            }
-        });
-        return accepted[0];
+    public int insertFluid(Level level, BlockPos pos, FluidStack stack, net.minecraft.core.Direction direction) {
+        return dev.arubik.craftengine.fluid.FluidCarrierImpl.insertFluid(level, pos, stack, CAPACITY, 0, direction);
     }
 
     @Override
-    public int extractFluid(Level level, BlockPos pos, int max, Consumer<FluidStack> drained) {
-        final int[] moved = { 0 };
-        withBE(level, pos, p -> {
-            FluidStack stored = p.getOrDefault(FluidKeys.FLUID, new FluidStack(FluidType.EMPTY, 0, 0));
-            if (stored.isEmpty())
-                return;
-            int toMove = Math.min(max, stored.getAmount());
-            FluidStack out = new FluidStack(stored.getType(), toMove, stored.getPressure());
-            stored.removeAmount(toMove);
-            if (stored.isEmpty())
-                p.remove(FluidKeys.FLUID);
-            else
-                p.set(FluidKeys.FLUID, stored);
-            moved[0] = toMove;
-            drained.accept(out);
-        });
-        return moved[0];
+    public int extractFluid(Level level, BlockPos pos, int max, Consumer<FluidStack> drained,
+            net.minecraft.core.Direction direction) {
+        return dev.arubik.craftengine.fluid.FluidCarrierImpl.extractFluid(level, pos, max, drained, direction);
     }
 
     protected boolean isCompatibleBehavior(Object behavior) {
@@ -174,8 +168,8 @@ public class PipeBehavior extends ConnectedBlockBehavior implements EntityBlockB
     }
 
     @Override
-    public FluidAccessMode getAccessMode() {
-        return FluidAccessMode.ANYONE_CAN_TAKE;
+    public dev.arubik.craftengine.util.TransferAccessMode getAccessMode() {
+        return dev.arubik.craftengine.util.TransferAccessMode.ANYONE_CAN_TAKE;
     }
 
     private BlockPos offset(BlockPos pos, Direction dir) {
@@ -202,43 +196,72 @@ public class PipeBehavior extends ConnectedBlockBehavior implements EntityBlockB
         if (!isConnected(dir, from, level))
             return false;
 
+        // Pipe is a conduit, it essentially has "Open" IO, so we skip checking our own
+        // IOConfiguration
+        // per user request.
+
         BlockPos targetPos = offset(from, dir);
         BlockState targetState = level.getBlockState(targetPos);
 
+        // Check neighbor IO Configuration if available
         var customOpt = BlockStateUtils.getOptionalCustomBlockState(targetState);
         FluidCarrier targetCarrier = customOpt
                 .map(cs -> cs.behavior() instanceof FluidCarrier fc ? fc : null)
                 .orElse(null);
 
+        net.minecraft.core.Direction fromTarget = Utils.oppositeDirection(dir);
+
+        if (customOpt.isPresent()) {
+            BlockBehavior behavior = customOpt.get().behavior();
+            if (behavior instanceof dev.arubik.craftengine.block.behavior.ConnectableBlockBehavior connectable) {
+                IOConfiguration targetConfig = connectable.getIOConfiguration(level, targetPos);
+
+                if (action == TransferAction.PUSH) {
+                    // Pushing TO target, so target must accept INPUT from us
+                    if (!targetConfig.acceptsInput(IOConfiguration.IOType.FLUID, fromTarget))
+                        return false;
+                } else if (action == TransferAction.PUMP) {
+                    // Pumping FROM target, so target must provide OUTPUT to us
+                    if (!targetConfig.providesOutput(IOConfiguration.IOType.FLUID, fromTarget))
+                        return false;
+                }
+            }
+        }
+
         FluidStack stored = getStored(level, from);
+        int transferRate = TRANSFER_PER_TICK; // Default rate for pipes
 
         switch (action) {
             case PUMP: {
+                int inputRate = transferRate;
+
                 // Intentar recoger de fluidos del mundo en el target
-                FluidStack collected = FluidType.collectAt(targetPos, level, TRANSFER_PER_TICK,stored.getType());
+                FluidStack collected = FluidType.collectAt(targetPos, level, inputRate, stored.getType());
                 if (!collected.isEmpty()) {
-                    int accepted = insertFluid(level, from, collected);
+                    int accepted = insertFluid(level, from, collected, null); // Internal fill? Pipe fills itself via
+                                                                              // pump
                     if (accepted > 0)
                         return true;
                 }
                 // Intentar extraer de un carrier si permite extracción general
-                if (targetCarrier != null && targetCarrier.getAccessMode() == FluidAccessMode.ANYONE_CAN_TAKE) {
+                if (targetCarrier != null && targetCarrier
+                        .getAccessMode() == dev.arubik.craftengine.util.TransferAccessMode.ANYONE_CAN_TAKE) {
                     FluidStack theirStored = targetCarrier.getStored(level, targetPos);
                     if (!theirStored.isEmpty()) {
-                        int move = Math.min(TRANSFER_PER_TICK, theirStored.getAmount());
+                        int move = Math.min(inputRate, theirStored.getAmount());
                         final FluidStack[] extracted = { null };
                         int actually = FluidType.extractFromCarrier(targetCarrier, level, targetPos, move,
-                                f -> extracted[0] = f);
+                                f -> extracted[0] = f, fromTarget); // Extract from target, passing side
                         if (actually > 0 && extracted[0] != null) {
                             // Decaimiento de presión por salto
                             FluidStack toInsert = new FluidStack(extracted[0].getType(), actually,
                                     Math.max(0, extracted[0].getPressure() - 1));
-                            int accepted = insertFluid(level, from, toInsert);
+                            int accepted = insertFluid(level, from, toInsert, null);
                             if (accepted < actually) {
                                 // devolver resto
                                 FluidStack remainder = new FluidStack(extracted[0].getType(), actually - accepted,
                                         extracted[0].getPressure());
-                                FluidType.depositToCarrier(targetCarrier, level, targetPos, remainder);
+                                FluidType.depositToCarrier(targetCarrier, level, targetPos, remainder, fromTarget);
                             }
                             return accepted > 0;
                         }
@@ -247,10 +270,12 @@ public class PipeBehavior extends ConnectedBlockBehavior implements EntityBlockB
                 return false;
             }
             case PUSH: {
+                if (targetCarrier == null)
+                    return false;
                 if (stored.isEmpty())
                     return false;
 
-                int move = Math.min(TRANSFER_PER_TICK, stored.getAmount());
+                int move = Math.min(transferRate, stored.getAmount());
                 if (move <= 0)
                     return false;
 
@@ -258,30 +283,37 @@ public class PipeBehavior extends ConnectedBlockBehavior implements EntityBlockB
                 if (dir == Direction.UP && stored.getPressure() <= 0)
                     return false;
 
-                if (targetCarrier != null) {
-                    int appliedPressure = Math.max(0, stored.getPressure() - 1); // decaimiento de presión por distancia
-                                                                                 // 1
-                    FluidStack toSend = new FluidStack(stored.getType(), move, appliedPressure);
-                    int accepted = FluidType.depositToCarrier(targetCarrier, level, targetPos, toSend);
-                    if (accepted > 0) {
-                        FluidType.extractFromCarrier(this, level, from, accepted, f -> {
-                        });
-                        return true;
+                // Loop detection: verificar historial de transferencias
+                PersistentBlockEntity pbe = getBE(level, from);
+                if (pbe != null) {
+                    String history = pbe.getOrDefault(FluidKeys.TRANSFER_HISTORY, "");
+                    if (FluidTransferHelper.wouldCreateLoop(history, targetPos)) {
+                        // Loop detectado! Aplicar penalización de cooldown
+                        pbe.set(FluidKeys.FLUID_IO_COOLDOWN, 20); // 1 segundo de cooldown
+                        return false;
                     }
-                    return false;
                 }
-                // Sin carrier: intento de colocación/derrame físico
-                if (stored.getAmount() >= stored.getType().mbPerFullBlock()) {
-                    FluidStack temp = new FluidStack(stored.getType(), stored.getAmount(),
-                            Math.max(0, stored.getPressure() - 1));
-                    if (FluidType.place(temp, targetPos, level)) {
-                        int placed = stored.getAmount() - temp.getAmount();
-                        if (placed > 0) {
-                            extractFluid(level, from, placed, f -> {
-                            });
-                            return true;
-                        }
+
+                int pressure = stored.getPressure();
+                FluidStack toTransfer = new FluidStack(stored.getType(), move,
+                        Math.max(0, pressure - 1));
+
+                int accepted = targetCarrier.insertFluid(level, targetPos, toTransfer, fromTarget);
+
+                if (accepted > 0) {
+                    stored.removeAmount(accepted);
+                    if (stored.isEmpty())
+                        withBE(level, from, p -> p.remove(FluidKeys.FLUID));
+                    else
+                        withBE(level, from, p -> p.set(FluidKeys.FLUID, stored));
+
+                    // Actualizar historial después de transferencia exitosa
+                    if (pbe != null) {
+                        String history = pbe.getOrDefault(FluidKeys.TRANSFER_HISTORY, "");
+                        String newHistory = FluidTransferHelper.updateHistory(history, targetPos);
+                        pbe.set(FluidKeys.TRANSFER_HISTORY, newHistory);
                     }
+                    return true;
                 }
                 return false;
             }
@@ -306,40 +338,47 @@ public class PipeBehavior extends ConnectedBlockBehavior implements EntityBlockB
                 int amountA = a.isEmpty() ? 0 : a.getAmount();
                 int amountB = b.isEmpty() ? 0 : b.getAmount();
                 int diff = amountA - amountB;
+
+                // Dead zone: evitar micro-transferencias que causan oscilación
+                if (Math.abs(diff) < 10)
+                    return false;
+
                 if (diff == 0)
                     return false; // ya equilibrado
 
-                int move = Math.min(TRANSFER_PER_TICK, Math.abs(diff) / 2 + (Math.abs(diff) % 2)); // tender al
-                                                                                                   // equilibrio
+                int move = Math.min(transferRate, Math.abs(diff) / 2 + (Math.abs(diff) % 2)); // tender al
+                                                                                              // equilibrio
 
                 if (diff > 0) {
                     // Nosotros tenemos más: empujar al vecino
                     int available = Math.min(move, amountA);
                     if (available <= 0)
                         return false;
-                    int appliedPressure = Math.max(0, ((a.isEmpty() ? 0 : a.getPressure()) + (b.isEmpty() ? 0 : b.getPressure())) / 2 );
+                    int appliedPressure = Math.max(0,
+                            ((a.isEmpty() ? 0 : a.getPressure()) + (b.isEmpty() ? 0 : b.getPressure())) / 2);
                     FluidStack toSend = new FluidStack(type, available, appliedPressure);
-                    int accepted = FluidType.depositToCarrier(targetCarrier, level, targetPos, toSend);
+                    int accepted = FluidType.depositToCarrier(targetCarrier, level, targetPos, toSend, fromTarget);
                     if (accepted > 0) {
                         FluidType.extractFromCarrier(this, level, from, accepted, f -> {
-                        });
+                        }, null); // Internal extract?
                         return true;
                     }
                 } else {
                     // Vecino tiene más: intentar tirar de él si su modo lo permite
-                    if (targetCarrier.getAccessMode() == FluidAccessMode.ANYONE_CAN_TAKE) {
+                    if (targetCarrier
+                            .getAccessMode() == dev.arubik.craftengine.util.TransferAccessMode.ANYONE_CAN_TAKE) {
                         int need = Math.min(move, amountB);
                         final FluidStack[] extracted = { null };
                         int actually = FluidType.extractFromCarrier(targetCarrier, level, targetPos, need,
-                                f -> extracted[0] = f);
+                                f -> extracted[0] = f, fromTarget);
                         if (actually > 0 && extracted[0] != null) {
                             FluidStack toInsert = new FluidStack(type, actually,
                                     Math.max(0, a.getPressure()));
-                            int accepted = insertFluid(level, from, toInsert);
+                            int accepted = insertFluid(level, from, toInsert, null);
                             if (accepted < actually) {
                                 FluidStack remainder = new FluidStack(type, actually - accepted,
                                         extracted[0].getPressure());
-                                FluidType.depositToCarrier(targetCarrier, level, targetPos, remainder);
+                                FluidType.depositToCarrier(targetCarrier, level, targetPos, remainder, fromTarget);
                             }
                             return accepted > 0;
                         }
@@ -352,7 +391,7 @@ public class PipeBehavior extends ConnectedBlockBehavior implements EntityBlockB
         }
     }
 
-    public static class Factory implements BlockBehaviorFactory {
+    public static class Factory implements BlockBehaviorFactory<BlockBehavior> {
         @Override
         public BlockBehavior create(CustomBlock block, Map<String, Object> args) {
             return new PipeBehavior(block);

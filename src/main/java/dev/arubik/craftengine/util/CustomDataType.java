@@ -10,9 +10,6 @@ import java.util.function.Function;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
-import org.bukkit.craftbukkit.entity.CraftEntity;
-import org.bukkit.craftbukkit.entity.CraftItem;
-import org.bukkit.craftbukkit.persistence.CraftPersistentDataContainer;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
@@ -24,17 +21,10 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.mojang.serialization.Codec;
-import com.mojang.serialization.JsonOps;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.server.level.ChunkLevel;
 import net.minecraft.world.ItemStackWithSlot;
-import net.minecraft.world.item.component.CustomData;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.level.LevelAccessor;
+import net.minecraft.world.level.block.state.BlockState;
 
 public class CustomDataType<T, P> {
 
@@ -57,6 +47,31 @@ public class CustomDataType<T, P> {
         }
     }
 
+    public static CustomDataType<BlockState, byte[]> BLOCK_STATE_TYPE = new CustomDataType<>(
+            PersistentDataType.BYTE_ARRAY,
+            blockState -> {
+                try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+                        BukkitObjectOutputStream dataOutput = new BukkitObjectOutputStream(outputStream)) {
+                    dataOutput.writeObject(blockState);
+                    return outputStream.toByteArray();
+                } catch (Exception exception) {
+                    return new byte[0];
+                }
+            },
+            bytes -> {
+                try (ByteArrayInputStream inputStream = new ByteArrayInputStream(bytes);
+                        BukkitObjectInputStream dataInput = new BukkitObjectInputStream(inputStream)) {
+                    return (BlockState) dataInput.readObject();
+                } catch (Exception exception) {
+                    return null;
+                }
+            });
+
+    public static CustomDataType<ItemStack, String> ITEM_STACK_TYPE = new CustomDataType<>(
+            PersistentDataType.STRING,
+            CustomDataType::encode,
+            CustomDataType::decode);
+
     public static CustomDataType<UUID, String> UUID_TYPE = new CustomDataType<UUID, String>(
             PersistentDataType.STRING,
             java.util.UUID::toString,
@@ -78,7 +93,8 @@ public class CustomDataType<T, P> {
                         Double.parseDouble(parts[2]), Double.parseDouble(parts[3]));
             });
 
-    public static final Gson gson = new GsonBuilder().registerTypeAdapter(ItemStackWithSlot.class, new ItemStackWithSlotAdaptor()).create();
+    public static final Gson gson = new GsonBuilder()
+            .registerTypeAdapter(ItemStackWithSlot.class, new ItemStackWithSlotAdaptor()).create();
     public static final CustomDataType<List<ItemStackWithSlot>, String> ITEM_STACK_WITH_SLOT_LIST_TYPE = new CustomDataType<List<ItemStackWithSlot>, String>(
             PersistentDataType.STRING,
             (itemStacks) -> {
@@ -90,7 +106,8 @@ public class CustomDataType<T, P> {
                     });
                     return jsonObject.toString();
                 } catch (Throwable e) {
-                    Bukkit.getConsoleSender().sendMessage("Error serializing ItemStackWithSlot list: " + e.getMessage());
+                    Bukkit.getConsoleSender()
+                            .sendMessage("Error serializing ItemStackWithSlot list: " + e.getMessage());
                     return "[]";
                 }
             },

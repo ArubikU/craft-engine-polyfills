@@ -23,16 +23,16 @@ import net.momirealms.craftengine.bukkit.block.behavior.UnsafeCompositeBlockBeha
 import net.momirealms.craftengine.bukkit.nms.FastNMS;
 import net.momirealms.craftengine.bukkit.util.BlockStateUtils;
 import net.momirealms.craftengine.bukkit.util.BlockTags;
-import net.momirealms.craftengine.core.block.BlockBehavior;
+import net.momirealms.craftengine.core.block.behavior.BlockBehavior;
 import net.momirealms.craftengine.core.block.CustomBlock;
 import net.momirealms.craftengine.core.block.ImmutableBlockState;
 import net.momirealms.craftengine.core.block.UpdateOption;
 import net.momirealms.craftengine.core.block.behavior.BlockBehaviorFactory;
 import net.momirealms.craftengine.core.block.properties.EnumProperty;
-import net.momirealms.craftengine.core.util.Direction;
+import net.minecraft.core.Direction;
 import net.momirealms.craftengine.core.util.Key;
 
-public class ConnectedBlockBehavior extends BukkitBlockBehavior {
+public class ConnectedBlockBehavior extends ConnectableBlockBehavior {
     public final EnumProperty<ConnectedFace> NORTH;
     public final EnumProperty<ConnectedFace> EAST;
     public final EnumProperty<ConnectedFace> SOUTH;
@@ -51,7 +51,15 @@ public class ConnectedBlockBehavior extends BukkitBlockBehavior {
             Set<Object> blockStates,
             Set<String> customBlocks,
             boolean includeSelfByDefault) {
-        super(customBlock);
+        super(customBlock, new ArrayList<>(), null, null, new dev.arubik.craftengine.multiblock.IOConfiguration.Open()); // Default
+                                                                                                                         // open
+                                                                                                                         // IO
+                                                                                                                         // for
+                                                                                                                         // connected
+                                                                                                                         // blocks
+                                                                                                                         // unless
+                                                                                                                         // specified
+                                                                                                                         // otherwise
         this.NORTH = (EnumProperty<ConnectedFace>) customBlock.getProperty("north");
         this.EAST = (EnumProperty<ConnectedFace>) customBlock.getProperty("east");
         this.SOUTH = (EnumProperty<ConnectedFace>) customBlock.getProperty("south");
@@ -124,21 +132,23 @@ public class ConnectedBlockBehavior extends BukkitBlockBehavior {
      * Verifica si el bloque vecino tiene ConnectableBlockBehavior y si permite
      * conectar desde la dirección opuesta.
      */
-    public boolean neighborCanConnectBack(Direction direction, BlockState neighborState) {
+    public boolean neighborCanConnectBack(Direction direction, BlockState neighborState, Level level,
+            BlockPos neighborPos) {
         Optional<ImmutableBlockState> customOpt = BlockStateUtils.getOptionalCustomBlockState(neighborState);
         if (customOpt.isEmpty())
             return true; // Si no es custom block, asumimos que puede conectar
 
         if (customOpt.get().behavior() instanceof ConnectableBlockBehavior connectableBehavior) {
-            Direction oppositeDirection = direction.opposite();
-            // Respetar la orientación del bloque vecino al decidir si puede conectar de vuelta
-            return connectableBehavior.canConnectTo(oppositeDirection, neighborState);
+            Direction oppositeDirection = Utils.oppositeDirection(direction);
+            // Respetar la orientación del bloque vecino al decidir si puede conectar de
+            // vuelta
+            return connectableBehavior.canConnectTo(level, neighborPos, oppositeDirection);
         }
         if (customOpt.get().behavior() instanceof UnsafeCompositeBlockBehavior composite) {
             if (composite.getAs(ConnectableBlockBehavior.class).isPresent()) {
                 ConnectableBlockBehavior connectableBehavior = composite.getAs(ConnectableBlockBehavior.class).get();
-                Direction oppositeDirection = direction.opposite();
-                return connectableBehavior.canConnectTo(oppositeDirection, neighborState);
+                Direction oppositeDirection = Utils.oppositeDirection(direction);
+                return connectableBehavior.canConnectTo(level, neighborPos, oppositeDirection);
             }
         }
         return true;
@@ -149,7 +159,7 @@ public class ConnectedBlockBehavior extends BukkitBlockBehavior {
         BlockPos relativePos = Utils.getRelativeBlockPos(direction, pos, level);
         BlockState relativeState = level.getBlockState(relativePos);
         if (canConnectToBlock(relativeState)) {
-            if (neighborCanConnectBack(direction, relativeState)) {
+            if (neighborCanConnectBack(direction, relativeState, level, relativePos)) {
                 return true;
             }
         }
@@ -226,7 +236,7 @@ public class ConnectedBlockBehavior extends BukkitBlockBehavior {
         }
     }
 
-    public static class Factory implements BlockBehaviorFactory {
+    public static class Factory implements BlockBehaviorFactory<BlockBehavior> {
         public static final Factory FACTORY = new Factory();
 
         @Override
@@ -260,7 +270,7 @@ public class ConnectedBlockBehavior extends BukkitBlockBehavior {
                 if (material != null) {
                     if (idx == -1) {
                         // Todas las variantes del bloque vanilla
-                        blockStates.addAll(BlockStateUtils.getAllVanillaBlockStates(blockType));
+                        blockStates.addAll(BlockStateUtils.getPossibleBlockStates(blockType));
                     } else {
                         // Estado específico
                         blockStates.add(BlockStateUtils.blockDataToBlockState(Bukkit.createBlockData(key)));
