@@ -8,8 +8,11 @@ import java.util.UUID;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
+import net.momirealms.craftengine.bukkit.nms.FastNMS;
+import net.momirealms.craftengine.bukkit.util.BlockStateUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.block.data.BlockData;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
@@ -47,21 +50,20 @@ public class CustomDataType<T, P> {
         }
     }
 
-    public static CustomDataType<BlockState, byte[]> BLOCK_STATE_TYPE = new CustomDataType<>(
-            PersistentDataType.BYTE_ARRAY,
+    public static CustomDataType<BlockState, String> BLOCK_STATE_TYPE = new CustomDataType<>(
+            PersistentDataType.STRING,
             blockState -> {
-                try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-                        BukkitObjectOutputStream dataOutput = new BukkitObjectOutputStream(outputStream)) {
-                    dataOutput.writeObject(blockState);
-                    return outputStream.toByteArray();
+                try {
+                    BlockData data = FastNMS.INSTANCE.method$CraftBlockData$fromData(blockState);
+                    return data.getAsString();
                 } catch (Exception exception) {
-                    return new byte[0];
+                    return "minecraft:air";
                 }
             },
-            bytes -> {
-                try (ByteArrayInputStream inputStream = new ByteArrayInputStream(bytes);
-                        BukkitObjectInputStream dataInput = new BukkitObjectInputStream(inputStream)) {
-                    return (BlockState) dataInput.readObject();
+            str -> {
+                try {
+                    BlockData data = Bukkit.createBlockData(str);
+                    return (BlockState) BlockStateUtils.blockDataToBlockState(data);
                 } catch (Exception exception) {
                     return null;
                 }

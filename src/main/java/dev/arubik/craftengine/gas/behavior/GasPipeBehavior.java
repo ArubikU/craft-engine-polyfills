@@ -76,7 +76,7 @@ public class GasPipeBehavior extends ConnectedBlockBehavior implements EntityBlo
     }
 
     @Override
-    public <T extends BlockEntity> BlockEntityTicker<T> createAsyncBlockEntityTicker(CEWorld world,
+    public <T extends BlockEntity> BlockEntityTicker<T> createSyncBlockEntityTicker(CEWorld world,
             ImmutableBlockState state, BlockEntityType<T> type) {
         if (type != blockEntityType())
             return null;
@@ -220,14 +220,15 @@ public class GasPipeBehavior extends ConnectedBlockBehavior implements EntityBlo
             BlockBehavior behavior = customOpt.get().behavior();
             if (behavior instanceof dev.arubik.craftengine.block.behavior.ConnectableBlockBehavior connectable) {
                 IOConfiguration targetConfig = connectable.getIOConfiguration(level, targetPos);
+                Direction targetLocalDir = connectable.toLocalDirection(fromTarget, targetState);
 
                 if (action == TransferAction.PUSH) {
                     // Pushing TO target, so target must accept INPUT from us
-                    if (!targetConfig.acceptsInput(IOConfiguration.IOType.GAS, fromTarget))
+                    if (!targetConfig.acceptsInput(IOConfiguration.IOType.GAS, targetLocalDir))
                         return false;
                 } else if (action == TransferAction.PUMP) {
                     // Pumping FROM target, so target must provide OUTPUT to us
-                    if (!targetConfig.providesOutput(IOConfiguration.IOType.GAS, fromTarget))
+                    if (!targetConfig.providesOutput(IOConfiguration.IOType.GAS, targetLocalDir))
                         return false;
                 }
             }

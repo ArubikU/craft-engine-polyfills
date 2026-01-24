@@ -17,7 +17,6 @@ public class MachineMenuListener implements Listener {
             int slot = event.getRawSlot();
 
             // Check if click is in the Machine Inventory (top), not Player Inventory
-            // (bottom)
             if (slot < event.getInventory().getSize() && slot >= 0) {
                 MenuSlotType type = layout.getSlotType(slot);
 
@@ -34,28 +33,24 @@ public class MachineMenuListener implements Listener {
                         }
                         break;
                     case OUTPUT:
-                        // Prevent placing items INTO output
-                        // allow taking (PICKUP_ALL, etc)
-                        // But block PLACE_ALL, PLACE_ONE, SWAP_WITH_CURSOR
                         if (isPlaceAction(event.getAction())) {
                             event.setCancelled(true);
+                        } else {
+                            // Schedule sync for removal
+                            scheduleSync(menu);
                         }
                         break;
                     case INPUT:
                     case BURNING:
-                        // Allow everything, or add specific filters here
-                        // e.g. menu.getMachine().isItemValidForSlot(slot, item);
+                        // Schedule sync for any change
+                        scheduleSync(menu);
                         break;
                 }
             } else {
                 // Click in player inventory.
-                // Check Shift-Click (MOVE_TO_OTHER_INVENTORY)
+                // Handling Shift-Clicking items into the machine
                 if (event.getAction() == InventoryAction.MOVE_TO_OTHER_INVENTORY) {
-                    // We need to know destination slot logic.
-                    // This is complex to implement perfectly without NMS container logic.
-                    // For MVP: Allow it, but if it lands in DYNAMIC/OUTPUT it might be weird.
-                    // Ideally we cancel shift-click or strictly handle it.
-                    // event.setCancelled(true); // Easiest safety
+                    scheduleSync(menu);
                 }
             }
         }
@@ -65,17 +60,28 @@ public class MachineMenuListener implements Listener {
     public void onInventoryDrag(InventoryDragEvent event) {
         if (event.getInventory().getHolder() instanceof MachineMenu menu) {
             MachineLayout layout = menu.getLayout();
+            boolean affectsMachine = false;
             for (int slot : event.getRawSlots()) {
                 if (slot < event.getInventory().getSize()) {
                     MenuSlotType type = layout.getSlotType(slot);
                     if (type == MenuSlotType.DYNAMIC || type == MenuSlotType.BACKGROUND
-                            || type == MenuSlotType.OUTPUT) {
+                            || type == MenuSlotType.OUTPUT || type == MenuSlotType.BUTTON) {
                         event.setCancelled(true);
                         return;
                     }
+                    affectsMachine = true;
                 }
             }
+            if (affectsMachine) {
+                scheduleSync(menu);
+            }
         }
+    }
+
+    private void scheduleSync(MachineMenu menu) {
+        org.bukkit.Bukkit.getScheduler().runTask(dev.arubik.craftengine.CraftEnginePolyfills.instance(), () -> {
+            menu.syncToMachine();
+        });
     }
 
     private boolean isPlaceAction(InventoryAction action) {

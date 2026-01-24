@@ -1,6 +1,8 @@
 package dev.arubik.craftengine.block.behavior;
 
 import dev.arubik.craftengine.util.BlockContainer;
+import dev.arubik.craftengine.util.SoundMap;
+
 import java.util.Map;
 import java.util.Optional;
 import net.minecraft.core.BlockPos;
@@ -26,25 +28,26 @@ public class StorageBlockBehavior extends BukkitBlockBehavior {
 
   private final String title;
 
-  public StorageBlockBehavior(CustomBlock customBlock, int size, String title) {
+  private final dev.arubik.craftengine.util.SoundMap soundMap;
+
+  public StorageBlockBehavior(CustomBlock customBlock, int size, String title,
+      dev.arubik.craftengine.util.SoundMap soundMap) {
     super(customBlock);
     this.size = Math.max(9, Math.min(size, 54));
     this.title = (title != null) ? title : "Storage";
+    this.soundMap = soundMap;
   }
 
   public static class Factory implements BlockBehaviorFactory<BlockBehavior> {
     public BlockBehavior create(CustomBlock block, Map<String, Object> arguments) {
-      int size = 27;
-      String title = "Storage";
-      Object s = arguments.get("size");
-      if (s instanceof Number) {
-        Number n = (Number) s;
-        size = n.intValue();
+      int size = (int) arguments.getOrDefault("size", 27);
+      String title = (String) arguments.getOrDefault("title", "Storage");
+      Object soundMapObj = arguments.get("sound-map");
+      SoundMap soundMap = null;
+      if (soundMapObj instanceof Map) {
+        soundMap = SoundMap.fromMap((Map<String, Object>) soundMapObj);
       }
-      Object t = arguments.get("title");
-      if (t != null)
-        title = String.valueOf(t);
-      return (BlockBehavior) new StorageBlockBehavior(block, size, title);
+      return (BlockBehavior) new StorageBlockBehavior(block, size, title, soundMap);
     }
   }
 
@@ -54,7 +57,8 @@ public class StorageBlockBehavior extends BukkitBlockBehavior {
       Object posHandle = LocationUtils.toBlockPos(context.getClickedPos());
       if (posHandle instanceof BlockPos) {
         BlockPos pos = (BlockPos) posHandle;
-        BlockContainer holder = BlockContainer.getOrCreate((Level) serverLevel, pos, this.size, this.title);
+        BlockContainer holder = BlockContainer.getOrCreate((Level) serverLevel, pos, this.size, this.title,
+            this.soundMap);
         BukkitServerPlayer player = (BukkitServerPlayer) context.getPlayer();
         Player bukkit = player.platformPlayer();
         if (bukkit instanceof Player) {
@@ -68,10 +72,11 @@ public class StorageBlockBehavior extends BukkitBlockBehavior {
     return InteractionResult.PASS;
   }
 
+  @Override
   public Object getContainer(Object thisBlock, Object[] args) {
     Level level = (Level) args[1];
     BlockPos pos = (BlockPos) args[2];
-    return BlockContainer.getOrCreate(level, pos, this.size, this.title);
+    return BlockContainer.getOrCreate(level, pos, this.size, this.title, this.soundMap);
   }
 
   @Override

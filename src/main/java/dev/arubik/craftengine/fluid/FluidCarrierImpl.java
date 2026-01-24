@@ -65,6 +65,7 @@ public class FluidCarrierImpl {
                     p.set(key, new FluidStack(stored.getType(), stored.getAmount(), pressure));
                     accepted[0] = move;
                 }
+            } else {
             }
         });
 

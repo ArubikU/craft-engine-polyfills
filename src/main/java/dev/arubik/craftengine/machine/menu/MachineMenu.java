@@ -4,6 +4,7 @@ import dev.arubik.craftengine.machine.block.entity.AbstractMachineBlockEntity;
 import dev.arubik.craftengine.machine.menu.layout.MachineLayout;
 import dev.arubik.craftengine.machine.menu.layout.MenuSlotType;
 import org.bukkit.Bukkit;
+import org.bukkit.craftbukkit.inventory.CraftItemStack;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
@@ -72,9 +73,41 @@ public class MachineMenu implements InventoryHolder {
         }
     }
 
+    /**
+     * Pushes item in a specific slot from Bukkit inventory to machine
+     */
+    public void syncToMachine(int slot) {
+        if (slot < 0 || slot >= inventory.getSize())
+            return;
+        MenuSlotType type = layout.getSlotType(slot);
+        if (type == MenuSlotType.INPUT || type == MenuSlotType.OUTPUT || type == MenuSlotType.BURNING) {
+            org.bukkit.inventory.ItemStack bukkit = inventory.getItem(slot);
+            if (bukkit == null || bukkit.getType() == org.bukkit.Material.AIR) {
+                machine.setItem(slot, net.minecraft.world.item.ItemStack.EMPTY);
+            } else {
+                // Use cast as requested, but fall back to NMS copy if it's a generic itemstack
+                if (bukkit instanceof CraftItemStack) {
+                    machine.setItem(slot, ((CraftItemStack) bukkit).handle);
+                } else {
+                    machine.setItem(slot, CraftItemStack.asNMSCopy(bukkit));
+                }
+            }
+        }
+    }
+
+    /**
+     * Pushes all appropriate slots from Bukkit inventory back to machine
+     */
+    public void syncToMachine() {
+        for (int i = 0; i < inventory.getSize(); i++) {
+            syncToMachine(i);
+        }
+    }
+
     private void updateDynamicSlots() {
         for (int i = 0; i < inventory.getSize(); i++) {
-            if (layout.getSlotType(i) == MenuSlotType.DYNAMIC) {
+            MenuSlotType type = layout.getSlotType(i);
+            if (type == MenuSlotType.DYNAMIC || type == MenuSlotType.BUTTON) {
                 var provider = layout.getProvider(i);
                 if (provider != null) {
                     inventory.setItem(i, provider.provide(machine, tickCount));

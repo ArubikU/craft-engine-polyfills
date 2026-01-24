@@ -9,6 +9,7 @@ import dev.arubik.craftengine.multiblock.MultiBlockSchema;
 import dev.arubik.craftengine.util.CustomBlockData;
 import dev.arubik.craftengine.util.TypedKey;
 import net.minecraft.core.BlockPos;
+import net.minecraft.util.datafix.fixes.ChunkPalettedStorageFix.Direction;
 import net.minecraft.world.ItemStackWithSlot;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -47,6 +48,8 @@ public class MultiPageChestMachineBlockEntity extends MultiBlockMachineBlockEnti
     private int currentPage = 0;
     private final MachineLayout layout;
 
+    private boolean dataLoaded = false;
+
     public MultiPageChestMachineBlockEntity(net.momirealms.craftengine.core.world.BlockPos pos,
             ImmutableBlockState state, MultiBlockSchema schema) {
         super(SLOTS_PER_PAGE, pos, state, schema); // Container holds current page only
@@ -63,9 +66,25 @@ public class MultiPageChestMachineBlockEntity extends MultiBlockMachineBlockEnti
         this.layout = new MachineLayout(InventoryType.CHEST, 54, "Multi-Page Chest");
         setupLayout();
 
-        // Load from persistence
-        loadFromCustomBlockData();
-        syncCurrentPageToInventory();
+        // Note: loadFromCustomBlockData() is deferred until world is set
+    }
+
+    /**
+     * Ensures data is loaded from persistence. Called lazily when world is
+     * available.
+     */
+    private void ensureDataLoaded() {
+        if (!dataLoaded && world != null) {
+            loadFromPersistence();
+            syncCurrentPageToInventory();
+            dataLoaded = true;
+        }
+    }
+
+    @Override
+    public void setWorld(net.momirealms.craftengine.core.world.CEWorld world) {
+        super.setWorld(world);
+        ensureDataLoaded();
     }
 
     private void setupLayout() {
@@ -85,7 +104,7 @@ public class MultiPageChestMachineBlockEntity extends MultiBlockMachineBlockEnti
         }, (machine, player) -> {
             if (currentPage > 0) {
                 previousPage();
-                reopenMenu(((CraftPlayer) player).getHandle());
+                getMenu().syncFromMachine();
                 player.playSound(
                         player.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
             }
@@ -110,7 +129,7 @@ public class MultiPageChestMachineBlockEntity extends MultiBlockMachineBlockEnti
         }, (machine, player) -> {
             if (currentPage < TOTAL_PAGES - 1) {
                 nextPage();
-                reopenMenu(((CraftPlayer) player).getHandle());
+                getMenu().syncFromMachine();
                 player.playSound(
                         player.getLocation(), Sound.UI_BUTTON_CLICK, 1.0f, 1.0f);
             }
@@ -126,25 +145,28 @@ public class MultiPageChestMachineBlockEntity extends MultiBlockMachineBlockEnti
 
     public void nextPage() {
         if (currentPage < TOTAL_PAGES - 1) {
+            getMenu().syncToMachine();
             saveCurrentPageFromInventory();
             currentPage++;
             syncCurrentPageToInventory();
-            saveToCustomBlockData();
+            saveToPersistence();
         }
     }
 
     public void previousPage() {
         if (currentPage > 0) {
+            getMenu().syncToMachine();
             saveCurrentPageFromInventory();
             currentPage--;
             syncCurrentPageToInventory();
-            saveToCustomBlockData();
+            saveToPersistence();
         }
     }
 
     private void syncCurrentPageToInventory() {
         for (int i = 0; i < SLOTS_PER_PAGE; i++) {
-            setItem(i, pages[currentPage][i]);
+            // Use super.setItem to avoid redundant saveToCustomBlockData calls
+            super.setItem(i, pages[currentPage][i]);
         }
     }
 
@@ -154,85 +176,185 @@ public class MultiPageChestMachineBlockEntity extends MultiBlockMachineBlockEnti
         }
     }
 
-    private void reopenMenu(Player player) {
-        // Close and reopen menu to refresh
-        player.closeContainer();
-        openMenu(player);
-    }
-
     // ========== Persistence ==========
 
-    private void saveToCustomBlockData() {
+    private void saveToPersistence() {
         saveCurrentPageFromInventory();
 
-        BlockPos nmsPos = getMachinePos();
-        Level level = getNMSLevel();
-        if (level == null)
-            return;
-
-        CustomBlockData data = CustomBlockData.from(level, nmsPos);
-
-        // Save each page
-        data.set(KEY_PAGE_0.getKey(), KEY_PAGE_0.getType(),
-                dev.arubik.craftengine.util.ArrayItemStackWithSlot.from(pages[0]));
-        data.set(KEY_PAGE_1.getKey(), KEY_PAGE_1.getType(),
-                dev.arubik.craftengine.util.ArrayItemStackWithSlot.from(pages[1]));
-        data.set(KEY_PAGE_2.getKey(), KEY_PAGE_2.getType(),
-                dev.arubik.craftengine.util.ArrayItemStackWithSlot.from(pages[2]));
-        data.set(KEY_CURRENT_PAGE.getKey(), KEY_CURRENT_PAGE.getType(), currentPage);
+        // Save each page directly into the BlockEntity PDC
+        this.set(KEY_PAGE_0, dev.arubik.craftengine.util.ArrayItemStackWithSlot.from(pages[0]));
+        this.set(KEY_PAGE_1, dev.arubik.craftengine.util.ArrayItemStackWithSlot.from(pages[1]));
+        this.set(KEY_PAGE_2, dev.arubik.craftengine.util.ArrayItemStackWithSlot.from(pages[2]));
+        this.set(KEY_CURRENT_PAGE, currentPage);
+        setChanged();
     }
 
-    private void loadFromCustomBlockData() {
-        BlockPos nmsPos = getMachinePos();
-        Level level = getNMSLevel();
-        if (level == null)
-            return;
-
-        CustomBlockData data = CustomBlockData.from(level, nmsPos);
-
+    private void loadFromPersistence() {
         // Load each page
-        loadPageFromData(data, KEY_PAGE_0, 0);
-        loadPageFromData(data, KEY_PAGE_1, 1);
-        loadPageFromData(data, KEY_PAGE_2, 2);
+        loadPageFromPersistence(KEY_PAGE_0, 0);
+        loadPageFromPersistence(KEY_PAGE_1, 1);
+        loadPageFromPersistence(KEY_PAGE_2, 2);
 
         // Load current page
-        data.getOptional(KEY_CURRENT_PAGE).ifPresent(page -> {
-            if (page >= 0 && page < TOTAL_PAGES) {
-                currentPage = page;
-            }
-        });
+        Integer page = this.get(KEY_CURRENT_PAGE);
+        if (page != null && page >= 0 && page < TOTAL_PAGES) {
+            currentPage = page;
+        }
     }
 
-    private void loadPageFromData(CustomBlockData data, TypedKey<List<ItemStackWithSlot>> key, int pageIndex) {
+    private void loadPageFromPersistence(TypedKey<List<ItemStackWithSlot>> key, int pageIndex) {
         // Initialize page with empty stacks
         for (int i = 0; i < SLOTS_PER_PAGE; i++) {
             pages[pageIndex][i] = ItemStack.EMPTY;
         }
 
-        // Load items from data
-        data.getOptional(key).ifPresent(contents -> {
+        // Load items from persistence
+        List<ItemStackWithSlot> contents = this.get(key);
+        if (contents != null) {
             for (ItemStackWithSlot item : contents) {
                 if (item.slot() >= 0 && item.slot() < SLOTS_PER_PAGE) {
                     pages[pageIndex][item.slot()] = item.stack();
                 }
             }
-        });
+        }
+    }
+
+    // ========== Automation Support (Virtual Slots) ==========
+
+    private static final int AUTOMATION_OFFSET = 1000;
+
+    @Override
+    public boolean isEmpty() {
+        for (int p = 0; p < TOTAL_PAGES; p++) {
+            for (int i = 0; i < SLOTS_PER_PAGE; i++) {
+                ItemStack stack = pages[p][i];
+                if (stack != null && !stack.isEmpty()) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    @Override
+    public int getContainerSize() {
+        // Expose virtual slots for automation in addition to the standard view
+        // Automation sees slots 1000 to 1134 (135 slots)
+        return AUTOMATION_OFFSET + TOTAL_SLOTS;
+    }
+
+    @Override
+    public int[] getSlotsForFace(net.minecraft.core.Direction side) {
+        // Automation always accesses the virtual slots (all pages)
+        int[] slots = new int[TOTAL_SLOTS];
+        for (int i = 0; i < TOTAL_SLOTS; i++) {
+            slots[i] = AUTOMATION_OFFSET + i;
+        }
+        return slots;
+    }
+
+    @Override
+    public boolean canPlaceItemThroughFace(int slot, ItemStack stack, net.minecraft.core.Direction dir) {
+        return slot >= AUTOMATION_OFFSET; // Only allow automation through virtual slots
+    }
+
+    @Override
+    public boolean canTakeItemThroughFace(int slot, ItemStack stack, net.minecraft.core.Direction dir) {
+        return slot >= AUTOMATION_OFFSET; // Only allow automation through virtual slots
+    }
+
+    @Override
+    public ItemStack getItem(int slot) {
+        if (slot >= AUTOMATION_OFFSET) {
+            int absoluteIndex = slot - AUTOMATION_OFFSET;
+            if (absoluteIndex >= 0 && absoluteIndex < TOTAL_SLOTS) {
+                int page = absoluteIndex / SLOTS_PER_PAGE;
+                int index = absoluteIndex % SLOTS_PER_PAGE;
+                if (page == currentPage) {
+                    return super.getItem(index);
+                }
+                return pages[page][index];
+            }
+            return ItemStack.EMPTY;
+        }
+        return super.getItem(slot);
     }
 
     @Override
     public void setItem(int slot, ItemStack stack) {
+        if (slot >= AUTOMATION_OFFSET) {
+            int absoluteIndex = slot - AUTOMATION_OFFSET;
+            if (absoluteIndex >= 0 && absoluteIndex < TOTAL_SLOTS) {
+                int page = absoluteIndex / SLOTS_PER_PAGE;
+                int index = absoluteIndex % SLOTS_PER_PAGE;
+
+                // Update internal storage
+                pages[page][index] = stack;
+
+                // If modifying the current page, update the container view
+                if (page == currentPage) {
+                    super.setItem(index, stack);
+                } else {
+                    saveToPersistence();
+                }
+            }
+            return;
+        }
+
+        // Handle direct slot access (e.g. from Menu sync)
+        if (slot >= 0 && slot < SLOTS_PER_PAGE) {
+            if (ItemStack.matches(pages[currentPage][slot], stack))
+                return;
+            pages[currentPage][slot] = stack;
+            super.setItem(slot, stack);
+            saveToPersistence();
+            return;
+        }
+
         super.setItem(slot, stack);
-        saveToCustomBlockData();
     }
 
     @Override
     public ItemStack removeItem(int slot, int amount) {
+        if (slot >= AUTOMATION_OFFSET) {
+            ItemStack stack = getItem(slot);
+            if (!stack.isEmpty()) {
+                if (stack.getCount() <= amount) {
+                    setItem(slot, ItemStack.EMPTY);
+                    return stack;
+                } else {
+                    ItemStack split = stack.split(amount);
+                    if (stack.isEmpty()) {
+                        setItem(slot, ItemStack.EMPTY);
+                    } else {
+                        setItem(slot, stack); // updates persistence
+                    }
+                    return split;
+                }
+            }
+            return ItemStack.EMPTY;
+        }
+
         ItemStack result = super.removeItem(slot, amount);
-        saveToCustomBlockData();
+        if (slot >= 0 && slot < SLOTS_PER_PAGE) {
+            pages[currentPage][slot] = getItem(slot);
+            saveToPersistence();
+        }
         return result;
     }
 
     // ========== No Processing (Passive Container) ==========
+
+    @Override
+    public void clearContent() {
+        for (int p = 0; p < TOTAL_PAGES; p++) {
+            for (int i = 0; i < SLOTS_PER_PAGE; i++) {
+                pages[p][i] = ItemStack.EMPTY;
+            }
+        }
+        super.clearContent(); // Clears current page inventory and calls setChanged()
+        saveToPersistence();
+    }
 
     @Override
     protected AbstractProcessingRecipe getMatchingRecipe(Level level) {

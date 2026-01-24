@@ -50,15 +50,20 @@ public class BlockContainer extends AbstractWorldlyContainer {
     // inherited
 
     public BlockContainer(ItemStack[] inventory, Set<UUID> viewers, int size, String title, BlockPos pos,
-            Level level) {
+            Level level, SoundMap soundMap) {
         super(size, pos, level);
         this.inventory = inventory;
-        this.viewers.addAll(viewers); // Abstract initializes it, we add existing (or replace?)
-        // Abstract viewers is ConcurrentHashMap.newKeySet().
-        // BlockContainer passed viewers might be arbitrary set. safer to addAll.
+        this.viewers.addAll(viewers);
         this.title = title;
+        this.soundMap = soundMap;
 
         DataHolders.INSTANCE.addHolder(this);
+    }
+
+    private SoundMap soundMap;
+
+    public void setSoundMap(SoundMap soundMap) {
+        this.soundMap = soundMap;
     }
 
     private static final Map<String, BlockContainer> REGISTRY = new ConcurrentHashMap<>();
@@ -67,9 +72,10 @@ public class BlockContainer extends AbstractWorldlyContainer {
         return level.getWorld().getName() + "@" + "x" + pos.getX() + "y" + pos.getY() + "z" + pos.getZ();
     }
 
-    public static BlockContainer getOrCreate(Level level, BlockPos pos, int size, String title) {
+    public static BlockContainer getOrCreate(Level level, BlockPos pos, int size, String title, SoundMap soundMap) {
         return REGISTRY.computeIfAbsent(makeKey(level, pos),
-                k -> new BlockContainer(new ItemStack[size], ConcurrentHashMap.newKeySet(), size, title, pos, level));
+                k -> new BlockContainer(new ItemStack[size], ConcurrentHashMap.newKeySet(), size, title, pos, level,
+                        soundMap));
     }
 
     public static Optional<BlockContainer> get(Block block) {
@@ -301,11 +307,19 @@ public class BlockContainer extends AbstractWorldlyContainer {
     @Override
     public void onOpen(CraftHumanEntity player) {
         super.onOpen(player);
+        // Play Open Sound
+        if (soundMap != null) {
+            soundMap.playOpen(player.getLocation());
+        }
     }
 
     @Override
     public void onClose(CraftHumanEntity player) {
         super.onClose(player);
+        // Play Close Sound
+        if (soundMap != null) {
+            soundMap.playClose(player.getLocation());
+        }
     }
 
     // getViewers inherited
@@ -433,12 +447,12 @@ public class BlockContainer extends AbstractWorldlyContainer {
 
         @EventHandler(ignoreCancelled = true)
         public void onMove(InventoryMoveItemEvent event) {
-            if (event.getSource().getHolder() instanceof BlockContainer s) {
+            if (event.getSource() != null && event.getSource().getHolder() instanceof BlockContainer s) {
                 s.syncFromBukkit();
                 s.setChanged();
                 s.saveToData();
             }
-            if (event.getDestination().getHolder() instanceof BlockContainer s) {
+            if (event.getDestination() != null && event.getDestination().getHolder() instanceof BlockContainer s) {
                 s.syncFromBukkit();
                 s.setChanged();
                 s.saveToData();

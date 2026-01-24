@@ -1,5 +1,6 @@
 package dev.arubik.craftengine.fluid.behavior;
 
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.function.Consumer;
@@ -34,6 +35,7 @@ import net.momirealms.craftengine.core.block.entity.tick.BlockEntityTicker;
 import net.momirealms.craftengine.core.world.context.UseOnContext;
 import net.momirealms.craftengine.core.world.CEWorld;
 import dev.arubik.craftengine.multiblock.IOConfiguration;
+import dev.arubik.craftengine.util.DirectionType;
 import dev.arubik.craftengine.util.Utils;
 
 public class PipeBehavior extends ConnectedBlockBehavior implements EntityBlockBehavior, FluidCarrier {
@@ -52,6 +54,7 @@ public class PipeBehavior extends ConnectedBlockBehavior implements EntityBlockB
         super(block, new java.util.ArrayList<>(), new HashSet<>(),
                 new HashSet<>(java.util.Arrays.asList("cml:iron_pump", "cml:copper_valve", "cml:copper_tank")), true);
         this.block = block;
+        this.connectableFaces = java.util.Arrays.asList(Direction.values());
     }
 
     @Override
@@ -74,7 +77,7 @@ public class PipeBehavior extends ConnectedBlockBehavior implements EntityBlockB
     }
 
     @Override
-    public <T extends BlockEntity> BlockEntityTicker<T> createAsyncBlockEntityTicker(CEWorld world,
+    public <T extends BlockEntity> BlockEntityTicker<T> createSyncBlockEntityTicker(CEWorld world,
             ImmutableBlockState state, BlockEntityType<T> type) {
         if (type != blockEntityType())
             return null;
@@ -215,14 +218,15 @@ public class PipeBehavior extends ConnectedBlockBehavior implements EntityBlockB
             BlockBehavior behavior = customOpt.get().behavior();
             if (behavior instanceof dev.arubik.craftengine.block.behavior.ConnectableBlockBehavior connectable) {
                 IOConfiguration targetConfig = connectable.getIOConfiguration(level, targetPos);
+                Direction targetLocalDir = connectable.toLocalDirection(fromTarget, targetState);
 
                 if (action == TransferAction.PUSH) {
                     // Pushing TO target, so target must accept INPUT from us
-                    if (!targetConfig.acceptsInput(IOConfiguration.IOType.FLUID, fromTarget))
+                    if (!targetConfig.acceptsInput(IOConfiguration.IOType.FLUID, targetLocalDir))
                         return false;
                 } else if (action == TransferAction.PUMP) {
                     // Pumping FROM target, so target must provide OUTPUT to us
-                    if (!targetConfig.providesOutput(IOConfiguration.IOType.FLUID, fromTarget))
+                    if (!targetConfig.providesOutput(IOConfiguration.IOType.FLUID, targetLocalDir))
                         return false;
                 }
             }

@@ -1,21 +1,26 @@
 package dev.arubik.craftengine.machine.block.entity;
 
+import dev.arubik.craftengine.block.behavior.ConnectableBlockBehavior;
 import dev.arubik.craftengine.block.entity.PersistentWorldlyBlockEntity;
 import dev.arubik.craftengine.fluid.FluidStack;
 import dev.arubik.craftengine.gas.GasStack;
 import dev.arubik.craftengine.machine.recipe.AbstractProcessingRecipe;
 import dev.arubik.craftengine.machine.recipe.RecipeOutput;
 import dev.arubik.craftengine.multiblock.IOConfiguration;
+import dev.arubik.craftengine.util.DirectionType;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.momirealms.craftengine.bukkit.block.behavior.UnsafeCompositeBlockBehavior;
 import net.momirealms.craftengine.bukkit.util.BlockStateUtils;
 import net.momirealms.craftengine.bukkit.world.BukkitWorld;
+import net.momirealms.craftengine.core.block.behavior.BlockBehavior;
 import net.minecraft.world.entity.player.Player;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Consumer;
 
 public abstract class AbstractMachineBlockEntity extends PersistentWorldlyBlockEntity {
@@ -124,21 +129,6 @@ public abstract class AbstractMachineBlockEntity extends PersistentWorldlyBlockE
     }
 
     public dev.arubik.craftengine.multiblock.IOConfiguration getIOConfiguration() {
-        // If using RelativeIO, configure facing from block state using
-        // getMachineLevel() if available?
-        // Actually, getFacing() needs level.
-        if (ioConfiguration instanceof dev.arubik.craftengine.multiblock.IOConfiguration.RelativeIO relativeIO) {
-            // Need level to resolve facing for RelativeIO
-            // This is tricky without Level passed to getIOConfiguration
-            // But usually IOConfig is set up once or we need to change how IOConfig works
-            // if it depends on Level dynamically
-            // For now, if we can't get Level, we can't resolve RelativeIO facing here
-            // easily without changing signature
-            // But wait, getIOConfiguration is often called without Level.
-            // Let's defer this or require Level.
-            // Actually, for RelativeIO, the facing should probably be resolved when the
-            // machine loads or state changes, not on every get.
-        }
         return ioConfiguration;
     }
 
@@ -156,33 +146,18 @@ public abstract class AbstractMachineBlockEntity extends PersistentWorldlyBlockE
             return null;
         }
 
-        // Try full direction first (6-way)
-        try {
-            @SuppressWarnings("unchecked")
-            net.momirealms.craftengine.core.block.properties.Property<net.minecraft.core.Direction> fullFacingProp = (net.momirealms.craftengine.core.block.properties.Property<net.minecraft.core.Direction>) customState
-                    .customBlockState().getProperty("facing");
-
-            if (fullFacingProp != null) {
-                return customState.get(fullFacingProp);
+        if (customState.behavior() instanceof ConnectableBlockBehavior connectableBlockBehavior) {
+            return connectableBlockBehavior.toDirection(state);
+        }
+        if (customState.behavior() instanceof UnsafeCompositeBlockBehavior unsafeCompositeBlockBehavior) {
+            Optional<ConnectableBlockBehavior> optional = unsafeCompositeBlockBehavior
+                    .getAs(ConnectableBlockBehavior.class);
+            if (optional.isPresent()) {
+                return optional.get().toDirection(state);
             }
-        } catch (Exception e) {
         }
 
-        // Try horizontal direction (4-way)
-        try {
-            @SuppressWarnings("unchecked")
-            net.momirealms.craftengine.core.block.properties.Property<net.momirealms.craftengine.core.util.HorizontalDirection> horizontalFacingProp = customState
-                    .customBlockState().getProperty("facing");
-
-            if (horizontalFacingProp != null) {
-                net.momirealms.craftengine.core.util.HorizontalDirection horizontalFacing = customState
-                        .get(horizontalFacingProp);
-                return dev.arubik.craftengine.multiblock.DirectionalIOHelper.fromHorizontalDirection(horizontalFacing);
-            }
-        } catch (Exception e) {
-        }
-
-        return null;
+        return Direction.NORTH;
     }
 
     // Updated: fillTank requires Level
@@ -207,44 +182,67 @@ public abstract class AbstractMachineBlockEntity extends PersistentWorldlyBlockE
 
     public int insertFluid(Level level, FluidStack stack, net.minecraft.core.Direction side, int slot) {
         if (ioConfiguration != null) {
+            Direction localDir = side;
+            DirectionType dirType = DirectionType.HORIZONTAL;
+
+            net.minecraft.world.level.block.state.BlockState state = level.getBlockState(getMachinePos());
+            Optional<net.momirealms.craftengine.core.block.ImmutableBlockState> customState = net.momirealms.craftengine.bukkit.util.BlockStateUtils
+                    .getOptionalCustomBlockState(state);
+            if (customState.isPresent()) {
+                BlockBehavior behavior = customState.get().behavior();
+                if (behavior instanceof ConnectableBlockBehavior connectableBlockBehavior) {
+                    localDir = connectableBlockBehavior.toLocalDirection(side, state);
+                }
+                if (behavior instanceof UnsafeCompositeBlockBehavior unsafeCompositeBlockBehavior) {
+                    Optional<ConnectableBlockBehavior> optional = unsafeCompositeBlockBehavior
+                            .getAs(ConnectableBlockBehavior.class);
+                    if (optional.isPresent()) {
+                        localDir = optional.get().toLocalDirection(side, state);
+                    }
+                }
+            }
+
             if (!getIOConfiguration().acceptsInput(dev.arubik.craftengine.multiblock.IOConfiguration.IOType.FLUID,
-                    side)) {
+                    localDir)) {
                 return 0;
             }
-        }
 
-        FluidStack copy = stack.copy();
-        int accepted = 0;
-        boolean changed = false;
-
-        int targetSlot = slot;
-        if (targetSlot == -1 && ioConfiguration != null) {
-            targetSlot = getIOConfiguration()
-                    .getTargetSlot(dev.arubik.craftengine.multiblock.IOConfiguration.IOType.FLUID, side);
-        }
-
-        if (targetSlot != -1) {
-            if (targetSlot >= 0 && targetSlot < fluidTanks.size()) {
-                accepted = fluidTanks.get(targetSlot).insert(level, BlockPos.of(pos.asLong()), copy);
-                if (accepted > 0)
-                    changed = true;
+            int targetSlot = slot;
+            if (targetSlot == -1) {
+                targetSlot = getIOConfiguration()
+                        .getTargetSlot(dev.arubik.craftengine.multiblock.IOConfiguration.IOType.FLUID,
+                                localDir);
             }
-        } else {
-            for (dev.arubik.craftengine.fluid.FluidTank tank : fluidTanks) {
-                int moved = tank.insert(level, BlockPos.of(pos.asLong()), copy);
-                if (moved > 0) {
-                    copy.removeAmount(moved);
-                    accepted += moved;
-                    changed = true;
+
+            FluidStack copy = stack.copy();
+            int accepted = 0;
+            boolean changed = false;
+
+            if (targetSlot != -1) {
+                if (targetSlot >= 0 && targetSlot < fluidTanks.size()) {
+                    accepted = fluidTanks.get(targetSlot).insert(level, BlockPos.of(pos.asLong()), copy);
+                    if (accepted > 0)
+                        changed = true;
                 }
-                if (copy.isEmpty())
-                    break;
+            } else {
+                for (dev.arubik.craftengine.fluid.FluidTank tank : fluidTanks) {
+                    int moved = tank.insert(level, BlockPos.of(pos.asLong()), copy);
+                    if (moved > 0) {
+                        copy.removeAmount(moved);
+                        accepted += moved;
+                        changed = true;
+                    }
+                    if (copy.isEmpty())
+                        break;
+                }
             }
+
+            if (changed)
+                setChanged();
+            return accepted;
         }
 
-        if (changed)
-            setChanged();
-        return accepted;
+        return 0;
     }
 
     // Updated: extractFluid requires Level
@@ -255,41 +253,62 @@ public abstract class AbstractMachineBlockEntity extends PersistentWorldlyBlockE
     public int extractFluid(Level level, int max, Consumer<FluidStack> drained, net.minecraft.core.Direction side,
             int slot) {
         if (ioConfiguration != null) {
+            Direction localDir = side;
+
+            net.minecraft.world.level.block.state.BlockState state = level.getBlockState(getMachinePos());
+            Optional<net.momirealms.craftengine.core.block.ImmutableBlockState> customState = net.momirealms.craftengine.bukkit.util.BlockStateUtils
+                    .getOptionalCustomBlockState(state);
+            if (customState.isPresent()) {
+                BlockBehavior behavior = customState.get().behavior();
+                if (behavior instanceof ConnectableBlockBehavior connectableBlockBehavior) {
+                    localDir = connectableBlockBehavior.toLocalDirection(side, state);
+                }
+                if (behavior instanceof UnsafeCompositeBlockBehavior unsafeCompositeBlockBehavior) {
+                    Optional<ConnectableBlockBehavior> behavior2 = unsafeCompositeBlockBehavior
+                            .getAs(ConnectableBlockBehavior.class);
+                    if (behavior2.isPresent()) {
+                        localDir = behavior2.get().toLocalDirection(side, state);
+                    }
+                }
+            }
+
             if (!getIOConfiguration().providesOutput(dev.arubik.craftengine.multiblock.IOConfiguration.IOType.FLUID,
-                    side)) {
+                    localDir)) {
                 return 0;
             }
-        }
 
-        final boolean[] changed = { false };
-        Consumer<FluidStack> hookDrained = (s) -> {
-            if (drained != null)
-                drained.accept(s);
-            changed[0] = true;
-        };
+            final boolean[] changed = { false };
+            Consumer<FluidStack> hookDrained = (s) -> {
+                if (drained != null)
+                    drained.accept(s);
+                changed[0] = true;
+            };
 
-        int targetSlot = slot;
-        if (targetSlot == -1 && ioConfiguration != null) {
-            targetSlot = getIOConfiguration()
-                    .getTargetSlot(dev.arubik.craftengine.multiblock.IOConfiguration.IOType.FLUID, side);
-        }
-
-        if (targetSlot != -1) {
-            if (targetSlot >= 0 && targetSlot < fluidTanks.size()) {
-                int extracted = fluidTanks.get(targetSlot).extract(level, BlockPos.of(pos.asLong()), max, hookDrained);
-                if (changed[0])
-                    setChanged();
-                return extracted;
+            int targetSlot = slot;
+            if (targetSlot == -1) {
+                targetSlot = getIOConfiguration()
+                        .getTargetSlot(dev.arubik.craftengine.multiblock.IOConfiguration.IOType.FLUID,
+                                localDir);
             }
-            return 0;
-        }
 
-        for (dev.arubik.craftengine.fluid.FluidTank tank : fluidTanks) {
-            int extracted = tank.extract(level, BlockPos.of(pos.asLong()), max, hookDrained);
-            if (extracted > 0) {
-                if (changed[0])
-                    setChanged();
-                return extracted;
+            if (targetSlot != -1) {
+                if (targetSlot >= 0 && targetSlot < fluidTanks.size()) {
+                    int extracted = fluidTanks.get(targetSlot).extract(level, BlockPos.of(pos.asLong()), max,
+                            hookDrained);
+                    if (changed[0])
+                        setChanged();
+                    return extracted;
+                }
+                return 0;
+            }
+
+            for (dev.arubik.craftengine.fluid.FluidTank tank : fluidTanks) {
+                int extracted = tank.extract(level, BlockPos.of(pos.asLong()), max, hookDrained);
+                if (extracted > 0) {
+                    if (changed[0])
+                        setChanged();
+                    return extracted;
+                }
             }
         }
 
@@ -320,43 +339,65 @@ public abstract class AbstractMachineBlockEntity extends PersistentWorldlyBlockE
     public int insertGas(Level level, dev.arubik.craftengine.gas.GasStack stack, net.minecraft.core.Direction side,
             int slot) {
         if (ioConfiguration != null) {
+            Direction localDir = side;
+            DirectionType dirType = DirectionType.HORIZONTAL;
+
+            net.minecraft.world.level.block.state.BlockState state = level.getBlockState(getMachinePos());
+            Optional<net.momirealms.craftengine.core.block.ImmutableBlockState> customState = net.momirealms.craftengine.bukkit.util.BlockStateUtils
+                    .getOptionalCustomBlockState(state);
+            if (customState.isPresent()) {
+                BlockBehavior behavior = customState.get().behavior();
+                if (behavior instanceof ConnectableBlockBehavior connectableBlockBehavior) {
+                    localDir = connectableBlockBehavior.toLocalDirection(side, state);
+                }
+                if (behavior instanceof UnsafeCompositeBlockBehavior unsafeCompositeBlockBehavior) {
+                    Optional<ConnectableBlockBehavior> behavior2 = unsafeCompositeBlockBehavior
+                            .getAs(ConnectableBlockBehavior.class);
+                    if (behavior2.isPresent()) {
+                        localDir = behavior2.get().toLocalDirection(side, state);
+                    }
+                }
+            }
+
             if (!getIOConfiguration().acceptsInput(dev.arubik.craftengine.multiblock.IOConfiguration.IOType.GAS,
-                    side)) {
+                    localDir)) {
                 return 0;
             }
-        }
 
-        if (stack == null || stack.isEmpty())
-            return 0;
+            if (stack == null || stack.isEmpty())
+                return 0;
 
-        dev.arubik.craftengine.gas.GasStack copy = new dev.arubik.craftengine.gas.GasStack(stack.getType(),
-                stack.getAmount());
-        int originalAmount = copy.getAmount();
-        boolean changed = false;
-
-        int targetSlot = slot;
-        if (targetSlot == -1 && ioConfiguration != null) {
-            targetSlot = getIOConfiguration()
-                    .getTargetSlot(dev.arubik.craftengine.multiblock.IOConfiguration.IOType.GAS, side);
-        }
-
-        if (targetSlot != -1) {
-            if (targetSlot >= 0 && targetSlot < gasTanks.size()) {
-                int accepted = gasTanks.get(targetSlot).insert(level, BlockPos.of(pos.asLong()), copy);
-                if (accepted > 0)
-                    changed = true;
-                return accepted;
+            int targetSlot = slot;
+            if (targetSlot == -1) {
+                targetSlot = getIOConfiguration()
+                        .getTargetSlot(dev.arubik.craftengine.multiblock.IOConfiguration.IOType.GAS, localDir);
             }
-            return 0;
+
+            dev.arubik.craftengine.gas.GasStack copy = new dev.arubik.craftengine.gas.GasStack(stack.getType(),
+                    stack.getAmount());
+            int originalAmount = copy.getAmount();
+            boolean changed = false;
+
+            if (targetSlot != -1) {
+                if (targetSlot >= 0 && targetSlot < gasTanks.size()) {
+                    int accepted = gasTanks.get(targetSlot).insert(level, BlockPos.of(pos.asLong()), copy);
+                    if (accepted > 0)
+                        changed = true;
+                    return accepted;
+                }
+                return 0;
+            }
+
+            fillGasTank(level, copy);
+            if (originalAmount != copy.getAmount())
+                changed = true;
+
+            if (changed)
+                setChanged();
+            return originalAmount - copy.getAmount();
         }
 
-        fillGasTank(level, copy);
-        if (originalAmount != copy.getAmount())
-            changed = true;
-
-        if (changed)
-            setChanged();
-        return originalAmount - copy.getAmount();
+        return 0;
     }
 
     // Updated: extractGas requires Level
@@ -368,41 +409,62 @@ public abstract class AbstractMachineBlockEntity extends PersistentWorldlyBlockE
     public int extractGas(Level level, int max, Consumer<dev.arubik.craftengine.gas.GasStack> drained,
             net.minecraft.core.Direction side, int slot) {
         if (ioConfiguration != null) {
+            Direction localDir = side;
+            DirectionType dirType = DirectionType.HORIZONTAL;
+
+            net.minecraft.world.level.block.state.BlockState state = level.getBlockState(getMachinePos());
+            Optional<net.momirealms.craftengine.core.block.ImmutableBlockState> customState = net.momirealms.craftengine.bukkit.util.BlockStateUtils
+                    .getOptionalCustomBlockState(state);
+            if (customState.isPresent()) {
+                BlockBehavior behavior = customState.get().behavior();
+                if (behavior instanceof ConnectableBlockBehavior connectableBlockBehavior) {
+                    localDir = connectableBlockBehavior.toLocalDirection(side, state);
+                }
+                if (behavior instanceof UnsafeCompositeBlockBehavior unsafeCompositeBlockBehavior) {
+                    Optional<ConnectableBlockBehavior> behavior2 = unsafeCompositeBlockBehavior
+                            .getAs(ConnectableBlockBehavior.class);
+                    if (behavior2.isPresent()) {
+                        localDir = behavior2.get().toLocalDirection(side, state);
+                    }
+                }
+            }
+
             if (!getIOConfiguration().providesOutput(dev.arubik.craftengine.multiblock.IOConfiguration.IOType.GAS,
-                    side)) {
+                    localDir)) {
                 return 0;
             }
-        }
 
-        final boolean[] changed = { false };
-        Consumer<dev.arubik.craftengine.gas.GasStack> hookDrained = (s) -> {
-            if (drained != null)
-                drained.accept(s);
-            changed[0] = true;
-        };
+            final boolean[] changed = { false };
+            Consumer<dev.arubik.craftengine.gas.GasStack> hookDrained = (s) -> {
+                if (drained != null)
+                    drained.accept(s);
+                changed[0] = true;
+            };
 
-        int targetSlot = slot;
-        if (targetSlot == -1 && ioConfiguration != null) {
-            targetSlot = getIOConfiguration()
-                    .getTargetSlot(dev.arubik.craftengine.multiblock.IOConfiguration.IOType.GAS, side);
-        }
-
-        if (targetSlot != -1) {
-            if (targetSlot >= 0 && targetSlot < gasTanks.size()) {
-                int extracted = gasTanks.get(targetSlot).extract(level, BlockPos.of(pos.asLong()), max, hookDrained);
-                if (changed[0])
-                    setChanged();
-                return extracted;
+            int targetSlot = slot;
+            if (targetSlot == -1) {
+                targetSlot = getIOConfiguration()
+                        .getTargetSlot(dev.arubik.craftengine.multiblock.IOConfiguration.IOType.GAS, localDir);
             }
-            return 0;
-        }
 
-        for (dev.arubik.craftengine.gas.GasTank tank : gasTanks) {
-            int extracted = tank.extract(level, BlockPos.of(pos.asLong()), max, hookDrained);
-            if (extracted > 0) {
-                if (changed[0])
-                    setChanged();
-                return extracted;
+            if (targetSlot != -1) {
+                if (targetSlot >= 0 && targetSlot < gasTanks.size()) {
+                    int extracted = gasTanks.get(targetSlot).extract(level, BlockPos.of(pos.asLong()), max,
+                            hookDrained);
+                    if (changed[0])
+                        setChanged();
+                    return extracted;
+                }
+                return 0;
+            }
+
+            for (dev.arubik.craftengine.gas.GasTank tank : gasTanks) {
+                int extracted = tank.extract(level, BlockPos.of(pos.asLong()), max, hookDrained);
+                if (extracted > 0) {
+                    if (changed[0])
+                        setChanged();
+                    return extracted;
+                }
             }
         }
         return 0;

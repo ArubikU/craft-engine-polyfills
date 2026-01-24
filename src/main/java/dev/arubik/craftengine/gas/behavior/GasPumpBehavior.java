@@ -114,7 +114,7 @@ public class GasPumpBehavior extends ConnectableBlockBehavior
     }
 
     @Override
-    public <T extends BlockEntity> net.momirealms.craftengine.core.block.entity.tick.BlockEntityTicker<T> createAsyncBlockEntityTicker(
+    public <T extends BlockEntity> net.momirealms.craftengine.core.block.entity.tick.BlockEntityTicker<T> createSyncBlockEntityTicker(
             net.momirealms.craftengine.core.world.CEWorld world, ImmutableBlockState state, BlockEntityType<T> type) {
         if (type != blockEntityType())
             return null;

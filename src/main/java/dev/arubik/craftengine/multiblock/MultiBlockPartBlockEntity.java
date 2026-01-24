@@ -10,13 +10,17 @@ import org.bukkit.NamespacedKey;
 import org.bukkit.World;
 import org.bukkit.craftbukkit.entity.CraftHumanEntity;
 import org.bukkit.entity.HumanEntity;
+import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.persistence.PersistentDataType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import dev.arubik.craftengine.block.behavior.ConnectableBlockBehavior;
 import dev.arubik.craftengine.block.entity.BukkitBlockEntityTypes;
 import dev.arubik.craftengine.block.entity.PersistentBlockEntity;
+import dev.arubik.craftengine.multiblock.IOConfiguration.IORole;
+import dev.arubik.craftengine.multiblock.IOConfiguration.IOType;
 import dev.arubik.craftengine.util.TypedKey;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -34,7 +38,7 @@ import net.momirealms.craftengine.core.block.entity.BlockEntity;
  * Supports optional machine capability and IO configuration.
  */
 public class MultiBlockPartBlockEntity extends PersistentBlockEntity
-        implements WorldlyContainer {
+        implements WorldlyContainer, InventoryHolder {
 
     // Persistent data keys
     private static final TypedKey<int[]> KEY_CORE_POS = TypedKey.of("craftengine", "multiblock_core_pos",
@@ -69,12 +73,21 @@ public class MultiBlockPartBlockEntity extends PersistentBlockEntity
     }
 
     public MultiBlockRole getRole() {
+        if (role == MultiBlockRole.NONE) {
+            String roleName = super.get(KEY_ROLE);
+            if (roleName != null) {
+                try {
+                    this.role = MultiBlockRole.valueOf(roleName);
+                } catch (Exception ignored) {
+                }
+            }
+        }
         return role;
     }
 
     public void setRole(MultiBlockRole role) {
         this.role = role;
-        super.set(KEY_ROLE.getKey(), PersistentDataType.STRING, role.name());
+        super.set(KEY_ROLE, role.name());
     }
 
     public boolean isFormed() {
@@ -116,23 +129,32 @@ public class MultiBlockPartBlockEntity extends PersistentBlockEntity
     }
 
     @Nullable
-    private MultiBlockMachineBlockEntity getCoreBlockEntity() {
+    private BlockEntity getCoreEntity() {
         BlockPos corePos = getCorePos();
-        if (corePos == null)
+        if (corePos == null) {
+            System.out.println("[MultiBlockPartBlockEntity] getCoreEntity: corePos is NULL at " + pos);
             return null;
+        }
+        if (world == null) {
+            System.out.println("[MultiBlockPartBlockEntity] getCoreEntity: world is NULL at " + pos);
+            return null;
+        }
         BlockEntity be = world
                 .getBlockEntityAtIfLoaded(net.momirealms.craftengine.core.world.BlockPos.of(corePos.asLong()));
-        if (be instanceof MultiBlockMachineBlockEntity pbe) {
-            return pbe;
+        if (be == null) {
+            System.out.println("[MultiBlockPartBlockEntity] getCoreEntity: No BlockEntity at " + corePos + " (Self at "
+                    + pos + ")");
         }
-        return null;
+        return be;
     }
 
     @Nullable
     private WorldlyContainer getCoreContainer() {
-        MultiBlockMachineBlockEntity target = getCoreBlockEntity();
-        if (target != null) {
-            return target;
+        BlockEntity core = getCoreEntity();
+        if (core == this)
+            return null; // Avoid recursion
+        if (core instanceof WorldlyContainer container) {
+            return container;
         }
         return null;
     }
@@ -140,8 +162,7 @@ public class MultiBlockPartBlockEntity extends PersistentBlockEntity
     // ========== Original Block State Management ==========
 
     public void setOriginalBlock(BlockState blockState) {
-        super.set(KEY_ORIGINAL_STATE.getKey(), dev.arubik.craftengine.util.CustomDataType.BLOCK_STATE_TYPE,
-                blockState);
+        super.set(KEY_ORIGINAL_STATE, blockState);
     }
 
     @Nullable
@@ -162,19 +183,58 @@ public class MultiBlockPartBlockEntity extends PersistentBlockEntity
     }
 
     public boolean acceptsInput(IOConfiguration.IOType type, Direction dir) {
-        if (ioConfig != null) {
-            return ioConfig.acceptsInput(type, dir);
+        Direction localDir = dir;
+
+        ConnectableBlockBehavior connectable = getBlockBehavior(ConnectableBlockBehavior.class);
+        if (connectable != null) {
+            localDir = connectable.toLocalDirection(dir, (BlockState) blockState.customBlockState().literalObject());
         }
-        MultiBlockMachineBlockEntity core = getCoreBlockEntity();
-        return core != null && core.getIOConfiguration().acceptsInput(type, dir);
+
+        if (ioConfig != null) {
+            return ioConfig.acceptsInput(type, localDir);
+        }
+        BlockEntity core = getCoreEntity();
+        if (core instanceof MultiBlockMachineBlockEntity machine) {
+            IOConfiguration coreConfig = machine.getIOConfiguration();
+            if (coreConfig != null) {
+                return coreConfig.acceptsInput(type, localDir);
+            }
+            return true; // Fallback to permissive if machine has no config
+        } else if (core instanceof MultiBlockPartBlockEntity part) {
+            IOConfiguration coreConfig = part.getIOConfiguration();
+            if (coreConfig != null) {
+                return coreConfig.acceptsInput(type, localDir);
+            }
+            return true; // Fallback to permissive
+        }
+        return false;
     }
 
     public boolean providesOutput(IOConfiguration.IOType type, Direction dir) {
-        if (ioConfig != null) {
-            return ioConfig.providesOutput(type, dir);
+        Direction localDir = dir;
+        ConnectableBlockBehavior connectable = getBlockBehavior(ConnectableBlockBehavior.class);
+        if (connectable != null) {
+            localDir = connectable.toLocalDirection(dir, (BlockState) blockState.customBlockState().literalObject());
         }
-        MultiBlockMachineBlockEntity core = getCoreBlockEntity();
-        return core != null && core.getIOConfiguration().providesOutput(type, dir);
+
+        if (ioConfig != null) {
+            return ioConfig.providesOutput(type, localDir);
+        }
+        BlockEntity core = getCoreEntity();
+        if (core instanceof MultiBlockMachineBlockEntity machine) {
+            IOConfiguration coreConfig = machine.getIOConfiguration();
+            if (coreConfig != null) {
+                return coreConfig.providesOutput(type, localDir);
+            }
+            return true; // Fallback to permissive
+        } else if (core instanceof MultiBlockPartBlockEntity part) {
+            IOConfiguration coreConfig = part.getIOConfiguration();
+            if (coreConfig != null) {
+                return coreConfig.providesOutput(type, localDir);
+            }
+            return true; // Fallback to permissive
+        }
+        return false;
     }
 
     // ========== Redstone Support ==========
@@ -206,9 +266,9 @@ public class MultiBlockPartBlockEntity extends PersistentBlockEntity
         }
 
         if (role == MultiBlockRole.PART && core != null) {
-            MultiBlockMachineBlockEntity target = getCoreBlockEntity();
-            if (target != null) {
-                return target.getRedstoneOutput(getRelativePos(), side);
+            BlockEntity target = getCoreEntity();
+            if (target instanceof MultiBlockMachineBlockEntity machine) {
+                return machine.getRedstoneOutput(getRelativePos(), side);
             }
         }
         return 0;
@@ -220,6 +280,7 @@ public class MultiBlockPartBlockEntity extends PersistentBlockEntity
      */
     public boolean canOutputRedstone(net.minecraft.core.Direction side) {
         IOConfiguration config = getIOConfiguration();
+
         return config != null && config.providesOutput(IOConfiguration.IOType.REDSTONE, side);
     }
 
@@ -231,24 +292,30 @@ public class MultiBlockPartBlockEntity extends PersistentBlockEntity
     public <P, C> boolean has(NamespacedKey key, PersistentDataType<P, C> type) {
         if (isLocalKey(key))
             return super.has(key, type);
-        MultiBlockMachineBlockEntity target = getCoreBlockEntity();
-        return target != null ? target.has(key, type) : super.has(key, type);
+        BlockEntity target = getCoreEntity();
+        if (target == null || target == this)
+            return super.has(key, type);
+        return (target instanceof MultiBlockMachineBlockEntity machine) ? machine.has(key, type) : super.has(key, type);
     }
 
     @Override
     public boolean has(NamespacedKey key) {
         if (isLocalKey(key))
             return super.has(key);
-        MultiBlockMachineBlockEntity target = getCoreBlockEntity();
-        return target != null ? target.has(key) : super.has(key);
+        BlockEntity target = getCoreEntity();
+        if (target == null || target == this)
+            return super.has(key);
+        return (target instanceof MultiBlockMachineBlockEntity machine) ? machine.has(key) : super.has(key);
     }
 
     @Override
     public <P, C> @Nullable C get(NamespacedKey key, PersistentDataType<P, C> type) {
         if (isLocalKey(key))
             return super.get(key, type);
-        MultiBlockMachineBlockEntity target = getCoreBlockEntity();
-        return target != null ? target.get(key, type) : super.get(key, type);
+        BlockEntity target = getCoreEntity();
+        if (target == null || target == this)
+            return super.get(key, type);
+        return (target instanceof MultiBlockMachineBlockEntity machine) ? machine.get(key, type) : super.get(key, type);
     }
 
     @Override
@@ -257,9 +324,13 @@ public class MultiBlockPartBlockEntity extends PersistentBlockEntity
             super.set(key, type, value);
             return;
         }
-        MultiBlockMachineBlockEntity target = getCoreBlockEntity();
-        if (target != null)
-            target.set(key, type, value);
+        BlockEntity target = getCoreEntity();
+        if (target == null || target == this) {
+            super.set(key, type, value);
+            return;
+        }
+        if (target instanceof MultiBlockMachineBlockEntity machine)
+            machine.set(key, type, value);
         else
             super.set(key, type, value);
     }
@@ -270,9 +341,13 @@ public class MultiBlockPartBlockEntity extends PersistentBlockEntity
             super.remove(key);
             return;
         }
-        MultiBlockMachineBlockEntity target = getCoreBlockEntity();
-        if (target != null)
-            target.remove(key);
+        BlockEntity target = getCoreEntity();
+        if (target == null || target == this) {
+            super.remove(key);
+            return;
+        }
+        if (target instanceof MultiBlockMachineBlockEntity machine)
+            machine.remove(key);
         else
             super.remove(key);
     }
@@ -331,23 +406,71 @@ public class MultiBlockPartBlockEntity extends PersistentBlockEntity
 
     @Override
     public int[] getSlotsForFace(Direction side) {
+        // System.out.println("[MultiBlockPartBlockEntity] getSlotsForFace side=" + side
+        // + " at " + pos);
         // If we have IO config, filter slots based on it
-        if (ioConfig != null && !ioConfig.acceptsInput(IOConfiguration.IOType.ITEM, side)
-                && !ioConfig.providesOutput(IOConfiguration.IOType.ITEM, side)) {
-            return new int[0]; // No slots accessible from this side
+        if (ioConfig != null) {
+            java.util.Set<Integer> slotSet = new java.util.TreeSet<>();
+
+            // Inputs (including fuel)
+            if (acceptsInput(IOConfiguration.IOType.ITEM, side)) {
+                for (int s : ioConfig.getSlots(IOType.ITEM, IORole.INPUT)) {
+                    slotSet.add(s);
+                }
+                for (int s : ioConfig.getSlots(IOType.ITEM, IORole.FUEL)) {
+                    slotSet.add(s);
+                }
+            }
+
+            // Outputs
+            if (providesOutput(IOConfiguration.IOType.ITEM, side)) {
+                for (int s : ioConfig.getSlots(IOType.ITEM, IORole.OUTPUT)) {
+                    slotSet.add(s);
+                }
+            }
+
+            if (!slotSet.isEmpty()) {
+                return slotSet.stream().mapToInt(Integer::intValue).toArray();
+            }
         }
 
         WorldlyContainer c = getCoreContainer();
         if (c != null) {
-            return c.getSlotsForFace(side);
+            int[] slots = c.getSlotsForFace(side);
+            // System.out.println("[MultiBlockPartBlockEntity] Delegating to core, slots
+            // size: " + slots.length);
+            return slots;
         }
+        // System.out.println("[MultiBlockPartBlockEntity] No core container found!");
         return new int[0];
     }
 
     @Override
     public boolean canPlaceItemThroughFace(int slot, ItemStack stack, Direction dir) {
         // Check IO config first
-        if (ioConfig != null && !ioConfig.acceptsInput(IOConfiguration.IOType.ITEM, dir)) {
+        if (ioConfig != null) {
+            if (!acceptsInput(IOConfiguration.IOType.ITEM, dir)) {
+                return false;
+            }
+
+            int[] inputSlots = ioConfig.getSlots(IOType.ITEM, IORole.INPUT);
+            int[] fuelSlots = ioConfig.getSlots(IOType.ITEM, IORole.FUEL);
+
+            // If no slots are explicitly defined but direction is allowed, fallback to core
+            if (inputSlots.length == 0 && fuelSlots.length == 0) {
+                WorldlyContainer c = getCoreContainer();
+                return c != null && c.canPlaceItemThroughFace(slot, stack, dir);
+            }
+
+            // Verify if slot is in INPUT or FUEL
+            for (int s : inputSlots) {
+                if (s == slot)
+                    return true;
+            }
+            for (int s : fuelSlots) {
+                if (s == slot)
+                    return true;
+            }
             return false;
         }
         WorldlyContainer c = getCoreContainer();
@@ -357,7 +480,24 @@ public class MultiBlockPartBlockEntity extends PersistentBlockEntity
     @Override
     public boolean canTakeItemThroughFace(int slot, ItemStack stack, Direction dir) {
         // Check IO config first
-        if (ioConfig != null && !ioConfig.providesOutput(IOConfiguration.IOType.ITEM, dir)) {
+        if (ioConfig != null) {
+            if (!providesOutput(IOConfiguration.IOType.ITEM, dir)) {
+                return false;
+            }
+
+            int[] outputSlots = ioConfig.getSlots(IOType.ITEM, IORole.OUTPUT);
+
+            // If no slots are explicitly defined but direction is allowed, fallback to core
+            if (outputSlots.length == 0) {
+                WorldlyContainer c = getCoreContainer();
+                return c != null && c.canTakeItemThroughFace(slot, stack, dir);
+            }
+
+            // Verify if slot is in OUTPUT
+            for (int s : outputSlots) {
+                if (s == slot)
+                    return true;
+            }
             return false;
         }
         WorldlyContainer c = getCoreContainer();
@@ -374,6 +514,18 @@ public class MultiBlockPartBlockEntity extends PersistentBlockEntity
     public List<ItemStack> getContents() {
         WorldlyContainer c = getCoreContainer();
         return c != null ? c.getContents() : new ArrayList<>();
+    }
+
+    @Override
+    public @NotNull Inventory getInventory() {
+        WorldlyContainer c = getCoreContainer();
+        if (c instanceof InventoryHolder h) {
+            Inventory inv = h.getInventory();
+            if (inv != null)
+                return inv;
+        }
+        // Return a dummy empty inventory instead of null to avoid NPEs in events
+        return org.bukkit.Bukkit.createInventory(null, 0);
     }
 
     @Override
@@ -404,11 +556,11 @@ public class MultiBlockPartBlockEntity extends PersistentBlockEntity
     }
 
     @Override
-    public InventoryHolder getOwner() {
+    public @Nullable InventoryHolder getOwner() {
         WorldlyContainer c = getCoreContainer();
         if (c instanceof InventoryHolder h)
             return h;
-        return null;
+        return this; // Return self as owner if no core, instead of null
     }
 
     @Override
@@ -427,7 +579,14 @@ public class MultiBlockPartBlockEntity extends PersistentBlockEntity
      */
     public int getRedstoneInput(Direction dir) {
         IOConfiguration config = getIOConfiguration();
-        if (config != null && config.acceptsInput(IOConfiguration.IOType.REDSTONE, dir)) {
+        Direction localDir = dir;
+        ConnectableBlockBehavior connectable = getBlockBehavior(ConnectableBlockBehavior.class);
+
+        if (connectable != null) {
+            localDir = connectable.toLocalDirection(dir, (BlockState) blockState.customBlockState().literalObject());
+        }
+
+        if (config != null && config.acceptsInput(IOConfiguration.IOType.REDSTONE, localDir)) {
             // Get neighbor block position
             BlockPos neighborPos = getNmsPos().relative(dir);
             // Read redstone signal from neighbor

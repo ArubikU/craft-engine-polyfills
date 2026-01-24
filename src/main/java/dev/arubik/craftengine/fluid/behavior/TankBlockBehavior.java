@@ -43,9 +43,14 @@ import net.momirealms.craftengine.core.world.context.UseOnContext;
 import net.momirealms.craftengine.core.util.HorizontalDirection;
 import net.momirealms.craftengine.libraries.nbt.CompoundTag;
 
+import net.momirealms.craftengine.core.block.entity.tick.BlockEntityTicker;
+import net.momirealms.craftengine.core.world.CEWorld;
+
 public class TankBlockBehavior extends ConnectableBlockBehavior implements EntityBlockBehavior, FluidCarrier {
 
     public static final Factory FACTORY = new Factory();
+
+    public static final int TRANSFER_PER_TICK = 100;
 
     public final EnumProperty<FluidType> fluidTypeProperty;
     public final IntegerProperty levelProperty; // puede ser null si no se registra realmente
@@ -192,10 +197,7 @@ public class TankBlockBehavior extends ConnectableBlockBehavior implements Entit
     }
 
     public FluidStack getStored(Level level, net.minecraft.core.BlockPos pos) {
-        PersistentBlockEntity be = getBlockEntity(level, pos);
-        if (be == null)
-            return new FluidStack(FluidType.EMPTY, 0, 0);
-        return be.getOrDefault(FluidKeys.FLUID, new FluidStack(FluidType.EMPTY, 0, 0));
+        return dev.arubik.craftengine.fluid.FluidCarrierImpl.getStored(level, pos);
     }
 
     public int insertFluid(Level level, net.minecraft.core.BlockPos pos, FluidStack stack) {
@@ -207,11 +209,10 @@ public class TankBlockBehavior extends ConnectableBlockBehavior implements Entit
         FluidType stores = state.get(fluidTypeProperty);
         if (stores != null && stores != FluidType.EMPTY) {
             int level = state.get(levelProperty);
-            executeBlockEntity((Level) context.getLevel().serverWorld(),
-                    (BlockPos) LocationUtils.toBlockPos(context.getClickedPos()), be -> {
-                        be.set(FluidKeys.FLUID, new FluidStack(stores,
-                                (int) Math.floor((level / (double) levelProperty.max) * MAX_CAPACITY), 0));
-                    });
+            dev.arubik.craftengine.util.CustomBlockData.from((Level) context.getLevel().serverWorld(),
+                    (BlockPos) LocationUtils.toBlockPos(context.getClickedPos()))
+                    .set(FluidKeys.FLUID, new FluidStack(stores,
+                            (int) Math.floor((level / (double) levelProperty.max) * MAX_CAPACITY), 0));
         }
         return state;
     }
@@ -339,19 +340,19 @@ public class TankBlockBehavior extends ConnectableBlockBehavior implements Entit
         // 1) Extraer de este tanque si coincide el tipo
         final int[] movedHere = { 0 };
         final int[] pressureHere = { 0 };
-        executeBlockEntity(level, pos, be -> {
-            FluidStack stored = be.getOrDefault(FluidKeys.FLUID, new FluidStack(FluidType.EMPTY, 0, 0));
-            if (stored.isEmpty() || stored.getType() != targetType)
-                return;
+        FluidStack stored = getStored(level, pos);
+        if (!stored.isEmpty() && stored.getType() == targetType) {
             int mv = Math.min(max, stored.getAmount());
-            pressureHere[0] = stored.getPressure();
-            stored.removeAmount(mv);
-            if (stored.isEmpty())
-                be.remove(FluidKeys.FLUID);
-            else
-                be.set(FluidKeys.FLUID, stored);
-            movedHere[0] = mv;
-        });
+            final int[] actuallyExtracted = { 0 };
+            final FluidStack[] extractedStack = { null };
+            actuallyExtracted[0] = dev.arubik.craftengine.fluid.FluidCarrierImpl.extractFluid(level, pos, mv,
+                    f -> extractedStack[0] = f);
+
+            if (actuallyExtracted[0] > 0) {
+                pressureHere[0] = extractedStack[0].getPressure();
+                movedHere[0] = actuallyExtracted[0];
+            }
+        }
         if (movedHere[0] > 0) {
             movedTotal += movedHere[0];
             agg.add(movedHere[0], pressureHere[0]);
@@ -391,6 +392,7 @@ public class TankBlockBehavior extends ConnectableBlockBehavior implements Entit
         if (level.isClientSide())
             return;
         FluidStack stored = getStored(level, pos);
+
         if (levelProperty != null) {
             int lev = (int) Math.ceil((stored.getAmount() / (double) MAX_CAPACITY) * levelProperty.max); // 0..10
             lev = Math.max(stored.isEmpty() ? 0 : 1, Math.min(lev, levelProperty.max));
@@ -398,9 +400,14 @@ public class TankBlockBehavior extends ConnectableBlockBehavior implements Entit
             if (state.isPresent()) {
                 ImmutableBlockState newState = state.get().with(levelProperty, lev)
                         .with(fluidTypeProperty, stored.getType());
+
                 FastNMS.INSTANCE.method$LevelWriter$setBlock(level, pos, newState.customBlockState().literalObject(),
                         3);
 
+                // Force data persistence to Chunk PDC after modification
+                if (!stored.isEmpty()) {
+                    dev.arubik.craftengine.util.CustomBlockData.from(level, pos).set(FluidKeys.FLUID, stored);
+                }
             }
         }
     }
@@ -419,7 +426,11 @@ public class TankBlockBehavior extends ConnectableBlockBehavior implements Entit
             ImmutableBlockState arg1) {
         PersistentBlockEntity be = new PersistentBlockEntity(arg0, arg1);
         be.setPreRemoveHook((CompoundTag container) -> {
-            FluidStack stored = TypedKey.getOfCompound(FluidKeys.FLUID, container);
+            // Use FluidCarrierImpl/CustomBlockData to retrieve stored fluid
+            FluidStack stored = dev.arubik.craftengine.fluid.FluidCarrierImpl.getStored(
+                    (Level) ((BukkitWorld) be.world().world()).serverWorld(),
+                    Utils.fromPos(be.pos()));
+
             if (stored != null && stored.getType() == FluidType.EXPERIENCE) {
                 Level level = (Level) ((BukkitWorld) be.world().world()).serverWorld();
 
@@ -450,6 +461,102 @@ public class TankBlockBehavior extends ConnectableBlockBehavior implements Entit
         PersistentBlockEntity be = getBlockEntity(world, pos);
         if (be != null)
             consumer.accept(be);
+    }
+
+    @Override
+    public <T extends BlockEntity> BlockEntityTicker<T> createSyncBlockEntityTicker(CEWorld world,
+            ImmutableBlockState state, BlockEntityType<T> type) {
+        if (type != blockEntityType(state))
+            return null;
+        return (lvl, cePos, ceState, be) -> {
+            Level level = (Level) world.world().serverWorld();
+            if (level == null || level.isClientSide())
+                return;
+            BlockPos mcPos = BlockPos.of(cePos.asLong());
+
+            // 1. Try to PUMP from UP
+            tryTransfer(level, mcPos, Direction.UP, true);
+
+            // 2. Try to PUSH to DOWN
+            tryTransfer(level, mcPos, Direction.DOWN, false);
+        };
+    }
+
+    private void tryTransfer(Level level, BlockPos pos, Direction direction, boolean isPump) {
+        if (!canConnectTo(level, pos, direction))
+            return;
+
+        BlockPos targetPos = pos.relative(direction);
+        BlockState targetState = level.getBlockState(targetPos);
+        var customOpt = BlockStateUtils.getOptionalCustomBlockState(targetState);
+
+        // Only interact with PIPES
+        if (customOpt.isEmpty() || !(customOpt.get().behavior() instanceof PipeBehavior)) {
+            return;
+        }
+
+        FluidCarrier targetCarrier = (FluidCarrier) customOpt.get().behavior();
+
+        FluidStack myStored = getStored(level, pos);
+
+        if (isPump) {
+            // "Extraer naturalmente de una pipe de arriba"
+            // We want to pull FROM the target (UP)
+
+            // If we are full, we can't pull
+            if (myStored.getAmount() >= MAX_CAPACITY)
+                return;
+
+            // Start simple: try to extract from them
+            int space = MAX_CAPACITY - myStored.getAmount();
+            int limit = Math.min(space, TRANSFER_PER_TICK);
+
+            // If we have fluid, we only accept SAME fluid
+            if (!myStored.isEmpty()) {
+                FluidStack theirStored = targetCarrier.getStored(level, targetPos);
+                if (!theirStored.isEmpty() && theirStored.getType() != myStored.getType()) {
+                    return;
+                }
+            }
+
+            final FluidStack[] extracted = { null };
+            // Direction.DOWN is the side of the UPPER block that faces US
+            int actually = FluidType.extractFromCarrier(targetCarrier, level, targetPos, limit, f -> extracted[0] = f,
+                    Direction.DOWN);
+
+            if (actually > 0 && extracted[0] != null) {
+                int accepted = insertFluid(level, pos, extracted[0]);
+                // If we couldn't insert all despite saying we had space (race condition?),
+                // refund??
+                // insertFluid handles logic, but let's assume it works because we checked
+                // space.
+                // But strictly speaking, if 'accepted' < 'actually', we should refund.
+                if (accepted < actually) {
+                    FluidStack remainder = new FluidStack(extracted[0].getType(), actually - accepted,
+                            extracted[0].getPressure());
+                    FluidType.depositToCarrier(targetCarrier, level, targetPos, remainder, Direction.DOWN);
+                }
+            }
+
+        } else {
+            // "Expulsar naturalmente a otras pipes de abajo"
+            // We want to push TO the target (DOWN)
+
+            if (myStored.isEmpty())
+                return;
+
+            int limit = Math.min(myStored.getAmount(), TRANSFER_PER_TICK);
+            FluidStack toPush = new FluidStack(myStored.getType(), limit, myStored.getPressure());
+
+            // Direction.UP is the side of the LOWER block that faces US
+            int accepted = targetCarrier.insertFluid(level, targetPos, toPush, Direction.UP);
+
+            if (accepted > 0) {
+                // Remove from us
+                final int[] removed = { 0 };
+                extractFluid(level, pos, accepted, f -> removed[0] = f.getAmount());
+            }
+        }
     }
 
     @Override

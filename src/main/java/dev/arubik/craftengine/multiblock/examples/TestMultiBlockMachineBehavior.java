@@ -50,6 +50,15 @@ public class TestMultiBlockMachineBehavior extends MultiBlockBehavior {
         super(customBlock, schema, partBlockId);
     }
 
+    public TestMultiBlockMachineBehavior(CustomBlock customBlock, MultiBlockSchema schema, String partBlockId,
+            java.util.List<Direction> connectableFaces,
+            net.momirealms.craftengine.core.block.properties.EnumProperty<net.momirealms.craftengine.core.util.HorizontalDirection> horizontalDirectionProperty,
+            net.momirealms.craftengine.core.block.properties.EnumProperty<net.momirealms.craftengine.core.util.Direction> verticalDirectionProperty,
+            IOConfiguration ioConfig) {
+        super(customBlock, schema, partBlockId, connectableFaces, horizontalDirectionProperty,
+                verticalDirectionProperty, ioConfig);
+    }
+
     public static class Factory implements BlockBehaviorFactory<BlockBehavior> {
         @Override
         public BlockBehavior create(CustomBlock block, Map<String, Object> arguments) {
@@ -68,7 +77,12 @@ public class TestMultiBlockMachineBehavior extends MultiBlockBehavior {
                 }
             }
 
-            TestMultiBlockMachineBehavior behavior = new TestMultiBlockMachineBehavior(block, schema, partBlockId);
+            dev.arubik.craftengine.machine.block.MachineBlockBehavior base = (dev.arubik.craftengine.machine.block.MachineBlockBehavior) dev.arubik.craftengine.machine.block.MachineBlockBehavior.FACTORY
+                    .create(block, arguments);
+
+            TestMultiBlockMachineBehavior behavior = new TestMultiBlockMachineBehavior(block, schema, partBlockId,
+                    base.getConnectableFaces(), base.horizontalDirectionProperty, base.verticalDirectionProperty,
+                    base.getIOConfiguration(null, null));
 
             // Set IO configuration provider for part-specific I/O
             behavior.withIOProvider(new IOConfigurationProvider() {

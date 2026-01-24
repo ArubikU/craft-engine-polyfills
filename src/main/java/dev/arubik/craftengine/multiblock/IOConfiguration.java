@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Set;
 
 import net.minecraft.core.Direction;
+import dev.arubik.craftengine.util.DirectionType;
 
 /**
  * Defines I/O configuration for a MultiBlock part, specifying which types
@@ -16,25 +17,35 @@ public interface IOConfiguration {
 
     /**
      * Check if this part accepts input of the given type from the given direction
+     * 
+     * @param type    The resource type
+     * @param dirType The machine's directional type (HORIZONTAL/FULL)
+     * @param facing  The direction being checked (local direction), usually a
+     *                Direction object
      */
-    boolean acceptsInput(IOType type, Direction dir);
+    boolean acceptsInput(IOType type, Object facing);
 
     /**
      * Check if this part provides output of the given type to the given direction
+     * 
+     * @param type    The resource type
+     * @param dirType The machine's directional type (HORIZONTAL/FULL)
+     * @param facing  The direction being checked (local direction), usually a
+     *                Direction object
      */
-    boolean providesOutput(IOType type, Direction dir);
+    boolean providesOutput(IOType type, Object facing);
 
     /**
      * Check if there is any connection capability (input or output) on the given
-     * direction
-     * for any IOType.
+     * direction for any IOType.
      * 
-     * @param dir The direction to check
+     * @param dirType The directional type
+     * @param facing  The direction being checked (local direction)
      * @return true if any IOType accepts input or provides output on this direction
      */
-    default boolean canConnect(Direction dir) {
+    default boolean canConnect(Object facing) {
         for (IOType type : IOType.values()) {
-            if (acceptsInput(type, dir) || providesOutput(type, dir)) {
+            if (acceptsInput(type, facing) || providesOutput(type, facing)) {
                 return true;
             }
         }
@@ -77,11 +88,12 @@ public interface IOConfiguration {
      * Get the target slot (tank index) for this IO type and direction.
      * Returns -1 if no specific slot is configured (default behavior).
      * 
-     * @param type The IO type
-     * @param dir  The direction
+     * @param type    The IO type
+     * @param dirType The directional type
+     * @param facing  The direction being checked (local direction)
      * @return Slot index or -1
      */
-    default int getTargetSlot(IOType type, Direction dir) {
+    default int getTargetSlot(IOType type, Object facing) {
         return -1;
     }
 
@@ -219,24 +231,24 @@ public interface IOConfiguration {
         }
 
         @Override
-        public int getTargetSlot(IOType type, Direction dir) {
-            if (acceptsInput(type, dir)) {
-                return inputSlots.getOrDefault(type, Map.of()).getOrDefault(dir, -1);
+        public int getTargetSlot(IOType type, Object facing) {
+            if (acceptsInput(type, facing)) {
+                return inputSlots.getOrDefault(type, Map.of()).getOrDefault((Direction) facing, -1);
             }
-            if (providesOutput(type, dir)) {
-                return outputSlots.getOrDefault(type, Map.of()).getOrDefault(dir, -1);
+            if (providesOutput(type, facing)) {
+                return outputSlots.getOrDefault(type, Map.of()).getOrDefault((Direction) facing, -1);
             }
             return -1;
         }
 
         @Override
-        public boolean acceptsInput(IOType type, Direction dir) {
-            return inputs.getOrDefault(dir, EnumSet.noneOf(IOType.class)).contains(type);
+        public boolean acceptsInput(IOType type, Object facing) {
+            return inputs.getOrDefault((Direction) facing, EnumSet.noneOf(IOType.class)).contains(type);
         }
 
         @Override
-        public boolean providesOutput(IOType type, Direction dir) {
-            return outputs.getOrDefault(dir, EnumSet.noneOf(IOType.class)).contains(type);
+        public boolean providesOutput(IOType type, Object facing) {
+            return outputs.getOrDefault((Direction) facing, EnumSet.noneOf(IOType.class)).contains(type);
         }
 
         @Override
@@ -251,12 +263,12 @@ public interface IOConfiguration {
      */
     class Open implements IOConfiguration {
         @Override
-        public boolean acceptsInput(IOType type, Direction dir) {
+        public boolean acceptsInput(IOType type, Object facing) {
             return true;
         }
 
         @Override
-        public boolean providesOutput(IOType type, Direction dir) {
+        public boolean providesOutput(IOType type, Object facing) {
             return true;
         }
     }
@@ -266,12 +278,12 @@ public interface IOConfiguration {
      */
     class Closed implements IOConfiguration {
         @Override
-        public boolean acceptsInput(IOType type, Direction dir) {
+        public boolean acceptsInput(IOType type, Object facing) {
             return false;
         }
 
         @Override
-        public boolean providesOutput(IOType type, Direction dir) {
+        public boolean providesOutput(IOType type, Object facing) {
             return false;
         }
     }
@@ -329,13 +341,13 @@ public interface IOConfiguration {
         }
 
         @Override
-        public boolean acceptsInput(IOType type, Direction dir) {
-            return inputRates.get(dir).containsKey(type);
+        public boolean acceptsInput(IOType type, Object facing) {
+            return inputRates.get((Direction) facing).containsKey(type);
         }
 
         @Override
-        public boolean providesOutput(IOType type, Direction dir) {
-            return outputRates.get(dir).containsKey(type);
+        public boolean providesOutput(IOType type, Object facing) {
+            return outputRates.get((Direction) facing).containsKey(type);
         }
 
     }
@@ -348,21 +360,12 @@ public interface IOConfiguration {
     class RelativeIO implements IOConfiguration {
         private final Map<IOType, Set<RelativeDirection>> inputs = new EnumMap<>(IOType.class);
         private final Map<IOType, Set<RelativeDirection>> outputs = new EnumMap<>(IOType.class);
-        private Direction facing; // Changed to full Direction to support both types
 
         public RelativeIO() {
             for (IOType type : IOType.values()) {
                 inputs.put(type, EnumSet.noneOf(RelativeDirection.class));
                 outputs.put(type, EnumSet.noneOf(RelativeDirection.class));
             }
-        }
-
-        /**
-         * Set the facing direction (supports both horizontal and full direction)
-         */
-        public RelativeIO withFacing(Direction facing) {
-            this.facing = facing;
-            return this;
         }
 
         /**
@@ -382,7 +385,7 @@ public interface IOConfiguration {
         }
 
         @Override
-        public boolean acceptsInput(IOType type, Direction direction) {
+        public boolean acceptsInput(IOType type, Object facing) {
             if (facing == null)
                 return false;
 
@@ -390,18 +393,13 @@ public interface IOConfiguration {
             if (relDirs == null || relDirs.isEmpty())
                 return false;
 
-            // Check each relative direction
-            for (RelativeDirection relDir : relDirs) {
-                Direction worldDir = DirectionalIOHelper.getWorldDirection(relDir, facing);
-                if (worldDir == direction) {
-                    return true;
-                }
-            }
-            return false;
+            // facing is the LOCAL Direction
+            RelativeDirection rel = DirectionalIOHelper.fromDirection((Direction) facing);
+            return relDirs.contains(rel);
         }
 
         @Override
-        public boolean providesOutput(IOType type, Direction direction) {
+        public boolean providesOutput(IOType type, Object facing) {
             if (facing == null)
                 return false;
 
@@ -409,14 +407,9 @@ public interface IOConfiguration {
             if (relDirs == null || relDirs.isEmpty())
                 return false;
 
-            // Check each relative direction
-            for (RelativeDirection relDir : relDirs) {
-                Direction worldDir = DirectionalIOHelper.getWorldDirection(relDir, facing);
-                if (worldDir == direction) {
-                    return true;
-                }
-            }
-            return false;
+            // facing is the LOCAL Direction
+            RelativeDirection rel = DirectionalIOHelper.fromDirection((Direction) facing);
+            return relDirs.contains(rel);
         }
     }
 
@@ -429,29 +422,12 @@ public interface IOConfiguration {
     class WithTransferRateRelative implements IOConfiguration {
         private final Map<IOType, Map<RelativeDirection, Integer>> inputRates = new EnumMap<>(IOType.class);
         private final Map<IOType, Map<RelativeDirection, Integer>> outputRates = new EnumMap<>(IOType.class);
-        private Direction facing;
 
         public WithTransferRateRelative() {
             for (IOType type : IOType.values()) {
                 inputRates.put(type, new EnumMap<>(RelativeDirection.class));
                 outputRates.put(type, new EnumMap<>(RelativeDirection.class));
             }
-        }
-
-        /**
-         * Set the facing direction (supports both horizontal and full direction)
-         */
-        public WithTransferRateRelative withFacing(Direction facing) {
-            this.facing = facing;
-            return this;
-        }
-
-        /**
-         * Set the facing direction from HorizontalDirection (convenience method)
-         */
-        public WithTransferRateRelative withFacing(net.momirealms.craftengine.core.util.HorizontalDirection facing) {
-            this.facing = DirectionalIOHelper.fromHorizontalDirection(facing);
-            return this;
         }
 
         /**
@@ -514,7 +490,7 @@ public interface IOConfiguration {
         }
 
         @Override
-        public boolean acceptsInput(IOType type, Direction direction) {
+        public boolean acceptsInput(IOType type, Object facing) {
             if (facing == null)
                 return false;
 
@@ -522,18 +498,13 @@ public interface IOConfiguration {
             if (rates == null || rates.isEmpty())
                 return false;
 
-            // Check each relative direction
-            for (RelativeDirection relDir : rates.keySet()) {
-                Direction worldDir = DirectionalIOHelper.getWorldDirection(relDir, facing);
-                if (worldDir == direction) {
-                    return true;
-                }
-            }
-            return false;
+            // facing is the LOCAL Direction
+            RelativeDirection rel = DirectionalIOHelper.fromDirection((Direction) facing);
+            return rates.containsKey(rel);
         }
 
         @Override
-        public boolean providesOutput(IOType type, Direction direction) {
+        public boolean providesOutput(IOType type, Object facing) {
             if (facing == null)
                 return false;
 
@@ -541,15 +512,9 @@ public interface IOConfiguration {
             if (rates == null || rates.isEmpty())
                 return false;
 
-            // Check each relative direction
-            for (RelativeDirection relDir : rates.keySet()) {
-                Direction worldDir = DirectionalIOHelper.getWorldDirection(relDir, facing);
-                if (worldDir == direction) {
-                    return true;
-                }
-            }
-            return false;
+            // facing is the LOCAL Direction
+            RelativeDirection rel = DirectionalIOHelper.fromDirection((Direction) facing);
+            return rates.containsKey(rel);
         }
-
     }
 }

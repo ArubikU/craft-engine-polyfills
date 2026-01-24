@@ -81,7 +81,7 @@ public class SpikeBlockBehavior extends BukkitBlockBehavior implements EntityBlo
     }
 
     @Override
-    public <T extends BlockEntity> BlockEntityTicker<T> createAsyncBlockEntityTicker(CEWorld world,
+    public <T extends BlockEntity> BlockEntityTicker<T> createSyncBlockEntityTicker(CEWorld world,
             ImmutableBlockState state, BlockEntityType<T> type) {
         if (type != blockEntityType(state))
             return null;

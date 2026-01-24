@@ -16,6 +16,7 @@ import net.momirealms.craftengine.core.block.ImmutableBlockState;
 import net.momirealms.craftengine.core.block.behavior.BlockBehaviorFactory;
 import net.minecraft.core.Direction;
 import net.momirealms.craftengine.core.util.HorizontalDirection;
+import dev.arubik.craftengine.util.DirectionType;
 
 /**
  * Behavior que define qué caras/lados de este bloque pueden conectarse con
@@ -50,10 +51,10 @@ public class ConnectableBlockBehavior extends BukkitBlockBehavior {
 
     public static final Factory FACTORY = new Factory();
 
-    private final List<Direction> connectableFaces;
+    protected List<Direction> connectableFaces;
     public final net.momirealms.craftengine.core.block.properties.EnumProperty<HorizontalDirection> horizontalDirectionProperty;
     public final net.momirealms.craftengine.core.block.properties.EnumProperty<net.momirealms.craftengine.core.util.Direction> verticalDirectionProperty;
-    protected final dev.arubik.craftengine.multiblock.IOConfiguration defaultIOConfig;
+    public final dev.arubik.craftengine.multiblock.IOConfiguration defaultIOConfig;
 
     public ConnectableBlockBehavior(CustomBlock block, List<Direction> connectableFaces,
             net.momirealms.craftengine.core.block.properties.EnumProperty<HorizontalDirection> horizontalDirectionProperty,
@@ -85,7 +86,7 @@ public class ConnectableBlockBehavior extends BukkitBlockBehavior {
     public boolean canConnectTo(Level level, BlockPos pos, net.minecraft.core.Direction direction) {
         BlockState blockState = level.getBlockState(pos);
         Direction localDirection = toLocalDirection(direction, blockState);
-        return connectableFaces.contains(localDirection);
+        return getConnectableFaces().contains(localDirection);
     }
 
     /**
@@ -93,6 +94,12 @@ public class ConnectableBlockBehavior extends BukkitBlockBehavior {
      */
     public List<Direction> getConnectableFaces() {
         return new ArrayList<>(connectableFaces);
+    }
+
+    public DirectionType getDirectionType() {
+        if (verticalDirectionProperty != null)
+            return DirectionType.FULL;
+        return DirectionType.HORIZONTAL;
     }
 
     /**
@@ -121,31 +128,28 @@ public class ConnectableBlockBehavior extends BukkitBlockBehavior {
         if (customState.owner().value() != this.customBlock)
             return originalDirection;
 
-        // Manejar redirección horizontal (local -> mundo)
-        if (horizontalDirectionProperty != null) {
-            try {
-                // Obtener la propiedad de dirección horizontal
-                HorizontalDirection directionProperty = customState.get(horizontalDirectionProperty);
-                // La dirección por defecto es NORTH, calcular el offset
-                int rotationSteps = getRotationSteps(HorizontalDirection.NORTH, directionProperty);
-                return rotateDirection(originalDirection, rotationSteps);
-            } catch (Exception ignored) {
-                // Si hay algún error en la conversión, usar la dirección original
-            }
-        }
-
-        // Manejar redirección para bloques full directional (local -> mundo)
-        if (verticalDirectionProperty != null) {
+        // Explicit dispatch based on DirectionType
+        if (getDirectionType() == DirectionType.FULL) {
             try {
                 net.momirealms.craftengine.core.util.Direction directionProperty = customState
                         .get(verticalDirectionProperty);
-                // Convert CE Direction to Minecraft Direction for logic
                 if (directionProperty != null) {
                     Direction mineDir = Direction.valueOf(directionProperty.name());
-                    return redirectFullDirectional(originalDirection, mineDir);
+                    return dev.arubik.craftengine.multiblock.DirectionalIOHelper.getVerticalWorldDirection(
+                            dev.arubik.craftengine.multiblock.DirectionalIOHelper.fromDirection(originalDirection),
+                            mineDir);
                 }
             } catch (Exception ignored) {
-                // Si hay algún error en la conversión, usar la dirección original
+            }
+        } else {
+            try {
+                HorizontalDirection directionProperty = customState.get(horizontalDirectionProperty);
+                if (directionProperty != null) {
+                    return dev.arubik.craftengine.multiblock.DirectionalIOHelper.getHorizontalWorldDirection(
+                            dev.arubik.craftengine.multiblock.DirectionalIOHelper.fromDirection(originalDirection),
+                            directionProperty);
+                }
+            } catch (Exception ignored) {
             }
         }
 
@@ -167,7 +171,7 @@ public class ConnectableBlockBehavior extends BukkitBlockBehavior {
 
     // Mundo -> Local: usa esto para chequear si un vecino puede conectar a este
     // bloque
-    protected net.minecraft.core.Direction toLocalDirection(net.minecraft.core.Direction worldDirection,
+    public net.minecraft.core.Direction toLocalDirection(net.minecraft.core.Direction worldDirection,
             BlockState blockState) {
         if (blockState == null)
             return worldDirection;
@@ -179,25 +183,26 @@ public class ConnectableBlockBehavior extends BukkitBlockBehavior {
         if (customState.owner().value() != this.customBlock)
             return worldDirection;
 
-        // Horizontal: aplicar rotación inversa
-        if (horizontalDirectionProperty != null) {
-            try {
-                HorizontalDirection directionProperty = customState.get(horizontalDirectionProperty);
-                int rotationSteps = getRotationSteps(HorizontalDirection.NORTH, directionProperty);
-                int inverse = (4 - (rotationSteps % 4)) % 4;
-                return rotateDirection(worldDirection, inverse);
-            } catch (Exception ignored) {
-            }
-        }
-
-        // Full directional: aplicar mapeo inverso
-        if (verticalDirectionProperty != null) {
+        // Explicit dispatch based on DirectionType
+        if (getDirectionType() == DirectionType.FULL) {
             try {
                 net.momirealms.craftengine.core.util.Direction directionProperty = customState
                         .get(verticalDirectionProperty);
                 if (directionProperty != null) {
                     Direction mineDir = Direction.valueOf(directionProperty.name());
-                    return inverseRedirectFullDirectional(worldDirection, mineDir);
+                    return dev.arubik.craftengine.multiblock.DirectionalIOHelper.getVerticalLocalDirection(
+                            worldDirection,
+                            mineDir);
+                }
+            } catch (Exception ignored) {
+            }
+        } else {
+            try {
+                HorizontalDirection directionProperty = customState.get(horizontalDirectionProperty);
+                if (directionProperty != null) {
+                    return dev.arubik.craftengine.multiblock.DirectionalIOHelper.getHorizontalLocalDirection(
+                            worldDirection,
+                            directionProperty);
                 }
             } catch (Exception ignored) {
             }
@@ -205,282 +210,32 @@ public class ConnectableBlockBehavior extends BukkitBlockBehavior {
         return worldDirection;
     }
 
-    /**
-     * Calcula los pasos de rotación necesarios entre dos direcciones horizontales.
-     */
-    private int getRotationSteps(HorizontalDirection from, HorizontalDirection to) {
-        HorizontalDirection[] directions = {
-                HorizontalDirection.NORTH, HorizontalDirection.EAST,
-                HorizontalDirection.SOUTH, HorizontalDirection.WEST
-        };
-
-        int fromIndex = -1, toIndex = -1;
-        for (int i = 0; i < directions.length; i++) {
-            if (directions[i] == from)
-                fromIndex = i;
-            if (directions[i] == to)
-                toIndex = i;
-        }
-
-        if (fromIndex == -1 || toIndex == -1)
-            return 0;
-
-        return (toIndex - fromIndex + 4) % 4;
-    }
-
-    /**
-     * Rota una dirección un número específico de pasos en sentido horario.
-     */
-    private net.minecraft.core.Direction rotateDirection(net.minecraft.core.Direction direction, int steps) {
-        if (steps == 0)
-            return direction;
-
-        // Solo rotar direcciones horizontales
-        return switch (direction) {
-            case NORTH -> switch (steps % 4) {
-                case 1 -> Direction.EAST;
-                case 2 -> Direction.SOUTH;
-                case 3 -> Direction.WEST;
+    public Direction toDirection(BlockState blockState) {
+        ImmutableBlockState customState = BlockStateUtils.getOptionalCustomBlockState(blockState).get();
+        HorizontalDirection horizontalDirection = customState.getNullable(horizontalDirectionProperty);
+        net.momirealms.craftengine.core.util.Direction verticalDirection = customState
+                .getNullable(verticalDirectionProperty);
+        if (verticalDirection != null) {
+            return switch (verticalDirection) {
+                case NORTH -> Direction.NORTH;
+                case SOUTH -> Direction.SOUTH;
+                case EAST -> Direction.EAST;
+                case WEST -> Direction.WEST;
+                case UP -> Direction.UP;
+                case DOWN -> Direction.DOWN;
                 default -> Direction.NORTH;
             };
-            case EAST -> switch (steps % 4) {
-                case 1 -> Direction.SOUTH;
-                case 2 -> Direction.WEST;
-                case 3 -> Direction.NORTH;
-                default -> Direction.EAST;
-            };
-            case SOUTH -> switch (steps % 4) {
-                case 1 -> Direction.WEST;
-                case 2 -> Direction.NORTH;
-                case 3 -> Direction.EAST;
-                default -> Direction.SOUTH;
-            };
-            case WEST -> switch (steps % 4) {
-                case 1 -> Direction.NORTH;
-                case 2 -> Direction.EAST;
-                case 3 -> Direction.SOUTH;
-                default -> Direction.WEST;
-            };
-            // Las direcciones verticales no se rotan
-            case UP, DOWN -> direction;
-        };
-    }
-
-    private Direction redirectFullDirectional(Direction originalDirection, Direction blockFacing) {
-        // Si el bloque está orientado hacia arriba o abajo, no rotar
-        switch (blockFacing) {
-            case UP:
-                return originalDirection;
-            case DOWN:
-                return switch (originalDirection) {
-                    case UP -> Direction.DOWN;
-                    case DOWN -> Direction.UP;
-                    case NORTH -> Direction.SOUTH;
-                    case SOUTH -> Direction.NORTH;
-                    case EAST -> Direction.WEST;
-                    case WEST -> Direction.EAST;
-                };
-            case NORTH:
-                switch (originalDirection) {
-                    case UP -> {
-                        return Direction.NORTH;
-                    }
-                    case DOWN -> {
-                        return Direction.SOUTH;
-                    }
-                    case NORTH -> {
-                        return Direction.DOWN;
-                    }
-                    case SOUTH -> {
-                        return Direction.UP;
-                    }
-                    case EAST -> {
-                        return Direction.EAST;
-                    }
-                    case WEST -> {
-                        return Direction.WEST;
-                    }
-                }
-                break;
-            case SOUTH:
-                switch (originalDirection) {
-                    case UP -> {
-                        return Direction.SOUTH;
-                    }
-                    case DOWN -> {
-                        return Direction.NORTH;
-                    }
-                    case NORTH -> {
-                        return Direction.UP;
-                    }
-                    case SOUTH -> {
-                        return Direction.DOWN;
-                    }
-                    case EAST -> {
-                        return Direction.WEST;
-                    }
-                    case WEST -> {
-                        return Direction.EAST;
-                    }
-                }
-                break;
-            case EAST:
-                switch (originalDirection) {
-                    case UP -> {
-                        return Direction.EAST;
-                    }
-                    case DOWN -> {
-                        return Direction.WEST;
-                    }
-                    case NORTH -> {
-                        return Direction.NORTH;
-                    }
-                    case SOUTH -> {
-                        return Direction.SOUTH;
-                    }
-                    case EAST -> {
-                        return Direction.DOWN;
-                    }
-                    case WEST -> {
-                        return Direction.UP;
-                    }
-                }
-                break;
-            case WEST:
-                switch (originalDirection) {
-                    case UP -> {
-                        return Direction.WEST;
-                    }
-                    case DOWN -> {
-                        return Direction.EAST;
-                    }
-                    case NORTH -> {
-                        return Direction.NORTH;
-                    }
-                    case SOUTH -> {
-                        return Direction.SOUTH;
-                    }
-                    case EAST -> {
-                        return Direction.UP;
-                    }
-                    case WEST -> {
-                        return Direction.DOWN;
-                    }
-                }
-                break;
-
-            default:
-                return originalDirection;
         }
-        return originalDirection;
-    }
-
-    private Direction inverseRedirectFullDirectional(Direction worldDirection, Direction blockFacing) {
-        switch (blockFacing) {
-            case UP:
-                return worldDirection; // identidad
-            case DOWN:
-                return switch (worldDirection) {
-                    case NORTH -> Direction.UP;
-                    case SOUTH -> Direction.DOWN;
-                    case DOWN -> Direction.NORTH;
-                    case UP -> Direction.SOUTH;
-                    case EAST -> Direction.WEST;
-                    case WEST -> Direction.EAST;
-                };
-            case NORTH:
-                // Inversa del caso NORTH en redirectFullDirectional
-                switch (worldDirection) {
-                    case NORTH -> {
-                        return Direction.UP;
-                    }
-                    case SOUTH -> {
-                        return Direction.DOWN;
-                    }
-                    case DOWN -> {
-                        return Direction.NORTH;
-                    }
-                    case UP -> {
-                        return Direction.SOUTH;
-                    }
-                    case EAST -> {
-                        return Direction.EAST;
-                    }
-                    case WEST -> {
-                        return Direction.WEST;
-                    }
-                }
-                break;
-            case SOUTH:
-                switch (worldDirection) {
-                    case SOUTH -> {
-                        return Direction.UP;
-                    }
-                    case NORTH -> {
-                        return Direction.DOWN;
-                    }
-                    case UP -> {
-                        return Direction.NORTH;
-                    }
-                    case DOWN -> {
-                        return Direction.SOUTH;
-                    }
-                    case WEST -> {
-                        return Direction.EAST;
-                    }
-                    case EAST -> {
-                        return Direction.WEST;
-                    }
-                }
-                break;
-            case EAST:
-                switch (worldDirection) {
-                    case EAST -> {
-                        return Direction.UP;
-                    }
-                    case WEST -> {
-                        return Direction.DOWN;
-                    }
-                    case NORTH -> {
-                        return Direction.NORTH;
-                    }
-                    case SOUTH -> {
-                        return Direction.SOUTH;
-                    }
-                    case DOWN -> {
-                        return Direction.EAST;
-                    }
-                    case UP -> {
-                        return Direction.WEST;
-                    }
-                }
-                break;
-            case WEST:
-                switch (worldDirection) {
-                    case WEST -> {
-                        return Direction.UP;
-                    }
-                    case EAST -> {
-                        return Direction.DOWN;
-                    }
-                    case NORTH -> {
-                        return Direction.NORTH;
-                    }
-                    case SOUTH -> {
-                        return Direction.SOUTH;
-                    }
-                    case UP -> {
-                        return Direction.EAST;
-                    }
-                    case DOWN -> {
-                        return Direction.WEST;
-                    }
-                }
-                break;
-            default:
-                return worldDirection;
+        if (horizontalDirection != null) {
+            return switch (horizontalDirection) {
+                case NORTH -> Direction.NORTH;
+                case SOUTH -> Direction.SOUTH;
+                case EAST -> Direction.EAST;
+                case WEST -> Direction.WEST;
+                default -> Direction.NORTH;
+            };
         }
-        return worldDirection;
+        return Direction.NORTH;
     }
 
     /**
@@ -598,7 +353,6 @@ public class ConnectableBlockBehavior extends BukkitBlockBehavior {
             if ("closed".equalsIgnoreCase(ioType)) {
                 ioConfig = new dev.arubik.craftengine.multiblock.IOConfiguration.Closed();
             }
-            // Add more types if necessary or custom parsing logic
 
             return new ConnectableBlockBehavior(block, faces, hProp, vProp, ioConfig);
         }

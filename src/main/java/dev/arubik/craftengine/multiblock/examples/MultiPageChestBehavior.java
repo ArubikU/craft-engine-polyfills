@@ -35,6 +35,15 @@ public class MultiPageChestBehavior extends MultiBlockBehavior {
         super(customBlock, schema, partBlockId);
     }
 
+    public MultiPageChestBehavior(CustomBlock customBlock, MultiBlockSchema schema, String partBlockId,
+            java.util.List<Direction> connectableFaces,
+            net.momirealms.craftengine.core.block.properties.EnumProperty<net.momirealms.craftengine.core.util.HorizontalDirection> horizontalDirectionProperty,
+            net.momirealms.craftengine.core.block.properties.EnumProperty<net.momirealms.craftengine.core.util.Direction> verticalDirectionProperty,
+            IOConfiguration ioConfig) {
+        super(customBlock, schema, partBlockId, connectableFaces, horizontalDirectionProperty,
+                verticalDirectionProperty, ioConfig);
+    }
+
     public static class Factory implements BlockBehaviorFactory<BlockBehavior> {
         @Override
         public BlockBehavior create(CustomBlock block, Map<String, Object> arguments) {
@@ -52,8 +61,14 @@ public class MultiPageChestBehavior extends MultiBlockBehavior {
                     }
                 }
             }
+            schema.addPart(1, 2, 1, (state) -> state.is(BlockTags.TRAPDOORS));
 
-            MultiPageChestBehavior behavior = new MultiPageChestBehavior(block, schema, partBlockId);
+            dev.arubik.craftengine.machine.block.MachineBlockBehavior base = (dev.arubik.craftengine.machine.block.MachineBlockBehavior) dev.arubik.craftengine.machine.block.MachineBlockBehavior.FACTORY
+                    .create(block, arguments);
+
+            MultiPageChestBehavior behavior = new MultiPageChestBehavior(block, schema, partBlockId,
+                    base.getConnectableFaces(), base.horizontalDirectionProperty, base.verticalDirectionProperty,
+                    base.defaultIOConfig);
 
             // Set IO configuration provider for hopper access
             behavior.withIOProvider(new IOConfigurationProvider() {
@@ -69,27 +84,24 @@ public class MultiPageChestBehavior extends MultiBlockBehavior {
 
                     IOConfiguration.Simple config = new IOConfiguration.Simple();
 
-                    // Top layer (y > 0) - Input to Page 0 (Slot 0)
+                    // Top layer (y > 0) - Input (Fills pages sequentially)
                     if (y > 0) {
                         for (Direction dir : Direction.values()) {
                             if (dir == Direction.DOWN)
                                 continue;
-                            config.withInputSlot(IOConfiguration.IOType.ITEM, 0, dir);
                             config.addInput(IOConfiguration.IOType.ITEM, dir);
                         }
                     }
-                    // Middle layer (y == 0) - Input to Page 1 (Slot 1)
+                    // Middle layer (y == 0) - Input (Fills pages sequentially)
                     else if (y == 0) {
                         for (Direction dir : Direction.values()) {
                             if (dir == Direction.DOWN || dir == Direction.UP)
                                 continue;
-                            config.withInputSlot(IOConfiguration.IOType.ITEM, 1, dir);
                             config.addInput(IOConfiguration.IOType.ITEM, dir);
                         }
                     }
-                    // Bottom layer (y < 0) - Output from Page 2 (Slot 2)
+                    // Bottom layer (y < 0) - Output (Extracts from pages sequentially)
                     else {
-                        config.withOutputSlot(IOConfiguration.IOType.ITEM, 2, Direction.DOWN);
                         config.addOutput(IOConfiguration.IOType.ITEM, Direction.DOWN);
                     }
 
@@ -112,6 +124,9 @@ public class MultiPageChestBehavior extends MultiBlockBehavior {
     protected InteractionResult onInteractFormed(UseOnContext context, BlockEntity core, Level level,
             BlockPos corePos) {
 
+        System.out.println(
+                "[MultiPageChestBehavior] onInteractFormed called, core type: " + core.getClass().getSimpleName());
+
         if (core instanceof MultiPageChestMachineBlockEntity chest) {
             net.minecraft.world.entity.player.Player player = (net.minecraft.world.entity.player.Player) context
                     .getPlayer().serverPlayer();
@@ -119,11 +134,33 @@ public class MultiPageChestBehavior extends MultiBlockBehavior {
             return InteractionResult.SUCCESS;
         }
 
+        if (core instanceof MultiBlockPartBlockEntity partEntity) {
+            System.out.println(
+                    "[MultiPageChestBehavior] Core is MultiBlockPartBlockEntity, creating temporary machine entity for menu");
+
+            // Get the immutable block state
+            net.momirealms.craftengine.core.world.BlockPos cePos = new net.momirealms.craftengine.core.world.BlockPos(
+                    corePos.getX(), corePos.getY(), corePos.getZ());
+            net.momirealms.craftengine.core.block.ImmutableBlockState state = net.momirealms.craftengine.bukkit.util.BlockStateUtils
+                    .getOptionalCustomBlockState(level.getBlockState(corePos)).orElse(null);
+
+            if (state != null) {
+                // Create the machine entity (it will load data from CustomBlockData)
+                MultiPageChestMachineBlockEntity chest = new MultiPageChestMachineBlockEntity(cePos, state, schema);
+
+                chest.setWorld(context.getLevel().storageWorld());
+                net.minecraft.world.entity.player.Player player = (net.minecraft.world.entity.player.Player) context
+                        .getPlayer().serverPlayer();
+                chest.openMenu(player);
+                return InteractionResult.SUCCESS;
+            }
+        }
+
         return InteractionResult.PASS;
     }
 
     @Override
-    protected void onDisassemble(Level level, BlockPos pos, MultiBlockPartBlockEntity core) {
+    protected void onDisassemble(Level level, BlockPos pos, BlockEntity core) {
         // Container persistence is handled by CustomBlockData automatically
         super.onDisassemble(level, pos, core);
     }

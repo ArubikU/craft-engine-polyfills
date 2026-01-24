@@ -16,19 +16,22 @@ public class DataHolders {
         holder.onUnload();
     }
 
-
     public void destroyHolder(DataHolder holder) {
-        holders.remove(holder);
-        holder.destroy();
+        if (holders.remove(holder)) {
+            holder.destroy();
+        }
     }
+
     public void removeHolders() {
         for (DataHolder holder : holders) {
             holder.onUnload();
         }
         holders.clear();
     }
+
     public static DataHolders getInstance() {
         return INSTANCE;
     }
+
     public static final DataHolders INSTANCE = new DataHolders();
 }

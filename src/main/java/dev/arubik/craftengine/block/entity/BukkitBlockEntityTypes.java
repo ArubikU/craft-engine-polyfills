@@ -18,10 +18,13 @@ public class BukkitBlockEntityTypes {
                 .register(Key.of("polyfills:test_machine"));
         ABSTRACT_MACHINE = net.momirealms.craftengine.bukkit.block.entity.BukkitBlockEntityTypes
                 .register(Key.of("polyfills:abstract_machine"));
+        MACHINE_PUMP = net.momirealms.craftengine.bukkit.block.entity.BukkitBlockEntityTypes
+                .register(Key.of("polyfills:machine_pump"));
     }
 
     public static final BlockEntityType<dev.arubik.craftengine.machine.examples.TestMachineBlockEntity> TEST_MACHINE;
     public static final BlockEntityType<dev.arubik.craftengine.machine.block.entity.AbstractMachineBlockEntity> ABSTRACT_MACHINE;
+    public static final BlockEntityType<dev.arubik.craftengine.machine.block.entity.MachinePumpBlockEntity> MACHINE_PUMP;
 
     public static BlockEntity getIfLoaded(Level world, BlockPos pos) {
         CEWorld ceWorld = new BukkitWorld(world.getWorld()).storageWorld();

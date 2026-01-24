@@ -519,6 +519,15 @@ public class CustomBlockData implements PersistentDataContainer {
         } else {
             chunk.getPersistentDataContainer().set(key, PersistentDataType.TAG_CONTAINER, pdc);
         }
+        // update cache
+        CACHE.put(getKey(this.getBlock()), this);
+        CHUNK_CACHE.compute(this.chunk.getChunkKey(), (k, v) -> {
+            if (v == null) {
+                v = new HashSet<>();
+            }
+            v.add(getKey(this.getBlock()));
+            return v;
+        });
     }
 
     /**

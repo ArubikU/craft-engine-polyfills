@@ -34,7 +34,14 @@ public class MachineBlockBehavior extends ConnectableBlockBehavior
     public static final Factory FACTORY = new Factory();
 
     public MachineBlockBehavior(CustomBlock block) {
-        super(block, new ArrayList<>(), getHorizontalProp(block), getVerticalProp(block), new IOConfiguration.Open());
+        super(block, new ArrayList<>(), null, null, new IOConfiguration.Open());
+    }
+
+    public MachineBlockBehavior(CustomBlock block, java.util.List<net.minecraft.core.Direction> connectableFaces,
+            net.momirealms.craftengine.core.block.properties.EnumProperty<net.momirealms.craftengine.core.util.HorizontalDirection> horizontalDirectionProperty,
+            net.momirealms.craftengine.core.block.properties.EnumProperty<net.momirealms.craftengine.core.util.Direction> verticalDirectionProperty,
+            IOConfiguration ioConfig) {
+        super(block, connectableFaces, horizontalDirectionProperty, verticalDirectionProperty, ioConfig);
     }
 
     // Default to ABSTRACT_MACHINE since AbstractMachineBlockEntity is the base for
@@ -43,34 +50,6 @@ public class MachineBlockBehavior extends ConnectableBlockBehavior
     @SuppressWarnings("unchecked")
     public <T extends BlockEntity> BlockEntityType<T> blockEntityType(ImmutableBlockState state) {
         return (BlockEntityType<T>) BukkitBlockEntityTypes.ABSTRACT_MACHINE;
-    }
-
-    @SuppressWarnings("unchecked")
-    private static net.momirealms.craftengine.core.block.properties.EnumProperty<net.momirealms.craftengine.core.util.HorizontalDirection> getHorizontalProp(
-            CustomBlock block) {
-        try {
-            var prop = block.getProperty("facing");
-            if (prop instanceof net.momirealms.craftengine.core.block.properties.EnumProperty<?> ep
-                    && ep.valueClass() == net.momirealms.craftengine.core.util.HorizontalDirection.class) {
-                return (net.momirealms.craftengine.core.block.properties.EnumProperty<net.momirealms.craftengine.core.util.HorizontalDirection>) prop;
-            }
-        } catch (Exception ignored) {
-        }
-        return null;
-    }
-
-    @SuppressWarnings("unchecked")
-    private static net.momirealms.craftengine.core.block.properties.EnumProperty<net.momirealms.craftengine.core.util.Direction> getVerticalProp(
-            CustomBlock block) {
-        try {
-            var prop = block.getProperty("facing");
-            if (prop instanceof net.momirealms.craftengine.core.block.properties.EnumProperty<?> ep
-                    && ep.valueClass() == net.momirealms.craftengine.core.util.Direction.class) {
-                return (net.momirealms.craftengine.core.block.properties.EnumProperty<net.momirealms.craftengine.core.util.Direction>) prop;
-            }
-        } catch (Exception ignored) {
-        }
-        return null;
     }
 
     @Override
@@ -181,7 +160,70 @@ public class MachineBlockBehavior extends ConnectableBlockBehavior
     public static class Factory implements BlockBehaviorFactory<BlockBehavior> {
         @Override
         public BlockBehavior create(CustomBlock block, Map<String, Object> arguments) {
-            return new MachineBlockBehavior(block);
+            java.util.List<net.minecraft.core.Direction> faces = new java.util.ArrayList<>();
+            Object facesArg = arguments.getOrDefault("faces", "all");
+            if (facesArg instanceof String faceStr) {
+                switch (faceStr.toLowerCase()) {
+                    case "all" -> {
+                        for (net.minecraft.core.Direction d : net.minecraft.core.Direction.values())
+                            faces.add(d);
+                    }
+                    case "horizontal" -> {
+                        faces.add(net.minecraft.core.Direction.NORTH);
+                        faces.add(net.minecraft.core.Direction.SOUTH);
+                        faces.add(net.minecraft.core.Direction.EAST);
+                        faces.add(net.minecraft.core.Direction.WEST);
+                    }
+                    case "vertical" -> {
+                        faces.add(net.minecraft.core.Direction.UP);
+                        faces.add(net.minecraft.core.Direction.DOWN);
+                    }
+                    default -> {
+                        try {
+                            faces.add(net.minecraft.core.Direction.valueOf(faceStr.toUpperCase()));
+                        } catch (Exception ignored) {
+                        }
+                    }
+                }
+            } else if (facesArg instanceof java.util.List<?> faceList) {
+                for (Object face : faceList) {
+                    try {
+                        faces.add(net.minecraft.core.Direction.valueOf(face.toString().toUpperCase()));
+                    } catch (Exception ignored) {
+                    }
+                }
+            }
+            if (faces.isEmpty()) {
+                for (net.minecraft.core.Direction d : net.minecraft.core.Direction.values())
+                    faces.add(d);
+            }
+
+            String hPropName = (String) arguments.get("horizontal-direction-property");
+            String vPropName = (String) arguments.get("vertical-direction-property");
+            net.momirealms.craftengine.core.block.properties.EnumProperty<net.momirealms.craftengine.core.util.HorizontalDirection> hProp = null;
+            net.momirealms.craftengine.core.block.properties.EnumProperty<net.momirealms.craftengine.core.util.Direction> vProp = null;
+
+            if (hPropName != null) {
+                try {
+                    hProp = (net.momirealms.craftengine.core.block.properties.EnumProperty<net.momirealms.craftengine.core.util.HorizontalDirection>) block
+                            .getProperty(hPropName);
+                } catch (Exception ignored) {
+                }
+            }
+            if (vPropName != null) {
+                try {
+                    vProp = (net.momirealms.craftengine.core.block.properties.EnumProperty<net.momirealms.craftengine.core.util.Direction>) block
+                            .getProperty(vPropName);
+                } catch (Exception ignored) {
+                }
+            }
+
+            IOConfiguration ioConfig = new IOConfiguration.Open();
+            String ioType = (String) arguments.get("io");
+            if ("closed".equalsIgnoreCase(ioType))
+                ioConfig = new IOConfiguration.Closed();
+
+            return new MachineBlockBehavior(block, faces, hProp, vProp, ioConfig);
         }
     }
 
@@ -189,5 +231,11 @@ public class MachineBlockBehavior extends ConnectableBlockBehavior
     public @Nullable BlockEntity createBlockEntity(net.momirealms.craftengine.core.world.BlockPos arg0,
             ImmutableBlockState arg1) {
         return null;
+    }
+
+    public void affectNeighborsAfterRemoval(Object thisBlock, Object[] args,
+            java.util.concurrent.Callable<Object> superMethod)
+            throws Exception {
+        superMethod.call();
     }
 }

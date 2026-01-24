@@ -16,7 +16,10 @@ import org.jetbrains.annotations.Nullable;
 import dev.arubik.craftengine.util.CustomDataType;
 import dev.arubik.craftengine.util.TypedKey;
 import net.minecraft.world.level.block.state.BlockState;
+import net.momirealms.craftengine.bukkit.block.behavior.UnsafeCompositeBlockBehavior;
+import net.momirealms.craftengine.bukkit.util.BlockStateUtils;
 import net.momirealms.craftengine.core.block.ImmutableBlockState;
+import net.momirealms.craftengine.core.block.behavior.BlockBehavior;
 import net.momirealms.craftengine.core.block.entity.BlockEntity;
 import net.momirealms.craftengine.core.util.Key;
 import net.momirealms.craftengine.core.world.BlockPos;
@@ -29,6 +32,8 @@ public class PersistentBlockEntity extends BlockEntity {
 
     public Function<CompoundTag, Void> preRemoveHook = null;
 
+    public Function<PersistentBlockEntity, Void> preCleanup = null;
+
     public PersistentBlockEntity(BlockPos pos, ImmutableBlockState blockState) {
         super(BukkitBlockEntityTypes.PERSISTENT_BLOCK_ENTITY_TYPE, pos, blockState);
         this.container = new CompoundTag();
@@ -38,10 +43,18 @@ public class PersistentBlockEntity extends BlockEntity {
         this.preRemoveHook = hook;
     }
 
+    public void setPreCleanup(Function<PersistentBlockEntity, Void> hook) {
+        this.preCleanup = hook;
+    }
+
     @Override
     public void preRemove() {
+
         if (this.preRemoveHook != null) {
             this.preRemoveHook.apply(this.container);
+        }
+        if (this.preCleanup != null) {
+            this.preCleanup.apply(this);
         }
         super.preRemove();
     }
@@ -227,7 +240,27 @@ public class PersistentBlockEntity extends BlockEntity {
         return value != null ? value : defaultValue;
     }
 
-    public void set(NamespacedKey key, CustomDataType<BlockState, byte[]> BLOCK_STATE_TYPE, BlockState blockState) {
-        set(key, BLOCK_STATE_TYPE.getBaseType(), BLOCK_STATE_TYPE.getSerializer().apply(blockState));
+    public BlockBehavior getBlockBehavior() {
+        Optional<ImmutableBlockState> customStateOpt = BlockStateUtils.getOptionalCustomBlockState(blockState);
+        if (customStateOpt.isPresent()) {
+            return customStateOpt.get().behavior();
+        }
+        return null;
+    }
+
+    public <T> T getBlockBehavior(Class<T> clazz) {
+        Optional<ImmutableBlockState> customStateOpt = BlockStateUtils.getOptionalCustomBlockState(blockState);
+        if (customStateOpt.isPresent()) {
+            // check if is instance of or implements etc
+            if (customStateOpt.get().behavior().getClass().isInstance(clazz)) {
+                return (T) customStateOpt.get().behavior();
+            }
+            if (customStateOpt.get().behavior() instanceof UnsafeCompositeBlockBehavior beh) {
+                if (beh.getAs(clazz).isPresent()) {
+                    return (T) beh.getAs(clazz).get();
+                }
+            }
+        }
+        return null;
     }
 }

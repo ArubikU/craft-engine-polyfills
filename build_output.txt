@@ -1,0 +1,41 @@
+> Task :clean
+> Task :paperweightUserdevSetup UP-TO-DATE
+
+> Task :compileJava
+D:\Github\craft-engine-polyfills\src\main\java\dev\arubik\craftengine\fluid\behavior\TankBlockBehavior.java:486: error: cannot find symbol
+        if (!isConnectedTo(direction, pos, level))
+             ^
+  symbol:   method isConnectedTo(Direction,BlockPos,Level)
+  location: class TankBlockBehavior
+Note: Some input files use or override a deprecated API.
+Note: Recompile with -Xlint:deprecation for details.
+Note: Some input files use unchecked or unsafe operations.
+Note: Recompile with -Xlint:unchecked for details.
+1 error
+
+> Task :compileJava FAILED
+
+[Incubating] Problems report is available at: file:///D:/Github/craft-engine-polyfills/build/reports/problems/problems-report.html
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':compileJava'.
+> Compilation failed; see the compiler output below.
+  Note: Recompile with -Xlint:deprecation for details.
+  Note: Recompile with -Xlint:unchecked for details.
+  Note: Some input files use or override a deprecated API.
+  Note: Some input files use unchecked or unsafe operations.
+  D:\Github\craft-engine-polyfills\src\main\java\dev\arubik\craftengine\fluid\behavior\TankBlockBehavior.java:486: error: cannot find symbol
+          if (!isConnectedTo(direction, pos, level))
+               ^
+    symbol:   method isConnectedTo(Direction,BlockPos,Level)
+    location: class TankBlockBehavior
+  1 error
+
+* Try:
+> Check your code and dependencies to fix the compilation error(s)
+> Run with --scan to get full insights.
+
+BUILD FAILED in 9s
+3 actionable tasks: 2 executed, 1 up-to-date

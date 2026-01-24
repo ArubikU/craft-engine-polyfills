@@ -48,22 +48,45 @@ public class RedstoneOperator extends DiodeBlockBehavior {
             Property<Boolean> powered = (Property<Boolean>) block.getProperty("powered");
             @SuppressWarnings("unchecked")
             Property<HorizontalDirection> facing = (Property<HorizontalDirection>) block.getProperty("facing");
-            @SuppressWarnings("unchecked")
-            Property<Integer> mode = (Property<Integer>) block.getProperty("mode");
+
+            Property<?> mode = block.getProperty("mode");
             @SuppressWarnings("unchecked")
             Property<Boolean> invert = (Property<Boolean>) block.getProperty("invert");
             return new RedstoneOperator(block, delay, powered, facing, mode, invert);
         }
     }
 
-    public final IntegerProperty MODE;
+    public final Property<?> MODE;
     public final BooleanProperty INVERT;
 
     public RedstoneOperator(CustomBlock arg0, int delay, Property<Boolean> powered,
-            Property<HorizontalDirection> facing, Property<Integer> mode, Property<Boolean> invert) {
+            Property<HorizontalDirection> facing, Property<?> mode, Property<Boolean> invert) {
         super(arg0, delay, powered, facing);
-        this.MODE = (IntegerProperty) mode;
+        this.MODE = mode;
         this.INVERT = (BooleanProperty) invert;
+    }
+
+    private int getMode(ImmutableBlockState state) {
+        Object val = state.get(MODE);
+        if (val instanceof Integer i)
+            return i;
+        if (val instanceof String s) {
+            try {
+                return Integer.parseInt(s);
+            } catch (NumberFormatException e) {
+                return 0;
+            }
+        }
+        return 0;
+    }
+
+    @SuppressWarnings("unchecked")
+    private ImmutableBlockState setMode(ImmutableBlockState state, int mode) {
+        if (MODE instanceof IntegerProperty) {
+            return state.with((Property<Integer>) MODE, mode);
+        } else {
+            return state.with((Property<String>) MODE, String.valueOf(mode));
+        }
     }
 
     @Override
@@ -159,7 +182,7 @@ public class RedstoneOperator extends DiodeBlockBehavior {
         }
         // and or and xor
         boolean invert = customState.get(INVERT);
-        switch (customState.get(MODE)) {
+        switch (getMode(customState)) {
             case 0:
                 return invert ? !(leftPower && rightPower) : (leftPower && rightPower);
             case 1:
@@ -190,9 +213,9 @@ public class RedstoneOperator extends DiodeBlockBehavior {
             return InteractionResult.SUCCESS;
         }
         ImmutableBlockState customState = BlockStateUtils.getOptionalCustomBlockState(blockState).orElseThrow();
-        int currentMode = customState.get(MODE);
+        int currentMode = getMode(customState);
         int nextMode = (currentMode + 1) % 3;
-        ImmutableBlockState newState = customState.with(MODE, nextMode);
+        ImmutableBlockState newState = setMode(customState, nextMode);
         FastNMS.INSTANCE.method$LevelWriter$setBlock(level, blockPos, newState.customBlockState().literalObject(),
                 Flags.UPDATE_CLIENTS);
         return InteractionResult.SUCCESS;

@@ -21,6 +21,7 @@ import org.jetbrains.annotations.NotNull;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.world.ItemStackWithSlot;
 import net.minecraft.world.WorldlyContainer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -55,37 +56,6 @@ public abstract class AbstractWorldlyContainer implements WorldlyContainer, Inve
     @Override
     public void setChanged() {
         if (level != null) {
-            // Mark block entity as dirty for persistence
-            // In NMS/Fabric: setChanged() or markDirty()
-            // In Bukkit-like abstract world:
-            // We might not have direct access to 'this' as a BlockEntity to call
-            // super.setChanged().
-            // But AbstractWorldlyContainer IS NOT A BLOCK ENTITY class itself?
-            // User code 'AbstractMachineBlockEntity extends AbstractWorldlyContainer'.
-            // If AbstractMachineBlockEntity is the BlockEntity, then setChanged() comes
-            // from BlockEntity.
-            // But WorldlyContainer interface forces setChanged().
-            // If AbstractMachineBlockEntity doesn't extend
-            // net.minecraft.world.level.block.entity.BlockEntity, then it must implement it
-            // manually.
-            // Wait, does AbstractWorldlyContainer extend BlockEntity?
-            // "public abstract class AbstractWorldlyContainer implements WorldlyContainer,
-            // InventoryHolder, DataHolder"
-            // It does NOT extend BlockEntity.
-            // So AbstractMachineBlockEntity probably *should* extend BlockEntity?
-            // But Java doesn't support multiple inheritance.
-            // Maybe AbstractWorldlyContainer is meant to be a delegate?
-            // Or maybe AbstractWorldlyContainer *should* extend BlockEntity?
-            // Let's check imports of AbstractWorldlyContainer.
-            // It imports net.minecraft.world.level.block.entity.BlockEntity? No.
-            // Line 30: implements WorldlyContainer...
-
-            // If I look at the user's codebase pattern (SpikeBlockBehavior), maybe they
-            // separate Behavior from BlockEntity?
-            // But AbstractMachineBlockEntity looks like it wants to be the BE.
-            // The compilation error says "PolyFurnaceBlockEntity must implement...
-            // setChanged()".
-            // Implementation:
         }
     }
 
@@ -177,17 +147,21 @@ public abstract class AbstractWorldlyContainer implements WorldlyContainer, Inve
     @Override
     public void saveToData() {
         CustomBlockData data = CustomBlockData.from(level, pos);
-        // Only save specific fields if subclasses call super or we do it here.
-        // Better to let subclasses handle specific logic but we can provide helper for
-        // inventory.
-        // BlockContainer saves "CONTENTS", Spike saves "ITEM".
-        // We will leave implementation to subclasses or unify in future.
-        // For now, let's keep it abstract or empty default.
+        if (inventory != null) {
+            data.set(TypedKeys.CONTENTS, ArrayItemStackWithSlot.from(inventory));
+        }
     }
 
     @Override
     public void loadFromData() {
-        // Same as above.
+        CustomBlockData data = CustomBlockData.from(level, pos);
+        data.getOptional(TypedKeys.CONTENTS).ifPresent(contents -> {
+            for (ItemStackWithSlot item : contents) {
+                if (item.slot() >= 0 && item.slot() < inventory.length) {
+                    inventory[item.slot()] = item.stack();
+                }
+            }
+        });
     }
 
     // --- WorldlyContainer Side Logic (Default permissive) ---
@@ -276,7 +250,7 @@ public abstract class AbstractWorldlyContainer implements WorldlyContainer, Inve
     @Override
     public void destroy() {
         stillValid = false;
-        DataHolders.INSTANCE.destroyHolder(this);
+        DataHolders.INSTANCE.holders.remove(this);
         unregister();
     }
 
