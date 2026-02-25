@@ -33,14 +33,11 @@ import net.momirealms.craftengine.core.block.entity.BlockEntityType;
 import net.momirealms.craftengine.core.block.entity.tick.BlockEntityTicker;
 import net.momirealms.craftengine.core.entity.player.InteractionHand;
 import net.momirealms.craftengine.core.entity.player.InteractionResult;
-import net.momirealms.craftengine.core.util.HorizontalDirection;
 import net.momirealms.craftengine.core.util.Key;
 import net.momirealms.craftengine.core.world.CEWorld;
 import net.momirealms.craftengine.core.world.chunk.CEChunk;
 import net.momirealms.craftengine.core.world.context.UseOnContext;
 import dev.arubik.craftengine.fluid.FluidStack;
-import dev.arubik.craftengine.fluid.behavior.FluidCarrier;
-import dev.arubik.craftengine.gas.GasCarrier;
 import dev.arubik.craftengine.gas.GasStack;
 
 /**
@@ -85,6 +82,15 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
             throw new IllegalStateException("CustomBlock must have 'multiblock_role' property defined");
         }
         this.MULTIBLOCK_ROLE = roleProperty;
+
+        // Try to get MACHINE_MODE property from block if it exists
+        net.momirealms.craftengine.core.block.properties.Property<MachineMode> machineModeProp = null;
+        try {
+            machineModeProp = (net.momirealms.craftengine.core.block.properties.Property<MachineMode>) customBlock
+                    .getProperty(dev.arubik.craftengine.property.Properties.MACHINE_MODE.value());
+        } catch (ClassCastException | NullPointerException ignored) {
+            // Property not found or wrong type, keep as null
+        }
     }
 
     @Override
@@ -115,6 +121,10 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
     public MultiBlockBehavior withIOProvider(IOConfigurationProvider provider) {
         this.ioProvider = provider != null ? provider : IOConfigurationProvider.OPEN;
         return this;
+    }
+
+    public IOConfigurationProvider getIOProvider() {
+        return ioProvider;
     }
 
     /**
@@ -485,9 +495,9 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
                     partEntity.setChanged();
 
                     // Configure IO if provider is set
-                    if (ioProvider != null) {
+                    if (getIOProvider() != null) {
                         // Pass unrotated relative pos to provider (Schema Space)
-                        IOConfiguration ioConfig = ioProvider.configurePartIO(relativePos);
+                        IOConfiguration ioConfig = getIOProvider().configurePartIO(relativePos);
 
                         // Wrap in RotatedIOConfiguration to handle world directions
                         if (ioConfig != null) {
@@ -759,9 +769,9 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
                     partEntity.setOriginalBlock(originalState);
 
                     // Configure IO if provider is set
-                    if (ioProvider != null) {
+                    if (getIOProvider() != null) {
                         // Pass unrotated relative pos to provider (Schema Space)
-                        IOConfiguration ioConfig = ioProvider.configurePartIO(relativePos);
+                        IOConfiguration ioConfig = getIOProvider().configurePartIO(relativePos);
 
                         // Wrap in RotatedIOConfiguration to handle world directions
                         if (ioConfig != null) {

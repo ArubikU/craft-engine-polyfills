@@ -13,21 +13,24 @@ public class AbstractProcessingRecipe {
     protected final List<RecipeOutput> outputs;
     protected final int processTime;
     protected boolean fuelRequired = true;
+    protected boolean requireOverclocked = false; // Only works when machine is overclocked
     protected final List<RecipeCondition> conditions;
 
     public AbstractProcessingRecipe(List<RecipeInput> inputs, List<RecipeOutput> outputs, int processTime) {
         this.inputs = inputs;
         this.outputs = outputs;
         this.processTime = processTime;
+        this.requireOverclocked = false;
         this.conditions = new java.util.ArrayList<>();
     }
 
     public AbstractProcessingRecipe(List<RecipeInput> inputs2, List<RecipeOutput> outputs2, int processTime2,
-            boolean fuelRequired2, List<RecipeCondition> conditions2) {
+            boolean fuelRequired2, boolean requireOverclocked2, List<RecipeCondition> conditions2) {
         this.inputs = inputs2;
         this.outputs = outputs2;
         this.processTime = processTime2;
         this.fuelRequired = fuelRequired2;
+        this.requireOverclocked = requireOverclocked2;
         this.conditions = conditions2;
     }
 
@@ -61,11 +64,21 @@ public class AbstractProcessingRecipe {
         return fuelRequired;
     }
 
+    public AbstractProcessingRecipe setRequireOverclocked(boolean requireOverclocked) {
+        this.requireOverclocked = requireOverclocked;
+        return this;
+    }
+
+    public boolean isRequireOverclocked() {
+        return requireOverclocked;
+    }
+
     public static class AbstractProcessingRecipeBuilder {
         protected final List<RecipeInput> inputs = new java.util.ArrayList<>();
         protected final List<RecipeOutput> outputs = new java.util.ArrayList<>();
         protected int processTime;
         protected boolean fuelRequired = true;
+        protected boolean requireOverclocked = false;
         protected final List<RecipeCondition> conditions = new java.util.ArrayList<>();
 
         public AbstractProcessingRecipeBuilder addInput(RecipeInput input) {
@@ -119,13 +132,19 @@ public class AbstractProcessingRecipe {
             return this;
         }
 
+        public AbstractProcessingRecipeBuilder setRequireOverclocked(boolean requireOverclocked) {
+            this.requireOverclocked = requireOverclocked;
+            return this;
+        }
+
         public AbstractProcessingRecipeBuilder addCondition(RecipeCondition condition) {
             this.conditions.add(condition);
             return this;
         }
 
         public AbstractProcessingRecipe build() {
-            return new AbstractProcessingRecipe(inputs, outputs, processTime, fuelRequired, conditions);
+            return new AbstractProcessingRecipe(inputs, outputs, processTime, fuelRequired, requireOverclocked,
+                    conditions);
         }
     }
 

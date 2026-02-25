@@ -27,21 +27,39 @@ import net.momirealms.craftengine.core.block.ImmutableBlockState;
 import net.momirealms.craftengine.core.block.entity.BlockEntity;
 import dev.arubik.craftengine.gas.GasCarrier;
 import dev.arubik.craftengine.gas.GasStack;
+import net.minecraft.core.Direction;
+import net.momirealms.craftengine.core.block.properties.EnumProperty;
+import net.momirealms.craftengine.core.util.HorizontalDirection;
+import java.util.List;
 
 public class MachineBlockBehavior extends ConnectableBlockBehavior
         implements FluidCarrier, GasCarrier, EntityBlockBehavior {
 
     public static final Factory FACTORY = new Factory();
 
+    // Optional MACHINE_MODE property (if block has it)
+    public final net.momirealms.craftengine.core.block.properties.Property<dev.arubik.craftengine.multiblock.MachineMode> MACHINE_MODE;
+
     public MachineBlockBehavior(CustomBlock block) {
         super(block, new ArrayList<>(), null, null, new IOConfiguration.Open());
+        this.MACHINE_MODE = null; // Default for this constructor
     }
 
-    public MachineBlockBehavior(CustomBlock block, java.util.List<net.minecraft.core.Direction> connectableFaces,
-            net.momirealms.craftengine.core.block.properties.EnumProperty<net.momirealms.craftengine.core.util.HorizontalDirection> horizontalDirectionProperty,
-            net.momirealms.craftengine.core.block.properties.EnumProperty<net.momirealms.craftengine.core.util.Direction> verticalDirectionProperty,
+    public MachineBlockBehavior(CustomBlock customBlock, List<Direction> connectableFaces,
+            EnumProperty<HorizontalDirection> horizontalDirectionProperty,
+            EnumProperty<net.momirealms.craftengine.core.util.Direction> verticalDirectionProperty,
             IOConfiguration ioConfig) {
-        super(block, connectableFaces, horizontalDirectionProperty, verticalDirectionProperty, ioConfig);
+        super(customBlock, connectableFaces, horizontalDirectionProperty, verticalDirectionProperty, ioConfig);
+
+        // Try to get MACHINE_MODE property from block if it exists
+        net.momirealms.craftengine.core.block.properties.Property<dev.arubik.craftengine.multiblock.MachineMode> machineModeProp = null;
+        try {
+            machineModeProp = (net.momirealms.craftengine.core.block.properties.Property<dev.arubik.craftengine.multiblock.MachineMode>) customBlock
+                    .getProperty(dev.arubik.craftengine.property.Properties.MACHINE_MODE.value());
+        } catch (ClassCastException | NullPointerException ignored) {
+            // Property not found or wrong type, keep as null
+        }
+        this.MACHINE_MODE = machineModeProp;
     }
 
     // Default to ABSTRACT_MACHINE since AbstractMachineBlockEntity is the base for

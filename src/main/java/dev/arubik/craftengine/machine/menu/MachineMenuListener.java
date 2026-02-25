@@ -41,7 +41,7 @@ public class MachineMenuListener implements Listener {
                         }
                         break;
                     case INPUT:
-                    case BURNING:
+                    case FUEL:
                         // Schedule sync for any change
                         scheduleSync(menu);
                         break;

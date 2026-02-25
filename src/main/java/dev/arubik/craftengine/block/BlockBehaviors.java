@@ -75,6 +75,9 @@ public class BlockBehaviors {
                 RegistryUtils.registerBlockBehavior(
                                 dev.arubik.craftengine.multiblock.examples.MultiPageChestBehavior.FACTORY_KEY,
                                 dev.arubik.craftengine.multiblock.examples.MultiPageChestBehavior.FACTORY);
+                RegistryUtils.registerBlockBehavior(
+                                dev.arubik.craftengine.multiblock.impl.MachineCoreT1Behavior.FACTORY_KEY,
+                                dev.arubik.craftengine.multiblock.impl.MachineCoreT1Behavior.FACTORY);
 
                 net.momirealms.craftengine.core.block.entity.render.element.BlockEntityElementConfigs.register(
                                 POLYFILL_SHULKER_BOX_HITBOX,

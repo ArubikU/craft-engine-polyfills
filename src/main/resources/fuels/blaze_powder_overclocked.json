@@ -1,0 +1,10 @@
+{
+    "type": "solid_fuel",
+    "input": {
+        "type": "item",
+        "item": "minecraft:blaze_powder",
+        "amount": 1
+    },
+    "burnTime": 2400,
+    "overclockedTime": 600
+}

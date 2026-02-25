@@ -66,7 +66,7 @@ public class MachineMenu implements InventoryHolder {
     public void syncFromMachine() {
         for (int i = 0; i < inventory.getSize(); i++) {
             MenuSlotType type = layout.getSlotType(i);
-            if (type == MenuSlotType.INPUT || type == MenuSlotType.OUTPUT || type == MenuSlotType.BURNING) {
+            if (type == MenuSlotType.INPUT || type == MenuSlotType.OUTPUT || type == MenuSlotType.FUEL) {
                 net.minecraft.world.item.ItemStack nms = machine.getItem(i);
                 inventory.setItem(i, dev.arubik.craftengine.util.BridgeUtils.toBukkit(nms));
             }
@@ -80,7 +80,7 @@ public class MachineMenu implements InventoryHolder {
         if (slot < 0 || slot >= inventory.getSize())
             return;
         MenuSlotType type = layout.getSlotType(slot);
-        if (type == MenuSlotType.INPUT || type == MenuSlotType.OUTPUT || type == MenuSlotType.BURNING) {
+        if (type == MenuSlotType.INPUT || type == MenuSlotType.OUTPUT || type == MenuSlotType.FUEL) {
             org.bukkit.inventory.ItemStack bukkit = inventory.getItem(slot);
             if (bukkit == null || bukkit.getType() == org.bukkit.Material.AIR) {
                 machine.setItem(slot, net.minecraft.world.item.ItemStack.EMPTY);

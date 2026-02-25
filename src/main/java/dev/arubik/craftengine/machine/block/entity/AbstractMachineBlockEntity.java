@@ -7,15 +7,20 @@ import dev.arubik.craftengine.gas.GasStack;
 import dev.arubik.craftengine.machine.recipe.AbstractProcessingRecipe;
 import dev.arubik.craftengine.machine.recipe.RecipeOutput;
 import dev.arubik.craftengine.multiblock.IOConfiguration;
+import dev.arubik.craftengine.multiblock.MachineMode;
+import dev.arubik.craftengine.multiblock.impl.MachineType;
 import dev.arubik.craftengine.util.DirectionType;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
 import net.momirealms.craftengine.bukkit.block.behavior.UnsafeCompositeBlockBehavior;
 import net.momirealms.craftengine.bukkit.util.BlockStateUtils;
 import net.momirealms.craftengine.bukkit.world.BukkitWorld;
+import net.momirealms.craftengine.core.block.UpdateOption;
 import net.momirealms.craftengine.core.block.behavior.BlockBehavior;
+import net.momirealms.craftengine.core.block.properties.Property;
 import net.minecraft.world.entity.player.Player;
 
 import java.util.ArrayList;
@@ -29,6 +34,7 @@ public abstract class AbstractMachineBlockEntity extends PersistentWorldlyBlockE
     protected int maxProgress = 0;
     protected int burnTime = 0;
     protected int maxBurnTime = 0;
+    protected int overclockedTicks = 0; // Ticks remaining in overclocked mode (0 = not overclocked)
     protected boolean isProcessing = false;
 
     public boolean isProcessing() {
@@ -58,6 +64,7 @@ public abstract class AbstractMachineBlockEntity extends PersistentWorldlyBlockE
     public AbstractMachineBlockEntity(int size, net.momirealms.craftengine.core.world.BlockPos pos,
             net.momirealms.craftengine.core.block.ImmutableBlockState state) {
         super(pos, state, size);
+
     }
 
     public net.minecraft.core.BlockPos getMachinePos() {
@@ -538,16 +545,25 @@ public abstract class AbstractMachineBlockEntity extends PersistentWorldlyBlockE
         if (recipe == null)
             return false;
 
+        // Check if recipe requires overclocked mode
+        if (recipe.isRequireOverclocked() && !isOverclocked()) {
+            return false;
+        }
+
+        // Check conditions
         for (dev.arubik.craftengine.machine.recipe.condition.RecipeCondition condition : recipe.getConditions()) {
             if (!condition.test(level, this)) {
                 return false;
             }
         }
 
+        // Check outputs
         for (RecipeOutput output : recipe.getOutputs()) {
-            if (!canFitOutput(level, output))
+            if (!canFitOutput(level, output)) {
                 return false;
+            }
         }
+
         return true;
     }
 
@@ -570,6 +586,43 @@ public abstract class AbstractMachineBlockEntity extends PersistentWorldlyBlockE
         }
         boolean hasSignal = level.hasNeighborSignal(BlockPos.of(pos.asLong()));
         return invertRedstone ? !hasSignal : hasSignal;
+    }
+
+    // --- Overclocking System ---
+
+    /**
+     * Gets whether this machine is currently in overclocked mode.
+     */
+    public boolean isOverclocked() {
+        return overclockedTicks > 0;
+    }
+
+    /**
+     * Sets the number of ticks to remain overclocked.
+     * 
+     * @param ticks Number of ticks (0 to disable)
+     */
+    public void setOverclockedTicks(int ticks) {
+        this.overclockedTicks = Math.max(0, ticks);
+        setChanged();
+    }
+
+    /**
+     * Increments the overclocked ticks by the given amount.
+     * Useful for fuel that grants overclocking.
+     * 
+     * @param ticks Number of ticks to add
+     */
+    public void incrementOverclocked(int ticks) {
+        this.overclockedTicks += ticks;
+        setChanged();
+    }
+
+    /**
+     * Gets the remaining overclocked ticks.
+     */
+    public int getOverclockedTicks() {
+        return overclockedTicks;
     }
 
     // --- Helpers ---
@@ -636,6 +689,9 @@ public abstract class AbstractMachineBlockEntity extends PersistentWorldlyBlockE
     private static final dev.arubik.craftengine.util.TypedKey<Integer> KEY_MAX_BURN_TIME = dev.arubik.craftengine.util.TypedKey
             .of("craftengine", "machine_max_burn_time",
                     org.bukkit.persistence.PersistentDataType.INTEGER);
+    private static final dev.arubik.craftengine.util.TypedKey<Integer> KEY_OVERCLOCKED_TICKS = dev.arubik.craftengine.util.TypedKey
+            .of("craftengine", "machine_overclocked_ticks",
+                    org.bukkit.persistence.PersistentDataType.INTEGER);
 
     @Override
     protected void saveCustomData(net.momirealms.craftengine.libraries.nbt.CompoundTag tag) {
@@ -643,6 +699,7 @@ public abstract class AbstractMachineBlockEntity extends PersistentWorldlyBlockE
         set(KEY_MAX_PROGRESS, maxProgress);
         set(KEY_BURN_TIME, burnTime);
         set(KEY_MAX_BURN_TIME, maxBurnTime);
+        set(KEY_OVERCLOCKED_TICKS, overclockedTicks);
         set(KEY_XP, storedXp);
         super.saveCustomData(tag);
     }
@@ -654,6 +711,7 @@ public abstract class AbstractMachineBlockEntity extends PersistentWorldlyBlockE
         this.maxProgress = getOrDefault(KEY_MAX_PROGRESS, 0);
         this.burnTime = getOrDefault(KEY_BURN_TIME, 0);
         this.maxBurnTime = getOrDefault(KEY_MAX_BURN_TIME, 0);
+        this.overclockedTicks = getOrDefault(KEY_OVERCLOCKED_TICKS, 0);
         this.storedXp = getOrDefault(KEY_XP, 0f);
     }
 
@@ -905,6 +963,12 @@ public abstract class AbstractMachineBlockEntity extends PersistentWorldlyBlockE
 
                 this.burnTime += burn;
                 this.maxBurnTime = burn;
+
+                // Apply overclocked time if the fuel grants it
+                if (recipe.getOverclockedTime() > 0) {
+                    incrementOverclocked(recipe.getOverclockedTime());
+                }
+
                 return;
             }
         }
@@ -1024,6 +1088,44 @@ public abstract class AbstractMachineBlockEntity extends PersistentWorldlyBlockE
             this.menu.tick();
         }
         processTick(level);
+
+        // Update MACHINE_MODE property if it exists
+        updateMachineModeProperty(level, pos, state);
+    }
+
+    /**
+     * Updates the MACHINE_MODE block property based on machine state.
+     * Only updates if the property exists in the block state.
+     */
+    private void updateMachineModeProperty(Level level, BlockPos pos,
+            net.momirealms.craftengine.core.block.ImmutableBlockState state) {
+        // Check if this block has MACHINE_MODE property via its behavior
+        BlockBehavior behavior = state.behavior();
+        if (!(behavior instanceof dev.arubik.craftengine.machine.block.MachineBlockBehavior machineBehavior)) {
+            return; // Not a machine block
+        }
+
+        Property<MachineMode> machineModeProp = machineBehavior.MACHINE_MODE;
+        if (machineModeProp == null) {
+            return; // Block doesn't have this property
+        }
+
+        // Determine new mode based on burnTime
+        MachineMode currentMode = state.get(machineModeProp);
+        MachineMode newMode;
+
+        if (burnTime > 0) {
+            newMode = MachineMode.WORKING;
+        } else {
+            newMode = MachineMode.IDLE;
+        }
+
+        // Only update if mode changed
+        if (currentMode != newMode) {
+            net.momirealms.craftengine.core.block.ImmutableBlockState newState = state.with(machineModeProp, newMode);
+            level.setBlock(pos, (BlockState) newState.customBlockState().literalObject(),
+                    UpdateOption.UPDATE_ALL_IMMEDIATE.flags());
+        }
     }
 
     @Override

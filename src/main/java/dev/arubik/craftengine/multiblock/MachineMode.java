@@ -8,8 +8,9 @@ import net.minecraft.util.StringRepresentable;
  */
 public enum MachineMode implements StringRepresentable {
     NONE("none"),
-    HIGH_FURNACE("high_furnace"),
-    ALLOY_SMELTER("alloy_smelter");
+    WORKING("working"),
+    IDLE("idle"),
+    OVERCLOCKING("overclocking");
 
     private final String name;
 

@@ -90,6 +90,7 @@ public class RecipeManager {
     private static void parseFuel(JsonObject json, String filename) {
         String type = json.get("type").getAsString();
         int burnTime = json.get("burnTime").getAsInt();
+        int overclockedTime = json.has("overclockedTime") ? json.get("overclockedTime").getAsInt() : 0;
 
         RecipeInput input = parseInput(json.getAsJsonObject("input"));
         RecipeOutput replacement = null;
@@ -100,7 +101,7 @@ public class RecipeManager {
             replacement = parseOutput(json.getAsJsonObject("replacement"));
         }
 
-        MachineFuelRecipe recipe = new MachineFuelRecipe(input, burnTime, replacement);
+        MachineFuelRecipe recipe = new MachineFuelRecipe(input, burnTime, replacement, overclockedTime);
         FUELS.computeIfAbsent(type, k -> new ArrayList<>()).add(recipe);
     }
 
@@ -108,6 +109,8 @@ public class RecipeManager {
         String type = json.get("type").getAsString();
         int time = json.get("time").getAsInt();
         boolean fuelRequired = json.has("fuelRequired") ? json.get("fuelRequired").getAsBoolean() : true;
+        boolean requireOverclocked = json.has("requireOverclocked") ? json.get("requireOverclocked").getAsBoolean()
+                : false;
 
         List<RecipeInput> inputs = new ArrayList<>();
         List<RecipeOutput> outputs = new ArrayList<>();
@@ -136,6 +139,7 @@ public class RecipeManager {
 
         AbstractProcessingRecipe recipe = new AbstractProcessingRecipe(inputs, outputs, time);
         recipe.setFuelRequired(fuelRequired);
+        recipe.setRequireOverclocked(requireOverclocked);
         for (RecipeCondition c : conditions) {
             recipe.addCondition(c);
         }

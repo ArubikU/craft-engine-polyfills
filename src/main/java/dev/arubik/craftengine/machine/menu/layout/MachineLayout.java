@@ -74,4 +74,21 @@ public class MachineLayout {
     public String getTitlePattern() {
         return titlePattern;
     }
+
+    public void fillBackground(org.bukkit.inventory.ItemStack item) {
+
+        // check if item is null
+        if (item == null) {
+            throw new IllegalArgumentException("Item cannot be null");
+        }
+
+        // fill all slots with item
+        for (int i = 0; i < size; i++) {
+            // check if is not defined
+            if (!slotTypes.containsKey(i)) {
+                slotTypes.put(i, MenuSlotType.BACKGROUND);
+                dynamicProviders.put(i, (player, inventory) -> item);
+            }
+        }
+    }
 }

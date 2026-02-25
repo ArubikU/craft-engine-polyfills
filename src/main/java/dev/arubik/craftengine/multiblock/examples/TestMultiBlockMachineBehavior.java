@@ -186,7 +186,7 @@ public class TestMultiBlockMachineBehavior extends MultiBlockBehavior {
                     "Test MultiBlock Machine")
                     .addSlot(0, MenuSlotType.INPUT)
                     .addSlot(1, MenuSlotType.OUTPUT)
-                    .addSlot(2, MenuSlotType.BURNING);
+                    .addSlot(2, MenuSlotType.FUEL);
 
             // Dynamic title
             this.layout.setDynamicTitle((machine) -> {

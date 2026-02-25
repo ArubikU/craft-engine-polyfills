@@ -3,17 +3,22 @@ package dev.arubik.craftengine.machine.recipe;
 public class MachineFuelRecipe {
     private final RecipeInput input;
     private final int burnTime;
-
     private final RecipeOutput replacement;
+    private final int overclockedTime; // Ticks to grant overclocked mode (0 = none)
 
-    public MachineFuelRecipe(RecipeInput input, int burnTime, RecipeOutput replacement) {
+    public MachineFuelRecipe(RecipeInput input, int burnTime, RecipeOutput replacement, int overclockedTime) {
         this.input = input;
         this.burnTime = burnTime;
         this.replacement = replacement;
+        this.overclockedTime = overclockedTime;
+    }
+
+    public MachineFuelRecipe(RecipeInput input, int burnTime, RecipeOutput replacement) {
+        this(input, burnTime, replacement, 0);
     }
 
     public MachineFuelRecipe(RecipeInput input, int burnTime) {
-        this(input, burnTime, null);
+        this(input, burnTime, null, 0);
     }
 
     public RecipeInput getInput() {
@@ -26,5 +31,9 @@ public class MachineFuelRecipe {
 
     public RecipeOutput getReplacement() {
         return replacement;
+    }
+
+    public int getOverclockedTime() {
+        return overclockedTime;
     }
 }

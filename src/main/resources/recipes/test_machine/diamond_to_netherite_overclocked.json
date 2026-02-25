@@ -1,0 +1,21 @@
+{
+    "type": "test_machine",
+    "time": 100,
+    "requireOverclocked": true,
+    "fuelRequired": true,
+    "inputs": [
+        {
+            "type": "item",
+            "id": "minecraft:diamond",
+            "amount": 1
+        }
+    ],
+    "outputs": [
+        {
+            "type": "item",
+            "id": "minecraft:netherite_ingot",
+            "amount": 1,
+            "chance": 1.0
+        }
+    ]
+}
