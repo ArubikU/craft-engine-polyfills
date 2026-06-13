@@ -1,0 +1,51 @@
+# Engineer's workbench (Immersive-Engineering-style crafting station).
+# Behavior -> dev.arubik.craftengine.crafting.WorkbenchBehavior (polyfills:workbench)
+# UI: 6x9 chest base; usable 6-wide x 4-tall region -> 3x2 input grid + 2 outputs
+# + 1 tool slot; everything else is BACKGROUND (not placeable). Overlay your own
+# GUI texture aligned to the slot indices the behavior reports.
+#
+# The 3D model is 2 BLOCKS WIDE (elements span x 0..32). It renders within this
+# single block into the facing-adjacent space, so KEEP THE NEXT BLOCK CLEAR.
+# (A true 2-collision multiblock can be layered on via the multiblock subsystem.)
+
+items:
+  demo:workbench:
+    data:
+      item_name: "<!i><gold>Engineer's Workbench"
+    model: minecraft:block/custom/workbench/workbench
+    behavior:
+      type: block_item
+      block: demo:workbench
+
+blocks:
+  demo:workbench:
+    loot:
+      template: default:loot_table/self
+    settings:
+      hardness: 2.5
+      resistance: 2.5
+      tags: ["minecraft:mineable/axe", "minecraft:mineable/pickaxe"]
+      sounds:
+        break: minecraft:block.wood.break
+        place: minecraft:block.wood.place
+        step: minecraft:block.wood.step
+        hit: minecraft:block.wood.hit
+        fall: minecraft:block.wood.fall
+    behavior:
+      type: polyfills:workbench
+      title: "Engineer's Workbench"
+    states:
+      properties:
+        facing:
+          type: 4-direction
+          default: north
+      appearances:
+        north: { auto_state: solid, model: { path: minecraft:block/custom/workbench/workbench } }
+        east:  { auto_state: solid, model: { path: minecraft:block/custom/workbench/workbench, y: 90 } }
+        south: { auto_state: solid, model: { path: minecraft:block/custom/workbench/workbench, y: 180 } }
+        west:  { auto_state: solid, model: { path: minecraft:block/custom/workbench/workbench, y: 270 } }
+      variants:
+        "facing=north": { appearance: north }
+        "facing=east": { appearance: east }
+        "facing=south": { appearance: south }
+        "facing=west": { appearance: west }
