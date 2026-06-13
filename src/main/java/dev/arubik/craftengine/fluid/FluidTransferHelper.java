@@ -1,7 +1,6 @@
 package dev.arubik.craftengine.fluid;
 
 import dev.arubik.craftengine.fluid.behavior.FluidCarrier;
-import dev.arubik.craftengine.util.TransferAccessMode;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.Level;
@@ -43,7 +42,7 @@ public class FluidTransferHelper {
         final int[] transferred = { 0 };
 
         Direction direction = getDirection(from, to);
-        net.minecraft.core.Direction mcDirection = net.minecraft.core.Direction.valueOf(direction.name());
+        net.minecraft.core.Direction mcDirection = direction;
 
         sourceCarrier.get().extractFluid(level, from, maxAmount, extracted -> {
             if (extracted.isEmpty())

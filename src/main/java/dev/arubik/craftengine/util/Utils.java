@@ -6,6 +6,23 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 
+/**
+ * Shared conversion and config-coercion helpers for the polyfill.
+ *
+ * <p>Two groups:</p>
+ * <ul>
+ *   <li><b>Direction / NMS conversion</b> — {@link #oppositeDirection}, {@link #fromDirection},
+ *       {@link #toBlockHitResult}, {@link #getRelativeBlockPos}, {@link #fromPos} bridge between
+ *       craft-engine's {@code core.util.Direction}/{@code core.world} types and Mojang-mapped NMS.</li>
+ *   <li><b>Config coercion</b> — the {@code getAs*} helpers replace craft-engine's removed
+ *       {@code ResourceConfigUtils.getAs*}. Each accepts a raw config value ({@code Object}, typically
+ *       from {@code ConfigSection.getOrDefault}) and coerces it: {@code getAsStringList} returns an
+ *       empty list for {@code null} and wraps a scalar as a singleton; the scalar {@code getAsBoolean/
+ *       Int/Double/Float} accept {@link Number}/{@link String} and otherwise throw
+ *       {@link IllegalArgumentException} naming the offending key. {@code requireNonNullOrThrow} and
+ *       {@code requireNonEmptyStringOrThrow} validate presence.</li>
+ * </ul>
+ */
 public class Utils {
 
     public static Direction oppositeDirection(Direction direction) {

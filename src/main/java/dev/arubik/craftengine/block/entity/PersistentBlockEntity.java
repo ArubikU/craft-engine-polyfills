@@ -260,7 +260,7 @@ public class PersistentBlockEntity extends BlockEntityController {
         Optional<ImmutableBlockState> customStateOpt = BlockStateUtils.getOptionalCustomBlockState(blockEntity().blockState());
         if (customStateOpt.isPresent()) {
             // check if is instance of or implements etc
-            if (customStateOpt.get().behavior().getClass().isInstance(clazz)) {
+            if (clazz.isInstance(customStateOpt.get().behavior())) {
                 return (T) customStateOpt.get().behavior();
             }
             if (customStateOpt.get().behavior() instanceof CompositeBlockBehavior beh) {

@@ -1,7 +1,7 @@
 package dev.arubik.craftengine.util;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.world.entity.item.FallingBlockEntity;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.momirealms.craftengine.bukkit.block.behavior.BukkitBlockBehavior;
@@ -88,18 +88,19 @@ public abstract class NmsBlockBehavior extends BukkitBlockBehavior {
         CraftEngine.instance().logger().info("Default affectNeighborsAfterRemoval behavior");
     }
 
-    // onLand is gone; vanilla landing is the fallOn callback.
-    // arg order: [level, blockPos, state, replaceableState, fallingBlockEntity]
+    // Vanilla Block.fallOn(Level, BlockState state, BlockPos pos, Entity entity, float fallDistance).
+    // The engine forwards these verbatim (no fallOn$* reorder constants exist), so:
+    //   args[0]=level, args[1]=state, args[2]=pos, args[3]=entity, args[4]=fallDistance.
     @Override
     public void fallOn(Object thisBlock, Object[] args) {
         try {
             onLand(
                 thisBlock,
                 (Level) args[0],
-                (BlockPos) args[1],
-                (BlockState) args[2],
-                (BlockState) args[3],
-                (FallingBlockEntity) args[4]
+                (BlockState) args[1],
+                (BlockPos) args[2],
+                (Entity) args[3],
+                ((Number) args[4]).floatValue()
             );
         } catch (RuntimeException ex) {
             throw ex;
@@ -108,9 +109,9 @@ public abstract class NmsBlockBehavior extends BukkitBlockBehavior {
         }
     }
 
-    public void onLand(Object thisBlock, Level level, BlockPos pos, BlockState state, BlockState replaceableState, FallingBlockEntity fallingBlock) {
+    /** Called when {@code entity} lands on this block after falling {@code fallDistance} blocks. Default no-op. */
+    public void onLand(Object thisBlock, Level level, BlockState state, BlockPos pos, Entity entity, float fallDistance) {
         // default no-op
-        CraftEngine.instance().logger().info("Default onLand behavior");
     }
 
 }

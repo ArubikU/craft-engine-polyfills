@@ -34,7 +34,7 @@ public final class MBlocks {
         STONE = getById("stone");
         STONE$defaultState = ((Block) STONE).defaultBlockState();
         ICE = getById("ice");
-        SHORT_GRASS = getById(VersionHelper.isOrAbove1_20_3() ? "short_grass" : "grass");
+        SHORT_GRASS = getById(VersionHelper.isOrAbove1_20_3 ? "short_grass" : "grass");
         SHORT_GRASS$defaultState = ((Block) SHORT_GRASS).defaultBlockState();
         SHULKER_BOX = getById("shulker_box");
         COMPOSTER = getById("composter");

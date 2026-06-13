@@ -53,11 +53,36 @@ public abstract class PersistentWorldlyBlockEntity extends PersistentBlockEntity
     // field? No, it has 'valid'. usage: isValid()
     // The decompiled BlockEntity has 'protected boolean valid;'
 
+    private static final dev.arubik.craftengine.util.TypedKey<List<net.minecraft.world.ItemStackWithSlot>> KEY_INVENTORY =
+            dev.arubik.craftengine.util.TypedKey.of("craftengine", "worldly_inventory",
+                    dev.arubik.craftengine.util.CustomDataType.ITEM_STACK_WITH_SLOT_LIST_TYPE);
+
     public PersistentWorldlyBlockEntity(BlockEntity blockEntity, int size) {
         super(blockEntity);
         this.size = size;
         this.inventory = new ItemStack[size];
         Arrays.fill(this.inventory, ItemStack.EMPTY);
+    }
+
+    @Override
+    public void saveCustomData(net.momirealms.craftengine.libraries.nbt.CompoundTag tag) {
+        // Persist the container slots into the PDC before the base writes it to the tag.
+        this.set(KEY_INVENTORY, dev.arubik.craftengine.util.ArrayItemStackWithSlot.from(this.inventory));
+        super.saveCustomData(tag);
+    }
+
+    @Override
+    public void loadCustomData(net.momirealms.craftengine.libraries.nbt.CompoundTag tag) {
+        super.loadCustomData(tag);
+        List<net.minecraft.world.ItemStackWithSlot> contents = this.get(KEY_INVENTORY);
+        if (contents != null) {
+            Arrays.fill(this.inventory, ItemStack.EMPTY);
+            for (net.minecraft.world.ItemStackWithSlot item : contents) {
+                if (item.slot() >= 0 && item.slot() < this.inventory.length) {
+                    this.inventory[item.slot()] = item.stack();
+                }
+            }
+        }
     }
 
     // Thin accessors replacing the old inherited BlockEntity members.
@@ -241,7 +266,7 @@ public abstract class PersistentWorldlyBlockEntity extends PersistentBlockEntity
         Optional<ImmutableBlockState> customStateOpt = BlockStateUtils.getOptionalCustomBlockState(blockEntity().blockState());
         if (customStateOpt.isPresent()) {
             // check if is instance of or implements etc
-            if (customStateOpt.get().behavior().getClass().isInstance(clazz)) {
+            if (clazz.isInstance(customStateOpt.get().behavior())) {
                 return (T) customStateOpt.get().behavior();
             }
             if (customStateOpt.get().behavior() instanceof CompositeBlockBehavior beh) {

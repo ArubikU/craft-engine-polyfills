@@ -157,7 +157,7 @@ public class ItemListener implements Listener {
                         extBehavior.onDamageTaken(nmsItem, event, nmsHolder, slot, amount);
                     }
                     case SLOT_CHANGE -> {
-                        if (args.length < 6)
+                        if (args.length < 7)
                             break;
                         ItemStack oldItem = (ItemStack) args[4];
                         ItemStack newItem = (ItemStack) args[5];
@@ -165,7 +165,7 @@ public class ItemListener implements Listener {
                         if (newItem == null) newItem = ItemStack.empty();
                         net.minecraft.world.item.ItemStack nmsOldItem = ((CraftItemStack) oldItem).handle;
                         net.minecraft.world.item.ItemStack nmsNewItem = ((CraftItemStack) newItem).handle;
-                        extBehavior.onSlotChange(nmsOldItem, event, nmsHolder, nmsNewItem, slot, (int) args[5]);
+                        extBehavior.onSlotChange(nmsOldItem, event, nmsHolder, nmsNewItem, slot, (int) args[6]);
                     }
                     case DEATH -> {
                         result = extBehavior.onDeath(nmsItem, event, nmsHolder, slot).asBukkitCopy();

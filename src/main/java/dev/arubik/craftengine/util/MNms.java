@@ -65,6 +65,7 @@ public final class MNms {
         return ((BlockState) state).getBlock();
     }
 
+    /** {@code blockOrTag} may be a {@link Block} or a {@link TagKey TagKey&lt;Block&gt;}; dispatch is by runtime type. */
     @SuppressWarnings("unchecked")
     public boolean method$BlockStateBase$is(Object state, Object blockOrTag) {
         BlockState bs = (BlockState) state;

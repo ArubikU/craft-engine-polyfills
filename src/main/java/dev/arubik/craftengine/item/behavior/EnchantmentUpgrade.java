@@ -41,9 +41,6 @@ public class EnchantmentUpgrade extends ExtendedItemBehavior {
         for (Map.Entry<Holder<Enchantment>, Integer> entry : enchantments.entrySet()) {
             int[] currentLevelArr = { 0 };
             mutable.removeIf(e -> {
-                Bukkit.getConsoleSender().sendMessage(e.value().description().getString());
-                Bukkit.getConsoleSender().sendMessage(entry.getKey().value().description().getString());
-
                 if (e.value().description().getString().equals(entry.getKey().value().description().getString())) {
                     currentLevelArr[0] = mutable.getLevel(e);
                     return true;
