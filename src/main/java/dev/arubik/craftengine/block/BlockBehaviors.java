@@ -82,5 +82,22 @@ public class BlockBehaviors {
                 net.momirealms.craftengine.core.block.entity.render.element.BlockEntityElementConfigs.register(
                                 POLYFILL_SHULKER_BOX_HITBOX,
                                 dev.arubik.craftengine.machine.render.element.ShulkerBoxHitboxElementConfig.FACTORY);
+
+                // New features: upgrade machine, vapor motor, conveyor, JIT crafting
+                RegistryUtils.registerBlockBehavior(
+                                dev.arubik.craftengine.machine.examples.UpgradeableFurnaceBehavior.POLYFILL_UPGRADEABLE_FURNACE,
+                                dev.arubik.craftengine.machine.examples.UpgradeableFurnaceBehavior.FACTORY);
+                RegistryUtils.registerBlockBehavior(
+                                dev.arubik.craftengine.rotation.VaporMotorBehavior.POLYFILL_VAPOR_MOTOR,
+                                dev.arubik.craftengine.rotation.VaporMotorBehavior.FACTORY);
+                RegistryUtils.registerBlockBehavior(
+                                dev.arubik.craftengine.conveyor.ConveyorBehavior.POLYFILL_CONVEYOR,
+                                dev.arubik.craftengine.conveyor.ConveyorBehavior.FACTORY);
+                RegistryUtils.registerBlockBehavior(
+                                dev.arubik.craftengine.crafting.CraftingTableBehavior.FACTORY_KEY,
+                                dev.arubik.craftengine.crafting.CraftingTableBehavior.FACTORY);
+
+                // Populate sample crafting recipes (3x3 shaped/shapeless + multi-output).
+                dev.arubik.craftengine.crafting.CraftingSamples.registerDefaults();
         }
 }

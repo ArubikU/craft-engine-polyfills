@@ -36,6 +36,8 @@ public final class CraftEnginePolyfills extends JavaPlugin {
         BlockContainer.ensureListenerRegistered(this);
         getServer().getPluginManager().registerEvents(new dev.arubik.craftengine.machine.menu.MachineMenuListener(),
                 this);
+        getServer().getPluginManager().registerEvents(new dev.arubik.craftengine.crafting.CraftingTableListener(),
+                this);
         // cepolyfill command
         // sub command data get <block_pos>
         CepCommand cepCommand = new CepCommand();
