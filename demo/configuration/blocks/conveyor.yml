@@ -1,0 +1,73 @@
+# CraftEngine block definition for the polyfill conveyor belt.
+# Behavior key -> dev.arubik.craftengine.conveyor.ConveyorBehavior (polyfills:conveyor)
+#
+# The polyfill READS three block-state properties (live, never cached):
+#   facing : 4-direction  (travel direction toward the next/END segment)
+#   slope  : string flat/up/down  (45-degree only)
+#   part   : string start/middle/end  (END = exit/growth tip)
+# It only reads them — you own the models. Add model variants per state as you like;
+# unlisted state combos fall back to the default appearance.
+
+items:
+  demo:conveyor:
+    data:
+      item_name: "<!i><white>Conveyor Belt"
+    # Replace with your own item model.
+    model: minecraft:block/custom/conveyor
+    behavior:
+      type: block_item
+      block: demo:conveyor
+
+blocks:
+  demo:conveyor:
+    loot:
+      template: default:loot_table/self
+    settings:
+      hardness: 0.8
+      resistance: 0.8
+      push_reaction: destroy
+      replaceable: false
+      tags: ["minecraft:mineable/pickaxe"]
+      sounds:
+        break: minecraft:block.stone.break
+        place: minecraft:block.stone.place
+        step: minecraft:block.wood.step
+        hit: minecraft:block.stone.hit
+        fall: minecraft:block.stone.fall
+    behavior:
+      type: polyfills:conveyor
+      # Optional fallback facing used only if the "facing" property is absent.
+      facing: north
+    states:
+      properties:
+        facing:
+          type: 4-direction
+          default: north
+        slope:
+          type: string
+          values: [flat, up, down]
+          default: flat
+        part:
+          type: string
+          values: [start, middle, end]
+          default: end
+      appearances:
+        north:
+          auto_state: solid
+          model: { path: minecraft:block/custom/conveyor }
+        east:
+          auto_state: solid
+          model: { path: minecraft:block/custom/conveyor, y: 90 }
+        south:
+          auto_state: solid
+          model: { path: minecraft:block/custom/conveyor, y: 180 }
+        west:
+          auto_state: solid
+          model: { path: minecraft:block/custom/conveyor, y: 270 }
+      # Model picked by facing. Add slope=up/down or part=* variants here to swap
+      # models for ramps / end caps (optional — they fall back to these otherwise).
+      variants:
+        "facing=north": { appearance: north }
+        "facing=east": { appearance: east }
+        "facing=south": { appearance: south }
+        "facing=west": { appearance: west }

@@ -1,0 +1,53 @@
+# Vapor motor — dev.arubik.craftengine.rotation.VaporMotorBehavior (polyfills:vapor_motor)
+# Consumes "vapor" (gas GasType.STEAM) and produces RPM, pushed ONLY to the block
+# directly in its facing direction (the belt head). Feed it steam via the gas
+# subsystem (gas pipe/insertion) on its gas-IO faces.
+#
+# Factory args (all optional, shown with defaults the code uses):
+#   vapor-capacity : tank size              (default in code)
+#   vapor-per-tick : vapor consumed per tick to make max RPM
+#   max-rpm        : RPM produced at full consumption
+
+items:
+  demo:vapor_motor:
+    data:
+      item_name: "<!i><aqua>Vapor Motor"
+    model: minecraft:block/custom/vapor_motor
+    behavior:
+      type: block_item
+      block: demo:vapor_motor
+
+blocks:
+  demo:vapor_motor:
+    loot:
+      template: default:loot_table/self
+    settings:
+      hardness: 1.5
+      resistance: 1.5
+      tags: ["minecraft:mineable/pickaxe"]
+      sounds:
+        break: minecraft:block.copper.break
+        place: minecraft:block.copper.place
+        step: minecraft:block.copper.step
+        hit: minecraft:block.copper.hit
+        fall: minecraft:block.copper.fall
+    behavior:
+      type: polyfills:vapor_motor
+      vapor-capacity: 10000
+      vapor-per-tick: 20
+      max-rpm: 128
+    states:
+      properties:
+        facing:
+          type: 4-direction
+          default: north
+      appearances:
+        north: { auto_state: solid, model: { path: minecraft:block/custom/vapor_motor } }
+        east:  { auto_state: solid, model: { path: minecraft:block/custom/vapor_motor, y: 90 } }
+        south: { auto_state: solid, model: { path: minecraft:block/custom/vapor_motor, y: 180 } }
+        west:  { auto_state: solid, model: { path: minecraft:block/custom/vapor_motor, y: 270 } }
+      variants:
+        "facing=north": { appearance: north }
+        "facing=east": { appearance: east }
+        "facing=south": { appearance: south }
+        "facing=west": { appearance: west }

@@ -1,0 +1,48 @@
+# Upgradeable furnace — dev.arubik.craftengine.machine.examples.UpgradeableFurnaceBehavior
+# (polyfills:upgradeable_furnace). Sample machine: input + output + fuel + 3 upgrade slots.
+# Upgrades (vanilla items, wired in code):
+#   minecraft:sugar          -> SPEED      (+1 each, max 3)   faster processing
+#   minecraft:redstone       -> EFFICIENCY (-20% fuel each, max 3)
+#   minecraft:glowstone_dust -> YIELD      (+0.5 output expected each, unlimited)
+# Smelting recipes are loaded by the polyfill RecipeManager (machine id "upgradeable_furnace").
+
+items:
+  demo:upgradeable_furnace:
+    data:
+      item_name: "<!i><yellow>Upgradeable Furnace"
+    model: minecraft:block/custom/upgradeable_furnace
+    behavior:
+      type: block_item
+      block: demo:upgradeable_furnace
+
+blocks:
+  demo:upgradeable_furnace:
+    loot:
+      template: default:loot_table/self
+    settings:
+      hardness: 3.5
+      resistance: 3.5
+      tags: ["minecraft:mineable/pickaxe"]
+      sounds:
+        break: minecraft:block.stone.break
+        place: minecraft:block.stone.place
+        step: minecraft:block.stone.step
+        hit: minecraft:block.stone.hit
+        fall: minecraft:block.stone.fall
+    behavior:
+      type: polyfills:upgradeable_furnace
+    states:
+      properties:
+        facing:
+          type: 4-direction
+          default: north
+      appearances:
+        north: { auto_state: solid, model: { path: minecraft:block/custom/upgradeable_furnace } }
+        east:  { auto_state: solid, model: { path: minecraft:block/custom/upgradeable_furnace, y: 90 } }
+        south: { auto_state: solid, model: { path: minecraft:block/custom/upgradeable_furnace, y: 180 } }
+        west:  { auto_state: solid, model: { path: minecraft:block/custom/upgradeable_furnace, y: 270 } }
+      variants:
+        "facing=north": { appearance: north }
+        "facing=east": { appearance: east }
+        "facing=south": { appearance: south }
+        "facing=west": { appearance: west }
