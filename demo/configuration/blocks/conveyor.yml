@@ -196,3 +196,19 @@ blocks:
         "facing=east,slope=down,part=end": { appearance: down_end_east }
         "facing=south,slope=down,part=end": { appearance: down_end_south }
         "facing=west,slope=down,part=end": { appearance: down_end_west }
+
+# Logical crafting recipe: a metal frame (iron) wrapping a belt surface (leather).
+# 6 iron + 3 leather -> 8 conveyor belts (CraftEngine shaped recipe).
+recipes:
+  demo:conveyor:
+    type: shaped
+    pattern:
+      - "III"
+      - "LLL"
+      - "III"
+    ingredients:
+      I: minecraft:iron_ingot
+      L: minecraft:leather
+    result:
+      id: demo:conveyor
+      count: 8

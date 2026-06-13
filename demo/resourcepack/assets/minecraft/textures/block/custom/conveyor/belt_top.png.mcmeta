@@ -1,7 +1,7 @@
 {
   "animation": {
     "interpolate": true,
-    "frametime": 1,
-    "comment": "Scrolling belt surface. belt_top.png must be a VERTICAL strip of N square frames (e.g. 16x(16*N)) showing the tread translating one step per frame ALONG the belt length (the +Z / 'north->south' axis of the base model). Lower frametime = faster visual scroll. The scroll is a fixed client-side speed; it does NOT read RPM. Model y-rotation per `facing` rotates this face too, so the visible scroll always runs toward the belt's travel direction; up/down models tilt it along the ramp."
+    "frametime": 2,
+    "comment": "Scrolling belt. belt_top.png is a 16x128 vertical strip of 8 frames; chevrons advance toward -Y (the exit side / +Z of the base model). frametime 2 = brisk Factorio-style scroll (lower = faster). Fixed client speed, not RPM. Model y-rotation per facing rotates this face too, so the scroll always runs toward travel direction; up/down tilt with the ramp."
   }
 }
