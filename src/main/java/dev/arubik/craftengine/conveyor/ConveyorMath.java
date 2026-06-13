@@ -34,7 +34,7 @@ public final class ConveyorMath {
     }
 
     /** Block-relative Y at which the carried item rides the belt top (flat). */
-    public static final float BELT_TOP_Y = 0.55f;
+    public static final float BELT_TOP_Y = 0.28f;
 
     /**
      * Build the block-relative START point (entry) of a segment from its facing
