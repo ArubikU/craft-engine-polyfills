@@ -54,7 +54,7 @@ public class ConveyorBehavior extends dev.arubik.craftengine.util.NmsBlockBehavi
         return new ConveyorBlockEntity(blockEntity, defaultFacing);
     }
 
-    // ---------------- right-click: extend ----------------
+    // ---------------- right-click: put / take the slot ----------------
 
     @Override
     public InteractionResult useWithoutItem(UseOnContext context, ImmutableBlockState state) {
@@ -65,10 +65,36 @@ public class ConveyorBehavior extends dev.arubik.craftengine.util.NmsBlockBehavi
         ConveyorBlockEntity be = ConveyorBlockEntity.conveyorAt(world, pos);
         if (be == null)
             return InteractionResult.PASS;
-        if (be.part() != ConveyorPart.END)
+
+        net.momirealms.craftengine.core.entity.player.Player cePlayer = context.getPlayer();
+        if (cePlayer == null || !(cePlayer.platformPlayer() instanceof org.bukkit.entity.Player player))
             return InteractionResult.PASS;
-        boolean extended = be.extend(world, pos, be.facing(), be.slope());
-        return extended ? InteractionResult.SUCCESS_AND_CANCEL : InteractionResult.PASS;
+
+        org.bukkit.inventory.PlayerInventory inv = player.getInventory();
+        org.bukkit.inventory.ItemStack hand = inv.getItemInMainHand();
+        boolean handEmpty = hand == null || hand.getType().isAir();
+
+        if (handEmpty) {
+            // Take: give the slot stack to the player.
+            org.bukkit.inventory.ItemStack slot = be.takeSlot();
+            if (slot == null || slot.getType().isAir())
+                return InteractionResult.PASS;
+            java.util.Map<Integer, org.bukkit.inventory.ItemStack> overflow = inv.addItem(slot);
+            for (org.bukkit.inventory.ItemStack left : overflow.values())
+                player.getWorld().dropItem(player.getLocation(), left);
+            return InteractionResult.SUCCESS_AND_CANCEL;
+        }
+
+        // Hand has an item: refuse conveyor block items (those are for the wand).
+        net.momirealms.craftengine.core.util.Key handId =
+                net.momirealms.craftengine.bukkit.api.CraftEngineItems.getCustomItemId(hand);
+        if (POLYFILL_CONVEYOR.equals(handId))
+            return InteractionResult.PASS;
+
+        // Put: merge into the slot if same type, else swap with the slot content.
+        org.bukkit.inventory.ItemStack leftover = be.putSlot(hand);
+        inv.setItemInMainHand(leftover);
+        return InteractionResult.SUCCESS_AND_CANCEL;
     }
 
     // ---------------- break ----------------

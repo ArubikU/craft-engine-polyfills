@@ -119,6 +119,11 @@ public class VaporMotorBlockEntity extends AbstractMachineBlockEntity implements
         return currentRpm;
     }
 
+    /** Public accessor for the motor's facing (where it delivers RPM), or null. */
+    public net.minecraft.core.Direction facing(Level level) {
+        return getFacing(level);
+    }
+
     // --- Tick: consume vapor -> produce RPM -> push to head ---
     @Override
     public void tick(Level level, BlockPos pos,

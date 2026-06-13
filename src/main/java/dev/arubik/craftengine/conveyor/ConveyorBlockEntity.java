@@ -8,6 +8,7 @@ import java.util.Set;
 import org.bukkit.craftbukkit.inventory.CraftItemStack;
 import org.joml.Vector3f;
 
+import dev.arubik.craftengine.block.entity.PersistentWorldlyBlockEntity;
 import dev.arubik.craftengine.rotation.RpmConsumer;
 import net.momirealms.craftengine.core.block.BlockDefinition;
 import net.momirealms.craftengine.core.block.ImmutableBlockState;
@@ -24,25 +25,21 @@ import net.momirealms.craftengine.core.world.ChunkPos;
 import net.momirealms.craftengine.libraries.nbt.CompoundTag;
 
 /**
- * Create-style conveyor belt segment, driven entirely by BLOCK-STATE PROPERTIES
- * and a linked-list segment model.
+ * Create-style conveyor belt segment. Each segment is now a 1-slot chest-like
+ * container (extends {@link PersistentWorldlyBlockEntity} with size 1) so that
+ * hoppers may insert/extract and the inventory is persisted automatically.
  *
- * <p><b>Block properties</b> (read live from {@link BlockEntity#blockState()},
- * never cached): {@code facing} (NORTH/EAST/SOUTH/WEST horizontal travel toward
- * the next segment), {@code slope} (FLAT/UP/DOWN, 45-degree) and {@code part}
- * (START/MIDDLE/END, END being the growth/exit point). Missing properties fall
- * back gracefully (facing -&gt; ctor default or NORTH, slope -&gt; FLAT, part -&gt; END).</p>
+ * <p>The single slot holds up to one full stack of ONE item type. Movement is
+ * driven by RPM (via {@link RpmConsumer}): when the belt is powered and the slot
+ * is non-empty the item interpolates start-&gt;end (slope-aware) and on arrival
+ * the WHOLE stack moves to the next segment's slot, or is dropped if it can't be
+ * accepted. A per-tick ticker also auto-picks-up nearby dropped items.</p>
  *
- * <p><b>Linked list:</b> each segment persists {@link #prevPos} (toward START).
- * A segment is the END when the block at {@code pos.relative(facing)} is not a
- * conveyor. Validation is by reference — the downstream segment is only "ours"
- * when its {@code prevPos} equals our pos. No global per-tick rescan.</p>
- *
- * <p>Holds one in-transit item advanced 0..1 by speed (RPM via {@link RpmConsumer}).
- * On arrival it is handed to the downstream segment via {@link #acceptItem}, else
- * dropped. Start/end render points ramp Y for UP/DOWN slopes.</p>
+ * <p>Block properties (read live, never cached): {@code facing} (travel toward
+ * the next segment), {@code slope} (FLAT/UP/DOWN) and {@code part}
+ * (START/MIDDLE/END). The belt is a linked list via persisted {@link #prevPos}.</p>
  */
-public class ConveyorBlockEntity extends BlockEntityController implements RpmConsumer {
+public class ConveyorBlockEntity extends PersistentWorldlyBlockEntity implements RpmConsumer {
 
     /** Reference rpm at which the belt runs at base speed. */
     public static final float BASE_RPM = 64f;
@@ -50,6 +47,11 @@ public class ConveyorBlockEntity extends BlockEntityController implements RpmCon
     public static final int BASE_TRAVEL_TICKS = 16;
     /** Maximum number of segments a single belt may grow to. */
     public static final int MAX_LENGTH = 64;
+
+    /** How often (ticks) to scan for dropped items to pick up. */
+    public static final int PICKUP_INTERVAL = 5;
+    /** Pickup scan radius around the block centre. */
+    public static final double PICKUP_RADIUS = 0.75;
 
     /** Property names the CraftEngine block config must define. */
     public static final String PROP_FACING = "facing";
@@ -67,31 +69,75 @@ public class ConveyorBlockEntity extends BlockEntityController implements RpmCon
     /** rpm actually driving this segment (head: inputRpm; body: upstream effective). */
     private float effectiveRpm = 0f;
 
-    // single-item buffer (Bukkit stack so persistence is trivial); null = empty
-    private org.bukkit.inventory.ItemStack carried;
+    /** Travel progress 0..1 of the slot stack across this segment. */
     private float progress = 0f;
+    /** Ticker counter for the pickup cadence. */
+    private int tickCounter = 0;
 
     // render
     private ConveyorItemDisplay display;
     private boolean displaySpawned = false;
 
     public ConveyorBlockEntity(BlockEntity blockEntity) {
-        super(blockEntity);
+        super(blockEntity, 1);
     }
 
     public ConveyorBlockEntity(BlockEntity blockEntity, Direction defaultFacing) {
-        super(blockEntity);
+        super(blockEntity, 1);
         if (defaultFacing != null)
             this.defaultFacing = defaultFacing;
     }
 
-    private BlockPos pos() {
-        return blockEntity().pos();
+    // ---------------- slot helpers ----------------
+
+    /** The NMS stack currently in slot 0 (never null; EMPTY when empty). */
+    private net.minecraft.world.item.ItemStack slot() {
+        return getItem(0);
+    }
+
+    @Override
+    public boolean isEmpty() {
+        net.minecraft.world.item.ItemStack s = slot();
+        return s == null || s.isEmpty();
+    }
+
+    /** The slot content as a Bukkit stack, or null when empty. */
+    private org.bukkit.inventory.ItemStack bukkitSlot() {
+        if (isEmpty())
+            return null;
+        return CraftItemStack.asBukkitCopy(slot());
+    }
+
+    // --- WorldlyContainer faces: allow all faces for slot 0 (hopper in/out) ---
+    @Override
+    public int[] getSlotsForFace(net.minecraft.core.Direction side) {
+        return new int[] { 0 };
+    }
+
+    @Override
+    public boolean canPlaceItemThroughFace(int index, net.minecraft.world.item.ItemStack stack,
+            net.minecraft.core.Direction direction) {
+        return true;
+    }
+
+    @Override
+    public boolean canTakeItemThroughFace(int index, net.minecraft.world.item.ItemStack stack,
+            net.minecraft.core.Direction direction) {
+        return true;
+    }
+
+    @Override
+    public int getMaxStackSize() {
+        return 64;
+    }
+
+    @Override
+    public void setChanged() {
+        // Slot persistence is pulled at chunk-save via the controller; no dirty flag needed.
     }
 
     // ---------------- live property reads (never cached) ----------------
 
-    /** Read an enum property's selected value NAME from a live state, or null. */
     @SuppressWarnings({ "unchecked", "rawtypes" })
     private static String enumName(ImmutableBlockState state, String name) {
         if (state == null)
@@ -148,10 +194,6 @@ public class ConveyorBlockEntity extends BlockEntityController implements RpmCon
         return effectiveRpm;
     }
 
-    public boolean isEmpty() {
-        return carried == null || carried.getType().isAir();
-    }
-
     public BlockPos prevPos() {
         return prevPos;
     }
@@ -161,18 +203,94 @@ public class ConveyorBlockEntity extends BlockEntityController implements RpmCon
     }
 
     /**
-     * Try to place an item onto this belt at the start point.
+     * Try to place an item onto this belt's slot at the start point.
      *
-     * @return false if the belt already carries an item (full)
+     * <p>Backed by the container slot: accepts when empty, or when stackable with
+     * the existing item (same type) up to the max stack size. Merges what fits.</p>
+     *
+     * @return true if the entire stack was accepted (slot may have merged it)
      */
     public boolean acceptItem(org.bukkit.inventory.ItemStack stack) {
-        if (!isEmpty() || stack == null || stack.getType().isAir())
+        if (stack == null || stack.getType().isAir())
             return false;
-        this.carried = stack.clone();
+        net.minecraft.world.item.ItemStack incoming = CraftItemStack.asNMSCopy(stack);
+        if (isEmpty()) {
+            setItem(0, incoming);
+            this.progress = 0f;
+            refreshDisplayItem();
+            return true;
+        }
+        net.minecraft.world.item.ItemStack cur = slot();
+        if (net.minecraft.world.item.ItemStack.isSameItemSameComponents(cur, incoming)) {
+            int max = Math.min(getMaxStackSize(), cur.getMaxStackSize());
+            int space = max - cur.getCount();
+            if (space <= 0)
+                return false;
+            int move = Math.min(space, incoming.getCount());
+            cur.grow(move);
+            setItem(0, cur);
+            refreshDisplayItem();
+            return move >= incoming.getCount();
+        }
+        return false;
+    }
+
+    /**
+     * Remove and return the entire slot stack as a Bukkit stack (or null if empty).
+     * Used by right-click "take".
+     */
+    public org.bukkit.inventory.ItemStack takeSlot() {
+        if (isEmpty())
+            return null;
+        org.bukkit.inventory.ItemStack out = bukkitSlot();
+        setItem(0, net.minecraft.world.item.ItemStack.EMPTY);
         this.progress = 0f;
+        refreshDisplayItem();
+        return out;
+    }
+
+    /**
+     * Put the player's hand stack into the slot. If the slot is empty, takes the
+     * whole stack. If same type, merges what fits. Otherwise swaps. Used by
+     * right-click "put".
+     *
+     * @return what should remain in the player's hand (empty/air-able stack)
+     */
+    public org.bukkit.inventory.ItemStack putSlot(org.bukkit.inventory.ItemStack hand) {
+        if (hand == null || hand.getType().isAir())
+            return hand;
+        net.minecraft.world.item.ItemStack incoming = CraftItemStack.asNMSCopy(hand);
+        if (isEmpty()) {
+            setItem(0, incoming);
+            this.progress = 0f;
+            refreshDisplayItem();
+            return new org.bukkit.inventory.ItemStack(org.bukkit.Material.AIR);
+        }
+        net.minecraft.world.item.ItemStack cur = slot();
+        if (net.minecraft.world.item.ItemStack.isSameItemSameComponents(cur, incoming)) {
+            int max = Math.min(getMaxStackSize(), cur.getMaxStackSize());
+            int space = max - cur.getCount();
+            int move = Math.max(0, Math.min(space, incoming.getCount()));
+            if (move > 0) {
+                cur.grow(move);
+                setItem(0, cur);
+                refreshDisplayItem();
+            }
+            org.bukkit.inventory.ItemStack remain = hand.clone();
+            remain.setAmount(hand.getAmount() - move);
+            return remain;
+        }
+        // swap
+        org.bukkit.inventory.ItemStack old = bukkitSlot();
+        setItem(0, incoming);
+        this.progress = 0f;
+        refreshDisplayItem();
+        return old;
+    }
+
+    private void refreshDisplayItem() {
         if (display != null)
-            display.setNmsItem(CraftItemStack.asNMSCopy(this.carried));
-        return true;
+            display.setNmsItem(slot().isEmpty() ? net.minecraft.world.item.ItemStack.EMPTY : slot().copy());
     }
 
     // ---------------- ticking ----------------
@@ -192,17 +310,24 @@ public class ConveyorBlockEntity extends BlockEntityController implements RpmCon
     private void serverTick(CEWorld world, BlockPos pos) {
         Direction facing = facing();
 
-        // 1. Effective rpm. Head = upstream neighbour is not a conveyor (keeps motor
-        //    rpm); a body segment instead reads the upstream conveyor's effective rpm.
+        // Effective rpm: head reads its motor input; a body reads its upstream's.
         ConveyorBlockEntity upstream = upstreamConveyor(world, pos, facing);
         if (upstream != null) {
             this.effectiveRpm = upstream.effectiveRpm();
         } else {
-            this.effectiveRpm = this.inputRpm; // head driven by motor
+            this.effectiveRpm = this.inputRpm;
+        }
+
+        // Auto-pickup cadence: only when the slot is empty.
+        if (++tickCounter >= PICKUP_INTERVAL) {
+            tickCounter = 0;
+            if (isEmpty())
+                tryPickup(world, pos);
         }
 
         if (isEmpty()) {
             ensureDisplayHidden(world, pos);
+            this.progress = 0f;
             return;
         }
 
@@ -218,9 +343,44 @@ public class ConveyorBlockEntity extends BlockEntityController implements RpmCon
         }
     }
 
+    /** Pull the nearest dropped item entity into the (empty) slot. */
+    private void tryPickup(CEWorld world, BlockPos pos) {
+        try {
+            org.bukkit.World bukkitWorld = (org.bukkit.World) world.world().platformWorld();
+            if (bukkitWorld == null)
+                return;
+            org.bukkit.Location center = new org.bukkit.Location(bukkitWorld,
+                    pos.x() + 0.5, pos.y() + 0.5, pos.z() + 0.5);
+            org.bukkit.entity.Item nearest = null;
+            double best = Double.MAX_VALUE;
+            for (org.bukkit.entity.Entity e : bukkitWorld.getNearbyEntities(center,
+                    PICKUP_RADIUS, PICKUP_RADIUS, PICKUP_RADIUS)) {
+                if (!(e instanceof org.bukkit.entity.Item item))
+                    continue;
+                if (item.isDead() || !item.isValid())
+                    continue;
+                double d = item.getLocation().distanceSquared(center);
+                if (d < best) {
+                    best = d;
+                    nearest = item;
+                }
+            }
+            if (nearest == null)
+                return;
+            org.bukkit.inventory.ItemStack stack = nearest.getItemStack();
+            setItem(0, CraftItemStack.asNMSCopy(stack));
+            this.progress = 0f;
+            refreshDisplayItem();
+            nearest.remove();
+        } catch (Throwable ignored) {
+        }
+    }
+
     private void handOff(CEWorld world, BlockPos pos, Direction facing) {
         ConveyorBlockEntity next = downstreamConveyor(world, pos, facing);
-        org.bukkit.inventory.ItemStack item = this.carried;
+        org.bukkit.inventory.ItemStack item = bukkitSlot();
+        if (item == null)
+            return;
         if (next != null && next.acceptItem(item)) {
             clearCarried(world, pos);
             return;
@@ -232,7 +392,7 @@ public class ConveyorBlockEntity extends BlockEntityController implements RpmCon
     private void dropAtEnd(CEWorld world, BlockPos pos, Direction facing, org.bukkit.inventory.ItemStack item) {
         try {
             org.bukkit.World bukkitWorld = (org.bukkit.World) world.world().platformWorld();
-            if (bukkitWorld != null) {
+            if (bukkitWorld != null && item != null && !item.getType().isAir()) {
                 Vector3f end = endRel(facing);
                 bukkitWorld.dropItem(new org.bukkit.Location(bukkitWorld,
                         pos.x() + end.x, pos.y() + end.y, pos.z() + end.z), item);
@@ -254,8 +414,8 @@ public class ConveyorBlockEntity extends BlockEntityController implements RpmCon
     private void renderCarried(CEWorld world, BlockPos pos, Direction facing) {
         if (display == null) {
             display = new ConveyorItemDisplay();
-            display.setNmsItem(CraftItemStack.asNMSCopy(this.carried));
         }
+        display.setNmsItem(slot().copy());
         Vector3f rel = ConveyorMath.interpolate(startRel(facing), endRel(facing), progress);
         double wx = pos.x() + rel.x;
         double wy = pos.y() + rel.y;
@@ -281,7 +441,7 @@ public class ConveyorBlockEntity extends BlockEntityController implements RpmCon
 
     private void clearCarried(CEWorld world, BlockPos pos) {
         ensureDisplayHidden(world, pos);
-        this.carried = null;
+        setItem(0, net.minecraft.world.item.ItemStack.EMPTY);
         this.progress = 0f;
     }
 
@@ -295,11 +455,6 @@ public class ConveyorBlockEntity extends BlockEntityController implements RpmCon
         return null;
     }
 
-    /**
-     * The downstream segment: the conveyor at {@code pos.relative(facing)} whose
-     * {@code prevPos} points back at {@code pos}. The exit may be +/-1 Y for a
-     * sloped belt, so we also probe above/below. Reference-validated.
-     */
     ConveyorBlockEntity downstreamConveyor(CEWorld world, BlockPos pos, Direction facing) {
         for (BlockPos cand : exitCandidates(pos, facing)) {
             ConveyorBlockEntity c = conveyorAt(world, cand);
@@ -309,14 +464,12 @@ public class ConveyorBlockEntity extends BlockEntityController implements RpmCon
         return null;
     }
 
-    /** The upstream segment referenced by {@link #prevPos}, if it is a conveyor. */
     ConveyorBlockEntity upstreamConveyor(CEWorld world, BlockPos pos, Direction facing) {
         if (prevPos == null)
             return null;
         return conveyorAt(world, prevPos);
     }
 
-    /** Candidate exit positions for a (possibly sloped) segment, in priority order. */
     static List<BlockPos> exitCandidates(BlockPos pos, Direction facing) {
         BlockPos flat = pos.relative(facing);
         List<BlockPos> list = new ArrayList<>(3);
@@ -326,26 +479,23 @@ public class ConveyorBlockEntity extends BlockEntityController implements RpmCon
         return list;
     }
 
-    /** The exit position for THIS segment given its live facing + slope. */
     BlockPos exitPos(Direction facing) {
         BlockPos flat = pos().relative(facing);
         int dy = slope().stepY();
         return dy == 0 ? flat : new BlockPos(flat.x(), flat.y() + dy, flat.z());
     }
 
-    /** True when no downstream conveyor follows this segment (this is the tail). */
     boolean isTail(CEWorld world, Direction facing) {
         return downstreamConveyor(world, pos(), facing) == null;
     }
 
-    // ---------------- extend (right-click on END) ----------------
+    // ---------------- extend (programmatic) ----------------
 
     /**
      * Extend the belt from this END segment: place a new conveyor at the exit
      * position (respecting slope Y), link it (prevPos = this pos, part = END),
-     * and demote this segment to MIDDLE (or START if it had no prev). Only
-     * extends when the target is air/replaceable and the belt is under
-     * {@link #MAX_LENGTH}.
+     * and demote this segment to MIDDLE (or START if it had no prev). Still
+     * useful programmatically; no longer invoked by right-click.
      *
      * @return true if a segment was added
      */
@@ -376,24 +526,20 @@ public class ConveyorBlockEntity extends BlockEntityController implements RpmCon
         BlockDefinition def = blockEntity().blockState().owner().value();
         Key blockId = def.id();
 
-        // New segment: facing + slope + part=END, placed at target.
         ImmutableBlockState newState = stateWith(def.defaultState(), facing, slope, ConveyorPart.END);
         org.bukkit.Location loc = new org.bukkit.Location(bukkitWorld, target.x(), target.y(), target.z());
         boolean placed = net.momirealms.craftengine.bukkit.api.CraftEngineBlocks.place(
                 loc, newState, UpdateFlags.UPDATE_ALL, false);
         if (!placed) {
-            // fall back to id-based placement
             placed = net.momirealms.craftengine.bukkit.api.CraftEngineBlocks.place(loc, blockId, false);
             if (!placed)
                 return false;
         }
 
-        // Link the freshly placed segment back to us.
         ConveyorBlockEntity created = conveyorAt(world, target);
         if (created != null)
             created.setPrevPos(pos);
 
-        // Demote this segment: END -> MIDDLE (or START if no upstream).
         ConveyorPart newPart = (prevPos == null) ? ConveyorPart.START : ConveyorPart.MIDDLE;
         applyPart(world, pos, facing, slope, newPart);
         return true;
@@ -413,23 +559,22 @@ public class ConveyorBlockEntity extends BlockEntityController implements RpmCon
     // ---------------- break ----------------
 
     /**
-     * Handle removal of this segment (called from the behavior's
-     * affectNeighborsAfterRemoval).
-     *
+     * Handle removal of this segment. Drops this segment's slot stack, then:
      * <ul>
-     *   <li>END (tail): just shorten — promote the upstream segment back to END.</li>
-     *   <li>START/MIDDLE: break the WHOLE belt — walk upstream via prevPos and
-     *       downstream via reference, removing every segment and dropping its
-     *       in-transit item.</li>
+     *   <li>END (tail): promote the upstream segment back to END.</li>
+     *   <li>START/MIDDLE: tear down the WHOLE belt, each removed segment dropping
+     *       its own slot stack.</li>
      * </ul>
      */
     public void onBroken(CEWorld world, BlockPos pos, Direction facing) {
         ConveyorBlockEntity down = downstreamConveyor(world, pos, facing);
         boolean tail = (down == null);
 
-        // drop our own carried item
-        if (!isEmpty())
-            dropAtEnd(world, pos, facing, this.carried);
+        // drop our own slot stack
+        if (!isEmpty()) {
+            dropAtEnd(world, pos, facing, bukkitSlot());
+            setItem(0, net.minecraft.world.item.ItemStack.EMPTY);
+        }
 
         if (tail) {
             ConveyorBlockEntity up = upstreamConveyor(world, pos, facing);
@@ -438,18 +583,15 @@ public class ConveyorBlockEntity extends BlockEntityController implements RpmCon
             return;
         }
 
-        // Not the tail: tear down the whole belt.
         Set<BlockPos> visited = new HashSet<>();
         visited.add(pos);
 
-        // upstream chain
         ConveyorBlockEntity up = upstreamConveyor(world, pos, facing);
         while (up != null && visited.add(up.pos())) {
             ConveyorBlockEntity next = up.upstreamConveyor(world, up.pos(), up.facing());
             up.removeSelf(world);
             up = next;
         }
-        // downstream chain
         ConveyorBlockEntity d = down;
         while (d != null && visited.add(d.pos())) {
             ConveyorBlockEntity next = d.downstreamConveyor(world, d.pos(), d.facing());
@@ -458,12 +600,12 @@ public class ConveyorBlockEntity extends BlockEntityController implements RpmCon
         }
     }
 
-    /** Remove this segment's block from the world, dropping its in-transit item. */
+    /** Remove this segment's block, dropping its slot stack. */
     private void removeSelf(CEWorld world) {
         BlockPos pos = pos();
         Direction facing = facing();
         if (!isEmpty()) {
-            dropAtEnd(world, pos, facing, this.carried);
+            dropAtEnd(world, pos, facing, bukkitSlot());
             clearCarried(world, pos);
         }
         try {
@@ -476,7 +618,6 @@ public class ConveyorBlockEntity extends BlockEntityController implements RpmCon
 
     // ---------------- state mutation helpers ----------------
 
-    /** Build a state from a base with the given facing/slope/part (skips absent props). */
     private static ImmutableBlockState stateWith(ImmutableBlockState base, Direction facing,
             ConveyorSlope slope, ConveyorPart part) {
         ImmutableBlockState s = base;
@@ -503,7 +644,6 @@ public class ConveyorBlockEntity extends BlockEntityController implements RpmCon
         }
     }
 
-    /** Re-place this block at {@code pos} with {@code part} updated, preserving facing/slope. */
     private void applyPart(CEWorld world, BlockPos pos, Direction facing, ConveyorSlope slope, ConveyorPart part) {
         try {
             org.bukkit.World bukkitWorld = (org.bukkit.World) world.world().platformWorld();
@@ -518,7 +658,7 @@ public class ConveyorBlockEntity extends BlockEntityController implements RpmCon
         }
     }
 
-    private static boolean isReplaceable(org.bukkit.block.Block block) {
+    static boolean isReplaceable(org.bukkit.block.Block block) {
         if (block == null)
             return false;
         org.bukkit.Material m = block.getType();
@@ -531,29 +671,22 @@ public class ConveyorBlockEntity extends BlockEntityController implements RpmCon
 
     @Override
     public void saveCustomData(CompoundTag tag) {
+        // Inventory (slot 0) is persisted by the parent.
+        super.saveCustomData(tag);
         tag.putFloat("progress", progress);
         if (prevPos != null) {
             tag.putInt("prevX", prevPos.x());
             tag.putInt("prevY", prevPos.y());
             tag.putInt("prevZ", prevPos.z());
         }
-        if (!isEmpty()) {
-            tag.putByteArray("item", carried.serializeAsBytes());
-        }
     }
 
     @Override
     public void loadCustomData(CompoundTag tag) {
+        super.loadCustomData(tag);
         this.progress = tag.getFloat("progress", 0f);
         if (tag.containsKey("prevX") && tag.containsKey("prevY") && tag.containsKey("prevZ")) {
             this.prevPos = new BlockPos(tag.getInt("prevX"), tag.getInt("prevY"), tag.getInt("prevZ"));
-        }
-        if (tag.containsKey("item")) {
-            try {
-                this.carried = org.bukkit.inventory.ItemStack.deserializeBytes(tag.getByteArray("item"));
-            } catch (Throwable ignored) {
-                this.carried = null;
-            }
         }
     }
 
