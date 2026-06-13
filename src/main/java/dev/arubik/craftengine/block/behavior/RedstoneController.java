@@ -1,7 +1,5 @@
 package dev.arubik.craftengine.block.behavior;
 
-import java.util.concurrent.Callable;
-
 import dev.arubik.craftengine.util.Utils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -61,14 +59,14 @@ public class RedstoneController extends DiodeBlockBehavior {
     }
 
     @Override
-    public void onPlace(Object thisBlock, Object[] args, Callable<Object> superMethod) {
+    public void onPlace(Object thisBlock, Object[] args) {
         Level level = (Level) args[1];
         BlockPos pos = (BlockPos) args[2];
         BlockState state = (BlockState) args[0];
 
         this.updateNeighborsInFront(level, pos, state);
         try {
-            super.onPlace(thisBlock, args, superMethod);
+            super.onPlace(thisBlock, args);
         } catch (Exception e) {
         }
     }
@@ -79,15 +77,13 @@ public class RedstoneController extends DiodeBlockBehavior {
     }
 
     @Override
-    public void tick(Object thisBlock, Object[] args, Callable<Object> superMethod) throws Exception {
+    public void tick(Object thisBlock, Object[] args) {
 
         if (this.delay != 0) {
             Object blockState = args[0];
             Object level = args[1];
             Object blockPos = args[2];
-            if (!this.canSurvive(thisBlock, args, () -> {
-                return true;
-            })) {
+            if (!this.canSurvive(thisBlock, args)) {
                 BlockStateUtils.getOptionalCustomBlockState(blockState).ifPresent((customState) -> {
                     if (!customState.isEmpty() && customState.owner().value() == this.blockDefinition) {
                         BukkitWorld world = new BukkitWorld(((ServerLevel) level).getWorld());
@@ -150,7 +146,7 @@ public class RedstoneController extends DiodeBlockBehavior {
     }
 
     @Override
-    public void neighborChanged(Object thisBlock, Object[] args, Callable<Object> superMethod) {
+    public void neighborChanged(Object thisBlock, Object[] args) {
         BlockState state = (BlockState) args[0];
         Level level = (Level) args[1];
         BlockPos pos = (BlockPos) args[2];

@@ -1,8 +1,5 @@
 package dev.arubik.craftengine.item.behavior;
 
-import java.nio.file.Path;
-import java.util.Map;
-
 import org.bukkit.craftbukkit.damage.CraftDamageSource;
 import org.bukkit.damage.DamageType;
 
@@ -61,21 +58,15 @@ public class FakeThornsLevel extends ExtendedItemBehavior {
 
     public static class Factory implements ItemBehaviorFactory<ItemBehavior> {
 
+        @Override
         public FakeThornsLevel create(net.momirealms.craftengine.core.pack.Pack pack, java.nio.file.Path path,
-                net.momirealms.craftengine.core.util.Key key, java.util.Map<String, Object> arguments) {
+                net.momirealms.craftengine.core.util.Key key,
+                net.momirealms.craftengine.core.plugin.config.ConfigSection arguments) {
             if (arguments.containsKey("extra_thorns_level")) {
-                Object levelObj = arguments.get("extra_thorns_level");
-                if (!(levelObj instanceof Integer level)) {
-                    throw new IllegalArgumentException("'extra_thorns_level' must be an Integer");
-                }
+                int level = arguments.getInt("extra_thorns_level");
                 return new FakeThornsLevel(level);
             }
             throw new IllegalArgumentException("Missing 'extra_thorns_level' argument");
-        }
-
-        @Override
-        public ItemBehavior create(Pack arg0, Path arg1, String arg2, Key arg3, Map<String, Object> arg4) {
-            return create(arg0, arg1, arg2, arg3, arg4);
         }
     }
 }

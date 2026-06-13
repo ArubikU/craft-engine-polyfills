@@ -287,9 +287,9 @@ public class SpikeBlockBehavior extends BukkitBlockBehavior implements EntityBlo
             }
         } else if (spike.getItem().isEmpty() && !ItemUtils.isEmpty(context.getItem())) {
             // Put item
-            Item<org.bukkit.inventory.ItemStack> item = (Item<org.bukkit.inventory.ItemStack>) context.getItem();
+            Item item = context.getItem();
             net.minecraft.world.item.ItemStack nmsItem = org.bukkit.craftbukkit.inventory.CraftItemStack
-                    .asNMSCopy(item.getItem());
+                    .asNMSCopy((org.bukkit.inventory.ItemStack) item.platformItem());
 
             net.minecraft.world.item.ItemStack copy = nmsItem.copy();
             copy.setCount(1);

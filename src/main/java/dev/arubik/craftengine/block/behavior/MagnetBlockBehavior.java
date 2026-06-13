@@ -1,7 +1,6 @@
 package dev.arubik.craftengine.block.behavior;
 
 import java.util.EnumSet;
-import java.util.concurrent.Callable;
 
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.ExperienceOrb;
@@ -47,7 +46,7 @@ public class MagnetBlockBehavior extends BukkitBlockBehavior {
     }
 
     @Override
-    public void randomTick(Object thisBlock, Object[] args, Callable<Object> superMethod) {
+    public void randomTick(Object thisBlock, Object[] args) {
         World level = (World) args[1];
         BlockPos blockPos = (BlockPos) args[2];
 

@@ -41,7 +41,6 @@ import dev.arubik.craftengine.item.behavior.ExtendedItemBehavior;
 import io.github.retrooper.packetevents.util.SpigotConversionUtil;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.momirealms.craftengine.bukkit.api.CraftEngineItems;
-import net.momirealms.craftengine.core.item.behavior.ItemBehavior;
 
 public class ItemListener implements Listener {
 
@@ -78,8 +77,10 @@ public class ItemListener implements Listener {
         net.minecraft.world.item.ItemStack nmsItem = ((CraftItemStack) item).handle;
         ItemStack result = item;
         if(CraftEngineItems.byItemStack(item)==null) return item;
-        for (ItemBehavior behavior : CraftEngineItems.byItemStack(item).behaviors()) {
-            if (behavior instanceof ExtendedItemBehavior extBehavior) {
+        List<ExtendedItemBehavior> behaviors = new ArrayList<>();
+        CraftEngineItems.byItemStack(item).behavior().let(ExtendedItemBehavior.class, behaviors::add);
+        for (ExtendedItemBehavior extBehavior : behaviors) {
+            {
                 switch (actionType) {
                     case ATTACK_ENTITY -> {
                         if (args.length < 5)
@@ -488,11 +489,7 @@ public class ItemListener implements Listener {
         public List<ExtendedItemBehavior> getBehaviors(net.minecraft.world.item.ItemStack item) {
             List<ExtendedItemBehavior> behaviors = new ArrayList<>();
             if( CraftEngineItems.byItemStack(item.asBukkitMirror())==null) return behaviors;
-            for (ItemBehavior behavior : CraftEngineItems.byItemStack(item.asBukkitMirror()).behaviors()) {
-                if (behavior instanceof ExtendedItemBehavior extBehavior) {
-                    behaviors.add(extBehavior);
-                }
-            }
+            CraftEngineItems.byItemStack(item.asBukkitMirror()).behavior().let(ExtendedItemBehavior.class, behaviors::add);
             return behaviors;
         }
 

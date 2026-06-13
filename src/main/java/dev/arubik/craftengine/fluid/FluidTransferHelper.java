@@ -186,7 +186,7 @@ public class FluidTransferHelper {
         if (state == null || state.isEmpty())
             return Optional.empty();
 
-        return state.behavior().getAs(FluidCarrier.class);
+        return Optional.ofNullable(state.behavior().getFirst(FluidCarrier.class));
     }
 
     /**

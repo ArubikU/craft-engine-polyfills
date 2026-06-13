@@ -76,18 +76,20 @@ public class EnchantmentUpgrade extends ExtendedItemBehavior {
 
     public static class EnchantmentUpgradeFactory implements ItemBehaviorFactory<ItemBehavior> {
 
-        public ItemBehavior create(Pack arg0, Path arg1, Key arg2, Map<String, Object> arguments) {
+        @Override
+        public ItemBehavior create(Pack arg0, Path arg1, Key arg2,
+                net.momirealms.craftengine.core.plugin.config.ConfigSection arguments) {
             if (arguments.containsKey("enchantments")) {
-                Object enchantsObj = arguments.get("enchantments");
-                if (!(enchantsObj instanceof Map<?, ?> enchantsRaw)) {
+                net.momirealms.craftengine.core.plugin.config.ConfigSection section = arguments.getSection("enchantments");
+                if (section == null) {
                     throw new IllegalArgumentException("'enchantments' must be a Map<String, Integer>");
                 }
                 Map<String, Integer> enchants = new java.util.HashMap<>();
-                for (Map.Entry<?, ?> entry : enchantsRaw.entrySet()) {
-                    if (!(entry.getKey() instanceof String key) || !(entry.getValue() instanceof Integer value)) {
+                for (Map.Entry<String, Object> entry : section.values().entrySet()) {
+                    if (!(entry.getValue() instanceof Integer value)) {
                         throw new IllegalArgumentException("Invalid enchantment entry: " + entry);
                     }
-                    enchants.put(key, value);
+                    enchants.put(entry.getKey(), value);
                 }
                 Map<Holder<Enchantment>, Integer> enchantments = enchants.entrySet().stream().collect(
                         java.util.stream.Collectors.toMap(
@@ -104,11 +106,6 @@ public class EnchantmentUpgrade extends ExtendedItemBehavior {
                 return new EnchantmentUpgrade(enchantments);
             }
             throw new UnsupportedOperationException("Unimplemented method 'create'");
-        }
-
-        @Override
-        public ItemBehavior create(Pack arg0, Path arg1, String arg2, Key arg3, Map<String, Object> arg4) {
-            return create(arg0, arg1, arg2, arg3, arg4);
         }
     }
 }

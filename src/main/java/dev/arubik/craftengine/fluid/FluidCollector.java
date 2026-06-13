@@ -193,7 +193,7 @@ public class FluidCollector {
                     // si el bloque encima es un carrier, no recolectar
                     ImmutableBlockState ibs = BlockStateUtils
                             .getOptionalCustomBlockState(level.getBlockState(p.offset(0, 1, 0))).orElse(null);
-                    if (ibs != null && ibs.behavior().getAs(PumpBehavior.class).isPresent())
+                    if (ibs != null && ibs.behavior().getFirst(PumpBehavior.class) != null)
                         continue;
 
                     // Evitar quitar el bloque central dos veces cuando sea flowing que refluye

@@ -21,7 +21,6 @@ import net.momirealms.craftengine.core.block.behavior.BlockBehaviorFactory;
 import net.momirealms.craftengine.core.block.property.BooleanProperty;
 import net.momirealms.craftengine.core.block.property.IntegerProperty;
 import net.momirealms.craftengine.core.block.property.Property;
-import net.momirealms.craftengine.core.util.MiscUtils;
 import net.momirealms.craftengine.core.util.random.RandomUtils;
 import net.momirealms.craftengine.core.world.BlockPos;
 
@@ -167,7 +166,7 @@ public class VerticalCropBlockBehavior extends BukkitBlockBehavior {
       int maxHeight = dev.arubik.craftengine.util.Utils.getAsInt(arguments.getOrDefault("max-height", Integer.valueOf(3)),
           "max-height");
       boolean direction = "up".equals(arguments.getOrDefault("direction", "up").toString().toLowerCase(Locale.ROOT));
-      List<String> requiredLiquids = MiscUtils
+      List<String> requiredLiquids = dev.arubik.craftengine.util.Utils
           .getAsStringList(arguments.getOrDefault("required-liquids", ObjectArrayList.of()));
       boolean reqWater = requiredLiquids.contains("water");
       boolean reqLava = requiredLiquids.contains("lava");
@@ -182,7 +181,7 @@ public class VerticalCropBlockBehavior extends BukkitBlockBehavior {
       }
       boolean stopOver = dev.arubik.craftengine.util.Utils.getAsBoolean(
           arguments.getOrDefault("stop-Overliquid-growing", Boolean.valueOf(false)), "stop-Overliquid-growing");
-      List<String> growTypes = MiscUtils
+      List<String> growTypes = dev.arubik.craftengine.util.Utils
           .getAsStringList(arguments.getOrDefault("grow-types", ObjectArrayList.of((Object[]) new String[] { "air" })));
       boolean allowAir = growTypes.contains("air");
       boolean allowWater = growTypes.contains("water");

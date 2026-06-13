@@ -7,7 +7,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.Callable;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -51,7 +50,7 @@ public class SpreadingBlockBehavior extends BukkitBlockBehavior {
     }
 
     @Override
-    public void randomTick(Object thisBlock, Object[] args, Callable<Object> superMethod) throws Exception {
+    public void randomTick(Object thisBlock, Object[] args) {
         if (RandomUtils.generateRandomFloat(0, 1) >= this.spreadChance)
             return;
 

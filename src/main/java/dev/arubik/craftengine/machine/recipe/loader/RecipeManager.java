@@ -218,7 +218,7 @@ public class RecipeManager {
         } else if ("custom_item".equals(type)) {
             String id = obj.get("id").getAsString();
             net.minecraft.world.item.ItemStack stack = ((CraftItemStack) CraftEngineItems.byId(Key.of(id))
-                    .buildItemStack()).handle;
+                    .buildBukkitItem()).handle;
             stack.setCount(amount);
             return new ItemOutput(stack, chance);
         } else if ("gas".equals(type)) {

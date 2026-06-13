@@ -7,7 +7,7 @@ import net.momirealms.craftengine.core.block.entity.render.element.BlockEntityEl
 import net.momirealms.craftengine.core.block.entity.render.element.BlockEntityElementConfigFactory;
 import net.momirealms.craftengine.core.entity.player.Player;
 import net.momirealms.craftengine.core.world.BlockPos;
-import net.momirealms.craftengine.core.world.World;
+import net.momirealms.craftengine.core.world.chunk.CEChunk;
 import org.bukkit.block.BlockFace;
 import org.joml.Vector3f;
 
@@ -82,12 +82,12 @@ public class ShulkerBoxHitboxElementConfig implements BlockEntityElementConfig<S
     }
 
     @Override
-    public ShulkerBoxHitboxElement create(World world, BlockPos pos) {
+    public ShulkerBoxHitboxElement create(CEChunk chunk, BlockPos pos) {
         return new ShulkerBoxHitboxElement(this, pos);
     }
 
     @Override
-    public ShulkerBoxHitboxElement create(World world, BlockPos pos, ShulkerBoxHitboxElement previous) {
+    public ShulkerBoxHitboxElement create(CEChunk chunk, BlockPos pos, ShulkerBoxHitboxElement previous) {
         return new ShulkerBoxHitboxElement(this, pos, previous.entityId,
                 previous.config.yRot != this.yRot ||
                         previous.config.xRot != this.xRot ||
@@ -95,7 +95,7 @@ public class ShulkerBoxHitboxElementConfig implements BlockEntityElementConfig<S
     }
 
     @Override
-    public ShulkerBoxHitboxElement createExact(World world, BlockPos pos, ShulkerBoxHitboxElement previous) {
+    public ShulkerBoxHitboxElement createExact(CEChunk chunk, BlockPos pos, ShulkerBoxHitboxElement previous) {
         if (!isSamePosition(previous.config)) {
             return null;
         }

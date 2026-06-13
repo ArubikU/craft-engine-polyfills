@@ -8,7 +8,7 @@ import org.bukkit.persistence.PersistentDataType;
 
 import dev.arubik.craftengine.block.behavior.ConnectableBlockBehavior;
 import dev.arubik.craftengine.block.entity.BukkitBlockEntityTypes;
-import dev.arubik.craftengine.block.entity.PersistentController;
+import dev.arubik.craftengine.block.entity.PersistentBlockEntity;
 import dev.arubik.craftengine.util.CustomBlockData;
 import dev.arubik.craftengine.util.TypedKey;
 import dev.arubik.craftengine.util.Utils;
@@ -217,7 +217,7 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
         }
 
         // Register disassembly hook
-        if (result instanceof PersistentController pbe) {
+        if (result instanceof PersistentBlockEntity pbe) {
             registerDisassemblyHook(pbe);
         }
 
@@ -511,7 +511,7 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
     }
 
     private void registerDisassemblyHooks(Level level, BlockPos corePos, BlockEntityController coreEntity) {
-        if (coreEntity instanceof PersistentController pbe) {
+        if (coreEntity instanceof PersistentBlockEntity pbe) {
             registerDisassemblyHook(pbe);
         }
 
@@ -528,25 +528,25 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
                 continue;
 
             BlockEntityController partBe = controllerAt(level, partPos);
-            if (partBe instanceof PersistentController pbe) {
+            if (partBe instanceof PersistentBlockEntity pbe) {
                 registerDisassemblyHook(pbe);
             }
         }
     }
 
-    private void registerDisassemblyHook(PersistentController pbe) {
+    private void registerDisassemblyHook(PersistentBlockEntity pbe) {
         System.out.println("[MultiBlockBehavior] Registering disassembly hook for " + pbe.getClass().getSimpleName()
-                + " at " + pbe.pos());
+                + " at " + pbe.blockEntity().pos());
         pbe.setPreCleanup((be) -> {
-            System.out.println("[MultiBlockBehavior] PRE-CLEANUP EXECUTION at " + be.pos());
+            System.out.println("[MultiBlockBehavior] PRE-CLEANUP EXECUTION at " + be.blockEntity().pos());
             handleDisassemblyFromHook(be);
             return null;
         });
     }
 
-    private void handleDisassemblyFromHook(PersistentController be) {
-        BlockPos pos = Utils.fromPos(be.pos());
-        Level level = (Level) be.world().world.minecraftWorld();
+    private void handleDisassemblyFromHook(PersistentBlockEntity be) {
+        BlockPos pos = Utils.fromPos(be.blockEntity().pos());
+        Level level = (Level) be.blockEntity().world().world.minecraftWorld();
 
         System.out.println("[MultiBlockBehavior] handleDisassemblyFromHook START at " + pos + " (Type: "
                 + be.getClass().getSimpleName() + ")");
@@ -570,7 +570,7 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
             coreBe = be; // Handle self if it's the core
         }
 
-        if (coreBe instanceof PersistentController pbe) {
+        if (coreBe instanceof PersistentBlockEntity pbe) {
             boolean isDisassembling = pbe.getOrDefault(KEY_DISASSEMBLING, false);
 
             // Interaction matching logic: treat as formed if it's a Machine and state is
@@ -578,7 +578,7 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
             // or if it's a Part and has corePos
             boolean isFormed = false;
             if (coreBe instanceof MultiBlockMachineBlockEntity) {
-                ImmutableBlockState ibs = be.world()
+                ImmutableBlockState ibs = be.blockEntity().world()
                         .getBlockStateAtIfLoaded(net.momirealms.craftengine.core.world.BlockPos.of(corePos.asLong()));
                 isFormed = ibs.getNullable(MULTIBLOCK_ROLE) == MultiBlockRole.CORE;
             } else if (coreBe instanceof MultiBlockPartBlockEntity part) {
@@ -779,7 +779,7 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
 
         // 7. Register disassembly hooks
         BlockEntityController coreBe = controllerAt(level, corePos);
-        if (coreBe instanceof PersistentController pbe) {
+        if (coreBe instanceof PersistentBlockEntity pbe) {
             // Ensure flag is clear
             pbe.remove(KEY_DISASSEMBLING);
             registerDisassemblyHooks(level, corePos, coreBe);
@@ -1144,19 +1144,18 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
         return 0;
     }
 
-    public PersistentController getBlockEntity(Level world, net.minecraft.core.BlockPos pos) {
+    public PersistentBlockEntity getBlockEntity(Level world, net.minecraft.core.BlockPos pos) {
         BlockEntityController be = controllerAt(world, pos);
-        if (be instanceof PersistentController)
-            return (PersistentController) be;
+        if (be instanceof PersistentBlockEntity)
+            return (PersistentBlockEntity) be;
         return null;
     }
 
-    @Override
     public Object getContainer(Object thisBlock, Object[] args) {
         Level level = (Level) args[1];
         BlockPos pos = (BlockPos) args[2];
 
-        PersistentController eBlockEntity = getBlockEntity(level, pos);
+        PersistentBlockEntity eBlockEntity = getBlockEntity(level, pos);
         if (eBlockEntity == null)
             return null;
         if (eBlockEntity instanceof MultiBlockPartBlockEntity core) {

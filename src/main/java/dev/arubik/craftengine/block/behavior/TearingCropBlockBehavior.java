@@ -21,7 +21,6 @@ import net.momirealms.craftengine.core.block.behavior.BlockBehaviorFactory;
 import net.momirealms.craftengine.core.block.property.IntegerProperty;
 import net.momirealms.craftengine.core.block.property.Property;
 import net.momirealms.craftengine.core.util.Key;
-import net.momirealms.craftengine.core.util.MiscUtils;
 import net.momirealms.craftengine.core.util.random.RandomUtils;
 import net.momirealms.craftengine.core.util.Tuple;
 import net.momirealms.craftengine.core.world.BlockPos;
@@ -204,7 +203,7 @@ public class TearingCropBlockBehavior extends BukkitBlockBehavior {
         mcTags.add(BlockTags.getOrCreate(Key.of(tag)));
       Set<Object> mcBlocks = new HashSet();
       Set<String> customBlocks = new HashSet<>();
-      for (String blockStateStr : MiscUtils
+      for (String blockStateStr : dev.arubik.craftengine.util.Utils
           .getAsStringList(arguments.getOrDefault((aboveOrBelow ? "above" : "bottom") + "-blocks", List.of()))) {
         int index = blockStateStr.indexOf('[');
         Key blockType = (index != -1) ? Key.from(blockStateStr.substring(0, index)) : Key.from(blockStateStr);

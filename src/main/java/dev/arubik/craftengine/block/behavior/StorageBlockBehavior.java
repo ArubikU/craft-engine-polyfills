@@ -73,7 +73,6 @@ public class StorageBlockBehavior extends BukkitBlockBehavior {
     return InteractionResult.PASS;
   }
 
-  @Override
   public Object getContainer(Object thisBlock, Object[] args) {
     Level level = (Level) args[1];
     BlockPos pos = (BlockPos) args[2];

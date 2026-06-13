@@ -1,7 +1,5 @@
 package dev.arubik.craftengine.block.behavior;
 
-import java.util.concurrent.Callable;
-
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.projectile.Projectile;
@@ -68,7 +66,7 @@ public class LightUpBlockBehavior extends BukkitBlockBehavior {
     }
 
     @Override
-    public void entityInside(Object thisBlock, Object[] args, Callable<Object> superMethod) throws Exception {
+    public void entityInside(Object thisBlock, Object[] args) {
         if (args.length >= 4) {
             BlockState state = (BlockState) args[0];
             Level level = (Level) args[1];

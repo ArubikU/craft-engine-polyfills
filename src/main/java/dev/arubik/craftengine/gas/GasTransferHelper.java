@@ -169,7 +169,7 @@ public class GasTransferHelper {
         if (state == null || state.isEmpty())
             return Optional.empty();
 
-        return state.behavior().getAs(GasCarrier.class);
+        return Optional.ofNullable(state.behavior().getFirst(GasCarrier.class));
     }
 
     /**
