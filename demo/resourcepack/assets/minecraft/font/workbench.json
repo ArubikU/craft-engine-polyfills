@@ -1,0 +1,13 @@
+{
+  "providers": [
+    {
+      "type": "bitmap",
+      "file": "minecraft:gui/workbench.png",
+      "ascent": -8,
+      "height": 132,
+      "chars": [
+        ""
+      ]
+    }
+  ]
+}
