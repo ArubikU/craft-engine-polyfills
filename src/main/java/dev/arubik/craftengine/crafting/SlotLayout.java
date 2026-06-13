@@ -24,9 +24,11 @@ public final class SlotLayout {
     private final int gridDepth;
     private final int[] inputSlots; // chest slot indices, ordered by grid index
     private final List<Integer> outputSlots;
+    /** CUSTOM slots whose contents are handed back to the player when the menu closes. */
+    private final java.util.Set<Integer> returnOnCloseSlots;
 
     private SlotLayout(int size, SlotRole[] roles, int[] gridIndex, int gridWidth, int gridHeight, int gridDepth,
-            int[] inputSlots, List<Integer> outputSlots) {
+            int[] inputSlots, List<Integer> outputSlots, java.util.Set<Integer> returnOnCloseSlots) {
         this.size = size;
         this.roles = roles;
         this.gridIndex = gridIndex;
@@ -35,6 +37,16 @@ public final class SlotLayout {
         this.gridDepth = gridDepth;
         this.inputSlots = inputSlots;
         this.outputSlots = outputSlots;
+        this.returnOnCloseSlots = returnOnCloseSlots;
+    }
+
+    /** CUSTOM slots flagged to be returned to the player on close (for non-persistent menus). */
+    public java.util.Set<Integer> returnOnCloseSlots() {
+        return returnOnCloseSlots;
+    }
+
+    public boolean returnsOnClose(int slot) {
+        return returnOnCloseSlots.contains(slot);
     }
 
     public int size() {
@@ -98,6 +110,7 @@ public final class SlotLayout {
         private int gridHeight = 0;
         private int gridDepth = 1;
         private final List<Integer> outputSlots = new ArrayList<>();
+        private final java.util.Set<Integer> returnCustom = new java.util.HashSet<>();
 
         private Builder(int size) {
             this.size = size;
@@ -133,7 +146,19 @@ public final class SlotLayout {
         }
 
         public Builder custom(int slot) {
+            return custom(slot, false);
+        }
+
+        /**
+         * Declares a CUSTOM slot. When {@code returnOnClose} is true the slot's
+         * contents are handed back to the player when the menu closes — use this
+         * for non-persistent menus (e.g. a tool slot) so items aren't lost.
+         */
+        public Builder custom(int slot, boolean returnOnClose) {
             roles[slot] = SlotRole.CUSTOM;
+            if (returnOnClose) {
+                returnCustom.add(slot);
+            }
             return this;
         }
 
@@ -167,7 +192,7 @@ public final class SlotLayout {
                 }
             }
             return new SlotLayout(size, roles.clone(), gridIndex.clone(), gridWidth, gridHeight, gridDepth,
-                    inputSlots, List.copyOf(outputSlots));
+                    inputSlots, List.copyOf(outputSlots), java.util.Set.copyOf(returnCustom));
         }
     }
 }

@@ -332,14 +332,21 @@ public abstract class AbstractCraftingMenu implements InventoryHolder {
         }
     }
 
-    /** Return INPUT items to the player (called on close) so nothing is lost. */
+    /** Return INPUT items (and any returnOnClose CUSTOM slots) to the player on close. */
     public final void returnInputs(Player player) {
         for (int s : layout.inputSlots()) {
-            ItemStack stack = inventory.getItem(s);
-            if (stack != null && stack.getType() != Material.AIR && stack.getAmount() > 0) {
-                giveStack(player, stack);
-                inventory.setItem(s, null);
-            }
+            returnSlot(player, s);
+        }
+        for (int s : layout.returnOnCloseSlots()) {
+            returnSlot(player, s);
+        }
+    }
+
+    private void returnSlot(Player player, int s) {
+        ItemStack stack = inventory.getItem(s);
+        if (stack != null && stack.getType() != Material.AIR && stack.getAmount() > 0) {
+            giveStack(player, stack);
+            inventory.setItem(s, null);
         }
     }
 }

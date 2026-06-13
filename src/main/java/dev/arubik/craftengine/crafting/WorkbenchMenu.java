@@ -47,7 +47,7 @@ public final class WorkbenchMenu extends AbstractCraftingMenu {
         b.input(IN_00, 0, 0).input(IN_10, 1, 0).input(IN_20, 2, 0);
         b.input(IN_01, 0, 1).input(IN_11, 1, 1).input(IN_21, 2, 1);
         b.output(OUT_0).output(OUT_1);
-        b.custom(TOOL_SLOT);
+        b.custom(TOOL_SLOT, true); // non-persistent menu: hand the tool back on close
         // All other slots stay BACKGROUND (the base enforces non-placeable).
         return b.build();
     }
