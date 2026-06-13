@@ -1,7 +1,7 @@
 {
   "parent": "block/block",
   "textures": {
-    "top": "minecraft:block/custom/conveyor/belt_top",
+    "top": "minecraft:block/custom/conveyor/belt_top_ramp",
     "frame": "minecraft:block/custom/conveyor/belt_frame",
     "particle": "minecraft:block/custom/conveyor/belt_frame"
   },
