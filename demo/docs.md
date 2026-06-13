@@ -33,6 +33,23 @@ No real entity exists on the server world — it's packet-only.
 - Client interpolation: ~**1 tick** position lerp (matches the server tick cadence).
 - Belt-top height (block-relative Y): `BELT_TOP_Y = 0.95`.
 
+### Animation & direction
+Two independent motions:
+1. **Belt surface (animated texture):** `belt_top.png` is a vertical strip of frames
+   (`belt_top.png.mcmeta` scrolls it). This is a **fixed client-side scroll** — it does
+   **not** read RPM, so a stalled belt still visually scrolls unless you supply a static
+   texture. The scroll runs along the belt length (the +Z axis of the base model).
+2. **Carried item (server-driven):** the `item_display` is moved start→end each tick by
+   the actual speed (RPM); when RPM is 0 it doesn't advance. This is the truthful motion.
+
+**Direction** is handled entirely by the model's `facing` rotation: each `facing` value
+maps to a `y:` rotation (north 0 / east 90 / south 180 / west 270) that rotates the whole
+model — including the animated top face — so the visible tread always scrolls toward the
+belt's travel direction. `up`/`down` models tilt the surface along the 45° ramp, so the
+animation climbs/descends with it. Author `belt_top.png` so its frames advance toward +Z
+(the exit side of the base/north model); every other facing/slope inherits the correct
+direction via rotation. No per-facing texture variants are needed.
+
 ### Speed / translation metrics
 Movement is RPM-driven. Constants (in `ConveyorBlockEntity` / `ConveyorMath`):
 

@@ -1,19 +1,19 @@
-# CraftEngine block definition for the polyfill conveyor belt.
+# CraftEngine block definition for the polyfill conveyor belt (FULL state matrix).
 # Behavior key -> dev.arubik.craftengine.conveyor.ConveyorBehavior (polyfills:conveyor)
 #
-# The polyfill READS three block-state properties (live, never cached):
-#   facing : 4-direction  (travel direction toward the next/END segment)
-#   slope  : string flat/up/down  (45-degree only)
-#   part   : string start/middle/end  (END = exit/growth tip)
-# It only reads them — you own the models. Add model variants per state as you like;
-# unlisted state combos fall back to the default appearance.
+# State properties read live by the polyfill:
+#   facing : 4-direction          (travel toward next/END segment)
+#   slope  : string flat/up/down  (45-degree ramps)
+#   part   : string start/middle/end
+# Models live in demo/resourcepack/assets/minecraft/models/block/custom/conveyor/.
+# 9 base geometries (slope x part) x 4 facing rotations (y 0/90/180/270) = 36 states.
+# Supply textures: belt_top, belt_bottom, belt_side, roller (PNG, same folder under textures/).
 
 items:
   demo:conveyor:
     data:
       item_name: "<!i><white>Conveyor Belt"
-    # Replace with your own item model.
-    model: minecraft:block/custom/conveyor
+    model: minecraft:block/custom/conveyor/conveyor_flat_middle
     behavior:
       type: block_item
       block: demo:conveyor
@@ -36,7 +36,6 @@ blocks:
         fall: minecraft:block.stone.fall
     behavior:
       type: polyfills:conveyor
-      # Optional fallback facing used only if the "facing" property is absent.
       facing: north
     states:
       properties:
@@ -52,22 +51,148 @@ blocks:
           values: [start, middle, end]
           default: end
       appearances:
-        north:
+        flat_start_north:
           auto_state: solid
-          model: { path: minecraft:block/custom/conveyor }
-        east:
+          model: { path: minecraft:block/custom/conveyor/conveyor_flat_start }
+        flat_start_east:
           auto_state: solid
-          model: { path: minecraft:block/custom/conveyor, y: 90 }
-        south:
+          model: { path: minecraft:block/custom/conveyor/conveyor_flat_start, y: 90 }
+        flat_start_south:
           auto_state: solid
-          model: { path: minecraft:block/custom/conveyor, y: 180 }
-        west:
+          model: { path: minecraft:block/custom/conveyor/conveyor_flat_start, y: 180 }
+        flat_start_west:
           auto_state: solid
-          model: { path: minecraft:block/custom/conveyor, y: 270 }
-      # Model picked by facing. Add slope=up/down or part=* variants here to swap
-      # models for ramps / end caps (optional — they fall back to these otherwise).
+          model: { path: minecraft:block/custom/conveyor/conveyor_flat_start, y: 270 }
+        flat_middle_north:
+          auto_state: solid
+          model: { path: minecraft:block/custom/conveyor/conveyor_flat_middle }
+        flat_middle_east:
+          auto_state: solid
+          model: { path: minecraft:block/custom/conveyor/conveyor_flat_middle, y: 90 }
+        flat_middle_south:
+          auto_state: solid
+          model: { path: minecraft:block/custom/conveyor/conveyor_flat_middle, y: 180 }
+        flat_middle_west:
+          auto_state: solid
+          model: { path: minecraft:block/custom/conveyor/conveyor_flat_middle, y: 270 }
+        flat_end_north:
+          auto_state: solid
+          model: { path: minecraft:block/custom/conveyor/conveyor_flat_end }
+        flat_end_east:
+          auto_state: solid
+          model: { path: minecraft:block/custom/conveyor/conveyor_flat_end, y: 90 }
+        flat_end_south:
+          auto_state: solid
+          model: { path: minecraft:block/custom/conveyor/conveyor_flat_end, y: 180 }
+        flat_end_west:
+          auto_state: solid
+          model: { path: minecraft:block/custom/conveyor/conveyor_flat_end, y: 270 }
+        up_start_north:
+          auto_state: solid
+          model: { path: minecraft:block/custom/conveyor/conveyor_up_start }
+        up_start_east:
+          auto_state: solid
+          model: { path: minecraft:block/custom/conveyor/conveyor_up_start, y: 90 }
+        up_start_south:
+          auto_state: solid
+          model: { path: minecraft:block/custom/conveyor/conveyor_up_start, y: 180 }
+        up_start_west:
+          auto_state: solid
+          model: { path: minecraft:block/custom/conveyor/conveyor_up_start, y: 270 }
+        up_middle_north:
+          auto_state: solid
+          model: { path: minecraft:block/custom/conveyor/conveyor_up_middle }
+        up_middle_east:
+          auto_state: solid
+          model: { path: minecraft:block/custom/conveyor/conveyor_up_middle, y: 90 }
+        up_middle_south:
+          auto_state: solid
+          model: { path: minecraft:block/custom/conveyor/conveyor_up_middle, y: 180 }
+        up_middle_west:
+          auto_state: solid
+          model: { path: minecraft:block/custom/conveyor/conveyor_up_middle, y: 270 }
+        up_end_north:
+          auto_state: solid
+          model: { path: minecraft:block/custom/conveyor/conveyor_up_end }
+        up_end_east:
+          auto_state: solid
+          model: { path: minecraft:block/custom/conveyor/conveyor_up_end, y: 90 }
+        up_end_south:
+          auto_state: solid
+          model: { path: minecraft:block/custom/conveyor/conveyor_up_end, y: 180 }
+        up_end_west:
+          auto_state: solid
+          model: { path: minecraft:block/custom/conveyor/conveyor_up_end, y: 270 }
+        down_start_north:
+          auto_state: solid
+          model: { path: minecraft:block/custom/conveyor/conveyor_down_start }
+        down_start_east:
+          auto_state: solid
+          model: { path: minecraft:block/custom/conveyor/conveyor_down_start, y: 90 }
+        down_start_south:
+          auto_state: solid
+          model: { path: minecraft:block/custom/conveyor/conveyor_down_start, y: 180 }
+        down_start_west:
+          auto_state: solid
+          model: { path: minecraft:block/custom/conveyor/conveyor_down_start, y: 270 }
+        down_middle_north:
+          auto_state: solid
+          model: { path: minecraft:block/custom/conveyor/conveyor_down_middle }
+        down_middle_east:
+          auto_state: solid
+          model: { path: minecraft:block/custom/conveyor/conveyor_down_middle, y: 90 }
+        down_middle_south:
+          auto_state: solid
+          model: { path: minecraft:block/custom/conveyor/conveyor_down_middle, y: 180 }
+        down_middle_west:
+          auto_state: solid
+          model: { path: minecraft:block/custom/conveyor/conveyor_down_middle, y: 270 }
+        down_end_north:
+          auto_state: solid
+          model: { path: minecraft:block/custom/conveyor/conveyor_down_end }
+        down_end_east:
+          auto_state: solid
+          model: { path: minecraft:block/custom/conveyor/conveyor_down_end, y: 90 }
+        down_end_south:
+          auto_state: solid
+          model: { path: minecraft:block/custom/conveyor/conveyor_down_end, y: 180 }
+        down_end_west:
+          auto_state: solid
+          model: { path: minecraft:block/custom/conveyor/conveyor_down_end, y: 270 }
       variants:
-        "facing=north": { appearance: north }
-        "facing=east": { appearance: east }
-        "facing=south": { appearance: south }
-        "facing=west": { appearance: west }
+        "facing=north,slope=flat,part=start": { appearance: flat_start_north }
+        "facing=east,slope=flat,part=start": { appearance: flat_start_east }
+        "facing=south,slope=flat,part=start": { appearance: flat_start_south }
+        "facing=west,slope=flat,part=start": { appearance: flat_start_west }
+        "facing=north,slope=flat,part=middle": { appearance: flat_middle_north }
+        "facing=east,slope=flat,part=middle": { appearance: flat_middle_east }
+        "facing=south,slope=flat,part=middle": { appearance: flat_middle_south }
+        "facing=west,slope=flat,part=middle": { appearance: flat_middle_west }
+        "facing=north,slope=flat,part=end": { appearance: flat_end_north }
+        "facing=east,slope=flat,part=end": { appearance: flat_end_east }
+        "facing=south,slope=flat,part=end": { appearance: flat_end_south }
+        "facing=west,slope=flat,part=end": { appearance: flat_end_west }
+        "facing=north,slope=up,part=start": { appearance: up_start_north }
+        "facing=east,slope=up,part=start": { appearance: up_start_east }
+        "facing=south,slope=up,part=start": { appearance: up_start_south }
+        "facing=west,slope=up,part=start": { appearance: up_start_west }
+        "facing=north,slope=up,part=middle": { appearance: up_middle_north }
+        "facing=east,slope=up,part=middle": { appearance: up_middle_east }
+        "facing=south,slope=up,part=middle": { appearance: up_middle_south }
+        "facing=west,slope=up,part=middle": { appearance: up_middle_west }
+        "facing=north,slope=up,part=end": { appearance: up_end_north }
+        "facing=east,slope=up,part=end": { appearance: up_end_east }
+        "facing=south,slope=up,part=end": { appearance: up_end_south }
+        "facing=west,slope=up,part=end": { appearance: up_end_west }
+        "facing=north,slope=down,part=start": { appearance: down_start_north }
+        "facing=east,slope=down,part=start": { appearance: down_start_east }
+        "facing=south,slope=down,part=start": { appearance: down_start_south }
+        "facing=west,slope=down,part=start": { appearance: down_start_west }
+        "facing=north,slope=down,part=middle": { appearance: down_middle_north }
+        "facing=east,slope=down,part=middle": { appearance: down_middle_east }
+        "facing=south,slope=down,part=middle": { appearance: down_middle_south }
+        "facing=west,slope=down,part=middle": { appearance: down_middle_west }
+        "facing=north,slope=down,part=end": { appearance: down_end_north }
+        "facing=east,slope=down,part=end": { appearance: down_end_east }
+        "facing=south,slope=down,part=end": { appearance: down_end_south }
+        "facing=west,slope=down,part=end": { appearance: down_end_west }
