@@ -1,7 +1,6 @@
 package dev.arubik.craftengine.block.behavior;
 
 import java.util.EnumSet;
-import java.util.Map;
 import java.util.concurrent.Callable;
 
 import org.bukkit.entity.Entity;
@@ -16,8 +15,9 @@ import net.momirealms.craftengine.bukkit.block.behavior.BukkitBlockBehavior;
 import net.momirealms.craftengine.bukkit.util.LocationUtils;
 import net.momirealms.craftengine.bukkit.world.BukkitExistingBlock;
 import net.momirealms.craftengine.core.block.behavior.BlockBehavior;
-import net.momirealms.craftengine.core.block.CustomBlock;
+import net.momirealms.craftengine.core.block.BlockDefinition;
 import net.momirealms.craftengine.core.block.behavior.BlockBehaviorFactory;
+import net.momirealms.craftengine.core.plugin.config.ConfigSection;
 import net.momirealms.craftengine.core.world.BlockPos;
 import net.momirealms.craftengine.core.world.World;
 
@@ -39,7 +39,7 @@ public class MagnetBlockBehavior extends BukkitBlockBehavior {
     private final double radius;
     private final double strength;
 
-    public MagnetBlockBehavior(CustomBlock customBlock, EnumSet<MagnetFlag> flags, double radius, double strength) {
+    public MagnetBlockBehavior(BlockDefinition customBlock, EnumSet<MagnetFlag> flags, double radius, double strength) {
         super(customBlock);
         this.flags = flags;
         this.radius = radius;
@@ -97,7 +97,7 @@ public class MagnetBlockBehavior extends BukkitBlockBehavior {
 
     public static class Factory implements BlockBehaviorFactory<BlockBehavior> {
         @Override
-        public BlockBehavior create(CustomBlock block, Map<String, Object> arguments) {
+        public BlockBehavior create(BlockDefinition block, ConfigSection arguments) {
             double radius = Double.parseDouble(arguments.getOrDefault("radius", 5.0).toString());
             double strength = Double.parseDouble(arguments.getOrDefault("strength", 0.2).toString());
 

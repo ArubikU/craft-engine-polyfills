@@ -1,7 +1,6 @@
 package dev.arubik.craftengine.multiblock;
 
 import net.minecraft.core.Direction;
-import net.momirealms.craftengine.core.util.HorizontalDirection;
 import dev.arubik.craftengine.util.DirectionType;
 
 /**
@@ -17,7 +16,8 @@ public class DirectionalIOHelper {
      * @param facing   The machine's horizontal facing direction
      * @return The actual world direction
      */
-    public static Direction getHorizontalWorldDirection(RelativeDirection relative, HorizontalDirection facing) {
+    public static Direction getHorizontalWorldDirection(RelativeDirection relative,
+            net.momirealms.craftengine.core.util.Direction facing) {
         if (relative == null || facing == null) {
             return Direction.NORTH;
         }
@@ -78,12 +78,13 @@ public class DirectionalIOHelper {
     /**
      * Convert HorizontalDirection to Minecraft Direction
      */
-    public static Direction fromHorizontalDirection(HorizontalDirection horizontal) {
+    public static Direction fromHorizontalDirection(net.momirealms.craftengine.core.util.Direction horizontal) {
         return switch (horizontal) {
             case NORTH -> Direction.NORTH;
             case SOUTH -> Direction.SOUTH;
             case EAST -> Direction.EAST;
             case WEST -> Direction.WEST;
+            default -> Direction.NORTH;
         };
     }
 
@@ -91,13 +92,13 @@ public class DirectionalIOHelper {
      * Convert Minecraft Direction to HorizontalDirection
      * Returns NORTH for non-horizontal directions
      */
-    public static HorizontalDirection toHorizontalDirection(Direction direction) {
+    public static net.momirealms.craftengine.core.util.Direction toHorizontalDirection(Direction direction) {
         return switch (direction) {
-            case NORTH -> HorizontalDirection.NORTH;
-            case SOUTH -> HorizontalDirection.SOUTH;
-            case EAST -> HorizontalDirection.EAST;
-            case WEST -> HorizontalDirection.WEST;
-            default -> HorizontalDirection.NORTH; // UP/DOWN default to NORTH
+            case NORTH -> net.momirealms.craftengine.core.util.Direction.NORTH;
+            case SOUTH -> net.momirealms.craftengine.core.util.Direction.SOUTH;
+            case EAST -> net.momirealms.craftengine.core.util.Direction.EAST;
+            case WEST -> net.momirealms.craftengine.core.util.Direction.WEST;
+            default -> net.momirealms.craftengine.core.util.Direction.NORTH; // UP/DOWN default to NORTH
         };
     }
 
@@ -145,7 +146,8 @@ public class DirectionalIOHelper {
      * Transform a world direction back to local direction based on machine
      * horizontal facing
      */
-    public static Direction getHorizontalLocalDirection(Direction world, HorizontalDirection facing) {
+    public static Direction getHorizontalLocalDirection(Direction world,
+            net.momirealms.craftengine.core.util.Direction facing) {
         for (RelativeDirection rel : RelativeDirection.values()) {
             if (getHorizontalWorldDirection(rel, facing) == world) {
                 return toDirection(rel);

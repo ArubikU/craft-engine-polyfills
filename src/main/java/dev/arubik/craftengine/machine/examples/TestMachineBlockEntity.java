@@ -31,9 +31,8 @@ public class TestMachineBlockEntity extends AbstractMachineBlockEntity {
             .addSlot(0, MenuSlotType.INPUT)
             .addSlot(1, MenuSlotType.OUTPUT);
 
-    public TestMachineBlockEntity(net.momirealms.craftengine.core.world.BlockPos pos,
-            net.momirealms.craftengine.core.block.ImmutableBlockState state) {
-        super(2, pos, state);
+    public TestMachineBlockEntity(net.momirealms.craftengine.core.block.entity.BlockEntity blockEntity) {
+        super(blockEntity, 2);
 
         // Initialize Tanks
         // Tank 0: Water only (10B)

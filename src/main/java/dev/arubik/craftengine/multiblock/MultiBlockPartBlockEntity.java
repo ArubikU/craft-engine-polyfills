@@ -17,8 +17,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import dev.arubik.craftengine.block.behavior.ConnectableBlockBehavior;
-import dev.arubik.craftengine.block.entity.BukkitBlockEntityTypes;
-import dev.arubik.craftengine.block.entity.PersistentBlockEntity;
+import dev.arubik.craftengine.block.entity.PersistentController;
 import dev.arubik.craftengine.multiblock.IOConfiguration.IORole;
 import dev.arubik.craftengine.multiblock.IOConfiguration.IOType;
 import dev.arubik.craftengine.util.TypedKey;
@@ -29,15 +28,15 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
-import net.momirealms.craftengine.core.block.ImmutableBlockState;
 import net.momirealms.craftengine.core.block.entity.BlockEntity;
 
 /**
- * Unified MultiBlock Part/Core Block Entity.
+ * Unified MultiBlock Part/Core controller (ce 26.6.2).
  * Handles both CORE and PART roles with automatic redirection to core.
  * Supports optional machine capability and IO configuration.
+ * Re-based onto BlockEntityController via PersistentController.
  */
-public class MultiBlockPartBlockEntity extends PersistentBlockEntity
+public class MultiBlockPartBlockEntity extends PersistentController
         implements WorldlyContainer, InventoryHolder {
 
     // Persistent data keys
@@ -66,10 +65,22 @@ public class MultiBlockPartBlockEntity extends PersistentBlockEntity
     private IOConfiguration ioConfig;
     private MultiBlockRole role;
 
-    public MultiBlockPartBlockEntity(net.momirealms.craftengine.core.world.BlockPos pos,
-            ImmutableBlockState state) {
-        super(pos, state);
+    public MultiBlockPartBlockEntity(BlockEntity blockEntity) {
+        super(blockEntity);
         this.role = MultiBlockRole.NONE;
+    }
+
+    // Thin accessors replacing the previously-inherited BlockEntity fields/methods.
+    public net.momirealms.craftengine.core.world.BlockPos pos() {
+        return blockEntity().pos();
+    }
+
+    public net.momirealms.craftengine.core.block.ImmutableBlockState blockState() {
+        return blockEntity().blockState();
+    }
+
+    public net.momirealms.craftengine.core.world.CEWorld world() {
+        return blockEntity().world();
     }
 
     public MultiBlockRole getRole() {
@@ -97,12 +108,12 @@ public class MultiBlockPartBlockEntity extends PersistentBlockEntity
     // ========== Position Management ==========
 
     private BlockPos getNmsPos() {
-        return new BlockPos(pos.x(), pos.y(), pos.z());
+        return new BlockPos(pos().x(), pos().y(), pos().z());
     }
 
     @Override
     public Location getLocation() {
-        return new Location((World) world.world.platformWorld(), pos.x(), pos.y(), pos.z());
+        return new Location((World) world().world.platformWorld(), pos().x(), pos().y(), pos().z());
     }
     // ========== Core Position Management ==========
 
@@ -129,28 +140,29 @@ public class MultiBlockPartBlockEntity extends PersistentBlockEntity
     }
 
     @Nullable
-    private BlockEntity getCoreEntity() {
+    private net.momirealms.craftengine.core.block.entity.BlockEntityController getCoreEntity() {
         BlockPos corePos = getCorePos();
         if (corePos == null) {
-            System.out.println("[MultiBlockPartBlockEntity] getCoreEntity: corePos is NULL at " + pos);
+            System.out.println("[MultiBlockPartBlockEntity] getCoreEntity: corePos is NULL at " + pos());
             return null;
         }
-        if (world == null) {
-            System.out.println("[MultiBlockPartBlockEntity] getCoreEntity: world is NULL at " + pos);
+        if (world() == null) {
+            System.out.println("[MultiBlockPartBlockEntity] getCoreEntity: world is NULL at " + pos());
             return null;
         }
-        BlockEntity be = world
+        BlockEntity be = world()
                 .getBlockEntityAtIfLoaded(net.momirealms.craftengine.core.world.BlockPos.of(corePos.asLong()));
         if (be == null) {
             System.out.println("[MultiBlockPartBlockEntity] getCoreEntity: No BlockEntity at " + corePos + " (Self at "
-                    + pos + ")");
+                    + pos() + ")");
+            return null;
         }
-        return be;
+        return be.controller;
     }
 
     @Nullable
     private WorldlyContainer getCoreContainer() {
-        BlockEntity core = getCoreEntity();
+        net.momirealms.craftengine.core.block.entity.BlockEntityController core = getCoreEntity();
         if (core == this)
             return null; // Avoid recursion
         if (core instanceof WorldlyContainer container) {
@@ -187,13 +199,13 @@ public class MultiBlockPartBlockEntity extends PersistentBlockEntity
 
         ConnectableBlockBehavior connectable = getBlockBehavior(ConnectableBlockBehavior.class);
         if (connectable != null) {
-            localDir = connectable.toLocalDirection(dir, (BlockState) blockState.customBlockState().literalObject());
+            localDir = connectable.toLocalDirection(dir, (BlockState) blockState().customBlockState().minecraftState());
         }
 
         if (ioConfig != null) {
             return ioConfig.acceptsInput(type, localDir);
         }
-        BlockEntity core = getCoreEntity();
+        net.momirealms.craftengine.core.block.entity.BlockEntityController core = getCoreEntity();
         if (core instanceof MultiBlockMachineBlockEntity machine) {
             IOConfiguration coreConfig = machine.getIOConfiguration();
             if (coreConfig != null) {
@@ -214,13 +226,13 @@ public class MultiBlockPartBlockEntity extends PersistentBlockEntity
         Direction localDir = dir;
         ConnectableBlockBehavior connectable = getBlockBehavior(ConnectableBlockBehavior.class);
         if (connectable != null) {
-            localDir = connectable.toLocalDirection(dir, (BlockState) blockState.customBlockState().literalObject());
+            localDir = connectable.toLocalDirection(dir, (BlockState) blockState().customBlockState().minecraftState());
         }
 
         if (ioConfig != null) {
             return ioConfig.providesOutput(type, localDir);
         }
-        BlockEntity core = getCoreEntity();
+        net.momirealms.craftengine.core.block.entity.BlockEntityController core = getCoreEntity();
         if (core instanceof MultiBlockMachineBlockEntity machine) {
             IOConfiguration coreConfig = machine.getIOConfiguration();
             if (coreConfig != null) {
@@ -266,7 +278,7 @@ public class MultiBlockPartBlockEntity extends PersistentBlockEntity
         }
 
         if (role == MultiBlockRole.PART && core != null) {
-            BlockEntity target = getCoreEntity();
+            net.momirealms.craftengine.core.block.entity.BlockEntityController target = getCoreEntity();
             if (target instanceof MultiBlockMachineBlockEntity machine) {
                 return machine.getRedstoneOutput(getRelativePos(), side);
             }
@@ -292,7 +304,7 @@ public class MultiBlockPartBlockEntity extends PersistentBlockEntity
     public <P, C> boolean has(NamespacedKey key, PersistentDataType<P, C> type) {
         if (isLocalKey(key))
             return super.has(key, type);
-        BlockEntity target = getCoreEntity();
+        net.momirealms.craftengine.core.block.entity.BlockEntityController target = getCoreEntity();
         if (target == null || target == this)
             return super.has(key, type);
         return (target instanceof MultiBlockMachineBlockEntity machine) ? machine.has(key, type) : super.has(key, type);
@@ -302,7 +314,7 @@ public class MultiBlockPartBlockEntity extends PersistentBlockEntity
     public boolean has(NamespacedKey key) {
         if (isLocalKey(key))
             return super.has(key);
-        BlockEntity target = getCoreEntity();
+        net.momirealms.craftengine.core.block.entity.BlockEntityController target = getCoreEntity();
         if (target == null || target == this)
             return super.has(key);
         return (target instanceof MultiBlockMachineBlockEntity machine) ? machine.has(key) : super.has(key);
@@ -312,7 +324,7 @@ public class MultiBlockPartBlockEntity extends PersistentBlockEntity
     public <P, C> @Nullable C get(NamespacedKey key, PersistentDataType<P, C> type) {
         if (isLocalKey(key))
             return super.get(key, type);
-        BlockEntity target = getCoreEntity();
+        net.momirealms.craftengine.core.block.entity.BlockEntityController target = getCoreEntity();
         if (target == null || target == this)
             return super.get(key, type);
         return (target instanceof MultiBlockMachineBlockEntity machine) ? machine.get(key, type) : super.get(key, type);
@@ -324,7 +336,7 @@ public class MultiBlockPartBlockEntity extends PersistentBlockEntity
             super.set(key, type, value);
             return;
         }
-        BlockEntity target = getCoreEntity();
+        net.momirealms.craftengine.core.block.entity.BlockEntityController target = getCoreEntity();
         if (target == null || target == this) {
             super.set(key, type, value);
             return;
@@ -341,7 +353,7 @@ public class MultiBlockPartBlockEntity extends PersistentBlockEntity
             super.remove(key);
             return;
         }
-        BlockEntity target = getCoreEntity();
+        net.momirealms.craftengine.core.block.entity.BlockEntityController target = getCoreEntity();
         if (target == null || target == this) {
             super.remove(key);
             return;
@@ -583,7 +595,7 @@ public class MultiBlockPartBlockEntity extends PersistentBlockEntity
         ConnectableBlockBehavior connectable = getBlockBehavior(ConnectableBlockBehavior.class);
 
         if (connectable != null) {
-            localDir = connectable.toLocalDirection(dir, (BlockState) blockState.customBlockState().literalObject());
+            localDir = connectable.toLocalDirection(dir, (BlockState) blockState().customBlockState().minecraftState());
         }
 
         if (config != null && config.acceptsInput(IOConfiguration.IOType.REDSTONE, localDir)) {

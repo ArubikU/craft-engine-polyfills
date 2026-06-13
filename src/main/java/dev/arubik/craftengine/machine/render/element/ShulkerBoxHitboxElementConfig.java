@@ -2,12 +2,10 @@ package dev.arubik.craftengine.machine.render.element;
 
 import com.google.common.base.Objects;
 import net.momirealms.craftengine.bukkit.entity.data.BaseEntityData;
-import net.momirealms.craftengine.bukkit.entity.data.ShulkerData;
-import net.momirealms.craftengine.bukkit.plugin.reflection.minecraft.CoreReflections;
+import net.momirealms.craftengine.bukkit.entity.data.monster.ShulkerData;
 import net.momirealms.craftengine.core.block.entity.render.element.BlockEntityElementConfig;
 import net.momirealms.craftengine.core.block.entity.render.element.BlockEntityElementConfigFactory;
 import net.momirealms.craftengine.core.entity.player.Player;
-import net.momirealms.craftengine.core.util.ResourceConfigUtils;
 import net.momirealms.craftengine.core.world.BlockPos;
 import net.momirealms.craftengine.core.world.World;
 import org.bukkit.block.BlockFace;
@@ -52,7 +50,7 @@ public class ShulkerBoxHitboxElementConfig implements BlockEntityElementConfig<S
             }
 
             // Index 17: Peek
-            ShulkerData.Peek.addEntityData((byte) peek, dataValues);
+            ShulkerData.RawPeekAmount.addEntityData((byte) peek, dataValues);
 
             // Index 18: Color
             ShulkerData.Color.addEntityData((byte) color, dataValues);
@@ -64,22 +62,22 @@ public class ShulkerBoxHitboxElementConfig implements BlockEntityElementConfig<S
     // Helper to map BlockFace to NMS Direction Object expected by ShulkerData
     private Object convertToNMSDirection(BlockFace face) {
         if (face == null)
-            return CoreReflections.instance$Direction$DOWN;
+            return net.minecraft.core.Direction.DOWN;
         switch (face) {
             case UP:
-                return CoreReflections.instance$Direction$UP;
+                return net.minecraft.core.Direction.UP;
             case DOWN:
-                return CoreReflections.instance$Direction$DOWN;
+                return net.minecraft.core.Direction.DOWN;
             case NORTH:
-                return CoreReflections.instance$Direction$NORTH;
+                return net.minecraft.core.Direction.NORTH;
             case SOUTH:
-                return CoreReflections.instance$Direction$SOUTH;
+                return net.minecraft.core.Direction.SOUTH;
             case WEST:
-                return CoreReflections.instance$Direction$WEST;
+                return net.minecraft.core.Direction.WEST;
             case EAST:
-                return CoreReflections.instance$Direction$EAST;
+                return net.minecraft.core.Direction.EAST;
             default:
-                return CoreReflections.instance$Direction$DOWN;
+                return net.minecraft.core.Direction.DOWN;
         }
     }
 
@@ -121,15 +119,15 @@ public class ShulkerBoxHitboxElementConfig implements BlockEntityElementConfig<S
 
     public static class Factory implements BlockEntityElementConfigFactory<ShulkerBoxHitboxElement> {
         @Override
-        public ShulkerBoxHitboxElementConfig create(Map<String, Object> arguments) {
+        public ShulkerBoxHitboxElementConfig create(net.momirealms.craftengine.core.plugin.config.ConfigSection arguments) {
             return new ShulkerBoxHitboxElementConfig(
-                    ResourceConfigUtils.getAsVector3f(arguments.getOrDefault("position", 0.5f), "position"),
-                    ResourceConfigUtils.getAsFloat(arguments.getOrDefault("pitch", 0f), "pitch"),
-                    ResourceConfigUtils.getAsFloat(arguments.getOrDefault("yaw", 0f), "yaw"),
-                    ResourceConfigUtils.getAsInt(arguments.getOrDefault("color", 16), "color"),
-                    ResourceConfigUtils.getAsInt(arguments.getOrDefault("peek", 0), "peek"),
-                    ResourceConfigUtils.getAsFloat(arguments.getOrDefault("scale", 1f), "scale"),
-                    ResourceConfigUtils.getAsEnum(arguments.getOrDefault("attach-face", "DOWN"), BlockFace.class,
+                    dev.arubik.craftengine.util.Utils.getAsVector3f(arguments.getOrDefault("position", 0.5f), "position"),
+                    dev.arubik.craftengine.util.Utils.getAsFloat(arguments.getOrDefault("pitch", 0f), "pitch"),
+                    dev.arubik.craftengine.util.Utils.getAsFloat(arguments.getOrDefault("yaw", 0f), "yaw"),
+                    dev.arubik.craftengine.util.Utils.getAsInt(arguments.getOrDefault("color", 16), "color"),
+                    dev.arubik.craftengine.util.Utils.getAsInt(arguments.getOrDefault("peek", 0), "peek"),
+                    dev.arubik.craftengine.util.Utils.getAsFloat(arguments.getOrDefault("scale", 1f), "scale"),
+                    dev.arubik.craftengine.util.Utils.getAsEnum(arguments.getOrDefault("attach-face", "DOWN"), BlockFace.class,
                             BlockFace.DOWN));
         }
     }

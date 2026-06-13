@@ -1,7 +1,5 @@
 package dev.arubik.craftengine.fluid.behavior;
 
-import java.util.Map;
-
 import dev.arubik.craftengine.block.behavior.ConnectableBlockBehavior;
 import dev.arubik.craftengine.block.entity.BukkitBlockEntityTypes;
 import dev.arubik.craftengine.block.entity.PersistentBlockEntity;
@@ -18,15 +16,17 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.momirealms.craftengine.bukkit.plugin.user.BukkitServerPlayer;
 import net.momirealms.craftengine.bukkit.util.LocationUtils;
-import net.momirealms.craftengine.core.block.CustomBlock;
+import net.momirealms.craftengine.core.block.BlockDefinition;
 import net.momirealms.craftengine.core.block.ImmutableBlockState;
+import net.momirealms.craftengine.core.plugin.config.ConfigSection;
 import net.momirealms.craftengine.core.block.behavior.BlockBehavior;
 import net.momirealms.craftengine.core.block.behavior.BlockBehaviorFactory;
 import net.momirealms.craftengine.core.block.entity.BlockEntity;
-import net.momirealms.craftengine.core.block.entity.BlockEntityType;
+import net.momirealms.craftengine.core.block.entity.BlockEntityController;
+import net.momirealms.craftengine.core.block.entity.tick.BlockEntityTicker;
+import net.momirealms.craftengine.core.world.CEWorld;
 import net.momirealms.craftengine.core.world.context.UseOnContext;
 import net.minecraft.core.Direction;
-import net.momirealms.craftengine.core.util.HorizontalDirection;
 
 /**
  * PumpBehavior: bloque conectable que añade presión al fluido almacenado.
@@ -34,16 +34,16 @@ import net.momirealms.craftengine.core.util.HorizontalDirection;
  * interfaz FluidCarrier.
  */
 public class PumpBehavior extends ConnectableBlockBehavior
-        implements FluidCarrier, net.momirealms.craftengine.core.block.behavior.EntityBlockBehavior {
+        implements FluidCarrier, net.momirealms.craftengine.core.block.behavior.EntityBlock {
     public static final Factory FACTORY = new Factory();
     private static final int PRESSURE_BOOST = 8;
 
     protected static final int CAPACITY = PipeBehavior.CAPACITY; // uniformidad
     protected static final int TRANSFER_PER_TICK = PipeBehavior.TRANSFER_PER_TICK * 10;
 
-    public PumpBehavior(CustomBlock block,
-            net.momirealms.craftengine.core.block.properties.EnumProperty<HorizontalDirection> horizontalDirectionProperty,
-            net.momirealms.craftengine.core.block.properties.EnumProperty<net.momirealms.craftengine.core.util.Direction> verticalDirectionProperty) {
+    public PumpBehavior(BlockDefinition block,
+            net.momirealms.craftengine.core.block.property.EnumProperty<net.momirealms.craftengine.core.util.Direction> horizontalDirectionProperty,
+            net.momirealms.craftengine.core.block.property.EnumProperty<net.momirealms.craftengine.core.util.Direction> verticalDirectionProperty) {
         super(block, java.util.List.of(net.minecraft.core.Direction.UP, net.minecraft.core.Direction.DOWN),
                 horizontalDirectionProperty,
                 verticalDirectionProperty);
@@ -51,8 +51,8 @@ public class PumpBehavior extends ConnectableBlockBehavior
 
     public static class Factory implements BlockBehaviorFactory<BlockBehavior> {
         @Override
-        public net.momirealms.craftengine.core.block.behavior.BlockBehavior create(CustomBlock block,
-                Map<String, Object> arguments) {
+        public net.momirealms.craftengine.core.block.behavior.BlockBehavior create(BlockDefinition block,
+                ConfigSection arguments) {
 
             // Leer las propiedades de dirección desde los argumentos
             String horizontalDirectionProperty = null;
@@ -73,13 +73,13 @@ public class PumpBehavior extends ConnectableBlockBehavior
                 verticalDirectionProperty = (String) verticalProp;
             }
 
-            net.momirealms.craftengine.core.block.properties.EnumProperty<HorizontalDirection> hProp = null;
-            net.momirealms.craftengine.core.block.properties.EnumProperty<net.momirealms.craftengine.core.util.Direction> vProp = null;
+            net.momirealms.craftengine.core.block.property.EnumProperty<net.momirealms.craftengine.core.util.Direction> hProp = null;
+            net.momirealms.craftengine.core.block.property.EnumProperty<net.momirealms.craftengine.core.util.Direction> vProp = null;
 
             if (horizontalDirectionProperty != null) {
                 try {
                     @SuppressWarnings("unchecked")
-                    var tmp = (net.momirealms.craftengine.core.block.properties.EnumProperty<HorizontalDirection>) block
+                    var tmp = (net.momirealms.craftengine.core.block.property.EnumProperty<net.momirealms.craftengine.core.util.Direction>) block
                             .getProperty(horizontalDirectionProperty);
                     hProp = tmp;
                 } catch (ClassCastException ignored) {
@@ -90,7 +90,7 @@ public class PumpBehavior extends ConnectableBlockBehavior
             if (verticalDirectionProperty != null) {
                 try {
                     @SuppressWarnings("unchecked")
-                    var tmp2 = (net.momirealms.craftengine.core.block.properties.EnumProperty<net.momirealms.craftengine.core.util.Direction>) block
+                    var tmp2 = (net.momirealms.craftengine.core.block.property.EnumProperty<net.momirealms.craftengine.core.util.Direction>) block
                             .getProperty(verticalDirectionProperty);
                     vProp = tmp2;
                 } catch (ClassCastException ignored) {
@@ -102,32 +102,43 @@ public class PumpBehavior extends ConnectableBlockBehavior
     }
 
     // --- Block Entity infra ---
-    public <T extends BlockEntity> BlockEntityType<T> blockEntityType(ImmutableBlockState state) {
-        @SuppressWarnings("unchecked")
-        BlockEntityType<T> type = (BlockEntityType<T>) BukkitBlockEntityTypes.PERSISTENT_BLOCK_ENTITY_TYPE;
-        return type;
-    }
+    private int controllerId;
 
-    public <T extends BlockEntity> BlockEntityType<T> blockEntityType() {
-        @SuppressWarnings("unchecked")
-        BlockEntityType<T> type = (BlockEntityType<T>) BukkitBlockEntityTypes.PERSISTENT_BLOCK_ENTITY_TYPE;
-        return type;
+    @Override
+    public void initControllerId(int id) {
+        this.controllerId = id;
     }
 
     @Override
-    public BlockEntity createBlockEntity(net.momirealms.craftengine.core.world.BlockPos pos,
-            ImmutableBlockState state) {
-        return new PersistentBlockEntity(pos, state);
+    public BlockEntityController createBlockEntityController(BlockEntity blockEntity) {
+        return new Controller(blockEntity, this);
     }
 
-    // --- Ticker oficial ---
-    @Override
-    public <T extends BlockEntity> net.momirealms.craftengine.core.block.entity.tick.BlockEntityTicker<T> createSyncBlockEntityTicker(
-            net.momirealms.craftengine.core.world.CEWorld world, ImmutableBlockState state, BlockEntityType<T> type) {
-        if (type != blockEntityType())
-            return null;
-        return (lvl, cePos, ceState, be) -> {
-            net.minecraft.world.level.Level level = (net.minecraft.world.level.Level) world.world().serverWorld();
+    /** Controller carrying this pump's sync ticking, backed by persistent data. */
+    public static class Controller extends PersistentBlockEntity {
+        private final PumpBehavior behavior;
+
+        public Controller(BlockEntity blockEntity, PumpBehavior behavior) {
+            super(blockEntity);
+            this.behavior = behavior;
+        }
+
+        @Override
+        public <C extends BlockEntityController> BlockEntityTicker<C> createBlockEntityTicker(
+                CEWorld world, ImmutableBlockState state) {
+            return BlockEntityController.createTickerHelper((BlockEntityTicker<Controller>) Controller::tick);
+        }
+
+        public static void tick(CEWorld world,
+                net.momirealms.craftengine.core.world.BlockPos cePos,
+                ImmutableBlockState ceState, Controller self) {
+            self.behavior.tickPump(world, cePos);
+        }
+    }
+
+    protected void tickPump(CEWorld world, net.momirealms.craftengine.core.world.BlockPos cePos) {
+        {
+            net.minecraft.world.level.Level level = (net.minecraft.world.level.Level) world.world().minecraftWorld();
             if (level == null || level.isClientSide())
                 return;
             BlockPos pos = BlockPos.of(cePos.asLong());
@@ -156,7 +167,7 @@ public class PumpBehavior extends ConnectableBlockBehavior
             // PUSH/IO solo si no hay cooldown de IO y hay contenido
             if (ioCd <= 0 && !stored.isEmpty())
                 tryDirectional(level, pos, Direction.UP, PumpAction.PUSH);
-        };
+        }
     }
 
     public enum PumpAction {
@@ -278,7 +289,7 @@ public class PumpBehavior extends ConnectableBlockBehavior
 
     protected PersistentBlockEntity getBE(Level level, BlockPos pos) {
         BlockEntity be = BukkitBlockEntityTypes.getIfLoaded(level, pos);
-        if (be instanceof PersistentBlockEntity p)
+        if (be != null && be.controller instanceof PersistentBlockEntity p)
             return p;
         return null;
     }
@@ -320,7 +331,7 @@ public class PumpBehavior extends ConnectableBlockBehavior
     public net.momirealms.craftengine.core.entity.player.InteractionResult useWithoutItem(UseOnContext context,
             ImmutableBlockState state) {
 
-        Level level = (Level) context.getLevel().serverWorld();
+        Level level = (Level) context.getLevel().minecraftWorld();
         BlockPos pos = (BlockPos) LocationUtils.toBlockPos(context.getClickedPos());
 
         BukkitServerPlayer bplayer = (BukkitServerPlayer) context.getPlayer();

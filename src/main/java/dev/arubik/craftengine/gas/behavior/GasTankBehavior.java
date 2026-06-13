@@ -1,7 +1,6 @@
 package dev.arubik.craftengine.gas.behavior;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -24,24 +23,23 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
-import net.momirealms.craftengine.bukkit.nms.FastNMS;
 import net.momirealms.craftengine.bukkit.plugin.user.BukkitServerPlayer;
 import net.momirealms.craftengine.bukkit.util.BlockStateUtils;
 import net.momirealms.craftengine.bukkit.util.LocationUtils;
 import net.momirealms.craftengine.core.block.behavior.BlockBehavior;
-import net.momirealms.craftengine.core.block.CustomBlock;
+import net.momirealms.craftengine.core.block.BlockDefinition;
 import net.momirealms.craftengine.core.block.ImmutableBlockState;
 import net.momirealms.craftengine.core.block.behavior.BlockBehaviorFactory;
-import net.momirealms.craftengine.core.block.behavior.EntityBlockBehavior;
+import net.momirealms.craftengine.core.block.behavior.EntityBlock;
+import net.momirealms.craftengine.core.plugin.config.ConfigSection;
 import net.momirealms.craftengine.core.block.entity.BlockEntity;
-import net.momirealms.craftengine.core.block.entity.BlockEntityType;
-import net.momirealms.craftengine.core.block.properties.EnumProperty;
-import net.momirealms.craftengine.core.block.properties.IntegerProperty;
+import net.momirealms.craftengine.core.block.entity.BlockEntityController;
+import net.momirealms.craftengine.core.block.property.EnumProperty;
+import net.momirealms.craftengine.core.block.property.IntegerProperty;
 import net.momirealms.craftengine.core.world.context.BlockPlaceContext;
 import net.momirealms.craftengine.core.world.context.UseOnContext;
-import net.momirealms.craftengine.core.util.HorizontalDirection;
 
-public class GasTankBehavior extends ConnectableBlockBehavior implements EntityBlockBehavior, GasCarrier {
+public class GasTankBehavior extends ConnectableBlockBehavior implements EntityBlock, GasCarrier {
 
     public static final Factory FACTORY = new Factory();
 
@@ -51,8 +49,8 @@ public class GasTankBehavior extends ConnectableBlockBehavior implements EntityB
     public final Set<GasType> acceptedGases = Set.of(GasType.values());
     public final int MAX_CAPACITY = 16000; // Large gas capacity
 
-    public GasTankBehavior(CustomBlock block,
-            EnumProperty<HorizontalDirection> horizontalDirectionProperty,
+    public GasTankBehavior(BlockDefinition block,
+            EnumProperty<net.momirealms.craftengine.core.util.Direction> horizontalDirectionProperty,
             EnumProperty<net.momirealms.craftengine.core.util.Direction> verticalDirectionProperty,
             EnumProperty<GasType> gasTypeProperty,
             IntegerProperty levelProperty) {
@@ -65,8 +63,9 @@ public class GasTankBehavior extends ConnectableBlockBehavior implements EntityB
     public static class Factory implements BlockBehaviorFactory<BlockBehavior> {
         @SuppressWarnings("unchecked")
         @Override
-        public BlockBehavior create(CustomBlock block, Map<String, Object> args) {
-            EnumProperty<HorizontalDirection> h = (EnumProperty<HorizontalDirection>) args.get("horizontal");
+        public BlockBehavior create(BlockDefinition block, ConfigSection args) {
+            EnumProperty<net.momirealms.craftengine.core.util.Direction> h = (EnumProperty<net.momirealms.craftengine.core.util.Direction>) args
+                    .get("horizontal");
             EnumProperty<net.momirealms.craftengine.core.util.Direction> v = (EnumProperty<net.momirealms.craftengine.core.util.Direction>) block
                     .getProperty("vertical");
             EnumProperty<GasType> f = (EnumProperty<GasType>) block.getProperty("gastype");
@@ -79,7 +78,7 @@ public class GasTankBehavior extends ConnectableBlockBehavior implements EntityB
     public net.momirealms.craftengine.core.entity.player.InteractionResult useWithoutItem(UseOnContext context,
             ImmutableBlockState state) {
 
-        Level level = (Level) context.getLevel().serverWorld();
+        Level level = (Level) context.getLevel().minecraftWorld();
         BlockPos pos = (BlockPos) LocationUtils.toBlockPos(context.getClickedPos());
 
         BukkitServerPlayer bplayer = (BukkitServerPlayer) context.getPlayer();
@@ -131,7 +130,7 @@ public class GasTankBehavior extends ConnectableBlockBehavior implements EntityB
         GasType stores = state.get(gasTypeProperty);
         if (stores != null && stores != GasType.EMPTY) {
             int level = state.get(levelProperty);
-            executeBlockEntity((Level) context.getLevel().serverWorld(),
+            executeBlockEntity((Level) context.getLevel().minecraftWorld(),
                     (BlockPos) LocationUtils.toBlockPos(context.getClickedPos()), be -> {
                         be.set(GasKeys.GAS, new GasStack(stores,
                                 (int) Math.floor((level / (double) levelProperty.max) * MAX_CAPACITY), 0));
@@ -190,7 +189,7 @@ public class GasTankBehavior extends ConnectableBlockBehavior implements EntityB
     public boolean isTank(Level level, BlockPos pos) {
         ImmutableBlockState state = BlockStateUtils.getOptionalCustomBlockState(level.getBlockState(pos)).orElse(null);
         if (state != null) {
-            return state.owner().value().id().equals(this.customBlock.id());
+            return state.owner().value().id().equals(this.block().id());
         }
         return false;
     }
@@ -298,7 +297,8 @@ public class GasTankBehavior extends ConnectableBlockBehavior implements EntityB
             if (state.isPresent()) {
                 ImmutableBlockState newState = state.get().with(levelProperty, lev)
                         .with(gasTypeProperty, stored.getType());
-                FastNMS.INSTANCE.method$LevelWriter$setBlock(level, pos, newState.customBlockState().literalObject(),
+                ((net.minecraft.world.level.LevelWriter) level).setBlock(pos,
+                        (net.minecraft.world.level.block.state.BlockState) newState.customBlockState().minecraftState(),
                         3);
             }
         }
@@ -308,21 +308,22 @@ public class GasTankBehavior extends ConnectableBlockBehavior implements EntityB
         return dev.arubik.craftengine.util.TransferAccessMode.ANYONE_CAN_TAKE;
     }
 
-    public <T extends BlockEntity> BlockEntityType<T> blockEntityType(ImmutableBlockState state) {
-        @SuppressWarnings("unchecked")
-        BlockEntityType<T> type = (BlockEntityType<T>) BukkitBlockEntityTypes.PERSISTENT_BLOCK_ENTITY_TYPE;
-        return type;
+    private int controllerId;
+
+    @Override
+    public void initControllerId(int id) {
+        this.controllerId = id;
     }
 
-    public BlockEntity createBlockEntity(net.momirealms.craftengine.core.world.BlockPos arg0,
-            ImmutableBlockState arg1) {
-        return new PersistentBlockEntity(arg0, arg1);
+    @Override
+    public BlockEntityController createBlockEntityController(BlockEntity blockEntity) {
+        return new PersistentBlockEntity(blockEntity);
     }
 
     public PersistentBlockEntity getBlockEntity(Level world, net.minecraft.core.BlockPos pos) {
         BlockEntity be = BukkitBlockEntityTypes.getIfLoaded(world, pos);
-        if (be instanceof PersistentBlockEntity)
-            return (PersistentBlockEntity) be;
+        if (be != null && be.controller instanceof PersistentBlockEntity p)
+            return p;
         return null;
     }
 

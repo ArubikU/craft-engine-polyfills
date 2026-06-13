@@ -1,26 +1,22 @@
 package dev.arubik.craftengine.fluid.behavior;
 
-import java.util.Map;
-import java.util.concurrent.Callable;
-
 import dev.arubik.craftengine.block.entity.BukkitBlockEntityTypes;
 import dev.arubik.craftengine.block.entity.PersistentBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.Level;
-import net.momirealms.craftengine.core.block.CustomBlock;
+import net.momirealms.craftengine.core.block.BlockDefinition;
 import net.momirealms.craftengine.core.block.ImmutableBlockState;
 import net.momirealms.craftengine.core.block.behavior.BlockBehaviorFactory;
 import net.momirealms.craftengine.core.block.entity.BlockEntity;
-import net.momirealms.craftengine.core.block.entity.BlockEntityType;
-import net.momirealms.craftengine.core.util.HorizontalDirection;
+import net.momirealms.craftengine.core.plugin.config.ConfigSection;
+import net.momirealms.craftengine.core.world.CEWorld;
 import net.momirealms.craftengine.core.util.Key;
 import org.bukkit.persistence.PersistentDataType;
 import dev.arubik.craftengine.fluid.FluidStack;
 import dev.arubik.craftengine.fluid.FluidType;
 import dev.arubik.craftengine.fluid.FluidKeys;
 import dev.arubik.craftengine.fluid.FluidTransferHelper;
-import net.momirealms.craftengine.bukkit.nms.FastNMS;
 import net.momirealms.craftengine.bukkit.util.LocationUtils;
 
 /**
@@ -31,15 +27,15 @@ public class ValveBehavior extends PumpBehavior {
     public static final Factory FACTORY = new Factory();
     private static final Key OPEN_KEY = Key.of("fluid:valve_open");
 
-    public ValveBehavior(CustomBlock block,
-            net.momirealms.craftengine.core.block.properties.EnumProperty<HorizontalDirection> horizontalDirectionProperty,
-            net.momirealms.craftengine.core.block.properties.EnumProperty<net.momirealms.craftengine.core.util.Direction> verticalDirectionProperty) {
+    public ValveBehavior(BlockDefinition block,
+            net.momirealms.craftengine.core.block.property.EnumProperty<net.momirealms.craftengine.core.util.Direction> horizontalDirectionProperty,
+            net.momirealms.craftengine.core.block.property.EnumProperty<net.momirealms.craftengine.core.util.Direction> verticalDirectionProperty) {
         super(block, horizontalDirectionProperty, verticalDirectionProperty);
     }
 
     protected PersistentBlockEntity getBE(Level level, BlockPos pos) {
         BlockEntity be = BukkitBlockEntityTypes.getIfLoaded(level, pos);
-        if (be instanceof PersistentBlockEntity p)
+        if (be != null && be.controller instanceof PersistentBlockEntity p)
             return p;
         return null;
     }
@@ -60,12 +56,9 @@ public class ValveBehavior extends PumpBehavior {
     }
 
     @Override
-    public <T extends BlockEntity> net.momirealms.craftengine.core.block.entity.tick.BlockEntityTicker<T> createSyncBlockEntityTicker(
-            net.momirealms.craftengine.core.world.CEWorld world, ImmutableBlockState state, BlockEntityType<T> type) {
-        if (type != blockEntityType())
-            return null;
-        return (lvl, cePos, ceState, be) -> {
-            net.minecraft.world.level.Level level = (net.minecraft.world.level.Level) world.world().serverWorld();
+    protected void tickPump(CEWorld world, net.momirealms.craftengine.core.world.BlockPos cePos) {
+        {
+            net.minecraft.world.level.Level level = (net.minecraft.world.level.Level) world.world().minecraftWorld();
             if (level == null || level.isClientSide())
                 return;
             BlockPos pos = BlockPos.of(cePos.asLong());
@@ -119,7 +112,7 @@ public class ValveBehavior extends PumpBehavior {
                             TRANSFER_PER_TICK, 1);
                 }
             }
-        };
+        }
     }
 
     // Añadir helper de toggle (MVP sencillo)
@@ -128,7 +121,8 @@ public class ValveBehavior extends PumpBehavior {
     }
 
     // Redstone: reaccionar a neighborChanged (similar enfoque al ventilador)
-    public void neighborChanged(Object thisBlock, Object[] args, Callable<Object> superMethod) {
+    @Override
+    public void neighborChanged(Object thisBlock, Object[] args) {
         // stateObj no es necesario para esta lógica
         Object levelObj = args[1];
         Object posObj = args[2];
@@ -137,7 +131,8 @@ public class ValveBehavior extends PumpBehavior {
         net.momirealms.craftengine.core.world.BlockPos cePos = LocationUtils.fromBlockPos(posObj);
         net.minecraft.core.BlockPos mcPos = net.minecraft.core.BlockPos.of(cePos.asLong());
         // Señal presente?
-        boolean powered = FastNMS.INSTANCE.method$SignalGetter$hasNeighborSignal(levelObj, posObj);
+        boolean powered = ((net.minecraft.world.level.SignalGetter) levelObj)
+                .hasNeighborSignal((net.minecraft.core.BlockPos) posObj);
         Level level = nmsLevel;
         boolean currentlyOpen = isOpen(level, mcPos);
         // Regla: señal de redstone cierra (seguridad) y ausencia de señal abre.
@@ -150,7 +145,7 @@ public class ValveBehavior extends PumpBehavior {
     // Factory
     public static class Factory implements BlockBehaviorFactory<ValveBehavior> {
         @Override
-        public ValveBehavior create(CustomBlock block, Map<String, Object> arguments) {
+        public ValveBehavior create(BlockDefinition block, ConfigSection arguments) {
 
             // Leer las propiedades de dirección desde los argumentos
             String horizontalDirectionProperty = null;
@@ -166,12 +161,12 @@ public class ValveBehavior extends PumpBehavior {
                 verticalDirectionProperty = (String) verticalProp;
             }
 
-            net.momirealms.craftengine.core.block.properties.EnumProperty<HorizontalDirection> hProp = null;
-            net.momirealms.craftengine.core.block.properties.EnumProperty<net.momirealms.craftengine.core.util.Direction> vProp = null;
+            net.momirealms.craftengine.core.block.property.EnumProperty<net.momirealms.craftengine.core.util.Direction> hProp = null;
+            net.momirealms.craftengine.core.block.property.EnumProperty<net.momirealms.craftengine.core.util.Direction> vProp = null;
 
             if (horizontalDirectionProperty != null) {
                 try {
-                    hProp = (net.momirealms.craftengine.core.block.properties.EnumProperty<HorizontalDirection>) block
+                    hProp = (net.momirealms.craftengine.core.block.property.EnumProperty<net.momirealms.craftengine.core.util.Direction>) block
                             .getProperty(horizontalDirectionProperty);
                 } catch (ClassCastException ignored) {
                     // Property type mismatch, keep as null
@@ -180,7 +175,7 @@ public class ValveBehavior extends PumpBehavior {
 
             if (verticalDirectionProperty != null) {
                 try {
-                    vProp = (net.momirealms.craftengine.core.block.properties.EnumProperty<net.momirealms.craftengine.core.util.Direction>) block
+                    vProp = (net.momirealms.craftengine.core.block.property.EnumProperty<net.momirealms.craftengine.core.util.Direction>) block
                             .getProperty(verticalDirectionProperty);
                 } catch (ClassCastException ignored) {
                     // Property type mismatch, keep as null
@@ -188,24 +183,5 @@ public class ValveBehavior extends PumpBehavior {
             }
             return new ValveBehavior(block, hProp, vProp);
         }
-    }
-
-    @Override
-    public <T extends BlockEntity> BlockEntityType<T> blockEntityType(ImmutableBlockState state) {
-        @SuppressWarnings("unchecked")
-        BlockEntityType<T> type = (BlockEntityType<T>) BukkitBlockEntityTypes.PERSISTENT_BLOCK_ENTITY_TYPE;
-        return type;
-    }
-
-    public <T extends BlockEntity> BlockEntityType<T> blockEntityType() {
-        @SuppressWarnings("unchecked")
-        BlockEntityType<T> type = (BlockEntityType<T>) BukkitBlockEntityTypes.PERSISTENT_BLOCK_ENTITY_TYPE;
-        return type;
-    }
-
-    @Override
-    public BlockEntity createBlockEntity(net.momirealms.craftengine.core.world.BlockPos pos,
-            ImmutableBlockState state) {
-        return new PersistentBlockEntity(pos, state);
     }
 }

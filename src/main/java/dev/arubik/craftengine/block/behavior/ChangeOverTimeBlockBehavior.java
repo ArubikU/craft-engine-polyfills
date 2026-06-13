@@ -1,6 +1,5 @@
 package dev.arubik.craftengine.block.behavior;
 
-import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.Callable;
 import net.momirealms.craftengine.bukkit.block.BukkitBlockManager;
@@ -10,13 +9,13 @@ import net.momirealms.craftengine.bukkit.util.BlockStateUtils;
 import net.momirealms.craftengine.bukkit.util.LocationUtils;
 import net.momirealms.craftengine.bukkit.world.BukkitExistingBlock;
 import net.momirealms.craftengine.core.block.behavior.BlockBehavior;
-import net.momirealms.craftengine.core.block.CustomBlock;
+import net.momirealms.craftengine.core.block.BlockDefinition;
 import net.momirealms.craftengine.core.block.ImmutableBlockState;
-import net.momirealms.craftengine.core.block.UpdateOption;
+import net.momirealms.craftengine.core.block.UpdateFlags;
 import net.momirealms.craftengine.core.block.behavior.BlockBehaviorFactory;
+import net.momirealms.craftengine.core.plugin.config.ConfigSection;
 import net.momirealms.craftengine.core.util.Key;
 import net.momirealms.craftengine.core.util.random.RandomUtils;
-import net.momirealms.craftengine.core.util.ResourceConfigUtils;
 import net.momirealms.craftengine.core.world.BlockPos;
 import net.momirealms.craftengine.core.world.World;
 import org.bukkit.GameEvent;
@@ -30,7 +29,7 @@ public class ChangeOverTimeBlockBehavior extends BukkitBlockBehavior {
 
   private final Key nextBlock;
 
-  public ChangeOverTimeBlockBehavior(CustomBlock customBlock, float delay, Key nextBlock) {
+  public ChangeOverTimeBlockBehavior(BlockDefinition customBlock, float delay, Key nextBlock) {
     super(customBlock);
     this.delay = delay;
     this.nextBlock = nextBlock;
@@ -39,7 +38,7 @@ public class ChangeOverTimeBlockBehavior extends BukkitBlockBehavior {
   public void randomTick(Object thisBlock, Object[] args, Callable<Object> superMethod) throws Exception {
     if (!shouldChange(args))
       return;
-    Optional<CustomBlock> optionalNewCustomBlock = BukkitBlockManager.instance().blockById(this.nextBlock);
+    Optional<BlockDefinition> optionalNewCustomBlock = BukkitBlockManager.instance().blockById(this.nextBlock);
     if (!optionalNewCustomBlock.isPresent())
       return;
     Object blockState = args[0];
@@ -48,14 +47,14 @@ public class ChangeOverTimeBlockBehavior extends BukkitBlockBehavior {
     Optional<ImmutableBlockState> optionalCurrentState = BlockStateUtils.getOptionalCustomBlockState(blockState);
     if (optionalCurrentState.isEmpty())
       return;
-    ImmutableBlockState newState = ((CustomBlock) optionalNewCustomBlock.get())
+    ImmutableBlockState newState = optionalNewCustomBlock.get()
         .getBlockState(((ImmutableBlockState) optionalCurrentState.get()).propertiesNbt());
     BukkitExistingBlock blockInWorld = (BukkitExistingBlock) level.getBlock(blockPos.x(), blockPos.y(), blockPos.z());
     BlockFormEvent event = new BlockFormEvent(blockInWorld.block(),
-        BlockStateUtils.fromBlockData(newState.customBlockState().literalObject()).createBlockState());
+        BlockStateUtils.fromBlockData(newState.customBlockState().minecraftState()).createBlockState());
     if (event.callEvent()) {
-      FastNMS.INSTANCE.method$LevelWriter$setBlock(level.serverWorld(), blockPos,
-          newState.customBlockState().literalObject(), UpdateOption.UPDATE_ALL_IMMEDIATE.flags());
+      dev.arubik.craftengine.util.MNms.INSTANCE.method$LevelWriter$setBlock(level.minecraftWorld(), blockPos,
+          newState.customBlockState().minecraftState(), UpdateFlags.UPDATE_ALL_IMMEDIATE);
       blockInWorld.block().getWorld().sendGameEvent(null, GameEvent.BLOCK_CHANGE,
           new Vector(blockPos.x(), blockPos.y(), blockPos.z()));
     }
@@ -66,10 +65,10 @@ public class ChangeOverTimeBlockBehavior extends BukkitBlockBehavior {
   }
 
   public static class Factory implements BlockBehaviorFactory<BlockBehavior> {
-    public BlockBehavior create(CustomBlock block, Map<String, Object> arguments) {
+    public BlockBehavior create(BlockDefinition block, ConfigSection arguments) {
       float delay = Float.valueOf(arguments.getOrDefault("delay", Float.valueOf(0.05688889F)).toString()).floatValue();
       Key nextBlock = Key
-          .of(ResourceConfigUtils.requireNonEmptyStringOrThrow(arguments.getOrDefault("next-block", "minecraft:air"),
+          .of(dev.arubik.craftengine.util.Utils.requireNonEmptyStringOrThrow(arguments.getOrDefault("next-block", "minecraft:air"),
               "warning.config.block.behavior.change_over_time_block_missing_next_block"));
       return (BlockBehavior) new ChangeOverTimeBlockBehavior(block, delay, nextBlock);
     }

@@ -13,9 +13,10 @@ import net.momirealms.craftengine.bukkit.plugin.user.BukkitServerPlayer;
 import net.momirealms.craftengine.bukkit.util.LocationUtils;
 import net.momirealms.craftengine.bukkit.world.BukkitWorld;
 import net.momirealms.craftengine.core.block.behavior.BlockBehavior;
-import net.momirealms.craftengine.core.block.CustomBlock;
+import net.momirealms.craftengine.core.block.BlockDefinition;
 import net.momirealms.craftengine.core.block.ImmutableBlockState;
 import net.momirealms.craftengine.core.block.behavior.BlockBehaviorFactory;
+import net.momirealms.craftengine.core.plugin.config.ConfigSection;
 import net.momirealms.craftengine.core.entity.player.InteractionResult;
 import net.momirealms.craftengine.core.world.context.UseOnContext;
 import org.bukkit.craftbukkit.CraftWorld;
@@ -30,7 +31,7 @@ public class StorageBlockBehavior extends BukkitBlockBehavior {
 
   private final dev.arubik.craftengine.util.SoundMap soundMap;
 
-  public StorageBlockBehavior(CustomBlock customBlock, int size, String title,
+  public StorageBlockBehavior(BlockDefinition customBlock, int size, String title,
       dev.arubik.craftengine.util.SoundMap soundMap) {
     super(customBlock);
     this.size = Math.max(9, Math.min(size, 54));
@@ -39,7 +40,7 @@ public class StorageBlockBehavior extends BukkitBlockBehavior {
   }
 
   public static class Factory implements BlockBehaviorFactory<BlockBehavior> {
-    public BlockBehavior create(CustomBlock block, Map<String, Object> arguments) {
+    public BlockBehavior create(BlockDefinition block, ConfigSection arguments) {
       int size = (int) arguments.getOrDefault("size", 27);
       String title = (String) arguments.getOrDefault("title", "Storage");
       Object soundMapObj = arguments.get("sound-map");

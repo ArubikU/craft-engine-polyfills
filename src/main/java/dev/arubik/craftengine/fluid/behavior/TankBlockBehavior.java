@@ -1,7 +1,6 @@
 package dev.arubik.craftengine.fluid.behavior;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -24,29 +23,28 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
-import net.momirealms.craftengine.bukkit.nms.FastNMS;
 import net.momirealms.craftengine.bukkit.plugin.user.BukkitServerPlayer;
 import net.momirealms.craftengine.bukkit.util.BlockStateUtils;
 import net.momirealms.craftengine.bukkit.util.LocationUtils;
 import net.momirealms.craftengine.bukkit.world.BukkitWorld;
 import net.momirealms.craftengine.core.block.behavior.BlockBehavior;
-import net.momirealms.craftengine.core.block.CustomBlock;
+import net.momirealms.craftengine.core.block.BlockDefinition;
 import net.momirealms.craftengine.core.block.ImmutableBlockState;
 import net.momirealms.craftengine.core.block.behavior.BlockBehaviorFactory;
-import net.momirealms.craftengine.core.block.behavior.EntityBlockBehavior;
+import net.momirealms.craftengine.core.block.behavior.EntityBlock;
+import net.momirealms.craftengine.core.plugin.config.ConfigSection;
 import net.momirealms.craftengine.core.block.entity.BlockEntity;
-import net.momirealms.craftengine.core.block.entity.BlockEntityType;
-import net.momirealms.craftengine.core.block.properties.EnumProperty;
-import net.momirealms.craftengine.core.block.properties.IntegerProperty;
+import net.momirealms.craftengine.core.block.entity.BlockEntityController;
+import net.momirealms.craftengine.core.block.property.EnumProperty;
+import net.momirealms.craftengine.core.block.property.IntegerProperty;
 import net.momirealms.craftengine.core.world.context.BlockPlaceContext;
 import net.momirealms.craftengine.core.world.context.UseOnContext;
-import net.momirealms.craftengine.core.util.HorizontalDirection;
 import net.momirealms.craftengine.libraries.nbt.CompoundTag;
 
 import net.momirealms.craftengine.core.block.entity.tick.BlockEntityTicker;
 import net.momirealms.craftengine.core.world.CEWorld;
 
-public class TankBlockBehavior extends ConnectableBlockBehavior implements EntityBlockBehavior, FluidCarrier {
+public class TankBlockBehavior extends ConnectableBlockBehavior implements EntityBlock, FluidCarrier {
 
     public static final Factory FACTORY = new Factory();
 
@@ -58,8 +56,8 @@ public class TankBlockBehavior extends ConnectableBlockBehavior implements Entit
     public final Set<FluidType> acceptedFluids = Set.of(FluidType.values());
     public final int MAX_CAPACITY = 5000; // 5 cubos (1000mb cada uno)
 
-    public TankBlockBehavior(CustomBlock block,
-            EnumProperty<HorizontalDirection> horizontalDirectionProperty,
+    public TankBlockBehavior(BlockDefinition block,
+            EnumProperty<net.momirealms.craftengine.core.util.Direction> horizontalDirectionProperty,
             EnumProperty<net.momirealms.craftengine.core.util.Direction> verticalDirectionProperty,
             EnumProperty<FluidType> fluidTypeProperty,
             IntegerProperty levelProperty) {
@@ -72,8 +70,9 @@ public class TankBlockBehavior extends ConnectableBlockBehavior implements Entit
     public static class Factory implements BlockBehaviorFactory<BlockBehavior> {
         @SuppressWarnings("unchecked")
         @Override
-        public BlockBehavior create(CustomBlock block, Map<String, Object> args) {
-            EnumProperty<HorizontalDirection> h = (EnumProperty<HorizontalDirection>) args.get("horizontal");
+        public BlockBehavior create(BlockDefinition block, ConfigSection args) {
+            EnumProperty<net.momirealms.craftengine.core.util.Direction> h = (EnumProperty<net.momirealms.craftengine.core.util.Direction>) args
+                    .get("horizontal");
             EnumProperty<net.momirealms.craftengine.core.util.Direction> v = (EnumProperty<net.momirealms.craftengine.core.util.Direction>) block
                     .getProperty("vertical");
             EnumProperty<FluidType> f = (EnumProperty<FluidType>) block.getProperty("fluidtype");
@@ -86,7 +85,7 @@ public class TankBlockBehavior extends ConnectableBlockBehavior implements Entit
     public net.momirealms.craftengine.core.entity.player.InteractionResult useWithoutItem(UseOnContext context,
             ImmutableBlockState state) {
 
-        Level level = (Level) context.getLevel().serverWorld();
+        Level level = (Level) context.getLevel().minecraftWorld();
         BlockPos pos = (BlockPos) LocationUtils.toBlockPos(context.getClickedPos());
 
         BukkitServerPlayer bplayer = (BukkitServerPlayer) context.getPlayer();
@@ -209,7 +208,7 @@ public class TankBlockBehavior extends ConnectableBlockBehavior implements Entit
         FluidType stores = state.get(fluidTypeProperty);
         if (stores != null && stores != FluidType.EMPTY) {
             int level = state.get(levelProperty);
-            dev.arubik.craftengine.util.CustomBlockData.from((Level) context.getLevel().serverWorld(),
+            dev.arubik.craftengine.util.CustomBlockData.from((Level) context.getLevel().minecraftWorld(),
                     (BlockPos) LocationUtils.toBlockPos(context.getClickedPos()))
                     .set(FluidKeys.FLUID, new FluidStack(stores,
                             (int) Math.floor((level / (double) levelProperty.max) * MAX_CAPACITY), 0));
@@ -282,7 +281,7 @@ public class TankBlockBehavior extends ConnectableBlockBehavior implements Entit
     public boolean isTank(Level level, BlockPos pos) {
         ImmutableBlockState state = BlockStateUtils.getOptionalCustomBlockState(level.getBlockState(pos)).orElse(null);
         if (state != null) {
-            return state.owner().value().id().equals(this.customBlock.id());
+            return state.owner().value().id().equals(this.block().id());
         }
         return false;
     }
@@ -401,7 +400,8 @@ public class TankBlockBehavior extends ConnectableBlockBehavior implements Entit
                 ImmutableBlockState newState = state.get().with(levelProperty, lev)
                         .with(fluidTypeProperty, stored.getType());
 
-                FastNMS.INSTANCE.method$LevelWriter$setBlock(level, pos, newState.customBlockState().literalObject(),
+                ((net.minecraft.world.level.LevelWriter) level).setBlock(pos,
+                        (net.minecraft.world.level.block.state.BlockState) newState.customBlockState().minecraftState(),
                         3);
 
                 // Force data persistence to Chunk PDC after modification
@@ -416,23 +416,37 @@ public class TankBlockBehavior extends ConnectableBlockBehavior implements Entit
         return dev.arubik.craftengine.util.TransferAccessMode.ANYONE_CAN_TAKE;
     }
 
-    public <T extends BlockEntity> BlockEntityType<T> blockEntityType(ImmutableBlockState state) {
-        @SuppressWarnings("unchecked")
-        BlockEntityType<T> type = (BlockEntityType<T>) BukkitBlockEntityTypes.PERSISTENT_BLOCK_ENTITY_TYPE;
-        return type;
+    private int controllerId;
+
+    @Override
+    public void initControllerId(int id) {
+        this.controllerId = id;
     }
 
-    public BlockEntity createBlockEntity(net.momirealms.craftengine.core.world.BlockPos arg0,
-            ImmutableBlockState arg1) {
-        PersistentBlockEntity be = new PersistentBlockEntity(arg0, arg1);
-        be.setPreRemoveHook((CompoundTag container) -> {
-            // Use FluidCarrierImpl/CustomBlockData to retrieve stored fluid
+    @Override
+    public BlockEntityController createBlockEntityController(BlockEntity blockEntity) {
+        return new Controller(blockEntity, this);
+    }
+
+    /** Controller carrying this tank's sync ticking + experience-drop on removal. */
+    public static class Controller extends PersistentBlockEntity {
+        private final TankBlockBehavior behavior;
+
+        public Controller(BlockEntity blockEntity, TankBlockBehavior behavior) {
+            super(blockEntity);
+            this.behavior = behavior;
+        }
+
+        @Override
+        public void onRemove() {
+            super.onRemove();
+            BlockEntity be = blockEntity();
             FluidStack stored = dev.arubik.craftengine.fluid.FluidCarrierImpl.getStored(
-                    (Level) ((BukkitWorld) be.world().world()).serverWorld(),
+                    (Level) ((BukkitWorld) be.world().world()).minecraftWorld(),
                     Utils.fromPos(be.pos()));
 
             if (stored != null && stored.getType() == FluidType.EXPERIENCE) {
-                Level level = (Level) ((BukkitWorld) be.world().world()).serverWorld();
+                Level level = (Level) ((BukkitWorld) be.world().world()).minecraftWorld();
 
                 int amount = stored.getAmount();
                 int orbs = (int) Math.ceil(amount / 7.0);
@@ -444,15 +458,25 @@ public class TankBlockBehavior extends ConnectableBlockBehavior implements Entit
                     level.addFreshEntity(orb);
                 }
             }
-            return null;
-        });
-        return be;
+        }
+
+        @Override
+        public <C extends BlockEntityController> BlockEntityTicker<C> createBlockEntityTicker(
+                CEWorld world, ImmutableBlockState state) {
+            return BlockEntityController.createTickerHelper((BlockEntityTicker<Controller>) Controller::tick);
+        }
+
+        public static void tick(CEWorld world,
+                net.momirealms.craftengine.core.world.BlockPos cePos,
+                ImmutableBlockState ceState, Controller self) {
+            self.behavior.tickTank(world, cePos);
+        }
     }
 
     public PersistentBlockEntity getBlockEntity(Level world, net.minecraft.core.BlockPos pos) {
         BlockEntity be = BukkitBlockEntityTypes.getIfLoaded(world, pos);
-        if (be instanceof PersistentBlockEntity)
-            return (PersistentBlockEntity) be;
+        if (be != null && be.controller instanceof PersistentBlockEntity p)
+            return p;
         return null;
     }
 
@@ -463,23 +487,17 @@ public class TankBlockBehavior extends ConnectableBlockBehavior implements Entit
             consumer.accept(be);
     }
 
-    @Override
-    public <T extends BlockEntity> BlockEntityTicker<T> createSyncBlockEntityTicker(CEWorld world,
-            ImmutableBlockState state, BlockEntityType<T> type) {
-        if (type != blockEntityType(state))
-            return null;
-        return (lvl, cePos, ceState, be) -> {
-            Level level = (Level) world.world().serverWorld();
-            if (level == null || level.isClientSide())
-                return;
-            BlockPos mcPos = BlockPos.of(cePos.asLong());
+    private void tickTank(CEWorld world, net.momirealms.craftengine.core.world.BlockPos cePos) {
+        Level level = (Level) world.world().minecraftWorld();
+        if (level == null || level.isClientSide())
+            return;
+        BlockPos mcPos = BlockPos.of(cePos.asLong());
 
-            // 1. Try to PUMP from UP
-            tryTransfer(level, mcPos, Direction.UP, true);
+        // 1. Try to PUMP from UP
+        tryTransfer(level, mcPos, Direction.UP, true);
 
-            // 2. Try to PUSH to DOWN
-            tryTransfer(level, mcPos, Direction.DOWN, false);
-        };
+        // 2. Try to PUSH to DOWN
+        tryTransfer(level, mcPos, Direction.DOWN, false);
     }
 
     private void tryTransfer(Level level, BlockPos pos, Direction direction, boolean isPump) {
@@ -568,7 +586,7 @@ public class TankBlockBehavior extends ConnectableBlockBehavior implements Entit
         // check if it is experience tank
         BlockState state = level.getBlockState(pos);
         ImmutableBlockState ibs = BlockStateUtils.getOptionalCustomBlockState(state).orElse(null);
-        if (ibs == null || !ibs.owner().value().id().equals(this.customBlock.id()))
+        if (ibs == null || !ibs.owner().value().id().equals(this.block().id()))
             return 0;
 
         FluidStack stored = getStored(level, pos);

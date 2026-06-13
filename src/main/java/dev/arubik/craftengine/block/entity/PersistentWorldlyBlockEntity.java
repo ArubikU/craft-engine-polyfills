@@ -29,11 +29,12 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.HopperBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.momirealms.craftengine.bukkit.block.behavior.UnsafeCompositeBlockBehavior;
+import net.momirealms.craftengine.bukkit.block.behavior.CompositeBlockBehavior;
 import net.momirealms.craftengine.bukkit.util.BlockStateUtils;
 import net.momirealms.craftengine.core.block.CustomBlockStateWrapper;
 import net.momirealms.craftengine.core.block.ImmutableBlockState;
 import net.momirealms.craftengine.core.block.behavior.BlockBehavior;
+import net.momirealms.craftengine.core.block.entity.BlockEntity;
 import net.momirealms.craftengine.core.world.BlockPos;
 
 /**
@@ -52,11 +53,16 @@ public abstract class PersistentWorldlyBlockEntity extends PersistentBlockEntity
     // field? No, it has 'valid'. usage: isValid()
     // The decompiled BlockEntity has 'protected boolean valid;'
 
-    public PersistentWorldlyBlockEntity(BlockPos pos, ImmutableBlockState state, int size) {
-        super(pos, state);
+    public PersistentWorldlyBlockEntity(BlockEntity blockEntity, int size) {
+        super(blockEntity);
         this.size = size;
         this.inventory = new ItemStack[size];
         Arrays.fill(this.inventory, ItemStack.EMPTY);
+    }
+
+    // Thin accessors replacing the old inherited BlockEntity members.
+    protected BlockPos pos() {
+        return blockEntity().pos();
     }
 
     // --- WorldlyContainer / Container Implementation ---
@@ -67,7 +73,7 @@ public abstract class PersistentWorldlyBlockEntity extends PersistentBlockEntity
     }
 
     public Level getNMSLevel() {
-        return (Level) world.world.serverWorld();
+        return (Level) blockEntity().world().world.minecraftWorld();
     }
 
     @Override
@@ -132,8 +138,9 @@ public abstract class PersistentWorldlyBlockEntity extends PersistentBlockEntity
 
     @Override
     public boolean stillValid(Player player) {
-        if (!isValid()) // Check BlockEntity validity
+        if (!blockEntity().isValid()) // Check BlockEntity validity
             return false;
+        BlockPos pos = pos();
         return !player.isRemoved() && player.distanceToSqr(
                 pos.x() + 0.5,
                 pos.y() + 0.5,
@@ -212,7 +219,8 @@ public abstract class PersistentWorldlyBlockEntity extends PersistentBlockEntity
 
     @Override
     public Location getLocation() {
-        return new Location((World) world.world.platformWorld(), pos.x(), pos.y(), pos.z());
+        BlockPos pos = pos();
+        return new Location((World) blockEntity().world().world.platformWorld(), pos.x(), pos.y(), pos.z());
     }
 
     // --- Lifecycle ---
@@ -222,7 +230,7 @@ public abstract class PersistentWorldlyBlockEntity extends PersistentBlockEntity
     }
 
     public BlockBehavior getBlockBehavior() {
-        Optional<ImmutableBlockState> customStateOpt = BlockStateUtils.getOptionalCustomBlockState(blockState);
+        Optional<ImmutableBlockState> customStateOpt = BlockStateUtils.getOptionalCustomBlockState(blockEntity().blockState());
         if (customStateOpt.isPresent()) {
             return customStateOpt.get().behavior();
         }
@@ -230,15 +238,16 @@ public abstract class PersistentWorldlyBlockEntity extends PersistentBlockEntity
     }
 
     public <T> T getBlockBehavior(Class<T> clazz) {
-        Optional<ImmutableBlockState> customStateOpt = BlockStateUtils.getOptionalCustomBlockState(blockState);
+        Optional<ImmutableBlockState> customStateOpt = BlockStateUtils.getOptionalCustomBlockState(blockEntity().blockState());
         if (customStateOpt.isPresent()) {
             // check if is instance of or implements etc
             if (customStateOpt.get().behavior().getClass().isInstance(clazz)) {
                 return (T) customStateOpt.get().behavior();
             }
-            if (customStateOpt.get().behavior() instanceof UnsafeCompositeBlockBehavior beh) {
-                if (beh.getAs(clazz).isPresent()) {
-                    return beh.getAs(clazz).get();
+            if (customStateOpt.get().behavior() instanceof CompositeBlockBehavior beh) {
+                T found = beh.getFirst(clazz);
+                if (found != null) {
+                    return found;
                 }
             }
         }

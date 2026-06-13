@@ -1,6 +1,5 @@
 package dev.arubik.craftengine.block.behavior;
 
-import java.util.Map;
 import java.util.concurrent.Callable;
 
 import net.minecraft.core.BlockPos;
@@ -13,10 +12,11 @@ import net.momirealms.craftengine.bukkit.block.behavior.BukkitBlockBehavior;
 import net.momirealms.craftengine.bukkit.nms.FastNMS;
 import net.momirealms.craftengine.bukkit.util.BlockStateUtils;
 import net.momirealms.craftengine.core.block.behavior.BlockBehavior;
-import net.momirealms.craftengine.core.block.CustomBlock;
+import net.momirealms.craftengine.core.block.BlockDefinition;
 import net.momirealms.craftengine.core.block.ImmutableBlockState;
 import net.momirealms.craftengine.core.block.behavior.BlockBehaviorFactory;
-import net.momirealms.craftengine.core.block.properties.BooleanProperty;
+import net.momirealms.craftengine.core.block.property.BooleanProperty;
+import net.momirealms.craftengine.core.plugin.config.ConfigSection;
 
 /**
  * Comportamiento de bloque que se puede encender/apagar con interacción del
@@ -30,7 +30,7 @@ public class LightUpBlockBehavior extends BukkitBlockBehavior {
     // Propiedad LIT como en el template
     public final BooleanProperty LIT;
 
-    public LightUpBlockBehavior(CustomBlock customBlock) {
+    public LightUpBlockBehavior(BlockDefinition customBlock) {
         super(customBlock);
         this.LIT = (BooleanProperty) customBlock.getProperty("lit");
     }
@@ -40,7 +40,7 @@ public class LightUpBlockBehavior extends BukkitBlockBehavior {
      */
     public boolean isLitUp(BlockState state) {
         ImmutableBlockState customState = BlockStateUtils.getOptionalCustomBlockState(state).orElse(null);
-        if (customState != null && customState.owner().value() == this.customBlock) {
+        if (customState != null && customState.owner().value() == this.blockDefinition) {
             return customState.get(LIT);
         }
         return false;
@@ -51,9 +51,9 @@ public class LightUpBlockBehavior extends BukkitBlockBehavior {
      */
     public void setLitUp(BlockState state, LevelAccessor world, BlockPos pos, boolean lit) {
         ImmutableBlockState customState = BlockStateUtils.getOptionalCustomBlockState(state).orElse(null);
-        if (customState != null && customState.owner().value() == this.customBlock) {
+        if (customState != null && customState.owner().value() == this.blockDefinition) {
             ImmutableBlockState newState = customState.with(LIT, lit);
-            FastNMS.INSTANCE.method$LevelWriter$setBlock(world, pos, newState.customBlockState().literalObject(), 3);
+            world.setBlock(pos, (BlockState) newState.customBlockState().minecraftState(), 3);
         }
     }
 
@@ -81,7 +81,7 @@ public class LightUpBlockBehavior extends BukkitBlockBehavior {
 
     public static class Factory implements BlockBehaviorFactory<BlockBehavior> {
         @Override
-        public BlockBehavior create(CustomBlock block, Map<String, Object> arguments) {
+        public BlockBehavior create(BlockDefinition block, ConfigSection arguments) {
             return new LightUpBlockBehavior(block);
         }
     }

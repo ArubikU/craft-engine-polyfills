@@ -1,7 +1,8 @@
 package dev.arubik.craftengine.util;
 
-import net.momirealms.craftengine.bukkit.nms.FastNMS;
-import net.momirealms.craftengine.bukkit.plugin.reflection.minecraft.MBuiltInRegistries;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.level.block.Block;
 import net.momirealms.craftengine.core.util.VersionHelper;
 
 public final class MBlocks {
@@ -21,21 +22,20 @@ public final class MBlocks {
     public static final Object BUBBLE_COLUMN;
 
     private static Object getById(String id) {
-        Object rl = FastNMS.INSTANCE.method$ResourceLocation$fromNamespaceAndPath("minecraft", id);
-        return FastNMS.INSTANCE.method$Registry$getValue(MBuiltInRegistries.BLOCK, rl);
+        return BuiltInRegistries.BLOCK.getValue(Identifier.withDefaultNamespace(id));
     }
 
     static {
         BUBBLE_COLUMN = getById("bubble_column");
         AIR = getById("air");
-        AIR$defaultState = FastNMS.INSTANCE.method$Block$defaultState(AIR);
+        AIR$defaultState = ((Block) AIR).defaultBlockState();
         FIRE = getById("fire");
         SOUL_FIRE = getById("soul_fire");
         STONE = getById("stone");
-        STONE$defaultState = FastNMS.INSTANCE.method$Block$defaultState(STONE);
+        STONE$defaultState = ((Block) STONE).defaultBlockState();
         ICE = getById("ice");
         SHORT_GRASS = getById(VersionHelper.isOrAbove1_20_3() ? "short_grass" : "grass");
-        SHORT_GRASS$defaultState = FastNMS.INSTANCE.method$Block$defaultState(SHORT_GRASS);
+        SHORT_GRASS$defaultState = ((Block) SHORT_GRASS).defaultBlockState();
         SHULKER_BOX = getById("shulker_box");
         COMPOSTER = getById("composter");
     }

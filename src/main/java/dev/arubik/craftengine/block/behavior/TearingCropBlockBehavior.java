@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.Callable;
 import net.momirealms.craftengine.bukkit.block.behavior.BukkitBlockBehavior;
 import net.momirealms.craftengine.bukkit.nms.FastNMS;
 import net.momirealms.craftengine.bukkit.util.BlockStateUtils;
@@ -15,15 +14,15 @@ import net.momirealms.craftengine.bukkit.util.LocationUtils;
 import net.momirealms.craftengine.bukkit.world.BukkitExistingBlock;
 import net.momirealms.craftengine.bukkit.world.BukkitWorld;
 import net.momirealms.craftengine.core.block.behavior.BlockBehavior;
-import net.momirealms.craftengine.core.block.CustomBlock;
+import net.momirealms.craftengine.core.block.BlockDefinition;
 import net.momirealms.craftengine.core.block.ImmutableBlockState;
+import net.momirealms.craftengine.core.plugin.config.ConfigSection;
 import net.momirealms.craftengine.core.block.behavior.BlockBehaviorFactory;
-import net.momirealms.craftengine.core.block.properties.IntegerProperty;
-import net.momirealms.craftengine.core.block.properties.Property;
+import net.momirealms.craftengine.core.block.property.IntegerProperty;
+import net.momirealms.craftengine.core.block.property.Property;
 import net.momirealms.craftengine.core.util.Key;
 import net.momirealms.craftengine.core.util.MiscUtils;
 import net.momirealms.craftengine.core.util.random.RandomUtils;
-import net.momirealms.craftengine.core.util.ResourceConfigUtils;
 import net.momirealms.craftengine.core.util.Tuple;
 import net.momirealms.craftengine.core.world.BlockPos;
 import org.bukkit.Bukkit;
@@ -53,7 +52,7 @@ public class TearingCropBlockBehavior extends BukkitBlockBehavior {
 
   protected final boolean blacklistMode;
 
-  public TearingCropBlockBehavior(CustomBlock block, Property<Integer> ageProperty, float growSpeed, boolean water,
+  public TearingCropBlockBehavior(BlockDefinition block, Property<Integer> ageProperty, float growSpeed, boolean water,
       int heightLimit, boolean blacklist, List<Object> tagsCanSurviveOn, Set<Object> blockStatesCanSurviveOn,
       Set<String> customBlocksCansSurviveOn) {
     super(block);
@@ -81,7 +80,8 @@ public class TearingCropBlockBehavior extends BukkitBlockBehavior {
 
   protected boolean mayPlaceOn(Object belowState, Object world, Object belowPos) {
     for (Object tag : this.tagsCanSurviveOn) {
-      if (FastNMS.INSTANCE.method$BlockStateBase$is(belowState, tag))
+      if (((net.minecraft.world.level.block.state.BlockState) belowState)
+          .is((net.minecraft.tags.TagKey<net.minecraft.world.level.block.Block>) tag))
         return !this.blacklistMode;
     }
     Optional<ImmutableBlockState> optionalCustomState = BlockStateUtils.getOptionalCustomBlockState(belowState);
@@ -90,7 +90,7 @@ public class TearingCropBlockBehavior extends BukkitBlockBehavior {
         return !this.blacklistMode;
     } else {
       ImmutableBlockState belowCustomState = optionalCustomState.get();
-      if (this.customBlocksCansSurviveOn.contains(((CustomBlock) belowCustomState.owner().value()).id().toString()))
+      if (this.customBlocksCansSurviveOn.contains(belowCustomState.owner().value().id().toString()))
         return !this.blacklistMode;
       if (this.customBlocksCansSurviveOn.contains(belowCustomState.toString()))
         return !this.blacklistMode;
@@ -99,7 +99,7 @@ public class TearingCropBlockBehavior extends BukkitBlockBehavior {
   }
 
   public BlockPos getTearingDripstone(Object level, BlockPos pos) {
-    BukkitWorld world = new BukkitWorld(FastNMS.INSTANCE.method$Level$getCraftWorld(level));
+    BukkitWorld world = new BukkitWorld(((net.minecraft.server.level.ServerLevel) level).getWorld());
     int heightLimit = Math.min(this.heightLimit + pos.y(), 320);
     for (int y = pos.y(); y < heightLimit; y++) {
       BlockPos currentPos = new BlockPos(pos.x(), y, pos.z());
@@ -165,7 +165,8 @@ public class TearingCropBlockBehavior extends BukkitBlockBehavior {
     return pos;
   }
 
-  public void randomTick(Object thisBlock, Object[] args, Callable<Object> superMethod) throws Exception {
+  @Override
+  public void randomTick(Object thisBlock, Object[] args) {
     if (RandomUtils.generateRandomFloat(0.0F, 1.0F) >= this.growSpeed)
       return;
     Object level = args[1];
@@ -173,11 +174,12 @@ public class TearingCropBlockBehavior extends BukkitBlockBehavior {
     int y = pos.y();
     int x = pos.x();
     int z = pos.z();
-    Object belowPos = FastNMS.INSTANCE.constructor$BlockPos(x, y - 1, z);
-    Object belowState = FastNMS.INSTANCE.method$BlockGetter$getBlockState(level, belowPos);
+    Object belowPos = new net.minecraft.core.BlockPos(x, y - 1, z);
+    Object belowState = ((net.minecraft.world.level.BlockGetter) level)
+        .getBlockState((net.minecraft.core.BlockPos) belowPos);
     if (!mayPlaceOn(belowState, level, belowPos))
       return;
-    BukkitWorld world = new BukkitWorld(FastNMS.INSTANCE.method$Level$getCraftWorld(level));
+    BukkitWorld world = new BukkitWorld(((net.minecraft.server.level.ServerLevel) level).getWorld());
     BlockPos targetPos = pos.above();
     BlockPos tearing = getTearingDripstone(level, targetPos);
     if (tearing == null)
@@ -189,15 +191,15 @@ public class TearingCropBlockBehavior extends BukkitBlockBehavior {
     if (age < this.ageProperty.max) {
       BukkitExistingBlock blockInWorld = (BukkitExistingBlock) world.getBlock(pos.x(), pos.y(), pos.z());
       blockInWorld.block().setBlockData(BlockStateUtils.fromBlockData(block.customBlock().defaultState()
-          .with((Property) this.ageProperty, Integer.valueOf(age + 1)).customBlockState().literalObject()));
+          .with((Property) this.ageProperty, Integer.valueOf(age + 1)).customBlockState().minecraftState()));
     }
   }
 
   public static class Factory implements BlockBehaviorFactory<BlockBehavior> {
-    public static Tuple<List<Object>, Set<Object>, Set<String>> readTagsAndState(Map<String, Object> arguments,
+    public static Tuple<List<Object>, Set<Object>, Set<String>> readTagsAndState(ConfigSection arguments,
         boolean aboveOrBelow) {
       List<Object> mcTags = new ArrayList();
-      for (String tag : MiscUtils.getAsStringList(arguments
+      for (String tag : dev.arubik.craftengine.util.Utils.getAsStringList(arguments
           .getOrDefault((aboveOrBelow ? "above" : "bottom") + "-block-tags", List.of())))
         mcTags.add(BlockTags.getOrCreate(Key.of(tag)));
       Set<Object> mcBlocks = new HashSet();
@@ -221,15 +223,15 @@ public class TearingCropBlockBehavior extends BukkitBlockBehavior {
       return new Tuple(mcTags, mcBlocks, customBlocks);
     }
 
-    public BlockBehavior create(CustomBlock block, Map<String, Object> arguments) {
-      Property<Integer> ageProperty = (Property<Integer>) ResourceConfigUtils
+    public BlockBehavior create(BlockDefinition block, ConfigSection arguments) {
+      Property<Integer> ageProperty = (Property<Integer>) dev.arubik.craftengine.util.Utils
           .requireNonNullOrThrow(block.getProperty("age"), "warning.config.block.behavior.crop.missing_age");
-      float growSpeed = ResourceConfigUtils.getAsFloat(arguments.getOrDefault("grow-speed", Float.valueOf(0.125F)),
+      float growSpeed = dev.arubik.craftengine.util.Utils.getAsFloat(arguments.getOrDefault("grow-speed", Float.valueOf(0.125F)),
           "grow-speed");
       Boolean water = Boolean.valueOf(arguments.getOrDefault("liquid", "water").toString().equalsIgnoreCase("water"));
       int heightLimit = Integer.parseInt(arguments.getOrDefault("heightLimit", Integer.valueOf(12)).toString());
       Tuple<List<Object>, Set<Object>, Set<String>> tuple = readTagsAndState(arguments, false);
-      boolean blacklistMode = ResourceConfigUtils
+      boolean blacklistMode = dev.arubik.craftengine.util.Utils
           .getAsBoolean(arguments.getOrDefault("blacklist", Boolean.valueOf(false)), "blacklist");
       return (BlockBehavior) new TearingCropBlockBehavior(block, ageProperty, growSpeed, water.booleanValue(),
           heightLimit, blacklistMode, (List<Object>) tuple.left(), (Set<Object>) tuple.mid(),

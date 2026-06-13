@@ -2,8 +2,6 @@ package dev.arubik.craftengine.machine.render.element;
 
 import it.unimi.dsi.fastutil.ints.IntList;
 import net.momirealms.craftengine.bukkit.nms.FastNMS;
-import net.momirealms.craftengine.bukkit.plugin.reflection.minecraft.CoreReflections;
-import net.momirealms.craftengine.bukkit.plugin.reflection.minecraft.MEntityTypes;
 import net.momirealms.craftengine.core.block.entity.render.element.BlockEntityElement;
 import net.momirealms.craftengine.core.entity.player.Player;
 import net.momirealms.craftengine.core.world.BlockPos;
@@ -20,20 +18,21 @@ public class ShulkerBoxHitboxElement implements BlockEntityElement {
     public final int entityId;
 
     public ShulkerBoxHitboxElement(ShulkerBoxHitboxElementConfig config, BlockPos pos) {
-        this(config, pos, CoreReflections.instance$Entity$ENTITY_COUNTER.incrementAndGet(), false);
+        this(config, pos, net.minecraft.world.entity.Entity.ENTITY_COUNTER.incrementAndGet(), false);
     }
 
     public ShulkerBoxHitboxElement(ShulkerBoxHitboxElementConfig config, BlockPos pos, int entityId,
             boolean posChanged) {
         Vector3f position = config.position();
-        this.cachedSpawnPacket = FastNMS.INSTANCE.constructor$ClientboundAddEntityPacket(
+        this.cachedSpawnPacket = dev.arubik.craftengine.util.MNms.INSTANCE.constructor$ClientboundAddEntityPacket(
                 entityId, UUID.randomUUID(), pos.x() + position.x, pos.y() + position.y, pos.z() + position.z,
-                config.xRot(), config.yRot(), MEntityTypes.SHULKER, 0, CoreReflections.instance$Vec3$Zero, 0);
+                config.xRot(), config.yRot(), net.minecraft.world.entity.EntityType.SHULKER, 0,
+                net.minecraft.world.phys.Vec3.ZERO, 0);
         this.config = config;
-        this.cachedDespawnPacket = FastNMS.INSTANCE.constructor$ClientboundRemoveEntitiesPacket(IntList.of(entityId));
+        this.cachedDespawnPacket = dev.arubik.craftengine.util.MNms.INSTANCE.constructor$ClientboundRemoveEntitiesPacket(IntList.of(entityId));
         this.entityId = entityId;
         this.cachedUpdatePosPacket = posChanged
-                ? FastNMS.INSTANCE.constructor$ClientboundEntityPositionSyncPacket(this.entityId, pos.x() + position.x,
+                ? dev.arubik.craftengine.util.MNms.INSTANCE.constructor$ClientboundEntityPositionSyncPacket(this.entityId, pos.x() + position.x,
                         pos.y() + position.y, pos.z() + position.z, config.yRot(), config.xRot(), false)
                 : null;
     }
@@ -58,7 +57,7 @@ public class ShulkerBoxHitboxElement implements BlockEntityElement {
                     .constructor$ClientboundSetEntityDataPacket(this.entityId, this.config.metadataValues(player))),
                     false);
         } else {
-            player.sendPacket(FastNMS.INSTANCE.constructor$ClientboundSetEntityDataPacket(this.entityId,
+            player.sendPacket(dev.arubik.craftengine.util.MNms.INSTANCE.constructor$ClientboundSetEntityDataPacket(this.entityId,
                     this.config.metadataValues(player)), false);
         }
     }

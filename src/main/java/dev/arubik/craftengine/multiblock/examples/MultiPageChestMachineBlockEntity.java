@@ -50,9 +50,9 @@ public class MultiPageChestMachineBlockEntity extends MultiBlockMachineBlockEnti
 
     private boolean dataLoaded = false;
 
-    public MultiPageChestMachineBlockEntity(net.momirealms.craftengine.core.world.BlockPos pos,
-            ImmutableBlockState state, MultiBlockSchema schema) {
-        super(SLOTS_PER_PAGE, pos, state, schema); // Container holds current page only
+    public MultiPageChestMachineBlockEntity(net.momirealms.craftengine.core.block.entity.BlockEntity blockEntity,
+            MultiBlockSchema schema) {
+        super(SLOTS_PER_PAGE, blockEntity, schema); // Container holds current page only
 
         // Initialize pages
         pages = new ItemStack[TOTAL_PAGES][SLOTS_PER_PAGE];
@@ -74,17 +74,13 @@ public class MultiPageChestMachineBlockEntity extends MultiBlockMachineBlockEnti
      * available.
      */
     private void ensureDataLoaded() {
-        if (!dataLoaded && world != null) {
+        // ce 26.6.2: controllers are constructed by the engine after the BlockEntity has
+        // a world; load lazily on first access.
+        if (!dataLoaded && blockEntity().world() != null) {
             loadFromPersistence();
             syncCurrentPageToInventory();
             dataLoaded = true;
         }
-    }
-
-    @Override
-    public void setWorld(net.momirealms.craftengine.core.world.CEWorld world) {
-        super.setWorld(world);
-        ensureDataLoaded();
     }
 
     private void setupLayout() {
@@ -138,6 +134,7 @@ public class MultiPageChestMachineBlockEntity extends MultiBlockMachineBlockEnti
 
     @Override
     public MachineLayout getLayout() {
+        ensureDataLoaded();
         return layout;
     }
 

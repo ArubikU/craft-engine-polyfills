@@ -1,7 +1,5 @@
 package dev.arubik.craftengine.multiblock.impl;
 
-import java.util.Map;
-
 import org.bukkit.persistence.PersistentDataType;
 
 import dev.arubik.craftengine.multiblock.MultiBlockBehavior;
@@ -12,13 +10,14 @@ import dev.arubik.craftengine.util.TypedKey;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
-import net.momirealms.craftengine.core.block.CustomBlock;
+import net.momirealms.craftengine.core.block.BlockDefinition;
 import net.momirealms.craftengine.core.block.ImmutableBlockState;
 import net.momirealms.craftengine.core.block.behavior.BlockBehavior;
 import net.momirealms.craftengine.core.block.behavior.BlockBehaviorFactory;
 import net.momirealms.craftengine.core.block.entity.BlockEntity;
-import net.momirealms.craftengine.core.block.properties.EnumProperty;
-import net.momirealms.craftengine.core.block.properties.Property;
+import net.momirealms.craftengine.core.block.property.EnumProperty;
+import net.momirealms.craftengine.core.block.property.Property;
+import net.momirealms.craftengine.core.plugin.config.ConfigSection;
 import net.momirealms.craftengine.core.world.context.UseOnContext;
 import net.momirealms.craftengine.core.entity.player.InteractionResult;
 
@@ -33,7 +32,7 @@ public class MachineCoreT1Behavior extends MultiBlockBehavior {
     // Properties
     protected final EnumProperty<MachineType> MACHINE_TYPE;
 
-    public MachineCoreT1Behavior(CustomBlock customBlock, String partBlockId) {
+    public MachineCoreT1Behavior(BlockDefinition customBlock, String partBlockId) {
         super(customBlock, new MultiBlockSchema(BlockPos.ZERO), partBlockId); // Default schema is placeholder
 
         // Define Chest Schema (3x3x3 Box of Copper Blocks)
@@ -52,7 +51,7 @@ public class MachineCoreT1Behavior extends MultiBlockBehavior {
             this.MACHINE_TYPE = (EnumProperty<MachineType>) enumProp;
         } else {
             throw new IllegalStateException(
-                    "CustomBlock for MachineCoreT1Behavior must have EnumProperty<MachineType> 'machine_type'");
+                    "BlockDefinition for MachineCoreT1Behavior must have EnumProperty<MachineType> 'machine_type'");
         }
     }
 
@@ -89,7 +88,7 @@ public class MachineCoreT1Behavior extends MultiBlockBehavior {
         if (super.tryFormMachine(level, pos, state)) {
             if (state != null) {
                 ImmutableBlockState newState = state.with(MACHINE_TYPE, MachineType.SMELTER);
-                level.setBlock(pos, (BlockState) newState.customBlockState().literalObject(), 3);
+                level.setBlock(pos, (BlockState) newState.customBlockState().minecraftState(), 3);
             }
             this.schema = original;
             return true;
@@ -100,7 +99,7 @@ public class MachineCoreT1Behavior extends MultiBlockBehavior {
         if (super.tryFormMachine(level, pos, state)) {
             if (state != null) {
                 ImmutableBlockState newState = state.with(MACHINE_TYPE, MachineType.CHEST);
-                level.setBlock(pos, (BlockState) newState.customBlockState().literalObject(), 3);
+                level.setBlock(pos, (BlockState) newState.customBlockState().minecraftState(), 3);
             }
             this.schema = original;
             return true;
@@ -181,8 +180,8 @@ public class MachineCoreT1Behavior extends MultiBlockBehavior {
     }
 
     @Override
-    protected MultiBlockMachineBlockEntity createMachineBlockEntity(net.momirealms.craftengine.core.world.BlockPos pos,
-            ImmutableBlockState state) {
+    protected MultiBlockMachineBlockEntity createMachineBlockEntity(
+            net.momirealms.craftengine.core.block.entity.BlockEntity blockEntity) {
 
         // When created via `tryFormMachine` flow above, the state passed IN might not
         // have the TYPE yet
@@ -191,26 +190,27 @@ public class MachineCoreT1Behavior extends MultiBlockBehavior {
         // is called.
 
         if (this.schema == smelterSchema) {
-            return new IndustrialSmelterBlockEntity(pos, state, smelterSchema);
+            return new IndustrialSmelterBlockEntity(blockEntity, smelterSchema);
         } else if (this.schema == chestSchema) {
-            return new MultiPageChestMachineBlockEntity(pos, state, chestSchema);
+            return new MultiPageChestMachineBlockEntity(blockEntity, chestSchema);
         }
 
         // Fallback for loading from disk (when schema validation isn't running)
         // Check state
-        MachineType type = state.get(MACHINE_TYPE);
+        MachineType type = blockEntity.blockState().get(MACHINE_TYPE);
         if (type == MachineType.SMELTER) {
-            return new IndustrialSmelterBlockEntity(pos, state, smelterSchema);
+            return new IndustrialSmelterBlockEntity(blockEntity, smelterSchema);
         } else if (type == MachineType.CHEST) {
-            return new MultiPageChestMachineBlockEntity(pos, state, chestSchema);
+            return new MultiPageChestMachineBlockEntity(blockEntity, chestSchema);
         }
 
         // Default fallthrough (shouldn't happen for formed machinery)
-        return new MultiPageChestMachineBlockEntity(pos, state, chestSchema);
+        return new MultiPageChestMachineBlockEntity(blockEntity, chestSchema);
     }
 
     @Override
-    protected InteractionResult onInteractFormed(UseOnContext context, BlockEntity core, Level level, BlockPos pos) {
+    protected InteractionResult onInteractFormed(UseOnContext context,
+            net.momirealms.craftengine.core.block.entity.BlockEntityController core, Level level, BlockPos pos) {
         if (core instanceof MultiBlockMachineBlockEntity machine) {
             net.minecraft.world.entity.player.Player nmsPlayer = (net.minecraft.world.entity.player.Player) context
                     .getPlayer().serverPlayer();
@@ -222,7 +222,7 @@ public class MachineCoreT1Behavior extends MultiBlockBehavior {
 
     public static class Factory implements BlockBehaviorFactory<BlockBehavior> {
         @Override
-        public BlockBehavior create(CustomBlock block, Map<String, Object> arguments) {
+        public BlockBehavior create(BlockDefinition block, ConfigSection arguments) {
             String partBlockId = (String) arguments.getOrDefault("part_block_id", "craftengine:multiblock_part");
             return new MachineCoreT1Behavior(block, partBlockId);
         }

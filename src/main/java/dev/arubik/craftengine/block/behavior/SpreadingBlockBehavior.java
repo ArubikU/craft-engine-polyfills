@@ -20,9 +20,10 @@ import net.momirealms.craftengine.bukkit.util.BlockStateUtils;
 import net.momirealms.craftengine.bukkit.util.BlockTags;
 import net.momirealms.craftengine.bukkit.util.LocationUtils;
 import net.momirealms.craftengine.core.block.behavior.BlockBehavior;
-import net.momirealms.craftengine.core.block.CustomBlock;
+import net.momirealms.craftengine.core.block.BlockDefinition;
 import net.momirealms.craftengine.core.block.ImmutableBlockState;
 import net.momirealms.craftengine.core.block.behavior.BlockBehaviorFactory;
+import net.momirealms.craftengine.core.plugin.config.ConfigSection;
 import net.momirealms.craftengine.core.util.Key;
 import net.momirealms.craftengine.core.util.random.RandomUtils;
 import net.momirealms.craftengine.core.world.BlockPos;
@@ -37,7 +38,7 @@ public class SpreadingBlockBehavior extends BukkitBlockBehavior {
     private final int maxPerTick;
     private final List<ReplaceRule> rules;
 
-    public SpreadingBlockBehavior(CustomBlock block,
+    public SpreadingBlockBehavior(BlockDefinition block,
             double spreadChance,
             int spreadRadius,
             int maxPerTick,
@@ -64,8 +65,8 @@ public class SpreadingBlockBehavior extends BukkitBlockBehavior {
             if (replaced >= maxPerTick)
                 break;
 
-            Object targetState = FastNMS.INSTANCE.method$BlockGetter$getBlockState(level,
-                    LocationUtils.toBlockPos(targetPos));
+            Object targetState = ((net.minecraft.world.level.BlockGetter) level).getBlockState(
+                    (net.minecraft.core.BlockPos) LocationUtils.toBlockPos(targetPos));
 
             ReplaceRule matched = getRuleFor(targetState);
             if (matched == null)
@@ -75,7 +76,9 @@ public class SpreadingBlockBehavior extends BukkitBlockBehavior {
             if (newState == null)
                 continue;
 
-            FastNMS.INSTANCE.method$LevelWriter$setBlock(level, LocationUtils.toBlockPos(targetPos), newState, 3);
+            ((net.minecraft.world.level.LevelWriter) level).setBlock(
+                    (net.minecraft.core.BlockPos) LocationUtils.toBlockPos(targetPos),
+                    (net.minecraft.world.level.block.state.BlockState) newState, 3);
             replaced++;
         }
     }
@@ -120,7 +123,8 @@ public class SpreadingBlockBehavior extends BukkitBlockBehavior {
         boolean matches(Object state) {
             // Match por tags
             for (Object tag : tags) {
-                if (FastNMS.INSTANCE.method$BlockStateBase$is(state, tag))
+                if (((net.minecraft.world.level.block.state.BlockState) state)
+                        .is((net.minecraft.tags.TagKey<net.minecraft.world.level.block.Block>) tag))
                     return true;
             }
             // Match por vanilla blockstates
@@ -146,7 +150,7 @@ public class SpreadingBlockBehavior extends BukkitBlockBehavior {
             Optional<ImmutableBlockState> custom = BlockStateUtils.getOptionalCustomBlockState(
                     BlockStateUtils.blockDataToBlockState(Bukkit.createBlockData(replacement)));
             if (custom.isPresent()) {
-                return custom.get().customBlockState().literalObject();
+                return custom.get().customBlockState().minecraftState();
             }
             return null;
         }
@@ -155,7 +159,7 @@ public class SpreadingBlockBehavior extends BukkitBlockBehavior {
     public static class Factory implements BlockBehaviorFactory<BlockBehavior> {
         @SuppressWarnings("unchecked")
         @Override
-        public BlockBehavior create(CustomBlock block, Map<String, Object> arguments) {
+        public BlockBehavior create(BlockDefinition block, ConfigSection arguments) {
             double spreadChance = Double.parseDouble(arguments.getOrDefault("spread-chance", 0.2).toString());
             int spreadRadius = Integer.parseInt(arguments.getOrDefault("spread-radius", 3).toString());
             int maxPerTick = Integer.parseInt(arguments.getOrDefault("max-per-tick", 1).toString());

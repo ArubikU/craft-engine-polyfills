@@ -1,6 +1,5 @@
 package dev.arubik.craftengine.block.behavior;
 
-import java.util.Map;
 import java.util.concurrent.Callable;
 
 import dev.arubik.craftengine.util.Utils;
@@ -20,14 +19,14 @@ import net.momirealms.craftengine.bukkit.util.BlockStateUtils;
 import net.momirealms.craftengine.bukkit.util.LocationUtils;
 import net.momirealms.craftengine.bukkit.world.BukkitWorld;
 import net.momirealms.craftengine.core.block.behavior.BlockBehavior;
-import net.momirealms.craftengine.core.block.CustomBlock;
+import net.momirealms.craftengine.core.block.BlockDefinition;
 import net.momirealms.craftengine.core.block.ImmutableBlockState;
-import net.momirealms.craftengine.core.block.UpdateOption.Flags;
+import net.momirealms.craftengine.core.block.UpdateFlags;
 import net.momirealms.craftengine.core.block.behavior.BlockBehaviorFactory;
-import net.momirealms.craftengine.core.block.properties.IntegerProperty;
-import net.momirealms.craftengine.core.block.properties.Property;
+import net.momirealms.craftengine.core.block.property.IntegerProperty;
+import net.momirealms.craftengine.core.block.property.Property;
 import net.momirealms.craftengine.core.entity.player.InteractionResult;
-import net.momirealms.craftengine.core.util.HorizontalDirection;
+import net.momirealms.craftengine.core.plugin.config.ConfigSection;
 import net.momirealms.craftengine.core.world.Vec3d;
 import net.momirealms.craftengine.core.world.WorldPosition;
 
@@ -37,7 +36,7 @@ public class RedstoneController extends DiodeBlockBehavior {
 
     public static class Factory implements BlockBehaviorFactory<BlockBehavior> {
         @Override
-        public BlockBehavior create(CustomBlock block, Map<String, Object> arguments) {
+        public BlockBehavior create(BlockDefinition block, ConfigSection arguments) {
             int delay = 0;
             Object d = arguments.get("delay");
             if (d instanceof Number n)
@@ -45,7 +44,8 @@ public class RedstoneController extends DiodeBlockBehavior {
             @SuppressWarnings("unchecked")
             Property<Boolean> powered = (Property<Boolean>) block.getProperty("powered");
             @SuppressWarnings("unchecked")
-            Property<HorizontalDirection> facing = (Property<HorizontalDirection>) block.getProperty("facing");
+            Property<net.momirealms.craftengine.core.util.Direction> facing = (Property<net.momirealms.craftengine.core.util.Direction>) block
+                    .getProperty("facing");
             @SuppressWarnings("unchecked")
             Property<Integer> mode = (Property<Integer>) block.getProperty("mode");
             return new RedstoneController(block, delay, powered, facing, mode);
@@ -54,8 +54,8 @@ public class RedstoneController extends DiodeBlockBehavior {
 
     public final IntegerProperty MODE;
 
-    public RedstoneController(CustomBlock arg0, int delay, Property<Boolean> powered,
-            Property<HorizontalDirection> facing, Property<Integer> mode) {
+    public RedstoneController(BlockDefinition arg0, int delay, Property<Boolean> powered,
+            Property<net.momirealms.craftengine.core.util.Direction> facing, Property<Integer> mode) {
         super(arg0, delay, powered, facing);
         this.MODE = (IntegerProperty) mode;
     }
@@ -89,12 +89,13 @@ public class RedstoneController extends DiodeBlockBehavior {
                 return true;
             })) {
                 BlockStateUtils.getOptionalCustomBlockState(blockState).ifPresent((customState) -> {
-                    if (!customState.isEmpty() && customState.owner().value() == this.customBlock) {
-                        BukkitWorld world = new BukkitWorld(FastNMS.INSTANCE.method$Level$getCraftWorld(level));
+                    if (!customState.isEmpty() && customState.owner().value() == this.blockDefinition) {
+                        BukkitWorld world = new BukkitWorld(((ServerLevel) level).getWorld());
                         WorldPosition position = new WorldPosition(world,
                                 Vec3d.atCenterOf(LocationUtils.fromBlockPos(blockPos)));
                         world.playBlockSound(position, customState.settings().sounds().breakSound());
-                        FastNMS.INSTANCE.method$LevelWriter$destroyBlock(level, blockPos, true);
+                        ((net.minecraft.world.level.LevelAccessor) level)
+                                .destroyBlock((net.minecraft.core.BlockPos) blockPos, true);
                     }
 
                 });
@@ -114,8 +115,8 @@ public class RedstoneController extends DiodeBlockBehavior {
         boolean shouldBePowered = computePower(level, pos, state);
         if (currentlyPowered != shouldBePowered) {
             customState = customState.with(POWERED, shouldBePowered);
-            FastNMS.INSTANCE.method$LevelWriter$setBlock(level, pos, customState.customBlockState().literalObject(),
-                    Flags.UPDATE_CLIENTS);
+            level.setBlock(pos, (BlockState) customState.customBlockState().minecraftState(),
+                    UpdateFlags.UPDATE_CLIENTS);
             notifyFrontNeighbors(level, pos, state);
         }
     }
@@ -155,7 +156,7 @@ public class RedstoneController extends DiodeBlockBehavior {
         BlockPos pos = (BlockPos) args[2];
 
         if (!state.canSurvive((LevelReader) level, pos)) {
-            FastNMS.INSTANCE.method$LevelWriter$destroyBlock(level, pos, true);
+            ((net.minecraft.world.level.LevelAccessor) level).destroyBlock(pos, true);
             for (Direction dir : Direction.values())
                 level.updateNeighborsAt(pos.relative(dir), (Block) state.getBlock());
             return;
@@ -171,15 +172,15 @@ public class RedstoneController extends DiodeBlockBehavior {
         if (!player.getAbilities().mayBuild) {
             return InteractionResult.PASS;
         }
-        if (FastNMS.INSTANCE.method$LevelReader$isClientSide(level)) {
+        if (((LevelReader) level).isClientSide()) {
             return InteractionResult.SUCCESS;
         }
         ImmutableBlockState customState = BlockStateUtils.getOptionalCustomBlockState(blockState).orElseThrow();
         int currentMode = customState.get(MODE);
         int nextMode = (currentMode + 1) % 3;
         ImmutableBlockState newState = customState.with(MODE, nextMode);
-        FastNMS.INSTANCE.method$LevelWriter$setBlock(level, blockPos, newState.customBlockState().literalObject(),
-                Flags.UPDATE_CLIENTS);
+        level.setBlock(blockPos, (BlockState) newState.customBlockState().minecraftState(),
+                UpdateFlags.UPDATE_CLIENTS);
         return InteractionResult.SUCCESS;
     }
 }

@@ -1,7 +1,5 @@
 package dev.arubik.craftengine.multiblock.examples;
 
-import java.util.Map;
-
 import dev.arubik.craftengine.fluid.FluidStack;
 import dev.arubik.craftengine.fluid.FluidTank;
 import dev.arubik.craftengine.fluid.FluidType;
@@ -25,10 +23,11 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.world.level.Level;
-import net.momirealms.craftengine.core.block.CustomBlock;
+import net.momirealms.craftengine.core.block.BlockDefinition;
 import net.momirealms.craftengine.core.block.ImmutableBlockState;
 import net.momirealms.craftengine.core.block.behavior.BlockBehavior;
 import net.momirealms.craftengine.core.block.behavior.BlockBehaviorFactory;
+import net.momirealms.craftengine.core.plugin.config.ConfigSection;
 import net.momirealms.craftengine.core.entity.player.InteractionResult;
 import net.momirealms.craftengine.core.util.Key;
 import net.momirealms.craftengine.core.world.context.UseOnContext;
@@ -46,14 +45,14 @@ public class TestMultiBlockMachineBehavior extends MultiBlockBehavior {
     public static final Key FACTORY_KEY = Key.of("polyfills:test_multiblock_machine");
     public static final Factory FACTORY = new Factory();
 
-    public TestMultiBlockMachineBehavior(CustomBlock customBlock, MultiBlockSchema schema, String partBlockId) {
+    public TestMultiBlockMachineBehavior(BlockDefinition customBlock, MultiBlockSchema schema, String partBlockId) {
         super(customBlock, schema, partBlockId);
     }
 
-    public TestMultiBlockMachineBehavior(CustomBlock customBlock, MultiBlockSchema schema, String partBlockId,
+    public TestMultiBlockMachineBehavior(BlockDefinition customBlock, MultiBlockSchema schema, String partBlockId,
             java.util.List<Direction> connectableFaces,
-            net.momirealms.craftengine.core.block.properties.EnumProperty<net.momirealms.craftengine.core.util.HorizontalDirection> horizontalDirectionProperty,
-            net.momirealms.craftengine.core.block.properties.EnumProperty<net.momirealms.craftengine.core.util.Direction> verticalDirectionProperty,
+            net.momirealms.craftengine.core.block.property.EnumProperty<net.momirealms.craftengine.core.util.Direction> horizontalDirectionProperty,
+            net.momirealms.craftengine.core.block.property.EnumProperty<net.momirealms.craftengine.core.util.Direction> verticalDirectionProperty,
             IOConfiguration ioConfig) {
         super(customBlock, schema, partBlockId, connectableFaces, horizontalDirectionProperty,
                 verticalDirectionProperty, ioConfig);
@@ -61,7 +60,7 @@ public class TestMultiBlockMachineBehavior extends MultiBlockBehavior {
 
     public static class Factory implements BlockBehaviorFactory<BlockBehavior> {
         @Override
-        public BlockBehavior create(CustomBlock block, Map<String, Object> arguments) {
+        public BlockBehavior create(BlockDefinition block, ConfigSection arguments) {
             String partBlockId = (String) arguments.getOrDefault("part_block_id", "craftengine:multiblock_part");
 
             // Define 3x3x3 Schema - Core at center (1,1,1)
@@ -146,9 +145,9 @@ public class TestMultiBlockMachineBehavior extends MultiBlockBehavior {
     }
 
     @Override
-    protected MultiBlockMachineBlockEntity createMachineBlockEntity(net.momirealms.craftengine.core.world.BlockPos pos,
-            ImmutableBlockState state) {
-        return new TestMultiBlockMachineBlockEntity(pos, state, schema);
+    protected MultiBlockMachineBlockEntity createMachineBlockEntity(
+            net.momirealms.craftengine.core.block.entity.BlockEntity blockEntity) {
+        return new TestMultiBlockMachineBlockEntity(blockEntity, schema);
     }
 
     /**
@@ -158,9 +157,9 @@ public class TestMultiBlockMachineBehavior extends MultiBlockBehavior {
 
         private final MachineLayout layout;
 
-        public TestMultiBlockMachineBlockEntity(net.momirealms.craftengine.core.world.BlockPos pos,
-                ImmutableBlockState state, MultiBlockSchema schema) {
-            super(3, pos, state, schema); // 3 slots: input, output, fuel
+        public TestMultiBlockMachineBlockEntity(net.momirealms.craftengine.core.block.entity.BlockEntity blockEntity,
+                MultiBlockSchema schema) {
+            super(3, blockEntity, schema); // 3 slots: input, output, fuel
 
             // Initialize Fluid Tanks
             addFluidTank(new FluidTank("water_input", 10000, FluidType.WATER));

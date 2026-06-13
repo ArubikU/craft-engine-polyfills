@@ -54,7 +54,7 @@ public class CustomDataType<T, P> {
             PersistentDataType.STRING,
             blockState -> {
                 try {
-                    BlockData data = FastNMS.INSTANCE.method$CraftBlockData$fromData(blockState);
+                    BlockData data = dev.arubik.craftengine.util.MNms.INSTANCE.method$CraftBlockData$fromData(blockState);
                     return data.getAsString();
                 } catch (Exception exception) {
                     return "minecraft:air";

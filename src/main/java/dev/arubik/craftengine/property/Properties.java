@@ -2,8 +2,8 @@ package dev.arubik.craftengine.property;
 
 import dev.arubik.craftengine.fluid.FluidType;
 import net.minecraft.world.level.block.state.properties.RedstoneSide;
-import net.momirealms.craftengine.core.block.properties.EnumProperty;
-import net.momirealms.craftengine.core.block.properties.Property;
+import net.momirealms.craftengine.core.block.property.EnumProperty;
+import net.momirealms.craftengine.core.block.property.Property;
 import net.momirealms.craftengine.core.util.Key;
 
 public class Properties {
@@ -17,17 +17,17 @@ public class Properties {
 
         // floor wall ceiling
         public static void register() {
-                net.momirealms.craftengine.core.block.properties.Properties.register(REDSTONE_SIDE,
+                net.momirealms.craftengine.core.block.property.Properties.register(REDSTONE_SIDE,
                                 EnumProperty.factory(RedstoneSide.class));
-                net.momirealms.craftengine.core.block.properties.Properties.register(CONNECTED_FACE,
+                net.momirealms.craftengine.core.block.property.Properties.register(CONNECTED_FACE,
                                 EnumProperty.factory(ConnectedFace.class));
-                net.momirealms.craftengine.core.block.properties.Properties.register(FLUID_TYPE,
+                net.momirealms.craftengine.core.block.property.Properties.register(FLUID_TYPE,
                                 EnumProperty.factory(FluidType.class));
-                net.momirealms.craftengine.core.block.properties.Properties.register(MULTIBLOCK_ROLE,
+                net.momirealms.craftengine.core.block.property.Properties.register(MULTIBLOCK_ROLE,
                                 EnumProperty.factory(dev.arubik.craftengine.multiblock.MultiBlockRole.class));
-                net.momirealms.craftengine.core.block.properties.Properties.register(MACHINE_MODE,
+                net.momirealms.craftengine.core.block.property.Properties.register(MACHINE_MODE,
                                 EnumProperty.factory(dev.arubik.craftengine.multiblock.MachineMode.class));
-                net.momirealms.craftengine.core.block.properties.Properties.register(MACHINE_TYPE,
+                net.momirealms.craftengine.core.block.property.Properties.register(MACHINE_TYPE,
                                 EnumProperty.factory(dev.arubik.craftengine.multiblock.impl.MachineType.class));
         }
 }

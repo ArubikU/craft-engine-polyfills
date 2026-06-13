@@ -1,7 +1,5 @@
 package dev.arubik.craftengine.multiblock.examples;
 
-import java.util.Map;
-
 import dev.arubik.craftengine.multiblock.IOConfiguration;
 import dev.arubik.craftengine.multiblock.IOConfigurationProvider;
 import dev.arubik.craftengine.multiblock.MultiBlockBehavior;
@@ -12,8 +10,9 @@ import net.minecraft.core.Direction;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.world.level.Level;
 import net.momirealms.craftengine.bukkit.plugin.user.BukkitServerPlayer;
-import net.momirealms.craftengine.core.block.CustomBlock;
+import net.momirealms.craftengine.core.block.BlockDefinition;
 import net.momirealms.craftengine.core.block.behavior.BlockBehavior;
+import net.momirealms.craftengine.core.plugin.config.ConfigSection;
 import net.momirealms.craftengine.core.block.behavior.BlockBehaviorFactory;
 import net.momirealms.craftengine.core.block.entity.BlockEntity;
 import net.momirealms.craftengine.core.entity.player.InteractionResult;
@@ -31,14 +30,14 @@ public class MultiPageChestBehavior extends MultiBlockBehavior {
     public static final Key FACTORY_KEY = Key.of("polyfills:multipage_chest");
     public static final Factory FACTORY = new Factory();
 
-    public MultiPageChestBehavior(CustomBlock customBlock, MultiBlockSchema schema, String partBlockId) {
+    public MultiPageChestBehavior(BlockDefinition customBlock, MultiBlockSchema schema, String partBlockId) {
         super(customBlock, schema, partBlockId);
     }
 
-    public MultiPageChestBehavior(CustomBlock customBlock, MultiBlockSchema schema, String partBlockId,
+    public MultiPageChestBehavior(BlockDefinition customBlock, MultiBlockSchema schema, String partBlockId,
             java.util.List<Direction> connectableFaces,
-            net.momirealms.craftengine.core.block.properties.EnumProperty<net.momirealms.craftengine.core.util.HorizontalDirection> horizontalDirectionProperty,
-            net.momirealms.craftengine.core.block.properties.EnumProperty<net.momirealms.craftengine.core.util.Direction> verticalDirectionProperty,
+            net.momirealms.craftengine.core.block.property.EnumProperty<net.momirealms.craftengine.core.util.Direction> horizontalDirectionProperty,
+            net.momirealms.craftengine.core.block.property.EnumProperty<net.momirealms.craftengine.core.util.Direction> verticalDirectionProperty,
             IOConfiguration ioConfig) {
         super(customBlock, schema, partBlockId, connectableFaces, horizontalDirectionProperty,
                 verticalDirectionProperty, ioConfig);
@@ -46,7 +45,7 @@ public class MultiPageChestBehavior extends MultiBlockBehavior {
 
     public static class Factory implements BlockBehaviorFactory<BlockBehavior> {
         @Override
-        public BlockBehavior create(CustomBlock block, Map<String, Object> arguments) {
+        public BlockBehavior create(BlockDefinition block, ConfigSection arguments) {
             String partBlockId = (String) arguments.getOrDefault("part_block_id", "craftengine:multiblock_part");
 
             // Define 3x3x3 Schema - Core at center (1,1,1)
@@ -115,13 +114,13 @@ public class MultiPageChestBehavior extends MultiBlockBehavior {
 
     @Override
     protected dev.arubik.craftengine.multiblock.MultiBlockMachineBlockEntity createMachineBlockEntity(
-            net.momirealms.craftengine.core.world.BlockPos pos,
-            net.momirealms.craftengine.core.block.ImmutableBlockState state) {
-        return new MultiPageChestMachineBlockEntity(pos, state, schema);
+            BlockEntity blockEntity) {
+        return new MultiPageChestMachineBlockEntity(blockEntity, schema);
     }
 
     @Override
-    protected InteractionResult onInteractFormed(UseOnContext context, BlockEntity core, Level level,
+    protected InteractionResult onInteractFormed(UseOnContext context,
+            net.momirealms.craftengine.core.block.entity.BlockEntityController core, Level level,
             BlockPos corePos) {
 
         System.out.println(
@@ -145,10 +144,12 @@ public class MultiPageChestBehavior extends MultiBlockBehavior {
                     .getOptionalCustomBlockState(level.getBlockState(corePos)).orElse(null);
 
             if (state != null) {
-                // Create the machine entity (it will load data from CustomBlockData)
-                MultiPageChestMachineBlockEntity chest = new MultiPageChestMachineBlockEntity(cePos, state, schema);
-
-                chest.setWorld(context.getLevel().storageWorld());
+                // Create the machine controller (it will load data from CustomBlockData).
+                // ce 26.6.2: the engine BlockEntity wraps the controller.
+                BlockEntity be = new BlockEntity(cePos, state);
+                be.setWorld(context.getLevel().storageWorld());
+                MultiPageChestMachineBlockEntity chest = new MultiPageChestMachineBlockEntity(be, schema);
+                be.controller = chest;
                 net.minecraft.world.entity.player.Player player = (net.minecraft.world.entity.player.Player) context
                         .getPlayer().serverPlayer();
                 chest.openMenu(player);
@@ -160,7 +161,8 @@ public class MultiPageChestBehavior extends MultiBlockBehavior {
     }
 
     @Override
-    protected void onDisassemble(Level level, BlockPos pos, BlockEntity core) {
+    protected void onDisassemble(Level level, BlockPos pos,
+            net.momirealms.craftengine.core.block.entity.BlockEntityController core) {
         // Container persistence is handled by CustomBlockData automatically
         super.onDisassemble(level, pos, core);
     }

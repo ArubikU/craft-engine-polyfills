@@ -4,7 +4,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -16,11 +15,11 @@ import net.momirealms.craftengine.bukkit.util.LocationUtils;
 import net.momirealms.craftengine.bukkit.world.BukkitExistingBlock;
 import net.momirealms.craftengine.bukkit.world.BukkitWorld;
 import net.momirealms.craftengine.core.block.behavior.BlockBehavior;
-import net.momirealms.craftengine.core.block.CustomBlock;
+import net.momirealms.craftengine.core.block.BlockDefinition;
 import net.momirealms.craftengine.core.block.ImmutableBlockState;
-import net.momirealms.craftengine.core.block.UpdateOption;
+import net.momirealms.craftengine.core.block.UpdateFlags;
 import net.momirealms.craftengine.core.block.behavior.BlockBehaviorFactory;
-import net.momirealms.craftengine.core.block.properties.Property;
+import net.momirealms.craftengine.core.block.property.Property;
 import net.momirealms.craftengine.core.util.Direction;
 import net.momirealms.craftengine.core.util.Key;
 import net.momirealms.craftengine.core.world.BlockPos;
@@ -29,15 +28,14 @@ import org.bukkit.World;
 import org.bukkit.entity.Entity;
 import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
-import net.momirealms.craftengine.core.block.behavior.EntityBlockBehavior;
+import net.momirealms.craftengine.core.block.behavior.EntityBlock;
+import net.momirealms.craftengine.core.plugin.config.ConfigSection;
 import net.momirealms.craftengine.core.block.entity.BlockEntity;
-import net.momirealms.craftengine.core.block.entity.BlockEntityType;
+import net.momirealms.craftengine.core.block.entity.BlockEntityController;
 import net.momirealms.craftengine.core.block.entity.tick.BlockEntityTicker;
 import net.momirealms.craftengine.core.world.CEWorld;
-import dev.arubik.craftengine.block.entity.BukkitBlockEntityTypes;
-import dev.arubik.craftengine.block.entity.PersistentBlockEntity;
 
-public class FanBlockBehavior extends BukkitBlockBehavior implements EntityBlockBehavior {
+public class FanBlockBehavior extends BukkitBlockBehavior implements EntityBlock {
   public static final Factory FACTORY = new Factory();
 
   private final Property<Direction> facingProperty;
@@ -63,7 +61,7 @@ public class FanBlockBehavior extends BukkitBlockBehavior implements EntityBlock
 
   private final boolean redstoneAffectsPush;
 
-  public FanBlockBehavior(CustomBlock customBlock, Property<Direction> facing, Property<Boolean> powered,
+  public FanBlockBehavior(BlockDefinition customBlock, Property<Direction> facing, Property<Boolean> powered,
       Property<Integer> powerLevel, int tickDelay, Particle particle, int maxPushDistance, Set<Key> passableBlocks,
       boolean redstoneAffectsPush) {
     super(customBlock);
@@ -77,57 +75,72 @@ public class FanBlockBehavior extends BukkitBlockBehavior implements EntityBlock
     this.redstoneAffectsPush = redstoneAffectsPush;
   }
 
+  private int controllerId;
+
   @Override
-  public <T extends BlockEntity> BlockEntityType<T> blockEntityType(ImmutableBlockState state) {
-    @SuppressWarnings("unchecked")
-    BlockEntityType<T> type = (BlockEntityType<T>) BukkitBlockEntityTypes.PERSISTENT_BLOCK_ENTITY_TYPE;
-    return type;
+  public void initControllerId(int id) {
+    this.controllerId = id;
   }
 
   @Override
-  public BlockEntity createBlockEntity(net.momirealms.craftengine.core.world.BlockPos pos, ImmutableBlockState state) {
-    return new PersistentBlockEntity(pos, state);
+  public BlockEntityController createBlockEntityController(BlockEntity blockEntity) {
+    return new FanController(blockEntity, this);
   }
 
-  @Override
-  public <T extends BlockEntity> BlockEntityTicker<T> createSyncBlockEntityTicker(CEWorld world,
-      ImmutableBlockState state, BlockEntityType<T> type) {
-    if (type != blockEntityType(state))
-      return null;
+  /** Controller that drives the fan's per-tick push logic. */
+  public static class FanController extends BlockEntityController {
+    private final FanBlockBehavior behavior;
 
-    return (lvl, cePos, ceState, be) -> {
-      Object level = world.world().serverWorld();
+    public FanController(BlockEntity blockEntity, FanBlockBehavior behavior) {
+      super(blockEntity);
+      this.behavior = behavior;
+    }
+
+    @Override
+    public <C extends BlockEntityController> BlockEntityTicker<C> createBlockEntityTicker(CEWorld world,
+        ImmutableBlockState state) {
+      @SuppressWarnings("unchecked")
+      BlockEntityTicker<C> ticker = (BlockEntityTicker<C>) BlockEntityController
+          .createTickerHelper((BlockEntityTicker<FanController>) FanController::tick);
+      return ticker;
+    }
+
+    public static void tick(CEWorld world, BlockPos cePos, ImmutableBlockState ceState, FanController self) {
+      FanBlockBehavior behavior = self.behavior;
+      Object level = world.world().minecraftWorld();
       if (level == null)
         return;
 
       ImmutableBlockState blockState = ceState;
       if (blockState == null || blockState.isEmpty()
-          || !((Boolean) blockState.get(this.poweredProperty)).booleanValue())
+          || !((Boolean) blockState.get(behavior.poweredProperty)).booleanValue())
         return;
 
-      Direction facing = (Direction) blockState.get(this.facingProperty);
-      BukkitWorld bukkitWorld = new BukkitWorld(FastNMS.INSTANCE.method$Level$getCraftWorld(level));
+      Direction facing = (Direction) blockState.get(behavior.facingProperty);
+      BukkitWorld bukkitWorld = new BukkitWorld(((net.minecraft.server.level.ServerLevel) level).getWorld());
       BlockPos pos = cePos;
-      int pushStrength = getPushStrength(blockState);
-      for (int i = 1; i <= this.maxPushDistance; i++) {
+      int pushStrength = behavior.getPushStrength(blockState);
+      for (int i = 1; i <= behavior.maxPushDistance; i++) {
         BlockPos targetPos = pos.relative(facing, i);
         BukkitExistingBlock blockInWorld = (BukkitExistingBlock) bukkitWorld.getBlock(targetPos.x(), targetPos.y(),
             targetPos.z());
-        if (!isPassable(blockInWorld))
+        if (!behavior.isPassable(blockInWorld))
           break;
-        applyPushAndParticles(bukkitWorld, targetPos, facing, pushStrength);
+        behavior.applyPushAndParticles(bukkitWorld, targetPos, facing, pushStrength);
       }
-    };
+    }
   }
 
-  public void onPlace(Object thisBlock, Object[] args, Callable<Object> superMethod) {
+  @Override
+  public void onPlace(Object thisBlock, Object[] args) {
     Object state = args[0];
     Object world = args[1];
     Object blockPos = args[2];
     updateActivationFromNearbyRedstone(state, world, blockPos);
   }
 
-  public void tick(Object thisBlock, Object[] args, Callable<Object> superMethod) {
+  @Override
+  public void tick(Object thisBlock, Object[] args) {
     // Entity ticker handles ticking now
   }
 
@@ -180,12 +193,14 @@ public class FanBlockBehavior extends BukkitBlockBehavior implements EntityBlock
       ImmutableBlockState newState = blockState.with(this.poweredProperty, Boolean.valueOf(shouldPower));
       if (this.powerLevelProperty != null)
         newState = newState.with(this.powerLevelProperty, Integer.valueOf(targetPowerLevel));
-      FastNMS.INSTANCE.method$LevelWriter$setBlock(level, posObj, newState.customBlockState().literalObject(),
-          UpdateOption.UPDATE_ALL.flags());
+      ((net.minecraft.world.level.LevelWriter) level).setBlock((net.minecraft.core.BlockPos) posObj,
+          (net.minecraft.world.level.block.state.BlockState) newState.customBlockState().minecraftState(),
+          UpdateFlags.UPDATE_ALL);
     }
   }
 
-  public void neighborChanged(Object thisBlock, Object[] args, Callable<Object> superMethod) {
+  @Override
+  public void neighborChanged(Object thisBlock, Object[] args) {
     Object state = args[0];
     Object level = args[1];
     Object posObj = args[2];
@@ -200,16 +215,18 @@ public class FanBlockBehavior extends BukkitBlockBehavior implements EntityBlock
       ImmutableBlockState newState = blockState.with(this.poweredProperty, Boolean.valueOf(shouldPower));
       if (this.powerLevelProperty != null)
         newState = newState.with(this.powerLevelProperty, Integer.valueOf(targetPowerLevel));
-      FastNMS.INSTANCE.method$LevelWriter$setBlock(level, posObj, newState.customBlockState().literalObject(),
-          UpdateOption.UPDATE_ALL.flags());
+      ((net.minecraft.world.level.LevelWriter) level).setBlock((net.minecraft.core.BlockPos) posObj,
+          (net.minecraft.world.level.block.state.BlockState) newState.customBlockState().minecraftState(),
+          UpdateFlags.UPDATE_ALL);
       blockState = newState;
     }
     if (!info.hasPower()) {
       ImmutableBlockState newState = blockState.with(this.poweredProperty, Boolean.valueOf(false));
       if (this.powerLevelProperty != null)
         newState = newState.with(this.powerLevelProperty, Integer.valueOf(0));
-      FastNMS.INSTANCE.method$LevelWriter$setBlock(level, posObj, newState.customBlockState().literalObject(),
-          UpdateOption.UPDATE_ALL.flags());
+      ((net.minecraft.world.level.LevelWriter) level).setBlock((net.minecraft.core.BlockPos) posObj,
+          (net.minecraft.world.level.block.state.BlockState) newState.customBlockState().minecraftState(),
+          UpdateFlags.UPDATE_ALL);
     }
   }
 
@@ -223,7 +240,7 @@ public class FanBlockBehavior extends BukkitBlockBehavior implements EntityBlock
   }
 
   private RedstoneInfo analyzeRedstone(Object level, Object posObj) {
-    BukkitWorld world = new BukkitWorld(FastNMS.INSTANCE.method$Level$getCraftWorld(level));
+    BukkitWorld world = new BukkitWorld(((net.minecraft.server.level.ServerLevel) level).getWorld());
     BlockPos pos = LocationUtils.fromBlockPos(posObj);
     int maxNeighborPower = 0;
     boolean foundDirectSource = false;
@@ -236,7 +253,8 @@ public class FanBlockBehavior extends BukkitBlockBehavior implements EntityBlock
           foundDirectSource = true;
       }
     }
-    boolean hasNeighborSignal = FastNMS.INSTANCE.method$SignalGetter$hasNeighborSignal(level, posObj);
+    boolean hasNeighborSignal = ((net.minecraft.world.level.SignalGetter) level)
+        .hasNeighborSignal((net.minecraft.core.BlockPos) posObj);
     return new RedstoneInfo(maxNeighborPower, foundDirectSource, hasNeighborSignal);
   }
 
@@ -246,12 +264,13 @@ public class FanBlockBehavior extends BukkitBlockBehavior implements EntityBlock
     }
   }
 
-  public boolean isSignalSource(Object thisBlock, Object[] args, Callable<Object> superMethod) {
+  @Override
+  public boolean isSignalSource(Object thisBlock, Object[] args) {
     return true;
   }
 
   public static class Factory implements BlockBehaviorFactory<BlockBehavior> {
-    public BlockBehavior create(CustomBlock block, Map<String, Object> arguments) {
+    public BlockBehavior create(BlockDefinition block, ConfigSection arguments) {
       Property<Direction> facing = (Property<Direction>) block.getProperty("facing");
       Property<Boolean> powered = (Property<Boolean>) block.getProperty("powered");
       Property<Integer> powerLevel = (Property<Integer>) block.getProperty("power");

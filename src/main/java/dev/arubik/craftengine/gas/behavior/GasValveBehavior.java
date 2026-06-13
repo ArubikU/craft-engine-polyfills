@@ -1,26 +1,22 @@
 package dev.arubik.craftengine.gas.behavior;
 
-import java.util.Map;
-import java.util.concurrent.Callable;
-
 import dev.arubik.craftengine.block.entity.BukkitBlockEntityTypes;
 import dev.arubik.craftengine.block.entity.PersistentBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.Level;
-import net.momirealms.craftengine.core.block.CustomBlock;
+import net.momirealms.craftengine.core.block.BlockDefinition;
 import net.momirealms.craftengine.core.block.ImmutableBlockState;
 import net.momirealms.craftengine.core.block.behavior.BlockBehaviorFactory;
 import net.momirealms.craftengine.core.block.entity.BlockEntity;
-import net.momirealms.craftengine.core.block.entity.BlockEntityType;
-import net.momirealms.craftengine.core.util.HorizontalDirection;
+import net.momirealms.craftengine.core.plugin.config.ConfigSection;
+import net.momirealms.craftengine.core.world.CEWorld;
 import net.momirealms.craftengine.core.util.Key;
 import org.bukkit.persistence.PersistentDataType;
 import dev.arubik.craftengine.gas.GasStack;
 import dev.arubik.craftengine.gas.GasType;
 import dev.arubik.craftengine.gas.GasKeys;
 import dev.arubik.craftengine.gas.GasTransferHelper;
-import net.momirealms.craftengine.bukkit.nms.FastNMS;
 import net.momirealms.craftengine.bukkit.util.LocationUtils;
 
 /**
@@ -31,15 +27,15 @@ public class GasValveBehavior extends GasPumpBehavior {
     public static final Factory FACTORY = new Factory();
     private static final Key OPEN_KEY = Key.of("gas:valve_open");
 
-    public GasValveBehavior(CustomBlock block,
-            net.momirealms.craftengine.core.block.properties.EnumProperty<HorizontalDirection> horizontalDirectionProperty,
-            net.momirealms.craftengine.core.block.properties.EnumProperty<net.momirealms.craftengine.core.util.Direction> verticalDirectionProperty) {
+    public GasValveBehavior(BlockDefinition block,
+            net.momirealms.craftengine.core.block.property.EnumProperty<net.momirealms.craftengine.core.util.Direction> horizontalDirectionProperty,
+            net.momirealms.craftengine.core.block.property.EnumProperty<net.momirealms.craftengine.core.util.Direction> verticalDirectionProperty) {
         super(block, horizontalDirectionProperty, verticalDirectionProperty);
     }
 
     protected PersistentBlockEntity getBE(Level level, BlockPos pos) {
         BlockEntity be = BukkitBlockEntityTypes.getIfLoaded(level, pos);
-        if (be instanceof PersistentBlockEntity p)
+        if (be != null && be.controller instanceof PersistentBlockEntity p)
             return p;
         return null;
     }
@@ -60,12 +56,9 @@ public class GasValveBehavior extends GasPumpBehavior {
     }
 
     @Override
-    public <T extends BlockEntity> net.momirealms.craftengine.core.block.entity.tick.BlockEntityTicker<T> createSyncBlockEntityTicker(
-            net.momirealms.craftengine.core.world.CEWorld world, ImmutableBlockState state, BlockEntityType<T> type) {
-        if (type != blockEntityType())
-            return null;
-        return (lvl, cePos, ceState, be) -> {
-            net.minecraft.world.level.Level level = (net.minecraft.world.level.Level) world.world().serverWorld();
+    protected void tickPump(CEWorld world, net.momirealms.craftengine.core.world.BlockPos cePos) {
+        {
+            net.minecraft.world.level.Level level = (net.minecraft.world.level.Level) world.world().minecraftWorld();
             if (level == null || level.isClientSide())
                 return;
             BlockPos pos = BlockPos.of(cePos.asLong());
@@ -115,7 +108,7 @@ public class GasValveBehavior extends GasPumpBehavior {
                     tryDirectional(level, pos, Direction.DOWN, PumpAction.PUSH);
                 }
             }
-        };
+        }
     }
 
     public void toggle(Level level, BlockPos pos) {
@@ -123,14 +116,16 @@ public class GasValveBehavior extends GasPumpBehavior {
     }
 
     // Redstone: reaccionar a neighborChanged
-    public void neighborChanged(Object thisBlock, Object[] args, Callable<Object> superMethod) {
+    @Override
+    public void neighborChanged(Object thisBlock, Object[] args) {
         Object levelObj = args[1];
         Object posObj = args[2];
         net.minecraft.world.level.Level nmsLevel = (net.minecraft.world.level.Level) levelObj;
 
         net.minecraft.core.BlockPos mcPos = (net.minecraft.core.BlockPos) posObj;
         // Señal presente?
-        boolean powered = FastNMS.INSTANCE.method$SignalGetter$hasNeighborSignal(levelObj, posObj);
+        boolean powered = ((net.minecraft.world.level.SignalGetter) levelObj)
+                .hasNeighborSignal((net.minecraft.core.BlockPos) posObj);
         Level level = nmsLevel;
         boolean currentlyOpen = isOpen(level, mcPos);
         // Regla: señal de redstone cierra (seguridad) y ausencia de señal abre.
@@ -143,7 +138,7 @@ public class GasValveBehavior extends GasPumpBehavior {
     // Factory
     public static class Factory implements BlockBehaviorFactory<GasValveBehavior> {
         @Override
-        public GasValveBehavior create(CustomBlock block, Map<String, Object> arguments) {
+        public GasValveBehavior create(BlockDefinition block, ConfigSection arguments) {
 
             String horizontalDirectionProperty = null;
             String verticalDirectionProperty = null;
@@ -158,12 +153,12 @@ public class GasValveBehavior extends GasPumpBehavior {
                 verticalDirectionProperty = (String) verticalProp;
             }
 
-            net.momirealms.craftengine.core.block.properties.EnumProperty<HorizontalDirection> hProp = null;
-            net.momirealms.craftengine.core.block.properties.EnumProperty<net.momirealms.craftengine.core.util.Direction> vProp = null;
+            net.momirealms.craftengine.core.block.property.EnumProperty<net.momirealms.craftengine.core.util.Direction> hProp = null;
+            net.momirealms.craftengine.core.block.property.EnumProperty<net.momirealms.craftengine.core.util.Direction> vProp = null;
 
             if (horizontalDirectionProperty != null) {
                 try {
-                    hProp = (net.momirealms.craftengine.core.block.properties.EnumProperty<HorizontalDirection>) block
+                    hProp = (net.momirealms.craftengine.core.block.property.EnumProperty<net.momirealms.craftengine.core.util.Direction>) block
                             .getProperty(horizontalDirectionProperty);
                 } catch (ClassCastException ignored) {
                 }
@@ -171,7 +166,7 @@ public class GasValveBehavior extends GasPumpBehavior {
 
             if (verticalDirectionProperty != null) {
                 try {
-                    vProp = (net.momirealms.craftengine.core.block.properties.EnumProperty<net.momirealms.craftengine.core.util.Direction>) block
+                    vProp = (net.momirealms.craftengine.core.block.property.EnumProperty<net.momirealms.craftengine.core.util.Direction>) block
                             .getProperty(verticalDirectionProperty);
                 } catch (ClassCastException ignored) {
                 }

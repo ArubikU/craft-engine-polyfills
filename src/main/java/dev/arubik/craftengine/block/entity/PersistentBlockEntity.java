@@ -16,17 +16,21 @@ import org.jetbrains.annotations.Nullable;
 import dev.arubik.craftengine.util.CustomDataType;
 import dev.arubik.craftengine.util.TypedKey;
 import net.minecraft.world.level.block.state.BlockState;
-import net.momirealms.craftengine.bukkit.block.behavior.UnsafeCompositeBlockBehavior;
+import net.momirealms.craftengine.bukkit.block.behavior.CompositeBlockBehavior;
 import net.momirealms.craftengine.bukkit.util.BlockStateUtils;
 import net.momirealms.craftengine.core.block.ImmutableBlockState;
 import net.momirealms.craftengine.core.block.behavior.BlockBehavior;
 import net.momirealms.craftengine.core.block.entity.BlockEntity;
+import net.momirealms.craftengine.core.block.entity.BlockEntityController;
 import net.momirealms.craftengine.core.util.Key;
-import net.momirealms.craftengine.core.world.BlockPos;
-import net.momirealms.craftengine.core.world.CEWorld;
 import net.momirealms.craftengine.libraries.nbt.CompoundTag;
 
-public class PersistentBlockEntity extends BlockEntity {
+/**
+ * Re-based onto {@link BlockEntityController} for craft-engine 26.6.2
+ * ({@code BlockEntity} is now final). The engine constructs the {@link BlockEntity}
+ * and stores this controller in {@code blockEntity.controller}.
+ */
+public class PersistentBlockEntity extends BlockEntityController {
 
     private CompoundTag container;
 
@@ -34,9 +38,14 @@ public class PersistentBlockEntity extends BlockEntity {
 
     public Function<PersistentBlockEntity, Void> preCleanup = null;
 
-    public PersistentBlockEntity(BlockPos pos, ImmutableBlockState blockState) {
-        super(BukkitBlockEntityTypes.PERSISTENT_BLOCK_ENTITY_TYPE, pos, blockState);
+    public PersistentBlockEntity(BlockEntity blockEntity) {
+        super(blockEntity);
         this.container = new CompoundTag();
+    }
+
+    // Thin accessors replacing the old inherited BlockEntity members.
+    public ImmutableBlockState blockState() {
+        return blockEntity().blockState();
     }
 
     public void setPreRemoveHook(Function<CompoundTag, Void> hook) {
@@ -48,7 +57,7 @@ public class PersistentBlockEntity extends BlockEntity {
     }
 
     @Override
-    public void preRemove() {
+    public void onRemove() {
 
         if (this.preRemoveHook != null) {
             this.preRemoveHook.apply(this.container);
@@ -56,7 +65,6 @@ public class PersistentBlockEntity extends BlockEntity {
         if (this.preCleanup != null) {
             this.preCleanup.apply(this);
         }
-        super.preRemove();
     }
 
     // Delegación de métodos
@@ -135,7 +143,7 @@ public class PersistentBlockEntity extends BlockEntity {
     }
 
     @Override
-    protected void saveCustomData(net.momirealms.craftengine.libraries.nbt.CompoundTag tag) {
+    public void saveCustomData(net.momirealms.craftengine.libraries.nbt.CompoundTag tag) {
         this.container.keySet().forEach(key -> {
             tag.put(key, container.get(key));
         });
@@ -241,7 +249,7 @@ public class PersistentBlockEntity extends BlockEntity {
     }
 
     public BlockBehavior getBlockBehavior() {
-        Optional<ImmutableBlockState> customStateOpt = BlockStateUtils.getOptionalCustomBlockState(blockState);
+        Optional<ImmutableBlockState> customStateOpt = BlockStateUtils.getOptionalCustomBlockState(blockEntity().blockState());
         if (customStateOpt.isPresent()) {
             return customStateOpt.get().behavior();
         }
@@ -249,15 +257,16 @@ public class PersistentBlockEntity extends BlockEntity {
     }
 
     public <T> T getBlockBehavior(Class<T> clazz) {
-        Optional<ImmutableBlockState> customStateOpt = BlockStateUtils.getOptionalCustomBlockState(blockState);
+        Optional<ImmutableBlockState> customStateOpt = BlockStateUtils.getOptionalCustomBlockState(blockEntity().blockState());
         if (customStateOpt.isPresent()) {
             // check if is instance of or implements etc
             if (customStateOpt.get().behavior().getClass().isInstance(clazz)) {
                 return (T) customStateOpt.get().behavior();
             }
-            if (customStateOpt.get().behavior() instanceof UnsafeCompositeBlockBehavior beh) {
-                if (beh.getAs(clazz).isPresent()) {
-                    return (T) beh.getAs(clazz).get();
+            if (customStateOpt.get().behavior() instanceof CompositeBlockBehavior beh) {
+                T found = beh.getFirst(clazz);
+                if (found != null) {
+                    return found;
                 }
             }
         }

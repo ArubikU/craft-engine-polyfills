@@ -2,7 +2,6 @@ package dev.arubik.craftengine.block.behavior;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 import net.minecraft.core.BlockPos;
@@ -11,11 +10,11 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.momirealms.craftengine.bukkit.block.behavior.BukkitBlockBehavior;
 import net.momirealms.craftengine.bukkit.util.BlockStateUtils;
 import net.momirealms.craftengine.core.block.behavior.BlockBehavior;
-import net.momirealms.craftengine.core.block.CustomBlock;
+import net.momirealms.craftengine.core.block.BlockDefinition;
 import net.momirealms.craftengine.core.block.ImmutableBlockState;
 import net.momirealms.craftengine.core.block.behavior.BlockBehaviorFactory;
+import net.momirealms.craftengine.core.plugin.config.ConfigSection;
 import net.minecraft.core.Direction;
-import net.momirealms.craftengine.core.util.HorizontalDirection;
 import dev.arubik.craftengine.util.DirectionType;
 
 /**
@@ -52,20 +51,20 @@ public class ConnectableBlockBehavior extends BukkitBlockBehavior {
     public static final Factory FACTORY = new Factory();
 
     protected List<Direction> connectableFaces;
-    public final net.momirealms.craftengine.core.block.properties.EnumProperty<HorizontalDirection> horizontalDirectionProperty;
-    public final net.momirealms.craftengine.core.block.properties.EnumProperty<net.momirealms.craftengine.core.util.Direction> verticalDirectionProperty;
+    public final net.momirealms.craftengine.core.block.property.EnumProperty<net.momirealms.craftengine.core.util.Direction> horizontalDirectionProperty;
+    public final net.momirealms.craftengine.core.block.property.EnumProperty<net.momirealms.craftengine.core.util.Direction> verticalDirectionProperty;
     public final dev.arubik.craftengine.multiblock.IOConfiguration defaultIOConfig;
 
-    public ConnectableBlockBehavior(CustomBlock block, List<Direction> connectableFaces,
-            net.momirealms.craftengine.core.block.properties.EnumProperty<HorizontalDirection> horizontalDirectionProperty,
-            net.momirealms.craftengine.core.block.properties.EnumProperty<net.momirealms.craftengine.core.util.Direction> verticalDirectionProperty) {
+    public ConnectableBlockBehavior(BlockDefinition block, List<Direction> connectableFaces,
+            net.momirealms.craftengine.core.block.property.EnumProperty<net.momirealms.craftengine.core.util.Direction> horizontalDirectionProperty,
+            net.momirealms.craftengine.core.block.property.EnumProperty<net.momirealms.craftengine.core.util.Direction> verticalDirectionProperty) {
         this(block, connectableFaces, horizontalDirectionProperty, verticalDirectionProperty,
                 new dev.arubik.craftengine.multiblock.IOConfiguration.Open());
     }
 
-    public ConnectableBlockBehavior(CustomBlock block, List<Direction> connectableFaces,
-            net.momirealms.craftengine.core.block.properties.EnumProperty<HorizontalDirection> horizontalDirectionProperty,
-            net.momirealms.craftengine.core.block.properties.EnumProperty<net.momirealms.craftengine.core.util.Direction> verticalDirectionProperty,
+    public ConnectableBlockBehavior(BlockDefinition block, List<Direction> connectableFaces,
+            net.momirealms.craftengine.core.block.property.EnumProperty<net.momirealms.craftengine.core.util.Direction> horizontalDirectionProperty,
+            net.momirealms.craftengine.core.block.property.EnumProperty<net.momirealms.craftengine.core.util.Direction> verticalDirectionProperty,
             dev.arubik.craftengine.multiblock.IOConfiguration ioConfig) {
         super(block);
         this.connectableFaces = connectableFaces;
@@ -125,7 +124,7 @@ public class ConnectableBlockBehavior extends BukkitBlockBehavior {
         ImmutableBlockState customState = customStateOpt.get();
 
         // Verificar que sea nuestro bloque
-        if (customState.owner().value() != this.customBlock)
+        if (customState.owner().value() != this.block())
             return originalDirection;
 
         // Explicit dispatch based on DirectionType
@@ -143,7 +142,7 @@ public class ConnectableBlockBehavior extends BukkitBlockBehavior {
             }
         } else {
             try {
-                HorizontalDirection directionProperty = customState.get(horizontalDirectionProperty);
+                net.momirealms.craftengine.core.util.Direction directionProperty = customState.get(horizontalDirectionProperty);
                 if (directionProperty != null) {
                     return dev.arubik.craftengine.multiblock.DirectionalIOHelper.getHorizontalWorldDirection(
                             dev.arubik.craftengine.multiblock.DirectionalIOHelper.fromDirection(originalDirection),
@@ -180,7 +179,7 @@ public class ConnectableBlockBehavior extends BukkitBlockBehavior {
         if (customStateOpt.isEmpty())
             return worldDirection;
         ImmutableBlockState customState = customStateOpt.get();
-        if (customState.owner().value() != this.customBlock)
+        if (customState.owner().value() != this.block())
             return worldDirection;
 
         // Explicit dispatch based on DirectionType
@@ -198,7 +197,7 @@ public class ConnectableBlockBehavior extends BukkitBlockBehavior {
             }
         } else {
             try {
-                HorizontalDirection directionProperty = customState.get(horizontalDirectionProperty);
+                net.momirealms.craftengine.core.util.Direction directionProperty = customState.get(horizontalDirectionProperty);
                 if (directionProperty != null) {
                     return dev.arubik.craftengine.multiblock.DirectionalIOHelper.getHorizontalLocalDirection(
                             worldDirection,
@@ -212,7 +211,7 @@ public class ConnectableBlockBehavior extends BukkitBlockBehavior {
 
     public Direction toDirection(BlockState blockState) {
         ImmutableBlockState customState = BlockStateUtils.getOptionalCustomBlockState(blockState).get();
-        HorizontalDirection horizontalDirection = customState.getNullable(horizontalDirectionProperty);
+        net.momirealms.craftengine.core.util.Direction horizontalDirection = customState.getNullable(horizontalDirectionProperty);
         net.momirealms.craftengine.core.util.Direction verticalDirection = customState
                 .getNullable(verticalDirectionProperty);
         if (verticalDirection != null) {
@@ -242,7 +241,7 @@ public class ConnectableBlockBehavior extends BukkitBlockBehavior {
      * Devuelve una instancia existente de ConnectableBlockBehavior para un bloque,
      * si existe.
      */
-    public static Optional<ConnectableBlockBehavior> from(CustomBlock block) {
+    public static Optional<ConnectableBlockBehavior> from(BlockDefinition block) {
         if (block == null)
             return Optional.empty();
         // Iterar sobre behaviors directamente desde el customBlock
@@ -252,7 +251,7 @@ public class ConnectableBlockBehavior extends BukkitBlockBehavior {
 
     public static class Factory implements BlockBehaviorFactory<BlockBehavior> {
         @Override
-        public BlockBehavior create(CustomBlock block, Map<String, Object> arguments) {
+        public BlockBehavior create(BlockDefinition block, ConfigSection arguments) {
             List<Direction> faces = new ArrayList<>();
 
             Object facesArg = arguments.getOrDefault("faces", "all");
@@ -326,12 +325,12 @@ public class ConnectableBlockBehavior extends BukkitBlockBehavior {
                 verticalDirectionProperty = (String) verticalProp;
             }
 
-            net.momirealms.craftengine.core.block.properties.EnumProperty<HorizontalDirection> hProp = null;
-            net.momirealms.craftengine.core.block.properties.EnumProperty<net.momirealms.craftengine.core.util.Direction> vProp = null;
+            net.momirealms.craftengine.core.block.property.EnumProperty<net.momirealms.craftengine.core.util.Direction> hProp = null;
+            net.momirealms.craftengine.core.block.property.EnumProperty<net.momirealms.craftengine.core.util.Direction> vProp = null;
 
             if (horizontalDirectionProperty != null) {
                 try {
-                    hProp = (net.momirealms.craftengine.core.block.properties.EnumProperty<HorizontalDirection>) block
+                    hProp = (net.momirealms.craftengine.core.block.property.EnumProperty<net.momirealms.craftengine.core.util.Direction>) block
                             .getProperty(horizontalDirectionProperty);
                 } catch (ClassCastException ignored) {
                     // Property type mismatch, keep as null
@@ -340,7 +339,7 @@ public class ConnectableBlockBehavior extends BukkitBlockBehavior {
 
             if (verticalDirectionProperty != null) {
                 try {
-                    vProp = (net.momirealms.craftengine.core.block.properties.EnumProperty<net.momirealms.craftengine.core.util.Direction>) block
+                    vProp = (net.momirealms.craftengine.core.block.property.EnumProperty<net.momirealms.craftengine.core.util.Direction>) block
                             .getProperty(verticalDirectionProperty);
                 } catch (ClassCastException ignored) {
                     // Property type mismatch, keep as null

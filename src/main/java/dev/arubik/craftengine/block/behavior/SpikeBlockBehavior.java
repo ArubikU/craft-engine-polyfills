@@ -4,7 +4,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.concurrent.Callable;
 
 import org.bukkit.Location;
 import org.bukkit.craftbukkit.entity.CraftPlayer;
@@ -16,16 +15,16 @@ import net.momirealms.craftengine.bukkit.block.behavior.BukkitBlockBehavior;
 import net.momirealms.craftengine.bukkit.nms.FastNMS;
 import net.momirealms.craftengine.bukkit.util.LocationUtils;
 import net.momirealms.craftengine.bukkit.world.BukkitWorld;
-import net.momirealms.craftengine.core.block.CustomBlock;
+import net.momirealms.craftengine.core.block.BlockDefinition;
 import net.momirealms.craftengine.core.block.ImmutableBlockState;
 import net.momirealms.craftengine.core.block.behavior.BlockBehavior;
 import net.momirealms.craftengine.core.block.behavior.BlockBehaviorFactory;
+import net.momirealms.craftengine.core.plugin.config.ConfigSection;
 import net.momirealms.craftengine.core.entity.player.InteractionHand;
 import net.momirealms.craftengine.core.entity.player.InteractionResult;
 import net.momirealms.craftengine.core.entity.player.Player;
 import net.momirealms.craftengine.core.item.Item;
 import net.momirealms.craftengine.core.util.ItemUtils;
-import net.momirealms.craftengine.core.util.ResourceConfigUtils;
 import net.momirealms.craftengine.core.world.BlockPos;
 import net.momirealms.craftengine.core.world.World;
 import net.momirealms.craftengine.core.world.context.UseOnContext;
@@ -46,48 +45,62 @@ import com.google.common.collect.MultimapBuilder;
 
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.Level;
-import net.momirealms.craftengine.core.block.behavior.EntityBlockBehavior;
+import net.momirealms.craftengine.core.block.behavior.EntityBlock;
 import net.momirealms.craftengine.core.block.entity.BlockEntity;
-import net.momirealms.craftengine.core.block.entity.BlockEntityType;
+import net.momirealms.craftengine.core.block.entity.BlockEntityController;
 import net.momirealms.craftengine.core.block.entity.tick.BlockEntityTicker;
 import net.momirealms.craftengine.core.world.CEWorld;
-import dev.arubik.craftengine.block.entity.BukkitBlockEntityTypes;
-import dev.arubik.craftengine.block.entity.PersistentBlockEntity;
 
-public class SpikeBlockBehavior extends BukkitBlockBehavior implements EntityBlockBehavior {
+public class SpikeBlockBehavior extends BukkitBlockBehavior implements EntityBlock {
 
     public static final Factory FACTORY = new Factory();
 
     private final double damageMultiplier;
     private final double cooldownMultiplier;
 
-    public SpikeBlockBehavior(CustomBlock customBlock, double damageMultiplier, double cooldownMultiplier) {
+    public SpikeBlockBehavior(BlockDefinition customBlock, double damageMultiplier, double cooldownMultiplier) {
         super(customBlock);
         this.damageMultiplier = damageMultiplier;
         this.cooldownMultiplier = cooldownMultiplier;
     }
 
+    private int controllerId;
+
     @Override
-    public <T extends BlockEntity> BlockEntityType<T> blockEntityType(ImmutableBlockState state) {
-        @SuppressWarnings("unchecked")
-        BlockEntityType<T> type = (BlockEntityType<T>) BukkitBlockEntityTypes.PERSISTENT_BLOCK_ENTITY_TYPE;
-        return type;
+    public void initControllerId(int id) {
+        this.controllerId = id;
     }
 
     @Override
-    public BlockEntity createBlockEntity(net.momirealms.craftengine.core.world.BlockPos pos,
-            ImmutableBlockState state) {
-        return new PersistentBlockEntity(pos, state);
+    public BlockEntityController createBlockEntityController(BlockEntity blockEntity) {
+        return new SpikeController(blockEntity, this);
     }
 
-    @Override
-    public <T extends BlockEntity> BlockEntityTicker<T> createSyncBlockEntityTicker(CEWorld world,
-            ImmutableBlockState state, BlockEntityType<T> type) {
-        if (type != blockEntityType(state))
-            return null;
+    /** Controller driving the spike's attack ticking; data lives in the standalone SpikeBlockEntity registry. */
+    public static class SpikeController extends BlockEntityController {
+        private final SpikeBlockBehavior behavior;
 
-        return (lvl, cePos, ceState, be) -> {
-            ServerLevel level = (ServerLevel) world.world().serverWorld();
+        public SpikeController(BlockEntity blockEntity, SpikeBlockBehavior behavior) {
+            super(blockEntity);
+            this.behavior = behavior;
+        }
+
+        @Override
+        public <C extends BlockEntityController> BlockEntityTicker<C> createBlockEntityTicker(CEWorld world,
+                ImmutableBlockState state) {
+            @SuppressWarnings("unchecked")
+            BlockEntityTicker<C> ticker = (BlockEntityTicker<C>) BlockEntityController
+                    .createTickerHelper((BlockEntityTicker<SpikeController>) SpikeController::tick);
+            return ticker;
+        }
+
+        public static void tick(CEWorld world, net.momirealms.craftengine.core.world.BlockPos cePos,
+                ImmutableBlockState ceState, SpikeController self) {
+            SpikeBlockBehavior behavior = self.behavior;
+            double damageMultiplier = behavior.damageMultiplier;
+            double cooldownMultiplier = behavior.cooldownMultiplier;
+
+            ServerLevel level = (ServerLevel) world.world().minecraftWorld();
             if (level == null || level.isClientSide())
                 return;
 
@@ -157,8 +170,8 @@ public class SpikeBlockBehavior extends BukkitBlockBehavior implements EntityBlo
                 if (attacked) {
                     entity.setLastAttackTime(currentTime);
                     level.updateNeighborsAt(pos,
-                            (net.minecraft.world.level.block.Block) customBlock.defaultState().customBlockState()
-                                    .literalObject());
+                            ((net.minecraft.world.level.block.state.BlockState) behavior.block().defaultState()
+                                    .customBlockState().minecraftState()).getBlock());
 
                     // Damage the item
                     if (itemStack.isDamageableItem()) {
@@ -175,15 +188,12 @@ public class SpikeBlockBehavior extends BukkitBlockBehavior implements EntityBlo
                     }
                 }
             }
-        };
+        }
     }
 
     @Override
-    public void onPlace(Object thisBlock, Object[] args, Callable<Object> superMethod) throws Exception {
-        superMethod.call();
+    public void onPlace(Object thisBlock, Object[] args) {
         // args: BlockState state, Level level, BlockPos pos, BlockState oldState,
-        // boolean movedByPiston
-        // 1.20.5+: BlockState state, Level level, BlockPos pos, BlockState oldState,
         // boolean movedByPiston
         // args[1] is Level, args[2] is BlockPos.
         Object levelObj = args[1];
@@ -195,36 +205,29 @@ public class SpikeBlockBehavior extends BukkitBlockBehavior implements EntityBlo
     }
 
     @Override
-    public void onRemove(Object thisBlock, Object[] args, Callable<Object> superMethod) throws Exception {
-        superMethod.call();
-        // args: BlockState state, Level level, BlockPos pos, BlockState newState,
-        // boolean movedByPiston
+    public void affectNeighborsAfterRemoval(Object thisBlock, Object[] args) {
+        super.affectNeighborsAfterRemoval(thisBlock, args);
+        // args: BlockState state, Level level, BlockPos pos, (movedByPiston)
         ServerLevel level = (ServerLevel) args[1]; // server level usually
         net.minecraft.core.BlockPos pos = (net.minecraft.core.BlockPos) args[2];
-        Object newStateObj = args[3];
 
-        // Check if block changed
-        BlockState state = (BlockState) args[0];
-        BlockState newState = (BlockState) newStateObj;
-
-        if (state.getBlock() != newState.getBlock()) {
-            SpikeBlockEntity spike = SpikeBlockEntity.get(level, pos).orElse(null);
-            if (spike != null) {
-                if (!spike.getItem().isEmpty()) {
-                    Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), spike.getItem());
-                }
-                spike.destroy();
+        // On removal, drop the stored item and destroy the standalone block entity.
+        SpikeBlockEntity spike = SpikeBlockEntity.get(level, pos).orElse(null);
+        if (spike != null) {
+            if (!spike.getItem().isEmpty()) {
+                Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), spike.getItem());
             }
+            spike.destroy();
         }
     }
 
     @Override
-    public boolean isSignalSource(Object thisBlock, Object[] args, Callable<Object> superMethod) {
+    public boolean isSignalSource(Object thisBlock, Object[] args) {
         return true;
     }
 
     @Override
-    public int getSignal(Object thisBlock, Object[] args, Callable<Object> superMethod) {
+    public int getSignal(Object thisBlock, Object[] args) {
         // params: BlockState blockState, BlockGetter blockAccess, BlockPos pos,
         // Direction side
         Level level = (Level) args[1];
@@ -241,7 +244,8 @@ public class SpikeBlockBehavior extends BukkitBlockBehavior implements EntityBlo
         return 0;
     }
 
-    @Override
+    // NOTE: getContainer is no longer a BlockBehavior callback in craft-engine 26.6.2.
+    // Kept for reference; not invoked by the engine.
     public Object getContainer(Object thisBlock, Object[] args) {
         // params: BlockState state, LevelAccessor level, BlockPos pos
         // Returns WorldlyContainer for hopper interaction
@@ -262,7 +266,7 @@ public class SpikeBlockBehavior extends BukkitBlockBehavior implements EntityBlo
         if (!(world.platformWorld() instanceof org.bukkit.World))
             return InteractionResult.PASS;
 
-        SpikeBlockEntity spike = SpikeBlockEntity.getOrCreate((ServerLevel) ((BukkitWorld) world).serverWorld(),
+        SpikeBlockEntity spike = SpikeBlockEntity.getOrCreate((ServerLevel) ((BukkitWorld) world).minecraftWorld(),
                 net.minecraft.core.BlockPos.of(pos.asLong()));
 
         // Put/Take item logic
@@ -304,10 +308,10 @@ public class SpikeBlockBehavior extends BukkitBlockBehavior implements EntityBlo
 
     public static class Factory implements BlockBehaviorFactory<BlockBehavior> {
         @Override
-        public BlockBehavior create(CustomBlock block, Map<String, Object> arguments) {
-            double damageMultiplier = ResourceConfigUtils.getAsDouble(arguments.getOrDefault("damage-multiplier", 1.0),
+        public BlockBehavior create(BlockDefinition block, ConfigSection arguments) {
+            double damageMultiplier = dev.arubik.craftengine.util.Utils.getAsDouble(arguments.getOrDefault("damage-multiplier", 1.0),
                     "damage-multiplier");
-            double cooldownMultiplier = ResourceConfigUtils
+            double cooldownMultiplier = dev.arubik.craftengine.util.Utils
                     .getAsDouble(arguments.getOrDefault("cooldown-multiplier", 1.0), "cooldown-multiplier");
 
             return new SpikeBlockBehavior(block, damageMultiplier, cooldownMultiplier);

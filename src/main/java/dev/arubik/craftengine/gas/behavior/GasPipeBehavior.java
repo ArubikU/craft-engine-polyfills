@@ -1,7 +1,6 @@
 package dev.arubik.craftengine.gas.behavior;
 
 import java.util.HashSet;
-import java.util.Map;
 import java.util.function.Consumer;
 
 import dev.arubik.craftengine.block.behavior.ConnectedBlockBehavior;
@@ -26,62 +25,74 @@ import net.momirealms.craftengine.bukkit.plugin.user.BukkitServerPlayer;
 import net.momirealms.craftengine.bukkit.util.BlockStateUtils;
 import net.momirealms.craftengine.bukkit.util.LocationUtils;
 import net.momirealms.craftengine.core.block.behavior.BlockBehavior;
-import net.momirealms.craftengine.core.block.CustomBlock;
+import net.momirealms.craftengine.core.block.BlockDefinition;
 import net.momirealms.craftengine.core.block.ImmutableBlockState;
 import net.momirealms.craftengine.core.block.behavior.BlockBehaviorFactory;
-import net.momirealms.craftengine.core.block.behavior.EntityBlockBehavior;
+import net.momirealms.craftengine.core.block.behavior.EntityBlock;
+import net.momirealms.craftengine.core.plugin.config.ConfigSection;
 import net.momirealms.craftengine.core.block.entity.BlockEntity;
-import net.momirealms.craftengine.core.block.entity.BlockEntityType;
+import net.momirealms.craftengine.core.block.entity.BlockEntityController;
 import net.momirealms.craftengine.core.block.entity.tick.BlockEntityTicker;
 import net.momirealms.craftengine.core.world.context.UseOnContext;
 import net.momirealms.craftengine.core.world.CEWorld;
 import dev.arubik.craftengine.multiblock.IOConfiguration;
 import dev.arubik.craftengine.util.Utils;
 
-public class GasPipeBehavior extends ConnectedBlockBehavior implements EntityBlockBehavior, GasCarrier {
+public class GasPipeBehavior extends ConnectedBlockBehavior implements EntityBlock, GasCarrier {
 
     public static final Factory FACTORY = new Factory();
 
     protected static final int CAPACITY = 1000; // mb
     protected static final int TRANSFER_PER_TICK = 100; // mb/tick
 
-    protected final CustomBlock block;
+    protected final BlockDefinition block;
 
     // Round-robin caching: guardar última dirección exitosa por posición
     private final java.util.Map<Long, Integer> lastSuccessfulDirection = new java.util.concurrent.ConcurrentHashMap<>();
 
-    public GasPipeBehavior(CustomBlock block) {
+    public GasPipeBehavior(BlockDefinition block) {
         super(block, new java.util.ArrayList<>(), new HashSet<>(),
                 new HashSet<>(java.util.Arrays.asList("cml:gas_pump", "cml:gas_valve", "cml:gas_tank")), true);
         this.block = block;
     }
 
-    @Override
-    public <T extends BlockEntity> BlockEntityType<T> blockEntityType(ImmutableBlockState state) {
-        @SuppressWarnings("unchecked")
-        BlockEntityType<T> type = (BlockEntityType<T>) BukkitBlockEntityTypes.PERSISTENT_BLOCK_ENTITY_TYPE;
-        return type;
-    }
+    private int controllerId;
 
-    public <T extends BlockEntity> BlockEntityType<T> blockEntityType() {
-        @SuppressWarnings("unchecked")
-        BlockEntityType<T> type = (BlockEntityType<T>) BukkitBlockEntityTypes.PERSISTENT_BLOCK_ENTITY_TYPE;
-        return type;
+    @Override
+    public void initControllerId(int id) {
+        this.controllerId = id;
     }
 
     @Override
-    public BlockEntity createBlockEntity(net.momirealms.craftengine.core.world.BlockPos pos,
-            ImmutableBlockState state) {
-        return new PersistentBlockEntity(pos, state);
+    public BlockEntityController createBlockEntityController(BlockEntity blockEntity) {
+        return new Controller(blockEntity, this);
     }
 
-    @Override
-    public <T extends BlockEntity> BlockEntityTicker<T> createSyncBlockEntityTicker(CEWorld world,
-            ImmutableBlockState state, BlockEntityType<T> type) {
-        if (type != blockEntityType())
-            return null;
-        return (lvl, cePos, ceState, be) -> {
-            Level level = (Level) world.world().serverWorld();
+    /** Controller carrying this gas pipe's sync ticking, backed by persistent data. */
+    public static class Controller extends PersistentBlockEntity {
+        private final GasPipeBehavior behavior;
+
+        public Controller(BlockEntity blockEntity, GasPipeBehavior behavior) {
+            super(blockEntity);
+            this.behavior = behavior;
+        }
+
+        @Override
+        public <C extends BlockEntityController> BlockEntityTicker<C> createBlockEntityTicker(
+                CEWorld world, ImmutableBlockState state) {
+            return BlockEntityController.createTickerHelper((BlockEntityTicker<Controller>) Controller::tick);
+        }
+
+        public static void tick(CEWorld world,
+                net.momirealms.craftengine.core.world.BlockPos cePos,
+                ImmutableBlockState ceState, Controller self) {
+            self.behavior.tickPipe(world, cePos);
+        }
+    }
+
+    private void tickPipe(CEWorld world, net.momirealms.craftengine.core.world.BlockPos cePos) {
+        {
+            Level level = (Level) world.world().minecraftWorld();
             if (level == null || level.isClientSide())
                 return;
             BlockPos mcPos = BlockPos.of(cePos.asLong());
@@ -137,12 +148,12 @@ public class GasPipeBehavior extends ConnectedBlockBehavior implements EntityBlo
                     tryTransfer(level, mcPos, Direction.UP, TransferAction.PUSH);
                 }
             }
-        };
+        }
     }
 
     protected PersistentBlockEntity getBE(Level level, BlockPos pos) {
         BlockEntity be = BukkitBlockEntityTypes.getIfLoaded(level, pos);
-        if (be instanceof PersistentBlockEntity p)
+        if (be != null && be.controller instanceof PersistentBlockEntity p)
             return p;
         return null;
     }
@@ -392,7 +403,7 @@ public class GasPipeBehavior extends ConnectedBlockBehavior implements EntityBlo
 
     public static class Factory implements BlockBehaviorFactory<BlockBehavior> {
         @Override
-        public BlockBehavior create(CustomBlock block, Map<String, Object> args) {
+        public BlockBehavior create(BlockDefinition block, ConfigSection args) {
             return new GasPipeBehavior(block);
         }
     }
@@ -401,7 +412,7 @@ public class GasPipeBehavior extends ConnectedBlockBehavior implements EntityBlo
     public net.momirealms.craftengine.core.entity.player.InteractionResult useWithoutItem(UseOnContext context,
             ImmutableBlockState state) {
 
-        Level level = (Level) context.getLevel().serverWorld();
+        Level level = (Level) context.getLevel().minecraftWorld();
         BlockPos pos = (BlockPos) LocationUtils.toBlockPos(context.getClickedPos());
 
         BukkitServerPlayer bplayer = (BukkitServerPlayer) context.getPlayer();

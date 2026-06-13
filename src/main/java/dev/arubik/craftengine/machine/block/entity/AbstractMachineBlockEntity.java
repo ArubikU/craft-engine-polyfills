@@ -15,12 +15,12 @@ import net.minecraft.core.Direction;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
-import net.momirealms.craftengine.bukkit.block.behavior.UnsafeCompositeBlockBehavior;
+import net.momirealms.craftengine.bukkit.block.behavior.CompositeBlockBehavior;
 import net.momirealms.craftengine.bukkit.util.BlockStateUtils;
 import net.momirealms.craftengine.bukkit.world.BukkitWorld;
-import net.momirealms.craftengine.core.block.UpdateOption;
+import net.momirealms.craftengine.core.block.UpdateFlags;
 import net.momirealms.craftengine.core.block.behavior.BlockBehavior;
-import net.momirealms.craftengine.core.block.properties.Property;
+import net.momirealms.craftengine.core.block.property.Property;
 import net.minecraft.world.entity.player.Player;
 
 import java.util.ArrayList;
@@ -60,15 +60,18 @@ public abstract class AbstractMachineBlockEntity extends PersistentWorldlyBlockE
         return burnTime;
     }
 
-    // Constructor updated: No Level, uses ImmutableBlockState
-    public AbstractMachineBlockEntity(int size, net.momirealms.craftengine.core.world.BlockPos pos,
-            net.momirealms.craftengine.core.block.ImmutableBlockState state) {
-        super(pos, state, size);
+    // Constructor updated for BlockEntityController composition model.
+    public AbstractMachineBlockEntity(net.momirealms.craftengine.core.block.entity.BlockEntity blockEntity, int size) {
+        super(blockEntity, size);
+    }
 
+    /** CE position of the backing block entity. */
+    public net.momirealms.craftengine.core.world.BlockPos pos() {
+        return blockEntity().pos();
     }
 
     public net.minecraft.core.BlockPos getMachinePos() {
-        return net.minecraft.core.BlockPos.of(this.pos.asLong());
+        return net.minecraft.core.BlockPos.of(blockEntity().pos().asLong());
     }
 
     // --- XP System ---
@@ -156,11 +159,10 @@ public abstract class AbstractMachineBlockEntity extends PersistentWorldlyBlockE
         if (customState.behavior() instanceof ConnectableBlockBehavior connectableBlockBehavior) {
             return connectableBlockBehavior.toDirection(state);
         }
-        if (customState.behavior() instanceof UnsafeCompositeBlockBehavior unsafeCompositeBlockBehavior) {
-            Optional<ConnectableBlockBehavior> optional = unsafeCompositeBlockBehavior
-                    .getAs(ConnectableBlockBehavior.class);
-            if (optional.isPresent()) {
-                return optional.get().toDirection(state);
+        if (customState.behavior() instanceof CompositeBlockBehavior compositeBlockBehavior) {
+            ConnectableBlockBehavior cbb = compositeBlockBehavior.getFirst(ConnectableBlockBehavior.class);
+            if (cbb != null) {
+                return cbb.toDirection(state);
             }
         }
 
@@ -171,7 +173,7 @@ public abstract class AbstractMachineBlockEntity extends PersistentWorldlyBlockE
     public boolean fillTank(Level level, FluidStack fluid) {
         boolean changed = false;
         for (dev.arubik.craftengine.fluid.FluidTank tank : fluidTanks) {
-            int accepted = tank.insert(level, BlockPos.of(pos.asLong()), fluid);
+            int accepted = tank.insert(level, getMachinePos(), fluid);
             if (accepted > 0) {
                 fluid.removeAmount(accepted);
                 changed = true;
@@ -200,11 +202,10 @@ public abstract class AbstractMachineBlockEntity extends PersistentWorldlyBlockE
                 if (behavior instanceof ConnectableBlockBehavior connectableBlockBehavior) {
                     localDir = connectableBlockBehavior.toLocalDirection(side, state);
                 }
-                if (behavior instanceof UnsafeCompositeBlockBehavior unsafeCompositeBlockBehavior) {
-                    Optional<ConnectableBlockBehavior> optional = unsafeCompositeBlockBehavior
-                            .getAs(ConnectableBlockBehavior.class);
-                    if (optional.isPresent()) {
-                        localDir = optional.get().toLocalDirection(side, state);
+                if (behavior instanceof CompositeBlockBehavior compositeBlockBehavior) {
+                    ConnectableBlockBehavior cbb = compositeBlockBehavior.getFirst(ConnectableBlockBehavior.class);
+                    if (cbb != null) {
+                        localDir = cbb.toLocalDirection(side, state);
                     }
                 }
             }
@@ -227,13 +228,13 @@ public abstract class AbstractMachineBlockEntity extends PersistentWorldlyBlockE
 
             if (targetSlot != -1) {
                 if (targetSlot >= 0 && targetSlot < fluidTanks.size()) {
-                    accepted = fluidTanks.get(targetSlot).insert(level, BlockPos.of(pos.asLong()), copy);
+                    accepted = fluidTanks.get(targetSlot).insert(level, getMachinePos(), copy);
                     if (accepted > 0)
                         changed = true;
                 }
             } else {
                 for (dev.arubik.craftengine.fluid.FluidTank tank : fluidTanks) {
-                    int moved = tank.insert(level, BlockPos.of(pos.asLong()), copy);
+                    int moved = tank.insert(level, getMachinePos(), copy);
                     if (moved > 0) {
                         copy.removeAmount(moved);
                         accepted += moved;
@@ -270,11 +271,10 @@ public abstract class AbstractMachineBlockEntity extends PersistentWorldlyBlockE
                 if (behavior instanceof ConnectableBlockBehavior connectableBlockBehavior) {
                     localDir = connectableBlockBehavior.toLocalDirection(side, state);
                 }
-                if (behavior instanceof UnsafeCompositeBlockBehavior unsafeCompositeBlockBehavior) {
-                    Optional<ConnectableBlockBehavior> behavior2 = unsafeCompositeBlockBehavior
-                            .getAs(ConnectableBlockBehavior.class);
-                    if (behavior2.isPresent()) {
-                        localDir = behavior2.get().toLocalDirection(side, state);
+                if (behavior instanceof CompositeBlockBehavior compositeBlockBehavior) {
+                    ConnectableBlockBehavior cbb = compositeBlockBehavior.getFirst(ConnectableBlockBehavior.class);
+                    if (cbb != null) {
+                        localDir = cbb.toLocalDirection(side, state);
                     }
                 }
             }
@@ -300,7 +300,7 @@ public abstract class AbstractMachineBlockEntity extends PersistentWorldlyBlockE
 
             if (targetSlot != -1) {
                 if (targetSlot >= 0 && targetSlot < fluidTanks.size()) {
-                    int extracted = fluidTanks.get(targetSlot).extract(level, BlockPos.of(pos.asLong()), max,
+                    int extracted = fluidTanks.get(targetSlot).extract(level, getMachinePos(), max,
                             hookDrained);
                     if (changed[0])
                         setChanged();
@@ -310,7 +310,7 @@ public abstract class AbstractMachineBlockEntity extends PersistentWorldlyBlockE
             }
 
             for (dev.arubik.craftengine.fluid.FluidTank tank : fluidTanks) {
-                int extracted = tank.extract(level, BlockPos.of(pos.asLong()), max, hookDrained);
+                int extracted = tank.extract(level, getMachinePos(), max, hookDrained);
                 if (extracted > 0) {
                     if (changed[0])
                         setChanged();
@@ -326,7 +326,7 @@ public abstract class AbstractMachineBlockEntity extends PersistentWorldlyBlockE
     public void fillGasTank(Level level, dev.arubik.craftengine.gas.GasStack gas) {
         boolean changed = false;
         for (dev.arubik.craftengine.gas.GasTank tank : gasTanks) {
-            int accepted = tank.insert(level, BlockPos.of(pos.asLong()), gas);
+            int accepted = tank.insert(level, getMachinePos(), gas);
             if (accepted > 0) {
                 gas.shrink(accepted);
                 changed = true;
@@ -357,11 +357,10 @@ public abstract class AbstractMachineBlockEntity extends PersistentWorldlyBlockE
                 if (behavior instanceof ConnectableBlockBehavior connectableBlockBehavior) {
                     localDir = connectableBlockBehavior.toLocalDirection(side, state);
                 }
-                if (behavior instanceof UnsafeCompositeBlockBehavior unsafeCompositeBlockBehavior) {
-                    Optional<ConnectableBlockBehavior> behavior2 = unsafeCompositeBlockBehavior
-                            .getAs(ConnectableBlockBehavior.class);
-                    if (behavior2.isPresent()) {
-                        localDir = behavior2.get().toLocalDirection(side, state);
+                if (behavior instanceof CompositeBlockBehavior compositeBlockBehavior) {
+                    ConnectableBlockBehavior cbb = compositeBlockBehavior.getFirst(ConnectableBlockBehavior.class);
+                    if (cbb != null) {
+                        localDir = cbb.toLocalDirection(side, state);
                     }
                 }
             }
@@ -387,7 +386,7 @@ public abstract class AbstractMachineBlockEntity extends PersistentWorldlyBlockE
 
             if (targetSlot != -1) {
                 if (targetSlot >= 0 && targetSlot < gasTanks.size()) {
-                    int accepted = gasTanks.get(targetSlot).insert(level, BlockPos.of(pos.asLong()), copy);
+                    int accepted = gasTanks.get(targetSlot).insert(level, getMachinePos(), copy);
                     if (accepted > 0)
                         changed = true;
                     return accepted;
@@ -427,11 +426,10 @@ public abstract class AbstractMachineBlockEntity extends PersistentWorldlyBlockE
                 if (behavior instanceof ConnectableBlockBehavior connectableBlockBehavior) {
                     localDir = connectableBlockBehavior.toLocalDirection(side, state);
                 }
-                if (behavior instanceof UnsafeCompositeBlockBehavior unsafeCompositeBlockBehavior) {
-                    Optional<ConnectableBlockBehavior> behavior2 = unsafeCompositeBlockBehavior
-                            .getAs(ConnectableBlockBehavior.class);
-                    if (behavior2.isPresent()) {
-                        localDir = behavior2.get().toLocalDirection(side, state);
+                if (behavior instanceof CompositeBlockBehavior compositeBlockBehavior) {
+                    ConnectableBlockBehavior cbb = compositeBlockBehavior.getFirst(ConnectableBlockBehavior.class);
+                    if (cbb != null) {
+                        localDir = cbb.toLocalDirection(side, state);
                     }
                 }
             }
@@ -456,7 +454,7 @@ public abstract class AbstractMachineBlockEntity extends PersistentWorldlyBlockE
 
             if (targetSlot != -1) {
                 if (targetSlot >= 0 && targetSlot < gasTanks.size()) {
-                    int extracted = gasTanks.get(targetSlot).extract(level, BlockPos.of(pos.asLong()), max,
+                    int extracted = gasTanks.get(targetSlot).extract(level, getMachinePos(), max,
                             hookDrained);
                     if (changed[0])
                         setChanged();
@@ -466,7 +464,7 @@ public abstract class AbstractMachineBlockEntity extends PersistentWorldlyBlockE
             }
 
             for (dev.arubik.craftengine.gas.GasTank tank : gasTanks) {
-                int extracted = tank.extract(level, BlockPos.of(pos.asLong()), max, hookDrained);
+                int extracted = tank.extract(level, getMachinePos(), max, hookDrained);
                 if (extracted > 0) {
                     if (changed[0])
                         setChanged();
@@ -584,7 +582,7 @@ public abstract class AbstractMachineBlockEntity extends PersistentWorldlyBlockE
         if (!requiresRedstone) {
             return true;
         }
-        boolean hasSignal = level.hasNeighborSignal(BlockPos.of(pos.asLong()));
+        boolean hasSignal = level.hasNeighborSignal(getMachinePos());
         return invertRedstone ? !hasSignal : hasSignal;
     }
 
@@ -694,7 +692,7 @@ public abstract class AbstractMachineBlockEntity extends PersistentWorldlyBlockE
                     org.bukkit.persistence.PersistentDataType.INTEGER);
 
     @Override
-    protected void saveCustomData(net.momirealms.craftengine.libraries.nbt.CompoundTag tag) {
+    public void saveCustomData(net.momirealms.craftengine.libraries.nbt.CompoundTag tag) {
         set(KEY_PROGRESS, progress);
         set(KEY_MAX_PROGRESS, maxProgress);
         set(KEY_BURN_TIME, burnTime);
@@ -1093,6 +1091,23 @@ public abstract class AbstractMachineBlockEntity extends PersistentWorldlyBlockE
         updateMachineModeProperty(level, pos, state);
     }
 
+    // --- Ticking attach (BlockEntityController model) ---
+    @Override
+    public <C extends net.momirealms.craftengine.core.block.entity.BlockEntityController> net.momirealms.craftengine.core.block.entity.tick.BlockEntityTicker<C> createBlockEntityTicker(
+            net.momirealms.craftengine.core.world.CEWorld world,
+            net.momirealms.craftengine.core.block.ImmutableBlockState state) {
+        return net.momirealms.craftengine.core.block.entity.BlockEntityController.createTickerHelper(
+                (net.momirealms.craftengine.core.block.entity.tick.BlockEntityTicker<AbstractMachineBlockEntity>) AbstractMachineBlockEntity::tickController);
+    }
+
+    /** Static ticker bridge -> instance {@link #tick(Level, BlockPos, ImmutableBlockState)}. */
+    public static void tickController(net.momirealms.craftengine.core.world.CEWorld world,
+            net.momirealms.craftengine.core.world.BlockPos pos,
+            net.momirealms.craftengine.core.block.ImmutableBlockState state, AbstractMachineBlockEntity self) {
+        Level level = (Level) world.world.minecraftWorld();
+        self.tick(level, net.minecraft.core.BlockPos.of(pos.asLong()), state);
+    }
+
     /**
      * Updates the MACHINE_MODE block property based on machine state.
      * Only updates if the property exists in the block state.
@@ -1123,8 +1138,8 @@ public abstract class AbstractMachineBlockEntity extends PersistentWorldlyBlockE
         // Only update if mode changed
         if (currentMode != newMode) {
             net.momirealms.craftengine.core.block.ImmutableBlockState newState = state.with(machineModeProp, newMode);
-            level.setBlock(pos, (BlockState) newState.customBlockState().literalObject(),
-                    UpdateOption.UPDATE_ALL_IMMEDIATE.flags());
+            level.setBlock(pos, (BlockState) newState.customBlockState().minecraftState(),
+                    UpdateFlags.UPDATE_ALL_IMMEDIATE);
         }
     }
 

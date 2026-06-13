@@ -2,14 +2,13 @@ package dev.arubik.craftengine.multiblock;
 
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.Callable;
 import java.util.function.Consumer;
 
 import org.bukkit.persistence.PersistentDataType;
 
 import dev.arubik.craftengine.block.behavior.ConnectableBlockBehavior;
 import dev.arubik.craftengine.block.entity.BukkitBlockEntityTypes;
-import dev.arubik.craftengine.block.entity.PersistentBlockEntity;
+import dev.arubik.craftengine.block.entity.PersistentController;
 import dev.arubik.craftengine.util.CustomBlockData;
 import dev.arubik.craftengine.util.TypedKey;
 import dev.arubik.craftengine.util.Utils;
@@ -20,17 +19,16 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.momirealms.craftengine.bukkit.block.BukkitBlockManager;
 import net.momirealms.craftengine.bukkit.block.behavior.BukkitBlockBehavior;
-import net.momirealms.craftengine.bukkit.nms.FastNMS;
 import net.momirealms.craftengine.bukkit.util.LocationUtils;
 import net.momirealms.craftengine.bukkit.world.BukkitWorld;
-import net.momirealms.craftengine.core.block.CustomBlock;
+import net.momirealms.craftengine.core.block.BlockDefinition;
 import net.momirealms.craftengine.core.block.ImmutableBlockState;
 import net.momirealms.craftengine.core.block.behavior.BlockBehavior;
 import net.momirealms.craftengine.core.block.behavior.BlockBehaviorFactory;
-import net.momirealms.craftengine.core.block.behavior.EntityBlockBehavior;
+import net.momirealms.craftengine.core.block.behavior.EntityBlock;
 import net.momirealms.craftengine.core.block.entity.BlockEntity;
-import net.momirealms.craftengine.core.block.entity.BlockEntityType;
-import net.momirealms.craftengine.core.block.entity.tick.BlockEntityTicker;
+import net.momirealms.craftengine.core.block.entity.BlockEntityController;
+import net.momirealms.craftengine.core.plugin.config.ConfigSection;
 import net.momirealms.craftengine.core.entity.player.InteractionHand;
 import net.momirealms.craftengine.core.entity.player.InteractionResult;
 import net.momirealms.craftengine.core.util.Key;
@@ -56,26 +54,26 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
     protected IOConfigurationProvider ioProvider; // Optional: for IO configuration
 
     // BlockState properties
-    protected final net.momirealms.craftengine.core.block.properties.Property<MultiBlockRole> MULTIBLOCK_ROLE;
+    protected final net.momirealms.craftengine.core.block.property.Property<MultiBlockRole> MULTIBLOCK_ROLE;
 
     private static final TypedKey<Boolean> KEY_DISASSEMBLING = TypedKey.of("craftengine", "multiblock_disassembling",
             PersistentDataType.BOOLEAN);
 
-    public MultiBlockBehavior(CustomBlock customBlock, MultiBlockSchema schema, String partBlockId) {
+    public MultiBlockBehavior(BlockDefinition customBlock, MultiBlockSchema schema, String partBlockId) {
         this(customBlock, schema, partBlockId, new java.util.ArrayList<>(), null, null, new IOConfiguration.Open());
     }
 
-    public MultiBlockBehavior(CustomBlock customBlock, MultiBlockSchema schema, String partBlockId,
+    public MultiBlockBehavior(BlockDefinition customBlock, MultiBlockSchema schema, String partBlockId,
             java.util.List<net.minecraft.core.Direction> connectableFaces,
-            net.momirealms.craftengine.core.block.properties.EnumProperty<net.momirealms.craftengine.core.util.HorizontalDirection> horizontalDirectionProperty,
-            net.momirealms.craftengine.core.block.properties.EnumProperty<net.momirealms.craftengine.core.util.Direction> verticalDirectionProperty,
+            net.momirealms.craftengine.core.block.property.EnumProperty<net.momirealms.craftengine.core.util.Direction> horizontalDirectionProperty,
+            net.momirealms.craftengine.core.block.property.EnumProperty<net.momirealms.craftengine.core.util.Direction> verticalDirectionProperty,
             IOConfiguration ioConfig) {
         super(customBlock, connectableFaces, horizontalDirectionProperty, verticalDirectionProperty, ioConfig);
         this.schema = schema;
         this.partBlockId = partBlockId;
         this.ioProvider = IOConfigurationProvider.OPEN;
 
-        net.momirealms.craftengine.core.block.properties.Property<MultiBlockRole> roleProperty = (net.momirealms.craftengine.core.block.properties.Property<MultiBlockRole>) customBlock
+        net.momirealms.craftengine.core.block.property.Property<MultiBlockRole> roleProperty = (net.momirealms.craftengine.core.block.property.Property<MultiBlockRole>) customBlock
                 .getProperty("multiblock_role");
 
         if (roleProperty == null) {
@@ -84,9 +82,9 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
         this.MULTIBLOCK_ROLE = roleProperty;
 
         // Try to get MACHINE_MODE property from block if it exists
-        net.momirealms.craftengine.core.block.properties.Property<MachineMode> machineModeProp = null;
+        net.momirealms.craftengine.core.block.property.Property<MachineMode> machineModeProp = null;
         try {
-            machineModeProp = (net.momirealms.craftengine.core.block.properties.Property<MachineMode>) customBlock
+            machineModeProp = (net.momirealms.craftengine.core.block.property.Property<MachineMode>) customBlock
                     .getProperty(dev.arubik.craftengine.property.Properties.MACHINE_MODE.value());
         } catch (ClassCastException | NullPointerException ignored) {
             // Property not found or wrong type, keep as null
@@ -96,7 +94,7 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
     @Override
     public dev.arubik.craftengine.multiblock.IOConfiguration getIOConfiguration(net.minecraft.world.level.Level level,
             net.minecraft.core.BlockPos pos) {
-        BlockEntity be = BukkitBlockEntityTypes.getIfLoaded(level, pos);
+        BlockEntityController be = controllerAt(level, pos);
         if (be instanceof MultiBlockPartBlockEntity part) {
             dev.arubik.craftengine.multiblock.IOConfiguration config = part.getIOConfiguration();
             if (config != null)
@@ -170,7 +168,7 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
 
     public static class Factory implements BlockBehaviorFactory<BlockBehavior> {
         @Override
-        public BlockBehavior create(CustomBlock block, Map<String, Object> arguments) {
+        public BlockBehavior create(BlockDefinition block, ConfigSection arguments) {
             dev.arubik.craftengine.machine.block.MachineBlockBehavior base = (dev.arubik.craftengine.machine.block.MachineBlockBehavior) dev.arubik.craftengine.machine.block.MachineBlockBehavior.FACTORY
                     .create(block, arguments);
             String partBlockId = (String) arguments.getOrDefault("part_block_id", "craftengine:multiblock_part");
@@ -182,64 +180,48 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
         }
     }
 
-    protected MultiBlockMachineBlockEntity createMachineBlockEntity(net.momirealms.craftengine.core.world.BlockPos pos,
-            ImmutableBlockState state) {
+    protected MultiBlockMachineBlockEntity createMachineBlockEntity(BlockEntity blockEntity) {
         throw new UnsupportedOperationException("Machine multiblocks must override createMachineBlockEntity()");
     }
 
-    // ========== EntityBlockBehavior Implementation ==========
+    /**
+     * Resolve the controller at a world position (ce 26.6.2). The engine returns a
+     * BlockEntity whose .controller holds our subclass.
+     */
+    protected static BlockEntityController controllerAt(Level level, BlockPos pos) {
+        BlockEntity be = BukkitBlockEntityTypes.getIfLoaded(level, pos);
+        return be == null ? null : be.controller;
+    }
+
+    // ========== EntityBlock Implementation (ce 26.6.2) ==========
+
+    private int controllerId;
 
     @Override
-    public BlockEntity createBlockEntity(net.momirealms.craftengine.core.world.BlockPos pos,
-            ImmutableBlockState state) {
-        // Check role to determine entity type
-        MultiBlockRole role = state.get(MULTIBLOCK_ROLE);
-        BlockEntity result;
+    public void initControllerId(int id) {
+        this.controllerId = id;
+    }
+
+    @Override
+    public BlockEntityController createBlockEntityController(BlockEntity blockEntity) {
+        // Check role to determine controller type
+        MultiBlockRole role = blockEntity.blockState().get(MULTIBLOCK_ROLE);
+        BlockEntityController result;
 
         if (role == MultiBlockRole.CORE) {
-            // Create machine block entity for CORE in machine multiblocks
-            result = (BlockEntity) createMachineBlockEntity(pos, state);
+            // Create machine controller for CORE in machine multiblocks
+            result = createMachineBlockEntity(blockEntity);
         } else {
-            // Create part block entity for all PARTs and non-machine COREs
-            result = (BlockEntity) new MultiBlockPartBlockEntity(pos, state);
+            // Create part controller for all PARTs and non-machine COREs
+            result = new MultiBlockPartBlockEntity(blockEntity);
         }
 
         // Register disassembly hook
-        if (result instanceof PersistentBlockEntity pbe) {
+        if (result instanceof PersistentController pbe) {
             registerDisassemblyHook(pbe);
         }
 
         return result;
-    }
-
-    @Override
-    public <T extends BlockEntity> BlockEntityType<T> blockEntityType(ImmutableBlockState state) {
-        // Check role to determine entity type
-        MultiBlockRole role = state.get(MULTIBLOCK_ROLE);
-
-        if (role == MultiBlockRole.CORE) {
-            // Machine block entity type for CORE in machine multiblocks
-            return (BlockEntityType<T>) BukkitBlockEntityTypes.PERSISTENT_BLOCK_ENTITY_TYPE;
-        } else {
-            // Part block entity type for all PARTs and non-machine COREs
-            return (BlockEntityType<T>) BukkitBlockEntityTypes.PERSISTENT_BLOCK_ENTITY_TYPE;
-        }
-    }
-
-    @Override
-    public <T extends BlockEntity> BlockEntityTicker<T> createSyncBlockEntityTicker(
-            CEWorld world, ImmutableBlockState state, BlockEntityType<T> type) {
-        // Only tick if this is a machine multiblock
-        if (state.get(MULTIBLOCK_ROLE) != MultiBlockRole.CORE) {
-            return null;
-        }
-
-        return (lvl, pos, st, be) -> {
-            if (be instanceof MultiBlockMachineBlockEntity machine) {
-                // Tick the machine directly
-                machine.tick((Level) lvl.world.serverWorld(), Utils.fromPos(pos), st);
-            }
-        };
     }
 
     // ========== Interaction Handling ==========
@@ -250,12 +232,12 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
             return InteractionResult.PASS;
         }
 
-        Level level = (Level) ((BukkitWorld) context.getLevel()).serverWorld();
+        Level level = (Level) ((BukkitWorld) context.getLevel()).minecraftWorld();
         BlockPos pos = new BlockPos(context.getClickedPos().x(), context.getClickedPos().y(),
                 context.getClickedPos().z());
 
         // Get block entity
-        BlockEntity be = BukkitBlockEntityTypes.getIfLoaded(level, pos);
+        BlockEntityController be = controllerAt(level, pos);
 
         // Debug logging
         System.out.println("[MultiBlockBehavior] useWithoutItem called at " + pos);
@@ -312,7 +294,7 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
             BlockPos corePos = mbe.getCorePos();
             System.out.println("[MultiBlockBehavior] PART block, corePos: " + corePos);
             if (corePos != null) {
-                BlockEntity coreBe = BukkitBlockEntityTypes.getIfLoaded(level, corePos);
+                BlockEntityController coreBe = controllerAt(level, corePos);
                 System.out.println("[MultiBlockBehavior] Core entity type: "
                         + (coreBe != null ? coreBe.getClass().getSimpleName() : "null"));
                 if (coreBe instanceof MultiBlockMachineBlockEntity coreEntity) {
@@ -341,7 +323,7 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
     /**
      * Called when a formed multiblock is interacted with
      */
-    protected InteractionResult onInteractFormed(UseOnContext context, BlockEntity core, Level level, BlockPos pos) {
+    protected InteractionResult onInteractFormed(UseOnContext context, BlockEntityController core, Level level, BlockPos pos) {
         // If there's a machine capability, open the menu
         if (core instanceof MultiBlockMachineBlockEntity machine) {
             net.minecraft.world.entity.player.Player nmsPlayer = (net.minecraft.world.entity.player.Player) context
@@ -408,17 +390,18 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
         // 2. Mark core as formed (by setting role) and update BlockState to CORE role
         coreEntity.remove(KEY_DISASSEMBLING);
         coreEntity.setRole(MultiBlockRole.CORE);
-        BlockEntity coreBeForHooks = (BlockEntity) coreEntity;
+        BlockEntityController coreBeForHooks = coreEntity;
 
         // Update the BlockState to have role=CORE (this is important for entity type
         // determination)
         ImmutableBlockState coreState = currentState.with(MULTIBLOCK_ROLE, MultiBlockRole.CORE);
-        level.setBlock(corePos, (BlockState) coreState.customBlockState().literalObject(), 3);
+        level.setBlock(corePos, (BlockState) coreState.customBlockState().minecraftState(), 3);
         System.out.println("[MultiBlockBehavior] Updated core BlockState to role=CORE");
 
-        // 3. Remove old BlockEntity and create the correct type
-        // (MultiBlockMachineBlockEntity)
-        BukkitWorld world = new BukkitWorld(FastNMS.INSTANCE.method$Level$getCraftWorld(level));
+        // 3. Remove old BlockEntity and create the correct controller
+        // (MultiBlockMachineBlockEntity). ce 26.6.2: the engine BlockEntity wraps the
+        // controller via its public 'controller' field.
+        BukkitWorld world = new BukkitWorld(((net.minecraft.server.level.ServerLevel) level).getWorld());
         net.momirealms.craftengine.core.world.BlockPos cePos = new net.momirealms.craftengine.core.world.BlockPos(
                 corePos.getX(), corePos.getY(), corePos.getZ());
         CEChunk chunk = world.storageWorld().getChunkAtIfLoaded(cePos.x() >> 4, cePos.z() >> 4);
@@ -427,25 +410,25 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
             chunk.removeBlockEntity(cePos);
             System.out.println("[MultiBlockBehavior] Removed old BlockEntity");
 
-            // Create and add new machine entity
-            MultiBlockMachineBlockEntity newMachineEntity = createMachineBlockEntity(cePos, coreState);
+            // Create and add new machine entity/controller pair
+            BlockEntity newBe = new BlockEntity(cePos, coreState);
+            newBe.setWorld(world.storageWorld());
+            MultiBlockMachineBlockEntity newMachineEntity = createMachineBlockEntity(newBe);
+            newBe.controller = newMachineEntity;
             // Ensure flag is clear on new entity
             newMachineEntity.remove(KEY_DISASSEMBLING);
 
-            // Set world before adding to chunk so the entity can load data
-            newMachineEntity.setWorld(world.storageWorld());
-            newMachineEntity.setChanged();
-            chunk.addBlockEntity((BlockEntity) newMachineEntity);
+            chunk.addBlockEntity(newBe);
             System.out.println("[MultiBlockBehavior] Created new machine BlockEntity: "
                     + newMachineEntity.getClass().getSimpleName() + " (FORMED)");
             coreEntity = null; // Reference is now invalid
-            coreBeForHooks = (BlockEntity) newMachineEntity;
+            coreBeForHooks = newMachineEntity;
         }
 
         // 4. Get part block state - use partBlockId if defined, otherwise use the same
         // block as core
-        Optional<CustomBlock> partBlockOpt = BukkitBlockManager.instance().blockById(Key.from(partBlockId));
-        CustomBlock partBlock;
+        Optional<BlockDefinition> partBlockOpt = BukkitBlockManager.instance().blockById(Key.from(partBlockId));
+        BlockDefinition partBlock;
         if (partBlockOpt.isEmpty()) {
             System.out.println("[MultiBlockBehavior] Part block not found for id: " + partBlockId
                     + ", using customBlock as fallback");
@@ -453,7 +436,7 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
         } else {
             partBlock = partBlockOpt.get();
         }
-        Object nmsStateObject = partBlock.defaultState().customBlockState().literalObject();
+        Object nmsStateObject = partBlock.defaultState().customBlockState().minecraftState();
 
         // 5. Replace all schema blocks with part blocks
         for (Map.Entry<BlockPos, java.util.function.Predicate<BlockState>> entry : schema.getParts().entrySet()) {
@@ -470,13 +453,14 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
 
             try {
                 // Set to part block
-                FastNMS.INSTANCE.method$LevelWriter$setBlock(world.serverWorld(),
-                        LocationUtils.toBlockPos(new net.momirealms.craftengine.core.world.BlockPos(
-                                partPos.getX(), partPos.getY(), partPos.getZ())),
-                        nmsStateObject, 3);
+                ((net.minecraft.world.level.LevelWriter) world.minecraftWorld()).setBlock(
+                        (net.minecraft.core.BlockPos) LocationUtils.toBlockPos(
+                                new net.momirealms.craftengine.core.world.BlockPos(
+                                        partPos.getX(), partPos.getY(), partPos.getZ())),
+                        (BlockState) nmsStateObject, 3);
 
                 // Configure the part
-                BlockEntity partBe = BukkitBlockEntityTypes.getIfLoaded(level, partPos);
+                BlockEntityController partBe = controllerAt(level, partPos);
                 if (partBe instanceof MultiBlockPartBlockEntity partEntity) {
 
                     // Set part role in BlockState
@@ -485,7 +469,7 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
                             .getOptionalCustomBlockState(partState).orElse(null);
                     if (partCustomState != null) {
                         partCustomState = partCustomState.with(MULTIBLOCK_ROLE, MultiBlockRole.PART);
-                        level.setBlock(partPos, (BlockState) partCustomState.customBlockState().literalObject(), 3);
+                        level.setBlock(partPos, (BlockState) partCustomState.customBlockState().minecraftState(), 3);
                     }
 
                     // Configure the part entity
@@ -526,8 +510,8 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
         return true;
     }
 
-    private void registerDisassemblyHooks(Level level, BlockPos corePos, BlockEntity coreEntity) {
-        if (coreEntity instanceof PersistentBlockEntity pbe) {
+    private void registerDisassemblyHooks(Level level, BlockPos corePos, BlockEntityController coreEntity) {
+        if (coreEntity instanceof PersistentController pbe) {
             registerDisassemblyHook(pbe);
         }
 
@@ -543,14 +527,14 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
             if (partPos.equals(corePos))
                 continue;
 
-            BlockEntity partBe = BukkitBlockEntityTypes.getIfLoaded(level, partPos);
-            if (partBe instanceof PersistentBlockEntity pbe) {
+            BlockEntityController partBe = controllerAt(level, partPos);
+            if (partBe instanceof PersistentController pbe) {
                 registerDisassemblyHook(pbe);
             }
         }
     }
 
-    private void registerDisassemblyHook(PersistentBlockEntity pbe) {
+    private void registerDisassemblyHook(PersistentController pbe) {
         System.out.println("[MultiBlockBehavior] Registering disassembly hook for " + pbe.getClass().getSimpleName()
                 + " at " + pbe.pos());
         pbe.setPreCleanup((be) -> {
@@ -560,9 +544,9 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
         });
     }
 
-    private void handleDisassemblyFromHook(PersistentBlockEntity be) {
+    private void handleDisassemblyFromHook(PersistentController be) {
         BlockPos pos = Utils.fromPos(be.pos());
-        Level level = (Level) be.world.world.serverWorld();
+        Level level = (Level) be.world().world.minecraftWorld();
 
         System.out.println("[MultiBlockBehavior] handleDisassemblyFromHook START at " + pos + " (Type: "
                 + be.getClass().getSimpleName() + ")");
@@ -581,12 +565,12 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
             return;
         }
 
-        BlockEntity coreBe = BukkitBlockEntityTypes.getIfLoaded(level, corePos);
+        BlockEntityController coreBe = controllerAt(level, corePos);
         if (coreBe == null && corePos.equals(pos)) {
             coreBe = be; // Handle self if it's the core
         }
 
-        if (coreBe instanceof PersistentBlockEntity pbe) {
+        if (coreBe instanceof PersistentController pbe) {
             boolean isDisassembling = pbe.getOrDefault(KEY_DISASSEMBLING, false);
 
             // Interaction matching logic: treat as formed if it's a Machine and state is
@@ -594,7 +578,7 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
             // or if it's a Part and has corePos
             boolean isFormed = false;
             if (coreBe instanceof MultiBlockMachineBlockEntity) {
-                ImmutableBlockState ibs = be.world
+                ImmutableBlockState ibs = be.world()
                         .getBlockStateAtIfLoaded(net.momirealms.craftengine.core.world.BlockPos.of(corePos.asLong()));
                 isFormed = ibs.getNullable(MULTIBLOCK_ROLE) == MultiBlockRole.CORE;
             } else if (coreBe instanceof MultiBlockPartBlockEntity part) {
@@ -717,13 +701,13 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
 
         // 2. Mark core as formed
         ImmutableBlockState coreState = currentState.with(MULTIBLOCK_ROLE, MultiBlockRole.CORE);
-        level.setBlock(corePos, (BlockState) coreState.customBlockState().literalObject(), 3);
+        level.setBlock(corePos, (BlockState) coreState.customBlockState().minecraftState(), 3);
         System.out.println("[MultiBlockBehavior] Updated core BlockState to role=CORE");
 
         // 4. Get part block state - use partBlockId if defined, otherwise use the same
         // block as core
-        Optional<CustomBlock> partBlockOpt = BukkitBlockManager.instance().blockById(Key.from(partBlockId));
-        CustomBlock partBlock;
+        Optional<BlockDefinition> partBlockOpt = BukkitBlockManager.instance().blockById(Key.from(partBlockId));
+        BlockDefinition partBlock;
         if (partBlockOpt.isEmpty()) {
             System.out.println("[MultiBlockBehavior] Part block not found for id: " + partBlockId
                     + ", using customBlock as fallback");
@@ -731,8 +715,8 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
         } else {
             partBlock = partBlockOpt.get();
         }
-        Object nmsStateObject = partBlock.defaultState().customBlockState().literalObject();
-        BukkitWorld world = new BukkitWorld(FastNMS.INSTANCE.method$Level$getCraftWorld(level));
+        Object nmsStateObject = partBlock.defaultState().customBlockState().minecraftState();
+        BukkitWorld world = new BukkitWorld(((net.minecraft.server.level.ServerLevel) level).getWorld());
 
         // 5. Replace all schema blocks with part blocks
         for (Map.Entry<BlockPos, java.util.function.Predicate<BlockState>> entry : schema.getParts().entrySet()) {
@@ -747,13 +731,14 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
 
             try {
                 // Set to part block
-                FastNMS.INSTANCE.method$LevelWriter$setBlock(world.serverWorld(),
-                        LocationUtils.toBlockPos(new net.momirealms.craftengine.core.world.BlockPos(
-                                partPos.getX(), partPos.getY(), partPos.getZ())),
-                        nmsStateObject, 3);
+                ((net.minecraft.world.level.LevelWriter) world.minecraftWorld()).setBlock(
+                        (net.minecraft.core.BlockPos) LocationUtils.toBlockPos(
+                                new net.momirealms.craftengine.core.world.BlockPos(
+                                        partPos.getX(), partPos.getY(), partPos.getZ())),
+                        (BlockState) nmsStateObject, 3);
 
                 // Configure the part
-                BlockEntity partBe = BukkitBlockEntityTypes.getIfLoaded(level, partPos);
+                BlockEntityController partBe = controllerAt(level, partPos);
                 if (partBe instanceof MultiBlockPartBlockEntity partEntity) {
 
                     // Set part role in BlockState
@@ -762,7 +747,7 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
                             .getOptionalCustomBlockState(partState).orElse(null);
                     if (partCustomState != null) {
                         partCustomState = partCustomState.with(MULTIBLOCK_ROLE, MultiBlockRole.PART);
-                        level.setBlock(partPos, (BlockState) partCustomState.customBlockState().literalObject(), 3);
+                        level.setBlock(partPos, (BlockState) partCustomState.customBlockState().minecraftState(), 3);
                     }
 
                     partEntity.setCorePos(corePos);
@@ -793,8 +778,8 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
         onFormMachine(level, corePos);
 
         // 7. Register disassembly hooks
-        BlockEntity coreBe = BukkitBlockEntityTypes.getIfLoaded(level, corePos);
-        if (coreBe instanceof PersistentBlockEntity pbe) {
+        BlockEntityController coreBe = controllerAt(level, corePos);
+        if (coreBe instanceof PersistentController pbe) {
             // Ensure flag is clear
             pbe.remove(KEY_DISASSEMBLING);
             registerDisassemblyHooks(level, corePos, coreBe);
@@ -819,11 +804,11 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
 
     // ========== Disassembly Logic ==========
 
-    protected void disassemble(Level level, BlockPos corePos, BlockEntity coreEntity) {
+    protected void disassemble(Level level, BlockPos corePos, BlockEntityController coreEntity) {
         disassemble(level, corePos, coreEntity, null);
     }
 
-    protected void disassemble(Level level, BlockPos corePos, BlockEntity coreEntity, BlockState coreState) {
+    protected void disassemble(Level level, BlockPos corePos, BlockEntityController coreEntity, BlockState coreState) {
         System.out.println("[MultiBlockBehavior] disassemble START at " + corePos);
         if (coreEntity != null) {
             System.out.println("[MultiBlockBehavior]   Core entity type: " + coreEntity.getClass().getName());
@@ -849,7 +834,7 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
                 System.out.println("[MultiBlockBehavior]   Resetting core role in BlockState");
                 try {
                     ImmutableBlockState newState = coreCustomState.with(MULTIBLOCK_ROLE, MultiBlockRole.NONE);
-                    level.setBlock(corePos, (BlockState) newState.customBlockState().literalObject(), 3);
+                    level.setBlock(corePos, (BlockState) newState.customBlockState().minecraftState(), 3);
                 } catch (Exception ignored) {
                 }
             }
@@ -891,7 +876,7 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
                 continue;
             }
 
-            BlockEntity partBe = BukkitBlockEntityTypes.getIfLoaded(level, partPos);
+            BlockEntityController partBe = controllerAt(level, partPos);
 
             if (partBe instanceof MultiBlockPartBlockEntity partEntity) {
                 BlockState originalState = partEntity.getOriginalBlock();
@@ -947,11 +932,11 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
     /**
      * Hook called when multiblock is disassembled
      */
-    protected void onDisassemble(Level level, BlockPos pos, BlockEntity core) {
+    protected void onDisassemble(Level level, BlockPos pos, BlockEntityController core) {
         // Override in subclasses if needed
     }
 
-    // Disposal logic is now managed via PersistentBlockEntity hooks (preCleanup)
+    // Disposal logic is now managed via PersistentController hooks (preCleanup)
     // to ensure block entity data is accessible during disassembly.
 
     // ========== Redstone Support ==========
@@ -961,7 +946,7 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
      * Delegates to the part block entity which can check IO configuration
      */
     @Override
-    public int getSignal(Object thisBlock, Object[] args, Callable<Object> superMethod) {
+    public int getSignal(Object thisBlock, Object[] args) {
         // args[0] = BlockState, args[1] = BlockGetter, args[2] = BlockPos, args[3] =
         // Direction
         try {
@@ -970,7 +955,7 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
             BlockPos pos = (BlockPos) args[2];
             net.minecraft.core.Direction direction = (net.minecraft.core.Direction) args[3];
 
-            BlockEntity be = BukkitBlockEntityTypes.getIfLoaded(level, pos);
+            BlockEntityController be = controllerAt(level, pos);
             if (be instanceof MultiBlockPartBlockEntity part) {
                 if (part.canOutputRedstone(direction)) {
                     return part.getRedstoneOutput();
@@ -988,22 +973,22 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
      * Delegates to the part block entity
      */
     @Override
-    public int getDirectSignal(Object thisBlock, Object[] args, Callable<Object> superMethod) {
+    public int getDirectSignal(Object thisBlock, Object[] args) {
         // For most multiblocks, direct signal = indirect signal
-        return getSignal(thisBlock, args, superMethod);
+        return getSignal(thisBlock, args);
     }
 
     /**
      * Declare this as a potential signal source if any part can output redstone
      */
     @Override
-    public boolean isSignalSource(Object thisBlock, Object[] args, Callable<Object> superMethod) {
+    public boolean isSignalSource(Object thisBlock, Object[] args) {
         try {
             net.minecraft.world.level.Level level = (net.minecraft.world.level.Level) args[1];
             BlockPos pos = (BlockPos) args[2];
             net.minecraft.core.Direction direction = (net.minecraft.core.Direction) args[3];
 
-            BlockEntity be = BukkitBlockEntityTypes.getIfLoaded(level, pos);
+            BlockEntityController be = controllerAt(level, pos);
             if (be instanceof MultiBlockPartBlockEntity part) {
                 return part.canOutputRedstone(direction);
             }
@@ -1021,14 +1006,14 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
 
     @Override
     public FluidStack getStored(Level level, BlockPos pos) {
-        BlockEntity be = BukkitBlockEntityTypes.getIfLoaded(level, pos);
+        BlockEntityController be = controllerAt(level, pos);
 
         if (be instanceof MultiBlockMachineBlockEntity) {
             return super.getStored(level, pos);
         }
 
         if (be instanceof MultiBlockPartBlockEntity part) {
-            BlockEntity core = BukkitBlockEntityTypes.getIfLoaded(level, part.getCorePos());
+            BlockEntityController core = controllerAt(level, part.getCorePos());
             if (core instanceof MultiBlockMachineBlockEntity co) {
                 int slot = part.getIOConfiguration().getTargetSlot(IOConfiguration.IOType.FLUID);
                 return co.getFluidInSlot(slot);
@@ -1040,7 +1025,7 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
 
     @Override
     public int insertFluid(Level level, BlockPos pos, FluidStack stack, Direction side) {
-        BlockEntity be = BukkitBlockEntityTypes.getIfLoaded(level, pos);
+        BlockEntityController be = controllerAt(level, pos);
 
         // Direct machine at this position - use parent logic
         if (be instanceof MultiBlockMachineBlockEntity) {
@@ -1053,7 +1038,7 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
                 return 0;
 
             int slot = part.getIOConfiguration().getTargetSlot(IOConfiguration.IOType.FLUID, side);
-            BlockEntity core = BukkitBlockEntityTypes.getIfLoaded(level, part.getCorePos());
+            BlockEntityController core = controllerAt(level, part.getCorePos());
             if (core instanceof MultiBlockMachineBlockEntity co) {
                 return co.insertFluidInSlot(slot, stack, level);
             }
@@ -1064,7 +1049,7 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
 
     @Override
     public int extractFluid(Level level, BlockPos pos, int max, Consumer<FluidStack> drained, Direction side) {
-        BlockEntity be = BukkitBlockEntityTypes.getIfLoaded(level, pos);
+        BlockEntityController be = controllerAt(level, pos);
 
         // Direct machine at this position - use parent logic
         if (be instanceof MultiBlockMachineBlockEntity) {
@@ -1077,7 +1062,7 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
                 return 0;
 
             int slot = part.getIOConfiguration().getTargetSlot(IOConfiguration.IOType.FLUID, side);
-            BlockEntity core = BukkitBlockEntityTypes.getIfLoaded(level, part.getCorePos());
+            BlockEntityController core = controllerAt(level, part.getCorePos());
             if (core instanceof MultiBlockMachineBlockEntity co) {
                 return co.extractFluidInSlot(slot, max, level, drained);
             }
@@ -1095,14 +1080,14 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
 
     @Override
     public GasStack getStoredGas(Level level, BlockPos pos) {
-        BlockEntity be = BukkitBlockEntityTypes.getIfLoaded(level, pos);
+        BlockEntityController be = controllerAt(level, pos);
 
         if (be instanceof MultiBlockMachineBlockEntity) {
             return super.getStoredGas(level, pos);
         }
 
         if (be instanceof MultiBlockPartBlockEntity part) {
-            BlockEntity core = BukkitBlockEntityTypes.getIfLoaded(level, part.getCorePos());
+            BlockEntityController core = controllerAt(level, part.getCorePos());
             if (core instanceof MultiBlockMachineBlockEntity co) {
                 return co.getGasInSlot(part.getIOConfiguration().getTargetSlot(IOConfiguration.IOType.GAS));
             }
@@ -1113,7 +1098,7 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
 
     @Override
     public int insertGas(Level level, BlockPos pos, GasStack stack, Direction side) {
-        BlockEntity be = BukkitBlockEntityTypes.getIfLoaded(level, pos);
+        BlockEntityController be = controllerAt(level, pos);
 
         // Direct machine at this position - use parent logic
         if (be instanceof MultiBlockMachineBlockEntity) {
@@ -1126,7 +1111,7 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
                 return 0;
 
             int slot = part.getIOConfiguration().getTargetSlot(IOConfiguration.IOType.GAS, side);
-            BlockEntity core = BukkitBlockEntityTypes.getIfLoaded(level, part.getCorePos());
+            BlockEntityController core = controllerAt(level, part.getCorePos());
             if (core instanceof MultiBlockMachineBlockEntity co) {
                 return co.insertGasInSlot(slot, stack, level);
             }
@@ -1137,7 +1122,7 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
 
     @Override
     public int extractGas(Level level, BlockPos pos, int max, Consumer<GasStack> drained, Direction side) {
-        BlockEntity be = BukkitBlockEntityTypes.getIfLoaded(level, pos);
+        BlockEntityController be = controllerAt(level, pos);
 
         // Direct machine at this position - use parent logic
         if (be instanceof MultiBlockMachineBlockEntity) {
@@ -1150,7 +1135,7 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
                 return 0;
 
             int slot = part.getIOConfiguration().getTargetSlot(IOConfiguration.IOType.GAS, side);
-            BlockEntity core = BukkitBlockEntityTypes.getIfLoaded(level, part.getCorePos());
+            BlockEntityController core = controllerAt(level, part.getCorePos());
             if (core instanceof MultiBlockMachineBlockEntity co) {
                 return co.extractGasInSlot(slot, max, level, drained);
             }
@@ -1159,10 +1144,10 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
         return 0;
     }
 
-    public PersistentBlockEntity getBlockEntity(Level world, net.minecraft.core.BlockPos pos) {
-        BlockEntity be = BukkitBlockEntityTypes.getIfLoaded(world, pos);
-        if (be instanceof PersistentBlockEntity)
-            return (PersistentBlockEntity) be;
+    public PersistentController getBlockEntity(Level world, net.minecraft.core.BlockPos pos) {
+        BlockEntityController be = controllerAt(world, pos);
+        if (be instanceof PersistentController)
+            return (PersistentController) be;
         return null;
     }
 
@@ -1171,7 +1156,7 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
         Level level = (Level) args[1];
         BlockPos pos = (BlockPos) args[2];
 
-        BlockEntity eBlockEntity = getBlockEntity(level, pos);
+        PersistentController eBlockEntity = getBlockEntity(level, pos);
         if (eBlockEntity == null)
             return null;
         if (eBlockEntity instanceof MultiBlockPartBlockEntity core) {

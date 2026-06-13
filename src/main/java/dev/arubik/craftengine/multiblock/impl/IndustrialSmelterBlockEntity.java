@@ -44,9 +44,9 @@ public class IndustrialSmelterBlockEntity extends MultiBlockMachineBlockEntity {
 
     private final MachineLayout layout;
 
-    public IndustrialSmelterBlockEntity(net.momirealms.craftengine.core.world.BlockPos pos,
-            ImmutableBlockState state, MultiBlockSchema schema) {
-        super(9, pos, state, schema);
+    public IndustrialSmelterBlockEntity(net.momirealms.craftengine.core.block.entity.BlockEntity blockEntity,
+            MultiBlockSchema schema) {
+        super(9, blockEntity, schema);
 
         // Add tanks using base class methods
         addFluidTank(new FluidTank("water_input", WATER_CAPACITY, FluidType.WATER));
@@ -244,7 +244,7 @@ public class IndustrialSmelterBlockEntity extends MultiBlockMachineBlockEntity {
     }
 
     private boolean consumeFuel() {
-        Level level = (Level) world.world.serverWorld();
+        Level level = (Level) blockEntity().world().world.minecraftWorld();
         for (int slot : FUEL_SLOTS) {
             ItemStack stack = getItem(slot);
             dev.arubik.craftengine.machine.recipe.MachineFuelRecipe recipe = RecipeManager.getFuel("solid_fuel",

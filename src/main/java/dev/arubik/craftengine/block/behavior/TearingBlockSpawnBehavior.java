@@ -2,20 +2,20 @@ package dev.arubik.craftengine.block.behavior;
 
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.Callable;
 import net.momirealms.craftengine.bukkit.block.BukkitBlockManager;
 import net.momirealms.craftengine.bukkit.block.behavior.BukkitBlockBehavior;
 import net.momirealms.craftengine.bukkit.nms.FastNMS;
-import net.momirealms.craftengine.bukkit.plugin.reflection.minecraft.MBlocks;
+import dev.arubik.craftengine.util.MBlocks;
 import net.momirealms.craftengine.bukkit.util.BlockStateUtils;
 import net.momirealms.craftengine.bukkit.util.LocationUtils;
 import net.momirealms.craftengine.bukkit.world.BukkitExistingBlock;
 import net.momirealms.craftengine.bukkit.world.BukkitWorld;
 import net.momirealms.craftengine.core.block.behavior.BlockBehavior;
-import net.momirealms.craftengine.core.block.CustomBlock;
-import net.momirealms.craftengine.core.block.EmptyBlock;
+import net.momirealms.craftengine.core.block.BlockDefinition;
+import net.momirealms.craftengine.core.block.EmptyBlockDefinition;
 import net.momirealms.craftengine.core.block.ImmutableBlockState;
 import net.momirealms.craftengine.core.block.behavior.BlockBehaviorFactory;
+import net.momirealms.craftengine.core.plugin.config.ConfigSection;
 import net.momirealms.craftengine.core.plugin.CraftEngine;
 import net.momirealms.craftengine.core.util.Key;
 import net.momirealms.craftengine.core.util.random.RandomUtils;
@@ -42,7 +42,7 @@ public class TearingBlockSpawnBehavior extends BukkitBlockBehavior {
 
   private ImmutableBlockState defaultImmutableBlockState;
 
-  public TearingBlockSpawnBehavior(CustomBlock customBlock, Key toPlace, Boolean water, float chance, int heightLimit) {
+  public TearingBlockSpawnBehavior(BlockDefinition customBlock, Key toPlace, Boolean water, float chance, int heightLimit) {
     super(customBlock);
     this.water = water.booleanValue();
     this.toPlace = toPlace;
@@ -53,16 +53,16 @@ public class TearingBlockSpawnBehavior extends BukkitBlockBehavior {
   public Object getDefaultBlockState() {
     if (this.defaultBlockState != null)
       return this.defaultBlockState;
-    Optional<CustomBlock> optionalCustomBlock = BukkitBlockManager.instance().blockById(this.toPlace);
+    Optional<BlockDefinition> optionalCustomBlock = BukkitBlockManager.instance().blockById(this.toPlace);
     if (optionalCustomBlock.isPresent()) {
-      CustomBlock customBlock = optionalCustomBlock.get();
-      this.defaultBlockState = customBlock.defaultState().customBlockState().literalObject();
+      BlockDefinition customBlock = optionalCustomBlock.get();
+      this.defaultBlockState = customBlock.defaultState().customBlockState().minecraftState();
       this.defaultImmutableBlockState = customBlock.defaultState();
     } else {
       CraftEngine.instance().logger()
           .warn("Failed to create solid block " + String.valueOf(this.toPlace) + " in TearingBlockSpawnBehavior");
       this.defaultBlockState = MBlocks.STONE$defaultState;
-      this.defaultImmutableBlockState = EmptyBlock.STATE;
+      this.defaultImmutableBlockState = EmptyBlockDefinition.STATE;
     }
     return this.defaultBlockState;
   }
@@ -74,7 +74,7 @@ public class TearingBlockSpawnBehavior extends BukkitBlockBehavior {
   }
 
   public BlockPos getTearingDripstone(Object level, BlockPos pos) {
-    BukkitWorld world = new BukkitWorld(FastNMS.INSTANCE.method$Level$getCraftWorld(level));
+    BukkitWorld world = new BukkitWorld(((net.minecraft.server.level.ServerLevel) level).getWorld());
     int heightLimit = Math.min(this.heightLimit + pos.y(), 320);
     for (int y = pos.y(); y < heightLimit; y++) {
       BlockPos currentPos = new BlockPos(pos.x(), y, pos.z());
@@ -140,12 +140,13 @@ public class TearingBlockSpawnBehavior extends BukkitBlockBehavior {
     return pos;
   }
 
-  public void randomTick(Object thisBlock, Object[] args, Callable<Object> superMethod) throws Exception {
+  @Override
+  public void randomTick(Object thisBlock, Object[] args) {
     Object level = args[1];
     BlockPos pos = LocationUtils.fromBlockPos(args[2]);
     if (RandomUtils.generateRandomFloat(0.0F, 1.0F) > this.chance)
       return;
-    BukkitWorld world = new BukkitWorld(FastNMS.INSTANCE.method$Level$getCraftWorld(level));
+    BukkitWorld world = new BukkitWorld(((net.minecraft.server.level.ServerLevel) level).getWorld());
     BlockPos targetPos = pos.above();
     BukkitExistingBlock blockInWorld = (BukkitExistingBlock) world.getBlock(targetPos.x(), targetPos.y(),
         targetPos.z());
@@ -163,22 +164,25 @@ public class TearingBlockSpawnBehavior extends BukkitBlockBehavior {
   public void placeBlock(Object level, BlockPos pos) {
     try {
       BukkitExistingBlock blockInWorld = (BukkitExistingBlock) (new BukkitWorld(
-          FastNMS.INSTANCE.method$Level$getCraftWorld(level))).getBlock(pos.x(), pos.y(), pos.z());
+          ((net.minecraft.server.level.ServerLevel) level).getWorld())).getBlock(pos.x(), pos.y(), pos.z());
       BlockData blockData = BlockStateUtils.fromBlockData(getDefaultBlockState());
       BlockState state = blockData.createBlockState();
       BlockFormEvent event = new BlockFormEvent(blockInWorld.block(), state);
       if (!event.callEvent())
         return;
-      BukkitWorld world = new BukkitWorld(FastNMS.INSTANCE.method$Level$getCraftWorld(level));
-      FastNMS.INSTANCE.method$LevelWriter$setBlock(world.serverWorld(), LocationUtils.toBlockPos(pos),
-          this.defaultImmutableBlockState.customBlockState().literalObject(), 3);
+      BukkitWorld world = new BukkitWorld(((net.minecraft.server.level.ServerLevel) level).getWorld());
+      ((net.minecraft.world.level.LevelWriter) world.minecraftWorld()).setBlock(
+          (net.minecraft.core.BlockPos) LocationUtils.toBlockPos(pos),
+          (net.minecraft.world.level.block.state.BlockState) this.defaultImmutableBlockState.customBlockState()
+              .minecraftState(),
+          3);
     } catch (Exception e) {
       CraftEngine.instance().logger().warn("Failed to update state for placement " + String.valueOf(pos), e);
     }
   }
 
   public static class Factory implements BlockBehaviorFactory<BlockBehavior> {
-    public BlockBehavior create(CustomBlock block, Map<String, Object> arguments) {
+    public BlockBehavior create(BlockDefinition block, ConfigSection arguments) {
       Boolean water = Boolean.valueOf(arguments.getOrDefault("liquid", "water").toString().equalsIgnoreCase("water"));
       Key toPlace = Key.from((String) arguments.getOrDefault("toPlace", "dripstone"));
       float chance = Float.parseFloat(arguments.getOrDefault("chance", Float.valueOf(0.011377778F)).toString());

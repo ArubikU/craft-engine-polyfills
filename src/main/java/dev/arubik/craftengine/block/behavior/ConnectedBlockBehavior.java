@@ -3,10 +3,8 @@ package dev.arubik.craftengine.block.behavior;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.Callable;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -19,16 +17,17 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.momirealms.craftengine.bukkit.block.behavior.BukkitBlockBehavior;
-import net.momirealms.craftengine.bukkit.block.behavior.UnsafeCompositeBlockBehavior;
+import net.momirealms.craftengine.bukkit.block.behavior.CompositeBlockBehavior;
 import net.momirealms.craftengine.bukkit.nms.FastNMS;
 import net.momirealms.craftengine.bukkit.util.BlockStateUtils;
 import net.momirealms.craftengine.bukkit.util.BlockTags;
 import net.momirealms.craftengine.core.block.behavior.BlockBehavior;
-import net.momirealms.craftengine.core.block.CustomBlock;
+import net.momirealms.craftengine.core.block.BlockDefinition;
 import net.momirealms.craftengine.core.block.ImmutableBlockState;
-import net.momirealms.craftengine.core.block.UpdateOption;
+import net.momirealms.craftengine.core.block.UpdateFlags;
 import net.momirealms.craftengine.core.block.behavior.BlockBehaviorFactory;
-import net.momirealms.craftengine.core.block.properties.EnumProperty;
+import net.momirealms.craftengine.core.block.property.EnumProperty;
+import net.momirealms.craftengine.core.plugin.config.ConfigSection;
 import net.minecraft.core.Direction;
 import net.momirealms.craftengine.core.util.Key;
 
@@ -46,7 +45,7 @@ public class ConnectedBlockBehavior extends ConnectableBlockBehavior {
     private final boolean includeSelfByDefault;
 
     @SuppressWarnings("unchecked")
-    public ConnectedBlockBehavior(CustomBlock customBlock,
+    public ConnectedBlockBehavior(BlockDefinition customBlock,
             List<Object> tags,
             Set<Object> blockStates,
             Set<String> customBlocks,
@@ -83,7 +82,7 @@ public class ConnectedBlockBehavior extends ConnectableBlockBehavior {
 
         // 1. Tags
         for (Object tag : tags) {
-            if (FastNMS.INSTANCE.method$BlockStateBase$is(state, tag)) {
+            if (dev.arubik.craftengine.util.MNms.INSTANCE.method$BlockStateBase$is(state, tag)) {
                 return true;
             }
         }
@@ -98,7 +97,7 @@ public class ConnectedBlockBehavior extends ConnectableBlockBehavior {
             String id = customOpt.get().owner().value().id().toString();
             if (customBlocks.contains(id))
                 return true;
-            if (includeSelfByDefault && id.equals(this.customBlock.id().toString()))
+            if (includeSelfByDefault && id.equals(this.block().id().toString()))
                 return true;
         }
 
@@ -144,9 +143,9 @@ public class ConnectedBlockBehavior extends ConnectableBlockBehavior {
             // vuelta
             return connectableBehavior.canConnectTo(level, neighborPos, oppositeDirection);
         }
-        if (customOpt.get().behavior() instanceof UnsafeCompositeBlockBehavior composite) {
-            if (composite.getAs(ConnectableBlockBehavior.class).isPresent()) {
-                ConnectableBlockBehavior connectableBehavior = composite.getAs(ConnectableBlockBehavior.class).get();
+        if (customOpt.get().behavior() instanceof CompositeBlockBehavior composite) {
+            ConnectableBlockBehavior connectableBehavior = composite.getFirst(ConnectableBlockBehavior.class);
+            if (connectableBehavior != null) {
                 Direction oppositeDirection = Utils.oppositeDirection(direction);
                 return connectableBehavior.canConnectTo(level, neighborPos, oppositeDirection);
             }
@@ -167,7 +166,7 @@ public class ConnectedBlockBehavior extends ConnectableBlockBehavior {
     }
 
     public Object vanillaMakeState(BlockPos pos, Level level) {
-        ImmutableBlockState state = (ImmutableBlockState) this.customBlock.defaultState();
+        ImmutableBlockState state = this.block().defaultState();
         if (this.NORTH != null && state.get(this.NORTH) != ConnectedFace.CONNECTED) {
             state = state.with(this.NORTH,
                     shouldConnect(Direction.NORTH, pos, level) ? ConnectedFace.CONNECTED : ConnectedFace.NONE);
@@ -202,7 +201,7 @@ public class ConnectedBlockBehavior extends ConnectableBlockBehavior {
     }
 
     @Override
-    public void onPlace(Object thisBlock, Object[] args, Callable<Object> superMethod) {
+    public void onPlace(Object thisBlock, Object[] args) {
         BlockState state = (BlockState) args[0];
         Level level = (Level) args[1];
         BlockPos pos = (BlockPos) args[2];
@@ -211,8 +210,8 @@ public class ConnectedBlockBehavior extends ConnectableBlockBehavior {
         newState.getNbtToSave();
         customState.getNbtToSave();
         if (customState != null && !newState.equals(customState)) {
-            FastNMS.INSTANCE.method$LevelWriter$setBlock(level, pos, newState.customBlockState().literalObject(),
-                    UpdateOption.UPDATE_ALL_IMMEDIATE.flags());
+            dev.arubik.craftengine.util.MNms.INSTANCE.method$LevelWriter$setBlock(level, pos, newState.customBlockState().minecraftState(),
+                    UpdateFlags.UPDATE_ALL_IMMEDIATE);
         }
     }
 
@@ -220,17 +219,18 @@ public class ConnectedBlockBehavior extends ConnectableBlockBehavior {
     // BlockPos pos, Direction direction, BlockPos neighborPos, BlockState
     // neighborState, RandomSource random
     @Override
-    public Object updateShape(Object thisBlock, Object[] args, Callable<Object> superMethod) throws Exception {
+    public Object updateShape(Object thisBlock, Object[] args) {
         BlockState state = (BlockState) args[0];
-        Level level = (Level) args[1];
+        Level level = (Level) args[BukkitBlockBehavior.updateShape$level];
         ImmutableBlockState customState = BlockStateUtils.getOptionalCustomBlockState(state).orElse(null);
         if (customState == null)
             return state;
-        ImmutableBlockState newState = (ImmutableBlockState) vanillaMakeState((BlockPos) args[3], level);
+        ImmutableBlockState newState = (ImmutableBlockState) vanillaMakeState(
+                (BlockPos) args[BukkitBlockBehavior.updateShape$blockPos], level);
         newState.getNbtToSave();
         customState.getNbtToSave();
         if (!newState.equals(customState)) {
-            return newState.customBlockState().literalObject();
+            return newState.customBlockState().minecraftState();
         } else {
             return state;
         }
@@ -240,7 +240,7 @@ public class ConnectedBlockBehavior extends ConnectableBlockBehavior {
         public static final Factory FACTORY = new Factory();
 
         @Override
-        public BlockBehavior create(CustomBlock block, Map<String, Object> arguments) {
+        public BlockBehavior create(BlockDefinition block, ConfigSection arguments) {
             List<Object> tags = new ArrayList<>();
             Set<Object> blockStates = new HashSet<>();
             Set<String> customBlocks = new HashSet<>();

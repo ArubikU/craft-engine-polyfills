@@ -36,9 +36,8 @@ public class MachinePumpBlockEntity extends AbstractMachineBlockEntity {
             "Machine Pump")
             .addSlot(4, MenuSlotType.OUTPUT); // Slot 4 for status
 
-    public MachinePumpBlockEntity(net.momirealms.craftengine.core.world.BlockPos pos,
-            ImmutableBlockState state) {
-        super(0, pos, state); // 0 item slots
+    public MachinePumpBlockEntity(net.momirealms.craftengine.core.block.entity.BlockEntity blockEntity) {
+        super(blockEntity, 0); // 0 item slots
 
         // Initialize Tank
         addFluidTank(new FluidTank("internal", CAPACITY));
