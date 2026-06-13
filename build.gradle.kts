@@ -28,6 +28,8 @@ dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.0")
     testImplementation("org.mockito:mockito-core:5.11.0")
     testImplementation("io.papermc.paper:paper-api:${rootProject.properties["paper_version"]}-R0.1-SNAPSHOT")
+    testImplementation("net.momirealms:craft-engine-core:${rootProject.properties["craftengine_version"]}")
+    testImplementation("net.momirealms:craft-engine-bukkit:${rootProject.properties["craftengine_version"]}")
 }
 
 

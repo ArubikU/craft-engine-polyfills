@@ -490,6 +490,8 @@ public abstract class AbstractMachineBlockEntity extends PersistentWorldlyBlockE
         if (level.isClientSide())
             return;
 
+        recomputeUpgrades();
+
         if (requiresRedstone && !isRedstoneEnabled(level)) {
             if (progress > 0) {
                 progress = Math.max(0, progress - 1);
@@ -518,7 +520,7 @@ public abstract class AbstractMachineBlockEntity extends PersistentWorldlyBlockE
 
             if (!needsFuel || burnTime > 0) {
                 isProcessing = true;
-                progress++;
+                progress += upgradeModifiers.stepFor(1);
                 if (maxProgress == 0)
                     maxProgress = recipe.getProcessTime();
 
@@ -672,6 +674,53 @@ public abstract class AbstractMachineBlockEntity extends PersistentWorldlyBlockE
                     dev.arubik.craftengine.multiblock.IOConfiguration.IORole.FUEL);
         }
         return new int[0];
+    }
+
+    // --- Upgrade modules ---
+    protected dev.arubik.craftengine.machine.upgrade.UpgradeModifiers upgradeModifiers =
+            dev.arubik.craftengine.machine.upgrade.UpgradeModifiers.NONE;
+
+    /** Item slots that accept upgrade modules. Override to enable upgrades. Default: none. */
+    public int[] getUpgradeSlots() {
+        return new int[0];
+    }
+
+    /** Registry used to resolve upgrade items. Override to expose a curated set. */
+    protected dev.arubik.craftengine.machine.upgrade.UpgradeRegistry upgradeRegistry() {
+        return dev.arubik.craftengine.machine.upgrade.UpgradeRegistry.global();
+    }
+
+    /** Current aggregate upgrade effect (speed / fuel / yield). */
+    public dev.arubik.craftengine.machine.upgrade.UpgradeModifiers getUpgradeModifiers() {
+        return upgradeModifiers;
+    }
+
+    /** Re-reads upgrade slots and recomputes {@link #upgradeModifiers}. Cheap; called each process tick. */
+    protected void recomputeUpgrades() {
+        int[] slots = getUpgradeSlots();
+        if (slots.length == 0) {
+            upgradeModifiers = dev.arubik.craftengine.machine.upgrade.UpgradeModifiers.NONE;
+            return;
+        }
+        java.util.Map<net.momirealms.craftengine.core.util.Key, Integer> counts = new java.util.HashMap<>();
+        for (int slot : slots) {
+            ItemStack stack = getItem(slot);
+            net.momirealms.craftengine.core.util.Key id = upgradeItemId(stack);
+            if (id == null) continue;
+            counts.merge(id, Math.max(1, stack.getCount()), Integer::sum);
+        }
+        upgradeModifiers = dev.arubik.craftengine.machine.upgrade.UpgradeModifiers.compute(counts, upgradeRegistry());
+    }
+
+    /** Resolves the craft-engine custom id (or vanilla id) of an upgrade-slot item, or null if empty. */
+    protected net.momirealms.craftengine.core.util.Key upgradeItemId(ItemStack nms) {
+        if (nms == null || nms.isEmpty()) return null;
+        org.bukkit.inventory.ItemStack bukkit = org.bukkit.craftbukkit.inventory.CraftItemStack.asBukkitCopy(nms);
+        net.momirealms.craftengine.core.util.Key custom =
+                net.momirealms.craftengine.bukkit.api.CraftEngineItems.getCustomItemId(bukkit);
+        if (custom != null) return custom;
+        org.bukkit.NamespacedKey nk = bukkit.getType().getKey();
+        return net.momirealms.craftengine.core.util.Key.of(nk.getNamespace(), nk.getKey());
     }
 
     // --- Persistence ---
@@ -952,7 +1001,8 @@ public abstract class AbstractMachineBlockEntity extends PersistentWorldlyBlockE
             var recipe = dev.arubik.craftengine.machine.recipe.loader.RecipeManager.getFuel(getMachineId(), stack);
             if (recipe != null && stack.getCount() >= recipe.getInput().getAmount()
                     && canFitReplacement(level, recipe, slot)) {
-                int burn = recipe.getBurnTime();
+                // Efficiency upgrades stretch each fuel item's burn time (consume less fuel).
+                int burn = (int) Math.round(recipe.getBurnTime() / upgradeModifiers.fuelMultiplier());
 
                 boolean consumedInPlace = placeReplacement(level, recipe, slot);
                 if (!consumedInPlace) {
