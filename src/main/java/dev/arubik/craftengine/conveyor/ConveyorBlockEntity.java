@@ -318,6 +318,10 @@ public class ConveyorBlockEntity extends PersistentWorldlyBlockEntity implements
             this.effectiveRpm = this.inputRpm;
         }
 
+        // Drive the 'activated' block-state (running when it has RPM) so the model/
+        // texture swaps between animated (on) and static (off).
+        maybeUpdateActivated(world, pos, this.effectiveRpm > 0f);
+
         // Auto-pickup cadence: only when the slot is empty.
         if (++tickCounter >= PICKUP_INTERVAL) {
             tickCounter = 0;
@@ -617,6 +621,43 @@ public class ConveyorBlockEntity extends PersistentWorldlyBlockEntity implements
     }
 
     // ---------------- state mutation helpers ----------------
+
+    /** Property name for the running flag the polyfill drives from RPM. */
+    private static final String PROP_ACTIVATED = "activated";
+    private Boolean lastActivated = null;
+
+    /**
+     * Sets the {@code activated} boolean block-state when the running state flips,
+     * swapping the model/texture between animated (on) and static (off). Uses a
+     * client-only NMS setBlock (flag 2) so the block entity (slot/links) is NOT
+     * recreated — same approach the redstone/diode behaviors use to change state.
+     */
+    private void maybeUpdateActivated(CEWorld world, BlockPos pos, boolean active) {
+        if (lastActivated != null && lastActivated == active)
+            return;
+        ImmutableBlockState cur = blockEntity().blockState();
+        if (cur == null || cur.getProperty(PROP_ACTIVATED) == null) {
+            lastActivated = active;   // property not defined on this block; nothing to toggle
+            return;
+        }
+        String now = enumName(cur, PROP_ACTIVATED);
+        if (String.valueOf(active).equalsIgnoreCase(now)) {
+            lastActivated = active;
+            return;
+        }
+        ImmutableBlockState ns = withEnum(cur, PROP_ACTIVATED, String.valueOf(active));
+        if (ns == cur)
+            return;
+        try {
+            Object level = world.world().minecraftWorld();
+            Object bp = dev.arubik.craftengine.util.MNms.INSTANCE.constructor$BlockPos(pos.x(), pos.y(), pos.z());
+            Object nms = ns.customBlockState().minecraftState();
+            // flag 2 = notify clients only (no neighbour updates, keeps the block entity)
+            dev.arubik.craftengine.util.MNms.INSTANCE.method$LevelWriter$setBlock(level, bp, nms, 2);
+            lastActivated = active;
+        } catch (Throwable ignored) {
+        }
+    }
 
     private static ImmutableBlockState stateWith(ImmutableBlockState base, Direction facing,
             ConveyorSlope slope, ConveyorPart part) {

@@ -1,7 +1,7 @@
 {
   "parent": "block/block",
   "textures": {
-    "top": "minecraft:block/custom/conveyor/belt_top",
+    "top": "minecraft:block/custom/conveyor/belt_top_static",
     "frame": "minecraft:block/custom/conveyor/belt_frame",
     "particle": "minecraft:block/custom/conveyor/belt_frame"
   },
@@ -9,23 +9,14 @@
     {
       "from": [
         0.01,
-        6,
-        -3.314
+        0.01,
+        0.01
       ],
       "to": [
         15.99,
-        10,
-        19.314
+        3.99,
+        15.99
       ],
-      "rotation": {
-        "angle": 45,
-        "axis": "x",
-        "origin": [
-          8,
-          8,
-          8
-        ]
-      },
       "faces": {
         "up": {
           "uv": [
