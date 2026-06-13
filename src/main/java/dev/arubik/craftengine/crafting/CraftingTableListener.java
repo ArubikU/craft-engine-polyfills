@@ -3,43 +3,53 @@ package dev.arubik.craftengine.crafting;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryAction;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
 
 /**
- * Drives {@link CraftingTableMenu} interaction: keeps the result preview in
- * sync as inputs change, handles taking the result (consume-one-each, instant
- * output), and returns inputs on close.
+ * Drives ALL {@link AbstractCraftingMenu} interaction (the default crafting
+ * table and any custom subclass): keeps the output preview in sync as inputs
+ * change, handles taking the result (normal and shift-click bulk craft), defers
+ * CUSTOM-slot changes to the menu hook, and returns inputs on close.
  *
- * <p>Mirrors the scheduling approach of {@code MachineMenuListener}: changes to
- * input slots are applied by Bukkit first, then we recompute on the next tick.
+ * <p>Kept as the same class name with a no-arg constructor so existing
+ * registration wiring continues to work unchanged.
  */
 public final class CraftingTableListener implements Listener {
 
     @EventHandler
     public void onClick(InventoryClickEvent event) {
-        if (!(event.getInventory().getHolder() instanceof CraftingTableMenu menu)) {
+        if (!(event.getInventory().getHolder() instanceof AbstractCraftingMenu menu)) {
             return;
         }
         int raw = event.getRawSlot();
         boolean topInventory = raw >= 0 && raw < event.getInventory().getSize();
 
         if (topInventory) {
-            if (menu.isFillerSlot(raw)) {
+            if (menu.isBackgroundSlot(raw)) {
                 event.setCancelled(true);
                 return;
             }
-            if (menu.isResultSlot(raw)) {
-                // Result slot: no placing into it; clicking it crafts.
+            if (menu.isOutputSlot(raw)) {
                 event.setCancelled(true);
                 if (event.getWhoClicked() instanceof Player player) {
-                    menu.takeResult(player);
+                    if (event.getClick() == ClickType.SHIFT_LEFT || event.getClick() == ClickType.SHIFT_RIGHT) {
+                        menu.shiftTakeResult(player);
+                    } else {
+                        menu.takeResult(player);
+                    }
                 }
                 return;
             }
-            // Input slot: allow the change, then recompute next tick.
+            if (menu.isCustomSlot(raw)) {
+                // Let the change apply, then notify the subclass next tick.
+                scheduleCustom(menu, raw);
+                return;
+            }
+            // INPUT slot: allow the change, then recompute next tick.
             scheduleRecompute(menu);
             return;
         }
@@ -52,15 +62,14 @@ public final class CraftingTableListener implements Listener {
 
     @EventHandler
     public void onDrag(InventoryDragEvent event) {
-        if (!(event.getInventory().getHolder() instanceof CraftingTableMenu menu)) {
+        if (!(event.getInventory().getHolder() instanceof AbstractCraftingMenu menu)) {
             return;
         }
         for (int raw : event.getRawSlots()) {
-            if (raw < event.getInventory().getSize()) {
-                if (menu.isResultSlot(raw) || menu.isFillerSlot(raw)) {
-                    event.setCancelled(true);
-                    return;
-                }
+            if (raw < event.getInventory().getSize()
+                    && (menu.isOutputSlot(raw) || menu.isBackgroundSlot(raw))) {
+                event.setCancelled(true);
+                return;
             }
         }
         scheduleRecompute(menu);
@@ -68,7 +77,7 @@ public final class CraftingTableListener implements Listener {
 
     @EventHandler
     public void onClose(InventoryCloseEvent event) {
-        if (!(event.getInventory().getHolder() instanceof CraftingTableMenu menu)) {
+        if (!(event.getInventory().getHolder() instanceof AbstractCraftingMenu menu)) {
             return;
         }
         if (event.getPlayer() instanceof Player player) {
@@ -76,8 +85,13 @@ public final class CraftingTableListener implements Listener {
         }
     }
 
-    private void scheduleRecompute(CraftingTableMenu menu) {
+    private void scheduleRecompute(AbstractCraftingMenu menu) {
         org.bukkit.Bukkit.getScheduler().runTask(
                 dev.arubik.craftengine.CraftEnginePolyfills.instance(), menu::recompute);
+    }
+
+    private void scheduleCustom(AbstractCraftingMenu menu, int slot) {
+        org.bukkit.Bukkit.getScheduler().runTask(
+                dev.arubik.craftengine.CraftEnginePolyfills.instance(), () -> menu.onCustomSlotChangedExternal(slot));
     }
 }

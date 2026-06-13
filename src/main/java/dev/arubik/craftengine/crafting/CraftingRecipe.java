@@ -23,7 +23,7 @@ import net.momirealms.craftengine.core.util.Key;
  * <p>Outputs are stored as {@link CraftCell}s (id + count) so this class stays
  * free of Bukkit/NMS; the menu layer converts them to real item stacks.
  */
-public final class CraftingRecipe {
+public final class CraftingRecipe implements CraftingRecipeLike {
 
     public enum Type {
         SHAPED,
@@ -56,8 +56,15 @@ public final class CraftingRecipe {
         this.outputs = outputs;
     }
 
+    @Override
     public Key id() {
         return id;
+    }
+
+    /** {@inheritDoc} The built-in recipe ignores the grid; outputs are fixed. */
+    @Override
+    public List<CraftCell> outputs(CraftingGrid grid) {
+        return outputs;
     }
 
     public Type type() {
@@ -80,6 +87,7 @@ public final class CraftingRecipe {
     /**
      * True if {@code grid} produces this recipe. Pure; safe to call from tests.
      */
+    @Override
     public boolean matches(CraftingGrid grid) {
         return switch (type) {
             case SHAPELESS -> matchesShapeless(grid);

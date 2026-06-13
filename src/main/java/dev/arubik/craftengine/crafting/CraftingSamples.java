@@ -64,6 +64,15 @@ public final class CraftingSamples {
                 .output(stick, 1)
                 .output(charcoal, 1)
                 .build());
+
+        // 4) FORGE (2x2 grid + fuel slot) sample: 4 coal in a 2x2 -> 1 diamond.
+        //    Registered in the 2x2 bucket; ForgeMenu additionally gates on fuel.
+        registry.register(2, 2, CraftingRecipe.shaped(Key.of("polyfills", "sample_forge_diamond"))
+                .row("CC")
+                .row("CC")
+                .define('C', coal)
+                .output(diamond, 1)
+                .build());
     }
 
     /*

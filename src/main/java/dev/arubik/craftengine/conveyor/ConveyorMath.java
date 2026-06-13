@@ -33,6 +33,36 @@ public final class ConveyorMath {
         return start + (end - start) * t;
     }
 
+    /** Block-relative Y at which the carried item rides the belt top (flat). */
+    public static final float BELT_TOP_Y = 0.95f;
+
+    /**
+     * Build the block-relative START point (entry) of a segment from its facing
+     * step vector and slope. The entry is the face OPPOSITE travel; for an UP
+     * slope the entry sits low and for a DOWN slope it sits high, so the item Y
+     * ramps by +/-1 across the segment.
+     *
+     * <p>Pure: no Bukkit/NMS. {@code stepX}/{@code stepZ} are the facing's unit
+     * step (one of them is +/-1, the other 0). {@code slopeStepY} is -1, 0 or +1.</p>
+     */
+    public static Vector3f startPoint(int stepX, int stepZ, int slopeStepY) {
+        // entry face = -facing, centred, at belt top; UP starts one lower, DOWN one higher
+        float yOff = slopeStepY > 0 ? -0.5f : (slopeStepY < 0 ? 0.5f : 0f);
+        return new Vector3f(0.5f - stepX * 0.5f, BELT_TOP_Y + yOff, 0.5f - stepZ * 0.5f);
+    }
+
+    /**
+     * Build the block-relative END point (exit) of a segment from its facing
+     * step vector and slope. The exit is the facing face; for UP it sits high,
+     * for DOWN it sits low.
+     *
+     * <p>Pure: no Bukkit/NMS.</p>
+     */
+    public static Vector3f endPoint(int stepX, int stepZ, int slopeStepY) {
+        float yOff = slopeStepY > 0 ? 0.5f : (slopeStepY < 0 ? -0.5f : 0f);
+        return new Vector3f(0.5f + stepX * 0.5f, BELT_TOP_Y + yOff, 0.5f + stepZ * 0.5f);
+    }
+
     /** Clamp a float into the [0,1] range. */
     public static float clamp01(float v) {
         if (v < 0f)

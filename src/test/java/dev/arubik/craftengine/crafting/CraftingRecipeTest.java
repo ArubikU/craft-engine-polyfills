@@ -141,9 +141,9 @@ class CraftingRecipeTest {
 
         CraftingGrid pick = grid3x3(new Key[][] {
                 { DIAMOND, DIAMOND, DIAMOND }, { null, STICK, null }, { null, STICK, null } });
-        Optional<CraftingRecipe> m = reg.match(pick);
+        Optional<CraftingRecipeLike> m = reg.match(pick);
         assertTrue(m.isPresent());
-        assertEquals(PICK, m.get().outputs().get(0).id());
+        assertEquals(PICK, m.get().outputs(pick).get(0).id());
 
         assertTrue(reg.match(CraftingGrid.empty(5, 5)).isEmpty());
     }

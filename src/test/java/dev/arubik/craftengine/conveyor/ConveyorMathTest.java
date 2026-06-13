@@ -68,4 +68,69 @@ class ConveyorMathTest {
         assertEquals(7.0, ConveyorMath.interpolate(7.0, 7.0, 0.5), EPS);
         assertEquals(7.0, ConveyorMath.interpolate(7.0, 7.0, 1.0), EPS);
     }
+
+    // ---------------- slope-aware start/end geometry ----------------
+
+    private static final float FEPS = 1e-6f;
+
+    @Test
+    void flatNorthKeepsYConstantAtBeltTop() {
+        // NORTH: stepX=0, stepZ=-1
+        org.joml.Vector3f start = ConveyorMath.startPoint(0, -1, 0);
+        org.joml.Vector3f end = ConveyorMath.endPoint(0, -1, 0);
+        assertEquals(ConveyorMath.BELT_TOP_Y, start.y, FEPS);
+        assertEquals(ConveyorMath.BELT_TOP_Y, end.y, FEPS);
+        // entry on +Z face, exit on -Z face
+        assertEquals(1.0f, start.z, FEPS);
+        assertEquals(0.0f, end.z, FEPS);
+        assertEquals(0.5f, start.x, FEPS);
+        assertEquals(0.5f, end.x, FEPS);
+    }
+
+    @Test
+    void upSlopeRampsYByPlusOneAcrossSegment() {
+        // EAST: stepX=1, stepZ=0; UP slope stepY=+1
+        org.joml.Vector3f start = ConveyorMath.startPoint(1, 0, 1);
+        org.joml.Vector3f end = ConveyorMath.endPoint(1, 0, 1);
+        assertEquals(end.y - start.y, 1.0f, FEPS); // ramps up exactly one block
+        assertEquals(ConveyorMath.BELT_TOP_Y - 0.5f, start.y, FEPS);
+        assertEquals(ConveyorMath.BELT_TOP_Y + 0.5f, end.y, FEPS);
+    }
+
+    @Test
+    void downSlopeRampsYByMinusOneAcrossSegment() {
+        // WEST: stepX=-1, stepZ=0; DOWN slope stepY=-1
+        org.joml.Vector3f start = ConveyorMath.startPoint(-1, 0, -1);
+        org.joml.Vector3f end = ConveyorMath.endPoint(-1, 0, -1);
+        assertEquals(end.y - start.y, -1.0f, FEPS); // ramps down exactly one block
+        assertEquals(ConveyorMath.BELT_TOP_Y + 0.5f, start.y, FEPS);
+        assertEquals(ConveyorMath.BELT_TOP_Y - 0.5f, end.y, FEPS);
+    }
+
+    @Test
+    void vectorInterpolateMidpointOfSlopedSegmentIsHalfwayInY() {
+        org.joml.Vector3f start = ConveyorMath.startPoint(1, 0, 1);
+        org.joml.Vector3f end = ConveyorMath.endPoint(1, 0, 1);
+        org.joml.Vector3f mid = ConveyorMath.interpolate(start, end, 0.5f);
+        assertEquals(ConveyorMath.BELT_TOP_Y, mid.y, FEPS);
+    }
+
+    @Test
+    void slopeStepYMapping() {
+        assertEquals(0, ConveyorSlope.FLAT.stepY());
+        assertEquals(1, ConveyorSlope.UP.stepY());
+        assertEquals(-1, ConveyorSlope.DOWN.stepY());
+        assertEquals(ConveyorSlope.UP, ConveyorSlope.fromName("up"));
+        assertEquals(ConveyorSlope.DOWN, ConveyorSlope.fromName("DOWN"));
+        assertEquals(ConveyorSlope.FLAT, ConveyorSlope.fromName(null));
+        assertEquals(ConveyorSlope.FLAT, ConveyorSlope.fromName("garbage"));
+    }
+
+    @Test
+    void partDefaultsToEnd() {
+        assertEquals(ConveyorPart.END, ConveyorPart.fromName(null));
+        assertEquals(ConveyorPart.END, ConveyorPart.fromName("xyz"));
+        assertEquals(ConveyorPart.START, ConveyorPart.fromName("start"));
+        assertEquals(ConveyorPart.MIDDLE, ConveyorPart.fromName("MIDDLE"));
+    }
 }
