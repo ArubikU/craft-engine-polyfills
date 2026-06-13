@@ -4,9 +4,13 @@
 # + 1 tool slot; everything else is BACKGROUND (not placeable). Overlay your own
 # GUI texture aligned to the slot indices the behavior reports.
 #
-# The 3D model is 2 BLOCKS WIDE (elements span x 0..32). It renders within this
-# single block into the facing-adjacent space, so KEEP THE NEXT BLOCK CLEAR.
-# (A true 2-collision multiblock can be layered on via the multiblock subsystem.)
+# This is now a REAL 2-collision double block (dev.arubik...multiblock.
+# HorizontalDoubleBlockBehavior, subclassed by WorkbenchBehavior). The placed
+# block is the LEFT (master) half; a RIGHT half is auto-placed one cell toward
+# facing.clockWise(). Breaking either removes both; right-clicking either opens
+# the master's menu. The model is SPLIT: workbench_left renders x 0..16, and
+# workbench_right renders the old x 16..32 shifted to 0..16. The item keeps the
+# original 2-wide workbench.json as its inventory model.
 
 items:
   demo:workbench:
@@ -39,16 +43,29 @@ blocks:
         facing:
           type: 4-direction
           default: north
+        # LEFT = master/origin half; RIGHT = the auto-placed second half.
+        half:
+          type: string
+          values: [left, right]
+          default: left
       appearances:
-        north: { auto_state: solid, model: { path: minecraft:block/custom/workbench/workbench } }
-        east:  { auto_state: solid, model: { path: minecraft:block/custom/workbench/workbench, y: 90 } }
-        south: { auto_state: solid, model: { path: minecraft:block/custom/workbench/workbench, y: 180 } }
-        west:  { auto_state: solid, model: { path: minecraft:block/custom/workbench/workbench, y: 270 } }
+        left_north:  { auto_state: solid, model: { path: minecraft:block/custom/workbench/workbench_left } }
+        left_east:   { auto_state: solid, model: { path: minecraft:block/custom/workbench/workbench_left, y: 90 } }
+        left_south:  { auto_state: solid, model: { path: minecraft:block/custom/workbench/workbench_left, y: 180 } }
+        left_west:   { auto_state: solid, model: { path: minecraft:block/custom/workbench/workbench_left, y: 270 } }
+        right_north: { auto_state: solid, model: { path: minecraft:block/custom/workbench/workbench_right } }
+        right_east:  { auto_state: solid, model: { path: minecraft:block/custom/workbench/workbench_right, y: 90 } }
+        right_south: { auto_state: solid, model: { path: minecraft:block/custom/workbench/workbench_right, y: 180 } }
+        right_west:  { auto_state: solid, model: { path: minecraft:block/custom/workbench/workbench_right, y: 270 } }
       variants:
-        "facing=north": { appearance: north }
-        "facing=east": { appearance: east }
-        "facing=south": { appearance: south }
-        "facing=west": { appearance: west }
+        "half=left:facing=north":  { appearance: left_north }
+        "half=left:facing=east":   { appearance: left_east }
+        "half=left:facing=south":  { appearance: left_south }
+        "half=left:facing=west":   { appearance: left_west }
+        "half=right:facing=north": { appearance: right_north }
+        "half=right:facing=east":  { appearance: right_east }
+        "half=right:facing=south": { appearance: right_south }
+        "half=right:facing=west":  { appearance: right_west }
 
 # --- Example custom GUI texture ---
 # An example chest-GUI background is provided at
