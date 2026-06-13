@@ -69,11 +69,11 @@ blocks:
 
 # --- Example custom GUI texture ---
 # An example chest-GUI background is provided at
-#   resourcepack/assets/minecraft/textures/gui/workbench.png  (176x132, slots marked)
+#   resourcepack/assets/minecraft/textures/gui/workbench.png  (176x104, 4-row, slots marked)
 # rendered via the font provider  assets/minecraft/font/workbench.json  (PUA char U+E000).
 # To show it, set this block's `title` to the glyph so Minecraft draws the image in the
 # menu title area (standard "image-in-title" technique):
 #   title: ""        # optionally prefix negative-space chars to center it
 # Tune `ascent` in the font json to slide the image over the chest slots. The slot
-# highlights in the PNG match the behavior's indices (input 10/11/12,19/20/21;
-# outputs 14,23; tool 16).
+# highlights in the PNG match the behavior's indices (input 10,11,12,19,20,21;
+# outputs 14,23; tool 9). 4-row chest, 6-wide usable region.

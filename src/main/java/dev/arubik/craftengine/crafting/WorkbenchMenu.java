@@ -27,12 +27,14 @@ public final class WorkbenchMenu extends AbstractCraftingMenu {
 
     // ---- slot indices (vanilla 6x9 chest; see class doc / summary for the map) ----
     // Row 1 cols 1-3 -> 10,11,12 ; Row 2 cols 1-3 -> 19,20,21 (the 3x2 input grid).
+    // 4-row chest (size 36), usable 6-wide region = columns 0..5; cols 6..8 background.
+    // Input 3x2 grid at cols 1..3, rows 1..2.
     public static final int IN_00 = 10, IN_10 = 11, IN_20 = 12;
     public static final int IN_01 = 19, IN_11 = 20, IN_21 = 21;
-    // Two outputs (row 1-2, col 5): 14 and 23.
+    // Two outputs (col 5, rows 1..2).
     public static final int OUT_0 = 14, OUT_1 = 23;
-    // Tool slot (row 1, col 6 region): 16.
-    public static final int TOOL_SLOT = 16;
+    // Tool slot (col 0, row 1) — inside the 6-wide region.
+    public static final int TOOL_SLOT = 9;
 
     private final StationRecipeRegistry registry;
 
@@ -43,7 +45,7 @@ public final class WorkbenchMenu extends AbstractCraftingMenu {
     }
 
     private static SlotLayout buildLayout() {
-        SlotLayout.Builder b = SlotLayout.builder(54).grid(3, 2);
+        SlotLayout.Builder b = SlotLayout.builder(36).grid(3, 2);
         b.input(IN_00, 0, 0).input(IN_10, 1, 0).input(IN_20, 2, 0);
         b.input(IN_01, 0, 1).input(IN_11, 1, 1).input(IN_21, 2, 1);
         b.output(OUT_0).output(OUT_1);
