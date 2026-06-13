@@ -53,6 +53,15 @@
             16
           ],
           "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            0,
+            12,
+            16,
+            16
+          ],
+          "texture": "#frame"
         }
       }
     },
