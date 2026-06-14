@@ -16,6 +16,9 @@ import net.momirealms.craftengine.core.world.CEWorld;
 public class BukkitBlockEntityTypes {
 
     public static BlockEntity getIfLoaded(Level world, BlockPos pos) {
+        if (world == null) {
+            return null;
+        }
         CEWorld ceWorld = new BukkitWorld(world.getWorld()).storageWorld();
         return ceWorld.getBlockEntityAtIfLoaded(net.momirealms.craftengine.core.world.BlockPos.of(pos.asLong()));
     }

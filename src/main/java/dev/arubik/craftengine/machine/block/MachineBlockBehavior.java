@@ -78,6 +78,11 @@ public class MachineBlockBehavior extends ConnectableBlockBehavior
 
     @Override
     public IOConfiguration getIOConfiguration(Level level, BlockPos pos) {
+        // Called with a null level at config-parse time (no world yet) to fetch the
+        // default config — don't touch the world then.
+        if (level == null) {
+            return defaultIOConfig;
+        }
         BlockEntity be = BukkitBlockEntityTypes.getIfLoaded(level, pos);
         if (be != null && be.controller instanceof AbstractMachineBlockEntity machine) {
             IOConfiguration config = machine.getIOConfiguration();

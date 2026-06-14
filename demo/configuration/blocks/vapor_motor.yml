@@ -12,7 +12,7 @@ items:
   demo:vapor_motor:
     data:
       item_name: "<!i><aqua>Vapor Motor"
-    model: minecraft:block/custom/vapor_motor
+    model: minecraft:block/custom/vapor_motor/vapor_motor
     behavior:
       type: block_item
       block: demo:vapor_motor
@@ -42,10 +42,10 @@ blocks:
           type: 4-direction
           default: north
       appearances:
-        north: { auto_state: solid, model: { path: minecraft:block/custom/vapor_motor } }
-        east:  { auto_state: solid, model: { path: minecraft:block/custom/vapor_motor, y: 90 } }
-        south: { auto_state: solid, model: { path: minecraft:block/custom/vapor_motor, y: 180 } }
-        west:  { auto_state: solid, model: { path: minecraft:block/custom/vapor_motor, y: 270 } }
+        north: { auto_state: solid, model: { path: minecraft:block/custom/vapor_motor/vapor_motor } }
+        east:  { auto_state: solid, model: { path: minecraft:block/custom/vapor_motor/vapor_motor, y: 90 } }
+        south: { auto_state: solid, model: { path: minecraft:block/custom/vapor_motor/vapor_motor, y: 180 } }
+        west:  { auto_state: solid, model: { path: minecraft:block/custom/vapor_motor/vapor_motor, y: 270 } }
       variants:
         "facing=north": { appearance: north }
         "facing=east": { appearance: east }

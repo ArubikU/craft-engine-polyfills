@@ -12,7 +12,7 @@ items:
   demo:conveyor:
     data:
       item_name: "<!i><white>Conveyor Belt"
-    model: minecraft:block/custom/conveyor/conveyor_flat_middle
+    model: minecraft:item/custom/conveyor_belt
     behavior:
       type: block_item
       block: demo:conveyor

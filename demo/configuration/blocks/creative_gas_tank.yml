@@ -1,0 +1,42 @@
+# Creative gas tank — dev.arubik.craftengine.gas.behavior.CreativeGasTankBehavior
+# (polyfills:creative_gas_tank). An INFINITE STEAM source for testing: every tick it
+# pushes steam into all adjacent gas consumers (the vapor motor's gas input, gas pipes,
+# tanks). Place it touching a vapor_motor to power it with no fuel setup.
+
+items:
+  demo:creative_gas_tank:
+    data:
+      item_name: "<!i><light_purple>Creative Gas Tank"
+    model: minecraft:block/custom/creative_gas_tank/creative_gas_tank
+    behavior:
+      type: block_item
+      block: demo:creative_gas_tank
+
+blocks:
+  demo:creative_gas_tank:
+    loot:
+      template: default:loot_table/self
+    settings:
+      hardness: 1.0
+      resistance: 3600000.0
+      tags: ["minecraft:mineable/pickaxe"]
+      sounds:
+        break: minecraft:block.copper.break
+        place: minecraft:block.copper.place
+        step: minecraft:block.copper.step
+        hit: minecraft:block.copper.hit
+        fall: minecraft:block.copper.fall
+    behavior:
+      type: polyfills:creative_gas_tank
+    states:
+      properties:
+        facing:
+          type: 4-direction
+          default: north
+      appearances:
+        base: { auto_state: solid, model: { path: minecraft:block/custom/creative_gas_tank/creative_gas_tank } }
+      variants:
+        "facing=north": { appearance: base }
+        "facing=east": { appearance: base }
+        "facing=south": { appearance: base }
+        "facing=west": { appearance: base }
