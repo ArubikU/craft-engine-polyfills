@@ -420,6 +420,7 @@ public class ConveyorBlockEntity extends PersistentWorldlyBlockEntity implements
             display = new ConveyorItemDisplay();
         }
         display.setNmsItem(slot().copy());
+        display.setRotation(ConveyorMath.itemRotation(facing.stepX(), facing.stepZ(), slope().stepY()));
         Vector3f rel = ConveyorMath.interpolate(startRel(facing), endRel(facing), progress);
         double wx = pos.x() + rel.x;
         double wy = pos.y() + rel.y;

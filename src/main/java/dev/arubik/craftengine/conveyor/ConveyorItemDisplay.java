@@ -44,21 +44,32 @@ public final class ConveyorItemDisplay {
         return entityId;
     }
 
+    /** Orientation of the carried item: yaw from belt facing + pitch from slope. */
+    private org.joml.Quaternionf rotation = new org.joml.Quaternionf();
+
     /** Set the NMS item stack to render (net.minecraft.world.item.ItemStack). */
     public void setNmsItem(Object nmsItemStack) {
         this.nmsItemStack = nmsItemStack;
     }
 
-    /** Build the entity metadata list (item + small scale + interpolation duration). */
+    /** Set the display rotation (oriented along the belt + tilted on ramps). */
+    public void setRotation(org.joml.Quaternionf rotation) {
+        this.rotation = rotation != null ? rotation : new org.joml.Quaternionf();
+    }
+
+    /** Build the entity metadata list (item + scale + orientation + interpolation). */
     private List<Object> metadata() {
         List<Object> values = new ArrayList<>();
         if (nmsItemStack != null) {
             DisplayData.ItemDisplayData.ItemStack.addEntityData(nmsItemStack, values);
         }
-        // Render the item at roughly a third scale so it sits on the belt.
+        // Render the item at roughly half scale so it sits on the belt.
         DisplayData.Scale.addEntityData(new Vector3f(0.5f, 0.5f, 0.5f), values);
-        // Smoothly interpolate the position move we issue each tick (~1 tick lerp).
+        // Orient along the belt (yaw) + tilt on ramps (pitch).
+        DisplayData.LeftRotation.addEntityData(rotation, values);
+        // Smoothly interpolate the position + rotation we issue each tick.
         DisplayData.PosRotInterpolationDuration.addEntityData(1, values);
+        DisplayData.TransformationInterpolationDuration.addEntityData(2, values);
         return values;
     }
 

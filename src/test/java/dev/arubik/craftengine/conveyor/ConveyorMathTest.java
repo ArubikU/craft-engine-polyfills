@@ -133,4 +133,17 @@ class ConveyorMathTest {
         assertEquals(ConveyorPart.START, ConveyorPart.fromName("start"));
         assertEquals(ConveyorPart.MIDDLE, ConveyorPart.fromName("MIDDLE"));
     }
+
+    @org.junit.jupiter.api.Test
+    void itemRotationTiltsOnRamps() {
+        // flat: no pitch -> rotating +Z keeps Z forward (x component ~ 0)
+        org.joml.Quaternionf flat = ConveyorMath.itemRotation(0, 1, 0);
+        org.joml.Vector3f vf = flat.transform(new org.joml.Vector3f(0, 0, 1));
+        assertEquals(0f, vf.y, 1e-5f);
+        // up ramp: forward gains a +Y component (climbs); down: -Y
+        org.joml.Vector3f up = ConveyorMath.itemRotation(0, 1, 1).transform(new org.joml.Vector3f(0, 0, 1));
+        org.joml.Vector3f dn = ConveyorMath.itemRotation(0, 1, -1).transform(new org.joml.Vector3f(0, 0, 1));
+        org.junit.jupiter.api.Assertions.assertTrue(up.y > 0.5f, "up ramp should tilt the item upward, got " + up.y);
+        org.junit.jupiter.api.Assertions.assertTrue(dn.y < -0.5f, "down ramp should tilt the item downward, got " + dn.y);
+    }
 }

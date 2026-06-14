@@ -63,6 +63,22 @@ public final class ConveyorMath {
         return new Vector3f(0.5f + stepX * 0.5f, BELT_TOP_Y + yOff, 0.5f + stepZ * 0.5f);
     }
 
+    /**
+     * Orientation for the carried item display: yaw aligns the item with the belt
+     * travel direction (from the facing step vector) and pitch tilts it +/-45 on
+     * up/down ramps. Pure (joml only) so it is unit-testable.
+     *
+     * @param facingStepX one of -1/0/1 (the facing's unit X step)
+     * @param facingStepZ one of -1/0/1 (the facing's unit Z step)
+     * @param slopeStepY  -1 (down), 0 (flat) or +1 (up)
+     */
+    public static org.joml.Quaternionf itemRotation(int facingStepX, int facingStepZ, int slopeStepY) {
+        float yaw = (float) Math.atan2(-facingStepX, facingStepZ);
+        float pitch = slopeStepY > 0 ? (float) Math.toRadians(-45)
+                : slopeStepY < 0 ? (float) Math.toRadians(45) : 0f;
+        return new org.joml.Quaternionf().rotateY(yaw).rotateX(pitch);
+    }
+
     /** Clamp a float into the [0,1] range. */
     public static float clamp01(float v) {
         if (v < 0f)
