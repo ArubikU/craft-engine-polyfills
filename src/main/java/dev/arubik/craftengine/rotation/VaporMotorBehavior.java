@@ -24,22 +24,27 @@ public class VaporMotorBehavior extends MachineBlockBehavior {
     private final int vaporCapacity;
     private final int vaporPerTick;
     private final float maxRpm;
+    private final float stressCapacity;
+    private final float vaporPerStress;
 
     public VaporMotorBehavior(BlockDefinition block,
             java.util.List<net.minecraft.core.Direction> connectableFaces,
             net.momirealms.craftengine.core.block.property.EnumProperty<net.momirealms.craftengine.core.util.Direction> horizontalDirectionProperty,
             net.momirealms.craftengine.core.block.property.EnumProperty<net.momirealms.craftengine.core.util.Direction> verticalDirectionProperty,
             dev.arubik.craftengine.multiblock.IOConfiguration ioConfig,
-            int vaporCapacity, int vaporPerTick, float maxRpm) {
+            int vaporCapacity, int vaporPerTick, float maxRpm, float stressCapacity, float vaporPerStress) {
         super(block, connectableFaces, horizontalDirectionProperty, verticalDirectionProperty, ioConfig);
         this.vaporCapacity = vaporCapacity;
         this.vaporPerTick = vaporPerTick;
         this.maxRpm = maxRpm;
+        this.stressCapacity = stressCapacity;
+        this.vaporPerStress = vaporPerStress;
     }
 
     @Override
     public BlockEntityController createBlockEntityController(BlockEntity blockEntity) {
-        return new VaporMotorBlockEntity(blockEntity, vaporCapacity, vaporPerTick, maxRpm);
+        return new VaporMotorBlockEntity(blockEntity, vaporCapacity, vaporPerTick, maxRpm,
+                stressCapacity, vaporPerStress);
     }
 
     public static class Factory implements BlockBehaviorFactory<BlockBehavior> {
@@ -52,9 +57,13 @@ public class VaporMotorBehavior extends MachineBlockBehavior {
                     VaporMotorBlockEntity.DEFAULT_VAPOR_PER_TICK), "vapor-per-tick");
             float maxRpm = Utils.getAsFloat(arguments.getOrDefault("max-rpm",
                     VaporMotorBlockEntity.DEFAULT_MAX_RPM), "max-rpm");
+            float stressCap = Utils.getAsFloat(arguments.getOrDefault("stress-capacity",
+                    VaporMotorBlockEntity.DEFAULT_STRESS_CAPACITY), "stress-capacity");
+            float vaporPerStress = Utils.getAsFloat(arguments.getOrDefault("vapor-per-stress",
+                    VaporMotorBlockEntity.DEFAULT_VAPOR_PER_STRESS), "vapor-per-stress");
             return new VaporMotorBehavior(block, base.getConnectableFaces(),
                     base.horizontalDirectionProperty, base.verticalDirectionProperty,
-                    base.getIOConfiguration(null, null), capacity, perTick, maxRpm);
+                    base.getIOConfiguration(null, null), capacity, perTick, maxRpm, stressCap, vaporPerStress);
         }
     }
 }

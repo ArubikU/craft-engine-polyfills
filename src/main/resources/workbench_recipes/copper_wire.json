@@ -1,0 +1,6 @@
+{
+  "tool": "demo:wire_blueprint",
+  "pattern": ["CCC", " G "],
+  "keys": { "C": "minecraft:copper_ingot", "G": "demo:copper_gear" },
+  "outputs": [ { "id": "demo:copper_wire", "count": 3 }, { "id": "demo:brass_shavings", "chance": 30 } ]
+}

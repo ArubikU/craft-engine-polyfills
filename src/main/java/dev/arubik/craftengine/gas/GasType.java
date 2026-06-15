@@ -11,8 +11,15 @@ public enum GasType {
         this.displayName = displayName;
     }
 
+    /** @deprecated prefer {@link #translationKey()} + a translatable component (client i18n). */
+    @Deprecated
     public String getDisplayName() {
         return displayName;
+    }
+
+    /** Minecraft i18n key for this gas, resolved client-side from the pack lang. */
+    public String translationKey() {
+        return "polyfill.gas." + name().toLowerCase(java.util.Locale.ROOT);
     }
 
     public boolean isEmpty() {

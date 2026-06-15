@@ -40,6 +40,12 @@ public final class CraftEnginePolyfills extends JavaPlugin {
                 this);
         getServer().getPluginManager().registerEvents(new dev.arubik.craftengine.conveyor.ConveyorWandListener(),
                 this);
+        getServer().getPluginManager().registerEvents(new dev.arubik.craftengine.conveyor.ConveyorBreakListener(),
+                this);
+        getServer().getPluginManager().registerEvents(new dev.arubik.craftengine.conveyor.ConveyorIoBreakListener(),
+                this);
+        getServer().getPluginManager().registerEvents(new dev.arubik.craftengine.rotation.AdvancedMotorBreakListener(),
+                this);
         // cepolyfill command
         // sub command data get <block_pos>
         CepCommand cepCommand = new CepCommand();
@@ -50,6 +56,45 @@ public final class CraftEnginePolyfills extends JavaPlugin {
         // Load Recipes
         dev.arubik.craftengine.machine.recipe.loader.RecipeManager.loadRecipes();
 
+        // Reload machine + workbench recipes whenever CraftEngine reloads
+        // (so `/craftengine reload all` also refreshes the JSON-defined recipes).
+        getServer().getPluginManager().registerEvents(new org.bukkit.event.Listener() {
+            @org.bukkit.event.EventHandler
+            public void onReload(net.momirealms.craftengine.bukkit.api.event.CraftEngineReloadEvent event) {
+                if (event.isFirstReload()) {
+                    return; // initial load already done above
+                }
+                dev.arubik.craftengine.machine.recipe.loader.RecipeManager.loadRecipes();
+                dev.arubik.craftengine.crafting.StationRecipeLoader.load();
+            }
+        }, this);
+    }
+
+    /** Copy a bundled resource (jar) to the data folder if absent. */
+    public void saveDefaultResource(String path) {
+        try {
+            saveResource(path, false);
+        } catch (IllegalArgumentException ignored) {
+            // resource not present in the jar
+        }
+    }
+
+    /** List bundled resource paths under {@code dir/} (e.g. "workbench_recipes") ending in {@code suffix}. */
+    public java.util.List<String> listBundledResources(String dir, String suffix) {
+        java.util.List<String> out = new java.util.ArrayList<>();
+        try (java.util.zip.ZipFile zip = new java.util.zip.ZipFile(getFile())) {
+            String prefix = dir.endsWith("/") ? dir : dir + "/";
+            var entries = zip.entries();
+            while (entries.hasMoreElements()) {
+                String name = entries.nextElement().getName();
+                if (name.startsWith(prefix) && name.endsWith(suffix) && !name.endsWith("/")) {
+                    out.add(name);
+                }
+            }
+        } catch (Exception e) {
+            getLogger().warning("Could not list bundled resources in " + dir + ": " + e.getMessage());
+        }
+        return out;
     }
 
     @Override

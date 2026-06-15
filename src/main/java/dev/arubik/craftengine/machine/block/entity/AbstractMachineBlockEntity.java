@@ -1130,6 +1130,15 @@ public abstract class AbstractMachineBlockEntity extends PersistentWorldlyBlockE
         getMenu().open((org.bukkit.entity.Player) player.getBukkitEntity());
     }
 
+    /**
+     * Whether the player may currently MODIFY (take/swap) the item in menu {@code slot}.
+     * Default yes; override to freeze a slot (e.g. an upgrade that is holding other slots
+     * unlocked must not be pulled while those slots are occupied).
+     */
+    public boolean canTakeFromSlot(int slot) {
+        return true;
+    }
+
     // Tick updated: accepts Level
     public void tick(Level level, BlockPos pos, net.momirealms.craftengine.core.block.ImmutableBlockState state) {
         if (this.menu != null) {

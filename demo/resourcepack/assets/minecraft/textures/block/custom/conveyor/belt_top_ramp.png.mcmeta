@@ -1,9 +1,6 @@
 {
   "animation": {
     "interpolate": true,
-    "frametime": 2,
-    "width": 16,
-    "height": 23,
-    "comment": "Non-square 16x23 frames so uv [0,0,16,16] maps one frame 1:1 onto the 45-degree diagonal belt face (no stretch)."
+    "frametime": 2
   }
 }

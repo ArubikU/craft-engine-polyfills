@@ -77,9 +77,11 @@ public class IndustrialSmelterBlockEntity extends MultiBlockMachineBlockEntity {
 
             org.bukkit.inventory.ItemStack stack = new org.bukkit.inventory.ItemStack(
                     fluid.isEmpty() ? Material.BUCKET : Material.WATER_BUCKET);
-            stack.editMeta(meta -> {
-                meta.setDisplayName("§bWater: " + fluid.getAmount() + " / " + WATER_CAPACITY + " mB");
-            });
+            stack.editMeta(meta -> meta.displayName(dev.arubik.craftengine.machine.menu.MenuText.noI(
+                    dev.arubik.craftengine.machine.menu.MenuText.kv("polyfill.liquid.water",
+                            net.kyori.adventure.text.format.NamedTextColor.AQUA,
+                            fluid.getAmount() + " / " + WATER_CAPACITY + " mB",
+                            net.kyori.adventure.text.format.NamedTextColor.WHITE))));
             return stack;
         });
 
@@ -90,9 +92,11 @@ public class IndustrialSmelterBlockEntity extends MultiBlockMachineBlockEntity {
             GasStack gas = smelter.get(tank.getKey());
 
             org.bukkit.inventory.ItemStack stack = new org.bukkit.inventory.ItemStack(Material.WHITE_STAINED_GLASS);
-            stack.editMeta(meta -> {
-                meta.setDisplayName("§fSteam: " + gas.getAmount() + " / " + STEAM_CAPACITY + " mB");
-            });
+            stack.editMeta(meta -> meta.displayName(dev.arubik.craftengine.machine.menu.MenuText.noI(
+                    dev.arubik.craftengine.machine.menu.MenuText.kv("polyfill.gas.steam",
+                            net.kyori.adventure.text.format.NamedTextColor.WHITE,
+                            gas.getAmount() + " / " + STEAM_CAPACITY + " mB",
+                            net.kyori.adventure.text.format.NamedTextColor.WHITE))));
             return stack;
         });
 

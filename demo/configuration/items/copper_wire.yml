@@ -1,0 +1,8 @@
+# Copper Wire — drawn copper, a steam-tech crafting component (cable).
+items:
+  demo:copper_wire:
+    data:
+      item_name: "<!i><color:#d98a4a><lang:item.demo.copper_wire>"
+      lore:
+        - "<!i><dark_gray><lang:demo.item.component>"
+    model: minecraft:item/custom/copper_wire

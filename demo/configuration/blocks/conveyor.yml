@@ -11,11 +11,87 @@
 items:
   demo:conveyor:
     data:
-      item_name: "<!i><white>Conveyor Belt"
+      item_name: "<!i><lang:item.demo.conveyor>"
     model: minecraft:item/custom/conveyor_belt
     behavior:
       type: block_item
       block: demo:conveyor
+
+  # --- Render-only items: the conveyor block is hosted on a single (invisible)
+  # waxed_copper_trapdoor state and its visual is drawn by an entity_renderer that
+  # points at these items' models. One per geometry+activated (facing via rotation).
+  demo:cv_flat_middle_on:
+    model: minecraft:block/custom/conveyor/conveyor_flat_middle
+    data:
+      item_name: "<!i><lang:item.demo.conveyor>"
+  demo:cv_flat_middle_off:
+    model: minecraft:block/custom/conveyor/conveyor_flat_middle_off
+    data:
+      item_name: "<!i><lang:item.demo.conveyor>"
+  demo:cv_conveyor_down_end:
+    model: minecraft:block/custom/conveyor/conveyor_down_end
+    data:
+      item_name: "<!i><lang:item.demo.conveyor>"
+  demo:cv_conveyor_down_end_off:
+    model: minecraft:block/custom/conveyor/conveyor_down_end_off
+    data:
+      item_name: "<!i><lang:item.demo.conveyor>"
+  demo:cv_conveyor_down_middle:
+    model: minecraft:block/custom/conveyor/conveyor_down_middle
+    data:
+      item_name: "<!i><lang:item.demo.conveyor>"
+  demo:cv_conveyor_down_middle_off:
+    model: minecraft:block/custom/conveyor/conveyor_down_middle_off
+    data:
+      item_name: "<!i><lang:item.demo.conveyor>"
+  demo:cv_conveyor_down_start:
+    model: minecraft:block/custom/conveyor/conveyor_down_start
+    data:
+      item_name: "<!i><lang:item.demo.conveyor>"
+  demo:cv_conveyor_down_start_off:
+    model: minecraft:block/custom/conveyor/conveyor_down_start_off
+    data:
+      item_name: "<!i><lang:item.demo.conveyor>"
+  demo:cv_conveyor_flat_end:
+    model: minecraft:block/custom/conveyor/conveyor_flat_end
+    data:
+      item_name: "<!i><lang:item.demo.conveyor>"
+  demo:cv_conveyor_flat_end_off:
+    model: minecraft:block/custom/conveyor/conveyor_flat_end_off
+    data:
+      item_name: "<!i><lang:item.demo.conveyor>"
+  demo:cv_conveyor_flat_start:
+    model: minecraft:block/custom/conveyor/conveyor_flat_start
+    data:
+      item_name: "<!i><lang:item.demo.conveyor>"
+  demo:cv_conveyor_flat_start_off:
+    model: minecraft:block/custom/conveyor/conveyor_flat_start_off
+    data:
+      item_name: "<!i><lang:item.demo.conveyor>"
+  demo:cv_conveyor_up_end:
+    model: minecraft:block/custom/conveyor/conveyor_up_end
+    data:
+      item_name: "<!i><lang:item.demo.conveyor>"
+  demo:cv_conveyor_up_end_off:
+    model: minecraft:block/custom/conveyor/conveyor_up_end_off
+    data:
+      item_name: "<!i><lang:item.demo.conveyor>"
+  demo:cv_conveyor_up_middle:
+    model: minecraft:block/custom/conveyor/conveyor_up_middle
+    data:
+      item_name: "<!i><lang:item.demo.conveyor>"
+  demo:cv_conveyor_up_middle_off:
+    model: minecraft:block/custom/conveyor/conveyor_up_middle_off
+    data:
+      item_name: "<!i><lang:item.demo.conveyor>"
+  demo:cv_conveyor_up_start:
+    model: minecraft:block/custom/conveyor/conveyor_up_start
+    data:
+      item_name: "<!i><lang:item.demo.conveyor>"
+  demo:cv_conveyor_up_start_off:
+    model: minecraft:block/custom/conveyor/conveyor_up_start_off
+    data:
+      item_name: "<!i><lang:item.demo.conveyor>"
 
 blocks:
   demo:conveyor:
@@ -36,6 +112,17 @@ blocks:
     behavior:
       type: polyfills:conveyor
       facing: north
+      # Tunables: ticks for one item to cross a segment at base speed (lower = faster),
+      # and the reference rpm. Both scale item transfer speed + the visual belt pace.
+      base-travel-ticks: 16
+      base-rpm: 64
+      # Stress (SU) each segment imposes on the driving motor, scaled by speed:
+      # actual = stress-impact × (motorRpm / base-rpm). So 2× rpm = 2× speed AND 2× SU
+      # per segment. The line stalls if its total exceeds the motor's stress-capacity.
+      stress-impact: 4
+      # How many items a single segment carries at once (each at its own position,
+      # spacing = 1/slots). They queue up and can't overtake each other.
+      slots: 4
     states:
       properties:
         facing:
@@ -54,221 +141,221 @@ blocks:
           default: false
       appearances:
         flat_start_north_on:
-          auto_state: solid
-          model: { path: minecraft:block/custom/conveyor/conveyor_flat_start }
+          state: waxed_copper_trapdoor[facing=north,half=bottom,open=false,powered=true,waterlogged=false]
+          entity_renderer: { item: demo:cv_conveyor_flat_end, rotation: 180 }
         flat_start_north_off:
-          auto_state: solid
-          model: { path: minecraft:block/custom/conveyor/conveyor_flat_start_off }
+          state: waxed_copper_trapdoor[facing=north,half=bottom,open=false,powered=true,waterlogged=false]
+          entity_renderer: { item: demo:cv_conveyor_flat_end_off, rotation: 180 }
         flat_start_east_on:
-          auto_state: solid
-          model: { path: minecraft:block/custom/conveyor/conveyor_flat_start, y: 90 }
+          state: waxed_copper_trapdoor[facing=north,half=bottom,open=false,powered=true,waterlogged=false]
+          entity_renderer: { item: demo:cv_conveyor_flat_end, rotation: 270 }
         flat_start_east_off:
-          auto_state: solid
-          model: { path: minecraft:block/custom/conveyor/conveyor_flat_start_off, y: 90 }
+          state: waxed_copper_trapdoor[facing=north,half=bottom,open=false,powered=true,waterlogged=false]
+          entity_renderer: { item: demo:cv_conveyor_flat_end_off, rotation: 270 }
         flat_start_south_on:
-          auto_state: solid
-          model: { path: minecraft:block/custom/conveyor/conveyor_flat_start, y: 180 }
+          state: waxed_copper_trapdoor[facing=north,half=bottom,open=false,powered=true,waterlogged=false]
+          entity_renderer: { item: demo:cv_conveyor_flat_end, rotation: 0 }
         flat_start_south_off:
-          auto_state: solid
-          model: { path: minecraft:block/custom/conveyor/conveyor_flat_start_off, y: 180 }
+          state: waxed_copper_trapdoor[facing=north,half=bottom,open=false,powered=true,waterlogged=false]
+          entity_renderer: { item: demo:cv_conveyor_flat_end_off, rotation: 0 }
         flat_start_west_on:
-          auto_state: solid
-          model: { path: minecraft:block/custom/conveyor/conveyor_flat_start, y: 270 }
+          state: waxed_copper_trapdoor[facing=north,half=bottom,open=false,powered=true,waterlogged=false]
+          entity_renderer: { item: demo:cv_conveyor_flat_end, rotation: 90 }
         flat_start_west_off:
-          auto_state: solid
-          model: { path: minecraft:block/custom/conveyor/conveyor_flat_start_off, y: 270 }
+          state: waxed_copper_trapdoor[facing=north,half=bottom,open=false,powered=true,waterlogged=false]
+          entity_renderer: { item: demo:cv_conveyor_flat_end_off, rotation: 90 }
         flat_middle_north_on:
-          auto_state: solid
-          model: { path: minecraft:block/custom/conveyor/conveyor_flat_middle }
+          state: waxed_copper_trapdoor[facing=north,half=bottom,open=false,powered=true,waterlogged=false]
+          entity_renderer: { item: demo:cv_flat_middle_on, rotation: 180 }
         flat_middle_north_off:
-          auto_state: solid
-          model: { path: minecraft:block/custom/conveyor/conveyor_flat_middle_off }
+          state: waxed_copper_trapdoor[facing=north,half=bottom,open=false,powered=true,waterlogged=false]
+          entity_renderer: { item: demo:cv_flat_middle_off, rotation: 180 }
         flat_middle_east_on:
-          auto_state: solid
-          model: { path: minecraft:block/custom/conveyor/conveyor_flat_middle, y: 90 }
+          state: waxed_copper_trapdoor[facing=north,half=bottom,open=false,powered=true,waterlogged=false]
+          entity_renderer: { item: demo:cv_flat_middle_on, rotation: 270 }
         flat_middle_east_off:
-          auto_state: solid
-          model: { path: minecraft:block/custom/conveyor/conveyor_flat_middle_off, y: 90 }
+          state: waxed_copper_trapdoor[facing=north,half=bottom,open=false,powered=true,waterlogged=false]
+          entity_renderer: { item: demo:cv_flat_middle_off, rotation: 270 }
         flat_middle_south_on:
-          auto_state: solid
-          model: { path: minecraft:block/custom/conveyor/conveyor_flat_middle, y: 180 }
+          state: waxed_copper_trapdoor[facing=north,half=bottom,open=false,powered=true,waterlogged=false]
+          entity_renderer: { item: demo:cv_flat_middle_on, rotation: 0 }
         flat_middle_south_off:
-          auto_state: solid
-          model: { path: minecraft:block/custom/conveyor/conveyor_flat_middle_off, y: 180 }
+          state: waxed_copper_trapdoor[facing=north,half=bottom,open=false,powered=true,waterlogged=false]
+          entity_renderer: { item: demo:cv_flat_middle_off, rotation: 0 }
         flat_middle_west_on:
-          auto_state: solid
-          model: { path: minecraft:block/custom/conveyor/conveyor_flat_middle, y: 270 }
+          state: waxed_copper_trapdoor[facing=north,half=bottom,open=false,powered=true,waterlogged=false]
+          entity_renderer: { item: demo:cv_flat_middle_on, rotation: 90 }
         flat_middle_west_off:
-          auto_state: solid
-          model: { path: minecraft:block/custom/conveyor/conveyor_flat_middle_off, y: 270 }
+          state: waxed_copper_trapdoor[facing=north,half=bottom,open=false,powered=true,waterlogged=false]
+          entity_renderer: { item: demo:cv_flat_middle_off, rotation: 90 }
         flat_end_north_on:
-          auto_state: solid
-          model: { path: minecraft:block/custom/conveyor/conveyor_flat_end }
+          state: waxed_copper_trapdoor[facing=north,half=bottom,open=false,powered=true,waterlogged=false]
+          entity_renderer: { item: demo:cv_conveyor_flat_start, rotation: 180 }
         flat_end_north_off:
-          auto_state: solid
-          model: { path: minecraft:block/custom/conveyor/conveyor_flat_end_off }
+          state: waxed_copper_trapdoor[facing=north,half=bottom,open=false,powered=true,waterlogged=false]
+          entity_renderer: { item: demo:cv_conveyor_flat_start_off, rotation: 180 }
         flat_end_east_on:
-          auto_state: solid
-          model: { path: minecraft:block/custom/conveyor/conveyor_flat_end, y: 90 }
+          state: waxed_copper_trapdoor[facing=north,half=bottom,open=false,powered=true,waterlogged=false]
+          entity_renderer: { item: demo:cv_conveyor_flat_start, rotation: 270 }
         flat_end_east_off:
-          auto_state: solid
-          model: { path: minecraft:block/custom/conveyor/conveyor_flat_end_off, y: 90 }
+          state: waxed_copper_trapdoor[facing=north,half=bottom,open=false,powered=true,waterlogged=false]
+          entity_renderer: { item: demo:cv_conveyor_flat_start_off, rotation: 270 }
         flat_end_south_on:
-          auto_state: solid
-          model: { path: minecraft:block/custom/conveyor/conveyor_flat_end, y: 180 }
+          state: waxed_copper_trapdoor[facing=north,half=bottom,open=false,powered=true,waterlogged=false]
+          entity_renderer: { item: demo:cv_conveyor_flat_start, rotation: 0 }
         flat_end_south_off:
-          auto_state: solid
-          model: { path: minecraft:block/custom/conveyor/conveyor_flat_end_off, y: 180 }
+          state: waxed_copper_trapdoor[facing=north,half=bottom,open=false,powered=true,waterlogged=false]
+          entity_renderer: { item: demo:cv_conveyor_flat_start_off, rotation: 0 }
         flat_end_west_on:
-          auto_state: solid
-          model: { path: minecraft:block/custom/conveyor/conveyor_flat_end, y: 270 }
+          state: waxed_copper_trapdoor[facing=north,half=bottom,open=false,powered=true,waterlogged=false]
+          entity_renderer: { item: demo:cv_conveyor_flat_start, rotation: 90 }
         flat_end_west_off:
-          auto_state: solid
-          model: { path: minecraft:block/custom/conveyor/conveyor_flat_end_off, y: 270 }
+          state: waxed_copper_trapdoor[facing=north,half=bottom,open=false,powered=true,waterlogged=false]
+          entity_renderer: { item: demo:cv_conveyor_flat_start_off, rotation: 90 }
         up_start_north_on:
-          auto_state: solid
-          model: { path: minecraft:block/custom/conveyor/conveyor_up_start }
+          state: waxed_copper_trapdoor[facing=north,half=bottom,open=false,powered=true,waterlogged=false]
+          entity_renderer: { item: demo:cv_conveyor_down_end, rotation: 180 }
         up_start_north_off:
-          auto_state: solid
-          model: { path: minecraft:block/custom/conveyor/conveyor_up_start_off }
+          state: waxed_copper_trapdoor[facing=north,half=bottom,open=false,powered=true,waterlogged=false]
+          entity_renderer: { item: demo:cv_conveyor_down_end_off, rotation: 180 }
         up_start_east_on:
-          auto_state: solid
-          model: { path: minecraft:block/custom/conveyor/conveyor_up_start, y: 90 }
+          state: waxed_copper_trapdoor[facing=north,half=bottom,open=false,powered=true,waterlogged=false]
+          entity_renderer: { item: demo:cv_conveyor_down_end, rotation: 270 }
         up_start_east_off:
-          auto_state: solid
-          model: { path: minecraft:block/custom/conveyor/conveyor_up_start_off, y: 90 }
+          state: waxed_copper_trapdoor[facing=north,half=bottom,open=false,powered=true,waterlogged=false]
+          entity_renderer: { item: demo:cv_conveyor_down_end_off, rotation: 270 }
         up_start_south_on:
-          auto_state: solid
-          model: { path: minecraft:block/custom/conveyor/conveyor_up_start, y: 180 }
+          state: waxed_copper_trapdoor[facing=north,half=bottom,open=false,powered=true,waterlogged=false]
+          entity_renderer: { item: demo:cv_conveyor_down_end, rotation: 0 }
         up_start_south_off:
-          auto_state: solid
-          model: { path: minecraft:block/custom/conveyor/conveyor_up_start_off, y: 180 }
+          state: waxed_copper_trapdoor[facing=north,half=bottom,open=false,powered=true,waterlogged=false]
+          entity_renderer: { item: demo:cv_conveyor_down_end_off, rotation: 0 }
         up_start_west_on:
-          auto_state: solid
-          model: { path: minecraft:block/custom/conveyor/conveyor_up_start, y: 270 }
+          state: waxed_copper_trapdoor[facing=north,half=bottom,open=false,powered=true,waterlogged=false]
+          entity_renderer: { item: demo:cv_conveyor_down_end, rotation: 90 }
         up_start_west_off:
-          auto_state: solid
-          model: { path: minecraft:block/custom/conveyor/conveyor_up_start_off, y: 270 }
+          state: waxed_copper_trapdoor[facing=north,half=bottom,open=false,powered=true,waterlogged=false]
+          entity_renderer: { item: demo:cv_conveyor_down_end_off, rotation: 90 }
         up_middle_north_on:
-          auto_state: solid
-          model: { path: minecraft:block/custom/conveyor/conveyor_up_middle }
+          state: waxed_copper_trapdoor[facing=north,half=bottom,open=false,powered=true,waterlogged=false]
+          entity_renderer: { item: demo:cv_conveyor_down_middle, rotation: 180 }
         up_middle_north_off:
-          auto_state: solid
-          model: { path: minecraft:block/custom/conveyor/conveyor_up_middle_off }
+          state: waxed_copper_trapdoor[facing=north,half=bottom,open=false,powered=true,waterlogged=false]
+          entity_renderer: { item: demo:cv_conveyor_down_middle_off, rotation: 180 }
         up_middle_east_on:
-          auto_state: solid
-          model: { path: minecraft:block/custom/conveyor/conveyor_up_middle, y: 90 }
+          state: waxed_copper_trapdoor[facing=north,half=bottom,open=false,powered=true,waterlogged=false]
+          entity_renderer: { item: demo:cv_conveyor_down_middle, rotation: 270 }
         up_middle_east_off:
-          auto_state: solid
-          model: { path: minecraft:block/custom/conveyor/conveyor_up_middle_off, y: 90 }
+          state: waxed_copper_trapdoor[facing=north,half=bottom,open=false,powered=true,waterlogged=false]
+          entity_renderer: { item: demo:cv_conveyor_down_middle_off, rotation: 270 }
         up_middle_south_on:
-          auto_state: solid
-          model: { path: minecraft:block/custom/conveyor/conveyor_up_middle, y: 180 }
+          state: waxed_copper_trapdoor[facing=north,half=bottom,open=false,powered=true,waterlogged=false]
+          entity_renderer: { item: demo:cv_conveyor_down_middle, rotation: 0 }
         up_middle_south_off:
-          auto_state: solid
-          model: { path: minecraft:block/custom/conveyor/conveyor_up_middle_off, y: 180 }
+          state: waxed_copper_trapdoor[facing=north,half=bottom,open=false,powered=true,waterlogged=false]
+          entity_renderer: { item: demo:cv_conveyor_down_middle_off, rotation: 0 }
         up_middle_west_on:
-          auto_state: solid
-          model: { path: minecraft:block/custom/conveyor/conveyor_up_middle, y: 270 }
+          state: waxed_copper_trapdoor[facing=north,half=bottom,open=false,powered=true,waterlogged=false]
+          entity_renderer: { item: demo:cv_conveyor_down_middle, rotation: 90 }
         up_middle_west_off:
-          auto_state: solid
-          model: { path: minecraft:block/custom/conveyor/conveyor_up_middle_off, y: 270 }
+          state: waxed_copper_trapdoor[facing=north,half=bottom,open=false,powered=true,waterlogged=false]
+          entity_renderer: { item: demo:cv_conveyor_down_middle_off, rotation: 90 }
         up_end_north_on:
-          auto_state: solid
-          model: { path: minecraft:block/custom/conveyor/conveyor_up_end }
+          state: waxed_copper_trapdoor[facing=north,half=bottom,open=false,powered=true,waterlogged=false]
+          entity_renderer: { item: demo:cv_conveyor_down_start, rotation: 180 }
         up_end_north_off:
-          auto_state: solid
-          model: { path: minecraft:block/custom/conveyor/conveyor_up_end_off }
+          state: waxed_copper_trapdoor[facing=north,half=bottom,open=false,powered=true,waterlogged=false]
+          entity_renderer: { item: demo:cv_conveyor_down_start_off, rotation: 180 }
         up_end_east_on:
-          auto_state: solid
-          model: { path: minecraft:block/custom/conveyor/conveyor_up_end, y: 90 }
+          state: waxed_copper_trapdoor[facing=north,half=bottom,open=false,powered=true,waterlogged=false]
+          entity_renderer: { item: demo:cv_conveyor_down_start, rotation: 270 }
         up_end_east_off:
-          auto_state: solid
-          model: { path: minecraft:block/custom/conveyor/conveyor_up_end_off, y: 90 }
+          state: waxed_copper_trapdoor[facing=north,half=bottom,open=false,powered=true,waterlogged=false]
+          entity_renderer: { item: demo:cv_conveyor_down_start_off, rotation: 270 }
         up_end_south_on:
-          auto_state: solid
-          model: { path: minecraft:block/custom/conveyor/conveyor_up_end, y: 180 }
+          state: waxed_copper_trapdoor[facing=north,half=bottom,open=false,powered=true,waterlogged=false]
+          entity_renderer: { item: demo:cv_conveyor_down_start, rotation: 0 }
         up_end_south_off:
-          auto_state: solid
-          model: { path: minecraft:block/custom/conveyor/conveyor_up_end_off, y: 180 }
+          state: waxed_copper_trapdoor[facing=north,half=bottom,open=false,powered=true,waterlogged=false]
+          entity_renderer: { item: demo:cv_conveyor_down_start_off, rotation: 0 }
         up_end_west_on:
-          auto_state: solid
-          model: { path: minecraft:block/custom/conveyor/conveyor_up_end, y: 270 }
+          state: waxed_copper_trapdoor[facing=north,half=bottom,open=false,powered=true,waterlogged=false]
+          entity_renderer: { item: demo:cv_conveyor_down_start, rotation: 90 }
         up_end_west_off:
-          auto_state: solid
-          model: { path: minecraft:block/custom/conveyor/conveyor_up_end_off, y: 270 }
+          state: waxed_copper_trapdoor[facing=north,half=bottom,open=false,powered=true,waterlogged=false]
+          entity_renderer: { item: demo:cv_conveyor_down_start_off, rotation: 90 }
         down_start_north_on:
-          auto_state: solid
-          model: { path: minecraft:block/custom/conveyor/conveyor_down_start }
+          state: waxed_copper_trapdoor[facing=north,half=bottom,open=false,powered=true,waterlogged=false]
+          entity_renderer: { item: demo:cv_conveyor_up_end, rotation: 180 }
         down_start_north_off:
-          auto_state: solid
-          model: { path: minecraft:block/custom/conveyor/conveyor_down_start_off }
+          state: waxed_copper_trapdoor[facing=north,half=bottom,open=false,powered=true,waterlogged=false]
+          entity_renderer: { item: demo:cv_conveyor_up_end_off, rotation: 180 }
         down_start_east_on:
-          auto_state: solid
-          model: { path: minecraft:block/custom/conveyor/conveyor_down_start, y: 90 }
+          state: waxed_copper_trapdoor[facing=north,half=bottom,open=false,powered=true,waterlogged=false]
+          entity_renderer: { item: demo:cv_conveyor_up_end, rotation: 270 }
         down_start_east_off:
-          auto_state: solid
-          model: { path: minecraft:block/custom/conveyor/conveyor_down_start_off, y: 90 }
+          state: waxed_copper_trapdoor[facing=north,half=bottom,open=false,powered=true,waterlogged=false]
+          entity_renderer: { item: demo:cv_conveyor_up_end_off, rotation: 270 }
         down_start_south_on:
-          auto_state: solid
-          model: { path: minecraft:block/custom/conveyor/conveyor_down_start, y: 180 }
+          state: waxed_copper_trapdoor[facing=north,half=bottom,open=false,powered=true,waterlogged=false]
+          entity_renderer: { item: demo:cv_conveyor_up_end, rotation: 0 }
         down_start_south_off:
-          auto_state: solid
-          model: { path: minecraft:block/custom/conveyor/conveyor_down_start_off, y: 180 }
+          state: waxed_copper_trapdoor[facing=north,half=bottom,open=false,powered=true,waterlogged=false]
+          entity_renderer: { item: demo:cv_conveyor_up_end_off, rotation: 0 }
         down_start_west_on:
-          auto_state: solid
-          model: { path: minecraft:block/custom/conveyor/conveyor_down_start, y: 270 }
+          state: waxed_copper_trapdoor[facing=north,half=bottom,open=false,powered=true,waterlogged=false]
+          entity_renderer: { item: demo:cv_conveyor_up_end, rotation: 90 }
         down_start_west_off:
-          auto_state: solid
-          model: { path: minecraft:block/custom/conveyor/conveyor_down_start_off, y: 270 }
+          state: waxed_copper_trapdoor[facing=north,half=bottom,open=false,powered=true,waterlogged=false]
+          entity_renderer: { item: demo:cv_conveyor_up_end_off, rotation: 90 }
         down_middle_north_on:
-          auto_state: solid
-          model: { path: minecraft:block/custom/conveyor/conveyor_down_middle }
+          state: waxed_copper_trapdoor[facing=north,half=bottom,open=false,powered=true,waterlogged=false]
+          entity_renderer: { item: demo:cv_conveyor_up_middle, rotation: 180 }
         down_middle_north_off:
-          auto_state: solid
-          model: { path: minecraft:block/custom/conveyor/conveyor_down_middle_off }
+          state: waxed_copper_trapdoor[facing=north,half=bottom,open=false,powered=true,waterlogged=false]
+          entity_renderer: { item: demo:cv_conveyor_up_middle_off, rotation: 180 }
         down_middle_east_on:
-          auto_state: solid
-          model: { path: minecraft:block/custom/conveyor/conveyor_down_middle, y: 90 }
+          state: waxed_copper_trapdoor[facing=north,half=bottom,open=false,powered=true,waterlogged=false]
+          entity_renderer: { item: demo:cv_conveyor_up_middle, rotation: 270 }
         down_middle_east_off:
-          auto_state: solid
-          model: { path: minecraft:block/custom/conveyor/conveyor_down_middle_off, y: 90 }
+          state: waxed_copper_trapdoor[facing=north,half=bottom,open=false,powered=true,waterlogged=false]
+          entity_renderer: { item: demo:cv_conveyor_up_middle_off, rotation: 270 }
         down_middle_south_on:
-          auto_state: solid
-          model: { path: minecraft:block/custom/conveyor/conveyor_down_middle, y: 180 }
+          state: waxed_copper_trapdoor[facing=north,half=bottom,open=false,powered=true,waterlogged=false]
+          entity_renderer: { item: demo:cv_conveyor_up_middle, rotation: 0 }
         down_middle_south_off:
-          auto_state: solid
-          model: { path: minecraft:block/custom/conveyor/conveyor_down_middle_off, y: 180 }
+          state: waxed_copper_trapdoor[facing=north,half=bottom,open=false,powered=true,waterlogged=false]
+          entity_renderer: { item: demo:cv_conveyor_up_middle_off, rotation: 0 }
         down_middle_west_on:
-          auto_state: solid
-          model: { path: minecraft:block/custom/conveyor/conveyor_down_middle, y: 270 }
+          state: waxed_copper_trapdoor[facing=north,half=bottom,open=false,powered=true,waterlogged=false]
+          entity_renderer: { item: demo:cv_conveyor_up_middle, rotation: 90 }
         down_middle_west_off:
-          auto_state: solid
-          model: { path: minecraft:block/custom/conveyor/conveyor_down_middle_off, y: 270 }
+          state: waxed_copper_trapdoor[facing=north,half=bottom,open=false,powered=true,waterlogged=false]
+          entity_renderer: { item: demo:cv_conveyor_up_middle_off, rotation: 90 }
         down_end_north_on:
-          auto_state: solid
-          model: { path: minecraft:block/custom/conveyor/conveyor_down_end }
+          state: waxed_copper_trapdoor[facing=north,half=bottom,open=false,powered=true,waterlogged=false]
+          entity_renderer: { item: demo:cv_conveyor_up_start, rotation: 180 }
         down_end_north_off:
-          auto_state: solid
-          model: { path: minecraft:block/custom/conveyor/conveyor_down_end_off }
+          state: waxed_copper_trapdoor[facing=north,half=bottom,open=false,powered=true,waterlogged=false]
+          entity_renderer: { item: demo:cv_conveyor_up_start_off, rotation: 180 }
         down_end_east_on:
-          auto_state: solid
-          model: { path: minecraft:block/custom/conveyor/conveyor_down_end, y: 90 }
+          state: waxed_copper_trapdoor[facing=north,half=bottom,open=false,powered=true,waterlogged=false]
+          entity_renderer: { item: demo:cv_conveyor_up_start, rotation: 270 }
         down_end_east_off:
-          auto_state: solid
-          model: { path: minecraft:block/custom/conveyor/conveyor_down_end_off, y: 90 }
+          state: waxed_copper_trapdoor[facing=north,half=bottom,open=false,powered=true,waterlogged=false]
+          entity_renderer: { item: demo:cv_conveyor_up_start_off, rotation: 270 }
         down_end_south_on:
-          auto_state: solid
-          model: { path: minecraft:block/custom/conveyor/conveyor_down_end, y: 180 }
+          state: waxed_copper_trapdoor[facing=north,half=bottom,open=false,powered=true,waterlogged=false]
+          entity_renderer: { item: demo:cv_conveyor_up_start, rotation: 0 }
         down_end_south_off:
-          auto_state: solid
-          model: { path: minecraft:block/custom/conveyor/conveyor_down_end_off, y: 180 }
+          state: waxed_copper_trapdoor[facing=north,half=bottom,open=false,powered=true,waterlogged=false]
+          entity_renderer: { item: demo:cv_conveyor_up_start_off, rotation: 0 }
         down_end_west_on:
-          auto_state: solid
-          model: { path: minecraft:block/custom/conveyor/conveyor_down_end, y: 270 }
+          state: waxed_copper_trapdoor[facing=north,half=bottom,open=false,powered=true,waterlogged=false]
+          entity_renderer: { item: demo:cv_conveyor_up_start, rotation: 90 }
         down_end_west_off:
-          auto_state: solid
-          model: { path: minecraft:block/custom/conveyor/conveyor_down_end_off, y: 270 }
+          state: waxed_copper_trapdoor[facing=north,half=bottom,open=false,powered=true,waterlogged=false]
+          entity_renderer: { item: demo:cv_conveyor_up_start_off, rotation: 90 }
       variants:
         "facing=north,slope=flat,part=start,activated=true": { appearance: flat_start_north_on }
         "facing=north,slope=flat,part=start,activated=false": { appearance: flat_start_north_off }

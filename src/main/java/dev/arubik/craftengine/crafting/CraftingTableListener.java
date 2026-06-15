@@ -45,6 +45,25 @@ public final class CraftingTableListener implements Listener {
                 return;
             }
             if (menu.isCustomSlot(raw)) {
+                // Custom-slot click hook (e.g. right-click blueprint -> auto-fill grid).
+                org.bukkit.inventory.ItemStack cursor = event.getCursor();
+                boolean cursorEmpty = cursor == null || cursor.getType() == org.bukkit.Material.AIR;
+                if (event.getWhoClicked() instanceof Player clicker
+                        && menu.onCustomSlotClickExternal(raw, event.getClick(), cursorEmpty, clicker)) {
+                    event.setCancelled(true);
+                    return;
+                }
+                // Enforce the CUSTOM-slot whitelist for the item being placed.
+                org.bukkit.inventory.ItemStack placing = event.getCursor();
+                if (event.getClick() == ClickType.NUMBER_KEY && event.getWhoClicked() instanceof Player p
+                        && event.getHotbarButton() >= 0) {
+                    placing = p.getInventory().getItem(event.getHotbarButton());
+                }
+                if (placing != null && placing.getType() != org.bukkit.Material.AIR
+                        && !menu.canPlaceCustomExternal(raw, placing)) {
+                    event.setCancelled(true);
+                    return;
+                }
                 // Let the change apply, then notify the subclass next tick.
                 scheduleCustom(menu, raw);
                 return;
@@ -54,9 +73,16 @@ public final class CraftingTableListener implements Listener {
             return;
         }
 
-        // Click in the player inventory: shift-click into the table may alter inputs.
+        // Shift-click from the player inventory: route by role + whitelist ourselves
+        // (vanilla would dump into the first empty slot, ignoring the tool whitelist).
         if (event.getAction() == InventoryAction.MOVE_TO_OTHER_INVENTORY) {
-            scheduleRecompute(menu);
+            org.bukkit.inventory.ItemStack moving = event.getCurrentItem();
+            if (moving == null || moving.getType() == org.bukkit.Material.AIR) {
+                return;
+            }
+            event.setCancelled(true);
+            org.bukkit.inventory.ItemStack leftover = menu.shiftInsert(moving.clone());
+            event.setCurrentItem(leftover);
         }
     }
 

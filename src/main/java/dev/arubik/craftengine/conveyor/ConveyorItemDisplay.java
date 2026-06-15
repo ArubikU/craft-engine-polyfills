@@ -34,6 +34,9 @@ public final class ConveyorItemDisplay {
     private double curX, curY, curZ;
     private Object nmsItemStack;
 
+    /** Players who have already been sent the spawn (add) packet for this entity. */
+    private final java.util.Set<UUID> shownTo = java.util.concurrent.ConcurrentHashMap.newKeySet();
+
     public ConveyorItemDisplay() {
         this.entityId = nextEntityId();
         this.despawnPacket = dev.arubik.craftengine.util.MNms.INSTANCE
@@ -52,9 +55,22 @@ public final class ConveyorItemDisplay {
         this.nmsItemStack = nmsItemStack;
     }
 
+    /** True when the rotation changed since the last metadata push (needs re-send). */
+    private boolean rotationDirty = false;
+
     /** Set the display rotation (oriented along the belt + tilted on ramps). */
     public void setRotation(org.joml.Quaternionf rotation) {
-        this.rotation = rotation != null ? rotation : new org.joml.Quaternionf();
+        org.joml.Quaternionf next = rotation != null ? rotation : new org.joml.Quaternionf();
+        if (!next.equals(this.rotation, 1e-4f))
+            this.rotationDirty = true;
+        this.rotation = next;
+    }
+
+    /** Consume the rotation-changed flag (so callers re-send metadata only when needed). */
+    public boolean consumeRotationDirty() {
+        boolean d = rotationDirty;
+        rotationDirty = false;
+        return d;
     }
 
     /** Build the entity metadata list (item + scale + orientation + interpolation). */
@@ -65,6 +81,9 @@ public final class ConveyorItemDisplay {
         }
         // Render the item at roughly half scale so it sits on the belt.
         DisplayData.Scale.addEntityData(new Vector3f(0.5f, 0.5f, 0.5f), values);
+        // Force full block+sky light so the item never renders pitch-black in shade.
+        // Brightness override packs (blockLight << 4) | (skyLight << 20); 15/15 = full.
+        DisplayData.BrightnessOverride.addEntityData((15 << 4) | (15 << 20), values);
         // Orient along the belt (yaw) + tilt on ramps (pitch).
         DisplayData.LeftRotation.addEntityData(rotation, values);
         // Smoothly interpolate the position + rotation we issue each tick.
@@ -107,6 +126,44 @@ public final class ConveyorItemDisplay {
     /** Remove the display for one player. */
     public void despawn(Player player) {
         player.sendPacket(despawnPacket, false);
+    }
+
+    /**
+     * Per-viewer render: spawns the entity for any tracked player who hasn't seen it
+     * yet (so EVERY player — not just whoever was online at first spawn — sees the
+     * item), moves it for those who already have, and re-pushes metadata when
+     * {@code forceMeta} (item/rotation changed). Players who left the chunk are dropped
+     * from the seen-set so they re-spawn on return.
+     */
+    public void render(List<Player> viewers, double x, double y, double z, boolean forceMeta) {
+        java.util.Set<UUID> current = new java.util.HashSet<>();
+        for (Player p : viewers) {
+            UUID id = uuidOf(p);
+            if (id == null)
+                continue;
+            current.add(id);
+            if (shownTo.add(id)) {
+                spawn(p, x, y, z); // sends add + data (current item + rotation)
+            } else {
+                updatePosition(p, x, y, z);
+                if (forceMeta)
+                    updateMetadata(p);
+            }
+        }
+        shownTo.retainAll(current);
+        this.curX = x;
+        this.curY = y;
+        this.curZ = z;
+    }
+
+    /** Forget who has seen this entity (call after despawning for everyone). */
+    public void clearShown() {
+        shownTo.clear();
+    }
+
+    private static UUID uuidOf(Player player) {
+        Object pp = player.platformPlayer();
+        return pp instanceof org.bukkit.entity.Player b ? b.getUniqueId() : null;
     }
 
     // ---- fresh server-unique fake entity id (Entity.ENTITY_COUNTER is private) ----

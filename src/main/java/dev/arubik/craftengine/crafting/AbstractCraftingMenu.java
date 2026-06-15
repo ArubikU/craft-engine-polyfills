@@ -87,6 +87,89 @@ public abstract class AbstractCraftingMenu implements InventoryHolder {
         onCustomSlotChanged(slot);
     }
 
+    /**
+     * Whitelist hook: may {@code item} be placed into CUSTOM slot {@code slot}?
+     * Default allows anything. Subclasses override to restrict (e.g. a tool slot
+     * that only accepts blueprints). {@code item} is the would-be contents.
+     */
+    protected boolean canPlaceCustom(int slot, ItemStack item) {
+        return true;
+    }
+
+    /** Public bridge for the listener to enforce the CUSTOM-slot whitelist. */
+    public final boolean canPlaceCustomExternal(int slot, ItemStack item) {
+        return canPlaceCustom(slot, item);
+    }
+
+    /**
+     * Custom-slot click hook. Return true to mark the click HANDLED (the listener
+     * then cancels it). Default: not handled. Used e.g. to auto-fill the grid from
+     * the player inventory when right-clicking a blueprint in the tool slot.
+     */
+    protected boolean onCustomSlotClick(int slot, org.bukkit.event.inventory.ClickType click,
+            boolean cursorEmpty, Player player) {
+        return false;
+    }
+
+    /** Public bridge for the listener. */
+    public final boolean onCustomSlotClickExternal(int slot, org.bukkit.event.inventory.ClickType click,
+            boolean cursorEmpty, Player player) {
+        return onCustomSlotClick(slot, click, cursorEmpty, player);
+    }
+
+    /** Give a stack to the player (overflow dropped). Exposed for subclass auto-fill. */
+    public final void giveToPlayer(Player player, ItemStack item) {
+        giveStack(player, item);
+    }
+
+    /**
+     * Route a shift-clicked stack from the player inventory into the menu, honoring
+     * roles + the CUSTOM-slot whitelist: fill whitelisted CUSTOM slots first (so a
+     * blueprint lands in the tool slot), then INPUT slots; OUTPUT/BACKGROUND never
+     * receive. Returns the leftover (or null if fully consumed).
+     */
+    public final ItemStack shiftInsert(ItemStack moving) {
+        if (moving == null || moving.getType() == Material.AIR) {
+            return moving;
+        }
+        // 1) CUSTOM slots that accept this item (e.g. the tool slot for a blueprint).
+        for (int s = 0; s < inventory.getSize() && moving.getAmount() > 0; s++) {
+            if (layout.isCustom(s) && canPlaceCustom(s, moving)) {
+                moving = mergeInto(s, moving);
+            }
+        }
+        // 2) INPUT slots (anything is a valid input).
+        for (int s : layout.inputSlots()) {
+            if (moving.getAmount() <= 0) {
+                break;
+            }
+            moving = mergeInto(s, moving);
+        }
+        recompute();
+        return moving.getAmount() > 0 ? moving : null;
+    }
+
+    /** Merge as much of {@code moving} as fits into slot {@code s}; returns the rest. */
+    private ItemStack mergeInto(int s, ItemStack moving) {
+        ItemStack existing = inventory.getItem(s);
+        int max = moving.getMaxStackSize();
+        if (existing == null || existing.getType() == Material.AIR) {
+            int put = Math.min(moving.getAmount(), max);
+            ItemStack copy = moving.clone();
+            copy.setAmount(put);
+            inventory.setItem(s, copy);
+            moving.setAmount(moving.getAmount() - put);
+        } else if (existing.isSimilar(moving)) {
+            int put = Math.min(moving.getAmount(), max - existing.getAmount());
+            if (put > 0) {
+                existing.setAmount(existing.getAmount() + put);
+                inventory.setItem(s, existing);
+                moving.setAmount(moving.getAmount() - put);
+            }
+        }
+        return moving;
+    }
+
     // ---- accessors ----
 
     public final SlotLayout layout() {
@@ -187,14 +270,17 @@ public abstract class AbstractCraftingMenu implements InventoryHolder {
         List<CraftCell> outputs = lastMatch.outputs(grid);
 
         int[] inputsAvailable = occupiedInputCounts(grid);
-        int crafts;
-        if (shift) {
-            int[] free = freeSpaceForOutputs(player, outputs);
-            crafts = CraftingTransaction.maxCrafts(inputsAvailable, outputs, free);
-        } else {
-            // Normal take is one craft, but still bounded by what fits so nothing voids.
-            int[] free = freeSpaceForOutputs(player, outputs);
-            crafts = Math.min(1, CraftingTransaction.maxCrafts(inputsAvailable, outputs, free));
+        // Chance-based (secondary) outputs must not bound how many crafts are possible —
+        // they may not drop — so treat them as having unlimited room for the bound.
+        int[] free = freeSpaceForOutputs(player, outputs);
+        for (int i = 0; i < free.length; i++) {
+            if (chanceOf(i) < 100) {
+                free[i] = Integer.MAX_VALUE;
+            }
+        }
+        int crafts = CraftingTransaction.maxCrafts(inputsAvailable, outputs, free);
+        if (!shift) {
+            crafts = Math.min(1, crafts);
         }
         crafts = Math.min(crafts, requested);
         if (crafts <= 0) {
@@ -206,11 +292,37 @@ public abstract class AbstractCraftingMenu implements InventoryHolder {
 
         consumeInputs(crafts);
         applyRemainders(lastMatch.remainders(grid), grid, crafts, player);
-        for (CraftCell out : outputs) {
-            giveOutput(player, out, crafts);
+        for (int i = 0; i < outputs.size(); i++) {
+            int ch = chanceOf(i);
+            int n = (ch >= 100) ? crafts : rollHits(crafts, ch);
+            if (n > 0) {
+                giveOutput(player, outputs.get(i), n);
+            }
         }
         onCraft(lastMatch, crafts);
         recompute();
+    }
+
+    /** Drop chance (0..100) for output {@code i} of the matched recipe; 100 if not chance-based. */
+    private int chanceOf(int i) {
+        return (lastMatch instanceof ChanceOutputs c) ? c.outputChance(i) : 100;
+    }
+
+    /** Roll {@code n} independent trials at {@code pct}% and return the number of hits. */
+    private static int rollHits(int n, int pct) {
+        if (pct >= 100) {
+            return n;
+        }
+        if (pct <= 0) {
+            return 0;
+        }
+        int hits = 0;
+        for (int k = 0; k < n; k++) {
+            if (java.util.concurrent.ThreadLocalRandom.current().nextInt(100) < pct) {
+                hits++;
+            }
+        }
+        return hits;
     }
 
     private int[] occupiedInputCounts(CraftingGrid grid) {

@@ -48,7 +48,12 @@ public final class ConveyorMath {
     public static Vector3f startPoint(int stepX, int stepZ, int slopeStepY) {
         // entry face = -facing, centred, at belt top; UP starts one lower, DOWN one higher
         float yOff = slopeStepY > 0 ? -0.5f : (slopeStepY < 0 ? 0.5f : 0f);
-        return new Vector3f(0.5f - stepX * 0.5f, BELT_TOP_Y + yOff, 0.5f - stepZ * 0.5f);
+        return new Vector3f(0.5f - stepX * 0.5f, BELT_TOP_Y + yOff + slopeLift(slopeStepY), 0.5f - stepZ * 0.5f);
+    }
+
+    /** Extra +8px (0.5) lift so the item rides ON the ramp surface, not sunk into it. */
+    private static float slopeLift(int slopeStepY) {
+        return slopeStepY != 0 ? 0.5f : 0f;
     }
 
     /**
@@ -60,7 +65,7 @@ public final class ConveyorMath {
      */
     public static Vector3f endPoint(int stepX, int stepZ, int slopeStepY) {
         float yOff = slopeStepY > 0 ? 0.5f : (slopeStepY < 0 ? -0.5f : 0f);
-        return new Vector3f(0.5f + stepX * 0.5f, BELT_TOP_Y + yOff, 0.5f + stepZ * 0.5f);
+        return new Vector3f(0.5f + stepX * 0.5f, BELT_TOP_Y + yOff + slopeLift(slopeStepY), 0.5f + stepZ * 0.5f);
     }
 
     /**
@@ -74,9 +79,11 @@ public final class ConveyorMath {
      */
     public static org.joml.Quaternionf itemRotation(int facingStepX, int facingStepZ, int slopeStepY) {
         float yaw = (float) Math.atan2(-facingStepX, facingStepZ);
-        float pitch = slopeStepY > 0 ? (float) Math.toRadians(-45)
-                : slopeStepY < 0 ? (float) Math.toRadians(45) : 0f;
-        return new org.joml.Quaternionf().rotateY(yaw).rotateX(pitch);
+        float pitch = slopeStepY > 0 ? (float) Math.toRadians(45)
+                : slopeStepY < 0 ? (float) Math.toRadians(-45) : 0f;
+        // Lay the item flat on the belt (default item_display stands upright) via a
+        // -90° tilt about X, then add the ramp pitch so it follows up/down slopes.
+        return new org.joml.Quaternionf().rotateY(yaw).rotateX((float) Math.toRadians(-90) + pitch);
     }
 
     /** Clamp a float into the [0,1] range. */

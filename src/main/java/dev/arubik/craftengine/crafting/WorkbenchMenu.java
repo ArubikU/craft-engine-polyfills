@@ -54,6 +54,154 @@ public final class WorkbenchMenu extends AbstractCraftingMenu {
         return b.build();
     }
 
+    // ---- tool-slot whitelist: only blueprint tools may sit in the TOOL slot ----
+
+    @Override
+    protected boolean canPlaceCustom(int slot, ItemStack item) {
+        if (slot != TOOL_SLOT) {
+            return true;
+        }
+        return registry.isRequiredTool(toolItemId(item));
+    }
+
+    // ---- recipe-book auto-fill: RIGHT-click the tool blueprint (empty cursor) ----
+    // (Plain Ctrl+click isn't sent by Minecraft, so right-click is the trigger.)
+
+    @Override
+    protected boolean onCustomSlotClick(int slot, org.bukkit.event.inventory.ClickType click,
+            boolean cursorEmpty, org.bukkit.entity.Player player) {
+        if (slot != TOOL_SLOT || !cursorEmpty || player == null) {
+            return false;
+        }
+        if (click != org.bukkit.event.inventory.ClickType.RIGHT
+                && click != org.bukkit.event.inventory.ClickType.SHIFT_RIGHT) {
+            return false;
+        }
+        Key toolId = toolItemId(getInventory().getItem(TOOL_SLOT));
+        java.util.List<StationRecipe> rs = registry.allByTool(toolId);
+        if (rs.isEmpty()) {
+            return false;
+        }
+        // Multi-recipe blueprint: each right-click cycles to the next recipe it carries.
+        StationRecipe pick = rs.get(Math.floorMod(fillIndex, rs.size()));
+        fillIndex++;
+        boolean max = (click == org.bukkit.event.inventory.ClickType.SHIFT_RIGHT);
+        autoFill(player, pick, max);
+        if (rs.size() > 1) {
+            player.sendActionBar(net.kyori.adventure.text.Component.text(
+                    "Blueprint recipe " + (Math.floorMod(fillIndex - 1, rs.size()) + 1) + "/" + rs.size()));
+        }
+        return true;
+    }
+
+    /** Cycling index for multi-recipe blueprints (advances each right-click). */
+    private int fillIndex = 0;
+
+    /**
+     * Pull recipe ingredients from the player inventory into the input grid. When
+     * {@code max} is true, fill as many crafts as the inventory + 64/slot allow
+     * (recipe-book "fill stacks"); otherwise a single craft.
+     */
+    private void autoFill(org.bukkit.entity.Player player, StationRecipe recipe, boolean max) {
+        CraftingRecipe base = recipe.base();
+        if (base.type() != CraftingRecipe.Type.SHAPED) {
+            return;
+        }
+        int[] inputs = layout().inputSlots();
+        int gw = layout().gridWidth();
+        // Return whatever is currently in the grid to the player first (vanilla replaces).
+        for (int s : inputs) {
+            ItemStack cur = getInventory().getItem(s);
+            if (cur != null && cur.getType() != Material.AIR) {
+                giveToPlayer(player, cur);
+                getInventory().setItem(s, null);
+            }
+        }
+
+        int crafts = 1;
+        if (max) {
+            java.util.Map<Key, Integer> needPerCraft = new java.util.HashMap<>();
+            int maxCellCount = 1;
+            for (int y = 0; y < base.patternHeight(); y++) {
+                for (int x = 0; x < base.patternWidth(); x++) {
+                    CraftIngredient ing = base.ingredientAt(x, y);
+                    if (ing.isEmpty()) {
+                        continue;
+                    }
+                    needPerCraft.merge(ing.id(), ing.count(), Integer::sum);
+                    maxCellCount = Math.max(maxCellCount, ing.count());
+                }
+            }
+            int c = 64 / Math.max(1, maxCellCount); // never exceed a 64 stack per slot
+            for (var e : needPerCraft.entrySet()) {
+                c = Math.min(c, availCount(player, e.getKey()) / e.getValue());
+            }
+            crafts = Math.max(0, c);
+            if (crafts == 0) {
+                recompute();
+                return;
+            }
+        }
+
+        for (int y = 0; y < base.patternHeight(); y++) {
+            for (int x = 0; x < base.patternWidth(); x++) {
+                CraftIngredient ing = base.ingredientAt(x, y);
+                if (ing.isEmpty()) {
+                    continue;
+                }
+                int gi = y * gw + x;
+                if (gi < 0 || gi >= inputs.length) {
+                    continue;
+                }
+                ItemStack pulled = pullFromPlayer(player, ing.id(), ing.count() * crafts);
+                if (pulled != null) {
+                    getInventory().setItem(inputs[gi], pulled);
+                }
+            }
+        }
+        recompute();
+    }
+
+    /** Total amount of {@code id} in the player inventory. */
+    private int availCount(org.bukkit.entity.Player player, Key id) {
+        int n = 0;
+        for (ItemStack s : player.getInventory().getStorageContents()) {
+            if (s != null && s.getType() != Material.AIR && id.equals(toolItemId(s))) {
+                n += s.getAmount();
+            }
+        }
+        return n;
+    }
+
+    /** Remove up to {@code count} of {@code id} from the player inventory; return what was taken. */
+    private ItemStack pullFromPlayer(org.bukkit.entity.Player player, Key id, int count) {
+        ItemStack[] storage = player.getInventory().getStorageContents();
+        int need = Math.max(1, count);
+        ItemStack taken = null;
+        for (int i = 0; i < storage.length && need > 0; i++) {
+            ItemStack s = storage[i];
+            if (s == null || s.getType() == Material.AIR) {
+                continue;
+            }
+            if (!id.equals(toolItemId(s))) {
+                continue;
+            }
+            int move = Math.min(need, s.getAmount());
+            if (taken == null) {
+                taken = s.clone();
+                taken.setAmount(0);
+            }
+            taken.setAmount(taken.getAmount() + move);
+            s.setAmount(s.getAmount() - move);
+            if (s.getAmount() <= 0) {
+                storage[i] = null;
+            }
+            need -= move;
+        }
+        player.getInventory().setStorageContents(storage);
+        return (taken != null && taken.getAmount() > 0) ? taken : null;
+    }
+
     // ---- matching: resolve a StationRecipe AND require its tool present ----
 
     @Override

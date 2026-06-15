@@ -14,6 +14,16 @@ public class MachineLayout {
     private final Map<Integer, DynamicItemProvider> dynamicProviders = new HashMap<>();
     private final Map<Integer, java.util.function.BiConsumer<dev.arubik.craftengine.machine.block.entity.AbstractMachineBlockEntity, org.bukkit.entity.Player>> buttonActions = new HashMap<>();
     private DynamicTitleProvider titleProvider;
+    private net.kyori.adventure.text.Component titleComponent;
+
+    /** A translatable/Adventure title (client-i18n); when set it overrides the String title. */
+    public void setTitleComponent(net.kyori.adventure.text.Component title) {
+        this.titleComponent = title;
+    }
+
+    public net.kyori.adventure.text.Component getTitleComponent() {
+        return titleComponent;
+    }
 
     public MachineLayout(InventoryType inventoryType, int size, String titlePattern) {
         this.inventoryType = inventoryType;
@@ -48,6 +58,25 @@ public class MachineLayout {
         slotTypes.put(slot, MenuSlotType.BUTTON);
         dynamicProviders.put(slot, iconProvider);
         buttonActions.put(slot, action);
+    }
+
+    /** Click-type-aware button: the action receives the {@link org.bukkit.event.inventory.ClickType}. */
+    public interface ClickButtonAction {
+        void accept(dev.arubik.craftengine.machine.block.entity.AbstractMachineBlockEntity machine,
+                org.bukkit.entity.Player player, org.bukkit.event.inventory.ClickType click);
+    }
+
+    private final Map<Integer, ClickButtonAction> clickButtonActions = new HashMap<>();
+
+    public MachineLayout addClickButton(int slot, DynamicItemProvider iconProvider, ClickButtonAction action) {
+        slotTypes.put(slot, MenuSlotType.BUTTON);
+        dynamicProviders.put(slot, iconProvider);
+        clickButtonActions.put(slot, action);
+        return this;
+    }
+
+    public ClickButtonAction getClickButtonAction(int slot) {
+        return clickButtonActions.get(slot);
     }
 
     public MenuSlotType getSlotType(int slot) {

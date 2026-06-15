@@ -76,6 +76,28 @@ public class MachineBlockBehavior extends ConnectableBlockBehavior
         return null;
     }
 
+    // Right-click opens the machine's menu (the base machine had no use hook, so
+    // sample machines like the upgradeable furnace did nothing on interact).
+    @Override
+    public net.momirealms.craftengine.core.entity.player.InteractionResult useWithoutItem(
+            net.momirealms.craftengine.core.world.context.UseOnContext context, ImmutableBlockState state) {
+        try {
+            net.minecraft.server.level.ServerLevel level = ((org.bukkit.craftbukkit.CraftWorld) ((net.momirealms.craftengine.bukkit.world.BukkitWorld) context
+                    .getLevel()).platformWorld()).getHandle();
+            BlockPos pos = (BlockPos) net.momirealms.craftengine.bukkit.util.LocationUtils
+                    .toBlockPos(context.getClickedPos());
+            BlockEntity be = BukkitBlockEntityTypes.getIfLoaded(level, pos);
+            if (be != null && be.controller instanceof AbstractMachineBlockEntity machine
+                    && context.getPlayer() instanceof net.momirealms.craftengine.bukkit.plugin.user.BukkitServerPlayer cePlayer
+                    && cePlayer.platformPlayer() instanceof org.bukkit.entity.Player bukkit) {
+                machine.getMenu().open(bukkit);
+                return net.momirealms.craftengine.core.entity.player.InteractionResult.SUCCESS_AND_CANCEL;
+            }
+        } catch (Throwable ignored) {
+        }
+        return net.momirealms.craftengine.core.entity.player.InteractionResult.PASS;
+    }
+
     @Override
     public IOConfiguration getIOConfiguration(Level level, BlockPos pos) {
         // Called with a null level at config-parse time (no world yet) to fetch the

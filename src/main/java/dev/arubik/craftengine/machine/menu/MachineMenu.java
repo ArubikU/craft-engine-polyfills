@@ -27,10 +27,14 @@ public class MachineMenu implements InventoryHolder {
                 title = dynamic;
             }
         }
-        // Placeholder replacement logic would go here: e.g.
-        // title.replace("{dynamic:gas}", ...)
-
-        if (layout.getInventoryType() == org.bukkit.event.inventory.InventoryType.CHEST) {
+        // A translatable Component title (client-i18n) takes precedence over the String.
+        net.kyori.adventure.text.Component titleComp = layout.getTitleComponent();
+        boolean chest = layout.getInventoryType() == org.bukkit.event.inventory.InventoryType.CHEST;
+        if (titleComp != null) {
+            this.inventory = chest
+                    ? Bukkit.createInventory(this, layout.getSize(), titleComp)
+                    : Bukkit.createInventory(this, layout.getInventoryType(), titleComp);
+        } else if (chest) {
             this.inventory = Bukkit.createInventory(this, layout.getSize(), title);
         } else {
             this.inventory = Bukkit.createInventory(this, layout.getInventoryType(), title);

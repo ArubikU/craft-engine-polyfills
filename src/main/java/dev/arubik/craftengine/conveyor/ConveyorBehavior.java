@@ -37,11 +37,35 @@ public class ConveyorBehavior extends dev.arubik.craftengine.util.NmsBlockBehavi
     public static final Factory FACTORY = new Factory();
 
     private final Direction defaultFacing;
+    private final int baseTravelTicks;
+    private final float baseRpm;
+    private final float stressImpact;
+    private final int slots;
     private int controllerId;
 
     public ConveyorBehavior(BlockDefinition block, Direction defaultFacing) {
+        this(block, defaultFacing, ConveyorBlockEntity.BASE_TRAVEL_TICKS, ConveyorBlockEntity.BASE_RPM,
+                ConveyorBlockEntity.DEFAULT_STRESS_IMPACT, ConveyorBlockEntity.DEFAULT_SLOTS);
+    }
+
+    public ConveyorBehavior(BlockDefinition block, Direction defaultFacing, int baseTravelTicks, float baseRpm) {
+        this(block, defaultFacing, baseTravelTicks, baseRpm, ConveyorBlockEntity.DEFAULT_STRESS_IMPACT,
+                ConveyorBlockEntity.DEFAULT_SLOTS);
+    }
+
+    public ConveyorBehavior(BlockDefinition block, Direction defaultFacing, int baseTravelTicks, float baseRpm,
+            float stressImpact) {
+        this(block, defaultFacing, baseTravelTicks, baseRpm, stressImpact, ConveyorBlockEntity.DEFAULT_SLOTS);
+    }
+
+    public ConveyorBehavior(BlockDefinition block, Direction defaultFacing, int baseTravelTicks, float baseRpm,
+            float stressImpact, int slots) {
         super(block);
         this.defaultFacing = defaultFacing == null ? Direction.NORTH : defaultFacing;
+        this.baseTravelTicks = baseTravelTicks > 0 ? baseTravelTicks : ConveyorBlockEntity.BASE_TRAVEL_TICKS;
+        this.baseRpm = baseRpm > 0 ? baseRpm : ConveyorBlockEntity.BASE_RPM;
+        this.stressImpact = stressImpact >= 0 ? stressImpact : ConveyorBlockEntity.DEFAULT_STRESS_IMPACT;
+        this.slots = slots > 0 ? slots : ConveyorBlockEntity.DEFAULT_SLOTS;
     }
 
     @Override
@@ -51,7 +75,7 @@ public class ConveyorBehavior extends dev.arubik.craftengine.util.NmsBlockBehavi
 
     @Override
     public BlockEntityController createBlockEntityController(BlockEntity blockEntity) {
-        return new ConveyorBlockEntity(blockEntity, defaultFacing);
+        return new ConveyorBlockEntity(blockEntity, defaultFacing, baseTravelTicks, baseRpm, stressImpact, slots);
     }
 
     // ---------------- right-click: put / take the slot ----------------
@@ -85,11 +109,25 @@ public class ConveyorBehavior extends dev.arubik.craftengine.util.NmsBlockBehavi
             return InteractionResult.SUCCESS_AND_CANCEL;
         }
 
-        // Hand has an item: refuse conveyor block items (those are for the wand).
+        // Hand has an item: refuse conveyor block items (those place/extend the belt,
+        // they must not be stuffed into the slot). Resolve item->block and check for a
+        // ConveyorBehavior — the config item id (demo:conveyor) is NOT the behavior key.
         net.momirealms.craftengine.core.util.Key handId =
                 net.momirealms.craftengine.bukkit.api.CraftEngineItems.getCustomItemId(hand);
-        if (POLYFILL_CONVEYOR.equals(handId))
-            return InteractionResult.PASS;
+        if (handId != null) {
+            net.momirealms.craftengine.core.block.BlockDefinition handDef =
+                    net.momirealms.craftengine.bukkit.api.CraftEngineBlocks.byId(handId);
+            if (handDef != null && handDef.defaultState() != null) {
+                Object hb = handDef.defaultState().behavior();
+                boolean handIsConveyor = hb instanceof ConveyorBehavior
+                        || (hb instanceof net.momirealms.craftengine.bukkit.block.behavior.DualBlockBehavior dual
+                                && dual.getFirst(ConveyorBehavior.class) != null)
+                        || (hb instanceof net.momirealms.craftengine.bukkit.block.behavior.CompositeBlockBehavior comp
+                                && comp.getFirst(ConveyorBehavior.class) != null);
+                if (handIsConveyor)
+                    return InteractionResult.PASS;
+            }
+        }
 
         // Put: merge into the slot if same type, else swap with the slot content.
         org.bukkit.inventory.ItemStack leftover = be.putSlot(hand);
@@ -99,10 +137,21 @@ public class ConveyorBehavior extends dev.arubik.craftengine.util.NmsBlockBehavi
 
     // ---------------- break ----------------
 
+    /** Positions whose break was already handled by {@link ConveyorBreakListener}. */
+    private static final java.util.Set<String> LISTENER_HANDLED =
+            java.util.concurrent.ConcurrentHashMap.newKeySet();
+
+    public static void markListenerHandled(int x, int y, int z) {
+        LISTENER_HANDLED.add(x + "," + y + "," + z);
+    }
+
     @Override
     public void affectNeighborsAfterRemoval(Object thisBlock, net.minecraft.world.level.Level level,
             net.minecraft.core.BlockPos nmsPos, net.minecraft.world.level.block.state.BlockState oldState,
             Boolean movedByPiston) {
+        // The Bukkit break listener already ran the teardown for this position.
+        if (LISTENER_HANDLED.remove(nmsPos.getX() + "," + nmsPos.getY() + "," + nmsPos.getZ()))
+            return;
         try {
             CEWorld world = new BukkitWorld(((ServerLevel) level).getWorld()).storageWorld();
             if (world == null)
@@ -141,7 +190,24 @@ public class ConveyorBehavior extends dev.arubik.craftengine.util.NmsBlockBehavi
                 } catch (IllegalArgumentException ignored) {
                 }
             }
-            return new ConveyorBehavior(block, facing);
+            // Tunables: how many ticks an item takes to cross one segment at base
+            // speed, and the reference rpm. Drive both transfer speed AND the visual
+            // belt pace (the polyfill scales movement by effectiveRpm/baseRpm).
+            int baseTravelTicks = dev.arubik.craftengine.util.Utils.getAsInt(
+                    arguments.getOrDefault("base-travel-ticks", ConveyorBlockEntity.BASE_TRAVEL_TICKS),
+                    "base-travel-ticks");
+            float baseRpm = (float) dev.arubik.craftengine.util.Utils.getAsDouble(
+                    arguments.getOrDefault("base-rpm", (double) ConveyorBlockEntity.BASE_RPM), "base-rpm");
+            // Stress imposed per belt segment (SU). The line stalls if its total
+            // exceeds the driving motor's stress capacity.
+            float stressImpact = dev.arubik.craftengine.util.Utils.getAsFloat(
+                    arguments.getOrDefault("stress-impact", ConveyorBlockEntity.DEFAULT_STRESS_IMPACT),
+                    "stress-impact");
+            // How many items this belt segment carries at once (each at its own
+            // position; spacing = 1/slots). Drives the multi-item transport.
+            int slots = dev.arubik.craftengine.util.Utils.getAsInt(
+                    arguments.getOrDefault("slots", ConveyorBlockEntity.DEFAULT_SLOTS), "slots");
+            return new ConveyorBehavior(block, facing, baseTravelTicks, baseRpm, stressImpact, slots);
         }
     }
 }

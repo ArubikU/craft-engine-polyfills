@@ -48,6 +48,50 @@ public final class StationRecipeRegistry {
         return Optional.empty();
     }
 
+    /** Remove all registered station recipes (used before a reload). */
+    public void clear() {
+        recipes.clear();
+        byId.clear();
+    }
+
+    /** All station recipes whose required tool is {@code toolId} (a blueprint may hold several). */
+    public java.util.List<StationRecipe> allByTool(Key toolId) {
+        java.util.List<StationRecipe> out = new java.util.ArrayList<>();
+        if (toolId != null) {
+            for (StationRecipe r : recipes) {
+                if (toolId.equals(r.requiredTool())) {
+                    out.add(r);
+                }
+            }
+        }
+        return out;
+    }
+
+    /** First station recipe whose required tool is {@code toolId}, if any. */
+    public Optional<StationRecipe> byTool(Key toolId) {
+        if (toolId != null) {
+            for (StationRecipe r : recipes) {
+                if (toolId.equals(r.requiredTool())) {
+                    return Optional.of(r);
+                }
+            }
+        }
+        return Optional.empty();
+    }
+
+    /** True if {@code itemId} is the required tool of ANY registered station recipe. */
+    public boolean isRequiredTool(Key itemId) {
+        if (itemId == null) {
+            return false;
+        }
+        for (StationRecipe r : recipes) {
+            if (itemId.equals(r.requiredTool())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public void unregister(Key id) {
         StationRecipe removed = byId.remove(id);
         if (removed != null) {

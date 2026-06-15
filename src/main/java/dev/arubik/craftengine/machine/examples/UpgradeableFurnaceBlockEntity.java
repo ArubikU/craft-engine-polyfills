@@ -46,6 +46,10 @@ public class UpgradeableFurnaceBlockEntity extends AbstractMachineBlockEntity {
     public UpgradeableFurnaceBlockEntity(net.momirealms.craftengine.core.block.entity.BlockEntity blockEntity) {
         super(blockEntity, 6);
 
+        this.layout.setTitleComponent(dev.arubik.craftengine.machine.menu.MenuText.noI(
+                dev.arubik.craftengine.machine.menu.MenuText.tr("polyfill.ui.furnace_title",
+                        net.kyori.adventure.text.format.NamedTextColor.GOLD)));
+
         // Ensure the sample upgrades exist in the global registry.
         registerDefaultUpgrades(UpgradeRegistry.global());
 
@@ -65,9 +69,18 @@ public class UpgradeableFurnaceBlockEntity extends AbstractMachineBlockEntity {
                     processing ? org.bukkit.Material.LIME_STAINED_GLASS_PANE
                             : org.bukkit.Material.RED_STAINED_GLASS_PANE);
             org.bukkit.inventory.meta.ItemMeta meta = stack.getItemMeta();
-            meta.setDisplayName(processing
-                    ? "§aProcessing (x" + self.getUpgradeModifiers().speedMultiplier() + ")"
-                    : "§cIdle");
+            if (processing) {
+                meta.displayName(dev.arubik.craftengine.machine.menu.MenuText.noI(
+                        dev.arubik.craftengine.machine.menu.MenuText.tr("polyfill.ui.processing",
+                                net.kyori.adventure.text.format.NamedTextColor.GREEN)
+                                .append(net.kyori.adventure.text.Component.text(
+                                        " (x" + self.getUpgradeModifiers().speedMultiplier() + ")",
+                                        net.kyori.adventure.text.format.NamedTextColor.GRAY))));
+            } else {
+                meta.displayName(dev.arubik.craftengine.machine.menu.MenuText.noI(
+                        dev.arubik.craftengine.machine.menu.MenuText.tr("polyfill.ui.idle",
+                                net.kyori.adventure.text.format.NamedTextColor.RED)));
+            }
             stack.setItemMeta(meta);
             return stack;
         });

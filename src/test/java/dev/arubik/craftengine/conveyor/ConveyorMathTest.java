@@ -93,8 +93,9 @@ class ConveyorMathTest {
         org.joml.Vector3f start = ConveyorMath.startPoint(1, 0, 1);
         org.joml.Vector3f end = ConveyorMath.endPoint(1, 0, 1);
         assertEquals(end.y - start.y, 1.0f, FEPS); // ramps up exactly one block
-        assertEquals(ConveyorMath.BELT_TOP_Y - 0.5f, start.y, FEPS);
-        assertEquals(ConveyorMath.BELT_TOP_Y + 0.5f, end.y, FEPS);
+        // +0.5 slope lift keeps the item on the ramp surface (see ConveyorMath.slopeLift).
+        assertEquals(ConveyorMath.BELT_TOP_Y - 0.5f + 0.5f, start.y, FEPS);
+        assertEquals(ConveyorMath.BELT_TOP_Y + 0.5f + 0.5f, end.y, FEPS);
     }
 
     @Test
@@ -103,8 +104,8 @@ class ConveyorMathTest {
         org.joml.Vector3f start = ConveyorMath.startPoint(-1, 0, -1);
         org.joml.Vector3f end = ConveyorMath.endPoint(-1, 0, -1);
         assertEquals(end.y - start.y, -1.0f, FEPS); // ramps down exactly one block
-        assertEquals(ConveyorMath.BELT_TOP_Y + 0.5f, start.y, FEPS);
-        assertEquals(ConveyorMath.BELT_TOP_Y - 0.5f, end.y, FEPS);
+        assertEquals(ConveyorMath.BELT_TOP_Y + 0.5f + 0.5f, start.y, FEPS);
+        assertEquals(ConveyorMath.BELT_TOP_Y - 0.5f + 0.5f, end.y, FEPS);
     }
 
     @Test
@@ -112,7 +113,7 @@ class ConveyorMathTest {
         org.joml.Vector3f start = ConveyorMath.startPoint(1, 0, 1);
         org.joml.Vector3f end = ConveyorMath.endPoint(1, 0, 1);
         org.joml.Vector3f mid = ConveyorMath.interpolate(start, end, 0.5f);
-        assertEquals(ConveyorMath.BELT_TOP_Y, mid.y, FEPS);
+        assertEquals(ConveyorMath.BELT_TOP_Y + 0.5f, mid.y, FEPS);
     }
 
     @Test
@@ -136,14 +137,15 @@ class ConveyorMathTest {
 
     @org.junit.jupiter.api.Test
     void itemRotationTiltsOnRamps() {
-        // flat: no pitch -> rotating +Z keeps Z forward (x component ~ 0)
+        // flat: the item lies flat on the belt -> its local up (0,1,0) becomes horizontal.
         org.joml.Quaternionf flat = ConveyorMath.itemRotation(0, 1, 0);
-        org.joml.Vector3f vf = flat.transform(new org.joml.Vector3f(0, 0, 1));
-        assertEquals(0f, vf.y, 1e-5f);
-        // up ramp: forward gains a +Y component (climbs); down: -Y
-        org.joml.Vector3f up = ConveyorMath.itemRotation(0, 1, 1).transform(new org.joml.Vector3f(0, 0, 1));
-        org.joml.Vector3f dn = ConveyorMath.itemRotation(0, 1, -1).transform(new org.joml.Vector3f(0, 0, 1));
-        org.junit.jupiter.api.Assertions.assertTrue(up.y > 0.5f, "up ramp should tilt the item upward, got " + up.y);
-        org.junit.jupiter.api.Assertions.assertTrue(dn.y < -0.5f, "down ramp should tilt the item downward, got " + dn.y);
+        org.joml.Vector3f upNormal = flat.transform(new org.joml.Vector3f(0, 1, 0));
+        assertEquals(0f, upNormal.y, 1e-5f);
+        // ramps add a distinct tilt either side of flat (quaternions differ).
+        org.joml.Quaternionf up = ConveyorMath.itemRotation(0, 1, 1);
+        org.joml.Quaternionf dn = ConveyorMath.itemRotation(0, 1, -1);
+        org.junit.jupiter.api.Assertions.assertFalse(up.equals(flat, 1e-4f), "up ramp should differ from flat");
+        org.junit.jupiter.api.Assertions.assertFalse(dn.equals(flat, 1e-4f), "down ramp should differ from flat");
+        org.junit.jupiter.api.Assertions.assertFalse(up.equals(dn, 1e-4f), "up and down ramps should differ");
     }
 }

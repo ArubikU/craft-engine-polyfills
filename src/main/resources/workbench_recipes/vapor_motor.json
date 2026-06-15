@@ -1,0 +1,6 @@
+{
+  "tool": "demo:vapor_motor_blueprint",
+  "pattern": ["CIC", "IGI"],
+  "keys": { "C": "minecraft:copper_ingot", "I": "minecraft:iron_ingot", "G": "demo:iron_gear" },
+  "outputs": [ { "id": "demo:vapor_motor", "count": 1 } ]
+}

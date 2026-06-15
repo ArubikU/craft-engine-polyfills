@@ -1,87 +1,23 @@
 {
-  "parent": "block/block",
-  "textures": {
-    "top": "minecraft:block/custom/conveyor/belt_top_ramp",
-    "frame": "minecraft:block/custom/conveyor/belt_frame",
-    "particle": "minecraft:block/custom/conveyor/belt_frame"
-  },
-  "elements": [
-    {
-      "from": [
-        0.01,
-        6,
-        -3.314
-      ],
-      "to": [
-        15.99,
-        10,
-        19.314
-      ],
-      "rotation": {
-        "angle": -45,
-        "axis": "x",
-        "origin": [
-          8,
-          8,
-          8
-        ]
-      },
-      "faces": {
-        "up": {
-          "uv": [
-            0,
-            0,
-            16,
-            16
-          ],
-          "texture": "#top"
-        },
-        "down": {
-          "uv": [
-            0,
-            4,
-            16,
-            12
-          ],
-          "texture": "#frame"
-        },
-        "north": {
-          "uv": [
-            0,
-            12,
-            16,
-            16
-          ],
-          "texture": "#frame"
-        },
-        "south": {
-          "uv": [
-            0,
-            12,
-            16,
-            16
-          ],
-          "texture": "#frame"
-        },
-        "east": {
-          "uv": [
-            0,
-            12,
-            16,
-            16
-          ],
-          "texture": "#frame"
-        },
-        "west": {
-          "uv": [
-            0,
-            12,
-            16,
-            16
-          ],
-          "texture": "#frame"
-        }
-      }
-    }
-  ]
+	"format_version": "1.21.6",
+	"credit": "Made by SR400X - https://linktr.ee/sr400x",
+	"parent": "block/block",
+	"textures": {
+		"top": "block/custom/conveyor/belt_top_ramp",
+		"particle": "block/custom/conveyor/belt_frame_ramp",
+		"frame": "block/custom/conveyor/belt_frame_ramp"
+	},
+	"elements": [
+		{
+			"from": [0.01, 6, -3.314],
+			"to": [15.99, 10, 19.314],
+			"rotation": {"angle": -45, "axis": "x", "origin": [8, 8, 8]},
+			"faces": {
+				"east": {"uv": [0, 0, 11.5, 2], "texture": "#frame"},
+				"west": {"uv": [11.5, 0, 0, 2], "texture": "#frame"},
+				"up": {"uv": [0, 0, 8, 11.5], "texture": "#top"},
+				"down": {"uv": [0, 0, 8, 11.5], "texture": "#top"}
+			}
+		}
+	]
 }

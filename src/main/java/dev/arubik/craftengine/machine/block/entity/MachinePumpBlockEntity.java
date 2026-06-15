@@ -65,13 +65,22 @@ public class MachinePumpBlockEntity extends AbstractMachineBlockEntity {
             org.bukkit.inventory.ItemStack stack = new org.bukkit.inventory.ItemStack(material);
             org.bukkit.inventory.meta.ItemMeta meta = stack.getItemMeta();
 
-            String fluidName = stored.isEmpty() ? "Empty" : stored.getType().toString();
-            meta.setDisplayName("§bFluid: " + fluidName);
-
-            java.util.List<String> lore = new java.util.ArrayList<>();
-            lore.add("§7Amount: §f" + stored.getAmount() + " / " + CAPACITY + " mB");
-            lore.add("§7Pressure: §f" + stored.getPressure());
-            meta.setLore(lore);
+            var GRAY = net.kyori.adventure.text.format.NamedTextColor.GRAY;
+            var WHITE = net.kyori.adventure.text.format.NamedTextColor.WHITE;
+            var AQUA = net.kyori.adventure.text.format.NamedTextColor.AQUA;
+            net.kyori.adventure.text.Component fluidName = stored.isEmpty()
+                    ? dev.arubik.craftengine.machine.menu.MenuText.tr("polyfill.liquid.empty", WHITE)
+                    : dev.arubik.craftengine.machine.menu.MenuText.tr(stored.getType().translationKey(), WHITE);
+            meta.displayName(dev.arubik.craftengine.machine.menu.MenuText.noI(
+                    dev.arubik.craftengine.machine.menu.MenuText.tr("polyfill.ui.fluid", AQUA)
+                            .append(net.kyori.adventure.text.Component.text(": ", GRAY)).append(fluidName)));
+            meta.lore(java.util.List.of(
+                    dev.arubik.craftengine.machine.menu.MenuText.noI(
+                            dev.arubik.craftengine.machine.menu.MenuText.kv("polyfill.ui.amount", GRAY,
+                                    stored.getAmount() + " / " + CAPACITY + " mB", WHITE)),
+                    dev.arubik.craftengine.machine.menu.MenuText.noI(
+                            dev.arubik.craftengine.machine.menu.MenuText.kv("polyfill.ui.pressure", GRAY,
+                                    String.valueOf(stored.getPressure()), WHITE))));
 
             stack.setItemMeta(meta);
             return stack;

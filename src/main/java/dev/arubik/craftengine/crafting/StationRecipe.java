@@ -21,21 +21,32 @@ import net.momirealms.craftengine.core.util.Key;
  * resolve items into. The tool-slot gate itself (presence + remaining uses) lives
  * in {@link WorkbenchMenu}; this class only declares the requirement.
  */
-public final class StationRecipe implements CraftingRecipeLike, RecipeCondition, RecipeExecutor {
+public final class StationRecipe implements CraftingRecipeLike, RecipeCondition, RecipeExecutor, ChanceOutputs {
 
     private final CraftingRecipe base;
     private final Key requiredTool;
     private final int toolUsesPerCraft;
     private final RecipeCondition condition;
     private final RecipeExecutor executor;
+    /** Per-output drop chance (0..100), aligned to base.outputs(); 100 = guaranteed. */
+    private final int[] chances;
 
     private StationRecipe(CraftingRecipe base, Key requiredTool, int toolUsesPerCraft,
-            RecipeCondition condition, RecipeExecutor executor) {
+            RecipeCondition condition, RecipeExecutor executor, int[] chances) {
         this.base = base;
         this.requiredTool = requiredTool;
         this.toolUsesPerCraft = Math.max(1, toolUsesPerCraft);
         this.condition = condition;
         this.executor = executor;
+        this.chances = chances;
+    }
+
+    @Override
+    public int outputChance(int index) {
+        if (chances == null || index < 0 || index >= chances.length) {
+            return 100;
+        }
+        return chances[index];
     }
 
     // ---- CraftingRecipeLike (delegate to the wrapped base recipe) ----
@@ -61,6 +72,11 @@ public final class StationRecipe implements CraftingRecipeLike, RecipeCondition,
     }
 
     // ---- station-specific ----
+
+    /** The wrapped base shaped/shapeless recipe (for auto-fill / introspection). */
+    public CraftingRecipe base() {
+        return base;
+    }
 
     /** The id of the item that must sit in the TOOL slot (custom or vanilla key). */
     public Key requiredTool() {
@@ -114,9 +130,16 @@ public final class StationRecipe implements CraftingRecipeLike, RecipeCondition,
         private int toolUsesPerCraft = 1;
         private RecipeCondition condition;
         private RecipeExecutor executor;
+        private final java.util.Map<Integer, Integer> chances = new java.util.HashMap<>();
 
         private Builder(Key id) {
             this.id = id;
+        }
+
+        /** Set the drop chance (0..100) for the output at {@code index} (default 100). */
+        public Builder chance(int index, int pct) {
+            chances.put(index, Math.max(0, Math.min(100, pct)));
+            return this;
         }
 
         /** Start a shaped base recipe (use its row/define/output methods). */
@@ -173,7 +196,11 @@ public final class StationRecipe implements CraftingRecipeLike, RecipeCondition,
             if (base.outputs().size() > 2) {
                 throw new IllegalStateException("StationRecipe supports at most 2 outputs");
             }
-            return new StationRecipe(base, requiredTool, toolUsesPerCraft, condition, executor);
+            int[] ch = new int[base.outputs().size()];
+            for (int i = 0; i < ch.length; i++) {
+                ch[i] = chances.getOrDefault(i, 100);
+            }
+            return new StationRecipe(base, requiredTool, toolUsesPerCraft, condition, executor, ch);
         }
     }
 }

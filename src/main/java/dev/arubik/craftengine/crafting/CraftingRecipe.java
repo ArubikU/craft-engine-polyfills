@@ -84,6 +84,14 @@ public final class CraftingRecipe implements CraftingRecipeLike {
         return patternHeight;
     }
 
+    /** SHAPED ingredient at trimmed-pattern cell (x,y), or EMPTY (also for shapeless/out of range). */
+    public CraftIngredient ingredientAt(int x, int y) {
+        if (type != Type.SHAPED || x < 0 || y < 0 || x >= patternWidth || y >= patternHeight) {
+            return CraftIngredient.EMPTY;
+        }
+        return pattern.get(y * patternWidth + x);
+    }
+
     /**
      * True if {@code grid} produces this recipe. Pure; safe to call from tests.
      */

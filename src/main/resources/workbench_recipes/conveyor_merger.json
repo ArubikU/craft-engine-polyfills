@@ -1,0 +1,6 @@
+{
+  "tool": "demo:logistics_blueprint",
+  "pattern": ["BIB", " G "],
+  "keys": { "B": "demo:conveyor", "I": "minecraft:iron_ingot", "G": "demo:stone_gear" },
+  "outputs": [ { "id": "demo:conveyor_merger", "count": 1 } ]
+}

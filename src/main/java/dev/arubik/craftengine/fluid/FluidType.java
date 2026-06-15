@@ -26,6 +26,11 @@ public enum FluidType {
         this.unit = unit;
     }
 
+    /** Minecraft i18n key for this liquid, resolved client-side from the pack lang. */
+    public String translationKey() {
+        return "polyfill.liquid." + name().toLowerCase(java.util.Locale.ROOT);
+    }
+
     // Delay específico para recolectar desde bloques (permite diferenciar de I/O)
     // Delay específico para recolectar desde bloques (permite diferenciar de I/O)
     public static int blockCollectDelay(FluidType t) {

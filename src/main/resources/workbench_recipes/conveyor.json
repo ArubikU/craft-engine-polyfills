@@ -1,0 +1,7 @@
+{
+  "tool": "demo:conveyor_blueprint",
+  "tool_uses": 1,
+  "pattern": ["KKK", "ICI"],
+  "keys": { "K": "minecraft:dried_kelp", "I": "minecraft:iron_ingot", "C": "minecraft:copper_ingot" },
+  "outputs": [ { "id": "demo:conveyor", "count": 4 } ]
+}

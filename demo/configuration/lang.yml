@@ -1,0 +1,306 @@
+# i18n names + blueprint/item lore strings (client-side, language-dependent like vanilla).
+lang#items:
+  en_us:
+    item.demo.conveyor: Conveyor Belt
+    item.demo.conveyor_merger: Conveyor Merger
+    item.demo.conveyor_splitter: Conveyor Splitter
+    item.demo.depot: Depot
+    item.demo.conveyor_blueprint: Conveyor Blueprint
+    item.demo.depot_blueprint: Depot Blueprint
+    item.demo.vapor_motor_blueprint: Vapor Motor Blueprint
+    item.demo.wire_blueprint: Wire Blueprint
+    item.demo.logistics_blueprint: Logistics Blueprint
+    item.demo.stone_gear: Stone Gear
+    item.demo.copper_gear: Copper Gear
+    item.demo.iron_gear: Iron Gear
+    item.demo.copper_wire: Copper Wire
+    item.demo.brass_shavings: Brass Shavings
+    demo.bp.craftable_on: "Craftable on:"
+    demo.bp.usage: "Usage:"
+    demo.bp.workbench: Engineer's Workbench
+    demo.bp.placeable: Placeable
+    demo.bp.reusable: Reusable blueprint (never consumed)
+    demo.bp.autofill: "Right-click: fill 1 · Shift: fill max"
+    demo.bp.multi: "Right-click cycles its recipes"
+    demo.item.component: Steam-tech component
+    demo.item.byproduct: Machining byproduct
+    polyfill.gas.empty: Empty
+    polyfill.gas.steam: Steam
+    polyfill.gas.heavy_steam: Heavy Steam
+    polyfill.liquid.water: Water
+    polyfill.liquid.lava: Lava
+    polyfill.liquid.slime: Slime
+    polyfill.liquid.experience: Experience
+    polyfill.liquid.powder_snow: Powder Snow
+    polyfill.liquid.milk: Milk
+    polyfill.liquid.honey: Honey
+    polyfill.liquid.empty: Empty
+    polyfill.ui.vapor: Vapor
+    polyfill.ui.type: Type
+    polyfill.ui.stored: Stored
+    polyfill.ui.use: Use
+    polyfill.ui.output: Output
+    polyfill.ui.rpm: RPM
+    polyfill.ui.sucap: SU cap
+    polyfill.ui.su: SU
+    polyfill.ui.max: Max
+    polyfill.ui.rpm_minus: '− RPM'
+    polyfill.ui.rpm_plus: '+ RPM'
+    polyfill.ui.su_minus: '− SU'
+    polyfill.ui.su_plus: '+ SU'
+    polyfill.ui.tune_hint: 'Click ±1 · Right ±8 · Q ±32 · Shift max/min'
+    polyfill.ui.upgrades: Upgrades
+    polyfill.ui.upgrades_desc: Open the upgrade modules
+    polyfill.ui.deplete: Deplete Tank
+    polyfill.ui.deplete_desc: Vent all stored gas
+    polyfill.ui.back: Back
+    polyfill.ui.active_slots: Active slots
+    polyfill.ui.active_slots_desc: Top-left slots apply
+    polyfill.ui.motor_title: Vapor Motor MkII
+    polyfill.ui.locked: Locked
+    polyfill.ui.locked_desc: Add extra_slots upgrades to unlock
+    polyfill.ui.demand: Demand
+    polyfill.ui.per_stress: Per stress
+    polyfill.ui.current_rpm: Current RPM
+    polyfill.ui.max_rpm: Max RPM
+    polyfill.ui.stress: Stress
+    polyfill.ui.load: Load
+    polyfill.ui.capacity: Capacity
+    polyfill.ui.stress_minus: '− Stress'
+    polyfill.ui.stress_plus: '+ Stress'
+    polyfill.ui.stress_cap: Stress cap
+    polyfill.ui.tune_click: click ± to tune
+    polyfill.ui.fluid: Fluid
+    polyfill.ui.amount: Amount
+    polyfill.ui.pressure: Pressure
+    polyfill.ui.processing: Processing
+    polyfill.ui.idle: Idle
+    polyfill.ui.furnace_title: Upgradeable Furnace
+  es_es:
+    item.demo.conveyor: Cinta Transportadora
+    item.demo.conveyor_merger: Combinador de Cintas
+    item.demo.conveyor_splitter: Divisor de Cintas
+    item.demo.depot: Depósito
+    item.demo.conveyor_blueprint: Plano de Cinta
+    item.demo.depot_blueprint: Plano de Depósito
+    item.demo.vapor_motor_blueprint: Plano de Motor de Vapor
+    item.demo.wire_blueprint: Plano de Cable
+    item.demo.logistics_blueprint: Plano de Logística
+    item.demo.stone_gear: Engranaje de Piedra
+    item.demo.copper_gear: Engranaje de Cobre
+    item.demo.iron_gear: Engranaje de Hierro
+    item.demo.copper_wire: Cable de Cobre
+    item.demo.brass_shavings: Viruta de Latón
+    demo.bp.craftable_on: "Crafteable en:"
+    demo.bp.usage: "Uso:"
+    demo.bp.workbench: Mesa del Ingeniero
+    demo.bp.placeable: Colocable
+    demo.bp.reusable: Plano reutilizable (nunca se gasta)
+    demo.bp.autofill: "Click der.: llena 1 · Shift: llena máx"
+    demo.bp.multi: "Click derecho alterna sus recetas"
+    demo.item.component: Componente a vapor
+    demo.item.byproduct: Subproducto de mecanizado
+    polyfill.gas.empty: Vacío
+    polyfill.gas.steam: Vapor
+    polyfill.gas.heavy_steam: Vapor Pesado
+    polyfill.liquid.water: Agua
+    polyfill.liquid.lava: Lava
+    polyfill.liquid.slime: Slime
+    polyfill.liquid.experience: Experiencia
+    polyfill.liquid.powder_snow: Nieve Polvo
+    polyfill.liquid.milk: Leche
+    polyfill.liquid.honey: Miel
+    polyfill.liquid.empty: Vacío
+    polyfill.ui.vapor: Vapor
+    polyfill.ui.type: Tipo
+    polyfill.ui.stored: Almacenado
+    polyfill.ui.use: Consumo
+    polyfill.ui.output: Salida
+    polyfill.ui.rpm: RPM
+    polyfill.ui.sucap: Tope SU
+    polyfill.ui.su: SU
+    polyfill.ui.max: Máx
+    polyfill.ui.rpm_minus: '− RPM'
+    polyfill.ui.rpm_plus: '+ RPM'
+    polyfill.ui.su_minus: '− SU'
+    polyfill.ui.su_plus: '+ SU'
+    polyfill.ui.tune_hint: 'Click ±1 · Der ±8 · Q ±32 · Shift máx/mín'
+    polyfill.ui.upgrades: Mejoras
+    polyfill.ui.upgrades_desc: Abrir módulos de mejora
+    polyfill.ui.deplete: Vaciar Tanque
+    polyfill.ui.deplete_desc: Ventear todo el gas
+    polyfill.ui.back: Volver
+    polyfill.ui.active_slots: Slots activos
+    polyfill.ui.active_slots_desc: Aplican los slots superiores
+    polyfill.ui.motor_title: Motor de Vapor MkII
+    polyfill.ui.locked: Bloqueado
+    polyfill.ui.locked_desc: Agrega mejoras extra_slots para desbloquear
+    polyfill.ui.demand: Demanda
+    polyfill.ui.per_stress: Por estrés
+    polyfill.ui.current_rpm: RPM actual
+    polyfill.ui.max_rpm: RPM máx
+    polyfill.ui.stress: Estrés
+    polyfill.ui.load: Carga
+    polyfill.ui.capacity: Capacidad
+    polyfill.ui.stress_minus: '− Estrés'
+    polyfill.ui.stress_plus: '+ Estrés'
+    polyfill.ui.stress_cap: Tope estrés
+    polyfill.ui.tune_click: click ± para ajustar
+    polyfill.ui.fluid: Fluido
+    polyfill.ui.amount: Cantidad
+    polyfill.ui.pressure: Presión
+    polyfill.ui.processing: Procesando
+    polyfill.ui.idle: Inactivo
+    polyfill.ui.furnace_title: Horno Mejorable
+  es_mx:
+    item.demo.conveyor: Cinta Transportadora
+    item.demo.conveyor_merger: Combinador de Cintas
+    item.demo.conveyor_splitter: Divisor de Cintas
+    item.demo.depot: Depósito
+    item.demo.conveyor_blueprint: Plano de Cinta
+    item.demo.depot_blueprint: Plano de Depósito
+    item.demo.vapor_motor_blueprint: Plano de Motor de Vapor
+    item.demo.wire_blueprint: Plano de Cable
+    item.demo.logistics_blueprint: Plano de Logística
+    item.demo.stone_gear: Engranaje de Piedra
+    item.demo.copper_gear: Engranaje de Cobre
+    item.demo.iron_gear: Engranaje de Hierro
+    item.demo.copper_wire: Cable de Cobre
+    item.demo.brass_shavings: Viruta de Latón
+    demo.bp.craftable_on: "Crafteable en:"
+    demo.bp.usage: "Uso:"
+    demo.bp.workbench: Mesa del Ingeniero
+    demo.bp.placeable: Colocable
+    demo.bp.reusable: Plano reutilizable (nunca se gasta)
+    demo.bp.autofill: "Click der.: llena 1 · Shift: llena máx"
+    demo.bp.multi: "Click derecho alterna sus recetas"
+    demo.item.component: Componente a vapor
+    demo.item.byproduct: Subproducto de mecanizado
+    polyfill.gas.empty: Vacío
+    polyfill.gas.steam: Vapor
+    polyfill.gas.heavy_steam: Vapor Pesado
+    polyfill.liquid.water: Agua
+    polyfill.liquid.lava: Lava
+    polyfill.liquid.slime: Slime
+    polyfill.liquid.experience: Experiencia
+    polyfill.liquid.powder_snow: Nieve Polvo
+    polyfill.liquid.milk: Leche
+    polyfill.liquid.honey: Miel
+    polyfill.liquid.empty: Vacío
+    polyfill.ui.vapor: Vapor
+    polyfill.ui.type: Tipo
+    polyfill.ui.stored: Almacenado
+    polyfill.ui.use: Consumo
+    polyfill.ui.output: Salida
+    polyfill.ui.rpm: RPM
+    polyfill.ui.sucap: Tope SU
+    polyfill.ui.su: SU
+    polyfill.ui.max: Máx
+    polyfill.ui.rpm_minus: '− RPM'
+    polyfill.ui.rpm_plus: '+ RPM'
+    polyfill.ui.su_minus: '− SU'
+    polyfill.ui.su_plus: '+ SU'
+    polyfill.ui.tune_hint: 'Click ±1 · Der ±8 · Q ±32 · Shift máx/mín'
+    polyfill.ui.upgrades: Mejoras
+    polyfill.ui.upgrades_desc: Abrir módulos de mejora
+    polyfill.ui.deplete: Vaciar Tanque
+    polyfill.ui.deplete_desc: Ventear todo el gas
+    polyfill.ui.back: Volver
+    polyfill.ui.active_slots: Slots activos
+    polyfill.ui.active_slots_desc: Aplican los slots superiores
+    polyfill.ui.motor_title: Motor de Vapor MkII
+    polyfill.ui.locked: Bloqueado
+    polyfill.ui.locked_desc: Agrega mejoras extra_slots para desbloquear
+    polyfill.ui.demand: Demanda
+    polyfill.ui.per_stress: Por estrés
+    polyfill.ui.current_rpm: RPM actual
+    polyfill.ui.max_rpm: RPM máx
+    polyfill.ui.stress: Estrés
+    polyfill.ui.load: Carga
+    polyfill.ui.capacity: Capacidad
+    polyfill.ui.stress_minus: '− Estrés'
+    polyfill.ui.stress_plus: '+ Estrés'
+    polyfill.ui.stress_cap: Tope estrés
+    polyfill.ui.tune_click: click ± para ajustar
+    polyfill.ui.fluid: Fluido
+    polyfill.ui.amount: Cantidad
+    polyfill.ui.pressure: Presión
+    polyfill.ui.processing: Procesando
+    polyfill.ui.idle: Inactivo
+    polyfill.ui.furnace_title: Horno Mejorable
+  es_ar:
+    item.demo.conveyor: Cinta Transportadora
+    item.demo.conveyor_merger: Combinador de Cintas
+    item.demo.conveyor_splitter: Divisor de Cintas
+    item.demo.depot: Depósito
+    item.demo.conveyor_blueprint: Plano de Cinta
+    item.demo.depot_blueprint: Plano de Depósito
+    item.demo.vapor_motor_blueprint: Plano de Motor de Vapor
+    item.demo.wire_blueprint: Plano de Cable
+    item.demo.logistics_blueprint: Plano de Logística
+    item.demo.stone_gear: Engranaje de Piedra
+    item.demo.copper_gear: Engranaje de Cobre
+    item.demo.iron_gear: Engranaje de Hierro
+    item.demo.copper_wire: Cable de Cobre
+    item.demo.brass_shavings: Viruta de Latón
+    demo.bp.craftable_on: "Crafteable en:"
+    demo.bp.usage: "Uso:"
+    demo.bp.workbench: Mesa del Ingeniero
+    demo.bp.placeable: Colocable
+    demo.bp.reusable: Plano reutilizable (nunca se gasta)
+    demo.bp.autofill: "Click der.: llena 1 · Shift: llena máx"
+    demo.bp.multi: "Click derecho alterna sus recetas"
+    demo.item.component: Componente a vapor
+    demo.item.byproduct: Subproducto de mecanizado
+    polyfill.gas.empty: Vacío
+    polyfill.gas.steam: Vapor
+    polyfill.gas.heavy_steam: Vapor Pesado
+    polyfill.liquid.water: Agua
+    polyfill.liquid.lava: Lava
+    polyfill.liquid.slime: Slime
+    polyfill.liquid.experience: Experiencia
+    polyfill.liquid.powder_snow: Nieve Polvo
+    polyfill.liquid.milk: Leche
+    polyfill.liquid.honey: Miel
+    polyfill.liquid.empty: Vacío
+    polyfill.ui.vapor: Vapor
+    polyfill.ui.type: Tipo
+    polyfill.ui.stored: Almacenado
+    polyfill.ui.use: Consumo
+    polyfill.ui.output: Salida
+    polyfill.ui.rpm: RPM
+    polyfill.ui.sucap: Tope SU
+    polyfill.ui.su: SU
+    polyfill.ui.max: Máx
+    polyfill.ui.rpm_minus: '− RPM'
+    polyfill.ui.rpm_plus: '+ RPM'
+    polyfill.ui.su_minus: '− SU'
+    polyfill.ui.su_plus: '+ SU'
+    polyfill.ui.tune_hint: 'Click ±1 · Der ±8 · Q ±32 · Shift máx/mín'
+    polyfill.ui.upgrades: Mejoras
+    polyfill.ui.upgrades_desc: Abrir módulos de mejora
+    polyfill.ui.deplete: Vaciar Tanque
+    polyfill.ui.deplete_desc: Ventear todo el gas
+    polyfill.ui.back: Volver
+    polyfill.ui.active_slots: Slots activos
+    polyfill.ui.active_slots_desc: Aplican los slots superiores
+    polyfill.ui.motor_title: Motor de Vapor MkII
+    polyfill.ui.locked: Bloqueado
+    polyfill.ui.locked_desc: Agrega mejoras extra_slots para desbloquear
+    polyfill.ui.demand: Demanda
+    polyfill.ui.per_stress: Por estrés
+    polyfill.ui.current_rpm: RPM actual
+    polyfill.ui.max_rpm: RPM máx
+    polyfill.ui.stress: Estrés
+    polyfill.ui.load: Carga
+    polyfill.ui.capacity: Capacidad
+    polyfill.ui.stress_minus: '− Estrés'
+    polyfill.ui.stress_plus: '+ Estrés'
+    polyfill.ui.stress_cap: Tope estrés
+    polyfill.ui.tune_click: click ± para ajustar
+    polyfill.ui.fluid: Fluido
+    polyfill.ui.amount: Cantidad
+    polyfill.ui.pressure: Presión
+    polyfill.ui.processing: Procesando
+    polyfill.ui.idle: Inactivo
+    polyfill.ui.furnace_title: Horno Mejorable

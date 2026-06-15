@@ -1,0 +1,66 @@
+# DEPOT — dev.arubik.craftengine.conveyor.DepotBehavior (polyfills:depot)
+# A 14x14x14 buffer block that doubles as an inventory:
+#   - belts drop items into it (it is a ConveyorReceiver)
+#   - hoppers can insert/extract (any face)
+#   - emits a redstone COMPARATOR signal proportional to its fill level
+#   - NO GUI: right-click with an empty hand takes the last stack out; right-click with a
+#     held stack puts it in.
+#
+# Factory args (optional):
+#   size  : number of inventory slots / item types it can hold (default 27, max 54)
+#   title : internal container name
+#   sound-map : optional open/close/etc. sounds
+
+items:
+  demo:depot:
+    data:
+      item_name: "<!i><lang:item.demo.depot>"
+    model: minecraft:block/custom/conveyor_io/depot
+    behavior:
+      type: block_item
+      block: demo:depot
+
+blocks:
+  demo:depot:
+    loot:
+      template: default:loot_table/self
+    settings:
+      hardness: 1.2
+      resistance: 1.2
+      tags: ["minecraft:mineable/pickaxe"]
+      sounds:
+        break: minecraft:block.copper.break
+        place: minecraft:block.copper.place
+        step: minecraft:block.copper.step
+        hit: minecraft:block.copper.hit
+        fall: minecraft:block.copper.fall
+    behavior:
+      type: polyfills:depot
+      size: 27
+      title: "<gold>Depot"
+    states:
+      properties:
+        facing:
+          type: 4-direction
+          default: north
+      appearances:
+        default: { auto_state: solid, model: { path: minecraft:block/custom/conveyor_io/depot } }
+      variants:
+        "facing=north": { appearance: default }
+        "facing=east": { appearance: default }
+        "facing=south": { appearance: default }
+        "facing=west": { appearance: default }
+
+recipes:
+  demo:depot:
+    type: shaped
+    pattern:
+      - "CCC"
+      - "CBC"
+      - "CCC"
+    ingredients:
+      C: minecraft:copper_ingot
+      B: minecraft:barrel
+    result:
+      id: demo:depot
+      count: 1

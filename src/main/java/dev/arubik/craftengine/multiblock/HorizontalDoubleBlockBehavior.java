@@ -186,8 +186,20 @@ public class HorizontalDoubleBlockBehavior extends NmsBlockBehavior implements E
             BlockPos rightPos = HorizontalDoubleGeometry.rightCell(masterPos, facing);
 
             org.bukkit.block.Block rightBlock = world.getBlockAt(rightPos.x(), rightPos.y(), rightPos.z());
+
+            // IDEMPOTENT: onPlace fires more than once for the master (the partner's
+            // UPDATE_ALL re-triggers it). If the partner RIGHT half is already there,
+            // do nothing — otherwise the 2nd pass would see it as "occupied" (its
+            // auto_state host is a solid vanilla block) and wrongly abort the master.
+            ImmutableBlockState rightExisting = CraftEngineBlocks.getCustomBlockState(rightBlock);
+            if (rightExisting != null && isDoubleBlock(rightExisting) && halfOf(rightExisting) == Half.RIGHT) {
+                return;
+            }
+
             if (!isReplaceable(rightBlock)) {
-                // Don't leave a half structure: abort by removing the master.
+                // Both halves must fit or nothing places: abort by removing the master
+                // so the player never gets a half structure. (Creative gives the item
+                // back on break; survival drops it via the loot table.)
                 CraftEngineBlocks.remove(placed, false);
                 return;
             }

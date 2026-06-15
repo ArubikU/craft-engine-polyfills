@@ -1,60 +1,22 @@
 {
-  "parent": "block/block",
-  "textures": {
-    "top": "minecraft:block/custom/conveyor/belt_top",
-    "frame": "minecraft:block/custom/conveyor/belt_frame",
-    "particle": "minecraft:block/custom/conveyor/belt_frame"
-  },
-  "elements": [
-    {
-      "from": [
-        0.01,
-        0.01,
-        0
-      ],
-      "to": [
-        15.99,
-        3.99,
-        16
-      ],
-      "faces": {
-        "up": {
-          "uv": [
-            0,
-            0,
-            16,
-            16
-          ],
-          "texture": "#top"
-        },
-        "down": {
-          "uv": [
-            0,
-            4,
-            16,
-            12
-          ],
-          "texture": "#frame"
-        },
-        "east": {
-          "uv": [
-            0,
-            12,
-            16,
-            16
-          ],
-          "texture": "#frame"
-        },
-        "west": {
-          "uv": [
-            0,
-            12,
-            16,
-            16
-          ],
-          "texture": "#frame"
-        }
-      }
-    }
-  ]
+	"format_version": "1.21.11",
+	"credit": "Made by SR400X - https://linktr.ee/sr400x",
+	"parent": "block/block",
+	"textures": {
+		"top": "block/custom/conveyor/belt_top",
+		"particle": "block/custom/conveyor/belt_frame",
+		"frame": "block/custom/conveyor/belt_frame"
+	},
+	"elements": [
+		{
+			"from": [0.01, 0.01, 0],
+			"to": [15.99, 3.99, 16],
+			"faces": {
+				"east": {"uv": [0, 12, 16, 16], "texture": "#frame"},
+				"west": {"uv": [16, 12, 0, 16], "texture": "#frame"},
+				"up": {"uv": [0, 0, 16, 16], "texture": "#top"},
+				"down": {"uv": [0, 0, 16, 16], "texture": "#top"}
+			}
+		}
+	]
 }

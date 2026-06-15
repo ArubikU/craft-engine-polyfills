@@ -47,23 +47,69 @@ public class ConveyorWandListener implements Listener {
 
     @EventHandler
     public void onInteract(PlayerInteractEvent event) {
-        if (event.getAction() != Action.LEFT_CLICK_BLOCK)
+        Action action = event.getAction();
+        if (action != Action.LEFT_CLICK_BLOCK && action != Action.RIGHT_CLICK_BLOCK)
+            return;
+        // Only the main hand — PlayerInteractEvent fires once per hand.
+        if (event.getHand() != org.bukkit.inventory.EquipmentSlot.HAND)
             return;
         Block clicked = event.getClickedBlock();
         if (clicked == null)
             return;
 
         ItemStack hand = event.getPlayer().getInventory().getItemInMainHand();
+        // The wand is "any custom item whose block carries a ConveyorBehavior" — we
+        // must NOT compare against the behavior key (polyfills:conveyor); the real
+        // item/block id comes from config (e.g. demo:conveyor).
         Key handId = CraftEngineItems.getCustomItemId(hand);
-        if (!ConveyorBehavior.POLYFILL_CONVEYOR.equals(handId))
+        if (handId == null)
             return;
+        BlockDefinition conveyorDef = CraftEngineBlocks.byId(handId);
+        if (!isConveyorBlock(conveyorDef))
+            return;
+
+        // RIGHT-click: the conveyor item never drops loose blocks — always cancel the
+        // vanilla placement. If the clicked block IS a belt end, extend the line by one
+        // segment (END grows forward, START grows backward).
+        if (action == Action.RIGHT_CLICK_BLOCK) {
+            event.setCancelled(true);
+            ImmutableBlockState clickedState = CraftEngineBlocks.getCustomBlockState(clicked);
+            if (!isConveyorState(clickedState))
+                return;
+            CEWorld w = new BukkitWorld(clicked.getWorld()).storageWorld();
+            if (w == null)
+                return;
+            BlockPos cp = new BlockPos(clicked.getX(), clicked.getY(), clicked.getZ());
+            ConveyorBlockEntity seg = ConveyorBlockEntity.conveyorAt(w, cp);
+            if (seg == null)
+                return;
+            boolean grew;
+            if (seg.part() == ConveyorPart.START)
+                grew = seg.extendStart(w, cp, seg.facing(), seg.slope());
+            else
+                grew = seg.extend(w, cp, seg.facing(), seg.slope());
+            if (grew) {
+                org.bukkit.entity.Player pl = event.getPlayer();
+                if (pl.getGameMode() != org.bukkit.GameMode.CREATIVE) {
+                    ItemStack h = pl.getInventory().getItemInMainHand();
+                    h.setAmount(h.getAmount() - 1);
+                }
+            } else {
+                event.getPlayer().sendMessage("§cCannot extend belt here (blocked or max length).");
+            }
+            return;
+        }
 
         // It's our wand item: take over the left-click entirely.
         event.setCancelled(true);
 
         org.bukkit.entity.Player player = event.getPlayer();
         UUID id = player.getUniqueId();
-        BlockPos clickedPos = new BlockPos(clicked.getX(), clicked.getY(), clicked.getZ());
+        // Place against the clicked FACE (the adjacent cell), like normal block
+        // placement — otherwise the belt is placed inside the block that was hit.
+        org.bukkit.block.BlockFace face = event.getBlockFace();
+        Block target = face != null ? clicked.getRelative(face) : clicked;
+        BlockPos clickedPos = new BlockPos(target.getX(), target.getY(), target.getZ());
 
         BlockPos a = selections.get(id);
         if (a == null) {
@@ -100,13 +146,10 @@ public class ConveyorWandListener implements Listener {
             }
         }
 
-        // Require a vapor motor adjacent to A, facing into A.
-        if (!hasMotorFacingInto(world, bukkitWorld, a)) {
-            player.sendMessage("§cCannot place belt: no vapor motor facing point A.");
-            return;
-        }
+        // Belt placement no longer requires a vapor motor — the motor can be added
+        // later and the belt starts driving once one feeds RPM into the line.
 
-        BlockDefinition def = CraftEngineBlocks.byId(ConveyorBehavior.POLYFILL_CONVEYOR);
+        BlockDefinition def = conveyorDef;
         if (def == null) {
             player.sendMessage("§cCannot place belt: conveyor block not registered.");
             return;
@@ -114,22 +157,64 @@ public class ConveyorWandListener implements Listener {
 
         Direction facing = travelDirection(plan.steps().get(0).stepX, plan.steps().get(0).stepZ);
 
+        // In survival, the belt costs one item per segment — cap the run at how many
+        // belts the player is holding (and consume exactly that many).
+        boolean creative = player.getGameMode() == org.bukkit.GameMode.CREATIVE;
+        int budget = creative ? Integer.MAX_VALUE : hand.getAmount();
+        if (budget <= 0) {
+            player.sendMessage("§cCannot place belt: out of conveyor items.");
+            return;
+        }
+
         BlockPos prev = null;
         int placedCount = 0;
         for (ConveyorPath.Step s : plan.steps()) {
+            if (placedCount >= budget)
+                break;
             ImmutableBlockState newState = stateWith(def.defaultState(), facing, s.slope, s.part);
             Location loc = new Location(bukkitWorld, s.x, s.y, s.z);
             boolean placed = CraftEngineBlocks.place(loc, newState, UpdateFlags.UPDATE_ALL, false);
             if (!placed)
                 continue;
             placedCount++;
+            // Wipe any stale belt data (items/prevPos from a previously broken belt at
+            // this position) so the new segment starts clean.
+            try {
+                dev.arubik.craftengine.util.CustomBlockData.from(bukkitWorld.getBlockAt(s.x, s.y, s.z)).clear();
+            } catch (Throwable ignored) {
+            }
             BlockPos here = new BlockPos(s.x, s.y, s.z);
             ConveyorBlockEntity seg = ConveyorBlockEntity.conveyorAt(world, here);
             if (seg != null && prev != null)
                 seg.setPrevPos(prev);
             prev = here;
         }
+        if (!creative && placedCount > 0)
+            hand.setAmount(hand.getAmount() - placedCount);
         player.sendMessage("§aPlaced conveyor belt: " + placedCount + " segments.");
+    }
+
+    /** True when {@code def}'s default state carries a {@link ConveyorBehavior} (id-agnostic). */
+    private static boolean isConveyorBlock(BlockDefinition def) {
+        if (def == null)
+            return false;
+        return isConveyorState(def.defaultState());
+    }
+
+    /** True when {@code state}'s behavior is (or wraps) a {@link ConveyorBehavior}. */
+    private static boolean isConveyorState(ImmutableBlockState state) {
+        if (state == null)
+            return false;
+        Object b = state.behavior();
+        if (b instanceof ConveyorBehavior)
+            return true;
+        // CE wraps behaviors in DualBlockBehavior / CompositeBlockBehavior; both expose
+        // getFirst(Class) but only on the concrete type (not the shared interface).
+        if (b instanceof net.momirealms.craftengine.bukkit.block.behavior.DualBlockBehavior dual)
+            return dual.getFirst(ConveyorBehavior.class) != null;
+        if (b instanceof net.momirealms.craftengine.bukkit.block.behavior.CompositeBlockBehavior comp)
+            return comp.getFirst(ConveyorBehavior.class) != null;
+        return false;
     }
 
     /** True when a vapor motor sits adjacent to A and points (facing) at A. */

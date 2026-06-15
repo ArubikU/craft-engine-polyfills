@@ -27,9 +27,16 @@ public class MachineMenuListener implements Listener {
                         break;
                     case BUTTON:
                         event.setCancelled(true);
-                        var action = layout.getButtonAction(slot);
-                        if (action != null && event.getWhoClicked() instanceof org.bukkit.entity.Player player) {
-                            action.accept(menu.getMachine(), player);
+                        if (event.getWhoClicked() instanceof org.bukkit.entity.Player player) {
+                            var clickAction = layout.getClickButtonAction(slot);
+                            if (clickAction != null) {
+                                clickAction.accept(menu.getMachine(), player, event.getClick());
+                            } else {
+                                var action = layout.getButtonAction(slot);
+                                if (action != null) {
+                                    action.accept(menu.getMachine(), player);
+                                }
+                            }
                         }
                         break;
                     case OUTPUT:
@@ -42,6 +49,11 @@ public class MachineMenuListener implements Listener {
                         break;
                     case INPUT:
                     case FUEL:
+                        // Frozen slots (e.g. an upgrade holding others unlocked) reject changes.
+                        if (!menu.getMachine().canTakeFromSlot(slot)) {
+                            event.setCancelled(true);
+                            break;
+                        }
                         // Schedule sync for any change
                         scheduleSync(menu);
                         break;
