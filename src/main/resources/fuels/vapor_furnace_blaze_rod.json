@@ -1,0 +1,5 @@
+{
+    "type": "vapor_furnace_mk1",
+    "burnTime": 2400,
+    "input": { "type": "item", "id": "minecraft:blaze_rod", "amount": 1 }
+}

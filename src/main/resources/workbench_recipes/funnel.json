@@ -1,0 +1,1 @@
+{ "tool": "cml:funnel_blueprint", "pattern": ["CCC", "CGC"], "keys": { "C": "minecraft:copper_ingot", "G": "cml:iron_gear" }, "outputs": [ { "id": "cml:funnel", "count": 1 } ] }

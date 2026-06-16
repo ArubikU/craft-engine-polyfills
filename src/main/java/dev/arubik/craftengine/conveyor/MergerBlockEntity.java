@@ -25,18 +25,20 @@ public class MergerBlockEntity extends AbstractRouterBlockEntity {
     }
 
     @Override
-    protected void route(CEWorld world, BlockPos pos) {
+    protected Direction[] inputSides() {
+        Direction f = facing();
+        return new Direction[] { f.opposite(), ConveyorRouting.cw(f), ConveyorRouting.ccw(f) }; // back/left/right
+    }
+
+    @Override
+    protected Direction[] outputSides() {
+        return new Direction[] { facing() }; // front: the single output belt
+    }
+
+    @Override
+    protected Direction chooseExit(CEWorld world, BlockPos pos) {
         Direction out = facing();
-        // Push as many buffered stacks forward as the downstream receiver accepts this
-        // tick (a belt only takes one when its entry point is clear, so this self-paces).
-        for (int i = 0; i < slots; i++) {
-            if (slotEmpty(i))
-                continue;
-            org.bukkit.inventory.ItemStack stack = bukkitSlot(i);
-            if (ConveyorRouting.push(world, pos, out, stack))
-                clearSlot(i);
-            else
-                break; // downstream full -> hold everything (backpressure)
-        }
+        ConveyorReceiver r = ConveyorRouting.receiverAt(world, pos, out);
+        return (r != null && !r.isFull()) ? out : null; // single output: front
     }
 }

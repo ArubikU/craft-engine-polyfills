@@ -188,6 +188,16 @@ public class GasPipeBehavior extends ConnectedBlockBehavior implements EntityBlo
     }
 
     @Override
+    protected Class<?> carrierClass() {
+        return GasCarrier.class;
+    }
+
+    @Override
+    protected dev.arubik.craftengine.multiblock.IOConfiguration.IOType carrierIOType() {
+        return dev.arubik.craftengine.multiblock.IOConfiguration.IOType.GAS;
+    }
+
+    @Override
     public dev.arubik.craftengine.util.TransferAccessMode getAccessMode() {
         return dev.arubik.craftengine.util.TransferAccessMode.ANYONE_CAN_TAKE;
     }
@@ -219,17 +229,27 @@ public class GasPipeBehavior extends ConnectedBlockBehavior implements EntityBlo
         BlockPos targetPos = offset(from, dir);
         BlockState targetState = level.getBlockState(targetPos);
 
-        // Check neighbor IO Configuration if available
+        // Check neighbor IO Configuration if available. Unwrap Composite/Dual wrappers so machines
+        // and multiblocks are still seen as GasCarriers.
         var customOpt = BlockStateUtils.getOptionalCustomBlockState(targetState);
         GasCarrier targetCarrier = customOpt
-                .map(cs -> cs.behavior() instanceof GasCarrier fc ? fc : null)
+                .map(cs -> {
+                    BlockBehavior b = cs.behavior();
+                    if (b instanceof GasCarrier fc)
+                        return fc;
+                    return b == null ? null : b.getFirst(GasCarrier.class);
+                })
                 .orElse(null);
 
         net.minecraft.core.Direction fromTarget = Utils.oppositeDirection(dir);
 
         if (customOpt.isPresent()) {
-            BlockBehavior behavior = customOpt.get().behavior();
-            if (behavior instanceof dev.arubik.craftengine.block.behavior.ConnectableBlockBehavior connectable) {
+            BlockBehavior raw = customOpt.get().behavior();
+            dev.arubik.craftengine.block.behavior.ConnectableBlockBehavior connectable =
+                    raw instanceof dev.arubik.craftengine.block.behavior.ConnectableBlockBehavior c ? c
+                            : (raw == null ? null
+                                    : raw.getFirst(dev.arubik.craftengine.block.behavior.ConnectableBlockBehavior.class));
+            if (connectable != null) {
                 IOConfiguration targetConfig = connectable.getIOConfiguration(level, targetPos);
                 Direction targetLocalDir = connectable.toLocalDirection(fromTarget, targetState);
 

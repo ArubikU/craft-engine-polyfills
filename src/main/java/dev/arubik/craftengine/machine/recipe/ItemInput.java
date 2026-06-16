@@ -31,7 +31,10 @@ public class ItemInput implements RecipeInput {
         return true;
     }
 
-    @Override
+    public ItemStack getStack() {
+        return required;
+    }
+
     public int getAmount() {
         return required.getCount();
     }

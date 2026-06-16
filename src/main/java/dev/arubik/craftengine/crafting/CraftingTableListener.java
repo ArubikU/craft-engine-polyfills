@@ -106,6 +106,11 @@ public final class CraftingTableListener implements Listener {
         if (!(event.getInventory().getHolder() instanceof AbstractCraftingMenu menu)) {
             return;
         }
+        // Shared inventory: only finalize (return inputs + persist) when the LAST viewer closes.
+        // During this event the closing player still counts as a viewer, so size 1 = last.
+        if (event.getInventory().getViewers().size() > 1) {
+            return;
+        }
         if (event.getPlayer() instanceof Player player) {
             menu.returnInputs(player);
         }

@@ -1,0 +1,12 @@
+{
+  "type": "crusher",
+  "time": 100,
+  "fuelRequired": false,
+  "rpm": 16,
+  "su": 8,
+  "inputs": [ { "type": "custom_item", "id": "cml:bauxite_ore", "amount": 1 } ],
+  "outputs": [
+    { "type": "custom_item", "id": "cml:bauxite_scraping", "amount": 2, "chance": 1.0 },
+    { "type": "custom_item", "id": "cml:bauxite_scraping", "amount": 1, "chance": 0.25 }
+  ]
+}

@@ -91,11 +91,20 @@ public class BlockBehaviors {
                                 dev.arubik.craftengine.machine.examples.UpgradeableFurnaceBehavior.POLYFILL_UPGRADEABLE_FURNACE,
                                 dev.arubik.craftengine.machine.examples.UpgradeableFurnaceBehavior.FACTORY);
                 RegistryUtils.registerBlockBehavior(
-                                dev.arubik.craftengine.rotation.VaporMotorBehavior.POLYFILL_VAPOR_MOTOR,
-                                dev.arubik.craftengine.rotation.VaporMotorBehavior.FACTORY);
+                                dev.arubik.craftengine.rotation.GasMotorMk1Behavior.POLYFILL_GAS_MOTOR_MK1,
+                                dev.arubik.craftengine.rotation.GasMotorMk1Behavior.FACTORY);
                 RegistryUtils.registerBlockBehavior(
-                                dev.arubik.craftengine.rotation.AdvancedVaporMotorBehavior.POLYFILL_ADVANCED_VAPOR_MOTOR,
-                                dev.arubik.craftengine.rotation.AdvancedVaporMotorBehavior.FACTORY);
+                                dev.arubik.craftengine.machine.examples.VaporFurnaceMk1Behavior.POLYFILL_VAPOR_FURNACE_MK1,
+                                dev.arubik.craftengine.machine.examples.VaporFurnaceMk1Behavior.FACTORY);
+                RegistryUtils.registerBlockBehavior(
+                                dev.arubik.craftengine.machine.examples.CrusherBehavior.POLYFILL_CRUSHER,
+                                dev.arubik.craftengine.machine.examples.CrusherBehavior.FACTORY);
+                RegistryUtils.registerBlockBehavior(
+                                dev.arubik.craftengine.machine.examples.SmelteryBehavior.POLYFILL_SMELTERY,
+                                dev.arubik.craftengine.machine.examples.SmelteryBehavior.FACTORY);
+                RegistryUtils.registerBlockBehavior(
+                                dev.arubik.craftengine.machine.examples.RefineryBehavior.POLYFILL_REFINERY,
+                                dev.arubik.craftengine.machine.examples.RefineryBehavior.FACTORY);
                 RegistryUtils.registerBlockBehavior(
                                 dev.arubik.craftengine.conveyor.ConveyorBehavior.POLYFILL_CONVEYOR,
                                 dev.arubik.craftengine.conveyor.ConveyorBehavior.FACTORY);
@@ -108,6 +117,9 @@ public class BlockBehaviors {
                 RegistryUtils.registerBlockBehavior(
                                 dev.arubik.craftengine.conveyor.DepotBehavior.FACTORY_KEY,
                                 dev.arubik.craftengine.conveyor.DepotBehavior.FACTORY);
+                RegistryUtils.registerBlockBehavior(
+                                dev.arubik.craftengine.conveyor.FunnelBehavior.FACTORY_KEY,
+                                dev.arubik.craftengine.conveyor.FunnelBehavior.FACTORY);
                 RegistryUtils.registerBlockBehavior(
                                 dev.arubik.craftengine.crafting.CraftingTableBehavior.FACTORY_KEY,
                                 dev.arubik.craftengine.crafting.CraftingTableBehavior.FACTORY);

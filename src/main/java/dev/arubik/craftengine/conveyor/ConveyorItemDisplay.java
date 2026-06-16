@@ -66,6 +66,20 @@ public final class ConveyorItemDisplay {
         this.rotation = next;
     }
 
+    /** Display scale (block units). Default 0.5 = half a block (belt item). */
+    private org.joml.Vector3f scale = new org.joml.Vector3f(0.5f, 0.5f, 0.5f);
+
+    public void setScale(float s) {
+        setScale(s, s, s);
+    }
+
+    public void setScale(float x, float y, float z) {
+        org.joml.Vector3f next = new org.joml.Vector3f(x, y, z);
+        if (!next.equals(this.scale, 1e-4f))
+            this.rotationDirty = true; // metadata needs a re-push
+        this.scale = next;
+    }
+
     /** Consume the rotation-changed flag (so callers re-send metadata only when needed). */
     public boolean consumeRotationDirty() {
         boolean d = rotationDirty;
@@ -79,8 +93,8 @@ public final class ConveyorItemDisplay {
         if (nmsItemStack != null) {
             DisplayData.ItemDisplayData.ItemStack.addEntityData(nmsItemStack, values);
         }
-        // Render the item at roughly half scale so it sits on the belt.
-        DisplayData.Scale.addEntityData(new Vector3f(0.5f, 0.5f, 0.5f), values);
+        // Render the item at the configured scale (default half a block, for the belt).
+        DisplayData.Scale.addEntityData(scale, values);
         // Force full block+sky light so the item never renders pitch-black in shade.
         // Brightness override packs (blockLight << 4) | (skyLight << 20); 15/15 = full.
         DisplayData.BrightnessOverride.addEntityData((15 << 4) | (15 << 20), values);

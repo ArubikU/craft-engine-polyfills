@@ -1,6 +1,6 @@
 {
-  "tool": "demo:depot_blueprint",
+  "tool": "cml:depot_blueprint",
   "pattern": ["III", "CGC"],
-  "keys": { "I": "minecraft:iron_ingot", "C": "minecraft:copper_ingot", "G": "demo:iron_gear" },
-  "outputs": [ { "id": "demo:depot", "count": 1 } ]
+  "keys": { "I": "minecraft:iron_ingot", "C": "minecraft:copper_ingot", "G": "cml:iron_gear" },
+  "outputs": [ { "id": "cml:depot", "count": 1 } ]
 }

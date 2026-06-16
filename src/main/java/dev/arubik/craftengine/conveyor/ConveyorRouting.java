@@ -75,11 +75,16 @@ final class ConveyorRouting {
      * @return true if a receiver accepted the whole stack.
      */
     static boolean push(CEWorld world, BlockPos pos, Direction dir, org.bukkit.inventory.ItemStack stack) {
+        return push(world, pos, dir, stack, 0f);
+    }
+
+    /** Push carrying the item's yaw {@code jitter} so its rotation stays consistent across the hop. */
+    static boolean push(CEWorld world, BlockPos pos, Direction dir, org.bukkit.inventory.ItemStack stack, float jitter) {
         if (stack == null || stack.getType().isAir())
             return false;
         ConveyorReceiver r = receiverAt(world, pos, dir);
         if (r == null || r.isFull())
             return false;
-        return r.receiveConveyorItem(stack, dir);
+        return r.receiveConveyorItem(stack, dir, jitter);
     }
 }

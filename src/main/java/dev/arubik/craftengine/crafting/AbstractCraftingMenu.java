@@ -57,6 +57,20 @@ public abstract class AbstractCraftingMenu implements InventoryHolder {
         drawBackground();
     }
 
+    /** Component-title variant (e.g. a custom-GUI image glyph). */
+    protected AbstractCraftingMenu(SlotLayout layout, net.kyori.adventure.text.Component title) {
+        this.layout = layout;
+        int rows = Math.max(1, Math.min(6, (layout.size() + 8) / 9));
+        this.inventory = Bukkit.createInventory(this, rows * 9,
+                title != null ? title : net.kyori.adventure.text.Component.text("Crafting"));
+        drawBackground();
+    }
+
+    /** The item used to fill BACKGROUND slots. Override to customise (e.g. an invisible filler). */
+    protected ItemStack backgroundItem() {
+        return FILLER;
+    }
+
     // ---- subclass contract ----
 
     /** Resolve the recipe matched by the current input grid (e.g. a registry). */
@@ -206,7 +220,7 @@ public abstract class AbstractCraftingMenu implements InventoryHolder {
     private void drawBackground() {
         for (int i = 0; i < inventory.getSize(); i++) {
             if (layout.isBackground(i)) {
-                inventory.setItem(i, FILLER.clone());
+                inventory.setItem(i, backgroundItem().clone());
             }
         }
     }
@@ -230,6 +244,7 @@ public abstract class AbstractCraftingMenu implements InventoryHolder {
             for (int s : outSlots) {
                 inventory.setItem(s, null);
             }
+            afterRecompute();
             return;
         }
         List<CraftCell> outputs = lastMatch.outputs(grid);
@@ -237,6 +252,11 @@ public abstract class AbstractCraftingMenu implements InventoryHolder {
             CraftCell cell = i < outputs.size() ? outputs.get(i) : CraftCell.EMPTY;
             inventory.setItem(outSlots.get(i), CraftItemAdapter.toBukkit(cell));
         }
+        afterRecompute();
+    }
+
+    /** Hook invoked at the end of every {@link #recompute()} (default no-op). */
+    protected void afterRecompute() {
     }
 
     // ---- crafting ----
@@ -452,6 +472,11 @@ public abstract class AbstractCraftingMenu implements InventoryHolder {
         for (int s : layout.returnOnCloseSlots()) {
             returnSlot(player, s);
         }
+        onMenuClosed(player);
+    }
+
+    /** Hook invoked at the end of close handling (after returns). Default no-op. */
+    protected void onMenuClosed(Player player) {
     }
 
     private void returnSlot(Player player, int s) {

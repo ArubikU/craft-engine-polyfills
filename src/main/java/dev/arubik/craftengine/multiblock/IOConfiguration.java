@@ -136,7 +136,8 @@ public interface IOConfiguration {
         GAS, // Gas in mB (default 1000 mB/tick)
         ENERGY, // Energy (default 1000 FE/tick)
         XP, // Experience points (default 100/tick)
-        REDSTONE;
+        REDSTONE,
+        FUNNEL; // Conveyor-belt item IO: belt feeds input / machine ejects output onto a belt
     }
 
     /**

@@ -1,0 +1,5 @@
+{
+    "type": "vapor_furnace_mk1",
+    "burnTime": 4000,
+    "input": { "type": "item", "id": "minecraft:dried_kelp_block", "amount": 1 }
+}

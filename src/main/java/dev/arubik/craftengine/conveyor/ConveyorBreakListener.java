@@ -33,6 +33,19 @@ public final class ConveyorBreakListener implements Listener {
         if (world == null)
             return;
         BlockPos pos = new BlockPos(block.getX(), block.getY(), block.getZ());
+        // Funnel / router (splitter/merger) also hold an in-transit render display whose
+        // affectNeighborsAfterRemoval is unreliable on creative player breaks -> despawn here.
+        net.momirealms.craftengine.core.block.entity.BlockEntity be = world.getBlockEntityAtIfLoaded(pos);
+        if (be != null) {
+            if (be.controller instanceof FunnelBlockEntity f) {
+                f.dropTransit();
+                return;
+            }
+            if (be.controller instanceof AbstractRouterBlockEntity r) {
+                r.dropAndDespawn();
+                return;
+            }
+        }
         ConveyorBlockEntity seg = ConveyorBlockEntity.conveyorAt(world, pos);
         if (seg == null)
             return;

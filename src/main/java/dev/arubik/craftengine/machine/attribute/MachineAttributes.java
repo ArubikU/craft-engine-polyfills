@@ -39,14 +39,15 @@ public final class MachineAttributes {
 
     // ---- standard machine attributes (base values) ----
     public static final Key OVERCLOCK_LIMIT = Key.of("polyfill", "overclock_limit"); // extra oc headroom (frac)
-    public static final Key GAS_EFFICIENCY = Key.of("polyfill", "gas_efficiency");   // gas reduction (frac, 0..)
+    /** Reduces fuel/gas/energy consumption (fraction). Generic so one upgrade fits any machine. */
+    public static final Key FUEL_EFFICIENCY = Key.of("polyfill", "fuel_efficiency");
     public static final Key GENERATION = Key.of("polyfill", "generation");           // output bonus (frac)
     public static final Key EXTRA_SLOTS = Key.of("polyfill", "extra_slots");         // unlocked upgrade slots
 
     private static final Map<Key, Double> BASES = new HashMap<>();
     static {
         BASES.put(OVERCLOCK_LIMIT, 0.0);
-        BASES.put(GAS_EFFICIENCY, 0.0);
+        BASES.put(FUEL_EFFICIENCY, 0.0);
         BASES.put(GENERATION, 0.0);
         BASES.put(EXTRA_SLOTS, 0.0);
     }

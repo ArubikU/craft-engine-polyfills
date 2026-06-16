@@ -29,4 +29,12 @@ public interface ConveyorReceiver {
      *         leave it on the belt (stall).
      */
     boolean receiveConveyorItem(org.bukkit.inventory.ItemStack stack, Direction sourceFacing);
+
+    /**
+     * Same, but carrying the item's current yaw {@code jitter} (radians) so its rotation stays
+     * consistent across hops (belt -> router -> belt). Default ignores it.
+     */
+    default boolean receiveConveyorItem(org.bukkit.inventory.ItemStack stack, Direction sourceFacing, float jitter) {
+        return receiveConveyorItem(stack, sourceFacing);
+    }
 }

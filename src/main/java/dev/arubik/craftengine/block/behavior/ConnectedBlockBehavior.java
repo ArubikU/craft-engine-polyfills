@@ -104,6 +104,76 @@ public class ConnectedBlockBehavior extends ConnectableBlockBehavior {
         return false;
     }
 
+    /** True if {@code beh} (possibly a Composite/Dual wrapper) exposes capability {@code cc}. */
+    @SuppressWarnings("unchecked")
+    private static boolean hasCapability(Object beh, Class<?> cc) {
+        if (beh == null)
+            return false;
+        if (cc.isInstance(beh))
+            return true;
+        // CE BlockBehavior exposes getFirst(Class) and it resolves interfaces (see FluidTransferHelper).
+        if (beh instanceof net.momirealms.craftengine.core.block.behavior.BlockBehavior bb) {
+            try {
+                return bb.getFirst((Class<Object>) cc) != null;
+            } catch (Throwable ignored) {
+            }
+        }
+        return false;
+    }
+
+    /**
+     * The carrier capability this connected block links to (e.g. {@code FluidCarrier.class} for a
+     * fluid pipe). Returns {@code null} to disable capability-based connection. Override in pipes.
+     */
+    protected Class<?> carrierClass() {
+        return null;
+    }
+
+    /** The IO type this carrier transfers (FLUID / GAS), used to filter connection per-face. */
+    protected dev.arubik.craftengine.multiblock.IOConfiguration.IOType carrierIOType() {
+        return null;
+    }
+
+    /**
+     * Capability- AND face-aware connection: link to a neighbour that exposes this pipe's carrier
+     * AND whose IO config accepts/provides this pipe's type on the touched LOCAL face — so a fluid
+     * pipe only connects to fluid faces, not item faces of the same multiblock.
+     */
+    protected boolean carrierConnectsHere(Direction direction, BlockState neighborState, Level level,
+            BlockPos neighborPos) {
+        Class<?> cc = carrierClass();
+        dev.arubik.craftengine.multiblock.IOConfiguration.IOType type = carrierIOType();
+        if (cc == null || type == null)
+            return false;
+        Optional<ImmutableBlockState> opt = BlockStateUtils.getOptionalCustomBlockState(neighborState);
+        if (opt.isEmpty())
+            return false;
+        Object beh = opt.get().behavior();
+        boolean cap = hasCapability(beh, cc);
+        if (dev.arubik.craftengine.machine.block.entity.AbstractMachineBlockEntity.DEBUG_IO)
+            System.out.println("[PipeConnect] dir=" + direction + " neigh=" + neighborPos.toShortString()
+                    + " beh=" + (beh == null ? "null" : beh.getClass().getSimpleName()) + " cap=" + cap);
+        if (!cap)
+            return false;
+        ConnectableBlockBehavior conn = beh instanceof ConnectableBlockBehavior c ? c
+                : (beh instanceof net.momirealms.craftengine.core.block.behavior.BlockBehavior bb
+                        ? bb.getFirst(ConnectableBlockBehavior.class)
+                        : null);
+        if (conn == null)
+            return false;
+        Direction opp = Utils.oppositeDirection(direction);
+        dev.arubik.craftengine.multiblock.IOConfiguration cfg = conn.getIOConfiguration(level, neighborPos);
+        // A carrier without a directional IO config (e.g. the creative gas tank) just connects.
+        if (cfg == null)
+            return true;
+        Direction local = conn.toLocalDirection(opp, neighborState);
+        boolean ok = cfg.acceptsInput(type, local) || cfg.providesOutput(type, local);
+        if (dev.arubik.craftengine.machine.block.entity.AbstractMachineBlockEntity.DEBUG_IO)
+            System.out.println("[PipeConnect] dir=" + direction + " neigh=" + neighborPos.toShortString()
+                    + " type=" + type + " local=" + local + " -> " + ok);
+        return ok;
+    }
+
     public boolean isConnectedTo(Direction direction, BlockPos pos, Level level) {
         BlockState state = level.getBlockState(pos);
         ImmutableBlockState relativeState = BlockStateUtils.getOptionalCustomBlockState(state).orElse(null);
@@ -161,6 +231,11 @@ public class ConnectedBlockBehavior extends ConnectableBlockBehavior {
             if (neighborCanConnectBack(direction, relativeState, level, relativePos)) {
                 return true;
             }
+        }
+        // Capability + type + face: connect to carriers (tanks, machines, multiblocks) only on a
+        // face that actually handles this pipe's resource type.
+        if (carrierConnectsHere(direction, relativeState, level, relativePos)) {
+            return true;
         }
         return false;
     }

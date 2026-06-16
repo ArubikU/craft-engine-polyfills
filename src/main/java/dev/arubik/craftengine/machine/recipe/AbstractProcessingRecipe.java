@@ -15,6 +15,23 @@ public class AbstractProcessingRecipe {
     protected boolean fuelRequired = true;
     protected boolean requireOverclocked = false; // Only works when machine is overclocked
     protected final List<RecipeCondition> conditions;
+    /** Optional mechanical requirements: minimum RPM to run, and SU load imposed while running. */
+    protected int minRpm = 0;
+    protected int suCost = 0;
+
+    public int getMinRpm() {
+        return minRpm;
+    }
+
+    public int getSuCost() {
+        return suCost;
+    }
+
+    public AbstractProcessingRecipe setMechanical(int minRpm, int suCost) {
+        this.minRpm = Math.max(0, minRpm);
+        this.suCost = Math.max(0, suCost);
+        return this;
+    }
 
     public AbstractProcessingRecipe(List<RecipeInput> inputs, List<RecipeOutput> outputs, int processTime) {
         this.inputs = inputs;

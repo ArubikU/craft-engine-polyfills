@@ -50,13 +50,14 @@ public class RecipeManager {
         File recipeFolder = new File(dataFolder, "recipes");
         if (!recipeFolder.exists()) {
             recipeFolder.mkdirs();
+            seedBundled("recipes");
         }
         loadRecursive(recipeFolder, false);
 
         File fuelFolder = new File(dataFolder, "fuels");
         if (!fuelFolder.exists()) {
             fuelFolder.mkdirs();
-            // createDefaults(fuelFolder);
+            seedBundled("fuels");
         }
         loadRecursive(fuelFolder, true);
 
@@ -64,6 +65,13 @@ public class RecipeManager {
                 .info("Loaded " + RECIPES.values().stream().mapToInt(List::size).sum() + " recipes.");
         CraftEnginePolyfills.instance().getLogger()
                 .info("Loaded " + FUELS.values().stream().mapToInt(List::size).sum() + " fuel types.");
+    }
+
+    /** Copy bundled jar resources under {@code dir/} into the data folder on first run. */
+    private static void seedBundled(String dir) {
+        for (String res : CraftEnginePolyfills.instance().listBundledResources(dir, ".json")) {
+            CraftEnginePolyfills.instance().saveDefaultResource(res);
+        }
     }
 
     private static void loadRecursive(File directory, boolean isFuel) {
@@ -140,6 +148,8 @@ public class RecipeManager {
         AbstractProcessingRecipe recipe = new AbstractProcessingRecipe(inputs, outputs, time);
         recipe.setFuelRequired(fuelRequired);
         recipe.setRequireOverclocked(requireOverclocked);
+        recipe.setMechanical(json.has("rpm") ? json.get("rpm").getAsInt() : 0,
+                json.has("su") ? json.get("su").getAsInt() : 0);
         for (RecipeCondition c : conditions) {
             recipe.addCondition(c);
         }
@@ -202,6 +212,9 @@ public class RecipeManager {
         } else if ("fluid".equals(type)) {
             FluidType fType = FluidType.valueOf(obj.get("id").getAsString().toUpperCase());
             return new FluidInput(new FluidStack(fType, amount), false);
+        } else if ("gas".equals(type)) {
+            GasType gType = GasType.valueOf(obj.get("id").getAsString().toUpperCase());
+            return new GasInput(new GasStack(gType, amount));
         }
         throw new IllegalArgumentException("Unknown input type: " + type);
     }
@@ -224,6 +237,9 @@ public class RecipeManager {
         } else if ("gas".equals(type)) {
             GasType gType = GasType.valueOf(obj.get("id").getAsString().toUpperCase());
             return new GasOutput(new GasStack(gType, amount), chance);
+        } else if ("fluid".equals(type)) {
+            FluidType fType = FluidType.valueOf(obj.get("id").getAsString().toUpperCase());
+            return new FluidOutput(new FluidStack(fType, amount), chance);
         } else if ("xp".equals(type)) {
             return new XpOutput((float) amount);
         }

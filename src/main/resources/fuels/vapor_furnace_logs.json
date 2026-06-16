@@ -1,0 +1,5 @@
+{
+    "type": "vapor_furnace_mk1",
+    "burnTime": 300,
+    "input": { "type": "item_tag", "tag": "minecraft:logs", "amount": 1 }
+}

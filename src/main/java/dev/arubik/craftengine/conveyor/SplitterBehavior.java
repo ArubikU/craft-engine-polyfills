@@ -55,7 +55,7 @@ public class SplitterBehavior extends dev.arubik.craftengine.util.NmsBlockBehavi
             BlockPos pos = new BlockPos(nmsPos.getX(), nmsPos.getY(), nmsPos.getZ());
             BlockEntity be = world.getBlockEntityAtIfLoaded(pos);
             if (be != null && be.controller instanceof AbstractRouterBlockEntity r)
-                RouterDrops.dropBuffer(world, pos, r);
+                r.dropAndDespawn();
         } catch (Throwable ignored) {
         }
     }

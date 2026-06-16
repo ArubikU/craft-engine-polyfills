@@ -229,7 +229,7 @@ public class ConveyorWandListener implements Listener {
             BlockPos neighbor = a.relative(d);
             BlockEntity be = world.getBlockEntityAtIfLoaded(neighbor);
             if (be == null
-                    || !(be.controller instanceof dev.arubik.craftengine.rotation.VaporMotorBlockEntity motor))
+                    || !(be.controller instanceof dev.arubik.craftengine.rotation.GasMotorMk1BlockEntity motor))
                 continue;
             net.minecraft.core.Direction mf = null;
             try {

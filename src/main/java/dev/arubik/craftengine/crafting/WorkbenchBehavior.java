@@ -48,6 +48,27 @@ public class WorkbenchBehavior extends HorizontalDoubleBlockBehavior {
     private final String title;
     private final StationRecipeRegistry registry;
 
+    // ---- tabletop render config (pixel coords authored for facing=south; rotate with facing) ----
+    public float[] blueprintPos = { 4f, 13.5f, 4f };
+    public float blueprintScale = 0.5f;
+    public float[] outputPos = { 4f, 13.5f, 4f };
+    public float outputScale = 0.375f;
+    public float[] output2Offset = { 3f, 1f, 0f }; // added to outputPos for a 2nd output
+    // Extra rotation (degrees, X/Y/Z) applied to each item after it's laid flat on the table.
+    public float[] blueprintRotation = { 0f, 0f, 0f };
+    public float[] outputRotation = { 0f, 0f, 0f };
+    public float[] output2Rotation = { 0f, 0f, 22f };
+
+    /** Per-item-id ADDITIVE render tweak (added on top of the slot's base pos/rotation/scale). */
+    public static final class RenderOverride {
+        public float[] pos = { 0f, 0f, 0f };
+        public float[] rot = { 0f, 0f, 0f };
+        public float scale = 0f;
+    }
+
+    /** item-id (e.g. "cml:funnel") -> additive render override. Empty = no overrides. */
+    public final java.util.Map<String, RenderOverride> renders = new java.util.HashMap<>();
+
     public WorkbenchBehavior(BlockDefinition block, String title, StationRecipeRegistry registry,
             String facingProperty, String halfProperty) {
         super(block, facingProperty, halfProperty);
@@ -56,7 +77,19 @@ public class WorkbenchBehavior extends HorizontalDoubleBlockBehavior {
     }
 
     protected AbstractCraftingMenu createMenu(Player player) {
-        return new WorkbenchMenu(title, registry);
+        return new WorkbenchMenu(title, registry, null);
+    }
+
+    protected AbstractCraftingMenu createMenu(Player player, WorkbenchBlockEntity be) {
+        return new WorkbenchMenu(title, registry, be);
+    }
+
+    @Override
+    protected net.momirealms.craftengine.core.block.entity.BlockEntityController createMasterController(
+            net.momirealms.craftengine.core.block.entity.BlockEntity blockEntity) {
+        WorkbenchBlockEntity be = new WorkbenchBlockEntity(blockEntity);
+        be.setConfig(this); // pass parsed render config directly (getBlockBehavior() returns null here)
+        return be;
     }
 
     /**
@@ -69,7 +102,21 @@ public class WorkbenchBehavior extends HorizontalDoubleBlockBehavior {
         try {
             if (context.getPlayer() instanceof BukkitServerPlayer cePlayer
                     && cePlayer.platformPlayer() instanceof Player bukkit) {
-                AbstractCraftingMenu menu = createMenu(bukkit);
+                WorkbenchBlockEntity be = null;
+                try {
+                    net.momirealms.craftengine.core.world.CEWorld cw =
+                            new net.momirealms.craftengine.bukkit.world.BukkitWorld(bukkit.getWorld()).storageWorld();
+                    net.momirealms.craftengine.core.block.entity.BlockEntity bent =
+                            cw.getBlockEntityAtIfLoaded(masterPos);
+                    if (bent != null && bent.controller instanceof WorkbenchBlockEntity wbe)
+                        be = wbe;
+                } catch (Throwable ignored2) {
+                }
+                if (be != null) {
+                    be.openMenu(bukkit, title, registry); // shared inventory -> no blueprint dup
+                    return InteractionResult.SUCCESS_AND_CANCEL;
+                }
+                AbstractCraftingMenu menu = createMenu(bukkit, be);
                 if (menu != null) {
                     menu.open(bukkit);
                     return InteractionResult.SUCCESS_AND_CANCEL;
@@ -87,7 +134,52 @@ public class WorkbenchBehavior extends HorizontalDoubleBlockBehavior {
             String title = (String) arguments.getOrDefault("title", "Engineer's Workbench");
             String facingProp = (String) arguments.getOrDefault("facing_property", DEFAULT_FACING_PROPERTY);
             String halfProp = (String) arguments.getOrDefault("half_property", DEFAULT_HALF_PROPERTY);
-            return new WorkbenchBehavior(block, title, StationRecipeRegistry.global(), facingProp, halfProp);
+            WorkbenchBehavior b = new WorkbenchBehavior(block, title, StationRecipeRegistry.global(), facingProp, halfProp);
+            b.blueprintPos = vec(arguments, "blueprint_pos", b.blueprintPos);
+            b.blueprintScale = flt(arguments, "blueprint_scale", b.blueprintScale);
+            b.outputPos = vec(arguments, "output_pos", b.outputPos);
+            b.outputScale = flt(arguments, "output_scale", b.outputScale);
+            b.output2Offset = vec(arguments, "output2_offset", b.output2Offset);
+            b.blueprintRotation = vec(arguments, "blueprint_rotation", b.blueprintRotation);
+            b.outputRotation = vec(arguments, "output_rotation", b.outputRotation);
+            b.output2Rotation = vec(arguments, "output2_rotation", b.output2Rotation);
+            Object rnd = arguments.get("renders");
+            if (rnd instanceof java.util.Map<?, ?> m) {
+                for (java.util.Map.Entry<?, ?> e : m.entrySet()) {
+                    if (!(e.getValue() instanceof java.util.Map<?, ?> v))
+                        continue;
+                    RenderOverride r = new RenderOverride();
+                    r.pos = vecMap(v, "pos", r.pos);
+                    r.rot = vecMap(v, "rotation", r.rot);
+                    Object sc = v.get("scale");
+                    r.scale = sc instanceof Number n ? n.floatValue() : 0f;
+                    b.renders.put(String.valueOf(e.getKey()), r);
+                }
+            }
+            return b;
+        }
+
+        private static float flt(ConfigSection a, String key, float def) {
+            Object v = a.get(key);
+            return v instanceof Number n ? n.floatValue() : def;
+        }
+
+        private static float[] vec(ConfigSection a, String key, float[] def) {
+            return toVec(a.get(key), def);
+        }
+
+        private static float[] vecMap(java.util.Map<?, ?> a, String key, float[] def) {
+            return toVec(a.get(key), def);
+        }
+
+        private static float[] toVec(Object v, float[] def) {
+            if (v instanceof java.util.List<?> l && l.size() >= 3) {
+                float[] out = new float[3];
+                for (int i = 0; i < 3; i++)
+                    out[i] = l.get(i) instanceof Number n ? n.floatValue() : def[i];
+                return out;
+            }
+            return def;
         }
     }
 }

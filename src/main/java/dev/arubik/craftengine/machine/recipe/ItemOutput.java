@@ -19,6 +19,10 @@ public class ItemOutput implements RecipeOutput {
 
     @Override
     public void dispense(Level level, AbstractMachineBlockEntity machine) {
+        // Respect the drop chance: a secondary output below 1.0 only sometimes drops.
+        if (chance < 1.0f && java.util.concurrent.ThreadLocalRandom.current().nextFloat() >= chance) {
+            return;
+        }
         machine.addOutput(stack.copy());
     }
 

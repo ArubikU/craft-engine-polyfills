@@ -1,0 +1,6 @@
+{
+  "tool": "cml:vapor_furnace_mk1_blueprint",
+  "pattern": ["III", "IGI"],
+  "keys": { "I": "minecraft:iron_ingot", "G": "cml:iron_gear" },
+  "outputs": [ { "id": "cml:vapor_furnace_mk1", "count": 1 } ]
+}

@@ -9,7 +9,10 @@ public class GasInput implements RecipeInput {
         this.required = required;
     }
 
-    @Override
+    public GasStack getGas() {
+        return required;
+    }
+
     public int getAmount() {
         return required.getAmount();
     }

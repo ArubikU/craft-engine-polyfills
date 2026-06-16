@@ -1,0 +1,6 @@
+{
+  "tool": "cml:vapor_motor_blueprint",
+  "pattern": ["CIC", "IGI"],
+  "keys": { "C": "minecraft:copper_ingot", "I": "minecraft:iron_ingot", "G": "cml:iron_gear" },
+  "outputs": [ { "id": "cml:gas_motor_mk1", "count": 1 } ]
+}

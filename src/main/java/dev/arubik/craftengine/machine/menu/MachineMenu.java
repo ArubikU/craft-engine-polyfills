@@ -67,13 +67,52 @@ public class MachineMenu implements InventoryHolder {
         }
     }
 
+    /**
+     * While true, {@link #syncFromMachine()} leaves INPUT/FUEL slots alone — set right after a
+     * player edits an input slot so the machine's per-tick {@code setChanged()} can't clobber the
+     * freshly-placed (not-yet-pushed) item before the scheduled {@link #syncToMachine()} runs.
+     */
+    private volatile boolean suppressInputPull = false;
+
+    public void markInputDirty() {
+        this.suppressInputPull = true;
+    }
+
+    // ---- ghost hint for empty FUEL slots (display-only; never stored as a real item) ----
+    private static final org.bukkit.NamespacedKey GHOST_KEY =
+            new org.bukkit.NamespacedKey("cml", "slot_ghost");
+
+    private static org.bukkit.inventory.ItemStack fuelGhost() {
+        org.bukkit.inventory.ItemStack s = new org.bukkit.inventory.ItemStack(org.bukkit.Material.COAL);
+        org.bukkit.inventory.meta.ItemMeta m = s.getItemMeta();
+        if (m != null) {
+            m.displayName(dev.arubik.craftengine.machine.menu.MenuText.noI(
+                    dev.arubik.craftengine.machine.menu.MenuText.tr("polyfill.ui.fuel",
+                            net.kyori.adventure.text.format.NamedTextColor.GRAY)));
+            m.getPersistentDataContainer().set(GHOST_KEY, org.bukkit.persistence.PersistentDataType.BYTE, (byte) 1);
+            s.setItemMeta(m);
+        }
+        return s;
+    }
+
+    /** True for the display-only placeholder shown in an empty fuel slot (must not be taken/stored). */
+    public static boolean isGhost(org.bukkit.inventory.ItemStack stack) {
+        if (stack == null || !stack.hasItemMeta())
+            return false;
+        org.bukkit.inventory.meta.ItemMeta m = stack.getItemMeta();
+        return m != null && m.getPersistentDataContainer().has(GHOST_KEY, org.bukkit.persistence.PersistentDataType.BYTE);
+    }
+
     public void syncFromMachine() {
         for (int i = 0; i < inventory.getSize(); i++) {
             MenuSlotType type = layout.getSlotType(i);
-            if (type == MenuSlotType.INPUT || type == MenuSlotType.OUTPUT || type == MenuSlotType.FUEL) {
-                net.minecraft.world.item.ItemStack nms = machine.getItem(i);
-                inventory.setItem(i, dev.arubik.craftengine.util.BridgeUtils.toBukkit(nms));
-            }
+            boolean io = type == MenuSlotType.INPUT || type == MenuSlotType.OUTPUT || type == MenuSlotType.FUEL;
+            if (!io)
+                continue;
+            if (suppressInputPull && (type == MenuSlotType.INPUT || type == MenuSlotType.FUEL))
+                continue; // don't overwrite a pending player placement
+            net.minecraft.world.item.ItemStack nms = machine.getItem(i);
+            inventory.setItem(i, dev.arubik.craftengine.util.BridgeUtils.toBukkit(nms));
         }
     }
 
@@ -86,8 +125,8 @@ public class MachineMenu implements InventoryHolder {
         MenuSlotType type = layout.getSlotType(slot);
         if (type == MenuSlotType.INPUT || type == MenuSlotType.OUTPUT || type == MenuSlotType.FUEL) {
             org.bukkit.inventory.ItemStack bukkit = inventory.getItem(slot);
-            if (bukkit == null || bukkit.getType() == org.bukkit.Material.AIR) {
-                machine.setItem(slot, net.minecraft.world.item.ItemStack.EMPTY);
+            if (bukkit == null || bukkit.getType() == org.bukkit.Material.AIR || isGhost(bukkit)) {
+                machine.setItem(slot, net.minecraft.world.item.ItemStack.EMPTY); // ghost = empty
             } else {
                 // Use cast as requested, but fall back to NMS copy if it's a generic itemstack
                 if (bukkit instanceof CraftItemStack) {
@@ -106,6 +145,7 @@ public class MachineMenu implements InventoryHolder {
         for (int i = 0; i < inventory.getSize(); i++) {
             syncToMachine(i);
         }
+        this.suppressInputPull = false; // player placement captured; resume machine->menu pulls
     }
 
     private void updateDynamicSlots() {

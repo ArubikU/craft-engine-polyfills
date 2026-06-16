@@ -95,6 +95,10 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
     public dev.arubik.craftengine.multiblock.IOConfiguration getIOConfiguration(net.minecraft.world.level.Level level,
             net.minecraft.core.BlockPos pos) {
         BlockEntityController be = controllerAt(level, pos);
+        // CORE: the machine controller is the single source of truth for IO.
+        if (be instanceof dev.arubik.craftengine.machine.block.entity.AbstractMachineBlockEntity core)
+            return core.getIOConfiguration();
+        // PART: consult the controller — its own (structure-derived) IO config, set at formation.
         if (be instanceof MultiBlockPartBlockEntity part) {
             dev.arubik.craftengine.multiblock.IOConfiguration config = part.getIOConfiguration();
             if (config != null)
@@ -109,8 +113,9 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
         dev.arubik.craftengine.multiblock.IOConfiguration config = getIOConfiguration(level, pos);
         if (config == null)
             return true;
-
-        return config.canConnect(direction);
+        // The config is in LOCAL space; convert the world face before asking it.
+        net.minecraft.core.Direction local = toLocalDirection(direction, level.getBlockState(pos));
+        return config.canConnect(local);
     }
 
     /**
@@ -1158,11 +1163,10 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
         PersistentBlockEntity eBlockEntity = getBlockEntity(level, pos);
         if (eBlockEntity == null)
             return null;
-        if (eBlockEntity instanceof MultiBlockPartBlockEntity core) {
-            return core;
-        }
-        if (eBlockEntity instanceof MultiBlockMachineBlockEntity core) {
-            return core;
+        // CE casts the result to an NMS WorldlyContainer — only return real containers
+        // (the machine core is one; bare parts are not).
+        if (eBlockEntity instanceof net.minecraft.world.Container c) {
+            return c;
         }
         return null;
     }

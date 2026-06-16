@@ -1,8 +1,0 @@
-{
-	"format_version": "1.21.11",
-	"credit": "Made by SR400X - https://linktr.ee/sr400x",
-	"parent": "minecraft:item/generated",
-	"textures": {
-		"layer0": "item/custom/conveyor_belt"
-	}
-}

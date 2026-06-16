@@ -1,0 +1,7 @@
+{
+  "type": "vapor_furnace_mk1",
+  "time": 120,
+  "fuelRequired": true,
+  "inputs": [ { "type": "fluid", "id": "water", "amount": 500 } ],
+  "outputs": [ { "type": "gas", "id": "steam", "amount": 500, "chance": 1.0 } ]
+}

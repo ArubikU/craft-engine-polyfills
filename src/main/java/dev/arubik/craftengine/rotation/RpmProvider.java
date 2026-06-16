@@ -8,8 +8,27 @@ package dev.arubik.craftengine.rotation;
  */
 public interface RpmProvider {
 
-    /** Current rotational output, in revolutions-per-minute. 0 when not producing. */
+    /** Current rotational output, in revolutions-per-minute. 0 when not producing (or stalled). */
     float getRpm();
+
+    /**
+     * The rotational output this source WOULD drive ignoring overstress — i.e. the speed used to
+     * compute the network's stress load so it stays stable whether or not the source is currently
+     * stalled. Belts size their reported SU from this (not {@link #getRpm()}) to avoid a
+     * run/stall/run flicker; the source then decides the stall by comparing the accumulated load to
+     * {@link #stressCapacity()}. Default: same as {@link #getRpm()}.
+     */
+    default float potentialRpm() {
+        return getRpm();
+    }
+
+    /**
+     * True for a genuine power SOURCE (a motor). A relay (conveyor router that just passes power
+     * through) returns false, so machines that must be driven directly by a motor can exclude it.
+     */
+    default boolean isRpmSource() {
+        return true;
+    }
 
     /**
      * Max stress (Create-style "stress units", SU) this source can drive. A consumer
@@ -25,5 +44,24 @@ public interface RpmProvider {
      * uses it to scale fuel use (more load = more vapor). Default ignores it.
      */
     default void reportStressLoad(float su) {
+    }
+
+    /**
+     * World position this source pushes its RPM toward — its FRONT (emitter) face. A consumer that
+     * is NOT at this position should not be driven by this source. Returns {@code null} for an
+     * omnidirectional source (drives any adjacent consumer).
+     */
+    default net.momirealms.craftengine.core.world.BlockPos rpmHeadPos() {
+        return null;
+    }
+
+    /**
+     * Whether this source drives a consumer at {@code consumerPos}. A single-front motor reaches
+     * only its {@link #rpmHeadPos()}; a relay (conveyor router) can reach several output sides.
+     */
+    default boolean rpmReaches(net.momirealms.craftengine.core.world.BlockPos consumerPos) {
+        net.momirealms.craftengine.core.world.BlockPos head = rpmHeadPos();
+        return head == null || (head.x() == consumerPos.x() && head.y() == consumerPos.y()
+                && head.z() == consumerPos.z());
     }
 }

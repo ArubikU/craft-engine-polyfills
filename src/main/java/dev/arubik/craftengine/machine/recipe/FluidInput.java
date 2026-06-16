@@ -24,7 +24,10 @@ public class FluidInput implements RecipeInput {
         // Assuming standard FluidStack behavior: matches Type and Tag/NBT.
     }
 
-    @Override
+    public FluidStack getFluid() {
+        return required;
+    }
+
     public int getAmount() {
         return required.getAmount();
     }

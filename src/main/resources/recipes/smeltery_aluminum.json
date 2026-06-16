@@ -1,0 +1,9 @@
+{
+  "type": "smeltery",
+  "time": 150,
+  "fuelRequired": false,
+  "rpm": 16,
+  "su": 8,
+  "inputs": [ { "type": "custom_item", "id": "cml:purified_aluminum_dust", "amount": 1 } ],
+  "outputs": [ { "type": "custom_item", "id": "cml:aluminum_ingot", "amount": 1, "chance": 1.0 } ]
+}

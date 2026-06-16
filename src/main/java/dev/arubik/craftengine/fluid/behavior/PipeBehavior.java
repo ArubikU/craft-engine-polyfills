@@ -115,34 +115,33 @@ public class PipeBehavior extends ConnectedBlockBehavior implements EntityBlock,
                         }
                     }
                 }
-                // Round-robin homogenize
-                Direction[] horizDirs = { Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST };
-                int startIdx = lastSuccessfulDirection.getOrDefault(mcPos.asLong(), 0) % horizDirs.length;
+                // Homogenize over ALL faces (vertical included so columns equalize). The UP case is
+                // gated by pressure inside tryTransfer so fluid only climbs within its reach.
+                Direction[] homogDirs = { Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST,
+                        Direction.UP, Direction.DOWN };
+                int startIdx = lastSuccessfulDirection.getOrDefault(mcPos.asLong(), 0) % homogDirs.length;
 
-                for (int i = 0; i < horizDirs.length; i++) {
-                    Direction dir = horizDirs[(startIdx + i) % horizDirs.length];
+                for (int i = 0; i < homogDirs.length; i++) {
+                    Direction dir = homogDirs[(startIdx + i) % homogDirs.length];
                     if (tryTransfer(level, mcPos, dir, TransferAction.HOMOGENIZE)) {
-                        lastSuccessfulDirection.put(mcPos.asLong(), (startIdx + i) % horizDirs.length);
+                        lastSuccessfulDirection.put(mcPos.asLong(), (startIdx + i) % homogDirs.length);
                     }
                 }
             } else {
                 if (tryTransfer(level, mcPos, Direction.UP, TransferAction.PUSH))
                     return;
 
-                // Round-robin homogenize (con presión)
-                Direction[] horizDirs = { Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST };
-                int startIdx = lastSuccessfulDirection.getOrDefault(mcPos.asLong(), 0) % horizDirs.length;
+                // Homogenize over ALL faces (vertical too) so a pressurized column fills evenly.
+                // NOTE: no more PUSH DOWN here — it was draining the upper pipes back down.
+                Direction[] homogDirs = { Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST,
+                        Direction.UP, Direction.DOWN };
+                int startIdx = lastSuccessfulDirection.getOrDefault(mcPos.asLong(), 0) % homogDirs.length;
 
-                for (int i = 0; i < horizDirs.length; i++) {
-                    Direction dir = horizDirs[(startIdx + i) % horizDirs.length];
+                for (int i = 0; i < homogDirs.length; i++) {
+                    Direction dir = homogDirs[(startIdx + i) % homogDirs.length];
                     if (tryTransfer(level, mcPos, dir, TransferAction.HOMOGENIZE)) {
-                        lastSuccessfulDirection.put(mcPos.asLong(), (startIdx + i) % horizDirs.length);
+                        lastSuccessfulDirection.put(mcPos.asLong(), (startIdx + i) % homogDirs.length);
                     }
-                }
-
-                stored = getStored(level, mcPos);
-                if (!stored.isEmpty()) {
-                    tryTransfer(level, mcPos, Direction.DOWN, TransferAction.PUSH);
                 }
             }
         }
@@ -182,6 +181,16 @@ public class PipeBehavior extends ConnectedBlockBehavior implements EntityBlock,
     }
 
     @Override
+    protected Class<?> carrierClass() {
+        return FluidCarrier.class;
+    }
+
+    @Override
+    protected dev.arubik.craftengine.multiblock.IOConfiguration.IOType carrierIOType() {
+        return dev.arubik.craftengine.multiblock.IOConfiguration.IOType.FLUID;
+    }
+
+    @Override
     public dev.arubik.craftengine.util.TransferAccessMode getAccessMode() {
         return dev.arubik.craftengine.util.TransferAccessMode.ANYONE_CAN_TAKE;
     }
@@ -217,17 +226,27 @@ public class PipeBehavior extends ConnectedBlockBehavior implements EntityBlock,
         BlockPos targetPos = offset(from, dir);
         BlockState targetState = level.getBlockState(targetPos);
 
-        // Check neighbor IO Configuration if available
+        // Check neighbor IO Configuration if available. Unwrap Composite/Dual wrappers so machines
+        // and multiblocks (whose behavior is wrapped by the engine) are still seen as FluidCarriers.
         var customOpt = BlockStateUtils.getOptionalCustomBlockState(targetState);
         FluidCarrier targetCarrier = customOpt
-                .map(cs -> cs.behavior() instanceof FluidCarrier fc ? fc : null)
+                .map(cs -> {
+                    BlockBehavior b = cs.behavior();
+                    if (b instanceof FluidCarrier fc)
+                        return fc;
+                    return b == null ? null : b.getFirst(FluidCarrier.class);
+                })
                 .orElse(null);
 
         net.minecraft.core.Direction fromTarget = Utils.oppositeDirection(dir);
 
         if (customOpt.isPresent()) {
-            BlockBehavior behavior = customOpt.get().behavior();
-            if (behavior instanceof dev.arubik.craftengine.block.behavior.ConnectableBlockBehavior connectable) {
+            BlockBehavior raw = customOpt.get().behavior();
+            dev.arubik.craftengine.block.behavior.ConnectableBlockBehavior connectable =
+                    raw instanceof dev.arubik.craftengine.block.behavior.ConnectableBlockBehavior c ? c
+                            : (raw == null ? null
+                                    : raw.getFirst(dev.arubik.craftengine.block.behavior.ConnectableBlockBehavior.class));
+            if (connectable != null) {
                 IOConfiguration targetConfig = connectable.getIOConfiguration(level, targetPos);
                 Direction targetLocalDir = connectable.toLocalDirection(fromTarget, targetState);
 
@@ -333,10 +352,14 @@ public class PipeBehavior extends ConnectedBlockBehavior implements EntityBlock,
                 return false;
             }
             case HOMOGENIZE: {
-                // Solo aplicar horizontalmente
-                if (dir == Direction.UP || dir == Direction.DOWN)
+                // Vertical homogenize allowed: DOWN freely; UP only while pressurized so fluid
+                // climbs the column within its pressure reach (and doesn't fall straight back).
+                if (dir == Direction.UP && stored.getPressure() <= 0)
                     return false;
                 if (targetCarrier == null)
+                    return false;
+                // Only equalize pipe<->pipe; never homogenize against a machine/tank (would drain it).
+                if (!(targetCarrier instanceof PipeBehavior))
                     return false;
 
                 FluidStack a = stored; // este
@@ -369,8 +392,10 @@ public class PipeBehavior extends ConnectedBlockBehavior implements EntityBlock,
                     int available = Math.min(move, amountA);
                     if (available <= 0)
                         return false;
-                    int appliedPressure = Math.max(0,
-                            ((a.isEmpty() ? 0 : a.getPressure()) + (b.isEmpty() ? 0 : b.getPressure())) / 2);
+                    // Homogenize moves fluid between same-level pipes; it must NOT drop pressure
+                    // (averaging collapsed pressure around corners). Carry the higher pressure.
+                    int appliedPressure = Math.max(a.isEmpty() ? 0 : a.getPressure(),
+                            b.isEmpty() ? 0 : b.getPressure());
                     FluidStack toSend = new FluidStack(type, available, appliedPressure);
                     int accepted = FluidType.depositToCarrier(targetCarrier, level, targetPos, toSend, fromTarget);
                     if (accepted > 0) {

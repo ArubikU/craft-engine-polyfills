@@ -78,6 +78,35 @@ public class ConveyorBehavior extends dev.arubik.craftengine.util.NmsBlockBehavi
         return new ConveyorBlockEntity(blockEntity, defaultFacing, baseTravelTicks, baseRpm, stressImpact, slots);
     }
 
+    // ---------------- comparator: read the belt's item fill (like the depot) ----------------
+
+    private static ConveyorBlockEntity controllerAt(Object levelObj, Object posObj) {
+        try {
+            CEWorld world = new net.momirealms.craftengine.bukkit.world.BukkitWorld(
+                    ((net.minecraft.server.level.ServerLevel) levelObj).getWorld()).storageWorld();
+            if (world == null)
+                return null;
+            net.momirealms.craftengine.core.world.BlockPos pos =
+                    net.momirealms.craftengine.bukkit.util.LocationUtils.fromBlockPos(posObj);
+            BlockEntity be = world.getBlockEntityAtIfLoaded(pos);
+            if (be != null && be.controller instanceof ConveyorBlockEntity c)
+                return c;
+        } catch (Throwable ignored) {
+        }
+        return null;
+    }
+
+    @Override
+    public boolean hasAnalogOutputSignal(Object thisBlock, Object[] args) {
+        return true;
+    }
+
+    @Override
+    public int getAnalogOutputSignal(Object thisBlock, Object[] args) {
+        ConveyorBlockEntity c = controllerAt(args[1], args[2]);
+        return c == null ? 0 : c.analogSignal();
+    }
+
     // ---------------- right-click: put / take the slot ----------------
 
     @Override

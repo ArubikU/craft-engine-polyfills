@@ -23,7 +23,10 @@ public class TagInput implements RecipeInput {
         return stack.is(tag);
     }
 
-    @Override
+    public net.minecraft.tags.TagKey<net.minecraft.world.item.Item> getTag() {
+        return tag;
+    }
+
     public int getAmount() {
         return amount;
     }

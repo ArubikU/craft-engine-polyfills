@@ -30,9 +30,34 @@ import net.momirealms.craftengine.core.plugin.config.ConfigSection;
 import java.util.List;
 
 public class MachineBlockBehavior extends ConnectableBlockBehavior
-        implements FluidCarrier, GasCarrier, EntityBlock {
+        implements FluidCarrier, GasCarrier, EntityBlock,
+        net.momirealms.craftengine.core.block.behavior.WorldlyContainerHolder {
 
     public static final Factory FACTORY = new Factory();
+
+    /**
+     * Hopper/funnel bridge: expose the machine block entity (already an NMS
+     * {@link net.minecraft.world.WorldlyContainer}) to vanilla {@code getContainerAt}, so
+     * funnels/hoppers/comparators see the machine — face-filtering is handled by the BE's
+     * {@code getSlotsForFace}/{@code canPlace/TakeItemThroughFace}. args[1]=Level, args[2]=BlockPos.
+     */
+    @Override
+    public Object getContainer(Object thisBlock, Object[] args) {
+        try {
+            net.minecraft.world.level.Level level = (net.minecraft.world.level.Level) args[1];
+            BlockPos pos = (BlockPos) args[2];
+            net.momirealms.craftengine.core.block.entity.BlockEntity be =
+                    dev.arubik.craftengine.block.entity.BukkitBlockEntityTypes.getIfLoaded(level, pos);
+            if (dev.arubik.craftengine.machine.block.entity.AbstractMachineBlockEntity.DEBUG_IO)
+                System.out.println("[MachineIO] getContainer @" + pos.toShortString() + " be="
+                        + (be == null ? "null" : be.controller == null ? "no-controller"
+                                : be.controller.getClass().getSimpleName()));
+            if (be != null && be.controller instanceof net.minecraft.world.Container c)
+                return c;
+        } catch (Throwable ignored) {
+        }
+        return null;
+    }
 
     // Optional MACHINE_MODE property (if block has it)
     public final net.momirealms.craftengine.core.block.property.Property<dev.arubik.craftengine.multiblock.MachineMode> MACHINE_MODE;
@@ -264,5 +289,16 @@ public class MachineBlockBehavior extends ConnectableBlockBehavior
     @Override
     public void affectNeighborsAfterRemoval(Object thisBlock, Object[] args) {
         super.affectNeighborsAfterRemoval(thisBlock, args);
+        // Drop the machine's stored items when the block is broken. args[1]=Level, args[2]=BlockPos.
+        try {
+            Level level = (Level) args[1];
+            BlockPos nmsPos = (BlockPos) args[2];
+            net.momirealms.craftengine.core.block.entity.BlockEntity be =
+                    dev.arubik.craftengine.block.entity.BukkitBlockEntityTypes.getIfLoaded(level, nmsPos);
+            if (be != null && be.controller instanceof AbstractMachineBlockEntity m) {
+                m.dropAllContents(level, nmsPos);
+            }
+        } catch (Throwable ignored) {
+        }
     }
 }

@@ -1,8 +1,0 @@
-# Brass Shavings ("viruta") — machining byproduct; a chance secondary output.
-items:
-  demo:brass_shavings:
-    data:
-      item_name: "<!i><color:#c89c48><lang:item.demo.brass_shavings>"
-      lore:
-        - "<!i><dark_gray><lang:demo.item.byproduct>"
-    model: minecraft:item/custom/brass_shavings

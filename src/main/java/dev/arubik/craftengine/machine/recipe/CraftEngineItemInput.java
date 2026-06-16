@@ -28,7 +28,10 @@ public class CraftEngineItemInput implements RecipeInput {
         return ceItem.id().toString().equals(itemId);
     }
 
-    @Override
+    public String getItemId() {
+        return itemId;
+    }
+
     public int getAmount() {
         return amount;
     }

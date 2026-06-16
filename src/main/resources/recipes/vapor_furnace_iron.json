@@ -1,0 +1,7 @@
+{
+  "type": "vapor_furnace_mk1",
+  "time": 200,
+  "fuelRequired": true,
+  "inputs": [ { "type": "item", "id": "minecraft:raw_iron", "amount": 1 } ],
+  "outputs": [ { "type": "item", "id": "minecraft:iron_ingot", "amount": 1, "chance": 1.0 } ]
+}

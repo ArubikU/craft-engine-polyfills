@@ -29,19 +29,88 @@ public final class WorkbenchMenu extends AbstractCraftingMenu {
     // Row 1 cols 1-3 -> 10,11,12 ; Row 2 cols 1-3 -> 19,20,21 (the 3x2 input grid).
     // 4-row chest (size 36), usable 6-wide region = columns 0..5; cols 6..8 background.
     // Input 3x2 grid at cols 1..3, rows 1..2.
-    public static final int IN_00 = 10, IN_10 = 11, IN_20 = 12;
-    public static final int IN_01 = 19, IN_11 = 20, IN_21 = 21;
-    // Two outputs (col 5, rows 1..2).
-    public static final int OUT_0 = 14, OUT_1 = 23;
+    // Input grid + outputs shifted one column right so they align with the workbench_ui frames.
+    public static final int IN_00 = 11, IN_10 = 12, IN_20 = 13;
+    public static final int IN_01 = 20, IN_11 = 21, IN_21 = 22;
+    // Two outputs (col 6, rows 1..2).
+    public static final int OUT_0 = 15, OUT_1 = 24;
     // Tool slot (col 0, row 1) — inside the 6-wide region.
     public static final int TOOL_SLOT = 9;
 
     private final StationRecipeRegistry registry;
+    private final WorkbenchBlockEntity be; // master controller (persists the blueprint), may be null
 
-    public WorkbenchMenu(String title, StationRecipeRegistry registry) {
-        super(buildLayout(), title);
+    public WorkbenchMenu(String title, StationRecipeRegistry registry, WorkbenchBlockEntity be) {
+        super(buildLayout(), guiTitle());
         this.registry = registry != null ? registry : StationRecipeRegistry.global();
+        this.be = be;
+        // Load the persisted blueprint into the tool slot so it survives across openings.
+        if (be != null) {
+            org.bukkit.inventory.ItemStack bp = be.getBlueprint();
+            if (bp != null && !bp.getType().isAir())
+                getInventory().setItem(TOOL_SLOT, bp);
+        }
         recompute();
+    }
+
+    /** Persist the tool-slot blueprint back into the block on close (it is NOT returned to player). */
+    @Override
+    protected void onMenuClosed(org.bukkit.entity.Player player) {
+        if (be != null) {
+            be.setBlueprint(getInventory().getItem(TOOL_SLOT));
+            be.clearSharedMenu(); // last viewer left -> next open rebuilds from the block
+        }
+    }
+
+    /** Push the current output preview to the block so it renders on the tabletop. */
+    @Override
+    protected void afterRecompute() {
+        if (be == null)
+            return;
+        java.util.List<org.bukkit.inventory.ItemStack> outs = new java.util.ArrayList<>(2);
+        for (int s : layout().outputSlots()) {
+            org.bukkit.inventory.ItemStack o = getInventory().getItem(s);
+            if (o != null && !o.getType().isAir())
+                outs.add(o);
+        }
+        be.setRenderOutputs(outs);
+    }
+
+    /** The custom-GUI title: the workbench UI image glyph (font cml:gui), shifted to overlay the chest. */
+    private static net.kyori.adventure.text.Component guiTitle() {
+        return net.kyori.adventure.text.Component.text("")
+                .font(net.kyori.adventure.key.Key.key("cml", "gui"))
+                .color(net.kyori.adventure.text.format.NamedTextColor.WHITE);
+    }
+
+    // Invisible, tooltip-less filler so only the UI image shows in BACKGROUND slots.
+    private static final ItemStack EMPTY_BG = buildEmptyBg();
+
+    private static ItemStack buildEmptyBg() {
+        ItemStack s;
+        try {
+            var def = CraftEngineItems.byId(Key.of("cml", "gui_empty"));
+            s = def != null ? def.buildBukkitItem() : new ItemStack(Material.AIR);
+        } catch (Throwable t) {
+            s = new ItemStack(Material.PAPER);
+        }
+        if (s.getType() == Material.AIR)
+            s = new ItemStack(Material.PAPER);
+        ItemMeta m = s.getItemMeta();
+        if (m != null) {
+            try {
+                m.setHideTooltip(true);
+            } catch (Throwable ignored) {
+            }
+            m.displayName(net.kyori.adventure.text.Component.empty());
+            s.setItemMeta(m);
+        }
+        return s;
+    }
+
+    @Override
+    protected ItemStack backgroundItem() {
+        return EMPTY_BG;
     }
 
     private static SlotLayout buildLayout() {
@@ -49,7 +118,7 @@ public final class WorkbenchMenu extends AbstractCraftingMenu {
         b.input(IN_00, 0, 0).input(IN_10, 1, 0).input(IN_20, 2, 0);
         b.input(IN_01, 0, 1).input(IN_11, 1, 1).input(IN_21, 2, 1);
         b.output(OUT_0).output(OUT_1);
-        b.custom(TOOL_SLOT, true); // non-persistent menu: hand the tool back on close
+        b.custom(TOOL_SLOT, false); // blueprint persists IN the block (saved on close), not returned
         // All other slots stay BACKGROUND (the base enforces non-placeable).
         return b.build();
     }

@@ -40,10 +40,12 @@ public class FluidCarrierImpl {
         if (stack == null || stack.isEmpty())
             return 0;
 
-        // Boost pressure if needed (e.g. Pump)
+        // Pump pressure: SET to the pump's rating (max), don't ADD — adding let recirculating
+        // fluid ramp pressure to absurd values (two pumps -> ~100).
         FluidStack incoming = stack;
         if (pressureBoost > 0) {
-            incoming = new FluidStack(stack.getType(), stack.getAmount(), stack.getPressure() + pressureBoost);
+            incoming = new FluidStack(stack.getType(), stack.getAmount(),
+                    Math.max(stack.getPressure(), pressureBoost));
         }
 
         final int[] accepted = { 0 };

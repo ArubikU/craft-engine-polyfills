@@ -1,0 +1,12 @@
+{
+  "type": "refinery",
+  "time": 200,
+  "fuelRequired": false,
+  "inputs": [
+    { "type": "custom_item", "id": "cml:bauxite_scraping", "amount": 3 },
+    { "type": "item", "id": "minecraft:quartz", "amount": 1 },
+    { "type": "fluid", "id": "water", "amount": 1000 },
+    { "type": "gas", "id": "steam", "amount": 100 }
+  ],
+  "outputs": [ { "type": "custom_item", "id": "cml:purified_aluminum_dust", "amount": 3, "chance": 1.0 } ]
+}

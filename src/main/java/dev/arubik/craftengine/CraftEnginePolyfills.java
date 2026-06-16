@@ -44,7 +44,7 @@ public final class CraftEnginePolyfills extends JavaPlugin {
                 this);
         getServer().getPluginManager().registerEvents(new dev.arubik.craftengine.conveyor.ConveyorIoBreakListener(),
                 this);
-        getServer().getPluginManager().registerEvents(new dev.arubik.craftengine.rotation.AdvancedMotorBreakListener(),
+        getServer().getPluginManager().registerEvents(new dev.arubik.craftengine.rotation.GasMotorBreakListener(),
                 this);
         // cepolyfill command
         // sub command data get <block_pos>
@@ -53,17 +53,18 @@ public final class CraftEnginePolyfills extends JavaPlugin {
         getCommand("cepolyfill").setTabCompleter(cepCommand);
         getLogger().info("CraftEngine Polyfills Enabled");
 
-        // Load Recipes
-        dev.arubik.craftengine.machine.recipe.loader.RecipeManager.loadRecipes();
+        // NOTE: don't load recipes here — onEnable runs BEFORE CraftEngine registers its
+        // custom items, so custom-item outputs (e.g. cml:aluminum_scraping) resolve null.
+        // The CraftEngineReloadEvent listener below loads them once (incl. the first load),
+        // after CE's items are ready.
 
         // Reload machine + workbench recipes whenever CraftEngine reloads
         // (so `/craftengine reload all` also refreshes the JSON-defined recipes).
         getServer().getPluginManager().registerEvents(new org.bukkit.event.Listener() {
             @org.bukkit.event.EventHandler
             public void onReload(net.momirealms.craftengine.bukkit.api.event.CraftEngineReloadEvent event) {
-                if (event.isFirstReload()) {
-                    return; // initial load already done above
-                }
+                // Reload AFTER CraftEngine has (re)loaded its items — including the first
+                // load — so custom-item recipe outputs resolve (onEnable runs too early).
                 dev.arubik.craftengine.machine.recipe.loader.RecipeManager.loadRecipes();
                 dev.arubik.craftengine.crafting.StationRecipeLoader.load();
             }

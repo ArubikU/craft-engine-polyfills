@@ -68,6 +68,13 @@ public class ConveyorBlockEntity extends PersistentWorldlyBlockEntity implements
     private float inputRpm = 0f;
     /** rpm actually driving this segment (head: inputRpm; body: upstream effective). */
     private float effectiveRpm = 0f;
+    /** The RpmProvider (motor or router relay) driving this line, for stress forwarding. */
+    private dev.arubik.craftengine.rotation.RpmProvider drivingMotor;
+
+    /** The source driving this belt's line (null if unpowered). */
+    public dev.arubik.craftengine.rotation.RpmProvider drivingMotor() {
+        return drivingMotor;
+    }
 
     /** Ticker counter for the pickup cadence. */
     private int tickCounter = 0;
@@ -383,6 +390,7 @@ public class ConveyorBlockEntity extends PersistentWorldlyBlockEntity implements
         ConveyorBlockEntity upstream = upstreamConveyor(world, pos, facing);
         if (upstream != null) {
             this.effectiveRpm = upstream.effectiveRpm();
+            this.drivingMotor = upstream.drivingMotor();
         } else {
             // Head: find the driving motor at either end (front/left/right of an end).
             dev.arubik.craftengine.rotation.RpmProvider startM = motorAround(world, pos, facing);
@@ -390,25 +398,28 @@ public class ConveyorBlockEntity extends PersistentWorldlyBlockEntity implements
             dev.arubik.craftengine.rotation.RpmProvider tailM =
                     motorAround(world, tail.pos(), facing.opposite());
             dev.arubik.craftengine.rotation.RpmProvider motor = strongerMotor(startM, tailM);
+            this.drivingMotor = motor;
 
             if (motor == null) {
                 this.effectiveRpm = this.inputRpm; // legacy push path / no motor
             } else {
                 // Stress economy: per-part SU scales with SPEED. Each segment imposes
-                // (stressImpact × rpm/baseRpm) SU, so feeding 2× rpm = 2× speed AND 2×
-                // stress per piece. If the line total exceeds the motor's capacity the
-                // network is OVERSTRESSED and stalls.
+                // (stressImpact × rpm/baseRpm) SU. Size the load from the motor's POTENTIAL rpm
+                // (stable even while stalled) and ALWAYS report it, so the motor sees the WHOLE
+                // tree (this line + every branch beyond routers) and decides the stall itself.
+                float potRpm = motor.potentialRpm();
+                float loadRatio = baseRpm > 0 ? potRpm / baseRpm : 0f;
+                float lineStress = countSegments(world, facing) * stressImpact * loadRatio;
+                motor.reportStressLoad(lineStress);
+                // Actual movement follows the motor's live rpm: 0 when it has stalled the network.
                 float rpm = motor.getRpm();
-                float speedRatio = baseRpm > 0 ? rpm / baseRpm : 0f;
-                float lineStress = countSegments(world, facing) * stressImpact * speedRatio;
-                if (lineStress <= motor.stressCapacity()) {
-                    motor.reportStressLoad(lineStress); // motor burns more vapor under load
-                    this.effectiveRpm = Math.max(this.inputRpm, rpm);
-                } else {
-                    this.effectiveRpm = 0f; // overstressed
-                }
+                this.effectiveRpm = rpm > 0f ? Math.max(this.inputRpm, rpm) : 0f;
             }
         }
+
+        // Redstone control (inverted): no signal = ON, signal = OFF. A powered belt stops.
+        if (redstonePowered(world, pos))
+            this.effectiveRpm = 0f;
 
         // Drive the 'activated' block-state (running when it has RPM) so the model/
         // texture swaps between animated (on) and static (off).
@@ -547,7 +558,16 @@ public class ConveyorBlockEntity extends PersistentWorldlyBlockEntity implements
         if (recv != null) {
             if (recv.isFull())
                 return false; // stall
-            if (recv.receiveConveyorItem(item, facing)) {
+            // Seamless: hand our live display entity to a display-capable receiver (funnel) so the
+            // item doesn't flicker across the boundary (same as belt->belt adoption).
+            if (recv instanceof ConveyorDisplayReceiver dr
+                    && dr.adoptConveyorItem(item, jitter[i], displays[i], spawned[i], facing)) {
+                displays[i] = null; // entity moved on (no pop/despawn)
+                spawned[i] = false;
+                clearSlot(i);
+                return true;
+            }
+            if (recv.receiveConveyorItem(item, facing, jitter[i])) { // carry rotation into the router
                 despawnSlot(world, pos, i);
                 clearSlot(i);
                 return true;
@@ -576,6 +596,27 @@ public class ConveyorBlockEntity extends PersistentWorldlyBlockEntity implements
      * Accept a handed-off item at {@code startProgress}, adopting its carried jitter
      * and live display entity so the visual is continuous across the boundary.
      */
+    /** Inverted redstone: true (= OFF) when the block receives any redstone power. */
+    private boolean redstonePowered(CEWorld world, BlockPos pos) {
+        try {
+            org.bukkit.World bw = (org.bukkit.World) world.world().platformWorld();
+            return bw != null && bw.getBlockAt(pos.x(), pos.y(), pos.z()).isBlockIndirectlyPowered();
+        } catch (Throwable t) {
+            return false;
+        }
+    }
+
+    /** Comparator signal from how full the segment's item slots are (like a container). */
+    public int analogSignal() {
+        int occupied = 0;
+        for (int i = 0; i < slots; i++)
+            if (!slotEmpty(i))
+                occupied++;
+        if (occupied == 0)
+            return 0;
+        return Math.min(15, (int) Math.floor((occupied / (float) slots) * 14f) + 1);
+    }
+
     // ---- ConveyorReceiver: belts ARE receivers (generic contract) ----
 
     @Override
@@ -585,6 +626,11 @@ public class ConveyorBlockEntity extends PersistentWorldlyBlockEntity implements
 
     @Override
     public boolean receiveConveyorItem(org.bukkit.inventory.ItemStack stack, Direction sourceFacing) {
+        return receiveConveyorItem(stack, sourceFacing, randJitter());
+    }
+
+    @Override
+    public boolean receiveConveyorItem(org.bukkit.inventory.ItemStack stack, Direction sourceFacing, float carriedJitter) {
         if (stack == null || stack.getType().isAir() || !backHasRoom())
             return false;
         int i = firstEmptySlot();
@@ -592,7 +638,7 @@ public class ConveyorBlockEntity extends PersistentWorldlyBlockEntity implements
             return false;
         setItem(i, CraftItemStack.asNMSCopy(stack));
         progress[i] = 0f;
-        jitter[i] = randJitter();
+        jitter[i] = carriedJitter; // preserve the item's rotation across the hop
         entryDir[i] = sourceFacing != null ? sourceFacing.opposite() : facing().opposite();
         dirty = true;
         return true;
@@ -629,6 +675,19 @@ public class ConveyorBlockEntity extends PersistentWorldlyBlockEntity implements
         return true;
     }
 
+    /**
+     * Adopt an item + its live display from a non-belt source (a funnel ejecting onto us) and render
+     * immediately, so the hand-off is seamless (no despawn/respawn flicker). Returns false if full.
+     */
+    public boolean adoptFromFunnel(CEWorld world, org.bukkit.inventory.ItemStack stack, float carriedJitter,
+            ConveyorItemDisplay disp, boolean wasSpawned, Direction entry) {
+        if (adoptItem(stack, carriedJitter, disp, wasSpawned, 0f, entry)) {
+            renderAll(world, pos(), facing());
+            return true;
+        }
+        return false;
+    }
+
     /** Drop every carried item off the end and empty the slots. */
     private void dropAllItems(CEWorld world, BlockPos pos, Direction facing) {
         for (int i = 0; i < slots; i++) {
@@ -651,8 +710,23 @@ public class ConveyorBlockEntity extends PersistentWorldlyBlockEntity implements
             org.bukkit.World bukkitWorld = (org.bukkit.World) world.world().platformWorld();
             if (bukkitWorld != null && item != null && !item.getType().isAir()) {
                 Vector3f end = endRel(facing);
-                bukkitWorld.dropItem(new org.bukkit.Location(bukkitWorld,
-                        pos.x() + end.x, pos.y() + end.y, pos.z() + end.z), item);
+                // Spawn it PAST the belt's front face (+0.45 along facing) so it lands outside
+                // this belt's own auto-pickup radius — otherwise the belt grabs it right back
+                // and the item looks frozen at the end.
+                double dx = pos.x() + end.x + facing.stepX() * 0.45;
+                double dy = pos.y() + end.y;
+                double dz = pos.z() + end.z + facing.stepZ() * 0.45;
+                org.bukkit.entity.Item dropped = bukkitWorld.dropItem(new org.bukkit.Location(bukkitWorld, dx, dy, dz),
+                        item);
+                // Launch it off the end keeping the belt's heading (facing + slope) and a
+                // standard ejection speed.
+                float inc = ConveyorMath.progressPerTick(effectiveRpm, baseRpm, baseTravelTicks);
+                if (inc <= 0f)
+                    inc = ConveyorMath.progressPerTick(BASE_RPM, BASE_RPM, BASE_TRAVEL_TICKS);
+                int sy = slope().stepY();
+                dropped.setVelocity(new org.bukkit.util.Vector(
+                        facing.stepX() * Math.max(inc, 0.12), sy * inc + 0.05, facing.stepZ() * Math.max(inc, 0.12)));
+                dropped.setPickupDelay(20); // ~1s so it clears the belt before any re-pickup
             }
         } catch (Throwable ignored) {
         }
@@ -722,7 +796,8 @@ public class ConveyorBlockEntity extends PersistentWorldlyBlockEntity implements
     }
 
     private void despawnSlotFor(List<Player> viewers, int i) {
-        if (displays[i] != null && spawned[i]) {
+        // Force-remove even if the spawned flag is stale (broke while an item was entering/leaving).
+        if (displays[i] != null) {
             for (Player p : viewers)
                 displays[i].despawn(p);
             displays[i].clearShown();
@@ -791,11 +866,30 @@ public class ConveyorBlockEntity extends PersistentWorldlyBlockEntity implements
             BlockEntity be = world.getBlockEntityAtIfLoaded(pos.relative(d));
             if (be != null
                     && be.controller instanceof dev.arubik.craftengine.rotation.RpmProvider motor) {
-                if (best == null || motor.getRpm() > best.getRpm())
+                // Only accept power from a source whose emitter reaches this belt (front for a
+                // motor; any output side for a conveyor router relay).
+                if (!motor.rpmReaches(pos))
+                    continue;
+                if (best == null || preferMotor(motor, best))
                     best = motor;
             }
         }
         return best;
+    }
+
+    /**
+     * Pick which adjacent power provider drives this belt. A real motor SOURCE always wins over a
+     * relay (conveyor router): so a belt sitting next to its OWN motor uses that motor and that whole
+     * branch is PRUNED from any upstream motor's tree (it no longer reports SU through the router).
+     * Between two of the same kind, the higher RPM wins.
+     */
+    private static boolean preferMotor(dev.arubik.craftengine.rotation.RpmProvider cand,
+            dev.arubik.craftengine.rotation.RpmProvider cur) {
+        boolean candSrc = cand.isRpmSource();
+        boolean curSrc = cur.isRpmSource();
+        if (candSrc != curSrc)
+            return candSrc; // a source beats a relay regardless of RPM
+        return cand.getRpm() > cur.getRpm();
     }
 
     /** Pick the motor with the higher RPM (null-safe). */

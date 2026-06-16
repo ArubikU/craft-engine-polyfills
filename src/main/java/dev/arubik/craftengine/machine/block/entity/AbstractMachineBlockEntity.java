@@ -28,7 +28,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
 
-public abstract class AbstractMachineBlockEntity extends PersistentWorldlyBlockEntity {
+public abstract class AbstractMachineBlockEntity extends PersistentWorldlyBlockEntity
+        implements dev.arubik.craftengine.conveyor.ConveyorDisplayReceiver {
 
     protected int progress = 0;
     protected int maxProgress = 0;
@@ -156,14 +157,13 @@ public abstract class AbstractMachineBlockEntity extends PersistentWorldlyBlockE
             return null;
         }
 
-        if (customState.behavior() instanceof ConnectableBlockBehavior connectableBlockBehavior) {
-            return connectableBlockBehavior.toDirection(state);
-        }
-        if (customState.behavior() instanceof CompositeBlockBehavior compositeBlockBehavior) {
-            ConnectableBlockBehavior cbb = compositeBlockBehavior.getFirst(ConnectableBlockBehavior.class);
-            if (cbb != null) {
-                return cbb.toDirection(state);
-            }
+        BlockBehavior beh = customState.behavior();
+        ConnectableBlockBehavior cbb = beh instanceof ConnectableBlockBehavior c ? c
+                : (beh != null ? beh.getFirst(ConnectableBlockBehavior.class) : null);
+        if (cbb != null) {
+            net.minecraft.core.Direction d = cbb.toDirection(state);
+            if (d != null)
+                return d;
         }
 
         return Direction.NORTH;
@@ -651,6 +651,46 @@ public abstract class AbstractMachineBlockEntity extends PersistentWorldlyBlockE
         accumulateXp(amount);
     }
 
+    /**
+     * Current {@code value, max} for a named bar stat (see {@code bars:} config + MachineBars).
+     * Default exposes {@code progress}; override to add machine-specific stats (water, steam, …).
+     */
+    public double[] barStat(String id) {
+        if ("progress".equals(id))
+            return new double[] { progress, maxProgress };
+        return new double[] { 0, 0 };
+    }
+
+    /**
+     * Current sub-type for a bar stat (e.g. the fluid/gas TYPE in the tank) so a bar can render
+     * per content type via {@code type:} on its states. Default: none.
+     */
+    public String barSubtype(String id) {
+        return "";
+    }
+
+    /** Drop every stored item into the world and clear the container (called on break). */
+    public void dropAllContents(Level level, BlockPos pos) {
+        try {
+            org.bukkit.World bw = level.getWorld();
+            org.bukkit.Location loc = new org.bukkit.Location(bw, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
+            for (int i = 0; i < inventory.length; i++) {
+                ItemStack st = inventory[i];
+                if (st != null && !st.isEmpty()) {
+                    bw.dropItemNaturally(loc, dev.arubik.craftengine.util.BridgeUtils.toBukkit(st));
+                }
+            }
+            // Drop any item caught mid-flight across a funnel face (it was reserved out of a slot).
+            for (FunnelTransit t : funnelTransits.values()) {
+                if (t.item != null && !t.item.getType().isAir())
+                    bw.dropItemNaturally(loc, t.item.clone());
+            }
+        } catch (Throwable ignored) {
+        }
+        despawnAllFunnelTransits(); // kill in-flight displays so none ghost after the machine breaks
+        clearContent();
+    }
+
     // --- Slot Config (Delegated to IOConfiguration) ---
     public int[] getOutputSlots() {
         if (ioConfiguration != null) {
@@ -666,6 +706,14 @@ public abstract class AbstractMachineBlockEntity extends PersistentWorldlyBlockE
                     dev.arubik.craftengine.multiblock.IOConfiguration.IORole.INPUT);
         }
         return new int[0];
+    }
+
+    /** True if {@code bukkit} is a valid fuel for THIS machine (per its registered fuel recipes). */
+    public boolean isFuelItem(org.bukkit.inventory.ItemStack bukkit) {
+        if (bukkit == null || bukkit.getType().isAir())
+            return false;
+        return dev.arubik.craftengine.machine.recipe.loader.RecipeManager.getFuel(
+                getMachineId(), org.bukkit.craftbukkit.inventory.CraftItemStack.asNMSCopy(bukkit)) != null;
     }
 
     public int[] getFuelSlots() {
@@ -1070,8 +1118,40 @@ public abstract class AbstractMachineBlockEntity extends PersistentWorldlyBlockE
         }
     }
 
+    /** When true, logs every IO face decision to console. */
+    public static boolean DEBUG_IO = false;
+
+    protected void dbgIO(String msg) {
+        if (DEBUG_IO)
+            System.out.println("[MachineIO] " + getMachineId() + " @" + getMachinePos().toShortString() + " " + msg);
+    }
+
+    /** Convert a WORLD-space face to the machine's LOCAL face, honoring its facing rotation. */
+    protected net.minecraft.core.Direction toLocalItemDir(net.minecraft.core.Direction side) {
+        try {
+            Level level = getNMSLevel();
+            if (level == null)
+                return side;
+            net.minecraft.world.level.block.state.BlockState state = level.getBlockState(getMachinePos());
+            Optional<net.momirealms.craftengine.core.block.ImmutableBlockState> cs =
+                    net.momirealms.craftengine.bukkit.util.BlockStateUtils.getOptionalCustomBlockState(state);
+            if (cs.isPresent()) {
+                BlockBehavior behavior = cs.get().behavior();
+                if (behavior instanceof ConnectableBlockBehavior cbb)
+                    return cbb.toLocalDirection(side, state);
+                if (behavior instanceof CompositeBlockBehavior comp) {
+                    ConnectableBlockBehavior cbb = comp.getFirst(ConnectableBlockBehavior.class);
+                    if (cbb != null)
+                        return cbb.toLocalDirection(side, state);
+                }
+            }
+        } catch (Throwable ignored) {
+        }
+        return side;
+    }
+
     @Override
-    public int[] getSlotsForFace(net.minecraft.core.Direction side) {
+    public int[] getSlotsForFace(net.minecraft.core.Direction worldSide) {
         if (ioConfiguration == null)
 
         {
@@ -1081,10 +1161,15 @@ public abstract class AbstractMachineBlockEntity extends PersistentWorldlyBlockE
             return all;
         }
 
+        net.minecraft.core.Direction side = toLocalItemDir(worldSide);
         boolean acceptsInput = ioConfiguration
                 .acceptsInput(dev.arubik.craftengine.multiblock.IOConfiguration.IOType.ITEM, side);
         boolean providesOutput = ioConfiguration
                 .providesOutput(dev.arubik.craftengine.multiblock.IOConfiguration.IOType.ITEM, side);
+        int dbgTarget = ioConfiguration.getTargetSlot(
+                dev.arubik.craftengine.multiblock.IOConfiguration.IOType.ITEM, side);
+        dbgIO("getSlotsForFace world=" + worldSide + " -> local=" + side
+                + " in=" + acceptsInput + " out=" + providesOutput + " target=" + dbgTarget);
 
         if (!acceptsInput && !providesOutput) {
             return new int[0];
@@ -1096,10 +1181,18 @@ public abstract class AbstractMachineBlockEntity extends PersistentWorldlyBlockE
         int[] fuels = getFuelSlots();
 
         if (acceptsInput) {
-            for (int i : inputs)
-                slots.add(i);
-            for (int i : fuels)
-                slots.add(i);
+            // If this face is bound to a specific input slot (withInputSlot), expose only that one
+            // so a hopper/funnel on that side feeds exactly that slot (e.g. NORTH=scraping, SOUTH=quartz).
+            int target = ioConfiguration.getTargetSlot(
+                    dev.arubik.craftengine.multiblock.IOConfiguration.IOType.ITEM, side);
+            if (target >= 0) {
+                slots.add(target);
+            } else {
+                for (int i : inputs)
+                    slots.add(i);
+                for (int i : fuels)
+                    slots.add(i);
+            }
         }
 
         if (providesOutput) {
@@ -1115,7 +1208,25 @@ public abstract class AbstractMachineBlockEntity extends PersistentWorldlyBlockE
         if (ioConfiguration == null) {
             return true;
         }
-        return ioConfiguration.acceptsInput(dev.arubik.craftengine.multiblock.IOConfiguration.IOType.ITEM, side);
+        // Only INPUT slots accept insertion, and only through an input face.
+        net.minecraft.core.Direction local = toLocalItemDir(side);
+        boolean accepts = ioConfiguration.acceptsInput(
+                dev.arubik.craftengine.multiblock.IOConfiguration.IOType.ITEM, local);
+        int target = ioConfiguration.getTargetSlot(dev.arubik.craftengine.multiblock.IOConfiguration.IOType.ITEM, local);
+        dbgIO("canPlace slot=" + slot + " world=" + side + " -> local=" + local
+                + " accepts=" + accepts + " target=" + target);
+        if (!accepts)
+            return false;
+        // Face bound to a specific slot accepts only that slot.
+        if (target >= 0)
+            return slot == target;
+        for (int in : getInputSlots())
+            if (in == slot)
+                return true;
+        for (int f : getFuelSlots())
+            if (f == slot)
+                return true;
+        return false;
     }
 
     @Override
@@ -1123,7 +1234,14 @@ public abstract class AbstractMachineBlockEntity extends PersistentWorldlyBlockE
         if (ioConfiguration == null) {
             return true;
         }
-        return ioConfiguration.providesOutput(dev.arubik.craftengine.multiblock.IOConfiguration.IOType.ITEM, side);
+        // Only OUTPUT slots can be pulled, and only through an output face.
+        net.minecraft.core.Direction local = toLocalItemDir(side);
+        if (!ioConfiguration.providesOutput(dev.arubik.craftengine.multiblock.IOConfiguration.IOType.ITEM, local))
+            return false;
+        for (int out : getOutputSlots())
+            if (out == slot)
+                return true;
+        return false;
     }
 
     public void openMenu(Player player) {
@@ -1146,8 +1264,398 @@ public abstract class AbstractMachineBlockEntity extends PersistentWorldlyBlockE
         }
         processTick(level);
 
+        if (!level.isClientSide()) {
+            pushFunnelOutputs(level);
+            pullFromInputFaces(level);
+        }
+
         // Update MACHINE_MODE property if it exists
         updateMachineModeProperty(level, pos, state);
+    }
+
+    // ============ Fluid/Gas auto-pull on INPUT faces (IO-driven, no hardcoded positions) ============
+
+    /** Pull fluid/gas from a connected carrier (pipe/tank) on every FLUID/GAS input face. */
+    protected void pullFromInputFaces(Level level) {
+        if (ioConfiguration == null)
+            return;
+        BlockPos pos = getMachinePos();
+        for (net.minecraft.core.Direction world : net.minecraft.core.Direction.values()) {
+            net.minecraft.core.Direction local = toLocalItemDir(world);
+            BlockPos src = pos.relative(world);
+            net.minecraft.core.Direction sideFromSrc = world.getOpposite();
+            if (ioConfiguration.acceptsInput(dev.arubik.craftengine.multiblock.IOConfiguration.IOType.FLUID, local))
+                pullFluidInto(level, src, sideFromSrc, ioConfiguration.getTargetSlot(
+                        dev.arubik.craftengine.multiblock.IOConfiguration.IOType.FLUID, local));
+            if (ioConfiguration.acceptsInput(dev.arubik.craftengine.multiblock.IOConfiguration.IOType.GAS, local))
+                pullGasInto(level, src, sideFromSrc, ioConfiguration.getTargetSlot(
+                        dev.arubik.craftengine.multiblock.IOConfiguration.IOType.GAS, local));
+        }
+    }
+
+    /** Extract fluid from a carrier at {@code src} into our fluid tank {@code tankIdx} (-1 = first). */
+    protected void pullFluidInto(Level level, BlockPos src, net.minecraft.core.Direction sideFromSrc, int tankIdx) {
+        if (fluidTanks.isEmpty())
+            return;
+        int idx = (tankIdx >= 0 && tankIdx < fluidTanks.size()) ? tankIdx : 0;
+        dev.arubik.craftengine.fluid.FluidTank tank = fluidTanks.get(idx);
+        try {
+            int space = tank.getCapacity() - tank.getFluid(level, getMachinePos()).getAmount();
+            if (space <= 0)
+                return;
+            dev.arubik.craftengine.fluid.behavior.FluidCarrier fc = fluidCarrierAt(level, src);
+            if (DEBUG_IO)
+                System.out.println("[Pull] " + getMachineId() + " FLUID src=" + src.toShortString()
+                        + " carrier=" + (fc == null ? "null" : fc.getClass().getSimpleName()) + " space=" + space);
+            if (fc == null)
+                return;
+            int[] got = { 0 };
+            fc.extractFluid(level, src, Math.min(space, 1000), f -> {
+                if (f != null && !f.isEmpty()) {
+                    got[0] += f.getAmount();
+                    tank.insert(level, getMachinePos(), f);
+                }
+            }, sideFromSrc);
+            if (DEBUG_IO && got[0] > 0)
+                System.out.println("[Pull]   pulled " + got[0] + " mB into tank");
+        } catch (Throwable ignored) {
+        }
+    }
+
+    /** Extract gas from a carrier at {@code src} into our gas tank {@code tankIdx} (-1 = first). */
+    protected void pullGasInto(Level level, BlockPos src, net.minecraft.core.Direction sideFromSrc, int tankIdx) {
+        if (gasTanks.isEmpty())
+            return;
+        int idx = (tankIdx >= 0 && tankIdx < gasTanks.size()) ? tankIdx : 0;
+        dev.arubik.craftengine.gas.GasTank tank = gasTanks.get(idx);
+        try {
+            int space = tank.getCapacity() - tank.getGas(level, getMachinePos()).getAmount();
+            if (space <= 0)
+                return;
+            dev.arubik.craftengine.gas.GasCarrier gc = gasCarrierAt(level, src);
+            if (gc == null)
+                return;
+            gc.extractGas(level, src, Math.min(space, 1000), g -> {
+                if (g != null && !g.isEmpty())
+                    tank.insert(level, getMachinePos(), g);
+            }, sideFromSrc);
+        } catch (Throwable ignored) {
+        }
+    }
+
+    protected static dev.arubik.craftengine.fluid.behavior.FluidCarrier fluidCarrierAt(Level level, BlockPos pos) {
+        var cs = net.momirealms.craftengine.bukkit.util.BlockStateUtils
+                .getOptionalCustomBlockState(level.getBlockState(pos)).orElse(null);
+        if (cs == null)
+            return null;
+        var b = cs.behavior();
+        if (b instanceof dev.arubik.craftengine.fluid.behavior.FluidCarrier fc)
+            return fc;
+        return b == null ? null : b.getFirst(dev.arubik.craftengine.fluid.behavior.FluidCarrier.class);
+    }
+
+    protected static dev.arubik.craftengine.gas.GasCarrier gasCarrierAt(Level level, BlockPos pos) {
+        var cs = net.momirealms.craftengine.bukkit.util.BlockStateUtils
+                .getOptionalCustomBlockState(level.getBlockState(pos)).orElse(null);
+        if (cs == null)
+            return null;
+        var b = cs.behavior();
+        if (b instanceof dev.arubik.craftengine.gas.GasCarrier gc)
+            return gc;
+        return b == null ? null : b.getFirst(dev.arubik.craftengine.gas.GasCarrier.class);
+    }
+
+    // ============ FUNNEL IO (conveyor-belt bridge, mirrors the funnel block) ============
+
+    private static net.minecraft.core.Direction nmsDir(net.momirealms.craftengine.core.util.Direction d) {
+        return net.minecraft.core.Direction.valueOf(d.name());
+    }
+
+    private static net.momirealms.craftengine.core.util.Direction coreDir(net.minecraft.core.Direction d) {
+        return net.momirealms.craftengine.core.util.Direction.valueOf(d.name());
+    }
+
+    /** Any local face configured as a FUNNEL input (belt feeds the machine). */
+    private boolean hasFunnelInput() {
+        if (ioConfiguration == null)
+            return false;
+        for (net.minecraft.core.Direction d : net.minecraft.core.Direction.values())
+            if (ioConfiguration.acceptsInput(dev.arubik.craftengine.multiblock.IOConfiguration.IOType.FUNNEL, d))
+                return true;
+        return false;
+    }
+
+    /** Backpressure for a feeding belt: stall only when this is a funnel target and inputs are full. */
+    @Override
+    public boolean isFull() {
+        if (!hasFunnelInput())
+            return false; // not a funnel target -> belt won't stall (it'll drop instead)
+        for (int s : getInputSlots()) {
+            ItemStack cur = getItem(s);
+            if (cur == null || cur.isEmpty() || cur.getCount() < cur.getMaxStackSize())
+                return false;
+        }
+        return true;
+    }
+
+    // ---- funnel-IO transit: animate items across the funnel face (mirrors the funnel block) ----
+    private net.momirealms.craftengine.core.world.CEWorld ceWorld; // cached each tick for rendering
+
+    private static final class FunnelTransit {
+        org.bukkit.inventory.ItemStack item;
+        float progress;
+        float jitter;
+        boolean out; // true = center -> face (output to belt); false = face -> center (input to slots)
+        dev.arubik.craftengine.conveyor.ConveyorItemDisplay display;
+        boolean spawned;
+    }
+
+    /** One in-flight item per WORLD funnel face (the visible item crossing that face). */
+    private final java.util.Map<net.minecraft.core.Direction, FunnelTransit> funnelTransits =
+            new java.util.EnumMap<>(net.minecraft.core.Direction.class);
+
+    /** The world face a belt feeds when its travel direction is {@code sourceFacing}. */
+    private net.minecraft.core.Direction inputFaceFor(net.momirealms.craftengine.core.util.Direction sourceFacing) {
+        net.minecraft.core.Direction worldFace = nmsDir(sourceFacing.opposite());
+        if (ioConfiguration == null)
+            return null;
+        net.minecraft.core.Direction local = toLocalItemDir(worldFace);
+        if (!ioConfiguration.acceptsInput(dev.arubik.craftengine.multiblock.IOConfiguration.IOType.FUNNEL, local))
+            return null;
+        return worldFace;
+    }
+
+    /** A belt pushes one item into our FUNNEL-input face -> animate across the face into a slot. */
+    @Override
+    public boolean receiveConveyorItem(org.bukkit.inventory.ItemStack stack,
+            net.momirealms.craftengine.core.util.Direction sourceFacing) {
+        return startInputTransit(stack, sourceFacing, 0f, null, false);
+    }
+
+    @Override
+    public boolean receiveConveyorItem(org.bukkit.inventory.ItemStack stack,
+            net.momirealms.craftengine.core.util.Direction sourceFacing, float jitter) {
+        return startInputTransit(stack, sourceFacing, jitter, null, false);
+    }
+
+    /** Seamless: adopt the sender's live display so the item doesn't flicker entering the machine. */
+    @Override
+    public boolean adoptConveyorItem(org.bukkit.inventory.ItemStack stack, float jitter,
+            dev.arubik.craftengine.conveyor.ConveyorItemDisplay display, boolean spawned,
+            net.momirealms.craftengine.core.util.Direction sourceFacing) {
+        return startInputTransit(stack, sourceFacing, jitter, display, spawned);
+    }
+
+    private boolean startInputTransit(org.bukkit.inventory.ItemStack stack,
+            net.momirealms.craftengine.core.util.Direction sourceFacing, float jitter,
+            dev.arubik.craftengine.conveyor.ConveyorItemDisplay display, boolean spawned) {
+        if (ioConfiguration == null || stack == null || stack.getType().isAir())
+            return false;
+        net.minecraft.core.Direction face = inputFaceFor(sourceFacing);
+        if (face == null)
+            return false;
+        if (funnelTransits.containsKey(face) || isFull())
+            return false; // one item per face in flight; stall if slots are full
+        FunnelTransit t = new FunnelTransit();
+        t.item = stack.clone();
+        t.item.setAmount(1);
+        t.jitter = jitter;
+        t.out = false;
+        t.progress = 0f;
+        t.display = display; // null -> we spawn our own on first render
+        t.spawned = spawned;
+        funnelTransits.put(face, t);
+        return true;
+    }
+
+    /** Adds {@code stack} fully into the input slots; true only if everything fit. */
+    private boolean addToInputs(ItemStack stack) {
+        boolean changed = false;
+        for (int s : getInputSlots()) {
+            if (stack.isEmpty())
+                break;
+            ItemStack cur = getItem(s);
+            if (cur == null || cur.isEmpty()) {
+                setItem(s, stack.copy());
+                stack.setCount(0);
+                changed = true;
+            } else if (ItemStack.isSameItemSameComponents(cur, stack)) {
+                int space = cur.getMaxStackSize() - cur.getCount();
+                int move = Math.min(space, stack.getCount());
+                if (move > 0) {
+                    cur.grow(move);
+                    stack.shrink(move);
+                    changed = true;
+                }
+            }
+        }
+        if (changed)
+            setChanged();
+        return stack.isEmpty();
+    }
+
+    /** Each tick, start a transit that carries an output item across the FUNNEL-output face. */
+    protected void pushFunnelOutputs(Level level) {
+        if (ioConfiguration == null || !providesAnyFunnelOutput())
+            return;
+        for (net.minecraft.core.Direction d : net.minecraft.core.Direction.values()) {
+            net.minecraft.core.Direction local = toLocalItemDir(d);
+            if (!ioConfiguration.providesOutput(dev.arubik.craftengine.multiblock.IOConfiguration.IOType.FUNNEL, local))
+                continue;
+            if (funnelTransits.containsKey(d))
+                continue; // already carrying an item across this face
+            // Only pull when a receiver is present and has room (else the item would have nowhere to go).
+            net.momirealms.craftengine.core.block.entity.BlockEntity be =
+                    dev.arubik.craftengine.block.entity.BukkitBlockEntityTypes.getIfLoaded(level,
+                            getMachinePos().relative(d));
+            if (be == null || !(be.controller instanceof dev.arubik.craftengine.conveyor.ConveyorReceiver recv))
+                continue;
+            if (recv instanceof AbstractMachineBlockEntity)
+                continue; // don't hand off to another machine via funnel
+            if (recv.isFull())
+                continue;
+            for (int s : getOutputSlots()) {
+                ItemStack cur = getItem(s);
+                if (cur == null || cur.isEmpty())
+                    continue;
+                org.bukkit.inventory.ItemStack one =
+                        org.bukkit.craftbukkit.inventory.CraftItemStack.asBukkitCopy(cur).clone();
+                one.setAmount(1);
+                FunnelTransit t = new FunnelTransit();
+                t.item = one;
+                t.jitter = 0f;
+                t.out = true;
+                t.progress = 0f;
+                funnelTransits.put(d, t);
+                cur.shrink(1); // reserved by the transit; it's now visually in flight
+                setChanged();
+                break;
+            }
+        }
+    }
+
+    /** Advance, render, and complete every funnel-face transit (input -> slot, output -> belt). */
+    private void tickFunnelTransits(net.momirealms.craftengine.core.world.CEWorld world) {
+        if (funnelTransits.isEmpty())
+            return;
+        Level level = (Level) world.world.minecraftWorld();
+        java.util.Iterator<java.util.Map.Entry<net.minecraft.core.Direction, FunnelTransit>> it =
+                funnelTransits.entrySet().iterator();
+        while (it.hasNext()) {
+            java.util.Map.Entry<net.minecraft.core.Direction, FunnelTransit> e = it.next();
+            net.minecraft.core.Direction face = e.getKey();
+            FunnelTransit t = e.getValue();
+            // Inherit the connected belt's speed on this face so the funnel keeps pace (no bottleneck).
+            float rpm = dev.arubik.craftengine.conveyor.ConveyorBlockEntity.BASE_RPM;
+            net.momirealms.craftengine.core.block.entity.BlockEntity nbe =
+                    dev.arubik.craftengine.block.entity.BukkitBlockEntityTypes.getIfLoaded(level,
+                            getMachinePos().relative(face));
+            if (nbe != null && nbe.controller instanceof dev.arubik.craftengine.conveyor.ConveyorBlockEntity belt
+                    && belt.effectiveRpm() > 0f)
+                rpm = belt.effectiveRpm();
+            float inc = dev.arubik.craftengine.conveyor.ConveyorMath.progressPerTick(rpm,
+                    dev.arubik.craftengine.conveyor.ConveyorBlockEntity.BASE_RPM,
+                    dev.arubik.craftengine.conveyor.ConveyorBlockEntity.BASE_TRAVEL_TICKS);
+            t.progress = Math.min(1f, t.progress + inc);
+            renderFunnelTransit(world, face, t);
+            if (t.progress < 1f)
+                continue;
+            if (!t.out) {
+                // Input reached the centre -> drop into the input slots; stall if they filled up.
+                ItemStack nms = org.bukkit.craftbukkit.inventory.CraftItemStack.asNMSCopy(t.item);
+                if (addToInputs(nms)) {
+                    despawnFunnelTransit(world, t);
+                    it.remove();
+                }
+                // else keep at 1.0 (rendered at centre) until a slot frees
+            } else {
+                // Output reached the face -> hand to the belt (transfer the display = seamless).
+                net.momirealms.craftengine.core.block.entity.BlockEntity be =
+                        dev.arubik.craftengine.block.entity.BukkitBlockEntityTypes.getIfLoaded(level,
+                                getMachinePos().relative(face));
+                if (be != null && be.controller instanceof dev.arubik.craftengine.conveyor.ConveyorBlockEntity belt) {
+                    if (belt.adoptFromFunnel(world, t.item, t.jitter, t.display, t.spawned, coreDir(face).opposite())) {
+                        t.display = null; // entity moved on
+                        it.remove();
+                    }
+                } else if (be != null
+                        && be.controller instanceof dev.arubik.craftengine.conveyor.ConveyorDisplayReceiver dr
+                        && !(dr instanceof AbstractMachineBlockEntity)) {
+                    // Router (splitter/merger/depot): transfer the display -> seamless.
+                    if (!dr.isFull() && dr.adoptConveyorItem(t.item, t.jitter, t.display, t.spawned, coreDir(face))) {
+                        t.display = null;
+                        it.remove();
+                    }
+                } else if (be != null && be.controller instanceof dev.arubik.craftengine.conveyor.ConveyorReceiver recv
+                        && !(recv instanceof AbstractMachineBlockEntity)) {
+                    if (!recv.isFull() && recv.receiveConveyorItem(t.item, coreDir(face), t.jitter)) {
+                        despawnFunnelTransit(world, t);
+                        it.remove();
+                    }
+                } else {
+                    // Belt gone -> drop the item back so it isn't lost, then clear the transit.
+                    addToInputs(org.bukkit.craftbukkit.inventory.CraftItemStack.asNMSCopy(t.item));
+                    despawnFunnelTransit(world, t);
+                    it.remove();
+                }
+                // else (belt full) keep at 1.0 and retry next tick
+            }
+        }
+    }
+
+    private void renderFunnelTransit(net.momirealms.craftengine.core.world.CEWorld world,
+            net.minecraft.core.Direction face, FunnelTransit t) {
+        BlockPos pos = getMachinePos();
+        java.util.List<net.momirealms.craftengine.core.entity.player.Player> viewers =
+                world.world().getTrackedBy(new net.momirealms.craftengine.core.world.ChunkPos(
+                        new net.momirealms.craftengine.core.world.BlockPos(pos.getX(), pos.getY(), pos.getZ())));
+        if (t.display == null)
+            t.display = new dev.arubik.craftengine.conveyor.ConveyorItemDisplay();
+        t.display.setNmsItem(org.bukkit.craftbukkit.inventory.CraftItemStack.asNMSCopy(t.item));
+        org.joml.Vector3f center = new org.joml.Vector3f(0.5f,
+                dev.arubik.craftengine.conveyor.ConveyorMath.BELT_TOP_Y, 0.5f);
+        org.joml.Vector3f faceEdge = new org.joml.Vector3f(0.5f + face.getStepX() * 0.5f,
+                dev.arubik.craftengine.conveyor.ConveyorMath.BELT_TOP_Y, 0.5f + face.getStepZ() * 0.5f);
+        org.joml.Vector3f rel = t.out
+                ? dev.arubik.craftengine.conveyor.ConveyorMath.interpolate(center, faceEdge, t.progress)
+                : dev.arubik.craftengine.conveyor.ConveyorMath.interpolate(faceEdge, center, t.progress);
+        // Face the travel direction (out -> toward the face; in -> toward the centre).
+        int mx = t.out ? face.getStepX() : -face.getStepX();
+        int mz = t.out ? face.getStepZ() : -face.getStepZ();
+        org.joml.Quaternionf rot = dev.arubik.craftengine.conveyor.ConveyorMath.itemRotation(mx, mz, 0);
+        rot.rotateY(t.jitter);
+        t.display.setRotation(rot);
+        t.display.render(viewers, pos.getX() + rel.x, pos.getY() + rel.y, pos.getZ() + rel.z, !t.spawned);
+        t.display.consumeRotationDirty();
+        t.spawned = true;
+    }
+
+    private void despawnFunnelTransit(net.momirealms.craftengine.core.world.CEWorld world, FunnelTransit t) {
+        if (t.display == null)
+            return;
+        for (net.momirealms.craftengine.core.entity.player.Player p : world.world().getTrackedBy(
+                new net.momirealms.craftengine.core.world.ChunkPos(new net.momirealms.craftengine.core.world.BlockPos(
+                        getMachinePos().getX(), getMachinePos().getY(), getMachinePos().getZ()))))
+            t.display.despawn(p);
+        t.display.clearShown();
+        t.display = null;
+        t.spawned = false;
+    }
+
+    /** Despawn every in-flight funnel-transit display (call on break/unload to avoid ghosts). */
+    protected void despawnAllFunnelTransits() {
+        if (ceWorld == null || funnelTransits.isEmpty())
+            return;
+        for (FunnelTransit t : funnelTransits.values())
+            despawnFunnelTransit(ceWorld, t);
+        funnelTransits.clear();
+    }
+
+    private boolean providesAnyFunnelOutput() {
+        for (net.minecraft.core.Direction d : net.minecraft.core.Direction.values())
+            if (ioConfiguration.providesOutput(dev.arubik.craftengine.multiblock.IOConfiguration.IOType.FUNNEL, d))
+                return true;
+        return false;
     }
 
     // --- Ticking attach (BlockEntityController model) ---
@@ -1164,7 +1672,10 @@ public abstract class AbstractMachineBlockEntity extends PersistentWorldlyBlockE
             net.momirealms.craftengine.core.world.BlockPos pos,
             net.momirealms.craftengine.core.block.ImmutableBlockState state, AbstractMachineBlockEntity self) {
         Level level = (Level) world.world.minecraftWorld();
+        self.ceWorld = world; // cache for funnel-transit rendering (needs CE viewers)
         self.tick(level, net.minecraft.core.BlockPos.of(pos.asLong()), state);
+        if (!level.isClientSide())
+            self.tickFunnelTransits(world);
     }
 
     /**

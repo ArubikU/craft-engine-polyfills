@@ -1,6 +1,6 @@
 {
-  "tool": "demo:logistics_blueprint",
+  "tool": "cml:logistics_blueprint",
   "pattern": [" G ", "BIB"],
-  "keys": { "B": "demo:conveyor", "I": "minecraft:iron_ingot", "G": "demo:stone_gear" },
-  "outputs": [ { "id": "demo:conveyor_splitter", "count": 1 } ]
+  "keys": { "B": "cml:conveyor", "I": "minecraft:iron_ingot", "G": "cml:stone_gear" },
+  "outputs": [ { "id": "cml:conveyor_splitter", "count": 1 } ]
 }

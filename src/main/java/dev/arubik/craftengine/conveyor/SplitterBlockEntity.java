@@ -32,27 +32,20 @@ public class SplitterBlockEntity extends AbstractRouterBlockEntity {
     }
 
     @Override
-    protected void route(CEWorld world, BlockPos pos) {
-        Direction front = facing();
-        Direction right = ConveyorRouting.cw(front);
-        Direction left = ConveyorRouting.ccw(front);
-        Direction[] outs = { front, right, left };
-
-        for (int i = 0; i < slots; i++) {
-            if (slotEmpty(i))
-                continue;
-            org.bukkit.inventory.ItemStack stack = bukkitSlot(i);
-            if (!dispatchBalanced(world, pos, outs, stack))
-                break; // every output full/blocked -> hold (backpressure)
-            clearSlot(i);
-        }
+    protected Direction[] inputSides() {
+        return new Direction[] { facing().opposite() }; // back: the feeding belt line
     }
 
-    /**
-     * Send one stack to the least-loaded output that currently has room. Returns
-     * false if no output could take it (all full/blocked).
-     */
-    private boolean dispatchBalanced(CEWorld world, BlockPos pos, Direction[] outs, org.bukkit.inventory.ItemStack stack) {
+    @Override
+    protected Direction[] outputSides() {
+        Direction f = facing();
+        return new Direction[] { f, ConveyorRouting.cw(f), ConveyorRouting.ccw(f) }; // front/right/left
+    }
+
+    @Override
+    protected Direction chooseExit(CEWorld world, BlockPos pos) {
+        Direction front = facing();
+        Direction[] outs = { front, ConveyorRouting.cw(front), ConveyorRouting.ccw(front) };
         int best = -1;
         long bestCount = Long.MAX_VALUE;
         for (int k = 0; k < outs.length; k++) {
@@ -64,12 +57,17 @@ public class SplitterBlockEntity extends AbstractRouterBlockEntity {
                 best = k;
             }
         }
-        if (best < 0)
-            return false;
-        if (ConveyorRouting.push(world, pos, outs[best], stack)) {
-            dispatched[best]++;
-            return true;
-        }
-        return false;
+        return best < 0 ? null : outs[best];
+    }
+
+    @Override
+    protected void onDispatched(Direction dir) {
+        Direction front = facing();
+        if (dir == front)
+            dispatched[0]++;
+        else if (dir == ConveyorRouting.cw(front))
+            dispatched[1]++;
+        else if (dir == ConveyorRouting.ccw(front))
+            dispatched[2]++;
     }
 }
