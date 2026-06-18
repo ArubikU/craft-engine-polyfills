@@ -183,6 +183,9 @@ public class MachineBlockBehavior extends ConnectableBlockBehavior
 
     @Override
     public GasStack getStoredGas(Level level, BlockPos pos) {
+        BlockEntity be = BukkitBlockEntityTypes.getIfLoaded(level, pos);
+        if (be != null && be.controller instanceof AbstractMachineBlockEntity machine)
+            return machine.getStoredGasForCarrier();
         return GasStack.EMPTY;
     }
 

@@ -42,6 +42,10 @@ public class PipeBehavior extends ConnectedBlockBehavior implements EntityBlock,
 
     public static final Factory FACTORY = new Factory();
 
+    /** Temporary pressure debug logging. */
+    public static final boolean PIPE_DBG = false;
+    private static long lastPipeDbg = 0;
+
     protected static final int CAPACITY = 1000; // mb
     protected static final int TRANSFER_PER_TICK = 100; // mb/tick
 
@@ -51,8 +55,12 @@ public class PipeBehavior extends ConnectedBlockBehavior implements EntityBlock,
     private final java.util.Map<Long, Integer> lastSuccessfulDirection = new java.util.concurrent.ConcurrentHashMap<>();
 
     public PipeBehavior(BlockDefinition block) {
+        // NOTE: cml:iron_pump is intentionally NOT in this blanket connect set. The pump is now a
+        // full machine with a directional FLUID IO config (in=DOWN/out=UP, facing-relative), so the
+        // pipe must connect to it ONLY through the face-aware carrierConnectsHere() path — which
+        // honors the pump's actual IN/OUT world faces — not via an all-sides custom-block match.
         super(block, new java.util.ArrayList<>(), new HashSet<>(),
-                new HashSet<>(java.util.Arrays.asList("cml:iron_pump", "cml:copper_valve", "cml:copper_tank")), true);
+                new HashSet<>(java.util.Arrays.asList("cml:copper_valve", "cml:copper_tank")), true);
         this.block = block;
         this.connectableFaces = java.util.Arrays.asList(Direction.values());
     }
@@ -98,6 +106,12 @@ public class PipeBehavior extends ConnectedBlockBehavior implements EntityBlock,
                 return;
             BlockPos mcPos = BlockPos.of(cePos.asLong());
             FluidStack stored = getStored(level, mcPos);
+            if (PIPE_DBG && !stored.isEmpty() && System.currentTimeMillis() - lastPipeDbg > 1000) {
+                lastPipeDbg = System.currentTimeMillis();
+                dev.arubik.craftengine.CraftEnginePolyfills.log("[PipeDBG] @" + mcPos.getX() + "," + mcPos.getY()
+                        + "," + mcPos.getZ() + " " + stored.getType() + " amt=" + stored.getAmount()
+                        + " pressure=" + stored.getPressure());
+            }
             if (stored.getPressure() <= 0) {
                 tryTransfer(level, mcPos, Direction.UP, TransferAction.PUMP);
                 stored = getStored(level, mcPos);
@@ -115,10 +129,10 @@ public class PipeBehavior extends ConnectedBlockBehavior implements EntityBlock,
                         }
                     }
                 }
-                // Homogenize over ALL faces (vertical included so columns equalize). The UP case is
-                // gated by pressure inside tryTransfer so fluid only climbs within its reach.
-                Direction[] homogDirs = { Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST,
-                        Direction.UP, Direction.DOWN };
+                // Homogenize HORIZONTALLY only. Vertical equalize would PULL fluid back UP out of the
+                // pipe below, fighting gravity (the bug: "homogeniza pero no baja"). Downward flow is the
+                // PUSH DOWN above (gravity); upward flow needs pressure (PUSH UP in the pressure branch).
+                Direction[] homogDirs = { Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST };
                 int startIdx = lastSuccessfulDirection.getOrDefault(mcPos.asLong(), 0) % homogDirs.length;
 
                 for (int i = 0; i < homogDirs.length; i++) {
@@ -282,7 +296,20 @@ public class PipeBehavior extends ConnectedBlockBehavior implements EntityBlock,
                         .getAccessMode() == dev.arubik.craftengine.util.TransferAccessMode.ANYONE_CAN_TAKE) {
                     FluidStack theirStored = targetCarrier.getStored(level, targetPos);
                     if (!theirStored.isEmpty()) {
-                        int move = Math.min(inputRate, theirStored.getAmount());
+                        // Only pull what THIS pipe can actually hold — never extract into a full or
+                        // type-incompatible pipe, or the extracted fluid is lost (the source can't
+                        // always take the remainder back). Fixes water vanishing from a tank tower.
+                        FluidStack pipeStored = getStored(level, from);
+                        int free;
+                        if (pipeStored.isEmpty())
+                            free = CAPACITY;
+                        else if (pipeStored.getType() == theirStored.getType())
+                            free = CAPACITY - pipeStored.getAmount();
+                        else
+                            free = 0;
+                        if (free <= 0)
+                            return false;
+                        int move = Math.min(Math.min(inputRate, theirStored.getAmount()), free);
                         final FluidStack[] extracted = { null };
                         int actually = FluidType.extractFromCarrier(targetCarrier, level, targetPos, move,
                                 f -> extracted[0] = f, fromTarget); // Extract from target, passing side
@@ -329,17 +356,21 @@ public class PipeBehavior extends ConnectedBlockBehavior implements EntityBlock,
                 }
 
                 int pressure = stored.getPressure();
-                FluidStack toTransfer = new FluidStack(stored.getType(), move,
-                        Math.max(0, pressure - 1));
+                // Pressure is only spent CLIMBING (pushing UP). Moving DOWN or horizontally keeps the
+                // full pressure, so fluid travels along/through pipes without bleeding pressure.
+                int sentPressure = (dir == Direction.UP) ? Math.max(0, pressure - 1) : pressure;
+                FluidStack toTransfer = new FluidStack(stored.getType(), move, sentPressure);
+                if (PIPE_DBG)
+                    dev.arubik.craftengine.CraftEnginePolyfills.log("[PipeDBG] PUSH " + dir + " from "
+                            + from.getX() + "," + from.getY() + "," + from.getZ() + " pressureIn=" + pressure
+                            + " sent=" + sentPressure + " (targetIsPipe=" + (targetCarrier instanceof PipeBehavior) + ")");
 
                 int accepted = targetCarrier.insertFluid(level, targetPos, toTransfer, fromTarget);
 
                 if (accepted > 0) {
-                    stored.removeAmount(accepted);
-                    if (stored.isEmpty())
-                        withBE(level, from, p -> p.remove(FluidKeys.FLUID));
-                    else
-                        withBE(level, from, p -> p.set(FluidKeys.FLUID, stored));
+                    // Remove what we sent from OUR store (CustomBlockData — same store insert/extract
+                    // use; the old withBE path wrote the BE tag, a different store -> desync).
+                    extractFluid(level, from, accepted, null, null);
 
                     // Actualizar historial después de transferencia exitosa
                     if (pbe != null) {

@@ -1,0 +1,22 @@
+{
+  "type": "crusher",
+  "time": 60,
+  "fuelRequired": false,
+  "rpm": 4,
+  "su": 2,
+  "inputs": [
+    {
+      "type": "item_tag",
+      "tag": "minecraft:wool",
+      "amount": 1
+    }
+  ],
+  "outputs": [
+    {
+      "type": "item",
+      "id": "minecraft:string",
+      "amount": 1,
+      "chance": 1.0
+    }
+  ]
+}

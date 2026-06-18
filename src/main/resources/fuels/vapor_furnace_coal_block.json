@@ -1,0 +1,5 @@
+{
+    "type": "vapor_furnace_mk1",
+    "burnTime": 16000,
+    "input": { "type": "item", "id": "minecraft:coal_block", "amount": 1 }
+}

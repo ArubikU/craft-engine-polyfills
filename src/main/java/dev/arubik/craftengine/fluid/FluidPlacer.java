@@ -10,6 +10,33 @@ public class FluidPlacer {
         if (stack == null || stack.isEmpty())
             return false;
         FluidType t = stack.getType();
+
+        // Fill CAULDRONS: water raises an (empty or water) cauldron's level (333 mB/level, max 3);
+        // lava fills an EMPTY cauldron with one bucket. Lets a pump deposit into a cauldron.
+        net.minecraft.world.level.block.state.BlockState cs = level.getBlockState(pos);
+        if (t == FluidType.WATER && (cs.is(Blocks.CAULDRON) || cs.is(Blocks.WATER_CAULDRON))) {
+            int levelMb = Math.max(1, FluidType.WATER.mbPerFullBlock() / 3);
+            int cur = cs.is(Blocks.WATER_CAULDRON)
+                    ? cs.getValue(net.minecraft.world.level.block.LayeredCauldronBlock.LEVEL) : 0;
+            if (cur >= 3)
+                return false;
+            int addLevels = Math.min(3 - cur, stack.getAmount() / levelMb);
+            if (addLevels <= 0)
+                return false;
+            level.setBlock(pos, Blocks.WATER_CAULDRON.defaultBlockState()
+                    .setValue(net.minecraft.world.level.block.LayeredCauldronBlock.LEVEL, cur + addLevels), 3);
+            stack.removeAmount(addLevels * levelMb);
+            return true;
+        }
+        if (t == FluidType.LAVA && cs.is(Blocks.CAULDRON)) {
+            int full = FluidType.LAVA.mbPerFullBlock();
+            if (stack.getAmount() < full)
+                return false;
+            level.setBlock(pos, Blocks.LAVA_CAULDRON.defaultBlockState(), 3);
+            stack.removeAmount(full);
+            return true;
+        }
+
         int needed = t.mbPerFullBlock();
         if (needed <= 0 || stack.getAmount() < needed)
             return false;

@@ -1,0 +1,14 @@
+{
+  "_comment": "Copper Furnace (machineId vapor_furnace_mk1) steel recipe. LAVA acts as the fuel/heat source, so fuelRequired=false: the base processTick gates fuel via `requiresFuel() && recipe.isFuelRequired()`, so with fuelRequired=false it processes with NO fuel item as long as 1000 mB of lava is present in the (unfiltered) fluid tank and consumed as the fluid input. Inputs: lava (fluid) + 4 raw_iron (matching vapor_furnace_iron.json) + 4 coal. The two item input slots each stack, so 4 raw_iron in one slot + 4 coal in the other fits the furnace's 2 input slots. Output: 1 cml:steel_ingot.",
+  "type": "vapor_furnace_mk1",
+  "time": 150,
+  "fuelRequired": false,
+  "inputs": [
+    { "type": "fluid", "id": "lava", "amount": 1000 },
+    { "type": "item", "id": "minecraft:raw_iron", "amount": 4 },
+    { "type": "item", "id": "minecraft:coal", "amount": 4 }
+  ],
+  "outputs": [
+    { "type": "custom_item", "id": "cml:steel_ingot", "amount": 1, "chance": 1.0 }
+  ]
+}

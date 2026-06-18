@@ -12,6 +12,8 @@ repositories {
     maven("https://repo.momirealms.net/releases/")
     maven { url = uri("https://repo.codemc.io/repository/maven-releases/") }
     maven { url = uri("https://repo.codemc.io/repository/maven-snapshots/") }
+    maven("https://maven.blamejared.com/")
+    maven("https://maven.nucleoid.xyz/")
 }
 
 dependencies {
@@ -23,6 +25,12 @@ dependencies {
     compileOnly("it.unimi.dsi:fastutil:${rootProject.properties["fastutil_version"]}")
     compileOnly("net.kyori:adventure-platform-bukkit:4.4.1")
     compileOnly("com.github.retrooper:packetevents-spigot:2.9.5")
+    // BetterModel animated render API (compileOnly soft-dependency). The bukkit-api jar
+    // transitively pulls bettermodel-api which holds kr.toxicity.model.api.BetterModel.
+    // NOTE: 3.x targets JVM 25; this project is Java 21, so we pin the latest Java-21
+    // compatible release (2.2.0). Its API (BetterModel.model/create, Tracker.animate,
+    // AnimationModifier) is identical to the 3.x sketch used by CrusherModelRenderer.
+    compileOnly("io.github.toxicity188:bettermodel-bukkit-api:2.2.0")
     //implementation("net.bytebuddy:byte-buddy:${rootProject.properties["byte_buddy_version"]}")
     //implementation("net.bytebuddy:byte-buddy-agent:${rootProject.properties["byte_buddy_version"]}")
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.0")
@@ -66,6 +74,7 @@ bukkit {
     author = "ArubikU"
     website = "https://github.com/ArubikU"
     depend = listOf("CraftEngine")
+    softDepend = listOf("BetterModel")
     foliaSupported = true
     commands {
         create("cepolyfill") {

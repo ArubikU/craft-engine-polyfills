@@ -179,21 +179,27 @@ public class ConnectedBlockBehavior extends ConnectableBlockBehavior {
         ImmutableBlockState relativeState = BlockStateUtils.getOptionalCustomBlockState(state).orElse(null);
         if (relativeState == null)
             return false; // No es un custom block, no
-        switch (direction) {
-            case NORTH:
-                return relativeState.get(NORTH) == ConnectedFace.CONNECTED;
-            case EAST:
-                return relativeState.get(EAST) == ConnectedFace.CONNECTED;
-            case SOUTH:
-                return relativeState.get(SOUTH) == ConnectedFace.CONNECTED;
-            case WEST:
-                return relativeState.get(WEST) == ConnectedFace.CONNECTED;
-            case UP:
-                return relativeState.get(UP) == ConnectedFace.CONNECTED;
-            case DOWN:
-                return relativeState.get(DOWN) == ConnectedFace.CONNECTED;
-            default:
-                return false;
+        // Guard: a stale block whose saved real-state doesn't match the current config can lack the
+        // connected_face property — treat as not connected instead of throwing every tick.
+        try {
+            switch (direction) {
+                case NORTH:
+                    return relativeState.get(NORTH) == ConnectedFace.CONNECTED;
+                case EAST:
+                    return relativeState.get(EAST) == ConnectedFace.CONNECTED;
+                case SOUTH:
+                    return relativeState.get(SOUTH) == ConnectedFace.CONNECTED;
+                case WEST:
+                    return relativeState.get(WEST) == ConnectedFace.CONNECTED;
+                case UP:
+                    return relativeState.get(UP) == ConnectedFace.CONNECTED;
+                case DOWN:
+                    return relativeState.get(DOWN) == ConnectedFace.CONNECTED;
+                default:
+                    return false;
+            }
+        } catch (IllegalArgumentException stale) {
+            return false;
         }
     }
 

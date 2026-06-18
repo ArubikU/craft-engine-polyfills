@@ -374,6 +374,10 @@ public class GasMotorMk1BlockEntity extends AbstractMachineBlockEntity implement
             lastInvHash = invHash();
         }
 
+        // Pull vapor from a connected gas pipe/tank on the GAS input face (UP) — pressureless steam
+        // won't be pushed DOWN into us by the pipe, so WE pull it in each tick.
+        pullFromInputFaces(level);
+
         Agg a = aggregate();
         // Keep targets within the (possibly upgrade-extended) caps.
         targetRpm = Math.max(0f, Math.min(rpmMax(level, a), targetRpm));

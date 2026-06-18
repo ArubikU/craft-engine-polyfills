@@ -33,15 +33,61 @@ public final class MachineBar {
     public enum Part { START, MIDDLE, END }
 
     public final String id;
-    public final String model;            // "row" | "column" (label / future shapes)
+    public final String model;            // "row" | "column" | "fluid" (per-level fill models)
     public final int[] slots;             // start (first) -> end (last)
     public final Map<Part, List<BarState>> states; // per-part, ascending by maxLocalPercent
+    public final String family;           // fluid model family prefix (e.g. "water"); subType may override
+    public final String name;             // tooltip name (e.g. "lang:polyfill.ui.fluid"); nullable
+
+    /**
+     * Optional PER-SLOT state declaration: {@code segments[k]} is the ordered state list for the
+     * bar's k-th slot (same slot order as {@link #slots}). When present, the renderer maps each
+     * slot's LOCAL fill % to a state in its own list (subtype-aware), instead of the shared
+     * start/middle/end parts. This is how the fluid bars declare their per-level fill models by
+     * RANGES + TYPE in config (no hardcoded fluid mapping). Null/empty = use {@link #states}.
+     */
+    public final List<List<BarState>> segments;
 
     public MachineBar(String id, String model, int[] slots, Map<Part, List<BarState>> states) {
+        this(id, model, slots, states, null, null, null);
+    }
+
+    public MachineBar(String id, String model, int[] slots, Map<Part, List<BarState>> states,
+            String family, String name) {
+        this(id, model, slots, states, family, name, null);
+    }
+
+    public MachineBar(String id, String model, int[] slots, Map<Part, List<BarState>> states,
+            String family, String name, List<List<BarState>> segments) {
         this.id = id;
         this.model = model;
         this.slots = slots;
         this.states = states;
+        this.family = family;
+        this.name = name;
+        this.segments = segments;
+    }
+
+    /** Pick the state for a slot whose LOCAL fill is {@code localPercent}, from an explicit list. */
+    public BarState stateForList(List<BarState> list, double localPercent, String subType) {
+        if (list == null || list.isEmpty())
+            return null;
+        BarState chosen = null;
+        for (boolean typedPass : new boolean[] { true, false }) {
+            for (BarState s : list) {
+                boolean typeOk = typedPass
+                        ? (s.type != null && subType != null && s.type.equalsIgnoreCase(subType))
+                        : (s.type == null);
+                if (!typeOk)
+                    continue;
+                if (localPercent >= s.min && localPercent <= s.max)
+                    return s;
+                chosen = s;
+            }
+            if (chosen != null && !typedPass)
+                break;
+        }
+        return chosen;
     }
 
     /** One appearance of a bar piece, chosen when the piece's LOCAL fill % falls in [{@link #min}, {@link #max}]. */

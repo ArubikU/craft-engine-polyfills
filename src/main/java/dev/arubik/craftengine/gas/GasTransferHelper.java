@@ -197,17 +197,9 @@ public class GasTransferHelper {
     public static boolean wouldCreateLoop(String history, BlockPos newPos) {
         if (history == null || history.isEmpty())
             return false;
-
-        String[] positions = history.split(";");
-        String newPosStr = newPos.getX() + "," + newPos.getY() + "," + newPos.getZ();
-
-        // Check if newPos already appears in history
-        for (String pos : positions) {
-            if (pos.equals(newPosStr))
-                return true; // Loop detected!
-        }
-
-        return false;
+        String tok = newPos.getX() + "," + newPos.getY() + "," + newPos.getZ();
+        // Delimiter-wrapped containment: no split() array alloc, no substring false positives.
+        return (";" + history + ";").contains(";" + tok + ";");
     }
 
     /**
@@ -219,19 +211,12 @@ public class GasTransferHelper {
      * @return Updated history string
      */
     public static String updateHistory(String history, BlockPos newPos) {
-        String newPosStr = newPos.getX() + "," + newPos.getY() + "," + newPos.getZ();
-
+        String tok = newPos.getX() + "," + newPos.getY() + "," + newPos.getZ();
         if (history == null || history.isEmpty())
-            return newPosStr;
-
-        String[] positions = history.split(";");
-
-        // Keep last 2 positions + new one = 3 total
-        if (positions.length >= 2) {
-            return positions[positions.length - 1] + ";" + newPosStr;
-        } else {
-            return history + ";" + newPosStr;
-        }
+            return tok;
+        int semi = history.lastIndexOf(';');
+        String last = semi < 0 ? history : history.substring(semi + 1);
+        return last + ";" + tok;
     }
 
     private static Direction getDirection(BlockPos from, BlockPos to) {

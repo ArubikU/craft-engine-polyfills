@@ -16,7 +16,6 @@ public class GasCarrierImpl {
 
         CustomBlockData.from(level, pos).edit(p -> {
             GasStack stored = p.getOrDefault(key, GasStack.EMPTY);
-
             if (stored.isEmpty()) {
                 int move = Math.min(capacity, stack.getAmount());
                 p.set(key, new GasStack(stack.getType(), move));

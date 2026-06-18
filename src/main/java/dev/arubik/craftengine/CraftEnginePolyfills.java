@@ -38,7 +38,15 @@ public final class CraftEnginePolyfills extends JavaPlugin {
                 this);
         getServer().getPluginManager().registerEvents(new dev.arubik.craftengine.crafting.CraftingTableListener(),
                 this);
-        getServer().getPluginManager().registerEvents(new dev.arubik.craftengine.conveyor.ConveyorWandListener(),
+        dev.arubik.craftengine.conveyor.ConveyorWandListener conveyorWand =
+                new dev.arubik.craftengine.conveyor.ConveyorWandListener();
+        getServer().getPluginManager().registerEvents(conveyorWand, this);
+        conveyorWand.start(this); // live aim-tracking preview task
+        dev.arubik.craftengine.pipe.PipeWandListener pipeWand =
+                new dev.arubik.craftengine.pipe.PipeWandListener();
+        getServer().getPluginManager().registerEvents(pipeWand, this);
+        pipeWand.start(this); // live aim-tracking preview task (MAGIC mode)
+        getServer().getPluginManager().registerEvents(new dev.arubik.craftengine.conveyor.FunnelPlaceListener(),
                 this);
         getServer().getPluginManager().registerEvents(new dev.arubik.craftengine.conveyor.ConveyorBreakListener(),
                 this);
@@ -46,11 +54,19 @@ public final class CraftEnginePolyfills extends JavaPlugin {
                 this);
         getServer().getPluginManager().registerEvents(new dev.arubik.craftengine.rotation.GasMotorBreakListener(),
                 this);
+        getServer().getPluginManager().registerEvents(new dev.arubik.craftengine.machine.block.MachineBreakListener(),
+                this);
+        // upgrade_scrapped/upgrade_copper are loot-only: inject them into vanilla chest loot.
+        getServer().getPluginManager().registerEvents(new dev.arubik.craftengine.loot.UpgradeLootListener(),
+                this);
         // cepolyfill command
         // sub command data get <block_pos>
         CepCommand cepCommand = new CepCommand();
         getCommand("cepolyfill").setExecutor(cepCommand);
         getCommand("cepolyfill").setTabCompleter(cepCommand);
+        // Initial load of the central machine-menu title-image config (also refreshed on each
+        // CraftEngineReloadEvent below). Images resolve lazily per-open, so loading the id map here is fine.
+        dev.arubik.craftengine.machine.menu.GuiTitles.reload();
         getLogger().info("CraftEngine Polyfills Enabled");
 
         // NOTE: don't load recipes here — onEnable runs BEFORE CraftEngine registers its
@@ -67,6 +83,9 @@ public final class CraftEnginePolyfills extends JavaPlugin {
                 // load — so custom-item recipe outputs resolve (onEnable runs too early).
                 dev.arubik.craftengine.machine.recipe.loader.RecipeManager.loadRecipes();
                 dev.arubik.craftengine.crafting.StationRecipeLoader.load();
+                // Reload the central machine-menu title-image config (so /craftengine reload all
+                // re-reads polyfills_gui.yml). The CraftEngineReloadEvent also fires the initial load.
+                dev.arubik.craftengine.machine.menu.GuiTitles.reload();
             }
         }, this);
     }

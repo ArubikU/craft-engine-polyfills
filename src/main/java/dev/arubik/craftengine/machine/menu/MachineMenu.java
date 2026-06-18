@@ -44,11 +44,17 @@ public class MachineMenu implements InventoryHolder {
     }
 
     public void tick() {
+        // No one is looking -> skip all gauge rebuilds / slot syncs / title updates entirely.
+        if (inventory.getViewers().isEmpty())
+            return;
         tickCount++;
-        if (tickCount % 5 == 0) {
+        // Refresh dynamic slots (bars: fuel / progress / fluid) + IO slots OFTEN so gauges look live.
+        if (tickCount % 2 == 0) {
             updateDynamicSlots();
-
-            // Dynamic Title Update
+            syncFromMachine(); // refresh OUTPUT/FUEL slots live so produced items show without reopening
+        }
+        if (tickCount % 5 == 0) {
+            // Dynamic Title Update (heavier; keep it less frequent than the gauges).
             if (layout.getTitleProvider() != null) {
                 String dynamic = layout.getTitleProvider().provide(machine);
                 if (dynamic != null && !dynamic.isEmpty()) {
@@ -154,7 +160,11 @@ public class MachineMenu implements InventoryHolder {
             if (type == MenuSlotType.DYNAMIC || type == MenuSlotType.BUTTON) {
                 var provider = layout.getProvider(i);
                 if (provider != null) {
-                    inventory.setItem(i, provider.provide(machine, tickCount));
+                    org.bukkit.inventory.ItemStack next = provider.provide(machine, tickCount);
+                    // Only push the slot when it actually changed — skips the per-viewer slot-update
+                    // packet (and client flicker) every refresh when a gauge hasn't moved.
+                    if (!java.util.Objects.equals(inventory.getItem(i), next))
+                        inventory.setItem(i, next);
                 }
             }
         }

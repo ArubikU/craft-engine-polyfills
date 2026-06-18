@@ -1,0 +1,6 @@
+{
+  "tool": "cml:upgrade_blueprint",
+  "pattern": [" U ", " C "],
+  "keys": { "U": "cml:upgrade_gold", "C": "cml:gold_cast" },
+  "outputs": [ { "id": "cml:upgrade_gold", "count": 2 } ]
+}

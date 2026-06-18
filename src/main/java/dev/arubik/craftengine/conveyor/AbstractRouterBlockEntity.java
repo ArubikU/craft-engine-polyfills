@@ -47,10 +47,12 @@ public abstract class AbstractRouterBlockEntity extends PersistentWorldlyBlockEn
     private void updateRpm(CEWorld world, BlockPos pos) {
         float best = 0f;
         float bestPot = 0f;
+        boolean beltFeeds = false; // a conveyor line feeds this router (vs a pure funnel/IO push)
         dev.arubik.craftengine.rotation.RpmProvider motor = null;
         for (Direction d : inputSides()) {
             BlockEntity be = world.getBlockEntityAtIfLoaded(pos.relative(d));
             if (be != null && be.controller instanceof ConveyorBlockEntity belt) {
+                beltFeeds = true;
                 best = Math.max(best, belt.effectiveRpm()); // live speed (0 while the motor stalls)
                 // Keep the driving motor even when the belt is stalled (effectiveRpm 0): pick by
                 // POTENTIAL rpm so output belts can still report load and keep the motor latched.
@@ -72,10 +74,11 @@ public abstract class AbstractRouterBlockEntity extends PersistentWorldlyBlockEn
             this.moveRpm = ConveyorBlockEntity.BASE_RPM; // still move items across the block
             return;
         }
-        if (motor == null && best <= 0f && hasItems()) {
-            // No motor-driven belt feeds us, but something pushed items in (a funnel from a chest,
-            // or a machine's funnel-IO output). Those carry items at the BASE belt speed without
-            // distributing rotational power -> move at BASE, relay no motor (no SU cost).
+        if (!beltFeeds && motor == null && best <= 0f && hasItems()) {
+            // A pure funnel/IO push (chest funnel, machine output) with NO feeding belt: carry items
+            // at BASE belt speed without distributing rotational power. Guarded by !beltFeeds so a
+            // motor-driven line that just LOST its motor (broken) goes to 0 instead of free-running:
+            // otherwise leftover items would keep the router (and its output belts) moving forever.
             best = ConveyorBlockEntity.BASE_RPM;
         }
         this.relayedRpm = best;

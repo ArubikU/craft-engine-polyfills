@@ -49,13 +49,19 @@ ICONS = {
     "conveyor": {"image": "i_conveyor", "kind": "model",
                  "model": "block/custom/conveyor/conveyor_flat_middle"},
     "depot":    {"image": "i_depot", "kind": "model", "model": "block/custom/conveyor_io/depot"},
-    "motor":    {"image": "i_motor", "kind": "model", "model": "block/custom/gas_motor_mk1/gas_motor_mk1"},
-    "furnace":  {"image": "i_furnace", "kind": "model", "model": "block/custom/vapor_furnace_mk1/vapor_furnace_mk1"},
+    "motor":    {"image": "i_motor", "kind": "model", "model": "block/custom/gas_motor_mk1/gas_motor_mk1", "rot180": True},
+    "furnace":  {"image": "i_furnace", "kind": "model", "model": "block/custom/vapor_furnace_mk1/vapor_furnace_mk1", "rot180": True},
     "copper_wire":    {"image": "i_wire",     "kind": "tex", "tex": "minecraft:item/custom/copper_wire"},
     "brass_shavings": {"image": "i_shavings", "kind": "tex", "tex": "minecraft:item/custom/brass_shavings"},
     "merger":   {"image": "i_merger",   "kind": "model", "model": "block/custom/conveyor_io/merger"},
     "splitter": {"image": "i_splitter", "kind": "model", "model": "block/custom/conveyor_io/splitter"},
-    "funnel":   {"image": "i_funnel",   "kind": "model", "model": "block/custom/funnel/funnel_out"},
+    "funnel":   {"image": "i_funnel",   "kind": "model", "model": "block/custom/funnel/funnel_out", "rot180": True},
+    "upgrade_iron":    {"image": "i_up_iron",    "kind": "tex", "tex": "minecraft:item/custom/upgrade_iron"},
+    "upgrade_gold":    {"image": "i_up_gold",    "kind": "tex", "tex": "minecraft:item/custom/upgrade_gold"},
+    "upgrade_diamond": {"image": "i_up_diamond", "kind": "tex", "tex": "minecraft:item/custom/upgrade_diamond"},
+    "iron_cast":    {"image": "i_cast_iron",    "kind": "tex", "tex": "minecraft:item/custom/iron_cast"},
+    "gold_cast":    {"image": "i_cast_gold",    "kind": "tex", "tex": "minecraft:item/custom/gold_cast"},
+    "diamond_cast": {"image": "i_cast_diamond", "kind": "tex", "tex": "minecraft:item/custom/diamond_cast"},
 }
 
 BLUEPRINTS = {
@@ -117,6 +123,21 @@ BLUEPRINTS = {
         "outputs": [{"item": "funnel", "count": 1}],
         "desc_color": "gold",
         "desc": ["Pulls items off a belt into a chest", "(or feeds them on) - one per side."],
+        "craft": {"pattern": ["PPP", "PGP", "PPP"],
+                  "ingredients": {"P": "minecraft:paper", "G": "cml:iron_gear"}},
+    },
+    # MULTI-RECIPE blueprint: duplicate an upgrade by consuming its matching cast.
+    "upgrade_blueprint": {
+        "name": "Upgrade Blueprint",
+        "model": "minecraft:item/custom/depot_blueprint",
+        "recipes": [
+            {"grid": [[None, "upgrade_iron", None], [None, "iron_cast", None]],
+             "outputs": [{"item": "upgrade_iron", "count": 2}]},
+            {"grid": [[None, "upgrade_gold", None], [None, "gold_cast", None]],
+             "outputs": [{"item": "upgrade_gold", "count": 2}]},
+            {"grid": [[None, "upgrade_diamond", None], [None, "diamond_cast", None]],
+             "outputs": [{"item": "upgrade_diamond", "count": 2}]},
+        ],
         "craft": {"pattern": ["PPP", "PGP", "PPP"],
                   "ingredients": {"P": "minecraft:paper", "G": "cml:iron_gear"}},
     },
@@ -184,24 +205,36 @@ def _affine(dst, src):
     return (a, b, c, d, e, f)
 
 
-# visible faces for a +x/+y/+z corner camera, with shading + corner order (origin,u,v)
+# ALL 6 faces with shading + corner order (origin, u-corner, v-corner). Drawn back->near
+# (painter's algorithm) so the camera-facing 3 overwrite the hidden 3 — this makes the
+# render correct for ANY yaw of the geometry (we literally spin the vertices, never the UVs).
 def _faces(x0, y0, z0, x1, y1, z1):
     return {
         "up":    (1.00, (x0, y1, z0), (x1, y1, z0), (x0, y1, z1)),
+        "down":  (0.45, (x0, y0, z1), (x1, y0, z1), (x0, y0, z0)),
         "south": (0.80, (x0, y1, z1), (x1, y1, z1), (x0, y0, z1)),
+        "north": (0.55, (x1, y1, z0), (x0, y1, z0), (x1, y0, z0)),
         "east":  (0.62, (x1, y1, z1), (x1, y1, z0), (x1, y0, z1)),
+        "west":  (0.62, (x0, y1, z0), (x0, y1, z1), (x0, y0, z0)),
     }
 
 
-def bake_model(model_path):
+def bake_model(model_path, rot180=False):
     with open(os.path.join(MODELS, model_path + ".json"), encoding="utf-8") as fh:
         model = json.load(fh)
     textures = model.get("textures", {})
     elements = model.get("elements", [])
     R = BAKE_RES
 
-    def proj(p):
+    # Literal 180° yaw about the block centre (8,8,8): spin the actual vertices, leave UVs alone.
+    def rot(p):
+        if not rot180:
+            return p
         x, y, z = p
+        return (16 - x, y, 16 - z)
+
+    def proj(p):
+        x, y, z = rot(p)
         return ((x - z) * C30, (x + z) * S30 - y)
 
     # bounds over all element corners
@@ -262,7 +295,8 @@ def bake_model(model_path):
             area = abs((u2[0] - o2[0]) * (v2[1] - o2[1]) - (u2[1] - o2[1]) * (v2[0] - o2[0]))
             if area < 0.5:
                 continue
-            depth = (o[0] + o[1] + o[2]) + (pu[0] + pu[1] + pu[2]) + (pv[0] + pv[1] + pv[2])
+            ro, ru, rv = rot(o), rot(pu), rot(pv)
+            depth = (ro[0] + ro[1] + ro[2]) + (ru[0] + ru[1] + ru[2]) + (rv[0] + rv[1] + rv[2])
             draws.append((depth, shade, crop, o2, u2, v2))
 
     draws.sort(key=lambda d: d[0])  # far -> near
@@ -308,7 +342,7 @@ def write_images():
     for key in sorted(inp | outp):
         ic = ICONS[key]
         if ic["kind"] == "model":
-            bake_model(ic["model"]).save(os.path.join(BAKE_DIR, ic["image"] + ".png"))
+            bake_model(ic["model"], ic.get("rot180", False)).save(os.path.join(BAKE_DIR, ic["image"] + ".png"))
             file_ref = "minecraft:font/image/baked/%s.png" % ic["image"]
         else:
             file_ref = ic["tex"]
@@ -342,7 +376,8 @@ def out_label(o):
 
 NAME_COLORS = {"conveyor_blueprint": "aqua", "depot_blueprint": "gold",
                "vapor_motor_blueprint": "aqua", "wire_blueprint": "yellow",
-               "logistics_blueprint": "light_purple", "funnel_blueprint": "gold"}
+               "logistics_blueprint": "light_purple", "funnel_blueprint": "gold",
+               "upgrade_blueprint": "light_purple"}
 
 
 def write_blueprint(bp_id, bp):

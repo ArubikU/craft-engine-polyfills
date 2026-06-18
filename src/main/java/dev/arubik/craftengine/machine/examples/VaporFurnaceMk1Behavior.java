@@ -8,6 +8,7 @@ import java.util.Map;
 import dev.arubik.craftengine.machine.attribute.MachineAttributes;
 import dev.arubik.craftengine.machine.attribute.MachineAttributes.Mod;
 import dev.arubik.craftengine.machine.block.MachineBlockBehavior;
+import dev.arubik.craftengine.machine.menu.MachineMenuConfig;
 import dev.arubik.craftengine.machine.menu.bar.MachineBar;
 import dev.arubik.craftengine.machine.menu.bar.MachineBars;
 import dev.arubik.craftengine.util.Utils;
@@ -32,21 +33,23 @@ public class VaporFurnaceMk1Behavior extends MachineBlockBehavior {
 
     private final Map<Key, List<Mod>> upgradeDefs;
     private final List<MachineBar> bars;
+    private final MachineMenuConfig menuConfig;
 
     public VaporFurnaceMk1Behavior(BlockDefinition block,
             java.util.List<net.minecraft.core.Direction> connectableFaces,
             net.momirealms.craftengine.core.block.property.EnumProperty<net.momirealms.craftengine.core.util.Direction> h,
             net.momirealms.craftengine.core.block.property.EnumProperty<net.momirealms.craftengine.core.util.Direction> v,
             dev.arubik.craftengine.multiblock.IOConfiguration ioConfig, Map<Key, List<Mod>> upgradeDefs,
-            List<MachineBar> bars) {
+            List<MachineBar> bars, MachineMenuConfig menuConfig) {
         super(block, connectableFaces, h, v, ioConfig);
         this.upgradeDefs = upgradeDefs;
         this.bars = bars;
+        this.menuConfig = menuConfig;
     }
 
     @Override
     public BlockEntityController createBlockEntityController(BlockEntity blockEntity) {
-        return new VaporFurnaceMk1BlockEntity(blockEntity, upgradeDefs, bars);
+        return new VaporFurnaceMk1BlockEntity(blockEntity, upgradeDefs, bars, menuConfig);
     }
 
     public static class Factory implements BlockBehaviorFactory<BlockBehavior> {
@@ -65,10 +68,11 @@ public class VaporFurnaceMk1Behavior extends MachineBlockBehavior {
             }
 
             List<MachineBar> bars = MachineBars.parse(arguments.get("bars"));
+            MachineMenuConfig menuConfig = MachineMenuConfig.parse(arguments::get);
 
             return new VaporFurnaceMk1Behavior(block, base.getConnectableFaces(),
                     base.horizontalDirectionProperty, base.verticalDirectionProperty,
-                    base.getIOConfiguration(null, null), upgrades, bars);
+                    base.getIOConfiguration(null, null), upgrades, bars, menuConfig);
         }
 
         private static List<Mod> parseMods(Object value) {

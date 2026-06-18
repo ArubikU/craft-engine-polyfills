@@ -1,0 +1,28 @@
+{
+  "type": "crusher",
+  "time": 100,
+  "fuelRequired": false,
+  "rpm": 16,
+  "su": 8,
+  "inputs": [
+    {
+      "type": "item_tag",
+      "tag": "minecraft:gold_ores",
+      "amount": 1
+    }
+  ],
+  "outputs": [
+    {
+      "type": "item",
+      "id": "minecraft:raw_gold",
+      "amount": 2,
+      "chance": 1.0
+    },
+    {
+      "type": "item",
+      "id": "minecraft:raw_gold",
+      "amount": 1,
+      "chance": 0.25
+    }
+  ]
+}

@@ -722,27 +722,21 @@ public class CustomBlockData implements PersistentDataContainer {
     }
 
     public static CustomBlockData from(Level level, BlockPos pos) {
-
-        String key = getKey(level.getWorld().getBlockAt(pos.getX(), pos.getY(), pos.getZ()));
-        if (CACHE.containsKey(key)) {
-            return CACHE.get(key);
-        }
-        return new CustomBlockData(level.getWorld().getBlockAt(pos.getX(), pos.getY(), pos.getZ()),
-                CraftEnginePolyfills.instance());
+        // Single getBlockAt + single map lookup (the ctor self-caches via CACHE.put, so a miss
+        // populates the cache for next time).
+        Block block = level.getWorld().getBlockAt(pos.getX(), pos.getY(), pos.getZ());
+        CustomBlockData cached = CACHE.get(getKey(block));
+        return cached != null ? cached : new CustomBlockData(block, CraftEnginePolyfills.instance());
     }
 
     public static CustomBlockData from(Block block) {
-        if (CACHE.containsKey(getKey(block))) {
-            return CACHE.get(getKey(block));
-        }
-        return new CustomBlockData(block, CraftEnginePolyfills.instance());
+        CustomBlockData cached = CACHE.get(getKey(block));
+        return cached != null ? cached : new CustomBlockData(block, CraftEnginePolyfills.instance());
     }
 
     public static CustomBlockData from(Block block, Plugin plugin) {
-        if (CACHE.containsKey(getKey(block))) {
-            return CACHE.get(getKey(block));
-        }
-        return new CustomBlockData(block, plugin);
+        CustomBlockData cached = CACHE.get(getKey(block));
+        return cached != null ? cached : new CustomBlockData(block, plugin);
     }
 
     public <T> void set(TypedKey<T> key, T value) {

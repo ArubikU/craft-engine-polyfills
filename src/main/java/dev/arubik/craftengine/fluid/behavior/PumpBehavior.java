@@ -36,7 +36,8 @@ import net.minecraft.core.Direction;
 public class PumpBehavior extends ConnectableBlockBehavior
         implements FluidCarrier, net.momirealms.craftengine.core.block.behavior.EntityBlock {
     public static final Factory FACTORY = new Factory();
-    private static final int PRESSURE_BOOST = 8;
+    /** Pressure the pump stamps onto pumped fluid — config `pressure` (default 8). Higher = lifts farther. */
+    private final int pressureBoost;
 
     protected static final int CAPACITY = PipeBehavior.CAPACITY; // uniformidad
     protected static final int TRANSFER_PER_TICK = PipeBehavior.TRANSFER_PER_TICK * 10;
@@ -44,9 +45,17 @@ public class PumpBehavior extends ConnectableBlockBehavior
     public PumpBehavior(BlockDefinition block,
             net.momirealms.craftengine.core.block.property.EnumProperty<net.momirealms.craftengine.core.util.Direction> horizontalDirectionProperty,
             net.momirealms.craftengine.core.block.property.EnumProperty<net.momirealms.craftengine.core.util.Direction> verticalDirectionProperty) {
+        this(block, horizontalDirectionProperty, verticalDirectionProperty, 8);
+    }
+
+    public PumpBehavior(BlockDefinition block,
+            net.momirealms.craftengine.core.block.property.EnumProperty<net.momirealms.craftengine.core.util.Direction> horizontalDirectionProperty,
+            net.momirealms.craftengine.core.block.property.EnumProperty<net.momirealms.craftengine.core.util.Direction> verticalDirectionProperty,
+            int pressureBoost) {
         super(block, java.util.List.of(net.minecraft.core.Direction.UP, net.minecraft.core.Direction.DOWN),
                 horizontalDirectionProperty,
                 verticalDirectionProperty);
+        this.pressureBoost = pressureBoost;
     }
 
     public static class Factory implements BlockBehaviorFactory<BlockBehavior> {
@@ -97,7 +106,9 @@ public class PumpBehavior extends ConnectableBlockBehavior
                     // Property type mismatch, keep as null
                 }
             }
-            return new PumpBehavior(block, hProp, vProp);
+            Object p = arguments.getOrDefault("pressure", arguments.get("pressure-boost"));
+            int pressureBoost = p instanceof Number ? ((Number) p).intValue() : 8;
+            return new PumpBehavior(block, hProp, vProp, pressureBoost);
         }
     }
 
@@ -146,7 +157,7 @@ public class PumpBehavior extends ConnectableBlockBehavior
             if (pbe != null) {
                 FluidStack s = pbe.getOrDefault(FluidKeys.FLUID, new FluidStack(FluidType.EMPTY, 0, 0));
                 if (!s.isEmpty()) {
-                    pbe.set(FluidKeys.FLUID, new FluidStack(s.getType(), s.getAmount(), PRESSURE_BOOST));
+                    pbe.set(FluidKeys.FLUID, new FluidStack(s.getType(), s.getAmount(), pressureBoost));
                 }
             }
             FluidStack stored = getStored(level, pos);
@@ -192,7 +203,12 @@ public class PumpBehavior extends ConnectableBlockBehavior
             // recolección
             FluidStack stored = getStored(level, from);
             FluidType base = FluidType.getFluidTypeAt(target, level);
-            FluidStack collected = base == FluidType.LAVA
+            net.minecraft.world.level.block.state.BlockState tb = level.getBlockState(target);
+            boolean isCauldron = tb.is(net.minecraft.world.level.block.Blocks.WATER_CAULDRON)
+                    || tb.is(net.minecraft.world.level.block.Blocks.LAVA_CAULDRON);
+            // Cauldrons are single material blocks (no fluid-state), so collectArea (which scans fluid
+            // SOURCES) would skip them — always drain a cauldron via collectAt. Lava LAKES still use area.
+            FluidStack collected = (base == FluidType.LAVA && !isCauldron)
                     ? FluidType.collectArea(target, level, 32, TRANSFER_PER_TICK, stored.getType())
                     : FluidType.collectAt(target, level, TRANSFER_PER_TICK, stored.getType());
             if (!collected.isEmpty()) {
@@ -305,7 +321,7 @@ public class PumpBehavior extends ConnectableBlockBehavior
     }
 
     public int insertFluid(Level level, BlockPos pos, FluidStack stack) {
-        return dev.arubik.craftengine.fluid.FluidCarrierImpl.insertFluid(level, pos, stack, CAPACITY, PRESSURE_BOOST);
+        return dev.arubik.craftengine.fluid.FluidCarrierImpl.insertFluid(level, pos, stack, CAPACITY, pressureBoost);
     }
 
     public int extractFluid(Level level, BlockPos pos, int max, java.util.function.Consumer<FluidStack> drained) {

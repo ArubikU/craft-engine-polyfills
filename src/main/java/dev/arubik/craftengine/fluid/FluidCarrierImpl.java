@@ -61,10 +61,18 @@ public class FluidCarrierImpl {
             } else if (stored.getType() == finalIncoming.getType()) {
                 int space = capacity - stored.getAmount();
                 if (space > 0) {
+                    int oldAmt = stored.getAmount();
                     int move = Math.min(space, finalIncoming.getAmount());
+                    // Amount-weighted AVERAGE pressure (not max): so fluid that climbed in at a lower
+                    // pressure actually lowers this pipe's pressure over ticks, instead of max-merge
+                    // pinning the whole line to the source pressure (the "9p everywhere" bug). Averaging
+                    // can never exceed the highest input, so it still can't ramp from recirculation.
+                    int blended = (oldAmt + move) > 0
+                            ? Math.round((oldAmt * stored.getPressure() + move * finalIncoming.getPressure())
+                                    / (float) (oldAmt + move))
+                            : finalIncoming.getPressure();
                     stored.addAmount(move);
-                    int pressure = Math.max(stored.getPressure(), finalIncoming.getPressure());
-                    p.set(key, new FluidStack(stored.getType(), stored.getAmount(), pressure));
+                    p.set(key, new FluidStack(stored.getType(), stored.getAmount(), blended));
                     accepted[0] = move;
                 }
             } else {

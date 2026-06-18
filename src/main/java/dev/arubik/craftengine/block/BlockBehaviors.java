@@ -49,6 +49,9 @@ public class BlockBehaviors {
                 RegistryUtils.registerBlockBehavior(POLYFILL_SPREADING_BLOCK, SpreadingBlockBehavior.FACTORY);
                 RegistryUtils.registerBlockBehavior(POLYFILL_PIPE_BLOCK, PipeBehavior.FACTORY);
                 RegistryUtils.registerBlockBehavior(POLYFILL_PUMP_BLOCK, PumpBehavior.FACTORY);
+                RegistryUtils.registerBlockBehavior(
+                                dev.arubik.craftengine.fluid.behavior.MachinePumpBehavior.FACTORY_KEY,
+                                dev.arubik.craftengine.fluid.behavior.MachinePumpBehavior.FACTORY);
                 RegistryUtils.registerBlockBehavior(POLYFILL_VALVE_BLOCK, ValveBehavior.FACTORY);
                 RegistryUtils.registerBlockBehavior(POLYFILL_FLUID_TANK_BLOCK, TankBlockBehavior.FACTORY);
                 RegistryUtils.registerBlockBehavior(POLYFILL_SPIKE_BLOCK, SpikeBlockBehavior.FACTORY);
@@ -120,6 +123,12 @@ public class BlockBehaviors {
                 RegistryUtils.registerBlockBehavior(
                                 dev.arubik.craftengine.conveyor.FunnelBehavior.FACTORY_KEY,
                                 dev.arubik.craftengine.conveyor.FunnelBehavior.FACTORY);
+                RegistryUtils.registerBlockBehavior(
+                                dev.arubik.craftengine.conveyor.FloorFunnelBehavior.FACTORY_KEY,
+                                dev.arubik.craftengine.conveyor.FloorFunnelBehavior.FACTORY);
+                RegistryUtils.registerBlockBehavior(
+                                dev.arubik.craftengine.conveyor.CeilingFunnelBehavior.FACTORY_KEY,
+                                dev.arubik.craftengine.conveyor.CeilingFunnelBehavior.FACTORY);
                 RegistryUtils.registerBlockBehavior(
                                 dev.arubik.craftengine.crafting.CraftingTableBehavior.FACTORY_KEY,
                                 dev.arubik.craftengine.crafting.CraftingTableBehavior.FACTORY);

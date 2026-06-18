@@ -918,18 +918,30 @@ public class ConveyorBlockEntity extends PersistentWorldlyBlockEntity implements
         return conveyorAt(world, prevPos);
     }
 
+    /**
+     * The candidate cells the belt's FRONT may hand off into, at the {@code facing} neighbour
+     * column for Y, Y+1 and Y-1. Probing all three bridges every junction regardless of which
+     * level a slope block sits on (slope blocks occupy the LOWER of the two levels they bridge):
+     * an UP at Y exits to {@code (facing, Y+1)}; a FLAT or DOWN at Y exits to {@code (facing, Y)}
+     * [same y]; and the Y-1 candidate catches a DOWN block sitting one below ahead.
+     */
     static List<BlockPos> exitCandidates(BlockPos pos, Direction facing) {
         BlockPos flat = pos.relative(facing);
         List<BlockPos> list = new ArrayList<>(3);
-        list.add(flat); // FLAT
-        list.add(new BlockPos(flat.x(), flat.y() + 1, flat.z())); // UP
-        list.add(new BlockPos(flat.x(), flat.y() - 1, flat.z())); // DOWN
+        list.add(flat); // FLAT / DOWN exit (same y)
+        list.add(new BlockPos(flat.x(), flat.y() + 1, flat.z())); // UP exit (one above)
+        list.add(new BlockPos(flat.x(), flat.y() - 1, flat.z())); // a DOWN block one below ahead
         return list;
     }
 
+    /**
+     * Where this segment's front edge hands off, under the LOWER-block slope convention:
+     * UP exits one above ({@code Y+1}); FLAT and DOWN both exit at the SAME y (a DOWN block
+     * sits at the lower level and its front already meets the flat ahead at its own y).
+     */
     BlockPos exitPos(Direction facing) {
         BlockPos flat = pos().relative(facing);
-        int dy = slope().stepY();
+        int dy = slope() == ConveyorSlope.UP ? 1 : 0;
         return dy == 0 ? flat : new BlockPos(flat.x(), flat.y() + dy, flat.z());
     }
 

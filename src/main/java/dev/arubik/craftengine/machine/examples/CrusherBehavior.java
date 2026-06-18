@@ -8,6 +8,9 @@ import java.util.Map;
 import dev.arubik.craftengine.machine.attribute.MachineAttributes;
 import dev.arubik.craftengine.machine.attribute.MachineAttributes.Mod;
 import dev.arubik.craftengine.machine.block.MachineBlockBehavior;
+import dev.arubik.craftengine.machine.menu.MachineMenuConfig;
+import dev.arubik.craftengine.machine.menu.bar.MachineBar;
+import dev.arubik.craftengine.machine.menu.bar.MachineBars;
 import dev.arubik.craftengine.util.Utils;
 import net.momirealms.craftengine.core.block.BlockDefinition;
 import net.momirealms.craftengine.core.block.behavior.BlockBehavior;
@@ -27,19 +30,24 @@ public class CrusherBehavior extends MachineBlockBehavior {
     public static final Factory FACTORY = new Factory();
 
     private final Map<Key, List<Mod>> upgradeDefs;
+    private final List<MachineBar> bars;
+    private final MachineMenuConfig menuConfig;
 
     public CrusherBehavior(BlockDefinition block,
             java.util.List<net.minecraft.core.Direction> connectableFaces,
             net.momirealms.craftengine.core.block.property.EnumProperty<net.momirealms.craftengine.core.util.Direction> h,
             net.momirealms.craftengine.core.block.property.EnumProperty<net.momirealms.craftengine.core.util.Direction> v,
-            dev.arubik.craftengine.multiblock.IOConfiguration ioConfig, Map<Key, List<Mod>> upgradeDefs) {
+            dev.arubik.craftengine.multiblock.IOConfiguration ioConfig, Map<Key, List<Mod>> upgradeDefs,
+            List<MachineBar> bars, MachineMenuConfig menuConfig) {
         super(block, connectableFaces, h, v, ioConfig);
         this.upgradeDefs = upgradeDefs;
+        this.bars = bars;
+        this.menuConfig = menuConfig;
     }
 
     @Override
     public BlockEntityController createBlockEntityController(BlockEntity blockEntity) {
-        return new CrusherBlockEntity(blockEntity, upgradeDefs);
+        return new CrusherBlockEntity(blockEntity, upgradeDefs, bars, menuConfig);
     }
 
     public static class Factory implements BlockBehaviorFactory<BlockBehavior> {
@@ -57,9 +65,12 @@ public class CrusherBehavior extends MachineBlockBehavior {
                 }
             }
 
+            List<MachineBar> bars = MachineBars.parse(arguments.get("bars"));
+            MachineMenuConfig menuConfig = MachineMenuConfig.parse(arguments::get);
+
             return new CrusherBehavior(block, base.getConnectableFaces(),
                     base.horizontalDirectionProperty, base.verticalDirectionProperty,
-                    base.getIOConfiguration(null, null), upgrades);
+                    base.getIOConfiguration(null, null), upgrades, bars, menuConfig);
         }
 
         private static List<Mod> parseMods(Object value) {

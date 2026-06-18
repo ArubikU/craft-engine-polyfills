@@ -1,5 +1,5 @@
 name: CraftEnginePolyfill
-version: 0.0.3
+version: 0.0.4
 main: dev.arubik.craftengine.CraftEnginePolyfills
 author: ArubikU
 website: https://github.com/ArubikU
@@ -10,4 +10,6 @@ commands:
     description: CraftEngine Polyfill main command
     usage: /<command>
 api-version: "1.20"
+softdepend:
+  - BetterModel
 folia-supported: true

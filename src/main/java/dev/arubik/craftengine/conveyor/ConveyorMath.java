@@ -81,6 +81,11 @@ public final class ConveyorMath {
         float yaw = (float) Math.atan2(-facingStepX, facingStepZ);
         float pitch = slopeStepY > 0 ? (float) Math.toRadians(45)
                 : slopeStepY < 0 ? (float) Math.toRadians(-45) : 0f;
+        // Negative-axis facings (NORTH stepZ=-1, WEST stepX=-1) carry a yaw that flips the
+        // item end-for-end, which mirrors the ramp pitch. Invert pitch there so the item
+        // tilts along the slope (not against it).
+        if (facingStepX < 0 || facingStepZ < 0)
+            pitch = -pitch;
         // Lay the item flat on the belt (default item_display stands upright) via a
         // -90° tilt about X, then add the ramp pitch so it follows up/down slopes.
         return new org.joml.Quaternionf().rotateY(yaw).rotateX((float) Math.toRadians(-90) + pitch);

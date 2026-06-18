@@ -80,6 +80,30 @@ public class FluidCollector {
                 }
             }
         } else {
+            net.minecraft.world.level.block.state.BlockState cs = level.getBlockState(pos);
+            // Cauldrons: water (1..3 levels) and lava (full = 1 bucket). Drains the cauldron as it pumps.
+            if (cs.is(Blocks.WATER_CAULDRON)) {
+                if (preferred != null && preferred != FluidType.EMPTY && preferred != FluidType.WATER)
+                    return new FluidStack(FluidType.EMPTY, 0, 0);
+                int levelMb = Math.max(1, FluidType.WATER.mbPerFullBlock() / 3); // 3 levels per full bucket
+                int lvl = cs.getValue(net.minecraft.world.level.block.LayeredCauldronBlock.LEVEL);
+                int takeLevels = Math.min(lvl, maxMb / levelMb);
+                if (takeLevels <= 0)
+                    return new FluidStack(FluidType.EMPTY, 0, 0);
+                int newLvl = lvl - takeLevels;
+                level.setBlock(pos, newLvl <= 0 ? Blocks.CAULDRON.defaultBlockState()
+                        : cs.setValue(net.minecraft.world.level.block.LayeredCauldronBlock.LEVEL, newLvl), 3);
+                return new FluidStack(FluidType.WATER, takeLevels * levelMb, 0);
+            }
+            if (cs.is(Blocks.LAVA_CAULDRON)) {
+                if (preferred != null && preferred != FluidType.EMPTY && preferred != FluidType.LAVA)
+                    return new FluidStack(FluidType.EMPTY, 0, 0);
+                int full = FluidType.LAVA.mbPerFullBlock(); // a lava cauldron holds exactly one bucket
+                if (full > maxMb)
+                    return new FluidStack(FluidType.EMPTY, 0, 0);
+                level.setBlock(pos, Blocks.CAULDRON.defaultBlockState(), 3);
+                return new FluidStack(FluidType.LAVA, full, 0);
+            }
             // Bloques materiales
             if (level.getBlockState(pos).getBlock() instanceof SlimeBlock) {
                 if (preferred != null && preferred != FluidType.EMPTY && preferred != FluidType.SLIME)
@@ -150,6 +174,10 @@ public class FluidCollector {
                     || fs.is(net.minecraft.world.level.material.Fluids.FLOWING_LAVA))
                 return FluidType.LAVA;
         } else {
+            if (level.getBlockState(pos).is(Blocks.WATER_CAULDRON))
+                return FluidType.WATER;
+            if (level.getBlockState(pos).is(Blocks.LAVA_CAULDRON))
+                return FluidType.LAVA;
             if (level.getBlockState(pos).getBlock() instanceof SlimeBlock)
                 return FluidType.SLIME;
             if (level.getBlockState(pos).is(Blocks.POWDER_SNOW))

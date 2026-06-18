@@ -96,58 +96,20 @@ public class GasPipeBehavior extends ConnectedBlockBehavior implements EntityBlo
             if (level == null || level.isClientSide())
                 return;
             BlockPos mcPos = BlockPos.of(cePos.asLong());
-            GasStack stored = getStoredGas(level, mcPos);
-            if (stored.getPressure() <= 0) {
-                // Gas sube naturalmente: intentar tomar de abajo (passive rise into pipe)
-                tryTransfer(level, mcPos, Direction.DOWN, TransferAction.PUMP);
-                stored = getStoredGas(level, mcPos);
-                if (!stored.isEmpty()) {
-                    // Round-robin: empezar desde última dirección exitosa
-                    // Prioridad a subir (UP) sin presión
-                    Direction[] pushDirs = { Direction.UP, Direction.NORTH, Direction.SOUTH, Direction.EAST,
-                            Direction.WEST };
-                    int startIdx = lastSuccessfulDirection.getOrDefault(mcPos.asLong(), 0);
-
-                    for (int i = 0; i < pushDirs.length; i++) {
-                        Direction dir = pushDirs[(startIdx + i) % pushDirs.length];
-                        if (tryTransfer(level, mcPos, dir, TransferAction.PUSH)) {
-                            lastSuccessfulDirection.put(mcPos.asLong(), (startIdx + i) % pushDirs.length);
-                            return;
-                        }
-                    }
-                }
-                // Round-robin homogenize
-                Direction[] horizDirs = { Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST };
-                int startIdx = lastSuccessfulDirection.getOrDefault(mcPos.asLong(), 0) % horizDirs.length;
-
-                for (int i = 0; i < horizDirs.length; i++) {
-                    Direction dir = horizDirs[(startIdx + i) % horizDirs.length];
-                    if (tryTransfer(level, mcPos, dir, TransferAction.HOMOGENIZE)) {
-                        lastSuccessfulDirection.put(mcPos.asLong(), (startIdx + i) % horizDirs.length);
-                    }
-                }
-            } else {
-                // Con presión: permitir bajar
-                if (tryTransfer(level, mcPos, Direction.DOWN, TransferAction.PUSH))
-                    return;
-
-                // Round-robin homogenize (con presión)
-                Direction[] horizDirs = { Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST };
-                int startIdx = lastSuccessfulDirection.getOrDefault(mcPos.asLong(), 0) % horizDirs.length;
-
-                for (int i = 0; i < horizDirs.length; i++) {
-                    Direction dir = horizDirs[(startIdx + i) % horizDirs.length];
-                    if (tryTransfer(level, mcPos, dir, TransferAction.HOMOGENIZE)) {
-                        lastSuccessfulDirection.put(mcPos.asLong(), (startIdx + i) % horizDirs.length);
-                    }
-                }
-
-                stored = getStoredGas(level, mcPos);
-                if (!stored.isEmpty()) {
-                    // Intentar subir incluso con presión (ya cubierto arriba, pero por si acaso)
-                    tryTransfer(level, mcPos, Direction.UP, TransferAction.PUSH);
-                }
-            }
+            // No pressure model: gas simply equalizes across the whole pipe network and flows to
+            // wherever it can. Each tick, on ALL six faces:
+            //   1) PUMP   — pull from adjacent SOURCES (tanks/machines that OUTPUT gas; pipes skipped)
+            //   2) PUSH   — push into adjacent CONSUMERS (machines that ACCEPT gas; pipes skipped)
+            //   3) HOMOGENIZE — equalize with adjacent PIPES (all 6 dirs, so it spreads up, down,
+            //      sideways and around corners — no more gas stuck unable to descend).
+            Direction[] all = { Direction.UP, Direction.DOWN, Direction.NORTH, Direction.SOUTH,
+                    Direction.EAST, Direction.WEST };
+            for (Direction dir : all)
+                tryTransfer(level, mcPos, dir, TransferAction.PUMP);
+            for (Direction dir : all)
+                tryTransfer(level, mcPos, dir, TransferAction.PUSH);
+            for (Direction dir : all)
+                tryTransfer(level, mcPos, dir, TransferAction.HOMOGENIZE);
         }
     }
 
@@ -166,10 +128,11 @@ public class GasPipeBehavior extends ConnectedBlockBehavior implements EntityBlo
 
     @Override
     public GasStack getStoredGas(Level level, BlockPos pos) {
-        PersistentBlockEntity be = getBE(level, pos);
-        if (be == null)
-            return GasStack.EMPTY;
-        return be.getOrDefault(GasKeys.GAS, GasStack.EMPTY);
+        // MUST read the same store insertGas/extractGas write to (CustomBlockData), NOT the BE tag —
+        // they diverged, so the pipe filled CustomBlockData to capacity while every read saw 0
+        // (display showed 0, the pump kept extracting into a "full" pipe and the gas was lost).
+        return dev.arubik.craftengine.util.CustomBlockData.from(level, pos)
+                .getOrDefault(GasKeys.GAS, GasStack.EMPTY);
     }
 
     @Override
@@ -272,12 +235,29 @@ public class GasPipeBehavior extends ConnectedBlockBehavior implements EntityBlo
             case PUMP: {
                 int inputRate = transferRate;
 
+                // Only PUMP (suck) from a real SOURCE (tank/machine), never from another PIPE — pipe
+                // <-> pipe must use PUSH/HOMOGENIZE. Otherwise every pipe in a column sucks the one
+                // below it, so gas always migrates UP and can never descend.
+                if (targetCarrier instanceof GasPipeBehavior)
+                    return false;
                 // Intentar extraer de un carrier si permite extracción general
                 if (targetCarrier != null && targetCarrier
                         .getAccessMode() == dev.arubik.craftengine.util.TransferAccessMode.ANYONE_CAN_TAKE) {
                     GasStack theirStored = targetCarrier.getStoredGas(level, targetPos);
                     if (!theirStored.isEmpty()) {
-                        int move = Math.min(inputRate, theirStored.getAmount());
+                        // Only pull what THIS pipe can actually hold — never extract into a full or
+                        // type-incompatible pipe (the source is output-only and would lose the gas).
+                        GasStack pipeStored = getStoredGas(level, from);
+                        int free;
+                        if (pipeStored.isEmpty())
+                            free = CAPACITY;
+                        else if (pipeStored.getType() == theirStored.getType())
+                            free = CAPACITY - pipeStored.getAmount();
+                        else
+                            free = 0;
+                        if (free <= 0)
+                            return false;
+                        int move = Math.min(Math.min(inputRate, theirStored.getAmount()), free);
                         final GasStack[] extracted = { null };
                         int actually = targetCarrier.extractGas(level, targetPos, move, f -> extracted[0] = f,
                                 fromTarget);
@@ -301,16 +281,18 @@ public class GasPipeBehavior extends ConnectedBlockBehavior implements EntityBlo
             case PUSH: {
                 if (targetCarrier == null)
                     return false;
+                // PUSH only feeds real CONSUMERS (machines/tanks). Pipe<->pipe is handled by
+                // HOMOGENIZE, so don't push into another pipe (avoids oscillation/loops).
+                if (targetCarrier instanceof GasPipeBehavior)
+                    return false;
                 if (stored.isEmpty())
                     return false;
 
                 int move = Math.min(transferRate, stored.getAmount());
                 if (move <= 0)
                     return false;
-
-                // Restricción para descender: requiere presión (gases suben)
-                if (dir == Direction.DOWN && stored.getPressure() <= 0)
-                    return false;
+                // (Gas may now flow DOWN even without pressure — it's tried LAST, after up/horizontal,
+                // so it still rises preferentially but isn't trapped when the only outlet is below.)
 
                 // Loop detection: verificar historial de transferencias
                 PersistentBlockEntity pbe = getBE(level, from);
@@ -331,11 +313,9 @@ public class GasPipeBehavior extends ConnectedBlockBehavior implements EntityBlo
                 int accepted = targetCarrier.insertGas(level, targetPos, toTransfer, fromTarget);
 
                 if (accepted > 0) {
-                    stored.shrink(accepted);
-                    if (stored.isEmpty())
-                        withBE(level, from, p -> p.remove(GasKeys.GAS));
-                    else
-                        withBE(level, from, p -> p.set(GasKeys.GAS, stored));
+                    // Remove what we sent from OUR store (CustomBlockData — same place insert/extract
+                    // use; the old withBE path wrote the BE tag, a different store -> desync).
+                    extractGas(level, from, accepted, null, fromTarget);
 
                     // Actualizar historial después de transferencia exitosa
                     if (pbe != null) {
@@ -348,10 +328,11 @@ public class GasPipeBehavior extends ConnectedBlockBehavior implements EntityBlo
                 return false;
             }
             case HOMOGENIZE: {
-                // Solo aplicar horizontalmente
-                if (dir == Direction.UP || dir == Direction.DOWN)
-                    return false;
                 if (targetCarrier == null)
+                    return false;
+                // Only equalize pipe<->pipe (no pressure model). Vertical IS allowed now, so gas
+                // spreads up/down and around corners instead of getting stuck on the corner pipe.
+                if (!(targetCarrier instanceof GasPipeBehavior))
                     return false;
 
                 GasStack a = stored; // este

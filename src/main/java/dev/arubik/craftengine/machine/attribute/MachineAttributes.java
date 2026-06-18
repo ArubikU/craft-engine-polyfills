@@ -43,6 +43,8 @@ public final class MachineAttributes {
     public static final Key FUEL_EFFICIENCY = Key.of("polyfill", "fuel_efficiency");
     public static final Key GENERATION = Key.of("polyfill", "generation");           // output bonus (frac)
     public static final Key EXTRA_SLOTS = Key.of("polyfill", "extra_slots");         // unlocked upgrade slots
+    /** Flat pressure bonus added to the pump's stamped fluid pressure (lifts fluid higher). */
+    public static final Key PRESSURE = Key.of("polyfill", "pressure");
 
     private static final Map<Key, Double> BASES = new HashMap<>();
     static {
@@ -50,6 +52,7 @@ public final class MachineAttributes {
         BASES.put(FUEL_EFFICIENCY, 0.0);
         BASES.put(GENERATION, 0.0);
         BASES.put(EXTRA_SLOTS, 0.0);
+        BASES.put(PRESSURE, 0.0);
     }
 
     /** Register/override a machine attribute's base value. */

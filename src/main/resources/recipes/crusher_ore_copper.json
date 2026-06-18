@@ -1,0 +1,28 @@
+{
+  "type": "crusher",
+  "time": 100,
+  "fuelRequired": false,
+  "rpm": 16,
+  "su": 8,
+  "inputs": [
+    {
+      "type": "item_tag",
+      "tag": "minecraft:copper_ores",
+      "amount": 1
+    }
+  ],
+  "outputs": [
+    {
+      "type": "item",
+      "id": "minecraft:raw_copper",
+      "amount": 3,
+      "chance": 1.0
+    },
+    {
+      "type": "item",
+      "id": "minecraft:raw_copper",
+      "amount": 1,
+      "chance": 0.25
+    }
+  ]
+}

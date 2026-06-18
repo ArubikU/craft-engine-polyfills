@@ -1,0 +1,11 @@
+{
+  "type": "crusher",
+  "time": 60,
+  "fuelRequired": false,
+  "rpm": 4,
+  "su": 2,
+  "inputs": [ { "type": "custom_item", "id": "cml:bauxite_stone", "amount": 1 } ],
+  "outputs": [
+    { "type": "custom_item", "id": "cml:bauxite_scraping", "amount": 1, "chance": 0.20 }
+  ]
+}

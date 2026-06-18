@@ -361,12 +361,29 @@ public interface IOConfiguration {
     class RelativeIO implements IOConfiguration {
         private final Map<IOType, Set<RelativeDirection>> inputs = new EnumMap<>(IOType.class);
         private final Map<IOType, Set<RelativeDirection>> outputs = new EnumMap<>(IOType.class);
+        // Item/tank slot indices by type+role (e.g. ITEM/FUEL), used by the fuel system.
+        private final Map<IOType, Map<IORole, int[]>> configuredSlots = new EnumMap<>(IOType.class);
 
         public RelativeIO() {
             for (IOType type : IOType.values()) {
                 inputs.put(type, EnumSet.noneOf(RelativeDirection.class));
                 outputs.put(type, EnumSet.noneOf(RelativeDirection.class));
             }
+        }
+
+        /** Configure the slot indices for a type/role (e.g. ITEM/FUEL). */
+        public RelativeIO setSlots(IOType type, IORole role, int... slots) {
+            configuredSlots.computeIfAbsent(type, k -> new EnumMap<>(IORole.class)).put(role, slots);
+            return this;
+        }
+
+        @Override
+        public int[] getSlots(IOType type, IORole role) {
+            Map<IORole, int[]> byRole = configuredSlots.get(type);
+            if (byRole == null)
+                return new int[0];
+            int[] s = byRole.get(role);
+            return s == null ? new int[0] : s;
         }
 
         /**

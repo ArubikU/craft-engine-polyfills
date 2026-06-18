@@ -32,6 +32,10 @@ public abstract class AbstractMachineBlockEntity extends PersistentWorldlyBlockE
         implements dev.arubik.craftengine.conveyor.ConveyorDisplayReceiver {
 
     protected int progress = 0;
+    // Fractional carry so a speed multiplier BELOW 1.0 (underclock) actually slows processing:
+    // each tick we add speedMultiplier (e.g. 0.5) and only advance whole progress when it accrues.
+    // Transient — the lost fraction on reload is negligible.
+    protected double progressCarry = 0.0;
     protected int maxProgress = 0;
     protected int burnTime = 0;
     protected int maxBurnTime = 0;
@@ -434,8 +438,8 @@ public abstract class AbstractMachineBlockEntity extends PersistentWorldlyBlockE
                 }
             }
 
-            if (!getIOConfiguration().providesOutput(dev.arubik.craftengine.multiblock.IOConfiguration.IOType.GAS,
-                    localDir)) {
+            if (!getIOConfiguration().providesOutput(
+                    dev.arubik.craftengine.multiblock.IOConfiguration.IOType.GAS, localDir)) {
                 return 0;
             }
 
@@ -520,13 +524,21 @@ public abstract class AbstractMachineBlockEntity extends PersistentWorldlyBlockE
 
             if (!needsFuel || burnTime > 0) {
                 isProcessing = true;
-                progress += upgradeModifiers.stepFor(1);
                 if (maxProgress == 0)
                     maxProgress = recipe.getProcessTime();
+
+                // Fractional advance: speedMultiplier may be <1 (underclock) or >1 (overclock).
+                progressCarry += Math.max(0.0, upgradeModifiers.speedMultiplier());
+                int adv = (int) progressCarry;
+                if (adv > 0) {
+                    progress += adv;
+                    progressCarry -= adv;
+                }
 
                 if (progress >= maxProgress) {
                     process(level, recipe);
                     progress = 0;
+                    progressCarry = 0.0;
                     isProcessing = false;
                 }
                 setChanged();
@@ -534,12 +546,38 @@ public abstract class AbstractMachineBlockEntity extends PersistentWorldlyBlockE
         } else {
             isProcessing = false;
             progress = 0;
+            progressCarry = 0.0;
             setChanged();
         }
     }
 
+    /** Extra %placeholder% values for a bar's name/lore (e.g. live rpm/su). Default: none. */
+    public java.util.Map<String, String> barPlaceholders(String id) {
+        return java.util.Collections.emptyMap();
+    }
+
+    /** The rpm a recipe ACTUALLY demands after this machine's overclock/efficiency. Default: raw. */
+    public int effectiveRpm(AbstractProcessingRecipe r) {
+        return r == null ? 0 : r.getMinRpm();
+    }
+
+    /** The su a recipe ACTUALLY draws after this machine's overclock. Default: raw. */
+    public int effectiveSu(AbstractProcessingRecipe r) {
+        return r == null ? 0 : r.getSuCost();
+    }
+
     // Updated abstract methods to take Level if needed
     protected abstract AbstractProcessingRecipe getMatchingRecipe(Level level);
+
+    /** The recipe currently matching the machine's inputs (for the info icon), or null. */
+    public AbstractProcessingRecipe getCurrentRecipe() {
+        try {
+            Level l = getNMSLevel();
+            return l == null ? null : getMatchingRecipe(l);
+        } catch (Throwable t) {
+            return null;
+        }
+    }
 
     protected boolean canProcess(Level level, AbstractProcessingRecipe recipe) {
         if (recipe == null)
@@ -706,6 +744,16 @@ public abstract class AbstractMachineBlockEntity extends PersistentWorldlyBlockE
                     dev.arubik.craftengine.multiblock.IOConfiguration.IORole.INPUT);
         }
         return new int[0];
+    }
+
+    /** First non-empty gas tank's contents — what a gas pipe/pump reads when pulling from this machine. */
+    public dev.arubik.craftengine.gas.GasStack getStoredGasForCarrier() {
+        for (dev.arubik.craftengine.gas.GasTank tank : gasTanks) {
+            dev.arubik.craftengine.gas.GasStack gs = tank.getGas(getNMSLevel(), getMachinePos());
+            if (gs != null && !gs.isEmpty())
+                return gs;
+        }
+        return dev.arubik.craftengine.gas.GasStack.EMPTY;
     }
 
     /** True if {@code bukkit} is a valid fuel for THIS machine (per its registered fuel recipes). */
@@ -1715,7 +1763,10 @@ public abstract class AbstractMachineBlockEntity extends PersistentWorldlyBlockE
 
     @Override
     public void setChanged() {
-        if (this.menu != null) {
+        // Re-sync slots only when the menu is actually being viewed. setChanged() fires often (fuel
+        // burn, progress) and the menu instance persists after the last viewer closes, so this would
+        // otherwise re-read/convert every slot forever for nobody.
+        if (this.menu != null && !this.menu.getInventory().getViewers().isEmpty()) {
             this.menu.syncFromMachine();
         }
     }

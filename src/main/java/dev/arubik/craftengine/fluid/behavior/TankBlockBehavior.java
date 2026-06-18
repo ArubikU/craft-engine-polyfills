@@ -336,31 +336,26 @@ public class TankBlockBehavior extends ConnectableBlockBehavior implements Entit
         if (max <= 0 || depth > 256)
             return 0;
         int movedTotal = 0;
-        // 1) Extraer de este tanque si coincide el tipo
-        final int[] movedHere = { 0 };
-        final int[] pressureHere = { 0 };
-        FluidStack stored = getStored(level, pos);
-        if (!stored.isEmpty() && stored.getType() == targetType) {
-            int mv = Math.min(max, stored.getAmount());
-            final int[] actuallyExtracted = { 0 };
-            final FluidStack[] extractedStack = { null };
-            actuallyExtracted[0] = dev.arubik.craftengine.fluid.FluidCarrierImpl.extractFluid(level, pos, mv,
-                    f -> extractedStack[0] = f);
-
-            if (actuallyExtracted[0] > 0) {
-                pressureHere[0] = extractedStack[0].getPressure();
-                movedHere[0] = actuallyExtracted[0];
-            }
-        }
-        if (movedHere[0] > 0) {
-            movedTotal += movedHere[0];
-            agg.add(movedHere[0], pressureHere[0]);
-            updateShapeState(level, pos);
+        // 1) Drain from the TOP of the column first (the level drops from above, like real gravity):
+        // recurse UP before taking from this tank.
+        if (isTank(level, pos.above()) && isStraight(level, pos) && isStraight(level, pos.above())) {
+            movedTotal += extractChain(level, pos.above(), max, targetType, agg, depth + 1);
         }
         int remaining = max - movedTotal;
-        // 2) Si falta, intentar arriba en línea recta
-        if (remaining > 0 && isTank(level, pos.above()) && isStraight(level, pos) && isStraight(level, pos.above())) {
-            movedTotal += extractChain(level, pos.above(), remaining, targetType, agg, depth + 1);
+        // 2) Then take from THIS tank if more is still needed.
+        if (remaining > 0) {
+            FluidStack stored = getStored(level, pos);
+            if (!stored.isEmpty() && stored.getType() == targetType) {
+                int mv = Math.min(remaining, stored.getAmount());
+                final FluidStack[] extractedStack = { null };
+                int actuallyExtracted = dev.arubik.craftengine.fluid.FluidCarrierImpl.extractFluid(level, pos, mv,
+                        f -> extractedStack[0] = f);
+                if (actuallyExtracted > 0) {
+                    movedTotal += actuallyExtracted;
+                    agg.add(actuallyExtracted, extractedStack[0].getPressure());
+                    updateShapeState(level, pos);
+                }
+            }
         }
         return movedTotal;
     }
@@ -392,13 +387,24 @@ public class TankBlockBehavior extends ConnectableBlockBehavior implements Entit
             return;
         FluidStack stored = getStored(level, pos);
 
-        if (levelProperty != null) {
-            int lev = (int) Math.ceil((stored.getAmount() / (double) MAX_CAPACITY) * levelProperty.max); // 0..10
-            lev = Math.max(stored.isEmpty() ? 0 : 1, Math.min(lev, levelProperty.max));
+        {
             Optional<ImmutableBlockState> state = BlockStateUtils.getOptionalCustomBlockState(level.getBlockState(pos));
             if (state.isPresent()) {
-                ImmutableBlockState newState = state.get().with(levelProperty, lev)
-                        .with(fluidTypeProperty, stored.getType());
+                ImmutableBlockState cur = state.get();
+                // Resolve the properties from the CURRENT state's block, NOT the cached fields: a
+                // `/craftengine reload all` re-registers the block with NEW property instances, so the
+                // cached levelProperty/fluidTypeProperty become stale and `state.with(staleProp,...)`
+                // throws "Property level not found in cml:copper_tank". Looking them up per-call fixes it.
+                IntegerProperty lvlProp = (IntegerProperty) cur.getProperty("level");
+                @SuppressWarnings("unchecked")
+                EnumProperty<FluidType> ftProp = (EnumProperty<FluidType>) cur.getProperty("fluidtype");
+                if (lvlProp == null)
+                    return;
+                int lev = (int) Math.ceil((stored.getAmount() / (double) MAX_CAPACITY) * lvlProp.max);
+                lev = Math.max(stored.isEmpty() ? 0 : 1, Math.min(lev, lvlProp.max));
+                ImmutableBlockState newState = cur.with(lvlProp, lev);
+                if (ftProp != null)
+                    newState = newState.with(ftProp, stored.getType());
 
                 ((net.minecraft.world.level.LevelWriter) level).setBlock(pos,
                         (net.minecraft.world.level.block.state.BlockState) newState.customBlockState().minecraftState(),

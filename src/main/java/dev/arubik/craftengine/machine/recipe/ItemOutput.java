@@ -39,4 +39,9 @@ public class ItemOutput implements RecipeOutput {
     public Object getOutput() {
         return stack;
     }
+
+    @Override
+    public float getChance() {
+        return chance;
+    }
 }

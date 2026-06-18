@@ -70,22 +70,29 @@ public final class ConveyorPath {
         }
     }
 
-    /** Result of planning: either an ordered step list or an error message. */
+    /**
+     * Result of planning: either an ordered step list or a failure. A failure carries
+     * an English {@code error()} (tests/logs) and a client-translatable
+     * {@code errorKey()} under {@code polyfill.wand.*} (the wand renders it as an
+     * Adventure {@code Component.translatable} so the player sees their own language).
+     */
     public static final class Result {
         private final List<Step> steps;
         private final String error;
+        private final String errorKey;
 
-        private Result(List<Step> steps, String error) {
+        private Result(List<Step> steps, String error, String errorKey) {
             this.steps = steps;
             this.error = error;
+            this.errorKey = errorKey;
         }
 
         public static Result ok(List<Step> steps) {
-            return new Result(steps, null);
+            return new Result(steps, null, null);
         }
 
-        public static Result fail(String error) {
-            return new Result(null, error);
+        public static Result fail(String error, String errorKey) {
+            return new Result(null, error, errorKey);
         }
 
         public boolean isValid() {
@@ -98,6 +105,11 @@ public final class ConveyorPath {
 
         public String error() {
             return error;
+        }
+
+        /** The {@code polyfill.wand.*} lang key for this failure (null when valid). */
+        public String errorKey() {
+            return errorKey;
         }
     }
 
@@ -123,15 +135,18 @@ public final class ConveyorPath {
         int dz = bz - az;
 
         if (dx == 0 && dz == 0) {
-            return Result.fail("Start and end must be different horizontal positions.");
+            return Result.fail("Start and end must be different horizontal positions.",
+                    "polyfill.wand.err_same_pos");
         }
         if (dx != 0 && dz != 0) {
-            return Result.fail("Path must be a straight line along one axis (N/S or E/W).");
+            return Result.fail("Path must be a straight line along one axis (N/S or E/W).",
+                    "polyfill.wand.err_not_straight");
         }
 
         int horiz = Math.abs(dx) + Math.abs(dz); // length along the single axis
         if (dy != 0 && Math.abs(dy) != horiz) {
-            return Result.fail("Slope must be 45 degrees: Y change must equal the horizontal length.");
+            return Result.fail("Slope must be 45 degrees: Y change must equal the horizontal length.",
+                    "polyfill.wand.err_bad_slope");
         }
 
         int stepX = Integer.signum(dx);
