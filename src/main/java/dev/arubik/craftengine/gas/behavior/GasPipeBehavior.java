@@ -104,12 +104,29 @@ public class GasPipeBehavior extends ConnectedBlockBehavior implements EntityBlo
             //      sideways and around corners — no more gas stuck unable to descend).
             Direction[] all = { Direction.UP, Direction.DOWN, Direction.NORTH, Direction.SOUTH,
                     Direction.EAST, Direction.WEST };
-            for (Direction dir : all)
-                tryTransfer(level, mcPos, dir, TransferAction.PUMP);
-            for (Direction dir : all)
-                tryTransfer(level, mcPos, dir, TransferAction.PUSH);
-            for (Direction dir : all)
-                tryTransfer(level, mcPos, dir, TransferAction.HOMOGENIZE);
+            // Resolve THIS pipe's connection state ONCE and build a connected-face mask, instead of
+            // re-reading getBlockState(self) inside every tryTransfer x 18. Skip unconnected faces
+            // entirely (an unconnected face has no gas neighbor, so all 3 actions would no-op anyway).
+            net.momirealms.craftengine.core.block.ImmutableBlockState self =
+                    net.momirealms.craftengine.bukkit.util.BlockStateUtils
+                            .getOptionalCustomBlockState(level.getBlockState(mcPos)).orElse(null);
+            if (self == null)
+                return;
+            int mask = 0;
+            for (int i = 0; i < 6; i++)
+                if (isFaceConnected(self, all[i]))
+                    mask |= (1 << i);
+            if (mask == 0)
+                return;
+            for (int i = 0; i < 6; i++)
+                if ((mask & (1 << i)) != 0)
+                    tryTransfer(level, mcPos, all[i], TransferAction.PUMP);
+            for (int i = 0; i < 6; i++)
+                if ((mask & (1 << i)) != 0)
+                    tryTransfer(level, mcPos, all[i], TransferAction.PUSH);
+            for (int i = 0; i < 6; i++)
+                if ((mask & (1 << i)) != 0)
+                    tryTransfer(level, mcPos, all[i], TransferAction.HOMOGENIZE);
         }
     }
 

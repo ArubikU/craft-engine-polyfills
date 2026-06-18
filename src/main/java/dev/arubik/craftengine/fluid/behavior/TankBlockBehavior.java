@@ -402,6 +402,15 @@ public class TankBlockBehavior extends ConnectableBlockBehavior implements Entit
                     return;
                 int lev = (int) Math.ceil((stored.getAmount() / (double) MAX_CAPACITY) * lvlProp.max);
                 lev = Math.max(stored.isEmpty() ? 0 : 1, Math.min(lev, lvlProp.max));
+
+                // Skip the (expensive) setBlock + redundant PDC write when the VISIBLE state is unchanged
+                // — the fluid amount/persistence was already updated by the insert/extract that called us,
+                // so a small change that doesn't move the level bucket needs no block update.
+                Integer curLev = cur.get(lvlProp);
+                FluidType curFt = ftProp != null ? cur.get(ftProp) : null;
+                if (curLev != null && curLev == lev && (ftProp == null || curFt == stored.getType()))
+                    return;
+
                 ImmutableBlockState newState = cur.with(lvlProp, lev);
                 if (ftProp != null)
                     newState = newState.with(ftProp, stored.getType());

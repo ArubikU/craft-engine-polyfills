@@ -174,6 +174,36 @@ public class ConnectedBlockBehavior extends ConnectableBlockBehavior {
         return ok;
     }
 
+    /**
+     * Same face-connection check as {@link #isConnectedTo} but against an ALREADY-resolved custom
+     * state — no world read. Lets a tick loop resolve the block's own state once and test all 6 faces
+     * cheaply instead of re-reading getBlockState per face.
+     */
+    public boolean isFaceConnected(ImmutableBlockState relativeState, Direction direction) {
+        if (relativeState == null)
+            return false;
+        try {
+            switch (direction) {
+                case NORTH:
+                    return relativeState.get(NORTH) == ConnectedFace.CONNECTED;
+                case EAST:
+                    return relativeState.get(EAST) == ConnectedFace.CONNECTED;
+                case SOUTH:
+                    return relativeState.get(SOUTH) == ConnectedFace.CONNECTED;
+                case WEST:
+                    return relativeState.get(WEST) == ConnectedFace.CONNECTED;
+                case UP:
+                    return relativeState.get(UP) == ConnectedFace.CONNECTED;
+                case DOWN:
+                    return relativeState.get(DOWN) == ConnectedFace.CONNECTED;
+                default:
+                    return false;
+            }
+        } catch (IllegalArgumentException stale) {
+            return false;
+        }
+    }
+
     public boolean isConnectedTo(Direction direction, BlockPos pos, Level level) {
         BlockState state = level.getBlockState(pos);
         ImmutableBlockState relativeState = BlockStateUtils.getOptionalCustomBlockState(state).orElse(null);
