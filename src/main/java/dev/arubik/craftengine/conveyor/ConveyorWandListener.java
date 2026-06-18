@@ -140,6 +140,8 @@ public class ConveyorWandListener implements Listener {
 
         org.bukkit.entity.Player player = event.getPlayer();
         ItemStack hand = player.getInventory().getItemInMainHand();
+        if (hand == null || hand.getType() == org.bukkit.Material.AIR)
+            return;
         Key handId = CraftEngineItems.getCustomItemId(hand);
         if (handId == null)
             return;

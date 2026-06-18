@@ -484,12 +484,19 @@ public class ConveyorBlockEntity extends PersistentWorldlyBlockEntity implements
                 return;
             org.bukkit.Location center = new org.bukkit.Location(bukkitWorld,
                     pos.x() + 0.5, pos.y() + 0.5, pos.z() + 0.5);
+            double cx = pos.x() + 0.5;
+            double cy = pos.y() + 0.5;
+            double cz = pos.z() + 0.5;
+            net.minecraft.server.level.ServerLevel serverLevel = ((org.bukkit.craftbukkit.CraftWorld) bukkitWorld)
+                    .getHandle();
+            net.minecraft.world.phys.AABB aabb = new net.minecraft.world.phys.AABB(
+                    cx - PICKUP_RADIUS, cy - PICKUP_RADIUS, cz - PICKUP_RADIUS,
+                    cx + PICKUP_RADIUS, cy + PICKUP_RADIUS, cz + PICKUP_RADIUS);
             org.bukkit.entity.Item nearest = null;
             double best = Double.MAX_VALUE;
-            for (org.bukkit.entity.Entity e : bukkitWorld.getNearbyEntities(center,
-                    PICKUP_RADIUS, PICKUP_RADIUS, PICKUP_RADIUS)) {
-                if (!(e instanceof org.bukkit.entity.Item item))
-                    continue;
+            for (net.minecraft.world.entity.item.ItemEntity nms : serverLevel.getEntitiesOfClass(
+                    net.minecraft.world.entity.item.ItemEntity.class, aabb, e -> !e.isRemoved())) {
+                org.bukkit.entity.Item item = (org.bukkit.entity.Item) nms.getBukkitEntity();
                 if (item.isDead() || !item.isValid())
                     continue;
                 double d = item.getLocation().distanceSquared(center);
@@ -1314,14 +1321,20 @@ public class ConveyorBlockEntity extends PersistentWorldlyBlockEntity implements
             dev.arubik.craftengine.util.CustomBlockData data = blockData(world);
             if (data == null)
                 return;
-            data.set(dev.arubik.craftengine.util.TypedKeys.CONTENTS,
-                    dev.arubik.craftengine.util.ArrayItemStackWithSlot.from(this.inventory));
-            for (int i = 0; i < slots; i++) {
-                data.set(progKey(i), progress[i]);
-                data.set(jitKey(i), jitter[i]);
-                data.set(entryKey(i), entryDir[i] != null ? entryDir[i].name() : "");
+            // Batch: ~14 set() calls below flush as ONE chunk PDC write instead of one per key.
+            data.beginBatch();
+            try {
+                data.set(dev.arubik.craftengine.util.TypedKeys.CONTENTS,
+                        dev.arubik.craftengine.util.ArrayItemStackWithSlot.from(this.inventory));
+                for (int i = 0; i < slots; i++) {
+                    data.set(progKey(i), progress[i]);
+                    data.set(jitKey(i), jitter[i]);
+                    data.set(entryKey(i), entryDir[i] != null ? entryDir[i].name() : "");
+                }
+                data.set(PREV_KEY, prevPos != null ? (prevPos.x() + "," + prevPos.y() + "," + prevPos.z()) : "");
+            } finally {
+                data.endBatch();
             }
-            data.set(PREV_KEY, prevPos != null ? (prevPos.x() + "," + prevPos.y() + "," + prevPos.z()) : "");
         } catch (Throwable ignored) {
         }
     }

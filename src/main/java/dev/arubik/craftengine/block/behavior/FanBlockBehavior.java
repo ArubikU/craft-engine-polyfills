@@ -167,9 +167,14 @@ public class FanBlockBehavior extends BukkitBlockBehavior implements EntityBlock
     double ry = randomOffset(jitter);
     double rz = randomOffset(jitter);
     bukkitWorld.spawnParticle(this.particle, cx + rx, cy + ry, cz + rz, 1, 0.0D, 0.0D, 0.0D, 0.0D);
-    bukkitWorld.getNearbyEntities(new BoundingBox(cx - 0.5D, cy - 0.5D, cz - 0.5D, cx + 0.5D, cy + 0.5D, cz + 0.5D))
-
-        .forEach(entity -> entity.setVelocity(entity.getVelocity().add(pushVector)));
+    net.minecraft.server.level.ServerLevel serverLevel = ((org.bukkit.craftbukkit.CraftWorld) bukkitWorld).getHandle();
+    net.minecraft.world.phys.AABB aabb = new net.minecraft.world.phys.AABB(cx - 0.5D, cy - 0.5D, cz - 0.5D, cx + 0.5D,
+        cy + 0.5D, cz + 0.5D);
+    for (net.minecraft.world.entity.Entity nms : serverLevel
+        .getEntitiesOfClass(net.minecraft.world.entity.Entity.class, aabb, e -> !e.isRemoved())) {
+      org.bukkit.entity.Entity entity = nms.getBukkitEntity();
+      entity.setVelocity(entity.getVelocity().add(pushVector));
+    }
   }
 
   private double randomOffset(double range) {

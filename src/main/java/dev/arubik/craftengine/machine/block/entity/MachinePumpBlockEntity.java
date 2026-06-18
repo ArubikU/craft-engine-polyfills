@@ -249,6 +249,8 @@ public class MachinePumpBlockEntity extends AbstractMachineBlockEntity {
 
     // Counts down ticks until the next pump operation (extract+push). Reset to effInterval() after each op.
     private int opCooldown = 0;
+    // Counts down to the next upgrade recompute (upgrades change rarely; no need to recompute per tick).
+    private int upgradeRecomputeCd = 0;
 
     // The pump opens its menu via the `active` field (not the base `this.menu`), so the base tick()
     // never ticks it. Tick `active` here so its dynamic gauges (fuel / progress / fluid) refresh live.
@@ -265,7 +267,13 @@ public class MachinePumpBlockEntity extends AbstractMachineBlockEntity {
         if (level.isClientSide())
             return;
 
-        recomputeUpgrades();
+        // Upgrades change rarely (player edits the slots): recompute on a 10-tick cadence instead of
+        // every tick (avoids the per-tick slot reads / item-id round-trips). bumpOverclock recomputes
+        // immediately, so overclock still applies instantly.
+        if (upgradeRecomputeCd-- <= 0) {
+            recomputeUpgrades();
+            upgradeRecomputeCd = 10;
+        }
         refreshUpgradePageIfNeeded();
         // (storedFluid() below is null-safe; the raw tank value is null until first filled.)
 
@@ -279,8 +287,9 @@ public class MachinePumpBlockEntity extends AbstractMachineBlockEntity {
         int cap = effCapacity();
         int pressure = effPressure();
 
-        // Always (re)stamp the configured pressure onto whatever is stored so it can climb pipes.
-        if (!stored.isEmpty()) {
+        // (Re)stamp the configured pressure onto stored fluid so it can climb pipes — but only when it
+        // actually differs, to avoid a PDC write every tick when pressure is stable.
+        if (!stored.isEmpty() && stored.getPressure() != pressure) {
             writeTank(level, new FluidStack(stored.getType(), stored.getAmount(), pressure));
         }
 
@@ -674,6 +683,7 @@ public class MachinePumpBlockEntity extends AbstractMachineBlockEntity {
         this.overclock += up ? delta : -delta;
         this.overclock = (float) clamp(this.overclock, -Math.min(this.curOverclockLimit, 0.99),
                 this.curOverclockLimit);
+        this.upgradeRecomputeCd = 0; // apply the new overclock on the next tick, not after the cadence
         setChanged();
     }
 

@@ -55,10 +55,23 @@ public class MagnetBlockBehavior extends BukkitBlockBehavior {
         if (blockInWorld.block() == null)
             return;
 
-        Vector center = blockInWorld.block().getLocation().add(0.5, 0.5, 0.5).toVector();
+        org.bukkit.Location blockLoc = blockInWorld.block().getLocation();
+        Vector center = blockLoc.clone().add(0.5, 0.5, 0.5).toVector();
 
-        for (Entity entity : blockInWorld.block().getWorld().getNearbyEntities(blockInWorld.block().getLocation(),
-                radius, radius, radius)) {
+        // Match Bukkit getNearbyEntities(loc, radius, radius, radius): box of
+        // half-extents radius centered on the block location.
+        double bx = blockLoc.getX();
+        double by = blockLoc.getY();
+        double bz = blockLoc.getZ();
+        net.minecraft.server.level.ServerLevel serverLevel = ((org.bukkit.craftbukkit.CraftWorld) blockLoc.getWorld())
+                .getHandle();
+        net.minecraft.world.phys.AABB aabb = new net.minecraft.world.phys.AABB(
+                bx - radius, by - radius, bz - radius,
+                bx + radius, by + radius, bz + radius);
+
+        for (net.minecraft.world.entity.Entity nms : serverLevel.getEntitiesOfClass(
+                net.minecraft.world.entity.Entity.class, aabb, e -> !e.isRemoved())) {
+            Entity entity = nms.getBukkitEntity();
             if (!shouldAffect(entity))
                 continue;
 

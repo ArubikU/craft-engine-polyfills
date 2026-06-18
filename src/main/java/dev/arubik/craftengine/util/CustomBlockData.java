@@ -512,6 +512,22 @@ public class CustomBlockData implements PersistentDataContainer {
      * Saves the block's {@link PersistentDataContainer} inside the chunk's
      * PersistentDataContainer
      */
+    // Batch mode: while true, set()/remove() skip the per-call save(); endBatch() flushes once.
+    // Lets callers that write many keys at once (e.g. conveyor saveState) pay ONE chunk PDC write
+    // instead of one per key. Main-thread only.
+    private transient boolean batching = false;
+
+    public void beginBatch() {
+        this.batching = true;
+    }
+
+    public void endBatch() {
+        if (this.batching) {
+            this.batching = false;
+            save();
+        }
+    }
+
     private void save() {
         setDirty(plugin, blockEntry);
         if (pdc.isEmpty()) {
@@ -761,7 +777,8 @@ public class CustomBlockData implements PersistentDataContainer {
             pdc.set(key.getKey(), key.getType(), value);
         }
 
-        save();
+        if (!batching)
+            save();
     }
 
     public <T> T get(TypedKey<T> key) {
@@ -795,7 +812,8 @@ public class CustomBlockData implements PersistentDataContainer {
         if (pdc.has(key.getKey())) {
             pdc.remove(key.getKey());
         }
-        save();
+        if (!batching)
+            save();
     }
 
     public <T> T getOrDefault(TypedKey<T> key, T defaultValue) {

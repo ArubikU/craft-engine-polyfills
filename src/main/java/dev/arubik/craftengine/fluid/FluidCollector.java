@@ -105,7 +105,7 @@ public class FluidCollector {
                 return new FluidStack(FluidType.LAVA, full, 0);
             }
             // Bloques materiales
-            if (level.getBlockState(pos).getBlock() instanceof SlimeBlock) {
+            if (cs.getBlock() instanceof SlimeBlock) {
                 if (preferred != null && preferred != FluidType.EMPTY && preferred != FluidType.SLIME)
                     return new FluidStack(FluidType.EMPTY, 0, 0);
                 int full = FluidType.SLIME.mbPerFullBlock();
@@ -114,7 +114,7 @@ public class FluidCollector {
                 level.setBlock(pos, Blocks.AIR.defaultBlockState(), 3);
                 return new FluidStack(FluidType.SLIME, full, 0);
             }
-            if (level.getBlockState(pos).is(Blocks.HONEY_BLOCK)) {
+            if (cs.is(Blocks.HONEY_BLOCK)) {
                 if (preferred != null && preferred != FluidType.EMPTY && preferred != FluidType.HONEY)
                     return new FluidStack(FluidType.EMPTY, 0, 0);
                 int full = FluidType.HONEY.mbPerFullBlock();
@@ -123,7 +123,7 @@ public class FluidCollector {
                 level.setBlock(pos, Blocks.AIR.defaultBlockState(), 3);
                 return new FluidStack(FluidType.HONEY, full, 0);
             }
-            if (level.getBlockState(pos).is(Blocks.POWDER_SNOW)) {
+            if (cs.is(Blocks.POWDER_SNOW)) {
                 if (preferred != null && preferred != FluidType.EMPTY && preferred != FluidType.POWDER_SNOW)
                     return new FluidStack(FluidType.EMPTY, 0, 0);
                 int full = FluidType.POWDER_SNOW.mbPerFullBlock();
@@ -174,18 +174,19 @@ public class FluidCollector {
                     || fs.is(net.minecraft.world.level.material.Fluids.FLOWING_LAVA))
                 return FluidType.LAVA;
         } else {
-            if (level.getBlockState(pos).is(Blocks.WATER_CAULDRON))
+            net.minecraft.world.level.block.state.BlockState cs = level.getBlockState(pos);
+            if (cs.is(Blocks.WATER_CAULDRON))
                 return FluidType.WATER;
-            if (level.getBlockState(pos).is(Blocks.LAVA_CAULDRON))
+            if (cs.is(Blocks.LAVA_CAULDRON))
                 return FluidType.LAVA;
-            if (level.getBlockState(pos).getBlock() instanceof SlimeBlock)
+            if (cs.getBlock() instanceof SlimeBlock)
                 return FluidType.SLIME;
-            if (level.getBlockState(pos).is(Blocks.POWDER_SNOW))
+            if (cs.is(Blocks.POWDER_SNOW))
                 return FluidType.POWDER_SNOW;
             var orbs = level.getEntitiesOfClass(ExperienceOrb.class, new AABB(pos));
             if (!orbs.isEmpty())
                 return FluidType.EXPERIENCE;
-            if (level.getBlockState(pos).is(Blocks.HONEY_BLOCK))
+            if (cs.is(Blocks.HONEY_BLOCK))
                 return FluidType.HONEY;
         }
         return FluidType.EMPTY;
