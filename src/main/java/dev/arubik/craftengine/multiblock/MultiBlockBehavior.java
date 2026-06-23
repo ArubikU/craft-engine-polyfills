@@ -59,6 +59,28 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
     private static final TypedKey<Boolean> KEY_DISASSEMBLING = TypedKey.of("craftengine", "multiblock_disassembling",
             PersistentDataType.BOOLEAN);
 
+    /**
+     * All multiblock behaviors, keyed by their CORE block id. The hammer-assemble listener iterates
+     * these to detect a structure from any clicked block. Keyed (not a list) so a config reload
+     * overwrites the stale instance instead of leaking duplicates.
+     */
+    private static final java.util.Map<Key, MultiBlockBehavior> REGISTRY = new java.util.concurrent.ConcurrentHashMap<>();
+
+    public static java.util.Collection<MultiBlockBehavior> registry() {
+        return REGISTRY.values();
+    }
+
+    /** Hammer item ids allowed to assemble this multiblock; empty = ANY hammer. */
+    private java.util.List<Key> assemblyItems = java.util.List.of();
+
+    public void setAssemblyItems(java.util.List<Key> items) {
+        this.assemblyItems = items == null ? java.util.List.of() : items;
+    }
+
+    public boolean acceptsHammer(Key hammerId) {
+        return assemblyItems.isEmpty() || assemblyItems.contains(hammerId);
+    }
+
     public MultiBlockBehavior(BlockDefinition customBlock, MultiBlockSchema schema, String partBlockId) {
         this(customBlock, schema, partBlockId, new java.util.ArrayList<>(), null, null, new IOConfiguration.Open());
     }
@@ -72,6 +94,10 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
         this.schema = schema;
         this.partBlockId = partBlockId;
         this.ioProvider = IOConfigurationProvider.OPEN;
+        try {
+            REGISTRY.put(customBlock.id(), this);
+        } catch (Throwable ignored) {
+        }
 
         net.momirealms.craftengine.core.block.property.Property<MultiBlockRole> roleProperty = (net.momirealms.craftengine.core.block.property.Property<MultiBlockRole>) customBlock
                 .getProperty("multiblock_role");
@@ -135,19 +161,28 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
      * Assumes NORTH is the default schema direction
      */
     protected BlockPos rotate(BlockPos pos, Direction facing) {
-        if (facing == null || facing == Direction.NORTH || facing == Direction.UP || facing == Direction.DOWN) {
-            return pos;
-        }
+        int[] r = MultiBlockGeometry.rotate(pos.getX(), pos.getY(), pos.getZ(), facingIndex(facing));
+        return new BlockPos(r[0], r[1], r[2]);
+    }
 
-        int x = pos.getX();
-        int y = pos.getY();
-        int z = pos.getZ();
+    /** Horizontal facing -> rotation index (NORTH/UP/DOWN/null = 0 identity). */
+    private static int facingIndex(Direction f) {
+        if (f == null)
+            return 0;
+        return switch (f) {
+            case EAST -> 1;
+            case SOUTH -> 2;
+            case WEST -> 3;
+            default -> 0; // NORTH, UP, DOWN
+        };
+    }
 
-        return switch (facing) {
-            case SOUTH -> new BlockPos(-x, y, -z);
-            case WEST -> new BlockPos(z, y, -x); // North (0,0,-1) -> West (-1,0,0)
-            case EAST -> new BlockPos(-z, y, x); // North (0,0,-1) -> East (1,0,0)
-            default -> pos;
+    private static Direction facingFromIndex(int i) {
+        return switch (i) {
+            case 1 -> Direction.EAST;
+            case 2 -> Direction.SOUTH;
+            case 3 -> Direction.WEST;
+            default -> Direction.NORTH;
         };
     }
 
@@ -256,15 +291,8 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
             MultiBlockRole stateRole = state.get(MULTIBLOCK_ROLE);
 
             if (stateRole == MultiBlockRole.CORE) {
-                // If it's a machine core and the state role is CORE, it's formed
-                System.out.println("[MultiBlockBehavior] Machine role is CORE");
+                // Formed machine core -> open its menu. Forming is HAMMER-ONLY (see HammerAssembleListener).
                 return onInteractFormed(context, be, level, pos);
-            } else {
-                // Try to form - we need to create a temporary wrapper or adapt tryForm
-                System.out.println("[MultiBlockBehavior] Attempting to form multiblock structure...");
-                if (tryFormMachine(level, pos, state)) {
-                    return InteractionResult.SUCCESS;
-                }
             }
             return InteractionResult.PASS;
         }
@@ -285,14 +313,9 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
         System.out.println("[MultiBlockBehavior] Part isFormed: " + mbe.isFormed());
 
         if (role == MultiBlockRole.CORE) {
-            // Core block - already formed
+            // Formed core -> open its menu. (Forming is hammer-only.)
             if (mbe.isFormed()) {
                 return onInteractFormed(context, mbe, level, pos);
-            } else {
-                // Try to form (shouldn't happen often, CORE should mean formed)
-                if (tryForm(level, pos, state, mbe)) {
-                    return InteractionResult.SUCCESS;
-                }
             }
         } else if (role == MultiBlockRole.PART) {
             // Part block - delegate to core
@@ -311,16 +334,9 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
                 // Part has no corePos - this shouldn't happen, but try to recover
                 System.out.println("[MultiBlockBehavior] PART has no corePos set!");
             }
-        } else if (role == MultiBlockRole.NONE) {
-            // Block placed but not formed - try to form
-            System.out.println("[MultiBlockBehavior] Role is NONE, attempting to form...");
-            if (tryForm(level, pos, state, mbe)) {
-                System.out.println("[MultiBlockBehavior] Formation successful!");
-                return InteractionResult.SUCCESS;
-            } else {
-                System.out.println("[MultiBlockBehavior] Formation failed - schema not matched");
-            }
         }
+        // role == NONE (unformed): bare-hand does NOT assemble — only an engineer's hammer does
+        // (HammerAssembleListener). This keeps assembly intentional and consumes hammer durability.
 
         return InteractionResult.PASS;
     }
@@ -341,9 +357,134 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
 
     // ========== Formation Logic ==========
 
+    /**
+     * Subclass veto on forming with a given block as the CORE (e.g. require a specific block beneath
+     * the core). Called by {@link #findFormCore} and both form paths. Default: always allowed.
+     */
+    protected boolean canFormAt(Level level, BlockPos corePos) {
+        return true;
+    }
+
+    /** Rotation encoded by a block's facing property (vertical first, then horizontal); NORTH default. */
+    protected Direction facingOf(ImmutableBlockState st) {
+        if (st == null)
+            return Direction.NORTH;
+        if (verticalDirectionProperty != null && st.get(verticalDirectionProperty) != null) {
+            try {
+                return Direction.valueOf(st.get(verticalDirectionProperty).toString());
+            } catch (Exception ignored) {
+            }
+        } else if (horizontalDirectionProperty != null && st.get(horizontalDirectionProperty) != null) {
+            try {
+                return DirectionalIOHelper.fromHorizontalDirection(st.get(horizontalDirectionProperty));
+            } catch (Exception ignored) {
+            }
+        }
+        return Direction.NORTH;
+    }
+
+    /** True when the block at {@code pos} is THIS multiblock's own block (the valid core block). */
+    private boolean isOwnBlockAt(Level level, BlockPos pos) {
+        var cs = net.momirealms.craftengine.bukkit.util.BlockStateUtils
+                .getOptionalCustomBlockState(level.getBlockState(pos)).orElse(null);
+        return cs != null && cs.owner() != null && cs.owner().value().id().equals(this.block().id());
+    }
+
+    /** Non-mutating schema check: the core block is ours AND every part predicate matches. */
+    protected boolean matchesSchemaAt(Level level, BlockPos corePos, Direction facing) {
+        if (!isOwnBlockAt(level, corePos))
+            return false;
+        BlockPos coreOffset = schema.getCoreOffset();
+        for (Map.Entry<BlockPos, java.util.function.Predicate<BlockState>> e : schema.getParts().entrySet()) {
+            BlockPos partPos = corePos.offset(rotate(e.getKey().subtract(coreOffset), facing));
+            if (partPos.equals(corePos))
+                continue;
+            if (!e.getValue().test(level.getBlockState(partPos)))
+                return false;
+        }
+        return true;
+    }
+
+    /**
+     * Immersive-Engineering-style detection: the player may right-click ANY block of the structure
+     * (not only the core, which can be buried). Treats the clicked block as each possible schema cell,
+     * derives the implied core position, and returns the first one that forms a complete, allowed
+     * structure. Trying {@code coreOffset} first keeps the legacy "click the core" behaviour identical.
+     */
+    protected BlockPos findFormCore(Level level, BlockPos clicked, ImmutableBlockState clickedState) {
+        if (schema == null)
+            return null;
+        // Directional multiblocks: the clicked block may be a vanilla part with no facing of its own, so
+        // try every horizontal rotation and confirm the discovered CORE's facing matches. Non-directional
+        // (e.g. a vertical tower): just the clicked block's own facing (NORTH for no-facing blocks).
+        int[] facingIdxs = (horizontalDirectionProperty != null)
+                ? new int[] { 0, 1, 2, 3 }
+                : new int[] { facingIndex(facingOf(clickedState)) };
+        BlockPos coreOffset = schema.getCoreOffset();
+        int[] coreOff = { coreOffset.getX(), coreOffset.getY(), coreOffset.getZ() };
+        int[] clk = { clicked.getX(), clicked.getY(), clicked.getZ() };
+        // Cells RELATIVE to schema origin: coreOffset first (legacy "clicked IS core"), then the parts.
+        java.util.List<int[]> cells = new java.util.ArrayList<>();
+        cells.add(coreOff);
+        for (BlockPos p : schema.getParts().keySet())
+            cells.add(new int[] { p.getX(), p.getY(), p.getZ() });
+        for (int fi : facingIdxs) {
+            Direction facing = facingFromIndex(fi);
+            for (int[] c : MultiBlockGeometry.candidateCores(cells, coreOff, clk, fi)) {
+                BlockPos corePos = new BlockPos(c[0], c[1], c[2]);
+                if (matchesSchemaAt(level, corePos, facing)
+                        && coreFacingMatches(level, corePos, facing)
+                        && canFormAt(level, corePos))
+                    return corePos;
+            }
+        }
+        return null;
+    }
+
+    /** For directional multiblocks, the core block's own facing must equal the tried rotation. */
+    private boolean coreFacingMatches(Level level, BlockPos corePos, Direction facing) {
+        if (horizontalDirectionProperty == null && verticalDirectionProperty == null)
+            return true;
+        ImmutableBlockState cs = customStateAt(level, corePos);
+        return cs != null && facingOf(cs) == facing;
+    }
+
+    /**
+     * Assemble from a hammer right-click on ANY block of the structure (vanilla or custom). Finds the
+     * implied core, then forms. Returns true if a structure was assembled.
+     */
+    /** Total blocks in the structure (parts + core) — the hammer durability cost of one assembly. */
+    public int structureBlockCount() {
+        return schema == null ? 1 : schema.getParts().size() + 1;
+    }
+
+    public boolean tryAssemble(Level level, BlockPos clicked) {
+        ImmutableBlockState clickedCustom = customStateAt(level, clicked);
+        BlockPos core = findFormCore(level, clicked, clickedCustom);
+        if (core == null)
+            return false;
+        ImmutableBlockState coreState = customStateAt(level, core);
+        if (coreState == null || coreState.get(MULTIBLOCK_ROLE) == MultiBlockRole.CORE)
+            return false; // missing or already formed
+        BlockEntityController coreBe = controllerAt(level, core);
+        if (coreBe instanceof MultiBlockPartBlockEntity part)
+            return tryForm(level, core, coreState, part);
+        return false;
+    }
+
+    /** Custom state at a position, or null. */
+    private ImmutableBlockState customStateAt(Level level, BlockPos pos) {
+        return net.momirealms.craftengine.bukkit.util.BlockStateUtils
+                .getOptionalCustomBlockState(level.getBlockState(pos)).orElse(null);
+    }
+
     protected boolean tryForm(Level level, BlockPos corePos, ImmutableBlockState currentState,
             MultiBlockPartBlockEntity coreEntity) {
         System.out.println("[MultiBlockBehavior] tryForm called at " + corePos);
+        if (!canFormAt(level, corePos)) {
+            System.out.println("[MultiBlockBehavior] canFormAt veto at " + corePos);
+            return false;
+        }
 
         // Determine Rotation
         Direction facing = Direction.NORTH;
@@ -656,6 +797,10 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
      */
     protected boolean tryFormMachine(Level level, BlockPos corePos, ImmutableBlockState currentState) {
         System.out.println("[MultiBlockBehavior] tryFormMachine called at " + corePos);
+        if (!canFormAt(level, corePos)) {
+            System.out.println("[MultiBlockBehavior] canFormAt veto at " + corePos);
+            return false;
+        }
 
         // Determine Rotation
         Direction facing = Direction.NORTH;

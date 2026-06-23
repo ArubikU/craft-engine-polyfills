@@ -1,0 +1,12 @@
+{
+  "type": "fan",
+  "time": 60,
+  "process": "washing",
+  "gas": "any",
+  "inputs": [ { "type": "item", "id": "minecraft:gravel", "amount": 1 } ],
+  "outputs": [
+    { "type": "item", "id": "minecraft:flint", "amount": 1, "chance": 1.0 },
+    { "type": "item", "id": "minecraft:clay_ball", "amount": 1, "chance": 0.25 },
+    { "type": "item", "id": "minecraft:iron_nugget", "amount": 1, "chance": 0.1 }
+  ]
+}

@@ -3,7 +3,8 @@ package dev.arubik.craftengine.gas;
 public enum GasType {
     EMPTY("Empty"),
     STEAM("Steam"),
-    HEAVY_STEAM("Heavy Steam");
+    HEAVY_STEAM("Heavy Steam"),
+    NITROGEN("Nitrogen");
 
     private final String displayName;
 

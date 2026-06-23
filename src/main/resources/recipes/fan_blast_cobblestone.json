@@ -1,0 +1,10 @@
+{
+  "type": "fan",
+  "time": 80,
+  "process": "blasting",
+  "gas": "any",
+  "inputs": [ { "type": "item", "id": "minecraft:cobblestone", "amount": 1 } ],
+  "outputs": [
+    { "type": "item", "id": "minecraft:stone", "amount": 1, "chance": 1.0 }
+  ]
+}

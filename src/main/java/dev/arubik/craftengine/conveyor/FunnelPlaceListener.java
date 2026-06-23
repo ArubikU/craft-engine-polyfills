@@ -72,7 +72,9 @@ public class FunnelPlaceListener implements Listener {
             blockId = CEILING_BLOCK;
         } else {
             blockId = FUNNEL_BLOCK;
-            funnelFacing = player.getFacing(); // directional: face where the player looks
+            // Placed against a wall: face OUT of the wall (the clicked face's normal, toward the player),
+            // not into it — player.getFacing() pointed into the wall and rendered the funnel reversed.
+            funnelFacing = face;
         }
 
         BlockDefinition def = CraftEngineBlocks.byId(blockId);

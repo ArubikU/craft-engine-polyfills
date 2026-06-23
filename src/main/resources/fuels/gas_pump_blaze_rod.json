@@ -1,0 +1,5 @@
+{
+    "type": "gas_pump",
+    "burnTime": 2400,
+    "input": { "type": "item", "id": "minecraft:blaze_rod", "amount": 1 }
+}

@@ -1,0 +1,5 @@
+{
+    "type": "machine_pump",
+    "burnTime": 14400,
+    "input": { "type": "item", "id": "minecraft:coal_block", "amount": 1 }
+}

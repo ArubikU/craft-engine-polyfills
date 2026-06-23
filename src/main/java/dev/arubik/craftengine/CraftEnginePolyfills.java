@@ -48,6 +48,8 @@ public final class CraftEnginePolyfills extends JavaPlugin {
         pipeWand.start(this); // live aim-tracking preview task (MAGIC mode)
         getServer().getPluginManager().registerEvents(new dev.arubik.craftengine.conveyor.FunnelPlaceListener(),
                 this);
+        getServer().getPluginManager().registerEvents(new dev.arubik.craftengine.multiblock.HammerAssembleListener(),
+                this);
         getServer().getPluginManager().registerEvents(new dev.arubik.craftengine.conveyor.ConveyorBreakListener(),
                 this);
         getServer().getPluginManager().registerEvents(new dev.arubik.craftengine.conveyor.ConveyorIoBreakListener(),

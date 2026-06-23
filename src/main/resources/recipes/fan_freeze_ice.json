@@ -1,0 +1,10 @@
+{
+  "type": "fan",
+  "time": 80,
+  "process": "freezing",
+  "gas": "nitrogen",
+  "inputs": [ { "type": "item", "id": "minecraft:ice", "amount": 1 } ],
+  "outputs": [
+    { "type": "item", "id": "minecraft:packed_ice", "amount": 1, "chance": 1.0 }
+  ]
+}

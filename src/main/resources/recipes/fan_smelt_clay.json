@@ -1,0 +1,10 @@
+{
+  "type": "fan",
+  "time": 100,
+  "process": "smelting",
+  "gas": "steam",
+  "inputs": [ { "type": "item", "id": "minecraft:clay_ball", "amount": 1 } ],
+  "outputs": [
+    { "type": "item", "id": "minecraft:brick", "amount": 1, "chance": 1.0 }
+  ]
+}

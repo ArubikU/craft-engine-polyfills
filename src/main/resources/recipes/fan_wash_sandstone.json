@@ -1,0 +1,10 @@
+{
+  "type": "fan",
+  "time": 80,
+  "process": "washing",
+  "gas": "any",
+  "inputs": [ { "type": "item", "id": "minecraft:sandstone", "amount": 1 } ],
+  "outputs": [
+    { "type": "item", "id": "minecraft:sand", "amount": 1, "chance": 1.0 }
+  ]
+}

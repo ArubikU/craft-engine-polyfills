@@ -41,7 +41,7 @@ public class BlockBehaviors {
                 RegistryUtils.registerBlockBehavior(POLYFILL_CHANGE_OVER_TIME_BLOCK,
                                 ChangeOverTimeBlockBehavior.FACTORY);
                 RegistryUtils.registerBlockBehavior(POLYFILL_BUSH_BLOCK, BushBlockBehavior.FACTORY);
-                RegistryUtils.registerBlockBehavior(POLYFILL_FAN_BLOCK, FanBlockBehavior.FACTORY);
+                RegistryUtils.registerBlockBehavior(POLYFILL_FAN_BLOCK, FanMachineBehavior.FACTORY);
                 RegistryUtils.registerBlockBehavior(POLYFILL_STORAGE_BLOCK, StorageBlockBehavior.FACTORY);
                 RegistryUtils.registerBlockBehavior(POLYFILL_REDSTONE_OPERATOR, RedstoneOperator.FACTORY);
                 RegistryUtils.registerBlockBehavior(POLYFILL_REDSTONE_CONTROLLER, RedstoneController.FACTORY);
@@ -52,6 +52,9 @@ public class BlockBehaviors {
                 RegistryUtils.registerBlockBehavior(
                                 dev.arubik.craftengine.fluid.behavior.MachinePumpBehavior.FACTORY_KEY,
                                 dev.arubik.craftengine.fluid.behavior.MachinePumpBehavior.FACTORY);
+                RegistryUtils.registerBlockBehavior(
+                                dev.arubik.craftengine.machine.block.behavior.GasPumpBehavior.FACTORY_KEY,
+                                dev.arubik.craftengine.machine.block.behavior.GasPumpBehavior.FACTORY);
                 RegistryUtils.registerBlockBehavior(POLYFILL_VALVE_BLOCK, ValveBehavior.FACTORY);
                 RegistryUtils.registerBlockBehavior(POLYFILL_FLUID_TANK_BLOCK, TankBlockBehavior.FACTORY);
                 RegistryUtils.registerBlockBehavior(POLYFILL_SPIKE_BLOCK, SpikeBlockBehavior.FACTORY);
@@ -84,6 +87,9 @@ public class BlockBehaviors {
                 RegistryUtils.registerBlockBehavior(
                                 dev.arubik.craftengine.multiblock.impl.MachineCoreT1Behavior.FACTORY_KEY,
                                 dev.arubik.craftengine.multiblock.impl.MachineCoreT1Behavior.FACTORY);
+                RegistryUtils.registerBlockBehavior(
+                                dev.arubik.craftengine.multiblock.impl.PressurizerWellBehavior.FACTORY_KEY,
+                                dev.arubik.craftengine.multiblock.impl.PressurizerWellBehavior.FACTORY);
 
                 net.momirealms.craftengine.core.block.entity.render.element.BlockEntityElementConfigs.register(
                                 POLYFILL_SHULKER_BOX_HITBOX,

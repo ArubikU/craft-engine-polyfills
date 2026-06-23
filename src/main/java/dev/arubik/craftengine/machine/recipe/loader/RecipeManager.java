@@ -145,7 +145,39 @@ public class RecipeManager {
             }
         }
 
-        AbstractProcessingRecipe recipe = new AbstractProcessingRecipe(inputs, outputs, time);
+        AbstractProcessingRecipe recipe;
+        if ("fan".equals(type)) {
+            // Fan recipes carry two extra gates (gas type + process family) expressed either as
+            // top-level fields or as conditions{ type: gas|process, value: ... }.
+            dev.arubik.craftengine.machine.recipe.FanProcess process =
+                    dev.arubik.craftengine.machine.recipe.FanProcess.NONE;
+            dev.arubik.craftengine.gas.GasType reqGas = null;
+            if (json.has("process"))
+                process = dev.arubik.craftengine.machine.recipe.FanProcess.parse(json.get("process").getAsString());
+            if (json.has("gas")) {
+                String g = json.get("gas").getAsString();
+                if (!"any".equalsIgnoreCase(g))
+                    reqGas = GasType.valueOf(g.toUpperCase());
+            }
+            if (json.has("conditions")) {
+                for (JsonElement e : json.getAsJsonArray("conditions")) {
+                    JsonObject o = e.getAsJsonObject();
+                    String ct = o.get("type").getAsString();
+                    if ("process".equals(ct) || "heat".equals(ct)) {
+                        process = dev.arubik.craftengine.machine.recipe.FanProcess.parse(o.get("value").getAsString());
+                    } else if ("gas".equals(ct)) {
+                        String g = o.get("value").getAsString();
+                        reqGas = "any".equalsIgnoreCase(g) ? null : GasType.valueOf(g.toUpperCase());
+                    }
+                }
+            }
+            dev.arubik.craftengine.machine.recipe.FanRecipe fan =
+                    new dev.arubik.craftengine.machine.recipe.FanRecipe(inputs, outputs, time, process, reqGas);
+            RECIPES.computeIfAbsent("fan", k -> new ArrayList<>()).add(fan);
+            return;
+        }
+
+        recipe = new AbstractProcessingRecipe(inputs, outputs, time);
         recipe.setFuelRequired(fuelRequired);
         recipe.setRequireOverclocked(requireOverclocked);
         recipe.setMechanical(json.has("rpm") ? json.get("rpm").getAsInt() : 0,
@@ -257,6 +289,16 @@ public class RecipeManager {
 
     public static List<AbstractProcessingRecipe> getRecipes(String type) {
         return RECIPES.getOrDefault(type, Collections.emptyList());
+    }
+
+    /** All loaded {@code fan} recipes (machine id {@code "fan"}), already cast. */
+    public static List<dev.arubik.craftengine.machine.recipe.FanRecipe> getFanRecipes() {
+        List<dev.arubik.craftengine.machine.recipe.FanRecipe> out = new ArrayList<>();
+        for (AbstractProcessingRecipe r : RECIPES.getOrDefault("fan", Collections.emptyList())) {
+            if (r instanceof dev.arubik.craftengine.machine.recipe.FanRecipe fr)
+                out.add(fr);
+        }
+        return out;
     }
 
     private static void createDefaults(File root) {

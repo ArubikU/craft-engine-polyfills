@@ -344,6 +344,93 @@ public class ConveyorBlockEntity extends PersistentWorldlyBlockEntity implements
         return hand;
     }
 
+    /**
+     * Airflow processing hook (used by the gas fan): the front-most carried item as a Bukkit stack,
+     * or null when this segment carries nothing. Does NOT remove it.
+     */
+    public org.bukkit.inventory.ItemStack peekCarried() {
+        int i = frontSlot();
+        return i < 0 ? null : bukkitSlot(i);
+    }
+
+    /**
+     * Stable id of the front-most carried item's DISPLAY entity, or -1. The display object is handed
+     * off intact belt->belt (no respawn), so this id follows the same physical item across belts —
+     * lets the gas fan track cook progress per moving item without tainting the stack.
+     */
+    public int peekCarriedDisplayId() {
+        int i = frontSlot();
+        if (i < 0 || displays[i] == null)
+            return -1;
+        return displays[i].entityId();
+    }
+
+    /** Visitor for {@link #forEachCarried}: gets each carried slot's display id + stack; returns the
+     *  replacement (same instance = unchanged, null/air = clear the slot). */
+    public interface CarriedVisitor {
+        org.bukkit.inventory.ItemStack visit(int displayId, org.bukkit.inventory.ItemStack stack);
+    }
+
+    /** Process EVERY non-empty carried slot (not just the front) — lets the gas fan cook a whole row
+     *  of items on one belt at once. */
+    public void forEachCarried(CarriedVisitor v) {
+        for (int i = 0; i < slots; i++) {
+            if (slotEmpty(i))
+                continue;
+            int did = displays[i] != null ? displays[i].entityId() : -1;
+            org.bukkit.inventory.ItemStack cur = bukkitSlot(i);
+            org.bukkit.inventory.ItemStack rep = v.visit(did, cur);
+            if (rep == cur)
+                continue; // unchanged
+            if (rep == null || rep.getType().isAir()) {
+                clearSlot(i);
+            } else {
+                setItem(i, CraftItemStack.asNMSCopy(rep));
+                dirty = true;
+                if (displays[i] != null)
+                    displays[i].setNmsItem(getItem(i).copy());
+            }
+            // A STOPPED belt won't run renderAll, so push the new item/visibility to viewers now —
+            // otherwise the stack updates but the display keeps showing the pre-cook item.
+            pushDisplay(i);
+        }
+    }
+
+    /** Push the current display state of slot {@code i} to nearby players (used after an off-tick change
+     *  on a stopped belt, where renderAll isn't running). */
+    private void pushDisplay(int i) {
+        try {
+            java.util.List<Player> viewers = blockEntity().world().world().getTrackedBy(new ChunkPos(pos()));
+            if (slotEmpty(i)) {
+                despawnSlotFor(viewers, i);
+            } else if (displays[i] != null) {
+                for (Player p : viewers)
+                    displays[i].updateMetadata(p);
+            }
+        } catch (Throwable ignored) {
+        }
+    }
+
+    /**
+     * Replace the front-most carried stack in place (used by the gas fan when an airflow recipe
+     * completes), keeping its travel progress so movement isn't broken. A null/air replacement clears
+     * the slot. Returns false when there is nothing carried.
+     */
+    public boolean replaceCarried(org.bukkit.inventory.ItemStack replacement) {
+        int i = frontSlot();
+        if (i < 0)
+            return false;
+        if (replacement == null || replacement.getType().isAir()) {
+            clearSlot(i);
+            return true;
+        }
+        setItem(i, CraftItemStack.asNMSCopy(replacement));
+        dirty = true;
+        if (displays[i] != null)
+            displays[i].setNmsItem(getItem(i).copy());
+        return true;
+    }
+
     /** Empty slot {@code i}, resetting its position and pushing the empty item to its display. */
     private void clearSlot(int i) {
         setItem(i, net.minecraft.world.item.ItemStack.EMPTY);

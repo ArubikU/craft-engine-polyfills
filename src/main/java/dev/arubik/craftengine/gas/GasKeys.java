@@ -48,4 +48,13 @@ public final class GasKeys {
             PersistentDataType.INTEGER);
     public static final TypedKey<Integer> GAS_BLOCK_COOLDOWN = TypedKey.of("craftengine", "gas_block_cooldown",
             PersistentDataType.INTEGER);
+
+    /**
+     * Written by a formed + steam-fed Pressurizer Well core to its own CustomBlockData (1 = active).
+     * A gas pump reads it on the cal block directly below the well core to raise its vein's pump limit.
+     */
+    public static final TypedKey<Integer> WELL_ACTIVE = TypedKey.of("craftengine", "pressurizer_well_active",
+            PersistentDataType.INTEGER);
+    /** Pump limit a single active Pressurizer Well grants to its anchored vein. */
+    public static final int WELL_PUMP_LIMIT = 5;
 }
