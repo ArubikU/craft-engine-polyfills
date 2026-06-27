@@ -60,13 +60,9 @@ public class GasPumpBlockEntity extends AbstractMachineBlockEntity {
     private static final int BASE_UNLOCKED = 3;
 
     /** Hard cap on extraction points a single pump can draw, regardless of vein size. */
-    public static final int MAX_POINTS_PER_PUMP = 8;
+    public static final double MAX_POINTS_PER_PUMP = 8.0;
     /** Safety cap on the vein flood-fill (blocks visited). */
     private static final int MAX_VEIN_BLOCKS = 512;
-
-    private static final String CAL_FULL = "cml:nitrogenatedcal_full";
-    private static final String CAL_MID = "cml:nitrogenatedcal_mid";
-    private static final String CAL_EMPTY = "cml:nitrogenatedcal_empty";
     private static final String GAS_PUMP_ID = "cml:gas_pump";
 
     // ---- config knobs ----
@@ -90,8 +86,9 @@ public class GasPumpBlockEntity extends AbstractMachineBlockEntity {
     private int curUnlocked = BASE_UNLOCKED;
 
     // Last computed vein stats (for the menu readout + extraction).
-    private int lastVeinPoints = 0;
-    private int lastDrawPoints = 0;
+    private double lastVeinPoints = 0;
+    private double lastDrawPoints = 0;
+    private GasType lastVeinGas = GasType.EMPTY;
     private boolean lastActiveOwner = true;
 
     private int page = 0;
@@ -125,7 +122,8 @@ public class GasPumpBlockEntity extends AbstractMachineBlockEntity {
         this.fuelSlots = this.menuConfig.fuelSlots != null ? this.menuConfig.fuelSlots : new int[0];
 
         setMaxStackSize(64);
-        addGasTank(new GasTank("internal", capacity, GasType.NITROGEN));
+        // Accept ANY gas — the vein's gas_provider blocks decide which gas is pumped (data-driven).
+        addGasTank(new GasTank("internal", capacity));
         setIOConfiguration(buildIO());
     }
 
@@ -296,7 +294,8 @@ public class GasPumpBlockEntity extends AbstractMachineBlockEntity {
         BlockPos inPos = pos.relative(worldDown);
         VeinScan vein = scanVein(level, inPos);
         this.lastVeinPoints = vein.points;
-        boolean haveSource = vein.points > 0;
+        this.lastVeinGas = vein.gas;
+        boolean haveSource = vein.points > 0 && vein.gas != GasType.EMPTY;
 
         // Vein ownership: only the first N pumps (N = veinPumpLimit) on the vein run.
         this.lastActiveOwner = haveSource && isActivePump(level, vein, pos, worldUp);
@@ -338,10 +337,13 @@ public class GasPumpBlockEntity extends AbstractMachineBlockEntity {
         int free = cap - stored.getAmount();
         if (free <= 0)
             return;
-        int amount = Math.min(free, lastDrawPoints * mbPerPoint);
+        // A buffer already holding a DIFFERENT gas blocks the new vein's gas (no mixing).
+        if (!stored.isEmpty() && stored.getType() != lastVeinGas)
+            return;
+        int amount = Math.min(free, (int) Math.round(lastDrawPoints * mbPerPoint));
         if (amount <= 0)
             return;
-        tank.insert(level, pos, new GasStack(GasType.NITROGEN, amount, pressure));
+        tank.insert(level, pos, new GasStack(lastVeinGas, amount, pressure));
     }
 
     /** Overwrite the buffer contents (used to re-stamp pressure). */
@@ -356,16 +358,15 @@ public class GasPumpBlockEntity extends AbstractMachineBlockEntity {
 
     // ---------------- vein flood-fill ----------------
 
-    /** Extraction points for a cal block id, or 0 if the block is not a cal block. */
-    private static int calPoints(String id) {
-        if (id == null)
-            return 0;
-        return switch (id) {
-            case CAL_FULL -> 4;
-            case CAL_MID -> 2;
-            case CAL_EMPTY -> 1;
-            default -> 0;
-        };
+    /** The {@link GasProviderBehavior} on the block at {@code pos}, or null if it isn't a gas vein node. */
+    public static dev.arubik.craftengine.gas.behavior.GasProviderBehavior providerAt(Level level, BlockPos pos) {
+        ImmutableBlockState s = BlockStateUtils.getOptionalCustomBlockState(level.getBlockState(pos)).orElse(null);
+        if (s == null || s.behavior() == null)
+            return null;
+        var b = s.behavior();
+        if (b instanceof dev.arubik.craftengine.gas.behavior.GasProviderBehavior g)
+            return g;
+        return b.getFirst(dev.arubik.craftengine.gas.behavior.GasProviderBehavior.class);
     }
 
     /** Custom-block id string at a position, or null when it isn't a CraftEngine block. */
@@ -375,31 +376,40 @@ public class GasPumpBlockEntity extends AbstractMachineBlockEntity {
     }
 
     private static final class VeinScan {
-        int points;
+        double points;
+        GasType gas = GasType.EMPTY;
         final java.util.List<BlockPos> blocks = new ArrayList<>();
     }
 
-    /** BFS the orthogonally-connected cal vein starting at {@code start}; sum extraction points. */
+    /**
+     * BFS the orthogonally-connected vein of {@code gas_provider} blocks SHARING THE SAME gas as the
+     * start block; sum their extraction points (data-driven — no hardcoded block ids).
+     */
     private VeinScan scanVein(Level level, BlockPos start) {
         VeinScan scan = new VeinScan();
-        int startPts = calPoints(customId(level, start));
-        if (startPts == 0)
+        var startProv = providerAt(level, start);
+        if (startProv == null || startProv.extractionPoints() <= 0 || startProv.gasType() == GasType.EMPTY)
             return scan;
+        GasType gas = startProv.gasType();
+        scan.gas = gas;
         java.util.ArrayDeque<BlockPos> queue = new java.util.ArrayDeque<>();
         java.util.HashSet<Long> seen = new java.util.HashSet<>();
         queue.add(start);
         seen.add(start.asLong());
         while (!queue.isEmpty() && scan.blocks.size() < MAX_VEIN_BLOCKS) {
             BlockPos p = queue.poll();
-            int pts = calPoints(customId(level, p));
-            if (pts == 0)
+            var prov = providerAt(level, p);
+            if (prov == null || prov.gasType() != gas || prov.extractionPoints() <= 0)
                 continue;
-            scan.points += pts;
+            scan.points += prov.extractionPoints();
             scan.blocks.add(p);
             for (Direction d : Direction.values()) {
                 BlockPos n = p.relative(d);
-                if (seen.add(n.asLong()) && calPoints(customId(level, n)) > 0)
-                    queue.add(n);
+                if (seen.add(n.asLong())) {
+                    var np = providerAt(level, n);
+                    if (np != null && np.gasType() == gas && np.extractionPoints() > 0)
+                        queue.add(n);
+                }
             }
         }
         return scan;
@@ -568,6 +578,13 @@ public class GasPumpBlockEntity extends AbstractMachineBlockEntity {
         return l;
     }
 
+    /** Trim trailing ".0" so whole point totals show as "2" not "2.0"; keep one decimal otherwise. */
+    private static String fmtPoints(double v) {
+        if (v == Math.rint(v))
+            return String.valueOf((long) v);
+        return String.valueOf(Math.round(v * 100.0) / 100.0);
+    }
+
     private org.bukkit.inventory.ItemStack infoIcon() {
         GasStack stored = storedGas();
         org.bukkit.inventory.ItemStack stack = new org.bukkit.inventory.ItemStack(Material.WHITE_STAINED_GLASS);
@@ -584,7 +601,7 @@ public class GasPumpBlockEntity extends AbstractMachineBlockEntity {
                 MenuText.noI(MenuText.kv("polyfill.ui.amount", GRAY,
                         (stored.isEmpty() ? 0 : stored.getAmount()) + " / " + effCapacity() + " mB", WHITE)),
                 MenuText.noI(MenuText.kv("polyfill.attr.extraction_points", GRAY,
-                        lastDrawPoints + " / " + lastVeinPoints, WHITE)),
+                        fmtPoints(lastDrawPoints) + " / " + fmtPoints(lastVeinPoints), WHITE)),
                 MenuText.noI(MenuText.kv("polyfill.ui.pressure", GRAY,
                         String.valueOf(stored.isEmpty() ? effPressure() : stored.getPressure()), WHITE))));
         stack.setItemMeta(meta);

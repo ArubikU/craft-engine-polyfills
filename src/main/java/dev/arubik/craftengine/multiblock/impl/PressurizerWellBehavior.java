@@ -45,14 +45,9 @@ public class PressurizerWellBehavior extends MultiBlockBehavior {
         return new PressurizerWellBlockEntity(blockEntity, schema);
     }
 
-    /** A valid vein anchor: any of the three nitrogenated-cal tiers. */
+    /** A valid vein anchor: ANY block that is a gas vein node (has a {@code gas_provider} behavior). */
     private static boolean isCalBlock(Level level, BlockPos pos) {
-        ImmutableBlockState s = BlockStateUtils.getOptionalCustomBlockState(level.getBlockState(pos)).orElse(null);
-        if (s == null || s.owner() == null)
-            return false;
-        String id = s.owner().value().id().toString();
-        return id.equals("cml:nitrogenatedcal_full") || id.equals("cml:nitrogenatedcal_mid")
-                || id.equals("cml:nitrogenatedcal_empty");
+        return dev.arubik.craftengine.machine.block.entity.GasPumpBlockEntity.providerAt(level, pos) != null;
     }
 
     /** True when {@code state} is a {@code cml:pressurizer_well} block (the tower's casing/core). */

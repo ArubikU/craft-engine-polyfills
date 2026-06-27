@@ -55,6 +55,8 @@ public class MachinePumpBlockEntity extends AbstractMachineBlockEntity {
 
     public static final int UPGRADE_SLOTS = 9; // container indices 0..8
     private static final int BASE_UNLOCKED = 3;
+    /** Temporary: log every push attempt to diagnose pump->pipe transfer. */
+    public static final boolean DEBUG_PUMP = false;
 
     // ---- config knobs (set from the behavior yml; sane fast-but-finite defaults) ----
     // capacity:        internal tank size (mB). default 8000 mB = 8 buckets.
@@ -323,17 +325,34 @@ public class MachinePumpBlockEntity extends AbstractMachineBlockEntity {
             // so `instanceof FluidCarrier` is false — must extract it via getFirst(FluidCarrier.class).
             dev.arubik.craftengine.fluid.behavior.FluidCarrier carrier =
                     FluidTransferHelper.getCarrier(level, up).orElse(null);
+            if (DEBUG_PUMP)
+                System.out.println("[PumpPush] pos=" + pos.toShortString() + " facing=" + facing
+                        + " worldUp(OUT)=" + worldUp + " target=" + up.toShortString()
+                        + " targetBlock=" + level.getBlockState(up).getBlock()
+                        + " carrier=" + (carrier == null ? "NULL" : carrier.getClass().getSimpleName())
+                        + " stored=" + stored.getAmount() + "mB");
             if (carrier != null) {
                 // Push the WHOLE tank into the pipe (the pipe's free capacity caps how much it takes).
                 // The tank is a BUFFER: when connected it drains, not just passes the per-op extraction.
                 int send = stored.getAmount();
-                FluidStack out = new FluidStack(stored.getType(), send,
-                        Math.max(0, stored.getPressure() - 1));
+                // Gravity: pushing DOWN needs no pressure — stamp 0 so the receiving pipe enters its
+                // gravity branch (pull-from-above + push-down) instead of the pressure branch that would
+                // try to shove the fluid right back UP into this pump (the recirculation that pinned the
+                // pump full / the pipe empty). Only UPWARD output keeps pressure (fluid climbs on pressure).
+                int outPressure = (worldUp == Direction.DOWN) ? 0 : Math.max(0, stored.getPressure() - 1);
+                FluidStack out = new FluidStack(stored.getType(), send, outPressure);
                 int inserted = carrier.insertFluid(level, up, out, worldUp.getOpposite());
+                if (DEBUG_PUMP)
+                    System.out.println("[PumpPush]   -> insertFluid side=" + worldUp.getOpposite()
+                            + " sent=" + send + " inserted=" + inserted);
                 if (inserted > 0) {
                     int left = stored.getAmount() - inserted;
                     writeTank(level, left <= 0 ? FluidStack.EMPTY
                             : new FluidStack(stored.getType(), left, stored.getPressure()));
+                    if (DEBUG_PUMP)
+                        System.out.println("[PumpPush]   wrote left=" + left + " reread="
+                                + storedFluid().getAmount() + "mB ioDelay="
+                                + FluidType.carrierIODelay(stored.getType()));
                     int delay = FluidType.carrierIODelay(stored.getType());
                     if (delay > 1)
                         set(FluidKeys.FLUID_IO_COOLDOWN, delay);
@@ -404,6 +423,10 @@ public class MachinePumpBlockEntity extends AbstractMachineBlockEntity {
             FluidStack collected = (base == FluidType.LAVA && !isCauldron)
                     ? FluidType.collectArea(target, level, 32, extract, stored.getType())
                     : FluidType.collectAt(target, level, extract, stored.getType());
+            if (DEBUG_PUMP)
+                System.out.println("[PumpExtract] from=" + target.toShortString() + " base=" + base
+                        + " before=" + stored.getAmount() + " collected=" + collected.getAmount()
+                        + " interval=" + effInterval());
             if (!collected.isEmpty() && (stored.isEmpty() || stored.getType() == collected.getType())) {
                 int newAmt = (stored.isEmpty() ? 0 : stored.getAmount()) + collected.getAmount();
                 writeTank(level, new FluidStack(collected.getType(), Math.min(cap, newAmt), pressure));

@@ -25,7 +25,6 @@ public abstract class NmsBlockBehavior extends BukkitBlockBehavior {
     }
 
     public void onPlace(Object thisBlock, Level level, BlockPos pos, BlockState state) {
-        CraftEngine.instance().logger().info("Default onPlace behavior");
     }
 
     @Override
@@ -39,7 +38,6 @@ public abstract class NmsBlockBehavior extends BukkitBlockBehavior {
     }
 
     public void tick(Object thisBlock, Level level, BlockPos pos, BlockState state) {
-        CraftEngine.instance().logger().info("Default tick behavior");
     }
 
     @Override
@@ -53,7 +51,6 @@ public abstract class NmsBlockBehavior extends BukkitBlockBehavior {
     }
 
     public void neighborChanged(Object thisBlock, Level level, BlockPos pos, BlockState state) {
-        CraftEngine.instance().logger().info("Default neighborChanged behavior");
     }
 
     @Override
@@ -67,7 +64,6 @@ public abstract class NmsBlockBehavior extends BukkitBlockBehavior {
     }
 
     public void randomTick(Object thisBlock, Level level, BlockPos pos, BlockState state) {
-        CraftEngine.instance().logger().info("Default randomTick behavior");
     }
 
     // onRemove no longer exists on BlockBehavior in 26.6.2; block-removal logic is now
@@ -85,7 +81,6 @@ public abstract class NmsBlockBehavior extends BukkitBlockBehavior {
     }
 
     public void affectNeighborsAfterRemoval(Object thisBlock, Level level, BlockPos pos, BlockState state, Boolean movedByPiston) {
-        CraftEngine.instance().logger().info("Default affectNeighborsAfterRemoval behavior");
     }
 
     // Vanilla Block.fallOn(Level, BlockState state, BlockPos pos, Entity entity, float fallDistance).

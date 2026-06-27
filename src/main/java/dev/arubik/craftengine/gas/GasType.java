@@ -27,6 +27,17 @@ public enum GasType {
         return this == EMPTY;
     }
 
+    /** Parse a config name (case-insensitive) to a GasType; unknown/blank -> EMPTY. */
+    public static GasType fromName(String s) {
+        if (s == null || s.isBlank())
+            return EMPTY;
+        try {
+            return valueOf(s.trim().toUpperCase(java.util.Locale.ROOT));
+        } catch (IllegalArgumentException e) {
+            return EMPTY;
+        }
+    }
+
     /**
      * Vent this gas into the air.
      * Spawns particles and returns true if vented (always true for non-empty gas).

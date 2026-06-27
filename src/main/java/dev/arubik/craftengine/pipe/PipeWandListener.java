@@ -150,18 +150,24 @@ public class PipeWandListener implements Listener {
         Block target = face != null ? clicked.getRelative(face) : clicked;
         int[] aimed = { target.getX(), target.getY(), target.getZ() };
 
-        // sneak+left = cycle mode (any mode, including NORMAL). sneak+right = clear selection.
+        // sneak+left = cycle mode (any mode, including NORMAL).
+        // sneak+right = clear selection IN A WAND MODE; in NORMAL it must fall through to vanilla
+        // sneak-placement (placing on a container without opening it) — no intercept, no "cleared" spam.
         if (sneaking) {
-            event.setCancelled(true);
             if (action == Action.LEFT_CLICK_BLOCK) {
+                event.setCancelled(true);
                 Mode next = cycle(mode);
                 modes.put(id, next);
                 clearSelection(player);
                 announceMode(player, next);
-            } else {
-                clearSelection(player);
-                msg(player, NamedTextColor.GRAY, "polyfill.pipewand.cleared");
+                return;
             }
+            // sneak + right
+            if (mode == Mode.NORMAL)
+                return; // vanilla sneak-place
+            event.setCancelled(true);
+            clearSelection(player);
+            msg(player, NamedTextColor.GRAY, "polyfill.pipewand.cleared");
             return;
         }
 

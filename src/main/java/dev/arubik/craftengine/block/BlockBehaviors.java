@@ -14,6 +14,7 @@ public class BlockBehaviors {
         public static final Key POLYFILL_BUSH_BLOCK = Key.of("polyfills:bush_block");
         public static final Key POLYFILL_CHANGE_OVER_TIME_BLOCK = Key.of("polyfills:change_over_time_block");
         public static final Key POLYFILL_FAN_BLOCK = Key.of("polyfills:fan_block");
+        public static final Key POLYFILL_CUSTOM_CRAFTER = Key.of("polyfills:custom_crafter");
         public static final Key POLYFILL_STORAGE_BLOCK = Key.of("polyfills:storage_block");
         public static final Key POLYFILL_REDSTONE_OPERATOR = Key.of("polyfills:redstone_operator");
         public static final Key POLYFILL_REDSTONE_CONTROLLER = Key.of("polyfills:redstone_controller");
@@ -30,6 +31,7 @@ public class BlockBehaviors {
         public static final Key POLYFILL_GAS_VALVE_BLOCK = Key.of("polyfills:gas_valve_block");
         public static final Key POLYFILL_GAS_TANK_BLOCK = Key.of("polyfills:gas_tank_block");
         public static final Key POLYFILL_GAS_PIPE_BLOCK = Key.of("polyfills:gas_pipe_block");
+        public static final Key POLYFILL_GAS_PROVIDER = Key.of("polyfills:gas_provider");
 
         public static final Key POLYFILL_SHULKER_BOX_HITBOX = Key.of("polyfills:shulker_box_hitbox");
 
@@ -42,6 +44,8 @@ public class BlockBehaviors {
                                 ChangeOverTimeBlockBehavior.FACTORY);
                 RegistryUtils.registerBlockBehavior(POLYFILL_BUSH_BLOCK, BushBlockBehavior.FACTORY);
                 RegistryUtils.registerBlockBehavior(POLYFILL_FAN_BLOCK, FanMachineBehavior.FACTORY);
+                RegistryUtils.registerBlockBehavior(POLYFILL_CUSTOM_CRAFTER,
+                                dev.arubik.craftengine.block.behavior.CustomCrafterBehavior.FACTORY);
                 RegistryUtils.registerBlockBehavior(POLYFILL_STORAGE_BLOCK, StorageBlockBehavior.FACTORY);
                 RegistryUtils.registerBlockBehavior(POLYFILL_REDSTONE_OPERATOR, RedstoneOperator.FACTORY);
                 RegistryUtils.registerBlockBehavior(POLYFILL_REDSTONE_CONTROLLER, RedstoneController.FACTORY);
@@ -68,6 +72,8 @@ public class BlockBehaviors {
                                 dev.arubik.craftengine.gas.behavior.GasTankBehavior.FACTORY);
                 RegistryUtils.registerBlockBehavior(POLYFILL_GAS_PIPE_BLOCK,
                                 dev.arubik.craftengine.gas.behavior.GasPipeBehavior.FACTORY);
+                RegistryUtils.registerBlockBehavior(POLYFILL_GAS_PROVIDER,
+                                dev.arubik.craftengine.gas.behavior.GasProviderBehavior.FACTORY);
                 RegistryUtils.registerBlockBehavior(
                                 dev.arubik.craftengine.gas.behavior.CreativeGasTankBehavior.FACTORY_KEY,
                                 dev.arubik.craftengine.gas.behavior.CreativeGasTankBehavior.FACTORY);

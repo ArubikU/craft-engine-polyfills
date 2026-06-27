@@ -95,9 +95,20 @@ public class MachinePumpBehavior extends MachineBlockBehavior {
             java.util.List<net.minecraft.core.Direction> faces = java.util.List.of(
                     net.minecraft.core.Direction.UP, net.minecraft.core.Direction.DOWN);
 
+            // Restrictive DEFAULT IO (FLUID in = local DOWN, out = local UP) — NOT the base Open() config.
+            // Open() made the OUTPUT face report acceptsInput=true whenever the block entity wasn't loaded
+            // at the moment a pipe queried it, so a pipe would shove fluid back IN through the pump's
+            // output face (the pump<->pipe recirculation). The entity sets the same config when loaded.
+            dev.arubik.craftengine.multiblock.IOConfiguration.RelativeIO defIO =
+                    new dev.arubik.craftengine.multiblock.IOConfiguration.RelativeIO();
+            defIO.addInput(dev.arubik.craftengine.multiblock.IOConfiguration.IOType.FLUID,
+                    dev.arubik.craftengine.multiblock.RelativeDirection.DOWN);
+            defIO.addOutput(dev.arubik.craftengine.multiblock.IOConfiguration.IOType.FLUID,
+                    dev.arubik.craftengine.multiblock.RelativeDirection.UP);
+
             return new MachinePumpBehavior(block, faces,
                     base.horizontalDirectionProperty, base.verticalDirectionProperty,
-                    base.getIOConfiguration(null, null), upgrades, bars, menuConfig,
+                    defIO, upgrades, bars, menuConfig,
                     capacity, extractPerTick, pushPerTick, pressure, extractTickRate);
         }
 
