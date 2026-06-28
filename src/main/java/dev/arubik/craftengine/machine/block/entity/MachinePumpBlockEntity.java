@@ -567,10 +567,19 @@ public class MachinePumpBlockEntity extends AbstractMachineBlockEntity {
         int extract = Math.min(free, Math.max(effExtractPerTick(), fullBlock));
         // When the tank is empty, tell the collector WHAT to pull (the world block's type) — passing the
         // empty tank's type made collectArea/collectAt find nothing (the "lava not pumped" bug).
-        FluidType want = stored.isEmpty() ? base : stored.getType();
+        // 1:1 with the old working pump: lava sweeps the area (SOURCE blocks only, replaced with air),
+        // everything else collects the single IN block. collectArea now includes the center, so a single
+        // lava source directly in front IS collected. Pass stored.getType() (collectArea maps EMPTY->base).
+        // radius 1 (3x3x3 = 27 = the collector's per-tick iteration cap): a larger radius starts the scan
+        // at the far -radius corner and the 27-iter cap means it never reaches the center block. r=1 keeps
+        // the center (the source in front) in range; the pool drains outward over successive ticks.
         FluidStack collected = (base == FluidType.LAVA && !cauldron)
-                ? FluidType.collectArea(target, level, 32, extract, want)
-                : FluidType.collectAt(target, level, extract, want);
+                ? FluidType.collectArea(target, level, 1, extract, stored.getType())
+                : FluidType.collectAt(target, level, extract, stored.getType());
+        if (dev.arubik.craftengine.fluid.graph.FluidEngine.DEBUG)
+            System.out.println("[PumpIntake] collected=" + (collected.isEmpty() ? "0" : collected.getType() + ":"
+                    + collected.getAmount()) + " extract=" + extract + " cap=" + cap
+                    + " srcAtTarget=" + level.getFluidState(target).isSource());
         if (!collected.isEmpty() && (stored.isEmpty() || stored.getType() == collected.getType())) {
             int newAmt = (stored.isEmpty() ? 0 : stored.getAmount()) + collected.getAmount();
             writeTank(level, new FluidStack(collected.getType(), Math.min(cap, newAmt), effPressure()));
@@ -599,40 +608,31 @@ public class MachinePumpBlockEntity extends AbstractMachineBlockEntity {
             return;
         FluidType t = stored.getType();
         if (t == FluidType.EXPERIENCE) {
-            int unit = Math.max(1, FluidType.EXPERIENCE.unitMb());
-            int xp = Math.min(stored.getAmount() / unit, 50); // cap per tick
-            if (xp <= 0)
+            // 1:1 with the old pump: XP isn't a placeable world fluid — emit as orbs (~7 mB per orb).
+            if (!level.getBlockState(out).isAir())
                 return;
-            if (level instanceof net.minecraft.server.level.ServerLevel sl)
-                net.minecraft.world.entity.ExperienceOrb.award(sl,
-                        net.minecraft.world.phys.Vec3.atCenterOf(out), xp);
-            int left = stored.getAmount() - xp * unit;
-            writeTank(level, left <= 0 ? FluidStack.EMPTY : new FluidStack(t, left, stored.getPressure()));
+            int amount = stored.getAmount();
+            if (amount <= 0)
+                return;
+            int orbs = (int) Math.ceil(amount / 7.0);
+            while (orbs > 0) {
+                int toSpawn = Math.min(orbs, 10);
+                orbs -= toSpawn;
+                level.addFreshEntity(new net.minecraft.world.entity.ExperienceOrb(
+                        level, out.getX() + 0.5, out.getY() + 0.5, out.getZ() + 0.5, toSpawn));
+            }
+            writeTank(level, FluidStack.EMPTY);
             return;
         }
-        if (!level.getBlockState(out).isAir())
-            return; // only place into empty space
+        // Placeable fluids/materials: need a full block's worth; FluidPlacer handles the block kind.
         int full = Math.max(1, t.mbPerFullBlock());
         if (stored.getAmount() < full)
-            return; // need a whole block's worth to place
-        net.minecraft.world.level.block.state.BlockState place = blockFor(t);
-        if (place == null)
             return;
-        level.setBlock(out, place, 3);
-        int left = stored.getAmount() - full;
-        writeTank(level, left <= 0 ? FluidStack.EMPTY : new FluidStack(t, left, stored.getPressure()));
-    }
-
-    /** The world block a given fluid type materializes into when expelled (null = not placeable). */
-    private static net.minecraft.world.level.block.state.BlockState blockFor(FluidType t) {
-        return switch (t) {
-            case LAVA -> net.minecraft.world.level.block.Blocks.LAVA.defaultBlockState();
-            case WATER -> net.minecraft.world.level.block.Blocks.WATER.defaultBlockState();
-            case SLIME -> net.minecraft.world.level.block.Blocks.SLIME_BLOCK.defaultBlockState();
-            case HONEY -> net.minecraft.world.level.block.Blocks.HONEY_BLOCK.defaultBlockState();
-            case POWDER_SNOW -> net.minecraft.world.level.block.Blocks.POWDER_SNOW.defaultBlockState();
-            default -> null;
-        };
+        FluidStack one = new FluidStack(t, full, stored.getPressure());
+        if (dev.arubik.craftengine.fluid.FluidPlacer.place(one, out, level)) {
+            int left = stored.getAmount() - full;
+            writeTank(level, left <= 0 ? FluidStack.EMPTY : new FluidStack(t, left, stored.getPressure()));
+        }
     }
 
     // ---------------- bars (main-page fluid readout) ----------------

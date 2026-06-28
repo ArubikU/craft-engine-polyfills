@@ -46,8 +46,17 @@ public final class FluidGraphBuilder {
             BlockPos pos = queue.poll();
             int aIdx = graph.addNode(makeNode(level, pos));
 
+            boolean dbgPump = dev.arubik.craftengine.fluid.graph.FluidEngine.DEBUG
+                    && pumpAt(level, pos) != null;
             for (Direction dir : Direction.values()) {
                 BlockPos np = pos.relative(dir);
+                if (dbgPump) {
+                    boolean carr = isCarrier(level, np);
+                    System.out.println("[PumpConnect] pump=" + pos.toShortString() + " dir=" + dir + " np="
+                            + np.toShortString() + " isCarrier=" + carr + " connected="
+                            + (carr && connected(level, pos, np, dir)) + " outFace="
+                            + pumpAt(level, pos).graphOutFace(level));
+                }
                 if (!isCarrier(level, np) || !connected(level, pos, np, dir))
                     continue;
                 int bIdx = graph.addNode(makeNode(level, np));

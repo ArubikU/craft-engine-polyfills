@@ -113,7 +113,12 @@ public abstract class AbstractMachineBlockEntity extends PersistentWorldlyBlockE
 
     // ---- hydraulic engine carrier hooks (the machine's REAL fluid store) ----
     public FluidStack getStoredFluidForCarrier() {
-        FluidStack s = fluidTanks.isEmpty() ? null : getFluidInSlot(0);
+        // Read the SAME store that setStoredFluidRaw / writeTank write: the FluidTank's CustomBlockData
+        // (PDC), NOT the in-memory get(key) container. They are SEPARATE stores — reading get(key) made
+        // the engine see an empty tank while the pump's PDC tank actually held fluid (lava/xp never pushed).
+        if (fluidTanks.isEmpty())
+            return FluidStack.EMPTY;
+        FluidStack s = fluidTanks.get(0).getFluid(getNMSLevel(), getMachinePos());
         return s == null ? FluidStack.EMPTY : s;
     }
 

@@ -43,7 +43,7 @@ public final class FluidEngine {
         return SEEDS.size();
     }
 
-    public static volatile boolean DEBUG = true;
+    public static volatile boolean DEBUG = false;
     private static int dbgTick = 0;
 
     /** Step every distinct registered network once (dedups blocks shared across seeds). */
