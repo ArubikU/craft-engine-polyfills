@@ -29,7 +29,7 @@ public final class FluidEngine {
 
     /** When true, {@link #tickAll} steps every registered network each driver tick. Default off so the
      * solver coexists with the live transport until validated, then flipped on for the cutover. */
-    public static volatile boolean ENABLED = false;
+    public static volatile boolean ENABLED = true;
 
     private static final java.util.Set<Long> SEEDS = java.util.concurrent.ConcurrentHashMap.newKeySet();
 

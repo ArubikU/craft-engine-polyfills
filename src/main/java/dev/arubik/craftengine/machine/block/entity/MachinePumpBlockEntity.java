@@ -277,6 +277,10 @@ public class MachinePumpBlockEntity extends AbstractMachineBlockEntity {
     protected void processTick(Level level) {
         if (level.isClientSide())
             return;
+        try {
+            dev.arubik.craftengine.fluid.graph.FluidEngine.registerSeed(getMachinePos());
+        } catch (Throwable ignored) {
+        }
         if (dev.arubik.craftengine.fluid.graph.FluidEngine.ENABLED)
             return; // hydraulic engine owns fluid transport when enabled
 

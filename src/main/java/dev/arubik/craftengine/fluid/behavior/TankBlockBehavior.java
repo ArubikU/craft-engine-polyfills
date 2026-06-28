@@ -549,11 +549,17 @@ public class TankBlockBehavior extends ConnectableBlockBehavior implements Entit
     }
 
     private void tickTank(CEWorld world, net.momirealms.craftengine.core.world.BlockPos cePos) {
-        if (dev.arubik.craftengine.fluid.graph.FluidEngine.ENABLED)
-            return; // hydraulic engine owns transport when enabled
         Level level = (Level) world.world().minecraftWorld();
         if (level == null || level.isClientSide())
             return;
+        // Register this tank's network so the hydraulic engine drives it (BFS expands to all pipes).
+        try {
+            dev.arubik.craftengine.fluid.graph.FluidEngine
+                    .registerSeed((BlockPos) Utils.fromPos(cePos));
+        } catch (Throwable ignored) {
+        }
+        if (dev.arubik.craftengine.fluid.graph.FluidEngine.ENABLED)
+            return; // hydraulic engine owns transport when enabled
         BlockPos mcPos = BlockPos.of(cePos.asLong());
 
         // 1. Try to PUMP from UP
