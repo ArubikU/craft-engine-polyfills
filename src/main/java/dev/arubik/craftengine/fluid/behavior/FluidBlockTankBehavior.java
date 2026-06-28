@@ -112,7 +112,25 @@ public class FluidBlockTankBehavior extends ConnectableBlockBehavior implements 
     public Group scanGroup(Level level, BlockPos start) {
         if (!isTank(level, start))
             return new Group(start.immutable(), 1, start.getX(), start.getY(), start.getZ(), 1, 1);
-        // 1) connected component (bounded flood).
+        return groupOf(start, solveComponent(level, start));
+    }
+
+    /** Build a Group for {@code cell} from a solved owner map (controller min-corner = cell's group). */
+    private static Group groupOf(BlockPos cell, java.util.Map<Long, long[]> owner) {
+        long[] a = owner.get(cell.asLong());
+        if (a == null)
+            return new Group(cell.immutable(), 1, cell.getX(), cell.getY(), cell.getZ(), 1, 1);
+        BlockPos ctrl = BlockPos.of(a[0]);
+        int w = (int) a[1], h = (int) a[2];
+        return new Group(ctrl, w * w * h, ctrl.getX(), ctrl.getY(), ctrl.getZ(), h, w);
+    }
+
+    /**
+     * Solve the WHOLE connected component once (Create's formMulti greedy): returns cell→[ctrlPos, w, h]
+     * for every member. One solve assigns all members, so a topology change recomputes the component in a
+     * single pass instead of per-block.
+     */
+    public java.util.Map<Long, long[]> solveComponent(Level level, BlockPos start) {
         java.util.List<BlockPos> comp = new java.util.ArrayList<>();
         HashSet<Long> inComp = new HashSet<>();
         ArrayDeque<BlockPos> q = new ArrayDeque<>();
@@ -120,6 +138,8 @@ public class FluidBlockTankBehavior extends ConnectableBlockBehavior implements 
         inComp.add(start.asLong());
         while (!q.isEmpty() && comp.size() < MAX_GROUP) {
             BlockPos p = q.poll();
+            if (!isTank(level, p))
+                continue;
             comp.add(p);
             for (Direction d : Direction.values()) {
                 BlockPos np = p.relative(d);
@@ -129,7 +149,7 @@ public class FluidBlockTankBehavior extends ConnectableBlockBehavior implements 
                 }
             }
         }
-        // 2) candidate prisms: each block as a min-corner, tallest filled w×w column per width.
+        // candidate prisms: each block as a min-corner, tallest filled w×w column per width.
         java.util.List<long[]> prisms = new java.util.ArrayList<>(); // [amount, ctrlPos, w, h]
         for (BlockPos c : comp)
             for (int w = 1; w <= MAX_WIDTH; w++) {
@@ -137,7 +157,7 @@ public class FluidBlockTankBehavior extends ConnectableBlockBehavior implements 
                 if (h > 0)
                     prisms.add(new long[] { (long) w * w * h, c.asLong(), w, h });
             }
-        // 3) greedy: claim the largest prism whose cells are all still free.
+        // greedy: claim the largest prism whose cells are all still free.
         prisms.sort((a, b) -> Long.compare(b[0], a[0]));
         HashSet<Long> assigned = new HashSet<>();
         java.util.Map<Long, long[]> owner = new java.util.HashMap<>(); // cell -> [ctrlPos, w, h]
@@ -160,13 +180,46 @@ public class FluidBlockTankBehavior extends ConnectableBlockBehavior implements 
                         owner.put(cell, new long[] { c.asLong(), w, h });
                     }
         }
-        // 4) the queried block's resolved group.
-        long[] a = owner.get(start.asLong());
-        if (a == null)
-            return new Group(start.immutable(), 1, start.getX(), start.getY(), start.getZ(), 1, 1);
-        BlockPos ctrl = BlockPos.of(a[0]);
-        int w = (int) a[1], h = (int) a[2];
-        return new Group(ctrl, w * w * h, ctrl.getX(), ctrl.getY(), ctrl.getZ(), h, w);
+        return owner;
+    }
+
+    /** Local tank-topology signature (6-neighbour mask) — a change means a tank was placed/removed nearby. */
+    public int neighborSig(Level level, BlockPos pos) {
+        int m = 0, i = 0;
+        for (Direction d : Direction.values()) {
+            if (isTank(level, pos.relative(d)))
+                m |= (1 << i);
+            i++;
+        }
+        return m;
+    }
+
+    /**
+     * Recompute the WHOLE component after a tank was placed/removed: one solve assigns every member's cached
+     * controller/count/signature, then each distinct group consolidates its fluid + refreshes its render.
+     * This is the ONLY place the heavy formation runs — driven by topology change, never per tick.
+     */
+    public void recomputeArea(Level level, BlockPos start) {
+        if (level.isClientSide())
+            return;
+        java.util.Map<Long, long[]> owner = solveComponent(level, start);
+        HashSet<Long> controllers = new HashSet<>();
+        for (java.util.Map.Entry<Long, long[]> e : owner.entrySet()) {
+            BlockPos cell = BlockPos.of(e.getKey());
+            long[] a = e.getValue();
+            Controller be = controllerBE(level, cell);
+            if (be != null) {
+                be.ctrl = a[0];
+                be.count = (int) (a[1] * a[1] * a[2]);
+                be.neighborSig = neighborSig(level, cell);
+            }
+            controllers.add(a[0]);
+        }
+        for (long c : controllers) {
+            BlockPos ctrl = BlockPos.of(c);
+            consolidateFluid(level, ctrl);
+            refreshGroupRender(level, ctrl);
+        }
     }
 
     /** Tallest run of fully-filled w×w layers up from min-corner {@code c} (all tanks; single fluid type). */
@@ -296,6 +349,50 @@ public class FluidBlockTankBehavior extends ConnectableBlockBehavior implements 
     }
 
     // ---------------- blockstate: frame (bottom/top) + window fluid plane (fluidtype/level) ----------------
+
+    /**
+     * Consolidate every member's stored fluid into the controller (clearing the others). Needed because the
+     * unified store lives at the controller pos — when the controller MOVES (group reshaped, or two filled
+     * groups merge) the fluid would otherwise be stranded at an old controller and read as empty. All fluid
+     * in a valid group shares one type (merge rejects mixed), so summing is safe; clamp to group capacity.
+     */
+    public void consolidateFluid(Level level, BlockPos anyMember) {
+        if (level.isClientSide())
+            return;
+        Group g = scanGroup(level, anyMember);
+        int total = 0;
+        FluidType type = null;
+        ArrayDeque<BlockPos> q = new ArrayDeque<>();
+        HashSet<Long> seen = new HashSet<>();
+        q.add(anyMember.immutable());
+        seen.add(anyMember.asLong());
+        java.util.List<BlockPos> members = new java.util.ArrayList<>();
+        while (!q.isEmpty()) {
+            BlockPos p = q.poll();
+            if (!isTank(level, p))
+                continue;
+            members.add(p);
+            FluidStack s = FluidCarrierImpl.getStored(level, p);
+            if (s != null && !s.isEmpty() && (type == null || type == s.getType())) {
+                type = s.getType();
+                total += s.getAmount();
+            }
+            for (Direction d : Direction.values()) {
+                BlockPos np = p.relative(d);
+                if (seen.add(np.asLong()) && isTank(level, np))
+                    q.add(np.immutable());
+            }
+        }
+        for (BlockPos m : members)
+            if (!m.equals(g.controller))
+                dev.arubik.craftengine.util.CustomBlockData.from(level, m).remove(FluidKeys.FLUID);
+        int cap = g.count * CAP_PER_BLOCK;
+        if (type != null && total > 0)
+            dev.arubik.craftengine.util.CustomBlockData.from(level, g.controller)
+                    .set(FluidKeys.FLUID, new FluidStack(type, Math.min(total, cap), 0));
+        else
+            dev.arubik.craftengine.util.CustomBlockData.from(level, g.controller).remove(FluidKeys.FLUID);
+    }
 
     /** Recompute every member's blockstate (bottom/top + the fluid plane mapped from the group fill). */
     public void refreshGroupRender(Level level, BlockPos anyMember) {
@@ -438,17 +535,11 @@ public class FluidBlockTankBehavior extends ConnectableBlockBehavior implements 
         long ctrl;   // cached controller pos (asLong); 0 = unresolved
         int count;   // cached member count
         boolean windowed = true; // hammer-toggled: false hides the window (all shapes PLAIN)
-        private int recomputeCd;
+        int neighborSig = -1;    // last seen local tank-topology mask; mismatch => place/break nearby
 
         public Controller(BlockEntity blockEntity, FluidBlockTankBehavior behavior) {
             super(blockEntity);
             this.behavior = behavior;
-        }
-
-        private void recompute(Level level, BlockPos pos) {
-            Group g = behavior.scanGroup(level, pos);
-            this.ctrl = g.controller.asLong();
-            this.count = g.count;
         }
 
         @Override
@@ -500,18 +591,15 @@ public class FluidBlockTankBehavior extends ConnectableBlockBehavior implements 
             if (level == null || level.isClientSide())
                 return;
             BlockPos pos = (BlockPos) Utils.fromPos(cePos);
-            // Refresh the group cache periodically (cheap cadence) + on first tick. When the group changes
-            // the controller re-renders all members' blockstates (bottom/top/shape) + the fluid box.
-            if (self.ctrl == 0L || self.recomputeCd-- <= 0) {
-                long prevCtrl = self.ctrl;
-                int prevCount = self.count;
-                self.recompute(level, pos);
-                self.recomputeCd = 20;
-                if (self.ctrl == pos.asLong() && (self.ctrl != prevCtrl || self.count != prevCount)) {
-                    try {
-                        self.behavior.refreshGroupRender(level, pos);
-                    } catch (Throwable ignored) {
-                    }
+            // EVENT-DRIVEN recompute: the heavy formation runs ONLY when the local tank topology changes
+            // (a tank placed/removed nearby), detected by a cheap 6-neighbour signature — never periodically.
+            // recomputeArea solves the whole component once, updating every member's cache (incl. signatures).
+            int sig = self.behavior.neighborSig(level, pos);
+            if (self.ctrl == 0L || sig != self.neighborSig) {
+                self.neighborSig = sig;
+                try {
+                    self.behavior.recomputeArea(level, pos);
+                } catch (Throwable ignored) {
                 }
             }
             // Only the controller registers the (single) engine seed for the whole group.
