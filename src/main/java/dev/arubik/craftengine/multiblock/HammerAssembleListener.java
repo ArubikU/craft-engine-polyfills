@@ -39,6 +39,24 @@ public class HammerAssembleListener implements Listener {
         Level level = ((org.bukkit.craftbukkit.CraftWorld) clicked.getWorld()).getHandle();
         BlockPos pos = new BlockPos(clicked.getX(), clicked.getY(), clicked.getZ());
 
+        // Fluid block tank: a hammer right-click toggles the group's window (cost = group block count).
+        net.momirealms.craftengine.core.block.ImmutableBlockState ce = net.momirealms.craftengine.bukkit.util.BlockStateUtils
+                .getOptionalCustomBlockState(level.getBlockState(pos)).orElse(null);
+        if (ce != null && !ce.isEmpty()) {
+            dev.arubik.craftengine.fluid.behavior.FluidBlockTankBehavior tank = ce.behavior()
+                    .getFirst(dev.arubik.craftengine.fluid.behavior.FluidBlockTankBehavior.class);
+            if (tank != null) {
+                try {
+                    int cost = tank.toggleWindowed(level, pos);
+                    e.setCancelled(true);
+                    clicked.getWorld().playSound(clicked.getLocation(), org.bukkit.Sound.BLOCK_COPPER_HIT, 0.7f, 1.2f);
+                    damageHammer(e.getPlayer(), cost);
+                } catch (Throwable ignored) {
+                }
+                return;
+            }
+        }
+
         for (MultiBlockBehavior beh : MultiBlockBehavior.registry()) {
             if (!beh.acceptsHammer(hammer))
                 continue;

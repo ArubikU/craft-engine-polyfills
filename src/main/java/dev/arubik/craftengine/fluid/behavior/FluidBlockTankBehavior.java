@@ -205,6 +205,44 @@ public class FluidBlockTankBehavior extends ConnectableBlockBehavior implements 
         return be != null && be.controller instanceof Controller c ? c : null;
     }
 
+    /** Whether this member's group shows the window (hammer-toggled). Default true. */
+    public boolean isWindowed(Level level, BlockPos pos) {
+        Controller be = controllerBE(level, pos);
+        return be == null || be.windowed;
+    }
+
+    /**
+     * Hammer toggle: flip the whole group's window on/off, persist it on every member, refresh the render.
+     * @return the group member count (the hammer durability cost).
+     */
+    public int toggleWindowed(Level level, BlockPos pos) {
+        Group g = scanGroup(level, pos);
+        Controller cbe = controllerBE(level, g.controller);
+        boolean next = !(cbe == null || cbe.windowed);
+        // set the flag on every member BE so it survives controller changes
+        ArrayDeque<BlockPos> q = new ArrayDeque<>();
+        HashSet<Long> seen = new HashSet<>();
+        q.add(pos.immutable());
+        seen.add(pos.asLong());
+        int count = 0;
+        while (!q.isEmpty()) {
+            BlockPos p = q.poll();
+            if (!isTank(level, p))
+                continue;
+            count++;
+            Controller be = controllerBE(level, p);
+            if (be != null)
+                be.windowed = next;
+            for (Direction d : Direction.values()) {
+                BlockPos np = p.relative(d);
+                if (seen.add(np.asLong()) && isTank(level, np))
+                    q.add(np.immutable());
+            }
+        }
+        refreshGroupRender(level, g.controller);
+        return Math.max(1, count);
+    }
+
     // ---------------- FluidCarrier (everything routes to the controller's store) ----------------
 
     @Override
@@ -270,6 +308,7 @@ public class FluidBlockTankBehavior extends ConnectableBlockBehavior implements 
                 : Math.min(1.0, stored.getAmount() / (double) cap);
         double surface = fill * g.height; // in block rows from the bottom
         FluidType type = (stored == null || stored.isEmpty()) ? FluidType.EMPTY : stored.getType();
+        boolean win = isWindowed(level, g.controller);
 
         // Server-side fluid box (Create's renderFluidBox equivalent) at the controller.
         try {
@@ -288,8 +327,9 @@ public class FluidBlockTankBehavior extends ConnectableBlockBehavior implements 
                 continue;
             int k = p.getY() - g.minY; // vertical index, 0 = bottom row
             double memberFill = Math.max(0.0, Math.min(1.0, surface - k)); // 0..1 within this row
-            dev.arubik.craftengine.property.TankShape shape = windowShape(g.width, p.getX() - g.minX,
-                    p.getZ() - g.minZ);
+            dev.arubik.craftengine.property.TankShape shape = win
+                    ? windowShape(g.width, p.getX() - g.minX, p.getZ() - g.minZ)
+                    : dev.arubik.craftengine.property.TankShape.PLAIN;
             applyMemberState(level, p, !isTank(level, p.below()), !isTank(level, p.above()), type, memberFill, shape);
             for (Direction d : Direction.values()) {
                 BlockPos np = p.relative(d);
@@ -397,6 +437,7 @@ public class FluidBlockTankBehavior extends ConnectableBlockBehavior implements 
         private final FluidBlockTankBehavior behavior;
         long ctrl;   // cached controller pos (asLong); 0 = unresolved
         int count;   // cached member count
+        boolean windowed = true; // hammer-toggled: false hides the window (all shapes PLAIN)
         private int recomputeCd;
 
         public Controller(BlockEntity blockEntity, FluidBlockTankBehavior behavior) {
@@ -413,6 +454,7 @@ public class FluidBlockTankBehavior extends ConnectableBlockBehavior implements 
         @Override
         public void saveCustomData(net.momirealms.craftengine.libraries.nbt.CompoundTag tag) {
             super.saveCustomData(tag);
+            tag.putBoolean("win", windowed);
             // Only the controller block carries the unified fluid (others route to it).
             try {
                 Level level = (Level) ((BukkitWorld) blockEntity().world().world()).minecraftWorld();
@@ -432,6 +474,8 @@ public class FluidBlockTankBehavior extends ConnectableBlockBehavior implements 
         @Override
         public void loadCustomData(net.momirealms.craftengine.libraries.nbt.CompoundTag tag) {
             super.loadCustomData(tag);
+            if (tag.containsKey("win"))
+                windowed = tag.getBoolean("win");
             try {
                 String tn = tag.getString("t");
                 if (tn != null && !tn.isEmpty()) {
