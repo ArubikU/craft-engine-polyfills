@@ -226,6 +226,11 @@ public class FluidBlockTankBehavior extends ConnectableBlockBehavior implements 
             }
             controllers.add(a[0]);
         }
+        // Clear fluid boxes left at cells that are no longer controllers (group split/reshape) — otherwise a
+        // demoted controller leaves a phantom fluid box floating. remove() is a no-op when there's no box.
+        for (Long cell : owner.keySet())
+            if (!controllers.contains(cell))
+                FluidTankRender.remove(level, BlockPos.of(cell));
         for (long c : controllers) {
             BlockPos ctrl = BlockPos.of(c);
             consolidateFluid(level, ctrl);
