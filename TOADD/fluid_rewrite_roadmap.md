@@ -176,22 +176,26 @@ Each phase compiles + deploys independently; old path stays until the new one is
   active-set for one-way valves). Self-test: `/cep fluid solvetest` (equalize / check-valve / pump-lift
   all pass; hand-verified). CG path + crest/siphon gating = documented follow-ups.
 - **Phase 3 (apply core) — DONE & deployed.** `FluidEngine.step(level, graph)`: build specs from live
-  stores → solve one step → write ΔV back (PIPE/TANK mutated, PUMP/HANDLER as fixed-head boundary).
-  Manual trigger: `/cep fluid step`. **Gated ON PURPOSE** — runs beside the still-live old transport so
-  it can be validated before the cutover.
+  stores → solve one step → write ΔV back. **Edge-based conservative apply** (per-edge `min(|flow|,
+  source, dest room)`) — conserves mass, no deadlock. 65 boot self-tests pass (`/cep fluid test`).
+- **Phase 3 (rest) — DONE & deployed.** Always-on per-tick `FluidEngine.tickAll` (driver in `onEnable`,
+  gated by `ENABLED`). Tanks/pumps `registerSeed` each tick; BFS expands to pipes. Pump `emf` wiring:
+  pump OUT edge carries `graphPressure()` (pumps drive edges, no active push). Chunk-loaded guard skips
+  seeds in unloaded chunks. Pump world source/sink: lava SOURCE (radius, → air) / water / cauldron / XP
+  collected into the pump tank; expelled to world (orbs / `FluidPlacer`) when the OUT face has no carrier.
+- **Phase 4 — DONE & deployed.** Old transport deleted: `FluidTransferHelper.push/pull/balance/transfer`,
+  tank+pipe `tryTransfer`, `PumpBehavior.tryDirectional/PumpAction/tickPump` flow, `ValveBehavior` flow.
+  Valve preserved IN the graph: closed → no edge, open → one-way downward edge (`allowedSign`). Kept
+  `FluidStack/Type/Tank/Keys/Collector/Placer` + `FluidCarrierImpl` as per-node store accessors.
+  Engine is the SOLE liquid transport (pipes/tanks/machines/pumps/valves). **Verified live** (user):
+  lava/water/XP collect + push pump→pipe→tank; shift-click readout (tanks+pipes) = i18n name + fill% + lift.
 
-### Remaining (gated on in-world validation of the apply)
-These replace/remove live behavior, so they MUST follow validating `FluidEngine.step` against real
-layouts (use `/cep fluid graph` + `/cep fluid step`) — a blind always-on cutover would regress the
-just-stabilized fluid system.
-
-- **Phase 3 (rest):** always-on per-tick `FluidEngine` + dirty-network tracking; pump `emf` wiring
-  (pumps drive their edges instead of active push/pull); world source/sink boundary (open ends,
-  cauldrons) as fixed nodes; multi-type networks.
-- **Phase 4:** delete the old transport (`FluidTransferHelper` push/pull/balance, `tryTransfer`,
-  per-block pump IO, `ValveBehavior` flow). Keep `FluidStack/Type/Tank/Keys/Collector/Placer/
-  Converter/Reactions` + `FluidCarrierImpl` as the per-node store accessor.
-- **Phase 5:** gas — same engine over a `CarrierKind`, migrate `Gas*`.
+### Remaining
+- **Phase 5 — gas (PENDING, deferred by user until liquids 100%).** `GasEngine` exists (`ENABLED=true`,
+  driver scheduled) but still uses the OLD global-scale apply and no gas block registers a seed, so it
+  doesn't run. To finish: edge-based apply (mirror `FluidEngine`), gas carriers `registerSeed`, then
+  delete old gas transport (`GasTransferHelper` flow, gas tick push/pull). Liquids are now validated, so
+  this is the only phase left — awaiting user go-ahead (same careful test loop as the liquid cutover).
 
 ## 6. First concrete step
 
