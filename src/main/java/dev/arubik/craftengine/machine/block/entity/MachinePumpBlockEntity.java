@@ -289,6 +289,12 @@ public class MachinePumpBlockEntity extends AbstractMachineBlockEntity {
                 pumpWorldIntake(level);
             } catch (Throwable ignored) {
             }
+            // If the OUT face has NO carrier (no pipe/tank), the engine can't move fluid out — so the pump
+            // EXPELS to the world: place a source/material block, or award XP orbs for experience.
+            try {
+                pumpWorldOutput(level);
+            } catch (Throwable ignored) {
+            }
             return;
         }
 
@@ -569,6 +575,64 @@ public class MachinePumpBlockEntity extends AbstractMachineBlockEntity {
             int newAmt = (stored.isEmpty() ? 0 : stored.getAmount()) + collected.getAmount();
             writeTank(level, new FluidStack(collected.getType(), Math.min(cap, newAmt), effPressure()));
         }
+    }
+
+    /**
+     * Expel the internal tank to the WORLD on the OUT face when there's no carrier to receive it. Fluids
+     * and material types place a block (into air only); experience is awarded as XP orbs. Bounded per tick.
+     */
+    private void pumpWorldOutput(Level level) {
+        FluidStack stored = storedFluid();
+        if (stored.isEmpty())
+            return;
+        BlockPos pos = getMachinePos();
+        Direction facing = getFacing(level);
+        ConnectableBlockBehavior cbb = getBlockBehavior(ConnectableBlockBehavior.class);
+        DirectionType type = cbb != null ? cbb.getDirectionType() : DirectionType.FULL;
+        Direction worldUp = type == DirectionType.FULL
+                ? DirectionalIOHelper.getVerticalWorldDirection(RelativeDirection.UP, facing)
+                : DirectionalIOHelper.getHorizontalWorldDirection(RelativeDirection.UP,
+                        DirectionalIOHelper.toHorizontalDirection(facing));
+        BlockPos out = pos.relative(worldUp);
+        // OUT neighbour is a CE carrier (pipe/tank) -> the engine moves fluid there; don't dump to world.
+        if (dev.arubik.craftengine.fluid.FluidTransferHelper.getCarrier(level, out).isPresent())
+            return;
+        FluidType t = stored.getType();
+        if (t == FluidType.EXPERIENCE) {
+            int unit = Math.max(1, FluidType.EXPERIENCE.unitMb());
+            int xp = Math.min(stored.getAmount() / unit, 50); // cap per tick
+            if (xp <= 0)
+                return;
+            if (level instanceof net.minecraft.server.level.ServerLevel sl)
+                net.minecraft.world.entity.ExperienceOrb.award(sl,
+                        net.minecraft.world.phys.Vec3.atCenterOf(out), xp);
+            int left = stored.getAmount() - xp * unit;
+            writeTank(level, left <= 0 ? FluidStack.EMPTY : new FluidStack(t, left, stored.getPressure()));
+            return;
+        }
+        if (!level.getBlockState(out).isAir())
+            return; // only place into empty space
+        int full = Math.max(1, t.mbPerFullBlock());
+        if (stored.getAmount() < full)
+            return; // need a whole block's worth to place
+        net.minecraft.world.level.block.state.BlockState place = blockFor(t);
+        if (place == null)
+            return;
+        level.setBlock(out, place, 3);
+        int left = stored.getAmount() - full;
+        writeTank(level, left <= 0 ? FluidStack.EMPTY : new FluidStack(t, left, stored.getPressure()));
+    }
+
+    /** The world block a given fluid type materializes into when expelled (null = not placeable). */
+    private static net.minecraft.world.level.block.state.BlockState blockFor(FluidType t) {
+        return switch (t) {
+            case LAVA -> net.minecraft.world.level.block.Blocks.LAVA.defaultBlockState();
+            case WATER -> net.minecraft.world.level.block.Blocks.WATER.defaultBlockState();
+            case SLIME -> net.minecraft.world.level.block.Blocks.SLIME_BLOCK.defaultBlockState();
+            case HONEY -> net.minecraft.world.level.block.Blocks.HONEY_BLOCK.defaultBlockState();
+            case POWDER_SNOW -> net.minecraft.world.level.block.Blocks.POWDER_SNOW.defaultBlockState();
+            default -> null;
+        };
     }
 
     // ---------------- bars (main-page fluid readout) ----------------

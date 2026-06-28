@@ -225,10 +225,8 @@ public class FluidCollector {
                     if (ibs != null && ibs.behavior().getFirst(PumpBehavior.class) != null)
                         continue;
 
-                    // Evitar quitar el bloque central dos veces cuando sea flowing que refluye
-                    if (p.equals(pos))
-                        continue;
-
+                    // NOTE: the center (p == pos) IS collected — it's the source block the pump sits on.
+                    // (Previously skipped, which made a single lava source pump nothing.)
                     if (targetType == FluidType.WATER || targetType == FluidType.LAVA) {
                         FluidState st = level.getFluidState(p);
                         if (!st.isEmpty() && st.isSource() && FluidType.matches(targetType, st)) {
