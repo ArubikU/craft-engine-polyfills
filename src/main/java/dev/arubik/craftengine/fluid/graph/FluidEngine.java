@@ -126,6 +126,7 @@ public final class FluidEngine {
             int newAmt = Math.max(0, Math.min((int) fn.capacityMb, oldAmt + delta));
             moved += Math.abs(newAmt - oldAmt);
             c.setStoredRaw(level, fn.pos, newAmt <= 0 ? FluidStack.EMPTY : new FluidStack(netType, newAmt, pressure));
+            c.onStoreChanged(level, fn.pos); // refresh model (tank fluidtype/level)
         }
         return moved / 2; // each mB shows up as -delta at the source and +delta at the sink
     }

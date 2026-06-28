@@ -73,4 +73,9 @@ public interface FluidCarrier {
             dev.arubik.craftengine.util.CustomBlockData.from(level, pos)
                     .set(dev.arubik.craftengine.fluid.FluidKeys.FLUID, stack);
     }
+
+    /** Called after the engine changes this carrier's store, so it can refresh its blockstate/model
+     * (e.g. a tank's fluidtype/level). Default no-op. */
+    default void onStoreChanged(Level level, BlockPos pos) {
+    }
 }

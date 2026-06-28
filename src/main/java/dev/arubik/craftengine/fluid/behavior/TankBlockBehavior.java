@@ -204,6 +204,11 @@ public class TankBlockBehavior extends ConnectableBlockBehavior implements Entit
         return MAX_CAPACITY;
     }
 
+    @Override
+    public void onStoreChanged(Level level, net.minecraft.core.BlockPos pos) {
+        updateShapeState(level, pos); // refresh fluidtype/level blockstate after an engine write
+    }
+
     public int insertFluid(Level level, net.minecraft.core.BlockPos pos, FluidStack stack) {
         return insertFluidInternal(level, pos, stack, 0);
     }

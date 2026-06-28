@@ -182,6 +182,15 @@ public class MachinePumpBlockEntity extends AbstractMachineBlockEntity {
         return Math.max(0, (int) Math.round(basePressure + curPressure));
     }
 
+    // ---- hydraulic graph hooks: pump OUT face + lift (emf in blocks) ----
+    public net.minecraft.core.Direction graphOutFace(Level level) {
+        return getFacing(level); // OUT = facing (worldUp); IN = opposite
+    }
+
+    public int graphPressure() {
+        return effPressure();
+    }
+
     private static double clamp(double v, double lo, double hi) {
         return Math.max(lo, Math.min(hi, v));
     }

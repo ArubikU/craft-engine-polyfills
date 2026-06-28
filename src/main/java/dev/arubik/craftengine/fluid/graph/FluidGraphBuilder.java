@@ -51,10 +51,11 @@ public final class FluidGraphBuilder {
                 if (!isCarrier(level, np) || !connected(level, pos, np, dir))
                     continue;
                 int bIdx = graph.addNode(makeNode(level, np));
-                // de-dup: only add the edge once per unordered pair (when aIdx < bIdx)
+                // de-dup: only add the edge once per unordered pair (when aIdx < bIdx). emf oriented pos→np.
                 if (aIdx < bIdx) {
                     int crestY = Math.max(pos.getY(), np.getY());
-                    graph.addEdge(new FluidEdge(aIdx, bIdx, DEFAULT_CONDUCTANCE, crestY, 0.0, 0));
+                    double emf = pumpEmf(level, pos, np);
+                    graph.addEdge(new FluidEdge(aIdx, bIdx, DEFAULT_CONDUCTANCE, crestY, emf, 0));
                 }
                 if (visited.add(np.asLong()))
                     queue.add(np.immutable());
@@ -67,6 +68,26 @@ public final class FluidGraphBuilder {
 
     private static boolean isCarrier(Level level, BlockPos pos) {
         return FluidTransferHelper.getCarrier(level, pos).isPresent();
+    }
+
+    private static dev.arubik.craftengine.machine.block.entity.MachinePumpBlockEntity pumpAt(Level level,
+            BlockPos pos) {
+        net.momirealms.craftengine.core.block.entity.BlockEntity be = dev.arubik.craftengine.block.entity.BukkitBlockEntityTypes
+                .getIfLoaded(level, pos);
+        return be != null
+                && be.controller instanceof dev.arubik.craftengine.machine.block.entity.MachinePumpBlockEntity m ? m
+                        : null;
+    }
+
+    /** emf (blocks of lift) on the edge a→b: a pump drives its OUT face. Positive = a→b. */
+    private static double pumpEmf(Level level, BlockPos a, BlockPos b) {
+        dev.arubik.craftengine.machine.block.entity.MachinePumpBlockEntity pa = pumpAt(level, a);
+        if (pa != null && b.equals(a.relative(pa.graphOutFace(level))))
+            return pa.graphPressure(); // a's OUT points at b -> a drives a→b
+        dev.arubik.craftengine.machine.block.entity.MachinePumpBlockEntity pb = pumpAt(level, b);
+        if (pb != null && a.equals(b.relative(pb.graphOutFace(level))))
+            return -pb.graphPressure(); // b's OUT points at a -> b drives b→a = -(a→b)
+        return 0.0;
     }
 
     private static <T> T behaviorAt(Level level, BlockPos pos, Class<T> type) {
