@@ -190,12 +190,17 @@ Each phase compiles + deploys independently; old path stays until the new one is
   Engine is the SOLE liquid transport (pipes/tanks/machines/pumps/valves). **Verified live** (user):
   lava/water/XP collect + push pump→pipe→tank; shift-click readout (tanks+pipes) = i18n name + fill% + lift.
 
-### Remaining
-- **Phase 5 — gas (PENDING, deferred by user until liquids 100%).** `GasEngine` exists (`ENABLED=true`,
-  driver scheduled) but still uses the OLD global-scale apply and no gas block registers a seed, so it
-  doesn't run. To finish: edge-based apply (mirror `FluidEngine`), gas carriers `registerSeed`, then
-  delete old gas transport (`GasTransferHelper` flow, gas tick push/pull). Liquids are now validated, so
-  this is the only phase left — awaiting user go-ahead (same careful test loop as the liquid cutover).
+- **Phase 5 — gas — DONE & deployed.** `GasEngine` now uses the **edge-based conservative apply** (mirror
+  `FluidEngine`; gas has no gravity so head=fill → equalizes fill = gas-pressure equalization). Gas
+  pump/pipe/valve ticks `registerSeed` and the engine drives transport. Closed gas valve cuts its edges.
+  Gas pump KEEPS its vein intake (well-pressure / `GasProvider` source blocks); `CreativeGasTank` keeps
+  its neighbour injection — both are gas SOURCES (inject; the engine transports). Old gas transport
+  DELETED (`GasTransferHelper.push/pull/balance`, gas tick flows, `GasPumpBehavior.tryDirectional`).
+  Machine gas store routed to the real tank key (`machine_gas_<name>`), fixing the engine-write/key bug.
+  **Pending: in-world validation** of gas movement (no live gas network observed yet) before debug off.
+
+## All phases complete (0–5). The hydraulic engine is the single transport for fluids AND gases across
+## pipes, tanks, pumps, valves, machines and multiblocks. Remaining = in-world gas validation + debug off.
 
 ## 6. First concrete step
 
