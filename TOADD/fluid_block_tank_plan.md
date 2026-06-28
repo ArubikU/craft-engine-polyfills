@@ -145,3 +145,18 @@ footprint position (windowShape), so no new states are needed. Slice the confirm
 named 16x16 textures and set them as the per-face #1 on the interior faces of the corner models.
 User's real complaint (screenshot): 3x3 corner/center render all faces -> verify interior faces are culled
 / use the seamless texture so the inside (fluid) reads cleanly.
+
+## CORRECTION — _connected is NOT a 16-tile CTM grid
+Viewing the sheet (TOADD/ctm_tiles/_sheet_4x.png) shows _connected.png (64x64) is a single CONNECTED-FACE
+tank texture at 4x detail: 4 quadrants = the 4 corner pieces of one big window/frame spanning a 2x2 face,
+plus panel/drawer trim. Create's window_corner models UV-map their window/wall faces into the matching
+quadrant so a w×w face reads as ONE continuous window. So the earlier "slice 16 tiles" idea is wrong.
+
+Correct horizontal-CTM step (intricate, do carefully, one model at a time + test):
+- For each window_corner model (block_*_window_ne/nw/se/sw), point the window-plane texture (#5) at
+  cml:block/fluid_block_tank_connected (the 64x64) and set that face's UV to the corner's 32x32 quadrant
+  (nw=[0,0,32,32], ne=[32,0,64,32], sw=[0,32,32,64], se=[32,32,64,64]) so the 4 corners tile into one window.
+- The plain WINDOW model (single-block face) keeps fluid_block_tank_window_single.
+- Verify on a real 2x2 and 3x3 in-world before mass-applying.
+DONE meanwhile: vertical CTM (per-position wall texture), stacked per-layer fluid render (ItemDisplay,
+translate +0.5/axis to centre at 0.5/0.5 and lift), unified multiblock store, deterministic partition.
