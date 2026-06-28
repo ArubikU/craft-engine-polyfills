@@ -71,9 +71,11 @@ public final class FluidTankRender {
             if (item == null)
                 continue;
             // The level model already has height ~layerFill of ONE block — NO vertical scale (no stretch).
+            // ItemDisplay centers the item at the entity, so translate +0.5 on every axis to drop the model
+            // into [0,1]³ of THIS block (centered at x/z = 0.5, lifted up out of the floor).
             Location loc = new Location(world, controller.getX(), controller.getY() + y, controller.getZ());
             Transformation t = new Transformation(
-                    new Vector3f(HULL, 0f, HULL),
+                    new Vector3f(0.5f, 0.5f, 0.5f),
                     new Quaternionf(),
                     new Vector3f(innerW, 1f, innerW),
                     new Quaternionf());
