@@ -236,7 +236,10 @@ public class TankBlockBehavior extends ConnectableBlockBehavior implements Entit
 
         int totalAccepted = 0;
 
-        if (isTank(level, pos.below()) && isStraight(level, pos) && isStraight(level, pos.below())) {
+        // With the hydraulic engine driving transport, DON'T cascade on insert — just fill this tank and
+        // let the solver distribute. The old down-cascade + per-block ticks double-counted fluid.
+        if (!dev.arubik.craftengine.fluid.graph.FluidEngine.ENABLED
+                && isTank(level, pos.below()) && isStraight(level, pos) && isStraight(level, pos.below())) {
             // Enviar todo el stack hacia abajo primero
             int acceptedDown = insertFluidInternal(level, pos.below(), stack, depth + 1);
             if (acceptedDown >= stack.getAmount()) {

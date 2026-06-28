@@ -77,8 +77,86 @@ public final class FluidSolverTests {
         return heads;
     }
 
+    /** Simulate the engine: solve + CONSERVATIVE scaled apply with capacities, return final amounts. */
+    private static int[] simulate(double[] y, long[] cap, int[] amt0, int[][] edges, double[] emf, int steps) {
+        int n = y.length;
+        int[] amt = amt0.clone();
+        for (int step = 0; step < steps; step++) {
+            NodeSpec[] ns = new NodeSpec[n];
+            for (int i = 0; i < n; i++)
+                ns[i] = new NodeSpec(cap[i], y[i] + amt[i] / (double) cap[i]);
+            BranchSpec[] br = new BranchSpec[edges.length];
+            for (int e = 0; e < edges.length; e++)
+                br[e] = new BranchSpec(edges[e][0], edges[e][1], 100, emf == null ? 0 : emf[e], 0);
+            Result r = FluidNetworkSolver.solve(ns, br, 1.0);
+            double s = 1.0;
+            for (int i = 0; i < n; i++) {
+                double d = r.netInflow[i];
+                if (d > 0) {
+                    double room = cap[i] - amt[i];
+                    if (d > room && d > 1e-9)
+                        s = Math.min(s, room / d);
+                } else if (d < 0) {
+                    if (-d > amt[i] && -d > 1e-9)
+                        s = Math.min(s, amt[i] / -d);
+                }
+            }
+            s = Math.max(0, s);
+            for (int i = 0; i < n; i++) {
+                amt[i] += (int) Math.round(r.netInflow[i] * s);
+                amt[i] = Math.max(0, Math.min((int) cap[i], amt[i]));
+            }
+        }
+        return amt;
+    }
+
+    private static int sum(int[] a) {
+        int s = 0;
+        for (int v : a)
+            s += v;
+        return s;
+    }
+
     public static Out run() {
         Out o = new Out();
+
+        // ---- engine conservation under capacity + gravity (the "1 bucket -> tank 5000" bug) ----
+        {
+            // top tank(Y=2,1000mB) - pipe(Y=1,cap1000,0) - bottom tank(Y=0,cap5000,0)
+            double[] y = { 2, 1, 0 };
+            long[] cap = { 5000, 1000, 5000 };
+            int[] a0 = { 1000, 0, 0 };
+            int[][] e = { { 0, 1 }, { 1, 2 } };
+            int[] fin = simulate(y, cap, a0, e, null, 600);
+            o.check("engine_conserve_total", sum(fin) == 1000);
+            o.check("engine_no_overflow", fin[0] <= 5000 && fin[1] <= 1000 && fin[2] <= 5000);
+            o.check("engine_pools_bottom", fin[2] >= fin[0]); // gravity: bottom holds >= top
+        }
+        {
+            // two equal-Y tanks, one full one empty -> equalize, conserved
+            double[] y = { 0, 0 };
+            long[] cap = { 5000, 5000 };
+            int[] a0 = { 4000, 0 };
+            int[] fin = simulate(y, cap, a0, new int[][] { { 0, 1 } }, null, 400);
+            o.check("engine_eq_conserve", sum(fin) == 4000);
+            o.check("engine_eq_split", Math.abs(fin[0] - fin[1]) < 50);
+        }
+        {
+            // pump lifts from low tank to high tank, conserved, no overflow
+            double[] y = { 0, 3 };
+            long[] cap = { 5000, 5000 };
+            int[] a0 = { 3000, 0 };
+            int[] fin = simulate(y, cap, a0, new int[][] { { 0, 1 } }, new double[] { 20 }, 600);
+            o.check("engine_pump_conserve", sum(fin) == 3000);
+            o.check("engine_pump_raised", fin[1] > 0);
+        }
+        {
+            // tiny amount (1 mB) never duplicates
+            double[] y = { 1, 0 };
+            long[] cap = { 5000, 5000 };
+            int[] fin = simulate(y, cap, new int[] { 1, 0 }, new int[][] { { 0, 1 } }, null, 50);
+            o.check("engine_tiny_conserve", sum(fin) == 1);
+        }
 
         // ---- 1-10: two-tank equalization at various heads + conservation ----
         for (int k = 0; k < 6; k++) {

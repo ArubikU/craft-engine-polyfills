@@ -105,18 +105,37 @@ public final class GasEngine {
 
         FluidNetworkSolver.Result r = FluidNetworkSolver.solve(nodes, branches, 1.0);
 
+        int[] old = new int[n];
+        for (int i = 0; i < n; i++) {
+            GasStack cur = carriers[i] != null ? carriers[i].getStoredGas(level, positions.get(i)) : null;
+            old[i] = (cur == null || cur.isEmpty()) ? 0 : cur.getAmount();
+        }
+        // Conservative scaled apply (same as FluidEngine): keep Σ flows = 0 within [0,cap].
+        double s = 1.0;
+        for (int i = 0; i < n; i++) {
+            double d = r.netInflow[i];
+            if (d > 0) {
+                double room = caps[i] - old[i];
+                if (d > room && d > 1e-9)
+                    s = Math.min(s, room / d);
+            } else if (d < 0) {
+                double avail = old[i];
+                if (-d > avail && -d > 1e-9)
+                    s = Math.min(s, avail / -d);
+            }
+        }
+        s = Math.max(0.0, s);
+
         int moved = 0;
         for (int i = 0; i < n; i++) {
             GasCarrier c = carriers[i];
             if (c == null)
                 continue;
-            int delta = (int) Math.round(r.netInflow[i]);
+            int delta = (int) Math.round(r.netInflow[i] * s);
             if (delta == 0)
                 continue;
-            GasStack cur = c.getStoredGas(level, positions.get(i));
-            int oldAmt = (cur == null || cur.isEmpty()) ? 0 : cur.getAmount();
-            int newAmt = Math.max(0, Math.min((int) caps[i], oldAmt + delta));
-            moved += Math.abs(newAmt - oldAmt);
+            int newAmt = Math.max(0, Math.min((int) caps[i], old[i] + delta));
+            moved += Math.abs(newAmt - old[i]);
             c.setStoredGasRaw(level, positions.get(i), newAmt <= 0 ? GasStack.EMPTY : new GasStack(netType, newAmt, 0));
         }
         return moved / 2;

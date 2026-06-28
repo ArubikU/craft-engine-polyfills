@@ -103,7 +103,23 @@ public final class FluidGraphBuilder {
         ConnectableBlockBehavior cb = behaviorAt(level, b, ConnectableBlockBehavior.class);
         if (ca == null || cb == null)
             return false;
-        return ca.canConnectTo(level, a, aToB) && cb.canConnectTo(level, b, aToB.getOpposite());
+        if (!ca.canConnectTo(level, a, aToB) || !cb.canConnectTo(level, b, aToB.getOpposite()))
+            return false;
+        // I/O-aware: each side must allow fluid in OR out on that local face. Pipes/tanks use Open IO
+        // (always true); machines restrict to their configured fluid I/O faces.
+        return ioAllowsFluid(level, a, ca, aToB) && ioAllowsFluid(level, b, cb, aToB.getOpposite());
+    }
+
+    private static boolean ioAllowsFluid(Level level, BlockPos pos, ConnectableBlockBehavior beh, Direction worldDir) {
+        try {
+            dev.arubik.craftengine.multiblock.IOConfiguration io = beh.getIOConfiguration(level, pos);
+            net.minecraft.world.level.block.state.BlockState st = level.getBlockState(pos);
+            net.minecraft.core.Direction local = beh.toLocalDirection(worldDir, st);
+            return io.acceptsInput(dev.arubik.craftengine.multiblock.IOConfiguration.IOType.FLUID, local)
+                    || io.providesOutput(dev.arubik.craftengine.multiblock.IOConfiguration.IOType.FLUID, local);
+        } catch (Throwable t) {
+            return true; // be permissive on error (don't drop valid pipe/tank connections)
+        }
     }
 
     private static FluidNode makeNode(Level level, BlockPos pos) {

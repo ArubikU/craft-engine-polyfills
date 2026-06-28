@@ -43,11 +43,15 @@ public final class FluidEngine {
         return SEEDS.size();
     }
 
+    public static volatile boolean DEBUG = true;
+    private static int dbgTick = 0;
+
     /** Step every distinct registered network once (dedups blocks shared across seeds). */
     public static void tickAll(Level level) {
         if (!ENABLED || SEEDS.isEmpty() || level == null)
             return;
         java.util.Set<Long> handled = new java.util.HashSet<>();
+        int nets = 0, moved = 0, biggest = 0;
         for (long key : SEEDS) {
             if (handled.contains(key))
                 continue;
@@ -65,10 +69,16 @@ public final class FluidEngine {
             for (FluidNode n : g.nodes)
                 handled.add(n.pos.asLong());
             try {
-                step(level, g);
+                int m = step(level, g);
+                nets++;
+                moved += m;
+                biggest = Math.max(biggest, g.nodes.size());
             } catch (Throwable ignored) {
             }
         }
+        if (DEBUG && (++dbgTick % 20 == 0) && nets > 0)
+            System.out.println("[FluidEngine] nets=" + nets + " biggest=" + biggest + " moved=" + moved
+                    + " seeds=" + SEEDS.size());
     }
 
     /** Build specs from the graph + live stores, solve one step, apply ΔV. Returns total mB moved. */
@@ -111,21 +121,45 @@ public final class FluidEngine {
 
         FluidNetworkSolver.Result r = FluidNetworkSolver.solve(nodes, branches, 1.0);
 
+        // Read current amounts.
+        int[] old = new int[n];
+        int[] pressure = new int[n];
+        for (int i = 0; i < n; i++) {
+            FluidStack cur = carriers[i] != null ? carriers[i].getStored(level, graph.nodes.get(i).pos) : null;
+            old[i] = (cur == null || cur.isEmpty()) ? 0 : cur.getAmount();
+            pressure[i] = (cur == null || cur.isEmpty()) ? 0 : cur.getPressure();
+        }
+        // CONSERVATIVE apply: scale ALL flows by the single factor that keeps every node within [0,cap].
+        // The solver seeks head equilibrium (gravity) that may want a node past its capacity; clamping each
+        // node independently would create/destroy mass (1 bucket -> tank 5000 bug). Scaling preserves Σ=0.
+        double s = 1.0;
+        for (int i = 0; i < n; i++) {
+            double d = r.netInflow[i];
+            if (d > 0) {
+                double room = graph.nodes.get(i).capacityMb - old[i];
+                if (d > room && d > 1e-9)
+                    s = Math.min(s, room / d);
+            } else if (d < 0) {
+                double avail = old[i];
+                if (-d > avail && -d > 1e-9)
+                    s = Math.min(s, avail / -d);
+            }
+        }
+        s = Math.max(0.0, s);
+
         int moved = 0;
         for (int i = 0; i < n; i++) {
-            FluidNode fn = graph.nodes.get(i);
             dev.arubik.craftengine.fluid.behavior.FluidCarrier c = carriers[i];
             if (c == null)
                 continue;
-            int delta = (int) Math.round(r.netInflow[i]);
+            int delta = (int) Math.round(r.netInflow[i] * s);
             if (delta == 0)
                 continue;
-            FluidStack cur = c.getStored(level, fn.pos);
-            int oldAmt = (cur == null || cur.isEmpty()) ? 0 : cur.getAmount();
-            int pressure = (cur == null || cur.isEmpty()) ? 0 : cur.getPressure();
-            int newAmt = Math.max(0, Math.min((int) fn.capacityMb, oldAmt + delta));
-            moved += Math.abs(newAmt - oldAmt);
-            c.setStoredRaw(level, fn.pos, newAmt <= 0 ? FluidStack.EMPTY : new FluidStack(netType, newAmt, pressure));
+            FluidNode fn = graph.nodes.get(i);
+            int newAmt = Math.max(0, Math.min((int) fn.capacityMb, old[i] + delta));
+            moved += Math.abs(newAmt - old[i]);
+            c.setStoredRaw(level, fn.pos,
+                    newAmt <= 0 ? FluidStack.EMPTY : new FluidStack(netType, newAmt, pressure[i]));
             c.onStoreChanged(level, fn.pos); // refresh model (tank fluidtype/level)
         }
         return moved / 2; // each mB shows up as -delta at the source and +delta at the sink
