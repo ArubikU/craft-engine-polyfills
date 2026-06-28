@@ -54,8 +54,10 @@ public class GasTankBehavior extends ConnectableBlockBehavior implements EntityB
             EnumProperty<net.momirealms.craftengine.core.util.Direction> verticalDirectionProperty,
             EnumProperty<GasType> gasTypeProperty,
             IntegerProperty levelProperty) {
+        // Gas connects on all 6 faces (no gravity/direction) so the engine network forms regardless of
+        // how pipes/pumps are placed around the tank (was UP/DOWN only).
         super(block,
-                List.of(Direction.UP, Direction.DOWN), horizontalDirectionProperty, verticalDirectionProperty);
+                java.util.Arrays.asList(Direction.values()), horizontalDirectionProperty, verticalDirectionProperty);
         this.gasTypeProperty = gasTypeProperty;
         this.levelProperty = levelProperty;
     }

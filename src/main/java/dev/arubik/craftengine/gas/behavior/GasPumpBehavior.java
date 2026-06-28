@@ -44,7 +44,9 @@ public class GasPumpBehavior extends ConnectableBlockBehavior
     public GasPumpBehavior(BlockDefinition block,
             net.momirealms.craftengine.core.block.property.EnumProperty<net.momirealms.craftengine.core.util.Direction> horizontalDirectionProperty,
             net.momirealms.craftengine.core.block.property.EnumProperty<net.momirealms.craftengine.core.util.Direction> verticalDirectionProperty) {
-        super(block, java.util.List.of(net.minecraft.core.Direction.UP, net.minecraft.core.Direction.DOWN),
+        // Gas has no direction — connect on all 6 faces so the engine can push the pumped gas into a pipe
+        // on ANY side (was UP/DOWN only, which left side-placed pipes unconnected).
+        super(block, java.util.Arrays.asList(net.minecraft.core.Direction.values()),
                 horizontalDirectionProperty,
                 verticalDirectionProperty);
     }

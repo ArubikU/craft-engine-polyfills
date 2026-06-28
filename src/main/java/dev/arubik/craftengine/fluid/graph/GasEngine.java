@@ -84,6 +84,10 @@ public final class GasEngine {
             int ai = idx(index, positions, pos);
             for (Direction dir : Direction.values()) {
                 BlockPos np = pos.relative(dir);
+                if (DEBUG && start.equals(pos))
+                    System.out.println("[GasConnect] node=" + pos.toShortString() + " dir=" + dir + " np="
+                            + np.toShortString() + " isCarrier=" + isCarrier(level, np) + " connected="
+                            + (isCarrier(level, np) && connected(level, pos, np, dir)));
                 if (!isCarrier(level, np) || !connected(level, pos, np, dir))
                     continue;
                 int bi = idx(index, positions, np);
@@ -222,8 +226,18 @@ public final class GasEngine {
     private static boolean connected(Level level, BlockPos a, BlockPos b, Direction aToB) {
         ConnectableBlockBehavior ca = connectable(level, a);
         ConnectableBlockBehavior cb = connectable(level, b);
-        if (ca == null || cb == null)
+        if (ca == null || cb == null) {
+            if (DEBUG)
+                System.out.println("[GasConn2] a=" + a.toShortString() + " b=" + b.toShortString() + " caNull="
+                        + (ca == null) + " cbNull=" + (cb == null));
             return false;
-        return ca.canConnectTo(level, a, aToB) && cb.canConnectTo(level, b, aToB.getOpposite());
+        }
+        boolean aOk = ca.canConnectTo(level, a, aToB);
+        boolean bOk = cb.canConnectTo(level, b, aToB.getOpposite());
+        if (DEBUG && !(aOk && bOk))
+            System.out.println("[GasConn2] a=" + a.toShortString() + "(" + ca.getClass().getSimpleName() + " "
+                    + ca.getConnectableFaces() + ") dir=" + aToB + " aOk=" + aOk + " | b=" + b.toShortString() + "("
+                    + cb.getClass().getSimpleName() + " " + cb.getConnectableFaces() + ") bOk=" + bOk);
+        return aOk && bOk;
     }
 }

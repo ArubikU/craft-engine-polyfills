@@ -54,6 +54,10 @@ public class GasPipeBehavior extends ConnectedBlockBehavior implements EntityBlo
         super(block, new java.util.ArrayList<>(), new HashSet<>(),
                 new HashSet<>(java.util.Arrays.asList("cml:gas_pump", "cml:gas_valve", "cml:gas_tank")), true);
         this.block = block;
+        // Gas connects on every face (no gravity/direction). This list drives canConnectTo, which the
+        // hydraulic GasEngine uses to build the network — it was empty, so NOTHING connected (every gas
+        // node came out isolated). Mirror the fluid PipeBehavior.
+        this.connectableFaces = java.util.Arrays.asList(Direction.values());
     }
 
     private int controllerId;
@@ -416,13 +420,21 @@ public class GasPipeBehavior extends ConnectedBlockBehavior implements EntityBlo
         GasStack stored = getStoredGas(level, pos);
 
         if (held == null || held.isEmpty() && player.isShiftKeyDown()) {
-            String gasName = stored.isEmpty() ? "gas.minecraft.empty"
-                    : "gas.minecraft." + stored.getType().toString().toLowerCase();
-            Component msg = MiniMessage.miniMessage().deserialize("<lang:" + gasName + "> " +
-                    "<gray>" + stored.getAmount() + "/" + CAPACITY + " mb</gray> " + stored.getPressure() + "p");
-            player.getBukkitEntity().sendActionBar(msg);
+            player.getBukkitEntity().sendActionBar(gasInfo(stored, CAPACITY));
             return net.momirealms.craftengine.core.entity.player.InteractionResult.SUCCESS_AND_CANCEL;
         }
         return net.momirealms.craftengine.core.entity.player.InteractionResult.PASS;
+    }
+
+    /** Shared shift-click readout for gas pipes/tanks: i18n gas name + amount/cap + fill%. Gas has NO
+     * head/lift (it equalizes freely, no gravity) — so no "lift"/pressure field, unlike the fluid readout. */
+    public static Component gasInfo(GasStack stored, int cap) {
+        int amt = (stored == null || stored.isEmpty()) ? 0 : stored.getAmount();
+        String key = (stored == null || stored.isEmpty()) ? "gas.minecraft.empty"
+                : "gas.minecraft." + stored.getType().toString().toLowerCase();
+        double fill = cap > 0 ? amt / (double) cap : 0;
+        return MiniMessage.miniMessage().deserialize(
+                "<lang:" + key + "> <gray>" + amt + "/" + cap + " mB</gray> "
+                        + "<dark_gray>·</dark_gray> <yellow>" + (int) Math.round(fill * 100) + "%</yellow>");
     }
 }
