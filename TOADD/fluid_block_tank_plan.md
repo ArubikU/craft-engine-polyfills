@@ -128,3 +128,20 @@ Rewrite order:
   5. Config/models/lang + fluid_block_tank recipe (8 copper_plate + glass) into recipe/polyfills_tanks.yml.
 GOTCHA: ImmutableBlockState.with needs Property<T extends Comparable<T>> + matching value — copy
 TankBlockBehavior.updateShapeState (~line 408) for the exact property-set API (raw Property + s.with fails).
+
+## HORIZONTAL CTM — next step (assets ready in TOADD/ctm_tiles/)
+_connected.png = 64x64 = 4x4 CTM tilesheet. Border analysis (T/B/L/R lines per tile):
+  row0: T-LR T-LR T-LR T-LR   row1: --LR --LR --LR ---R
+  row2: TBLR -BLR -BLR -B-R   row3: TBLR TBLR TBLR TBLR
+Rows = vertical state (DONE via per-position wall texture conn_top/middle/bottom). Columns intended for
+horizontal but the L/R detection is noisy -> open the exported tiles in TOADD/ctm_tiles/ (tile_rY_cX.png +
+_sheet_4x.png) and confirm which column = "connected left", "connected right", "connected both" by eye.
+
+Approach (deterministic, no blockstate explosion, mirrors the vertical fix): the window_corner MODELS
+(block_*_window_ne/nw/se/sw) already know which faces are INTERIOR (toward footprint neighbours). Edit each
+corner model so its interior side faces use the horizontally-seamless wall tile (no L/R ridge) while the
+exterior faces keep the ridged wall + window. The blockstate already picks the right corner model per
+footprint position (windowShape), so no new states are needed. Slice the confirmed seamless tiles into
+named 16x16 textures and set them as the per-face #1 on the interior faces of the corner models.
+User's real complaint (screenshot): 3x3 corner/center render all faces -> verify interior faces are culled
+/ use the seamless texture so the inside (fluid) reads cleanly.
