@@ -30,11 +30,39 @@ import net.momirealms.craftengine.core.block.ImmutableBlockState;
  */
 public final class GasEngine {
 
-    public static volatile boolean ENABLED = false;
+    public static volatile boolean ENABLED = true;
     private static final double DEFAULT_CONDUCTANCE = 1000.0;
     private static final int MAX_BLOCKS = 4096;
+    private static final java.util.Set<Long> SEEDS = java.util.concurrent.ConcurrentHashMap.newKeySet();
 
     private GasEngine() {
+    }
+
+    public static void registerSeed(BlockPos pos) {
+        if (pos != null)
+            SEEDS.add(pos.asLong());
+    }
+
+    /** Step every distinct registered gas network once (mirror of FluidEngine.tickAll). */
+    public static void tickAll(Level level) {
+        if (!ENABLED || SEEDS.isEmpty() || level == null)
+            return;
+        Set<Long> handled = new HashSet<>();
+        for (long key : SEEDS) {
+            if (handled.contains(key))
+                continue;
+            BlockPos seed = BlockPos.of(key);
+            if (!isCarrier(level, seed)) {
+                handled.add(key);
+                continue;
+            }
+            try {
+                // mark all positions in this network handled by stepping from the seed
+                handled.add(key);
+                step(level, seed);
+            } catch (Throwable ignored) {
+            }
+        }
     }
 
     /** Build the gas network containing {@code start}, solve one step, apply ΔV. Returns units moved. */

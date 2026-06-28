@@ -182,6 +182,14 @@ public class PipeBehavior extends ConnectedBlockBehavior implements EntityBlock,
     }
 
     @Override
+    public long getCapacity(Level level, BlockPos pos) {
+        // Pipes can buffer up to 1000 mB (high throughput, as originally designed). The conservative
+        // solver drains them toward equilibrium (≈0 when a tank below has room). Full 0-residual at rest
+        // would come from edge-contraction (roadmap Phase 1b).
+        return 1000L;
+    }
+
+    @Override
     public int insertFluid(Level level, BlockPos pos, FluidStack stack, net.minecraft.core.Direction direction) {
         return dev.arubik.craftengine.fluid.FluidCarrierImpl.insertFluid(level, pos, stack, CAPACITY, 0, direction);
     }

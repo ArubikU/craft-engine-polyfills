@@ -47,9 +47,13 @@ public final class CraftEnginePolyfills extends JavaPlugin {
             if (!dev.arubik.craftengine.fluid.graph.FluidEngine.ENABLED)
                 return;
             for (org.bukkit.World w : getServer().getWorlds()) {
+                net.minecraft.world.level.Level lvl = ((org.bukkit.craftbukkit.CraftWorld) w).getHandle();
                 try {
-                    dev.arubik.craftengine.fluid.graph.FluidEngine
-                            .tickAll(((org.bukkit.craftbukkit.CraftWorld) w).getHandle());
+                    dev.arubik.craftengine.fluid.graph.FluidEngine.tickAll(lvl);
+                } catch (Throwable ignored) {
+                }
+                try {
+                    dev.arubik.craftengine.fluid.graph.GasEngine.tickAll(lvl);
                 } catch (Throwable ignored) {
                 }
             }

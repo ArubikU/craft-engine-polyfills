@@ -102,10 +102,21 @@ public class TankBlockBehavior extends ConnectableBlockBehavior implements Entit
         FluidStack stored = getStored(level, pos);
 
         if (held == null || held.isEmpty() && player.isShiftKeyDown()) {
-            String fluidName = stored.isEmpty() ? "fluid.minecraft.empty"
-                    : "fluid.minecraft." + stored.getType().toString().toLowerCase();
-            Component msg = MiniMessage.miniMessage().deserialize("<lang:" + fluidName + "> " +
-                    "<gray>" + stored.getAmount() + "/" + MAX_CAPACITY + " mb</gray>");
+            // New hydraulic metrics (pressure no longer exists — the engine uses head/flow).
+            int amt = stored.isEmpty() ? 0 : stored.getAmount();
+            String type = stored.isEmpty() ? "empty" : stored.getType().name().toLowerCase();
+            double fill = amt / (double) MAX_CAPACITY;
+            double head = pos.getY() + fill; // hydraulic head = Y + fill
+            int nodes = 0;
+            try {
+                nodes = dev.arubik.craftengine.fluid.graph.FluidGraphBuilder.build(level, pos).size();
+            } catch (Throwable ignored) {
+            }
+            Component msg = MiniMessage.miniMessage().deserialize(
+                    "<aqua>" + type + "</aqua> <gray>" + amt + "/" + MAX_CAPACITY + " mB</gray> "
+                            + "<dark_gray>·</dark_gray> <yellow>" + (int) Math.round(fill * 100) + "%</yellow> "
+                            + "<dark_gray>·</dark_gray> <green>head " + String.format("%.2f", head) + "</green> "
+                            + "<dark_gray>·</dark_gray> <gray>net " + nodes + " nodes</gray>");
             player.getBukkitEntity().sendActionBar(msg);
             return net.momirealms.craftengine.core.entity.player.InteractionResult.SUCCESS_AND_CANCEL;
         }
