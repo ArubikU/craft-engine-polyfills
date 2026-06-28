@@ -129,6 +129,7 @@ public class FanMachineBlockEntity extends AbstractMachineBlockEntity {
         // Process-particle defaults (config overrides): fire->flame, lava->lava, water->splash, freeze->snow.
         this.processParticles = processParticles != null ? processParticles : new java.util.HashMap<>();
         this.processParticles.putIfAbsent(FanProcess.SMELTING, org.bukkit.Particle.FLAME);
+        this.processParticles.putIfAbsent(FanProcess.COOKING, org.bukkit.Particle.CAMPFIRE_COSY_SMOKE);
         this.processParticles.putIfAbsent(FanProcess.BLASTING, org.bukkit.Particle.LAVA);
         this.processParticles.putIfAbsent(FanProcess.WASHING, org.bukkit.Particle.SPLASH);
         this.processParticles.putIfAbsent(FanProcess.FREEZING, org.bukkit.Particle.SNOWFLAKE);
@@ -333,6 +334,9 @@ public class FanMachineBlockEntity extends AbstractMachineBlockEntity {
                     : (nitroSteam ? heavySteamParticle : particle);
             // Push entities + particles (ALWAYS — independent of whether a recipe is processing).
             applyPushAndParticles(bukkitWorld, serverLevel, cell, facing, pushStr, cellParticle);
+            // Gas atmosphere effects on living entities in the airflow (nitrogen freezes, steam over water
+            // douses fire, etc). family/nitroSteam encode the cell's wet/fire context.
+            applyGasEntityEffects(serverLevel, cell, tier, family, nitroSteam);
             // Process dropped items + belt items in this cell.
             if (family != FanProcess.NONE) {
                 processDroppedItems(serverLevel, cell, family, tier, seenItems);
@@ -367,22 +371,38 @@ public class FanMachineBlockEntity extends AbstractMachineBlockEntity {
 
     private FanProcess processFamilyAt(Level level, BlockPos cell,
             net.minecraft.world.level.block.state.BlockState bs, GasType tier) {
+        // Full gas × block map:
+        //   lava     : nitrogen -> WASHING (quenched), else BLASTING (hottest).
+        //   water    : nitrogen -> FREEZING, else WASHING.
+        //   fire      : nitrogen -> NONE (boils to heavy steam + slows entities), heavy -> BLASTING,
+        //               steam -> SMELTING (furnace).
+        //   soul_fire : same as fire BUT steam -> COOKING (smoker / food); heavy -> BLASTING.
         if (bs.is(net.minecraft.world.level.block.Blocks.LAVA)
                 || bs.is(net.minecraft.world.level.block.Blocks.LAVA_CAULDRON)) {
-            return FanProcess.BLASTING; // lava is always hotter
+            return tier == GasType.NITROGEN ? FanProcess.WASHING : FanProcess.BLASTING;
         }
         if (bs.is(net.minecraft.world.level.block.Blocks.WATER)
                 || bs.is(net.minecraft.world.level.block.Blocks.WATER_CAULDRON)) {
-            // Nitrogen over water freezes; any other gas washes.
             return tier == GasType.NITROGEN ? FanProcess.FREEZING : FanProcess.WASHING;
         }
         if (isFireBlock(bs)) {
-            // Nitrogen + fire makes heavy steam (handled as a particle swap upstream) — no recipe family.
             if (tier == GasType.NITROGEN)
-                return FanProcess.NONE;
-            return tier == GasType.HEAVY_STEAM ? FanProcess.BLASTING : FanProcess.SMELTING;
+                return FanProcess.NONE; // nitrogen over fire: no recipe (boils to heavy steam upstream)
+            if (tier == GasType.HEAVY_STEAM)
+                return FanProcess.BLASTING;
+            // STEAM: soul fire cooks food (smoker), ordinary fire smelts (furnace).
+            return isSoulFire(bs) ? FanProcess.COOKING : FanProcess.SMELTING;
         }
         return FanProcess.NONE;
+    }
+
+    /** Soul fire family: soul_fire block or a lit soul campfire (the "smoker" heat source for COOKING). */
+    private static boolean isSoulFire(net.minecraft.world.level.block.state.BlockState bs) {
+        if (bs.is(net.minecraft.world.level.block.Blocks.SOUL_FIRE))
+            return true;
+        return bs.is(net.minecraft.world.level.block.Blocks.SOUL_CAMPFIRE)
+                && bs.hasProperty(net.minecraft.world.level.block.CampfireBlock.LIT)
+                && bs.getValue(net.minecraft.world.level.block.CampfireBlock.LIT);
     }
 
     /** Fire family: fire, soul fire, or a lit (soul) campfire. */
@@ -524,27 +544,27 @@ public class FanMachineBlockEntity extends AbstractMachineBlockEntity {
             net.minecraft.world.item.crafting.SingleRecipeInput input =
                     new net.minecraft.world.item.crafting.SingleRecipeInput(single);
             net.minecraft.world.item.crafting.RecipeManager rm = level.getServer().getRecipeManager();
-            boolean blasting = family == FanProcess.BLASTING;
+            // Map the fan family to the matching vanilla cooking recipe type.
+            net.minecraft.world.item.crafting.RecipeType<? extends net.minecraft.world.item.crafting.AbstractCookingRecipe> rtype =
+                    switch (family) {
+                        case BLASTING -> net.minecraft.world.item.crafting.RecipeType.BLASTING;
+                        case COOKING -> net.minecraft.world.item.crafting.RecipeType.SMOKING;
+                        default -> net.minecraft.world.item.crafting.RecipeType.SMELTING;
+                    };
             net.minecraft.world.item.crafting.AbstractCookingRecipe cook = null;
-            if (blasting) {
-                var h = rm.getRecipeFor(net.minecraft.world.item.crafting.RecipeType.BLASTING, input, level);
-                if (h.isPresent())
-                    cook = h.get().value();
-            } else {
-                var h = rm.getRecipeFor(net.minecraft.world.item.crafting.RecipeType.SMELTING, input, level);
-                if (h.isPresent())
-                    cook = h.get().value();
-            }
+            var h = rm.getRecipeFor(rtype, input, level);
+            if (h.isPresent())
+                cook = h.get().value();
             if (cook != null) {
                 net.minecraft.world.item.ItemStack out = cook.assemble(input, level.registryAccess());
                 if (out != null && !out.isEmpty()) {
                     ResolvedRecipe rr = new ResolvedRecipe();
                     rr.inputAmount = 1;
-                    // The vanilla recipe's OWN cooking time (smelting ~200t, blasting ~100t).
+                    // The vanilla recipe's OWN cooking time (smelting ~200t, blasting/smoking ~100t).
                     try {
                         rr.time = Math.max(1, cook.cookingTime());
                     } catch (Throwable t) {
-                        rr.time = blasting ? 100 : 200;
+                        rr.time = family == FanProcess.SMELTING ? 200 : 100;
                     }
                     rr.outputs.add(out.copy());
                     rr.chances.add(1.0f);
@@ -618,6 +638,11 @@ public class FanMachineBlockEntity extends AbstractMachineBlockEntity {
                 w.spawnParticle(org.bukkit.Particle.FLAME, x, y, z, 6, 0.18, 0.18, 0.18, 0.01);
                 w.spawnParticle(org.bukkit.Particle.SMOKE, x, y, z, 5, 0.15, 0.2, 0.15, 0.01);
                 w.playSound(loc, org.bukkit.Sound.BLOCK_LAVA_POP, 0.5f, 1.8f);
+            }
+            case COOKING -> {
+                w.spawnParticle(org.bukkit.Particle.CAMPFIRE_COSY_SMOKE, x, y, z, 6, 0.15, 0.25, 0.15, 0.01);
+                w.spawnParticle(org.bukkit.Particle.SMOKE, x, y, z, 4, 0.15, 0.2, 0.15, 0.01);
+                w.playSound(loc, org.bukkit.Sound.BLOCK_CAMPFIRE_CRACKLE, 0.6f, 1.2f);
             }
             case WASHING -> {
                 w.spawnParticle(org.bukkit.Particle.SPLASH, x, y, z, 10, 0.2, 0.25, 0.2, 0.05);
@@ -732,6 +757,53 @@ public class FanMachineBlockEntity extends AbstractMachineBlockEntity {
 
     private static double rand(double range) {
         return (java.util.concurrent.ThreadLocalRandom.current().nextDouble() * 2.0D - 1.0D) * range;
+    }
+
+    /**
+     * Apply gas-atmosphere effects to living entities standing in this airflow cell.
+     * <ul>
+     *   <li>Nitrogen (dry air): freezing.</li>
+     *   <li>Nitrogen over water (family FREEZING): slowness + freezing.</li>
+     *   <li>Nitrogen over fire (nitroSteam): slowness only.</li>
+     *   <li>Steam / heavy steam over water (family WASHING): douses the entity's fire.</li>
+     * </ul>
+     */
+    private void applyGasEntityEffects(net.minecraft.server.level.ServerLevel level, BlockPos cell, GasType tier,
+            FanProcess family, boolean nitroSteam) {
+        if (tier != GasType.NITROGEN && tier != GasType.STEAM && tier != GasType.HEAVY_STEAM)
+            return;
+        double cx = cell.getX() + 0.5D, cy = cell.getY() + 0.5D, cz = cell.getZ() + 0.5D;
+        net.minecraft.world.phys.AABB aabb = new net.minecraft.world.phys.AABB(
+                cx - 0.5D, cy - 0.5D, cz - 0.5D, cx + 0.5D, cy + 0.5D, cz + 0.5D);
+        for (net.minecraft.world.entity.Entity nms : level.getEntitiesOfClass(
+                net.minecraft.world.entity.LivingEntity.class, aabb, e -> !e.isRemoved())) {
+            org.bukkit.entity.Entity be = nms.getBukkitEntity();
+            if (!(be instanceof org.bukkit.entity.LivingEntity living))
+                continue;
+            if (tier == GasType.NITROGEN) {
+                if (family == FanProcess.FREEZING) { // nitrogen over water -> slowness + freezing
+                    freeze(living);
+                    slow(living);
+                } else if (nitroSteam) { // nitrogen over fire -> slowness only
+                    slow(living);
+                } else { // plain nitrogen air -> freezing
+                    freeze(living);
+                }
+            } else { // STEAM / HEAVY_STEAM
+                if (family == FanProcess.WASHING) // steam over water -> put out fire
+                    living.setFireTicks(0);
+            }
+        }
+    }
+
+    private static void freeze(org.bukkit.entity.LivingEntity living) {
+        int max = Math.max(140, living.getMaxFreezeTicks());
+        living.setFreezeTicks(Math.min(max, living.getFreezeTicks() + 60));
+    }
+
+    private static void slow(org.bukkit.entity.LivingEntity living) {
+        living.addPotionEffect(new org.bukkit.potion.PotionEffect(
+                org.bukkit.potion.PotionEffectType.SLOWNESS, 60, 1, true, false, true));
     }
 
     private static final String PROP_POWERED = "powered";
@@ -890,6 +962,7 @@ public class FanMachineBlockEntity extends AbstractMachineBlockEntity {
         String statusKey = !lastBlowing ? "polyfill.ui.fan_status_idle"
                 : switch (lastFamily) {
                     case SMELTING -> "polyfill.ui.fan_status_smelting";
+                    case COOKING -> "polyfill.ui.fan_status_cooking";
                     case BLASTING -> "polyfill.ui.fan_status_blasting";
                     case WASHING -> "polyfill.ui.fan_status_washing";
                     case FREEZING -> "polyfill.ui.fan_status_freezing";
