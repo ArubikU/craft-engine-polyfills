@@ -57,6 +57,8 @@ public class ValveBehavior extends PumpBehavior {
 
     @Override
     protected void tickPump(CEWorld world, net.momirealms.craftengine.core.world.BlockPos cePos) {
+        if (dev.arubik.craftengine.fluid.graph.FluidEngine.ENABLED)
+            return; // hydraulic engine owns transport; the valve is a graph edge now
         {
             net.minecraft.world.level.Level level = (net.minecraft.world.level.Level) world.world().minecraftWorld();
             if (level == null || level.isClientSide())

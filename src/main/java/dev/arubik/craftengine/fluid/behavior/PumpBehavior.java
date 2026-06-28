@@ -148,6 +148,8 @@ public class PumpBehavior extends ConnectableBlockBehavior
     }
 
     protected void tickPump(CEWorld world, net.momirealms.craftengine.core.world.BlockPos cePos) {
+        if (dev.arubik.craftengine.fluid.graph.FluidEngine.ENABLED)
+            return; // hydraulic engine owns transport (legacy pump behavior is inert under it)
         {
             net.minecraft.world.level.Level level = (net.minecraft.world.level.Level) world.world().minecraftWorld();
             if (level == null || level.isClientSide())
