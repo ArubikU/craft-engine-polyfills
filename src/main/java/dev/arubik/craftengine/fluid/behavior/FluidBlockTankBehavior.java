@@ -101,38 +101,95 @@ public class FluidBlockTankBehavior extends ConnectableBlockBehavior implements 
         return s != null && !s.isEmpty() && s.behavior().getFirst(FluidBlockTankBehavior.class) != null;
     }
 
-    /** BFS the connected fluid_block_tank group; controller = min Y, then min X, min Z. */
+    private static final int MAX_WIDTH = 3;
+
+    /**
+     * Resolve the queried block's group like Create's {@code ConnectivityHandler.formMulti}: only COMPLETE
+     * rectangular prisms (square footprint w≤3 × height, every cell a tank, single fluid) merge — formed
+     * greedily largest-first, so an incomplete layer stays separate instead of flood-merging a blob.
+     * Returns the group that ends up containing {@code start} (its controller = the prism's min-corner).
+     */
     public Group scanGroup(Level level, BlockPos start) {
+        if (!isTank(level, start))
+            return new Group(start.immutable(), 1, start.getX(), start.getY(), start.getZ(), 1, 1);
+        // 1) connected component (bounded flood).
+        java.util.List<BlockPos> comp = new java.util.ArrayList<>();
+        HashSet<Long> inComp = new HashSet<>();
         ArrayDeque<BlockPos> q = new ArrayDeque<>();
-        HashSet<Long> seen = new HashSet<>();
         q.add(start.immutable());
-        seen.add(start.asLong());
-        BlockPos ctrl = start.immutable();
-        int count = 0, minY = start.getY(), maxY = start.getY();
-        int minX = start.getX(), maxX = start.getX(), minZ = start.getZ(), maxZ = start.getZ();
-        while (!q.isEmpty() && count < MAX_GROUP) {
+        inComp.add(start.asLong());
+        while (!q.isEmpty() && comp.size() < MAX_GROUP) {
             BlockPos p = q.poll();
-            if (!isTank(level, p))
-                continue;
-            count++;
-            minY = Math.min(minY, p.getY());
-            maxY = Math.max(maxY, p.getY());
-            minX = Math.min(minX, p.getX());
-            maxX = Math.max(maxX, p.getX());
-            minZ = Math.min(minZ, p.getZ());
-            maxZ = Math.max(maxZ, p.getZ());
-            if (p.getY() < ctrl.getY()
-                    || (p.getY() == ctrl.getY() && p.getX() < ctrl.getX())
-                    || (p.getY() == ctrl.getY() && p.getX() == ctrl.getX() && p.getZ() < ctrl.getZ()))
-                ctrl = p.immutable();
+            comp.add(p);
             for (Direction d : Direction.values()) {
                 BlockPos np = p.relative(d);
-                if (seen.add(np.asLong()) && isTank(level, np))
+                if (!inComp.contains(np.asLong()) && isTank(level, np)) {
+                    inComp.add(np.asLong());
                     q.add(np.immutable());
+                }
             }
         }
-        int width = Math.max(maxX - minX, maxZ - minZ) + 1;
-        return new Group(ctrl, Math.max(1, count), minX, minY, minZ, Math.max(1, maxY - minY + 1), width);
+        // 2) candidate prisms: each block as a min-corner, tallest filled w×w column per width.
+        java.util.List<long[]> prisms = new java.util.ArrayList<>(); // [amount, ctrlPos, w, h]
+        for (BlockPos c : comp)
+            for (int w = 1; w <= MAX_WIDTH; w++) {
+                int h = maxFilledHeight(level, c, w, inComp);
+                if (h > 0)
+                    prisms.add(new long[] { (long) w * w * h, c.asLong(), w, h });
+            }
+        // 3) greedy: claim the largest prism whose cells are all still free.
+        prisms.sort((a, b) -> Long.compare(b[0], a[0]));
+        HashSet<Long> assigned = new HashSet<>();
+        java.util.Map<Long, long[]> owner = new java.util.HashMap<>(); // cell -> [ctrlPos, w, h]
+        for (long[] pr : prisms) {
+            BlockPos c = BlockPos.of(pr[1]);
+            int w = (int) pr[2], h = (int) pr[3];
+            boolean free = true;
+            for (int dy = 0; dy < h && free; dy++)
+                for (int dx = 0; dx < w && free; dx++)
+                    for (int dz = 0; dz < w && free; dz++)
+                        if (assigned.contains(c.offset(dx, dy, dz).asLong()))
+                            free = false;
+            if (!free)
+                continue;
+            for (int dy = 0; dy < h; dy++)
+                for (int dx = 0; dx < w; dx++)
+                    for (int dz = 0; dz < w; dz++) {
+                        long cell = c.offset(dx, dy, dz).asLong();
+                        assigned.add(cell);
+                        owner.put(cell, new long[] { c.asLong(), w, h });
+                    }
+        }
+        // 4) the queried block's resolved group.
+        long[] a = owner.get(start.asLong());
+        if (a == null)
+            return new Group(start.immutable(), 1, start.getX(), start.getY(), start.getZ(), 1, 1);
+        BlockPos ctrl = BlockPos.of(a[0]);
+        int w = (int) a[1], h = (int) a[2];
+        return new Group(ctrl, w * w * h, ctrl.getX(), ctrl.getY(), ctrl.getZ(), h, w);
+    }
+
+    /** Tallest run of fully-filled w×w layers up from min-corner {@code c} (all tanks; single fluid type). */
+    private int maxFilledHeight(Level level, BlockPos c, int w, HashSet<Long> inComp) {
+        FluidType locked = null;
+        int h = 0;
+        for (int dy = 0; dy < MAX_GROUP; dy++) {
+            for (int dx = 0; dx < w; dx++)
+                for (int dz = 0; dz < w; dz++) {
+                    BlockPos cell = c.offset(dx, dy, dz);
+                    if (!inComp.contains(cell.asLong()))
+                        return h; // incomplete layer -> stop growing
+                    FluidStack s = FluidCarrierImpl.getStored(level, cell);
+                    if (s != null && !s.isEmpty()) {
+                        if (locked == null)
+                            locked = s.getType();
+                        else if (locked != s.getType())
+                            return h; // different fluids -> do not merge
+                    }
+                }
+            h++;
+        }
+        return h;
     }
 
     /** Cached controller pos for this member (BE cache; falls back to a fresh scan). */
@@ -213,6 +270,12 @@ public class FluidBlockTankBehavior extends ConnectableBlockBehavior implements 
                 : Math.min(1.0, stored.getAmount() / (double) cap);
         double surface = fill * g.height; // in block rows from the bottom
         FluidType type = (stored == null || stored.isEmpty()) ? FluidType.EMPTY : stored.getType();
+
+        // Server-side fluid box (Create's renderFluidBox equivalent) at the controller.
+        try {
+            FluidTankRender.update(level, g.controller, g.width, g.height, type, fill);
+        } catch (Throwable ignored) {
+        }
 
         // Re-scan to visit every member (scanGroup only tracked the controller); cheap, bounded by MAX_GROUP.
         ArrayDeque<BlockPos> q = new ArrayDeque<>();
@@ -393,10 +456,19 @@ public class FluidBlockTankBehavior extends ConnectableBlockBehavior implements 
             if (level == null || level.isClientSide())
                 return;
             BlockPos pos = (BlockPos) Utils.fromPos(cePos);
-            // Refresh the group cache periodically (cheap cadence) + on first tick.
+            // Refresh the group cache periodically (cheap cadence) + on first tick. When the group changes
+            // the controller re-renders all members' blockstates (bottom/top/shape) + the fluid box.
             if (self.ctrl == 0L || self.recomputeCd-- <= 0) {
+                long prevCtrl = self.ctrl;
+                int prevCount = self.count;
                 self.recompute(level, pos);
                 self.recomputeCd = 20;
+                if (self.ctrl == pos.asLong() && (self.ctrl != prevCtrl || self.count != prevCount)) {
+                    try {
+                        self.behavior.refreshGroupRender(level, pos);
+                    } catch (Throwable ignored) {
+                    }
+                }
             }
             // Only the controller registers the (single) engine seed for the whole group.
             if (self.ctrl == pos.asLong()) {
