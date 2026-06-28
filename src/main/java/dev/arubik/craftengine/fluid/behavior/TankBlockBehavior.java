@@ -107,16 +107,9 @@ public class TankBlockBehavior extends ConnectableBlockBehavior implements Entit
             String type = stored.isEmpty() ? "empty" : stored.getType().name().toLowerCase();
             double fill = amt / (double) MAX_CAPACITY;
             double head = pos.getY() + fill; // hydraulic head = Y + fill
-            int nodes = 0;
-            try {
-                nodes = dev.arubik.craftengine.fluid.graph.FluidGraphBuilder.build(level, pos).size();
-            } catch (Throwable ignored) {
-            }
             Component msg = MiniMessage.miniMessage().deserialize(
                     "<aqua>" + type + "</aqua> <gray>" + amt + "/" + MAX_CAPACITY + " mB</gray> "
-                            + "<dark_gray>·</dark_gray> <yellow>" + (int) Math.round(fill * 100) + "%</yellow> "
-                            + "<dark_gray>·</dark_gray> <green>head " + String.format("%.2f", head) + "</green> "
-                            + "<dark_gray>·</dark_gray> <gray>net " + nodes + " nodes</gray>");
+                            + "<dark_gray>·</dark_gray> <yellow>" + (int) Math.round(fill * 100) + "%</yellow>");
             player.getBukkitEntity().sendActionBar(msg);
             return net.momirealms.craftengine.core.entity.player.InteractionResult.SUCCESS_AND_CANCEL;
         }

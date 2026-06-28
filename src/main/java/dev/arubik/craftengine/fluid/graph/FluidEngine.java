@@ -43,7 +43,7 @@ public final class FluidEngine {
         return SEEDS.size();
     }
 
-    public static volatile boolean DEBUG = true;
+    public static volatile boolean DEBUG = false;
     private static int dbgTick = 0;
 
     /** Step every distinct registered network once (dedups blocks shared across seeds). */
@@ -129,39 +129,55 @@ public final class FluidEngine {
             old[i] = (cur == null || cur.isEmpty()) ? 0 : cur.getAmount();
             pressure[i] = (cur == null || cur.isEmpty()) ? 0 : cur.getPressure();
         }
-        // CONSERVATIVE apply: scale ALL flows by the single factor that keeps every node within [0,cap].
-        // The solver seeks head equilibrium (gravity) that may want a node past its capacity; clamping each
-        // node independently would create/destroy mass (1 bucket -> tank 5000 bug). Scaling preserves Σ=0.
-        double s = 1.0;
-        for (int i = 0; i < n; i++) {
-            double d = r.netInflow[i];
-            if (d > 0) {
-                double room = graph.nodes.get(i).capacityMb - old[i];
-                if (d > room && d > 1e-9)
-                    s = Math.min(s, room / d);
-            } else if (d < 0) {
-                double avail = old[i];
-                if (-d > avail && -d > 1e-9)
-                    s = Math.min(s, avail / -d);
+        // EDGE-BASED conservative apply: move each edge's solved flow but capped by the source's available
+        // amount AND the destination's free room. A single global scale froze the whole network whenever one
+        // node wanted to give but was empty (e.g. an empty high-Y tank with high head). Per-edge clamping
+        // lets the pipe->bottom flow drain even while the empty top can't supply. Always mass-conserving.
+        int[] amt = old.clone();
+        int moved = 0;
+        for (int e = 0; e < branches.length; e++) {
+            double q = r.flows[e];
+            int from, to;
+            if (q > 1e-9) {
+                from = branches[e].a;
+                to = branches[e].b;
+            } else if (q < -1e-9) {
+                from = branches[e].b;
+                to = branches[e].a;
+            } else {
+                continue;
+            }
+            int want = (int) Math.round(Math.abs(q));
+            int room = (int) graph.nodes.get(to).capacityMb - amt[to];
+            int m = Math.min(want, Math.min(amt[from], room));
+            if (m > 0) {
+                amt[from] -= m;
+                amt[to] += m;
+                moved += m;
             }
         }
-        s = Math.max(0.0, s);
 
-        int moved = 0;
+        if (DEBUG && n <= 5) {
+            StringBuilder sb = new StringBuilder("[FluidStep] type=" + netType + " moved=" + moved);
+            for (int i = 0; i < n; i++) {
+                FluidNode fn = graph.nodes.get(i);
+                sb.append(" #").append(i).append("(").append(fn.kind).append(" Y=").append(fn.pos.getY())
+                        .append(" ").append(old[i]).append("->").append(amt[i]).append(" head=")
+                        .append(String.format("%.2f", fn.head)).append(")");
+            }
+            sb.append(" edges=").append(graph.edges.size());
+            System.out.println(sb);
+        }
+
         for (int i = 0; i < n; i++) {
             dev.arubik.craftengine.fluid.behavior.FluidCarrier c = carriers[i];
-            if (c == null)
-                continue;
-            int delta = (int) Math.round(r.netInflow[i] * s);
-            if (delta == 0)
+            if (c == null || amt[i] == old[i])
                 continue;
             FluidNode fn = graph.nodes.get(i);
-            int newAmt = Math.max(0, Math.min((int) fn.capacityMb, old[i] + delta));
-            moved += Math.abs(newAmt - old[i]);
             c.setStoredRaw(level, fn.pos,
-                    newAmt <= 0 ? FluidStack.EMPTY : new FluidStack(netType, newAmt, pressure[i]));
+                    amt[i] <= 0 ? FluidStack.EMPTY : new FluidStack(netType, amt[i], pressure[i]));
             c.onStoreChanged(level, fn.pos); // refresh model (tank fluidtype/level)
         }
-        return moved / 2; // each mB shows up as -delta at the source and +delta at the sink
+        return moved; // edge-based: each transfer counted once
     }
 }
