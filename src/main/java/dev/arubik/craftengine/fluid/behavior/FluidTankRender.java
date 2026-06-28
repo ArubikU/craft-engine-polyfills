@@ -61,8 +61,10 @@ public final class FluidTankRender {
         }
 
         double fluidBlocks = fill * height; // total fluid column height in blocks
-        float innerW = Math.max(0.01f, width - 2 * HULL);
-        int layerIdx = 0;
+        // ONE native 1×1 display PER CELL (footprint w×w × each filled layer): NO x/z scaling, so cells abut
+        // seamlessly — no stretch, no gaps, no misalignment. 2×2 floor = 4 displays, 3×3 floor = 9, etc.
+        // ItemDisplay centres the model on the entity, so place at the cell centre (+0.5) with scale 1.
+        int idx = 0;
         for (int y = 0; y < height; y++) {
             double layerFill = Math.max(0.0, Math.min(1.0, fluidBlocks - y)); // 0..1 within this block layer
             if (layerFill <= 0.001)
@@ -70,37 +72,37 @@ public final class FluidTankRender {
             ItemStack item = levelItem(type, layerFill);
             if (item == null)
                 continue;
-            // The level model already has height ~layerFill of ONE block — NO vertical scale (no stretch).
-            // ItemDisplay centers the item at the entity, so translate +0.5 on every axis to drop the model
-            // into [0,1]³ of THIS block (centered at x/z = 0.5, lifted up out of the floor).
-            Location loc = new Location(world, controller.getX(), controller.getY() + y, controller.getZ());
-            Transformation t = new Transformation(
-                    new Vector3f(0.5f, 0.5f, 0.5f),
-                    new Quaternionf(),
-                    new Vector3f(innerW, 1f, innerW),
-                    new Quaternionf());
-            ItemDisplay box = layerIdx < displays.size() ? validDisplay(world, displays.get(layerIdx)) : null;
-            if (box == null) {
-                ItemStack fi = item;
-                box = world.spawn(loc, ItemDisplay.class, e -> {
-                    e.addScoreboardTag("cml_fluidbox");
-                    e.setItemStack(fi);
-                    e.setBrightness(new org.bukkit.entity.Display.Brightness(15, 15));
-                    e.setPersistent(true);
-                    e.setTransformation(t);
-                });
-                if (layerIdx < displays.size())
-                    displays.set(layerIdx, box.getUniqueId());
-                else
-                    displays.add(box.getUniqueId());
-            } else {
-                box.setItemStack(item);
-                box.teleport(loc);
-                box.setTransformation(t);
-            }
-            layerIdx++;
+            for (int dx = 0; dx < width; dx++)
+                for (int dz = 0; dz < width; dz++) {
+                    Location loc = new Location(world, controller.getX() + dx, controller.getY() + y,
+                            controller.getZ() + dz);
+                    Transformation t = new Transformation(
+                            new Vector3f(0.5f, 0.5f, 0.5f), new Quaternionf(),
+                            new Vector3f(1f, 1f, 1f), new Quaternionf());
+                    ItemDisplay box = idx < displays.size() ? validDisplay(world, displays.get(idx)) : null;
+                    if (box == null) {
+                        ItemStack fi = item;
+                        box = world.spawn(loc, ItemDisplay.class, e -> {
+                            e.addScoreboardTag("cml_fluidbox");
+                            e.setItemStack(fi);
+                            e.setBrightness(new org.bukkit.entity.Display.Brightness(15, 15));
+                            e.setPersistent(true);
+                            e.setTransformation(t);
+                        });
+                        if (idx < displays.size())
+                            displays.set(idx, box.getUniqueId());
+                        else
+                            displays.add(box.getUniqueId());
+                    } else {
+                        box.setItemStack(item);
+                        box.teleport(loc);
+                        box.setTransformation(t);
+                    }
+                    idx++;
+                }
         }
-        // Remove surplus layer displays (fluid level dropped).
+        int layerIdx = idx;
+        // Remove surplus displays (fluid level dropped / group shrank).
         for (int i = displays.size() - 1; i >= layerIdx; i--) {
             UUID id = displays.remove(i);
             Entity e = id != null ? world.getEntity(id) : null;
