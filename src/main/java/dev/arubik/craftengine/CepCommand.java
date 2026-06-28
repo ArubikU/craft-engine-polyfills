@@ -185,6 +185,17 @@ public class CepCommand implements CommandExecutor, TabCompleter {
             return true;
         });
 
+        // /cep fluid test — run the 50+ solver edge-case suite.
+        cases.put(new ArgumentList("fluid^", "test^"), (sender, parsed) -> {
+            dev.arubik.craftengine.fluid.graph.FluidSolverTests.Out o = dev.arubik.craftengine.fluid.graph.FluidSolverTests
+                    .run();
+            sender.sendMessage("§bSolver tests§7: §a" + o.passed + " passed§7, "
+                    + (o.failed == 0 ? "§a0 failed" : "§c" + o.failed + " failed"));
+            for (String f : o.failures)
+                sender.sendMessage("§c ✗ " + f);
+            return true;
+        });
+
         // /cep fluid engine off — back to the live per-block transport.
         cases.put(new ArgumentList("fluid^", "engine^", "off^"), (sender, parsed) -> {
             dev.arubik.craftengine.fluid.graph.FluidEngine.ENABLED = false;

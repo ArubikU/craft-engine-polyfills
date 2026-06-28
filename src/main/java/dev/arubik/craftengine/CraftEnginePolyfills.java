@@ -32,6 +32,15 @@ public final class CraftEnginePolyfills extends JavaPlugin {
     public void onEnable() {
         PacketEvents.getAPI().init();
         ItemListener.register(this);
+        // Boot-time solver self-test (logs pass/fail for the 50+ edge-case suite).
+        try {
+            dev.arubik.craftengine.fluid.graph.FluidSolverTests.Out o = dev.arubik.craftengine.fluid.graph.FluidSolverTests
+                    .run();
+            getLogger().info("[FluidSolver] tests: " + o.passed + " passed, " + o.failed + " failed"
+                    + (o.failures.isEmpty() ? "" : " -> " + o.failures));
+        } catch (Throwable t) {
+            getLogger().warning("[FluidSolver] test run failed: " + t);
+        }
         // Hydraulic engine driver (Phase 6): steps every registered fluid network each tick. No-op while
         // FluidEngine.ENABLED is false (default), so the live per-block transport runs until toggled.
         getServer().getScheduler().runTaskTimer(this, () -> {
