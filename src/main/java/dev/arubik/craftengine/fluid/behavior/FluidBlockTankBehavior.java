@@ -232,9 +232,8 @@ public class FluidBlockTankBehavior extends ConnectableBlockBehavior implements 
             if (!controllers.contains(cell))
                 FluidTankRender.remove(level, BlockPos.of(cell));
         for (long c : controllers) {
-            BlockPos ctrl = BlockPos.of(c);
-            consolidateFluid(level, ctrl);
-            refreshGroupRender(level, ctrl);
+            consolidateFluid(level, BlockPos.of(c));
+            refreshGroupFromOwner(level, owner, c); // reuse the solved map (no per-group re-solve)
         }
     }
 
@@ -414,42 +413,57 @@ public class FluidBlockTankBehavior extends ConnectableBlockBehavior implements 
     public void refreshGroupRender(Level level, BlockPos anyMember) {
         if (level.isClientSide())
             return;
-        Group g = scanGroup(level, anyMember);
-        FluidStack stored = FluidCarrierImpl.getStored(level, g.controller);
-        int cap = g.count * CAP_PER_BLOCK;
+        java.util.Map<Long, long[]> owner = solveComponent(level, anyMember);
+        long[] me = owner.get(anyMember.asLong());
+        if (me == null)
+            return;
+        long ctrl = me[0]; // resolve to THIS member's group controller (not necessarily anyMember)
+        refreshGroupFromOwner(level, owner, ctrl);
+    }
+
+    /**
+     * Render exactly ONE group (the cells the owner map assigns to {@code ctrl}). bottom/top/shape come from
+     * SAME-GROUP membership, so the model reflects the real multiblock: a face is capped where THIS group
+     * ends — even if a different tank/group sits against it — and windows tile only within this footprint.
+     */
+    private void refreshGroupFromOwner(Level level, java.util.Map<Long, long[]> owner, long ctrl) {
+        long[] ca = owner.get(ctrl);
+        if (ca == null)
+            return;
+        BlockPos ctrlPos = BlockPos.of(ctrl);
+        int width = (int) ca[1], height = (int) ca[2];
+        int minX = ctrlPos.getX(), minY = ctrlPos.getY(), minZ = ctrlPos.getZ();
+        int cap = width * width * height * CAP_PER_BLOCK;
+        FluidStack stored = FluidCarrierImpl.getStored(level, ctrlPos);
         double fill = (stored == null || stored.isEmpty() || cap <= 0) ? 0.0
                 : Math.min(1.0, stored.getAmount() / (double) cap);
-        double surface = fill * g.height; // in block rows from the bottom
+        double surface = fill * height;
         FluidType type = (stored == null || stored.isEmpty()) ? FluidType.EMPTY : stored.getType();
-        boolean win = isWindowed(level, g.controller);
+        boolean win = isWindowed(level, ctrlPos);
 
-        // Server-side fluid box (Create's renderFluidBox equivalent) at the controller.
         try {
-            FluidTankRender.update(level, g.controller, g.width, g.height, type, fill);
+            FluidTankRender.update(level, ctrlPos, width, height, type, fill);
         } catch (Throwable ignored) {
         }
 
-        // Re-scan to visit every member (scanGroup only tracked the controller); cheap, bounded by MAX_GROUP.
-        ArrayDeque<BlockPos> q = new ArrayDeque<>();
-        HashSet<Long> seen = new HashSet<>();
-        q.add(anyMember.immutable());
-        seen.add(anyMember.asLong());
-        while (!q.isEmpty()) {
-            BlockPos p = q.poll();
-            if (!isTank(level, p))
-                continue;
-            int k = p.getY() - g.minY; // vertical index, 0 = bottom row
-            double memberFill = Math.max(0.0, Math.min(1.0, surface - k)); // 0..1 within this row
+        for (java.util.Map.Entry<Long, long[]> e : owner.entrySet()) {
+            if (e.getValue()[0] != ctrl)
+                continue; // only THIS group's cells
+            BlockPos p = BlockPos.of(e.getKey());
+            int k = p.getY() - minY;
+            double memberFill = Math.max(0.0, Math.min(1.0, surface - k));
+            boolean bottom = !sameGroup(owner, p.below(), ctrl);
+            boolean top = !sameGroup(owner, p.above(), ctrl);
             dev.arubik.craftengine.property.TankShape shape = win
-                    ? windowShape(g.width, p.getX() - g.minX, p.getZ() - g.minZ)
+                    ? windowShape(width, p.getX() - minX, p.getZ() - minZ)
                     : dev.arubik.craftengine.property.TankShape.PLAIN;
-            applyMemberState(level, p, !isTank(level, p.below()), !isTank(level, p.above()), type, memberFill, shape);
-            for (Direction d : Direction.values()) {
-                BlockPos np = p.relative(d);
-                if (seen.add(np.asLong()) && isTank(level, np))
-                    q.add(np.immutable());
-            }
+            applyMemberState(level, p, bottom, top, type, memberFill, shape);
         }
+    }
+
+    private static boolean sameGroup(java.util.Map<Long, long[]> owner, BlockPos pos, long ctrl) {
+        long[] a = owner.get(pos.asLong());
+        return a != null && a[0] == ctrl;
     }
 
     /** Window shape for a member at footprint offset (xOff, zOff), Create's exact rule (setWindows). */
