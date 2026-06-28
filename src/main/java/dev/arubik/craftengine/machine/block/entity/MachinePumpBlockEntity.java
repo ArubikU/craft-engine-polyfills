@@ -268,6 +268,8 @@ public class MachinePumpBlockEntity extends AbstractMachineBlockEntity {
     protected void processTick(Level level) {
         if (level.isClientSide())
             return;
+        if (dev.arubik.craftengine.fluid.graph.FluidEngine.ENABLED)
+            return; // hydraulic engine owns fluid transport when enabled
 
         // Upgrades change rarely (player edits the slots): recompute on a 10-tick cadence instead of
         // every tick (avoids the per-tick slot reads / item-id round-trips). bumpOverclock recomputes

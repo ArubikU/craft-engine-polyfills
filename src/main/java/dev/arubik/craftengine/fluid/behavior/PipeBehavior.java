@@ -100,6 +100,8 @@ public class PipeBehavior extends ConnectedBlockBehavior implements EntityBlock,
     }
 
     private void tickPipe(CEWorld world, net.momirealms.craftengine.core.world.BlockPos cePos) {
+        if (dev.arubik.craftengine.fluid.graph.FluidEngine.ENABLED)
+            return; // hydraulic engine owns transport when enabled
         {
             Level level = (Level) world.world().minecraftWorld();
             if (level == null || level.isClientSide())

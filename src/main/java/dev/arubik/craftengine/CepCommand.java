@@ -163,6 +163,34 @@ public class CepCommand implements CommandExecutor, TabCompleter {
             sender.sendMessage("§bgas step§7: applied, §f" + moved + "§7 units moved (no gravity)");
             return true;
         });
+
+        // /cep fluid engine on — turn the always-on hydraulic engine ON and register the looked-at network.
+        cases.put(new ArgumentList("fluid^", "engine^", "on^"), (sender, parsed) -> {
+            if (sender instanceof Player player) {
+                Block tb = player.getTargetBlockExact(8);
+                if (tb != null) {
+                    net.minecraft.world.level.Level lvl = ((org.bukkit.craftbukkit.CraftWorld) tb.getWorld())
+                            .getHandle();
+                    net.minecraft.core.BlockPos p = new net.minecraft.core.BlockPos(tb.getX(), tb.getY(), tb.getZ());
+                    dev.arubik.craftengine.fluid.graph.FluidGraph g = dev.arubik.craftengine.fluid.graph.FluidGraphBuilder
+                            .build(lvl, p);
+                    for (dev.arubik.craftengine.fluid.graph.FluidNode node : g.nodes)
+                        dev.arubik.craftengine.fluid.graph.FluidEngine.registerSeed(node.pos);
+                    sender.sendMessage("§aregistered §f" + g.nodes.size() + "§a-node network");
+                }
+            }
+            dev.arubik.craftengine.fluid.graph.FluidEngine.ENABLED = true;
+            sender.sendMessage("§aFluidEngine ON§7 (old per-block transport suspended). seeds="
+                    + dev.arubik.craftengine.fluid.graph.FluidEngine.seedCount());
+            return true;
+        });
+
+        // /cep fluid engine off — back to the live per-block transport.
+        cases.put(new ArgumentList("fluid^", "engine^", "off^"), (sender, parsed) -> {
+            dev.arubik.craftengine.fluid.graph.FluidEngine.ENABLED = false;
+            sender.sendMessage("§cFluidEngine OFF§7 (per-block transport restored).");
+            return true;
+        });
     }
 
     private static String fmt(double d) {

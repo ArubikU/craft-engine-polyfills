@@ -32,6 +32,19 @@ public final class CraftEnginePolyfills extends JavaPlugin {
     public void onEnable() {
         PacketEvents.getAPI().init();
         ItemListener.register(this);
+        // Hydraulic engine driver (Phase 6): steps every registered fluid network each tick. No-op while
+        // FluidEngine.ENABLED is false (default), so the live per-block transport runs until toggled.
+        getServer().getScheduler().runTaskTimer(this, () -> {
+            if (!dev.arubik.craftengine.fluid.graph.FluidEngine.ENABLED)
+                return;
+            for (org.bukkit.World w : getServer().getWorlds()) {
+                try {
+                    dev.arubik.craftengine.fluid.graph.FluidEngine
+                            .tickAll(((org.bukkit.craftbukkit.CraftWorld) w).getHandle());
+                } catch (Throwable ignored) {
+                }
+            }
+        }, 1L, 1L);
         dev.arubik.craftengine.block.behavior.CrafterSlotStateListener.register();
         CustomBlockData.registerListener(this);
         BlockContainer.ensureListenerRegistered(this);
