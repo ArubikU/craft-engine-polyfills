@@ -148,8 +148,7 @@ public class BlockBehaviors {
                                 dev.arubik.craftengine.crafting.WorkbenchBehavior.FACTORY_KEY,
                                 dev.arubik.craftengine.crafting.WorkbenchBehavior.FACTORY);
 
-                // Populate sample crafting recipes (3x3 shaped/shapeless + multi-output).
-                dev.arubik.craftengine.crafting.CraftingSamples.registerDefaults();
+                // (CraftingSamples deleted — real recipes are CraftEngine-native YAML on the vanilla table.)
                 // Populate sample workbench station recipes (3x2 + tool + condition/executor).
                 dev.arubik.craftengine.crafting.WorkbenchSamples.registerDefaults();
         }
