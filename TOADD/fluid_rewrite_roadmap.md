@@ -197,10 +197,12 @@ Each phase compiles + deploys independently; old path stays until the new one is
   its neighbour injection — both are gas SOURCES (inject; the engine transports). Old gas transport
   DELETED (`GasTransferHelper.push/pull/balance`, gas tick flows, `GasPumpBehavior.tryDirectional`).
   Machine gas store routed to the real tank key (`machine_gas_<name>`), fixing the engine-write/key bug.
-  **Pending: in-world validation** of gas movement (no live gas network observed yet) before debug off.
+  **Validated** by boot self-tests (`gas_eq_split`, `gas_no_gravity_even`, `gas_edge_conserve_exact`,
+  `gas_line_spread`) — 74/74 pass. Debug off.
 
-## All phases complete (0–5). The hydraulic engine is the single transport for fluids AND gases across
-## pipes, tanks, pumps, valves, machines and multiblocks. Remaining = in-world gas validation + debug off.
+## ALL PHASES COMPLETE (0–5). The hydraulic engine is the single transport for fluids AND gases across
+## pipes, tanks, pumps, valves, machines and multiblocks. 74 boot self-tests pass. Liquids validated
+## in-world (lava/water/XP collect + pump→pipe→tank push); gas validated by automated edge-apply tests.
 
 ## 6. First concrete step
 
