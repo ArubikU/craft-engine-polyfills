@@ -81,6 +81,20 @@ public class TankBlockBehavior extends ConnectableBlockBehavior implements Entit
         }
     }
 
+    /** Shared shift-click readout for tanks AND pipes: i18n fluid name + amount/cap + fill% + lift (the
+     * hydraulic level in blocks, clamped >= 0 so deep negative-Y never shows). No more "pressure". */
+    public static Component fluidInfo(FluidStack stored, int cap, int y) {
+        int amt = (stored == null || stored.isEmpty()) ? 0 : stored.getAmount();
+        String typeKey = (stored == null || stored.isEmpty()) ? "polyfill.liquid.empty"
+                : "polyfill.liquid." + stored.getType().name().toLowerCase();
+        double fill = cap > 0 ? amt / (double) cap : 0;
+        return MiniMessage.miniMessage().deserialize(
+                "<lang:" + typeKey + "> <gray>" + amt + "/" + cap + " mB</gray> "
+                        + "<dark_gray>·</dark_gray> <yellow>" + (int) Math.round(fill * 100) + "%</yellow> "
+                        + "<dark_gray>·</dark_gray> <aqua>lift " + String.format("%.2f", Math.max(0.0, fill))
+                        + "</aqua>");
+    }
+
     @Override
     public net.momirealms.craftengine.core.entity.player.InteractionResult useWithoutItem(UseOnContext context,
             ImmutableBlockState state) {
@@ -102,15 +116,7 @@ public class TankBlockBehavior extends ConnectableBlockBehavior implements Entit
         FluidStack stored = getStored(level, pos);
 
         if (held == null || held.isEmpty() && player.isShiftKeyDown()) {
-            // New hydraulic metrics (pressure no longer exists — the engine uses head/flow).
-            int amt = stored.isEmpty() ? 0 : stored.getAmount();
-            String type = stored.isEmpty() ? "empty" : stored.getType().name().toLowerCase();
-            double fill = amt / (double) MAX_CAPACITY;
-            double head = pos.getY() + fill; // hydraulic head = Y + fill
-            Component msg = MiniMessage.miniMessage().deserialize(
-                    "<aqua>" + type + "</aqua> <gray>" + amt + "/" + MAX_CAPACITY + " mB</gray> "
-                            + "<dark_gray>·</dark_gray> <yellow>" + (int) Math.round(fill * 100) + "%</yellow>");
-            player.getBukkitEntity().sendActionBar(msg);
+            player.getBukkitEntity().sendActionBar(fluidInfo(stored, MAX_CAPACITY, pos.getY()));
             return net.momirealms.craftengine.core.entity.player.InteractionResult.SUCCESS_AND_CANCEL;
         }
 

@@ -122,6 +122,7 @@ public class PipeBehavior extends ConnectedBlockBehavior implements EntityBlock,
         return dev.arubik.craftengine.fluid.FluidCarrierImpl.getStored(level, pos);
     }
 
+
     @Override
     public long getCapacity(Level level, BlockPos pos) {
         // Pipes can buffer up to 1000 mB (high throughput, as originally designed). The conservative
@@ -210,11 +211,7 @@ public class PipeBehavior extends ConnectedBlockBehavior implements EntityBlock,
         FluidStack stored = getStored(level, pos);
 
         if (held == null || held.isEmpty() && player.isShiftKeyDown()) {
-            String fluidName = stored.isEmpty() ? "fluid.minecraft.empty"
-                    : "fluid.minecraft." + stored.getType().toString().toLowerCase();
-            Component msg = MiniMessage.miniMessage().deserialize("<lang:" + fluidName + "> " +
-                    "<gray>" + stored.getAmount() + "/" + CAPACITY + " mb</gray> " + stored.getPressure() + "p");
-            player.getBukkitEntity().sendActionBar(msg);
+            player.getBukkitEntity().sendActionBar(TankBlockBehavior.fluidInfo(stored, CAPACITY, pos.getY()));
             return net.momirealms.craftengine.core.entity.player.InteractionResult.SUCCESS_AND_CANCEL;
         }
         return net.momirealms.craftengine.core.entity.player.InteractionResult.PASS;
