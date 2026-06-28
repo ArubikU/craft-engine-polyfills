@@ -157,8 +157,19 @@ public class FluidBlockTankBehavior extends ConnectableBlockBehavior implements 
                 if (h > 0)
                     prisms.add(new long[] { (long) w * w * h, c.asLong(), w, h });
             }
-        // greedy: claim the largest prism whose cells are all still free.
-        prisms.sort((a, b) -> Long.compare(b[0], a[0]));
+        // greedy: claim the largest prism whose cells are all still free. The tie-break MUST be deterministic
+        // (amount desc, then wider, then min controller pos) so every member solves the SAME partition —
+        // otherwise different blocks pick different overlapping prisms and the multi renders inconsistently
+        // (e.g. a leftover pair drawn as half of a 2×2).
+        prisms.sort((a, b) -> {
+            int c = Long.compare(b[0], a[0]);
+            if (c != 0)
+                return c;
+            c = Long.compare(b[2], a[2]); // prefer the wider footprint
+            if (c != 0)
+                return c;
+            return Long.compare(a[1], b[1]); // then the lowest controller position
+        });
         HashSet<Long> assigned = new HashSet<>();
         java.util.Map<Long, long[]> owner = new java.util.HashMap<>(); // cell -> [ctrlPos, w, h]
         for (long[] pr : prisms) {
