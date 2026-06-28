@@ -281,8 +281,16 @@ public class MachinePumpBlockEntity extends AbstractMachineBlockEntity {
             dev.arubik.craftengine.fluid.graph.FluidEngine.registerSeed(getMachinePos());
         } catch (Throwable ignored) {
         }
-        if (dev.arubik.craftengine.fluid.graph.FluidEngine.ENABLED)
-            return; // hydraulic engine owns fluid transport when enabled
+        if (dev.arubik.craftengine.fluid.graph.FluidEngine.ENABLED) {
+            // The engine distributes between CE blocks, but world fluids (a lava/water source on the IN
+            // face) are OUTSIDE the graph. The pump still INJECTS them into its own tank here; the engine
+            // then moves that into the network.
+            try {
+                pumpWorldIntake(level);
+            } catch (Throwable ignored) {
+            }
+            return;
+        }
 
         // Upgrades change rarely (player edits the slots): recompute on a 10-tick cadence instead of
         // every tick (avoids the per-tick slot reads / item-id round-trips). bumpOverclock recomputes
@@ -507,6 +515,53 @@ public class MachinePumpBlockEntity extends AbstractMachineBlockEntity {
     @Override
     protected String getMachineId() {
         return "machine_pump";
+    }
+
+    /**
+     * Inject WORLD fluid on the IN face into the pump's tank (the engine handles CE-block transport, but
+     * world sources are outside the graph). Lava is collected over a radius and the drained blocks become
+     * stone (anti-lag); water/cauldrons via the point collector. Fuel-driven, capped by tank room.
+     */
+    private void pumpWorldIntake(Level level) {
+        BlockPos pos = getMachinePos();
+        Direction facing = getFacing(level);
+        ConnectableBlockBehavior cbb = getBlockBehavior(ConnectableBlockBehavior.class);
+        DirectionType type = cbb != null ? cbb.getDirectionType() : DirectionType.FULL;
+        Direction worldDown = type == DirectionType.FULL
+                ? DirectionalIOHelper.getVerticalWorldDirection(RelativeDirection.DOWN, facing)
+                : DirectionalIOHelper.getHorizontalWorldDirection(RelativeDirection.DOWN,
+                        DirectionalIOHelper.toHorizontalDirection(facing));
+        int cap = effCapacity();
+        FluidStack stored = storedFluid();
+        if (!stored.isEmpty() && stored.getAmount() >= cap)
+            return;
+        BlockPos target = pos.relative(worldDown);
+        FluidType base = FluidType.getFluidTypeAt(target, level);
+        net.minecraft.world.level.block.state.BlockState tb = level.getBlockState(target);
+        boolean cauldron = tb.is(net.minecraft.world.level.block.Blocks.WATER_CAULDRON)
+                || tb.is(net.minecraft.world.level.block.Blocks.LAVA_CAULDRON);
+        if (base == FluidType.EMPTY && !cauldron)
+            return; // IN is a CE carrier (engine handles it) or empty
+        // Fuel-driven, like the old pump.
+        if (burnTime <= 0) {
+            if (hasFuel(level)) {
+                consumeFuel(level);
+                setChanged();
+            } else {
+                return;
+            }
+        }
+        burnTime--;
+        int free = cap - (stored.isEmpty() ? 0 : stored.getAmount());
+        int fullBlock = base != FluidType.EMPTY ? base.mbPerFullBlock() : 1000;
+        int extract = Math.min(free, Math.max(effExtractPerTick(), fullBlock));
+        FluidStack collected = (base == FluidType.LAVA && !cauldron)
+                ? FluidType.collectArea(target, level, 32, extract, stored.getType())
+                : FluidType.collectAt(target, level, extract, stored.getType());
+        if (!collected.isEmpty() && (stored.isEmpty() || stored.getType() == collected.getType())) {
+            int newAmt = (stored.isEmpty() ? 0 : stored.getAmount()) + collected.getAmount();
+            writeTank(level, new FluidStack(collected.getType(), Math.min(cap, newAmt), effPressure()));
+        }
     }
 
     // ---------------- bars (main-page fluid readout) ----------------
