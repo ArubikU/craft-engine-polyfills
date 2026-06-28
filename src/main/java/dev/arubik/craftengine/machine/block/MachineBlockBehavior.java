@@ -237,6 +237,21 @@ public class MachineBlockBehavior extends ConnectableBlockBehavior
         return 0;
     }
 
+    @Override
+    public long getGasCapacity(Level level, BlockPos pos) {
+        BlockEntity be = BukkitBlockEntityTypes.getIfLoaded(level, pos);
+        if (be != null && be.controller instanceof AbstractMachineBlockEntity machine)
+            return machine.getGasCapacityForCarrier();
+        return GasCarrier.super.getGasCapacity(level, pos);
+    }
+
+    @Override
+    public void setStoredGasRaw(Level level, BlockPos pos, GasStack stack) {
+        BlockEntity be = BukkitBlockEntityTypes.getIfLoaded(level, pos);
+        if (be != null && be.controller instanceof AbstractMachineBlockEntity machine)
+            machine.setStoredGasRaw(level, stack);
+    }
+
     public static class Factory implements BlockBehaviorFactory<BlockBehavior> {
         @Override
         public BlockBehavior create(BlockDefinition block, ConfigSection arguments) {

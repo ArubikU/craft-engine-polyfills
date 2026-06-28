@@ -96,6 +96,11 @@ public class GasPipeBehavior extends ConnectedBlockBehavior implements EntityBlo
             if (level == null || level.isClientSide())
                 return;
             BlockPos mcPos = BlockPos.of(cePos.asLong());
+            if (dev.arubik.craftengine.fluid.graph.GasEngine.ENABLED) {
+                // Hydraulic engine owns gas transport; register this network and let the engine equalize.
+                dev.arubik.craftengine.fluid.graph.GasEngine.registerSeed(mcPos);
+                return;
+            }
             // No pressure model: gas simply equalizes across the whole pipe network and flows to
             // wherever it can. Each tick, on ALL six faces:
             //   1) PUMP   — pull from adjacent SOURCES (tanks/machines that OUTPUT gas; pipes skipped)

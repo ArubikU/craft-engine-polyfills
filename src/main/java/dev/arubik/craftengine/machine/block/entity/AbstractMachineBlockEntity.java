@@ -781,6 +781,23 @@ public abstract class AbstractMachineBlockEntity extends PersistentWorldlyBlockE
         return dev.arubik.craftengine.gas.GasStack.EMPTY;
     }
 
+    public long getGasCapacityForCarrier() {
+        return gasTanks.isEmpty() ? 0L : gasTanks.get(0).getCapacity();
+    }
+
+    /** Engine apply hook for gas: write the buffer tank's CustomBlockData store (the SAME key the gas tank
+     * reads — gasTanks.get(0).getKey(), NOT the GasCarrier default GasKeys.GAS, which is a different key and
+     * would make the engine's writes invisible to the machine, the gas equivalent of the fluid pump bug). */
+    public void setStoredGasRaw(Level level, dev.arubik.craftengine.gas.GasStack stack) {
+        if (gasTanks.isEmpty())
+            return;
+        dev.arubik.craftengine.util.TypedKey<dev.arubik.craftengine.gas.GasStack> key = gasTanks.get(0).getKey();
+        if (stack == null || stack.isEmpty())
+            dev.arubik.craftengine.util.CustomBlockData.from(level, getMachinePos()).remove(key);
+        else
+            dev.arubik.craftengine.util.CustomBlockData.from(level, getMachinePos()).set(key, stack);
+    }
+
     /** True if {@code bukkit} is a valid fuel for THIS machine (per its registered fuel recipes). */
     public boolean isFuelItem(org.bukkit.inventory.ItemStack bukkit) {
         if (bukkit == null || bukkit.getType().isAir())

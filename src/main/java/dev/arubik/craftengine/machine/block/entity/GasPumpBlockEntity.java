@@ -245,6 +245,13 @@ public class GasPumpBlockEntity extends AbstractMachineBlockEntity {
             return;
 
         BlockPos pos = getMachinePos();
+        // Register this gas network with the hydraulic engine (it expands via BFS to pipes/tanks). The
+        // vein intake below STILL runs under the engine (it fills this pump's tank from gas source blocks);
+        // only the manual OUT push is handed to the engine.
+        try {
+            dev.arubik.craftengine.fluid.graph.GasEngine.registerSeed(pos);
+        } catch (Throwable ignored) {
+        }
         GasTank tank = gasTanks.get(0);
         int cap = effCapacity();
         int pressure = effPressure();
@@ -266,11 +273,12 @@ public class GasPumpBlockEntity extends AbstractMachineBlockEntity {
         if (ioCd > 0)
             set(GasKeys.GAS_IO_COOLDOWN, ioCd - 1);
 
-        // PUSH EVERY TICK: the buffer drains into a connected gas carrier above.
+        // PUSH EVERY TICK: the buffer drains into a connected gas carrier above. Under the engine this is
+        // the engine's job (it moves pump->pipe->tank), so the manual push is disabled when ENABLED.
         GasStack stored = tank.getGas(level, pos);
         if (stored == null)
             stored = GasStack.EMPTY;
-        if (ioCd <= 0 && !stored.isEmpty()) {
+        if (!dev.arubik.craftengine.fluid.graph.GasEngine.ENABLED && ioCd <= 0 && !stored.isEmpty()) {
             BlockPos up = pos.relative(worldUp);
             GasCarrier carrier = GasTransferHelper.getCarrier(level, up).orElse(null);
             if (carrier != null) {

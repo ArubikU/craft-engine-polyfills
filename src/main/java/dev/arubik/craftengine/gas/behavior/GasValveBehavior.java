@@ -62,6 +62,10 @@ public class GasValveBehavior extends GasPumpBehavior {
             if (level == null || level.isClientSide())
                 return;
             BlockPos pos = BlockPos.of(cePos.asLong());
+            if (dev.arubik.craftengine.fluid.graph.GasEngine.ENABLED) {
+                dev.arubik.craftengine.fluid.graph.GasEngine.registerSeed(pos);
+                return; // engine owns gas transport; valve is a graph edge (open/closed gates it)
+            }
             if (!isOpen(level, pos))
                 return;
             PersistentBlockEntity pbe = getBE(level, pos);

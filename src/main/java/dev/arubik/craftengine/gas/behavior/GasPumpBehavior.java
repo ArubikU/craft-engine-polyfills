@@ -135,6 +135,10 @@ public class GasPumpBehavior extends ConnectableBlockBehavior
             if (level == null || level.isClientSide())
                 return;
             BlockPos pos = BlockPos.of(cePos.asLong());
+            if (dev.arubik.craftengine.fluid.graph.GasEngine.ENABLED) {
+                dev.arubik.craftengine.fluid.graph.GasEngine.registerSeed(pos);
+                return; // engine owns gas transport (legacy block-pump push is inert under it)
+            }
             PersistentBlockEntity pbe = getBE(level, pos);
             if (pbe != null) {
                 GasStack s = pbe.getOrDefault(GasKeys.GAS, GasStack.EMPTY);

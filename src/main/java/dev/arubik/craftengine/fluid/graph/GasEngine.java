@@ -87,7 +87,7 @@ public final class GasEngine {
                 if (!isCarrier(level, np) || !connected(level, pos, np, dir))
                     continue;
                 int bi = idx(index, positions, np);
-                if (ai < bi)
+                if (ai < bi && !closedValve(level, pos) && !closedValve(level, np))
                     edgePairs.add(new int[] { ai, bi });
                 if (visited.add(np.asLong()))
                     queue.add(np.immutable());
@@ -138,36 +138,52 @@ public final class GasEngine {
             GasStack cur = carriers[i] != null ? carriers[i].getStoredGas(level, positions.get(i)) : null;
             old[i] = (cur == null || cur.isEmpty()) ? 0 : cur.getAmount();
         }
-        // Conservative scaled apply (same as FluidEngine): keep Σ flows = 0 within [0,cap].
-        double s = 1.0;
-        for (int i = 0; i < n; i++) {
-            double d = r.netInflow[i];
-            if (d > 0) {
-                double room = caps[i] - old[i];
-                if (d > room && d > 1e-9)
-                    s = Math.min(s, room / d);
-            } else if (d < 0) {
-                double avail = old[i];
-                if (-d > avail && -d > 1e-9)
-                    s = Math.min(s, avail / -d);
+        if (DEBUG && n <= 6) {
+            StringBuilder sb = new StringBuilder("[GasStepEntry] n=" + n + " netType=" + netType + " edges="
+                    + branches.length);
+            for (int i = 0; i < n; i++)
+                sb.append(" #").append(i).append("(").append(carriers[i] == null ? "NULL"
+                        : carriers[i].getClass().getSimpleName()).append(" ").append(old[i]).append("/")
+                        .append(caps[i]).append(")");
+            System.out.println(sb);
+        }
+        // EDGE-BASED conservative apply (mirror FluidEngine): move each edge's solved flow capped by the
+        // source's amount AND the destination's room. Mass-conserving; no global-scale deadlock. Gas has no
+        // gravity (head = fill only), so this equalizes fill across the network = gas-pressure equalization.
+        int[] amt = old.clone();
+        int moved = 0;
+        for (int e = 0; e < branches.length; e++) {
+            double q = r.flows[e];
+            int from, to;
+            if (q > 1e-9) {
+                from = branches[e].a;
+                to = branches[e].b;
+            } else if (q < -1e-9) {
+                from = branches[e].b;
+                to = branches[e].a;
+            } else {
+                continue;
+            }
+            int want = (int) Math.round(Math.abs(q));
+            int room = (int) caps[to] - amt[to];
+            int m = Math.min(want, Math.min(amt[from], room));
+            if (m > 0) {
+                amt[from] -= m;
+                amt[to] += m;
+                moved += m;
             }
         }
-        s = Math.max(0.0, s);
-
-        int moved = 0;
         for (int i = 0; i < n; i++) {
             GasCarrier c = carriers[i];
-            if (c == null)
+            if (c == null || amt[i] == old[i])
                 continue;
-            int delta = (int) Math.round(r.netInflow[i] * s);
-            if (delta == 0)
-                continue;
-            int newAmt = Math.max(0, Math.min((int) caps[i], old[i] + delta));
-            moved += Math.abs(newAmt - old[i]);
-            c.setStoredGasRaw(level, positions.get(i), newAmt <= 0 ? GasStack.EMPTY : new GasStack(netType, newAmt, 0));
+            c.setStoredGasRaw(level, positions.get(i),
+                    amt[i] <= 0 ? GasStack.EMPTY : new GasStack(netType, amt[i], 0));
         }
-        return moved / 2;
+        return moved;
     }
+
+    public static volatile boolean DEBUG = true;
 
     // ---------------- helpers ----------------
 
@@ -183,6 +199,17 @@ public final class GasEngine {
 
     private static boolean isCarrier(Level level, BlockPos pos) {
         return GasTransferHelper.getCarrier(level, pos).isPresent();
+    }
+
+    /** A CLOSED gas valve blocks flow on every incident edge (gas has no gravity, so open = bidirectional). */
+    private static boolean closedValve(Level level, BlockPos pos) {
+        ImmutableBlockState state = BlockStateUtils.getOptionalCustomBlockState(level.getBlockState(pos))
+                .orElse(null);
+        if (state == null || state.isEmpty())
+            return false;
+        dev.arubik.craftengine.gas.behavior.GasValveBehavior v = state.behavior()
+                .getFirst(dev.arubik.craftengine.gas.behavior.GasValveBehavior.class);
+        return v != null && !v.isOpen(level, pos);
     }
 
     private static ConnectableBlockBehavior connectable(Level level, BlockPos pos) {
