@@ -57,64 +57,7 @@ public class ValveBehavior extends PumpBehavior {
 
     @Override
     protected void tickPump(CEWorld world, net.momirealms.craftengine.core.world.BlockPos cePos) {
-        if (dev.arubik.craftengine.fluid.graph.FluidEngine.ENABLED)
-            return; // hydraulic engine owns transport; the valve is a graph edge now
-        {
-            net.minecraft.world.level.Level level = (net.minecraft.world.level.Level) world.world().minecraftWorld();
-            if (level == null || level.isClientSide())
-                return;
-            BlockPos pos = BlockPos.of(cePos.asLong());
-            if (!isOpen(level, pos))
-                return;
-            PersistentBlockEntity pbe = getBE(level, pos);
-            if (pbe != null) {
-                FluidStack s = pbe.getOrDefault(FluidKeys.FLUID, new FluidStack(FluidType.EMPTY, 0, 0));
-                if (!s.isEmpty()) {
-                    pbe.set(FluidKeys.FLUID, new FluidStack(s.getType(), s.getAmount(), s.getPressure() + 2));
-                }
-            }
-
-            // El valve usa la misma lógica que el pump pero solo si está abierto
-            // 1. PUMP (succionar) - intentar succionar fluidos del mundo o carriers
-            if (tryDirectional(level, pos, Direction.DOWN, PumpAction.PUMP))
-                return;
-            for (var d : new Direction[] {
-                    Direction.NORTH,
-                    Direction.SOUTH,
-                    Direction.EAST,
-                    Direction.WEST }) {
-                if (tryDirectional(level, pos, d, PumpAction.PUMP))
-                    return;
-            }
-
-            // 2. PUSH (empujar) - solo si tenemos fluido almacenado
-            FluidStack stored = getStored(level, pos);
-            if (!stored.isEmpty()) {
-                // Determine direction based on valve orientation or logic
-                // Defaulting to existing logic: DOWN first, then horizontal, then UP
-
-                // DOWN
-                if (FluidTransferHelper.push(level, pos, Direction.DOWN,
-                        TRANSFER_PER_TICK, 0))
-                    return;
-
-                // HORIZONTAL
-                for (var d : new Direction[] {
-                        Direction.NORTH,
-                        Direction.SOUTH,
-                        Direction.EAST,
-                        Direction.WEST }) {
-                    if (FluidTransferHelper.push(level, pos, d, TRANSFER_PER_TICK, 0))
-                        return;
-                }
-
-                // UP (requires pressure)
-                if (stored.getPressure() > 0) {
-                    FluidTransferHelper.push(level, pos, Direction.UP,
-                            TRANSFER_PER_TICK, 1);
-                }
-            }
-        }
+        // OLD valve transport DELETED — the engine drives flow; the valve is a one-way graph edge.
     }
 
     // Añadir helper de toggle (MVP sencillo)

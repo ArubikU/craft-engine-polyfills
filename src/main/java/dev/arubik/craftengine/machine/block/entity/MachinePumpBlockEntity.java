@@ -540,6 +540,10 @@ public class MachinePumpBlockEntity extends AbstractMachineBlockEntity {
         net.minecraft.world.level.block.state.BlockState tb = level.getBlockState(target);
         boolean cauldron = tb.is(net.minecraft.world.level.block.Blocks.WATER_CAULDRON)
                 || tb.is(net.minecraft.world.level.block.Blocks.LAVA_CAULDRON);
+        if (dev.arubik.craftengine.fluid.graph.FluidEngine.DEBUG)
+            System.out.println("[PumpIntake] worldDown(IN)=" + worldDown + " target=" + target.toShortString()
+                    + " base=" + base + " block=" + tb.getBlock() + " cauldron=" + cauldron + " stored="
+                    + storedFluid().getAmount() + " burnTime=" + burnTime + " hasFuel=" + hasFuel(level));
         if (base == FluidType.EMPTY && !cauldron)
             return; // IN is a CE carrier (engine handles it) or empty
         // Fuel-driven, like the old pump.
@@ -555,9 +559,12 @@ public class MachinePumpBlockEntity extends AbstractMachineBlockEntity {
         int free = cap - (stored.isEmpty() ? 0 : stored.getAmount());
         int fullBlock = base != FluidType.EMPTY ? base.mbPerFullBlock() : 1000;
         int extract = Math.min(free, Math.max(effExtractPerTick(), fullBlock));
+        // When the tank is empty, tell the collector WHAT to pull (the world block's type) — passing the
+        // empty tank's type made collectArea/collectAt find nothing (the "lava not pumped" bug).
+        FluidType want = stored.isEmpty() ? base : stored.getType();
         FluidStack collected = (base == FluidType.LAVA && !cauldron)
-                ? FluidType.collectArea(target, level, 32, extract, stored.getType())
-                : FluidType.collectAt(target, level, extract, stored.getType());
+                ? FluidType.collectArea(target, level, 32, extract, want)
+                : FluidType.collectAt(target, level, extract, want);
         if (!collected.isEmpty() && (stored.isEmpty() || stored.getType() == collected.getType())) {
             int newAmt = (stored.isEmpty() ? 0 : stored.getAmount()) + collected.getAmount();
             writeTank(level, new FluidStack(collected.getType(), Math.min(cap, newAmt), effPressure()));

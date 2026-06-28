@@ -53,9 +53,12 @@ public final class FluidGraphBuilder {
                 int bIdx = graph.addNode(makeNode(level, np));
                 // de-dup: only add the edge once per unordered pair (when aIdx < bIdx). emf oriented pos→np.
                 if (aIdx < bIdx) {
-                    int crestY = Math.max(pos.getY(), np.getY());
-                    double emf = pumpEmf(level, pos, np);
-                    graph.addEdge(new FluidEdge(aIdx, bIdx, DEFAULT_CONDUCTANCE, crestY, emf, 0));
+                    int valve = valveCheck(level, pos, np); // -2 = closed valve -> no edge
+                    if (valve != -2) {
+                        int crestY = Math.max(pos.getY(), np.getY());
+                        double emf = pumpEmf(level, pos, np);
+                        graph.addEdge(new FluidEdge(aIdx, bIdx, DEFAULT_CONDUCTANCE, crestY, emf, valve));
+                    }
                 }
                 if (visited.add(np.asLong()))
                     queue.add(np.immutable());
@@ -77,6 +80,27 @@ public final class FluidGraphBuilder {
         return be != null
                 && be.controller instanceof dev.arubik.craftengine.machine.block.entity.MachinePumpBlockEntity m ? m
                         : null;
+    }
+
+    /**
+     * Valve constraint on the a→b edge: returns -2 if a closed valve is on either end (no flow), else the
+     * one-way sign — a valve passes fluid only DOWNWARD (gravity), so the higher end may push to the lower.
+     * 0 = no valve / horizontal valve (bidirectional).
+     */
+    private static int valveCheck(Level level, BlockPos a, BlockPos b) {
+        dev.arubik.craftengine.fluid.behavior.ValveBehavior va = behaviorAt(level, a,
+                dev.arubik.craftengine.fluid.behavior.ValveBehavior.class);
+        dev.arubik.craftengine.fluid.behavior.ValveBehavior vb = behaviorAt(level, b,
+                dev.arubik.craftengine.fluid.behavior.ValveBehavior.class);
+        if (va == null && vb == null)
+            return 0;
+        if ((va != null && !va.isOpen(level, a)) || (vb != null && !vb.isOpen(level, b)))
+            return -2; // closed -> no flow
+        if (a.getY() > b.getY())
+            return +1; // a higher -> a→b (downward) only
+        if (b.getY() > a.getY())
+            return -1; // b higher -> b→a (downward) only
+        return 0; // same Y -> bidirectional
     }
 
     /** emf (blocks of lift) on the edge a→b: a pump drives its OUT face. Positive = a→b. */

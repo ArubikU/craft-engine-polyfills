@@ -29,64 +29,6 @@ public class FluidTransferHelper {
      * @param pressureDecay Pressure lost per transfer
      * @return Amount actually transferred (mb)
      */
-    public static int transfer(Level level, BlockPos from, BlockPos to, int maxAmount, int pressureDecay) {
-        if (level == null || from == null || to == null || maxAmount <= 0)
-            return 0;
-
-        Optional<FluidCarrier> sourceCarrier = getCarrier(level, from);
-        Optional<FluidCarrier> targetCarrier = getCarrier(level, to);
-
-        if (!sourceCarrier.isPresent() || !targetCarrier.isPresent())
-            return 0;
-
-        final int[] transferred = { 0 };
-
-        Direction direction = getDirection(from, to);
-        net.minecraft.core.Direction mcDirection = direction;
-
-        sourceCarrier.get().extractFluid(level, from, maxAmount, extracted -> {
-            if (extracted.isEmpty())
-                return;
-
-            // Apply pressure decay
-            FluidStack decayed = new FluidStack(
-                    extracted.getType(),
-                    extracted.getAmount(),
-                    Math.max(0, extracted.getPressure() - pressureDecay));
-
-            int inserted = targetCarrier.get().insertFluid(level, to, decayed, mcDirection.getOpposite());
-            transferred[0] = inserted;
-
-            // Return unused fluid to source
-            int unused = extracted.getAmount() - inserted;
-            if (unused > 0) {
-                FluidStack remaining = new FluidStack(
-                        extracted.getType(),
-                        unused,
-                        extracted.getPressure());
-                sourceCarrier.get().insertFluid(level, from, remaining, mcDirection); // Re-insert unused to the same
-                                                                                      // side
-                                                                                      // we extracted from? No, usually
-                                                                                      // "internal".
-                // But insertFluid needs a side. If we extracted from 'direction', we put back
-                // to 'direction'?
-                // actually re-insertion usually happens "internally".
-                // But the interface demands a direction.
-                // If we extracted from North face, and couldn't send it all, we put it back
-                // "into" the North face?
-                // Or we pretend it never left? Use null? Or use direction.
-                // Using 'direction' implies we are pushing it BACK into the block from the
-                // outside face?
-                // No, we want to return it to storage.
-                // FluidCarrierImpl.insertFluid(..., direction) -> adds to tanks accessible from
-                // direction.
-                // If we extracted from direction, then tanks were accessible from direction.
-                // So re-inserting to direction is safe.
-            }
-        }, mcDirection);
-
-        return transferred[0];
-    }
 
     /**
      * Attempt to push fluid in a specific direction.
@@ -98,11 +40,6 @@ public class FluidTransferHelper {
      * @param pressureDecay Pressure decay per jump
      * @return true if any fluid was transferred
      */
-    public static boolean push(Level level, BlockPos from, Direction dir, int amount, int pressureDecay) {
-        BlockPos target = offset(from, dir);
-        int transferred = transfer(level, from, target, amount, pressureDecay);
-        return transferred > 0;
-    }
 
     /**
      * Attempt to pull fluid from a specific direction.
@@ -114,11 +51,6 @@ public class FluidTransferHelper {
      * @param pressureDecay Pressure decay per jump
      * @return true if any fluid was transferred
      */
-    public static boolean pull(Level level, BlockPos to, Direction dir, int amount, int pressureDecay) {
-        BlockPos source = offset(to, dir);
-        int transferred = transfer(level, source, to, amount, pressureDecay);
-        return transferred > 0;
-    }
 
     /**
      * Balance fluid between two carriers (homogenization).
@@ -131,45 +63,6 @@ public class FluidTransferHelper {
      *                    micro-transfers)
      * @return true if fluid was balanced
      */
-    public static boolean balance(Level level, BlockPos posA, BlockPos posB, int maxTransfer, int deadZone) {
-        Optional<FluidCarrier> carrierA = getCarrier(level, posA);
-        Optional<FluidCarrier> carrierB = getCarrier(level, posB);
-
-        if (!carrierA.isPresent() || !carrierB.isPresent())
-            return false;
-
-        FluidStack a = carrierA.get().getStored(level, posA);
-        FluidStack b = carrierB.get().getStored(level, posB);
-
-        // Type compatibility check
-        if (!a.isEmpty() && !b.isEmpty() && a.getType() != b.getType())
-            return false;
-
-        if (a.isEmpty() && b.isEmpty())
-            return false;
-
-        int amountA = a.isEmpty() ? 0 : a.getAmount();
-        int amountB = b.isEmpty() ? 0 : b.getAmount();
-        int diff = amountA - amountB;
-
-        // Dead zone check
-        if (Math.abs(diff) < deadZone)
-            return false;
-
-        if (diff == 0)
-            return false;
-
-        // Calculate transfer amount (tend toward equilibrium)
-        int move = Math.min(maxTransfer, Math.abs(diff) / 2 + (Math.abs(diff) % 2));
-
-        if (diff > 0) {
-            // A → B
-            return transfer(level, posA, posB, move, 0) > 0;
-        } else {
-            // B → A
-            return transfer(level, posB, posA, move, 0) > 0;
-        }
-    }
 
     /**
      * Get FluidCarrier behavior from a block.

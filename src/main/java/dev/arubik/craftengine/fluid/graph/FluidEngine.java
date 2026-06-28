@@ -43,7 +43,7 @@ public final class FluidEngine {
         return SEEDS.size();
     }
 
-    public static volatile boolean DEBUG = false;
+    public static volatile boolean DEBUG = true;
     private static int dbgTick = 0;
 
     /** Step every distinct registered network once (dedups blocks shared across seeds). */
@@ -56,6 +56,12 @@ public final class FluidEngine {
             if (handled.contains(key))
                 continue;
             BlockPos seed = BlockPos.of(key);
+            // PERF: only drive networks whose chunk is actually loaded/ticking — skip (and forget) seeds in
+            // unloaded chunks so we don't scan the whole world every tick.
+            if (!level.isLoaded(seed)) {
+                SEEDS.remove(key);
+                continue;
+            }
             FluidGraph g;
             try {
                 g = FluidGraphBuilder.build(level, seed);
@@ -104,6 +110,19 @@ public final class FluidEngine {
                 netType = s.getType();
                 break;
             }
+        }
+        if (DEBUG && n <= 6) {
+            StringBuilder sb = new StringBuilder("[FluidStepEntry] n=" + n + " netType=" + netType + " edges="
+                    + graph.edges.size());
+            for (int i = 0; i < n; i++) {
+                FluidNode fn = graph.nodes.get(i);
+                FluidStack s = carriers[i] != null ? carriers[i].getStored(level, fn.pos) : null;
+                sb.append(" #").append(i).append("(").append(fn.kind).append(" carrier=")
+                        .append(carriers[i] == null ? "NULL" : carriers[i].getClass().getSimpleName())
+                        .append(" stored=").append(s == null || s.isEmpty() ? "0" : s.getType() + ":" + s.getAmount())
+                        .append(")");
+            }
+            System.out.println(sb);
         }
         if (netType == FluidType.EMPTY)
             return 0;
