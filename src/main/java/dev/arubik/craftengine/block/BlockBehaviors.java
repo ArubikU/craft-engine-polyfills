@@ -25,6 +25,7 @@ public class BlockBehaviors {
         public static final Key POLYFILL_PUMP_BLOCK = Key.of("polyfills:pump_block");
         public static final Key POLYFILL_VALVE_BLOCK = Key.of("polyfills:valve_block");
         public static final Key POLYFILL_FLUID_TANK_BLOCK = Key.of("polyfills:fluid_tank_block");
+        public static final Key POLYFILL_FLUID_BLOCK_TANK = Key.of("polyfills:fluid_block_tank");
         public static final Key POLYFILL_SPIKE_BLOCK = Key.of("polyfills:spike_block");
 
         public static final Key POLYFILL_GAS_PUMP_BLOCK = Key.of("polyfills:gas_pump_block");
