@@ -62,6 +62,8 @@ public class BlockBehaviors {
                                 dev.arubik.craftengine.machine.block.behavior.GasPumpBehavior.FACTORY);
                 RegistryUtils.registerBlockBehavior(POLYFILL_VALVE_BLOCK, ValveBehavior.FACTORY);
                 RegistryUtils.registerBlockBehavior(POLYFILL_FLUID_TANK_BLOCK, TankBlockBehavior.FACTORY);
+                RegistryUtils.registerBlockBehavior(POLYFILL_FLUID_BLOCK_TANK,
+                                dev.arubik.craftengine.fluid.behavior.FluidBlockTankBehavior.FACTORY);
                 RegistryUtils.registerBlockBehavior(POLYFILL_SPIKE_BLOCK, SpikeBlockBehavior.FACTORY);
 
                 // Gas Blocks

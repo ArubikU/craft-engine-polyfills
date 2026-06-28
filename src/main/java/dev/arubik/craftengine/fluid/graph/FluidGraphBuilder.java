@@ -38,13 +38,16 @@ public final class FluidGraphBuilder {
             return graph;
 
         Set<Long> visited = new HashSet<>();
+        Set<Long> edgeKeys = new HashSet<>(); // dedup edges after multiblock-tank group collapse
         ArrayDeque<BlockPos> queue = new ArrayDeque<>();
         queue.add(start.immutable());
         visited.add(start.asLong());
 
         while (!queue.isEmpty() && visited.size() <= MAX_BLOCKS) {
             BlockPos pos = queue.poll();
-            int aIdx = graph.addNode(makeNode(level, pos));
+            // A fluid_block_tank group collapses to ONE node (its controller), so a pipe on any member
+            // accesses the whole tank and the engine never N×-counts the shared fluid.
+            int aIdx = graph.addNode(makeNode(level, canonical(level, pos)));
 
             boolean dbgPump = dev.arubik.craftengine.fluid.graph.FluidEngine.DEBUG
                     && pumpAt(level, pos) != null;
@@ -59,9 +62,10 @@ public final class FluidGraphBuilder {
                 }
                 if (!isCarrier(level, np) || !connected(level, pos, np, dir))
                     continue;
-                int bIdx = graph.addNode(makeNode(level, np));
-                // de-dup: only add the edge once per unordered pair (when aIdx < bIdx). emf oriented pos→np.
-                if (aIdx < bIdx) {
+                int bIdx = graph.addNode(makeNode(level, canonical(level, np)));
+                // de-dup: one edge per unordered pair (aIdx < bIdx) AND skip internal tank-group edges
+                // (aIdx == bIdx) + duplicate external edges collapsed from several members (edgeKeys).
+                if (aIdx < bIdx && edgeKeys.add(((long) aIdx << 32) | (bIdx & 0xffffffffL))) {
                     int valve = valveCheck(level, pos, np); // -2 = closed valve -> no edge
                     if (valve != -2) {
                         int crestY = Math.max(pos.getY(), np.getY());
@@ -121,6 +125,13 @@ public final class FluidGraphBuilder {
         if (pb != null && a.equals(b.relative(pb.graphOutFace(level))))
             return -pb.graphPressure(); // b's OUT points at a -> b drives b→a = -(a→b)
         return 0.0;
+    }
+
+    /** Collapse a multiblock-tank member to its group controller; everything else is its own node. */
+    private static BlockPos canonical(Level level, BlockPos pos) {
+        dev.arubik.craftengine.fluid.behavior.FluidBlockTankBehavior tank = behaviorAt(level, pos,
+                dev.arubik.craftengine.fluid.behavior.FluidBlockTankBehavior.class);
+        return tank != null ? tank.controllerOf(level, pos) : pos;
     }
 
     private static <T> T behaviorAt(Level level, BlockPos pos, Class<T> type) {
