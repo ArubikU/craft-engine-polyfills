@@ -80,12 +80,6 @@ public class GasTransferHelper {
      * @param pressureDecay Pressure decay per jump
      * @return true if any gas was transferred
      */
-    public static boolean push(Level level, BlockPos from, Direction dir, int amount, int pressureDecay) {
-        BlockPos target = offset(from, dir);
-        int transferred = transfer(level, from, target, amount, pressureDecay);
-
-        return transferred > 0;
-    }
 
     /**
      * Attempt to pull gas from a specific direction.
@@ -97,11 +91,6 @@ public class GasTransferHelper {
      * @param pressureDecay Pressure decay per jump
      * @return true if any gas was transferred
      */
-    public static boolean pull(Level level, BlockPos to, Direction dir, int amount, int pressureDecay) {
-        BlockPos source = offset(to, dir);
-        int transferred = transfer(level, source, to, amount, pressureDecay);
-        return transferred > 0;
-    }
 
     /**
      * Balance gas between two carriers (homogenization).
@@ -114,45 +103,6 @@ public class GasTransferHelper {
      *                    micro-transfers)
      * @return true if gas was balanced
      */
-    public static boolean balance(Level level, BlockPos posA, BlockPos posB, int maxTransfer, int deadZone) {
-        Optional<GasCarrier> carrierA = getCarrier(level, posA);
-        Optional<GasCarrier> carrierB = getCarrier(level, posB);
-
-        if (!carrierA.isPresent() || !carrierB.isPresent())
-            return false;
-
-        GasStack a = carrierA.get().getStoredGas(level, posA);
-        GasStack b = carrierB.get().getStoredGas(level, posB);
-
-        // Type compatibility check
-        if (!a.isEmpty() && !b.isEmpty() && a.getType() != b.getType())
-            return false;
-
-        if (a.isEmpty() && b.isEmpty())
-            return false;
-
-        int amountA = a.isEmpty() ? 0 : a.getAmount();
-        int amountB = b.isEmpty() ? 0 : b.getAmount();
-        int diff = amountA - amountB;
-
-        // Dead zone check
-        if (Math.abs(diff) < deadZone)
-            return false;
-
-        if (diff == 0)
-            return false;
-
-        // Calculate transfer amount (tend toward equilibrium)
-        int move = Math.min(maxTransfer, Math.abs(diff) / 2 + (Math.abs(diff) % 2));
-
-        if (diff > 0) {
-            // A -> B
-            return transfer(level, posA, posB, move, 0) > 0;
-        } else {
-            // B -> A
-            return transfer(level, posB, posA, move, 0) > 0;
-        }
-    }
 
     /**
      * Get GasCarrier behavior from a block.

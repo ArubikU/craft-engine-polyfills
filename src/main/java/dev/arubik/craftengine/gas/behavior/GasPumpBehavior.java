@@ -130,145 +130,15 @@ public class GasPumpBehavior extends ConnectableBlockBehavior
     }
 
     protected void tickPump(CEWorld world, net.momirealms.craftengine.core.world.BlockPos cePos) {
-        {
-            net.minecraft.world.level.Level level = (net.minecraft.world.level.Level) world.world().minecraftWorld();
-            if (level == null || level.isClientSide())
-                return;
-            BlockPos pos = BlockPos.of(cePos.asLong());
-            if (dev.arubik.craftengine.fluid.graph.GasEngine.ENABLED) {
-                dev.arubik.craftengine.fluid.graph.GasEngine.registerSeed(pos);
-                return; // engine owns gas transport (legacy block-pump push is inert under it)
-            }
-            PersistentBlockEntity pbe = getBE(level, pos);
-            if (pbe != null) {
-                GasStack s = pbe.getOrDefault(GasKeys.GAS, GasStack.EMPTY);
-                if (!s.isEmpty()) {
-                    pbe.set(GasKeys.GAS, new GasStack(s.getType(), s.getAmount(), PRESSURE_BOOST));
-                }
-            }
-            GasStack stored = getStoredGas(level, pos);
-
-            int blockCd = 0, ioCd = 0;
-            // Keys in PumpBehavior were FLUID_BLOCK_COOLDOWN etc. mapping to generic
-            // string/int keys
-            // Using ad-hoc strings for now to match logic
-            if (pbe != null) {
-                blockCd = pbe.getOrDefault(GasKeys.GAS_BLOCK_COOLDOWN, 0);
-                ioCd = pbe.getOrDefault(GasKeys.GAS_IO_COOLDOWN, 0);
-                if (blockCd > 0)
-                    pbe.set(GasKeys.GAS_BLOCK_COOLDOWN, blockCd - 1);
-                if (ioCd > 0)
-                    pbe.set(GasKeys.GAS_IO_COOLDOWN, ioCd - 1);
-            }
-
-            // Gas Physics:
-            // Pumping (Inputs): Gas rises, so try to suck from BELOW (DOWN) by default, or
-            // inputs.
-            // Pushing (Outputs): Gas rises, so push UP naturally. Pressure allows pushing
-            // DOWN.
-
-            // PUMP from logic (Suction)
-            if (blockCd <= 0 && stored.getAmount() < CAPACITY) {
-                // Try sucking from DOWN (below) first as gas rises into us
-                tryDirectional(level, pos, Direction.DOWN, PumpAction.PUMP);
-                // Also could try horizontal inputs?
-            }
-
-            // PUSH to logic (Ejection)
-            if (ioCd <= 0 && !stored.isEmpty()) {
-                // Try pushing UP (natural rise)
-                tryDirectional(level, pos, Direction.UP, PumpAction.PUSH);
-                // Or other directions if configured
-            }
-        }
-    }
-
-    public enum PumpAction {
-        PUMP,
-        PUSH
+        // OLD per-block gas pump transport DELETED (roadmap Phase 5). The hydraulic engine (GasEngine) is
+        // the sole gas transport; this block just registers its network so the engine equalizes it.
+        net.minecraft.world.level.Level level = (net.minecraft.world.level.Level) world.world().minecraftWorld();
+        if (level == null || level.isClientSide())
+            return;
+        dev.arubik.craftengine.fluid.graph.GasEngine.registerSeed(BlockPos.of(cePos.asLong()));
     }
 
     // Reuse logic structure but adapted for Gas
-    protected boolean tryDirectional(Level level, BlockPos from, Direction dir, PumpAction action) {
-        BlockPos target = offset(from, dir);
-        try {
-            net.minecraft.world.level.block.state.BlockState bs = level.getBlockState(from);
-            dir = redirectDirection(dir, bs); // Handles rotateable blocks
-            target = offset(from, dir);
-        } catch (Throwable ignored) {
-        }
-
-        if (action == PumpAction.PUMP) {
-            // Cannot collect area/blocks for gas usually? Unless gas blocks exist. Assume
-            // carriers for now.
-            // ...
-
-            var opt = net.momirealms.craftengine.bukkit.util.BlockStateUtils
-                    .getOptionalCustomBlockState(level.getBlockState(target));
-            GasCarrier carrier = opt.map(cs -> cs.behavior() instanceof GasCarrier fc ? fc : null).orElse(null);
-
-            Direction fromTarget = dev.arubik.craftengine.util.Utils.oppositeDirection(dir);
-
-            if (carrier != null
-                    && carrier.getAccessMode() == dev.arubik.craftengine.util.TransferAccessMode.ANYONE_CAN_TAKE) {
-                GasStack stored = getStoredGas(level, from);
-                int free = Math.max(0, CAPACITY - stored.getAmount());
-                if (free > 0) {
-                    int move = Math.min(TRANSFER_PER_TICK, free);
-                    final GasStack[] extracted = { null };
-                    int actualExtracted = carrier.extractGas(level, target, move, f -> extracted[0] = f, fromTarget);
-                    if (actualExtracted > 0 && extracted[0] != null) {
-                        int accepted = insertGas(level, from, extracted[0], null);
-                        if (accepted < actualExtracted) {
-                            GasStack remainder = new GasStack(extracted[0].getType(),
-                                    actualExtracted - accepted, extracted[0].getPressure());
-                            carrier.insertGas(level, target, remainder, fromTarget);
-                        }
-                        return accepted > 0;
-                    }
-                }
-            }
-
-        } else if (action == PumpAction.PUSH) {
-            GasStack stored = getStoredGas(level, from);
-            if (stored.isEmpty())
-                return false;
-
-            // Determine pressure physics
-            int pressureModifier = 0;
-            if (dir == Direction.DOWN) {
-                if (stored.getPressure() <= 0)
-                    return false; // Needs pressure to go DOWN
-                pressureModifier = 1; // Losses pressure going DOWN
-            } else if (dir == Direction.UP) {
-                pressureModifier = 0; // Free to go UP
-            } else {
-                pressureModifier = 0;
-            }
-
-            // Try pushing to carrier
-            boolean transferred = GasTransferHelper.push(level, from, dir, TRANSFER_PER_TICK, pressureModifier);
-            if (transferred) {
-                return true;
-            }
-
-            // If not transferred, check if we should VENT
-            // Venting happens if target is Air and we are pushing
-
-            if (level.getBlockState(target).isAir()) {
-                // Vent gas
-                int amount = Math.min(TRANSFER_PER_TICK, stored.getAmount());
-                if (stored.getType().vent(level, target, amount)) {
-                    // Remove vented gas
-                    extractGas(level, from, amount, null, dir);
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        return false;
-    }
 
     protected PersistentBlockEntity getBE(Level level, BlockPos pos) {
         BlockEntity be = BukkitBlockEntityTypes.getIfLoaded(level, pos);

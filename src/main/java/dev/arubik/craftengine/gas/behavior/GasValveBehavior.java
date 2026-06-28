@@ -57,62 +57,12 @@ public class GasValveBehavior extends GasPumpBehavior {
 
     @Override
     protected void tickPump(CEWorld world, net.momirealms.craftengine.core.world.BlockPos cePos) {
-        {
-            net.minecraft.world.level.Level level = (net.minecraft.world.level.Level) world.world().minecraftWorld();
-            if (level == null || level.isClientSide())
-                return;
-            BlockPos pos = BlockPos.of(cePos.asLong());
-            if (dev.arubik.craftengine.fluid.graph.GasEngine.ENABLED) {
-                dev.arubik.craftengine.fluid.graph.GasEngine.registerSeed(pos);
-                return; // engine owns gas transport; valve is a graph edge (open/closed gates it)
-            }
-            if (!isOpen(level, pos))
-                return;
-            PersistentBlockEntity pbe = getBE(level, pos);
-            if (pbe != null) {
-                GasStack s = pbe.getOrDefault(GasKeys.GAS, GasStack.EMPTY);
-                if (!s.isEmpty()) {
-                    pbe.set(GasKeys.GAS, new GasStack(s.getType(), s.getAmount(), s.getPressure() + 2));
-                }
-            }
-
-            // Gas Physics:
-            // 1. PUMP (succionar)
-            if (tryDirectional(level, pos, Direction.DOWN, PumpAction.PUMP))
-                return;
-
-            for (var d : new Direction[] {
-                    Direction.NORTH,
-                    Direction.SOUTH,
-                    Direction.EAST,
-                    Direction.WEST }) {
-                if (tryDirectional(level, pos, d, PumpAction.PUMP))
-                    return;
-            }
-
-            // 2. PUSH (empujar)
-            GasStack stored = getStoredGas(level, pos);
-            if (!stored.isEmpty()) {
-                // Try pushing UP (natural rise)
-                if (tryDirectional(level, pos, Direction.UP, PumpAction.PUSH))
-                    return;
-
-                // HORIZONTAL
-                for (var d : new Direction[] {
-                        Direction.NORTH,
-                        Direction.SOUTH,
-                        Direction.EAST,
-                        Direction.WEST }) {
-                    if (tryDirectional(level, pos, d, PumpAction.PUSH))
-                        return;
-                }
-
-                // DOWN (requires pressure)
-                if (stored.getPressure() > 0) {
-                    tryDirectional(level, pos, Direction.DOWN, PumpAction.PUSH);
-                }
-            }
-        }
+        // OLD gas valve transport DELETED (roadmap Phase 5). The engine drives gas flow; this valve is a
+        // graph edge (closed = no edge). It just registers its network so the engine equalizes it.
+        net.minecraft.world.level.Level level = (net.minecraft.world.level.Level) world.world().minecraftWorld();
+        if (level == null || level.isClientSide())
+            return;
+        dev.arubik.craftengine.fluid.graph.GasEngine.registerSeed(BlockPos.of(cePos.asLong()));
     }
 
     public void toggle(Level level, BlockPos pos) {

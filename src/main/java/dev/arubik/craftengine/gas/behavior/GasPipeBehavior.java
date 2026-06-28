@@ -91,48 +91,12 @@ public class GasPipeBehavior extends ConnectedBlockBehavior implements EntityBlo
     }
 
     private void tickPipe(CEWorld world, net.momirealms.craftengine.core.world.BlockPos cePos) {
-        {
-            Level level = (Level) world.world().minecraftWorld();
-            if (level == null || level.isClientSide())
-                return;
-            BlockPos mcPos = BlockPos.of(cePos.asLong());
-            if (dev.arubik.craftengine.fluid.graph.GasEngine.ENABLED) {
-                // Hydraulic engine owns gas transport; register this network and let the engine equalize.
-                dev.arubik.craftengine.fluid.graph.GasEngine.registerSeed(mcPos);
-                return;
-            }
-            // No pressure model: gas simply equalizes across the whole pipe network and flows to
-            // wherever it can. Each tick, on ALL six faces:
-            //   1) PUMP   — pull from adjacent SOURCES (tanks/machines that OUTPUT gas; pipes skipped)
-            //   2) PUSH   — push into adjacent CONSUMERS (machines that ACCEPT gas; pipes skipped)
-            //   3) HOMOGENIZE — equalize with adjacent PIPES (all 6 dirs, so it spreads up, down,
-            //      sideways and around corners — no more gas stuck unable to descend).
-            Direction[] all = { Direction.UP, Direction.DOWN, Direction.NORTH, Direction.SOUTH,
-                    Direction.EAST, Direction.WEST };
-            // Resolve THIS pipe's connection state ONCE and build a connected-face mask, instead of
-            // re-reading getBlockState(self) inside every tryTransfer x 18. Skip unconnected faces
-            // entirely (an unconnected face has no gas neighbor, so all 3 actions would no-op anyway).
-            net.momirealms.craftengine.core.block.ImmutableBlockState self =
-                    net.momirealms.craftengine.bukkit.util.BlockStateUtils
-                            .getOptionalCustomBlockState(level.getBlockState(mcPos)).orElse(null);
-            if (self == null)
-                return;
-            int mask = 0;
-            for (int i = 0; i < 6; i++)
-                if (isFaceConnected(self, all[i]))
-                    mask |= (1 << i);
-            if (mask == 0)
-                return;
-            for (int i = 0; i < 6; i++)
-                if ((mask & (1 << i)) != 0)
-                    tryTransfer(level, mcPos, all[i], TransferAction.PUMP);
-            for (int i = 0; i < 6; i++)
-                if ((mask & (1 << i)) != 0)
-                    tryTransfer(level, mcPos, all[i], TransferAction.PUSH);
-            for (int i = 0; i < 6; i++)
-                if ((mask & (1 << i)) != 0)
-                    tryTransfer(level, mcPos, all[i], TransferAction.HOMOGENIZE);
-        }
+        // OLD per-block gas pipe transport DELETED (roadmap Phase 5). The hydraulic engine (GasEngine) is
+        // the single gas transport; this pipe just registers its network so the engine equalizes it.
+        Level level = (Level) world.world().minecraftWorld();
+        if (level == null || level.isClientSide())
+            return;
+        dev.arubik.craftengine.fluid.graph.GasEngine.registerSeed(BlockPos.of(cePos.asLong()));
     }
 
     protected PersistentBlockEntity getBE(Level level, BlockPos pos) {
