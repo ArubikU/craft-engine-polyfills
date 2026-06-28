@@ -31,21 +31,21 @@ public final class FluidTankRender {
     private FluidTankRender() {
     }
 
-    /** controller pos (asLong) -> display entity UUID. */
-    private static final Map<Long, UUID> BOXES = new ConcurrentHashMap<>();
+    /** controller pos (asLong) -> per-layer display entity UUIDs (bottom..top). */
+    private static final Map<Long, java.util.List<UUID>> BOXES = new ConcurrentHashMap<>();
 
-    // Insets (block units): side wall + top/bottom margins so the fluid sits inside the frame/window.
+    // Side wall inset (block units) so the fluid sits inside the frame/window.
     private static final float HULL = 1f / 16f + 1f / 128f;
-    private static final float BOTTOM_MARGIN = 1f / 8f;
-    private static final float TOP_MARGIN = 1f / 8f;
 
     /**
-     * Spawn/update/remove the fluid display for a tank group.
+     * Spawn/update/remove the fluid display for a tank group — ONE display PER BLOCK LAYER, STACKED (not a
+     * single stretched box). Each layer shows the level model matching how full that layer is, at its own
+     * block, so the texture is never stretched vertically and the column fills bottom-up.
      *
-     * @param controller min-corner block of the group
+     * @param controller min-corner (bottom) block of the group
      * @param width      footprint side (1..3)
      * @param height     group height in blocks
-     * @param type       fluid type (EMPTY removes the display)
+     * @param type       fluid type (EMPTY removes everything)
      * @param fill       0..1 fill fraction of the whole group
      */
     public static void update(Level level, BlockPos controller, int width, int height, FluidType type, double fill) {
@@ -53,56 +53,74 @@ public final class FluidTankRender {
             return;
         org.bukkit.World world = server.getWorld();
         long key = controller.asLong();
+        java.util.List<UUID> displays = BOXES.computeIfAbsent(key, k -> new java.util.ArrayList<>());
 
         if (type == FluidType.EMPTY || fill <= 0.0) {
             remove(world, key);
             return;
         }
 
-        ItemStack item = levelItem(type, fill);
-        if (item == null) {
-            remove(world, key);
-            return;
-        }
-
-        // The level model already encodes the surface height (~fill of one block); scaling Y by the group
-        // height makes the column ~fill*height tall. Sides inset by HULL so it shows through the window.
+        double fluidBlocks = fill * height; // total fluid column height in blocks
         float innerW = Math.max(0.01f, width - 2 * HULL);
-        float innerH = Math.max(0.01f, height - BOTTOM_MARGIN - TOP_MARGIN);
-        Location loc = new Location(world, controller.getX(), controller.getY(), controller.getZ());
-        Transformation t = new Transformation(
-                new Vector3f(HULL, BOTTOM_MARGIN, HULL),
-                new Quaternionf(),
-                new Vector3f(innerW, innerH, innerW),
-                new Quaternionf());
-
-        Entity existing = world.getEntity(BOXES.getOrDefault(key, new UUID(0, 0)));
-        ItemDisplay box = existing instanceof ItemDisplay d && d.isValid() ? d : null;
-        if (box == null) {
-            box = world.spawn(loc, ItemDisplay.class, e -> {
-                e.addScoreboardTag("cml_fluidbox");
-                e.setItemStack(item);
-                e.setBrightness(new org.bukkit.entity.Display.Brightness(15, 15));
-                e.setPersistent(true);
-                e.setTransformation(t);
-            });
-            BOXES.put(key, box.getUniqueId());
-        } else {
-            box.setItemStack(item);
-            box.teleport(loc);
-            box.setTransformation(t);
+        int layerIdx = 0;
+        for (int y = 0; y < height; y++) {
+            double layerFill = Math.max(0.0, Math.min(1.0, fluidBlocks - y)); // 0..1 within this block layer
+            if (layerFill <= 0.001)
+                break; // no fluid above here
+            ItemStack item = levelItem(type, layerFill);
+            if (item == null)
+                continue;
+            // The level model already has height ~layerFill of ONE block — NO vertical scale (no stretch).
+            Location loc = new Location(world, controller.getX(), controller.getY() + y, controller.getZ());
+            Transformation t = new Transformation(
+                    new Vector3f(HULL, 0f, HULL),
+                    new Quaternionf(),
+                    new Vector3f(innerW, 1f, innerW),
+                    new Quaternionf());
+            ItemDisplay box = layerIdx < displays.size() ? validDisplay(world, displays.get(layerIdx)) : null;
+            if (box == null) {
+                ItemStack fi = item;
+                box = world.spawn(loc, ItemDisplay.class, e -> {
+                    e.addScoreboardTag("cml_fluidbox");
+                    e.setItemStack(fi);
+                    e.setBrightness(new org.bukkit.entity.Display.Brightness(15, 15));
+                    e.setPersistent(true);
+                    e.setTransformation(t);
+                });
+                if (layerIdx < displays.size())
+                    displays.set(layerIdx, box.getUniqueId());
+                else
+                    displays.add(box.getUniqueId());
+            } else {
+                box.setItemStack(item);
+                box.teleport(loc);
+                box.setTransformation(t);
+            }
+            layerIdx++;
+        }
+        // Remove surplus layer displays (fluid level dropped).
+        for (int i = displays.size() - 1; i >= layerIdx; i--) {
+            UUID id = displays.remove(i);
+            Entity e = id != null ? world.getEntity(id) : null;
+            if (e != null)
+                e.remove();
         }
     }
 
-    /** Build the level item (cml:fluidlvl_&lt;type&gt;_&lt;0..15&gt;) for this fill fraction. */
-    private static ItemStack levelItem(FluidType type, double fill) {
+    private static ItemDisplay validDisplay(org.bukkit.World world, UUID id) {
+        Entity e = id != null ? world.getEntity(id) : null;
+        return e instanceof ItemDisplay d && d.isValid() ? d : null;
+    }
+
+    /** Build the level item (cml:fluidlvl_&lt;type&gt;_&lt;0..15&gt;) for this layer's fill fraction. */
+    private static ItemStack levelItem(FluidType type, double layerFill) {
         String tn = switch (type) {
             case WATER, MILK, POWDER_SNOW -> "water";
             case LAVA, HONEY, SLIME -> "lava";
             case EXPERIENCE -> "xp";
             default -> "water";
         };
-        int lvl = Math.max(0, Math.min(15, (int) Math.round(fill * 15)));
+        int lvl = Math.max(0, Math.min(15, (int) Math.round(layerFill * 15)));
         try {
             var d = CraftEngineItems.byId(Key.of("cml", "fluidlvl_" + tn + "_" + lvl));
             return d != null ? d.buildBukkitItem() : null;
@@ -111,14 +129,15 @@ public final class FluidTankRender {
         }
     }
 
-    /** Remove the group's display (block broken / group emptied). */
+    /** Remove ALL of the group's layer displays (block broken / group emptied). */
     public static void remove(org.bukkit.World world, long controllerKey) {
-        UUID id = BOXES.remove(controllerKey);
-        if (id != null && world != null) {
-            Entity e = world.getEntity(id);
-            if (e != null)
-                e.remove();
-        }
+        java.util.List<UUID> ids = BOXES.remove(controllerKey);
+        if (ids != null && world != null)
+            for (UUID id : ids) {
+                Entity e = id != null ? world.getEntity(id) : null;
+                if (e != null)
+                    e.remove();
+            }
     }
 
     public static void remove(Level level, BlockPos controller) {
