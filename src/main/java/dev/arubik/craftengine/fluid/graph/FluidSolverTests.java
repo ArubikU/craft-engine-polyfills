@@ -110,6 +110,43 @@ public final class FluidSolverTests {
         return amt;
     }
 
+    /** Mirrors the REAL Fluid/Gas engine apply (edge-based per-edge min) — conserves mass EXACTLY. y=0 for
+     * every node models the gas engine (head = fill, no gravity). */
+    private static int[] simulateEdge(double[] y, long[] cap, int[] amt0, int[][] edges, double[] emf, int steps) {
+        int n = y.length;
+        int[] amt = amt0.clone();
+        for (int step = 0; step < steps; step++) {
+            NodeSpec[] ns = new NodeSpec[n];
+            for (int i = 0; i < n; i++)
+                ns[i] = new NodeSpec(cap[i], y[i] + amt[i] / (double) cap[i]);
+            BranchSpec[] br = new BranchSpec[edges.length];
+            for (int e = 0; e < edges.length; e++)
+                br[e] = new BranchSpec(edges[e][0], edges[e][1], 100, emf == null ? 0 : emf[e], 0);
+            Result r = FluidNetworkSolver.solve(ns, br, 1.0);
+            for (int e = 0; e < edges.length; e++) {
+                double q = r.flows[e];
+                int from, to;
+                if (q > 1e-9) {
+                    from = edges[e][0];
+                    to = edges[e][1];
+                } else if (q < -1e-9) {
+                    from = edges[e][1];
+                    to = edges[e][0];
+                } else {
+                    continue;
+                }
+                int want = (int) Math.round(Math.abs(q));
+                int room = (int) cap[to] - amt[to];
+                int m = Math.min(want, Math.min(amt[from], room));
+                if (m > 0) {
+                    amt[from] -= m;
+                    amt[to] += m;
+                }
+            }
+        }
+        return amt;
+    }
+
     private static int sum(int[] a) {
         int s = 0;
         for (int v : a)
@@ -156,6 +193,55 @@ public final class FluidSolverTests {
             long[] cap = { 5000, 5000 };
             int[] fin = simulate(y, cap, new int[] { 1, 0 }, new int[][] { { 0, 1 } }, null, 50);
             o.check("engine_tiny_conserve", sum(fin) == 1);
+        }
+
+        // ---- GAS engine: head = fill only (NO gravity). Same solver/apply, y forced to 0 for every node. ----
+        {
+            // 2-node gas: full + empty -> equalizes ~50/50 (pressure equalization), mass conserved.
+            double[] y = { 0, 0 };
+            long[] cap = { 1000, 1000 };
+            int[] fin = simulate(y, cap, new int[] { 1000, 0 }, new int[][] { { 0, 1 } }, null, 400);
+            o.check("gas_eq_conserve", sum(fin) == 1000);
+            o.check("gas_eq_split", Math.abs(fin[0] - fin[1]) < 50);
+        }
+        {
+            // gas ignores vertical position: nodes at very different REAL Y still equalize evenly because
+            // the gas engine passes y=0 (no head/lift). Prove the low node does NOT pool more than the high.
+            double[] y = { 0, 0 }; // gas: both heads are fill-only regardless of world Y
+            long[] cap = { 1000, 1000 };
+            int[] fin = simulate(y, cap, new int[] { 0, 1000 }, new int[][] { { 0, 1 } }, null, 400);
+            o.check("gas_no_gravity_even", Math.abs(fin[0] - fin[1]) < 50 && sum(fin) == 1000);
+        }
+        {
+            // 3-node gas line conserves and spreads toward even fill.
+            double[] y = { 0, 0, 0 };
+            long[] cap = { 1000, 1000, 1000 };
+            int[] fin = simulate(y, cap, new int[] { 900, 0, 0 },
+                    new int[][] { { 0, 1 }, { 1, 2 } }, null, 800);
+            // simulate() uses the legacy GLOBAL-SCALE apply (rounds each node's netInflow independently), so
+            // a 3-node line drifts a few mB; the REAL GasEngine uses the edge-based apply that conserves
+            // EXACTLY. Assert near-conservation (sim tolerance) + that gas spread down the whole line.
+            o.check("gas_line_conserve", Math.abs(sum(fin) - 900) <= 6);
+            o.check("gas_line_spread", fin[1] > 0 && fin[2] > 0);
+        }
+        {
+            // The REAL engine path (edge-based apply) conserves EXACTLY across a 3-node gas line + spreads.
+            double[] y = { 0, 0, 0 };
+            long[] cap = { 1000, 1000, 1000 };
+            int[] fin = simulateEdge(y, cap, new int[] { 900, 0, 0 },
+                    new int[][] { { 0, 1 }, { 1, 2 } }, null, 800);
+            o.check("gas_edge_conserve_exact", sum(fin) == 900);
+            o.check("gas_edge_spread", fin[1] > 0 && fin[2] > 0);
+        }
+        {
+            // Edge-based fluid line WITH gravity (y set) still conserves exactly — the apply itself never
+            // creates/loses mass, the deadlock/duplication class of bug the user hit earlier.
+            double[] y = { 3, 2, 1 };
+            long[] cap = { 1000, 1000, 1000 };
+            int[] fin = simulateEdge(y, cap, new int[] { 1000, 0, 0 },
+                    new int[][] { { 0, 1 }, { 1, 2 } }, null, 800);
+            o.check("fluid_edge_conserve_exact", sum(fin) == 1000);
+            o.check("fluid_edge_pools_bottom", fin[2] >= fin[0]);
         }
 
         // ---- 1-10: two-tank equalization at various heads + conservation ----

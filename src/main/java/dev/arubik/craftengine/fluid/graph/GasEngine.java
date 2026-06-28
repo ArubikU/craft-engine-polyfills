@@ -183,7 +183,7 @@ public final class GasEngine {
         return moved;
     }
 
-    public static volatile boolean DEBUG = true;
+    public static volatile boolean DEBUG = false;
 
     // ---------------- helpers ----------------
 
