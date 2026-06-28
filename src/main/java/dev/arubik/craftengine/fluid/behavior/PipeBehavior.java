@@ -100,67 +100,8 @@ public class PipeBehavior extends ConnectedBlockBehavior implements EntityBlock,
     }
 
     private void tickPipe(CEWorld world, net.momirealms.craftengine.core.world.BlockPos cePos) {
-        if (dev.arubik.craftengine.fluid.graph.FluidEngine.ENABLED)
-            return; // hydraulic engine owns transport when enabled
-        {
-            Level level = (Level) world.world().minecraftWorld();
-            if (level == null || level.isClientSide())
-                return;
-            BlockPos mcPos = BlockPos.of(cePos.asLong());
-            FluidStack stored = getStored(level, mcPos);
-            if (PIPE_DBG && !stored.isEmpty() && System.currentTimeMillis() - lastPipeDbg > 1000) {
-                lastPipeDbg = System.currentTimeMillis();
-                dev.arubik.craftengine.CraftEnginePolyfills.log("[PipeDBG] @" + mcPos.getX() + "," + mcPos.getY()
-                        + "," + mcPos.getZ() + " " + stored.getType() + " amt=" + stored.getAmount()
-                        + " pressure=" + stored.getPressure());
-            }
-            if (stored.getPressure() <= 0) {
-                tryTransfer(level, mcPos, Direction.UP, TransferAction.PUMP);
-                stored = getStored(level, mcPos);
-                if (!stored.isEmpty()) {
-                    // Round-robin: empezar desde última dirección exitosa
-                    Direction[] pushDirs = { Direction.DOWN, Direction.NORTH, Direction.SOUTH, Direction.EAST,
-                            Direction.WEST };
-                    int startIdx = lastSuccessfulDirection.getOrDefault(mcPos.asLong(), 0);
-
-                    for (int i = 0; i < pushDirs.length; i++) {
-                        Direction dir = pushDirs[(startIdx + i) % pushDirs.length];
-                        if (tryTransfer(level, mcPos, dir, TransferAction.PUSH)) {
-                            lastSuccessfulDirection.put(mcPos.asLong(), (startIdx + i) % pushDirs.length);
-                            return;
-                        }
-                    }
-                }
-                // Homogenize HORIZONTALLY only. Vertical equalize would PULL fluid back UP out of the
-                // pipe below, fighting gravity (the bug: "homogeniza pero no baja"). Downward flow is the
-                // PUSH DOWN above (gravity); upward flow needs pressure (PUSH UP in the pressure branch).
-                Direction[] homogDirs = { Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST };
-                int startIdx = lastSuccessfulDirection.getOrDefault(mcPos.asLong(), 0) % homogDirs.length;
-
-                for (int i = 0; i < homogDirs.length; i++) {
-                    Direction dir = homogDirs[(startIdx + i) % homogDirs.length];
-                    if (tryTransfer(level, mcPos, dir, TransferAction.HOMOGENIZE)) {
-                        lastSuccessfulDirection.put(mcPos.asLong(), (startIdx + i) % homogDirs.length);
-                    }
-                }
-            } else {
-                if (tryTransfer(level, mcPos, Direction.UP, TransferAction.PUSH))
-                    return;
-
-                // Homogenize over ALL faces (vertical too) so a pressurized column fills evenly.
-                // NOTE: no more PUSH DOWN here — it was draining the upper pipes back down.
-                Direction[] homogDirs = { Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST,
-                        Direction.UP, Direction.DOWN };
-                int startIdx = lastSuccessfulDirection.getOrDefault(mcPos.asLong(), 0) % homogDirs.length;
-
-                for (int i = 0; i < homogDirs.length; i++) {
-                    Direction dir = homogDirs[(startIdx + i) % homogDirs.length];
-                    if (tryTransfer(level, mcPos, dir, TransferAction.HOMOGENIZE)) {
-                        lastSuccessfulDirection.put(mcPos.asLong(), (startIdx + i) % homogDirs.length);
-                    }
-                }
-            }
-        }
+        // OLD per-block pipe transport DELETED (roadmap Phase 4). The hydraulic engine (FluidEngine) is the
+        // single fluid transport system; pipes are driven as graph nodes. Pipe BEs no longer push/pull.
     }
 
     protected PersistentBlockEntity getBE(Level level, BlockPos pos) {

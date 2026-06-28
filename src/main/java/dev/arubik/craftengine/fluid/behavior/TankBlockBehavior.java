@@ -565,15 +565,8 @@ public class TankBlockBehavior extends ConnectableBlockBehavior implements Entit
                     .registerSeed((BlockPos) Utils.fromPos(cePos));
         } catch (Throwable ignored) {
         }
-        if (dev.arubik.craftengine.fluid.graph.FluidEngine.ENABLED)
-            return; // hydraulic engine owns transport when enabled
-        BlockPos mcPos = BlockPos.of(cePos.asLong());
-
-        // 1. Try to PUMP from UP
-        tryTransfer(level, mcPos, Direction.UP, true);
-
-        // 2. Try to PUSH to DOWN
-        tryTransfer(level, mcPos, Direction.DOWN, false);
+        // OLD per-block tank transport DELETED (roadmap Phase 4). The hydraulic engine (FluidEngine) is the
+        // single fluid transport system; this tick only registers the network (above) for the engine.
     }
 
     private void tryTransfer(Level level, BlockPos pos, Direction direction, boolean isPump) {
