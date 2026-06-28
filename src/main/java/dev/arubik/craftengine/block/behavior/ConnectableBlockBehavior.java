@@ -83,9 +83,17 @@ public class ConnectableBlockBehavior extends BukkitBlockBehavior {
      * @return true si esta cara puede conectarse
      */
     public boolean canConnectTo(Level level, BlockPos pos, net.minecraft.core.Direction direction) {
+        // Fast paths that skip the blockstate lookup + toLocalDirection (which dominated the gas-engine
+        // tick — for a property-less pipe it threw+caught an IllegalArgumentException on every call):
+        //   - connects on all 6 faces  -> any direction is fine.
+        //   - no connectable faces     -> never connects.
+        if (connectableFaces.size() >= 6)
+            return true;
+        if (connectableFaces.isEmpty())
+            return false;
         BlockState blockState = level.getBlockState(pos);
         Direction localDirection = toLocalDirection(direction, blockState);
-        return getConnectableFaces().contains(localDirection);
+        return connectableFaces.contains(localDirection);
     }
 
     /**
@@ -127,11 +135,13 @@ public class ConnectableBlockBehavior extends BukkitBlockBehavior {
         if (customState.owner().value() != this.block())
             return originalDirection;
 
-        // Explicit dispatch based on DirectionType
+        // Explicit dispatch based on DirectionType (null-guard before get() — see toLocalDirection note).
         if (getDirectionType() == DirectionType.FULL) {
+            if (verticalDirectionProperty == null)
+                return originalDirection;
             try {
                 net.momirealms.craftengine.core.util.Direction directionProperty = customState
-                        .get(verticalDirectionProperty);
+                        .getNullable(verticalDirectionProperty);
                 if (directionProperty != null) {
                     Direction mineDir = Direction.valueOf(directionProperty.name());
                     return dev.arubik.craftengine.multiblock.DirectionalIOHelper.getVerticalWorldDirection(
@@ -141,8 +151,11 @@ public class ConnectableBlockBehavior extends BukkitBlockBehavior {
             } catch (Exception ignored) {
             }
         } else {
+            if (horizontalDirectionProperty == null)
+                return originalDirection;
             try {
-                net.momirealms.craftengine.core.util.Direction directionProperty = customState.get(horizontalDirectionProperty);
+                net.momirealms.craftengine.core.util.Direction directionProperty = customState
+                        .getNullable(horizontalDirectionProperty);
                 if (directionProperty != null) {
                     return dev.arubik.craftengine.multiblock.DirectionalIOHelper.getHorizontalWorldDirection(
                             dev.arubik.craftengine.multiblock.DirectionalIOHelper.fromDirection(originalDirection),
@@ -182,11 +195,15 @@ public class ConnectableBlockBehavior extends BukkitBlockBehavior {
         if (customState.owner().value() != this.block())
             return worldDirection;
 
-        // Explicit dispatch based on DirectionType
+        // Explicit dispatch based on DirectionType. NOTE: guard the property for null BEFORE calling get()
+        // — get(null) throws IllegalArgumentException, and building that exception (stack trace) on every
+        // call for property-less blocks (pipes/tanks) was the single biggest server-thread cost.
         if (getDirectionType() == DirectionType.FULL) {
+            if (verticalDirectionProperty == null)
+                return worldDirection;
             try {
                 net.momirealms.craftengine.core.util.Direction directionProperty = customState
-                        .get(verticalDirectionProperty);
+                        .getNullable(verticalDirectionProperty);
                 if (directionProperty != null) {
                     Direction mineDir = Direction.valueOf(directionProperty.name());
                     return dev.arubik.craftengine.multiblock.DirectionalIOHelper.getVerticalLocalDirection(
@@ -196,8 +213,11 @@ public class ConnectableBlockBehavior extends BukkitBlockBehavior {
             } catch (Exception ignored) {
             }
         } else {
+            if (horizontalDirectionProperty == null)
+                return worldDirection;
             try {
-                net.momirealms.craftengine.core.util.Direction directionProperty = customState.get(horizontalDirectionProperty);
+                net.momirealms.craftengine.core.util.Direction directionProperty = customState
+                        .getNullable(horizontalDirectionProperty);
                 if (directionProperty != null) {
                     return dev.arubik.craftengine.multiblock.DirectionalIOHelper.getHorizontalLocalDirection(
                             worldDirection,

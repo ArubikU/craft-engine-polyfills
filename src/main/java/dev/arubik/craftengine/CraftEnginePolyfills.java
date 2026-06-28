@@ -57,7 +57,7 @@ public final class CraftEnginePolyfills extends JavaPlugin {
                 } catch (Throwable ignored) {
                 }
             }
-        }, 1L, 1L);
+        }, 1L, 3L); // every 3 ticks — fluid/gas equalize fine at ~7Hz, and the per-tick BFS rebuild is costly
         dev.arubik.craftengine.block.behavior.CrafterSlotStateListener.register();
         CustomBlockData.registerListener(this);
         BlockContainer.ensureListenerRegistered(this);

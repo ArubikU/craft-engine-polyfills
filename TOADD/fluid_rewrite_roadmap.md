@@ -197,12 +197,15 @@ Each phase compiles + deploys independently; old path stays until the new one is
   its neighbour injection — both are gas SOURCES (inject; the engine transports). Old gas transport
   DELETED (`GasTransferHelper.push/pull/balance`, gas tick flows, `GasPumpBehavior.tryDirectional`).
   Machine gas store routed to the real tank key (`machine_gas_<name>`), fixing the engine-write/key bug.
-  **Validated** by boot self-tests (`gas_eq_split`, `gas_no_gravity_even`, `gas_edge_conserve_exact`,
-  `gas_line_spread`) — 74/74 pass. Debug off.
+  Gas block connectivity fixed: `GasPipe/Tank/Pump` `connectableFaces` were empty/UP-DOWN-only so the BFS
+  built isolated nodes — set to all 6 faces (gas has no direction). **Validated in-world**: pump→pipe→fan
+  network forms (n=3) and nitrogen flows (pump drains, machine fills). Boot self-tests 74/74 pass. Debug off.
 
-## ALL PHASES COMPLETE (0–5). The hydraulic engine is the single transport for fluids AND gases across
-## pipes, tanks, pumps, valves, machines and multiblocks. 74 boot self-tests pass. Liquids validated
-## in-world (lava/water/XP collect + pump→pipe→tank push); gas validated by automated edge-apply tests.
+## ALL PHASES COMPLETE (0–5) — VALIDATED IN-WORLD. The hydraulic engine is the single transport for
+## fluids AND gases across pipes, tanks, pumps, valves, machines and multiblocks. 74 boot self-tests pass.
+## Liquids: lava/water/XP collect + pump→pipe→tank push verified live. Gas: pump→pipe→machine network
+## (n=3) with nitrogen flow verified live. NOTHING PENDING — later work (fan COOKING family, gas entity
+## effects) is NEW feature scope requested after the roadmap, not part of it.
 
 ## 6. First concrete step
 
