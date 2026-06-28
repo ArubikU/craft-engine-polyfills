@@ -64,24 +64,59 @@ public abstract class PersistentWorldlyBlockEntity extends PersistentBlockEntity
         Arrays.fill(this.inventory, ItemStack.EMPTY);
     }
 
+    private net.minecraft.core.HolderLookup.Provider registries() {
+        try {
+            Level l = getNMSLevel();
+            if (l != null)
+                return l.registryAccess();
+        } catch (Throwable ignored) {
+        }
+        return ((org.bukkit.craftbukkit.CraftServer) org.bukkit.Bukkit.getServer()).getServer().registryAccess();
+    }
+
     @Override
     public void saveCustomData(net.momirealms.craftengine.libraries.nbt.CompoundTag tag) {
-        // Persist the container slots into the PDC before the base writes it to the tag.
-        this.set(KEY_INVENTORY, dev.arubik.craftengine.util.ArrayItemStackWithSlot.from(this.inventory));
+        // Persist the container slots into the CraftEngine-native block-entity NBT (the `tag`) via
+        // ItemStack.CODEC, NOT the Bukkit PDC — the PDC path did not survive restarts.
         super.saveCustomData(tag);
+        try {
+            net.minecraft.resources.RegistryOps<net.minecraft.nbt.Tag> ops =
+                    net.minecraft.resources.RegistryOps.create(net.minecraft.nbt.NbtOps.INSTANCE, registries());
+            net.minecraft.nbt.CompoundTag root = new net.minecraft.nbt.CompoundTag();
+            for (int i = 0; i < this.inventory.length; i++) {
+                ItemStack s = this.inventory[i];
+                if (s != null && !s.isEmpty()) {
+                    final int idx = i;
+                    ItemStack.CODEC.encodeStart(ops, s).result().ifPresent(t -> root.put("i" + idx, t));
+                }
+            }
+            java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+            net.minecraft.nbt.NbtIo.writeCompressed(root, baos);
+            tag.putByteArray("inv", baos.toByteArray());
+        } catch (Throwable ignored) {
+        }
     }
 
     @Override
     public void loadCustomData(net.momirealms.craftengine.libraries.nbt.CompoundTag tag) {
         super.loadCustomData(tag);
-        List<net.minecraft.world.ItemStackWithSlot> contents = this.get(KEY_INVENTORY);
-        if (contents != null) {
-            Arrays.fill(this.inventory, ItemStack.EMPTY);
-            for (net.minecraft.world.ItemStackWithSlot item : contents) {
-                if (item.slot() >= 0 && item.slot() < this.inventory.length) {
-                    this.inventory[item.slot()] = item.stack();
+        try {
+            byte[] bytes = tag.getByteArray("inv");
+            if (bytes != null && bytes.length > 0) {
+                net.minecraft.nbt.CompoundTag root = net.minecraft.nbt.NbtIo.readCompressed(
+                        new java.io.ByteArrayInputStream(bytes), net.minecraft.nbt.NbtAccounter.unlimitedHeap());
+                net.minecraft.resources.RegistryOps<net.minecraft.nbt.Tag> ops =
+                        net.minecraft.resources.RegistryOps.create(net.minecraft.nbt.NbtOps.INSTANCE, registries());
+                Arrays.fill(this.inventory, ItemStack.EMPTY);
+                for (int i = 0; i < this.inventory.length; i++) {
+                    net.minecraft.nbt.Tag it = root.get("i" + i);
+                    if (it != null) {
+                        final int slot = i;
+                        ItemStack.CODEC.parse(ops, it).result().ifPresent(s -> this.inventory[slot] = s);
+                    }
                 }
             }
+        } catch (Throwable ignored) {
         }
     }
 

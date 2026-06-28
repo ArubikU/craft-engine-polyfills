@@ -20,7 +20,8 @@ public final class GasKeys {
             (complex) -> {
                 try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
                         DataOutputStream dos = new DataOutputStream(baos)) {
-                    dos.writeInt(complex.getType() == null ? -1 : complex.getType().ordinal());
+                    // Persist the type by NAME, not ordinal (reordering GasType would remap stored gas).
+                    dos.writeUTF(complex.getType() == null ? "" : complex.getType().name());
                     dos.writeInt(complex.getAmount());
                     return baos.toByteArray();
                 } catch (IOException e) {
@@ -30,8 +31,13 @@ public final class GasKeys {
             (primitive) -> {
                 try (ByteArrayInputStream bais = new ByteArrayInputStream(primitive);
                         DataInputStream dis = new DataInputStream(bais)) {
-                    int ordinal = dis.readInt();
-                    GasType type = (ordinal == -1) ? null : GasType.values()[ordinal];
+                    GasType type;
+                    try {
+                        String name = dis.readUTF();
+                        type = name.isEmpty() ? null : GasType.valueOf(name);
+                    } catch (Throwable unknownOrLegacy) {
+                        return GasStack.EMPTY;
+                    }
                     int amount = dis.readInt();
                     return new GasStack(type, amount);
                 } catch (IOException e) {

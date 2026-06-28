@@ -1,0 +1,123 @@
+package dev.arubik.craftengine.fluid.graph;
+
+import java.util.ArrayDeque;
+import java.util.HashSet;
+import java.util.Set;
+
+import dev.arubik.craftengine.block.behavior.ConnectableBlockBehavior;
+import dev.arubik.craftengine.fluid.FluidCarrierImpl;
+import dev.arubik.craftengine.fluid.FluidStack;
+import dev.arubik.craftengine.fluid.FluidTransferHelper;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.world.level.Level;
+import net.momirealms.craftengine.bukkit.util.BlockStateUtils;
+import net.momirealms.craftengine.core.block.ImmutableBlockState;
+
+/**
+ * Builds a {@link FluidGraph} from the world by BFS over connected fluid-carrier blocks
+ * (Phase 1 of the hydraulic rewrite — read-only, does NOT change flow).
+ *
+ * <p>Phase 1 emits ONE node per fluid block and ONE edge per connected adjacent pair. Edge contraction
+ * of 2-connection pass-through pipes (the create-pipes-n-physics optimization) is deferred to Phase 1b;
+ * a per-block graph is already correct input for the solver.</p>
+ */
+public final class FluidGraphBuilder {
+
+    /** Default conductance (mB/tick per block of head diff). Refined per pipe tier in Phase 3. */
+    private static final double DEFAULT_CONDUCTANCE = 1000.0;
+    private static final int MAX_BLOCKS = 4096; // safety cap on a single network scan
+
+    private FluidGraphBuilder() {
+    }
+
+    /** Build the connected network containing {@code start}, or an empty graph if it isn't a carrier. */
+    public static FluidGraph build(Level level, BlockPos start) {
+        FluidGraph graph = new FluidGraph();
+        if (level == null || start == null || !isCarrier(level, start))
+            return graph;
+
+        Set<Long> visited = new HashSet<>();
+        ArrayDeque<BlockPos> queue = new ArrayDeque<>();
+        queue.add(start.immutable());
+        visited.add(start.asLong());
+
+        while (!queue.isEmpty() && visited.size() <= MAX_BLOCKS) {
+            BlockPos pos = queue.poll();
+            int aIdx = graph.addNode(makeNode(level, pos));
+
+            for (Direction dir : Direction.values()) {
+                BlockPos np = pos.relative(dir);
+                if (!isCarrier(level, np) || !connected(level, pos, np, dir))
+                    continue;
+                int bIdx = graph.addNode(makeNode(level, np));
+                // de-dup: only add the edge once per unordered pair (when aIdx < bIdx)
+                if (aIdx < bIdx) {
+                    int crestY = Math.max(pos.getY(), np.getY());
+                    graph.addEdge(new FluidEdge(aIdx, bIdx, DEFAULT_CONDUCTANCE, crestY, 0.0, 0));
+                }
+                if (visited.add(np.asLong()))
+                    queue.add(np.immutable());
+            }
+        }
+        return graph;
+    }
+
+    // ---------------- helpers ----------------
+
+    private static boolean isCarrier(Level level, BlockPos pos) {
+        return FluidTransferHelper.getCarrier(level, pos).isPresent();
+    }
+
+    private static <T> T behaviorAt(Level level, BlockPos pos, Class<T> type) {
+        ImmutableBlockState state = BlockStateUtils.getOptionalCustomBlockState(level.getBlockState(pos)).orElse(null);
+        if (state == null || state.isEmpty())
+            return null;
+        return state.behavior().getFirst(type);
+    }
+
+    /** Two adjacent carriers are connected only if BOTH expose a connectable face toward each other. */
+    private static boolean connected(Level level, BlockPos a, BlockPos b, Direction aToB) {
+        ConnectableBlockBehavior ca = behaviorAt(level, a, ConnectableBlockBehavior.class);
+        ConnectableBlockBehavior cb = behaviorAt(level, b, ConnectableBlockBehavior.class);
+        if (ca == null || cb == null)
+            return false;
+        return ca.canConnectTo(level, a, aToB) && cb.canConnectTo(level, b, aToB.getOpposite());
+    }
+
+    private static FluidNode makeNode(Level level, BlockPos pos) {
+        FluidNode.Kind kind = classify(level, pos);
+        long capacity = capacityFor(kind);
+        FluidStack stored = FluidCarrierImpl.getStored(level, pos);
+        double fill = (stored == null || stored.isEmpty() || capacity <= 0)
+                ? 0.0
+                : Math.min(1.0, stored.getAmount() / (double) capacity);
+        double head = pos.getY() + fill; // gravity baseline: Y + how full this node is
+        return new FluidNode(pos.immutable(), kind, capacity, head);
+    }
+
+    private static FluidNode.Kind classify(Level level, BlockPos pos) {
+        if (behaviorAt(level, pos, dev.arubik.craftengine.fluid.behavior.MachinePumpBehavior.class) != null
+                || behaviorAt(level, pos, dev.arubik.craftengine.fluid.behavior.PumpBehavior.class) != null)
+            return FluidNode.Kind.PUMP;
+        if (behaviorAt(level, pos, dev.arubik.craftengine.fluid.behavior.TankBlockBehavior.class) != null)
+            return FluidNode.Kind.TANK;
+        if (behaviorAt(level, pos, dev.arubik.craftengine.fluid.behavior.PipeBehavior.class) != null)
+            return FluidNode.Kind.PIPE;
+        return FluidNode.Kind.HANDLER;
+    }
+
+    private static long capacityFor(FluidNode.Kind kind) {
+        // Placeholder capacities (mB) — refined from real block config in Phase 3.
+        switch (kind) {
+            case TANK:
+                return 5000L;
+            case HANDLER:
+                return 8000L;
+            case PUMP:
+                return 8000L;
+            default:
+                return 100L; // a pipe segment holds little
+        }
+    }
+}

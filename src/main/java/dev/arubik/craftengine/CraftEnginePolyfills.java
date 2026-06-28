@@ -32,6 +32,7 @@ public final class CraftEnginePolyfills extends JavaPlugin {
     public void onEnable() {
         PacketEvents.getAPI().init();
         ItemListener.register(this);
+        dev.arubik.craftengine.block.behavior.CrafterSlotStateListener.register();
         CustomBlockData.registerListener(this);
         BlockContainer.ensureListenerRegistered(this);
         getServer().getPluginManager().registerEvents(new dev.arubik.craftengine.machine.menu.MachineMenuListener(),

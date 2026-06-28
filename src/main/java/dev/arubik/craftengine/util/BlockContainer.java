@@ -115,15 +115,36 @@ public class BlockContainer extends AbstractWorldlyContainer {
 
     private Inventory bukkitInventory;
 
+    /** Parse the configured title into an NMS Component. Supports {@code <lang:key>} and plain text. */
+    private net.minecraft.network.chat.Component titleComponent() {
+        String t = (title == null) ? "Storage" : title;
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("^<lang:([^>]+)>$").matcher(t.trim());
+        if (m.matches())
+            return net.minecraft.network.chat.Component.translatable(m.group(1));
+        return net.minecraft.network.chat.Component.literal(t);
+    }
+
+    /**
+     * Open a vanilla {@link net.minecraft.world.inventory.ChestMenu} backed DIRECTLY by this NMS
+     * Container — single source of truth, no separate Bukkit Inventory copy. Eliminates the desync that
+     * lost items under rapid hopper/crafter inserts.
+     */
     public void open(org.bukkit.entity.Player player) {
-        if (bukkitInventory == null) {
-            bukkitInventory = Bukkit.createInventory(this, size, MiniMessage.miniMessage().deserialize(title));
-            syncToBukkit();
-        }
-        if (!viewers.contains(player.getUniqueId())) {
-            viewers.add(player.getUniqueId());
-        }
-        player.openInventory(bukkitInventory);
+        net.minecraft.server.level.ServerPlayer sp = ((org.bukkit.craftbukkit.entity.CraftPlayer) player).getHandle();
+        int rows = Math.max(1, Math.min(size / 9, 6));
+        net.minecraft.world.inventory.MenuType<net.minecraft.world.inventory.ChestMenu> type = switch (rows) {
+            case 1 -> net.minecraft.world.inventory.MenuType.GENERIC_9x1;
+            case 2 -> net.minecraft.world.inventory.MenuType.GENERIC_9x2;
+            case 4 -> net.minecraft.world.inventory.MenuType.GENERIC_9x4;
+            case 5 -> net.minecraft.world.inventory.MenuType.GENERIC_9x5;
+            case 6 -> net.minecraft.world.inventory.MenuType.GENERIC_9x6;
+            default -> net.minecraft.world.inventory.MenuType.GENERIC_9x3;
+        };
+        final int r = rows;
+        net.minecraft.world.MenuProvider provider = new net.minecraft.world.SimpleMenuProvider(
+                (id, inv, p) -> new net.minecraft.world.inventory.ChestMenu(type, id, inv, this, r),
+                titleComponent());
+        sp.openMenu(provider);
     }
 
     // WorldlyContainer methods are mostly inherited now.
@@ -393,10 +414,10 @@ public class BlockContainer extends AbstractWorldlyContainer {
 
     @Override
     public @NotNull Inventory getInventory() {
+        // LIVE wrapper around this NMS Container (not a separate copy) — used by getOwner().getInventory()
+        // in hopper/crafter InventoryMoveItemEvent. Reads/writes the same backing array, so no desync.
         if (bukkitInventory == null) {
-            bukkitInventory = Bukkit.createInventory(this, size, MiniMessage.miniMessage().deserialize(title));
-            bukkitInventory.setMaxStackSize(maxStackSize);
-            syncToBukkit();
+            bukkitInventory = new org.bukkit.craftbukkit.inventory.CraftInventory(this);
         }
         return bukkitInventory;
     }

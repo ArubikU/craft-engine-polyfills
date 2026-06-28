@@ -20,7 +20,9 @@ public final class FluidKeys {
             (complex) -> {
                 try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
                         DataOutputStream dos = new DataOutputStream(baos)) {
-                    dos.writeInt(complex.getType().ordinal());
+                    // Persist the type by NAME, not ordinal: adding/reordering FluidType values would
+                    // otherwise remap every stored fluid to a different type ("the stored liquid changes").
+                    dos.writeUTF(complex.getType().name());
                     dos.writeInt(complex.getAmount());
                     dos.writeInt(complex.getPressure());
                     return baos.toByteArray();
@@ -31,7 +33,14 @@ public final class FluidKeys {
             (primitive) -> {
                 try (ByteArrayInputStream bais = new ByteArrayInputStream(primitive);
                         DataInputStream dis = new DataInputStream(bais)) {
-                    FluidType type = FluidType.values()[dis.readInt()];
+                    FluidType type;
+                    try {
+                        type = FluidType.valueOf(dis.readUTF());
+                    } catch (Throwable unknownOrLegacy) {
+                        // Unknown name OR legacy ordinal-format data -> treat as empty rather than guessing
+                        // a wrong type.
+                        return FluidStack.EMPTY;
+                    }
                     int amount = dis.readInt();
                     int pressure = dis.readInt();
                     return new FluidStack(type, amount, pressure);

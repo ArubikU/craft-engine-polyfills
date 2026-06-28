@@ -133,6 +133,10 @@ public final class MachineBars {
     private static ItemStack renderSegment(MachineBar bar, int segIndex, int n, double value, double max, String subType,
             java.util.Map<String, String> ph) {
         double overall = max > 0 ? Math.max(0, Math.min(1.0, value / max)) : 0;
+        // Any non-zero contents read as at least 1% global, so 1 mB still lights the FIRST slot's lowest
+        // fill state instead of rounding away to nothing. Upper slots stay empty (their local fill is 0).
+        if (value >= 1 && overall > 0 && overall < 0.01)
+            overall = 0.01;
         // The segment covers [segIndex/n, (segIndex+1)/n] of the bar.
         double lo = (double) segIndex / n;
         double localFrac = Math.max(0, Math.min(1.0, (overall - lo) * n));

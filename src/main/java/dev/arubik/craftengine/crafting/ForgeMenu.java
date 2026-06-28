@@ -45,16 +45,28 @@ public final class ForgeMenu extends AbstractCraftingMenu {
         return registry.match(grid);
     }
 
+    /** Any item the vanilla furnace accepts as fuel (logs, planks, coal, sticks, ...), 1 per craft. */
+    private static boolean isVanillaFuel(ItemStack fuel) {
+        if (fuel == null || fuel.getType().isAir())
+            return false;
+        try {
+            net.minecraft.world.item.ItemStack nms = org.bukkit.craftbukkit.inventory.CraftItemStack.asNMSCopy(fuel);
+            return net.minecraft.server.MinecraftServer.getServer().overworld().fuelValues().burnDuration(nms) > 0;
+        } catch (Throwable t) {
+            return false;
+        }
+    }
+
     @Override
     protected boolean isCustomCraftAllowed(CraftingGrid grid, CraftingRecipeLike recipe, int crafts) {
         ItemStack fuel = getInventory().getItem(FUEL_SLOT);
-        return fuel != null && fuel.getType() == Material.COAL && fuel.getAmount() >= crafts;
+        return fuel != null && isVanillaFuel(fuel) && fuel.getAmount() >= crafts;
     }
 
     @Override
     protected void onCraft(CraftingRecipeLike recipe, int crafts) {
         ItemStack fuel = getInventory().getItem(FUEL_SLOT);
-        if (fuel != null && fuel.getType() == Material.COAL) {
+        if (fuel != null && isVanillaFuel(fuel)) {
             int amt = fuel.getAmount() - crafts;
             if (amt <= 0) {
                 getInventory().setItem(FUEL_SLOT, null);

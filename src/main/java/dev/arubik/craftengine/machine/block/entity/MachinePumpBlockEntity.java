@@ -357,6 +357,22 @@ public class MachinePumpBlockEntity extends AbstractMachineBlockEntity {
                     if (delay > 1)
                         set(FluidKeys.FLUID_IO_COOLDOWN, delay);
                 }
+            } else if (stored.getType() == FluidType.EXPERIENCE) {
+                // XP isn't a placeable world fluid — emit it as experience orbs into the OUT-face air.
+                if (level.getBlockState(up).isAir()) {
+                    int amount = stored.getAmount();
+                    if (amount > 0) {
+                        // Same XP<->orb convention as TankBlockBehavior: ~7 mB per orb, spawned in chunks.
+                        int orbs = (int) Math.ceil(amount / 7.0);
+                        while (orbs > 0) {
+                            int toSpawn = Math.min(orbs, 10);
+                            orbs -= toSpawn;
+                            level.addFreshEntity(new net.minecraft.world.entity.ExperienceOrb(
+                                    level, up.getX() + 0.5, up.getY() + 0.5, up.getZ() + 0.5, toSpawn));
+                        }
+                        writeTank(level, FluidStack.EMPTY);
+                    }
+                }
             } else if (stored.getAmount() >= stored.getType().mbPerFullBlock()) {
                 // No carrier above: PLACE the fluid as a world block (like the old pump). Needs a full
                 // block's worth; cauldrons/water/lava/slime/honey/powder_snow are placeable.
@@ -434,7 +450,27 @@ public class MachinePumpBlockEntity extends AbstractMachineBlockEntity {
                 if (delay > 1)
                     set(FluidKeys.FLUID_BLOCK_COOLDOWN, delay);
             } else if (collected.isEmpty()) {
-                FluidTransferHelper.pull(level, pos, worldDown, extract, 0);
+                // Source is a CE carrier (tank/pipe), not a world fluid. FluidTransferHelper.pull goes
+                // through transfer() which needs BOTH ends to be FluidCarriers — the pump is a machine,
+                // not a carrier, so it always failed. Pull from the carrier straight into our tank.
+                dev.arubik.craftengine.fluid.behavior.FluidCarrier src =
+                        FluidTransferHelper.getCarrier(level, target).orElse(null);
+                if (src != null) {
+                    FluidStack srcStored = src.getStored(level, target);
+                    int free2 = cap - (stored.isEmpty() ? 0 : stored.getAmount());
+                    // Only pull when types are compatible — else extractFluid would remove fluid we can't
+                    // store and it would vanish.
+                    if (!srcStored.isEmpty() && free2 > 0
+                            && (stored.isEmpty() || stored.getType() == srcStored.getType())) {
+                        final FluidStack[] got = { null };
+                        src.extractFluid(level, target, Math.min(extract, free2), f -> got[0] = f,
+                                worldDown.getOpposite());
+                        if (got[0] != null && !got[0].isEmpty()) {
+                            int newAmt = (stored.isEmpty() ? 0 : stored.getAmount()) + got[0].getAmount();
+                            writeTank(level, new FluidStack(got[0].getType(), Math.min(cap, newAmt), pressure));
+                        }
+                    }
+                }
             }
         }
     }
@@ -470,6 +506,18 @@ public class MachinePumpBlockEntity extends AbstractMachineBlockEntity {
         return s == null ? FluidStack.EMPTY : s;
     }
 
+    /**
+     * Disable the generic all-faces auto-pull for the pump. The pump does its OWN directional intake
+     * (extract on the IN face in the pump core). The generic puller checks {@code acceptsInput} with the
+     * ITEM local direction, which mis-maps the fluid faces and sucks fluid back out of the OUT neighbour
+     * (the tank we just pushed into) — a pump<->tank recirculation loop.
+     */
+    @Override
+    protected void pullFromInputFaces(Level level) {
+        // no-op: pump handles its own fluid intake directionally
+    }
+
+
     /** Write the internal tank to the shared CustomBlockData store (same store the pipes use). */
     private void writeTank(Level level, FluidStack s) {
         net.minecraft.core.BlockPos pos = getMachinePos();
@@ -502,7 +550,9 @@ public class MachinePumpBlockEntity extends AbstractMachineBlockEntity {
     public String barSubtype(String id) {
         if ("fluid".equals(id) || "internal".equals(id)) {
             FluidStack s = storedFluid();
-            return s.isEmpty() ? "" : s.getType().toString();
+            // Short enum name (water/lava/experience) to match the bar states' `type:` tags — NOT
+            // toString(), which returns the translation key and never matched.
+            return s.isEmpty() ? "" : s.getType().name().toLowerCase(java.util.Locale.ROOT);
         }
         return super.barSubtype(id);
     }

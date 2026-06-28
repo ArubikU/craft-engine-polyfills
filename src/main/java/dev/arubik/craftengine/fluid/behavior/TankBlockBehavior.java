@@ -476,6 +476,42 @@ public class TankBlockBehavior extends ConnectableBlockBehavior implements Entit
         }
 
         @Override
+        public void saveCustomData(net.momirealms.craftengine.libraries.nbt.CompoundTag tag) {
+            super.saveCustomData(tag);
+            // Persist the stored fluid into the CraftEngine-native block-entity NBT — the live store is
+            // CustomBlockData, which was not surviving restarts ("tanks don't save their fluid").
+            try {
+                Level level = (Level) ((BukkitWorld) blockEntity().world().world()).minecraftWorld();
+                BlockPos pos = (BlockPos) Utils.fromPos(blockEntity().pos());
+                FluidStack f = dev.arubik.craftengine.fluid.FluidCarrierImpl.getStored(level, pos);
+                if (f != null && !f.isEmpty()) {
+                    tag.putString("t", f.getType().name());
+                    tag.putInt("a", f.getAmount());
+                    tag.putInt("p", f.getPressure());
+                }
+            } catch (Throwable ignored) {
+            }
+        }
+
+        @Override
+        public void loadCustomData(net.momirealms.craftengine.libraries.nbt.CompoundTag tag) {
+            super.loadCustomData(tag);
+            try {
+                String tn = tag.getString("t");
+                if (tn != null && !tn.isEmpty()) {
+                    Level level = (Level) ((BukkitWorld) blockEntity().world().world()).minecraftWorld();
+                    BlockPos pos = (BlockPos) Utils.fromPos(blockEntity().pos());
+                    FluidType ty = FluidType.valueOf(tn);
+                    int a = tag.getInt("a");
+                    int p = tag.getInt("p");
+                    dev.arubik.craftengine.util.CustomBlockData.from(level, pos)
+                            .set(dev.arubik.craftengine.fluid.FluidKeys.FLUID, new FluidStack(ty, a, p));
+                }
+            } catch (Throwable ignored) {
+            }
+        }
+
+        @Override
         public <C extends BlockEntityController> BlockEntityTicker<C> createBlockEntityTicker(
                 CEWorld world, ImmutableBlockState state) {
             return BlockEntityController.createTickerHelper((BlockEntityTicker<Controller>) Controller::tick);

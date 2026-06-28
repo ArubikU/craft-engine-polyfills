@@ -7,6 +7,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.dispenser.DefaultDispenseItemBehavior;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.Container;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.CraftingInput;
@@ -51,6 +52,9 @@ public class CustomCrafterBehavior extends BukkitBlockBehavior
     private static final int CRAFTING_TICKS = 6;
     private static final int CRAFTING_TICK_DELAY = 4;
 
+    /** player UUID -> crafter BE they currently have open (for the SLOT_STATE_CHANGE interception). */
+    static final java.util.Map<java.util.UUID, CustomCrafterBlockEntity> OPEN = new java.util.concurrent.ConcurrentHashMap<>();
+
     private final Property<Boolean> craftingProp;
     private final Property<Boolean> triggeredProp;
     private final Property<net.momirealms.craftengine.core.util.Direction> facingProp;
@@ -84,10 +88,31 @@ public class CustomCrafterBehavior extends BukkitBlockBehavior
 
     // ---------------- hopper / comparator bridge ----------------
 
+    // The hopper/comparator bridge contexts don't always pass args in the (state, level, pos) layout the
+    // block-behavior hooks use — scan for the Level and BlockPos by type so we never cast the wrong slot
+    // (that ClassCastException is what crashed the hopper and made funnels see no container).
+    private static Level levelArg(Object[] args) {
+        for (Object o : args)
+            if (o instanceof Level l)
+                return l;
+        return null;
+    }
+
+    private static BlockPos posArg(Object[] args) {
+        for (Object o : args)
+            if (o instanceof BlockPos p)
+                return p;
+        return null;
+    }
+
     @Override
     public Object getContainer(Object thisBlock, Object[] args) {
         try {
-            CustomCrafterBlockEntity c = at((Level) args[1], (BlockPos) args[2]);
+            Level level = levelArg(args);
+            BlockPos pos = posArg(args);
+            if (level == null || pos == null)
+                return null;
+            CustomCrafterBlockEntity c = at(level, pos);
             if (c instanceof Container)
                 return c;
         } catch (Throwable ignored) {
@@ -102,7 +127,11 @@ public class CustomCrafterBehavior extends BukkitBlockBehavior
 
     @Override
     public int getAnalogOutputSignal(Object thisBlock, Object[] args) {
-        CustomCrafterBlockEntity c = at((Level) args[1], (BlockPos) args[2]);
+        Level level = levelArg(args);
+        BlockPos pos = posArg(args);
+        if (level == null || pos == null)
+            return 0;
+        CustomCrafterBlockEntity c = at(level, pos);
         return c == null ? 0 : c.getRedstoneSignal();
     }
 
@@ -124,6 +153,7 @@ public class CustomCrafterBehavior extends BukkitBlockBehavior
         boolean triggered = be.isTriggered();
         if (hasSignal && !triggered) {
             be.setTriggered(true);
+            be.requestCraft(); // one craft per rising edge
             setProps(level, pos, cs, true, null);
             level.scheduleTick(pos, state.getBlock(), CRAFTING_TICK_DELAY);
         } else if (!hasSignal && triggered) {
@@ -169,6 +199,10 @@ public class CustomCrafterBehavior extends BukkitBlockBehavior
                 return InteractionResult.PASS;
             net.minecraft.server.level.ServerPlayer sp = (net.minecraft.server.level.ServerPlayer) context.getPlayer()
                     .serverPlayer();
+            // Track which crafter BE this player has open: vanilla's slot-disable handler is hard-gated on a
+            // real CrafterBlockEntity, so it never fires for our custom container. We intercept the
+            // SLOT_STATE_CHANGE packet (see SlotStateListener) and apply it to the BE we record here.
+            OPEN.put(sp.getUUID(), be);
             net.minecraft.world.MenuProvider provider = new net.minecraft.world.SimpleMenuProvider(
                     (id, inv, p) -> new net.minecraft.world.inventory.CrafterMenu(id, inv, be, be.containerData()),
                     net.minecraft.network.chat.Component.translatable("container.crafter"));
@@ -184,6 +218,10 @@ public class CustomCrafterBehavior extends BukkitBlockBehavior
     private void dispenseFrom(ServerLevel level, BlockPos pos, net.minecraft.world.level.block.state.BlockState state) {
         CustomCrafterBlockEntity crafter = at(level, pos);
         if (crafter == null)
+            return;
+        // One craft per redstone pulse: CE may route a tick here every game tick, so only craft when a
+        // request is pending from the rising edge (consumed here), otherwise it would craft forever.
+        if (!crafter.consumeCraftRequest())
             return;
         CraftingInput input = crafter.asCraftInput();
         Optional<RecipeHolder<CraftingRecipe>> result = RECIPE_CACHE.get(level, input);

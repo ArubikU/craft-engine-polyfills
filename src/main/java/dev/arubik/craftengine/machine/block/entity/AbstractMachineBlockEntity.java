@@ -838,24 +838,53 @@ public abstract class AbstractMachineBlockEntity extends PersistentWorldlyBlockE
 
     @Override
     public void saveCustomData(net.momirealms.craftengine.libraries.nbt.CompoundTag tag) {
-        set(KEY_PROGRESS, progress);
-        set(KEY_MAX_PROGRESS, maxProgress);
-        set(KEY_BURN_TIME, burnTime);
-        set(KEY_MAX_BURN_TIME, maxBurnTime);
-        set(KEY_OVERCLOCKED_TICKS, overclockedTicks);
-        set(KEY_XP, storedXp);
+        // Persist machine scalars into the CraftEngine-native block-entity NBT (the `tag`), NOT the Bukkit
+        // PDC via set(): the PDC path was not surviving restarts ("machines/pumps don't save").
         super.saveCustomData(tag);
+        tag.putInt("progress", progress);
+        tag.putInt("max_progress", maxProgress);
+        tag.putInt("burn_time", burnTime);
+        tag.putInt("max_burn_time", maxBurnTime);
+        tag.putInt("overclocked_ticks", overclockedTicks);
+        tag.putFloat("stored_xp", storedXp);
+        // Fluid tanks: persist into the NBT tag too (the live store is CustomBlockData, which wasn't
+        // surviving restarts). On load we write these back into CustomBlockData so FluidTank sees them.
+        for (int i = 0; i < fluidTanks.size(); i++) {
+            try {
+                dev.arubik.craftengine.fluid.FluidStack f = fluidTanks.get(i).getFluid(getNMSLevel(),
+                        getMachinePos());
+                if (f != null && !f.isEmpty()) {
+                    tag.putString("ft" + i + "_t", f.getType().name());
+                    tag.putInt("ft" + i + "_a", f.getAmount());
+                    tag.putInt("ft" + i + "_p", f.getPressure());
+                }
+            } catch (Throwable ignored) {
+            }
+        }
     }
 
     @Override
     public void loadCustomData(net.momirealms.craftengine.libraries.nbt.CompoundTag tag) {
         super.loadCustomData(tag);
-        this.progress = getOrDefault(KEY_PROGRESS, 0);
-        this.maxProgress = getOrDefault(KEY_MAX_PROGRESS, 0);
-        this.burnTime = getOrDefault(KEY_BURN_TIME, 0);
-        this.maxBurnTime = getOrDefault(KEY_MAX_BURN_TIME, 0);
-        this.overclockedTicks = getOrDefault(KEY_OVERCLOCKED_TICKS, 0);
-        this.storedXp = getOrDefault(KEY_XP, 0f);
+        this.progress = tag.getInt("progress");
+        this.maxProgress = tag.getInt("max_progress");
+        this.burnTime = tag.getInt("burn_time");
+        this.maxBurnTime = tag.getInt("max_burn_time");
+        this.overclockedTicks = tag.getInt("overclocked_ticks");
+        this.storedXp = tag.getFloat("stored_xp");
+        for (int i = 0; i < fluidTanks.size(); i++) {
+            try {
+                String tn = tag.getString("ft" + i + "_t");
+                if (tn != null && !tn.isEmpty()) {
+                    dev.arubik.craftengine.fluid.FluidType ty = dev.arubik.craftengine.fluid.FluidType.valueOf(tn);
+                    int a = tag.getInt("ft" + i + "_a");
+                    int p = tag.getInt("ft" + i + "_p");
+                    dev.arubik.craftengine.util.CustomBlockData.from(getNMSLevel(), getMachinePos())
+                            .set(fluidTanks.get(i).getKey(), new dev.arubik.craftengine.fluid.FluidStack(ty, a, p));
+                }
+            } catch (Throwable ignored) {
+            }
+        }
     }
 
     @Override

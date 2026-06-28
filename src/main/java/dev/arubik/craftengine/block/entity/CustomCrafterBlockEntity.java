@@ -30,7 +30,8 @@ import net.momirealms.craftengine.libraries.nbt.CompoundTag;
  * ingredient with a {@code hurt_and_break} craft-remainder is damaged IN ITS SLOT instead of being
  * ejected out the front.</p>
  */
-public class CustomCrafterBlockEntity extends BlockEntityController implements CraftingContainer {
+public class CustomCrafterBlockEntity extends BlockEntityController
+        implements CraftingContainer, net.minecraft.world.WorldlyContainer, org.bukkit.inventory.InventoryHolder {
 
     public static final int CONTAINER_WIDTH = 3;
     public static final int CONTAINER_HEIGHT = 3;
@@ -173,9 +174,41 @@ public class CustomCrafterBlockEntity extends BlockEntityController implements C
     // --- Paper CraftBukkit Container bridge (forced by the interface; minimal, no real Bukkit use) ---
     private final java.util.List<org.bukkit.entity.HumanEntity> transaction = new java.util.ArrayList<>();
 
+    // --- WorldlyContainer (hopper/automation access; CE casts the container to this) ---
+
+    @Override
+    public int[] getSlotsForFace(net.minecraft.core.Direction face) {
+        int[] all = new int[CONTAINER_SIZE];
+        for (int i = 0; i < CONTAINER_SIZE; i++)
+            all[i] = i;
+        return all;
+    }
+
+    @Override
+    public boolean canPlaceItemThroughFace(int slot, ItemStack stack, net.minecraft.core.Direction face) {
+        return !isSlotDisabled(slot) && canPlaceItem(slot, stack);
+    }
+
+    @Override
+    public boolean canTakeItemThroughFace(int slot, ItemStack stack, net.minecraft.core.Direction face) {
+        return false; // like vanilla crafter: outputs are pushed out the front, not pulled by hoppers
+    }
+
     @Override
     public org.bukkit.inventory.InventoryHolder getOwner() {
-        return null;
+        return this;
+    }
+
+    private transient org.bukkit.inventory.Inventory bukkitInventory;
+
+    @Override
+    public org.bukkit.inventory.Inventory getInventory() {
+        // LIVE Bukkit wrapper over this NMS container (no copy) — required by CraftBukkit's hopper
+        // InventoryMoveItemEvent path (destination.getOwner().getInventory()). Returning null here is
+        // what crashed the hopper. Same approach as AbstractWorldlyContainer/BlockContainer.
+        if (bukkitInventory == null)
+            bukkitInventory = new org.bukkit.craftbukkit.inventory.CraftInventory(this);
+        return bukkitInventory;
     }
 
     @Override
@@ -242,6 +275,10 @@ public class CustomCrafterBlockEntity extends BlockEntityController implements C
         }
     }
 
+    public int[] slotStatesSnapshot() {
+        return this.slotStates.clone();
+    }
+
     public boolean isSlotDisabled(int slot) {
         return slot >= 0 && slot < CONTAINER_SIZE && this.slotStates[slot] == SLOT_DISABLED;
     }
@@ -256,6 +293,19 @@ public class CustomCrafterBlockEntity extends BlockEntityController implements C
 
     public boolean isTriggered() {
         return this.triggered == 1;
+    }
+
+    /** One-shot craft request: set on the redstone rising edge, consumed by the craft (one per pulse). */
+    private transient boolean craftRequested = false;
+
+    public void requestCraft() {
+        this.craftRequested = true;
+    }
+
+    public boolean consumeCraftRequest() {
+        boolean r = this.craftRequested;
+        this.craftRequested = false;
+        return r;
     }
 
     public void setCraftingTicksRemaining(int v) {

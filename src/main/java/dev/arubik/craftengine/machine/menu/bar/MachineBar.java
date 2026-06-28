@@ -73,6 +73,7 @@ public final class MachineBar {
         if (list == null || list.isEmpty())
             return null;
         BarState chosen = null;
+        double bestDist = Double.MAX_VALUE;
         for (boolean typedPass : new boolean[] { true, false }) {
             for (BarState s : list) {
                 boolean typeOk = typedPass
@@ -82,9 +83,23 @@ public final class MachineBar {
                     continue;
                 if (localPercent >= s.min && localPercent <= s.max)
                     return s;
-                chosen = s;
+                // Out of range but with SOME fill: keep the NEAREST state (not the last iterated), so an
+                // almost-empty piece shows the lowest fill state instead of the full one. A piece whose
+                // LOCAL fill is 0 stays empty (chosen=null -> invisible), so upper slots of a column don't
+                // light up until the fluid actually reaches them.
+                if (localPercent > 0) {
+                    double d = localPercent < s.min ? s.min - localPercent : localPercent - s.max;
+                    if (d < bestDist) {
+                        bestDist = d;
+                        chosen = s;
+                    }
+                }
             }
-            if (chosen != null && !typedPass)
+            // Break as soon as ANY pass found a candidate — the TYPED pass runs first, so a typed
+            // (e.g. experience) fallback wins over the untyped (water) one even when the fill is
+            // out of every range (e.g. 0%). Previously only the untyped pass could break, so the
+            // untyped fallback always overwrote the typed one and the bar reverted to water.
+            if (chosen != null)
                 break;
         }
         return chosen;
@@ -134,6 +149,7 @@ public final class MachineBar {
             return null;
         // Pass 1: states whose type matches the current sub-type (specific wins). Pass 2: untyped.
         BarState chosen = null;
+        double bestDist = Double.MAX_VALUE;
         for (boolean typedPass : new boolean[] { true, false }) {
             for (BarState s : list) {
                 boolean typeOk = typedPass
@@ -143,9 +159,23 @@ public final class MachineBar {
                     continue;
                 if (localPercent >= s.min && localPercent <= s.max)
                     return s;
-                chosen = s;
+                // Out of range but with SOME fill: keep the NEAREST state (not the last iterated), so an
+                // almost-empty piece shows the lowest fill state instead of the full one. A piece whose
+                // LOCAL fill is 0 stays empty (chosen=null -> invisible), so upper slots of a column don't
+                // light up until the fluid actually reaches them.
+                if (localPercent > 0) {
+                    double d = localPercent < s.min ? s.min - localPercent : localPercent - s.max;
+                    if (d < bestDist) {
+                        bestDist = d;
+                        chosen = s;
+                    }
+                }
             }
-            if (chosen != null && !typedPass)
+            // Break as soon as ANY pass found a candidate — the TYPED pass runs first, so a typed
+            // (e.g. experience) fallback wins over the untyped (water) one even when the fill is
+            // out of every range (e.g. 0%). Previously only the untyped pass could break, so the
+            // untyped fallback always overwrote the typed one and the bar reverted to water.
+            if (chosen != null)
                 break;
         }
         return chosen;
