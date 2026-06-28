@@ -87,9 +87,11 @@ public final class FluidGraphBuilder {
 
     private static FluidNode makeNode(Level level, BlockPos pos) {
         FluidNode.Kind kind = classify(level, pos);
-        long capacity = capacityFor(kind);
-        FluidStack stored = FluidCarrierImpl.getStored(level, pos);
-        double fill = (stored == null || stored.isEmpty() || capacity <= 0)
+        dev.arubik.craftengine.fluid.behavior.FluidCarrier carrier = FluidTransferHelper.getCarrier(level, pos)
+                .orElse(null);
+        long capacity = carrier != null ? Math.max(1L, carrier.getCapacity(level, pos)) : 1L;
+        FluidStack stored = carrier != null ? carrier.getStored(level, pos) : FluidStack.EMPTY;
+        double fill = (stored == null || stored.isEmpty())
                 ? 0.0
                 : Math.min(1.0, stored.getAmount() / (double) capacity);
         double head = pos.getY() + fill; // gravity baseline: Y + how full this node is
@@ -107,17 +109,4 @@ public final class FluidGraphBuilder {
         return FluidNode.Kind.HANDLER;
     }
 
-    private static long capacityFor(FluidNode.Kind kind) {
-        // Placeholder capacities (mB) — refined from real block config in Phase 3.
-        switch (kind) {
-            case TANK:
-                return 5000L;
-            case HANDLER:
-                return 8000L;
-            case PUMP:
-                return 8000L;
-            default:
-                return 100L; // a pipe segment holds little
-        }
-    }
 }

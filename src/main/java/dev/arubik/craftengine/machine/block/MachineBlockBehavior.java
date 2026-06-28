@@ -171,7 +171,25 @@ public class MachineBlockBehavior extends ConnectableBlockBehavior
 
     @Override
     public FluidStack getStored(Level level, BlockPos pos) {
+        BlockEntity be = BukkitBlockEntityTypes.getIfLoaded(level, pos);
+        if (be != null && be.controller instanceof AbstractMachineBlockEntity machine)
+            return machine.getStoredFluidForCarrier();
         return FluidStack.EMPTY;
+    }
+
+    @Override
+    public long getCapacity(Level level, BlockPos pos) {
+        BlockEntity be = BukkitBlockEntityTypes.getIfLoaded(level, pos);
+        if (be != null && be.controller instanceof AbstractMachineBlockEntity machine)
+            return machine.getFluidCapacityForCarrier();
+        return 0L;
+    }
+
+    @Override
+    public void setStoredRaw(Level level, BlockPos pos, FluidStack stack) {
+        BlockEntity be = BukkitBlockEntityTypes.getIfLoaded(level, pos);
+        if (be != null && be.controller instanceof AbstractMachineBlockEntity machine)
+            machine.setStoredFluidRaw(level, stack);
     }
 
     @Override

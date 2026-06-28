@@ -147,6 +147,22 @@ public class CepCommand implements CommandExecutor, TabCompleter {
             sender.sendMessage("§bfluid step§7: applied, §f" + moved + "§7 mB moved across the network");
             return true;
         });
+
+        // /cep gas step — Phase 5: gas network solved with no gravity (head = fill only).
+        cases.put(new ArgumentList("gas^", "step^"), (sender, parsed) -> {
+            if (!(sender instanceof Player player))
+                return true;
+            Block tb = player.getTargetBlockExact(8);
+            if (tb == null) {
+                sender.sendMessage("Look at a gas block.");
+                return true;
+            }
+            net.minecraft.world.level.Level level = ((org.bukkit.craftbukkit.CraftWorld) tb.getWorld()).getHandle();
+            net.minecraft.core.BlockPos pos = new net.minecraft.core.BlockPos(tb.getX(), tb.getY(), tb.getZ());
+            int moved = dev.arubik.craftengine.fluid.graph.GasEngine.step(level, pos);
+            sender.sendMessage("§bgas step§7: applied, §f" + moved + "§7 units moved (no gravity)");
+            return true;
+        });
     }
 
     private static String fmt(double d) {

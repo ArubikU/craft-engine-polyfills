@@ -111,6 +111,26 @@ public abstract class AbstractMachineBlockEntity extends PersistentWorldlyBlockE
         return get(fluidTanks.get(slot).getKey());
     }
 
+    // ---- hydraulic engine carrier hooks (the machine's REAL fluid store) ----
+    public FluidStack getStoredFluidForCarrier() {
+        FluidStack s = fluidTanks.isEmpty() ? null : getFluidInSlot(0);
+        return s == null ? FluidStack.EMPTY : s;
+    }
+
+    public long getFluidCapacityForCarrier() {
+        return fluidTanks.isEmpty() ? 0L : fluidTanks.get(0).getCapacity();
+    }
+
+    public void setStoredFluidRaw(Level level, FluidStack stack) {
+        if (fluidTanks.isEmpty())
+            return;
+        dev.arubik.craftengine.util.TypedKey<FluidStack> key = fluidTanks.get(0).getKey();
+        if (stack == null || stack.isEmpty())
+            dev.arubik.craftengine.util.CustomBlockData.from(level, getMachinePos()).remove(key);
+        else
+            dev.arubik.craftengine.util.CustomBlockData.from(level, getMachinePos()).set(key, stack);
+    }
+
     public GasStack getGasInSlot(int slot) {
         return get(gasTanks.get(slot).getKey());
     }

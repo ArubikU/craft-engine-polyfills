@@ -32,4 +32,19 @@ public interface GasCarrier {
      * Controla quién puede extraer de este carrier.
      */
     dev.arubik.craftengine.util.TransferAccessMode getAccessMode();
+
+    // ---- hydraulic engine hooks (gases have NO gravity/head — solved on fill only) ----
+
+    /** This carrier's gas capacity in units at {@code pos}. Override per block. */
+    default long getGasCapacity(Level level, BlockPos pos) {
+        return 1000L;
+    }
+
+    /** Set this carrier's stored gas DIRECTLY (engine apply path). Default writes the shared GAS store. */
+    default void setStoredGasRaw(Level level, BlockPos pos, GasStack stack) {
+        if (stack == null || stack.isEmpty())
+            dev.arubik.craftengine.util.CustomBlockData.from(level, pos).remove(GasKeys.GAS);
+        else
+            dev.arubik.craftengine.util.CustomBlockData.from(level, pos).set(GasKeys.GAS, stack);
+    }
 }

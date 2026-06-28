@@ -77,10 +77,19 @@ public final class FluidEngine {
             return 0;
         int n = graph.nodes.size();
 
+        // Each node's REAL carrier (its valid store — tank PDC, machine fluid tank, etc).
+        dev.arubik.craftengine.fluid.behavior.FluidCarrier[] carriers =
+                new dev.arubik.craftengine.fluid.behavior.FluidCarrier[n];
+        for (int i = 0; i < n; i++)
+            carriers[i] = dev.arubik.craftengine.fluid.FluidTransferHelper
+                    .getCarrier(level, graph.nodes.get(i).pos).orElse(null);
+
         // Network fluid type = first non-empty node. Empty network -> nothing to do.
         FluidType netType = FluidType.EMPTY;
-        for (FluidNode node : graph.nodes) {
-            FluidStack s = FluidCarrierImpl.getStored(level, node.pos);
+        for (int i = 0; i < n; i++) {
+            if (carriers[i] == null)
+                continue;
+            FluidStack s = carriers[i].getStored(level, graph.nodes.get(i).pos);
             if (s != null && !s.isEmpty()) {
                 netType = s.getType();
                 break;
@@ -92,10 +101,7 @@ public final class FluidEngine {
         FluidNetworkSolver.NodeSpec[] nodes = new FluidNetworkSolver.NodeSpec[n];
         for (int i = 0; i < n; i++) {
             FluidNode fn = graph.nodes.get(i);
-            // Boundary nodes (pump/handler) get huge capacitance so the solver treats them as fixed head.
-            boolean boundary = fn.kind == FluidNode.Kind.PUMP || fn.kind == FluidNode.Kind.HANDLER;
-            double cap = boundary ? 1.0e9 : Math.max(1.0, fn.capacityMb);
-            nodes[i] = new FluidNetworkSolver.NodeSpec(cap, fn.head);
+            nodes[i] = new FluidNetworkSolver.NodeSpec(Math.max(1.0, fn.capacityMb), fn.head);
         }
         FluidNetworkSolver.BranchSpec[] branches = new FluidNetworkSolver.BranchSpec[graph.edges.size()];
         for (int e = 0; e < branches.length; e++) {
@@ -108,21 +114,18 @@ public final class FluidEngine {
         int moved = 0;
         for (int i = 0; i < n; i++) {
             FluidNode fn = graph.nodes.get(i);
-            if (fn.kind == FluidNode.Kind.PUMP || fn.kind == FluidNode.Kind.HANDLER)
-                continue; // fixed boundary — its store lives elsewhere
+            dev.arubik.craftengine.fluid.behavior.FluidCarrier c = carriers[i];
+            if (c == null)
+                continue;
             int delta = (int) Math.round(r.netInflow[i]);
             if (delta == 0)
                 continue;
-            FluidStack cur = FluidCarrierImpl.getStored(level, fn.pos);
+            FluidStack cur = c.getStored(level, fn.pos);
             int oldAmt = (cur == null || cur.isEmpty()) ? 0 : cur.getAmount();
             int pressure = (cur == null || cur.isEmpty()) ? 0 : cur.getPressure();
             int newAmt = Math.max(0, Math.min((int) fn.capacityMb, oldAmt + delta));
             moved += Math.abs(newAmt - oldAmt);
-            BlockPos pos = fn.pos;
-            if (newAmt <= 0)
-                CustomBlockData.from(level, pos).remove(FluidKeys.FLUID);
-            else
-                CustomBlockData.from(level, pos).set(FluidKeys.FLUID, new FluidStack(netType, newAmt, pressure));
+            c.setStoredRaw(level, fn.pos, newAmt <= 0 ? FluidStack.EMPTY : new FluidStack(netType, newAmt, pressure));
         }
         return moved / 2; // each mB shows up as -delta at the source and +delta at the sink
     }

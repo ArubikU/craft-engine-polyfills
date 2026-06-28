@@ -199,6 +199,11 @@ public class TankBlockBehavior extends ConnectableBlockBehavior implements Entit
         return dev.arubik.craftengine.fluid.FluidCarrierImpl.getStored(level, pos);
     }
 
+    @Override
+    public long getCapacity(Level level, net.minecraft.core.BlockPos pos) {
+        return MAX_CAPACITY;
+    }
+
     public int insertFluid(Level level, net.minecraft.core.BlockPos pos, FluidStack stack) {
         return insertFluidInternal(level, pos, stack, 0);
     }

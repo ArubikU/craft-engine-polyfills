@@ -52,4 +52,25 @@ public interface FluidCarrier {
      * Controla quién puede extraer de este carrier.
      */
     dev.arubik.craftengine.util.TransferAccessMode getAccessMode();
+
+    // ---- hydraulic engine hooks (use each block's REAL store, not a placeholder) ----
+
+    /** This carrier's fluid capacity in mB at {@code pos}. Override per block (tank/pump/pipe). */
+    default long getCapacity(Level level, BlockPos pos) {
+        return 1000L;
+    }
+
+    /**
+     * Set this carrier's stored fluid DIRECTLY (engine apply path — bypasses IO-side gating). Default
+     * writes the shared {@link dev.arubik.craftengine.fluid.FluidKeys#FLUID} store (pipes/tanks). Machines
+     * override to write their own fluid tank.
+     */
+    default void setStoredRaw(Level level, BlockPos pos, FluidStack stack) {
+        if (stack == null || stack.isEmpty())
+            dev.arubik.craftengine.util.CustomBlockData.from(level, pos)
+                    .remove(dev.arubik.craftengine.fluid.FluidKeys.FLUID);
+        else
+            dev.arubik.craftengine.util.CustomBlockData.from(level, pos)
+                    .set(dev.arubik.craftengine.fluid.FluidKeys.FLUID, stack);
+    }
 }
