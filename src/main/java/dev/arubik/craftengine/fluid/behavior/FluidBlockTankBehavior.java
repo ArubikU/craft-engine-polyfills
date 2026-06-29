@@ -454,9 +454,10 @@ public class FluidBlockTankBehavior extends ConnectableBlockBehavior implements 
         } catch (Throwable ignored) {
         }
 
-        // Exterior shell: render only the group's outer faces via display entities (interiors see-through).
+        // Shell DISABLED: the block's 24 frame models render the tank again (display-entity shell looked
+        // wrong). Clear any shell quads previously spawned for this group.
         try {
-            FluidShellRender.update(level, owner, ctrl);
+            FluidShellRender.remove(level, ctrlPos);
         } catch (Throwable ignored) {
         }
 
