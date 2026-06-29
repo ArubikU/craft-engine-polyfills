@@ -76,9 +76,13 @@ public final class FluidTankRender {
                 for (int dz = 0; dz < width; dz++) {
                     Location loc = new Location(world, controller.getX() + dx, controller.getY() + y,
                             controller.getZ() + dz);
+                    // Inset ONLY the footprint-boundary faces by HULL (so the fluid sits inside the walls and
+                    // doesn't clip through), full on interior faces (so neighbouring cells abut with no gap).
+                    float ax = dx == 0 ? HULL : 0f, bx = 1f - (dx == width - 1 ? HULL : 0f);
+                    float az = dz == 0 ? HULL : 0f, bz = 1f - (dz == width - 1 ? HULL : 0f);
                     Transformation t = new Transformation(
-                            new Vector3f(0.5f, 0.5f, 0.5f), new Quaternionf(),
-                            new Vector3f(1f, 1f, 1f), new Quaternionf());
+                            new Vector3f((ax + bx) / 2f, 0.5f, (az + bz) / 2f), new Quaternionf(),
+                            new Vector3f(bx - ax, 1f, bz - az), new Quaternionf());
                     ItemDisplay box = idx < displays.size() ? validDisplay(world, displays.get(idx)) : null;
                     if (box == null) {
                         ItemStack fi = item;

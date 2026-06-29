@@ -442,7 +442,11 @@ public class FluidBlockTankBehavior extends ConnectableBlockBehavior implements 
         boolean win = isWindowed(level, ctrlPos);
 
         try {
-            FluidTankRender.update(level, ctrlPos, width, height, type, fill);
+            // No window -> no fluid render at all (the group is opaque/closed).
+            if (win)
+                FluidTankRender.update(level, ctrlPos, width, height, type, fill);
+            else
+                FluidTankRender.remove(level, ctrlPos);
         } catch (Throwable ignored) {
         }
 
@@ -570,6 +574,27 @@ public class FluidBlockTankBehavior extends ConnectableBlockBehavior implements 
         public Controller(BlockEntity blockEntity, FluidBlockTankBehavior behavior) {
             super(blockEntity);
             this.behavior = behavior;
+        }
+
+        @Override
+        public void onRemove() {
+            super.onRemove();
+            // Clear this block's fluid displays (if it was a controller) + re-solve the remaining tanks so
+            // the survivors re-render with their new group (event-driven sig change also catches it, but the
+            // broken controller's displays must go NOW or they linger as floating fluid boxes).
+            try {
+                Level level = (Level) ((BukkitWorld) blockEntity().world().world()).minecraftWorld();
+                BlockPos pos = (BlockPos) Utils.fromPos(blockEntity().pos());
+                FluidTankRender.remove(level, pos);
+                for (Direction d : Direction.values()) {
+                    BlockPos np = pos.relative(d);
+                    if (behavior.isTank(level, np)) {
+                        behavior.recomputeArea(level, np);
+                        break;
+                    }
+                }
+            } catch (Throwable ignored) {
+            }
         }
 
         @Override
