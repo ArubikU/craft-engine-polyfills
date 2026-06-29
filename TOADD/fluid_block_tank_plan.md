@@ -180,3 +180,14 @@ New ShellRender (mirror FluidTankRender lifecycle, keyed by controller -> List<U
 - Block config: replace the 24 frame variants with ONE empty/invisible model (keep collision via auto_state).
 - Wire ShellRender.update(owner, ctrl) in refreshGroupFromOwner alongside FluidTankRender; remove in
     recomputeArea cleanup + Controller.onRemove (same as the fluid box).
+
+## REMAINING (model render polish) — do carefully with visual iteration
+- Face direction: item-display flips the model 180°, so cull the OPPOSITE world face for an interior side
+  (north face nulled when SOUTH neighbour is same-group, east<->west). DONE (verify visually).
+- Corner windows depend on FOOTPRINT WIDTH (Create setWindows): w=2 corners HAVE a window; w=3 corners are
+  PLAIN (no window) and only the edge-mids show a window; w=1 = full window. The facing mask alone can't
+  tell a 2x2 corner from a 3x3 corner -> the model must also depend on width (add width to the model key, or
+  bring back Create's shape formula and layer the interior-face cull on top). Re-fetch Create base models +
+  match TOADD/ctm_tiles (4x4 connected sheet, 16 tiles: rows=vertical state, cols=horizontal) for the wall.
+- Apply the CTM via TOADD/ctm_tiles: pick the wall tile per (vertical, horizontal) connection so adjacent
+  tanks are seamless. Entity-renderer means no blockstate-pool limit, so per-combo models are fine.
