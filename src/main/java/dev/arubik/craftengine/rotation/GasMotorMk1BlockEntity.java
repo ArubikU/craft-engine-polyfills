@@ -93,7 +93,7 @@ public class GasMotorMk1BlockEntity extends AbstractMachineBlockEntity implement
         addGasTank(new GasTank("vapor", this.vaporCapacity)); // null filter = accept any gas
 
         IOConfiguration.Simple config = new IOConfiguration.Simple();
-        config.addInput(IOType.GAS, Direction.UP); // vapor enters only from the top
+        config.addInput(IOType.GAS, Direction.UP, Direction.DOWN); // vapor enters from top OR bottom
         config.setSlots(IOType.GAS, IOConfiguration.IORole.INPUT, 0);
         setIOConfiguration(config);
 
