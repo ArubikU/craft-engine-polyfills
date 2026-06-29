@@ -67,11 +67,14 @@ public final class FluidTankRender {
         int idx = 0;
         for (int y = 0; y < height; y++) {
             double layerFill = Math.max(0.0, Math.min(1.0, fluidBlocks - y)); // 0..1 within this block layer
-            if (layerFill <= 0.001)
+            // The bottom layer (y==0) ALWAYS renders while the group holds any fluid (caller already
+            // returned for EMPTY/0), at its minimum level _2 — there is no "0%" look. Higher layers stop
+            // once empty.
+            if (y > 0 && layerFill <= 0.001)
                 break; // no fluid above here
             int rawLevel = (int) Math.round(layerFill * 15);
-            if (rawLevel <= 0)
-                break; // negligible sliver
+            if (y > 0 && rawLevel <= 0)
+                break; // negligible sliver above the bottom
             // Cap clearance: levels that clip into a frame cap are never shown. The bottom-capped layer (y==0)
             // renders only 2..15 (0/1 hide inside the bottom cap); the top-capped layer (y==height-1) renders
             // only 0..13 (14/15 poke through the top cap). A single block (both caps) is therefore 2..13.
