@@ -72,10 +72,11 @@ public final class FluidTankRender {
             int rawLevel = (int) Math.round(layerFill * 15);
             if (rawLevel <= 0)
                 break; // negligible sliver
-            // Cap clearance: the bottom-capped layer (y==0) starts at MIN level 2 (the _0/_1 models clip into
-            // the bottom cap), and the top-capped layer (y==height-1) maxes at 14 (the _15 pokes the top cap).
-            int lo = (y == 0) ? 2 : 1;
-            int hi = (y == height - 1) ? 14 : 15;
+            // Cap clearance: levels that clip into a frame cap are never shown. The bottom-capped layer (y==0)
+            // renders only 2..15 (0/1 hide inside the bottom cap); the top-capped layer (y==height-1) renders
+            // only 0..13 (14/15 poke through the top cap). A single block (both caps) is therefore 2..13.
+            int lo = (y == 0) ? 2 : 0;
+            int hi = (y == height - 1) ? 13 : 15;
             int lvl = Math.max(lo, Math.min(hi, rawLevel));
             ItemStack item = levelItem(type, lvl);
             if (item == null)
