@@ -474,7 +474,7 @@ public class FluidBlockTankBehavior extends ConnectableBlockBehavior implements 
             dev.arubik.craftengine.property.TankFacing facing = win
                     ? dev.arubik.craftengine.property.TankFacing.of(
                             !sameGroup(owner, p.north(), ctrl), !sameGroup(owner, p.east(), ctrl),
-                            !sameGroup(owner, p.south(), ctrl), !sameGroup(owner, p.west(), ctrl))
+                            !sameGroup(owner, p.south(), ctrl), !sameGroup(owner, p.west(), ctrl), width)
                     : dev.arubik.craftengine.property.TankFacing.SOLID; // hammer window off -> opaque tank
             applyMemberState(level, p, bottom, top, type, memberFill, facing);
         }

@@ -11,7 +11,8 @@ public enum TankFacing {
 
     NONE("none"),
     N("n"), E("e"), S("s"), W("w"),
-    NE("ne"), NW("nw"), ES("es"), SW("sw"),
+    NE("ne"), NW("nw"), ES("es"), SW("sw"), // windowed half-corner (footprint width == 2)
+    NEP("nep"), NWP("nwp"), ESP("esp"), SWP("swp"), // plain corner, no window (footprint width >= 3)
     NESW("nesw"),
     SOLID("solid"); // hammer-disabled window: opaque walls
 
@@ -41,5 +42,28 @@ public enum TankFacing {
             if (f.name.equals(k))
                 return f;
         return NESW; // any non-square combination (shouldn't occur) falls back to the full window
+    }
+
+    /**
+     * Width-aware variant: a CORNER cell (exactly two adjacent exterior sides) renders a windowed
+     * half-corner only in a 2×2 footprint; in a 3×3+ footprint the corners are PLAIN (no window) and
+     * only the edge-mid cells carry the centered window. Everything else is width-independent.
+     */
+    public static TankFacing of(boolean n, boolean e, boolean s, boolean w, int width) {
+        TankFacing base = of(n, e, s, w);
+        if (width < 3)
+            return base; // 1×1 / 2×2: corners stay windowed
+        switch (base) {
+            case NE:
+                return NEP;
+            case NW:
+                return NWP;
+            case ES:
+                return ESP;
+            case SW:
+                return SWP;
+            default:
+                return base;
+        }
     }
 }
