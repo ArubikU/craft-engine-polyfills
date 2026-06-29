@@ -232,8 +232,8 @@ public class FluidBlockTankBehavior extends ConnectableBlockBehavior implements 
             if (!controllers.contains(cell))
                 FluidTankRender.remove(level, BlockPos.of(cell));
         for (long c : controllers) {
-            consolidateFluid(level, BlockPos.of(c));
-            refreshGroupFromOwner(level, owner, c); // reuse the solved map (no per-group re-solve)
+            consolidateFromOwner(level, owner, c); // per-group fluid sum (reuse the solved map)
+            refreshGroupFromOwner(level, owner, c);
         }
     }
 
@@ -374,39 +374,41 @@ public class FluidBlockTankBehavior extends ConnectableBlockBehavior implements 
     public void consolidateFluid(Level level, BlockPos anyMember) {
         if (level.isClientSide())
             return;
-        Group g = scanGroup(level, anyMember);
+        consolidateFromOwner(level, solveComponent(level, anyMember),
+                scanGroup(level, anyMember).controller.asLong());
+    }
+
+    /**
+     * Sum the fluid of EXACTLY ONE group (the cells the owner map assigns to {@code ctrl}) into its
+     * controller, clamped to THAT group's capacity, clearing the other members. Operating per-group (not
+     * over the whole connected component) is critical: a flood-then-clamp summed adjacent SEPARATE tanks and
+     * clamped to one small group's cap, destroying fluid (40k tank + a 1×1 next to it collapsed to 8k).
+     */
+    private void consolidateFromOwner(Level level, java.util.Map<Long, long[]> owner, long ctrl) {
+        long[] ca = owner.get(ctrl);
+        if (ca == null)
+            return;
+        int cap = (int) (ca[1] * ca[1] * ca[2]) * CAP_PER_BLOCK;
+        BlockPos ctrlPos = BlockPos.of(ctrl);
         int total = 0;
         FluidType type = null;
-        ArrayDeque<BlockPos> q = new ArrayDeque<>();
-        HashSet<Long> seen = new HashSet<>();
-        q.add(anyMember.immutable());
-        seen.add(anyMember.asLong());
-        java.util.List<BlockPos> members = new java.util.ArrayList<>();
-        while (!q.isEmpty()) {
-            BlockPos p = q.poll();
-            if (!isTank(level, p))
-                continue;
-            members.add(p);
-            FluidStack s = FluidCarrierImpl.getStored(level, p);
+        for (java.util.Map.Entry<Long, long[]> e : owner.entrySet()) {
+            if (e.getValue()[0] != ctrl)
+                continue; // only THIS group's cells
+            BlockPos m = BlockPos.of(e.getKey());
+            FluidStack s = FluidCarrierImpl.getStored(level, m);
             if (s != null && !s.isEmpty() && (type == null || type == s.getType())) {
                 type = s.getType();
                 total += s.getAmount();
             }
-            for (Direction d : Direction.values()) {
-                BlockPos np = p.relative(d);
-                if (seen.add(np.asLong()) && isTank(level, np))
-                    q.add(np.immutable());
-            }
-        }
-        for (BlockPos m : members)
-            if (!m.equals(g.controller))
+            if (!m.equals(ctrlPos))
                 dev.arubik.craftengine.util.CustomBlockData.from(level, m).remove(FluidKeys.FLUID);
-        int cap = g.count * CAP_PER_BLOCK;
+        }
         if (type != null && total > 0)
-            dev.arubik.craftengine.util.CustomBlockData.from(level, g.controller)
+            dev.arubik.craftengine.util.CustomBlockData.from(level, ctrlPos)
                     .set(FluidKeys.FLUID, new FluidStack(type, Math.min(total, cap), 0));
         else
-            dev.arubik.craftengine.util.CustomBlockData.from(level, g.controller).remove(FluidKeys.FLUID);
+            dev.arubik.craftengine.util.CustomBlockData.from(level, ctrlPos).remove(FluidKeys.FLUID);
     }
 
     /** Recompute every member's blockstate (bottom/top + the fluid plane mapped from the group fill). */

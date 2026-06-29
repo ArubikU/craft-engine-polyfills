@@ -62,11 +62,18 @@ public final class FluidGraphBuilder {
                 }
                 if (!isCarrier(level, np) || !connected(level, pos, np, dir))
                     continue;
+                // Two block-tank cells NEVER exchange fluid directly: same group is one collapsed node
+                // (internal), and DIFFERENT adjacent groups are SEPARATE tanks (they share only through
+                // pipes). Without this, touching tank groups equalized + clamped to the smaller cap and lost
+                // fluid. Still BFS into np so the whole network is discovered.
+                boolean bothTanks = behaviorAt(level, pos,
+                        dev.arubik.craftengine.fluid.behavior.FluidBlockTankBehavior.class) != null
+                        && behaviorAt(level, np,
+                                dev.arubik.craftengine.fluid.behavior.FluidBlockTankBehavior.class) != null;
                 int bIdx = graph.addNode(makeNode(level, canonical(level, np)));
-                // de-dup: one edge per unordered pair (aIdx < bIdx) AND skip internal tank-group edges
-                // (aIdx == bIdx) + duplicate external edges collapsed from several members (edgeKeys).
-                if (aIdx < bIdx && edgeKeys.add(((long) aIdx << 32) | (bIdx & 0xffffffffL))) {
-                    int valve = valveCheck(level, pos, np); // -2 = closed valve -> no edge
+                if (!bothTanks
+                        && aIdx < bIdx && edgeKeys.add(((long) aIdx << 32) | (bIdx & 0xffffffffL))) {
+                    int valve = valveCheck(level, pos, np);
                     if (valve != -2) {
                         int crestY = Math.max(pos.getY(), np.getY());
                         double emf = pumpEmf(level, pos, np);
