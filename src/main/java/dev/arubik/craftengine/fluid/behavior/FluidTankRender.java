@@ -69,7 +69,14 @@ public final class FluidTankRender {
             double layerFill = Math.max(0.0, Math.min(1.0, fluidBlocks - y)); // 0..1 within this block layer
             if (layerFill <= 0.001)
                 break; // no fluid above here
-            ItemStack item = levelItem(type, layerFill);
+            int rawLevel = (int) Math.round(layerFill * 15);
+            if (rawLevel <= 0)
+                break; // negligible sliver — its _0 model would just clip
+            // Layers that carry a cap (group bottom y==0, group top y==height-1, or a 1x1x1) clamp to 1..14:
+            // the _0 (1px) and _15 (full) models poke through the cap geometry, so discard those states there.
+            boolean capped = y == 0 || y == height - 1;
+            int lvl = capped ? Math.max(1, Math.min(14, rawLevel)) : Math.max(1, Math.min(15, rawLevel));
+            ItemStack item = levelItem(type, lvl);
             if (item == null)
                 continue;
             for (int dx = 0; dx < width; dx++)
@@ -120,15 +127,15 @@ public final class FluidTankRender {
         return e instanceof ItemDisplay d && d.isValid() ? d : null;
     }
 
-    /** Build the level item (cml:fluidlvl_&lt;type&gt;_&lt;0..15&gt;) for this layer's fill fraction. */
-    private static ItemStack levelItem(FluidType type, double layerFill) {
+    /** Build the level item cml:fluidlvl_&lt;type&gt;_&lt;0..15&gt; for an explicit level index. */
+    private static ItemStack levelItem(FluidType type, int lvl) {
         String tn = switch (type) {
             case WATER, MILK, POWDER_SNOW -> "water";
             case LAVA, HONEY, SLIME -> "lava";
             case EXPERIENCE -> "xp";
             default -> "water";
         };
-        int lvl = Math.max(0, Math.min(15, (int) Math.round(layerFill * 15)));
+        lvl = Math.max(0, Math.min(15, lvl));
         try {
             var d = CraftEngineItems.byId(Key.of("cml", "fluidlvl_" + tn + "_" + lvl));
             return d != null ? d.buildBukkitItem() : null;
