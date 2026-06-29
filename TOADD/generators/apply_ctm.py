@@ -18,21 +18,28 @@ OUT = r"D:\Github\craft-engine-polyfills\testserver\plugins\CraftEngine\resource
 
 OPP = {"north": "south", "south": "north", "east": "west", "west": "east"}
 
-# --- EDITABLE MAPPING ---------------------------------------------------------
-ROW = {"top": 0, "middle": 1, "bottom": 3, "single": 1}      # vertical -> sheet row
-COL = {"L": 0, "M": 1, "R": 3, "single": 1}                  # horizontal -> sheet col
+# --- MAPPING (calibrated from user's sheet table) -----------------------------
+# rows (vertical):   y0=top  y1=middle  y2=bottom  y3=single
+# cols (horizontal): x0=1-wide/both-ends(nesw)  x1=west-end(sw)  x2=middle(s)  x3=east-end(es)
+ROW = {"top": 0, "middle": 1, "bottom": 2, "single": 3}
+COL = {"single": 0, "L": 1, "M": 2, "R": 3}
 # -----------------------------------------------------------------------------
 
-def belongs(el):
+def principal_side(el):
+    """The wall's actual facing = the side it is THINNEST against (its normal). A corner
+    segment is thin on two axes; the thinner one (the 1px wall plane) is the real wall."""
     fx, fy, fz = el["from"]; tx, ty, tz = el["to"]
     mnx, mxx = min(fx, tx), max(fx, tx); mnz, mxz = min(fz, tz), max(fz, tz)
-    tx4 = (mxx - mnx) <= 4; tz4 = (mxz - mnz) <= 4
-    s = set()
-    if mnz < 1 and tz4:  s.add("north")
-    if mxz > 15 and tz4: s.add("south")
-    if mnx < 1 and tx4:  s.add("west")
-    if mxx > 15 and tx4: s.add("east")
-    return s
+    thz = mxz - mnz; thx = mxx - mnx
+    cands = []
+    if mnz < 1 and thz <= 4:  cands.append((thz, "north"))
+    if mxz > 15 and thz <= 4: cands.append((thz, "south"))
+    if mnx < 1 and thx <= 4:  cands.append((thx, "west"))
+    if mxx > 15 and thx <= 4: cands.append((thx, "east"))
+    if not cands:
+        return None
+    cands.sort()  # thinnest first; deterministic tie-break by side name
+    return cands[0][1]
 
 def mask_ext(mask):
     if mask == "none":          return set()
@@ -68,10 +75,10 @@ def main():
             wall_faces = [f for f in faces.values() if f.get("texture") == "#1"]
             if not wall_faces:
                 continue
-            local = belongs(el)
+            local = principal_side(el)
             if not local:
                 continue
-            world_side = OPP[next(iter(local))]
+            world_side = OPP[local]
             row = ROW[pos]; col = COL[col_for(world_side, ext)]
             key = f"c{row}{col}"
             tex[key] = f"cml:block/fbt_ctm_r{row}_c{col}"
