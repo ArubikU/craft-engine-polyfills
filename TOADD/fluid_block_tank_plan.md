@@ -160,3 +160,23 @@ Correct horizontal-CTM step (intricate, do carefully, one model at a time + test
 - Verify on a real 2x2 and 3x3 in-world before mass-applying.
 DONE meanwhile: vertical CTM (per-position wall texture), stacked per-layer fluid render (ItemDisplay,
 translate +0.5/axis to centre at 0.5/0.5 and lift), unified multiblock store, deterministic partition.
+
+## PER-FACE DISPLAY-ENTITY SHELL (next — replaces the 24 blockstate variants; saves blockstates)
+can-occlude:true did NOT cull interior faces (CraftEngine auto_state). Decision: render the shell via
+display entities per exterior face; the block model becomes EMPTY (invisible) so interiors are see-through.
+
+New ShellRender (mirror FluidTankRender lifecycle, keyed by controller -> List<UUID>):
+- For each member cell of a group, for each of the 6 faces:
+    * neighbour in that dir SAME group (owner map) -> INTERIOR -> skip (see-through).
+    * else EXTERIOR -> spawn an ItemDisplay quad for that face.
+- Face quad models (flat 16x16, 1px), 3 textures:
+    * cml:block/fluid_shell/window  -> fluid_block_tank_window_single (exterior SIDE faces)
+    * cml:block/fluid_shell/cap     -> fluid_block_tank_top           (exterior TOP/BOTTOM faces)
+    * (optional wall for non-window side variants)
+- Orient the north-facing quad to each dir via display rotation quaternion:
+    NORTH=identity, SOUTH=Y180, EAST=Y-90, WEST=Y90, UP=X-90, DOWN=X90; translate to the face plane.
+- CTM tile: pick from the 64x64 sheet (rows=vertical state by bottom/top, cols=horizontal by lateral
+    same-group neighbours) -> the quad's UV maps that 16px tile; OR keep window_single for v1.
+- Block config: replace the 24 frame variants with ONE empty/invisible model (keep collision via auto_state).
+- Wire ShellRender.update(owner, ctrl) in refreshGroupFromOwner alongside FluidTankRender; remove in
+    recomputeArea cleanup + Controller.onRemove (same as the fluid box).
