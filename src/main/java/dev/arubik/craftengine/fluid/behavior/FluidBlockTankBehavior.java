@@ -229,8 +229,10 @@ public class FluidBlockTankBehavior extends ConnectableBlockBehavior implements 
         // Clear fluid boxes left at cells that are no longer controllers (group split/reshape) — otherwise a
         // demoted controller leaves a phantom fluid box floating. remove() is a no-op when there's no box.
         for (Long cell : owner.keySet())
-            if (!controllers.contains(cell))
+            if (!controllers.contains(cell)) {
                 FluidTankRender.remove(level, BlockPos.of(cell));
+                FluidShellRender.remove(level, BlockPos.of(cell));
+            }
         for (long c : controllers) {
             consolidateFromOwner(level, owner, c); // per-group fluid sum (reuse the solved map)
             refreshGroupFromOwner(level, owner, c);
@@ -452,6 +454,12 @@ public class FluidBlockTankBehavior extends ConnectableBlockBehavior implements 
         } catch (Throwable ignored) {
         }
 
+        // Exterior shell: render only the group's outer faces via display entities (interiors see-through).
+        try {
+            FluidShellRender.update(level, owner, ctrl);
+        } catch (Throwable ignored) {
+        }
+
         for (java.util.Map.Entry<Long, long[]> e : owner.entrySet()) {
             if (e.getValue()[0] != ctrl)
                 continue; // only THIS group's cells
@@ -588,6 +596,7 @@ public class FluidBlockTankBehavior extends ConnectableBlockBehavior implements 
                 Level level = (Level) ((BukkitWorld) blockEntity().world().world()).minecraftWorld();
                 BlockPos pos = (BlockPos) Utils.fromPos(blockEntity().pos());
                 FluidTankRender.remove(level, pos);
+                FluidShellRender.remove(level, pos);
                 for (Direction d : Direction.values()) {
                     BlockPos np = pos.relative(d);
                     if (behavior.isTank(level, np)) {
