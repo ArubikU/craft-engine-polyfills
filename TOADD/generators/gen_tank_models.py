@@ -1,12 +1,20 @@
 #!/usr/bin/env python3
 """Generate cml fluid_block_tank face models from Create originals.
 
-Convention (item-display flips model 180deg about Y): a model face on local side L
-displays at world side opposite(L). Keep a face's real texture iff opposite(L) is in
-the cell's EXTERIOR set; otherwise null it (#6 = transparent). up/down faces always kept.
+CULLING = DELETE WHOLE CUBES (never faces, never UVs). A side cube (wall or window) is
+KEPT only if it physically TOUCHES one of the cell's EXTERIOR boundary planes, computed
+from the cube's own from/to. Cubes that touch no exterior side are deleted, so the
+interior of a multiblock is truly hollow. Lid cubes (those with up/down faces) are kept
+as-is per source position (block_single=both lids, bottom/top=one, middle=none).
+
+Belongs test: a cube belongs to side D iff it is a THIN slab (extent perpendicular to D
+<= 4px) flush against D's plane. (Full-length walls touch the perpendicular sides at
+their ends, so the thin-slab gate is what stops a corner cube keeping all four walls.)
+  north: min_z < 1  & (max_z-min_z)<=4     south: max_z > 15 & (max_z-min_z)<=4
+  west:  min_x < 1  & (max_x-min_x)<=4     east:  max_x > 15 & (max_x-min_x)<=4
 
 Per facing mask:
-  none            base,                 exterior={}            -> lids only
+  none            base/middle,          exterior={}            -> lids only (interior cell)
   n/e/s/w         window,               exterior={that side}   -> centered porthole on 1 side (w>=3 edge-mid)
   ne/nw/es/sw     create half-corner,   exterior={2 adj sides} -> merged half-window corner (w==2)
   nep/nwp/esp/swp base,                 exterior={2 adj sides} -> plain walls, no window (w>=3 corner)
@@ -18,46 +26,45 @@ import json, os, copy
 SRC = r"C:\Users\ejane\AppData\Local\Temp\createmodels"
 OUT = r"D:\Github\craft-engine-polyfills\testserver\plugins\CraftEngine\resources\modern\resourcepack\assets\cml\models\block\fluid_block_tank"
 
-OPP = {"north": "south", "south": "north", "east": "west", "west": "east"}
 LETTER = {"n": "north", "e": "east", "s": "south", "w": "west"}
 HORIZ = ("north", "east", "south", "west")
-
-# world-exterior corner mask -> Create half-corner source (flip: source has geometry on OPPOSITE sides)
-HALF_SRC = {"ne": "window_sw", "nw": "window_se", "es": "window_nw", "sw": "window_ne"}
-
+HALF_SRC = {"ne": "window_ne", "nw": "window_nw", "es": "window_se", "sw": "window_sw"}
 POSITIONS = ["single", "bottom", "middle", "top"]
 
 def texmap(pos, src_tex):
-    # Preserve EACH source model's own texture keys (single uses #5 window_single; multi-height uses #3
-    # fluid_tank_window with vertical-CTM UVs). Swap create:->cml: / fluid_tank->fluid_block_tank, then
-    # override #1 (walls) with the per-position connection texture and add #6 (null) for culled faces.
-    out = {}
-    for k, v in src_tex.items():
-        out[k] = v.replace("create:block/fluid_tank", "cml:block/fluid_block_tank")
+    # Texture PATHS only (never UVs): swap create:->cml: / fluid_tank->fluid_block_tank,
+    # then override #1 (walls) with the per-position vertical-CTM connection texture.
+    out = {k: v.replace("create:block/fluid_tank", "cml:block/fluid_block_tank") for k, v in src_tex.items()}
     out["1"] = "cml:block/fluid_block_tank_conn_" + pos
-    out["6"] = "cml:block/null"
     return out
 
 def load(pos, suffix):
-    p = os.path.join(SRC, f"block_{pos}{suffix}.json")
-    return json.load(open(p))
+    return json.load(open(os.path.join(SRC, f"block_{pos}{suffix}.json")))
+
+def touched_sides(el):
+    fx, fy, fz = el["from"]
+    tx, ty, tz = el["to"]
+    minx, maxx = min(fx, tx), max(fx, tx)
+    minz, maxz = min(fz, tz), max(fz, tz)
+    thin_x = (maxx - minx) <= 4
+    thin_z = (maxz - minz) <= 4
+    s = set()
+    if minz < 1 and thin_z:  s.add("north")
+    if maxz > 15 and thin_z: s.add("south")
+    if minx < 1 and thin_x:  s.add("west")
+    if maxx > 15 and thin_x: s.add("east")
+    return s
+
+def is_lid(el):
+    return "up" in el["faces"] or "down" in el["faces"]
 
 def emit(pos, mask, exterior, source_suffix, keep_all=False):
-    """exterior: set of world dirs ('north'...). keep_all: ignore exterior, keep every face real."""
     d = load(pos, source_suffix)
-    out = {"credit": "Made with Blockbench", "parent": "block/block", "textures": texmap(pos, d["textures"]), "elements": []}
+    out = {"credit": "Made with Blockbench", "parent": "block/block",
+           "textures": texmap(pos, d["textures"]), "elements": []}
     for el in d["elements"]:
-        ne = copy.deepcopy(el)
-        for side in list(ne["faces"].keys()):
-            if side not in HORIZ:
-                continue  # up/down always kept
-            f = ne["faces"][side]
-            disp = OPP[side]  # world side this local face shows on after the 180 flip
-            keep = keep_all or (disp in exterior)
-            if not keep:
-                f["texture"] = "#6"
-        out["elements"].append(ne)
-    # flatten groups (not needed for rendering)
+        if is_lid(el) or keep_all or (touched_sides(el) & exterior):
+            out["elements"].append(copy.deepcopy(el))
     path = os.path.join(OUT, f"block_{pos}_face_{mask}.json")
     json.dump(out, open(path, "w"), separators=(",", ":"))
     return path
@@ -66,22 +73,14 @@ def main():
     os.makedirs(OUT, exist_ok=True)
     count = 0
     for pos in POSITIONS:
-        # none -> lids only
         emit(pos, "none", set(), ""); count += 1
-        # edge-mids: window source, 1 exterior side
         for ltr, wd in LETTER.items():
             emit(pos, ltr, {wd}, "_window"); count += 1
-        # windowed corners (w==2): create half-corner source, 2 exterior sides
         for mask, src in HALF_SRC.items():
-            ext = {LETTER[c] for c in mask}
-            emit(pos, mask, ext, "_" + src); count += 1
-        # plain corners (w>=3): base source, 2 exterior sides, no window
+            emit(pos, mask, {LETTER[c] for c in mask}, "_" + src); count += 1
         for mask in ("ne", "nw", "es", "sw"):
-            ext = {LETTER[c] for c in mask}
-            emit(pos, mask + "p", ext, ""); count += 1
-        # nesw isolated column: full window
+            emit(pos, mask + "p", {LETTER[c] for c in mask}, ""); count += 1
         emit(pos, "nesw", set(HORIZ), "_window"); count += 1
-        # solid: base, keep all walls (opaque, no window)
         emit(pos, "solid", set(HORIZ), "", keep_all=True); count += 1
     print(f"emitted {count} models to {OUT}")
 
