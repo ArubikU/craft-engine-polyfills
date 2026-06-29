@@ -23,6 +23,8 @@ OPP = {"north": "south", "south": "north", "east": "west", "west": "east"}
 # cols (horizontal): x0=1-wide/both-ends(nesw)  x1=west-end(sw)  x2=middle(s)  x3=east-end(es)
 ROW = {"top": 0, "middle": 1, "bottom": 2, "single": 3}
 COL = {"single": 0, "L": 1, "M": 2, "R": 3}
+# masks whose CTM wall faces need a horizontal (U) UV flip so the tile mirrors correctly
+FLIP_U_MASKS = {"nwp", "nep", "esp"}
 # -----------------------------------------------------------------------------
 
 def principal_side(el):
@@ -85,6 +87,9 @@ def main():
             used[key] = True
             for f in wall_faces:
                 f["texture"] = "#" + key
+                if mask in FLIP_U_MASKS and "uv" in f:
+                    u1, v1, u2, v2 = f["uv"]
+                    f["uv"] = [u2, v1, u1, v2]  # horizontal (U) flip
         if used:
             json.dump(d, open(fp, "w"), separators=(",", ":"))
             changed += 1
