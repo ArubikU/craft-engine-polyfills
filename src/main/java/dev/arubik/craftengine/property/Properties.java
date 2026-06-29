@@ -15,6 +15,7 @@ public class Properties {
         public static final Key MACHINE_MODE = Key.of("polyfills:machine_mode");
         public static final Key MACHINE_TYPE = Key.of("polyfills:machine_type");
         public static final Key TANK_SHAPE = Key.of("polyfills:tank_shape");
+        public static final Key TANK_FACING = Key.of("polyfills:tank_facing");
 
         // floor wall ceiling
         public static void register() {
@@ -32,5 +33,7 @@ public class Properties {
                                 EnumProperty.factory(dev.arubik.craftengine.multiblock.impl.MachineType.class));
                 net.momirealms.craftengine.core.block.property.Properties.register(TANK_SHAPE,
                                 EnumProperty.factory(TankShape.class));
+                net.momirealms.craftengine.core.block.property.Properties.register(TANK_FACING,
+                                EnumProperty.factory(TankFacing.class));
         }
 }

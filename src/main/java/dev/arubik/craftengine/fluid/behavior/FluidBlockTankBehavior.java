@@ -469,10 +469,14 @@ public class FluidBlockTankBehavior extends ConnectableBlockBehavior implements 
             double memberFill = Math.max(0.0, Math.min(1.0, surface - k));
             boolean bottom = !sameGroup(owner, p.below(), ctrl);
             boolean top = !sameGroup(owner, p.above(), ctrl);
-            dev.arubik.craftengine.property.TankShape shape = win
-                    ? windowShape(width, p.getX() - minX, p.getZ() - minZ)
-                    : dev.arubik.craftengine.property.TankShape.PLAIN;
-            applyMemberState(level, p, bottom, top, type, memberFill, shape);
+            // facing = which HORIZONTAL sides are exterior (neighbour not in this group) — the model culls
+            // the interior sides so the multiblock is hollow/see-through. (north=-z, east=+x, south=+z, west=-x)
+            dev.arubik.craftengine.property.TankFacing facing = win
+                    ? dev.arubik.craftengine.property.TankFacing.of(
+                            !sameGroup(owner, p.north(), ctrl), !sameGroup(owner, p.east(), ctrl),
+                            !sameGroup(owner, p.south(), ctrl), !sameGroup(owner, p.west(), ctrl))
+                    : dev.arubik.craftengine.property.TankFacing.SOLID; // hammer window off -> opaque tank
+            applyMemberState(level, p, bottom, top, type, memberFill, facing);
         }
     }
 
@@ -481,24 +485,9 @@ public class FluidBlockTankBehavior extends ConnectableBlockBehavior implements 
         return a != null && a[0] == ctrl;
     }
 
-    /** Window shape for a member at footprint offset (xOff, zOff), Create's exact rule (setWindows). */
-    private static dev.arubik.craftengine.property.TankShape windowShape(int width, int xOff, int zOff) {
-        if (width == 1)
-            return dev.arubik.craftengine.property.TankShape.WINDOW;
-        if (width == 2)
-            return xOff == 0
-                    ? (zOff == 0 ? dev.arubik.craftengine.property.TankShape.WINDOW_NW
-                            : dev.arubik.craftengine.property.TankShape.WINDOW_SW)
-                    : (zOff == 0 ? dev.arubik.craftengine.property.TankShape.WINDOW_NE
-                            : dev.arubik.craftengine.property.TankShape.WINDOW_SE);
-        if (width == 3 && Math.abs(xOff - zOff) == 1)
-            return dev.arubik.craftengine.property.TankShape.WINDOW;
-        return dev.arubik.craftengine.property.TankShape.PLAIN;
-    }
-
     @SuppressWarnings("unchecked")
     private void applyMemberState(Level level, BlockPos pos, boolean bottom, boolean top, FluidType type,
-            double memberFill, dev.arubik.craftengine.property.TankShape shape) {
+            double memberFill, dev.arubik.craftengine.property.TankFacing facing) {
         Optional<ImmutableBlockState> opt = BlockStateUtils.getOptionalCustomBlockState(level.getBlockState(pos));
         if (opt.isEmpty())
             return;
@@ -513,11 +502,11 @@ public class FluidBlockTankBehavior extends ConnectableBlockBehavior implements 
                 (net.momirealms.craftengine.core.block.property.Property<Boolean>) (Object) cur.getProperty("top");
         if (tp != null)
             ns = ns.with(tp, top);
-        // shape (custom EnumProperty<TankShape>) — Create's window/corner/plain tiling.
-        EnumProperty<dev.arubik.craftengine.property.TankShape> shapeProp =
-                (EnumProperty<dev.arubik.craftengine.property.TankShape>) (Object) cur.getProperty("shape");
-        if (shapeProp != null)
-            ns = ns.with(shapeProp, shape);
+        // facing (custom EnumProperty<TankFacing>) — which sides are exterior; model culls interior faces.
+        EnumProperty<dev.arubik.craftengine.property.TankFacing> faceProp =
+                (EnumProperty<dev.arubik.craftengine.property.TankFacing>) (Object) cur.getProperty("facing");
+        if (faceProp != null)
+            ns = ns.with(faceProp, facing);
         // Fluid plane: level (0..max) + fluidtype — same convention as the personal tank's window fill.
         IntegerProperty lvlProp = (IntegerProperty) (Object) cur.getProperty("level");
         if (lvlProp != null) {
