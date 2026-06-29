@@ -139,10 +139,15 @@ public class MachinePumpBlockEntity extends AbstractMachineBlockEntity {
         IOConfiguration.RelativeIO cfg = new IOConfiguration.RelativeIO();
         cfg.addInput(IOType.FLUID, RelativeDirection.DOWN);
         cfg.addOutput(IOType.FLUID, RelativeDirection.UP);
-        // Register the (manual) fuel slot(s) so the shared fuel system (hasFuel/consumeFuel/getFuelSlots)
-        // finds them. There is no automatic item IO face for fuel — players load it through the menu.
-        if (fuelSlots.length > 0)
+        // Fuel can be inserted (hopper/funnel) from EVERY face that isn't the fluid IN (DOWN) / OUT (UP):
+        // the 4 side faces accept ITEM, which getSlotsForFace/canPlaceItemThroughFace route to the fuel slots.
+        if (fuelSlots.length > 0) {
+            cfg.addInput(IOType.ITEM, RelativeDirection.FRONT);
+            cfg.addInput(IOType.ITEM, RelativeDirection.BACK);
+            cfg.addInput(IOType.ITEM, RelativeDirection.LEFT);
+            cfg.addInput(IOType.ITEM, RelativeDirection.RIGHT);
             cfg.setSlots(IOType.ITEM, IOConfiguration.IORole.FUEL, fuelSlots);
+        }
         return cfg;
     }
 

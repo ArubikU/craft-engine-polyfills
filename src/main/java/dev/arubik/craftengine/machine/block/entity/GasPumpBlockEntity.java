@@ -134,8 +134,15 @@ public class GasPumpBlockEntity extends AbstractMachineBlockEntity {
     private IOConfiguration buildIO() {
         IOConfiguration.RelativeIO cfg = new IOConfiguration.RelativeIO();
         cfg.addOutput(IOType.GAS, RelativeDirection.UP);
-        if (fuelSlots.length > 0)
+        // Fuel via hopper/funnel from every face except the gas IN (DOWN vein) / OUT (UP): the 4 side faces
+        // accept ITEM -> routed to the fuel slots by getSlotsForFace/canPlaceItemThroughFace.
+        if (fuelSlots.length > 0) {
+            cfg.addInput(IOType.ITEM, RelativeDirection.FRONT);
+            cfg.addInput(IOType.ITEM, RelativeDirection.BACK);
+            cfg.addInput(IOType.ITEM, RelativeDirection.LEFT);
+            cfg.addInput(IOType.ITEM, RelativeDirection.RIGHT);
             cfg.setSlots(IOType.ITEM, IOConfiguration.IORole.FUEL, fuelSlots);
+        }
         return cfg;
     }
 
