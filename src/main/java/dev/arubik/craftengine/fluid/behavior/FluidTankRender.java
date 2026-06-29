@@ -68,19 +68,19 @@ public final class FluidTankRender {
         for (int y = 0; y < height; y++) {
             double layerFill = Math.max(0.0, Math.min(1.0, fluidBlocks - y)); // 0..1 within this block layer
             // The bottom layer (y==0) ALWAYS renders while the group holds any fluid (caller already
-            // returned for EMPTY/0), at its minimum level _2 — there is no "0%" look. Higher layers stop
-            // once empty.
+            // returned for EMPTY/0). Higher layers stop once empty.
             if (y > 0 && layerFill <= 0.001)
                 break; // no fluid above here
             int rawLevel = (int) Math.round(layerFill * 15);
             if (y > 0 && rawLevel <= 0)
                 break; // negligible sliver above the bottom
-            // Cap clearance: levels that clip into a frame cap are never shown. The bottom-capped layer (y==0)
-            // renders only 2..15 (0/1 hide inside the bottom cap); the top-capped layer (y==height-1) renders
-            // only 0..13 (14/15 poke through the top cap). A single block (both caps) is therefore 2..13.
-            int lo = (y == 0) ? 2 : 0;
-            int hi = (y == height - 1) ? 13 : 15;
+            // Cap clearance: the bottom and top capped layers max out at level _11 (the taller levels poke
+            // through the frame caps); middle layers use the full 0..15. The bottom layer is additionally
+            // lifted +4px in Y (see yoff below) so it clears the bottom cap — min level is _0.
+            int lo = 0;
+            int hi = (y == 0 || y == height - 1) ? 11 : 15;
             int lvl = Math.max(lo, Math.min(hi, rawLevel));
+            float yoff = (y == 0) ? 4f / 16f : 0f; // ONLY this tank's bottom fluid layer gets the 4px lift
             ItemStack item = levelItem(type, lvl);
             if (item == null)
                 continue;
@@ -93,7 +93,7 @@ public final class FluidTankRender {
                     float ax = dx == 0 ? HULL : 0f, bx = 1f - (dx == width - 1 ? HULL : 0f);
                     float az = dz == 0 ? HULL : 0f, bz = 1f - (dz == width - 1 ? HULL : 0f);
                     Transformation t = new Transformation(
-                            new Vector3f((ax + bx) / 2f, 0.5f, (az + bz) / 2f), new Quaternionf(),
+                            new Vector3f((ax + bx) / 2f, 0.5f + yoff, (az + bz) / 2f), new Quaternionf(),
                             new Vector3f(bx - ax, 1f, bz - az), new Quaternionf());
                     ItemDisplay box = idx < displays.size() ? validDisplay(world, displays.get(idx)) : null;
                     if (box == null) {
