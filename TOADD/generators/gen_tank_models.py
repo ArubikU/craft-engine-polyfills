@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Generate cml fluid_block_tank face models from Create originals.
 
-Convention (DIRECT): keep a face's real texture iff its own side L is in the cell's
-EXTERIOR set; otherwise null it (#6 = transparent) so interior-facing sides hide.
-up/down faces always kept.
+Convention (item-display flips model 180deg about Y): a model face on local side L
+displays at world side opposite(L). Keep a face's real texture iff opposite(L) is in
+the cell's EXTERIOR set; otherwise null it (#6 = transparent). up/down faces always kept.
 
 Per facing mask:
   none            base,                 exterior={}            -> lids only
@@ -22,8 +22,8 @@ OPP = {"north": "south", "south": "north", "east": "west", "west": "east"}
 LETTER = {"n": "north", "e": "east", "s": "south", "w": "west"}
 HORIZ = ("north", "east", "south", "west")
 
-# world-exterior corner mask -> Create half-corner source (DIRECT: geometry on the named exterior sides)
-HALF_SRC = {"ne": "window_ne", "nw": "window_nw", "es": "window_se", "sw": "window_sw"}
+# world-exterior corner mask -> Create half-corner source (flip: source has geometry on OPPOSITE sides)
+HALF_SRC = {"ne": "window_sw", "nw": "window_se", "es": "window_nw", "sw": "window_ne"}
 
 POSITIONS = ["single", "bottom", "middle", "top"]
 
@@ -52,8 +52,8 @@ def emit(pos, mask, exterior, source_suffix, keep_all=False):
             if side not in HORIZ:
                 continue  # up/down always kept
             f = ne["faces"][side]
-            # DIRECT mapping: keep the face on the exterior side itself; null interior-facing sides.
-            keep = keep_all or (side in exterior)
+            disp = OPP[side]  # world side this local face shows on after the 180 flip
+            keep = keep_all or (disp in exterior)
             if not keep:
                 f["texture"] = "#6"
         out["elements"].append(ne)
