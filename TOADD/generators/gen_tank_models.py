@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 """Generate cml fluid_block_tank face models from Create originals.
 
-Convention (item-display flips model 180deg about Y): a model face on local side L
-displays at world side opposite(L). Keep a face's real texture iff opposite(L) is in
-the cell's EXTERIOR set; otherwise null it (#6 = transparent) so it hides on the
-interior. up/down faces always kept.
+Convention (DIRECT): keep a face's real texture iff its own side L is in the cell's
+EXTERIOR set; otherwise null it (#6 = transparent) so interior-facing sides hide.
+up/down faces always kept.
 
 Per facing mask:
   none            base,                 exterior={}            -> lids only
@@ -23,21 +22,21 @@ OPP = {"north": "south", "south": "north", "east": "west", "west": "east"}
 LETTER = {"n": "north", "e": "east", "s": "south", "w": "west"}
 HORIZ = ("north", "east", "south", "west")
 
-# world-exterior corner mask -> Create half-corner source (flip: source has geometry on OPPOSITE sides)
-HALF_SRC = {"ne": "window_sw", "nw": "window_se", "es": "window_nw", "sw": "window_ne"}
+# world-exterior corner mask -> Create half-corner source (DIRECT: geometry on the named exterior sides)
+HALF_SRC = {"ne": "window_ne", "nw": "window_nw", "es": "window_se", "sw": "window_sw"}
 
 POSITIONS = ["single", "bottom", "middle", "top"]
 
-def texmap(pos):
-    # #1 walls use the per-position vertical-CTM connection texture; rest map 1:1 with namespace swap.
-    return {
-        "0": "cml:block/fluid_block_tank_top",
-        "1": "cml:block/fluid_block_tank_conn_" + pos,
-        "4": "cml:block/fluid_block_tank_inner",
-        "5": "cml:block/fluid_block_tank_window_single",
-        "particle": "cml:block/fluid_block_tank",
-        "6": "cml:block/null",
-    }
+def texmap(pos, src_tex):
+    # Preserve EACH source model's own texture keys (single uses #5 window_single; multi-height uses #3
+    # fluid_tank_window with vertical-CTM UVs). Swap create:->cml: / fluid_tank->fluid_block_tank, then
+    # override #1 (walls) with the per-position connection texture and add #6 (null) for culled faces.
+    out = {}
+    for k, v in src_tex.items():
+        out[k] = v.replace("create:block/fluid_tank", "cml:block/fluid_block_tank")
+    out["1"] = "cml:block/fluid_block_tank_conn_" + pos
+    out["6"] = "cml:block/null"
+    return out
 
 def load(pos, suffix):
     p = os.path.join(SRC, f"block_{pos}{suffix}.json")
@@ -46,15 +45,15 @@ def load(pos, suffix):
 def emit(pos, mask, exterior, source_suffix, keep_all=False):
     """exterior: set of world dirs ('north'...). keep_all: ignore exterior, keep every face real."""
     d = load(pos, source_suffix)
-    out = {"credit": "Made with Blockbench", "parent": "block/block", "textures": texmap(pos), "elements": []}
+    out = {"credit": "Made with Blockbench", "parent": "block/block", "textures": texmap(pos, d["textures"]), "elements": []}
     for el in d["elements"]:
         ne = copy.deepcopy(el)
         for side in list(ne["faces"].keys()):
             if side not in HORIZ:
                 continue  # up/down always kept
             f = ne["faces"][side]
-            disp = OPP[side]  # world side this local face shows on after the 180 flip
-            keep = keep_all or (disp in exterior)
+            # DIRECT mapping: keep the face on the exterior side itself; null interior-facing sides.
+            keep = keep_all or (side in exterior)
             if not keep:
                 f["texture"] = "#6"
         out["elements"].append(ne)
