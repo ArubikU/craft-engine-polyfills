@@ -86,7 +86,8 @@ public final class FluidGraphBuilder {
                     int tankSide = loneTankSide(level, pos, np); // 1 = pos is the tank, 2 = np is the tank, 0 = none
                     if (tankSide != 0 && valve != -2) {
                         BlockPos member = tankSide == 1 ? pos : np;
-                        double sub = submergence(level, member); // surfaceY - memberY (blocks above the member)
+                        BlockPos neighbor = tankSide == 1 ? np : pos;
+                        double sub = submergence(level, member, neighbor); // blocks of fluid above the OUTLET face
                         if (sub <= 1e-3) {
                             int gate = tankSide == 1 ? -1 : +1; // block OUT of the tank; allow only fill IN
                             valve = (valve == 0) ? gate : (valve == gate ? valve : -2);
@@ -157,8 +158,13 @@ public final class FluidGraphBuilder {
         return 0;
     }
 
-    /** Blocks of fluid above a tank member (surfaceY - memberY): >0 submerged, ≤0 dry. */
-    private static double submergence(Level level, BlockPos member) {
+    /**
+     * Blocks of fluid above the OUTLET face of a tank member toward {@code neighbor}: >0 submerged, ≤0 dry.
+     * The outlet sits on the floor of the block for a DOWN or side connection (drains from the bottom), and
+     * on the ceiling (memberY+1) for an UP connection — so a hole on the top face only escapes once the
+     * column is full, while a hole on the bottom face drains everything.
+     */
+    private static double submergence(Level level, BlockPos member, BlockPos neighbor) {
         dev.arubik.craftengine.fluid.behavior.FluidBlockTankBehavior tank = behaviorAt(level, member,
                 dev.arubik.craftengine.fluid.behavior.FluidBlockTankBehavior.class);
         if (tank == null)
@@ -170,7 +176,8 @@ public final class FluidGraphBuilder {
         double fill = (stored == null || stored.isEmpty()) ? 0.0
                 : Math.min(1.0, stored.getAmount() / (double) cap);
         double surfaceY = g.minY + fill * g.height;
-        return surfaceY - member.getY();
+        double outletY = member.getY() + (neighbor.getY() > member.getY() ? 1.0 : 0.0); // UP face = ceiling
+        return surfaceY - outletY;
     }
 
     /** emf (blocks of lift) on the edge a→b: a pump drives its OUT face. Positive = a→b. */
