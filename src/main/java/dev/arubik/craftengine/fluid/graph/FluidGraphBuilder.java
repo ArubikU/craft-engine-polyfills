@@ -88,13 +88,18 @@ public final class FluidGraphBuilder {
                         BlockPos member = tankSide == 1 ? pos : np;
                         BlockPos neighbor = tankSide == 1 ? np : pos;
                         double sub = submergence(level, member, neighbor); // blocks of fluid above the OUTLET face
+                        // IRL directional port: a SUBMERGED outlet (fluid above it) only lets fluid OUT (that
+                        // level is already full — nothing pushes in); a DRY outlet (above the surface) only lets
+                        // fluid IN (it pours/falls in — there's no fluid there to draw). a = pos, b = np.
+                        int gate;
                         if (sub <= 1e-3) {
-                            int gate = tankSide == 1 ? -1 : +1; // block OUT of the tank; allow only fill IN
-                            valve = (valve == 0) ? gate : (valve == gate ? valve : -2);
+                            gate = (tankSide == 1) ? -1 : +1; // dry  -> IN only (block OUT of the tank)
                         } else {
+                            gate = (tankSide == 1) ? +1 : -1; // submerged -> OUT only (block IN to the tank)
                             double t = Math.min(1.0, sub / SUBMERGENCE_RAMP);
                             conductance = MIN_CONDUCTANCE + (DEFAULT_CONDUCTANCE - MIN_CONDUCTANCE) * t;
                         }
+                        valve = (valve == 0) ? gate : (valve == gate ? valve : -2);
                     }
                     if (valve != -2) {
                         int crestY = Math.max(pos.getY(), np.getY());
