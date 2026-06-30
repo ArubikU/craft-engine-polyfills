@@ -658,10 +658,16 @@ public class FluidBlockTankBehavior extends ConnectableBlockBehavior implements 
                 } catch (Throwable ignored) {
                 }
             }
-            // Only the controller registers the (single) engine seed for the whole group.
+            // Only the controller registers the (single) engine seed for the whole group, and broadcasts the
+            // group's packet fluid displays to whoever currently tracks its chunk (handles join / chunk load /
+            // render-distance changes — the displays are virtual, so they must be re-sent per tracker).
             if (self.ctrl == pos.asLong()) {
                 try {
                     dev.arubik.craftengine.fluid.graph.FluidEngine.registerSeed(pos);
+                } catch (Throwable ignored) {
+                }
+                try {
+                    FluidTankRender.flush(level, pos);
                 } catch (Throwable ignored) {
                 }
             }

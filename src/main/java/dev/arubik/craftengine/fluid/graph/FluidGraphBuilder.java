@@ -74,6 +74,12 @@ public final class FluidGraphBuilder {
                 if (!bothTanks
                         && aIdx < bIdx && edgeKeys.add(((long) aIdx << 32) | (bIdx & 0xffffffffL))) {
                     int valve = valveCheck(level, pos, np);
+                    // Height gate: a tank member whose outlet is ABOVE the group's fluid surface cannot
+                    // serve OUT (no liquid reaches that hole), but may still receive IN. Modelled as a
+                    // one-way constraint, combined with any real valve (conflicting one-ways => no flow).
+                    int gate = heightGate(level, pos, np);
+                    if (valve != -2 && gate != 0)
+                        valve = (valve == 0) ? gate : (valve == gate ? valve : -2);
                     if (valve != -2) {
                         int crestY = Math.max(pos.getY(), np.getY());
                         double emf = pumpEmf(level, pos, np);
@@ -121,6 +127,44 @@ public final class FluidGraphBuilder {
         if (b.getY() > a.getY())
             return -1; // b higher -> b→a (downward) only
         return 0; // same Y -> bidirectional
+    }
+
+    /** Outlet height within a tank member block (centre) — fluid must reach this to flow OUT. */
+    private static final double OUTLET_HEIGHT = 0.5;
+
+    /**
+     * One-way height constraint for a tank-member ↔ non-tank (pipe/machine) edge: a tank member only serves
+     * OUT while the group's fluid surface reaches its outlet. Returns +1 (a→b only) / -1 (b→a only) to block
+     * extraction from a "dry" member while still allowing fill IN; 0 when no height gate applies. a = pos, b = np.
+     */
+    private static int heightGate(Level level, BlockPos pos, BlockPos np) {
+        boolean posTank = isTankMember(level, pos), npTank = isTankMember(level, np);
+        if (posTank && !npTank && tankMemberDry(level, pos))
+            return -1; // block OUT of pos (a→b): allow only b→a (fill into the tank)
+        if (npTank && !posTank && tankMemberDry(level, np))
+            return +1; // block OUT of np (b→a): allow only a→b (fill into the tank)
+        return 0;
+    }
+
+    private static boolean isTankMember(Level level, BlockPos pos) {
+        return behaviorAt(level, pos,
+                dev.arubik.craftengine.fluid.behavior.FluidBlockTankBehavior.class) != null;
+    }
+
+    /** True when the group's fluid surface sits below this member's outlet (so it can't serve OUT). */
+    private static boolean tankMemberDry(Level level, BlockPos member) {
+        dev.arubik.craftengine.fluid.behavior.FluidBlockTankBehavior tank = behaviorAt(level, member,
+                dev.arubik.craftengine.fluid.behavior.FluidBlockTankBehavior.class);
+        if (tank == null)
+            return false;
+        BlockPos controller = tank.controllerOf(level, member);
+        dev.arubik.craftengine.fluid.behavior.FluidBlockTankBehavior.Group g = tank.scanGroup(level, controller);
+        FluidStack stored = tank.getStored(level, controller);
+        long cap = Math.max(1L, tank.getCapacity(level, controller));
+        double fill = (stored == null || stored.isEmpty()) ? 0.0
+                : Math.min(1.0, stored.getAmount() / (double) cap);
+        double surfaceY = g.minY + fill * g.height; // world-Y of the liquid surface
+        return surfaceY < member.getY() + OUTLET_HEIGHT;
     }
 
     /** emf (blocks of lift) on the edge a→b: a pump drives its OUT face. Positive = a→b. */
