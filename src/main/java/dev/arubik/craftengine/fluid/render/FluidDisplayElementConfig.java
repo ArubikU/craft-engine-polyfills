@@ -37,7 +37,6 @@ public final class FluidDisplayElementConfig implements BlockEntityElementConfig
     public final Quaternionf rotation;  // arbitrary orientation (also the display LeftRotation)
     public final Vector3f pivot;        // rotation pivot, local to position
     public final Vector3f scale;        // per-cell display scale
-    public final float inset;           // shrink the OUTER footprint faces (anti-clip), interior faces stay full
     public final int blockLight, skyLight;
 
     // fluid source
@@ -53,12 +52,11 @@ public final class FluidDisplayElementConfig implements BlockEntityElementConfig
     public final String itemNamespace, itemTemplate; // e.g. cml / "fluidlvl_%s_%d"
 
     public FluidDisplayElementConfig(Vector3f position, float width, float height, float length, Quaternionf rotation,
-            Vector3f pivot, Vector3f scale, float inset, int blockLight, int skyLight, boolean fromBlock,
+            Vector3f pivot, Vector3f scale, int blockLight, int skyLight, boolean fromBlock,
             FluidType explicitType, long explicitAmount, long explicitMax, boolean capBottom, boolean capTop,
             float lift, int oneCapMax, int twoCapMax, int openMax, int minLevel, String itemNamespace,
             String itemTemplate) {
         this.position = position;
-        this.inset = inset;
         this.width = Math.max(0.01f, width);
         this.height = Math.max(0.01f, height);
         this.length = Math.max(0.01f, length);
@@ -142,11 +140,9 @@ public final class FluidDisplayElementConfig implements BlockEntityElementConfig
                 continue;
             for (int dx = 0; dx < cellsX; dx++)
                 for (int dz = 0; dz < cellsZ; dz++) {
-                    // span of this cell within the exact box; optional inset shrinks ONLY the outer faces.
-                    float x0 = dx * cellW + (dx == 0 ? inset : 0f);
-                    float x1 = (dx + 1) * cellW - (dx == cellsX - 1 ? inset : 0f);
-                    float z0 = dz * cellL + (dz == 0 ? inset : 0f);
-                    float z1 = (dz + 1) * cellL - (dz == cellsZ - 1 ? inset : 0f);
+                    // span of this cell within the exact box (cells abut, no gaps).
+                    float x0 = dx * cellW, x1 = (dx + 1) * cellW;
+                    float z0 = dz * cellL, z1 = (dz + 1) * cellL;
                     Vector3f local = new Vector3f(position.x + (x0 + x1) / 2f,
                             position.y + y * cellH + cellH / 2f + yoff, position.z + (z0 + z1) / 2f);
                     Vector3f rel = new Vector3f(local).sub(pivot);
@@ -226,9 +222,6 @@ public final class FluidDisplayElementConfig implements BlockEntityElementConfig
             Vector3f pivot = Utils.getAsVector3f(a.getOrDefault("pivot",
                     new java.util.ArrayList<>(List.of(w / 2f, 0f, l / 2f))), "pivot");
             Vector3f scale = Utils.getAsVector3f(a.getOrDefault("scale", 1f), "scale");
-            // extra anti-clip inset on the OUTER faces (block units); 0 by default since the exact box size
-            // already controls the margin (e.g. width 1.9 inside a 2-wide tank leaves 0.05 per side).
-            float inset = Utils.getAsFloat(a.getOrDefault("inset", 0f), "inset");
             boolean fromBlock = !"explicit"
                     .equalsIgnoreCase(String.valueOf(a.getOrDefault("fluid-source", "block")));
             FluidType type = Utils.getAsEnum(a.getOrDefault("fluid-type", "EMPTY"), FluidType.class, FluidType.EMPTY);
@@ -245,7 +238,7 @@ public final class FluidDisplayElementConfig implements BlockEntityElementConfig
             int sl = Utils.getAsInt(a.getOrDefault("sky-light", 15), "sky-light");
             String ns = String.valueOf(a.getOrDefault("item-namespace", "cml"));
             String tpl = String.valueOf(a.getOrDefault("item-template", "fluidlvl_%s_%d"));
-            return new FluidDisplayElementConfig(pos, w, h, l, rot, pivot, scale, inset, bl, sl, fromBlock, type,
+            return new FluidDisplayElementConfig(pos, w, h, l, rot, pivot, scale, bl, sl, fromBlock, type,
                     amount, max, capB, capT, lift, oneMax, twoMax, openMax, minLvl, ns, tpl);
         }
     }
