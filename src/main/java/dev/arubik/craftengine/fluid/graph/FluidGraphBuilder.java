@@ -24,8 +24,12 @@ import net.momirealms.craftengine.core.block.ImmutableBlockState;
  */
 public final class FluidGraphBuilder {
 
-    /** Default conductance (mB/tick per block of head diff). Refined per pipe tier in Phase 3. */
+    /** Default (max) conductance (mB/tick per block of head diff). Refined per pipe tier in Phase 3. */
     private static final double DEFAULT_CONDUCTANCE = 1000.0;
+    /** Minimum conductance for a tank outlet that is only just submerged (slowest trickle). */
+    private static final double MIN_CONDUCTANCE = 150.0;
+    /** Submergence depth (blocks above the connected member) at which the outlet reaches full speed. */
+    private static final double SUBMERGENCE_RAMP = 1.0;
     private static final int MAX_BLOCKS = 4096; // safety cap on a single network scan
 
     private FluidGraphBuilder() {
@@ -74,10 +78,27 @@ public final class FluidGraphBuilder {
                 if (!bothTanks
                         && aIdx < bIdx && edgeKeys.add(((long) aIdx << 32) | (bIdx & 0xffffffffL))) {
                     int valve = valveCheck(level, pos, np);
+                    double conductance = DEFAULT_CONDUCTANCE;
+                    // Tank ↔ non-tank edge: the connection only flows OUT while the group's fluid surface is
+                    // ABOVE the connected member, and the flow SPEED ramps with how deep that member is
+                    // submerged (just-covered = min, ≥1 block deep = max). Above the surface => block OUT
+                    // (one-way IN only) so a drain stops exactly at the connection height (no siphon below it).
+                    int tankSide = loneTankSide(level, pos, np); // 1 = pos is the tank, 2 = np is the tank, 0 = none
+                    if (tankSide != 0 && valve != -2) {
+                        BlockPos member = tankSide == 1 ? pos : np;
+                        double sub = submergence(level, member); // surfaceY - memberY (blocks above the member)
+                        if (sub <= 1e-3) {
+                            int gate = tankSide == 1 ? -1 : +1; // block OUT of the tank; allow only fill IN
+                            valve = (valve == 0) ? gate : (valve == gate ? valve : -2);
+                        } else {
+                            double t = Math.min(1.0, sub / SUBMERGENCE_RAMP);
+                            conductance = MIN_CONDUCTANCE + (DEFAULT_CONDUCTANCE - MIN_CONDUCTANCE) * t;
+                        }
+                    }
                     if (valve != -2) {
                         int crestY = Math.max(pos.getY(), np.getY());
                         double emf = pumpEmf(level, pos, np);
-                        graph.addEdge(new FluidEdge(aIdx, bIdx, DEFAULT_CONDUCTANCE, crestY, emf, valve));
+                        graph.addEdge(new FluidEdge(aIdx, bIdx, conductance, crestY, emf, valve));
                     }
                 }
                 if (visited.add(np.asLong()))
@@ -121,6 +142,35 @@ public final class FluidGraphBuilder {
         if (b.getY() > a.getY())
             return -1; // b higher -> b→a (downward) only
         return 0; // same Y -> bidirectional
+    }
+
+    /** Returns 1 if exactly {@code a} is a tank (and b isn't), 2 if exactly {@code b} is, else 0. */
+    private static int loneTankSide(Level level, BlockPos a, BlockPos b) {
+        boolean ta = behaviorAt(level, a,
+                dev.arubik.craftengine.fluid.behavior.FluidBlockTankBehavior.class) != null;
+        boolean tb = behaviorAt(level, b,
+                dev.arubik.craftengine.fluid.behavior.FluidBlockTankBehavior.class) != null;
+        if (ta && !tb)
+            return 1;
+        if (tb && !ta)
+            return 2;
+        return 0;
+    }
+
+    /** Blocks of fluid above a tank member (surfaceY - memberY): >0 submerged, ≤0 dry. */
+    private static double submergence(Level level, BlockPos member) {
+        dev.arubik.craftengine.fluid.behavior.FluidBlockTankBehavior tank = behaviorAt(level, member,
+                dev.arubik.craftengine.fluid.behavior.FluidBlockTankBehavior.class);
+        if (tank == null)
+            return 0.0;
+        BlockPos controller = tank.controllerOf(level, member);
+        dev.arubik.craftengine.fluid.behavior.FluidBlockTankBehavior.Group g = tank.scanGroup(level, controller);
+        FluidStack stored = tank.getStored(level, controller);
+        long cap = Math.max(1L, tank.getCapacity(level, controller));
+        double fill = (stored == null || stored.isEmpty()) ? 0.0
+                : Math.min(1.0, stored.getAmount() / (double) cap);
+        double surfaceY = g.minY + fill * g.height;
+        return surfaceY - member.getY();
     }
 
     /** emf (blocks of lift) on the edge a→b: a pump drives its OUT face. Positive = a→b. */
