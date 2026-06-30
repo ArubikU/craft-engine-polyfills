@@ -33,7 +33,7 @@ public final class FluidDisplayElementConfig implements BlockEntityElementConfig
     public static final Factory FACTORY = new Factory();
 
     public final Vector3f position;     // offset from the block origin (block units)
-    public final int width, height, length; // footprint w×l, h layers
+    public final float width, height, length; // EXACT box size (block units); cell count = round(dim)
     public final Quaternionf rotation;  // arbitrary orientation (also the display LeftRotation)
     public final Vector3f pivot;        // rotation pivot, local to position
     public final Vector3f scale;        // per-cell display scale
@@ -52,16 +52,16 @@ public final class FluidDisplayElementConfig implements BlockEntityElementConfig
 
     public final String itemNamespace, itemTemplate; // e.g. cml / "fluidlvl_%s_%d"
 
-    public FluidDisplayElementConfig(Vector3f position, int width, int height, int length, Quaternionf rotation,
+    public FluidDisplayElementConfig(Vector3f position, float width, float height, float length, Quaternionf rotation,
             Vector3f pivot, Vector3f scale, float inset, int blockLight, int skyLight, boolean fromBlock,
             FluidType explicitType, long explicitAmount, long explicitMax, boolean capBottom, boolean capTop,
             float lift, int oneCapMax, int twoCapMax, int openMax, int minLevel, String itemNamespace,
             String itemTemplate) {
         this.position = position;
         this.inset = inset;
-        this.width = Math.max(1, width);
-        this.height = Math.max(1, height);
-        this.length = Math.max(1, length);
+        this.width = Math.max(0.01f, width);
+        this.height = Math.max(0.01f, height);
+        this.length = Math.max(0.01f, length);
         this.rotation = rotation;
         this.pivot = pivot;
         this.scale = scale;
@@ -118,8 +118,14 @@ public final class FluidDisplayElementConfig implements BlockEntityElementConfig
         if (type == FluidType.EMPTY || fill <= 0.0)
             return slots;
         String name = fluidName(type);
-        double fluidBlocks = fill * height;
-        for (int y = 0; y < height; y++) {
+        // Cell count = nearest integer to each dimension (1.9 -> 2). Each cell is then sized so the WHOLE box
+        // is EXACTLY width×height×length and cells abut with no gaps (native models, just scaled per axis).
+        int cellsX = Math.max(1, Math.round(width));
+        int cellsY = Math.max(1, Math.round(height));
+        int cellsZ = Math.max(1, Math.round(length));
+        float cellW = width / cellsX, cellH = height / cellsY, cellL = length / cellsZ;
+        double fluidBlocks = fill * cellsY; // fill expressed in layer units
+        for (int y = 0; y < cellsY; y++) {
             double layerFill = Math.max(0.0, Math.min(1.0, fluidBlocks - y));
             if (y > 0 && layerFill <= 0.001)
                 break;
@@ -127,25 +133,26 @@ public final class FluidDisplayElementConfig implements BlockEntityElementConfig
             if (y > 0 && rawLevel <= 0)
                 break;
             boolean cap0 = capBottom && y == 0;
-            boolean capT = capTop && y == height - 1;
+            boolean capT = capTop && y == cellsY - 1;
             int hi = (cap0 && capT) ? twoCapMax : ((cap0 || capT) ? oneCapMax : openMax);
             int lvl = Math.max(minLevel, Math.min(hi, rawLevel));
             float yoff = cap0 ? lift : 0f;
             Object nms = FluidDisplayElement.toNms(levelItem(name, lvl));
             if (nms == null)
                 continue;
-            for (int dx = 0; dx < width; dx++)
-                for (int dz = 0; dz < length; dz++) {
-                    // Inset ONLY the outer footprint faces (anti-clip vs the walls); interior faces stay full
-                    // so neighbouring cells abut seamlessly — exactly like the hardcoded tank renderer.
-                    float ax = (dx == 0) ? inset : 0f, bx = 1f - ((dx == width - 1) ? inset : 0f);
-                    float az = (dz == 0) ? inset : 0f, bz = 1f - ((dz == length - 1) ? inset : 0f);
-                    Vector3f local = new Vector3f(position.x + dx + (ax + bx) / 2f,
-                            position.y + y + 0.5f + yoff, position.z + dz + (az + bz) / 2f);
+            for (int dx = 0; dx < cellsX; dx++)
+                for (int dz = 0; dz < cellsZ; dz++) {
+                    // span of this cell within the exact box; optional inset shrinks ONLY the outer faces.
+                    float x0 = dx * cellW + (dx == 0 ? inset : 0f);
+                    float x1 = (dx + 1) * cellW - (dx == cellsX - 1 ? inset : 0f);
+                    float z0 = dz * cellL + (dz == 0 ? inset : 0f);
+                    float z1 = (dz + 1) * cellL - (dz == cellsZ - 1 ? inset : 0f);
+                    Vector3f local = new Vector3f(position.x + (x0 + x1) / 2f,
+                            position.y + y * cellH + cellH / 2f + yoff, position.z + (z0 + z1) / 2f);
                     Vector3f rel = new Vector3f(local).sub(pivot);
                     rotation.transform(rel);
                     Vector3f world = rel.add(pivot);
-                    Vector3f cellScale = new Vector3f(scale.x * (bx - ax), scale.y, scale.z * (bz - az));
+                    Vector3f cellScale = new Vector3f(scale.x * (x1 - x0), scale.y * cellH, scale.z * (z1 - z0));
                     slots.add(new Slot(pos.x() + world.x, pos.y() + world.y, pos.z() + world.z, cellScale, nms));
                 }
         }
@@ -209,9 +216,9 @@ public final class FluidDisplayElementConfig implements BlockEntityElementConfig
     public static final class Factory implements BlockEntityElementConfigFactory<FluidDisplayElement> {
         @Override
         public FluidDisplayElementConfig create(ConfigSection a) {
-            int w = Utils.getAsInt(a.getOrDefault("width", 1), "width");
-            int h = Utils.getAsInt(a.getOrDefault("height", 1), "height");
-            int l = Utils.getAsInt(a.getOrDefault("length", 1), "length");
+            float w = Utils.getAsFloat(a.getOrDefault("width", 1f), "width");
+            float h = Utils.getAsFloat(a.getOrDefault("height", 1f), "height");
+            float l = Utils.getAsFloat(a.getOrDefault("length", 1f), "length");
             Vector3f pos = Utils.getAsVector3f(a.getOrDefault("position", 0f), "position");
             Vector3f euler = Utils.getAsVector3f(a.getOrDefault("rotation", 0f), "rotation"); // degrees
             Quaternionf rot = new Quaternionf().rotationXYZ(
@@ -219,8 +226,9 @@ public final class FluidDisplayElementConfig implements BlockEntityElementConfig
             Vector3f pivot = Utils.getAsVector3f(a.getOrDefault("pivot",
                     new java.util.ArrayList<>(List.of(w / 2f, 0f, l / 2f))), "pivot");
             Vector3f scale = Utils.getAsVector3f(a.getOrDefault("scale", 1f), "scale");
-            // default inset = HULL (1/16 + 1/128) so the fluid sits just inside the walls like the tank
-            float inset = Utils.getAsFloat(a.getOrDefault("inset", 1f / 16f + 1f / 128f), "inset");
+            // extra anti-clip inset on the OUTER faces (block units); 0 by default since the exact box size
+            // already controls the margin (e.g. width 1.9 inside a 2-wide tank leaves 0.05 per side).
+            float inset = Utils.getAsFloat(a.getOrDefault("inset", 0f), "inset");
             boolean fromBlock = !"explicit"
                     .equalsIgnoreCase(String.valueOf(a.getOrDefault("fluid-source", "block")));
             FluidType type = Utils.getAsEnum(a.getOrDefault("fluid-type", "EMPTY"), FluidType.class, FluidType.EMPTY);
