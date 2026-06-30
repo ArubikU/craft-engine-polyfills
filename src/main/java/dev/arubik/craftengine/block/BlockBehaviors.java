@@ -36,6 +36,8 @@ public class BlockBehaviors {
 
         public static final Key POLYFILL_SHULKER_BOX_HITBOX = Key.of("polyfills:shulker_box_hitbox");
 
+        public static final Key POLYFILL_FLUID_DISPLAY = Key.of("polyfills:fluid_display");
+
         public static void register() {
                 RegistryUtils.registerBlockBehavior(POLYFILL_BUBBLE_BLOCK, BubbleBlockBehavior.FACTORY);
                 RegistryUtils.registerBlockBehavior(POLYFILL_TEARING_CROP_BLOCK, TearingCropBlockBehavior.FACTORY);
@@ -103,6 +105,10 @@ public class BlockBehaviors {
                 net.momirealms.craftengine.core.block.entity.render.element.BlockEntityElementConfigs.register(
                                 POLYFILL_SHULKER_BOX_HITBOX,
                                 dev.arubik.craftengine.machine.render.element.ShulkerBoxHitboxElementConfig.FACTORY);
+
+                net.momirealms.craftengine.core.block.entity.render.element.BlockEntityElementConfigs.register(
+                                POLYFILL_FLUID_DISPLAY,
+                                dev.arubik.craftengine.fluid.render.FluidDisplayElementConfig.FACTORY);
 
                 // New features: upgrade machine, vapor motor, conveyor, JIT crafting
                 RegistryUtils.registerBlockBehavior(
