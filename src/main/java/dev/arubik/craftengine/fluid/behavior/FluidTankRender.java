@@ -73,9 +73,10 @@ public final class FluidTankRender {
             int rawLevel = (int) Math.round(layerFill * 15);
             if (y > 0 && rawLevel <= 0)
                 break;
-            // Capped layers max at _11 (taller pokes the frame caps); the bottom layer is lifted +4px so it
-            // clears the bottom cap; min level _0.
-            int hi = (y == 0 || y == height - 1) ? 11 : 15;
+            // Frame caps clip the level: a layer with ONE cap (bottom-only or top-only) maxes at _11; a
+            // single block (height==1, BOTH caps) maxes at _7; uncapped middle layers use the full 0..15.
+            boolean cap0 = (y == 0), capT = (y == height - 1);
+            int hi = (cap0 && capT) ? 7 : ((cap0 || capT) ? 11 : 15);
             int lvl = Math.max(0, Math.min(hi, rawLevel));
             float yoff = (y == 0) ? 4f / 16f : 0f;
             ItemStack bukkit = levelItem(type, lvl);

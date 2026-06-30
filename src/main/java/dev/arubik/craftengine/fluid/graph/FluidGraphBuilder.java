@@ -79,12 +79,15 @@ public final class FluidGraphBuilder {
                         && aIdx < bIdx && edgeKeys.add(((long) aIdx << 32) | (bIdx & 0xffffffffL))) {
                     int valve = valveCheck(level, pos, np);
                     double conductance = DEFAULT_CONDUCTANCE;
+                    double emf = pumpEmf(level, pos, np);
                     // Tank ↔ non-tank edge: the connection only flows OUT while the group's fluid surface is
                     // ABOVE the connected member, and the flow SPEED ramps with how deep that member is
                     // submerged (just-covered = min, ≥1 block deep = max). Above the surface => block OUT
                     // (one-way IN only) so a drain stops exactly at the connection height (no siphon below it).
+                    // A liquid PUMP on the edge (emf != 0) BYPASSES this IRL height gate entirely — it forces
+                    // flow (e.g. fills a submerged port) regardless of surface level.
                     int tankSide = loneTankSide(level, pos, np); // 1 = pos is the tank, 2 = np is the tank, 0 = none
-                    if (tankSide != 0 && valve != -2) {
+                    if (tankSide != 0 && valve != -2 && emf == 0.0) {
                         BlockPos member = tankSide == 1 ? pos : np;
                         BlockPos neighbor = tankSide == 1 ? np : pos;
                         double sub = submergence(level, member, neighbor); // blocks of fluid above the OUTLET face
@@ -103,7 +106,6 @@ public final class FluidGraphBuilder {
                     }
                     if (valve != -2) {
                         int crestY = Math.max(pos.getY(), np.getY());
-                        double emf = pumpEmf(level, pos, np);
                         graph.addEdge(new FluidEdge(aIdx, bIdx, conductance, crestY, emf, valve));
                     }
                 }
