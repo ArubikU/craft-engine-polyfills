@@ -37,6 +37,7 @@ public final class FluidDisplayElementConfig implements BlockEntityElementConfig
     public final Quaternionf rotation;  // arbitrary orientation (also the display LeftRotation)
     public final Vector3f pivot;        // rotation pivot, local to position
     public final Vector3f scale;        // per-cell display scale
+    public final float inset;           // shrink the OUTER footprint faces (anti-clip), interior faces stay full
     public final int blockLight, skyLight;
 
     // fluid source
@@ -52,10 +53,12 @@ public final class FluidDisplayElementConfig implements BlockEntityElementConfig
     public final String itemNamespace, itemTemplate; // e.g. cml / "fluidlvl_%s_%d"
 
     public FluidDisplayElementConfig(Vector3f position, int width, int height, int length, Quaternionf rotation,
-            Vector3f pivot, Vector3f scale, int blockLight, int skyLight, boolean fromBlock, FluidType explicitType,
-            long explicitAmount, long explicitMax, boolean capBottom, boolean capTop, float lift, int oneCapMax,
-            int twoCapMax, int openMax, int minLevel, String itemNamespace, String itemTemplate) {
+            Vector3f pivot, Vector3f scale, float inset, int blockLight, int skyLight, boolean fromBlock,
+            FluidType explicitType, long explicitAmount, long explicitMax, boolean capBottom, boolean capTop,
+            float lift, int oneCapMax, int twoCapMax, int openMax, int minLevel, String itemNamespace,
+            String itemTemplate) {
         this.position = position;
+        this.inset = inset;
         this.width = Math.max(1, width);
         this.height = Math.max(1, height);
         this.length = Math.max(1, length);
@@ -133,12 +136,17 @@ public final class FluidDisplayElementConfig implements BlockEntityElementConfig
                 continue;
             for (int dx = 0; dx < width; dx++)
                 for (int dz = 0; dz < length; dz++) {
-                    Vector3f local = new Vector3f(position.x + dx + 0.5f, position.y + y + 0.5f + yoff,
-                            position.z + dz + 0.5f);
+                    // Inset ONLY the outer footprint faces (anti-clip vs the walls); interior faces stay full
+                    // so neighbouring cells abut seamlessly — exactly like the hardcoded tank renderer.
+                    float ax = (dx == 0) ? inset : 0f, bx = 1f - ((dx == width - 1) ? inset : 0f);
+                    float az = (dz == 0) ? inset : 0f, bz = 1f - ((dz == length - 1) ? inset : 0f);
+                    Vector3f local = new Vector3f(position.x + dx + (ax + bx) / 2f,
+                            position.y + y + 0.5f + yoff, position.z + dz + (az + bz) / 2f);
                     Vector3f rel = new Vector3f(local).sub(pivot);
                     rotation.transform(rel);
                     Vector3f world = rel.add(pivot);
-                    slots.add(new Slot(pos.x() + world.x, pos.y() + world.y, pos.z() + world.z, scale, nms));
+                    Vector3f cellScale = new Vector3f(scale.x * (bx - ax), scale.y, scale.z * (bz - az));
+                    slots.add(new Slot(pos.x() + world.x, pos.y() + world.y, pos.z() + world.z, cellScale, nms));
                 }
         }
         return slots;
@@ -211,6 +219,8 @@ public final class FluidDisplayElementConfig implements BlockEntityElementConfig
             Vector3f pivot = Utils.getAsVector3f(a.getOrDefault("pivot",
                     new java.util.ArrayList<>(List.of(w / 2f, 0f, l / 2f))), "pivot");
             Vector3f scale = Utils.getAsVector3f(a.getOrDefault("scale", 1f), "scale");
+            // default inset = HULL (1/16 + 1/128) so the fluid sits just inside the walls like the tank
+            float inset = Utils.getAsFloat(a.getOrDefault("inset", 1f / 16f + 1f / 128f), "inset");
             boolean fromBlock = !"explicit"
                     .equalsIgnoreCase(String.valueOf(a.getOrDefault("fluid-source", "block")));
             FluidType type = Utils.getAsEnum(a.getOrDefault("fluid-type", "EMPTY"), FluidType.class, FluidType.EMPTY);
@@ -227,8 +237,8 @@ public final class FluidDisplayElementConfig implements BlockEntityElementConfig
             int sl = Utils.getAsInt(a.getOrDefault("sky-light", 15), "sky-light");
             String ns = String.valueOf(a.getOrDefault("item-namespace", "cml"));
             String tpl = String.valueOf(a.getOrDefault("item-template", "fluidlvl_%s_%d"));
-            return new FluidDisplayElementConfig(pos, w, h, l, rot, pivot, scale, bl, sl, fromBlock, type, amount,
-                    max, capB, capT, lift, oneMax, twoMax, openMax, minLvl, ns, tpl);
+            return new FluidDisplayElementConfig(pos, w, h, l, rot, pivot, scale, inset, bl, sl, fromBlock, type,
+                    amount, max, capB, capT, lift, oneMax, twoMax, openMax, minLvl, ns, tpl);
         }
     }
 }
