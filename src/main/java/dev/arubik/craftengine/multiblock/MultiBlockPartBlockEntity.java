@@ -12,7 +12,7 @@ import org.bukkit.craftbukkit.entity.CraftHumanEntity;
 import org.bukkit.entity.HumanEntity;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
-import org.bukkit.persistence.PersistentDataType;
+import dev.arubik.craftengine.util.NbtType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -41,14 +41,14 @@ public class MultiBlockPartBlockEntity extends PersistentController
 
     // Persistent data keys
     private static final TypedKey<int[]> KEY_CORE_POS = TypedKey.of("craftengine", "multiblock_core_pos",
-            PersistentDataType.INTEGER_ARRAY);
+            NbtType.INTEGER_ARRAY);
     private static final TypedKey<BlockState> KEY_ORIGINAL_STATE = TypedKey.of("craftengine",
             "multiblock_original_state",
             dev.arubik.craftengine.util.CustomDataType.BLOCK_STATE_TYPE);
     private static final TypedKey<String> KEY_ROLE = TypedKey.of("craftengine", "multiblock_role",
-            PersistentDataType.STRING);
+            NbtType.STRING);
     private static final TypedKey<String> KEY_IO_CONFIG = TypedKey.of("craftengine", "multiblock_io_config",
-            PersistentDataType.STRING);
+            NbtType.STRING);
 
     // Local keys that should not be delegated to core
     private static final Set<String> LOCAL_KEYS = new HashSet<>();
@@ -135,7 +135,7 @@ public class MultiBlockPartBlockEntity extends PersistentController
 
     public void setCorePos(BlockPos corePos) {
         this.core = corePos;
-        super.set(KEY_CORE_POS.getKey(), PersistentDataType.INTEGER_ARRAY,
+        super.set(KEY_CORE_POS.getKey(), NbtType.INTEGER_ARRAY,
                 new int[] { corePos.getX(), corePos.getY(), corePos.getZ() });
     }
 
@@ -301,7 +301,7 @@ public class MultiBlockPartBlockEntity extends PersistentController
     }
 
     @Override
-    public <P, C> boolean has(NamespacedKey key, PersistentDataType<P, C> type) {
+    public boolean has(NamespacedKey key, NbtType type) {
         if (isLocalKey(key))
             return super.has(key, type);
         net.momirealms.craftengine.core.block.entity.BlockEntityController target = getCoreEntity();
@@ -321,7 +321,7 @@ public class MultiBlockPartBlockEntity extends PersistentController
     }
 
     @Override
-    public <P, C> @Nullable C get(NamespacedKey key, PersistentDataType<P, C> type) {
+    public <C> @Nullable C get(NamespacedKey key, NbtType type) {
         if (isLocalKey(key))
             return super.get(key, type);
         net.momirealms.craftengine.core.block.entity.BlockEntityController target = getCoreEntity();
@@ -331,7 +331,7 @@ public class MultiBlockPartBlockEntity extends PersistentController
     }
 
     @Override
-    public <P, C> void set(@NotNull NamespacedKey key, @NotNull PersistentDataType<P, C> type, @NotNull C value) {
+    public <C> void set(@NotNull NamespacedKey key, @NotNull NbtType type, @NotNull C value) {
         if (isLocalKey(key)) {
             super.set(key, type, value);
             return;

@@ -6,7 +6,7 @@ import java.util.Map;
 
 import org.bukkit.Material;
 import org.bukkit.event.inventory.ClickType;
-import org.bukkit.persistence.PersistentDataType;
+import dev.arubik.craftengine.util.NbtType;
 
 import dev.arubik.craftengine.fluid.FluidTank;
 import dev.arubik.craftengine.gas.GasTank;
@@ -102,9 +102,9 @@ public class VaporFurnaceMk1BlockEntity extends AbstractMachineBlockEntity {
     private MachineMenu active;
 
     private static final TypedKey<Float> KEY_OC = TypedKey.of("craftengine", "vapor_furnace_overclock",
-            PersistentDataType.FLOAT);
+            NbtType.FLOAT);
     private static final TypedKey<Float> KEY_GEN_BUFFER = TypedKey.of("craftengine", "vapor_furnace_gen_buffer",
-            PersistentDataType.FLOAT);
+            NbtType.FLOAT);
 
     // Deterministic GENERATION buffer for ITEM outputs only: each finished craft adds curGeneration; on
     // every whole 1.0 it dispenses one extra set of the recipe's ITEM outputs. Gas/fluid outputs are NOT

@@ -6,7 +6,7 @@ import java.util.Map;
 
 import org.bukkit.Material;
 import org.bukkit.event.inventory.ClickType;
-import org.bukkit.persistence.PersistentDataType;
+import dev.arubik.craftengine.util.NbtType;
 
 import dev.arubik.craftengine.block.entity.BukkitBlockEntityTypes;
 import dev.arubik.craftengine.machine.attribute.MachineAttributes;
@@ -111,9 +111,9 @@ public class CrusherBlockEntity extends AbstractMachineBlockEntity implements Rp
     private double genBuffer = 0.0;
 
     private static final TypedKey<Float> KEY_OC = TypedKey.of("craftengine", "crusher_overclock",
-            PersistentDataType.FLOAT);
+            NbtType.FLOAT);
     private static final TypedKey<Float> KEY_GEN_BUFFER = TypedKey.of("craftengine", "crusher_gen_buffer",
-            PersistentDataType.FLOAT);
+            NbtType.FLOAT);
 
     public CrusherBlockEntity(BlockEntity blockEntity) {
         this(blockEntity, new java.util.HashMap<>(), new ArrayList<>(), defaultMenuConfig());

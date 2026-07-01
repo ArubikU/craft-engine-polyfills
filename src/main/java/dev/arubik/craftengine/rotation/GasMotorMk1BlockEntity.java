@@ -4,7 +4,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.bukkit.event.inventory.ClickType;
-import org.bukkit.persistence.PersistentDataType;
+import dev.arubik.craftengine.util.NbtType;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -78,9 +78,9 @@ public class GasMotorMk1BlockEntity extends AbstractMachineBlockEntity implement
     private int lastRenderedUnlocked = BASE_UNLOCKED;
     private MachineMenu active;
 
-    private static final TypedKey<Float> KEY_RPM_T = TypedKey.of("craftengine", "adv_motor_trpm", PersistentDataType.FLOAT);
-    private static final TypedKey<Float> KEY_SU_T = TypedKey.of("craftengine", "adv_motor_tsu", PersistentDataType.FLOAT);
-    private static final TypedKey<Float> KEY_RPM = TypedKey.of("craftengine", "adv_motor_rpm", PersistentDataType.FLOAT);
+    private static final TypedKey<Float> KEY_RPM_T = TypedKey.of("craftengine", "adv_motor_trpm", NbtType.FLOAT);
+    private static final TypedKey<Float> KEY_SU_T = TypedKey.of("craftengine", "adv_motor_tsu", NbtType.FLOAT);
+    private static final TypedKey<Float> KEY_RPM = TypedKey.of("craftengine", "adv_motor_rpm", NbtType.FLOAT);
 
     public GasMotorMk1BlockEntity(BlockEntity blockEntity, int vaporCapacity,
             Map<GasType, GasSpec> gases,

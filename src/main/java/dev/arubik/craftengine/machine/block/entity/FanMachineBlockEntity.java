@@ -6,7 +6,7 @@ import java.util.Map;
 
 import org.bukkit.Material;
 import org.bukkit.event.inventory.ClickType;
-import org.bukkit.persistence.PersistentDataType;
+import dev.arubik.craftengine.util.NbtType;
 
 import dev.arubik.craftengine.gas.GasStack;
 import dev.arubik.craftengine.gas.GasTank;
@@ -104,7 +104,7 @@ public class FanMachineBlockEntity extends AbstractMachineBlockEntity {
     private boolean lastBlowing = false;
 
     private static final TypedKey<Float> KEY_OC = TypedKey.of("craftengine", "fan_overclock",
-            PersistentDataType.FLOAT);
+            NbtType.FLOAT);
 
     public FanMachineBlockEntity(BlockEntity blockEntity, Map<Key, List<Mod>> upgradeDefs,
             List<MachineBar> bars, MachineMenuConfig menuConfig,

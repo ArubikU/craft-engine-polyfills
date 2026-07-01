@@ -250,12 +250,11 @@ public class DepotBlockEntity extends PersistentBlockEntity implements ConveyorR
 
     private void load() {
         try {
-            getOptional(dev.arubik.craftengine.util.TypedKeys.CONTENTS).ifPresent(contents -> {
-                for (int i = 0; i < container.containerSize(); i++)
-                    set(i, null);
-                for (net.minecraft.world.ItemStackWithSlot it : contents)
-                    if (it.slot() >= 0 && it.slot() < container.containerSize())
-                        set(it.slot(), CraftItemStack.asBukkitCopy(it.stack()));
+            getOptional(dev.arubik.craftengine.util.TypedKeys.NMS_ITEMS).ifPresent(nms -> {
+                for (int i = 0; i < container.containerSize(); i++) {
+                    net.minecraft.world.item.ItemStack s = i < nms.length ? nms[i] : null;
+                    set(i, (s == null || s.isEmpty()) ? null : CraftItemStack.asBukkitCopy(s));
+                }
             });
         } catch (Throwable ignored) {
         }
@@ -282,8 +281,7 @@ public class DepotBlockEntity extends PersistentBlockEntity implements ConveyorR
                 org.bukkit.inventory.ItemStack cur = get(i);
                 nms[i] = cur == null ? net.minecraft.world.item.ItemStack.EMPTY : CraftItemStack.asNMSCopy(cur);
             }
-            set(dev.arubik.craftengine.util.TypedKeys.CONTENTS,
-                    dev.arubik.craftengine.util.ArrayItemStackWithSlot.from(nms));
+            set(dev.arubik.craftengine.util.TypedKeys.NMS_ITEMS, nms);
             // Refresh comparators reading this block.
             Level lvl = nmsLevel();
             if (lvl != null) {

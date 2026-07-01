@@ -12,7 +12,7 @@ import net.momirealms.craftengine.core.block.entity.BlockEntity;
 import net.momirealms.craftengine.core.plugin.config.ConfigSection;
 import net.momirealms.craftengine.core.world.CEWorld;
 import net.momirealms.craftengine.core.util.Key;
-import org.bukkit.persistence.PersistentDataType;
+import dev.arubik.craftengine.util.NbtType;
 import dev.arubik.craftengine.fluid.FluidStack;
 import dev.arubik.craftengine.fluid.FluidType;
 import dev.arubik.craftengine.fluid.FluidKeys;
@@ -44,14 +44,14 @@ public class ValveBehavior extends PumpBehavior {
         PersistentBlockEntity pbe = getBE(level, pos);
         if (pbe == null)
             return false;
-        Boolean open = pbe.get(OPEN_KEY, PersistentDataType.BOOLEAN);
+        Boolean open = pbe.get(OPEN_KEY, NbtType.BOOLEAN);
         return open != null && open;
     }
 
     public void setOpen(Level level, BlockPos pos, boolean open) {
         PersistentBlockEntity pbe = getBE(level, pos);
         if (pbe != null) {
-            pbe.set(OPEN_KEY, PersistentDataType.BOOLEAN, open);
+            pbe.set(OPEN_KEY, NbtType.BOOLEAN, open);
         }
     }
 

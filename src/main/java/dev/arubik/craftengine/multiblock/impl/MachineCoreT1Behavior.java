@@ -1,6 +1,6 @@
 package dev.arubik.craftengine.multiblock.impl;
 
-import org.bukkit.persistence.PersistentDataType;
+import dev.arubik.craftengine.util.NbtType;
 
 import dev.arubik.craftengine.multiblock.MultiBlockBehavior;
 import dev.arubik.craftengine.multiblock.MultiBlockMachineBlockEntity;

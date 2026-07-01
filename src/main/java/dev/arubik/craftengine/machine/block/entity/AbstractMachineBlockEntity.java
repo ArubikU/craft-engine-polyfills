@@ -83,7 +83,7 @@ public abstract class AbstractMachineBlockEntity extends PersistentWorldlyBlockE
     protected float storedXp = 0;
     private static final dev.arubik.craftengine.util.TypedKey<Float> KEY_XP = dev.arubik.craftengine.util.TypedKey.of(
             "craftengine", "machine_xp",
-            org.bukkit.persistence.PersistentDataType.FLOAT);
+            dev.arubik.craftengine.util.NbtType.FLOAT);
 
     public float getStoredXp() {
         return storedXp;
@@ -867,19 +867,19 @@ public abstract class AbstractMachineBlockEntity extends PersistentWorldlyBlockE
     // --- Persistence ---
     private static final dev.arubik.craftengine.util.TypedKey<Integer> KEY_PROGRESS = dev.arubik.craftengine.util.TypedKey
             .of("craftengine", "machine_progress",
-                    org.bukkit.persistence.PersistentDataType.INTEGER);
+                    dev.arubik.craftengine.util.NbtType.INTEGER);
     private static final dev.arubik.craftengine.util.TypedKey<Integer> KEY_MAX_PROGRESS = dev.arubik.craftengine.util.TypedKey
             .of("craftengine", "machine_max_progress",
-                    org.bukkit.persistence.PersistentDataType.INTEGER);
+                    dev.arubik.craftengine.util.NbtType.INTEGER);
     private static final dev.arubik.craftengine.util.TypedKey<Integer> KEY_BURN_TIME = dev.arubik.craftengine.util.TypedKey
             .of("craftengine", "machine_burn_time",
-                    org.bukkit.persistence.PersistentDataType.INTEGER);
+                    dev.arubik.craftengine.util.NbtType.INTEGER);
     private static final dev.arubik.craftengine.util.TypedKey<Integer> KEY_MAX_BURN_TIME = dev.arubik.craftengine.util.TypedKey
             .of("craftengine", "machine_max_burn_time",
-                    org.bukkit.persistence.PersistentDataType.INTEGER);
+                    dev.arubik.craftengine.util.NbtType.INTEGER);
     private static final dev.arubik.craftengine.util.TypedKey<Integer> KEY_OVERCLOCKED_TICKS = dev.arubik.craftengine.util.TypedKey
             .of("craftengine", "machine_overclocked_ticks",
-                    org.bukkit.persistence.PersistentDataType.INTEGER);
+                    dev.arubik.craftengine.util.NbtType.INTEGER);
 
     @Override
     public void saveCustomData(net.momirealms.craftengine.libraries.nbt.CompoundTag tag) {

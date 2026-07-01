@@ -519,17 +519,15 @@ public class FunnelBlockEntity extends PersistentBlockEntity implements Conveyor
 
     // ---------------- persistence (this block entity's own CE tag) ----------------
 
-    private static final dev.arubik.craftengine.util.TypedKey<org.bukkit.inventory.ItemStack> KEY_ITEM =
-            dev.arubik.craftengine.util.TypedKeys.ITEM;
     private static final dev.arubik.craftengine.util.TypedKey<Float> KEY_PROG =
             dev.arubik.craftengine.util.TypedKey.of("craftengine", "funnel_prog",
-                    org.bukkit.persistence.PersistentDataType.FLOAT);
+                    dev.arubik.craftengine.util.NbtType.FLOAT);
 
     private void load() {
         try {
-            transit = getOptional(KEY_ITEM).orElse(null);
-            if (transit != null && transit.getType().isAir())
-                transit = null;
+            net.minecraft.world.item.ItemStack nms = getOptional(dev.arubik.craftengine.util.TypedKeys.NMS_ITEM)
+                    .orElse(null);
+            transit = (nms != null && !nms.isEmpty()) ? CraftItemStack.asBukkitCopy(nms) : null;
             progress = getOrDefault(KEY_PROG, 0f);
         } catch (Throwable ignored) {
         }
@@ -540,7 +538,7 @@ public class FunnelBlockEntity extends PersistentBlockEntity implements Conveyor
             if (transit == null)
                 clear();
             else {
-                set(KEY_ITEM, transit);
+                set(dev.arubik.craftengine.util.TypedKeys.NMS_ITEM, CraftItemStack.asNMSCopy(transit));
                 set(KEY_PROG, progress);
             }
         } catch (Throwable ignored) {

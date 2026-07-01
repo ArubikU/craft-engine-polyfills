@@ -12,7 +12,7 @@ import net.momirealms.craftengine.core.world.BlockPos;
 import net.momirealms.craftengine.core.world.CEWorld;
 import net.momirealms.craftengine.core.world.ChunkPos;
 import org.bukkit.NamespacedKey;
-import org.bukkit.persistence.PersistentDataType;
+import dev.arubik.craftengine.util.NbtType;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
@@ -62,7 +62,7 @@ public class WorkbenchBlockEntity extends PersistentBlockEntity {
     // Persisted on this block entity's own CE tag, alongside every other TypedKey-backed field.
     private static final dev.arubik.craftengine.util.TypedKey<byte[]> BP_KEY =
             dev.arubik.craftengine.util.TypedKey.of("craftengine", "wb_blueprint",
-                    org.bukkit.persistence.PersistentDataType.BYTE_ARRAY);
+                    dev.arubik.craftengine.util.NbtType.BYTE_ARRAY);
 
     private org.bukkit.inventory.ItemStack cachedBlueprint; // last value seen (block may be air in onRemove)
 

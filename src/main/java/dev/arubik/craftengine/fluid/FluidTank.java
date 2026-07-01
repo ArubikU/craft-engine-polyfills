@@ -40,7 +40,7 @@ public class FluidTank {
         this.filter = filter;
     }
 
-    // We need to match the PersistentDataType used in FluidKeys.
+    // We need to match the NbtType used in FluidKeys.
     // If FluidKeys uses a custom DataType, we must reuse it.
 
     public TypedKey<FluidStack> getKey() {

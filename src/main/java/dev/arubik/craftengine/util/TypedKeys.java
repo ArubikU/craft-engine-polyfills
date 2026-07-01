@@ -1,20 +1,17 @@
 package dev.arubik.craftengine.util;
 
-import java.util.List;
-
-import org.bukkit.persistence.PersistentDataType;
-
-import net.minecraft.world.ItemStackWithSlot;
-
 public class TypedKeys {
         public static final String NAMESPACE = "craftengine";
         public static final TypedKey<Integer> MAX_STACK_SIZE = TypedKey.of(NAMESPACE, "max_stack_size",
-                        PersistentDataType.INTEGER);
-        public static final TypedKey<List<ItemStackWithSlot>> CONTENTS = TypedKey.of(NAMESPACE, "contents",
-                        CustomDataType.ITEM_STACK_WITH_SLOT_LIST_TYPE);
-        public static final TypedKey<org.bukkit.inventory.ItemStack> ITEM = TypedKey.of(NAMESPACE, "item",
-                        CustomDataType.ITEM_STACK_TYPE);
+                        NbtType.INTEGER);
         public static final TypedKey<java.util.UUID> OWNER = TypedKey.of(NAMESPACE, "owner", CustomDataType.UUID_TYPE);
         public static final TypedKey<Long> LAST_ATTACK_TIME = TypedKey.of(NAMESPACE, "last_attack_time",
-                        PersistentDataType.LONG);
+                        NbtType.LONG);
+
+        /** Single NMS ItemStack, codec-serialized (see {@link CustomDataType#ITEM_CODEC_TYPE}). */
+        public static final TypedKey<net.minecraft.world.item.ItemStack> NMS_ITEM = TypedKey.of(NAMESPACE, "nms_item",
+                        CustomDataType.ITEM_CODEC_TYPE);
+        /** Fixed-size NMS ItemStack[] (index = slot), codec-serialized (see {@link CustomDataType#ITEM_ARRAY_CODEC_TYPE}). */
+        public static final TypedKey<net.minecraft.world.item.ItemStack[]> NMS_ITEMS = TypedKey.of(NAMESPACE, "nms_items",
+                        CustomDataType.ITEM_ARRAY_CODEC_TYPE);
 }

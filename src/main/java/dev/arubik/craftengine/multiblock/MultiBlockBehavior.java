@@ -4,7 +4,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Consumer;
 
-import org.bukkit.persistence.PersistentDataType;
+import dev.arubik.craftengine.util.NbtType;
 
 import dev.arubik.craftengine.block.behavior.ConnectableBlockBehavior;
 import dev.arubik.craftengine.block.entity.BukkitBlockEntityTypes;
@@ -56,7 +56,7 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
     protected final net.momirealms.craftengine.core.block.property.Property<MultiBlockRole> MULTIBLOCK_ROLE;
 
     private static final TypedKey<Boolean> KEY_DISASSEMBLING = TypedKey.of("craftengine", "multiblock_disassembling",
-            PersistentDataType.BOOLEAN);
+            NbtType.BOOLEAN);
 
     /**
      * All multiblock behaviors, keyed by their CORE block id. The hammer-assemble listener iterates

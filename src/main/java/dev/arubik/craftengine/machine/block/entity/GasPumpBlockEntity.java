@@ -6,7 +6,7 @@ import java.util.Map;
 
 import org.bukkit.Material;
 import org.bukkit.event.inventory.ClickType;
-import org.bukkit.persistence.PersistentDataType;
+import dev.arubik.craftengine.util.NbtType;
 
 import dev.arubik.craftengine.block.behavior.ConnectableBlockBehavior;
 import dev.arubik.craftengine.gas.GasCarrier;
@@ -96,7 +96,7 @@ public class GasPumpBlockEntity extends AbstractMachineBlockEntity {
     private int shownUnlocked = -1;
 
     private static final TypedKey<Float> KEY_OC = TypedKey.of("craftengine", "gas_pump_overclock",
-            PersistentDataType.FLOAT);
+            NbtType.FLOAT);
 
     public GasPumpBlockEntity(BlockEntity blockEntity) {
         this(blockEntity, new java.util.HashMap<>(), new ArrayList<>(), defaultMenuConfig(),

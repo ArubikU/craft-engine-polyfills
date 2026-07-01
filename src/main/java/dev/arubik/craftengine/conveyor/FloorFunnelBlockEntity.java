@@ -326,14 +326,11 @@ public class FloorFunnelBlockEntity extends PersistentBlockEntity implements Con
         }
     }
 
-    private static final dev.arubik.craftengine.util.TypedKey<org.bukkit.inventory.ItemStack> KEY_ITEM =
-            dev.arubik.craftengine.util.TypedKeys.ITEM;
-
     private void load() {
         try {
-            held = getOptional(KEY_ITEM).orElse(null);
-            if (held != null && held.getType().isAir())
-                held = null;
+            net.minecraft.world.item.ItemStack nms = getOptional(dev.arubik.craftengine.util.TypedKeys.NMS_ITEM)
+                    .orElse(null);
+            held = (nms != null && !nms.isEmpty()) ? CraftItemStack.asBukkitCopy(nms) : null;
         } catch (Throwable ignored) {
         }
     }
@@ -343,7 +340,7 @@ public class FloorFunnelBlockEntity extends PersistentBlockEntity implements Con
             if (held == null || held.getType().isAir())
                 clear();
             else
-                set(KEY_ITEM, held);
+                set(dev.arubik.craftengine.util.TypedKeys.NMS_ITEM, CraftItemStack.asNMSCopy(held));
         } catch (Throwable ignored) {
         }
     }

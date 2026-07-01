@@ -8,12 +8,11 @@ import java.util.Set;
 import java.util.function.Function;
 
 import org.bukkit.NamespacedKey;
-import org.bukkit.persistence.PersistentDataContainer;
-import org.bukkit.persistence.PersistentDataType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import dev.arubik.craftengine.util.CustomDataType;
+import dev.arubik.craftengine.util.NbtType;
 import dev.arubik.craftengine.util.TypedKey;
 import net.minecraft.world.level.block.state.BlockState;
 import net.momirealms.craftengine.bukkit.block.behavior.CompositeBlockBehavior;
@@ -69,7 +68,7 @@ public class PersistentBlockEntity extends BlockEntityController {
 
     // Delegación de métodos
 
-    public <P, C> boolean has(NamespacedKey key, PersistentDataType<P, C> type) {
+    public boolean has(NamespacedKey key, NbtType type) {
         return container.containsKey(key.getKey());
     }
 
@@ -77,52 +76,40 @@ public class PersistentBlockEntity extends BlockEntityController {
         return container.containsKey(key.getKey());
     }
 
-    public <P, C> @Nullable C get(NamespacedKey key, PersistentDataType<P, C> type) {
+    @SuppressWarnings("unchecked")
+    public <C> @Nullable C get(NamespacedKey key, NbtType type) {
         if (!container.containsKey(key.getKey())) {
             return null;
         }
 
         // Handle primitive types directly
-        if (type == PersistentDataType.STRING) {
-            return (C) container.getString(key.getKey());
-        } else if (type == PersistentDataType.INTEGER) {
-            return (C) Integer.valueOf(container.getInt(key.getKey()));
-        } else if (type == PersistentDataType.DOUBLE) {
-            return (C) Double.valueOf(container.getDouble(key.getKey()));
-        } else if (type == PersistentDataType.BYTE) {
-            return (C) Byte.valueOf(container.getByte(key.getKey()));
-        } else if (type == PersistentDataType.BYTE_ARRAY) {
-            return (C) container.getByteArray(key.getKey());
-        } else if (type == PersistentDataType.LONG) {
-            return (C) Long.valueOf(container.getLong(key.getKey()));
-        } else if (type == PersistentDataType.FLOAT) {
-            return (C) Float.valueOf(container.getFloat(key.getKey()));
-        } else if (type == PersistentDataType.SHORT) {
-            return (C) Short.valueOf(container.getShort(key.getKey()));
-        } else if (type == PersistentDataType.INTEGER_ARRAY) {
-            return (C) container.getIntArray(key.getKey());
-        } else if (type == PersistentDataType.LONG_ARRAY) {
-            return (C) container.getLongArray(key.getKey());
-        } else if (type == PersistentDataType.BOOLEAN) {
-            byte value = container.getByte(key.getKey());
-            return (C) Boolean.valueOf(value != 0);
-        }
-
-        return null;
+        return switch (type) {
+            case STRING -> (C) container.getString(key.getKey());
+            case INTEGER -> (C) Integer.valueOf(container.getInt(key.getKey()));
+            case DOUBLE -> (C) Double.valueOf(container.getDouble(key.getKey()));
+            case BYTE -> (C) Byte.valueOf(container.getByte(key.getKey()));
+            case BYTE_ARRAY -> (C) container.getByteArray(key.getKey());
+            case LONG -> (C) Long.valueOf(container.getLong(key.getKey()));
+            case FLOAT -> (C) Float.valueOf(container.getFloat(key.getKey()));
+            case SHORT -> (C) Short.valueOf(container.getShort(key.getKey()));
+            case INTEGER_ARRAY -> (C) container.getIntArray(key.getKey());
+            case LONG_ARRAY -> (C) container.getLongArray(key.getKey());
+            case BOOLEAN -> (C) Boolean.valueOf(container.getByte(key.getKey()) != 0);
+        };
     }
 
-    public <P, C> @Nullable C get(Key key, PersistentDataType<P, C> type) {
+    public <C> @Nullable C get(Key key, NbtType type) {
         return this.get(NamespacedKey.fromString(key.toString()), type);
     }
 
-    public <P, C> C getOrDefault(NamespacedKey key, PersistentDataType<P, C> type, C defaultValue) {
+    public <C> C getOrDefault(NamespacedKey key, NbtType type, C defaultValue) {
         if (has(key, type)) {
             return get(key, type);
         }
         return defaultValue;
     }
 
-    public <P, C> C getOrDefault(Key key, PersistentDataType<P, C> type, C defaultValue) {
+    public <C> C getOrDefault(Key key, NbtType type, C defaultValue) {
         return this.getOrDefault(NamespacedKey.fromString(key.toString()), type, defaultValue);
     }
 
@@ -163,43 +150,30 @@ public class PersistentBlockEntity extends BlockEntityController {
         this.container = tag;
     }
 
-    public <P, C> void set(@NotNull NamespacedKey key, @NotNull PersistentDataType<P, C> type, @NotNull C value) {
+    public <C> void set(@NotNull NamespacedKey key, @NotNull NbtType type, @NotNull C value) {
         // Handle primitive types directly
-        if (type == PersistentDataType.STRING) {
-            container.putString(key.getKey(), (String) value);
-        } else if (type == PersistentDataType.INTEGER) {
-            container.putInt(key.getKey(), (Integer) value);
-        } else if (type == PersistentDataType.DOUBLE) {
-            container.putDouble(key.getKey(), (Double) value);
-        } else if (type == PersistentDataType.BYTE) {
-            container.putByte(key.getKey(), (Byte) value);
-        } else if (type == PersistentDataType.BYTE_ARRAY) {
-            container.putByteArray(key.getKey(), (byte[]) value);
-        } else if (type == PersistentDataType.LONG) {
-            container.putLong(key.getKey(), (Long) value);
-        } else if (type == PersistentDataType.FLOAT) {
-            container.putFloat(key.getKey(), (Float) value);
-        } else if (type == PersistentDataType.SHORT) {
-            container.putShort(key.getKey(), (Short) value);
-        } else if (type == PersistentDataType.INTEGER_ARRAY) {
-            container.putIntArray(key.getKey(), (int[]) value);
-        } else if (type == PersistentDataType.LONG_ARRAY) {
-            container.putLongArray(key.getKey(), (long[]) value);
-        } else if (type == PersistentDataType.BOOLEAN) {
-            container.putByte(key.getKey(), (byte) ((Boolean) value ? 1 : 0));
-        } else {
-            throw new IllegalArgumentException("Unsupported PersistentDataType: " + type);
+        switch (type) {
+            case STRING -> container.putString(key.getKey(), (String) value);
+            case INTEGER -> container.putInt(key.getKey(), (Integer) value);
+            case DOUBLE -> container.putDouble(key.getKey(), (Double) value);
+            case BYTE -> container.putByte(key.getKey(), (Byte) value);
+            case BYTE_ARRAY -> container.putByteArray(key.getKey(), (byte[]) value);
+            case LONG -> container.putLong(key.getKey(), (Long) value);
+            case FLOAT -> container.putFloat(key.getKey(), (Float) value);
+            case SHORT -> container.putShort(key.getKey(), (Short) value);
+            case INTEGER_ARRAY -> container.putIntArray(key.getKey(), (int[]) value);
+            case LONG_ARRAY -> container.putLongArray(key.getKey(), (long[]) value);
+            case BOOLEAN -> container.putByte(key.getKey(), (byte) ((Boolean) value ? 1 : 0));
         }
     }
 
-    public <P, C> void setIfAbsent(@NotNull NamespacedKey key, @NotNull PersistentDataType<P, C> type,
-            @NotNull C value) {
+    public <C> void setIfAbsent(@NotNull NamespacedKey key, @NotNull NbtType type, @NotNull C value) {
         if (!has(key, type)) {
             set(key, type, value);
         }
     }
 
-    public <P, C> void set(@NotNull Key key, @NotNull PersistentDataType<P, C> type, @NotNull C value) {
+    public <C> void set(@NotNull Key key, @NotNull NbtType type, @NotNull C value) {
         this.set(NamespacedKey.fromString(key.toString()), type, value);
     }
 

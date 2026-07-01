@@ -603,10 +603,14 @@ public class FluidBlockTankBehavior extends ConnectableBlockBehavior implements 
             }
         }
 
+        private static final dev.arubik.craftengine.util.TypedKey<Boolean> KEY_WINDOWED =
+                dev.arubik.craftengine.util.TypedKey.of("craftengine", "tank_windowed",
+                        dev.arubik.craftengine.util.NbtType.BOOLEAN);
+
         @Override
         public void saveCustomData(net.momirealms.craftengine.libraries.nbt.CompoundTag tag) {
+            set(KEY_WINDOWED, windowed);
             super.saveCustomData(tag);
-            tag.putBoolean("win", windowed);
             // The unified fluid (FluidKeys.FLUID) is already in this controller's own container and
             // gets written by super.saveCustomData(tag) above — no separate mirror needed.
         }
@@ -614,8 +618,7 @@ public class FluidBlockTankBehavior extends ConnectableBlockBehavior implements 
         @Override
         public void loadCustomData(net.momirealms.craftengine.libraries.nbt.CompoundTag tag) {
             super.loadCustomData(tag);
-            if (tag.containsKey("win"))
-                windowed = tag.getBoolean("win");
+            windowed = getOrDefault(KEY_WINDOWED, windowed);
         }
 
         @Override

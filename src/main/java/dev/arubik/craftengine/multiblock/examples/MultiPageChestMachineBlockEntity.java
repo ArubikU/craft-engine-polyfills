@@ -9,7 +9,6 @@ import dev.arubik.craftengine.multiblock.MultiBlockSchema;
 import dev.arubik.craftengine.util.TypedKey;
 import net.minecraft.core.BlockPos;
 import net.minecraft.util.datafix.fixes.ChunkPalettedStorageFix.Direction;
-import net.minecraft.world.ItemStackWithSlot;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -19,9 +18,7 @@ import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.craftbukkit.entity.CraftPlayer;
 import org.bukkit.event.inventory.InventoryType;
-import org.bukkit.persistence.PersistentDataType;
-
-import java.util.List;
+import dev.arubik.craftengine.util.NbtType;
 
 /**
  * Multi-page chest machine entity with 3 pages of 45 slots each (135 total
@@ -34,14 +31,14 @@ public class MultiPageChestMachineBlockEntity extends MultiBlockMachineBlockEnti
     private static final int TOTAL_SLOTS = TOTAL_PAGES * SLOTS_PER_PAGE; // 135
 
     // Typed keys for persistence
-    private static final TypedKey<List<ItemStackWithSlot>> KEY_PAGE_0 = TypedKey.of("craftengine", "multipage_page0",
-            dev.arubik.craftengine.util.CustomDataType.ITEM_STACK_WITH_SLOT_LIST_TYPE);
-    private static final TypedKey<List<ItemStackWithSlot>> KEY_PAGE_1 = TypedKey.of("craftengine", "multipage_page1",
-            dev.arubik.craftengine.util.CustomDataType.ITEM_STACK_WITH_SLOT_LIST_TYPE);
-    private static final TypedKey<List<ItemStackWithSlot>> KEY_PAGE_2 = TypedKey.of("craftengine", "multipage_page2",
-            dev.arubik.craftengine.util.CustomDataType.ITEM_STACK_WITH_SLOT_LIST_TYPE);
+    private static final TypedKey<ItemStack[]> KEY_PAGE_0 = TypedKey.of("craftengine", "multipage_page0",
+            dev.arubik.craftengine.util.CustomDataType.ITEM_ARRAY_CODEC_TYPE);
+    private static final TypedKey<ItemStack[]> KEY_PAGE_1 = TypedKey.of("craftengine", "multipage_page1",
+            dev.arubik.craftengine.util.CustomDataType.ITEM_ARRAY_CODEC_TYPE);
+    private static final TypedKey<ItemStack[]> KEY_PAGE_2 = TypedKey.of("craftengine", "multipage_page2",
+            dev.arubik.craftengine.util.CustomDataType.ITEM_ARRAY_CODEC_TYPE);
     private static final TypedKey<Integer> KEY_CURRENT_PAGE = TypedKey.of("craftengine", "multipage_current_page",
-            PersistentDataType.INTEGER);
+            NbtType.INTEGER);
 
     private final ItemStack[][] pages; // [page][slot]
     private int currentPage = 0;
@@ -177,10 +174,10 @@ public class MultiPageChestMachineBlockEntity extends MultiBlockMachineBlockEnti
     private void saveToPersistence() {
         saveCurrentPageFromInventory();
 
-        // Save each page directly into the BlockEntity PDC
-        this.set(KEY_PAGE_0, dev.arubik.craftengine.util.ArrayItemStackWithSlot.from(pages[0]));
-        this.set(KEY_PAGE_1, dev.arubik.craftengine.util.ArrayItemStackWithSlot.from(pages[1]));
-        this.set(KEY_PAGE_2, dev.arubik.craftengine.util.ArrayItemStackWithSlot.from(pages[2]));
+        // Save each page directly into this block entity's own CE tag.
+        this.set(KEY_PAGE_0, pages[0]);
+        this.set(KEY_PAGE_1, pages[1]);
+        this.set(KEY_PAGE_2, pages[2]);
         this.set(KEY_CURRENT_PAGE, currentPage);
         setChanged();
     }
@@ -198,19 +195,18 @@ public class MultiPageChestMachineBlockEntity extends MultiBlockMachineBlockEnti
         }
     }
 
-    private void loadPageFromPersistence(TypedKey<List<ItemStackWithSlot>> key, int pageIndex) {
+    private void loadPageFromPersistence(TypedKey<ItemStack[]> key, int pageIndex) {
         // Initialize page with empty stacks
         for (int i = 0; i < SLOTS_PER_PAGE; i++) {
             pages[pageIndex][i] = ItemStack.EMPTY;
         }
 
         // Load items from persistence
-        List<ItemStackWithSlot> contents = this.get(key);
+        ItemStack[] contents = this.get(key);
         if (contents != null) {
-            for (ItemStackWithSlot item : contents) {
-                if (item.slot() >= 0 && item.slot() < SLOTS_PER_PAGE) {
-                    pages[pageIndex][item.slot()] = item.stack();
-                }
+            for (int i = 0; i < contents.length && i < SLOTS_PER_PAGE; i++) {
+                if (contents[i] != null)
+                    pages[pageIndex][i] = contents[i];
             }
         }
     }

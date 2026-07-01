@@ -1375,22 +1375,22 @@ public class ConveyorBlockEntity extends PersistentWorldlyBlockEntity implements
 
     private dev.arubik.craftengine.util.TypedKey<Float> progKey(int i) {
         return dev.arubik.craftengine.util.TypedKey.of("craftengine", "cv_prog" + i,
-                org.bukkit.persistence.PersistentDataType.FLOAT);
+                dev.arubik.craftengine.util.NbtType.FLOAT);
     }
 
     private dev.arubik.craftengine.util.TypedKey<Float> jitKey(int i) {
         return dev.arubik.craftengine.util.TypedKey.of("craftengine", "cv_jit" + i,
-                org.bukkit.persistence.PersistentDataType.FLOAT);
+                dev.arubik.craftengine.util.NbtType.FLOAT);
     }
 
     private dev.arubik.craftengine.util.TypedKey<String> entryKey(int i) {
         return dev.arubik.craftengine.util.TypedKey.of("craftengine", "cv_entry" + i,
-                org.bukkit.persistence.PersistentDataType.STRING);
+                dev.arubik.craftengine.util.NbtType.STRING);
     }
 
     private static final dev.arubik.craftengine.util.TypedKey<String> PREV_KEY =
             dev.arubik.craftengine.util.TypedKey.of("craftengine", "cv_prev",
-                    org.bukkit.persistence.PersistentDataType.STRING);
+                    dev.arubik.craftengine.util.NbtType.STRING);
 
     /** Push per-slot progress/jitter/entryDir + prevPos into this BE's own persisted data. */
     private void saveState(CEWorld world) {

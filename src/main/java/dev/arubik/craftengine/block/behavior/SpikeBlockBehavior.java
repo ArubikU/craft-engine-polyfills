@@ -127,17 +127,18 @@ public class SpikeBlockBehavior extends BukkitBlockBehavior implements EntityBlo
 
         @Override
         public void saveCustomData(net.momirealms.craftengine.libraries.nbt.CompoundTag tag) {
+            // Push the instance fields into this BE's own TypedKey-backed container before the parent
+            // flushes it to tag — same reusable keys other block entities use, not raw tag.put* calls.
+            set(dev.arubik.craftengine.util.TypedKeys.OWNER, ownerUUID);
+            set(dev.arubik.craftengine.util.TypedKeys.LAST_ATTACK_TIME, lastAttackTime);
             super.saveCustomData(tag);
-            tag.putString("owner", ownerUUID != null ? ownerUUID.toString() : "");
-            tag.putLong("last_attack", lastAttackTime);
         }
 
         @Override
         public void loadCustomData(net.momirealms.craftengine.libraries.nbt.CompoundTag tag) {
             super.loadCustomData(tag);
-            String o = tag.getString("owner");
-            this.ownerUUID = (o != null && !o.isEmpty()) ? java.util.UUID.fromString(o) : null;
-            this.lastAttackTime = tag.getLong("last_attack");
+            this.ownerUUID = getOrDefault(dev.arubik.craftengine.util.TypedKeys.OWNER, null);
+            this.lastAttackTime = getOrDefault(dev.arubik.craftengine.util.TypedKeys.LAST_ATTACK_TIME, 0L);
         }
 
         @Override

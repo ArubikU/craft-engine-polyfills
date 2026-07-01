@@ -2,7 +2,7 @@ package dev.arubik.craftengine.fluid;
 
 import dev.arubik.craftengine.util.CustomDataType;
 import dev.arubik.craftengine.util.TypedKey;
-import org.bukkit.persistence.PersistentDataType;
+import dev.arubik.craftengine.util.NbtType;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -16,7 +16,7 @@ public final class FluidKeys {
     }
 
     public static final CustomDataType<FluidStack, byte[]> FLUID_DATA_TYPE = new CustomDataType<>(
-            PersistentDataType.BYTE_ARRAY,
+            NbtType.BYTE_ARRAY,
             (complex) -> {
                 try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
                         DataOutputStream dos = new DataOutputStream(baos)) {
@@ -53,19 +53,19 @@ public final class FluidKeys {
 
     // Cooldown por bloque para limitar frecuencia por tipo de fluido (ticks)
     public static final TypedKey<Integer> FLUID_TICK_COOLDOWN = TypedKey.of("craftengine", "fluid_tick_cd",
-            PersistentDataType.INTEGER);
+            NbtType.INTEGER);
 
     // Cooldown independiente para operaciones de recolección desde bloques del
     // mundo
     public static final TypedKey<Integer> FLUID_BLOCK_COOLDOWN = TypedKey.of("craftengine", "fluid_block_cd",
-            PersistentDataType.INTEGER);
+            NbtType.INTEGER);
 
     // Cooldown independiente para operaciones de I/O con carriers (push y pull)
     public static final TypedKey<Integer> FLUID_IO_COOLDOWN = TypedKey.of("craftengine", "fluid_io_cd",
-            PersistentDataType.INTEGER);
+            NbtType.INTEGER);
 
     // Transfer history para detectar loops (últimas 3 posiciones visitadas)
     public static final TypedKey<String> TRANSFER_HISTORY = TypedKey.of("craftengine", "fluid_history",
-            PersistentDataType.STRING);
+            NbtType.STRING);
 
 }
