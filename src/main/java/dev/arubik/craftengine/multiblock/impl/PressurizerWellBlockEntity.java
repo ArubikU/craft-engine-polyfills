@@ -25,7 +25,7 @@ import net.momirealms.craftengine.core.block.entity.BlockEntity;
  * Pressurizer Well core (the central-bottom block of a 3×3×6 {@code cml:pressurizer_well} tower). While
  * the structure is formed AND fed steam, it raises the pump limit of the cal vein anchored directly
  * below the core from 1 to {@link GasKeys#WELL_PUMP_LIMIT}. It publishes that state by writing
- * {@link GasKeys#WELL_ACTIVE} (1/0) to its own CustomBlockData, which gas pumps read.
+ * {@link GasKeys#WELL_ACTIVE} (1/0) to its own block-entity data, which gas pumps read.
  *
  * <p>Steam is consumed CONTINUOUSLY: it pulls steam from any gas carrier touching the tower into its
  * buffer and burns {@link #STEAM_PER_CYCLE} per cycle. With no steam the well stays formed but goes
@@ -86,8 +86,7 @@ public class PressurizerWellBlockEntity extends MultiBlockMachineBlockEntity {
                 nowActive = false;
             }
             // Publish the active flag for gas pumps to read off the anchored cal vein.
-            var data = dev.arubik.craftengine.util.CustomBlockData.from(level, core);
-            data.set(GasKeys.WELL_ACTIVE, nowActive ? 1 : 0);
+            set(GasKeys.WELL_ACTIVE, nowActive ? 1 : 0);
             this.active = nowActive;
             this.isProcessing = nowActive;
         }

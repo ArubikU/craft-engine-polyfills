@@ -230,11 +230,7 @@ public class DepotBlockEntity extends PersistentBlockEntity implements ConveyorR
             set(i, null);
         }
         despawnAllDisplays();
-        try {
-            dev.arubik.craftengine.util.CustomBlockData.from(
-                    bw.getBlockAt(pos.x(), pos.y(), pos.z())).clear();
-        } catch (Throwable ignored) {
-        }
+        clear();
     }
 
     /** Despawn all on-top item displays for every tracked viewer. */
@@ -250,24 +246,11 @@ public class DepotBlockEntity extends PersistentBlockEntity implements ConveyorR
         }
     }
 
-    // ---------------- persistence (chunk-backed CustomBlockData) ----------------
-
-    private dev.arubik.craftengine.util.CustomBlockData blockData() {
-        try {
-            org.bukkit.World bw = (org.bukkit.World) blockEntity().world().world.platformWorld();
-            var pos = blockEntity().pos();
-            return dev.arubik.craftengine.util.CustomBlockData.from(bw.getBlockAt(pos.x(), pos.y(), pos.z()));
-        } catch (Throwable t) {
-            return null;
-        }
-    }
+    // ---------------- persistence (this block entity's own CE tag) ----------------
 
     private void load() {
         try {
-            dev.arubik.craftengine.util.CustomBlockData data = blockData();
-            if (data == null)
-                return;
-            data.getOptional(dev.arubik.craftengine.util.TypedKeys.CONTENTS).ifPresent(contents -> {
+            getOptional(dev.arubik.craftengine.util.TypedKeys.CONTENTS).ifPresent(contents -> {
                 for (int i = 0; i < container.containerSize(); i++)
                     set(i, null);
                 for (net.minecraft.world.ItemStackWithSlot it : contents)
@@ -293,16 +276,13 @@ public class DepotBlockEntity extends PersistentBlockEntity implements ConveyorR
             return;
         lastHash = h;
         try {
-            dev.arubik.craftengine.util.CustomBlockData data = blockData();
-            if (data == null)
-                return;
             net.minecraft.world.item.ItemStack[] nms =
                     new net.minecraft.world.item.ItemStack[container.containerSize()];
             for (int i = 0; i < nms.length; i++) {
                 org.bukkit.inventory.ItemStack cur = get(i);
                 nms[i] = cur == null ? net.minecraft.world.item.ItemStack.EMPTY : CraftItemStack.asNMSCopy(cur);
             }
-            data.set(dev.arubik.craftengine.util.TypedKeys.CONTENTS,
+            set(dev.arubik.craftengine.util.TypedKeys.CONTENTS,
                     dev.arubik.craftengine.util.ArrayItemStackWithSlot.from(nms));
             // Refresh comparators reading this block.
             Level lvl = nmsLevel();

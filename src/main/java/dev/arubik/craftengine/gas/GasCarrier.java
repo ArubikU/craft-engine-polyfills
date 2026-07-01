@@ -42,9 +42,11 @@ public interface GasCarrier {
 
     /** Set this carrier's stored gas DIRECTLY (engine apply path). Default writes the shared GAS store. */
     default void setStoredGasRaw(Level level, BlockPos pos, GasStack stack) {
-        if (stack == null || stack.isEmpty())
-            dev.arubik.craftengine.util.CustomBlockData.from(level, pos).remove(GasKeys.GAS);
-        else
-            dev.arubik.craftengine.util.CustomBlockData.from(level, pos).set(GasKeys.GAS, stack);
+        dev.arubik.craftengine.block.entity.PersistentBlockEntity.executeAt(level, pos, be -> {
+            if (stack == null || stack.isEmpty())
+                be.remove(GasKeys.GAS);
+            else
+                be.set(GasKeys.GAS, stack);
+        });
     }
 }

@@ -20,7 +20,6 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
 import org.jetbrains.annotations.NotNull;
 
-import dev.arubik.craftengine.util.DataHolders;
 import dev.arubik.craftengine.util.Utils;
 import net.minecraft.core.Direction;
 import net.minecraft.world.WorldlyContainer;
@@ -39,7 +38,7 @@ import net.momirealms.craftengine.core.world.BlockPos;
 
 /**
  * A BlockEntity that is also a WorldlyContainer (Inventory).
- * Combines PersistentBlockEntity features with AbstractWorldlyContainer logic.
+ * Combines PersistentBlockEntity features with WorldlyContainer/InventoryHolder logic.
  */
 public abstract class PersistentWorldlyBlockEntity extends PersistentBlockEntity
         implements WorldlyContainer, InventoryHolder {
@@ -50,12 +49,6 @@ public abstract class PersistentWorldlyBlockEntity extends PersistentBlockEntity
     protected int maxStackSize = 64;
 
     // Not needed: protected boolean stillValid = true; // BlockEntity has 'valid'
-    // field? No, it has 'valid'. usage: isValid()
-    // The decompiled BlockEntity has 'protected boolean valid;'
-
-    private static final dev.arubik.craftengine.util.TypedKey<List<net.minecraft.world.ItemStackWithSlot>> KEY_INVENTORY =
-            dev.arubik.craftengine.util.TypedKey.of("craftengine", "worldly_inventory",
-                    dev.arubik.craftengine.util.CustomDataType.ITEM_STACK_WITH_SLOT_LIST_TYPE);
 
     public PersistentWorldlyBlockEntity(BlockEntity blockEntity, int size) {
         super(blockEntity);

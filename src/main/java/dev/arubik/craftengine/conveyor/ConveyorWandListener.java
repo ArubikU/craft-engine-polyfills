@@ -430,14 +430,13 @@ public class ConveyorWandListener implements Listener {
             if (!placed)
                 continue;
             placedCount++;
-            try {
-                dev.arubik.craftengine.util.CustomBlockData.from(bukkitWorld.getBlockAt(s.x, s.y, s.z)).clear();
-            } catch (Throwable ignored) {
-            }
             BlockPos here = new BlockPos(s.x, s.y, s.z);
             ConveyorBlockEntity seg = ConveyorBlockEntity.conveyorAt(world, here);
-            if (seg != null && prev != null)
-                seg.setPrevPos(prev);
+            if (seg != null) {
+                seg.clear();
+                if (prev != null)
+                    seg.setPrevPos(prev);
+            }
             prev = here;
         }
         if (!creative && placedCount > 0)

@@ -12,8 +12,8 @@ import org.jetbrains.annotations.NotNull;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 
+import dev.arubik.craftengine.block.entity.PersistentBlockEntity;
 import dev.arubik.craftengine.util.ArgumentList;
-import dev.arubik.craftengine.util.CustomBlockData;
 import dev.arubik.craftengine.util.ArgumentList.XAxisCoordinate;
 import dev.arubik.craftengine.util.ArgumentList.YAxisCoordinate;
 import dev.arubik.craftengine.util.ArgumentList.ZAxisCoordinate;
@@ -36,13 +36,13 @@ public class CepCommand implements CommandExecutor, TabCompleter {
             int y = (Integer) parsed[3];
             int z = (Integer) parsed[4];
             if (sender instanceof Player player){
-                Block block = player.getWorld().getBlockAt(x,y,z);
-                CustomBlockData data = CustomBlockData.from(block);
+                Level level = ((CraftWorld) player.getWorld()).getHandle();
+                BlockPos pos = new BlockPos(x, y, z);
+                PersistentBlockEntity be = PersistentBlockEntity.getIfLoaded(level, pos);
                 JsonObject json = new JsonObject();
-                for (var key : data.getKeys()) {
-                    Object value = data.get(key, data.getDataType(key));
-                    if(value != null){
-                        json.addProperty(key.getKey().toString(), String.valueOf(value));
+                if (be != null) {
+                    for (var entry : be.debugDump().entrySet()) {
+                        json.addProperty(entry.getKey(), entry.getValue());
                     }
                 }
                 sender.sendMessage(MiniMessage.miniMessage().deserialize(JsonFormatter.toMiniMessage(json)));

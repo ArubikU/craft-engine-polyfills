@@ -91,7 +91,10 @@ public class FunnelPlaceListener implements Listener {
             return;
         // Fresh block: clear any stale persisted item from a previous occupant.
         try {
-            dev.arubik.craftengine.util.CustomBlockData.from(target).clear();
+            net.minecraft.world.level.Level level = ((org.bukkit.craftbukkit.CraftWorld) target.getWorld()).getHandle();
+            net.minecraft.core.BlockPos nmsPos = new net.minecraft.core.BlockPos(target.getX(), target.getY(), target.getZ());
+            dev.arubik.craftengine.block.entity.PersistentBlockEntity.executeAt(level, nmsPos,
+                    dev.arubik.craftengine.block.entity.PersistentBlockEntity::clear);
         } catch (Throwable ignored) {
         }
         if (player.getGameMode() != GameMode.CREATIVE) {

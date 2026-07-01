@@ -59,34 +59,15 @@ public class WorkbenchBlockEntity extends PersistentBlockEntity {
 
     // ---------------- blueprint persistence ----------------
 
-    // Chunk-backed persistence (CE BE tag save is unreliable here — same reason the conveyor/motor
-    // use CustomBlockData): the blueprint survives restart on the block's own PDC.
+    // Persisted on this block entity's own CE tag, alongside every other TypedKey-backed field.
     private static final dev.arubik.craftengine.util.TypedKey<byte[]> BP_KEY =
             dev.arubik.craftengine.util.TypedKey.of("craftengine", "wb_blueprint",
                     org.bukkit.persistence.PersistentDataType.BYTE_ARRAY);
 
-    private dev.arubik.craftengine.util.CustomBlockData blockData() {
-        try {
-            CEWorld world = blockEntity().world();
-            if (world == null)
-                return null;
-            org.bukkit.World bw = (org.bukkit.World) world.world().platformWorld();
-            if (bw == null)
-                return null;
-            BlockPos p = blockEntity().pos();
-            return dev.arubik.craftengine.util.CustomBlockData.from(bw.getBlockAt(p.x(), p.y(), p.z()));
-        } catch (Throwable t) {
-            return null;
-        }
-    }
-
     private org.bukkit.inventory.ItemStack cachedBlueprint; // last value seen (block may be air in onRemove)
 
     public org.bukkit.inventory.ItemStack getBlueprint() {
-        dev.arubik.craftengine.util.CustomBlockData d = blockData();
-        if (d == null)
-            return cachedBlueprint;
-        byte[] bytes = d.get(BP_KEY);
+        byte[] bytes = get(BP_KEY);
         if (bytes == null || bytes.length == 0) {
             cachedBlueprint = null;
             return null;
@@ -101,13 +82,10 @@ public class WorkbenchBlockEntity extends PersistentBlockEntity {
 
     public void setBlueprint(org.bukkit.inventory.ItemStack stack) {
         cachedBlueprint = (stack == null || stack.getType().isAir()) ? null : stack.clone();
-        dev.arubik.craftengine.util.CustomBlockData d = blockData();
-        if (d == null)
-            return;
         if (stack == null || stack.getType().isAir())
-            d.remove(BP_KEY.getKey());
+            remove(BP_KEY.getKey());
         else
-            d.set(BP_KEY, stack.serializeAsBytes());
+            set(BP_KEY, stack.serializeAsBytes());
     }
 
     /** The open menu pushes the current matched output(s) here so they render on the table. */
@@ -332,9 +310,7 @@ public class WorkbenchBlockEntity extends PersistentBlockEntity {
                     bw.dropItemNaturally(new org.bukkit.Location(bw, pos.x() + 0.5, pos.y() + 0.5, pos.z() + 0.5), bp);
             }
             // Clear the persisted data so a future block at this position doesn't read a stale blueprint.
-            dev.arubik.craftengine.util.CustomBlockData d = blockData();
-            if (d != null)
-                d.remove(BP_KEY.getKey());
+            remove(BP_KEY.getKey());
             cachedBlueprint = null;
             // Kill any rendered displays.
             if (world != null) {

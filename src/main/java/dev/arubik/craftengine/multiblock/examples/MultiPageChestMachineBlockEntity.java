@@ -6,7 +6,6 @@ import dev.arubik.craftengine.machine.recipe.AbstractProcessingRecipe;
 import dev.arubik.craftengine.machine.recipe.RecipeOutput;
 import dev.arubik.craftengine.multiblock.MultiBlockMachineBlockEntity;
 import dev.arubik.craftengine.multiblock.MultiBlockSchema;
-import dev.arubik.craftengine.util.CustomBlockData;
 import dev.arubik.craftengine.util.TypedKey;
 import net.minecraft.core.BlockPos;
 import net.minecraft.util.datafix.fixes.ChunkPalettedStorageFix.Direction;
@@ -66,7 +65,7 @@ public class MultiPageChestMachineBlockEntity extends MultiBlockMachineBlockEnti
         this.layout = new MachineLayout(InventoryType.CHEST, 54, "Multi-Page Chest");
         setupLayout();
 
-        // Note: loadFromCustomBlockData() is deferred until world is set
+        // Note: loadFromPersistence() is deferred until world is set
     }
 
     /**
@@ -162,7 +161,7 @@ public class MultiPageChestMachineBlockEntity extends MultiBlockMachineBlockEnti
 
     private void syncCurrentPageToInventory() {
         for (int i = 0; i < SLOTS_PER_PAGE; i++) {
-            // Use super.setItem to avoid redundant saveToCustomBlockData calls
+            // Use super.setItem to avoid redundant saveToPersistence calls
             super.setItem(i, pages[currentPage][i]);
         }
     }

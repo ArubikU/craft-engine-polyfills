@@ -9,9 +9,6 @@ import com.github.retrooper.packetevents.PacketEvents;
 import dev.arubik.craftengine.block.BlockBehaviors;
 import dev.arubik.craftengine.item.ItemBehaviors;
 import dev.arubik.craftengine.item.ItemListener;
-import dev.arubik.craftengine.util.BlockContainer;
-import dev.arubik.craftengine.util.CustomBlockData;
-import dev.arubik.craftengine.util.DataHolders;
 import io.github.retrooper.packetevents.factory.spigot.SpigotPacketEventsBuilder;
 import net.momirealms.craftengine.core.plugin.CraftEngine;
 
@@ -59,8 +56,6 @@ public final class CraftEnginePolyfills extends JavaPlugin {
             }
         }, 1L, 3L); // every 3 ticks — fluid/gas equalize fine at ~7Hz, and the per-tick BFS rebuild is costly
         dev.arubik.craftengine.block.behavior.CrafterSlotStateListener.register();
-        CustomBlockData.registerListener(this);
-        BlockContainer.ensureListenerRegistered(this);
         getServer().getPluginManager().registerEvents(new dev.arubik.craftengine.machine.menu.MachineMenuListener(),
                 this);
         getServer().getPluginManager().registerEvents(new dev.arubik.craftengine.crafting.CraftingTableListener(),
@@ -149,7 +144,6 @@ public final class CraftEnginePolyfills extends JavaPlugin {
     @Override
     public void onDisable() {
         PacketEvents.getAPI().terminate();
-        DataHolders.INSTANCE.removeHolders();
         getLogger().info("CraftEngine Polyfills Disabled");
     }
 

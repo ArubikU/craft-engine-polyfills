@@ -104,25 +104,18 @@ public class GasPipeBehavior extends ConnectedBlockBehavior implements EntityBlo
     }
 
     protected PersistentBlockEntity getBE(Level level, BlockPos pos) {
-        BlockEntity be = BukkitBlockEntityTypes.getIfLoaded(level, pos);
-        if (be != null && be.controller instanceof PersistentBlockEntity p)
-            return p;
-        return null;
+        return PersistentBlockEntity.getIfLoaded(level, pos);
     }
 
     protected void withBE(Level level, BlockPos pos, Consumer<PersistentBlockEntity> consumer) {
-        PersistentBlockEntity p = getBE(level, pos);
-        if (p != null)
-            consumer.accept(p);
+        PersistentBlockEntity.executeAt(level, pos, consumer);
     }
 
     @Override
     public GasStack getStoredGas(Level level, BlockPos pos) {
-        // MUST read the same store insertGas/extractGas write to (CustomBlockData), NOT the BE tag —
-        // they diverged, so the pipe filled CustomBlockData to capacity while every read saw 0
-        // (display showed 0, the pump kept extracting into a "full" pipe and the gas was lost).
-        return dev.arubik.craftengine.util.CustomBlockData.from(level, pos)
-                .getOrDefault(GasKeys.GAS, GasStack.EMPTY);
+        // MUST read the same store insertGas/extractGas write to (the block entity's own tag via
+        // GasCarrierImpl) — they used to diverge from a separate chunk-PDC store, which silently lost gas.
+        return GasCarrierImpl.getStoredGas(level, pos, GasKeys.GAS);
     }
 
     @Override
@@ -303,8 +296,7 @@ public class GasPipeBehavior extends ConnectedBlockBehavior implements EntityBlo
                 int accepted = targetCarrier.insertGas(level, targetPos, toTransfer, fromTarget);
 
                 if (accepted > 0) {
-                    // Remove what we sent from OUR store (CustomBlockData — same place insert/extract
-                    // use; the old withBE path wrote the BE tag, a different store -> desync).
+                    // Remove what we sent from our own block-entity store (same place insert/extract use).
                     extractGas(level, from, accepted, null, fromTarget);
 
                     // Actualizar historial después de transferencia exitosa

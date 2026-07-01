@@ -25,7 +25,7 @@ import net.momirealms.craftengine.core.world.CEWorld;
  * <p>Item intake: belts hand items over directly via {@link ConveyorReceiver} (no drop),
  * dropped items resting on top are vacuumed, and hoppers/droppers above push in through the
  * vanilla container bridge ({@link FloorFunnelBehavior} exposes none here — top intake is the
- * vacuum + belt hand-off). Persistence uses chunk-backed CustomBlockData.</p>
+ * vacuum + belt hand-off). Persistence uses this block entity's own CE tag.</p>
  */
 public class FloorFunnelBlockEntity extends PersistentBlockEntity implements ConveyorReceiver {
 
@@ -317,7 +317,7 @@ public class FloorFunnelBlockEntity extends PersistentBlockEntity implements Con
         }
     }
 
-    // ---------------- persistence (chunk-backed CustomBlockData) ----------------
+    // ---------------- persistence (this block entity's own CE tag) ----------------
 
     private void ensureLoaded() {
         if (!loaded) {
@@ -326,25 +326,12 @@ public class FloorFunnelBlockEntity extends PersistentBlockEntity implements Con
         }
     }
 
-    private dev.arubik.craftengine.util.CustomBlockData blockData() {
-        try {
-            org.bukkit.World bw = (org.bukkit.World) blockEntity().world().world.platformWorld();
-            BlockPos p = blockEntity().pos();
-            return dev.arubik.craftengine.util.CustomBlockData.from(bw.getBlockAt(p.x(), p.y(), p.z()));
-        } catch (Throwable t) {
-            return null;
-        }
-    }
-
     private static final dev.arubik.craftengine.util.TypedKey<org.bukkit.inventory.ItemStack> KEY_ITEM =
             dev.arubik.craftengine.util.TypedKeys.ITEM;
 
     private void load() {
         try {
-            dev.arubik.craftengine.util.CustomBlockData d = blockData();
-            if (d == null)
-                return;
-            held = d.getOptional(KEY_ITEM).orElse(null);
+            held = getOptional(KEY_ITEM).orElse(null);
             if (held != null && held.getType().isAir())
                 held = null;
         } catch (Throwable ignored) {
@@ -353,13 +340,10 @@ public class FloorFunnelBlockEntity extends PersistentBlockEntity implements Con
 
     private void save() {
         try {
-            dev.arubik.craftengine.util.CustomBlockData d = blockData();
-            if (d == null)
-                return;
             if (held == null || held.getType().isAir())
-                d.clear();
+                clear();
             else
-                d.set(KEY_ITEM, held);
+                set(KEY_ITEM, held);
         } catch (Throwable ignored) {
         }
     }

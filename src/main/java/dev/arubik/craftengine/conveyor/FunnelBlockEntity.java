@@ -517,17 +517,7 @@ public class FunnelBlockEntity extends PersistentBlockEntity implements Conveyor
         }
     }
 
-    // ---------------- persistence ----------------
-
-    private dev.arubik.craftengine.util.CustomBlockData blockData() {
-        try {
-            org.bukkit.World bw = (org.bukkit.World) blockEntity().world().world.platformWorld();
-            BlockPos p = blockEntity().pos();
-            return dev.arubik.craftengine.util.CustomBlockData.from(bw.getBlockAt(p.x(), p.y(), p.z()));
-        } catch (Throwable t) {
-            return null;
-        }
-    }
+    // ---------------- persistence (this block entity's own CE tag) ----------------
 
     private static final dev.arubik.craftengine.util.TypedKey<org.bukkit.inventory.ItemStack> KEY_ITEM =
             dev.arubik.craftengine.util.TypedKeys.ITEM;
@@ -537,27 +527,21 @@ public class FunnelBlockEntity extends PersistentBlockEntity implements Conveyor
 
     private void load() {
         try {
-            dev.arubik.craftengine.util.CustomBlockData d = blockData();
-            if (d == null)
-                return;
-            transit = d.getOptional(KEY_ITEM).orElse(null);
+            transit = getOptional(KEY_ITEM).orElse(null);
             if (transit != null && transit.getType().isAir())
                 transit = null;
-            progress = d.getOrDefault(KEY_PROG, 0f);
+            progress = getOrDefault(KEY_PROG, 0f);
         } catch (Throwable ignored) {
         }
     }
 
     private void save() {
         try {
-            dev.arubik.craftengine.util.CustomBlockData d = blockData();
-            if (d == null)
-                return;
             if (transit == null)
-                d.clear();
+                clear();
             else {
-                d.set(KEY_ITEM, transit);
-                d.set(KEY_PROG, progress);
+                set(KEY_ITEM, transit);
+                set(KEY_PROG, progress);
             }
         } catch (Throwable ignored) {
         }

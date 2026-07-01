@@ -228,10 +228,10 @@ public class TankBlockBehavior extends ConnectableBlockBehavior implements Entit
         FluidType stores = state.get(fluidTypeProperty);
         if (stores != null && stores != FluidType.EMPTY) {
             int level = state.get(levelProperty);
-            dev.arubik.craftengine.util.CustomBlockData.from((Level) context.getLevel().minecraftWorld(),
-                    (BlockPos) LocationUtils.toBlockPos(context.getClickedPos()))
-                    .set(FluidKeys.FLUID, new FluidStack(stores,
-                            (int) Math.floor((level / (double) levelProperty.max) * MAX_CAPACITY), 0));
+            executeBlockEntity((Level) context.getLevel().minecraftWorld(),
+                    (BlockPos) LocationUtils.toBlockPos(context.getClickedPos()),
+                    be -> be.set(FluidKeys.FLUID, new FluidStack(stores,
+                            (int) Math.floor((level / (double) levelProperty.max) * MAX_CAPACITY), 0)));
         }
         return state;
     }
@@ -441,11 +441,8 @@ public class TankBlockBehavior extends ConnectableBlockBehavior implements Entit
                 ((net.minecraft.world.level.LevelWriter) level).setBlock(pos,
                         (net.minecraft.world.level.block.state.BlockState) newState.customBlockState().minecraftState(),
                         3);
-
-                // Force data persistence to Chunk PDC after modification
-                if (!stored.isEmpty()) {
-                    dev.arubik.craftengine.util.CustomBlockData.from(level, pos).set(FluidKeys.FLUID, stored);
-                }
+                // The fluid amount/type was already persisted to the block entity's own store by the
+                // insert/extract that called us — no separate re-write needed.
             }
         }
     }
@@ -499,42 +496,6 @@ public class TankBlockBehavior extends ConnectableBlockBehavior implements Entit
         }
 
         @Override
-        public void saveCustomData(net.momirealms.craftengine.libraries.nbt.CompoundTag tag) {
-            super.saveCustomData(tag);
-            // Persist the stored fluid into the CraftEngine-native block-entity NBT — the live store is
-            // CustomBlockData, which was not surviving restarts ("tanks don't save their fluid").
-            try {
-                Level level = (Level) ((BukkitWorld) blockEntity().world().world()).minecraftWorld();
-                BlockPos pos = (BlockPos) Utils.fromPos(blockEntity().pos());
-                FluidStack f = dev.arubik.craftengine.fluid.FluidCarrierImpl.getStored(level, pos);
-                if (f != null && !f.isEmpty()) {
-                    tag.putString("t", f.getType().name());
-                    tag.putInt("a", f.getAmount());
-                    tag.putInt("p", f.getPressure());
-                }
-            } catch (Throwable ignored) {
-            }
-        }
-
-        @Override
-        public void loadCustomData(net.momirealms.craftengine.libraries.nbt.CompoundTag tag) {
-            super.loadCustomData(tag);
-            try {
-                String tn = tag.getString("t");
-                if (tn != null && !tn.isEmpty()) {
-                    Level level = (Level) ((BukkitWorld) blockEntity().world().world()).minecraftWorld();
-                    BlockPos pos = (BlockPos) Utils.fromPos(blockEntity().pos());
-                    FluidType ty = FluidType.valueOf(tn);
-                    int a = tag.getInt("a");
-                    int p = tag.getInt("p");
-                    dev.arubik.craftengine.util.CustomBlockData.from(level, pos)
-                            .set(dev.arubik.craftengine.fluid.FluidKeys.FLUID, new FluidStack(ty, a, p));
-                }
-            } catch (Throwable ignored) {
-            }
-        }
-
-        @Override
         public <C extends BlockEntityController> BlockEntityTicker<C> createBlockEntityTicker(
                 CEWorld world, ImmutableBlockState state) {
             return BlockEntityController.createTickerHelper((BlockEntityTicker<Controller>) Controller::tick);
@@ -548,17 +509,12 @@ public class TankBlockBehavior extends ConnectableBlockBehavior implements Entit
     }
 
     public PersistentBlockEntity getBlockEntity(Level world, net.minecraft.core.BlockPos pos) {
-        BlockEntity be = BukkitBlockEntityTypes.getIfLoaded(world, pos);
-        if (be != null && be.controller instanceof PersistentBlockEntity p)
-            return p;
-        return null;
+        return PersistentBlockEntity.getIfLoaded(world, pos);
     }
 
     public void executeBlockEntity(Level world, net.minecraft.core.BlockPos pos,
             java.util.function.Consumer<PersistentBlockEntity> consumer) {
-        PersistentBlockEntity be = getBlockEntity(world, pos);
-        if (be != null)
-            consumer.accept(be);
+        PersistentBlockEntity.executeAt(world, pos, consumer);
     }
 
     private void tickTank(CEWorld world, net.momirealms.craftengine.core.world.BlockPos cePos) {

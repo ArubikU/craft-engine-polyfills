@@ -42,7 +42,9 @@ public class GasTank {
     }
 
     public GasStack getGas(Level level, BlockPos pos) {
-        return dev.arubik.craftengine.util.CustomBlockData.from(level, pos).getOrDefault(key, GasStack.EMPTY);
+        dev.arubik.craftengine.block.entity.PersistentBlockEntity be = dev.arubik.craftengine.block.entity.PersistentBlockEntity
+                .getIfLoaded(level, pos);
+        return be != null ? be.getOrDefault(key, GasStack.EMPTY) : GasStack.EMPTY;
     }
 
     public int insert(Level level, BlockPos pos, GasStack stack) {

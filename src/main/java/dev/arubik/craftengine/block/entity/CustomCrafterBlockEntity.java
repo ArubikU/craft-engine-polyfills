@@ -205,7 +205,7 @@ public class CustomCrafterBlockEntity extends BlockEntityController
     public org.bukkit.inventory.Inventory getInventory() {
         // LIVE Bukkit wrapper over this NMS container (no copy) — required by CraftBukkit's hopper
         // InventoryMoveItemEvent path (destination.getOwner().getInventory()). Returning null here is
-        // what crashed the hopper. Same approach as AbstractWorldlyContainer/BlockContainer.
+        // what crashed the hopper. Same approach as StorageBlockEntity.
         if (bukkitInventory == null)
             bukkitInventory = new org.bukkit.craftbukkit.inventory.CraftInventory(this);
         return bukkitInventory;

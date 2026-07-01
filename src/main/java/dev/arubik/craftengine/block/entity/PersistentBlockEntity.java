@@ -130,6 +130,15 @@ public class PersistentBlockEntity extends BlockEntityController {
         return container.keySet().stream().map(NamespacedKey::fromString).collect(java.util.stream.Collectors.toSet());
     }
 
+    /** Raw key -> string-rendered value dump of this block entity's persisted data, for debug tooling. */
+    public java.util.Map<String, String> debugDump() {
+        java.util.Map<String, String> out = new java.util.LinkedHashMap<>();
+        for (String key : container.keySet()) {
+            out.put(key, String.valueOf(container.get(key)));
+        }
+        return out;
+    }
+
     public boolean isEmpty() {
         return container.isEmpty();
     }
@@ -246,6 +255,35 @@ public class PersistentBlockEntity extends BlockEntityController {
     public <T> T getOrDefault(TypedKey<T> key, T defaultValue) {
         T value = get(key);
         return value != null ? value : defaultValue;
+    }
+
+    /** Removes all keys from this block entity's own persisted data. */
+    public void clear() {
+        new java.util.HashSet<>(container.keySet()).forEach(container::remove);
+    }
+
+    /**
+     * Looks up the {@link PersistentBlockEntity} controller backing the block entity at {@code pos},
+     * or null if unloaded / not a {@link PersistentBlockEntity}. Single lookup point replacing the
+     * duplicated getBlockEntity() helpers that used to live on individual behaviors.
+     */
+    @Nullable
+    public static PersistentBlockEntity getIfLoaded(net.minecraft.world.level.Level world,
+            net.minecraft.core.BlockPos pos) {
+        BlockEntity be = dev.arubik.craftengine.block.entity.BukkitBlockEntityTypes.getIfLoaded(world, pos);
+        if (be != null && be.controller instanceof PersistentBlockEntity p) {
+            return p;
+        }
+        return null;
+    }
+
+    /** Runs {@code consumer} against the loaded block entity at {@code pos}, if any. */
+    public static void executeAt(net.minecraft.world.level.Level world, net.minecraft.core.BlockPos pos,
+            java.util.function.Consumer<PersistentBlockEntity> consumer) {
+        PersistentBlockEntity be = getIfLoaded(world, pos);
+        if (be != null) {
+            consumer.accept(be);
+        }
     }
 
     public BlockBehavior getBlockBehavior() {

@@ -2,17 +2,19 @@ package dev.arubik.craftengine.fluid;
 
 import java.util.function.Consumer;
 
-import dev.arubik.craftengine.util.CustomBlockData;
+import dev.arubik.craftengine.block.entity.PersistentBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 
 public class FluidCarrierImpl {
 
     /**
-     * Obtiene el fluido almacenado en un bloque usando CustomBlockData.
+     * Obtiene el fluido almacenado en un bloque, leido directamente del block entity
+     * (persistido via NBT, no chunk PDC).
      */
     public static FluidStack getStored(Level level, BlockPos pos) {
-        return CustomBlockData.from(level, pos).getOrDefault(FluidKeys.FLUID, FluidStack.EMPTY);
+        PersistentBlockEntity be = PersistentBlockEntity.getIfLoaded(level, pos);
+        return be != null ? be.getOrDefault(FluidKeys.FLUID, FluidStack.EMPTY) : FluidStack.EMPTY;
     }
 
     /**
@@ -51,7 +53,7 @@ public class FluidCarrierImpl {
         final int[] accepted = { 0 };
         final FluidStack finalIncoming = incoming; // effectively final for lambda
 
-        CustomBlockData.from(level, pos).edit(p -> {
+        PersistentBlockEntity.executeAt(level, pos, p -> {
             FluidStack stored = p.getOrDefault(key, FluidStack.EMPTY);
 
             if (stored.isEmpty()) {
@@ -103,7 +105,7 @@ public class FluidCarrierImpl {
     public static int extractFluid(Level level, BlockPos pos, int max, Consumer<FluidStack> drained,
             dev.arubik.craftengine.util.TypedKey<FluidStack> key) {
         final int[] moved = { 0 };
-        CustomBlockData.from(level, pos).edit(p -> {
+        PersistentBlockEntity.executeAt(level, pos, p -> {
             FluidStack stored = p.getOrDefault(key, FluidStack.EMPTY);
             if (stored.isEmpty())
                 return;

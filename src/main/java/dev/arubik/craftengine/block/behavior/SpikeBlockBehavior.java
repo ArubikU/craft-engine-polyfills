@@ -10,7 +10,8 @@ import org.bukkit.craftbukkit.entity.CraftPlayer;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.event.entity.EntityDamageEvent.DamageCause;
 
-import dev.arubik.craftengine.block.entity.SpikeBlockEntity;
+import dev.arubik.craftengine.block.entity.BukkitBlockEntityTypes;
+import dev.arubik.craftengine.block.entity.PersistentWorldlyBlockEntity;
 import net.momirealms.craftengine.bukkit.block.behavior.BukkitBlockBehavior;
 import net.momirealms.craftengine.bukkit.nms.FastNMS;
 import net.momirealms.craftengine.bukkit.util.LocationUtils;
@@ -76,13 +77,95 @@ public class SpikeBlockBehavior extends BukkitBlockBehavior implements EntityBlo
         return new SpikeController(blockEntity, this);
     }
 
-    /** Controller driving the spike's attack ticking; data lives in the standalone SpikeBlockEntity registry. */
-    public static class SpikeController extends BlockEntityController {
+    /** Looks up the loaded {@link SpikeController} at {@code pos}, or null. */
+    public static SpikeController getSpike(Level level, net.minecraft.core.BlockPos pos) {
+        BlockEntity be = BukkitBlockEntityTypes.getIfLoaded(level, pos);
+        return (be != null && be.controller instanceof SpikeController s) ? s : null;
+    }
+
+    /** Controller driving the spike's attack ticking; the held item/owner/cooldown live directly on it. */
+    public static class SpikeController extends PersistentWorldlyBlockEntity {
         private final SpikeBlockBehavior behavior;
+        private java.util.UUID ownerUUID;
+        private long lastAttackTime = 0;
 
         public SpikeController(BlockEntity blockEntity, SpikeBlockBehavior behavior) {
-            super(blockEntity);
+            super(blockEntity, 1);
             this.behavior = behavior;
+        }
+
+        @Override
+        public void setChanged() {
+            // Persistence is pulled at chunk-save via saveCustomData/loadCustomData; no dirty flag needed.
+        }
+
+        public net.minecraft.world.item.ItemStack getItem() {
+            return getItem(0);
+        }
+
+        public void setItem(net.minecraft.world.item.ItemStack item) {
+            setItem(0, item);
+            if (item == null || item.isEmpty())
+                ownerUUID = null;
+        }
+
+        public java.util.UUID getOwnerUUID() {
+            return ownerUUID;
+        }
+
+        public void setOwnerUUID(java.util.UUID owner) {
+            this.ownerUUID = owner;
+        }
+
+        public long getLastAttackTime() {
+            return lastAttackTime;
+        }
+
+        public void setLastAttackTime(long lastAttackTime) {
+            this.lastAttackTime = lastAttackTime;
+        }
+
+        @Override
+        public void saveCustomData(net.momirealms.craftengine.libraries.nbt.CompoundTag tag) {
+            super.saveCustomData(tag);
+            tag.putString("owner", ownerUUID != null ? ownerUUID.toString() : "");
+            tag.putLong("last_attack", lastAttackTime);
+        }
+
+        @Override
+        public void loadCustomData(net.momirealms.craftengine.libraries.nbt.CompoundTag tag) {
+            super.loadCustomData(tag);
+            String o = tag.getString("owner");
+            this.ownerUUID = (o != null && !o.isEmpty()) ? java.util.UUID.fromString(o) : null;
+            this.lastAttackTime = tag.getLong("last_attack");
+        }
+
+        @Override
+        public boolean canPlaceItemThroughFace(int index, net.minecraft.world.item.ItemStack stack,
+                net.minecraft.core.Direction direction) {
+            return index == 0 && getItem(0).isEmpty(); // Only allow placing if empty
+        }
+
+        @Override
+        public boolean canTakeItemThroughFace(int index, net.minecraft.world.item.ItemStack stack,
+                net.minecraft.core.Direction direction) {
+            return false;
+        }
+
+        @Override
+        public net.minecraft.world.item.ItemStack removeItem(int slot, int amount) {
+            net.minecraft.world.item.ItemStack result = super.removeItem(slot, amount);
+            if (slot == 0 && getItem(0).isEmpty())
+                ownerUUID = null;
+            return result;
+        }
+
+        @Override
+        public net.minecraft.world.item.ItemStack removeItemNoUpdate(int slot) {
+            net.minecraft.world.item.ItemStack result = super.removeItemNoUpdate(slot);
+            if (slot == 0)
+                ownerUUID = null;
+            return result;
         }
 
         @Override
@@ -105,7 +188,7 @@ public class SpikeBlockBehavior extends BukkitBlockBehavior implements EntityBlo
                 return;
 
             net.minecraft.core.BlockPos pos = net.minecraft.core.BlockPos.of(cePos.asLong());
-            SpikeBlockEntity entity = SpikeBlockEntity.getOrCreate(level, pos);
+            SpikeController entity = self;
 
             if (!entity.getItem().isEmpty()) {
                 net.minecraft.world.item.ItemStack itemStack = entity.getItem();
@@ -192,32 +275,16 @@ public class SpikeBlockBehavior extends BukkitBlockBehavior implements EntityBlo
     }
 
     @Override
-    public void onPlace(Object thisBlock, Object[] args) {
-        // args: BlockState state, Level level, BlockPos pos, BlockState oldState,
-        // boolean movedByPiston
-        // args[1] is Level, args[2] is BlockPos.
-        Object levelObj = args[1];
-        Object posObj = args[2];
-
-        if (levelObj instanceof ServerLevel level && posObj instanceof net.minecraft.core.BlockPos pos) {
-            SpikeBlockEntity entity = SpikeBlockEntity.getOrCreate(level, pos);
-        }
-    }
-
-    @Override
     public void affectNeighborsAfterRemoval(Object thisBlock, Object[] args) {
         super.affectNeighborsAfterRemoval(thisBlock, args);
         // args: BlockState state, Level level, BlockPos pos, (movedByPiston)
         ServerLevel level = (ServerLevel) args[1]; // server level usually
         net.minecraft.core.BlockPos pos = (net.minecraft.core.BlockPos) args[2];
 
-        // On removal, drop the stored item and destroy the standalone block entity.
-        SpikeBlockEntity spike = SpikeBlockEntity.get(level, pos).orElse(null);
-        if (spike != null) {
-            if (!spike.getItem().isEmpty()) {
-                Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), spike.getItem());
-            }
-            spike.destroy();
+        // On removal, drop the stored item (the block entity itself is torn down by the engine).
+        SpikeController spike = getSpike(level, pos);
+        if (spike != null && !spike.getItem().isEmpty()) {
+            Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), spike.getItem());
         }
     }
 
@@ -233,7 +300,7 @@ public class SpikeBlockBehavior extends BukkitBlockBehavior implements EntityBlo
         Level level = (Level) args[1];
         net.minecraft.core.BlockPos pos = (net.minecraft.core.BlockPos) args[2];
 
-        SpikeBlockEntity spike = SpikeBlockEntity.get(level, pos).orElse(null);
+        SpikeController spike = getSpike(level, pos);
         if (spike != null) {
             long time = level.getGameTime() - spike.getLastAttackTime();
             // Pulse 2 ticks
@@ -252,7 +319,7 @@ public class SpikeBlockBehavior extends BukkitBlockBehavior implements EntityBlo
         Level level = (Level) args[1];
         net.minecraft.core.BlockPos pos = (net.minecraft.core.BlockPos) args[2];
 
-        return SpikeBlockEntity.getOrCreate(level, pos);
+        return getSpike((ServerLevel) level, pos);
     }
 
     @Override
@@ -266,8 +333,10 @@ public class SpikeBlockBehavior extends BukkitBlockBehavior implements EntityBlo
         if (!(world.platformWorld() instanceof org.bukkit.World))
             return InteractionResult.PASS;
 
-        SpikeBlockEntity spike = SpikeBlockEntity.getOrCreate((ServerLevel) ((BukkitWorld) world).minecraftWorld(),
+        SpikeController spike = getSpike((ServerLevel) ((BukkitWorld) world).minecraftWorld(),
                 net.minecraft.core.BlockPos.of(pos.asLong()));
+        if (spike == null)
+            return InteractionResult.PASS;
 
         // Put/Take item logic
         if (context.getHand() == InteractionHand.MAIN_HAND && ItemUtils.isEmpty(context.getItem())) {

@@ -57,43 +57,6 @@ public class TypedKey<T> {
         ));
     }
 
-    
-    public static <T> void set(TypedKey<T> key, T value, PersistentDataContainer pdc) {
-        if(value == null) {
-            pdc.remove(key.getKey());
-            return;
-        }
-        if (key.isCustom()) {
-            @SuppressWarnings("unchecked")
-            CustomDataType<T, Object> customType = (CustomDataType<T, Object>) key.getCustomType();
-
-            if(customType.isContainerSerializer()){
-                PersistentDataContainer container = pdc.getAdapterContext().newPersistentDataContainer();
-                pdc.set(key.getKey(), customType.getBaseType(), customType.getContainerSerializer().apply(value, container));
-            }else{
-                Object primitive = customType.getSerializer().apply(value);
-                pdc.set(key.getKey(), customType.getBaseType(), primitive);
-            }
-        } else {
-            pdc.set(key.getKey(), key.getType(), value);
-        }
-    }
-    public static boolean has(TypedKey<?> key, PersistentDataContainer pdc) {
-        return pdc.has(key.getKey(), key.getType());
-    }
-
-    public static <T> T get(TypedKey<T> key, PersistentDataContainer pdc) {
-
-        if (key.isCustom()) {
-            @SuppressWarnings("unchecked")
-            CustomDataType<T, Object> customType = (CustomDataType<T, Object>) key.getCustomType();
-            Object primitive = pdc.get(key.getKey(), customType.getBaseType());
-            return primitive != null ? customType.getDeserializer().apply(primitive) : null;
-        } else {
-            return pdc.get(key.getKey(), key.getType());
-        }
-    }
-
 
     public static <T> T getOfCompound(TypedKey<T> key, net.momirealms.craftengine.libraries.nbt.CompoundTag tag) {
         if (key.isCustom()) {

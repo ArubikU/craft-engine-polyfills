@@ -9,7 +9,6 @@ import org.bukkit.persistence.PersistentDataType;
 import dev.arubik.craftengine.block.behavior.ConnectableBlockBehavior;
 import dev.arubik.craftengine.block.entity.BukkitBlockEntityTypes;
 import dev.arubik.craftengine.block.entity.PersistentBlockEntity;
-import dev.arubik.craftengine.util.CustomBlockData;
 import dev.arubik.craftengine.util.TypedKey;
 import dev.arubik.craftengine.util.Utils;
 import net.minecraft.core.BlockPos;

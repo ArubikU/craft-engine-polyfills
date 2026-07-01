@@ -113,9 +113,8 @@ public abstract class AbstractMachineBlockEntity extends PersistentWorldlyBlockE
 
     // ---- hydraulic engine carrier hooks (the machine's REAL fluid store) ----
     public FluidStack getStoredFluidForCarrier() {
-        // Read the SAME store that setStoredFluidRaw / writeTank write: the FluidTank's CustomBlockData
-        // (PDC), NOT the in-memory get(key) container. They are SEPARATE stores — reading get(key) made
-        // the engine see an empty tank while the pump's PDC tank actually held fluid (lava/xp never pushed).
+        // Read the SAME store that setStoredFluidRaw / writeTank write: the FluidTank's block-entity tag,
+        // NOT the in-memory get(key) container of a DIFFERENT block entity — they must stay the same store.
         if (fluidTanks.isEmpty())
             return FluidStack.EMPTY;
         FluidStack s = fluidTanks.get(0).getFluid(getNMSLevel(), getMachinePos());
@@ -130,10 +129,12 @@ public abstract class AbstractMachineBlockEntity extends PersistentWorldlyBlockE
         if (fluidTanks.isEmpty())
             return;
         dev.arubik.craftengine.util.TypedKey<FluidStack> key = fluidTanks.get(0).getKey();
-        if (stack == null || stack.isEmpty())
-            dev.arubik.craftengine.util.CustomBlockData.from(level, getMachinePos()).remove(key);
-        else
-            dev.arubik.craftengine.util.CustomBlockData.from(level, getMachinePos()).set(key, stack);
+        dev.arubik.craftengine.block.entity.PersistentBlockEntity.executeAt(level, getMachinePos(), be -> {
+            if (stack == null || stack.isEmpty())
+                be.remove(key);
+            else
+                be.set(key, stack);
+        });
     }
 
     public GasStack getGasInSlot(int slot) {
@@ -785,17 +786,19 @@ public abstract class AbstractMachineBlockEntity extends PersistentWorldlyBlockE
         return gasTanks.isEmpty() ? 0L : gasTanks.get(0).getCapacity();
     }
 
-    /** Engine apply hook for gas: write the buffer tank's CustomBlockData store (the SAME key the gas tank
+    /** Engine apply hook for gas: write the buffer tank's block-entity store (the SAME key the gas tank
      * reads — gasTanks.get(0).getKey(), NOT the GasCarrier default GasKeys.GAS, which is a different key and
      * would make the engine's writes invisible to the machine, the gas equivalent of the fluid pump bug). */
     public void setStoredGasRaw(Level level, dev.arubik.craftengine.gas.GasStack stack) {
         if (gasTanks.isEmpty())
             return;
         dev.arubik.craftengine.util.TypedKey<dev.arubik.craftengine.gas.GasStack> key = gasTanks.get(0).getKey();
-        if (stack == null || stack.isEmpty())
-            dev.arubik.craftengine.util.CustomBlockData.from(level, getMachinePos()).remove(key);
-        else
-            dev.arubik.craftengine.util.CustomBlockData.from(level, getMachinePos()).set(key, stack);
+        dev.arubik.craftengine.block.entity.PersistentBlockEntity.executeAt(level, getMachinePos(), be -> {
+            if (stack == null || stack.isEmpty())
+                be.remove(key);
+            else
+                be.set(key, stack);
+        });
     }
 
     /** True if {@code bukkit} is a valid fuel for THIS machine (per its registered fuel recipes). */
@@ -889,20 +892,8 @@ public abstract class AbstractMachineBlockEntity extends PersistentWorldlyBlockE
         tag.putInt("max_burn_time", maxBurnTime);
         tag.putInt("overclocked_ticks", overclockedTicks);
         tag.putFloat("stored_xp", storedXp);
-        // Fluid tanks: persist into the NBT tag too (the live store is CustomBlockData, which wasn't
-        // surviving restarts). On load we write these back into CustomBlockData so FluidTank sees them.
-        for (int i = 0; i < fluidTanks.size(); i++) {
-            try {
-                dev.arubik.craftengine.fluid.FluidStack f = fluidTanks.get(i).getFluid(getNMSLevel(),
-                        getMachinePos());
-                if (f != null && !f.isEmpty()) {
-                    tag.putString("ft" + i + "_t", f.getType().name());
-                    tag.putInt("ft" + i + "_a", f.getAmount());
-                    tag.putInt("ft" + i + "_p", f.getPressure());
-                }
-            } catch (Throwable ignored) {
-            }
-        }
+        // Fluid tanks write directly into this machine's own block-entity container (see FluidTank/
+        // FluidCarrierImpl), so super.saveCustomData(tag) above already flushes them — no separate mirror.
     }
 
     @Override
@@ -914,19 +905,6 @@ public abstract class AbstractMachineBlockEntity extends PersistentWorldlyBlockE
         this.maxBurnTime = tag.getInt("max_burn_time");
         this.overclockedTicks = tag.getInt("overclocked_ticks");
         this.storedXp = tag.getFloat("stored_xp");
-        for (int i = 0; i < fluidTanks.size(); i++) {
-            try {
-                String tn = tag.getString("ft" + i + "_t");
-                if (tn != null && !tn.isEmpty()) {
-                    dev.arubik.craftengine.fluid.FluidType ty = dev.arubik.craftengine.fluid.FluidType.valueOf(tn);
-                    int a = tag.getInt("ft" + i + "_a");
-                    int p = tag.getInt("ft" + i + "_p");
-                    dev.arubik.craftengine.util.CustomBlockData.from(getNMSLevel(), getMachinePos())
-                            .set(fluidTanks.get(i).getKey(), new dev.arubik.craftengine.fluid.FluidStack(ty, a, p));
-                }
-            } catch (Throwable ignored) {
-            }
-        }
     }
 
     @Override

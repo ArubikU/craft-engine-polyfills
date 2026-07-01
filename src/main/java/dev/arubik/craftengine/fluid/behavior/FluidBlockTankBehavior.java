@@ -330,10 +330,12 @@ public class FluidBlockTankBehavior extends ConnectableBlockBehavior implements 
     @Override
     public void setStoredRaw(Level level, BlockPos pos, FluidStack stack) {
         BlockPos ctrl = controllerOf(level, pos);
-        if (stack == null || stack.isEmpty())
-            dev.arubik.craftengine.util.CustomBlockData.from(level, ctrl).remove(FluidKeys.FLUID);
-        else
-            dev.arubik.craftengine.util.CustomBlockData.from(level, ctrl).set(FluidKeys.FLUID, stack);
+        PersistentBlockEntity.executeAt(level, ctrl, be -> {
+            if (stack == null || stack.isEmpty())
+                be.remove(FluidKeys.FLUID);
+            else
+                be.set(FluidKeys.FLUID, stack);
+        });
     }
 
     @Override
@@ -404,13 +406,16 @@ public class FluidBlockTankBehavior extends ConnectableBlockBehavior implements 
                 total += s.getAmount();
             }
             if (!m.equals(ctrlPos))
-                dev.arubik.craftengine.util.CustomBlockData.from(level, m).remove(FluidKeys.FLUID);
+                PersistentBlockEntity.executeAt(level, m, be -> be.remove(FluidKeys.FLUID));
         }
-        if (type != null && total > 0)
-            dev.arubik.craftengine.util.CustomBlockData.from(level, ctrlPos)
-                    .set(FluidKeys.FLUID, new FluidStack(type, Math.min(total, cap), 0));
-        else
-            dev.arubik.craftengine.util.CustomBlockData.from(level, ctrlPos).remove(FluidKeys.FLUID);
+        final FluidType finalType = type;
+        final int finalTotal = total;
+        PersistentBlockEntity.executeAt(level, ctrlPos, be -> {
+            if (finalType != null && finalTotal > 0)
+                be.set(FluidKeys.FLUID, new FluidStack(finalType, Math.min(finalTotal, cap), 0));
+            else
+                be.remove(FluidKeys.FLUID);
+        });
     }
 
     /** Recompute every member's blockstate (bottom/top + the fluid plane mapped from the group fill). */
@@ -602,20 +607,8 @@ public class FluidBlockTankBehavior extends ConnectableBlockBehavior implements 
         public void saveCustomData(net.momirealms.craftengine.libraries.nbt.CompoundTag tag) {
             super.saveCustomData(tag);
             tag.putBoolean("win", windowed);
-            // Only the controller block carries the unified fluid (others route to it).
-            try {
-                Level level = (Level) ((BukkitWorld) blockEntity().world().world()).minecraftWorld();
-                BlockPos pos = (BlockPos) Utils.fromPos(blockEntity().pos());
-                if (ctrl == 0L || ctrl == pos.asLong()) {
-                    FluidStack f = FluidCarrierImpl.getStored(level, pos);
-                    if (f != null && !f.isEmpty()) {
-                        tag.putString("t", f.getType().name());
-                        tag.putInt("a", f.getAmount());
-                        tag.putInt("p", f.getPressure());
-                    }
-                }
-            } catch (Throwable ignored) {
-            }
+            // The unified fluid (FluidKeys.FLUID) is already in this controller's own container and
+            // gets written by super.saveCustomData(tag) above — no separate mirror needed.
         }
 
         @Override
@@ -623,16 +616,6 @@ public class FluidBlockTankBehavior extends ConnectableBlockBehavior implements 
             super.loadCustomData(tag);
             if (tag.containsKey("win"))
                 windowed = tag.getBoolean("win");
-            try {
-                String tn = tag.getString("t");
-                if (tn != null && !tn.isEmpty()) {
-                    Level level = (Level) ((BukkitWorld) blockEntity().world().world()).minecraftWorld();
-                    BlockPos pos = (BlockPos) Utils.fromPos(blockEntity().pos());
-                    dev.arubik.craftengine.util.CustomBlockData.from(level, pos).set(FluidKeys.FLUID,
-                            new FluidStack(FluidType.valueOf(tn), tag.getInt("a"), tag.getInt("p")));
-                }
-            } catch (Throwable ignored) {
-            }
         }
 
         @Override

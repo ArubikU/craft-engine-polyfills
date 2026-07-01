@@ -78,7 +78,7 @@ public class ConveyorBlockEntity extends PersistentWorldlyBlockEntity implements
 
     /** Ticker counter for the pickup cadence. */
     private int tickCounter = 0;
-    /** Lazy-load guard + dirty flag for CustomBlockData persistence. */
+    /** Lazy-load guard: hydrates progress/jitter/entryDir/prevPos fields on first tick. */
     private boolean stateLoaded = false;
     /** Set only when an item is added/removed; the tick flushes state just then. */
     private boolean dirty = false;
@@ -458,9 +458,10 @@ public class ConveyorBlockEntity extends PersistentWorldlyBlockEntity implements
     private void serverTick(CEWorld world, BlockPos pos) {
         Direction facing = facing();
 
-        // The conveyor BE's setChanged() is a no-op, so we persist state ourselves to
-        // CustomBlockData (the proven, chunk-backed path) — only when an item actually
-        // enters/leaves (dirty), never on plain movement.
+        // Progress/jitter/entryDir/prevPos live as instance fields for the hot per-tick path;
+        // mirror them into this BE's own persisted data only when an item actually enters/leaves
+        // (dirty), never on plain movement. Persistence itself (tag flush) is pulled by the engine
+        // at chunk-save via saveCustomData/loadCustomData — no manual chunk-PDC writes needed.
         if (!stateLoaded) {
             loadState(world);
             stateLoaded = true;
@@ -791,12 +792,7 @@ public class ConveyorBlockEntity extends PersistentWorldlyBlockEntity implements
             clearSlot(i);
         }
         // Wipe persisted state so a future block at this pos doesn't read stale items.
-        try {
-            dev.arubik.craftengine.util.CustomBlockData data = blockData(world);
-            if (data != null)
-                data.clear();
-        } catch (Throwable ignored) {
-        }
+        clear();
     }
 
     private void dropAtEnd(CEWorld world, BlockPos pos, Direction facing, org.bukkit.inventory.ItemStack item) {
@@ -1154,8 +1150,10 @@ public class ConveyorBlockEntity extends PersistentWorldlyBlockEntity implements
     /** Wipe persisted belt data at a freshly-placed cell (avoids stale items/links). */
     private static void clearStaleData(org.bukkit.World bukkitWorld, BlockPos at) {
         try {
-            dev.arubik.craftengine.util.CustomBlockData.from(
-                    bukkitWorld.getBlockAt(at.x(), at.y(), at.z())).clear();
+            net.minecraft.world.level.Level level = ((org.bukkit.craftbukkit.CraftWorld) bukkitWorld).getHandle();
+            net.minecraft.core.BlockPos nmsPos = new net.minecraft.core.BlockPos(at.x(), at.y(), at.z());
+            dev.arubik.craftengine.block.entity.PersistentBlockEntity.executeAt(level, nmsPos,
+                    dev.arubik.craftengine.block.entity.PersistentBlockEntity::clear);
         } catch (Throwable ignored) {
         }
     }
@@ -1373,15 +1371,7 @@ public class ConveyorBlockEntity extends PersistentWorldlyBlockEntity implements
                 || m == org.bukkit.Material.SNOW;
     }
 
-    // ---------------- persistence (CustomBlockData, chunk-backed) ----------------
-
-    private dev.arubik.craftengine.util.CustomBlockData blockData(CEWorld world) {
-        org.bukkit.World bw = (org.bukkit.World) world.world().platformWorld();
-        if (bw == null)
-            return null;
-        return dev.arubik.craftengine.util.CustomBlockData.from(
-                bw.getBlockAt(pos().x(), pos().y(), pos().z()));
-    }
+    // ---------------- persistence (single store: this block entity's own CE tag) ----------------
 
     private dev.arubik.craftengine.util.TypedKey<Float> progKey(int i) {
         return dev.arubik.craftengine.util.TypedKey.of("craftengine", "cv_prog" + i,
@@ -1402,103 +1392,35 @@ public class ConveyorBlockEntity extends PersistentWorldlyBlockEntity implements
             dev.arubik.craftengine.util.TypedKey.of("craftengine", "cv_prev",
                     org.bukkit.persistence.PersistentDataType.STRING);
 
-    /** Flush items + per-slot positions + prevPos to CustomBlockData (called on change). */
+    /** Push per-slot progress/jitter/entryDir + prevPos into this BE's own persisted data. */
     private void saveState(CEWorld world) {
-        try {
-            dev.arubik.craftengine.util.CustomBlockData data = blockData(world);
-            if (data == null)
-                return;
-            // Batch: ~14 set() calls below flush as ONE chunk PDC write instead of one per key.
-            data.beginBatch();
-            try {
-                data.set(dev.arubik.craftengine.util.TypedKeys.CONTENTS,
-                        dev.arubik.craftengine.util.ArrayItemStackWithSlot.from(this.inventory));
-                for (int i = 0; i < slots; i++) {
-                    data.set(progKey(i), progress[i]);
-                    data.set(jitKey(i), jitter[i]);
-                    data.set(entryKey(i), entryDir[i] != null ? entryDir[i].name() : "");
-                }
-                data.set(PREV_KEY, prevPos != null ? (prevPos.x() + "," + prevPos.y() + "," + prevPos.z()) : "");
-            } finally {
-                data.endBatch();
-            }
-        } catch (Throwable ignored) {
+        for (int i = 0; i < slots; i++) {
+            set(progKey(i), progress[i]);
+            set(jitKey(i), jitter[i]);
+            set(entryKey(i), entryDir[i] != null ? entryDir[i].name() : "");
         }
+        set(PREV_KEY, prevPos != null ? (prevPos.x() + "," + prevPos.y() + "," + prevPos.z()) : "");
     }
 
-    /** Restore items + positions + prevPos from CustomBlockData on first tick. */
+    /** Restore per-slot progress/jitter/entryDir + prevPos from this BE's own persisted data. */
     private void loadState(CEWorld world) {
-        try {
-            dev.arubik.craftengine.util.CustomBlockData data = blockData(world);
-            if (data == null)
-                return;
-            // Only restore when there IS persisted content — never clobber a freshly
-            // placed segment or one that just received a hand-off before its first tick.
-            java.util.Optional<java.util.List<net.minecraft.world.ItemStackWithSlot>> contents =
-                    data.getOptional(dev.arubik.craftengine.util.TypedKeys.CONTENTS);
-            if (contents.isPresent()) {
-                for (int i = 0; i < slots; i++)
-                    setItem(i, net.minecraft.world.item.ItemStack.EMPTY);
-                for (net.minecraft.world.ItemStackWithSlot it : contents.get())
-                    if (it.slot() >= 0 && it.slot() < slots)
-                        setItem(it.slot(), it.stack());
-                for (int i = 0; i < slots; i++) {
-                    progress[i] = data.getOrDefault(progKey(i), 0f);
-                    jitter[i] = data.getOrDefault(jitKey(i), 0f);
-                    String e = data.getOrDefault(entryKey(i), "");
-                    if (e != null && !e.isEmpty()) {
-                        try {
-                            entryDir[i] = Direction.valueOf(e);
-                        } catch (IllegalArgumentException ignored) {
-                        }
-                    }
-                }
-            }
-            String pp = data.getOrDefault(PREV_KEY, "");
-            if (pp != null && !pp.isEmpty()) {
-                String[] xyz = pp.split(",");
-                if (xyz.length == 3)
-                    this.prevPos = new BlockPos(Integer.parseInt(xyz[0]),
-                            Integer.parseInt(xyz[1]), Integer.parseInt(xyz[2]));
-            }
-        } catch (Throwable ignored) {
-        }
-    }
-
-    // ---------------- persistence (legacy tag; kept harmless) ----------------
-
-    @Override
-    public void saveCustomData(CompoundTag tag) {
-        // The inventory slots (the items themselves) are persisted by the parent.
-        super.saveCustomData(tag);
         for (int i = 0; i < slots; i++) {
-            tag.putFloat("progress" + i, progress[i]);
-            tag.putFloat("jitter" + i, jitter[i]);
-            tag.putString("entry" + i, entryDir[i] != null ? entryDir[i].name() : "");
-        }
-        if (prevPos != null) {
-            tag.putInt("prevX", prevPos.x());
-            tag.putInt("prevY", prevPos.y());
-            tag.putInt("prevZ", prevPos.z());
-        }
-    }
-
-    @Override
-    public void loadCustomData(CompoundTag tag) {
-        super.loadCustomData(tag);
-        for (int i = 0; i < slots; i++) {
-            this.progress[i] = tag.getFloat("progress" + i, 0f);
-            this.jitter[i] = tag.getFloat("jitter" + i, 0f);
-            String e = tag.getString("entry" + i, "");
+            progress[i] = getOrDefault(progKey(i), 0f);
+            jitter[i] = getOrDefault(jitKey(i), 0f);
+            String e = getOrDefault(entryKey(i), "");
             if (e != null && !e.isEmpty()) {
                 try {
-                    this.entryDir[i] = Direction.valueOf(e);
+                    entryDir[i] = Direction.valueOf(e);
                 } catch (IllegalArgumentException ignored) {
                 }
             }
         }
-        if (tag.containsKey("prevX") && tag.containsKey("prevY") && tag.containsKey("prevZ")) {
-            this.prevPos = new BlockPos(tag.getInt("prevX"), tag.getInt("prevY"), tag.getInt("prevZ"));
+        String pp = getOrDefault(PREV_KEY, "");
+        if (pp != null && !pp.isEmpty()) {
+            String[] xyz = pp.split(",");
+            if (xyz.length == 3)
+                this.prevPos = new BlockPos(Integer.parseInt(xyz[0]),
+                        Integer.parseInt(xyz[1]), Integer.parseInt(xyz[2]));
         }
     }
 

@@ -2,7 +2,6 @@ package dev.arubik.craftengine.util;
 
 import java.util.List;
 
-import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 
 import net.minecraft.world.ItemStackWithSlot;
@@ -18,7 +17,4 @@ public class TypedKeys {
         public static final TypedKey<java.util.UUID> OWNER = TypedKey.of(NAMESPACE, "owner", CustomDataType.UUID_TYPE);
         public static final TypedKey<Long> LAST_ATTACK_TIME = TypedKey.of(NAMESPACE, "last_attack_time",
                         PersistentDataType.LONG);
-        public static final TypedKey<PersistentDataContainer> PERSISTENT_DATA = TypedKey.of(NAMESPACE,
-                        "persistent_data",
-                        PersistentDataType.TAG_CONTAINER);
 }

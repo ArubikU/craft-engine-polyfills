@@ -66,12 +66,12 @@ public interface FluidCarrier {
      * override to write their own fluid tank.
      */
     default void setStoredRaw(Level level, BlockPos pos, FluidStack stack) {
-        if (stack == null || stack.isEmpty())
-            dev.arubik.craftengine.util.CustomBlockData.from(level, pos)
-                    .remove(dev.arubik.craftengine.fluid.FluidKeys.FLUID);
-        else
-            dev.arubik.craftengine.util.CustomBlockData.from(level, pos)
-                    .set(dev.arubik.craftengine.fluid.FluidKeys.FLUID, stack);
+        dev.arubik.craftengine.block.entity.PersistentBlockEntity.executeAt(level, pos, be -> {
+            if (stack == null || stack.isEmpty())
+                be.remove(dev.arubik.craftengine.fluid.FluidKeys.FLUID);
+            else
+                be.set(dev.arubik.craftengine.fluid.FluidKeys.FLUID, stack);
+        });
     }
 
     /** Called after the engine changes this carrier's store, so it can refresh its blockstate/model

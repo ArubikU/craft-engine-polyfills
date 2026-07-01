@@ -22,8 +22,7 @@ final class RouterDrops {
                     bw.dropItem(new org.bukkit.Location(bw, pos.x() + 0.5, pos.y() + 0.5, pos.z() + 0.5), bukkit);
                 r.setItem(i, net.minecraft.world.item.ItemStack.EMPTY);
             }
-            dev.arubik.craftengine.util.CustomBlockData.from(
-                    bw.getBlockAt(pos.x(), pos.y(), pos.z())).clear();
+            r.clear();
         } catch (Throwable ignored) {
         }
     }

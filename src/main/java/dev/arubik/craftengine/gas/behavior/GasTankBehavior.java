@@ -323,17 +323,12 @@ public class GasTankBehavior extends ConnectableBlockBehavior implements EntityB
     }
 
     public PersistentBlockEntity getBlockEntity(Level world, net.minecraft.core.BlockPos pos) {
-        BlockEntity be = BukkitBlockEntityTypes.getIfLoaded(world, pos);
-        if (be != null && be.controller instanceof PersistentBlockEntity p)
-            return p;
-        return null;
+        return PersistentBlockEntity.getIfLoaded(world, pos);
     }
 
     public void executeBlockEntity(Level world, net.minecraft.core.BlockPos pos,
             java.util.function.Consumer<PersistentBlockEntity> consumer) {
-        PersistentBlockEntity be = getBlockEntity(world, pos);
-        if (be != null)
-            consumer.accept(be);
+        PersistentBlockEntity.executeAt(world, pos, consumer);
     }
 
     @Override

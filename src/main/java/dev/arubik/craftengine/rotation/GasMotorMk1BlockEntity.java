@@ -332,12 +332,7 @@ public class GasMotorMk1BlockEntity extends AbstractMachineBlockEntity implement
                 bw.dropItem(new org.bukkit.Location(bw, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5), b);
             setItem(i, net.minecraft.world.item.ItemStack.EMPTY);
         }
-        try {
-            dev.arubik.craftengine.util.CustomBlockData d = blockData();
-            if (d != null)
-                d.clear();
-        } catch (Throwable ignored) {
-        }
+        clear();
         setChanged();
     }
 
@@ -355,8 +350,6 @@ public class GasMotorMk1BlockEntity extends AbstractMachineBlockEntity implement
     }
 
     // ---------------- tick ----------------
-    private boolean upgradesLoaded = false;
-    private int lastInvHash = Integer.MIN_VALUE;
 
     @Override
     public void tick(Level level, BlockPos pos,
@@ -365,14 +358,6 @@ public class GasMotorMk1BlockEntity extends AbstractMachineBlockEntity implement
             active.tick();
         if (level.isClientSide())
             return;
-
-        // Reliable, chunk-backed persistence of the upgrade slots (CE's BE tag save is
-        // unreliable here, like the conveyor). Load lazily, save when contents change.
-        if (!upgradesLoaded) {
-            loadUpgrades();
-            upgradesLoaded = true;
-            lastInvHash = invHash();
-        }
 
         // Pull vapor from a connected gas pipe/tank on the GAS input face (UP) — pressureless steam
         // won't be pushed DOWN into us by the pipe, so WE pull it in each tick.
@@ -445,57 +430,6 @@ public class GasMotorMk1BlockEntity extends AbstractMachineBlockEntity implement
             }
         }
 
-        // Flush upgrades to chunk-backed storage when they change.
-        int h = invHash();
-        if (h != lastInvHash) {
-            lastInvHash = h;
-            saveUpgrades();
-        }
-    }
-
-    private int invHash() {
-        int h = 7;
-        for (int i = 0; i < UPGRADE_SLOTS; i++) {
-            net.minecraft.world.item.ItemStack s = getItem(i);
-            h = h * 31 + (s == null || s.isEmpty() ? 0
-                    : System.identityHashCode(s.getItem()) * 131 + s.getCount());
-        }
-        return h;
-    }
-
-    private dev.arubik.craftengine.util.CustomBlockData blockData() {
-        Level lvl = getNMSLevel();
-        if (lvl == null)
-            return null;
-        BlockPos p = getMachinePos();
-        return dev.arubik.craftengine.util.CustomBlockData.from(lvl, p);
-    }
-
-    private void loadUpgrades() {
-        try {
-            dev.arubik.craftengine.util.CustomBlockData data = blockData();
-            if (data == null)
-                return;
-            data.getOptional(dev.arubik.craftengine.util.TypedKeys.CONTENTS).ifPresent(contents -> {
-                for (int i = 0; i < UPGRADE_SLOTS; i++)
-                    setItem(i, net.minecraft.world.item.ItemStack.EMPTY);
-                for (net.minecraft.world.ItemStackWithSlot it : contents)
-                    if (it.slot() >= 0 && it.slot() < UPGRADE_SLOTS)
-                        setItem(it.slot(), it.stack());
-            });
-        } catch (Throwable ignored) {
-        }
-    }
-
-    private void saveUpgrades() {
-        try {
-            dev.arubik.craftengine.util.CustomBlockData data = blockData();
-            if (data == null)
-                return;
-            data.set(dev.arubik.craftengine.util.TypedKeys.CONTENTS,
-                    dev.arubik.craftengine.util.ArrayItemStackWithSlot.from(this.inventory));
-        } catch (Throwable ignored) {
-        }
     }
 
     private Boolean lastActivated = null;

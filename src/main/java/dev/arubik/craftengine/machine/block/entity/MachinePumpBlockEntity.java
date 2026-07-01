@@ -643,9 +643,8 @@ public class MachinePumpBlockEntity extends AbstractMachineBlockEntity {
     // ---------------- bars (main-page fluid readout) ----------------
 
     /**
-     * Stored fluid read from the SINGLE shared store ({@link FluidTank#getFluid} -> CustomBlockData),
-     * the SAME place the pipes/carriers read/write — NOT the in-memory {@code container} (get/set), which
-     * is a separate store and was causing the tank to look empty to pipes / the bar.
+     * Stored fluid read from the SINGLE shared store ({@link FluidTank#getFluid}, the block entity's own
+     * data), the SAME place the pipes/carriers read/write.
      */
     private FluidStack storedFluid() {
         FluidStack s = fluidTanks.get(0).getFluid(getNMSLevel(), getMachinePos());
@@ -664,14 +663,15 @@ public class MachinePumpBlockEntity extends AbstractMachineBlockEntity {
     }
 
 
-    /** Write the internal tank to the shared CustomBlockData store (same store the pipes use). */
+    /** Write the internal tank to the shared block-entity store (same store the pipes use). */
     private void writeTank(Level level, FluidStack s) {
         net.minecraft.core.BlockPos pos = getMachinePos();
-        var data = dev.arubik.craftengine.util.CustomBlockData.from(level, pos);
-        if (s == null || s.isEmpty())
-            data.remove(fluidTanks.get(0).getKey());
-        else
-            data.set(fluidTanks.get(0).getKey(), s);
+        dev.arubik.craftengine.block.entity.PersistentBlockEntity.executeAt(level, pos, be -> {
+            if (s == null || s.isEmpty())
+                be.remove(fluidTanks.get(0).getKey());
+            else
+                be.set(fluidTanks.get(0).getKey(), s);
+        });
     }
 
     @Override
@@ -826,7 +826,7 @@ public class MachinePumpBlockEntity extends AbstractMachineBlockEntity {
             switch (b.action.kind) {
                 case OPEN_PAGE -> s.openPage(p, b.action.page);
                 case DEPLETE_FLUID -> {
-                    // Clear the SHARED store (CustomBlockData), not the dead in-memory container.
+                    // Clear the shared block-entity fluid store (same one pipes/carriers use).
                     s.writeTank(s.getNMSLevel(), FluidStack.EMPTY);
                     s.setChanged();
                 }

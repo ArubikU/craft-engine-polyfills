@@ -1,6 +1,6 @@
 package dev.arubik.craftengine.gas;
 
-import dev.arubik.craftengine.util.CustomBlockData;
+import dev.arubik.craftengine.block.entity.PersistentBlockEntity;
 import dev.arubik.craftengine.util.TypedKey;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
@@ -14,7 +14,7 @@ public class GasCarrierImpl {
 
         final int[] accepted = { 0 };
 
-        CustomBlockData.from(level, pos).edit(p -> {
+        PersistentBlockEntity.executeAt(level, pos, p -> {
             GasStack stored = p.getOrDefault(key, GasStack.EMPTY);
             if (stored.isEmpty()) {
                 int move = Math.min(capacity, stack.getAmount());
@@ -37,7 +37,7 @@ public class GasCarrierImpl {
     public static int extractGas(Level level, BlockPos pos, int max, Consumer<GasStack> drained,
             TypedKey<GasStack> key) {
         final int[] moved = { 0 };
-        CustomBlockData.from(level, pos).edit(p -> {
+        PersistentBlockEntity.executeAt(level, pos, p -> {
             GasStack stored = p.getOrDefault(key, GasStack.EMPTY);
             if (stored.isEmpty())
                 return;
@@ -59,6 +59,7 @@ public class GasCarrierImpl {
     }
 
     public static GasStack getStoredGas(Level level, BlockPos pos, TypedKey<GasStack> key) {
-        return CustomBlockData.from(level, pos).getOrDefault(key, GasStack.EMPTY);
+        PersistentBlockEntity be = PersistentBlockEntity.getIfLoaded(level, pos);
+        return be != null ? be.getOrDefault(key, GasStack.EMPTY) : GasStack.EMPTY;
     }
 }

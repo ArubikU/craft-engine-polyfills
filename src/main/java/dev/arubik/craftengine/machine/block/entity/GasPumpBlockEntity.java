@@ -364,11 +364,12 @@ public class GasPumpBlockEntity extends AbstractMachineBlockEntity {
     /** Overwrite the buffer contents (used to re-stamp pressure). */
     private void writeBuffer(Level level, GasStack s) {
         BlockPos pos = getMachinePos();
-        var data = dev.arubik.craftengine.util.CustomBlockData.from(level, pos);
-        if (s == null || s.isEmpty())
-            data.remove(gasTanks.get(0).getKey());
-        else
-            data.set(gasTanks.get(0).getKey(), s);
+        dev.arubik.craftengine.block.entity.PersistentBlockEntity.executeAt(level, pos, be -> {
+            if (s == null || s.isEmpty())
+                be.remove(gasTanks.get(0).getKey());
+            else
+                be.set(gasTanks.get(0).getKey(), s);
+        });
     }
 
     // ---------------- vein flood-fill ----------------
@@ -442,8 +443,9 @@ public class GasPumpBlockEntity extends AbstractMachineBlockEntity {
         for (BlockPos calPos : vein.blocks) {
             BlockPos above = calPos.relative(Direction.UP);
             if (WELL_CORE_ID.equals(customId(level, above))) {
-                int active = dev.arubik.craftengine.util.CustomBlockData.from(level, above)
-                        .getOrDefault(GasKeys.WELL_ACTIVE, 0);
+                dev.arubik.craftengine.block.entity.PersistentBlockEntity be =
+                        dev.arubik.craftengine.block.entity.PersistentBlockEntity.getIfLoaded(level, above);
+                int active = be != null ? be.getOrDefault(GasKeys.WELL_ACTIVE, 0) : 0;
                 if (active == 1)
                     return GasKeys.WELL_PUMP_LIMIT;
             }

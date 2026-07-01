@@ -358,7 +358,10 @@ public class PipeWandListener implements Listener {
                 continue;
             placed++;
             try {
-                dev.arubik.craftengine.util.CustomBlockData.from(world.getBlockAt(c.x, c.y, c.z)).clear();
+                net.minecraft.world.level.Level nmsLevel = ((org.bukkit.craftbukkit.CraftWorld) world).getHandle();
+                net.minecraft.core.BlockPos nmsPos = new net.minecraft.core.BlockPos(c.x, c.y, c.z);
+                dev.arubik.craftengine.block.entity.PersistentBlockEntity.executeAt(nmsLevel, nmsPos,
+                        dev.arubik.craftengine.block.entity.PersistentBlockEntity::clear);
             } catch (Throwable ignored) {
             }
         }

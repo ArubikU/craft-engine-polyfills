@@ -1,6 +1,7 @@
 package dev.arubik.craftengine.block.behavior;
 
-import dev.arubik.craftengine.util.BlockContainer;
+import dev.arubik.craftengine.block.entity.BukkitBlockEntityTypes;
+import dev.arubik.craftengine.block.entity.StorageBlockEntity;
 import dev.arubik.craftengine.util.SoundMap;
 
 import java.util.Map;
@@ -16,6 +17,9 @@ import net.momirealms.craftengine.core.block.behavior.BlockBehavior;
 import net.momirealms.craftengine.core.block.BlockDefinition;
 import net.momirealms.craftengine.core.block.ImmutableBlockState;
 import net.momirealms.craftengine.core.block.behavior.BlockBehaviorFactory;
+import net.momirealms.craftengine.core.block.behavior.EntityBlock;
+import net.momirealms.craftengine.core.block.entity.BlockEntity;
+import net.momirealms.craftengine.core.block.entity.BlockEntityController;
 import net.momirealms.craftengine.core.plugin.config.ConfigSection;
 import net.momirealms.craftengine.core.entity.player.InteractionResult;
 import net.momirealms.craftengine.core.world.context.UseOnContext;
@@ -23,7 +27,7 @@ import org.bukkit.craftbukkit.CraftWorld;
 import org.bukkit.entity.Player;
 
 public class StorageBlockBehavior extends BukkitBlockBehavior
-    implements net.momirealms.craftengine.core.block.behavior.WorldlyContainerHolder {
+    implements net.momirealms.craftengine.core.block.behavior.WorldlyContainerHolder, EntityBlock {
   public static final Factory FACTORY = new Factory();
 
   private final int size;
@@ -38,6 +42,24 @@ public class StorageBlockBehavior extends BukkitBlockBehavior
     this.size = Math.max(9, Math.min(size, 54));
     this.title = (title != null) ? title : "Storage";
     this.soundMap = soundMap;
+  }
+
+  private int controllerId;
+
+  @Override
+  public void initControllerId(int id) {
+    this.controllerId = id;
+  }
+
+  @Override
+  public BlockEntityController createBlockEntityController(BlockEntity blockEntity) {
+    return new StorageBlockEntity(blockEntity, size, title, soundMap);
+  }
+
+  /** Looks up the loaded {@link StorageBlockEntity} at {@code pos}, or null. */
+  public static StorageBlockEntity getStorage(Level level, BlockPos pos) {
+    BlockEntity be = BukkitBlockEntityTypes.getIfLoaded(level, pos);
+    return (be != null && be.controller instanceof StorageBlockEntity s) ? s : null;
   }
 
   public static class Factory implements BlockBehaviorFactory<BlockBehavior> {
@@ -59,8 +81,9 @@ public class StorageBlockBehavior extends BukkitBlockBehavior
       Object posHandle = LocationUtils.toBlockPos(context.getClickedPos());
       if (posHandle instanceof BlockPos) {
         BlockPos pos = (BlockPos) posHandle;
-        BlockContainer holder = BlockContainer.getOrCreate((Level) serverLevel, pos, this.size, this.title,
-            this.soundMap);
+        StorageBlockEntity holder = getStorage(serverLevel, pos);
+        if (holder == null)
+          return InteractionResult.PASS;
         BukkitServerPlayer player = (BukkitServerPlayer) context.getPlayer();
         Player bukkit = player.platformPlayer();
         if (bukkit instanceof Player) {
@@ -77,15 +100,17 @@ public class StorageBlockBehavior extends BukkitBlockBehavior
   public Object getContainer(Object thisBlock, Object[] args) {
     Level level = (Level) args[1];
     BlockPos pos = (BlockPos) args[2];
-    return BlockContainer.getOrCreate(level, pos, this.size, this.title, this.soundMap);
+    return getStorage(level, pos);
   }
 
   @Override
   public int getAnalogOutputSignal(Object thisBlock, Object[] args) {
-    Optional<BlockContainer> container = BlockContainer.get((Level) args[1], (BlockPos) args[2]);
-    if (container.isEmpty())
+    Level level = (Level) args[1];
+    BlockPos pos = (BlockPos) args[2];
+    StorageBlockEntity storage = getStorage(level, pos);
+    if (storage == null)
       return 0;
-    return ((BlockContainer) container.get()).getAnalogOutput();
+    return storage.getAnalogOutput();
   }
 
   @Override

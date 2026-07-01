@@ -144,7 +144,7 @@ public class MultiPageChestBehavior extends MultiBlockBehavior {
                     .getOptionalCustomBlockState(level.getBlockState(corePos)).orElse(null);
 
             if (state != null) {
-                // Create the machine controller (it will load data from CustomBlockData).
+                // Create the machine controller (it will load data from its own CE tag).
                 // ce 26.6.2: the engine BlockEntity wraps the controller.
                 BlockEntity be = new BlockEntity(cePos, state);
                 be.setWorld(context.getLevel().storageWorld());
@@ -163,7 +163,7 @@ public class MultiPageChestBehavior extends MultiBlockBehavior {
     @Override
     protected void onDisassemble(Level level, BlockPos pos,
             net.momirealms.craftengine.core.block.entity.BlockEntityController core) {
-        // Container persistence is handled by CustomBlockData automatically
+        // Container persistence is handled by the block entity's own CE tag automatically
         super.onDisassemble(level, pos, core);
     }
 }
