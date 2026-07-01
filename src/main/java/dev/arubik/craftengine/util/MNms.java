@@ -9,6 +9,7 @@ import it.unimi.dsi.fastutil.ints.IntList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Vec3i;
 import net.minecraft.network.protocol.game.ClientboundAddEntityPacket;
+import net.minecraft.network.protocol.game.ClientboundBlockDestructionPacket;
 import net.minecraft.network.protocol.game.ClientboundEntityPositionSyncPacket;
 import net.minecraft.network.protocol.game.ClientboundRemoveEntitiesPacket;
 import net.minecraft.network.protocol.game.ClientboundSetEntityDataPacket;
@@ -122,5 +123,16 @@ public final class MNms {
     public Object constructor$ClientboundSetEntityDataPacket(int entityId, Object packedItems) {
         return new ClientboundSetEntityDataPacket(entityId,
                 (List<SynchedEntityData.DataValue<?>>) packedItems);
+    }
+
+    /**
+     * Block-crack-stage overlay packet (used by miners/drills to show progressive damage on a
+     * block they're stalled cutting through). {@code progress} is 0-9 to show a crack stage, or
+     * any value outside that range (e.g. -1) to clear the overlay. {@code id} is an arbitrary
+     * "breaker id" — vanilla uses the breaking entity's id so multiple simultaneous breakers on
+     * the same block don't clobber each other's overlay.
+     */
+    public Object constructor$ClientboundBlockDestructionPacket(int id, Object pos, int progress) {
+        return new ClientboundBlockDestructionPacket(id, (BlockPos) pos, progress);
     }
 }

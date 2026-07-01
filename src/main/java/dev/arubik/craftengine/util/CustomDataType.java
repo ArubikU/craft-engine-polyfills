@@ -2,6 +2,8 @@ package dev.arubik.craftengine.util;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 import java.util.function.Function;
 
@@ -10,8 +12,18 @@ import net.momirealms.craftengine.bukkit.util.BlockStateUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.block.data.BlockData;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.util.io.BukkitObjectInputStream;
+import org.bukkit.util.io.BukkitObjectOutputStream;
+import org.yaml.snakeyaml.external.biz.base64Coder.Base64Coder;
+
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.ItemStackWithSlot;
 import net.minecraft.world.level.block.state.BlockState;
 
 public class CustomDataType<T, P> {
@@ -142,6 +154,46 @@ public class CustomDataType<T, P> {
                     }
                 }
                 return stacks;
+            });
+
+    public static final CustomDataType<List<ItemStackWithSlot>, byte[]> ITEM_STACK_WITH_SLOT_LIST_TYPE = new CustomDataType<List<ItemStackWithSlot>, byte[]>(
+            NbtType.BYTE_ARRAY,
+            (itemStacks) -> {
+                
+                net.minecraft.resources.RegistryOps<net.minecraft.nbt.Tag> ops = net.minecraft.resources.RegistryOps
+                        .create(net.minecraft.nbt.NbtOps.INSTANCE, itemCodecRegistries());
+                net.minecraft.nbt.CompoundTag root = new net.minecraft.nbt.CompoundTag();
+                for (int i = 0; i < itemStacks.size(); i++) {
+                    ItemStackWithSlot stackWithSlot = itemStacks.get(i);
+                    net.minecraft.world.item.ItemStack stack = stackWithSlot.stack();
+                    if (stack != null && !stack.isEmpty()) {
+                        final int idx = i;
+                        net.minecraft.world.item.ItemStack.CODEC.encodeStart(ops, stack).result()
+                                .ifPresent(t -> root.put("i" + idx, t));
+                        root.putInt("s" + idx, stackWithSlot.slot());
+                    }
+                }
+                root.putInt("n", itemStacks.size());
+                return compress(root);
+            },
+            bytes -> {
+                net.minecraft.nbt.CompoundTag root = decompress(bytes);
+                int n = root.getInt("n").orElse(0);
+                List<ItemStackWithSlot> itemStacks = new ArrayList<>();
+                net.minecraft.resources.RegistryOps<net.minecraft.nbt.Tag> ops = net.minecraft.resources.RegistryOps
+                        .create(net.minecraft.nbt.NbtOps.INSTANCE, itemCodecRegistries());
+                for (int i = 0; i < n; i++) {
+                    net.minecraft.nbt.Tag it = root.get("i" + i);
+                    if (it != null) {
+                        final int idx = i;
+                        net.minecraft.world.item.ItemStack.CODEC.parse(ops, it).result()
+                                .ifPresent(s -> {
+                                    int slot = root.getInt("s" + idx).orElse(-1);
+                                    itemStacks.add(new ItemStackWithSlot(slot,s));
+                                });
+                    }
+                }
+                return itemStacks;
             });
 
     private final NbtType baseType;

@@ -72,6 +72,36 @@ public class StorageBlockEntity extends PersistentWorldlyBlockEntity {
         return net.minecraft.world.inventory.AbstractContainerMenu.getRedstoneSignalFromContainer(this);
     }
 
+    /**
+     * Drop every stored item into the world. Called from {@link #onRemove()} — the
+     * BlockEntityController's own CraftEngine-driven teardown hook, fired while this BE (and its
+     * inventory) is still intact, so no Bukkit break-event listener is needed to catch it.
+     */
+    private void dropAllContents() {
+        try {
+            net.minecraft.world.level.Level level = getNMSLevel();
+            if (level == null)
+                return;
+            net.momirealms.craftengine.core.world.BlockPos pos = pos();
+            org.bukkit.World bw = level.getWorld();
+            org.bukkit.Location loc = new org.bukkit.Location(bw, pos.x() + 0.5, pos.y() + 0.5, pos.z() + 0.5);
+            for (int i = 0; i < inventory.length; i++) {
+                net.minecraft.world.item.ItemStack st = inventory[i];
+                if (st != null && !st.isEmpty()) {
+                    bw.dropItemNaturally(loc, org.bukkit.craftbukkit.inventory.CraftItemStack.asBukkitCopy(st));
+                    inventory[i] = net.minecraft.world.item.ItemStack.EMPTY;
+                }
+            }
+        } catch (Throwable ignored) {
+        }
+    }
+
+    @Override
+    public void onRemove() {
+        dropAllContents();
+        super.onRemove();
+    }
+
     @Override
     public org.bukkit.inventory.Inventory getInventory() {
         // LIVE wrapper around this NMS Container (not a separate copy) so hopper/crafter events see the
