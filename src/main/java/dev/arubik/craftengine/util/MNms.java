@@ -8,15 +8,21 @@ import org.bukkit.craftbukkit.block.data.CraftBlockData;
 import it.unimi.dsi.fastutil.ints.IntList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Vec3i;
+import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientboundAddEntityPacket;
 import net.minecraft.network.protocol.game.ClientboundBlockDestructionPacket;
+import net.minecraft.network.protocol.game.ClientboundBundlePacket;
 import net.minecraft.network.protocol.game.ClientboundEntityPositionSyncPacket;
 import net.minecraft.network.protocol.game.ClientboundRemoveEntitiesPacket;
 import net.minecraft.network.protocol.game.ClientboundSetEntityDataPacket;
+import net.minecraft.network.protocol.game.ClientboundUpdateAttributesPacket;
+import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.PositionMoveRotation;
+import net.minecraft.world.entity.ai.attributes.AttributeInstance;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelWriter;
@@ -134,5 +140,37 @@ public final class MNms {
      */
     public Object constructor$ClientboundBlockDestructionPacket(int id, Object pos, int progress) {
         return new ClientboundBlockDestructionPacket(id, (BlockPos) pos, progress);
+    }
+
+    /**
+     * Bundles several packets so the client applies them all within the same render frame
+     * (introduced for exactly this: many entities that must visibly move in lockstep — sent
+     * as separate unbundled packets, netty/client processing can stagger them by a frame or
+     * two, which reads as jitter for a multi-entity swarm even though each packet alone is
+     * fine). {@code packets} must all be client-game-bound packets (e.g. entity position
+     * sync / set-entity-data packets).
+     */
+    @SuppressWarnings("unchecked")
+    public Object constructor$ClientboundBundlePacket(List<Object> packets) {
+        return new ClientboundBundlePacket((List<Packet<? super ClientGamePacketListener>>) (List<?>) packets);
+    }
+
+    /**
+     * A synthetic {@code generic.scale} attribute-update packet for a fake/packet-only entity
+     * (2026-07-02 session — see {@code ContraptionShulkerColliderSwarm}'s "shulker always renders
+     * full-size" bug writeup). Vanilla's {@code Attributes.SCALE} is what {@code LivingEntity
+     * #getScale()} reads to size {@code Shulker#makeBoundingBox} — a real per-entity lever, but
+     * synced via this dedicated attributes packet, NOT via entity metadata/{@code
+     * SynchedEntityData} (unlike {@code AttachFace}/{@code RawPeekAmount}/{@code Color}, which
+     * ARE metadata and already get sent via {@code constructor$ClientboundSetEntityDataPacket}).
+     * A packet-only fake entity (no real backing {@code LivingEntity}/{@code AttributeMap} on the
+     * server) has no {@code AttributeInstance} to snapshot from, so one is built standalone here
+     * purely to carry the desired base value into the packet's constructor — it is never attached
+     * to any real entity or ticked; {@code onDirty} is a no-op since nothing ever mutates it again.
+     */
+    public Object constructor$ClientboundScaleAttributePacket(int entityId, double scale) {
+        AttributeInstance instance = new AttributeInstance(Attributes.SCALE, ai -> {});
+        instance.setBaseValue(scale);
+        return new ClientboundUpdateAttributesPacket(entityId, List.of(instance));
     }
 }

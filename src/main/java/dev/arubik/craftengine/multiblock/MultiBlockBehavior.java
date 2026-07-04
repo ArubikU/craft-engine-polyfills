@@ -227,7 +227,7 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
      * Resolve the controller at a world position (ce 26.6.2). The engine returns a
      * BlockEntity whose .controller holds our subclass.
      */
-    protected static BlockEntityController controllerAt(Level level, BlockPos pos) {
+    public static BlockEntityController controllerAt(Level level, BlockPos pos) {
         BlockEntity be = BukkitBlockEntityTypes.getIfLoaded(level, pos);
         return be == null ? null : be.controller;
     }
@@ -455,6 +455,32 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
     /** Total blocks in the structure (parts + core) — the hammer durability cost of one assembly. */
     public int structureBlockCount() {
         return schema == null ? 1 : schema.getParts().size() + 1;
+    }
+
+    /**
+     * Every real-world position occupied by the FORMED structure rooted at {@code corePos}
+     * (the core itself + every schema part, rotated by the core's current facing) — used by
+     * {@code dev.arubik.craftengine.contraption.behavior.MultiblockMembershipRegistry} so a
+     * contraption glue-capture that touches ANY part or the core pulls in the WHOLE assembled
+     * multiblock, never a partial structure. Mirrors the exact rotate/offset math
+     * {@link #disassemble} and {@link #tryForm} already use to walk the schema, just without
+     * mutating anything.
+     */
+    public java.util.Set<BlockPos> memberPositions(Level level, BlockPos corePos) {
+        java.util.Set<BlockPos> members = new java.util.HashSet<>();
+        members.add(corePos);
+        if (schema == null) {
+            return members;
+        }
+        Direction facing = getFacing(level, corePos);
+        BlockPos coreOffset = schema.getCoreOffset();
+        for (BlockPos partSchemaPos : schema.getParts().keySet()) {
+            BlockPos relativePos = partSchemaPos.subtract(coreOffset);
+            BlockPos rotatedRelative = rotate(relativePos, facing);
+            BlockPos partPos = corePos.offset(rotatedRelative);
+            members.add(partPos);
+        }
+        return members;
     }
 
     public boolean tryAssemble(Level level, BlockPos clicked) {

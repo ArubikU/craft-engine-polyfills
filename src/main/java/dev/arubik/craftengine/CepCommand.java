@@ -202,6 +202,232 @@ public class CepCommand implements CommandExecutor, TabCompleter {
             sender.sendMessage("§cFluidEngine OFF§7 (per-block transport restored).");
             return true;
         });
+
+        // /cep contraption spike-swarm <n> <item|shulker> — Phase 0 spike #1: packet-swarm
+        // entity budget + per-tick reposition cost at 20Hz (see CONTRAPTIONS.md §4).
+        cases.put(new ArgumentList("contraption^", "spike-swarm^", Integer.class, String.class), (sender, parsed) -> {
+            if (!(sender instanceof Player player))
+                return true;
+            int n = (Integer) parsed[2];
+            String kind = (String) parsed[3];
+            dev.arubik.craftengine.contraption.SwarmSpike.start(CraftEnginePolyfills.instance(), player, n, kind);
+            return true;
+        });
+
+        // /cep contraption spike-stop — cancel + despawn the running swarm spike early.
+        cases.put(new ArgumentList("contraption^", "spike-stop^"), (sender, parsed) -> {
+            if (sender instanceof Player player)
+                dev.arubik.craftengine.contraption.SwarmSpike.stop(player);
+            return true;
+        });
+
+        // Glue is now an item-based wand tool (cml:slime_glue, right-click twice to glue two
+        // adjacent blocks) — see contraption.GlueWandListener. The old /cep contraption glue
+        // and glue-clear commands were removed once that replaced them.
+
+        // /cep contraption structure — report the size of the glued structure you're looking at.
+        cases.put(new ArgumentList("contraption^", "structure^"), (sender, parsed) -> {
+            if (!(sender instanceof Player player))
+                return true;
+            Block tb = player.getTargetBlockExact(8);
+            if (tb == null) {
+                sender.sendMessage("§cLook at a block.");
+                return true;
+            }
+            BlockPos pos = new BlockPos(tb.getX(), tb.getY(), tb.getZ());
+            Set<BlockPos> structure = dev.arubik.craftengine.contraption.GlueRegistry
+                    .structureAt(tb.getWorld().getUID(), pos);
+            sender.sendMessage("§bStructure§7: §f" + structure.size() + "§7 block(s) glued together.");
+            return true;
+        });
+
+        // /cep contraption capture-test — Phase 1 round-trip proof (CONTRAPTIONS.md §5
+        // Phase 1): capture the glued structure at the looked-at block, blank it to air,
+        // wait 2s, then restore it exactly from the captured NBT blob.
+        cases.put(new ArgumentList("contraption^", "capture-test^"), (sender, parsed) -> {
+            if (!(sender instanceof Player player))
+                return true;
+            Block tb = player.getTargetBlockExact(8);
+            if (tb == null) {
+                sender.sendMessage("§cLook at a block.");
+                return true;
+            }
+            BlockPos bearing = new BlockPos(tb.getX(), tb.getY(), tb.getZ());
+            Set<BlockPos> structure = dev.arubik.craftengine.contraption.GlueRegistry
+                    .structureAt(tb.getWorld().getUID(), bearing);
+            net.minecraft.world.level.Level level = ((CraftWorld) tb.getWorld()).getHandle();
+
+            dev.arubik.craftengine.contraption.ContraptionCapture.Result captured = dev.arubik.craftengine.contraption.ContraptionCapture
+                    .capture(level, structure, bearing);
+            sender.sendMessage("§bCaptured §f" + captured.level().blockCount() + "§b block(s). Blanking for 2s, then restoring...");
+            dev.arubik.craftengine.contraption.ContraptionCapture.removeFromWorld(level, structure);
+
+            org.bukkit.Bukkit.getScheduler().runTaskLater(CraftEnginePolyfills.instance(), () -> {
+                dev.arubik.craftengine.contraption.ContraptionCapture.restore(level, captured.level(), bearing);
+                sender.sendMessage("§aRestored §f" + captured.level().blockCount() + "§a block(s) from the captured NBT blob.");
+            }, 40L);
+            return true;
+        });
+
+        // /cep contraption spawn-holo — Phase 2 (CONTRAPTIONS.md §5): capture the glued
+        // structure at the looked-at block, remove it from the world, and spawn a
+        // ContraptionEntity hologram in its exact place via the BLOCK_DISPLAY swarm.
+        cases.put(new ArgumentList("contraption^", "spawn-holo^"), (sender, parsed) -> {
+            if (!(sender instanceof Player player))
+                return true;
+            Block tb = player.getTargetBlockExact(8);
+            if (tb == null) {
+                sender.sendMessage("§cLook at a block.");
+                return true;
+            }
+            BlockPos bearing = new BlockPos(tb.getX(), tb.getY(), tb.getZ());
+            dev.arubik.craftengine.contraption.HologramTest.start(CraftEnginePolyfills.instance(), tb.getWorld(),
+                    bearing);
+            sender.sendMessage("§bHologram spawned. §7/cep contraption despawn-holo to restore the real blocks.");
+            return true;
+        });
+
+        // /cep contraption despawn-holo — despawn the swarm and restore the real blocks.
+        cases.put(new ArgumentList("contraption^", "despawn-holo^"), (sender, parsed) -> {
+            if (sender instanceof Player player) {
+                dev.arubik.craftengine.contraption.HologramTest.stop(player.getWorld());
+                sender.sendMessage("§7Hologram despawned, real blocks restored.");
+            }
+            return true;
+        });
+
+        // /cep contraption move <dx> <dy> <dz> — Phase 3 (CONTRAPTIONS.md §5): attach a
+        // constant-velocity LinearActuatorBehavior (blocks/second) to the active hologram
+        // so ContraptionEngine's master clock drives it every tick.
+        cases.put(new ArgumentList("contraption^", "move^", Double.class, Double.class, Double.class),
+                (sender, parsed) -> {
+                    if (!(sender instanceof Player player))
+                        return true;
+                    double dx = (Double) parsed[2];
+                    double dy = (Double) parsed[3];
+                    double dz = (Double) parsed[4];
+                    boolean ok = dev.arubik.craftengine.contraption.HologramTest.setLinearVelocity(player.getWorld(),
+                            dx, dy, dz);
+                    sender.sendMessage(ok
+                            ? "§bMoving at §f" + dx + ", " + dy + ", " + dz + "§b blocks/sec."
+                            : "§cNo active hologram in this world — /cep contraption spawn-holo first.");
+                    return true;
+                });
+
+        // /cep contraption nudge <dx> <dy> <dz> — debug tool: instantly shift the active
+        // hologram's CONTINUOUS position by a one-shot delta (as opposed to "move", which
+        // attaches a constant blocks/sec velocity behavior) — for manually testing
+        // movement/rendering without a real bearing behavior driving it. Resolves "the
+        // currently active contraption" the same way "move"/"miner" already do: HologramTest's
+        // per-world ACTIVE run.
+        cases.put(new ArgumentList("contraption^", "nudge^", Double.class, Double.class, Double.class),
+                (sender, parsed) -> {
+                    if (!(sender instanceof Player player))
+                        return true;
+                    double dx = (Double) parsed[2];
+                    double dy = (Double) parsed[3];
+                    double dz = (Double) parsed[4];
+                    boolean ok = dev.arubik.craftengine.contraption.HologramTest.nudgePosition(player.getWorld(),
+                            dx, dy, dz);
+                    sender.sendMessage(ok
+                            ? "§bNudged by §f" + dx + ", " + dy + ", " + dz + "§b."
+                            : "§cNo active hologram in this world — /cep contraption spawn-holo first.");
+                    return true;
+                });
+
+        // /cep contraption rotate <90|180|270|-90> — debug tool: add the given number of
+        // degrees to the active hologram's current yaw, for manually testing rotation (and the
+        // axis-snap-on-disassemble behavior) without a real ROTATIONAL bearing spinning it.
+        // This project's contraptions only ever track a single yaw around the vertical Y axis
+        // (no pitch/roll — see ContraptionMath/ContraptionState), so "choosing an axis" here
+        // means picking one of the 4 cardinal-facing steps rather than a genuine 3D axis.
+        cases.put(new ArgumentList("contraption^", "rotate^", Integer.class), (sender, parsed) -> {
+            if (!(sender instanceof Player player))
+                return true;
+            int degrees = (Integer) parsed[2];
+            boolean ok = dev.arubik.craftengine.contraption.HologramTest.rotateYawDegrees(player.getWorld(), degrees);
+            sender.sendMessage(ok
+                    ? "§bRotated by §f" + degrees + "§b degrees."
+                    : "§cNo active hologram in this world — /cep contraption spawn-holo first.");
+            return true;
+        });
+
+        // /cep contraption miner <dx> <dy> <dz> <rpm> — Phase 5 (CONTRAPTIONS.md §5): attach
+        // a MinerBehavior targeting the given bearing-relative offset to the active hologram.
+        cases.put(new ArgumentList("contraption^", "miner^", Integer.class, Integer.class, Integer.class,
+                Double.class), (sender, parsed) -> {
+                    if (!(sender instanceof Player player))
+                        return true;
+                    int dx = (Integer) parsed[2];
+                    int dy = (Integer) parsed[3];
+                    int dz = (Integer) parsed[4];
+                    double rpm = (Double) parsed[5];
+                    boolean ok = dev.arubik.craftengine.contraption.HologramTest.addMiner(player.getWorld(),
+                            new net.minecraft.core.BlockPos(dx, dy, dz), rpm);
+                    sender.sendMessage(ok
+                            ? "§bMiner attached, targeting offset §f" + dx + "," + dy + "," + dz + "§b at §f" + rpm + "§b rpm."
+                            : "§cNo active hologram in this world — /cep contraption spawn-holo first.");
+                    return true;
+                });
+        // /cep contraption join — DEBUG: teleport the executing player DIRECTLY INTO the
+        // active hologram's hidden ContraptionLevel (a real cross-world Bukkit teleport, not a
+        // packet illusion), positioned just above the bearing's local origin (BlockPos.ZERO —
+        // ContraptionCapture always stores the bearing itself at local (0,0,0), see
+        // ContraptionMath.toLocal). Lets a developer walk around INSIDE the mini-dimension to
+        // inspect the raw captured blocks directly, rather than trusting the packet-mirror
+        // swarms to be rendering them faithfully. Debug-only noclip power — gated on a
+        // permission (falls back to op, like any unregistered Bukkit permission node).
+        cases.put(new ArgumentList("contraption^", "join^"), (sender, parsed) -> {
+            if (!(sender instanceof Player player))
+                return true;
+            if (!player.hasPermission("cep.contraption.debug")) {
+                sender.sendMessage("§cYou don't have permission to noclip into a contraption's internal level.");
+                return true;
+            }
+            // Join the contraption the player is LOOKING AT (2026-07-02 — "join debe meterte al
+            // contraption que estas mirando"): raycast against every live contraption's cells via
+            // the same real-world raycast ContraptionInteractionListener uses for right-click
+            // routing, instead of blindly grabbing the first contraption in this world.
+            net.minecraft.server.level.ServerPlayer nmsPlayer = ((org.bukkit.craftbukkit.entity.CraftPlayer) player).getHandle();
+            dev.arubik.craftengine.contraption.ContraptionInteractionListener.Hit hit =
+                    dev.arubik.craftengine.contraption.ContraptionInteractionListener.raycast(nmsPlayer);
+            dev.arubik.craftengine.contraption.level.ContraptionLevel level = hit != null ? hit.state().level() : null;
+            if (level == null) {
+                sender.sendMessage("§cYou're not looking at a contraption — aim at one and try again.");
+                return true;
+            }
+            dev.arubik.craftengine.contraption.ContraptionJoinManager.recordPreJoinLocation(player);
+            org.bukkit.Location dest = new org.bukkit.Location(level.getWorld(), 0.5, 1.0, 0.5);
+            player.teleport(dest);
+            sender.sendMessage("§bTeleported into the contraption's internal level§7 (local origin ~0,1,0)."
+                    + " §cNote: this level's blocks/entities only ever MOVE via render-position math"
+                    + " (ContraptionLevel#setTransform) — your real Bukkit position here is static and won't"
+                    + " follow the contraption if it's moving/rotating. §7/cep contraption leave to return.");
+            CraftEnginePolyfills.instance().getLogger()
+                    .info("[contraption debug] " + player.getName() + " joined ContraptionLevel " + level.getWorld().getName());
+            return true;
+        });
+
+        // /cep contraption leave — DEBUG: teleport the player back to wherever they were in the
+        // real world before /cep contraption join. Fails gracefully (no NPE) if they never joined.
+        cases.put(new ArgumentList("contraption^", "leave^"), (sender, parsed) -> {
+            if (!(sender instanceof Player player))
+                return true;
+            if (!player.hasPermission("cep.contraption.debug")) {
+                sender.sendMessage("§cYou don't have permission to use this command.");
+                return true;
+            }
+            org.bukkit.Location back = dev.arubik.craftengine.contraption.ContraptionJoinManager.consumePreJoinLocation(player);
+            if (back == null) {
+                sender.sendMessage("§cYou haven't /cep contraption join'ed anything — nowhere to return to.");
+                return true;
+            }
+            player.teleport(back);
+            sender.sendMessage("§bTeleported back to the real world.");
+            CraftEnginePolyfills.instance().getLogger()
+                    .info("[contraption debug] " + player.getName() + " left the contraption level.");
+            return true;
+        });
     }
 
     private static String fmt(double d) {

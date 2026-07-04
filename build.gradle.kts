@@ -53,6 +53,9 @@ tasks.withType<JavaCompile> {
     options.encoding = "UTF-8"
     options.release.set(21)
     dependsOn(tasks.clean)
+    // Temporary: cap the forked compiler JVM heap so it starts on a host with an exhausted page file.
+    options.isFork = true
+    options.forkOptions.jvmArgs = listOf("-Xmx384m", "-XX:+UseSerialGC", "-XX:MaxMetaspaceSize=256m")
 }
 
 tasks.test {

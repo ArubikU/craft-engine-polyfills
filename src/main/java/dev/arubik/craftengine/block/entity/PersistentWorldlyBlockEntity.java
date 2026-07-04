@@ -154,8 +154,28 @@ public abstract class PersistentWorldlyBlockEntity extends PersistentBlockEntity
     public boolean stillValid(Player player) {
         if (!blockEntity().isValid()) // Check BlockEntity validity
             return false;
+        if (player.isRemoved())
+            return false;
         BlockPos pos = pos();
-        return !player.isRemoved() && player.distanceToSqr(
+        // A block sitting inside a dev.arubik.craftengine.contraption.level.ContraptionLevel has
+        // LOCAL positions (small numbers, e.g. 0,0,0) as its real BlockPos — NOT where the
+        // contraption visually appears. Raw player.distanceToSqr(pos) against those local
+        // coordinates is therefore always enormous relative to the real player's real-world
+        // position, so the menu would close on the very next tick. Route through the
+        // ContraptionLevel's own bearing-transformed real-world position instead.
+        net.minecraft.world.level.Level level = getNMSLevel();
+        if (level instanceof dev.arubik.craftengine.contraption.level.ContraptionLevel contraptionLevel) {
+            // realWorldPositionOf(BlockPos) resolves the block's MIN corner (matches
+            // ContraptionMath.renderPosition's own convention, used identically by
+            // ContraptionInteractionListener's raycast AABBs) — add the +0.5 block-center offset
+            // via the continuous-position overload so this matches vanilla's own
+            // pos.getX()+0.5-style distance convention.
+            net.minecraft.world.phys.Vec3 localCenter = new net.minecraft.world.phys.Vec3(
+                    pos.x() + 0.5, pos.y() + 0.5, pos.z() + 0.5);
+            net.minecraft.world.phys.Vec3 realPos = contraptionLevel.realWorldPositionOf(localCenter);
+            return player.distanceToSqr(realPos.x, realPos.y, realPos.z) <= 64.0;
+        }
+        return player.distanceToSqr(
                 pos.x() + 0.5,
                 pos.y() + 0.5,
                 pos.z() + 0.5) <= 64.0;

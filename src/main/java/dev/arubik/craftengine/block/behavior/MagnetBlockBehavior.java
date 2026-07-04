@@ -69,8 +69,19 @@ public class MagnetBlockBehavior extends BukkitBlockBehavior {
                 bx - radius, by - radius, bz - radius,
                 bx + radius, by + radius, bz + radius);
 
-        for (net.minecraft.world.entity.Entity nms : serverLevel.getEntitiesOfClass(
-                net.minecraft.world.entity.Entity.class, aabb, e -> !e.isRemoved())) {
+        // The pull vector below is `center(THIS block's position) - entity.getLocation()`. Inside a
+        // contraption ContraptionLevel#getEntitiesOfClass returns the dual-world union (fake + real), but
+        // `center` here is the magnet's FAKE-LEVEL local position while a real-world entity's location is
+        // real-world — subtracting the two mixes coordinate spaces and yields a garbage pull direction. A
+        // magnet correctly attracting real entities would need transform-aware math it doesn't have, so
+        // restrict a captured magnet to the FAKE level (getLocalEntities); it still attracts co-captured
+        // items/entities normally, just not real-world ones.
+        java.util.List<net.minecraft.world.entity.Entity> targets =
+                (serverLevel instanceof dev.arubik.craftengine.contraption.level.ContraptionLevel cl)
+                        ? cl.getLocalEntities(net.minecraft.world.entity.Entity.class, aabb, e -> !e.isRemoved())
+                        : serverLevel.getEntitiesOfClass(net.minecraft.world.entity.Entity.class, aabb,
+                                e -> !e.isRemoved());
+        for (net.minecraft.world.entity.Entity nms : targets) {
             Entity entity = nms.getBukkitEntity();
             if (!shouldAffect(entity))
                 continue;

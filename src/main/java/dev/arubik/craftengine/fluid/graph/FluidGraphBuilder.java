@@ -74,8 +74,34 @@ public final class FluidGraphBuilder {
                         dev.arubik.craftengine.fluid.behavior.FluidBlockTankBehavior.class) != null
                         && behaviorAt(level, np,
                                 dev.arubik.craftengine.fluid.behavior.FluidBlockTankBehavior.class) != null;
+                // Fluid-type compatibility gate (2026-07-02 session — "Y0 lava, Y1 water... el agua
+                // baja al Y0 y convierte la lava en agua sin validar"): the whole connected network
+                // gets ONE global "netType" (FluidEngine.step picks the first non-empty node's type
+                // and applies it to every node it moves fluid into/out of — see that method's own
+                // comment). Nothing here ever stopped an edge from linking two ALREADY-non-empty
+                // nodes holding DIFFERENT fluids, so two separately-filled tanks that happen to be
+                // adjacent/connectable (same block type, different block type — e.g. a copper_tank
+                // stacked on a fluid_block_tank — doesn't matter, this check is type/content based,
+                // not block-id based) got silently merged into one network and whichever type wasn't
+                // picked as "netType" got overwritten as fluid moved. Block the edge outright unless
+                // the two sides already hold the SAME type or at least one side is empty (air-
+                // equivalent) — exactly "deben ser los mismos liquidos o el del tanque de abajo debe
+                // ser aire, no pueden mezclarse liquidos."
+                boolean typeIncompatible = false;
+                {
+                    var carrierA = FluidTransferHelper.getCarrier(level, pos);
+                    var carrierB = FluidTransferHelper.getCarrier(level, np);
+                    if (carrierA.isPresent() && carrierB.isPresent()) {
+                        FluidStack sa = carrierA.get().getStored(level, pos);
+                        FluidStack sb = carrierB.get().getStored(level, np);
+                        if (sa != null && !sa.isEmpty() && sb != null && !sb.isEmpty()
+                                && sa.getType() != sb.getType()) {
+                            typeIncompatible = true;
+                        }
+                    }
+                }
                 int bIdx = graph.addNode(makeNode(level, canonical(level, np)));
-                if (!bothTanks
+                if (!bothTanks && !typeIncompatible
                         && aIdx < bIdx && edgeKeys.add(((long) aIdx << 32) | (bIdx & 0xffffffffL))) {
                     int valve = valveCheck(level, pos, np);
                     double conductance = DEFAULT_CONDUCTANCE;

@@ -156,6 +156,25 @@ public class BlockBehaviors {
                 RegistryUtils.registerBlockBehavior(
                                 dev.arubik.craftengine.crafting.WorkbenchBehavior.FACTORY_KEY,
                                 dev.arubik.craftengine.crafting.WorkbenchBehavior.FACTORY);
+                // Contraption bearing block (CONTRAPTIONS.md §5 Phase 6 follow-up): real
+                // detection replacing the old bearing-test-register command/BearingAnchorRegistry
+                // placeholder. Still blocked on a real .yml block config referencing this key —
+                // see CONTRAPTIONS.md for the exact YAML.
+                RegistryUtils.registerBlockBehavior(
+                                dev.arubik.craftengine.contraption.behavior.BearingBlockBehavior.FACTORY_KEY,
+                                dev.arubik.craftengine.contraption.behavior.BearingBlockBehavior.FACTORY);
+
+                // Contraption miner/drill block (this session): a real CraftEngine block
+                // behavior mirroring BearingBlockBehavior's shape. Also wired into the
+                // contraption auto-attach path (MovementBehaviorRegistry) right here so both
+                // registrations stay next to each other for discoverability — see
+                // MinerBlockBehavior#buildMovementBehavior's javadoc for what gets built.
+                RegistryUtils.registerBlockBehavior(
+                                dev.arubik.craftengine.contraption.behavior.MinerBlockBehavior.FACTORY_KEY,
+                                dev.arubik.craftengine.contraption.behavior.MinerBlockBehavior.FACTORY);
+                dev.arubik.craftengine.contraption.behavior.MovementBehaviorRegistry.register(
+                                dev.arubik.craftengine.contraption.behavior.MinerBlockBehavior.FACTORY_KEY,
+                                dev.arubik.craftengine.contraption.behavior.MinerBlockBehavior::buildMovementBehavior);
 
                 // (CraftingSamples deleted — real recipes are CraftEngine-native YAML on the vanilla table.)
                 // Populate sample workbench station recipes (3x2 + tool + condition/executor).

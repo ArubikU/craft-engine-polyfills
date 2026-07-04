@@ -61,7 +61,8 @@ import net.momirealms.craftengine.core.util.Key;
  * main page, shown on the Upgrades page), a 2x2 input grid, a 2x2 output grid, a center progress
  * item, plus status / info / upgrades / overclock buttons.</p>
  */
-public class CrusherBlockEntity extends AbstractMachineBlockEntity implements RpmConsumer {
+public class CrusherBlockEntity extends AbstractMachineBlockEntity implements RpmConsumer,
+        dev.arubik.craftengine.machine.render.BetterModelDriven {
 
     // Fallback menu size if config omits menu_size. MUST stay 54.
     private static final int DEFAULT_MENU_SIZE = 54; // 6 rows; slots 0..8 reserved for upgrades
@@ -160,6 +161,11 @@ public class CrusherBlockEntity extends AbstractMachineBlockEntity implements Rp
     private final dev.arubik.craftengine.machine.render.BetterModelMachineRenderer renderer =
             new dev.arubik.craftengine.machine.render.BetterModelMachineRenderer(
                     "crusher", () -> (1.0 + overclock));
+
+    @Override
+    public dev.arubik.craftengine.machine.render.BetterModelMachineRenderer betterModelRenderer() {
+        return renderer;
+    }
 
     // Invisible, tooltip-less filler so only the UI image shows in background slots (like the workbench).
     private static org.bukkit.inventory.ItemStack buildFiller() {

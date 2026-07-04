@@ -8,10 +8,12 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.bukkit.craftbukkit.inventory.CraftItemStack;
 import org.bukkit.inventory.ItemStack;
 
+import dev.arubik.craftengine.contraption.level.ContraptionLevel;
 import dev.arubik.craftengine.fluid.FluidType;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.Vec3;
 import net.momirealms.craftengine.bukkit.api.CraftEngineItems;
 import net.momirealms.craftengine.bukkit.world.BukkitWorld;
 import net.momirealms.craftengine.core.entity.player.Player;
@@ -42,6 +44,11 @@ public final class FluidTankRender {
     private static final class GroupBoxes {
         final List<FluidDisplay> live = new ArrayList<>();
         final List<FluidDisplay> dead = new ArrayList<>(); // removed slots awaiting a despawn broadcast
+        // Parallel to `live`: each display's LOCAL (pre-bearing-transform) target, so flush() can
+        // re-resolve the real-world position every tick — update() only recomputes this on fluid/
+        // topology change, but a contraption's bearing moves/rotates every tick regardless, so
+        // baking the transform once inside update() left the fluid frozen at its capture-time spot.
+        final List<double[]> localTargets = new ArrayList<>();
     }
 
     /**
@@ -87,26 +94,46 @@ public final class FluidTankRender {
                 for (int dz = 0; dz < width; dz++) {
                     float ax = dx == 0 ? HULL : 0f, bx = 1f - (dx == width - 1 ? HULL : 0f);
                     float az = dz == 0 ? HULL : 0f, bz = 1f - (dz == width - 1 ? HULL : 0f);
-                    double wx = controller.getX() + dx + (ax + bx) / 2f;
-                    double wy = controller.getY() + y + 0.5f + yoff;
-                    double wz = controller.getZ() + dz + (az + bz) / 2f;
+                    // LOCAL (pre-bearing-transform) position — flush() re-resolves the real-world
+                    // position from this every tick, so a moving/rotating contraption's fluid keeps
+                    // following the bearing instead of freezing at capture-time's position.
+                    double lx = controller.getX() + dx + (ax + bx) / 2f;
+                    double ly = controller.getY() + y + 0.5f + yoff;
+                    double lz = controller.getZ() + dz + (az + bz) / 2f;
                     FluidDisplay d = idx < g.live.size() ? g.live.get(idx) : null;
+                    double[] local;
                     if (d == null) {
                         d = new FluidDisplay();
                         g.live.add(d);
+                        local = new double[3];
+                        g.localTargets.add(local);
+                    } else {
+                        local = idx < g.localTargets.size() ? g.localTargets.get(idx) : new double[3];
+                        if (idx >= g.localTargets.size())
+                            g.localTargets.add(local);
                     }
+                    local[0] = lx;
+                    local[1] = ly;
+                    local[2] = lz;
                     d.setNmsItem(nms);
                     d.setScale(bx - ax, 1f, bz - az);
-                    d.setTarget(wx, wy, wz);
                     idx++;
                 }
         }
         // Surplus displays (level dropped / group shrank) -> despawn on the next flush.
-        for (int i = g.live.size() - 1; i >= idx; i--)
+        for (int i = g.live.size() - 1; i >= idx; i--) {
             g.dead.add(g.live.remove(i));
+            if (i < g.localTargets.size())
+                g.localTargets.remove(i);
+        }
     }
 
-    /** Broadcast a group's displays to the players currently tracking the controller's chunk (per tick). */
+    /**
+     * Broadcast a group's displays to the players currently tracking the controller's chunk (per
+     * tick) — ALSO re-resolves each display's real-world position/rotation from its stored LOCAL
+     * target every call, not just when {@link #update} last ran, so a moving/rotating contraption
+     * keeps the fluid glued to the bearing instead of leaving it frozen at capture-time's spot.
+     */
     public static void flush(Level level, BlockPos controller) {
         GroupBoxes g = RENDERS.get(controller.asLong());
         if (g == null)
@@ -117,8 +144,25 @@ public final class FluidTankRender {
                 d.despawnAll(viewers);
             g.dead.clear();
         }
-        for (FluidDisplay d : g.live)
-            d.render(viewers, d.consumeMetaDirty());
+        ContraptionLevel contraption = level instanceof ContraptionLevel cl ? cl : null;
+        org.joml.Quaternionf rotation = contraption != null ? contraption.realOrientationOf(null) : null;
+        for (int i = 0; i < g.live.size(); i++) {
+            FluidDisplay d = g.live.get(i);
+            double[] local = i < g.localTargets.size() ? g.localTargets.get(i) : null;
+            boolean metaDirty = d.consumeMetaDirty();
+            if (local != null) {
+                double wx = local[0], wy = local[1], wz = local[2];
+                if (contraption != null) {
+                    Vec3 real = contraption.realWorldPositionOf(new Vec3(wx, wy, wz));
+                    wx = real.x;
+                    wy = real.y;
+                    wz = real.z;
+                }
+                d.setTarget(wx, wy, wz);
+                d.setRotation(rotation); // null -> identity, matches a non-contraption tank
+            }
+            d.render(viewers, metaDirty);
+        }
     }
 
     /** Despawn ALL of the group's displays (block broken / group emptied). */
@@ -135,6 +179,12 @@ public final class FluidTankRender {
 
     private static List<Player> viewersOf(Level level, BlockPos controller) {
         try {
+            // A ContraptionLevel is a real, separate, hidden dimension with zero real players
+            // ever inside it — chunk-tracking against it is always empty. Redirect to the real
+            // world at the bearing's live transform instead (see ContraptionLevel#realViewers).
+            if (level instanceof ContraptionLevel contraption) {
+                return contraption.realViewers(controller);
+            }
             org.bukkit.World bw = ((ServerLevel) level).getWorld();
             return new BukkitWorld(bw).getTrackedBy(new ChunkPos(controller.getX() >> 4, controller.getZ() >> 4));
         } catch (Throwable t) {

@@ -20,8 +20,8 @@ import net.momirealms.craftengine.core.entity.player.Player;
  * A server-side fake {@code minecraft:item_display} entity for the multiblock tank's fluid, sent to players
  * by PACKET (no real Bukkit entity). One per footprint cell per filled layer; the controller broadcasts to
  * the players tracking its chunk every tick, so anyone who loads the chunk (or joins, or widens view distance)
- * gets it on the next tick and players who leave the chunk drop it. Mirrors {@code ConveyorItemDisplay} but
- * static (no rotation) and carries its own target position + scale.
+ * gets it on the next tick and players who leave the chunk drop it. Mirrors {@code ConveyorItemDisplay}
+ * (position + scale + optional yaw rotation for contraption riding) but stores its own target position.
  */
 public final class FluidDisplay {
 
@@ -35,6 +35,9 @@ public final class FluidDisplay {
     /** target absolute world position (model centre) + scale. */
     double tx, ty, tz;
     private Vector3f scale = new Vector3f(1f, 1f, 1f);
+    /** Orientation (identity for a free-standing tank; the bearing's yaw when inside a
+     *  contraption — see {@code dev.arubik.craftengine.contraption.level.ContraptionLevel#realOrientationOf}). */
+    private org.joml.Quaternionf rotation = new org.joml.Quaternionf();
     private Object nmsItemStack;
     private boolean metaDirty = true;
 
@@ -65,6 +68,15 @@ public final class FluidDisplay {
         this.tz = z;
     }
 
+    /** Set the display's orientation (bearing yaw when riding a contraption); marks metadata dirty when it changes. */
+    public void setRotation(org.joml.Quaternionf rotation) {
+        org.joml.Quaternionf next = rotation != null ? rotation : new org.joml.Quaternionf();
+        if (!next.equals(this.rotation, 1e-4f)) {
+            this.rotation = next;
+            this.metaDirty = true;
+        }
+    }
+
     public boolean consumeMetaDirty() {
         boolean d = metaDirty;
         metaDirty = false;
@@ -76,8 +88,17 @@ public final class FluidDisplay {
         if (nmsItemStack != null)
             DisplayData.ItemDisplayData.ItemStack.addEntityData(nmsItemStack, values);
         DisplayData.Scale.addEntityData(scale, values);
+        DisplayData.LeftRotation.addEntityData(rotation, values);
         // Full block+sky light so the fluid never renders pitch-black inside the tank.
         DisplayData.BrightnessOverride.addEntityData((15 << 4) | (15 << 20), values);
+        // Interpolation window (ticks) for both position/rotation and transform (scale/rotation) —
+        // without this a Display entity has NO window to animate into a newly-synced position and
+        // either snaps or visibly jitters between per-tick position-sync packets while riding a
+        // moving/rotating contraption. Matches the established convention used by every other
+        // Display-backed swarm in this codebase (see ContraptionDisplaySwarm.Cell#metadata,
+        // ContraptionFurnitureSwarm, ConveyorItemDisplay, SwarmSpike): duration=2.
+        DisplayData.PosRotInterpolationDuration.addEntityData(2, values);
+        DisplayData.TransformationInterpolationDuration.addEntityData(2, values);
         return values;
     }
 

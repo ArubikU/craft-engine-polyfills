@@ -4,6 +4,7 @@ import org.bukkit.craftbukkit.inventory.CraftItemStack;
 import org.joml.Vector3f;
 
 import dev.arubik.craftengine.block.entity.PersistentBlockEntity;
+import dev.arubik.craftengine.contraption.level.ContraptionLevel;
 import net.momirealms.craftengine.core.block.ImmutableBlockState;
 import net.momirealms.craftengine.core.block.entity.BlockEntity;
 import net.momirealms.craftengine.core.block.entity.BlockEntityController;
@@ -427,7 +428,8 @@ public class FunnelBlockEntity extends PersistentBlockEntity implements Conveyor
             return;
         }
         BlockPos pos = blockEntity().pos();
-        java.util.List<Player> viewers = world.world().getTrackedBy(new ChunkPos(pos));
+        java.util.List<Player> viewers = ConveyorBlockEntity.viewersOf(world, pos);
+        ContraptionLevel contraption = ConveyorBlockEntity.contraptionOf(world);
         if (display == null)
             display = new ConveyorItemDisplay();
         display.setNmsItem(CraftItemStack.asNMSCopy(transit));
@@ -445,9 +447,17 @@ public class FunnelBlockEntity extends PersistentBlockEntity implements Conveyor
         Direction move = out ? facing : toContainer;
         org.joml.Quaternionf rot = ConveyorMath.itemRotation(move.stepX(), move.stepZ(), 0);
         rot.rotateY(carriedJitter); // same yaw jitter as the belts -> rotation stays consistent
-        display.setRotation(rot);
 
         double wx = pos.x() + rel.x, wy = pos.y() + rel.y, wz = pos.z() + rel.z;
+        if (contraption != null) {
+            net.minecraft.world.phys.Vec3 real = contraption
+                    .realWorldPositionOf(new net.minecraft.world.phys.Vec3(wx, wy, wz));
+            wx = real.x;
+            wy = real.y;
+            wz = real.z;
+            rot = contraption.realOrientationOf(rot);
+        }
+        display.setRotation(rot);
         display.render(viewers, wx, wy, wz, !spawned);
         display.consumeRotationDirty();
         spawned = true;
@@ -456,7 +466,7 @@ public class FunnelBlockEntity extends PersistentBlockEntity implements Conveyor
     private void despawn(CEWorld world) {
         // Force-remove even if the spawned flag is stale (item broke mid-transit).
         if (display != null) {
-            for (Player p : world.world().getTrackedBy(new ChunkPos(blockEntity().pos())))
+            for (Player p : ConveyorBlockEntity.viewersOf(world, blockEntity().pos()))
                 display.despawn(p);
             display.clearShown();
             spawned = false;

@@ -138,6 +138,23 @@ public class HorizontalDoubleBlockBehavior extends NmsBlockBehavior implements E
         return Half.fromName(enumName(state, halfProperty));
     }
 
+    // ---------------- public read-only accessors (contraption multiblock-membership expansion) ----------------
+
+    /** Public wrapper over {@link #isDoubleBlock} — pure read, no side effects, safe to expose. */
+    public final boolean isDoubleBlockPublic(ImmutableBlockState state) {
+        return isDoubleBlock(state);
+    }
+
+    /** Public wrapper over {@link #facingOf}. */
+    public final Direction facingOfPublic(ImmutableBlockState state) {
+        return facingOf(state);
+    }
+
+    /** Public wrapper over {@link #halfOf}. */
+    public final Half halfOfPublic(ImmutableBlockState state) {
+        return halfOf(state);
+    }
+
     // ---------------- placement ----------------
 
     @Override

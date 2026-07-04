@@ -96,9 +96,25 @@ public class FluidBlockTankBehavior extends ConnectableBlockBehavior implements 
         }
     }
 
+    /**
+     * Membership test for multiblock group-formation ({@link #scanGroup}/{@link #solveComponent}).
+     * MUST match the neighbor's exact registered block id ({@code s.owner().value().id()}), not
+     * just "does this neighbor's behavior chain also include {@code FluidBlockTankBehavior}"
+     * (2026-07-02 session — "si se pone un copper tank sobre un multiblock tank, saca el liquido
+     * del tanque aunque sean liquidos diferentes"). {@code copper_tank} and {@code fluid_block_tank}
+     * are DIFFERENT registered blocks that both happen to share this same Java behavior class —
+     * the previous class-only check treated any two blocks using this class as ONE unified
+     * multiblock group the instant they touched, silently merging/sharing their fluid storage
+     * (and losing/overwriting whichever type didn't "win" the shared pool) even though they're
+     * meant to be entirely separate tanks. Same convention {@code TankBlockBehavior.isTank}
+     * already uses (exact block-id match) for its own same-type vertical-stacking check.
+     */
     public boolean isTank(Level level, BlockPos pos) {
         ImmutableBlockState s = BlockStateUtils.getOptionalCustomBlockState(level.getBlockState(pos)).orElse(null);
-        return s != null && !s.isEmpty() && s.behavior().getFirst(FluidBlockTankBehavior.class) != null;
+        if (s == null || s.isEmpty() || s.behavior().getFirst(FluidBlockTankBehavior.class) == null) {
+            return false;
+        }
+        return s.owner() != null && s.owner().value().id().equals(this.block().id());
     }
 
     private static final int MAX_WIDTH = 3;
@@ -550,6 +566,55 @@ public class FluidBlockTankBehavior extends ConnectableBlockBehavior implements 
                     TankBlockBehavior.fluidInfo(getStored(level, pos), (int) getCapacity(level, pos), pos.getY()));
             return net.momirealms.craftengine.core.entity.player.InteractionResult.SUCCESS_AND_CANCEL;
         }
+
+        // Bucket/bottle fill-into-tank — this behavior previously only handled the shift-click
+        // readout above and never actually accepted a held container's fluid at all (unlike the
+        // single-block TankBlockBehavior, which already had this). Mirrors that same pattern,
+        // routed through insertFluid/extractFluid so it correctly reaches the GROUP controller
+        // for a multiblock tank instead of a single member's own (irrelevant) local store.
+        if (held != null && !held.isEmpty()) {
+            var collectResult = FluidType.collectFromStack(held);
+            FluidStack inputFluid = collectResult.getFirst();
+            ItemStack emptiedContainer = collectResult.getSecond();
+            if (!inputFluid.isEmpty()) {
+                int accepted = insertFluid(level, pos, inputFluid, null);
+                if (accepted == inputFluid.getAmount()) {
+                    if (!player.getAbilities().instabuild) {
+                        held.shrink(1);
+                        if (!emptiedContainer.isEmpty()) {
+                            player.addItem(emptiedContainer);
+                        }
+                    }
+                    // See TankBlockBehavior#playFillOrEmptySound's javadoc — same missing-sound
+                    // gap, same fix (this is a hand-rolled fill flow, not vanilla BucketItem).
+                    TankBlockBehavior.playFillOrEmptySound(level, pos, inputFluid.getType(), true);
+                    return net.momirealms.craftengine.core.entity.player.InteractionResult.SUCCESS_AND_CANCEL;
+                }
+            }
+
+            FluidStack stored = getStored(level, pos);
+            if (!stored.isEmpty()) {
+                var outputResult = FluidType.collectToStack(held, stored, stored.getAmount());
+                ItemStack resultItem = outputResult.getFirst();
+                FluidStack remainingFluid = outputResult.getSecond();
+                if (!resultItem.isEmpty()) {
+                    int drainedAmount = stored.getAmount() - remainingFluid.getAmount();
+                    if (drainedAmount > 0) {
+                        final FluidStack[] drained = { null };
+                        extractFluid(level, pos, drainedAmount, f -> drained[0] = f, null);
+                        if (drained[0] != null && drained[0].getAmount() == drainedAmount) {
+                            if (!player.getAbilities().instabuild) {
+                                held.shrink(1);
+                                player.addItem(resultItem);
+                            }
+                            TankBlockBehavior.playFillOrEmptySound(level, pos, drained[0].getType(), false);
+                            return net.momirealms.craftengine.core.entity.player.InteractionResult.SUCCESS_AND_CANCEL;
+                        }
+                    }
+                }
+            }
+        }
+
         return net.momirealms.craftengine.core.entity.player.InteractionResult.PASS;
     }
 

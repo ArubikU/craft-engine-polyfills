@@ -134,6 +134,14 @@ public class TankBlockBehavior extends ConnectableBlockBehavior implements Entit
                         player.addItem(remainingItem);
                     }
                 }
+                // Bucket-empty-into-tank sound (2026-07-02 session — "al rellenar un tanque no
+                // suena el sonido de rellenar"): this whole fill flow is a hand-rolled
+                // reimplementation of vanilla bucket behavior, not a call into vanilla's own
+                // BucketItem/LiquidBlockUtils (which is what normally plays this sound), so it
+                // never played anything on its own. ContraptionLevel already correctly redirects
+                // playSound (via its playSeededSound override) to the real world at the bearing's
+                // live transform, so this "just works" for a tank living inside a contraption too.
+                playFillOrEmptySound(level, pos, inputFluid.getType(), true);
                 return net.momirealms.craftengine.core.entity.player.InteractionResult.SUCCESS_AND_CANCEL;
             }
         }
@@ -154,6 +162,7 @@ public class TankBlockBehavior extends ConnectableBlockBehavior implements Entit
                             held.shrink(1);
                             player.addItem(resultItem);
                         }
+                        playFillOrEmptySound(level, pos, drained[0].getType(), false);
                         return net.momirealms.craftengine.core.entity.player.InteractionResult.SUCCESS_AND_CANCEL;
                     }
                 }
@@ -203,6 +212,29 @@ public class TankBlockBehavior extends ConnectableBlockBehavior implements Entit
         if (fluid == null || fluid.isEmpty())
             return false;
         return acceptedFluids.contains(fluid.getType());
+    }
+
+    /**
+     * Vanilla bucket-fill/empty sound, picked by fluid type — {@code filling} true = pouring
+     * INTO the tank (bucket-empty sound, matches vanilla's own "emptying a bucket" naming),
+     * false = draining OUT (bucket-fill sound, "filling a bucket FROM the tank"). See the
+     * {@code useWithoutItem} call sites for why this needs to be triggered manually.
+     */
+    static void playFillOrEmptySound(Level level, net.minecraft.core.BlockPos pos, FluidType type,
+            boolean filling) {
+        net.minecraft.sounds.SoundEvent sound = switch (type) {
+            case LAVA -> filling ? net.minecraft.sounds.SoundEvents.BUCKET_EMPTY_LAVA
+                    : net.minecraft.sounds.SoundEvents.BUCKET_FILL_LAVA;
+            case WATER -> filling ? net.minecraft.sounds.SoundEvents.BUCKET_EMPTY
+                    : net.minecraft.sounds.SoundEvents.BUCKET_FILL;
+            case POWDER_SNOW -> filling ? net.minecraft.sounds.SoundEvents.BUCKET_EMPTY_POWDER_SNOW
+                    : net.minecraft.sounds.SoundEvents.BUCKET_FILL_POWDER_SNOW;
+            case MILK -> filling ? net.minecraft.sounds.SoundEvents.BUCKET_EMPTY
+                    : net.minecraft.sounds.SoundEvents.BUCKET_FILL;
+            default -> filling ? net.minecraft.sounds.SoundEvents.BUCKET_EMPTY
+                    : net.minecraft.sounds.SoundEvents.BUCKET_FILL;
+        };
+        level.playSound(null, pos, sound, net.minecraft.sounds.SoundSource.BLOCKS, 1.0F, 1.0F);
     }
 
     public FluidStack getStored(Level level, net.minecraft.core.BlockPos pos) {

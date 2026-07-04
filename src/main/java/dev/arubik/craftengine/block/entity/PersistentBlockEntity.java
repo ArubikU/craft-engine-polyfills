@@ -1,7 +1,5 @@
 package dev.arubik.craftengine.block.entity;
 
-import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.Optional;
 import java.util.Set;
@@ -130,12 +128,38 @@ public class PersistentBlockEntity extends BlockEntityController {
         return container.isEmpty();
     }
 
+    /**
+     * Exports this block entity's whole persisted state as a self-describing NBT blob via
+     * {@code NBT.toBytes} (a leading type-id byte + full tag tree) — NOT {@link CompoundTag#write},
+     * which only writes the compound's raw body and is not byte-compatible with a generic reader.
+     * {@link #loadFromBytes} is the exact inverse.
+     *
+     * <p>Routes through {@link #saveCustomData} (not a raw dump of {@link #container}) — a subclass
+     * like {@link PersistentWorldlyBlockEntity} only flushes its LIVE in-memory state (e.g. the
+     * {@code inventory[]} array) into {@code container} INSIDE its own {@code saveCustomData}
+     * override, which normally only runs at a real chunk-save. Serializing {@code container}
+     * directly (the previous implementation) meant a contraption capture — happening mid-game,
+     * never a real chunk-save — read whatever {@code container} last held (stale/empty), silently
+     * losing any live-only state a subclass hadn't flushed yet. This mirrors exactly what a real
+     * save does: build a fresh tag, let every override in the chain (including this base class's
+     * own, which copies {@code container}'s remaining keys) populate it, then serialize that.
+     */
     public byte[] serializeToBytes() throws IOException {
-        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-        DataOutputStream dataOutputStream = new DataOutputStream(byteArrayOutputStream);
-        container.write(dataOutputStream);
-        dataOutputStream.flush();
-        return byteArrayOutputStream.toByteArray();
+        net.momirealms.craftengine.libraries.nbt.CompoundTag tag = new net.momirealms.craftengine.libraries.nbt.CompoundTag();
+        saveCustomData(tag);
+        return net.momirealms.craftengine.libraries.nbt.NBT.toBytes(tag);
+    }
+
+    /**
+     * Replaces this block entity's whole persisted container from a blob produced by
+     * {@link #serializeToBytes()}. Routes through {@link #loadCustomData} (not just a raw field
+     * swap) so subclass overrides that parse the container into live in-memory state — e.g.
+     * {@link PersistentWorldlyBlockEntity#loadCustomData} populating its {@code inventory}
+     * array from {@code TypedKeys.NMS_ITEMS} — actually run; otherwise a caller reading back
+     * live state (rather than re-querying the container key-by-key) would see nothing change.
+     */
+    public void loadFromBytes(byte[] bytes) throws IOException {
+        loadCustomData(net.momirealms.craftengine.libraries.nbt.NBT.fromBytes(bytes));
     }
 
     @Override

@@ -57,6 +57,22 @@ public final class BetterModelMachineRenderer {
     /** Name of the animation currently looping, or {@code null} when at rest. */
     private String currentAnim;
 
+    /** BetterModel model id this renderer drives (e.g. {@code "crusher"}). Never null. */
+    public String modelId() {
+        return modelId;
+    }
+
+    /** True once {@link #show()} has spawned a live (not-closed) tracker for this renderer. */
+    public boolean isShown() {
+        DummyTracker t = this.tracker;
+        return t != null && !t.isClosed();
+    }
+
+    /** Name of the animation currently looping, or {@code null} when at rest/not shown. */
+    public String currentAnimation() {
+        return currentAnim;
+    }
+
     // Last known placement; show() re-spawns the model here.
     private World world;
     private double x, y, z;

@@ -9,6 +9,7 @@ import org.bukkit.craftbukkit.inventory.CraftItemStack;
 import org.joml.Vector3f;
 
 import dev.arubik.craftengine.block.entity.PersistentWorldlyBlockEntity;
+import dev.arubik.craftengine.contraption.level.ContraptionLevel;
 import dev.arubik.craftengine.rotation.RpmConsumer;
 import net.momirealms.craftengine.core.block.BlockDefinition;
 import net.momirealms.craftengine.core.block.ImmutableBlockState;
@@ -143,6 +144,30 @@ public class ConveyorBlockEntity extends PersistentWorldlyBlockEntity implements
     /** Minimum progress gap between two consecutive items so they don't overlap. */
     private float spacing() {
         return 1f / slots;
+    }
+
+    /**
+     * Real players who should see something rendered at {@code pos} in {@code world}. A belt
+     * segment living inside a {@link ContraptionLevel} (a real, separate, hidden dimension with
+     * zero real players ever inside it) can never resolve real viewers off its own chunk
+     * tracking, so redirect through the bearing's live transform instead — see
+     * {@link ContraptionLevel#realViewers(net.minecraft.core.BlockPos)}. Every {@code getTrackedBy}
+     * call site in this class should go through this helper rather than calling it directly.
+     * Package-visible so the other conveyor block entities (funnel, router, depot) that resolve
+     * viewers the same way can reuse it instead of duplicating the redirect.
+     */
+    static List<Player> viewersOf(CEWorld world, BlockPos pos) {
+        Object nms = world.world().minecraftWorld();
+        if (nms instanceof ContraptionLevel contraption) {
+            return contraption.realViewers(new net.minecraft.core.BlockPos(pos.x(), pos.y(), pos.z()));
+        }
+        return world.world().getTrackedBy(new ChunkPos(pos));
+    }
+
+    /** {@link ContraptionLevel} hosting {@code world}, or {@code null} if this segment isn't riding a contraption. */
+    static ContraptionLevel contraptionOf(CEWorld world) {
+        Object nms = world.world().minecraftWorld();
+        return nms instanceof ContraptionLevel contraption ? contraption : null;
     }
 
     // ---------------- slot helpers ----------------
@@ -400,7 +425,7 @@ public class ConveyorBlockEntity extends PersistentWorldlyBlockEntity implements
      *  on a stopped belt, where renderAll isn't running). */
     private void pushDisplay(int i) {
         try {
-            java.util.List<Player> viewers = blockEntity().world().world().getTrackedBy(new ChunkPos(pos()));
+            java.util.List<Player> viewers = viewersOf(blockEntity().world(), pos());
             if (slotEmpty(i)) {
                 despawnSlotFor(viewers, i);
             } else if (displays[i] != null) {
@@ -582,8 +607,19 @@ public class ConveyorBlockEntity extends PersistentWorldlyBlockEntity implements
                     cx + PICKUP_RADIUS, cy + PICKUP_RADIUS, cz + PICKUP_RADIUS);
             org.bukkit.entity.Item nearest = null;
             double best = Double.MAX_VALUE;
-            for (net.minecraft.world.entity.item.ItemEntity nms : serverLevel.getEntitiesOfClass(
-                    net.minecraft.world.entity.item.ItemEntity.class, aabb, e -> !e.isRemoved())) {
+            // Belt pickup ABSORBS (removes) the item into this belt's slot — a destructive housekeeping op
+            // that must NOT reach into the real world. When this conveyor is captured inside a contraption,
+            // ContraptionLevel#getEntitiesOfClass returns the dual-world union (fake + transformed real),
+            // which would let a flying belt vacuum up & delete real-world dropped items from a distance.
+            // Force the FAKE-only query here (getLocalEntities) so a captured belt only ever ingests items
+            // that are genuinely inside the contraption (e.g. dropped by a co-captured funnel).
+            java.util.List<net.minecraft.world.entity.item.ItemEntity> items =
+                    (serverLevel instanceof dev.arubik.craftengine.contraption.level.ContraptionLevel cl)
+                            ? cl.getLocalEntities(net.minecraft.world.entity.item.ItemEntity.class, aabb,
+                                    e -> !e.isRemoved())
+                            : serverLevel.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, aabb,
+                                    e -> !e.isRemoved());
+            for (net.minecraft.world.entity.item.ItemEntity nms : items) {
                 org.bukkit.entity.Item item = (org.bukkit.entity.Item) nms.getBukkitEntity();
                 if (item.isDead() || !item.isValid())
                     continue;
@@ -834,7 +870,8 @@ public class ConveyorBlockEntity extends PersistentWorldlyBlockEntity implements
 
     /** Render every occupied slot's item at its own position; hide emptied ones. */
     private void renderAll(CEWorld world, BlockPos pos, Direction facing) {
-        List<Player> viewers = world.world().getTrackedBy(new ChunkPos(pos));
+        List<Player> viewers = viewersOf(world, pos);
+        ContraptionLevel contraption = contraptionOf(world);
         int slopeY = slope().stepY();
         Vector3f startP = startRel(facing);
         Vector3f exit = endRel(facing);
@@ -873,9 +910,20 @@ public class ConveyorBlockEntity extends PersistentWorldlyBlockEntity implements
                 rot = ConveyorMath.itemRotation(facing.stepX(), facing.stepZ(), slopeY);
             }
             rot.rotateY(jitter[i]);
-            d.setRotation(rot);
 
             double wx = pos.x() + rel.x, wy = pos.y() + rel.y, wz = pos.z() + rel.z;
+            if (contraption != null) {
+                // Riding a contraption: `pos`/`rel` are local (fake) coordinates inside the
+                // ContraptionLevel — translate/rotate through the bearing's live transform so
+                // the item visibly moves/rotates with it instead of staying put.
+                net.minecraft.world.phys.Vec3 real = contraption
+                        .realWorldPositionOf(new net.minecraft.world.phys.Vec3(wx, wy, wz));
+                wx = real.x;
+                wy = real.y;
+                wz = real.z;
+                rot = contraption.realOrientationOf(rot);
+            }
+            d.setRotation(rot);
             // Per-viewer render: spawns for any tracked player who hasn't seen this item
             // yet (every player sees it, not just whoever was online first) and re-pushes
             // metadata when the rotation changed (slope→flat, corner turn).
@@ -896,12 +944,12 @@ public class ConveyorBlockEntity extends PersistentWorldlyBlockEntity implements
     }
 
     private void despawnSlot(CEWorld world, BlockPos pos, int i) {
-        despawnSlotFor(world.world().getTrackedBy(new ChunkPos(pos)), i);
+        despawnSlotFor(viewersOf(world, pos), i);
     }
 
     /** Despawn all item displays for this segment. */
     private void despawnAll(CEWorld world, BlockPos pos) {
-        List<Player> viewers = world.world().getTrackedBy(new ChunkPos(pos));
+        List<Player> viewers = viewersOf(world, pos);
         for (int i = 0; i < slots; i++)
             despawnSlotFor(viewers, i);
     }
@@ -1193,6 +1241,21 @@ public class ConveyorBlockEntity extends PersistentWorldlyBlockEntity implements
         if (teardownInProgress)
             return;
 
+        // affectNeighborsAfterRemoval (which drives this, see ConveyorBehavior) is an
+        // engine-generic BlockBehavior hook: it fires on ANY block-state removal, including
+        // ContraptionCapture.removeFromWorld's setBlock(pos, AIR, 3) call during
+        // "convert structure into a hologram" — NOT just real player/piston breaks. That
+        // capture path already (a) read this segment's full state into the ContraptionLevel
+        // and (b) proactively clears our live content via PersistentWorldlyBlockEntity#
+        // clearContent() (a non-dropping clear) immediately before the setBlock that triggers
+        // this callback — see ContraptionCapture.removeFromWorld's javadoc. If our container is
+        // already empty at this point, there is nothing left to drop, and continuing on would
+        // pointlessly reassign the neighbouring START/END belt segments (or, worse, wipe a
+        // sibling's prevPos/part linkage) even though this "break" wasn't a real teardown.
+        // Skip the whole drop/teardown dance in that case.
+        if (isEmpty())
+            return;
+
         ConveyorBlockEntity up = upstreamConveyor(world, pos, facing);
         ConveyorBlockEntity down = downstreamConveyor(world, pos, facing);
 
@@ -1427,5 +1490,27 @@ public class ConveyorBlockEntity extends PersistentWorldlyBlockEntity implements
     @Override
     public void onRemove() {
         super.onRemove();
+        // CraftEngine's WorldStorageInjector fires this synchronously from setBlock(AIR) — the
+        // SAME hook StorageBlockEntity relies on for dropAllContents() (see ContraptionCapture
+        // #removeFromWorld's javadoc). Without this, capturing a belt into a contraption hologram
+        // (or any other real removal of this block) left its ConveyorItemDisplay packet entities
+        // orphaned at the old real-world position forever, since nothing else ever despawns them.
+        try {
+            despawnAll(blockEntity().world(), pos());
+        } catch (Throwable ignored) {
+        }
+    }
+
+    /**
+     * Public entry point for {@link #despawnAll} — needed because {@code ContraptionLevel#dispose()}
+     * (2026-07-01/02 session — "al destruir un holo o contraption con conveyors... tampoco
+     * despawnea el render") just discards the WHOLE mini-dimension wholesale, so {@link #onRemove}
+     * (which only fires from a real {@code setBlock} state change) never runs for a conveyor
+     * living inside a contraption being torn down — the SAME class of leak already fixed for
+     * {@code FluidTankRender} (see {@code ContraptionAssembler#disassemble}/{@code HologramTest#stop}'s
+     * explicit per-position cleanup loop, which this is meant to be called from the same way).
+     */
+    public void despawnRender() {
+        despawnAll(blockEntity().world(), pos());
     }
 }

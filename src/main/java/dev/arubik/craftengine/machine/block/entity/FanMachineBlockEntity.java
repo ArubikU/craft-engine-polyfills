@@ -423,8 +423,9 @@ public class FanMachineBlockEntity extends AbstractMachineBlockEntity {
         double cx = cell.getX() + 0.5D, cy = cell.getY() + 0.5D, cz = cell.getZ() + 0.5D;
         net.minecraft.world.phys.AABB aabb = new net.minecraft.world.phys.AABB(
                 cx - 0.5D, cy - 0.5D, cz - 0.5D, cx + 0.5D, cy + 0.5D, cz + 0.5D);
-        for (net.minecraft.world.entity.item.ItemEntity item : level.getEntitiesOfClass(
-                net.minecraft.world.entity.item.ItemEntity.class, aabb, e -> !e.isRemoved())) {
+        for (net.minecraft.world.entity.item.ItemEntity item :
+                dev.arubik.craftengine.contraption.level.ContraptionLevel.unionEntities(
+                level, net.minecraft.world.entity.item.ItemEntity.class, aabb, e -> !e.isRemoved())) {
             int id = item.getId();
             net.minecraft.world.item.ItemStack stack = item.getItem();
             if (stack == null || stack.isEmpty())
@@ -446,7 +447,10 @@ public class FanMachineBlockEntity extends AbstractMachineBlockEntity {
                 item.setItem(shrunk);
                 if (shrunk.isEmpty())
                     item.discard();
-                spawnOutputs(level, cx, cy, cz, rr, sets); // output count scales with the whole stack
+                // Pass the INPUT item through so the level bridge can land the output in whatever world
+                // the input truly lives in — real world for a union-captured real item, this fake level
+                // for a co-captured one (residual 2). Outside a contraption this is just the fake level.
+                spawnOutputs(level, item, cx, cy, cz, rr, sets); // output count scales with the whole stack
                 convertEffect(level, cx, cy, cz, family);
                 seen.put(id, 0);
             } else {
@@ -488,8 +492,9 @@ public class FanMachineBlockEntity extends AbstractMachineBlockEntity {
             seen.put((long) displayId, 0);
             convertEffect(level, dx, dy, dz, family);
             if (remainder > 0) {
-                // Partial: the leftover input keeps riding the belt; all outputs drop.
-                spawnOutputs(level, dx, dy, dz, rr, sets);
+                // Partial: the leftover input keeps riding the belt; all outputs drop. Belt source has
+                // no dropped-item input, so null -> outputs stay in this (fake) level's local space.
+                spawnOutputs(level, null, dx, dy, dz, rr, sets);
                 org.bukkit.inventory.ItemStack rem = carried.clone();
                 rem.setAmount(remainder);
                 return rem;
@@ -579,7 +584,7 @@ public class FanMachineBlockEntity extends AbstractMachineBlockEntity {
     /** Spawn ALL outputs (respecting chance) as dropped items at the cell centre. */
     private void spawnOutputs(net.minecraft.server.level.ServerLevel level, double x, double y, double z,
             ResolvedRecipe rr) {
-        spawnOutputs(level, x, y, z, rr, 1);
+        spawnOutputs(level, null, x, y, z, rr, 1);
     }
 
     /**
@@ -616,7 +621,9 @@ public class FanMachineBlockEntity extends AbstractMachineBlockEntity {
                 int c = Math.min(max, total);
                 net.minecraft.world.item.ItemStack out = base.copy();
                 out.setCount(c);
-                dropItem(level, x, y, z, out);
+                // Belt source: no dropped-item input (belt items are fake displays), so null -> the
+                // output stays in this fake level's local space, exactly as before.
+                dropItem(level, null, x, y, z, out);
                 total -= c;
             }
         }
@@ -659,8 +666,13 @@ public class FanMachineBlockEntity extends AbstractMachineBlockEntity {
         }
     }
 
-    /** Spawn outputs for {@code sets} recipe completions at once (whole-stack conversion). */
-    private void spawnOutputs(net.minecraft.server.level.ServerLevel level, double x, double y, double z,
+    /**
+     * Spawn outputs for {@code sets} recipe completions at once (whole-stack conversion). {@code inputEntity}
+     * is the dropped item they were produced from (or {@code null} for belt/positional sources) — threaded
+     * to {@link #dropItem} so the level bridge lands each output in the input's own world (residual 2).
+     */
+    private void spawnOutputs(net.minecraft.server.level.ServerLevel level,
+            net.minecraft.world.entity.Entity inputEntity, double x, double y, double z,
             ResolvedRecipe rr, int sets) {
         if (sets <= 0)
             return;
@@ -684,7 +696,7 @@ public class FanMachineBlockEntity extends AbstractMachineBlockEntity {
                 int c = Math.min(max, total);
                 net.minecraft.world.item.ItemStack out = base.copy();
                 out.setCount(c);
-                dropItem(level, x, y, z, out);
+                dropItem(level, inputEntity, x, y, z, out);
                 total -= c;
             }
         }
@@ -697,17 +709,22 @@ public class FanMachineBlockEntity extends AbstractMachineBlockEntity {
             if (rr.chances.get(i) < 1.0f
                     && java.util.concurrent.ThreadLocalRandom.current().nextFloat() >= rr.chances.get(i))
                 continue;
-            dropItem(level, x, y, z, rr.outputs.get(i).copy());
+            dropItem(level, null, x, y, z, rr.outputs.get(i).copy());
         }
     }
 
-    private static void dropItem(net.minecraft.server.level.ServerLevel level, double x, double y, double z,
+    /**
+     * Spawn a produced output item. {@code inputEntity} is the dropped item this output was made from
+     * (or {@code null} for belt/positional outputs with no dropped-item source): the level bridge uses it
+     * to place the output in whatever world the input truly lives in — the real world for a union-captured
+     * real item, this fake contraption level for a co-captured one (residual 2). {@code x,y,z} are the
+     * fake-level fallback coordinates used whenever the input is fake or the fan isn't in a contraption.
+     */
+    private static void dropItem(net.minecraft.server.level.ServerLevel level,
+            net.minecraft.world.entity.Entity inputEntity, double x, double y, double z,
             net.minecraft.world.item.ItemStack out) {
-        net.minecraft.world.entity.item.ItemEntity spawned =
-                new net.minecraft.world.entity.item.ItemEntity(level, x, y, z, out);
-        spawned.setDeltaMovement(0, 0, 0);
-        spawned.setDefaultPickUpDelay();
-        level.addFreshEntity(spawned);
+        dev.arubik.craftengine.contraption.level.ContraptionLevel.spawnProcessingOutput(
+                level, inputEntity, x, y, z, out);
     }
 
     // ---------------- push / particles (NMS) ----------------
@@ -748,10 +765,15 @@ public class FanMachineBlockEntity extends AbstractMachineBlockEntity {
                 facing.getStepX(), facing.getStepY(), facing.getStepZ(), flow);
         net.minecraft.world.phys.AABB aabb = new net.minecraft.world.phys.AABB(
                 cx - 0.5D, cy - 0.5D, cz - 0.5D, cx + 0.5D, cy + 0.5D, cz + 0.5D);
-        for (net.minecraft.world.entity.Entity nms : level.getEntitiesOfClass(
-                net.minecraft.world.entity.Entity.class, aabb, e -> !e.isRemoved())) {
-            org.bukkit.entity.Entity entity = nms.getBukkitEntity();
-            entity.setVelocity(entity.getVelocity().add(push));
+        for (net.minecraft.world.entity.Entity nms :
+                dev.arubik.craftengine.contraption.level.ContraptionLevel.unionEntities(
+                level, net.minecraft.world.entity.Entity.class, aabb, e -> !e.isRemoved())) {
+            // The scan is the dual-world union (fake + transformed real) when this fan is inside a
+            // contraption, so `push` is a LOCAL-space vector that must be yaw-rotated for real-world
+            // targets but left raw for co-captured fake ones. The level bridge owns that distinction
+            // (and no-ops the rotation when we're not inside a contraption) — the fan stays a pure
+            // local-space actor. See ContraptionLevel#pushEntity.
+            dev.arubik.craftengine.contraption.level.ContraptionLevel.pushEntity(level, nms, push);
         }
     }
 
@@ -775,8 +797,9 @@ public class FanMachineBlockEntity extends AbstractMachineBlockEntity {
         double cx = cell.getX() + 0.5D, cy = cell.getY() + 0.5D, cz = cell.getZ() + 0.5D;
         net.minecraft.world.phys.AABB aabb = new net.minecraft.world.phys.AABB(
                 cx - 0.5D, cy - 0.5D, cz - 0.5D, cx + 0.5D, cy + 0.5D, cz + 0.5D);
-        for (net.minecraft.world.entity.Entity nms : level.getEntitiesOfClass(
-                net.minecraft.world.entity.LivingEntity.class, aabb, e -> !e.isRemoved())) {
+        for (net.minecraft.world.entity.Entity nms :
+                dev.arubik.craftengine.contraption.level.ContraptionLevel.unionEntities(
+                level, net.minecraft.world.entity.LivingEntity.class, aabb, e -> !e.isRemoved())) {
             org.bukkit.entity.Entity be = nms.getBukkitEntity();
             if (!(be instanceof org.bukkit.entity.LivingEntity living))
                 continue;

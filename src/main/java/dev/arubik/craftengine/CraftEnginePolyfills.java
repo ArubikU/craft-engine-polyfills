@@ -29,6 +29,31 @@ public final class CraftEnginePolyfills extends JavaPlugin {
     public void onEnable() {
         PacketEvents.getAPI().init();
         ItemListener.register(this);
+        // Restore the loose world glue graph persisted at last shutdown (2026-07-03 — "has que
+        // las glue persista al apagar o reiniciar el sv"). Assembled contraptions carry their own
+        // glue in their structure NBT; this is the unassembled real-world glue.
+        try {
+            dev.arubik.craftengine.contraption.GlueRegistry.loadAll(getDataFolder().toPath().resolve("glue.dat"));
+        } catch (Throwable t) {
+            getLogger().warning("[Contraption] failed to load persisted glue graph: " + t);
+        }
+        // Boot-scan persisted block-anchored (LINEAR/ROTATIONAL) contraptions into an in-memory
+        // index (2026-07-03 — restart persistence, the block-anchored analog of the minecart's
+        // entity-PDC). NOT rehydrated immediately: the target world/chunk may not be loaded yet —
+        // ContraptionChunkLifecycleListener#onChunkLoad rehydrates each as its bearing's chunk
+        // loads, exactly how the minecart rehydrates via natural entity chunk-load.
+        try {
+            dev.arubik.craftengine.contraption.persistence.BlockAnchoredContraptionStore.loadIndex();
+        } catch (Throwable t) {
+            getLogger().warning("[Contraption] failed to index persisted block-anchored contraptions: " + t);
+        }
+        // Euler/robin_euler extended-solid piston bearings (dropped their load, awaiting a redstone
+        // pulse / dwell timer to re-grab it) — restore so the trigger survives restart.
+        try {
+            dev.arubik.craftengine.contraption.EulerExtendedRegistry.loadAll(getDataFolder().toPath().resolve("euler.dat"));
+        } catch (Throwable t) {
+            getLogger().warning("[Contraption] failed to load euler-extended bearings: " + t);
+        }
         // Boot-time solver self-test (logs pass/fail for the 50+ edge-case suite).
         try {
             dev.arubik.craftengine.fluid.graph.FluidSolverTests.Out o = dev.arubik.craftengine.fluid.graph.FluidSolverTests
@@ -55,7 +80,50 @@ public final class CraftEnginePolyfills extends JavaPlugin {
                 }
             }
         }, 1L, 3L); // every 3 ticks — fluid/gas equalize fine at ~7Hz, and the per-tick BFS rebuild is costly
+        // Contraption master clock (CONTRAPTIONS.md §5 Phase 3): every registered contraption's
+        // behaviors + stall gate + render, once per tick — mirrors the fluid driver above.
+        getServer().getScheduler().runTaskTimer(this, dev.arubik.craftengine.contraption.ContraptionEngine::tickAll, 1L,
+                1L);
+        // Contraption chunk lifecycle (CONTRAPTIONS.md Phase 6): anchor-keyed (not
+        // current-position-keyed) load/unload wiring — see ContraptionChunkLifecycleListener's
+        // javadoc for why this replaced the old ContraptionPersistence/ContraptionChunkListener.
+        getServer().getPluginManager().registerEvents(new dev.arubik.craftengine.contraption.ContraptionChunkLifecycleListener(),
+                this);
+        // Bearing hammer-trigger assemble/disassemble (CONTRAPTIONS.md §5 Phase 6).
+        getServer().getPluginManager().registerEvents(new dev.arubik.craftengine.contraption.BearingHammerListener(),
+                this);
+        // Minecart-bearing data-loss guard (belt-and-suspenders on top of setInvulnerable —
+        // see MinecartBearing.DamageGuard's own javadoc): cancels VehicleDamageEvent/
+        // VehicleDestroyEvent for any bearing minecart so the only way to remove one is the
+        // explicit hammer-driven MinecartBearing#disassemble flow.
+        getServer().getPluginManager().registerEvents(new dev.arubik.craftengine.contraption.MinecartBearing.DamageGuard(),
+                this);
+        // Glue wand item tool (CONTRAPTIONS.md §1): WorldEdit-style two-corner AREA glue with
+        // cml:slime_glue — right-click pos1, right-click pos2 elsewhere to instantly glue the
+        // whole axis-aligned box between them into one structure (sneak = cancel pending pos1);
+        // 192-use durability, breaks when spent; passive particle indicator shows already-glued
+        // faces near the crosshair whenever the wand is held. Replaces the old /cep contraption
+        // glue command.
+        dev.arubik.craftengine.contraption.GlueWandListener glueWand =
+                new dev.arubik.craftengine.contraption.GlueWandListener();
+        getServer().getPluginManager().registerEvents(glueWand, this);
+        glueWand.start(this);
+        // Task 2 (CONTRAPTIONS.md 2026-07-01 session): right-click raycast routing into a
+        // contraption's real ContraptionLevel blocks; left-click is an explicit no-op.
+        getServer().getPluginManager().registerEvents(new dev.arubik.craftengine.contraption.ContraptionInteractionListener(),
+                this);
+        // Furniture-seat completion: sit down (right-click a free seat slot, runs BEFORE the
+        // block-cell listener above) / stand up (sneak) after a contraption has been assembled.
+        getServer().getPluginManager().registerEvents(new dev.arubik.craftengine.contraption.ContraptionSeatListener(),
+                this);
+        // Dropped-item bridge (2026-07-01 session): a real player picking up one of
+        // ContraptionItemPickupSwarm's real-world mirror ItemEntitys also discards the matching
+        // internal item still sitting inside the owning ContraptionLevel — see that swarm's javadoc.
+        getServer().getPluginManager().registerEvents(new dev.arubik.craftengine.contraption.render.ContraptionItemPickupListener(),
+                this);
         dev.arubik.craftengine.block.behavior.CrafterSlotStateListener.register();
+        // TEMPORARY diagnostic (2026-07-01 debugging session) — see class javadoc.
+        dev.arubik.craftengine.contraption.ContraptionInteractPacketDebug.register();
         getServer().getPluginManager().registerEvents(new dev.arubik.craftengine.machine.menu.MachineMenuListener(),
                 this);
         getServer().getPluginManager().registerEvents(new dev.arubik.craftengine.crafting.CraftingTableListener(),
@@ -143,6 +211,70 @@ public final class CraftEnginePolyfills extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        // Safety net (2026-07-01 session — "al cerrar el sv con el contraption esas entidades
+        // se guarden tmb"): a ContraptionLevel's real entities (any mob that wandered in) are
+        // NOT persisted by anything — the mini-dimension itself isn't saved/reloaded across a
+        // restart (a separate, larger, explicitly-deferred persistence project). Without this,
+        // every entity still living inside an active contraption at shutdown would simply cease
+        // to exist. Only flushes entities into the real world at their current mirrored
+        // position — vanilla's own save-on-shutdown then covers them like any other real entity.
+        try {
+            for (dev.arubik.craftengine.contraption.ContraptionEntity entity : dev.arubik.craftengine.contraption.ContraptionManager
+                    .all()) {
+                dev.arubik.craftengine.contraption.level.ContraptionLevel level = entity.state().level();
+                if (level != null) {
+                    level.transferRemainingEntitiesToRealWorld();
+                }
+            }
+        } catch (Throwable t) {
+            getLogger().warning("Failed to flush contraption entities on shutdown: " + t);
+        }
+        // Re-dump every currently-live BLOCK-ANCHORED contraption's CURRENT structure to disk
+        // (2026-07-03 — restart persistence). A contraption is block-anchored iff its id is in the
+        // assembled-anchor map (the minecart type isn't — it persists via its entity PDC, saved by
+        // vanilla). This mirrors the minecart's structure being re-saved on unload; onDisable is
+        // the shutdown equivalent since chunks aren't individually unloaded on a clean stop.
+        try {
+            var anchors = dev.arubik.craftengine.contraption.BearingHammerListener.assembledAnchorsSnapshot();
+            for (dev.arubik.craftengine.contraption.ContraptionEntity entity : dev.arubik.craftengine.contraption.ContraptionManager
+                    .all()) {
+                var anchor = anchors.get(entity.state().id());
+                if (anchor == null) {
+                    continue; // not block-anchored (e.g. minecart) — handled elsewhere
+                }
+                org.bukkit.World world = getServer().getWorld(anchor.worldId());
+                if (world == null) {
+                    continue;
+                }
+                net.minecraft.world.level.Level realLevel = ((org.bukkit.craftbukkit.CraftWorld) world).getHandle();
+                dev.arubik.craftengine.contraption.BearingType type = dev.arubik.craftengine.contraption.behavior.BearingBlockBehavior
+                        .typeAt(realLevel, anchor.pos());
+                if (type == null) {
+                    type = dev.arubik.craftengine.contraption.BearingType.ROTATIONAL;
+                }
+                double rpm = dev.arubik.craftengine.contraption.behavior.BearingBlockBehavior.rpmAt(realLevel,
+                        anchor.pos());
+                double su = dev.arubik.craftengine.contraption.behavior.BearingBlockBehavior.suPerBlockAt(realLevel,
+                        anchor.pos());
+                dev.arubik.craftengine.contraption.persistence.BlockAnchoredContraptionStore.save(entity.state(),
+                        anchor.pos(), type, rpm, su);
+            }
+        } catch (Throwable t) {
+            getLogger().warning("[Contraption] failed to save block-anchored contraptions on shutdown: " + t);
+        }
+        // Persist the loose world glue graph so glued-but-unassembled structures keep their glue
+        // across a restart (2026-07-03). Assembled contraptions persist their own glue separately.
+        try {
+            dev.arubik.craftengine.contraption.GlueRegistry.saveAll(getDataFolder().toPath().resolve("glue.dat"));
+        } catch (Throwable t) {
+            getLogger().warning("[Contraption] failed to save glue graph on shutdown: " + t);
+        }
+        // Euler/robin_euler extended-solid bearings — persist so their redstone/timer trigger survives.
+        try {
+            dev.arubik.craftengine.contraption.EulerExtendedRegistry.saveAll(getDataFolder().toPath().resolve("euler.dat"));
+        } catch (Throwable t) {
+            getLogger().warning("[Contraption] failed to save euler-extended bearings: " + t);
+        }
         PacketEvents.getAPI().terminate();
         getLogger().info("CraftEngine Polyfills Disabled");
     }

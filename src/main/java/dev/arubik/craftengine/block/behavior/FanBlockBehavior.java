@@ -375,15 +375,43 @@ public class FanBlockBehavior extends BukkitBlockBehavior implements EntityBlock
     Vector pushVector = ((Vector) DIRECTION_VECTORS.getOrDefault(facing, new Vector(0, 0, 0))).clone()
         .multiply(pushStrength * 0.1D);
     double jitter = 0.2D;
-    bukkitWorld.spawnParticle(particle, cx + randomOffset(jitter), cy + randomOffset(jitter),
-        cz + randomOffset(jitter), 1, 0.0D, 0.0D, 0.0D, 0.0D);
     net.minecraft.server.level.ServerLevel serverLevel = ((org.bukkit.craftbukkit.CraftWorld) bukkitWorld).getHandle();
+    // NMS addParticle (not Bukkit World#spawnParticle) so a contraption's own ContraptionLevel
+    // override can redirect this to the real world at the bearing's live transform — Bukkit's
+    // World#spawnParticle bypasses NMS Level entirely and can't be intercepted that way.
+    net.minecraft.core.particles.ParticleOptions nmsParticle =
+        org.bukkit.craftbukkit.CraftParticle.createParticleParam(particle, null);
+    serverLevel.addParticle(nmsParticle, cx + randomOffset(jitter), cy + randomOffset(jitter),
+        cz + randomOffset(jitter), 0.0D, 0.0D, 0.0D);
     net.minecraft.world.phys.AABB aabb = new net.minecraft.world.phys.AABB(cx - 0.5D, cy - 0.5D, cz - 0.5D, cx + 0.5D,
         cy + 0.5D, cz + 0.5D);
     for (net.minecraft.world.entity.Entity nms : serverLevel
         .getEntitiesOfClass(net.minecraft.world.entity.Entity.class, aabb, e -> !e.isRemoved())) {
       org.bukkit.entity.Entity entity = nms.getBukkitEntity();
       entity.setVelocity(entity.getVelocity().add(pushVector));
+    }
+
+    // getEntitiesOfClass above only ever sees entities physically inside serverLevel — if the fan
+    // lives inside a contraption's own mini ContraptionLevel, that never includes real-world
+    // entities (e.g. a player standing near the flying contraption), so also push those, at the
+    // real-world-equivalent position/direction from the bearing's live transform.
+    if (serverLevel instanceof dev.arubik.craftengine.contraption.level.ContraptionLevel contraptionLevel) {
+      net.minecraft.core.BlockPos nmsTargetPos = new net.minecraft.core.BlockPos(targetPos.x(), targetPos.y(), targetPos.z());
+      net.minecraft.world.phys.Vec3 realCenter = contraptionLevel.realWorldPositionOf(nmsTargetPos);
+      net.minecraft.world.phys.Vec3 realPush = contraptionLevel
+          .rotateToRealWorld(new net.minecraft.world.phys.Vec3(pushVector.getX(), pushVector.getY(), pushVector.getZ()));
+      Vector realPushVector = new Vector(realPush.x, realPush.y, realPush.z);
+      net.minecraft.world.phys.AABB realAabb = new net.minecraft.world.phys.AABB(
+          realCenter.x - 0.5D, realCenter.y - 0.5D, realCenter.z - 0.5D,
+          realCenter.x + 0.5D, realCenter.y + 0.5D, realCenter.z + 0.5D);
+      net.minecraft.world.level.Level realNmsLevel = contraptionLevel.realLevel();
+      if (realNmsLevel instanceof net.minecraft.server.level.ServerLevel realServerLevel) {
+        for (net.minecraft.world.entity.Entity nms : realServerLevel
+            .getEntitiesOfClass(net.minecraft.world.entity.Entity.class, realAabb, e -> !e.isRemoved())) {
+          org.bukkit.entity.Entity entity = nms.getBukkitEntity();
+          entity.setVelocity(entity.getVelocity().add(realPushVector));
+        }
+      }
     }
   }
 
