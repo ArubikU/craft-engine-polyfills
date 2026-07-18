@@ -485,7 +485,10 @@ public final class AspContraptionLevel extends SlimeLevelInstance implements Con
 
     @Override
     public Vec3 rotateToRealWorld(Vec3 localDirection) {
-        return ContraptionMath.rotateYaw(localDirection, realYaw);
+        // Full orientation, not yaw-only (2026-07-18 — "el fan no sigue bien el pitch/yaw ... si el contraption
+        // está de cabeza el fan me jala en vez de empujarme"). Rotate a LOCAL direction (a fan's thrust axis /
+        // particle-stream velocity) into the world with the SAME yaw∘pitch∘roll the cells render with.
+        return ContraptionMath.rotateYawPitchRoll(localDirection, realYaw, realPitch, realRoll);
     }
 
     private AABB localBoxToRealWorld(AABB local) {

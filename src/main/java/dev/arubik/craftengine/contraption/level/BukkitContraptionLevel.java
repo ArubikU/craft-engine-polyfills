@@ -644,7 +644,11 @@ implements ContraptionBoundary, ContraptionLevel {
     }
 
     public Vec3 rotateToRealWorld(Vec3 localDirection) {
-        return ContraptionMath.rotateYaw((Vec3)localDirection, (double)this.realYaw);
+        // Full orientation, not yaw-only (2026-07-18 — "el fan no sigue bien el pitch/yaw ... si el contraption
+        // está de cabeza el fan me jala en vez de empujarme"). This rotates a LOCAL direction (a fan's thrust
+        // axis, its particle-stream velocity) into the world, so it must apply the SAME yaw∘pitch∘roll the cells
+        // render with — with only yaw an upside-down contraption's thrust/airflow pointed the wrong way.
+        return ContraptionMath.rotateYawPitchRoll(localDirection, this.realYaw, this.realPitch, this.realRoll);
     }
 
     private AABB localBoxToRealWorld(AABB local) {
