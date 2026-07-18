@@ -20,9 +20,7 @@ import net.minecraft.world.level.block.state.BlockState;
  * <h2>The scale (higher bounces)</h2>
  * <pre>
  *   0.0   dead stop — an ordinary block (the default)
- *   0.8   slime block — flings a falling body back up
- *   0.5   bed — a firm bounce
- *   0.0   honey — sticky, absorbs the hit
+ *   1.0   slime block — flings a falling body back up (the one vanilla bouncy block)
  * </pre>
  * See {@link dev.arubik.craftengine.contraption.physics.RestitutionTable} for the built-in vanilla families
  * and why restitution is combined between the two contacting surfaces (bounciest wins) rather than owned by

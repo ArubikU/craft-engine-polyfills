@@ -13,20 +13,17 @@ import net.minecraft.world.level.block.state.BlockState;
  * It is a coefficient of restitution — the fraction of closing speed returned as separation at a contact
  * (see {@code XpbdSolver#solveVelocities}). {@code 0} is a dead stop, {@code 1} a perfect elastic bounce.
  * <pre>
- *   0.0   ordinary block — absorbs the hit (the default for every block)
- *   0.8   slime block — flings a falling body back up
- *   0.5   bed — a firm bounce
- *   0.0   honey — sticky, keeps its old no-bounce grip
+ *   0.0   every ordinary block — absorbs the hit (the default)
+ *   1.0   slime block — the ONE vanilla bouncy block
  * </pre>
  * {@link FrictionTable} deliberately does NOT model slime's bounce ("a separate thing we do not model") —
  * this table is that separate thing.
  *
- * <h2>Restitution is a property of the CONTACT, not the body</h2>
- * Like friction, bounce lives between two touching surfaces. The solver combines the two sides — the
- * contraption's own {@code RestitutionModel} mean and the surface it strikes — by taking the BOUNCIER of the
- * two (the standard restitution-combine rule: a rubber ball bounces off concrete because the ball is bouncy,
- * not because both surfaces are), so a slime contraption bounces off any ground and any body bounces off a
- * slime contraption.
+ * <h2>Restitution is CELL-LOCAL, not a body average</h2>
+ * Unlike mass, friction, and floatability (one mass-weighted-mean number per body), a contraption only bounces
+ * where the CONTACTED cell is bouncy: a slime cell in a structure's floor bounces when that cell lands, while a
+ * stone cell beside it does not (the solver resolves restitution at each contact point — see
+ * {@code PhysicsWorld#buildRestitutionField}). Between two bodies the bouncier contacted cell wins.
  */
 public final class RestitutionTable {
 
@@ -62,21 +59,13 @@ public final class RestitutionTable {
         if (override != null) {
             return override;
         }
-        String n = m.name();
-        // The slime block — the canonical bounce surface. Guard against SLIME_BALL (an item, not placeable)
-        // but SLIME_BLOCK is the one that matters here.
-        if (n.equals("SLIME_BLOCK")) {
-            return 0.8;
+        // The slime block is the ONLY vanilla block that bounces, at full restitution (2026-07-17 — user:
+        // "el único bloque que tendrá vía vanilla será el slime ... todos tienen 0, el slime 1"). Everything
+        // else — stone, dirt, wood, metal, even beds/honey — is a dead stop; a bouncier block is opt-in via
+        // restitution.yml or a custom polyfills:restitution_block.
+        if (m.name().equals("SLIME_BLOCK")) {
+            return 1.0;
         }
-        // Beds bounce a fall in vanilla — a firm, lesser rebound than slime.
-        if (n.endsWith("_BED")) {
-            return 0.5;
-        }
-        // Honey is sticky: it keeps its no-bounce absorption (and its high friction, in FrictionTable).
-        if (n.contains("HONEY")) {
-            return 0.0;
-        }
-        // Everything else — stone, dirt, wood, metal — does not bounce.
         return TABLE.defaultValue();
     }
 }

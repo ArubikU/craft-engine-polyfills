@@ -643,13 +643,14 @@ public final class PhysicsWorld {
             CollisionShape newShape = CollisionShape.of(contraptionLevel, com);
             double floatability = FloatabilityModel.of(contraptionLevel).floatability();
             double friction = FrictionModel.of(contraptionLevel).friction();
-            double restitution = RestitutionModel.of(contraptionLevel).restitution();
+            java.util.function.ToDoubleFunction<Vector3d> restitutionField =
+                    buildRestitutionField(contraptionLevel, com, body.body);
             enqueue(() -> {
                 body.shape = newShape;
                 body.body.setMassProperties(mm.inverseMass(), mm.inverseInertiaTensor());
                 body.floatability = floatability;
                 body.body.setFriction(friction);
-                body.body.setRestitution(restitution);
+                body.body.setRestitutionField(restitutionField);
                 body.wakeUp();
             });
             entry.initialized = false;
@@ -941,7 +942,7 @@ public final class PhysicsWorld {
             body.body.setMassProperties(entry.massModel.inverseMass(), entry.massModel.inverseInertiaTensor());
             body.floatability = FloatabilityModel.of(contraptionLevel).floatability();
             body.body.setFriction(FrictionModel.of(contraptionLevel).friction());
-            body.body.setRestitution(RestitutionModel.of(contraptionLevel).restitution());
+            body.body.setRestitutionField(buildRestitutionField(contraptionLevel, com, body.body));
             // The cell set changed, so the COM moved: the body's stored COM position now refers to a
             // different material point. Re-derive it from the state's (unchanged) bearing origin.
             entry.initialized = false;
@@ -1055,6 +1056,65 @@ public final class PhysicsWorld {
     private static Vector3d localCom(Entry entry) {
         Vec3 com = entry.massModel.centerOfMass();
         return new Vector3d(com.x, com.y, com.z);
+    }
+
+    /**
+     * Builds the CELL-LOCAL bounciness lookup for a body (2026-07-17 — user: "bounciness ... cell prefered"):
+     * a world contact point resolves to the coefficient of restitution of the CELL it fell on, so a slime cell
+     * bounces where it lands while its neighbours do not. The bouncy cells are snapshotted HERE (main thread,
+     * reading the live level) into an immutable packed-key map, so the returned function — invoked on the
+     * physics thread every contact — only does arithmetic and a map lookup, never an off-thread block read.
+     * Returns a constant-zero function when the body has no bouncy cell, so an ordinary structure pays nothing.
+     */
+    private static java.util.function.ToDoubleFunction<Vector3d> buildRestitutionField(
+            dev.arubik.craftengine.contraption.level.ContraptionLevel level, Vector3d com, RigidBody body) {
+        java.util.Map<Long, Float> restMap = new java.util.HashMap<>();
+        for (net.minecraft.core.BlockPos local : level.localPositions()) {
+            net.minecraft.world.level.block.state.BlockState state = level.getBlockState(local);
+            if (state.isAir()) {
+                continue;
+            }
+            double r = dev.arubik.craftengine.contraption.behavior.RestitutionBlockBehavior.restitutionOf(state);
+            if (r > 0.0) {
+                restMap.put(local.asLong(), (float) r);
+            }
+        }
+        if (restMap.isEmpty()) {
+            return worldPoint -> 0.0;
+        }
+        Vector3d comSnapshot = new Vector3d(com);
+        return worldPoint -> restitutionAtWorld(worldPoint, body, comSnapshot, restMap);
+    }
+
+    /** Maps a WORLD contact point back to the body's level-local cell and returns that cell's restitution (0 if none). */
+    private static double restitutionAtWorld(Vector3d worldPoint, RigidBody body, Vector3d com,
+            java.util.Map<Long, Float> restMap) {
+        // world -> COM-relative local: R⁻¹·(world - position)/scale
+        Vector3d d = new Vector3d(worldPoint).sub(body.position);
+        new org.joml.Quaterniond(body.orientation).conjugate().transform(d);
+        double scale = body.scale();
+        if (scale > 1.0E-9) {
+            d.div(scale);
+        }
+        // COM-relative -> level-local
+        double lx = d.x + com.x, ly = d.y + com.y, lz = d.z + com.z;
+        // The contact point sits on a cell FACE, so probe the eight cells straddling it and take the bounciest
+        // found — a point on TOP of a slime cell would otherwise floor to the air cell above it.
+        double best = 0.0;
+        double eps = 0.02;
+        for (double ox = -eps; ox <= eps; ox += 2.0 * eps) {
+            for (double oy = -eps; oy <= eps; oy += 2.0 * eps) {
+                for (double oz = -eps; oz <= eps; oz += 2.0 * eps) {
+                    long key = net.minecraft.core.BlockPos.asLong(
+                            (int) Math.floor(lx + ox), (int) Math.floor(ly + oy), (int) Math.floor(lz + oz));
+                    Float r = restMap.get(key);
+                    if (r != null && r > best) {
+                        best = r;
+                    }
+                }
+            }
+        }
+        return best;
     }
 
     private static PhysicsBehavior physicsBehaviorOf(ContraptionState state) {

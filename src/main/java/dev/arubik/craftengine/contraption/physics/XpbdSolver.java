@@ -573,16 +573,17 @@ public final class XpbdSolver {
             // skip the whole contact when vn >= 0 (the old bug): a body sliding along a surface it already
             // rests on has vn ~ 0, and it still has to be braked by friction. Friction below runs regardless,
             // capped by the SUSTAINED normal impulse the position solve accumulated.
-            // Per-contact restitution — the material bounce, no longer the hardcoded global RESTITUTION.
-            // Combined by taking the BOUNCIER surface (standard restitution-combine: a slime raft bounces off
-            // stone, an iron raft bounces off a slime floor). A bare-terrain contact (b == null) has only this
-            // body's own coefficient. The bounce TARGET is sized from the PRE-solve closing speed
+            // Per-contact restitution — the material bounce, resolved CELL-LOCALLY: it is the bounciness of the
+            // CELL at this contact point (per body), not a body average, so a slime cell bounces where it lands
+            // while a stone cell beside it does not (2026-07-17 — "bounciness ... cell prefered"). Combined by
+            // taking the BOUNCIER surface (standard restitution-combine). A bare-terrain contact (b == null)
+            // has only this body's own cell. The bounce TARGET is sized from the PRE-solve closing speed
             // (approachSpeed) — not the current normal velocity, which the position solve has already resolved
             // to ~0 (see the substep loop). Below RESTITUTION_MIN_SPEED a contact is settling, not an impact,
             // so the target stays 0 and a body on slime comes to rest instead of jittering forever.
-            double e = a.restitution();
+            double e = a.restitutionAt(eval.point());
             if (b != null) {
-                e = Math.max(e, b.restitution());
+                e = Math.max(e, b.restitutionAt(eval.point()));
             }
             double vnPrev = approachSpeed[idx];
             double target = (e > 0.0 && vnPrev < -RESTITUTION_MIN_SPEED) ? -e * vnPrev : 0.0;

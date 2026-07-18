@@ -60,14 +60,21 @@ public final class RigidBody {
     private double friction = 0.7;
 
     /**
-     * This body's own surface bounciness — the mass-weighted mean of its cells (see {@code RestitutionModel}),
-     * the normal-direction twin of {@link #friction}. Coefficient of restitution: fraction of closing speed
-     * returned as separation on impact. {@code 0} = dead stop (ordinary block), {@code 0.8} = slime-block
-     * bounce. Default {@code 0} keeps every non-bouncy body exactly as the solver's old hardcoded
-     * {@code RESTITUTION = 0}. The solver combines it with the surface struck (bounciest wins), so it is only
-     * ONE side of a contact.
+     * This body's uniform bounciness fallback — used only when no per-cell {@link #restitutionField} is set
+     * (e.g. the unit-test bodies). Coefficient of restitution: fraction of closing speed returned as
+     * separation. Default {@code 0} = a dead stop, the solver's old hardcoded behaviour.
      */
     private double restitution = 0.0;
+
+    /**
+     * Bounciness resolved AT a world contact point — the CELL-LOCAL model (2026-07-17 — user: "bounciness ...
+     * cell prefered, solo si la interacción es en esa celda se ve afectado"). Unlike mass/friction/floatability
+     * (one mass-weighted-mean number for the whole body), a body only bounces where the CONTACTED cell is
+     * bouncy: a slime cell in the floor of a structure makes it bounce when THAT cell lands, while a stone cell
+     * next to it does not. Set from the captured cells at sync (see {@code PhysicsWorld}); {@code null} falls
+     * back to the uniform {@link #restitution}.
+     */
+    private java.util.function.ToDoubleFunction<Vector3d> restitutionField = null;
 
     /** Scratch, reused to keep the per-substep solve allocation-free. */
     private final Matrix3d rotationScratch = new Matrix3d();
@@ -106,6 +113,16 @@ public final class RigidBody {
 
     public double restitution() {
         return restitution;
+    }
+
+    /** Installs the cell-local bounciness lookup (world point → coefficient); {@code null} reverts to the uniform value. */
+    public void setRestitutionField(java.util.function.ToDoubleFunction<Vector3d> restitutionField) {
+        this.restitutionField = restitutionField;
+    }
+
+    /** The coefficient of restitution at a WORLD contact point — the contacted cell's bounciness, or the uniform fallback. */
+    public double restitutionAt(Vector3d worldPoint) {
+        return restitutionField != null ? restitutionField.applyAsDouble(worldPoint) : restitution;
     }
 
     /** {@code 1/(m·s³)} — the scaling law for mass under a uniform scale {@code s}. */
