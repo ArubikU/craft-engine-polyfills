@@ -55,6 +55,10 @@ public record MassModel(double totalMass, Vec3 centerOfMass, int cellCount,
      */
     public static final double BASELINE_BLOCK_MASS = 1.0;
 
+    /** TEMP (2026-07-18 — "qué bloque pesa tanto"): throttled per-cell weight dump. */
+    public static boolean MASS_DBG = true;
+    private static volatile long massDbgLast = 0L;
+
     /** An empty contraption's degenerate model — mass {@code 0}, COM at the local origin, no inertia. */
     public static final MassModel EMPTY = new MassModel(0.0, Vec3.ZERO, 0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
 
@@ -89,6 +93,17 @@ public record MassModel(double totalMass, Vec3 centerOfMass, int cellCount,
         }
         if (mass <= 0.0 || cells == 0) {
             return EMPTY;
+        }
+        if (MASS_DBG && System.currentTimeMillis() - massDbgLast > 4000L) {
+            massDbgLast = System.currentTimeMillis();
+            StringBuilder sb = new StringBuilder("[MassDBG] cells=" + cells + " total=" + mass + " :");
+            for (BlockPos local : level.localPositions()) {
+                BlockState st = level.getBlockState(local);
+                if (st.isAir()) continue;
+                sb.append(' ').append(st.getBlock().getName().getString().replace("block.minecraft.", ""))
+                        .append('=').append(WeightBlockBehavior.weightOf(st));
+            }
+            org.bukkit.Bukkit.getLogger().info(sb.toString());
         }
         double comX = cx / mass, comY = cy / mass, comZ = cz / mass;
 

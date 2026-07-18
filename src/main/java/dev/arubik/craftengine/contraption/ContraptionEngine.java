@@ -120,6 +120,13 @@ public final class ContraptionEngine {
                         state.yawRadians() - yawBefore);
             }
 
+            // Keep the real-world chunks around a RIDDEN contraption loaded (2026-07-18 — "al sentarme en un
+            // seat ... este no carga los chunks alrededor"). A seated rider is a passenger of a teleporting
+            // ArmorStand mount, and a passenger's chunk-map centre does not follow, so a moving contraption drags
+            // the rider into unloaded terrain (no ground to render or collide with). Force-load a radius around
+            // the contraption's current position while it carries a rider; cleared the moment it is empty.
+            followRealChunks(entity, bukkitWorld);
+
             if (bukkitWorld != null) {
                 // Everything below this point only has meaning where the contraption actually IS in the
                 // real world — its projection, the entities it carries/pushes, and the real containers it
@@ -241,6 +248,73 @@ public final class ContraptionEngine {
         }
         if (perf) {
             ContraptionPerf.tickEnd();
+        }
+    }
+
+    /** Chunk radius force-loaded around a ridden contraption so a seated passenger has terrain to see/stand on. */
+    private static final int FOLLOW_RADIUS = 4;
+    /** Force-loaded chunk keys per contraption, so each tick only the moved edge is added/removed. */
+    private static final java.util.Map<java.util.UUID, java.util.Set<Long>> FOLLOW_CHUNKS = new java.util.HashMap<>();
+
+    /**
+     * Maintains a moving ring of force-loaded real-world chunks around a contraption THAT CARRIES A RIDER, so a
+     * seated passenger (whose own chunk-map centre does not follow the teleporting mount) always has loaded
+     * terrain. Diffed against last tick's set — only the chunks entering/leaving the {@link #FOLLOW_RADIUS}
+     * square get a ticket added/removed. Cleared entirely the moment the contraption has no riders, or its world
+     * is gone, so an unridden contraption keeps nothing loaded.
+     */
+    private static void followRealChunks(ContraptionEntity entity, org.bukkit.World world) {
+        java.util.UUID id = entity.state().id();
+        boolean ridden = !entity.state().seatedRiders().isEmpty();
+        if (world == null || !ridden) {
+            clearFollowChunks(id, world);
+            return;
+        }
+        org.bukkit.plugin.Plugin plugin = org.bukkit.plugin.java.JavaPlugin.getPlugin(dev.arubik.craftengine.CraftEnginePolyfills.class);
+        int cx = net.minecraft.util.Mth.floor(entity.state().x()) >> 4;
+        int cz = net.minecraft.util.Mth.floor(entity.state().z()) >> 4;
+        java.util.Set<Long> desired = new java.util.HashSet<>();
+        for (int dx = -FOLLOW_RADIUS; dx <= FOLLOW_RADIUS; dx++) {
+            for (int dz = -FOLLOW_RADIUS; dz <= FOLLOW_RADIUS; dz++) {
+                desired.add(net.minecraft.world.level.ChunkPos.asLong(cx + dx, cz + dz));
+            }
+        }
+        java.util.Set<Long> current = FOLLOW_CHUNKS.computeIfAbsent(id, k -> new java.util.HashSet<>());
+        for (long key : desired) {
+            if (current.add(key)) {
+                try {
+                    world.addPluginChunkTicket(net.minecraft.world.level.ChunkPos.getX(key),
+                            net.minecraft.world.level.ChunkPos.getZ(key), plugin);
+                } catch (Throwable ignored) {
+                }
+            }
+        }
+        for (java.util.Iterator<Long> it = current.iterator(); it.hasNext();) {
+            long key = it.next();
+            if (!desired.contains(key)) {
+                try {
+                    world.removePluginChunkTicket(net.minecraft.world.level.ChunkPos.getX(key),
+                            net.minecraft.world.level.ChunkPos.getZ(key), plugin);
+                } catch (Throwable ignored) {
+                }
+                it.remove();
+            }
+        }
+    }
+
+    /** Releases every follow-ticket a contraption held (dismount, despawn, world gone). */
+    private static void clearFollowChunks(java.util.UUID id, org.bukkit.World world) {
+        java.util.Set<Long> held = FOLLOW_CHUNKS.remove(id);
+        if (held == null || held.isEmpty() || world == null) {
+            return;
+        }
+        org.bukkit.plugin.Plugin plugin = org.bukkit.plugin.java.JavaPlugin.getPlugin(dev.arubik.craftengine.CraftEnginePolyfills.class);
+        for (long key : held) {
+            try {
+                world.removePluginChunkTicket(net.minecraft.world.level.ChunkPos.getX(key),
+                        net.minecraft.world.level.ChunkPos.getZ(key), plugin);
+            } catch (Throwable ignored) {
+            }
         }
     }
 
