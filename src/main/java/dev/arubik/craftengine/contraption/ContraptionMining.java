@@ -148,7 +148,8 @@ public final class ContraptionMining implements Listener {
                 return; // a swing delivered twice in the same click must not break two cells
             }
             LAST_CREATIVE_BREAK_MS.put(playerId, now);
-            breakCell(player, hit.state(), hit.local(), state, false);
+            Vec3 faceWorld = hit.state().level().realWorldPositionOf(hit.localClip());
+            breakCell(player, hit.state(), hit.local(), state, false, faceWorld);
             SESSIONS.remove(playerId);
             return;
         }
@@ -210,20 +211,23 @@ public final class ContraptionMining implements Listener {
             double delta = hardness <= 0.0f ? 1.0 : digSpeed / hardness / (correctTool ? 30.0 : 100.0);
             s.progress += delta;
 
+            // Particles come out of the FACE the player is aiming at — the exact ray hit point, mapped to the
+            // real world (2026-07-17 — "las partículas salen en una esquina").
+            Vec3 faceWorld = level.realWorldPositionOf(hit.localClip());
             // Animate the arm while mining. The first-person swing is client-predicted, but broadcasting the
             // swing keeps the player visibly working to everyone tracking them; the internal swing-timer gates
             // the cadence so calling it every tick just sustains a continuous mining swing.
             player.swing(InteractionHand.MAIN_HAND, true);
             // Crumble animation: a few of the block's own break particles each tick, growing with progress,
             // plus the block's hit sound roughly every quarter-second so the dig is audible while it works.
-            emitCrumbs(player, level, s.local, state, s.progress);
+            emitCrumbs((ServerLevel) player.level(), faceWorld, state, s.progress);
             if (s.tickCounter++ % 5 == 0) {
                 SoundType st = state.getSoundType();
                 playCellSound(level, s.local, st.getHitSound(), (st.getVolume() + 1.0f) / 8.0f, st.getPitch() * 0.5f);
             }
 
             if (s.progress >= 1.0) {
-                breakCell(player, entity.state(), s.local, state, !correctTool);
+                breakCell(player, entity.state(), s.local, state, !correctTool, faceWorld);
                 it.remove();
             }
         }
@@ -235,15 +239,18 @@ public final class ContraptionMining implements Listener {
      * the tool, and plays the block's break sound + a burst of particles.
      */
     private static void breakCell(ServerPlayer player, ContraptionState state, BlockPos local, BlockState blockState,
-            boolean wrongTool) {
+            boolean wrongTool, Vec3 faceWorld) {
         ContraptionLevel level = state.level();
         if (level == null) {
             return;
         }
         ServerLevel cLevel = level.serverLevel();
         ServerLevel realLevel = (ServerLevel) player.level();
-        Vec3 realPos = level.realWorldPositionOf(local);
-        BlockPos realBlockPos = BlockPos.containing(realPos.x, realPos.y, realPos.z);
+        // Drops pop from the cell CENTRE (its real-world position), particles burst from the FACE the player
+        // was aiming at (the exact ray hit point) — not the cell's min corner, which is what realWorldPositionOf
+        // of the raw BlockPos gives (2026-07-17 — "las partículas salen en una esquina").
+        Vec3 centerWorld = level.realWorldPositionOf(new Vec3(local.getX() + 0.5, local.getY() + 0.5, local.getZ() + 0.5));
+        BlockPos realBlockPos = BlockPos.containing(centerWorld.x, centerWorld.y, centerWorld.z);
         boolean creative = player.getAbilities().instabuild;
 
         BlockEntity be = level.getBlockEntity(local);
@@ -286,18 +293,59 @@ public final class ContraptionMining implements Listener {
 
         SoundType st = blockState.getSoundType();
         playCellSound(level, local, st.getBreakSound(), (st.getVolume() + 1.0f) / 2.0f, st.getPitch() * 0.8f);
-        // A generous burst of the block's break particles in the real world where the cell stood.
+        // A generous burst of the block's break particles at the aimed face.
         realLevel.sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, blockState),
-                realPos.x, realPos.y, realPos.z, 24, 0.25, 0.25, 0.25, 0.05);
+                faceWorld.x, faceWorld.y, faceWorld.z, 24, 0.2, 0.2, 0.2, 0.05);
+
+        // Mine the LAST block of a contraption and the (now empty) structure is torn down (2026-07-17 — user:
+        // "al romper todos los bloques ... se borra no?"). refreshLocalPositions() rebuilds the cell set from
+        // the level's non-air blocks; if nothing solid is left, remove the contraption outright — its blocks
+        // are all gone as drops, so there is nothing to restore. A bearing's real anchor block is not a cell,
+        // so it stays behind, un-assembled.
+        level.refreshLocalPositions();
+        boolean empty = true;
+        for (BlockPos p : level.localPositions()) {
+            if (!level.getBlockState(p).isAir()) {
+                empty = false;
+                break;
+            }
+        }
+        if (empty) {
+            teardownEmpty(state);
+        }
     }
 
-    /** A handful of the block's break particles at the cell's real position, scaled up as the dig nears completion. */
-    private static void emitCrumbs(ServerPlayer player, ContraptionLevel level, BlockPos local, BlockState state,
-            double progress) {
-        Vec3 realPos = level.realWorldPositionOf(local);
+    /**
+     * Removes a contraption that has had its last cell mined away — the same teardown a TNT detonation uses,
+     * minus the blast: despawn its packet-only render/colliders, unregister it from the manager, physics, and
+     * persistence, clear its assembled marker, and dispose the hidden level. Never restores blocks (they left
+     * as drops). Best-effort — a teardown hiccup must not throw back into the mining tick.
+     */
+    private static void teardownEmpty(ContraptionState state) {
+        try {
+            ContraptionEntity entity = ContraptionManager.get(state.id());
+            org.bukkit.World bukkitWorld = Bukkit.getWorld(state.worldId());
+            if (entity != null) {
+                entity.despawn(bukkitWorld == null ? List.of() : CePlayers.resolve(bukkitWorld.getPlayers()));
+            }
+            ContraptionManager.remove(state.id());
+            dev.arubik.craftengine.contraption.physics.PhysicsWorld.remove(state.id());
+            dev.arubik.craftengine.contraption.persistence.BlockAnchoredContraptionStore.delete(state.id());
+            dev.arubik.craftengine.contraption.BearingHammerListener.forgetAssembled(state.id());
+            ContraptionLevel level = state.level();
+            if (level != null) {
+                level.dispose();
+            }
+        } catch (Throwable t) {
+            Bukkit.getLogger().warning("[Contraption] mining teardown of emptied contraption failed: " + t);
+        }
+    }
+
+    /** A handful of the block's break particles at the aimed face, scaled up as the dig nears completion. */
+    private static void emitCrumbs(ServerLevel realLevel, Vec3 faceWorld, BlockState state, double progress) {
         int count = 1 + (int) (progress * 5.0);
-        ((ServerLevel) player.level()).sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, state),
-                realPos.x, realPos.y, realPos.z, count, 0.2, 0.2, 0.2, 0.02);
+        realLevel.sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, state),
+                faceWorld.x, faceWorld.y, faceWorld.z, count, 0.12, 0.12, 0.12, 0.02);
     }
 
     /** Plays {@code sound} centred on a cell — the ContraptionLevel maps the local position to the real world. */
