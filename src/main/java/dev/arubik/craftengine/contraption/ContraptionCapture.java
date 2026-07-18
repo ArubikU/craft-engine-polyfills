@@ -131,17 +131,57 @@ public final class ContraptionCapture {
         // others don't within one capture. Running the whole pass twice guarantees every pipe's
         // LAST recomputation (pass 2) happens only after every block in the structure already
         // received its pass-1 update, so by pass 2 every neighbor's state has converged.
-        for (int pass = 0; pass < 2; pass++) {
-            for (BlockPos pos : worldPositions) {
-                BlockPos local = ContraptionMath.toLocal(pos, bearingWorldPos);
-                try {
-                    level.updateNeighborsAt(local, level.getBlockState(local).getBlock());
-                } catch (Throwable ignored) {
-                    // best-effort — a single misbehaving neighbor update shouldn't abort the capture
-                }
+        //
+        // ORDERED settle (2026-07-17 session — user, Spanish: "al armar un bearing la redstone a
+        // veces sigue rompiéndose... copiar los estados... instanciarlo como estaba"): this settle
+        // pass fires a REAL neighbor block-update on each captured cell, and — exactly like the
+        // disassemble RESTORE path already documents (see {@link #placeOrdered}'s root-cause
+        // javadoc, "al deconstruir la redstone se termina rompiendo... se rompe la mitad") — when
+        // that update lands on a SUPPORT-DEPENDENT block (redstone dust, repeater/comparator,
+        // torch, lever, rail, ...) vanilla re-runs its {@code canSurvive}/{@code neighborChanged}
+        // logic and can call {@code Block#updateOrDestroy}, POPPING the component right out of the
+        // hologram if, at that instant, its evaluation against the still-transient local network/
+        // supports says it can't stay. Iterating an unordered {@code Set<BlockPos>} made that
+        // order-dependent — hence the user's "a veces": a redstone cell whose turn came before the
+        // rest of its supports/network had themselves settled popped out and was silently lost from
+        // the contraption for the entire round-trip (it never comes back on disassemble). The
+        // capture side was never given the same fix the restore side got. Partition the cells the
+        // SAME way {@link #placeOrdered} does ({@link #isSupportDependent}) and ALWAYS settle
+        // STRUCTURAL (self-supporting) cells before SUPPORT-DEPENDENT ones, so every dependent's
+        // supports are already stable the moment its own neighbor-update fires. Still TWO passes for
+        // the pipe-connection convergence documented above; the structural-first ordering is applied
+        // within each pass.
+        List<BlockPos> structuralLocals = new ArrayList<>();
+        List<BlockPos> dependentLocals = new ArrayList<>();
+        for (BlockPos pos : worldPositions) {
+            BlockPos local = ContraptionMath.toLocal(pos, bearingWorldPos);
+            if (isSupportDependent(level.getBlockState(local))) {
+                dependentLocals.add(local);
+            } else {
+                structuralLocals.add(local);
             }
         }
+        for (int pass = 0; pass < 2; pass++) {
+            settleLocalNeighbors(level, structuralLocals);
+            settleLocalNeighbors(level, dependentLocals);
+        }
         return new Result(level, resolveAutoBehaviors(level));
+    }
+
+    /**
+     * One in-hologram neighbor-update pass over {@code locals} — the capture-side twin of
+     * {@link #settleNeighbors} (the real-world restore pass). Split out so {@link #capture}'s settle
+     * can run STRUCTURAL cells before SUPPORT-DEPENDENT ones (see the ordered-settle comment in
+     * {@link #capture}) instead of one unordered sweep that could pop redstone out of the hologram.
+     */
+    private static void settleLocalNeighbors(ContraptionLevel level, List<BlockPos> locals) {
+        for (BlockPos local : locals) {
+            try {
+                level.updateNeighborsAt(local, level.getBlockState(local).getBlock());
+            } catch (Throwable ignored) {
+                // best-effort — a single misbehaving neighbor update shouldn't abort the capture
+            }
+        }
     }
 
     /**
