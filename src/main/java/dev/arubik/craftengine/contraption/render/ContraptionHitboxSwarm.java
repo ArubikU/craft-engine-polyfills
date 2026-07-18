@@ -437,7 +437,7 @@ public final class ContraptionHitboxSwarm {
                     && state.getValue(net.minecraft.world.level.block.TrapDoorBlock.OPEN)) {
                 return noCollision(state);
             }
-            net.minecraft.world.phys.shapes.VoxelShape shape = state.getCollisionShape(level, offset);
+            net.minecraft.world.phys.shapes.VoxelShape shape = state.getCollisionShape(level.serverLevel(), offset);
             if (shape.isEmpty()) {
                 // No real collision at all — e.g. torches, tripwire, most plants/flowers, rails,
                 // signs, buttons, etc. (2026-07-02 session — "hay bloques que no deben tener solid

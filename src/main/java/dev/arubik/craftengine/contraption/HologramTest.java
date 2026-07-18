@@ -195,12 +195,12 @@ public final class HologramTest {
             // tank controller, so it's safe to call blindly for every captured cell.
             for (net.minecraft.core.BlockPos local : state.level().localPositions()) {
                 try {
-                    dev.arubik.craftengine.fluid.behavior.FluidTankRender.remove(state.level(), local);
+                    dev.arubik.craftengine.fluid.behavior.FluidTankRender.remove(state.level().serverLevel(), local);
                 } catch (Throwable ignored) {
                 }
                 try {
                     dev.arubik.craftengine.block.entity.PersistentBlockEntity pbe = dev.arubik.craftengine.block.entity.PersistentBlockEntity
-                            .getIfLoaded(state.level(), local);
+                            .getIfLoaded(state.level().serverLevel(), local);
                     if (pbe instanceof dev.arubik.craftengine.conveyor.ConveyorBlockEntity conveyor) {
                         conveyor.despawnRender();
                     }

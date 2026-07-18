@@ -424,7 +424,7 @@ public class FanMachineBlockEntity extends AbstractMachineBlockEntity {
         net.minecraft.world.phys.AABB aabb = new net.minecraft.world.phys.AABB(
                 cx - 0.5D, cy - 0.5D, cz - 0.5D, cx + 0.5D, cy + 0.5D, cz + 0.5D);
         for (net.minecraft.world.entity.item.ItemEntity item :
-                dev.arubik.craftengine.contraption.level.ContraptionLevel.unionEntities(
+                dev.arubik.craftengine.contraption.level.BukkitContraptionLevel.unionEntities(
                 level, net.minecraft.world.entity.item.ItemEntity.class, aabb, e -> !e.isRemoved())) {
             int id = item.getId();
             net.minecraft.world.item.ItemStack stack = item.getItem();
@@ -723,7 +723,7 @@ public class FanMachineBlockEntity extends AbstractMachineBlockEntity {
     private static void dropItem(net.minecraft.server.level.ServerLevel level,
             net.minecraft.world.entity.Entity inputEntity, double x, double y, double z,
             net.minecraft.world.item.ItemStack out) {
-        dev.arubik.craftengine.contraption.level.ContraptionLevel.spawnProcessingOutput(
+        dev.arubik.craftengine.contraption.level.BukkitContraptionLevel.spawnProcessingOutput(
                 level, inputEntity, x, y, z, out);
     }
 
@@ -766,14 +766,14 @@ public class FanMachineBlockEntity extends AbstractMachineBlockEntity {
         net.minecraft.world.phys.AABB aabb = new net.minecraft.world.phys.AABB(
                 cx - 0.5D, cy - 0.5D, cz - 0.5D, cx + 0.5D, cy + 0.5D, cz + 0.5D);
         for (net.minecraft.world.entity.Entity nms :
-                dev.arubik.craftengine.contraption.level.ContraptionLevel.unionEntities(
+                dev.arubik.craftengine.contraption.level.BukkitContraptionLevel.unionEntities(
                 level, net.minecraft.world.entity.Entity.class, aabb, e -> !e.isRemoved())) {
             // The scan is the dual-world union (fake + transformed real) when this fan is inside a
             // contraption, so `push` is a LOCAL-space vector that must be yaw-rotated for real-world
             // targets but left raw for co-captured fake ones. The level bridge owns that distinction
             // (and no-ops the rotation when we're not inside a contraption) — the fan stays a pure
             // local-space actor. See ContraptionLevel#pushEntity.
-            dev.arubik.craftengine.contraption.level.ContraptionLevel.pushEntity(level, nms, push);
+            dev.arubik.craftengine.contraption.level.BukkitContraptionLevel.pushEntity(level, nms, push);
         }
     }
 
@@ -798,7 +798,7 @@ public class FanMachineBlockEntity extends AbstractMachineBlockEntity {
         net.minecraft.world.phys.AABB aabb = new net.minecraft.world.phys.AABB(
                 cx - 0.5D, cy - 0.5D, cz - 0.5D, cx + 0.5D, cy + 0.5D, cz + 0.5D);
         for (net.minecraft.world.entity.Entity nms :
-                dev.arubik.craftengine.contraption.level.ContraptionLevel.unionEntities(
+                dev.arubik.craftengine.contraption.level.BukkitContraptionLevel.unionEntities(
                 level, net.minecraft.world.entity.LivingEntity.class, aabb, e -> !e.isRemoved())) {
             org.bukkit.entity.Entity be = nms.getBukkitEntity();
             if (!(be instanceof org.bukkit.entity.LivingEntity living))

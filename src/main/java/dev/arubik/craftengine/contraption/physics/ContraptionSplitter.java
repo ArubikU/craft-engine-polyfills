@@ -25,6 +25,7 @@ import dev.arubik.craftengine.contraption.MovementBehavior;
 import dev.arubik.craftengine.contraption.behavior.MassModel;
 import dev.arubik.craftengine.contraption.behavior.PhysicsBehavior;
 import dev.arubik.craftengine.contraption.level.ContraptionLevel;
+import dev.arubik.craftengine.contraption.level.BukkitContraptionLevel;
 
 /**
  * Fractures a PhysContraption whose cells no longer form one connected solid into one independent
@@ -210,7 +211,7 @@ public final class ContraptionSplitter {
             Set<BlockPos> island) {
         ContraptionLevel childLevel;
         try {
-            childLevel = ContraptionLevel.create(parentLevel.realLevel(), parentState.x(), parentState.y(),
+            childLevel = BukkitContraptionLevel.create(parentLevel.realLevel(), parentState.x(), parentState.y(),
                     parentState.z(), parentState.yawRadians());
         } catch (Throwable t) {
             return null;

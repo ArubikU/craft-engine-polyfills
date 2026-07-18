@@ -24,6 +24,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 import dev.arubik.craftengine.CraftEnginePolyfills;
 import dev.arubik.craftengine.contraption.behavior.MinecartFollowBehavior;
 import dev.arubik.craftengine.contraption.level.ContraptionLevel;
+import dev.arubik.craftengine.contraption.level.BukkitContraptionLevel;
 import dev.arubik.craftengine.contraption.persistence.ContraptionStructureNbt;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
@@ -320,7 +321,7 @@ public final class MinecartBearing {
         World bukkitWorld = minecart.getWorld();
         Level realLevel = ((CraftWorld) bukkitWorld).getHandle();
         Location loc = minecart.getLocation();
-        ContraptionLevel level = ContraptionLevel.create(realLevel, loc.getX(), loc.getY(), loc.getZ(), 0);
+        ContraptionLevel level = BukkitContraptionLevel.create(realLevel, loc.getX(), loc.getY(), loc.getZ(), 0);
         try {
             ContraptionStructureNbt.load(level, ContraptionStructureNbt.fromBytes(bytes));
         } catch (IOException e) {

@@ -9,6 +9,7 @@ import dev.arubik.craftengine.block.entity.PersistentBlockEntity;
 import dev.arubik.craftengine.block.entity.PersistentWorldlyBlockEntity;
 import dev.arubik.craftengine.contraption.behavior.MovementBehaviorRegistry;
 import dev.arubik.craftengine.contraption.level.ContraptionLevel;
+import dev.arubik.craftengine.contraption.level.BukkitContraptionLevel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.Containers;
@@ -56,7 +57,7 @@ public final class ContraptionCapture {
      * from the real world — see {@link #removeFromWorld} for that half.
      */
     public static Result capture(Level realLevel, Set<BlockPos> worldPositions, BlockPos bearingWorldPos) {
-        ContraptionLevel level = ContraptionLevel.create(realLevel,
+        ContraptionLevel level = BukkitContraptionLevel.create(realLevel,
                 bearingWorldPos.getX(), bearingWorldPos.getY(), bearingWorldPos.getZ(), 0);
 
         for (BlockPos pos : worldPositions) {
@@ -93,7 +94,7 @@ public final class ContraptionCapture {
                     // though the real block it was captured from was full: the fluid render then
                     // legitimately sees fill<=0 and never draws anything, even though the shell
                     // (built from static block-state props, unaffected by this) renders fine.
-                    PersistentBlockEntity inLevel = PersistentBlockEntity.getIfLoaded(level, local);
+                    PersistentBlockEntity inLevel = PersistentBlockEntity.getIfLoaded(level.serverLevel(), local);
                     if (inLevel != null) {
                         inLevel.loadFromBytes(bytes);
                     }
@@ -811,7 +812,7 @@ public final class ContraptionCapture {
         // happened in between. Falls back to the capture-time snapshot only if the live
         // controller can't be found for some reason (e.g. a cell whose block never actually
         // finished loading inside the mini-dimension).
-        PersistentBlockEntity live = PersistentBlockEntity.getIfLoaded(level, local);
+        PersistentBlockEntity live = PersistentBlockEntity.getIfLoaded(level.serverLevel(), local);
         byte[] ceBytes;
         if (live != null) {
             try {

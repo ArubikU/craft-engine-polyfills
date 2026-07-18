@@ -18,6 +18,7 @@ import org.bukkit.persistence.PersistentDataType;
 import dev.arubik.craftengine.CraftEnginePolyfills;
 import dev.arubik.craftengine.contraption.behavior.MinecartFollowBehavior;
 import dev.arubik.craftengine.contraption.level.ContraptionLevel;
+import dev.arubik.craftengine.contraption.level.BukkitContraptionLevel;
 import dev.arubik.craftengine.contraption.persistence.BlockAnchoredContraptionStore;
 import dev.arubik.craftengine.contraption.persistence.ContraptionStructureNbt;
 import net.minecraft.nbt.CompoundTag;
@@ -161,7 +162,7 @@ public final class ContraptionTemplates {
             Level realLevel = ((CraftWorld) world).getHandle();
             // Mirror BlockAnchoredContraptionStore#rehydrate / MinecartBearing#rehydrate: capture
             // always creates the level at yaw 0; the copy starts at the requested position.
-            ContraptionLevel level = ContraptionLevel.create(realLevel, x, y, z, 0);
+            ContraptionLevel level = BukkitContraptionLevel.create(realLevel, x, y, z, 0);
             ContraptionStructureNbt.load(level, structure);
             // Fresh UUID — a template is a COPY source, so each spawn is a distinct contraption, never
             // the identity of whatever contraption was originally saved.

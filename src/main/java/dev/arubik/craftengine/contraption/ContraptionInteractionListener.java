@@ -384,7 +384,7 @@ public final class ContraptionInteractionListener implements Listener {
             if (state.isAir()) {
                 return unit;
             }
-            net.minecraft.world.phys.shapes.VoxelShape shape = state.getCollisionShape(level, local);
+            net.minecraft.world.phys.shapes.VoxelShape shape = state.getCollisionShape(level.serverLevel(), local);
             if (shape.isEmpty()) {
                 return unit; // no real collision (torch/plant/etc.) — keep it clickable as a full cube
             }
@@ -742,7 +742,7 @@ public final class ContraptionInteractionListener implements Listener {
             return new PlaceOutcome(false);
         }
 
-        BlockPlaceContext context = new BlockPlaceContext(level, player, hand, held, hitResult);
+        BlockPlaceContext context = new BlockPlaceContext(level.serverLevel(), player, hand, held, hitResult);
         InteractionResult result = blockItem.place(context);
         org.bukkit.Bukkit.getLogger().info("[Contraption] vanilla placement item=" + held + " hand=" + hand
                 + " result=" + result + " consumes=" + result.consumesAction());
@@ -930,12 +930,12 @@ public final class ContraptionInteractionListener implements Listener {
     private static InteractionResult tryHand(BlockState blockState, ContraptionLevel level, ServerPlayer player,
             BlockHitResult hitResult, InteractionHand hand, boolean allowEmptyHandFallback) {
         ItemStack held = player.getItemInHand(hand);
-        InteractionResult result = blockState.useItemOn(held, level, player, hand, hitResult);
+        InteractionResult result = blockState.useItemOn(held, level.serverLevel(), player, hand, hitResult);
         if (result.consumesAction()) {
             return result;
         }
         if (allowEmptyHandFallback) {
-            return blockState.useWithoutItem(level, player, hitResult);
+            return blockState.useWithoutItem(level.serverLevel(), player, hitResult);
         }
         return result;
     }
@@ -967,7 +967,7 @@ public final class ContraptionInteractionListener implements Listener {
             return;
         }
         try {
-            blockState.attack(level, hit.local(), player);
+            blockState.attack(level.serverLevel(), hit.local(), player);
         } catch (Throwable ignored) {
             // Fail-open — see forward()'s own try/catch for the same rationale.
         }
@@ -1114,7 +1114,7 @@ public final class ContraptionInteractionListener implements Listener {
             public void execute(java.util.function.BiConsumer<net.minecraft.world.level.Level, BlockPos> consumer) {
                 // NOT inherited: the default routes through evaluate above and would swallow this,
                 // taking CraftingMenu#removed's clearContainer with it — i.e. the player's grid.
-                consumer.accept(level, local);
+                consumer.accept(level.serverLevel(), local);
             }
         };
         try {

@@ -49,7 +49,7 @@ public final class CraftEnginePolyfills extends JavaPlugin {
         // loads, exactly how the minecart rehydrates via natural entity chunk-load.
         // Wipe any leftover contraption-level scaffolding folders in temp (a crash skips their per-dispose
         // cleanup). Live contraptions rehydrate from NBT below, never from these — see ContraptionLevel.
-        dev.arubik.craftengine.contraption.level.ContraptionLevel.wipeStorageRoot();
+        dev.arubik.craftengine.contraption.level.BukkitContraptionLevel.wipeStorageRoot();
         try {
             dev.arubik.craftengine.contraption.persistence.BlockAnchoredContraptionStore.loadIndex();
         } catch (Throwable t) {

@@ -22,6 +22,7 @@ import dev.arubik.craftengine.contraption.ContraptionManager;
 import dev.arubik.craftengine.contraption.ContraptionState;
 import dev.arubik.craftengine.contraption.MovementBehavior;
 import dev.arubik.craftengine.contraption.level.ContraptionLevel;
+import dev.arubik.craftengine.contraption.level.BukkitContraptionLevel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtAccounter;
@@ -259,7 +260,7 @@ public final class BlockAnchoredContraptionStore {
         try {
             // Capture always creates the level at yaw 0 (see ContraptionCapture#capture); the live
             // transform is then applied via the state ctor + setYawRadians below.
-            ContraptionLevel level = ContraptionLevel.create(realLevel, rec.x(), rec.y(), rec.z(), 0);
+            ContraptionLevel level = BukkitContraptionLevel.create(realLevel, rec.x(), rec.y(), rec.z(), 0);
             ContraptionStructureNbt.load(level, structure);
             ContraptionState state = new ContraptionState(rec.id(), rec.worldId(), level, rec.x(), rec.y(), rec.z());
             state.setYawRadians(rec.yawRadians());
