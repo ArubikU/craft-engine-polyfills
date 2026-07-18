@@ -456,6 +456,13 @@ public final class PlayerCarry {
     }
 
     /**
+     * Minimum |dy| (blocks/tick) that counts as a real vertical platform move worth carrying the rider's Y for.
+     * Below it the motion is a PHYS body's settling/jitter noise, not a lift, and carrying it would sink the
+     * rider — see {@link #carry}. A bearing lift moves well above this.
+     */
+    private static final double CARRY_Y_MIN = 0.02;
+
+    /**
      * Call once per server tick per carried player with THIS tick's platform movement
      * (world-space blocks: how far the platform itself moved since last tick).
      *
@@ -567,7 +574,13 @@ public final class PlayerCarry {
         // platform's own dy is exactly as reliable on a WASD-held tick as on a no-input tick.
         boolean hasDirectionalInput = input != null
                 && (input.forward() || input.backward() || input.left() || input.right());
-        boolean applyY = dy != 0.0;
+        // Only carry Y for a MEANINGFUL vertical platform move, not for tiny jitter (2026-07-18 — "al ponerme
+        // encima del contraption que se mueve ... me hundo"). A bearing lift reports a clean dy; a PHYS
+        // contraption resting on / driven across the ground reports vertical solver noise (a heavy body settles
+        // and micro-bounces each tick), and SETTING the rider's Y to that noise pins them slightly descending —
+        // they sink into the deck. Below the threshold Y is echoed (untouched), so the rider's own gravity and
+        // the shulker floor hold them up normally; a real lift (|dy| above the threshold) still carries them.
+        boolean applyY = Math.abs(dy) > CARRY_Y_MIN;
 
         if (hasDirectionalInput && !applyY) {
             // Pure horizontal contraption + WASD held: nothing here needs to touch Y anyway, so
