@@ -107,6 +107,14 @@ public final class ContraptionMining implements Listener {
     /** Guards against a creative instant-break firing twice from a double-delivered swing. */
     private static final Map<UUID, Long> LAST_CREATIVE_BREAK_MS = new ConcurrentHashMap<>();
 
+    /** When each player last RIGHT-clicked a contraption (a use). A swing within a breath of one is a use-swing, not a mine. */
+    private static final Map<UUID, Long> LAST_USE_MS = new ConcurrentHashMap<>();
+
+    /** Records a right-click use so the following arm-swing is not mistaken for a mining attack. Called from the interact dispatch. */
+    public static void noteUse(UUID playerId) {
+        LAST_USE_MS.put(playerId, System.currentTimeMillis());
+    }
+
     private static int taskId = -1;
 
     /** Registers the swing heartbeat and starts the per-tick progress task. Called once on enable. */
@@ -123,6 +131,16 @@ public final class ContraptionMining implements Listener {
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = false)
     public void onSwing(PlayerAnimationEvent event) {
         if (event.getAnimationType() != PlayerAnimationType.ARM_SWING) {
+            return;
+        }
+        // A swing is NOT always a left-click: the client also swings the arm on a right-click USE (place/
+        // interact), so mining used to arm on right-clicks too — "el right click y left click se consideran
+        // igual" (2026-07-18). The client sends the use packet BEFORE the swing, so a right-click has just
+        // called noteUse; skip arming if a use landed in the last breath. Genuine left-clicks never call
+        // noteUse, so they still arm.
+        java.util.UUID playerId = ((CraftPlayer) event.getPlayer()).getUniqueId();
+        Long lastUse = LAST_USE_MS.get(playerId);
+        if (lastUse != null && System.currentTimeMillis() - lastUse < 250L) {
             return;
         }
         ServerPlayer player = ((CraftPlayer) event.getPlayer()).getHandle();
@@ -434,5 +452,6 @@ public final class ContraptionMining implements Listener {
     public static void forget(UUID playerId) {
         SESSIONS.remove(playerId);
         LAST_CREATIVE_BREAK_MS.remove(playerId);
+        LAST_USE_MS.remove(playerId);
     }
 }

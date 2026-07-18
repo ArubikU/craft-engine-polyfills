@@ -399,6 +399,10 @@ public final class ContraptionInteractionListener implements Listener {
 
     /** See class javadoc "Dispatch hook". */
     static void forward(ServerPlayer player, Hit hit) {
+        // Mark this as a right-click USE so the arm-swing the client sends alongside it is not mistaken for a
+        // mining attack (2026-07-18 — "right y left click se consideran igual"). Every right-click dispatch —
+        // block interact, entity interact, and the phys-contraption packet path — funnels through here.
+        ContraptionMining.noteUse(player.getUUID());
         // Checked HERE rather than at any one call site, because three separate paths reach this: the
         // PlayerInteractEvent raycast, the PlayerInteractEntityEvent raycast, and — the one that actually
         // matters for a phys contraption — ContraptionInteractPacketDebug's PacketEvents listener. A phys
