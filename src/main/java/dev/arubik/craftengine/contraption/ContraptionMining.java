@@ -321,12 +321,24 @@ public final class ContraptionMining implements Listener {
             container.clearContent();
         }
 
-        // Block loot — tool/fortune/silk-touch aware, via the same overload vanilla's playerDestroy uses. A
+        // Block loot. A CraftEngine CUSTOM block (a captured machine, a decorative custom block) must drop its
+        // OWN item, not the loot of the vanilla base state it is painted onto (2026-07-18) — Block.getDrops on
+        // the raw BlockState would hand back a note block / mushroom stem / nothing. So resolve the custom block
+        // and drop its item form; only a genuine vanilla block falls to the tool/fortune/silk-aware getDrops. A
         // wrong tool or a creative break yields nothing, exactly like vanilla.
         if (!creative && !wrongTool) {
-            List<ItemStack> drops = Block.getDrops(blockState, cLevel, local, be, player, player.getMainHandItem());
-            for (ItemStack drop : drops) {
-                Block.popResource(realLevel, realBlockPos, drop);
+            net.momirealms.craftengine.core.block.ImmutableBlockState ce =
+                    net.momirealms.craftengine.bukkit.util.BlockStateUtils.getOptionalCustomBlockState(blockState).orElse(null);
+            if (ce != null && !ce.isEmpty()) {
+                ItemStack customDrop = ceBlockDrop(ce);
+                if (customDrop != null && !customDrop.isEmpty()) {
+                    Block.popResource(realLevel, realBlockPos, customDrop);
+                }
+            } else {
+                List<ItemStack> drops = Block.getDrops(blockState, cLevel, local, be, player, player.getMainHandItem());
+                for (ItemStack drop : drops) {
+                    Block.popResource(realLevel, realBlockPos, drop);
+                }
             }
         }
 
@@ -429,6 +441,21 @@ public final class ContraptionMining implements Listener {
         }
         s.crackPos = null;
         s.crackStage = -1;
+    }
+
+    /** The item a captured CraftEngine custom block drops when mined — its own block-item, not the vanilla base's loot; null if unresolvable. */
+    private static ItemStack ceBlockDrop(net.momirealms.craftengine.core.block.ImmutableBlockState ce) {
+        try {
+            net.momirealms.craftengine.core.util.Key id = ce.owner().value().id();
+            var def = net.momirealms.craftengine.bukkit.api.CraftEngineItems.byId(id);
+            if (def == null) {
+                return null;
+            }
+            org.bukkit.inventory.ItemStack bukkit = def.buildBukkitItem();
+            return bukkit == null ? null : org.bukkit.craftbukkit.inventory.CraftItemStack.asNMSCopy(bukkit);
+        } catch (Throwable t) {
+            return null;
+        }
     }
 
     /** A handful of the block's break particles at the aimed face, scaled up as the dig nears completion. */
