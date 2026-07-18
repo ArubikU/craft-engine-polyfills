@@ -1,18 +1,28 @@
 package dev.arubik.craftengine.contraption;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 
-import net.momirealms.craftengine.libraries.nbt.CompoundTag;
-import net.momirealms.craftengine.libraries.nbt.NBT;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtAccounter;
+import net.minecraft.nbt.NbtIo;
+import net.minecraft.nbt.Tag;
 
 /**
  * Byte-blob round-trip for a captured structure's {@link CompoundTag} manifest
- * (CONTRAPTIONS.md §1 "Capture" / §4 spike #2). Thin wrapper over CraftEngine's own
- * {@code NBT.toBytes}/{@code NBT.fromBytes} — NOT {@link CompoundTag#write}, which only
- * serializes the compound's raw body (no leading type-id byte) and is therefore NOT
- * byte-compatible with {@code NBT.fromBytes}'s expectations. Kept as its own tiny class
- * (rather than inlined in {@link ContraptionCapture}) so the wire-format choice is one
- * obvious place to change if it ever needs to (e.g. gzip-compressed like a chunk region).
+ * (CONTRAPTIONS.md §1 "Capture" / §4 spike #2). Thin wrapper over vanilla
+ * {@link NbtIo#writeAnyTag}/{@link NbtIo#readAnyTag} — the nameless "network" tag format:
+ * a single leading type-id byte followed by the raw tag body, with NO root-name UTF and NO
+ * gzip. This is byte-for-byte identical to CraftEngine's former
+ * {@code NBT.toBytes}/{@code NBT.fromBytes} (which wrote {@code writeUnnamedTag(tag, out, false)}
+ * over a plain {@code DataOutputStream}), so manifest blobs written before the swap still load
+ * unchanged. NOT {@link NbtIo#write}, which prefixes an empty root-name UTF, and NOT
+ * {@link NbtIo#writeCompressed}, which gzips — either would change the on-disk bytes. Kept as its
+ * own tiny class (rather than inlined in {@link ContraptionCapture}) so the wire-format choice is
+ * one obvious place to change if it ever needs to (e.g. gzip-compressed like a chunk region).
  */
 public final class ContraptionNbt {
 
@@ -20,10 +30,20 @@ public final class ContraptionNbt {
     }
 
     public static byte[] toBytes(CompoundTag tag) throws IOException {
-        return NBT.toBytes(tag);
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        try (DataOutputStream out = new DataOutputStream(baos)) {
+            NbtIo.writeAnyTag(tag, out);
+        }
+        return baos.toByteArray();
     }
 
     public static CompoundTag fromBytes(byte[] bytes) throws IOException {
-        return NBT.fromBytes(bytes);
+        try (DataInputStream in = new DataInputStream(new ByteArrayInputStream(bytes))) {
+            Tag tag = NbtIo.readAnyTag(in, NbtAccounter.unlimitedHeap());
+            if (tag instanceof CompoundTag compound) {
+                return compound;
+            }
+            throw new IOException("Root tag must be CompoundTag");
+        }
     }
 }

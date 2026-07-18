@@ -74,7 +74,7 @@ public class TearingBlockSpawnBehavior extends BukkitBlockBehavior {
   }
 
   public BlockPos getTearingDripstone(Object level, BlockPos pos) {
-    BukkitWorld world = new BukkitWorld(((net.minecraft.server.level.ServerLevel) level).getWorld());
+    BukkitWorld world = dev.arubik.craftengine.util.CeWorlds.of(((net.minecraft.server.level.ServerLevel) level).getWorld());
     int heightLimit = Math.min(this.heightLimit + pos.y(), 320);
     for (int y = pos.y(); y < heightLimit; y++) {
       BlockPos currentPos = new BlockPos(pos.x(), y, pos.z());
@@ -146,7 +146,7 @@ public class TearingBlockSpawnBehavior extends BukkitBlockBehavior {
     BlockPos pos = LocationUtils.fromBlockPos(args[2]);
     if (RandomUtils.generateRandomFloat(0.0F, 1.0F) > this.chance)
       return;
-    BukkitWorld world = new BukkitWorld(((net.minecraft.server.level.ServerLevel) level).getWorld());
+    BukkitWorld world = dev.arubik.craftengine.util.CeWorlds.of(((net.minecraft.server.level.ServerLevel) level).getWorld());
     BlockPos targetPos = pos.above();
     BukkitExistingBlock blockInWorld = (BukkitExistingBlock) world.getBlock(targetPos.x(), targetPos.y(),
         targetPos.z());
@@ -163,14 +163,14 @@ public class TearingBlockSpawnBehavior extends BukkitBlockBehavior {
 
   public void placeBlock(Object level, BlockPos pos) {
     try {
-      BukkitExistingBlock blockInWorld = (BukkitExistingBlock) (new BukkitWorld(
+      BukkitExistingBlock blockInWorld = (BukkitExistingBlock) (dev.arubik.craftengine.util.CeWorlds.of(
           ((net.minecraft.server.level.ServerLevel) level).getWorld())).getBlock(pos.x(), pos.y(), pos.z());
       BlockData blockData = BlockStateUtils.fromBlockData(getDefaultBlockState());
       BlockState state = blockData.createBlockState();
       BlockFormEvent event = new BlockFormEvent(blockInWorld.block(), state);
       if (!event.callEvent())
         return;
-      BukkitWorld world = new BukkitWorld(((net.minecraft.server.level.ServerLevel) level).getWorld());
+      BukkitWorld world = dev.arubik.craftengine.util.CeWorlds.of(((net.minecraft.server.level.ServerLevel) level).getWorld());
       ((net.minecraft.world.level.LevelWriter) world.minecraftWorld()).setBlock(
           (net.minecraft.core.BlockPos) LocationUtils.toBlockPos(pos),
           (net.minecraft.world.level.block.state.BlockState) this.defaultImmutableBlockState.customBlockState()

@@ -6,6 +6,8 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Entity;
 
+import dev.arubik.craftengine.contraption.ContraptionEntity;
+import dev.arubik.craftengine.contraption.ContraptionWorlds;
 import dev.arubik.craftengine.contraption.MovementBehavior;
 import dev.arubik.craftengine.contraption.MovementContext;
 import net.minecraft.world.phys.Vec3;
@@ -99,6 +101,28 @@ import net.minecraft.world.phys.Vec3;
  * ({@link #MAX_YAW_STEP_RADIANS}) now drives {@code ContraptionState}'s yaw toward, so even the
  * one-tick target jump at the exact classification boundary is spread into a continuous ramp
  * rather than a visible 180-degree pop.
+ *
+ * <p><b>Portal crossing (roadmap item #1 — cross-world teleport).</b> Vanilla drives the real anchor
+ * minecart through a nether/end portal under its own rail physics and re-homes it in a DIFFERENT world
+ * (the cart keeps its UUID across {@code changeDimension}, so {@link Bukkit#getEntity} still resolves
+ * it). Each tick this behavior compares {@code entity.getWorld().getUID()} against the contraption's
+ * {@code state.worldId()}; on a mismatch it re-anchors the whole contraption into the cart's new world
+ * via {@link ContraptionEntity#teleport} — which despawns the old world's real-world satellites,
+ * re-points the hidden {@code ContraptionLevel}'s projection + the state's anchor, and forces a full
+ * re-render next tick — WITHOUT recreating the hidden mini-dimension. The owning facade is recovered
+ * from the hidden level through {@link ContraptionWorlds#owning(net.minecraft.world.level.Level)} (item
+ * #5's reverse index), and the delta/yaw accumulator is re-baselined ({@code hasLastSample=false}) so
+ * the first post-cross tick re-acquires cleanly with no spurious inter-world velocity spike.
+ *
+ * <p><b>End-portal safety.</b> An end portal DESTROYS non-player entities — the anchor cart is removed,
+ * not relocated — leaving a live contraption with a dead anchor. Because {@code Bukkit.getEntity(uuid)}
+ * returns {@code null} for both a destroyed cart AND one merely in an unloaded chunk, a dwell counter
+ * ({@link #ANCHOR_LOST_GRACE_TICKS}) disambiguates: only after the anchor has been unresolvable that
+ * many consecutive ticks (having once been acquired) does {@link #wantsDisassembleInPlace()} latch true,
+ * which {@code ContraptionEngine.tickAll} observes and turns into a safe disassemble-in-place at the
+ * contraption's last live position (blocks restored into the world) — rather than leaking a permanently
+ * stalled, anchorless contraption. A transient unload that re-resolves within the window just resets the
+ * counter and resumes following.
  */
 public final class MinecartFollowBehavior implements MovementBehavior {
 
@@ -140,8 +164,25 @@ public final class MinecartFollowBehavior implements MovementBehavior {
     /** One cardinal quarter-turn (PI/2), the boundary spacing used to classify parallel vs perpendicular axis — see class javadoc. */
     private static final double QUARTER_TURN = Math.PI / 2.0;
 
+    /**
+     * How many consecutive ticks the anchor minecart may be unresolvable — AFTER it was once
+     * successfully acquired — before this behavior gives up on it and requests a safe
+     * disassemble-in-place (see {@link #wantsDisassembleInPlace()} and the class javadoc's "End-portal
+     * safety"). Sized generously (5s at 20 TPS) so an ordinary chunk-unload / brief lag hitch — during
+     * which {@code Bukkit.getEntity} legitimately returns {@code null} for a still-alive cart — never
+     * trips the teardown; only a genuinely GONE anchor (destroyed by an end portal, {@code /kill}, or a
+     * third-party force-remove) stays missing this long. {@code Bukkit.getEntity(uuid)} cannot itself
+     * distinguish "dead" from "in an unloaded chunk" (both yield {@code null}), so this dwell is the
+     * discriminator; a re-acquired cart resets the counter and cancels the pending teardown.
+     */
+    private static final int ANCHOR_LOST_GRACE_TICKS = 100;
+
     private final UUID entityId;
     private boolean missing;
+    /** Consecutive ticks the anchor has been unresolvable since it was last seen — see {@link #ANCHOR_LOST_GRACE_TICKS}. */
+    private int missingTicks;
+    /** Set once the anchor has stayed gone past {@link #ANCHOR_LOST_GRACE_TICKS} — polled by {@code ContraptionEngine.tickAll}. */
+    private boolean wantsDisassembleInPlace;
     private boolean hasLastSample;
     private double lastX, lastY, lastZ;
     private double lastYawRadians;
@@ -159,15 +200,60 @@ public final class MinecartFollowBehavior implements MovementBehavior {
         this.entityId = entityId;
     }
 
+    /** The real anchor minecart entity's UUID — see {@link #entityId}. Exposed so a teardown that removes the whole contraption (e.g. {@code ContraptionTemplates#saveToItem}) can also remove the anchor entity, not just the block/render swarms. */
+    public UUID entityId() {
+        return entityId;
+    }
+
     @Override
     public void tick(MovementContext ctx) {
+        // The anchor cart's UUID is STABLE across vanilla non-player changeDimension (restoreFrom copies
+        // it), so Bukkit.getEntity keeps resolving the same cart after a portal move — see the class
+        // javadoc's "Portal crossing" and "End-portal safety" sections.
         Entity entity = Bukkit.getEntity(entityId);
         if (entity == null || !entity.isValid()) {
             missing = true;
             pendingVelocity = Vec3.ZERO;
+            // End-portal safety: an end portal DESTROYS non-player entities (the cart is removed, not
+            // moved), so the anchor never comes back. Distinguish that from a transient unresolvable
+            // (chunk unload / lag) by dwell: only after the cart has been gone past the grace window —
+            // and only if we ever actually had it — do we flag a safe disassemble-in-place, which
+            // ContraptionEngine.tickAll performs AFTER its iteration (a behavior can't dismantle its own
+            // contraption mid-tick without mutating the manager set). Until then we simply stall (freeze
+            // geographic movement), exactly as before.
+            if (hasLastSample && missingTicks < ANCHOR_LOST_GRACE_TICKS && ++missingTicks >= ANCHOR_LOST_GRACE_TICKS) {
+                wantsDisassembleInPlace = true;
+            }
             return;
         }
         missing = false;
+        missingTicks = 0;
+
+        // Portal crossing (roadmap item #1): vanilla moves the real cart through a nether/end portal on
+        // its own and re-homes it in a different world under the SAME UUID. Detect the world change and
+        // re-anchor the whole contraption (hidden mini-dimension projection pointer + state world/pose)
+        // into the cart's new world via the item-#1 teleport path, then re-baseline the delta/yaw
+        // accumulator like a fresh (re)acquire so the next tick tracks cleanly from the new anchor with
+        // no spurious cross-world jump. The owning facade is recovered from the hidden level through
+        // ContraptionWorlds' reverse index (item #5) — no ContraptionEntity reference needs threading
+        // through MovementContext.
+        if (!entity.getWorld().getUID().equals(ctx.state().worldId())) {
+            ContraptionEntity facade = ContraptionWorlds.owning(ctx.state().level()).orElse(null);
+            if (facade != null) {
+                Location at = entity.getLocation();
+                // Same offset convention the fresh-acquire branch below anchors to: block-corner X/Z
+                // (cart centre - 0.5) and the rail-height-corrected Y. Yaw is preserved as-is.
+                facade.teleport(at.getWorld(),
+                        at.getX() - 0.5,
+                        at.getY() + Y_OFFSET - MINECART_RAIL_OFFSET,
+                        at.getZ() - 0.5,
+                        ctx.state().yawRadians());
+            }
+            hasLastSample = false;      // re-baseline the delta accumulator on the new anchor next tick
+            pendingVelocity = Vec3.ZERO; // contribute no movement the tick we cross
+            return;
+        }
+
         Location loc = entity.getLocation();
         double x = loc.getX();
         double y = loc.getY() + Y_OFFSET - MINECART_RAIL_OFFSET;
@@ -261,6 +347,18 @@ public final class MinecartFollowBehavior implements MovementBehavior {
     @Override
     public boolean isStalled() {
         return missing;
+    }
+
+    /**
+     * Whether the anchor minecart has been gone long enough (see {@link #ANCHOR_LOST_GRACE_TICKS}) that
+     * this contraption should be safely disassembled-in-place rather than left live with a dead anchor —
+     * the end-portal / destroyed-cart fallback. Polled by {@code ContraptionEngine.tickAll}, which runs
+     * the teardown after its per-tick iteration completes. Latches once set (a cart destroyed by an end
+     * portal never returns); a cart that DOES re-resolve before the grace window elapses resets
+     * {@link #missingTicks} and this is never set.
+     */
+    public boolean wantsDisassembleInPlace() {
+        return wantsDisassembleInPlace;
     }
 
     @Override

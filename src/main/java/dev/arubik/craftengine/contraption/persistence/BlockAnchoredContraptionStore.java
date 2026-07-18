@@ -57,8 +57,16 @@ public final class BlockAnchoredContraptionStore {
     }
 
     /** A persisted block-anchored contraption's manifest fields (structure loaded lazily on rehydrate). */
+    /**
+     * @param pitchRadians tilt, and {@code rollRadians} lean. Meaningless for LINEAR/ROTATIONAL — a
+     *        bearing holds its structure upright, which is why only yaw was ever stored — but a PHYS body
+     *        is free to topple, and a toppled one that came back upright would be a visible lie about
+     *        where it was left. Absent from files written before this existed; those read as 0, i.e.
+     *        exactly the upright pose they were restored with anyway.
+     */
     public record Record(UUID id, UUID worldId, BlockPos bearingPos, double x, double y, double z,
-            double yawRadians, boolean stalled, BearingType type, double rpm, double suPerBlock) {
+            double yawRadians, double pitchRadians, double rollRadians, boolean stalled, BearingType type,
+            double rpm, double suPerBlock) {
     }
 
     /** In-memory boot index: contraption id -> its manifest record. Populated by {@link #loadIndex}. */
@@ -77,6 +85,31 @@ public final class BlockAnchoredContraptionStore {
      * Callable both at assemble time and at chunk-unload (re-dumps the live structure, exactly
      * like {@code MinecartBearing#saveStructure}). Best-effort: a failure is logged, never thrown.
      */
+    /**
+     * The {@link BearingType} to persist for {@code state}: its OWN recorded type, falling back to the
+     * anchor block only when it has none, and to {@link BearingType#ROTATIONAL} when neither answers.
+     *
+     * <h2>Why the state wins over the block</h2>
+     * Re-reading the anchor block is sound for LINEAR/ROTATIONAL, whose bearing stays put in the world
+     * and pins the structure to it. It is wrong for {@link BearingType#PHYS}, and silently so: a phys
+     * contraption has no pinning bearing, its anchor block is captured INTO the structure, and the body
+     * then FALLS AWAY from the anchor coordinates. By save time the world there is ordinary air, the
+     * lookup returns null, and the ROTATIONAL fallback was taken — so every phys contraption was written
+     * to disk as a spinning bearing and came back as one after a restart.
+     *
+     * @param level the real world to consult for the fallback; may be {@code null}
+     */
+    public static BearingType typeToPersist(ContraptionState state, net.minecraft.world.level.Level level,
+            BlockPos anchor) {
+        BearingType recorded = state == null ? null : state.bearingType();
+        if (recorded != null) {
+            return recorded;
+        }
+        BearingType fromBlock = level == null ? null
+                : dev.arubik.craftengine.contraption.behavior.BearingBlockBehavior.typeAt(level, anchor);
+        return fromBlock != null ? fromBlock : BearingType.ROTATIONAL;
+    }
+
     public static void save(ContraptionState state, BlockPos bearingPos, BearingType type, double rpm,
             double suPerBlock) {
         if (state == null || state.level() == null) {
@@ -94,6 +127,8 @@ public final class BlockAnchoredContraptionStore {
             root.putDouble("y", state.y());
             root.putDouble("z", state.z());
             root.putDouble("yaw", state.yawRadians());
+            root.putDouble("pitch", state.pitchRadians());
+            root.putDouble("roll", state.rollRadians());
             root.putBoolean("stalled", state.isStalled());
             root.putString("type", type.name());
             root.putDouble("rpm", rpm);
@@ -103,7 +138,8 @@ public final class BlockAnchoredContraptionStore {
             // Keep the boot index in sync so an unload-then-reload within the same session
             // (never restarted) still finds an up-to-date record.
             INDEX.put(state.id(), new Record(state.id(), state.worldId(), bearingPos, state.x(), state.y(),
-                    state.z(), state.yawRadians(), state.isStalled(), type, rpm, suPerBlock));
+                    state.z(), state.yawRadians(), state.pitchRadians(), state.rollRadians(), state.isStalled(),
+                    type, rpm, suPerBlock));
         } catch (Throwable t) {
             CraftEnginePolyfills.instance().getLogger()
                     .warning("[Contraption] failed to save block-anchored contraption " + state.id() + ": " + t);
@@ -168,6 +204,9 @@ public final class BlockAnchoredContraptionStore {
         }
         return new Record(id, world, bearingPos, root.getDouble("x").orElse(0.0), root.getDouble("y").orElse(0.0),
                 root.getDouble("z").orElse(0.0), root.getDouble("yaw").orElse(0.0),
+                // Absent from pre-existing files — 0 is both the safe default and the exact pose those
+                // contraptions were being rehydrated with before pitch/roll were stored at all.
+                root.getDouble("pitch").orElse(0.0), root.getDouble("roll").orElse(0.0),
                 root.getBoolean("stalled").orElse(false), type, root.getDouble("rpm").orElse(0.0),
                 root.getDouble("su").orElse(0.0));
     }
@@ -224,6 +263,14 @@ public final class BlockAnchoredContraptionStore {
             ContraptionStructureNbt.load(level, structure);
             ContraptionState state = new ContraptionState(rec.id(), rec.worldId(), level, rec.x(), rec.y(), rec.z());
             state.setYawRadians(rec.yawRadians());
+            // A PHYS body persists the pose it was actually left in, tilt included (see Record). Zero for
+            // a bearing, which is what it always effectively was.
+            state.setPitchRadians(rec.pitchRadians());
+            state.setRollRadians(rec.rollRadians());
+            // Restore the persisted uniform SCALE (roadmap item #9) — carried in the embedded structure blob
+            // (ContraptionStructureNbt) and put onto the level by its #load above; reaffirm onto the state so
+            // a scaled block-anchored contraption rehydrates at its saved size. 1.0 for a pre-scale blob.
+            state.setScale(level.realScaleFactor());
             state.setStalled(rec.stalled());
             // Re-place captured CraftEngine furniture into the freshly-loaded hidden level (rode
             // along in the structure NBT) — same call MinecartBearing#rehydrate uses.

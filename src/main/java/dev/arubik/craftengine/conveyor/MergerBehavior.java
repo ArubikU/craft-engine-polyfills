@@ -49,7 +49,7 @@ public class MergerBehavior extends dev.arubik.craftengine.util.NmsBlockBehavior
             net.minecraft.core.BlockPos nmsPos, net.minecraft.world.level.block.state.BlockState oldState,
             Boolean movedByPiston) {
         try {
-            CEWorld world = new BukkitWorld(((ServerLevel) level).getWorld()).storageWorld();
+            CEWorld world = dev.arubik.craftengine.util.CeWorlds.of(((ServerLevel) level).getWorld()).storageWorld();
             if (world == null)
                 return;
             BlockPos pos = new BlockPos(nmsPos.getX(), nmsPos.getY(), nmsPos.getZ());

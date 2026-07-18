@@ -11,6 +11,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import dev.arubik.craftengine.contraption.ContraptionPushSettings;
 import dev.arubik.craftengine.contraption.PlayerCarry;
 import dev.arubik.craftengine.contraption.level.ContraptionLevel;
 import dev.arubik.craftengine.util.MNms;
@@ -91,6 +92,16 @@ public final class ContraptionHitboxSwarm {
     private final ContraptionShulkerColliderSwarm shulkerColliders = new ContraptionShulkerColliderSwarm();
 
     /**
+     * Withholds the SOLID shulker colliders from one viewer — see
+     * {@link ContraptionShulkerColliderSwarm#setExcludedViewer}. Only the shulkers need this: the
+     * INTERACTION cells this class spawns do not override {@code canBeCollidedWith}, so a client never
+     * treats them as obstacles.
+     */
+    public void setColliderExcludedViewer(java.util.UUID viewer) {
+        shulkerColliders.setExcludedViewer(viewer);
+    }
+
+    /**
      * (Re)builds the auto-derived slots from a captured level; custom slots (see
      * {@link #addCustomSlot}) survive a rebuild. Keyed by offset (like
      * {@code ContraptionDisplaySwarm.cells}) so an unchanged top-cell REUSES its existing
@@ -104,6 +115,9 @@ public final class ContraptionHitboxSwarm {
      * cause a despawn/spawn here.
      */
     public void rebuild(ContraptionLevel level, List<Player> viewers, Vec3 bearingWorldPos) {
+        // Drop cache entries for cells that no longer exist BEFORE anything reads the cache, so a
+        // cell that leaves and returns within one tick can't resolve against its own stale shape.
+        cellCache.keySet().retainAll(level.localPositions());
         // Every captured cell gets its own INTERACTION + shulker hitbox now (2026-07-02 session —
         // "veo que no pones shulker y interaction a todos los bloques ... debes ponerle shulker a
         // todo" — a multi-cell structure like a tall fluid_block_tank used to only get ONE hitbox
@@ -141,17 +155,17 @@ public final class ContraptionHitboxSwarm {
             // slab's REAL collision surface (e.g. a bottom slab's top face at y+0.5, not the
             // flat-assumed y+1.0) fell either outside or only accidentally inside the standing
             // window depending on slab orientation — see isStandingOnFootprint's javadoc for the
-            // exact numbers. shulkerParamsFor already derives the real per-cell shape's
+            // exact numbers. computeCell already derives the real per-cell shape's
             // minY/height from the same BlockState#getCollisionShape this class's shulker
             // population loop (below) uses for the passive visual collider — reuse that exact
             // derivation here too, rather than duplicating the VoxelShape query, and store the
             // result on the Slot alongside (not instead of) its flat width/height so both the
             // full-cell INTERACTION spawn AND the shape-accurate carry check can each read the
             // field they actually need.
-            ShulkerParams standParams = shulkerParamsFor(level, offset);
+            ShulkerParams standParams = cellFor(level, offset).params;
             double standBottomY = standParams != null ? standParams.yOffset : 0.0;
             double standTopY = standParams != null ? standParams.yOffset + standParams.scale : 1.0;
-            // hasCollision mirrors shulkerParamsFor's own null-means-no-collision result (torches,
+            // hasCollision mirrors computeCell's own null-means-no-collision result (torches,
             // tripwire, most plants, etc. — see that method's shape.isEmpty() javadoc) — see the
             // Slot#hasCollision field javadoc for why overlapsAnySolid/resolvePushOut need this.
             boolean hasCollision = standParams != null;
@@ -174,14 +188,15 @@ public final class ContraptionHitboxSwarm {
         // offset as the INTERACTION slot above so ContraptionShulkerColliderSwarm's own
         // key-based diffing reuses/prunes correctly across rebuilds.
         //
-        // Shape-aware sizing (2026-07-02 follow-up — "genera shulker hitbox dependiendo del
-        // bounding box, o sea una escalera deberia tener otro bounding box"): every cell used to
-        // get a hardcoded full 1x1x1 scale=1/attachFace=DOWN/peek=0 shulker regardless of the
-        // captured block's REAL shape. Now each cell's REAL NMS collision shape
-        // (BlockState#getCollisionShape — full precision, available here because ContraptionLevel
-        // genuinely IS a ServerLevel, unlike GlueWandListener#outlineBlock which only has Bukkit's
-        // Block#getBoundingBox to work with) drives scale/attachFace/offset (see
-        // #shulkerParamsFor's javadoc for the full derivation and the multi-box/stair caveat).
+        // Shape-aware sizing: each cell's REAL NMS collision shape (BlockState#getCollisionShape —
+        // full precision, available here because ContraptionLevel genuinely IS a ServerLevel,
+        // unlike GlueWandListener#outlineBlock which only has Bukkit's Block#getBoundingBox to work
+        // with) is handed to the swarm whole, merged and flattened to AABBs by #computeCell. A
+        // shulker's box is a CUBE, so ONE of them can never be a stair — which is why the swarm
+        // spends a distance-dependent NUMBER of them per cell instead of trying to pick better
+        // parameters for a single one (see ContraptionShulkerColliderSwarm#renderCells and
+        // ShulkerBoxFit). This layer's job ends at supplying the geometry; how many entities it
+        // becomes, for whom, is the swarm's.
         //
         // <p><b>2026-07-02 session, LATER same day — the peek-merge "save entities" optimization
         // that used to live here has been REMOVED</b> ("no todos tienen una shulker hitbox solida
@@ -225,21 +240,72 @@ public final class ContraptionHitboxSwarm {
         }
         Set<Object> shulkerKeys = new HashSet<>();
         for (BlockPos offset : allOffsets) {
-            ShulkerParams params = shulkerParamsFor(level, offset);
-            if (params == null) {
+            CachedCell cell = cellFor(level, offset);
+            if (cell.boxes == null) {
                 // No real collision at all (2026-07-02 session — "hay bloques que no deben tener
                 // solid hitbox como antorchas"): deliberately DON'T add this offset to shulkerKeys
                 // either, so prune() below removes any stale slot left over from a PREVIOUS
                 // rebuild where this same cell held a solid block (e.g. a torch placed where a
-                // full block used to be) — see #shulkerParamsFor's javadoc for which shapes hit
+                // full block used to be) — see #computeCell's javadoc for which shapes hit
                 // this path.
                 continue;
             }
             shulkerKeys.add(offset);
-            shulkerColliders.addSlot(offset, offset.getX() + 0.5, offset.getY() + params.yOffset, offset.getZ() + 0.5,
-                    params.scale, params.attachFace, params.peek);
+            // Hand over the cell's REAL merged geometry rather than a pre-chosen single box: the
+            // swarm decides how many shulkers to spend on it per viewer, from that viewer's
+            // distance (see ContraptionShulkerColliderSwarm#renderCells). Passing the CACHED list
+            // instance matters — the swarm's identity check is what makes an unchanged cell free.
+            shulkerColliders.setCell(offset, cell.boxes, viewers);
         }
         shulkerColliders.prune(shulkerKeys, viewers);
+    }
+
+    /**
+     * Per-cell derived collision geometry, cached against the {@code BlockState} it came from — see
+     * {@link #cellFor}.
+     */
+    private static final class CachedCell {
+        final net.minecraft.world.level.block.state.BlockState state;
+        /** The single-box approximation driving the carry/stand window; null when the cell has no collision at all. */
+        final ShulkerParams params;
+        /**
+         * The cell's merged collision boxes translated into the bearing-local frame, for the shulker
+         * swarm's LOD fit; null exactly when {@link #params} is (they share one shape query).
+         */
+        final List<net.minecraft.world.phys.AABB> boxes;
+
+        CachedCell(net.minecraft.world.level.block.state.BlockState state, ShulkerParams params,
+                List<net.minecraft.world.phys.AABB> boxes) {
+            this.state = state;
+            this.params = params;
+            this.boxes = boxes;
+        }
+    }
+
+    /**
+     * Per-cell shape cache. {@link #rebuild} runs every tick for every cell, and a
+     * {@code VoxelShape} query plus {@code optimize()/toAabbs()} is far too expensive to repeat at
+     * that rate — but a cell's geometry is a pure function of its {@code BlockState}, which only
+     * changes when a block genuinely changes. Entries are dropped for vanished cells at the top of
+     * {@link #rebuild} and wholesale in {@link #despawnAll}.
+     */
+    private final Map<BlockPos, CachedCell> cellCache = new HashMap<>();
+
+    /**
+     * This cell's cached geometry, recomputed only when its {@code BlockState} changed. The identity
+     * comparison is exact, not an optimization gamble: vanilla interns every {@code BlockState} into
+     * a single instance per property combination, so two states are the same object iff they are the
+     * same state.
+     */
+    private CachedCell cellFor(ContraptionLevel level, BlockPos offset) {
+        net.minecraft.world.level.block.state.BlockState state = level.getBlockState(offset);
+        CachedCell cached = cellCache.get(offset);
+        if (cached != null && cached.state == state) {
+            return cached;
+        }
+        CachedCell fresh = computeCell(level, offset, state);
+        cellCache.put(offset, fresh);
+        return fresh;
     }
 
     /** Radius (blocks) within which a real player must be for {@link #rebuild} to bother populating shulker colliders — see that method's "Optimal shulkering" javadoc. */
@@ -271,7 +337,7 @@ public final class ContraptionHitboxSwarm {
     }
 
     /**
-     * Derived shulker parameters for one captured cell — see {@link #shulkerParamsFor}.
+     * Derived shulker parameters for one captured cell — see {@link #computeCell}.
      */
     private static final class ShulkerParams {
         final float scale;
@@ -303,43 +369,36 @@ public final class ContraptionHitboxSwarm {
     private static final ShulkerParams FULL_CUBE = new ShulkerParams(1f, net.minecraft.core.Direction.DOWN, 0);
 
     /**
-     * Computes a single shulker's {@code scale}/{@code attachFace}/{@code peek} approximating
-     * {@code offset}'s REAL captured-block collision shape (2026-07-02 session — see
-     * {@link #rebuild}'s javadoc for the request). Uses
-     * {@code BlockState#getCollisionShape(BlockGetter, BlockPos)} — the genuine NMS
-     * {@code VoxelShape}, which for something like a stair is actually MULTIPLE sub-boxes (an
-     * L-shape) — collapsed to its overall {@code bounds()} AABB (a single box) for this
-     * approximation: a shulker entity's own shape is always a cube (± one peek-driven extension
-     * along a single axis), so it fundamentally CANNOT represent a multi-box L-shape exactly no
-     * matter how its parameters are chosen. Per this task's explicit "ahorrar shulker box's"
-     * framing (prefer fewer entities over maximum precision), this falls back to the SIMPLER
-     * single-shulker-per-cell approximation (the overall bounding box) rather than spawning a
-     * second shulker for the "notch" a stair/L-shape leaves uncovered — one shulker that covers
-     * the block's overall footprint (slightly over-covering the notch) is deemed an acceptable
-     * approximation, same tradeoff {@code GlueWandListener#outlineBlock}'s own bounding-box-only
-     * outline already makes for the same shapes.
+     * Resolves one captured cell's {@code BlockState} into both of the things the rest of this class
+     * needs from its REAL collision shape, from a SINGLE {@code BlockState#getCollisionShape} query
+     * (the genuine NMS {@code VoxelShape}):
+     * <ul>
+     *   <li>{@link CachedCell#boxes} — the shape merged, {@code optimize()}d and flattened to AABBs
+     *   in the bearing-local frame. This is the input to the shulker swarm's distance-LOD fit, which
+     *   spends N cubes on it (see {@link ShulkerBoxFit}); it is the ONLY thing that lets a stair or
+     *   a door collide as itself, since one shulker is one cube and can never be either.</li>
+     *   <li>{@link CachedCell#params} — the single-box approximation the CARRY/standing window is
+     *   built from ({@code standBottomY}/{@code standTopY} in {@link #rebuild}). This deliberately
+     *   stays single-box and stays the shape's overall {@code bounds()}: it answers "what height is
+     *   this cell's top surface", which has one answer per cell regardless of how many colliders the
+     *   cell is currently drawn with, and which must not vary by viewer.</li>
+     * </ul>
      *
-     * <p>The overall AABB's Y-extent becomes the shulker's {@code scale} (a plain Y-thin box —
-     * e.g. a slab's {@code [0,0.5]} height reports {@code scale=0.5}, a full block reports
-     * {@code scale=1}) with {@code attachFace=DOWN} and the box's local offset shifted so its
-     * BOTTOM sits at the real shape's {@code minY} (not always 0 — e.g. an upper slab's
-     * {@code minY=0.5}). X/Z extents are NOT independently reproducible (a shulker box is a cube,
-     * always centered on the entity's own X/Z) — this is a known, accepted limitation of a
-     * single-shulker approximation; the box is still centred on the cell exactly like the
-     * previous always-1x1x1 behavior, just correctly Y-sized/positioned now, which already
-     * covers the two shapes explicitly called out in the ask (slabs: half-height; stairs:
-     * approximated by their overall bounding column, same as a full block since most stairs'
-     * {@code bounds()} spans the full cell height/footprint).
+     * <p>{@code params}' Y-extent becomes {@code scale} (a slab's {@code [0,0.5]} reports
+     * {@code 0.5}; a full block {@code 1}) with {@code attachFace=DOWN} and {@code yOffset} shifted
+     * so the box's bottom sits at the shape's real {@code minY} (an upper slab's {@code 0.5}, not
+     * always 0).
      *
-     * <p>{@code peek} is always {@code 0} — see {@link #rebuild}'s javadoc for why the previous
-     * vertical-run peek-merge (one peeking shulker covering N stacked cells) was removed entirely:
-     * a peek-grown box is one continuous solid volume with no standable surface at any
-     * intermediate cell boundary, which directly caused the "middle layers have no real hitbox"
-     * bug. Every cell — including every cell of a tall stack — now gets its own independent,
-     * correctly Y-sized/positioned shulker.
+     * <p>{@code peek} is always {@code 0}. A peek-grown box is one continuous solid volume with no
+     * standable surface at any intermediate cell boundary, which is why the vertical-run peek-merge
+     * that once lived in {@link #rebuild} caused "middle layers have no real hitbox" — see that
+     * method's javadoc.
+     *
+     * <p>A {@code null} {@code params}/{@code boxes} means the cell is genuinely passable (torch,
+     * plant, open door) and gets no collider at all.
      */
-    private static ShulkerParams shulkerParamsFor(ContraptionLevel level, BlockPos offset) {
-        net.minecraft.world.level.block.state.BlockState state = level.getBlockState(offset);
+    private static CachedCell computeCell(ContraptionLevel level, BlockPos offset,
+            net.minecraft.world.level.block.state.BlockState state) {
         if (state.isAir()) {
             // Defensive only — rebuild()'s caller loop iterates level.localPositions(), which
             // ContraptionLevel#resync already excludes air from (see that class's own javadoc),
@@ -347,7 +406,7 @@ public final class ContraptionHitboxSwarm {
             // "no collider" result rather than FULL_CUBE on principle: air should never be solid,
             // and returning FULL_CUBE here used to be actively wrong if this method is ever called
             // from anywhere else in the future.
-            return null;
+            return noCollision(state);
         }
         try {
             // Open door/trapdoor special-case (2026-07-02 session follow-up — "shulker swarm:
@@ -371,12 +430,12 @@ public final class ContraptionHitboxSwarm {
             if (block instanceof net.minecraft.world.level.block.DoorBlock
                     && state.hasProperty(net.minecraft.world.level.block.DoorBlock.OPEN)
                     && state.getValue(net.minecraft.world.level.block.DoorBlock.OPEN)) {
-                return null;
+                return noCollision(state);
             }
             if (block instanceof net.minecraft.world.level.block.TrapDoorBlock
                     && state.hasProperty(net.minecraft.world.level.block.TrapDoorBlock.OPEN)
                     && state.getValue(net.minecraft.world.level.block.TrapDoorBlock.OPEN)) {
-                return null;
+                return noCollision(state);
             }
             net.minecraft.world.phys.shapes.VoxelShape shape = state.getCollisionShape(level, offset);
             if (shape.isEmpty()) {
@@ -387,17 +446,43 @@ public final class ContraptionHitboxSwarm {
                 // through was getting a full solid 1x1x1 shulker collider, i.e. exactly the reported
                 // bug (a torch blocking movement/giving pushback like a full block). Returning null
                 // tells the caller (rebuild()) to skip adding a shulker slot for this cell entirely.
-                return null;
+                return noCollision(state);
             }
             net.minecraft.world.phys.AABB bounds = shape.bounds();
             double height = bounds.maxY - bounds.minY;
             if (height <= 0.0 || height > 1.0) {
-                return FULL_CUBE; // degenerate/oversized shape — don't trust it, fall back to the safe default
+                return fullCube(state, offset); // degenerate/oversized shape — don't trust it, fall back to the safe default
             }
-            return new ShulkerParams((float) height, net.minecraft.core.Direction.DOWN, 0, bounds.minY);
+            // optimize() runs vanilla's greedy box merging before toAabbs() flattens the shape, so a
+            // stair arrives as its true 2 regions rather than the raw voxel soup — the LOD fit's
+            // budget is spent per region, so the region count is what its quality rides on. Boxes are
+            // translated into the bearing-local frame here (a VoxelShape is authored cell-relative),
+            // matching the frame every swarm's local offsets already use.
+            List<net.minecraft.world.phys.AABB> boxes = new ArrayList<>();
+            for (net.minecraft.world.phys.AABB box : shape.optimize().toAabbs()) {
+                boxes.add(box.move(offset.getX(), offset.getY(), offset.getZ()));
+            }
+            if (boxes.isEmpty()) {
+                return noCollision(state);
+            }
+            return new CachedCell(state,
+                    new ShulkerParams((float) height, net.minecraft.core.Direction.DOWN, 0, bounds.minY),
+                    List.copyOf(boxes));
         } catch (Throwable t) {
-            return FULL_CUBE; // best-effort — a shape-query failure shouldn't block hitbox population
+            return fullCube(state, offset); // best-effort — a shape-query failure shouldn't block hitbox population
         }
+    }
+
+    /** A cell that is genuinely passable — no stand window, no collider (see {@link #computeCell}). */
+    private static CachedCell noCollision(net.minecraft.world.level.block.state.BlockState state) {
+        return new CachedCell(state, null, null);
+    }
+
+    /** The safe fallback cell: a solid full-cell cube, matching {@link #FULL_CUBE}'s stand window. */
+    private static CachedCell fullCube(net.minecraft.world.level.block.state.BlockState state, BlockPos offset) {
+        return new CachedCell(state, FULL_CUBE, List.of(new net.minecraft.world.phys.AABB(
+                offset.getX(), offset.getY(), offset.getZ(),
+                offset.getX() + 1.0, offset.getY() + 1.0, offset.getZ() + 1.0)));
     }
 
     /**
@@ -495,12 +580,75 @@ public final class ContraptionHitboxSwarm {
      * skips resending position-sync packets (a pure rotation still counts as "moved").
      */
     public void render(List<Player> viewers, Vec3 bearingWorldPos, double yawRadians, boolean moved) {
+        render(viewers, bearingWorldPos, yawRadians, 0.0, 1.0, moved);
+    }
+
+    /**
+     * Scale-aware {@link #render(List, Vec3, double, boolean)} (roadmap item #9 — per-contraption
+     * {@code scale}): the whole collider swarm is sized/spaced to match the scaled visual so a resized
+     * contraption is collidable at its rendered size. Two things scale together, both keyed off the same
+     * {@code scale}:
+     * <ul>
+     *   <li><b>Inter-cell SPACING</b> — each slot's local offset is projected through
+     *   {@link ContraptionMath#renderPosition(Vec3, Vec3, double, double, double)} with {@code scale}, so
+     *   the colliders spread apart (or together) about the bearing pivot exactly like the block-display
+     *   cells do.</li>
+     *   <li><b>Box SIZE</b> — the {@code INTERACTION} slot's width/height and the shulker collider's
+     *   {@code Scale} attribute are both multiplied by {@code scale} (see {@link Slot#render} /
+     *   {@link ContraptionShulkerColliderSwarm#render}), so each individual box grows/shrinks with the
+     *   model.</li>
+     * </ul>
+     *
+     * <p><b>Documented approximation.</b> This scales the collider GEOMETRY, but the manual
+     * standing/side-collision math ({@link #carryRiders} et al., which read each slot's un-scaled local
+     * {@code width}/{@code standTopY}) is NOT scale-corrected in this pass — a scaled contraption's visual
+     * colliders match its size, but the fine-grained carry/pushback resolution still reasons in the
+     * un-scaled local footprint (acceptable best-effort, consistent with this whole layer being packet-only
+     * discrete "collision"). At {@code scale == 1.0} everything below reduces byte-for-byte to the pre-scale
+     * behaviour (renderPosition's scale-1 fast path; {@code width*1.0}/{@code Scale*1.0} identities; no
+     * scale-resend packets ever emitted).
+     */
+    public void render(List<Player> viewers, Vec3 bearingWorldPos, double yawRadians, double scale, boolean moved) {
+        render(viewers, bearingWorldPos, yawRadians, 0.0, scale, moved);
+    }
+
+    /**
+     * Pitch-aware {@link #render(List, Vec3, double, double, boolean)} (roadmap item #9 phase 5 — TIPPING).
+     * Each slot's local offset is projected through the SAME
+     * {@link ContraptionMath#renderPosition(Vec3, Vec3, double, double, double)} the block_display cells use —
+     * now with the identical {@code pitchRadians} (previously hard-coded {@code 0.0} here), so a tipping
+     * contraption's interaction/shulker colliders orbit to the SAME tilted cell positions the visual blocks
+     * do instead of staying flat while the display tips. The boxes themselves stay axis-aligned (an
+     * {@code INTERACTION}/{@code SHULKER} box cannot tilt) — this aligns their CENTRES to the canonical
+     * {@code renderPosition} mapping, the best a non-oriented box can do. At {@code pitch == 0} this is
+     * byte-for-byte the pre-pitch behaviour ({@code renderPosition}'s pitch-0 fast path), so every
+     * never-tipped bearing/minecart contraption is unchanged.
+     */
+    public void render(List<Player> viewers, Vec3 bearingWorldPos, double yawRadians, double pitchRadians,
+            double scale, boolean moved) {
+        render(viewers, bearingWorldPos, yawRadians, pitchRadians, 0.0, scale, moved);
+    }
+
+    /**
+     * Pitch+ROLL-aware {@link #render(List, Vec3, double, double, double, boolean)} (roadmap item #9 phase 6 —
+     * ROLL). Each slot's local offset is projected through the SAME
+     * {@link ContraptionMath#renderPosition(Vec3, Vec3, double, double, double, double)} the block_display cells
+     * use — now with the identical {@code pitchRadians} AND {@code rollRadians} — so a body leaning in any
+     * horizontal direction toward its heavy side keeps its interaction/shulker collider CENTRES aligned with the
+     * visual blocks instead of the colliders staying flat. The boxes themselves stay axis-aligned (an
+     * {@code INTERACTION}/{@code SHULKER} box cannot tilt), aligning their centres to the canonical
+     * {@code renderPosition} mapping — the best a non-oriented box can do. At {@code pitch == 0 && roll == 0}
+     * this is byte-for-byte the pre-tilt behaviour ({@code renderPosition}'s tilt-0 fast path), so every
+     * never-leaned bearing/minecart contraption is unchanged.
+     */
+    public void render(List<Player> viewers, Vec3 bearingWorldPos, double yawRadians, double pitchRadians,
+            double rollRadians, double scale, boolean moved) {
         for (Slot slot : allSlots()) {
             Vec3 pos = dev.arubik.craftengine.contraption.ContraptionMath.renderPosition(
-                    new Vec3(slot.lx, slot.ly, slot.lz), bearingWorldPos, yawRadians);
-            slot.render(viewers, pos.x, pos.y, pos.z, moved);
+                    new Vec3(slot.lx, slot.ly, slot.lz), bearingWorldPos, yawRadians, pitchRadians, rollRadians, scale);
+            slot.render(viewers, pos.x, pos.y, pos.z, scale, moved);
         }
-        shulkerColliders.render(viewers, bearingWorldPos, yawRadians, moved);
+        shulkerColliders.render(viewers, bearingWorldPos, yawRadians, pitchRadians, rollRadians, scale, moved);
     }
 
     public void despawnAll(List<Player> viewers) {
@@ -518,6 +666,7 @@ public final class ContraptionHitboxSwarm {
         customSlots.clear();
         currentRiders.clear();
         stepState.clear();
+        cellCache.clear();
         shulkerColliders.clear(viewers);
     }
 
@@ -752,6 +901,10 @@ public final class ContraptionHitboxSwarm {
     private static final double FLOOR_CLEARANCE = 0.35;
 
     /** Half-width of a standard vanilla player hitbox (0.6 wide) — see {@link #clampDeltaForSideCollision}. */
+    /** Below this per-tick movement (squared) a contraption counts as static — no player shove. See
+     *  {@link #pushBackNearbyBystanders}. 0.02 blocks/tick squared: well under any real drive, above jitter. */
+    private static final double STATIC_DELTA_SQ = 0.02 * 0.02;
+
     private static final double RIDER_HALF_WIDTH = 0.3;
     /** Standard vanilla standing player hitbox height — see {@link #clampDeltaForSideCollision}. */
     private static final double RIDER_HEIGHT = 1.8;
@@ -880,17 +1033,27 @@ public final class ContraptionHitboxSwarm {
      * on a shape's real top is never again mistaken for "inside" that same cell.
      *
      * <p>Slots with {@link Slot#hasCollision} {@code false} (torches, tripwire, most plants/flowers,
-     * etc. — see {@code shulkerParamsFor}'s {@code shape.isEmpty()} javadoc) are skipped entirely —
+     * etc. — see {@code computeCell}'s {@code shape.isEmpty()} javadoc) are skipped entirely —
      * see that field's own javadoc for the companion "torch shoves the player like a full block"
      * bug this closes.
      */
     private static boolean overlapsAnySolid(Vec3 targetPos, Vec3 bearingWorldPos, List<Slot> solids, double halfWidth, double height, double yaw) {
-        // Yaw-aware (2026-07-03): un-rotate the rider's would-be position into the local slot frame
-        // before the box test, so the side-collision clamp doesn't spuriously fire (and zero the
-        // carry delta) on a rotated minecart contraption where the axis-aligned world boxes no longer
-        // line up with the real rotated cells. The rider's own AABB is treated as axis-aligned in the
-        // local frame — a fine approximation for this manual packet-only collision check.
-        Vec3 local = dev.arubik.craftengine.contraption.ContraptionMath.realToLocal(targetPos, bearingWorldPos, yaw);
+        return overlapsAnySolid(targetPos, bearingWorldPos, solids, halfWidth, height, yaw, 0.0, 0.0, 1.0);
+    }
+
+    /**
+     * Pitch/roll/scale-aware overlap test (2026-07-17 — "que solo haga [push] si se esta dentro del AABB
+     * bounding box del bloque considerando su yaw y pitch"). A yaw-only un-rotation lines the box test up
+     * with the cells of a contraption that only spins, but a phys contraption that PITCHES or ROLLS has its
+     * cells tilted out of the world-axis-aligned frame, so the yaw-only test both misses entities genuinely
+     * inside a tilted block and falsely reports ones that only look adjacent from above — exactly the push
+     * misbehaviour. Un-rotating by the full orientation puts the entity in the same tilted frame the cells
+     * live in, so "inside the block's box" means inside the ACTUAL oriented box.
+     */
+    private static boolean overlapsAnySolid(Vec3 targetPos, Vec3 bearingWorldPos, List<Slot> solids,
+            double halfWidth, double height, double yaw, double pitch, double roll, double scale) {
+        Vec3 local = dev.arubik.craftengine.contraption.ContraptionMath.realToLocal(
+                targetPos, bearingWorldPos, yaw, pitch, roll, scale <= 0 ? 1.0 : scale);
         double rMinX = local.x - halfWidth, rMaxX = local.x + halfWidth;
         double rMinZ = local.z - halfWidth, rMaxZ = local.z + halfWidth;
         // Raise the rider's collision floor above the standing tolerance band (2026-07-03 — "el tren
@@ -1022,7 +1185,7 @@ public final class ContraptionHitboxSwarm {
             // symptom exactly). A TOP slab's real surface (local Y 0.5..1.0, true top at y+1.0)
             // happened to coincide with the flat assumption by luck of top-slab geometry, which is
             // why the bug appeared shape/orientation-dependent rather than uniformly broken.
-            // slot.standTopY now holds the REAL shape-derived local top (see shulkerParamsFor /
+            // slot.standTopY now holds the REAL shape-derived local top (see computeCell /
             // this slot's construction in rebuild()), so this now correctly resolves to
             // bearingY + slot.ly + 0.5 for a bottom slab, matching its genuine collision surface.
             double topY = slot.ly + slot.standTopY; // local top face (Y unaffected by yaw)
@@ -1105,8 +1268,13 @@ public final class ContraptionHitboxSwarm {
      * real-world pickup mirrors (those are already independently kept in sync with the
      * contraption's live transform every tick by that swarm — see its class javadoc; carrying them
      * AGAIN here would double-apply the delta and make them drift away twice as fast).
+     *
+     * <p>{@code anchorEntityId} (nullable) is the entity the contraption is anchored to and driven BY —
+     * a harnessed ghast flying inside its own structure. Carrying it would add the delta it itself
+     * produced back onto its own position, doubling its speed every tick. See
+     * {@code ContraptionState#anchorEntityId}.
      */
-    public void carryNearbyEntities(net.minecraft.world.level.Level realLevel, Vec3 bearingWorldPos, double deltaX, double deltaY, double deltaZ, double yaw) {
+    public void carryNearbyEntities(net.minecraft.world.level.Level realLevel, Vec3 bearingWorldPos, double deltaX, double deltaY, double deltaZ, double yaw, java.util.UUID anchorEntityId) {
         if (deltaX == 0.0 && deltaY == 0.0 && deltaZ == 0.0) {
             return;
         }
@@ -1146,6 +1314,9 @@ public final class ContraptionHitboxSwarm {
             if (entity instanceof net.minecraft.world.entity.item.ItemEntity
                     && ContraptionItemPickupSwarm.isMirror(entity.getUUID())) {
                 continue; // already position-synced by ContraptionItemPickupSwarm — avoid double-carry
+            }
+            if (entity.getUUID().equals(anchorEntityId)) {
+                continue; // the anchor drives this contraption; carrying it would double its own delta
             }
             candidates.add(entity);
         }
@@ -1190,8 +1361,38 @@ public final class ContraptionHitboxSwarm {
      */
     public void pushBackNearbyBystanders(net.minecraft.world.level.Level realLevel, Vec3 bearingWorldPos,
             double deltaX, double deltaY, double deltaZ, double yaw) {
-        if (deltaX == 0.0 && deltaY == 0.0 && deltaZ == 0.0) {
+        pushBackNearbyBystanders(realLevel, bearingWorldPos, deltaX, deltaY, deltaZ, yaw, ContraptionPushSettings.DEFAULT);
+    }
+
+    /**
+     * {@link ContraptionPushSettings}-aware overload (2026-07-15 session — "contraption collide
+     * detection and settings to push up"): the bystander shove is scaled by
+     * {@link ContraptionPushSettings#pushStrength} and, when
+     * {@link ContraptionPushSettings#pushUpEnabled} is set, a shove against a lip no taller than
+     * {@link ContraptionPushSettings#maxStepUpHeight} is converted into an upward step-up lift
+     * instead (see {@link #applyPushSettings}). {@link ContraptionPushSettings#DEFAULT} reproduces
+     * the pre-settings behavior exactly ({@code pushStrength=1}, {@code pushUpEnabled=false}).
+     */
+    public void pushBackNearbyBystanders(net.minecraft.world.level.Level realLevel, Vec3 bearingWorldPos,
+            double deltaX, double deltaY, double deltaZ, double yaw, ContraptionPushSettings settings) {
+        pushBackNearbyBystanders(realLevel, bearingWorldPos, deltaX, deltaY, deltaZ, yaw, 0.0, 0.0, 1.0, settings);
+    }
+
+    /** Pitch/roll/scale-aware {@link #pushBackNearbyBystanders} — orientation-aware push detection (2026-07-17). */
+    public void pushBackNearbyBystanders(net.minecraft.world.level.Level realLevel, Vec3 bearingWorldPos,
+            double deltaX, double deltaY, double deltaZ, double yaw, double pitch, double roll, double scale,
+            ContraptionPushSettings settings) {
+        // A STATIC contraption never shoves a PLAYER (2026-07-17 — "si un contraption esta estatico no
+        // aplicar pushup a player, solo a entidades"): a player's own packet-only SHULKER colliders already
+        // stop them walking into it, so a server-side push here is redundant and only ever fires
+        // spuriously — that is the "me sacan volando cuando no deberian". Non-players have no shulker, so
+        // pushBackNearbyEntities still pushes them when static. Threshold, not exact zero, because the async
+        // solver reports tiny resting jitter that is not real movement.
+        if (deltaX * deltaX + deltaY * deltaY + deltaZ * deltaZ < STATIC_DELTA_SQ) {
             return;
+        }
+        if (settings == null) {
+            settings = ContraptionPushSettings.DEFAULT;
         }
         List<Slot> solids = allSlots();
         if (solids.isEmpty() || !(realLevel instanceof net.minecraft.server.level.ServerLevel)) {
@@ -1228,11 +1429,19 @@ public final class ContraptionHitboxSwarm {
             }
             Vec3 playerPos = sp.position();
             Vec3 push = computeSolidPush(playerPos, bearingWorldPos, solids, RIDER_HALF_WIDTH, RIDER_HEIGHT, yaw,
-                    deltaX, deltaY, deltaZ);
-            if (push.equals(Vec3.ZERO)) {
+                    pitch, roll, scale, deltaX, deltaY, deltaZ);
+            // Apply configurable strength + opt-in step-up (a bystander player is never silently
+            // "carried up" — allowCarryUp=false — only shoved, or lifted-over-a-lip when pushUp on).
+            push = applyPushSettings(push, playerPos, bearingWorldPos, solids, RIDER_HALF_WIDTH, RIDER_HEIGHT, yaw,
+                    settings, false);
+            // WALLS ONLY, never the floor (2026-07-17 — "solo contra paredes no contra el suelo que pise").
+            // A bystander is shoved sideways out of a wall's path; they must never be lifted, which is what
+            // read as being launched into the air. Vertical support is carryRiders' job (standing on top),
+            // not this out-of-the-way shove.
+            if (push.x == 0.0 && push.z == 0.0) {
                 continue;
             }
-            PlayerCarry.carry(sp, push.x, push.y, push.z);
+            PlayerCarry.carry(sp, push.x, 0.0, push.z);
         }
     }
 
@@ -1253,6 +1462,40 @@ public final class ContraptionHitboxSwarm {
      */
     public void pushBackNearbyEntities(net.minecraft.world.level.Level realLevel, Vec3 bearingWorldPos,
             double deltaX, double deltaY, double deltaZ, double yaw) {
+        pushBackNearbyEntities(realLevel, bearingWorldPos, deltaX, deltaY, deltaZ, yaw, ContraptionPushSettings.DEFAULT,
+                null);
+    }
+
+    /**
+     * {@link ContraptionPushSettings}-aware overload (2026-07-15 session — see
+     * {@link #pushBackNearbyBystanders(net.minecraft.world.level.Level, Vec3, double, double, double, double, ContraptionPushSettings)}).
+     * In addition to {@link ContraptionPushSettings#pushStrength} scaling and the
+     * {@link ContraptionPushSettings#pushUpEnabled} step-up path, a non-player entity honors
+     * {@link ContraptionPushSettings#carryEntities}: when set and a step-up lip within
+     * {@link ContraptionPushSettings#maxStepUpHeight} exists, the entity is lifted UP onto the step
+     * (horizontal shove suppressed) rather than shoved back. {@link ContraptionPushSettings#DEFAULT}
+     * reproduces the pre-settings behavior exactly.
+     *
+     * <p>{@code anchorEntityId} (nullable) is exempt: the entity the contraption is anchored to and
+     * driven by flies INSIDE its own structure by design (a harnessed ghast — "self block of this
+     * contraption should not affect the same ghast"), so it must never be shoved out of its own walls.
+     * See {@code ContraptionState#anchorEntityId}. Only that one entity — every other ghast, including
+     * another harnessed one, still collides normally.
+     */
+    public void pushBackNearbyEntities(net.minecraft.world.level.Level realLevel, Vec3 bearingWorldPos,
+            double deltaX, double deltaY, double deltaZ, double yaw, ContraptionPushSettings settings,
+            java.util.UUID anchorEntityId) {
+        pushBackNearbyEntities(realLevel, bearingWorldPos, deltaX, deltaY, deltaZ, yaw, 0.0, 0.0, 1.0, settings,
+                anchorEntityId);
+    }
+
+    /** Pitch/roll/scale-aware {@link #pushBackNearbyEntities} — orientation-aware push detection (2026-07-17). */
+    public void pushBackNearbyEntities(net.minecraft.world.level.Level realLevel, Vec3 bearingWorldPos,
+            double deltaX, double deltaY, double deltaZ, double yaw, double pitch, double roll, double scale,
+            ContraptionPushSettings settings, java.util.UUID anchorEntityId) {
+        if (settings == null) {
+            settings = ContraptionPushSettings.DEFAULT;
+        }
         List<Slot> solids = allSlots();
         if (solids.isEmpty() || !(realLevel instanceof net.minecraft.server.level.ServerLevel)) {
             return;
@@ -1286,13 +1529,20 @@ public final class ContraptionHitboxSwarm {
                     && ContraptionItemPickupSwarm.isMirror(entity.getUUID())) {
                 continue; // owned by the pickup swarm
             }
+            if (entity.getUUID().equals(anchorEntityId)) {
+                continue; // flies inside its own structure by design — see the javadoc
+            }
             if (!topSlots.isEmpty() && isStandingOnFootprint(entity.position(), bearingWorldPos, topSlots, yaw)) {
                 continue; // standing on top — carryNearbyEntities owns it
             }
             double halfWidth = entity.getBbWidth() / 2.0;
             double height = entity.getBbHeight();
             Vec3 push = computeSolidPush(entity.position(), bearingWorldPos, solids, halfWidth, height, yaw,
-                    deltaX, deltaY, deltaZ);
+                    pitch, roll, scale, deltaX, deltaY, deltaZ);
+            // Configurable strength + opt-in step-up; allowCarryUp=true so carryEntities can lift a
+            // non-rider onto the step instead of shoving it back (see applyPushSettings).
+            push = applyPushSettings(push, entity.position(), bearingWorldPos, solids, halfWidth, height, yaw,
+                    settings, true);
             if (push.equals(Vec3.ZERO)) {
                 continue;
             }
@@ -1333,9 +1583,23 @@ public final class ContraptionHitboxSwarm {
      */
     private static Vec3 computeSolidPush(Vec3 pos, Vec3 bearingWorldPos, List<Slot> solids, double halfWidth,
             double height, double yaw, double dx, double dy, double dz) {
+        return computeSolidPush(pos, bearingWorldPos, solids, halfWidth, height, yaw, 0.0, 0.0, 1.0, dx, dy, dz);
+    }
+
+    /**
+     * Pitch/roll/scale-aware push (2026-07-17). Only the DETECTION (is the entity inside a solid) is made
+     * orientation-aware — the resulting shove stays horizontal-in-yaw, which is what a pushed-out entity
+     * wants regardless of the contraption's tilt. See {@link #overlapsAnySolid}.
+     */
+    private static Vec3 computeSolidPush(Vec3 pos, Vec3 bearingWorldPos, List<Slot> solids, double halfWidth,
+            double height, double yaw, double pitch, double roll, double scale, double dx, double dy, double dz) {
         Vec3 target = new Vec3(pos.x + dx, pos.y + dy, pos.z + dz);
-        boolean now = overlapsAnySolid(pos, bearingWorldPos, solids, halfWidth, height, yaw);
-        boolean next = overlapsAnySolid(target, bearingWorldPos, solids, halfWidth, height, yaw);
+        boolean now = overlapsAnySolid(pos, bearingWorldPos, solids, halfWidth, height, yaw, pitch, roll, scale);
+        boolean next = overlapsAnySolid(target, bearingWorldPos, solids, halfWidth, height, yaw, pitch, roll, scale);
+        // Heading gate (2026-07-17 — "y/o si esta dirigiendose ... evitar miss behaviors"): if the entity
+        // is not inside a solid NOW and won't be after the contraption's move, only a genuine sweep toward
+        // it should push it. resolveSweptPushOut already restricts to the swept volume, so an entity that is
+        // merely adjacent and not being driven into is left alone rather than nudged every tick.
         if (now || next) {
             Vec3 push = resolvePushOut(pos, bearingWorldPos, solids, halfWidth, height, yaw);
             if (!push.equals(Vec3.ZERO)) {
@@ -1344,6 +1608,85 @@ public final class ContraptionHitboxSwarm {
             return new Vec3(dx, 0.0, dz); // touching a closing wall — shove along its travel
         }
         return resolveSweptPushOut(pos, bearingWorldPos, solids, halfWidth, height, yaw, dx, dy, dz);
+    }
+
+    /**
+     * Applies {@link ContraptionPushSettings} to a raw solid-pushback vector (2026-07-15 session —
+     * "contraption collide detection and settings to push up"). Purely a post-processing layer on
+     * top of {@link #computeSolidPush}'s result — the underlying collision MATH is untouched, so
+     * {@link ContraptionPushSettings#DEFAULT} ({@code pushStrength=1}, {@code pushUpEnabled=false},
+     * {@code carryEntities=false}) returns the input push unchanged and behavior is identical to
+     * before this setting existed.
+     *
+     * <ul>
+     *   <li><b>Strength</b>: the horizontal shove is scaled by
+     *   {@link ContraptionPushSettings#pushStrength} (default {@code 1.0} — a no-op).</li>
+     *   <li><b>Opt-in step-up</b> (guarded by {@link ContraptionPushSettings#pushUpEnabled}, off by
+     *   default so this whole branch is dormant): when a horizontal shove would push the thing
+     *   back and the solid directly under/around it presents a lip no taller than
+     *   {@link ContraptionPushSettings#maxStepUpHeight} above its feet (measured via
+     *   {@link #lipHeightAboveFeet}), the thing is lifted UP by that lip height (times
+     *   {@link ContraptionPushSettings#pushUpStrength}) so it steps up over the lip instead of
+     *   being shoved back.</li>
+     *   <li><b>Carry up</b> ({@code allowCarryUp} + {@link ContraptionPushSettings#carryEntities},
+     *   non-player entities only): when a step-up lift is applied, the horizontal shove is
+     *   suppressed so the entity is carried up onto the step rather than also pushed sideways. A
+     *   bystander player passes {@code allowCarryUp=false} and is never silently lifted this way.</li>
+     * </ul>
+     */
+    private static Vec3 applyPushSettings(Vec3 push, Vec3 pos, Vec3 bearingWorldPos, List<Slot> solids,
+            double halfWidth, double height, double yaw, ContraptionPushSettings settings, boolean allowCarryUp) {
+        if (push.equals(Vec3.ZERO)) {
+            return push; // nothing to push — leave it alone (and skip the lip query)
+        }
+        double px = push.x * settings.pushStrength;
+        double pz = push.z * settings.pushStrength;
+        double py = push.y;
+        boolean carryUp = allowCarryUp && settings.carryEntities;
+        if ((settings.pushUpEnabled || carryUp) && (px != 0.0 || pz != 0.0)) {
+            double lip = lipHeightAboveFeet(pos, bearingWorldPos, solids, halfWidth, yaw);
+            if (lip > 0.0 && lip <= settings.maxStepUpHeight) {
+                py += lip * settings.pushUpStrength;
+                if (carryUp) {
+                    // Carried UP onto the step, not shoved: drop the horizontal component.
+                    px = 0.0;
+                    pz = 0.0;
+                }
+            }
+        }
+        return new Vec3(px, py, pz);
+    }
+
+    /**
+     * Height (blocks) of the tallest solid top face above the thing's feet among every
+     * {@code hasCollision} slot whose XZ footprint the thing overlaps — i.e. the "lip" a step-up
+     * would have to clear (see {@link #applyPushSettings}). Works in the local slot frame (un-rotate
+     * {@code pos} by {@code yaw}, matching {@link #overlapsAnySolid}) and reuses each slot's real
+     * shape-derived top ({@code slot.standTopY}). Returns {@code 0.0} when no overlapping solid rises
+     * above the feet. Read-only geometry query — does not affect the existing collision math.
+     */
+    private static double lipHeightAboveFeet(Vec3 pos, Vec3 bearingWorldPos, List<Slot> solids,
+            double halfWidth, double yaw) {
+        Vec3 local = dev.arubik.craftengine.contraption.ContraptionMath.realToLocal(pos, bearingWorldPos, yaw);
+        double rMinX = local.x - halfWidth, rMaxX = local.x + halfWidth;
+        double rMinZ = local.z - halfWidth, rMaxZ = local.z + halfWidth;
+        double feetY = local.y;
+        double bestTop = feetY;
+        for (Slot slot : solids) {
+            if (!slot.hasCollision) {
+                continue;
+            }
+            double half = slot.width / 2.0;
+            double minX = slot.lx - half, maxX = slot.lx + half;
+            double minZ = slot.lz - half, maxZ = slot.lz + half;
+            if (rMaxX > minX && rMinX < maxX && rMaxZ > minZ && rMinZ < maxZ) {
+                double top = slot.ly + slot.standTopY;
+                if (top > bestTop) {
+                    bestTop = top;
+                }
+            }
+        }
+        return bestTop - feetY;
     }
 
     /**
@@ -1491,7 +1834,7 @@ public final class ContraptionHitboxSwarm {
          * session, carry-fix follow-up — see the long comment at this slot's construction site in
          * {@link #rebuild} for the full root-cause writeup). Defaults to {@code [0, height]} — the
          * flat full-cell assumption — for any {@link Slot} built via the legacy 5-arg constructor
-         * (custom/shulker-adjacent slots that don't go through {@code shulkerParamsFor}), so
+         * (custom/shulker-adjacent slots that don't go through {@code computeCell}), so
          * behavior for those is completely unchanged. Mutable (not {@code final}) so {@link #rebuild}
          * can refresh it on a REUSED slot when the underlying block changes shape in place without
          * the slot itself being despawned/recreated.
@@ -1502,11 +1845,11 @@ public final class ContraptionHitboxSwarm {
          * torch-pushback follow-up — "la antorcha esta siendo tomada en cuenta en el AABB como
          * full block empujando al jugador fuera de si"). {@code true} by default for any
          * {@link Slot} built via the legacy 5-arg constructor (custom/shulker-adjacent slots that
-         * don't go through {@code shulkerParamsFor} — unchanged "always solid" behavior for
-         * those), and set from {@code shulkerParamsFor(level, offset) != null} for auto-derived
+         * don't go through {@code computeCell} — unchanged "always solid" behavior for
+         * those), and set from {@code computeCell(level, offset) != null} for auto-derived
          * cells in {@link #rebuild} — mirrors EXACTLY the same real-shape check the passive
          * shulker-collider layer already uses to skip a cell entirely (torches, tripwire, most
-         * plants, etc. — see {@code shulkerParamsFor}'s {@code shape.isEmpty()} javadoc). Before
+         * plants, etc. — see {@code computeCell}'s {@code shape.isEmpty()} javadoc). Before
          * this field existed, {@link #overlapsAnySolid}/{@link #resolvePushOut} (the side-collision
          * clamp and bystander-pushback machinery) iterated {@link #allSlots} unconditionally
          * treating EVERY cell as a solid flat {@code width}x{@code height} box regardless of the
@@ -1519,6 +1862,17 @@ public final class ContraptionHitboxSwarm {
         private final UUID uuid = UUID.randomUUID();
         private final Object despawnPacket;
         private final Set<UUID> shownTo = ConcurrentHashMap.newKeySet();
+
+        /**
+         * Live uniform contraption SCALE (roadmap item #9) this slot's box is currently sized by — its
+         * {@code INTERACTION} width/height are sent as {@code width*renderScale}/{@code height*renderScale}
+         * (see {@link #metadata}). {@code 1.0} means "un-scaled, exactly as before this field existed"
+         * ({@code width*1.0}/{@code height*1.0} are the float-exact identities, so the scale-1 spawn packet is
+         * byte-for-byte unchanged). A change flags {@link #scaleDirty} for a metadata resend to existing viewers.
+         */
+        private double renderScale = 1.0;
+        /** Set when {@link #renderScale} changes; cleared once {@link #render} resends the sized metadata to every current viewer. */
+        private volatile boolean scaleDirty = false;
 
         Slot(double lx, double ly, double lz, float width, float height) {
             this(lx, ly, lz, width, height, 0.0, height);
@@ -1537,8 +1891,10 @@ public final class ContraptionHitboxSwarm {
 
         private List<Object> metadata() {
             List<Object> values = new ArrayList<>();
-            InteractionData.Width.addEntityData(width, values);
-            InteractionData.Height.addEntityData(height, values);
+            // Box sized by the live contraption scale (roadmap item #9); at renderScale == 1.0 these are the
+            // float-exact width/height, so the scale-1 packet is byte-for-byte the pre-scale one.
+            InteractionData.Width.addEntityData((float) (width * renderScale), values);
+            InteractionData.Height.addEntityData((float) (height * renderScale), values);
             InteractionData.Response.addEntityData(false, values); // no "hit" feedback needed — carry-only
             return values;
         }
@@ -1559,7 +1915,14 @@ public final class ContraptionHitboxSwarm {
             player.sendPacket(despawnPacket, false);
         }
 
-        void render(List<Player> viewers, double x, double y, double z, boolean moved) {
+        void render(List<Player> viewers, double x, double y, double z, double scale, boolean moved) {
+            if (scale != renderScale) {
+                // Contraption resized (e.g. the phys wand): resize this box and resend its sized metadata to
+                // everyone already tracking it (newly-spawned viewers below already get the fresh size).
+                renderScale = scale;
+                scaleDirty = true;
+            }
+            boolean resendScale = scaleDirty;
             Set<UUID> current = new HashSet<>();
             for (Player p : viewers) {
                 UUID id = uuidOf(p);
@@ -1569,9 +1932,17 @@ public final class ContraptionHitboxSwarm {
                 current.add(id);
                 if (shownTo.add(id)) {
                     spawn(p, x, y, z);
-                } else if (moved) {
-                    updatePosition(p, x, y, z);
+                } else {
+                    if (moved) {
+                        updatePosition(p, x, y, z);
+                    }
+                    if (resendScale) {
+                        p.sendPacket(MNms.INSTANCE.constructor$ClientboundSetEntityDataPacket(entityId, metadata()), false);
+                    }
                 }
+            }
+            if (resendScale) {
+                scaleDirty = false;
             }
             shownTo.retainAll(current);
         }

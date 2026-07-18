@@ -29,6 +29,11 @@ public final class CraftEnginePolyfills extends JavaPlugin {
     public void onEnable() {
         PacketEvents.getAPI().init();
         ItemListener.register(this);
+        // The vanilla block tables the physics reads: how much a block IS (mass) and how a fluid pushes
+        // it (floatability). Both are owner-editable overrides layered over a built-in family table —
+        // see BlockPropertyTable for the lookup order. Loaded before anything can capture a contraption.
+        dev.arubik.craftengine.contraption.behavior.WeightBlockBehavior.loadTable();
+        dev.arubik.craftengine.contraption.physics.FloatabilityTable.load();
         // Restore the loose world glue graph persisted at last shutdown (2026-07-03 — "has que
         // las glue persista al apagar o reiniciar el sv"). Assembled contraptions carry their own
         // glue in their structure NBT; this is the unassembled real-world glue.
@@ -42,6 +47,9 @@ public final class CraftEnginePolyfills extends JavaPlugin {
         // entity-PDC). NOT rehydrated immediately: the target world/chunk may not be loaded yet —
         // ContraptionChunkLifecycleListener#onChunkLoad rehydrates each as its bearing's chunk
         // loads, exactly how the minecart rehydrates via natural entity chunk-load.
+        // Wipe any leftover contraption-level scaffolding folders in temp (a crash skips their per-dispose
+        // cleanup). Live contraptions rehydrate from NBT below, never from these — see ContraptionLevel.
+        dev.arubik.craftengine.contraption.level.ContraptionLevel.wipeStorageRoot();
         try {
             dev.arubik.craftengine.contraption.persistence.BlockAnchoredContraptionStore.loadIndex();
         } catch (Throwable t) {
@@ -98,6 +106,13 @@ public final class CraftEnginePolyfills extends JavaPlugin {
         // explicit hammer-driven MinecartBearing#disassemble flow.
         getServer().getPluginManager().registerEvents(new dev.arubik.craftengine.contraption.MinecartBearing.DamageGuard(),
                 this);
+        // Happy-ghast harness contraption: equipping a harness on an adult ghast assembles a contraption
+        // pre-filled with a hollow 4x4x4 shell of the harness's wool colour; removing it with shears hands
+        // the whole structure back inside the harness item (like the minecart's save-to-item). See
+        // GhastHarnessListener's javadoc for why EntityEquipmentChangedEvent is the detection hook and why
+        // the item still has to be stamped from the interact event.
+        getServer().getPluginManager().registerEvents(new dev.arubik.craftengine.contraption.GhastHarnessListener(),
+                this);
         // Glue wand item tool (CONTRAPTIONS.md §1): WorldEdit-style two-corner AREA glue with
         // cml:slime_glue — right-click pos1, right-click pos2 elsewhere to instantly glue the
         // whole axis-aligned box between them into one structure (sneak = cancel pending pos1);
@@ -112,6 +127,27 @@ public final class CraftEnginePolyfills extends JavaPlugin {
         // contraption's real ContraptionLevel blocks; left-click is an explicit no-op.
         getServer().getPluginManager().registerEvents(new dev.arubik.craftengine.contraption.ContraptionInteractionListener(),
                 this);
+        // Creative Phys Wand (roadmap item #9 — cml:creative_phys_wand): creative-only tool to GRAB a
+        // contraption and drag it by the crosshair (reusing ContraptionEntity#teleport) and live-resize
+        // it (ContraptionEntity#setScale). Owns a 1-tick drag task started via #start below (self-cancels
+        // per-grab when a grabber logs off / leaves creative / puts the wand away / the contraption dies).
+        dev.arubik.craftengine.contraption.CreativePhysWandListener physWand =
+                new dev.arubik.craftengine.contraption.CreativePhysWandListener();
+        getServer().getPluginManager().registerEvents(physWand, this);
+        physWand.start(this);
+        // A TNT cell lit inside ANY contraption is ejected as a real PrimedTnt into the real world at
+        // that cell's live position, carrying the contraption's velocity there — otherwise it would
+        // prime, tick and detonate inside a hidden dimension nobody can see. Catches every ignition
+        // path at once by hooking the one addFreshEntity every TntBlock#prime funnels into; see the
+        // listener's javadoc.
+        getServer().getPluginManager().registerEvents(
+                new dev.arubik.craftengine.contraption.explosive.ContraptionTntEjectListener(), this);
+        // Wakes sleeping phys bodies when the world under them changes (a sleeping body is skipped by
+        // the solver, so without this it hangs in mid-air after its support is mined out), and lets
+        // explosions throw phys contraptions — vanilla's Explosion cannot see them, since they are not
+        // real entities. See the listener's javadoc.
+        getServer().getPluginManager().registerEvents(
+                new dev.arubik.craftengine.contraption.physics.PhysicsWorldListener(), this);
         // Furniture-seat completion: sit down (right-click a free seat slot, runs BEFORE the
         // block-cell listener above) / stand up (sneak) after a contraption has been assembled.
         getServer().getPluginManager().registerEvents(new dev.arubik.craftengine.contraption.ContraptionSeatListener(),
@@ -247,11 +283,9 @@ public final class CraftEnginePolyfills extends JavaPlugin {
                     continue;
                 }
                 net.minecraft.world.level.Level realLevel = ((org.bukkit.craftbukkit.CraftWorld) world).getHandle();
-                dev.arubik.craftengine.contraption.BearingType type = dev.arubik.craftengine.contraption.behavior.BearingBlockBehavior
-                        .typeAt(realLevel, anchor.pos());
-                if (type == null) {
-                    type = dev.arubik.craftengine.contraption.BearingType.ROTATIONAL;
-                }
+                dev.arubik.craftengine.contraption.BearingType type =
+                        dev.arubik.craftengine.contraption.persistence.BlockAnchoredContraptionStore
+                                .typeToPersist(entity.state(), realLevel, anchor.pos());
                 double rpm = dev.arubik.craftengine.contraption.behavior.BearingBlockBehavior.rpmAt(realLevel,
                         anchor.pos());
                 double su = dev.arubik.craftengine.contraption.behavior.BearingBlockBehavior.suPerBlockAt(realLevel,
@@ -275,6 +309,15 @@ public final class CraftEnginePolyfills extends JavaPlugin {
         } catch (Throwable t) {
             getLogger().warning("[Contraption] failed to save euler-extended bearings: " + t);
         }
+        // Stop the island-solve workers. Daemon threads would not hold the JVM open anyway, but a
+        // reload leaves the old plugin's pool running against classes that are about to be replaced.
+        try {
+            dev.arubik.craftengine.contraption.physics.PhysicsWorld.shutdown();
+        } catch (Throwable t) {
+            getLogger().warning("[Contraption] failed to stop physics workers: " + t);
+        }
+        // Cached world wrappers hold a reference to worlds that a reload replaces.
+        dev.arubik.craftengine.util.CeWorlds.clear();
         PacketEvents.getAPI().terminate();
         getLogger().info("CraftEngine Polyfills Disabled");
     }

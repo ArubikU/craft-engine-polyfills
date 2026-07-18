@@ -343,8 +343,70 @@ public final class ContraptionCapture {
      * hook fires finds nothing left to drop. Vanilla chest/barrel/hopper have no CE controller
      * at their position, so this lookup is simply null for them and this step is a no-op —
      * their already-working path above is untouched.
+     *
+     * <p><b>Synthetic-removal signal.</b> A {@code BlockBehavior} hook reached from this method's
+     * {@code setBlock(AIR)} loop cannot otherwise tell a capture from a player or piston break.
+     * Behaviors that must NOT run their real teardown during a capture (the belt in
+     * {@code ConveyorBlockEntity#onBroken} tears down the WHOLE line when its middle goes away —
+     * catastrophic if a capture triggered it) ask {@link #isRemovingForCapture()} instead of
+     * guessing. See that flag's javadoc for why a proxy such as "is the container empty?" is not
+     * a sound substitute.</p>
      */
     public static void removeFromWorld(Level level, Set<BlockPos> worldPositions) {
+        boolean prevRemovingForCapture = removingForCapture;
+        removingForCapture = true;
+        try {
+            removeFromWorld0(level, worldPositions);
+        } finally {
+            // MUST be restored on the exception path too: a stuck `true` would leave every
+            // conveyor in the world permanently un-teardownable (breaks would silently no-op).
+            removingForCapture = prevRemovingForCapture;
+        }
+    }
+
+    /**
+     * True while {@link #removeFromWorld} is setting captured cells to air, i.e. while any
+     * {@code affectNeighborsAfterRemoval} / {@code onRemove} hook reached from that loop is
+     * running. Lets a block behavior tell a SYNTHETIC removal ("this structure is becoming a
+     * contraption hologram; its full state was already read into the ContraptionLevel moments
+     * ago") apart from a GENUINE break (player in either game mode, or a piston), which are
+     * otherwise identical at the behavior hook.
+     *
+     * <p>Belt and braces, deliberately: {@link #removeFromWorld}'s quiet flags omit
+     * {@code UPDATE_NEIGHBORS}, and vanilla only fires {@code affectNeighborsAfterRemoval} when
+     * {@code (flags & UPDATE_NEIGHBORS) != 0 || movedByPiston} (verified in
+     * {@code LevelChunk#setBlockState}, Paper 1.21.11 mapped sources), so today no such hook is
+     * actually reached from here. The signal exists so a behavior's correctness does not silently
+     * depend on that flag choice — the quiet flags were themselves introduced later, to fix an
+     * unrelated duplication bug, and could be revisited the same way. {@code onRemove} (CraftEngine's
+     * palette-level injection) DOES still fire from here regardless of flags.
+     *
+     * <p>This replaces an earlier {@code isEmpty()} proxy in {@code ConveyorBlockEntity#onBroken}
+     * that inferred "this is a capture" from the segment's container being empty (capture clears
+     * content via {@link PersistentWorldlyBlockEntity#clearContent()} just below, so a capture is
+     * always empty). The inference does not hold in the other direction: a belt a player breaks is
+     * usually empty too, so the proxy swallowed the real teardown for the common case (user report:
+     * "las conveyor al romperlas por el medio no se rompe todo", and "si al romper el inicio o final
+     * no actualiza el conveyor anterior"). An explicit signal set by the capture itself cannot be
+     * confused with a genuine break.
+     *
+     * <p>Not volatile/thread-local by design, mirroring {@code ConveyorBlockEntity}'s
+     * {@code teardownInProgress}: every writer and reader is on the server main thread —
+     * {@code removeFromWorld}'s callers are assembly paths driven from a Bukkit command/ticked
+     * bearing, {@code Level#setBlock} is main-thread-only anyway, and the hooks that read this
+     * run synchronously inside that same {@code setBlock} on the same thread. A cross-thread read
+     * is therefore not a supported call, and making the field {@code volatile} would only make
+     * such a read reliably observe {@code true} — i.e. skip a legitimate teardown — which is
+     * strictly worse than the plain field's non-guarantee.
+     */
+    private static boolean removingForCapture = false;
+
+    /** @see #isRemovingForCapture */
+    public static boolean isRemovingForCapture() {
+        return removingForCapture;
+    }
+
+    private static void removeFromWorld0(Level level, Set<BlockPos> worldPositions) {
         // BetterModel real-tracker leak fix (2026-07-02 session — "se bugea y termina apareciendo
         // 2 modelos"): CraftEngine's own onRemove()/preRemove() hook chain (see
         // PersistentBlockEntity#onRemove — invoked by WorldStorageInjector on THIS method's own

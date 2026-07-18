@@ -164,7 +164,9 @@ public abstract class PersistentWorldlyBlockEntity extends PersistentBlockEntity
         // position, so the menu would close on the very next tick. Route through the
         // ContraptionLevel's own bearing-transformed real-world position instead.
         net.minecraft.world.level.Level level = getNMSLevel();
-        if (level instanceof dev.arubik.craftengine.contraption.level.ContraptionLevel contraptionLevel) {
+        dev.arubik.craftengine.contraption.level.ContraptionBoundary contraptionLevel =
+                dev.arubik.craftengine.contraption.level.ContraptionBoundary.of(level).orElse(null);
+        if (contraptionLevel != null) {
             // realWorldPositionOf(BlockPos) resolves the block's MIN corner (matches
             // ContraptionMath.renderPosition's own convention, used identically by
             // ContraptionInteractionListener's raycast AABBs) — add the +0.5 block-center offset

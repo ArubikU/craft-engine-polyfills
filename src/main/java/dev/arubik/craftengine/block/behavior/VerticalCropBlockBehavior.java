@@ -124,7 +124,7 @@ public class VerticalCropBlockBehavior extends BukkitBlockBehavior {
     if (RandomUtils.generateRandomFloat(0.0F, 1.0F) >= this.growSpeed)
       return;
     Object level = args[1];
-    BukkitWorld bukkitWorld = new BukkitWorld(((net.minecraft.server.level.ServerLevel) level).getWorld());
+    BukkitWorld bukkitWorld = dev.arubik.craftengine.util.CeWorlds.of(((net.minecraft.server.level.ServerLevel) level).getWorld());
     BlockPos currentPos = LocationUtils.fromBlockPos(args[2]);
     int height = 0;
     BlockPos hPos = currentPos;

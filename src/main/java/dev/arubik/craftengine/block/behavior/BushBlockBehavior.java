@@ -158,7 +158,7 @@ public class BushBlockBehavior extends AbstractCanSurviveBlockBehavior {
       return;
     BlockPos hPos = LocationUtils.fromBlockPos(blockPos);
     hPos = hPos.offset(0, 1, 0);
-    BukkitWorld bukkitWorld = new BukkitWorld(dev.arubik.craftengine.util.MNms.INSTANCE.method$Level$getCraftWorld(world));
+    BukkitWorld bukkitWorld = dev.arubik.craftengine.util.CeWorlds.of(dev.arubik.craftengine.util.MNms.INSTANCE.method$Level$getCraftWorld(world));
     ImmutableBlockState aboveState = bukkitWorld.getBlock(hPos.x(), hPos.y(), hPos.z()).customBlockState();
     if (aboveState != null && aboveState.owner().value() == this.block())
       return;
@@ -174,7 +174,7 @@ public class BushBlockBehavior extends AbstractCanSurviveBlockBehavior {
   }
 
   public boolean isTip(Object world, Object pos) {
-    BukkitWorld bukkitWorld = new BukkitWorld(dev.arubik.craftengine.util.MNms.INSTANCE.method$Level$getCraftWorld(world));
+    BukkitWorld bukkitWorld = dev.arubik.craftengine.util.CeWorlds.of(dev.arubik.craftengine.util.MNms.INSTANCE.method$Level$getCraftWorld(world));
     BlockPos hPos = LocationUtils.fromBlockPos(pos);
     hPos = hPos.offset(0, 1, 0);
     ExistingBlock above = bukkitWorld.getBlock(hPos.x(), hPos.y(), hPos.z());
@@ -197,7 +197,7 @@ public class BushBlockBehavior extends AbstractCanSurviveBlockBehavior {
   }
 
   protected void updateBlocks(Object world, Object topPos) {
-    BukkitWorld bukkitWorld = new BukkitWorld(dev.arubik.craftengine.util.MNms.INSTANCE.method$Level$getCraftWorld(world));
+    BukkitWorld bukkitWorld = dev.arubik.craftengine.util.CeWorlds.of(dev.arubik.craftengine.util.MNms.INSTANCE.method$Level$getCraftWorld(world));
     BlockPos pos = LocationUtils.fromBlockPos(topPos).offset(0, -1, 0);
     ImmutableBlockState tipState = null;
     if (bukkitWorld.getBlock(pos.x(), pos.y(), pos.z()).customBlock() != null)

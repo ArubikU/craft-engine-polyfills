@@ -232,6 +232,8 @@ public final class FluidGraphBuilder {
     }
 
     private static <T> T behaviorAt(Level level, BlockPos pos, Class<T> type) {
+        if (!level.hasChunkAt(pos))
+            return null; // see FluidTransferHelper#getCarrier: an unguarded read here force-loads the chunk
         ImmutableBlockState state = BlockStateUtils.getOptionalCustomBlockState(level.getBlockState(pos)).orElse(null);
         if (state == null || state.isEmpty())
             return null;

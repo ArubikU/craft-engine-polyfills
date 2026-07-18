@@ -50,7 +50,7 @@ public class FunnelBehavior extends dev.arubik.craftengine.util.NmsBlockBehavior
 
     private static FunnelBlockEntity controllerAt(Object levelObj, Object posObj) {
         try {
-            CEWorld world = new BukkitWorld(((ServerLevel) levelObj).getWorld()).storageWorld();
+            CEWorld world = dev.arubik.craftengine.util.CeWorlds.of(((ServerLevel) levelObj).getWorld()).storageWorld();
             if (world == null)
                 return null;
             net.momirealms.craftengine.core.world.BlockPos pos = LocationUtils.fromBlockPos(posObj);

@@ -283,7 +283,9 @@ public final class ContraptionSeatListener implements Listener {
 
         Vec3 bearing = new Vec3(state.x(), state.y(), state.z());
         double yaw = state.yawRadians();
-        Vec3 seatPos = occupiedSlot != null ? occupiedSlot.currentRealPosition(bearing, yaw)
+        Vec3 seatPos = occupiedSlot != null
+                ? occupiedSlot.currentRealPosition(bearing, yaw, state.pitchRadians(), state.rollRadians(),
+                        state.scale())
                 : fallbackMountPos != null ? fallbackMountPos
                 : new Vec3(bukkit.getLocation().getX(), bukkit.getLocation().getY(), bukkit.getLocation().getZ());
         float seatYaw = occupiedSlot != null ? occupiedSlot.currentYawDegrees(yaw)
@@ -331,7 +333,8 @@ public final class ContraptionSeatListener implements Listener {
                 if (!slot.isFree()) {
                     continue;
                 }
-                Vec3 real = slot.currentRealPosition(bearing, yaw);
+                Vec3 real = slot.currentRealPosition(bearing, yaw, state.pitchRadians(), state.rollRadians(),
+                        state.scale());
                 AABB box = new AABB(real.x - 0.5, real.y - 0.5, real.z - 0.5, real.x + 0.5, real.y + 0.5, real.z + 0.5);
                 if (box.clip(eye, end).isPresent()) {
                     return true;
@@ -376,7 +379,8 @@ public final class ContraptionSeatListener implements Listener {
                 if (!slot.isFree()) {
                     continue;
                 }
-                Vec3 real = slot.currentRealPosition(bearing, yaw);
+                Vec3 real = slot.currentRealPosition(bearing, yaw, state.pitchRadians(), state.rollRadians(),
+                        state.scale());
                 // Best-effort click target box (same scoped shortcut ContraptionFurnitureSwarm's
                 // own HitboxCell already documents taking — not a faithful reproduction of the
                 // furniture's real configured collider shape).
@@ -399,7 +403,8 @@ public final class ContraptionSeatListener implements Listener {
 
         Vec3 bearing = new Vec3(bestState.x(), bestState.y(), bestState.z());
         double yaw = bestState.yawRadians();
-        Vec3 seatPos = bestSlot.currentRealPosition(bearing, yaw);
+        Vec3 seatPos = bestSlot.currentRealPosition(bearing, yaw, bestState.pitchRadians(), bestState.rollRadians(),
+                bestState.scale());
         float seatYaw = bestSlot.currentYawDegrees(yaw);
 
         // Real vehicle-mounting (2026-07-02 session, seat-only rework) — spawn a real, invisible
@@ -418,6 +423,12 @@ public final class ContraptionSeatListener implements Listener {
         bestSlot.occupy(player.getUUID());
         bestState.addSeatedRider(player.getUUID(), bestSlot.bearingLocalOffset());
         bestState.setSeatedRiderMount(player.getUUID(), mount.getUniqueId());
+        // Roadmap item #9: sitting in a scaled contraption resizes the rider to match it, so they actually
+        // fill the giant sofa instead of perching on it. Applied here (not left to the next tick's
+        // carrySeatedRiders) so the resize lands on the same tick as the sit, with no visible pop.
+        // The scale is INTENTIONALLY never restored on dismount — see
+        // ContraptionSeatMount#applyContraptionScale's javadoc before "repairing" that into a restore.
+        ContraptionSeatMount.applyContraptionScale(bukkitPlayer, bestState.scale());
         return true;
     }
 }

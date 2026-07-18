@@ -1,0 +1,22 @@
+# Per-block MASS for vanilla blocks, in the contraption mass model's own units.
+#
+# Mass decides how much a block IS: it places the contraption's centre of mass, builds its inertia
+# tensor (what makes an unbalanced structure tip), and sets how far an explosion throws it.
+# It does NOT decide whether the block floats — that is floatability.yml.
+#
+# Lookup order, first match wins:
+#   1. a CraftEngine custom block's own `polyfills:weight_block` behavior
+#   2. the `blocks:` map below
+#   3. the built-in family table (wood is light, stone is heavy, metal is heaviest)
+#   4. `default:` below
+#
+# Keys are Bukkit material names; a `minecraft:` prefix is accepted.
+
+# Mass for a block nothing above classified.
+default: 10.0
+
+blocks: {}
+# Examples — uncomment to override the built-in table:
+#   IRON_BLOCK: 30.0
+#   OAK_PLANKS: 6.0
+#   minecraft:white_wool: 3.0

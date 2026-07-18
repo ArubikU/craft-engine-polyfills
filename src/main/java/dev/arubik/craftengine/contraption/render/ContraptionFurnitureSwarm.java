@@ -4,6 +4,7 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -11,6 +12,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
 import dev.arubik.craftengine.contraption.ContraptionFurniture;
@@ -108,6 +110,45 @@ import net.momirealms.craftengine.core.entity.seat.SeatConfig;
 public final class ContraptionFurnitureSwarm {
 
     private final List<Cell> cells = new ArrayList<>();
+
+    /**
+     * Seats declared by captured FURNITURE ({@code FurnitureVariant#hitBoxConfigs()} -&gt;
+     * {@code SeatConfig}) — rebuilt only when the captured furniture LIST identity changes, i.e. never
+     * after assembly (see {@link #lastBuiltFrom}).
+     */
+    private final List<SeatSlot> furnitureSeatSlots = new ArrayList<>();
+
+    /**
+     * Seats declared by captured BLOCKS via CraftEngine's {@code seat_block} behavior (2026-07-16 —
+     * see {@link ContraptionBlockSeats} for the full writeup on why the native
+     * {@code SeatBlockEntityController#spawnSeat} path cannot be used for a captured block). Keyed by
+     * {@link BlockSeatKey} — a seat's own resolved local position + facing — rather than rebuilt from
+     * scratch, so a seat that is UNCHANGED across a rebuild keeps its very same {@link SeatSlot} instance
+     * and therefore its {@code occupant}: a block-seat rider must not be silently un-seated just because
+     * some unrelated block elsewhere on the contraption moved and triggered a rescan.
+     */
+    private final Map<Object, SeatSlot> blockSeatSlots = new LinkedHashMap<>();
+
+    /**
+     * The captured block set {@link #rebuildBlockSeats} last actually scanned. The scan itself is a
+     * CraftEngine custom-state + behavior lookup PER CELL, which is far too heavy to repeat every tick for
+     * a large structure — and it only ever needs redoing when the block set actually changes shape (a
+     * piston pushing a sofa in/out of the contraption, a captured seat block being broken). So the set is
+     * compared by value against the previous scan's snapshot and the whole scan short-circuits when it
+     * matches, exactly the same "identity/equality gate in front of an expensive rebuild" shape
+     * {@link #lastBuiltFrom} already uses for the furniture cells.
+     */
+    private Set<BlockPos> lastBlockSeatScan;
+
+    /**
+     * The COMBINED seat list {@link #seatSlots()} hands out — furniture seats followed by block seats.
+     * Recomposed by {@link #recomposeSeatSlots} whenever either half changes, and never on a normal tick.
+     * Deliberately kept as one flat list of one {@link SeatSlot} TYPE, so
+     * {@code ContraptionSeatListener}'s sit/stand/carry/dismount paths (and
+     * {@code ContraptionEntity#carrySeatedRiders}) needed no changes at all to gain block seats — a block
+     * seat and a furniture seat are the same kind of thing to every consumer, differing only in where their
+     * offset came from.
+     */
     private final List<SeatSlot> seatSlots = new ArrayList<>();
 
     /**
@@ -166,9 +207,10 @@ public final class ContraptionFurnitureSwarm {
             return; // nothing changed since the last successful build — see javadoc above
         }
         despawnAllInternal();
-        seatSlots.clear();
+        furnitureSeatSlots.clear();
         lastBuiltFrom = furniture;
         if (furniture == null) {
+            recomposeSeatSlots();
             return;
         }
         for (ContraptionFurniture cf : furniture) {
@@ -193,42 +235,91 @@ public final class ContraptionFurnitureSwarm {
                 // ContraptionFurnitureCapture already uses for a rider captured mid-sit.
                 for (FurnitureHitBoxConfig<?> hitBox : variant.hitBoxConfigs()) {
                     for (SeatConfig seat : hitBox.seats()) {
-                        // Unlike every other element cell in this class (item display, text
-                        // display, armor stand), a SeatConfig#position() is NOT baked into a
-                        // rotated client-side model — it positions a genuinely separate real
-                        // mount entity in world space (see ContraptionSeatMount), exactly like
-                        // real CraftEngine's own BukkitSeat#calculateSeatLocation, which rotates
-                        // SeatConfig#position() by the source location's yaw before adding it.
-                        // The furniture's own placement yaw relative to the bearing
-                        // (cf.yawOffsetDegrees()) is that "source yaw" here, so the seat's raw
-                        // config-local offset must be rotated by it BEFORE combining with the
-                        // furniture's localOffset() — adding it unrotated (as every other cell
-                        // does for its own already-model-relative offset) put the seat in the
-                        // wrong spot for any furniture piece not facing the bearing's yaw-0
-                        // orientation.
+                        // Unlike every other element cell in this class (item display, text display, armor
+                        // stand), a SeatConfig#position() is NOT baked into a rotated client-side model —
+                        // it positions a genuinely separate real mount entity in world space (see
+                        // ContraptionSeatMount), so it must be rotated by its SOURCE's own yaw (here the
+                        // furniture's placement yaw relative to the bearing, cf.yawOffsetDegrees()) before
+                        // being combined with cf.localOffset(). That rotation is CraftEngine's own
+                        // convention, not ours, and now lives in exactly one place — see
+                        // ContraptionSeatMath, which the block-seat path (ContraptionBlockSeats) shares.
                         //
-                        // Verified numerically against BukkitSeat#calculateSeatLocation's real
-                        // quaternion math (toQuaternionf(0, radians(180 - yaw), 0).conjugate(),
-                        // then .add(offset.x, .., -offset.z)): for every tested yaw, that
-                        // computation equals -rotateYaw(seat.position(), yawRadians) — i.e. the
-                        // rotated offset negated — NOT +rotateYaw(...). Negating after rotation
-                        // (rather than rotating by yaw+180 or flipping rotateYaw's own sign
-                        // convention, which is shared/relied on elsewhere in this class for
-                        // bearing rotation) keeps this call site self-contained.
-                        Vec3 rotatedSeatOffset = ContraptionMath.rotateYaw(
-                                new Vec3(seat.position().x, seat.position().y, seat.position().z),
-                                Math.toRadians(cf.yawOffsetDegrees()));
-                        Vec3 local = cf.localOffset().add(-rotatedSeatOffset.x, rotatedSeatOffset.y, -rotatedSeatOffset.z);
-                        seatSlots.add(new SeatSlot(cf, local, cf.yawOffsetDegrees() + seat.yRot()));
+                        // 2026-07-16: this call site used to inline that math itself, with a comment
+                        // asserting it had been verified against BukkitSeat#calculateSeatLocation "for
+                        // every tested yaw". It had not: re-running that comparison against the real jar
+                        // shows the old inline formula matches CraftEngine ONLY for a seat whose config Z
+                        // offset is 0 (which every seat configured today happens to be, so nothing
+                        // observable changes here) and mirrors the seat across its source for any other Z.
+                        // ContraptionSeatMath carries the corrected, re-verified derivation.
+                        Vec3 local = cf.localOffset()
+                                .add(ContraptionSeatMath.seatOffset(seat.position(), cf.yawOffsetDegrees()));
+                        furnitureSeatSlots.add(new SeatSlot(cf, local,
+                                ContraptionSeatMath.seatYawDegrees(seat, cf.yawOffsetDegrees()),
+                                seat.limitPlayerRotation()));
                     }
                 }
             } catch (Throwable ignored) {
                 // One malformed furniture definition/variant shouldn't blank the whole swarm.
             }
         }
+        recomposeSeatSlots();
     }
 
-    /** Every sittable seat slot from every captured furniture piece — see {@link SeatSlot}. */
+    /**
+     * (Re)builds the BLOCK-seat half of {@link #seatSlots()} from {@code level}'s captured cells — every
+     * seat any captured block declares through CraftEngine's {@code seat_block} behavior (2026-07-16; see
+     * {@link ContraptionBlockSeats} for why these have to be re-emitted by us rather than spawned through
+     * CraftEngine's own native seat path). Called every tick from {@code ContraptionEntity#rebuildSwarm},
+     * right after {@code ContraptionLevel#refreshLocalPositions} has re-synced the cell set — but the
+     * actual (per-cell CraftEngine lookup) scan only runs when that cell set genuinely CHANGED, see
+     * {@link #lastBlockSeatScan}.
+     *
+     * <p>An unchanged seat keeps its existing {@link SeatSlot} instance across a rescan (see
+     * {@link #blockSeatSlots}), so a rider seated on a sofa is not un-seated by an unrelated block moving.
+     * A seat that genuinely stops existing — its block was pushed elsewhere, or broken — drops out of the
+     * map and, if it was occupied, simply stops being findable by occupant id; {@code
+     * ContraptionSeatListener#dismount} already handles exactly that case (it falls back to the rider's
+     * live mount position, see its own javadoc), which is why no explicit eviction is needed here.
+     */
+    public void rebuildBlockSeats(ContraptionLevel level) {
+        Set<BlockPos> current = level == null ? java.util.Set.of() : level.localPositions();
+        if (current.equals(lastBlockSeatScan)) {
+            return; // block set unchanged — skip the whole per-cell CraftEngine lookup (see javadoc)
+        }
+        lastBlockSeatScan = new HashSet<>(current); // snapshot: localPositions() is a live view
+        Map<Object, SeatSlot> rescanned = new LinkedHashMap<>();
+        for (ContraptionBlockSeats.BlockSeat seat : ContraptionBlockSeats.scan(level)) {
+            Object key = new BlockSeatKey(seat.local(), seat.yawOffsetDegrees());
+            SeatSlot existing = blockSeatSlots.get(key);
+            rescanned.put(key, existing != null ? existing
+                    : new SeatSlot(null, seat.local(), seat.yawOffsetDegrees(), seat.limitPlayerRotation()));
+        }
+        blockSeatSlots.clear();
+        blockSeatSlots.putAll(rescanned);
+        recomposeSeatSlots();
+    }
+
+    /**
+     * Stable identity of a block seat across rescans — its fully-resolved local position plus its facing.
+     * Keyed on the RESULT rather than on {@code (BlockPos, seatIndex)} deliberately: two rescans that
+     * produce the same seat in the same place ARE the same seat to a sitting player, regardless of which
+     * cell/behavior/index the scan happened to walk it out of.
+     */
+    private record BlockSeatKey(Vec3 local, float yawOffsetDegrees) {
+    }
+
+    /** Rebuilds the flat combined view {@link #seatSlots()} hands out — furniture seats, then block seats. */
+    private void recomposeSeatSlots() {
+        seatSlots.clear();
+        seatSlots.addAll(furnitureSeatSlots);
+        seatSlots.addAll(blockSeatSlots.values());
+    }
+
+    /**
+     * Every sittable seat slot on this contraption — from captured FURNITURE and from captured BLOCKS
+     * ({@code seat_block}) alike, as one flat list of one type; see {@link SeatSlot} and
+     * {@link #seatSlots} for why the two sources are deliberately indistinguishable to every consumer.
+     */
     public List<SeatSlot> seatSlots() {
         return seatSlots;
     }
@@ -257,26 +348,82 @@ public final class ContraptionFurnitureSwarm {
      * target — see that helper's javadoc for the full root-cause writeup. {@code level} null
      * (no captured-block data, e.g. the pure-kinematics/registry unit-test path) skips the scan
      * and falls back to real-ambient-only, same as before this fix.
+     *
+     * <p><b>Uniform scale (2026-07-16 fix — captured furniture ignored the contraption's {@code scale}).</b>
+     * {@code scale} is the contraption's live {@code ContraptionState#scale()} (roadmap item #9), threaded
+     * straight from {@code ContraptionEntity#render} exactly like it already was into
+     * {@link ContraptionDisplaySwarm}/{@code ContraptionHitboxSwarm}. Unlike
+     * {@link ContraptionBlockEntityElementMirror} (whose positions route through
+     * {@code ContraptionLevel#realWorldPositionOf}, which already carried the level's scale), this swarm
+     * calls {@code ContraptionMath#renderPosition} DIRECTLY with the bearing pose — so before this fix it
+     * genuinely projected every furniture piece to its UNSCALED position AND rendered it at its unscaled
+     * size, leaving a scaled contraption's sofas/lamps the wrong size and visibly detached from the blocks
+     * they sit on. Both halves are now fixed: {@link Cell#render} scales the position via the same
+     * scale-about-pivot {@code renderPosition} overload the block swarm uses, and each Display-backed cell's
+     * metadata scales via {@link ContraptionRenderScale}. At {@code scale == 1.0} every path here is
+     * byte-for-byte the pre-scale behaviour (see {@link Cell#render}).
+     *
+     * <p><b>Pitch/roll (2026-07-16 follow-up — the other half of the same gap).</b> The scale fix above
+     * left {@code pitch}/{@code roll} pinned at {@code 0} in every {@code renderPosition} call here, which
+     * was its own bug for the exact same reason: a TIPPING or LEANING contraption tilted its captured
+     * BLOCKS ({@link ContraptionDisplaySwarm} already threads the full pose) while its furniture stayed
+     * stubbornly level — a sofa floating flat inside a rolled hull. Both are now threaded straight from
+     * {@code ContraptionEntity#render}, the same live {@code ContraptionState#pitchRadians()}/
+     * {@code rollRadians()} every other swarm receives, so furniture orbits to the identical
+     * {@code renderPosition} mapping its surrounding blocks do. At {@code pitch == 0 && roll == 0} the
+     * projection reduces to exactly {@link ContraptionMath#rotateYaw} (see that class's fast-path javadoc),
+     * so a never-tilted contraption is byte-for-byte unchanged.
+     *
+     * <p><b>Model ORIENTATION (2026-07-16 follow-up — "el furniture render no se mueve con el pitch/yaw
+     * etc o sea siempre queda recto").</b> The pitch/roll pass above moved every furniture cell to its
+     * correctly TILTED place but left each cell's own model standing upright there — a sofa at the right
+     * spot inside a rolled hull, still perfectly level. That gap is now closed for the Display-backed cells:
+     * {@link Cell#modelRotation} derives the contraption's tilt re-expressed in each element's own entity
+     * frame and {@link ContraptionRenderScale} composes it into the element's CraftEngine-authored
+     * transform (never overwriting it — furniture metadata is authored by CraftEngine and mirrored here,
+     * so an element with its own {@code rotation:} keeps it and merely leans). YAW needed no change: it has
+     * always been carried by each cell's entity body yaw ({@code yawDegrees} below), which is the correct
+     * lever and composes exactly.
+     *
+     * <p>Three cell types cannot follow the tilt, each for a concrete structural reason documented at the
+     * class in question rather than worked around: {@link ArmorStandCell} (a {@code LivingEntity} has no
+     * transform metadata and no body-lean field — yaw only), {@link ItemCell} (CraftEngine authors this
+     * element with no orientation at all, in or out of a contraption), and {@link InteractionHitboxCell}
+     * (an {@code INTERACTION} box is axis-aligned by definition). All three still follow the full pose for
+     * POSITION.
      */
-    public void render(List<Player> viewers, Vec3 bearingWorldPos, double yawRadians, ServerLevel realLevel,
-            ContraptionLevel level) {
+    public void render(List<Player> viewers, Vec3 bearingWorldPos, double yawRadians, double pitchRadians,
+            double rollRadians, double scale, ServerLevel realLevel, ContraptionLevel level) {
         updateAmbientLight(bearingWorldPos, realLevel);
         for (Cell cell : cells) {
             int blockLight = ContraptionLightEmitters.withEmitterFalloff(level, cell.nearestLocalBlockPos(),
                     lastAmbientBlockLight);
-            cell.render(viewers, bearingWorldPos, yawRadians, blockLight, lastAmbientSkyLight);
+            cell.render(viewers, bearingWorldPos, yawRadians, pitchRadians, rollRadians, scale, blockLight,
+                    lastAmbientSkyLight);
         }
-        renderInteractionHitboxes(viewers, bearingWorldPos, yawRadians);
+        renderInteractionHitboxes(viewers, bearingWorldPos, yawRadians, pitchRadians, rollRadians, scale);
+    }
+
+    /** Back-compat level (pitch/roll = 0) overload — see the full {@link #render(List, Vec3, double, double, double, double, ServerLevel, ContraptionLevel)}. */
+    public void render(List<Player> viewers, Vec3 bearingWorldPos, double yawRadians, double scale,
+            ServerLevel realLevel, ContraptionLevel level) {
+        render(viewers, bearingWorldPos, yawRadians, 0.0, 0.0, scale, realLevel, level);
+    }
+
+    /** Back-compat scale-1 overload — see the full {@link #render(List, Vec3, double, double, double, double, ServerLevel, ContraptionLevel)}. */
+    public void render(List<Player> viewers, Vec3 bearingWorldPos, double yawRadians, ServerLevel realLevel,
+            ContraptionLevel level) {
+        render(viewers, bearingWorldPos, yawRadians, 0.0, 0.0, 1.0, realLevel, level);
     }
 
     /** Back-compat overload for any caller without a real-world light/captured-block reference — falls back to full-bright/no-falloff. */
     public void render(List<Player> viewers, Vec3 bearingWorldPos, double yawRadians, ServerLevel realLevel) {
-        render(viewers, bearingWorldPos, yawRadians, realLevel, null);
+        render(viewers, bearingWorldPos, yawRadians, 0.0, 0.0, 1.0, realLevel, null);
     }
 
     /** Back-compat overload for any caller without a real-world light reference — falls back to full-bright. */
     public void render(List<Player> viewers, Vec3 bearingWorldPos, double yawRadians) {
-        render(viewers, bearingWorldPos, yawRadians, null, null);
+        render(viewers, bearingWorldPos, yawRadians, 0.0, 0.0, 1.0, null, null);
     }
 
     /**
@@ -313,7 +460,8 @@ public final class ContraptionFurnitureSwarm {
      * updates its existing {@link InteractionHitboxCell}'s render transform, exactly like every
      * other {@link Cell} in this class already does per-tick.
      */
-    private void renderInteractionHitboxes(List<Player> viewers, Vec3 bearingWorldPos, double yawRadians) {
+    private void renderInteractionHitboxes(List<Player> viewers, Vec3 bearingWorldPos, double yawRadians,
+            double pitchRadians, double rollRadians, double scale) {
         if (lastBuiltFrom == null) {
             pruneInteractionHitboxes(java.util.Collections.emptySet(), viewers);
             return;
@@ -369,7 +517,7 @@ public final class ContraptionFurnitureSwarm {
         }
         pruneInteractionHitboxes(liveKeys, viewers);
         for (InteractionHitboxCell cell : interactionHitboxes.values()) {
-            cell.render(viewers, bearingWorldPos, yawRadians);
+            cell.render(viewers, bearingWorldPos, yawRadians, pitchRadians, rollRadians, scale);
         }
     }
 
@@ -394,6 +542,9 @@ public final class ContraptionFurnitureSwarm {
             cell.despawnAll(viewers);
         }
         cells.clear();
+        furnitureSeatSlots.clear();
+        blockSeatSlots.clear();
+        lastBlockSeatScan = null; // defensive: force a real block-seat rescan if this instance is reused
         seatSlots.clear();
         for (InteractionHitboxCell cell : interactionHitboxes.values()) {
             cell.despawnAll(viewers);
@@ -484,6 +635,26 @@ public final class ContraptionFurnitureSwarm {
         private int blockLight = -1;
         private int skyLight = -1;
 
+        /**
+         * This cell's live uniform SCALE (the contraption's {@code ContraptionState#scale()}, roadmap item
+         * #9 — see {@link ContraptionFurnitureSwarm#render}'s "Uniform scale" javadoc). {@code 1.0} for any
+         * never-scaled body, in which case every {@code metadata} builder here takes
+         * {@link ContraptionRenderScale#applyTo}'s immediate-return fast path and emits byte-for-byte the
+         * pre-scale packet. A change flags a metadata resend exactly like a brightness change does (see
+         * {@link #render}).
+         */
+        private double scale = 1.0;
+
+        /**
+         * This cell's live model ROTATION — the contraption's tilt re-expressed in this element's own frame
+         * (see {@link #modelRotation}), or {@code null} on a never-tilted body, which is the value every
+         * existing contraption holds forever. Composed into each Display-backed subclass's {@code metadata}
+         * via {@link ContraptionRenderScale}, and a change flags a metadata resend exactly like a brightness
+         * or scale change already did (see {@link #render}) — a {@code Display}'s transform is metadata, so
+         * a rotation that is never resent is a rotation the client never sees.
+         */
+        private Quaternionf rotation;
+
         Cell(ContraptionFurniture cf) {
             this.cf = cf;
         }
@@ -507,6 +678,71 @@ public final class ContraptionFurnitureSwarm {
         abstract Vector3f offset();
 
         abstract float baseYaw();
+
+        /**
+         * The element's own authored entity PITCH in degrees ({@code config.xRot}, the YAML {@code pitch:}
+         * key) — the exact value this cell puts in the {@code xRot} slot of its own spawn/position packets.
+         * The pitch twin of {@link #baseYaw}, added 2026-07-16 because {@link #modelRotation} needs the
+         * element's full authored entity rotation, not just its yaw half, to express the contraption's
+         * world-space tilt in this element's own model frame.
+         */
+        abstract float basePitch();
+
+        /**
+         * The rotation this cell must compose INTO its authored {@code Display} transform so its model
+         * follows the contraption's live pose, or {@code null} for "nothing to compose" (2026-07-16 fix —
+         * "el furniture render no se mueve con el pitch/yaw etc o sea siempre queda recto"). Fed to
+         * {@link ContraptionRenderScale#applyTo(List, double, org.joml.Quaternionf)} by the Display-backed
+         * subclasses; see that method for how the composition itself works.
+         *
+         * <p><b>Why this is a TILT-ONLY residual and not the whole pose.</b> A {@code Display}'s client
+         * renderer orients the entity FIRST and then applies the transformation inside that frame — for the
+         * default {@code FIXED} billboard (confirmed: CraftEngine's own element factories default
+         * {@code billboard} to {@code Billboard.FIXED}) the rendered result is {@code E · T}, where
+         * {@code E} is built from the entity's own body yaw/xRot and {@code T} is the authored
+         * transformation. That is not a guess about our packets: it is how CraftEngine's OWN real-world
+         * furniture already works — {@code ItemDisplayFurnitureElementConfig#getPos} spawns the element at
+         * {@code furniturePos.yRot + config.yRot} / {@code furniturePos.xRot + config.xRot} while emitting
+         * {@code config.rotation} as the {@code LeftRotation}, and that combination renders correctly at
+         * every placement yaw in production.
+         *
+         * <p>This swarm already sends the contraption's yaw through that same entity-yaw lever
+         * ({@link #render} adds {@code toDegrees(yawRadians)} into {@code yawDegrees}), and yaw about
+         * vertical commutes cleanly out front: {@code Ry(-cyaw)·Ry(-yaw0) == Ry(-(cyaw + yaw0))}. So YAW
+         * was never the missing half — only the tilt was, exactly matching the report's "siempre queda
+         * recto" (always stands upright). What is left to express is therefore:
+         *
+         * <pre>desired = R_c · E0 · T          sent = Ry(-cyaw) · E0 · (Q·T)
+         * R_c = Ry(-cyaw) · R_tilt         (the contraption's pose — see ContraptionLevel#realOrientationOf)
+         * ⇒ Q = E0⁻¹ · R_tilt · E0</pre>
+         *
+         * <p>i.e. a CONJUGATION: the contraption's world-space tilt re-expressed in this element's own
+         * entity frame, which is precisely what it must be, since the transformation is applied inside that
+         * frame. {@code E0} is the element's own tilt-free entity rotation
+         * ({@code rotateY(-(cf.yawOffsetDegrees() + baseYaw())).rotateX(basePitch())}) and {@code R_tilt} is
+         * {@code rotateX(pitch).rotateZ(roll)} — the identical quaternion, in the identical
+         * {@code pitch ∘ roll} order, that {@code ContraptionLevel#realOrientationOf} and
+         * {@code ContraptionDisplaySwarm.Cell#metadata} already use, and matching
+         * {@code ContraptionMath#rotateYawPitchRoll}'s position math (roll innermost, then pitch, then yaw),
+         * so a cell's model orientation and its orbit stay in lock-step.
+         *
+         * <p><b>Identity pose returns {@code null}, structurally.</b> At {@code pitch == 0 && roll == 0}
+         * this returns before building anything, so nothing is composed and every never-tilted contraption
+         * emits byte-for-byte its pre-fix metadata. That exact-zero gate is deliberate rather than relying
+         * on {@code E0⁻¹ · I · E0} evaluating to a bit-exact identity quaternion in {@code float} math — it
+         * very nearly does, but "very nearly" would append a {@code LeftRotation} to elements that never had
+         * one, which is not what "unchanged" means.
+         */
+        Quaternionf modelRotation(double yawRadians, double pitchRadians, double rollRadians) {
+            if (pitchRadians == 0.0 && rollRadians == 0.0) {
+                return null; // never-tilted body — see javadoc; emits the pre-fix metadata exactly
+            }
+            Quaternionf tilt = new Quaternionf().rotateX((float) pitchRadians).rotateZ((float) rollRadians);
+            Quaternionf e0 = new Quaternionf()
+                    .rotateY((float) -Math.toRadians(cf.yawOffsetDegrees() + baseYaw()))
+                    .rotateX((float) Math.toRadians(basePitch()));
+            return e0.invert(new Quaternionf()).mul(tilt).mul(e0); // E0⁻¹ · R_tilt · E0
+        }
 
         /**
          * This cell's own local (bearing-relative, yaw-0 basis) position, rounded to the nearest
@@ -541,14 +777,54 @@ public final class ContraptionFurnitureSwarm {
             // no-op by default
         }
 
-        void render(List<Player> viewers, Vec3 bearingWorldPos, double yawRadians, int blockLight, int skyLight) {
+        /**
+         * <b>Scale threading (2026-07-16 fix — roadmap item #9; see
+         * {@link ContraptionFurnitureSwarm#render}'s "Uniform scale" javadoc).</b> Two independent things
+         * had to be scaled, and both are:
+         * <ul>
+         * <li><b>Position</b> — {@code local} is the furniture's captured bearing-relative offset PLUS this
+         * element's own authored {@code offset()} ({@code config.position}), and the COMBINED vector is what
+         * now goes through the scale-aware {@code ContraptionMath#renderPosition(local, bearing, yaw, pitch,
+         * roll, scale)} overload. So the element's own local offset is scaled about the bearing pivot too,
+         * not merely the furniture's origin — a lamp authored half a block above its base ends up a full
+         * block above it on a {@code scale=2} body, exactly like the captured blocks around it (which
+         * {@link ContraptionDisplaySwarm} already spaced by {@code scale} the same way). Previously this
+         * called the yaw-only {@code renderPosition(local, bearing, yaw)} overload, which pins {@code pitch
+         * = roll = 0} and {@code scale = 1} — the whole bug.</li>
+         * <li><b>Size</b> — each Display-backed subclass's {@code metadata} multiplies the authored
+         * {@code Scale}/{@code Translation} via {@link ContraptionRenderScale}, and a scale change flags a
+         * metadata resend here exactly like a brightness change already did (a resize is rare, so this adds
+         * no meaningful packet volume).</li>
+         * </ul>
+         *
+         * <p><b>{@code scale == 1.0 && pitch == 0 && roll == 0} is byte-identical to before (zero
+         * regression).</b> The yaw-only {@code renderPosition(local, bearing, yaw)} overload this replaced is
+         * itself defined as a plain delegation to {@code renderPosition(local, bearing, yaw, 0.0, 0.0, 1.0)}
+         * (see {@code ContraptionMath}'s own overload chain), so passing the full pose explicitly reaches the
+         * SAME arithmetic at those values — not an equivalent-looking reimplementation. And
+         * {@link ContraptionRenderScale#applyTo} returns immediately at {@code 1.0} without touching the
+         * metadata list.
+         *
+         * <p><b>2026-07-16 follow-up: pitch/roll are now threaded too.</b> The scale fix above pinned them
+         * at {@code 0}, deferring the body-lean gap; they are now the contraption's real live
+         * {@code pitchRadians}/{@code rollRadians}, so captured furniture tilts with the hull it sits in
+         * instead of floating level inside a rolled body. See {@link ContraptionFurnitureSwarm#render}'s own
+         * "Pitch/roll" javadoc — including why the cell's model ORIENTATION stays yaw-only.
+         */
+        void render(List<Player> viewers, Vec3 bearingWorldPos, double yawRadians, double pitchRadians,
+                double rollRadians, double scale, int blockLight, int skyLight) {
             Vector3f off = offset();
             Vec3 local = cf.localOffset().add(off.x, off.y, off.z);
-            Vec3 real = ContraptionMath.renderPosition(local, bearingWorldPos, yawRadians);
+            Vec3 real = ContraptionMath.renderPosition(local, bearingWorldPos, yawRadians, pitchRadians,
+                    rollRadians, scale);
             float yawDegrees = cf.yawOffsetDegrees() + baseYaw() + (float) Math.toDegrees(yawRadians);
-            boolean lightChanged = blockLight != this.blockLight || skyLight != this.skyLight;
+            Quaternionf rotation = modelRotation(yawRadians, pitchRadians, rollRadians);
+            boolean metaChanged = blockLight != this.blockLight || skyLight != this.skyLight || scale != this.scale
+                    || rotationChanged(rotation);
             this.blockLight = blockLight;
             this.skyLight = skyLight;
+            this.scale = scale;
+            this.rotation = rotation;
             Set<UUID> current = new HashSet<>();
             for (Player p : viewers) {
                 UUID id = uuidOf(p);
@@ -560,7 +836,7 @@ public final class ContraptionFurnitureSwarm {
                     spawn(p, real, yawDegrees);
                 } else {
                     updatePosition(p, real, yawDegrees);
-                    if (lightChanged) {
+                    if (metaChanged) {
                         resendMetadata(p);
                     }
                 }
@@ -575,6 +851,31 @@ public final class ContraptionFurnitureSwarm {
 
         int skyLight() {
             return skyLight;
+        }
+
+        /** This cell's live uniform scale — baked into each Display-backed subclass's {@code metadata}. */
+        double scale() {
+            return scale;
+        }
+
+        /** This cell's live model rotation — composed into each Display-backed subclass's {@code metadata}. */
+        Quaternionf rotation() {
+            return rotation;
+        }
+
+        /**
+         * Whether {@code next} differs enough from the last-sent {@link #rotation} to be worth a metadata
+         * resend. Null-transitions (a body starting or stopping its tilt) always count. Otherwise compared
+         * with the same {@code 1e-4f} epsilon {@link ContraptionPistonShaftSwarm.Segment} already uses for
+         * its own {@code LeftRotation} resend gate: a continuously-tilting body's quaternion changes every
+         * tick by construction, so an exact-equality gate would be no gate at all, while sub-{@code 1e-4}
+         * differences are far below anything a client can render.
+         */
+        private boolean rotationChanged(Quaternionf next) {
+            if (rotation == null || next == null) {
+                return rotation != next;
+            }
+            return !next.equals(rotation, 1e-4f);
         }
 
         void despawnAll(List<Player> viewers) {
@@ -612,6 +913,11 @@ public final class ContraptionFurnitureSwarm {
         }
 
         @Override
+        float basePitch() {
+            return config.xRot;
+        }
+
+        @Override
         void spawn(Player player, Vec3 realPos, float yawDegrees) {
             Object add = MNms.INSTANCE.constructor$ClientboundAddEntityPacket(entityId, uuid,
                     realPos.x, realPos.y, realPos.z, config.xRot, yawDegrees, EntityType.ITEM_DISPLAY, 0, Vec3.ZERO, 0);
@@ -633,10 +939,15 @@ public final class ContraptionFurnitureSwarm {
         /**
          * Furniture's own authored appearance metadata + interpolation tuning + this cell's live
          * ambient {@code BrightnessOverride} (see {@code ContraptionFurnitureSwarm}'s own "Ambient
-         * lighting" javadoc — 2026-07-02 follow-up fix; this field was never set at all before).
+         * lighting" javadoc — 2026-07-02 follow-up fix; this field was never set at all before) + the
+         * contraption's live {@code scale} and model {@code rotation} composed into the authored
+         * transform (2026-07-16 — see {@link ContraptionRenderScale}). Both are no-ops at an
+         * unscaled/never-tilted pose, so this stays byte-for-byte the pre-fix packet there.
          */
         private List<Object> metadata(Player player) {
             List<Object> values = new ArrayList<>(config.metadata.apply(player, null));
+            // roadmap item #9 (scale) + the 2026-07-16 tilt fix — both no-ops at scale 1 / null rotation
+            ContraptionRenderScale.applyTo(values, scale(), rotation());
             addInterpolationTuning(values); // see ROOT-CAUSE javadoc on ContraptionFurnitureSwarm.Cell
             net.momirealms.craftengine.bukkit.entity.data.DisplayData.BrightnessOverride
                     .addEntityData((blockLight() << 4) | (skyLight() << 20), values);
@@ -671,6 +982,11 @@ public final class ContraptionFurnitureSwarm {
         }
 
         @Override
+        float basePitch() {
+            return config.xRot;
+        }
+
+        @Override
         void spawn(Player player, Vec3 realPos, float yawDegrees) {
             Object add = MNms.INSTANCE.constructor$ClientboundAddEntityPacket(entityId, uuid,
                     realPos.x, realPos.y, realPos.z, config.xRot, yawDegrees, EntityType.TEXT_DISPLAY, 0, Vec3.ZERO, 0);
@@ -692,10 +1008,23 @@ public final class ContraptionFurnitureSwarm {
         /**
          * Furniture's own authored appearance metadata + interpolation tuning + this cell's live
          * ambient {@code BrightnessOverride} (see {@code ContraptionFurnitureSwarm}'s own "Ambient
-         * lighting" javadoc — 2026-07-02 follow-up fix; this field was never set at all before).
+         * lighting" javadoc — 2026-07-02 follow-up fix; this field was never set at all before) + the
+         * contraption's live {@code scale} and model {@code rotation} composed into the authored
+         * transform (2026-07-16 — see {@link ContraptionRenderScale}). Both are no-ops at an
+         * unscaled/never-tilted pose, so this stays byte-for-byte the pre-fix packet there.
+         *
+         * <p>A {@code TEXT_DISPLAY} honours {@code LeftRotation} exactly like an {@code ITEM_DISPLAY} does
+         * — both are the same {@code Display} entity family sharing one transform implementation
+         * ({@code com.mojang.math.Transformation}); only {@code BLOCK_DISPLAY} is the documented
+         * odd-one-out (see {@link ContraptionRenderScale#applyTo(List, double, Quaternionf)}). Note a text
+         * display authored with a non-{@code FIXED} {@code billboard:} is view-aligned by the client and
+         * will ignore this — that is the config asking for a always-face-the-camera label, and honouring
+         * it is correct, not a gap.
          */
         private List<Object> metadata(Player player) {
             List<Object> values = new ArrayList<>(config.metadata.apply(player));
+            // roadmap item #9 (scale) + the 2026-07-16 tilt fix — both no-ops at scale 1 / null rotation
+            ContraptionRenderScale.applyTo(values, scale(), rotation());
             addInterpolationTuning(values); // see ROOT-CAUSE javadoc on ContraptionFurnitureSwarm.Cell
             net.momirealms.craftengine.bukkit.entity.data.DisplayData.BrightnessOverride
                     .addEntityData((blockLight() << 4) | (skyLight() << 20), values);
@@ -708,7 +1037,47 @@ public final class ContraptionFurnitureSwarm {
         }
     }
 
-    /** Position/metadata only — no held-item equipment packet (see class javadoc). */
+    /**
+     * Position/metadata only — no held-item equipment packet (see class javadoc).
+     *
+     * <p><b>NOT SCALE-AWARE — no lever exists (2026-07-16, roadmap item #9).</b> This cell's POSITION
+     * scales correctly ({@link Cell#render} is shared by every cell here), but its SIZE cannot follow the
+     * contraption's {@code scale}: a vanilla {@code ArmorStand} is a real {@code LivingEntity}, not a
+     * {@code Display}, so the {@code Display}-only {@code Scale} transform metadata
+     * {@link ContraptionRenderScale} works through simply does not exist on it. The protocol's only armor-
+     * stand size lever is {@code ArmorStandData}'s {@code Small} flag — a BINARY half-size toggle, not a
+     * continuous factor, and part of the furniture's own authored appearance, so flipping it would mis-size
+     * every scale other than {@code 0.5} while silently overriding what the furniture config authored. Left
+     * faithful to the authored config: on a scaled contraption an armor-stand-backed furniture element sits
+     * in the right (scaled) PLACE at its unscaled size. Same limitation, same reason, as
+     * {@link ContraptionBlockEntityElementMirror}'s own {@code ArmorStandCell}.
+     *
+     * <p><b>YAW-ONLY ORIENTATION — pitch/roll have no lever (2026-07-16 tilt fix).</b> This cell's YAW
+     * does follow the contraption: {@link Cell#render} feeds the bearing's live yaw into {@code yawDegrees},
+     * which this cell sends as both the body and head yaw of a real {@code ARMOR_STAND}, and a
+     * {@code LivingEntity}'s model genuinely rotates with its body yaw. PITCH and ROLL cannot follow, and
+     * the reason is structural rather than a scope cut:
+     * <ul>
+     * <li>The {@code Display}-only {@code transformation} metadata {@link ContraptionRenderScale} composes
+     * rotation through does not exist on an armor stand at all — it is a {@code LivingEntity}, not a
+     * {@code Display}. Same root cause as the size limitation above.</li>
+     * <li>A {@code LivingEntity}'s model is rendered from {@code yBodyRot}/{@code yHeadRot} plus its
+     * {@code xRot} — and {@code xRot} only pitches the HEAD. There is no protocol field that leans the
+     * entity's body off vertical; the spawn packet's {@code xRot} slot (already sent here as
+     * {@code config.xRot}) will not tip the stand over.</li>
+     * <li>CraftEngine's {@code ArmorStandData} does expose per-limb poses ({@code HeadPose},
+     * {@code BodyPose}, …; verified in the 26.6.2 jar). They are deliberately NOT used: each rotates one
+     * BONE about its own joint — the head about the neck, not the entity about its position — so feeding a
+     * body lean into {@code HeadPose} would swivel the held item about the wrong pivot and read as a broken
+     * model rather than a leaning one. They are also part of the furniture's own authored appearance, which
+     * this class mirrors rather than overrides ({@code config.metadata} is sent verbatim below).</li>
+     * </ul>
+     * Consequence, stated plainly: inside a TILTED contraption an armor-stand-backed furniture element
+     * still travels to its correct tilted PLACE ({@link Cell#render}'s position math is shared by every
+     * cell here and is fully pose-aware) and still turns with the body's yaw, but stands vertically rather
+     * than leaning with the hull. Same limitation, same reason, as
+     * {@link ContraptionBlockEntityElementMirror}'s own {@code ArmorStandCell}.
+     */
     private static final class ArmorStandCell extends Cell {
         private final ArmorStandFurnitureElementConfig config;
         private final int entityId = nextEntityId();
@@ -731,6 +1100,17 @@ public final class ContraptionFurnitureSwarm {
         }
 
         @Override
+        float basePitch() {
+            return config.xRot;
+        }
+
+        /** No tilt lever on a {@code LivingEntity} — see this class's own "YAW-ONLY ORIENTATION" javadoc. */
+        @Override
+        Quaternionf modelRotation(double yawRadians, double pitchRadians, double rollRadians) {
+            return null;
+        }
+
+        @Override
         void spawn(Player player, Vec3 realPos, float yawDegrees) {
             Object add = MNms.INSTANCE.constructor$ClientboundAddEntityPacket(entityId, uuid,
                     realPos.x, realPos.y, realPos.z, config.xRot, yawDegrees, EntityType.ARMOR_STAND, 0, Vec3.ZERO, yawDegrees);
@@ -750,7 +1130,24 @@ public final class ContraptionFurnitureSwarm {
         }
     }
 
-    /** Floating item (item_display) — furniture's variant, one entity (unlike the block-entity one, which rides a real item). */
+    /**
+     * Floating item (item_display) — furniture's variant, one entity (unlike the block-entity one, which
+     * rides a real item).
+     *
+     * <p><b>NOT ROTATABLE — the element has no orientation to follow (2026-07-16 tilt fix).</b> Unique
+     * among the cells here, and verified against CraftEngine 26.6.2's own sources rather than assumed:
+     * {@code ItemFurnitureElementConfig} authors ONLY a {@code position} — it has no {@code xRot},
+     * {@code yRot} or {@code rotation} field at all (every other element config has all three), its
+     * {@code getPos} returns a bare {@code Furniture#getRelativePosition} with no rotation term, and its
+     * {@code metadata} builder emits {@code ItemEntityData.Item}/{@code NoGravity} — real dropped-ITEM
+     * metadata, carrying none of the {@code Display} transform fields {@link ContraptionRenderScale} works
+     * through. CraftEngine deliberately renders this element as an un-oriented floating item: it has no
+     * orientation in the real world either, at any furniture placement yaw. Matching that faithfully means
+     * composing nothing — which is also why this cell's own {@code spawn}/{@code updatePosition} pin the
+     * entity yaw/pitch at {@code 0} and ignore the {@code yawDegrees} they are handed. Forcing a rotation
+     * onto it here would make a captured floating item behave differently from the identical, uncaptured
+     * one sitting next to it. Its POSITION still follows the full pose like every other cell.
+     */
     private static final class ItemCell extends Cell {
         private final ItemFurnitureElementConfig config;
         private final int entityId = nextEntityId();
@@ -770,6 +1167,17 @@ public final class ContraptionFurnitureSwarm {
         @Override
         float baseYaw() {
             return 0f;
+        }
+
+        @Override
+        float basePitch() {
+            return 0f; // matches the literal 0f this cell's own spawn/updatePosition packets send
+        }
+
+        /** Deliberately un-oriented, exactly like CraftEngine's own — see this class's javadoc. */
+        @Override
+        Quaternionf modelRotation(double yawRadians, double pitchRadians, double rollRadians) {
+            return null;
         }
 
         @Override
@@ -798,6 +1206,7 @@ public final class ContraptionFurnitureSwarm {
          */
         private List<Object> metadata(Player player) {
             List<Object> values = new ArrayList<>(config.metadata.apply(player, null));
+            ContraptionRenderScale.applyTo(values, scale()); // roadmap item #9 — no-op at scale 1
             addInterpolationTuning(values); // see ROOT-CAUSE javadoc on ContraptionFurnitureSwarm.Cell
             net.momirealms.craftengine.bukkit.entity.data.DisplayData.BrightnessOverride
                     .addEntityData((blockLight() << 4) | (skyLight() << 20), values);
@@ -822,6 +1231,20 @@ public final class ContraptionFurnitureSwarm {
      * {@code ContraptionMath#renderPosition} redirect convention (not {@link Cell}'s own
      * offset/baseYaw shape, since a hitbox part has no meaningful "yaw" of its own — it's an
      * axis-aligned box, same as every other packet-only hitbox slot in this package).
+     *
+     * <p><b>NOT ROTATABLE AT ALL — not even yaw (2026-07-16 tilt fix).</b> An {@code INTERACTION} entity
+     * has no model and no orientation: it IS its {@code Width}/{@code Height} metadata, and the client
+     * derives an AXIS-ALIGNED bounding box from those about the entity position. There is no rotation lever
+     * to send — the entity's own {@code yRot}/{@code xRot} are ignored for its hit-detection box (which is
+     * why the {@code spawn}/{@code updatePosition} packets below already pass a literal {@code 0f, 0f} and
+     * always have), and {@code Display} transform metadata does not exist on this entity type. This is the
+     * same reason the sibling {@code ContraptionHitboxSwarm} slots are axis-aligned, and it long predates
+     * this fix: a rotated contraption's colliders have always been axis-aligned boxes tracking rotated
+     * POSITIONS, which is what {@link #render} already does correctly through the full pose. The practical
+     * effect on a tilted body is that a non-cubic part's standable/clickable box stays axis-aligned while
+     * its visual leans — an approximation, deliberately left as-is rather than papered over: making it
+     * exact would need a fundamentally different collider (a swept set of smaller boxes), which is its own
+     * piece of work, not part of an orientation fix.
      */
     private static final class InteractionHitboxCell {
         private final float width;
@@ -832,6 +1255,18 @@ public final class ContraptionFurnitureSwarm {
         private final Object despawnPacket = MNms.INSTANCE.constructor$ClientboundRemoveEntitiesPacket(IntList.of(entityId));
         private final Set<UUID> shownTo = ConcurrentHashMap.newKeySet();
         private Vec3 localOffset = Vec3.ZERO;
+
+        /**
+         * This hitbox's live uniform SCALE (roadmap item #9). Unlike the visual cells, an
+         * {@code INTERACTION} entity has no {@code Display} transform to scale — its size IS its
+         * {@code Width}/{@code Height} metadata, so {@code scale} is multiplied straight into those in
+         * {@link #metadata}. Scaling the collider alongside the visual is mandatory, not cosmetic: these are
+         * the real standable/clickable surfaces of a captured furniture piece (see this class's own
+         * "Hitbox/collider" javadoc), so a scaled sofa whose box stayed 1x would render large while only
+         * being standable/clickable over its original small footprint. {@code 1.0} emits byte-for-byte the
+         * pre-scale metadata ({@code w * 1.0f == w} exactly — no rounding).
+         */
+        private double scale = 1.0;
 
         InteractionHitboxCell(float width, float height, boolean interactive) {
             this.width = width;
@@ -845,14 +1280,32 @@ public final class ContraptionFurnitureSwarm {
 
         private List<Object> metadata() {
             List<Object> values = new ArrayList<>();
-            InteractionData.Width.addEntityData(width, values);
-            InteractionData.Height.addEntityData(height, values);
+            float s = (float) scale;
+            InteractionData.Width.addEntityData(width * s, values);
+            InteractionData.Height.addEntityData(height * s, values);
             InteractionData.Response.addEntityData(interactive, values);
             return values;
         }
 
-        void render(List<Player> viewers, Vec3 bearingWorldPos, double yawRadians) {
-            Vec3 real = ContraptionMath.renderPosition(localOffset, bearingWorldPos, yawRadians);
+        /**
+         * Positions the box via the same scale-aware {@code renderPosition} overload every visual cell here
+         * now uses (so collider and visual land on the identical scaled coordinate), and resizes it when the
+         * contraption's {@code scale} actually changed — a resize is rare, so the resend costs nothing on a
+         * normal tick. At {@code scale == 1.0} the position call is the same delegation chain the yaw-only
+         * overload always took, and {@code metaChanged} never fires, so nothing extra is sent.
+         *
+         * <p>{@code pitchRadians}/{@code rollRadians} are threaded for the same reason the visual cells now
+         * thread them (2026-07-16 — see {@link ContraptionFurnitureSwarm#render}'s "Pitch/roll" javadoc),
+         * and here it is mandatory rather than cosmetic: these boxes ARE the real standable/clickable
+         * surfaces of a captured furniture piece, so leaving them level while the visual tilts would let a
+         * player stand on a sofa that visibly isn't there any more.
+         */
+        void render(List<Player> viewers, Vec3 bearingWorldPos, double yawRadians, double pitchRadians,
+                double rollRadians, double scale) {
+            Vec3 real = ContraptionMath.renderPosition(localOffset, bearingWorldPos, yawRadians, pitchRadians,
+                    rollRadians, scale);
+            boolean metaChanged = scale != this.scale;
+            this.scale = scale;
             Set<UUID> current = new HashSet<>();
             for (Player p : viewers) {
                 UUID id = uuidOf(p);
@@ -864,6 +1317,10 @@ public final class ContraptionFurnitureSwarm {
                     spawn(p, real);
                 } else {
                     updatePosition(p, real);
+                    if (metaChanged) {
+                        p.sendPacket(MNms.INSTANCE.constructor$ClientboundSetEntityDataPacket(entityId, metadata()),
+                                false);
+                    }
                 }
             }
             shownTo.retainAll(current);
@@ -895,40 +1352,64 @@ public final class ContraptionFurnitureSwarm {
     }
 
     /**
-     * One sittable seat slot from a captured furniture piece's real
-     * {@code FurnitureVariant#hitBoxConfigs()} -&gt; {@code SeatConfig} (the same config real
-     * CraftEngine furniture uses for its own vanilla vehicle-mount seats — see
-     * {@code ContraptionFurnitureCapture}'s javadoc for why a captured seat is never a real
-     * followed/mounted entity). Real player interaction ({@code ContraptionSeatListener})
-     * redirects a click into occupying a free slot exactly like a rider captured mid-sit at
-     * assembly time: the player is carried at this slot's fixed bearing-relative offset via
-     * {@code ContraptionState#addSeatedRider}/{@code ContraptionEntity#carrySeatedRiders}, the
-     * SAME mechanism, not a new one.
+     * One sittable seat slot on a contraption — from a captured FURNITURE piece's real
+     * {@code FurnitureVariant#hitBoxConfigs()} -&gt; {@code SeatConfig}, or (2026-07-16) from a captured
+     * BLOCK's CraftEngine {@code seat_block} behavior via {@link ContraptionBlockSeats}. Both are the same
+     * config type ({@code SeatConfig}) resolved through the same copied CraftEngine placement convention
+     * ({@link ContraptionSeatMath}), so they are deliberately ONE class here rather than two: every consumer
+     * ({@code ContraptionSeatListener}'s sit/stand/quit/death paths,
+     * {@code ContraptionEntity#carrySeatedRiders}) treats a seat as a seat and needed no change at all to
+     * gain block seats.
      *
-     * <p>{@code bearingLocalOffset} follows the exact same approximation every other
-     * {@link Cell} in this class already takes (see this class's own javadoc, "same
-     * technique"): the seat's raw config-local {@code SeatConfig#position()} is added
-     * directly to the furniture's captured {@code localOffset()} WITHOUT first rotating by
-     * the furniture's own placement yaw ({@code yawOffsetDegrees()}) — consistent with how
-     * every other visual element (item display, text display, armor stand) is positioned in
-     * this same swarm, not a new inconsistency. The combined vector already sits in the
-     * bearing's yaw-0 basis, ready to feed straight into
-     * {@code ContraptionMath#renderPosition}/{@code ContraptionState#addSeatedRider}.
+     * <p>Real player interaction ({@code ContraptionSeatListener}) redirects a click into occupying a free
+     * slot exactly like a rider captured mid-sit at assembly time: the player is carried at this slot's
+     * fixed bearing-relative offset via {@code ContraptionState#addSeatedRider}/
+     * {@code ContraptionEntity#carrySeatedRiders}, the SAME mechanism, not a new one. See
+     * {@code ContraptionFurnitureCapture}'s javadoc for why a captured seat is never a real
+     * followed/mounted entity, and {@link ContraptionBlockSeats}'s for why a captured seat BLOCK can never
+     * use CraftEngine's own native {@code spawnSeat} path either.
+     *
+     * <p>{@code bearingLocalOffset} already sits in the bearing's yaw-0 basis — the seat's raw config-local
+     * {@code SeatConfig#position()} rotated by its SOURCE's own yaw (the furniture's placement yaw, or the
+     * block's {@code facing}-derived rotation) and combined with that source's local offset, per
+     * {@link ContraptionSeatMath}. So it feeds straight into {@code ContraptionMath#renderPosition}/
+     * {@code ContraptionState#addSeatedRider} with no further correction.
      */
     public static final class SeatSlot {
+        /**
+         * The captured furniture piece this seat came from, or {@code null} for a seat declared by a
+         * captured BLOCK ({@code seat_block} — see {@link ContraptionBlockSeats}), which has no furniture
+         * behind it at all. Nothing outside this class reads it today; it is kept for parity/debugging.
+         */
         public final ContraptionFurniture furniture;
         private final Vec3 bearingLocalOffset;
         private final float yawOffsetDegrees;
+        /**
+         * Carried verbatim from the source {@code SeatConfig#limitPlayerRotation()} — CraftEngine uses it to
+         * decide whether a seated rider's view is clamped to the seat's facing (its own
+         * {@code BukkitSeat#spawnSeatEntityForPlayer} picks a rotation-clamping seat ENTITY TYPE from it).
+         * This project's seats are always the {@code ArmorStand} mount ({@code ContraptionSeatMount}), which
+         * doesn't clamp, so nothing consumes this yet — it is threaded through so the flag survives capture
+         * and a future rotation-clamp doesn't have to re-plumb the whole seat pipeline to find it.
+         */
+        private final boolean limitPlayerRotation;
         private UUID occupant; // null = free
 
-        private SeatSlot(ContraptionFurniture furniture, Vec3 bearingLocalOffset, float yawOffsetDegrees) {
+        private SeatSlot(ContraptionFurniture furniture, Vec3 bearingLocalOffset, float yawOffsetDegrees,
+                boolean limitPlayerRotation) {
             this.furniture = furniture;
             this.bearingLocalOffset = bearingLocalOffset;
             this.yawOffsetDegrees = yawOffsetDegrees;
+            this.limitPlayerRotation = limitPlayerRotation;
         }
 
         public Vec3 bearingLocalOffset() {
             return bearingLocalOffset;
+        }
+
+        /** See {@link #limitPlayerRotation} — carried through from the source {@code SeatConfig}, unused so far. */
+        public boolean limitPlayerRotation() {
+            return limitPlayerRotation;
         }
 
         public boolean isFree() {
@@ -947,9 +1428,27 @@ public final class ContraptionFurnitureSwarm {
             occupant = null;
         }
 
-        /** This seat's current real-world (snap-to) position under the bearing's live transform. */
-        public Vec3 currentRealPosition(Vec3 bearingWorldPos, double yawRadians) {
-            return ContraptionMath.renderPosition(bearingLocalOffset, bearingWorldPos, yawRadians);
+        /**
+         * This seat's current real-world (snap-to) position under the bearing's live FULL transform.
+         *
+         * <p><b>2026-07-16 fix — the reported seat drift.</b> This used to call the yaw-only
+         * {@code renderPosition(local, bearing, yaw)} overload, which pins {@code pitch = roll = 0} and
+         * {@code scale = 1}. Every OTHER cell of a contraption — blocks, colliders, furniture visuals —
+         * projects through the full pose, so on any scaled or tilted contraption the seat alone was computed
+         * against a different transform than the structure it belongs to: the sofa rendered (and its
+         * collider sat) at the scaled/tilted position while the seat, the mount entity tracking it every
+         * tick, and the rider on top of it were all placed at the unscaled, level one — i.e. the seat
+         * visibly drifted away from its own furniture, by more the further it sat from the bearing pivot.
+         * Threading the real {@code pitch}/{@code roll}/{@code scale} puts a seat back on exactly the
+         * {@code renderPosition} mapping its own sofa uses. At {@code scale == 1 && pitch == 0 && roll == 0}
+         * this is byte-for-byte the old call (the yaw-only overload is literally defined as a delegation to
+         * these arguments — see {@code ContraptionMath}'s overload chain), so an ordinary contraption is
+         * unaffected.
+         */
+        public Vec3 currentRealPosition(Vec3 bearingWorldPos, double yawRadians, double pitchRadians,
+                double rollRadians, double scale) {
+            return ContraptionMath.renderPosition(bearingLocalOffset, bearingWorldPos, yawRadians, pitchRadians,
+                    rollRadians, scale);
         }
 
         /** This seat's current facing (degrees) under the bearing's live rotation. */

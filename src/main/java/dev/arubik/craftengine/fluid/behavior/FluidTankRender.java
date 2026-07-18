@@ -8,7 +8,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.bukkit.craftbukkit.inventory.CraftItemStack;
 import org.bukkit.inventory.ItemStack;
 
-import dev.arubik.craftengine.contraption.level.ContraptionLevel;
+import dev.arubik.craftengine.contraption.level.ContraptionBoundary;
 import dev.arubik.craftengine.fluid.FluidType;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -49,6 +49,35 @@ public final class FluidTankRender {
         // topology change, but a contraption's bearing moves/rotates every tick regardless, so
         // baking the transform once inside update() left the fluid frozen at its capture-time spot.
         final List<double[]> localTargets = new ArrayList<>();
+        /**
+         * Parallel to {@code live}: each display's UNSCALED cell box size in block units — the size the
+         * slab has on a free-standing (non-contraption) tank. Kept separate from the size actually sent
+         * for the same reason {@link #localTargets} is kept separate from the sent position: a
+         * contraption's {@code scale} is a LIVE value (the Creative Phys Wand resizes a rendered body),
+         * so the final size must be recomputed from this base every {@link #flush}, and multiplying the
+         * stored value in place would compound the factor on every tick.
+         */
+        final List<float[]> localScales = new ArrayList<>();
+    }
+
+    /**
+     * Multiplies an unscaled cell box size by the contraption's uniform {@code scale} (roadmap item #9),
+     * yielding the {@code DisplayData.Scale} an {@code ITEM_DISPLAY} slab must carry to stay glued to its
+     * (already scale-projected) tank block.
+     *
+     * <p>Scaling all three components by the SAME factor is what keeps this correct in the presence of the
+     * per-axis hull inset baked into {@code base} (x/z are {@code < 1} so the fluid sits inside the frame,
+     * y is a full block): a {@code Display} places a model vertex {@code v} at
+     * {@code Translation + LeftRotation·(Scale·(RightRotation·v))}, and this renderer's {@code LeftRotation}
+     * is the bearing's orientation. Since {@code s} is uniform,
+     * {@code LeftRotation·((s·Base)·v) == s·(LeftRotation·(Base·v))} — the inset box is still shaped and
+     * oriented exactly as before, just grown about the entity position, which
+     * {@code ContraptionBoundary#realWorldPositionOf} has already put at the scaled place. Adjacent slabs
+     * therefore keep abutting seamlessly at any scale, exactly as they do at {@code s == 1}.
+     */
+    static float[] scaledCellBox(float[] base, double scale) {
+        float s = (float) scale;
+        return new float[] { base[0] * s, base[1] * s, base[2] * s };
     }
 
     /**
@@ -102,21 +131,31 @@ public final class FluidTankRender {
                     double lz = controller.getZ() + dz + (az + bz) / 2f;
                     FluidDisplay d = idx < g.live.size() ? g.live.get(idx) : null;
                     double[] local;
+                    float[] baseScale;
                     if (d == null) {
                         d = new FluidDisplay();
                         g.live.add(d);
                         local = new double[3];
                         g.localTargets.add(local);
+                        baseScale = new float[3];
+                        g.localScales.add(baseScale);
                     } else {
                         local = idx < g.localTargets.size() ? g.localTargets.get(idx) : new double[3];
                         if (idx >= g.localTargets.size())
                             g.localTargets.add(local);
+                        baseScale = idx < g.localScales.size() ? g.localScales.get(idx) : new float[3];
+                        if (idx >= g.localScales.size())
+                            g.localScales.add(baseScale);
                     }
                     local[0] = lx;
                     local[1] = ly;
                     local[2] = lz;
+                    // UNSCALED box size only — flush() applies the contraption's live scale to it and is
+                    // what actually pushes the size to the display (see GroupBoxes#localScales).
+                    baseScale[0] = bx - ax;
+                    baseScale[1] = 1f;
+                    baseScale[2] = bz - az;
                     d.setNmsItem(nms);
-                    d.setScale(bx - ax, 1f, bz - az);
                     idx++;
                 }
         }
@@ -125,14 +164,35 @@ public final class FluidTankRender {
             g.dead.add(g.live.remove(i));
             if (i < g.localTargets.size())
                 g.localTargets.remove(i);
+            if (i < g.localScales.size())
+                g.localScales.remove(i);
         }
     }
 
     /**
      * Broadcast a group's displays to the players currently tracking the controller's chunk (per
-     * tick) — ALSO re-resolves each display's real-world position/rotation from its stored LOCAL
-     * target every call, not just when {@link #update} last ran, so a moving/rotating contraption
-     * keeps the fluid glued to the bearing instead of leaving it frozen at capture-time's spot.
+     * tick) — ALSO re-resolves each display's real-world position/rotation/SIZE from its stored LOCAL
+     * target every call, not just when {@link #update} last ran, so a moving/rotating/resizing
+     * contraption keeps the fluid glued to the bearing instead of leaving it frozen at capture-time's
+     * spot.
+     *
+     * <p><b>Why SIZE is resolved here and not in {@link #update} (2026-07-16 fix — "the liquid render on
+     * fluid block tank and outside of it when in a contraption dont inherit the scale").</b> The tank's
+     * liquid is the one tank visual this project renders itself; its SHELL is CraftEngine's own
+     * {@code entity-renderer: { item: cml:fbt_* } }, mirrored and already scaled by
+     * {@code ContraptionBlockEntityElementMirror}/{@code ContraptionRenderScale}. So on a scaled
+     * contraption the shell grew and the liquid did not: each slab's POSITION was always correct (it goes
+     * through {@code ContraptionBoundary#realWorldPositionOf}, whose projection scales the offset from the
+     * bearing pivot) but its {@code DisplayData.Scale} stayed at the unscaled cell box — leaving the liquid
+     * as detached 1x cubes with gaps inside an enlarged tank at {@code scale > 1}, and protruding out
+     * through the tank's walls at {@code scale < 1} (the "and outside of it" half of the report).
+     *
+     * <p>{@link #update} is the wrong place to fix it because it is EVENT-driven (fluid amount / group
+     * topology change only). A contraption's scale is LIVE — the Creative Phys Wand resizes a body that is
+     * already rendered and whose fluid is not changing — so a size baked at update time would only ever be
+     * right until the next resize. This method already re-resolves position and rotation every tick for
+     * exactly that reason; size now rides the same path, and {@code FluidDisplay#setScale}'s epsilon gate
+     * keeps it a no-op packet-wise until the factor actually moves.
      */
     public static void flush(Level level, BlockPos controller) {
         GroupBoxes g = RENDERS.get(controller.asLong());
@@ -144,12 +204,17 @@ public final class FluidTankRender {
                 d.despawnAll(viewers);
             g.dead.clear();
         }
-        ContraptionLevel contraption = level instanceof ContraptionLevel cl ? cl : null;
+        ContraptionBoundary contraption = ContraptionBoundary.of(level).orElse(null);
         org.joml.Quaternionf rotation = contraption != null ? contraption.realOrientationOf(null) : null;
+        double scale = contraption != null ? contraption.realScaleFactor() : 1.0;
         for (int i = 0; i < g.live.size(); i++) {
             FluidDisplay d = g.live.get(i);
             double[] local = i < g.localTargets.size() ? g.localTargets.get(i) : null;
-            boolean metaDirty = d.consumeMetaDirty();
+            float[] baseScale = i < g.localScales.size() ? g.localScales.get(i) : null;
+            if (baseScale != null) {
+                float[] box = scaledCellBox(baseScale, scale);
+                d.setScale(box[0], box[1], box[2]);
+            }
             if (local != null) {
                 double wx = local[0], wy = local[1], wz = local[2];
                 if (contraption != null) {
@@ -161,6 +226,10 @@ public final class FluidTankRender {
                 d.setTarget(wx, wy, wz);
                 d.setRotation(rotation); // null -> identity, matches a non-contraption tank
             }
+            // Consumed AFTER the setters above, never before: setScale/setRotation are themselves what
+            // raise the dirty flag, so reading it first would defer every size/orientation change to the
+            // NEXT flush — i.e. resend it a tick late, against a body that has since moved on again.
+            boolean metaDirty = d.consumeMetaDirty();
             d.render(viewers, metaDirty);
         }
     }
@@ -179,14 +248,15 @@ public final class FluidTankRender {
 
     private static List<Player> viewersOf(Level level, BlockPos controller) {
         try {
-            // A ContraptionLevel is a real, separate, hidden dimension with zero real players
+            // A contraption level is a real, separate, hidden dimension with zero real players
             // ever inside it — chunk-tracking against it is always empty. Redirect to the real
-            // world at the bearing's live transform instead (see ContraptionLevel#realViewers).
-            if (level instanceof ContraptionLevel contraption) {
+            // world at the bearing's live transform instead (see ContraptionBoundary#realViewers).
+            ContraptionBoundary contraption = ContraptionBoundary.of(level).orElse(null);
+            if (contraption != null) {
                 return contraption.realViewers(controller);
             }
             org.bukkit.World bw = ((ServerLevel) level).getWorld();
-            return new BukkitWorld(bw).getTrackedBy(new ChunkPos(controller.getX() >> 4, controller.getZ() >> 4));
+            return dev.arubik.craftengine.util.CeWorlds.of(bw).getTrackedBy(new ChunkPos(controller.getX() >> 4, controller.getZ() >> 4));
         } catch (Throwable t) {
             return List.of();
         }

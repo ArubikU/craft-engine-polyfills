@@ -128,7 +128,7 @@ public class RedstoneOperator extends DiodeBlockBehavior {
             if (!this.canSurvive(thisBlock, args)) {
                 BlockStateUtils.getOptionalCustomBlockState(blockState).ifPresent((customState) -> {
                     if (!customState.isEmpty() && customState.owner().value() == this.blockDefinition) {
-                        BukkitWorld world = new BukkitWorld(((ServerLevel) level).getWorld());
+                        BukkitWorld world = dev.arubik.craftengine.util.CeWorlds.of(((ServerLevel) level).getWorld());
                         WorldPosition position = new WorldPosition(world,
                                 Vec3d.atCenterOf(LocationUtils.fromBlockPos(blockPos)));
                         world.playBlockSound(position, customState.settings().sounds().breakSound());

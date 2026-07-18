@@ -48,6 +48,13 @@ public final class ContraptionStructureNbt {
         }
         CompoundTag root = new CompoundTag();
         root.put("blocks", blocks);
+        // Per-contraption uniform SCALE (roadmap item #9). Carried in the structure blob so a scaled
+        // contraption round-trips a restart at its rendered size — this is the minecart persistence path
+        // (the minecart's yaw is re-derived from rail physics and never persisted, but scale MUST survive),
+        // and it also covers the block-anchored store, which embeds this same dump. The live value lives on
+        // the level (ContraptionState#setScale pushes it there); absent in pre-scale blobs, which #load
+        // defaults to 1.0 (an old contraption loads back un-scaled, exactly as it was saved).
+        root.putDouble("scale", level.realScaleFactor());
         // Internal glue topology, LOCAL coords (2026-07-03 — "persistir los glue block en el nbt
         // del contraption"). Two parallel LongArray columns of packed BlockPos endpoints so the
         // glue survives restart in the bearing's saved NBT (the in-memory GlueRegistry does not);
@@ -84,6 +91,10 @@ public final class ContraptionStructureNbt {
 
     /** Repopulates a freshly-created (empty) {@link ContraptionLevel} from a dumped tag — the mirror of {@link #dump}. */
     public static void load(ContraptionLevel level, CompoundTag root) {
+        // Restore the uniform SCALE (roadmap item #9) onto the level BEFORE any block placement — the
+        // rehydrate caller then reads it back via level.realScaleFactor() and setScale()s the freshly-built
+        // ContraptionState. Defaults to 1.0 for a pre-scale blob (un-scaled, as saved).
+        level.setScaleFactor(root.getDouble("scale").orElse(1.0));
         var blockLookup = level.registryAccess().lookupOrThrow(Registries.BLOCK);
         ListTag blocks = root.getListOrEmpty("blocks");
         for (int i = 0; i < blocks.size(); i++) {

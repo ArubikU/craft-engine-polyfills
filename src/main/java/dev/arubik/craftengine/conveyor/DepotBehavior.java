@@ -62,7 +62,7 @@ public class DepotBehavior extends dev.arubik.craftengine.util.NmsBlockBehavior
     /** Resolve the depot controller at a world+pos (shared by all hooks). */
     private static DepotBlockEntity controllerAt(Object levelObj, Object posObj) {
         try {
-            CEWorld world = new BukkitWorld(((ServerLevel) levelObj).getWorld()).storageWorld();
+            CEWorld world = dev.arubik.craftengine.util.CeWorlds.of(((ServerLevel) levelObj).getWorld()).storageWorld();
             if (world == null)
                 return null;
             net.momirealms.craftengine.core.world.BlockPos pos = LocationUtils.fromBlockPos(posObj);

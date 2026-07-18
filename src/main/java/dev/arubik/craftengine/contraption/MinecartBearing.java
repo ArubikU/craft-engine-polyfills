@@ -17,6 +17,10 @@ import org.bukkit.event.vehicle.VehicleDestroyEvent;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 
+import org.bukkit.Material;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
+
 import dev.arubik.craftengine.CraftEnginePolyfills;
 import dev.arubik.craftengine.contraption.behavior.MinecartFollowBehavior;
 import dev.arubik.craftengine.contraption.level.ContraptionLevel;
@@ -60,6 +64,8 @@ public final class MinecartBearing {
     private static final NamespacedKey ASSEMBLED = key("contraption_assembled");
     private static final NamespacedKey CONTRAPTION_ID = key("contraption_id");
     private static final NamespacedKey STRUCTURE = key("contraption_structure");
+    /** Marks a held ItemStack as a packed minecart contraption (see {@link #pickUpToItem}/{@link #placeFromItem}). */
+    private static final NamespacedKey ITEM_MARKER = key("contraption_minecart_item");
 
     public static boolean isBearing(Entity entity) {
         return entity.getPersistentDataContainer().has(IS_BEARING, PersistentDataType.BYTE);
@@ -91,6 +97,11 @@ public final class MinecartBearing {
         }
 
         Set<BlockPos> structure = GlueRegistry.structureAt(bukkitWorld.getUID(), bearingPos);
+        // Veto hook (public API) — parity with ContraptionAssembler#assemble, fired BEFORE any real
+        // block is read/removed. Cancelling aborts (returns null, same as no rail beneath would).
+        if (ContraptionAssembler.fireAssembleCancelled(bukkitWorld, bearingPos, BearingType.MINECART, structure, null)) {
+            return null;
+        }
         ContraptionCapture.Result captured = ContraptionCapture.capture(realLevel, structure, bearingPos);
         // Persist glue topology onto the captured level (2026-07-03) — see the matching call in
         // ContraptionAssembler#assemble and ContraptionCapture#captureGlueEdges. This is what makes
@@ -140,7 +151,9 @@ public final class MinecartBearing {
         tag(minecart, id, true);
         saveStructure(minecart, state);
 
-        return ContraptionManager.register(new ContraptionEntity(state));
+        ContraptionEntity entity = ContraptionManager.register(new ContraptionEntity(state));
+        ContraptionAssembler.fireAssembled(entity);
+        return entity;
     }
 
     /**
@@ -166,6 +179,11 @@ public final class MinecartBearing {
      */
     public static void disassemble(World bukkitWorld, Entity minecart, ContraptionEntity entity) {
         ContraptionState state = entity.state();
+        // Veto hook (public API) — parity with ContraptionAssembler#disassemble, fired BEFORE any
+        // teardown; cancelling leaves the contraption (and its real minecart anchor) live and intact.
+        if (ContraptionAssembler.fireDisassembleCancelled(entity)) {
+            return;
+        }
         entity.despawn(CePlayers.resolve(bukkitWorld.getPlayers()));
         ContraptionManager.remove(state.id());
 
@@ -178,11 +196,78 @@ public final class MinecartBearing {
         ContraptionCapture.restoreGlue(bukkitWorld.getUID(), state.level(), state.originBearingBlockPos(),
                 snapped, quarterTurns);
         ContraptionCapture.restoreRotated(realLevel, state.level(), snapped, quarterTurns);
+        // Cheaply-available final resting footprint for ContraptionDisassembledEvent — gathered before
+        // dispose() discards the level. Same grid-snap + rotation the block restore just used.
+        Set<BlockPos> restingPositions = new java.util.HashSet<>();
+        if (state.level() != null) {
+            for (BlockPos local : state.level().localPositions()) {
+                restingPositions.add(ContraptionMath.toWorld(ContraptionCapture.rotateLocal(local, quarterTurns),
+                        snapped));
+            }
+        }
         ContraptionFurnitureCapture.restoreFurniture(bukkitWorld, state.furniture(), snapped, quarterTurns);
         if (state.level() != null) {
             state.level().dispose();
         }
         minecart.remove();
+        ContraptionAssembler.fireDisassembled(state.id(), bukkitWorld, snapped, restingPositions);
+    }
+
+    /**
+     * <b>End-portal / dead-anchor safety fallback (roadmap item #1 — see
+     * {@code .migration/ROADMAP-world-boundary.md} §1 "End portals destroy the minecart").</b> When the
+     * real anchor minecart is DESTROYED (an end portal removes non-player entities outright; also
+     * {@code /kill} or a third-party force-remove) while the contraption is still live,
+     * {@link MinecartFollowBehavior} latches {@link MinecartFollowBehavior#wantsDisassembleInPlace()}
+     * after a grace window and {@code ContraptionEngine.tickAll} routes here — restoring the structure
+     * into the world at its LAST live position rather than leaking a permanently stalled, anchorless
+     * contraption.
+     *
+     * <p>Identical teardown to {@link #disassemble} EXCEPT (a) there is no anchor minecart to pass or
+     * remove — it is already gone (best-effort removal below covers the rare case it somehow still
+     * resolves), and (b) the {@code fireDisassembleCancelled} veto is intentionally NOT fired: this is
+     * an emergency integrity teardown, not a user-initiated disassemble, and must not be vetoable into
+     * leaking a dead-anchor contraption. Grid-snap + axis-snap-rotation restore at the current position,
+     * glue + furniture restore, dispose the hidden level, fire {@code ContraptionDisassembledEvent}.
+     */
+    public static void disassembleInPlace(World bukkitWorld, ContraptionEntity entity) {
+        ContraptionState state = entity.state();
+        entity.despawn(CePlayers.resolve(bukkitWorld.getPlayers()));
+        ContraptionManager.remove(state.id());
+
+        Level realLevel = ((CraftWorld) bukkitWorld).getHandle();
+        BlockPos snapped = ContraptionMath.gridSnap(new Vec3(state.x(), state.y(), state.z()));
+        int quarterTurns = ContraptionMath.quarterTurnsBetween(0, state.yawRadians());
+        ContraptionCapture.restoreGlue(bukkitWorld.getUID(), state.level(), state.originBearingBlockPos(),
+                snapped, quarterTurns);
+        ContraptionCapture.restoreRotated(realLevel, state.level(), snapped, quarterTurns);
+        Set<BlockPos> restingPositions = new java.util.HashSet<>();
+        if (state.level() != null) {
+            for (BlockPos local : state.level().localPositions()) {
+                restingPositions.add(ContraptionMath.toWorld(ContraptionCapture.rotateLocal(local, quarterTurns),
+                        snapped));
+            }
+        }
+        ContraptionFurnitureCapture.restoreFurniture(bukkitWorld, state.furniture(), snapped, quarterTurns);
+        if (state.level() != null) {
+            state.level().dispose();
+        }
+        // Best-effort: the anchor is expected to be gone (that's why we're here), but if a
+        // /kill-style removal left a resolvable-but-invalid handle, or any residue survives, drop it.
+        try {
+            for (MovementBehavior b : state.behaviors()) {
+                if (b instanceof MinecartFollowBehavior follow) {
+                    Entity cart = org.bukkit.Bukkit.getEntity(follow.entityId());
+                    if (cart != null) {
+                        cart.remove();
+                    }
+                    break;
+                }
+            }
+        } catch (Throwable ignored) {
+            // the whole contraption is being torn down regardless
+        }
+        ContraptionAssembler.fireDisassembled(state.id(), bukkitWorld, snapped, restingPositions);
     }
 
     private static void tag(Entity minecart, UUID contraptionId, boolean assembled) {
@@ -244,6 +329,10 @@ public final class MinecartBearing {
             return;
         }
         ContraptionState state = new ContraptionState(id, bukkitWorld.getUID(), level, loc.getX(), loc.getY(), loc.getZ());
+        // Restore the persisted uniform SCALE (roadmap item #9). ContraptionStructureNbt#load already put the
+        // saved value back on the level; reaffirm it onto the state (which re-pushes the full transform),
+        // so a scaled minecart contraption rehydrates at its saved size. 1.0 (default) for a pre-scale blob.
+        state.setScale(level.realScaleFactor());
         // Re-place captured CraftEngine furniture inside the freshly-loaded hidden level (2026-07-03
         // — "todos los craft engine furnitures se pierden al reiniciar el sv"). The furniture
         // metadata rode along in the structure NBT (ContraptionStructureNbt); this rebuilds the live
@@ -255,6 +344,105 @@ public final class MinecartBearing {
         }
         state.addBehavior(new MinecartFollowBehavior(minecart.getUniqueId()));
         ContraptionManager.register(new ContraptionEntity(state));
+    }
+
+    // ---------------- pack to / spawn from a held item (2026-07-04 — "de el item al jugador... un
+    // minecart con cofre que al ponerlo re spawnea el contraption") ----------------
+
+    /** True if {@code item} is a packed minecart contraption produced by {@link #pickUpToItem}. */
+    public static boolean isContraptionItem(ItemStack item) {
+        if (item == null || item.getType() != Material.CHEST_MINECART || !item.hasItemMeta()) {
+            return false;
+        }
+        Byte v = item.getItemMeta().getPersistentDataContainer().get(ITEM_MARKER, PersistentDataType.BYTE);
+        return v != null && v != 0;
+    }
+
+    /** The serialized structure bytes carried by a packed contraption item, or {@code null}. */
+    private static byte[] structureBytesOf(ItemStack item) {
+        if (!isContraptionItem(item)) {
+            return null;
+        }
+        return item.getItemMeta().getPersistentDataContainer().get(STRUCTURE, PersistentDataType.BYTE_ARRAY);
+    }
+
+    /** Builds a chest-minecart item that carries {@code structureBytes} in its meta PDC. */
+    private static ItemStack buildItem(byte[] structureBytes) {
+        ItemStack item = new ItemStack(Material.CHEST_MINECART);
+        ItemMeta meta = item.getItemMeta();
+        meta.getPersistentDataContainer().set(ITEM_MARKER, PersistentDataType.BYTE, (byte) 1);
+        meta.getPersistentDataContainer().set(STRUCTURE, PersistentDataType.BYTE_ARRAY, structureBytes);
+        meta.setDisplayName("§bPacked Contraption Minecart");
+        item.setItemMeta(meta);
+        return item;
+    }
+
+    /**
+     * Packs a LIVE minecart contraption into a chest-minecart ITEM (2026-07-04 request) — the
+     * "pick it up whole" counterpart to {@link #disassemble} (which restores the blocks into the
+     * world in place). Dumps the current structure to the item's PDC (the SAME
+     * {@link ContraptionStructureNbt} bytes the minecart already carries in its own PDC), tears the
+     * live contraption down WITHOUT restoring any real blocks (despawn render/hitbox swarms, dismount
+     * seated riders, dispose the hidden level, remove the anchor minecart), and returns the item for
+     * the caller to hand the player. {@link #placeFromItem} is the inverse. Returns {@code null} if
+     * the structure can't be serialized (nothing is torn down in that failure case).
+     */
+    public static ItemStack pickUpToItem(World bukkitWorld, Entity minecart, ContraptionEntity entity) {
+        ContraptionState state = entity.state();
+        if (state.level() == null) {
+            return null;
+        }
+        byte[] bytes;
+        try {
+            bytes = ContraptionStructureNbt.toBytes(ContraptionStructureNbt.dump(state.level()));
+        } catch (IOException e) {
+            CraftEnginePolyfills.instance().getLogger()
+                    .warning("[Contraption] failed to pack minecart contraption to item: " + e);
+            return null;
+        }
+        ItemStack item = buildItem(bytes);
+        // Teardown WITHOUT block restore (the blocks live on in the item, not the world) — mirrors
+        // the non-restoring half of #disassemble: despawn everything (this also dismounts any seated
+        // rider via ContraptionEntity#despawnRest) + dispose the level + remove the anchor minecart.
+        entity.despawn(CePlayers.resolve(bukkitWorld.getPlayers()));
+        ContraptionManager.remove(state.id());
+        state.level().dispose();
+        minecart.remove();
+        return item;
+    }
+
+    /**
+     * Re-spawns a minecart contraption from a packed {@link #pickUpToItem} item at {@code at}
+     * (which must sit on a rail — same rail requirement as {@link #assemble}). Spawns a fresh anchor
+     * minecart, stamps the item's structure bytes onto its PDC, and drives {@link #rehydrate} to
+     * rebuild the live contraption exactly like a chunk-load rehydrate. The item is NOT consumed
+     * here (the caller decides); a fresh contraption id is minted so multiple copies never collide.
+     * Returns the new {@link ContraptionEntity}, or {@code null} if the item has no structure or the
+     * spawn location isn't a rail.
+     */
+    public static ContraptionEntity placeFromItem(ItemStack item, World bukkitWorld, Location at) {
+        byte[] bytes = structureBytesOf(item);
+        if (bytes == null) {
+            return null;
+        }
+        Level realLevel = ((CraftWorld) bukkitWorld).getHandle();
+        BlockPos railPos = new BlockPos(at.getBlockX(), at.getBlockY(), at.getBlockZ());
+        if (!(realLevel.getBlockState(railPos).getBlock() instanceof BaseRailBlock)) {
+            return null;
+        }
+        Entity minecart = bukkitWorld.spawnEntity(at, org.bukkit.entity.EntityType.MINECART);
+        minecart.setInvulnerable(true);
+        UUID id = UUID.randomUUID();
+        tag(minecart, id, true);
+        minecart.getPersistentDataContainer().set(STRUCTURE, PersistentDataType.BYTE_ARRAY, bytes);
+        rehydrate(minecart); // builds the ContraptionEntity from the PDC we just stamped
+        ContraptionEntity entity = ContraptionManager.get(id);
+        if (entity == null) {
+            // Rehydrate declined (shouldn't happen for a fresh id with valid bytes) — clean up the
+            // orphan anchor so we don't leave a tagged, structure-less minecart behind.
+            minecart.remove();
+        }
+        return entity;
     }
 
     /**

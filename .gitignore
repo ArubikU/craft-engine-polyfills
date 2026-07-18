@@ -122,3 +122,4 @@ runs/
 !gradle-wrapper.jar
 .migration/
 testserver/
+logs/

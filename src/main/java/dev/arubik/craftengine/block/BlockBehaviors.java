@@ -176,6 +176,37 @@ public class BlockBehaviors {
                                 dev.arubik.craftengine.contraption.behavior.MinerBlockBehavior.FACTORY_KEY,
                                 dev.arubik.craftengine.contraption.behavior.MinerBlockBehavior::buildMovementBehavior);
 
+                // Contraption mover/propulsion block (roadmap item #4): a real CraftEngine block
+                // behavior mirroring MinerBlockBehavior's shape. Auto-attached into a captured
+                // contraption via the SAME MovementBehaviorRegistry path the miner uses, so a
+                // mover block glued inside any bearing-assembled structure contributes propulsion —
+                // see MoverBlockBehavior#buildMovementBehavior's javadoc for what gets built.
+                RegistryUtils.registerBlockBehavior(
+                                dev.arubik.craftengine.contraption.behavior.MoverBlockBehavior.FACTORY_KEY,
+                                dev.arubik.craftengine.contraption.behavior.MoverBlockBehavior.FACTORY);
+                dev.arubik.craftengine.contraption.behavior.MovementBehaviorRegistry.register(
+                                dev.arubik.craftengine.contraption.behavior.MoverBlockBehavior.FACTORY_KEY,
+                                dev.arubik.craftengine.contraption.behavior.MoverBlockBehavior::buildMovementBehavior);
+
+                // Contraption weight/ballast block (roadmap item #9 — PhysContraption): a real
+                // CraftEngine block behavior mirroring MoverBlockBehavior's shape, carrying a `weight:`
+                // config value. UNLIKE the miner/mover it does NOT register a MovementBehaviorRegistry
+                // factory — it contributes no movement of its own; instead PhysicsBehavior aggregates the
+                // mass of all captured weight blocks (via MassModel/WeightBlockBehavior#weightOf) into
+                // the contraption's mass model. See WeightBlockBehavior's javadoc.
+                RegistryUtils.registerBlockBehavior(
+                                dev.arubik.craftengine.contraption.behavior.WeightBlockBehavior.FACTORY_KEY,
+                                dev.arubik.craftengine.contraption.behavior.WeightBlockBehavior.FACTORY);
+
+                // Floatability: the per-block gravity multiplier the mass model averages into a body's
+                // own gravity (1 = normal, 0 = weightless, -1 = rises). Data only, exactly like the
+                // weight block above — it contributes no movement behavior of its own. See
+                // FloatabilityBlockBehavior's javadoc for why it is mass-weighted and how it differs
+                // from buoyancy.
+                RegistryUtils.registerBlockBehavior(
+                                dev.arubik.craftengine.contraption.behavior.FloatabilityBlockBehavior.FACTORY_KEY,
+                                dev.arubik.craftengine.contraption.behavior.FloatabilityBlockBehavior.FACTORY);
+
                 // (CraftingSamples deleted — real recipes are CraftEngine-native YAML on the vanilla table.)
                 // Populate sample workbench station recipes (3x2 + tool + condition/executor).
                 dev.arubik.craftengine.crafting.WorkbenchSamples.registerDefaults();

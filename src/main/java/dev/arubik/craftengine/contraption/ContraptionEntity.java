@@ -38,11 +38,156 @@ public final class ContraptionEntity {
     // transform and only ask a swarm to resend position packets when it actually changed.
     // Metadata/blockstate-dirty resends (furnace lit toggling, etc.) are unaffected — those are
     // already tracked completely independently per-cell (see ContraptionDisplaySwarm.Cell).
-    private double lastRenderX = Double.NaN, lastRenderY, lastRenderZ, lastRenderYaw;
+    private double lastRenderX = Double.NaN, lastRenderY, lastRenderZ, lastRenderYaw, lastRenderPitch, lastRenderRoll;
+    /** Last uniform SCALE rendered (roadmap item #9 — per-contraption {@code scale}); a change marks the swarm "moved" so every cell's position/size packet is resent. Starts at {@code 1.0} (un-scaled). */
+    private double lastRenderScale = 1.0;
 
     public ContraptionEntity(ContraptionState state) {
         this.state = state;
         rebuildSwarm(List.of());
+    }
+
+    /**
+     * <b>Cross-world teleport (roadmap item #1 — see {@code .migration/ROADMAP-world-boundary.md}
+     * §1).</b> Atomically moves this whole contraption — hidden mini-dimension and all — to project
+     * into a DIFFERENT real world at {@code (x, y, z, yawRadians)}, without recreating the hidden
+     * {@link dev.arubik.craftengine.contraption.level.ContraptionLevel} (only its projection pointer
+     * and the state's anchor move). The primary caller is
+     * {@link dev.arubik.craftengine.contraption.behavior.MinecartFollowBehavior} when its real anchor
+     * minecart crosses a nether/end portal and vanilla relocates the cart into a new world; it is also
+     * a clean public entry point for admin/scripted moves.
+     *
+     * <p><b>Ordering (all synchronous, main-thread — the {@code ContraptionAccessor} discipline).</b>
+     * <ol>
+     *   <li><b>Despawn the OLD world's real-world satellites.</b> Resolved against the world
+     *       {@code state.worldId()} STILL points at (captured before the re-anchor). {@link #despawn}
+     *       sends destroy packets for the render/element/furniture/piston-shaft/item-pickup mirror
+     *       swarms ({@link #despawnRest}) AND the hitbox/shulker-collider swarm
+     *       ({@link #despawnHitboxesOnly}) to those viewers, so nothing lingers for players left behind
+     *       in the old world. {@code despawnRest} additionally dismounts every seated rider (releasing
+     *       their real {@link ContraptionSeatMount} ArmorStand) — a seated rider is therefore DROPPED
+     *       by a teleport rather than carried across the boundary (documented limitation: a real
+     *       vanilla passenger cannot follow the mini-dimension through a portal; re-seating post-cross
+     *       is deferred).</li>
+     *   <li><b>Re-anchor level + state</b> to the destination world/transform via
+     *       {@link dev.arubik.craftengine.contraption.level.ContraptionLevel#reanchor} +
+     *       {@link ContraptionState#setAnchor} (both with the SAME transform).</li>
+     *   <li><b>Force a full re-render next tick</b> via {@link #markMoved} (nulls the render-transform
+     *       cache), so {@code ContraptionEngine.tickAll} — which already re-resolves the world from
+     *       {@code state.worldId()} each tick and calls {@link #rebuildSwarm}/{@link #render} — respawns
+     *       every swarm for the DESTINATION world's viewers with no further work here.</li>
+     * </ol>
+     *
+     * <p><b>Back-index untouched.</b> {@link dev.arubik.craftengine.contraption.ContraptionWorlds}'s
+     * reverse map is keyed by the {@link dev.arubik.craftengine.contraption.level.ContraptionLevel}
+     * instance (its {@code ContraptionBoundary} identity), which does NOT change on a re-anchor — only
+     * the world it projects into does — so no index maintenance is needed here.
+     *
+     * <p><b>Not touched:</b> {@code world} must be a real {@code CraftWorld}-backed
+     * {@link net.minecraft.server.level.ServerLevel}; no-op on the null-tolerant unit-test path where
+     * {@code state.level()} is {@code null}.
+     */
+    public void teleport(org.bukkit.World world, double x, double y, double z, double yawRadians) {
+        if (world == null) {
+            return;
+        }
+        // 1) Despawn the OLD world's satellites for whoever currently sees them (state.worldId() still
+        //    points at the old world at this point — capture its viewers BEFORE the re-anchor below).
+        org.bukkit.World oldWorld = null;
+        try {
+            oldWorld = org.bukkit.Bukkit.getWorld(state.worldId());
+        } catch (Throwable ignored) {
+            // pure-JVM unit-test path (no live server) — nothing to despawn
+        }
+        if (oldWorld != null) {
+            despawn(CePlayers.resolve(oldWorld.getPlayers()));
+        }
+        // 2) Re-anchor the hidden level's projection pointer + the state's world/transform (same pose).
+        if (state.level() != null) {
+            net.minecraft.server.level.ServerLevel newHandle =
+                    ((org.bukkit.craftbukkit.CraftWorld) world).getHandle();
+            state.level().reanchor(newHandle, x, y, z, yawRadians);
+        }
+        state.setAnchor(world.getUID(), x, y, z, yawRadians);
+        // 3) Force a full re-render into the destination world on the next tick.
+        markMoved();
+    }
+
+    /**
+     * Invalidates the cached "last rendered transform" (see {@link #lastRenderX}) so the very next
+     * {@link #render} treats the contraption as moved and re-sends every cell's position packet to all
+     * current viewers — used after a {@link #teleport} re-anchor so the destination world's viewers get
+     * a full resend even if the numeric transform happens to match the last one rendered in the old
+     * world. Cheap and idempotent.
+     */
+    public void markMoved() {
+        lastRenderX = Double.NaN;
+    }
+
+    /**
+     * Whether this contraption's swarms are currently suspended — see {@link #suspendRender}.
+     * Owned by {@code ContraptionEngine.tickAll}, which is the only thing allowed to flip it.
+     */
+    private boolean renderSuspended;
+
+    public boolean renderSuspended() {
+        return renderSuspended;
+    }
+
+    /**
+     * <b>Stops rendering this contraption entirely, giving every client back its entities first.</b>
+     * Used by {@code ContraptionEngine.tickAll} to drop a contraption nobody can currently see (its real
+     * position's chunk is unloaded, or its world has no players) out of the per-tick render cost.
+     *
+     * <p><b>Why a despawn is mandatory, not merely tidy.</b> Every swarm tracks who it has spawned for in
+     * a per-cell {@code shownTo} set and ends its render with {@code shownTo.retainAll(currentViewers)} —
+     * which FORGETS a viewer without sending them a despawn packet. So merely skipping {@code render} and
+     * resuming later is not symmetric: the swarm still believes each client has the entities, and a client
+     * that dropped them in the meantime (relog, world change, an unload that discarded them) would never be
+     * sent the spawn packet again on resume, leaving the contraption permanently invisible-but-solid for
+     * them. Despawning here clears every {@code shownTo}, so {@link #render} rebuilds the client state from
+     * scratch when the contraption resumes — correct for whoever is actually watching by then, not for
+     * whoever was watching when it went quiet.
+     *
+     * <p><b>Deliberately not {@link #despawnRest}</b>, despite covering the same swarms: that method also
+     * dismounts every seated rider (correct when a contraption is being torn down for good, wrong here — a
+     * suspend is temporary and must not eject a passenger just because their chunk briefly unloaded). The
+     * mini-dimension, the state, the behaviors and the seat registrations all survive untouched; only the
+     * client-side projection goes.
+     *
+     * <p><b>{@link ContraptionItemPickupSwarm} is deliberately left running/untouched.</b> Its
+     * {@code despawnAll} is not a despawn at all — it RELEASES each mirror into the world as a permanent,
+     * gravity-driven real item, which is right when the contraption is being destroyed (the internal source
+     * item dies with the level, so the mirror is the only surviving copy) and wrong here: the source item
+     * survives a suspend, so releasing the mirror would drop a real duplicate into the world and then mint a
+     * second mirror for the same item on resume. Its mirrors are real entities the server already tracks
+     * (nothing to strand on a client) and its {@code tick} re-syncs them by UUID, so simply not ticking it
+     * while suspended is both free and correct.
+     *
+     * <p>{@code viewers} must be the world's REAL players, for the same reason every other despawn path
+     * needs them (see {@link dev.arubik.craftengine.contraption.CePlayers}) — an empty list clears the
+     * records while sending nothing. Passing an empty list is only correct when the world genuinely has no
+     * players, in which case there is nobody to strand.
+     */
+    public void suspendRender(List<Player> viewers) {
+        displaySwarm.despawnAll(viewers);
+        hitboxSwarm.despawnAll(viewers);
+        entityMirrorSwarm.despawnAll(viewers);
+        elementMirror.despawnAll(viewers);
+        furnitureSwarm.despawnAll(viewers);
+        shaftSwarm.despawnAll(viewers);
+        renderSuspended = true;
+        markMoved();
+    }
+
+    /**
+     * Clears the {@link #suspendRender} flag. The swarms need no priming: their {@code rebuild} repopulates
+     * the cell set from the level and {@code render} re-spawns for every current viewer, because the
+     * suspend already emptied each {@code shownTo}.
+     */
+    public void resumeRender() {
+        renderSuspended = false;
+        markMoved();
     }
 
     /**
@@ -58,6 +203,20 @@ public final class ContraptionEntity {
 
     public ContraptionState state() {
         return state;
+    }
+
+    /**
+     * <b>Public setter path for a live contraption's uniform SCALE</b> (roadmap item #9 — the "creative
+     * phys wand" entry point). Clamps + applies via {@link ContraptionState#setScale} (which pushes the full
+     * transform onto the hidden level so the real-world projection resizes in lock-step), then invalidates
+     * the render-transform cache via {@link #markMoved} so the very next {@link #render} treats the
+     * contraption as moved and resends every cell's scaled position/size packet to all current viewers. Safe
+     * to call every tick (idempotent when the value is unchanged — {@code render}'s own {@code moved}
+     * gate/each swarm's per-cell dirty tracking suppress redundant packets). Main-thread only.
+     */
+    public void setScale(double scale) {
+        state.setScale(scale);
+        markMoved();
     }
 
     /** Exposed for {@code ContraptionSeatListener} to reach the swarm's sittable seat slots. */
@@ -85,6 +244,12 @@ public final class ContraptionEntity {
         // (which all key off level.localPositions()) actually see any block that moved in/out of
         // a tracked cell since the last rebuild (e.g. a piston push), not just what was captured.
         state.level().refreshLocalPositions();
+        // Seats declared by captured BLOCKS (CraftEngine's seat_block behavior) — rebuilt from the same
+        // freshly-refreshed cell set the display/hitbox swarms below key off, so a sofa pushed in or out of
+        // the contraption gains/loses its seat the same tick its block does. Cheap on an unchanged block set
+        // (the scan short-circuits — see ContraptionFurnitureSwarm#rebuildBlockSeats). Feeds the SAME
+        // seatSlots() list the furniture seats above do, so ContraptionSeatListener needed no changes.
+        furnitureSwarm.rebuildBlockSeats(state.level());
         Vec3 bearing = new Vec3(state.x(), state.y(), state.z());
         displaySwarm.rebuild(state.level(), viewers);
         hitboxSwarm.rebuild(state.level(), viewers, bearing);
@@ -113,22 +278,45 @@ public final class ContraptionEntity {
     public void render(List<Player> viewers, net.minecraft.server.level.ServerLevel realLevel) {
         Vec3 bearing = new Vec3(state.x(), state.y(), state.z());
         double yaw = state.yawRadians();
+        double pitch = state.pitchRadians();
+        double roll = state.rollRadians();
+        double scale = state.scale();
         boolean moved = Double.isNaN(lastRenderX) || bearing.x != lastRenderX || bearing.y != lastRenderY
-                || bearing.z != lastRenderZ || yaw != lastRenderYaw;
+                || bearing.z != lastRenderZ || yaw != lastRenderYaw || pitch != lastRenderPitch
+                || roll != lastRenderRoll || scale != lastRenderScale;
         lastRenderX = bearing.x;
         lastRenderY = bearing.y;
         lastRenderZ = bearing.z;
         lastRenderYaw = yaw;
+        lastRenderPitch = pitch;
+        lastRenderRoll = roll;
+        lastRenderScale = scale;
 
-        displaySwarm.render(viewers, bearing, yaw, state.level(), moved, realLevel);
-        hitboxSwarm.render(viewers, bearing, yaw, moved);
+        displaySwarm.render(viewers, bearing, yaw, pitch, roll, scale, state.level(), moved, realLevel);
+        // Pitch+roll+scale threaded so the interaction/shulker colliders orbit to the SAME cell positions the
+        // block_display renders (canonical renderPosition mapping) — previously the hitbox swarm ignored
+        // pitch/roll, so a tipping/leaning contraption's colliders stayed flat while the visual tilted.
+        // A ridden anchor is driven by its RIDER'S client, which collides it against these solid
+        // packet colliders — so the rider must not receive them or the anchor grinds against its own
+        // structure. See ContraptionShulkerColliderSwarm#setExcludedViewer.
+        hitboxSwarm.setColliderExcludedViewer(anchorRiderId());
+        hitboxSwarm.render(viewers, bearing, yaw, pitch, roll, scale, moved);
         // Furniture-owned real entities (meta ItemDisplay + hitbox colliders) are excluded here —
         // see ContraptionEntityMirrorSwarm's own javadoc, "Furniture-owned real entities excluded"
         // — they're already mirrored by furnitureSwarm.render below.
         entityMirrorSwarm.render(viewers, state.level(), state.furniture());
         itemPickupSwarm.tick(state.level());
-        elementMirror.render(viewers, state.level(), realLevel);
-        furnitureSwarm.render(viewers, bearing, yaw, realLevel, state.level());
+        // Scale threaded into BOTH mirrors (2026-07-16 fix, roadmap item #9): a scaled contraption's
+        // CraftEngine entity-renderer block visuals and its captured furniture used to stay at size 1
+        // (and, for furniture, at unscaled POSITIONS too — it projects via ContraptionMath directly,
+        // whereas the element mirror goes through ContraptionLevel#realWorldPositionOf, which already
+        // carried the level's scale). See each swarm's own "Uniform scale" render javadoc.
+        elementMirror.render(viewers, state.level(), realLevel, scale);
+        // Pitch+roll threaded (2026-07-16 follow-up to the same-day scale fix): captured furniture used to
+        // project through a yaw+scale-only transform, so a TIPPING/LEANING contraption tilted its blocks
+        // while its sofas/lamps stayed level inside the rolled hull — and its furniture colliders with them.
+        // See ContraptionFurnitureSwarm#render's "Pitch/roll" javadoc.
+        furnitureSwarm.render(viewers, bearing, yaw, pitch, roll, scale, realLevel, state.level());
         renderPistonShaft(viewers, realLevel, moved);
     }
 
@@ -196,6 +384,29 @@ public final class ContraptionEntity {
      * correct owner of a seated player's position/velocity every tick (see its own javadoc,
      * "Position-lock, not velocity-nudge").
      */
+    /**
+     * The player currently riding this contraption's anchor entity, or {@code null}.
+     *
+     * <p>Only an entity-anchored contraption has one; a block bearing cannot be ridden, so this is
+     * {@code null} for every other kind and they are unaffected.
+     */
+    private java.util.UUID anchorRiderId() {
+        java.util.UUID anchorId = state.anchorEntityId();
+        if (anchorId == null) {
+            return null;
+        }
+        org.bukkit.entity.Entity anchor = org.bukkit.Bukkit.getEntity(anchorId);
+        if (anchor == null) {
+            return null;
+        }
+        for (org.bukkit.entity.Entity passenger : anchor.getPassengers()) {
+            if (passenger instanceof org.bukkit.entity.Player player) {
+                return player.getUniqueId();
+            }
+        }
+        return null;
+    }
+
     public void carryRiders(List<ServerPlayer> candidates) {
         Vec3 bearing = new Vec3(state.x(), state.y(), state.z());
         java.util.Map<java.util.UUID, Vec3> seated = state.seatedRiders();
@@ -218,7 +429,7 @@ public final class ContraptionEntity {
      */
     public void carryEntities(net.minecraft.world.level.Level realLevel) {
         Vec3 bearing = new Vec3(state.x(), state.y(), state.z());
-        hitboxSwarm.carryNearbyEntities(realLevel, bearing, state.lastDeltaX(), state.lastDeltaY(), state.lastDeltaZ(), state.yawRadians());
+        hitboxSwarm.carryNearbyEntities(realLevel, bearing, state.lastDeltaX(), state.lastDeltaY(), state.lastDeltaZ(), state.yawRadians(), state.anchorEntityId());
     }
 
     /**
@@ -230,7 +441,7 @@ public final class ContraptionEntity {
      */
     public void pushBackBystanders(net.minecraft.world.level.Level realLevel) {
         Vec3 bearing = new Vec3(state.x(), state.y(), state.z());
-        hitboxSwarm.pushBackNearbyBystanders(realLevel, bearing, state.lastDeltaX(), state.lastDeltaY(), state.lastDeltaZ(), state.yawRadians());
+        hitboxSwarm.pushBackNearbyBystanders(realLevel, bearing, state.lastDeltaX(), state.lastDeltaY(), state.lastDeltaZ(), state.yawRadians(), state.pitchRadians(), state.rollRadians(), state.scale(), state.pushSettings());
     }
 
     /**
@@ -242,7 +453,7 @@ public final class ContraptionEntity {
      */
     public void pushBackEntities(net.minecraft.world.level.Level realLevel) {
         Vec3 bearing = new Vec3(state.x(), state.y(), state.z());
-        hitboxSwarm.pushBackNearbyEntities(realLevel, bearing, state.lastDeltaX(), state.lastDeltaY(), state.lastDeltaZ(), state.yawRadians());
+        hitboxSwarm.pushBackNearbyEntities(realLevel, bearing, state.lastDeltaX(), state.lastDeltaY(), state.lastDeltaZ(), state.yawRadians(), state.pitchRadians(), state.rollRadians(), state.scale(), state.pushSettings(), state.anchorEntityId());
     }
 
     /**
@@ -268,10 +479,31 @@ public final class ContraptionEntity {
      * between "where we teleported the player" and "where the client thinks they are": the mount
      * entity IS the seat's real position, and the player rides it exactly the way a boat/horse
      * passenger does.
+     *
+     * <p><b>Full pose, not yaw-only (2026-07-16 fix — the reported seat drift).</b> The mount's target used
+     * to come from the yaw-only {@code renderPosition(local, bearing, yaw)} overload, which pins
+     * {@code pitch = roll = 0} and {@code scale = 1} — while the furniture the seat belongs to, and every
+     * captured block around it, projected through the contraption's FULL live pose. On any scaled or tilted
+     * contraption the seat was therefore computed against a different transform than its own sofa, so the
+     * mount (and the rider on it) sat visibly away from the seat — further off the further the seat was from
+     * the bearing pivot, and dragged along every tick since this method re-asserts it. The full pose is now
+     * threaded, here and through {@code SeatSlot#currentRealPosition}, so a seat rides exactly the
+     * {@code renderPosition} mapping its furniture does. At {@code scale == 1 && pitch == 0 && roll == 0}
+     * this is byte-for-byte the old call (see {@code ContraptionMath}'s overload chain).
+     *
+     * <p><b>Rider scale (roadmap item #9).</b> A seated rider is resized to the contraption's own uniform
+     * {@code scale} every tick, guarded by a base-value compare inside
+     * {@link ContraptionSeatMount#applyContraptionScale}, so rescaling a contraption with someone already
+     * sitting in it (the creative phys wand) resizes them live. <b>The scale is deliberately never restored
+     * on dismount — that is an intentional gag, not a missing teardown; see that method's javadoc before
+     * "fixing" it.</b>
      */
     public void carrySeatedRiders() {
         Vec3 bearing = new Vec3(state.x(), state.y(), state.z());
         double yaw = state.yawRadians();
+        double pitch = state.pitchRadians();
+        double roll = state.rollRadians();
+        double scale = state.scale();
         for (java.util.Map.Entry<java.util.UUID, Vec3> e : state.seatedRiders().entrySet()) {
             java.util.UUID id = e.getKey();
             java.util.UUID mountId = state.seatedRiderMount(id);
@@ -279,7 +511,8 @@ public final class ContraptionEntity {
             if (mount == null) {
                 continue; // mount despawned/world unloaded — stays registered, nothing to reposition this tick
             }
-            Vec3 target = dev.arubik.craftengine.contraption.ContraptionMath.renderPosition(e.getValue(), bearing, yaw);
+            Vec3 target = dev.arubik.craftengine.contraption.ContraptionMath.renderPosition(e.getValue(), bearing,
+                    yaw, pitch, roll, scale);
             float seatYaw = 0f;
             for (ContraptionFurnitureSwarm.SeatSlot slot : furnitureSwarm.seatSlots()) {
                 if (id.equals(slot.occupant())) {
@@ -289,6 +522,10 @@ public final class ContraptionEntity {
             }
             ContraptionSeatMount.reposition(mount, target, seatYaw);
             rotateSeatedRiderView(id, seatYaw);
+            org.bukkit.entity.Player seated = org.bukkit.Bukkit.getPlayer(id);
+            if (seated != null) {
+                ContraptionSeatMount.applyContraptionScale(seated, scale);
+            }
         }
         // Drop stale per-rider yaw bookkeeping for anyone no longer seated.
         seatFacing.keySet().retainAll(state.seatedRiders().keySet());

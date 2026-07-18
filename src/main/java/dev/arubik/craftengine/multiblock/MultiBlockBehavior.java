@@ -572,7 +572,7 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
         // 3. Remove old BlockEntity and create the correct controller
         // (MultiBlockMachineBlockEntity). ce 26.6.2: the engine BlockEntity wraps the
         // controller via its public 'controller' field.
-        BukkitWorld world = new BukkitWorld(((net.minecraft.server.level.ServerLevel) level).getWorld());
+        BukkitWorld world = dev.arubik.craftengine.util.CeWorlds.of(((net.minecraft.server.level.ServerLevel) level).getWorld());
         net.momirealms.craftengine.core.world.BlockPos cePos = new net.momirealms.craftengine.core.world.BlockPos(
                 corePos.getX(), corePos.getY(), corePos.getZ());
         CEChunk chunk = world.storageWorld().getChunkAtIfLoaded(cePos.x() >> 4, cePos.z() >> 4);
@@ -891,7 +891,7 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
             partBlock = partBlockOpt.get();
         }
         Object nmsStateObject = partBlock.defaultState().customBlockState().minecraftState();
-        BukkitWorld world = new BukkitWorld(((net.minecraft.server.level.ServerLevel) level).getWorld());
+        BukkitWorld world = dev.arubik.craftengine.util.CeWorlds.of(((net.minecraft.server.level.ServerLevel) level).getWorld());
 
         // 5. Replace all schema blocks with part blocks
         for (Map.Entry<BlockPos, java.util.function.Predicate<BlockState>> entry : schema.getParts().entrySet()) {

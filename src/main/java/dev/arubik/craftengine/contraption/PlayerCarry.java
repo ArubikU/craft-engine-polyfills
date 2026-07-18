@@ -592,7 +592,14 @@ public final class PlayerCarry {
         Vec3 current = player.getDeltaMovement();
         double outX = hasDirectionalInput ? current.x : dx;
         double outZ = hasDirectionalInput ? current.z : dz;
-        Vec3 combined = new Vec3(outX, applyY ? current.y + dy : current.y, outZ);
+        // Y: SET to the platform's own vertical velocity, do NOT add it to the player's (2026-07-17 — "al
+        // saltar en un contraption ... la caida como que la gravedad es altisima y caigo re rapido"). A
+        // rider standing on a platform is SUPPORTED by it — their vertical motion IS the platform's, so
+        // gravity must not stack on top. The old `current.y + dy` added the player's own gravity-fall
+        // (already in current.y) to a DESCENDING platform's fall, so a rider on anything sinking dropped at
+        // roughly double gravity. Setting it makes the rider track the platform exactly, up or down; jumps
+        // are unaffected (this whole block is skipped while the jump key is held, above).
+        Vec3 combined = new Vec3(outX, applyY ? dy : current.y, outZ);
         player.setDeltaMovement(combined);
         player.connection.send(new ClientboundSetEntityMotionPacket(player));
     }

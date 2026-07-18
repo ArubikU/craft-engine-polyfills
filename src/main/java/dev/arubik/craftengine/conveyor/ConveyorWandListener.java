@@ -359,7 +359,7 @@ public class ConveyorWandListener implements Listener {
     /** True when the block at {@code pos} is a conveyor splitter/merger router. */
     private boolean isRouter(org.bukkit.World world, BlockPos pos) {
         try {
-            CEWorld w = new BukkitWorld(world).storageWorld();
+            CEWorld w = dev.arubik.craftengine.util.CeWorlds.of(world).storageWorld();
             if (w == null)
                 return false;
             var be = w.getBlockEntityAtIfLoaded(pos);
@@ -395,7 +395,7 @@ public class ConveyorWandListener implements Listener {
     private void placeRoute(org.bukkit.entity.Player player, org.bukkit.World bukkitWorld, ItemStack hand,
             BlockDefinition def, List<ConveyorPath.Step> steps) {
         clearPreview(player);
-        CEWorld world = new BukkitWorld(bukkitWorld).storageWorld();
+        CEWorld world = dev.arubik.craftengine.util.CeWorlds.of(bukkitWorld).storageWorld();
         if (world == null) {
             msg(player, NamedTextColor.RED, "polyfill.wand.no_world");
             return;
@@ -449,7 +449,7 @@ public class ConveyorWandListener implements Listener {
         ImmutableBlockState clickedState = CraftEngineBlocks.getCustomBlockState(clicked);
         if (!isConveyorState(clickedState))
             return;
-        CEWorld w = new BukkitWorld(clicked.getWorld()).storageWorld();
+        CEWorld w = dev.arubik.craftengine.util.CeWorlds.of(clicked.getWorld()).storageWorld();
         if (w == null)
             return;
         BlockPos cp = new BlockPos(clicked.getX(), clicked.getY(), clicked.getZ());
@@ -478,7 +478,7 @@ public class ConveyorWandListener implements Listener {
     private void showPreview(org.bukkit.entity.Player player, org.bukkit.World bukkitWorld,
             List<ConveyorPath.Step> steps) {
         clearPreview(player);
-        CEWorld world = new BukkitWorld(bukkitWorld).storageWorld();
+        CEWorld world = dev.arubik.craftengine.util.CeWorlds.of(bukkitWorld).storageWorld();
         if (world == null)
             return;
         List<Player> viewers = new ArrayList<>();

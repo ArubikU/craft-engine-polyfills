@@ -9,8 +9,10 @@ import org.bukkit.craftbukkit.inventory.CraftItemStack;
 import org.joml.Vector3f;
 
 import dev.arubik.craftengine.block.entity.PersistentWorldlyBlockEntity;
+import dev.arubik.craftengine.contraption.level.ContraptionBoundary;
 import dev.arubik.craftengine.contraption.level.ContraptionLevel;
 import dev.arubik.craftengine.rotation.RpmConsumer;
+import net.minecraft.world.level.Level;
 import net.momirealms.craftengine.core.block.BlockDefinition;
 import net.momirealms.craftengine.core.block.ImmutableBlockState;
 import net.momirealms.craftengine.core.block.UpdateFlags;
@@ -157,17 +159,20 @@ public class ConveyorBlockEntity extends PersistentWorldlyBlockEntity implements
      * viewers the same way can reuse it instead of duplicating the redirect.
      */
     static List<Player> viewersOf(CEWorld world, BlockPos pos) {
-        Object nms = world.world().minecraftWorld();
-        if (nms instanceof ContraptionLevel contraption) {
+        ContraptionBoundary contraption = contraptionOf(world);
+        if (contraption != null) {
             return contraption.realViewers(new net.minecraft.core.BlockPos(pos.x(), pos.y(), pos.z()));
         }
         return world.world().getTrackedBy(new ChunkPos(pos));
     }
 
-    /** {@link ContraptionLevel} hosting {@code world}, or {@code null} if this segment isn't riding a contraption. */
-    static ContraptionLevel contraptionOf(CEWorld world) {
-        Object nms = world.world().minecraftWorld();
-        return nms instanceof ContraptionLevel contraption ? contraption : null;
+    /**
+     * The {@link ContraptionBoundary} hosting {@code world}, or {@code null} if this segment isn't
+     * riding a contraption — resolved via {@link ContraptionBoundary#of} (the single authorized
+     * {@code instanceof} site), so this class never names the concrete {@link ContraptionLevel} type.
+     */
+    static ContraptionBoundary contraptionOf(CEWorld world) {
+        return ContraptionBoundary.of((Level) world.world().minecraftWorld()).orElse(null);
     }
 
     // ---------------- slot helpers ----------------
@@ -613,9 +618,10 @@ public class ConveyorBlockEntity extends PersistentWorldlyBlockEntity implements
             // which would let a flying belt vacuum up & delete real-world dropped items from a distance.
             // Force the FAKE-only query here (getLocalEntities) so a captured belt only ever ingests items
             // that are genuinely inside the contraption (e.g. dropped by a co-captured funnel).
+            ContraptionBoundary boundary = ContraptionBoundary.of(serverLevel).orElse(null);
             java.util.List<net.minecraft.world.entity.item.ItemEntity> items =
-                    (serverLevel instanceof dev.arubik.craftengine.contraption.level.ContraptionLevel cl)
-                            ? cl.getLocalEntities(net.minecraft.world.entity.item.ItemEntity.class, aabb,
+                    (boundary != null)
+                            ? boundary.getLocalEntities(net.minecraft.world.entity.item.ItemEntity.class, aabb,
                                     e -> !e.isRemoved())
                             : serverLevel.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, aabb,
                                     e -> !e.isRemoved());
@@ -871,7 +877,7 @@ public class ConveyorBlockEntity extends PersistentWorldlyBlockEntity implements
     /** Render every occupied slot's item at its own position; hide emptied ones. */
     private void renderAll(CEWorld world, BlockPos pos, Direction facing) {
         List<Player> viewers = viewersOf(world, pos);
-        ContraptionLevel contraption = contraptionOf(world);
+        ContraptionBoundary contraption = contraptionOf(world);
         int slopeY = slope().stepY();
         Vector3f startP = startRel(facing);
         Vector3f exit = endRel(facing);
@@ -1242,18 +1248,33 @@ public class ConveyorBlockEntity extends PersistentWorldlyBlockEntity implements
             return;
 
         // affectNeighborsAfterRemoval (which drives this, see ConveyorBehavior) is an
-        // engine-generic BlockBehavior hook: it fires on ANY block-state removal, including
-        // ContraptionCapture.removeFromWorld's setBlock(pos, AIR, 3) call during
-        // "convert structure into a hologram" — NOT just real player/piston breaks. That
-        // capture path already (a) read this segment's full state into the ContraptionLevel
-        // and (b) proactively clears our live content via PersistentWorldlyBlockEntity#
-        // clearContent() (a non-dropping clear) immediately before the setBlock that triggers
-        // this callback — see ContraptionCapture.removeFromWorld's javadoc. If our container is
-        // already empty at this point, there is nothing left to drop, and continuing on would
-        // pointlessly reassign the neighbouring START/END belt segments (or, worse, wipe a
-        // sibling's prevPos/part linkage) even though this "break" wasn't a real teardown.
-        // Skip the whole drop/teardown dance in that case.
-        if (isEmpty())
+        // engine-generic BlockBehavior hook, so a SYNTHETIC removal — ContraptionCapture
+        // #removeFromWorld setting a captured cell to air to "convert the structure into a
+        // hologram" — could in principle land here looking exactly like a real break. It must
+        // not: capture already read this segment's full state into the ContraptionLevel, so
+        // dropping items would duplicate them, and tearing the line down (or re-linking a
+        // sibling's prevPos/part) would wreck a belt that is supposed to survive intact inside
+        // the contraption. Ask the capture itself rather than inferring: isRemovingForCapture()
+        // is set by removeFromWorld around exactly that removal loop, and every hook reachable
+        // from it runs synchronously on the same (main) thread.
+        //
+        // This guard is defence-in-depth: as of the "al ensamblar la palanca se duplica" fix,
+        // removeFromWorld's quiet flags (UPDATE_CLIENTS|UPDATE_KNOWN_SHAPE|UPDATE_SUPPRESS_DROPS)
+        // omit UPDATE_NEIGHBORS, and vanilla only invokes the hook when
+        // `(flags & UPDATE_NEIGHBORS) != 0 || movedByPiston` — verified in LevelChunk#setBlockState
+        // (Paper 1.21.11 mapped sources, ~line 414). So a capture does not currently reach this
+        // method at all. The check stays because it does not depend on that flag choice remaining
+        // true; correctness here should not silently hinge on a constant three classes away.
+        //
+        // It replaces an `isEmpty()` proxy that inferred "this is a capture" from the segment's
+        // container being empty (capture calls clearContent() before its setBlock, so a capture is
+        // always empty). The inference never held in reverse: a belt a player breaks is usually
+        // empty too — belts are empty most of the time — so the proxy swallowed the REAL teardown
+        // in the common case. Both user reports came from exactly this line: "las conveyor al
+        // romperlas por el medio no se rompe todo" (a MIDDLE break tore nothing down) and "si al
+        // romper el inicio o final no actualiza el conveyor anterior" (a START/END break left the
+        // neighbour's part/prevPos stale, since those paths sit below this guard too).
+        if (dev.arubik.craftengine.contraption.ContraptionCapture.isRemovingForCapture())
             return;
 
         ConveyorBlockEntity up = upstreamConveyor(world, pos, facing);

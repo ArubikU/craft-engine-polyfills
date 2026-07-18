@@ -182,7 +182,7 @@ public class ConveyorBehavior extends dev.arubik.craftengine.util.NmsBlockBehavi
         if (LISTENER_HANDLED.remove(nmsPos.getX() + "," + nmsPos.getY() + "," + nmsPos.getZ()))
             return;
         try {
-            CEWorld world = new BukkitWorld(((ServerLevel) level).getWorld()).storageWorld();
+            CEWorld world = dev.arubik.craftengine.util.CeWorlds.of(((ServerLevel) level).getWorld()).storageWorld();
             if (world == null)
                 return;
             BlockPos pos = new BlockPos(nmsPos.getX(), nmsPos.getY(), nmsPos.getZ());

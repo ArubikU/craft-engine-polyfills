@@ -26,7 +26,7 @@ public final class ConveyorBreakListener implements Listener {
         Block block = event.getBlock();
         CEWorld world;
         try {
-            world = new BukkitWorld(block.getWorld()).storageWorld();
+            world = dev.arubik.craftengine.util.CeWorlds.of(block.getWorld()).storageWorld();
         } catch (Throwable t) {
             return;
         }

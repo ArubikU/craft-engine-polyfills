@@ -5,9 +5,11 @@ import java.util.UUID;
 
 import org.bukkit.craftbukkit.block.data.CraftBlockData;
 
+import io.netty.buffer.Unpooled;
 import it.unimi.dsi.fastutil.ints.IntList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Vec3i;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientboundAddEntityPacket;
 import net.minecraft.network.protocol.game.ClientboundBlockDestructionPacket;
@@ -15,6 +17,7 @@ import net.minecraft.network.protocol.game.ClientboundBundlePacket;
 import net.minecraft.network.protocol.game.ClientboundEntityPositionSyncPacket;
 import net.minecraft.network.protocol.game.ClientboundRemoveEntitiesPacket;
 import net.minecraft.network.protocol.game.ClientboundSetEntityDataPacket;
+import net.minecraft.network.protocol.game.ClientboundSetPassengersPacket;
 import net.minecraft.network.protocol.game.ClientboundUpdateAttributesPacket;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.syncher.SynchedEntityData;
@@ -123,6 +126,22 @@ public final class MNms {
             float yRot, float xRot, boolean onGround) {
         PositionMoveRotation pmr = new PositionMoveRotation(new Vec3(x, y, z), Vec3.ZERO, yRot, xRot);
         return new ClientboundEntityPositionSyncPacket(entityId, pmr, onGround);
+    }
+
+    /**
+     * Mounts {@code passengerIds} on {@code vehicleId} for the client only, by raw entity id.
+     * Vanilla's public constructor takes a real {@code Entity} and reads its live
+     * {@code getPassengers()} list; a packet-only fake pair (see
+     * {@code ContraptionShulkerColliderSwarm}) has neither a server-side {@code Entity} nor a real
+     * passenger list, and the id-based constructor is private — so the packet is built by decoding
+     * its own wire form, which is the only public id-based path and stays in lockstep with vanilla's
+     * codec by construction.
+     */
+    public Object constructor$ClientboundSetPassengersPacket(int vehicleId, int[] passengerIds) {
+        FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
+        buf.writeVarInt(vehicleId);
+        buf.writeVarIntArray(passengerIds);
+        return ClientboundSetPassengersPacket.STREAM_CODEC.decode(buf);
     }
 
     @SuppressWarnings("unchecked")

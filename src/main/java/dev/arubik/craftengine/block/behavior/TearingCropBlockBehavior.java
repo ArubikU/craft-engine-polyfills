@@ -98,7 +98,7 @@ public class TearingCropBlockBehavior extends BukkitBlockBehavior {
   }
 
   public BlockPos getTearingDripstone(Object level, BlockPos pos) {
-    BukkitWorld world = new BukkitWorld(((net.minecraft.server.level.ServerLevel) level).getWorld());
+    BukkitWorld world = dev.arubik.craftengine.util.CeWorlds.of(((net.minecraft.server.level.ServerLevel) level).getWorld());
     int heightLimit = Math.min(this.heightLimit + pos.y(), 320);
     for (int y = pos.y(); y < heightLimit; y++) {
       BlockPos currentPos = new BlockPos(pos.x(), y, pos.z());
@@ -178,7 +178,7 @@ public class TearingCropBlockBehavior extends BukkitBlockBehavior {
         .getBlockState((net.minecraft.core.BlockPos) belowPos);
     if (!mayPlaceOn(belowState, level, belowPos))
       return;
-    BukkitWorld world = new BukkitWorld(((net.minecraft.server.level.ServerLevel) level).getWorld());
+    BukkitWorld world = dev.arubik.craftengine.util.CeWorlds.of(((net.minecraft.server.level.ServerLevel) level).getWorld());
     BlockPos targetPos = pos.above();
     BlockPos tearing = getTearingDripstone(level, targetPos);
     if (tearing == null)

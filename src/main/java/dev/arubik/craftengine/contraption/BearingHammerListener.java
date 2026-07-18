@@ -90,11 +90,28 @@ public class BearingHammerListener implements Listener {
         }
     }
 
-    /** Re-registers the assembled-anchor bookkeeping (assemble time, or rehydrate on chunk load). */
+    /**
+     * Re-registers the assembled-anchor bookkeeping (assemble time, rehydrate on chunk load, or — for a
+     * PHYS body — every tick it moves to a new block; see {@code PhysicsWorld#writeBack}).
+     *
+     * <p>Safe to call repeatedly with a DIFFERENT position for the same contraption: the previous key is
+     * dropped. That matters because {@link #ASSEMBLED} is keyed by position and drives chunk-unload
+     * teardown — a lingering old key would let an unrelated chunk's unload believe it owned this
+     * contraption and tear it down while it was still live somewhere else. Nothing re-anchored before
+     * PHYS bodies did, which is why this only had to be a plain put until now.
+     */
     public static void markAssembled(UUID worldId, BlockPos pos, UUID contraptionId) {
         AnchorKey anchor = new AnchorKey(worldId, pos);
-        ASSEMBLED.put(anchor, contraptionId);
+        AnchorKey previous = BY_CONTRAPTION.get(contraptionId);
+        if (anchor.equals(previous)) {
+            return; // already anchored exactly here — the common case for a PHYS body, which calls this
+                    // every tick but only actually moves between blocks occasionally, and never once asleep
+        }
+        if (previous != null) {
+            ASSEMBLED.remove(previous);
+        }
         BY_CONTRAPTION.put(contraptionId, anchor);
+        ASSEMBLED.put(anchor, contraptionId);
     }
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
@@ -193,17 +210,43 @@ public class BearingHammerListener implements Listener {
     private void handleInteractEntity(PlayerInteractEntityEvent e) {
         if (e.getHand() != EquipmentSlot.HAND)
             return;
-        Key hammer = hammerHeld(e.getPlayer().getInventory().getItemInMainHand());
-        if (hammer == null)
-            return;
-
         Entity clicked = e.getRightClicked();
         if (!MinecartBearing.isBearing(clicked) || !MinecartBearing.isAssembled(clicked))
             return;
 
-        e.setCancelled(true);
+        ItemStack hand = e.getPlayer().getInventory().getItemInMainHand();
+        Key hammer = hammerHeld(hand);
         UUID contraptionId = MinecartBearing.contraptionId(clicked);
         ContraptionEntity entity = contraptionId == null ? null : ContraptionManager.get(contraptionId);
+
+        // PACK into an item (2026-07-04 request): bare-hand (no hammer) + sneaking pockets the whole
+        // contraption as a chest-minecart item instead of restoring the blocks into the world. The
+        // hammer path below keeps the original restore-in-place disassemble.
+        boolean bareHand = hammer == null && (hand == null || hand.getType().isAir());
+        if (bareHand && e.getPlayer().isSneaking()) {
+            e.setCancelled(true);
+            if (entity != null) {
+                ItemStack item = MinecartBearing.pickUpToItem(clicked.getWorld(), clicked, entity);
+                if (item != null) {
+                    java.util.Map<Integer, ItemStack> overflow = e.getPlayer().getInventory().addItem(item);
+                    for (ItemStack leftover : overflow.values()) {
+                        e.getPlayer().getWorld().dropItemNaturally(e.getPlayer().getLocation(), leftover);
+                    }
+                    clicked.getWorld().playSound(clicked.getLocation(), org.bukkit.Sound.ENTITY_ITEM_PICKUP, 0.8f, 1.0f);
+                    e.getPlayer().sendMessage("§bContraption packed into a minecart item.");
+                    return;
+                }
+                e.getPlayer().sendMessage("§cCouldn't pack this contraption.");
+            } else {
+                clicked.remove();
+            }
+            return;
+        }
+
+        if (hammer == null)
+            return; // bare-hand non-sneak (or a non-hammer item) — let vanilla handle it
+
+        e.setCancelled(true);
         if (entity != null) {
             MinecartBearing.disassemble(clicked.getWorld(), clicked, entity);
         } else {
@@ -211,6 +254,37 @@ public class BearingHammerListener implements Listener {
         }
         clicked.getWorld().playSound(clicked.getLocation(), org.bukkit.Sound.BLOCK_ANVIL_USE, 0.7f, 1.4f);
         e.getPlayer().sendMessage("§7Contraption disassembled, blocks restored, minecart removed.");
+    }
+
+    /**
+     * Right-click a rail with a packed {@link MinecartBearing#pickUpToItem} chest-minecart item to
+     * re-spawn the whole contraption (2026-07-04 request — "un minecart con cofre que al ponerlo re
+     * spawnea el contraption"). Cancels vanilla chest-minecart placement so only our custom spawn
+     * happens; consumes one item on success (survival only).
+     */
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onPlaceContraptionItem(PlayerInteractEvent e) {
+        if (e.getAction() != Action.RIGHT_CLICK_BLOCK || e.getHand() != EquipmentSlot.HAND)
+            return;
+        ItemStack item = e.getItem();
+        if (!MinecartBearing.isContraptionItem(item))
+            return;
+        Block clicked = e.getClickedBlock();
+        if (clicked == null)
+            return;
+        e.setCancelled(true); // never let vanilla place a plain chest minecart from our tagged item
+        org.bukkit.Location at = new org.bukkit.Location(clicked.getWorld(),
+                clicked.getX() + 0.5, clicked.getY(), clicked.getZ() + 0.5);
+        ContraptionEntity entity = MinecartBearing.placeFromItem(item, clicked.getWorld(), at);
+        if (entity == null) {
+            e.getPlayer().sendMessage("§cPlace the packed contraption on a rail.");
+            return;
+        }
+        if (e.getPlayer().getGameMode() != org.bukkit.GameMode.CREATIVE) {
+            item.setAmount(item.getAmount() - 1);
+        }
+        clicked.getWorld().playSound(clicked.getLocation(), org.bukkit.Sound.BLOCK_ANVIL_USE, 0.7f, 1.0f);
+        e.getPlayer().sendMessage("§bContraption re-spawned onto a minecart.");
     }
 
     private static Key hammerHeld(ItemStack hand) {

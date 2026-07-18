@@ -147,6 +147,45 @@ final class ContraptionSeatMount {
         }
     }
 
+    /**
+     * Sets a seated rider's OWN entity scale to the contraption's uniform {@code scale} (roadmap item #9),
+     * so a player sitting in a {@code scale=3} contraption is themselves three times the size and actually
+     * fills the giant sofa they're on instead of perching on it like a doll. Uses vanilla's real
+     * {@code minecraft:scale} attribute ({@code Attributes.SCALE}, present since 1.20.5) — verified against
+     * this project's own {@code mappedServerJar.jar}: {@code Attributes.SCALE} is a
+     * {@code Holder<Attribute>} and {@code LivingEntity#getAttribute(Holder<Attribute>)} is the accessor —
+     * reached through NMS rather than Bukkit's {@code Attribute} registry constant purely because the NMS
+     * handle is the one this project can verify against a jar it actually has on disk.
+     *
+     * <p><b>INTENTIONAL, DO NOT "FIX": the scale is NEVER restored on dismount.</b> There is deliberately no
+     * counterpart to this method — no restore on stand, on sneak-dismount, on disassemble, on teleport, on
+     * death, or on logoff. A player who sits in a scaled contraption KEEPS that size after standing up,
+     * permanently, until something else changes it. This is a gag the user asked for explicitly and by
+     * name; it is not an oversight, not a leak, and not a missing teardown path. Every seat-release path
+     * ({@code ContraptionSeatListener#dismount} and friends) is therefore correct in saying nothing about
+     * scale at all. If you are here because this "looks like a bug" — it is the feature.
+     *
+     * <p>Write-only and idempotent: it is safe to call every tick (and
+     * {@code ContraptionEntity#carrySeatedRiders} does, guarded by a base-value compare) so that rescaling a
+     * contraption with someone already sitting in it — e.g. via the creative phys wand — resizes them live.
+     * Best-effort: a mapping/attribute failure is swallowed rather than breaking the per-tick seat loop, the
+     * same convention {@link #rotateRiderView} already uses.
+     */
+    static void applyContraptionScale(Player player, double scale) {
+        try {
+            net.minecraft.server.level.ServerPlayer sp =
+                    ((org.bukkit.craftbukkit.entity.CraftPlayer) player).getHandle();
+            net.minecraft.world.entity.ai.attributes.AttributeInstance inst =
+                    sp.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.SCALE);
+            if (inst == null || inst.getBaseValue() == scale) {
+                return; // unsupported, or already exactly this size — nothing to send
+            }
+            inst.setBaseValue(scale);
+        } catch (Throwable ignored) {
+            // mapping/version mismatch — skip the resize rather than break the seat carry loop
+        }
+    }
+
     /** Resolves a previously-spawned mount entity by its real Bukkit UUID, or null if it's gone (e.g. world unload). */
     static Entity resolve(UUID mountEntityId) {
         if (mountEntityId == null) {

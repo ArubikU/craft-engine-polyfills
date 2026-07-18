@@ -207,6 +207,8 @@ public final class GasEngine {
 
     /** A CLOSED gas valve blocks flow on every incident edge (gas has no gravity, so open = bidirectional). */
     private static boolean closedValve(Level level, BlockPos pos) {
+        if (!level.hasChunkAt(pos))
+            return false; // see GasTransferHelper#getCarrier: an unguarded read here force-loads the chunk
         ImmutableBlockState state = BlockStateUtils.getOptionalCustomBlockState(level.getBlockState(pos))
                 .orElse(null);
         if (state == null || state.isEmpty())
@@ -217,6 +219,8 @@ public final class GasEngine {
     }
 
     private static ConnectableBlockBehavior connectable(Level level, BlockPos pos) {
+        if (!level.hasChunkAt(pos))
+            return null; // see GasTransferHelper#getCarrier: an unguarded read here force-loads the chunk
         ImmutableBlockState state = BlockStateUtils.getOptionalCustomBlockState(level.getBlockState(pos)).orElse(null);
         if (state == null || state.isEmpty())
             return null;

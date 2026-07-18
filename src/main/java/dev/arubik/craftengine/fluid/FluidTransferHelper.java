@@ -70,6 +70,12 @@ public class FluidTransferHelper {
     public static Optional<FluidCarrier> getCarrier(Level level, BlockPos pos) {
         if (level == null || pos == null)
             return Optional.empty();
+        // An unloaded chunk has no carrier, and asking anyway is not free: Level#getBlockState on an
+        // absent chunk goes through ServerChunkCache#getChunkFallback into syncLoad, which LOADS THE
+        // CHUNK synchronously on the server thread. The graph walks neighbours outward, so every edge
+        // leaving loaded terrain would force-load a chunk, every tick.
+        if (!level.hasChunkAt(pos))
+            return Optional.empty();
 
         ImmutableBlockState state = BlockStateUtils
                 .getOptionalCustomBlockState(level.getBlockState(pos))

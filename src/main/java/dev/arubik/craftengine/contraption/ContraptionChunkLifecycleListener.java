@@ -45,6 +45,12 @@ public final class ContraptionChunkLifecycleListener implements Listener {
             if (MinecartBearing.isBearing(entity)) {
                 MinecartBearing.rehydrate(entity);
             }
+            // GHAST bearings are entity-anchored exactly like minecarts (the harnessed ghast's own
+            // vanilla entity save/load persists the PDC the structure rides in), so they get the same
+            // treatment — see GhastHarnessBearing's "Persistence".
+            if (GhastHarnessBearing.isBearing(entity)) {
+                GhastHarnessBearing.rehydrate(entity);
+            }
         }
         // Block-anchored (LINEAR/ROTATIONAL) — the disk analog of the minecart's natural
         // entity-driven rehydrate above: rebuild any persisted contraption whose bearing anchor
@@ -81,18 +87,21 @@ public final class ContraptionChunkLifecycleListener implements Listener {
             // present in this chunk that's about to unload). See BlockAnchoredContraptionStore#save.
             net.minecraft.world.level.Level realLevel =
                     ((org.bukkit.craftbukkit.CraftWorld) event.getWorld()).getHandle();
-            BearingType type = dev.arubik.craftengine.contraption.behavior.BearingBlockBehavior
-                    .typeAt(realLevel, anchor.pos());
-            if (type == null) {
-                type = BearingType.ROTATIONAL; // block gone/altered — keep saving under a sane default
-            }
+            BearingType type = dev.arubik.craftengine.contraption.persistence.BlockAnchoredContraptionStore
+                    .typeToPersist(entity.state(), realLevel, anchor.pos());
             double rpm = dev.arubik.craftengine.contraption.behavior.BearingBlockBehavior
                     .rpmAt(realLevel, anchor.pos());
             double su = dev.arubik.craftengine.contraption.behavior.BearingBlockBehavior
                     .suPerBlockAt(realLevel, anchor.pos());
             dev.arubik.craftengine.contraption.persistence.BlockAnchoredContraptionStore.save(
                     entity.state(), anchor.pos(), type, rpm, su);
-            entity.despawn(List.of());
+            // Despawn to the world's actual players, never an empty list: every swarm's
+            // despawnAll iterates the viewers it is HANDED and then clears its own records, so an
+            // empty list sends zero despawn packets while still forgetting the entities existed —
+            // leaving the fake blocks stranded on every client that could see them.
+            List<net.momirealms.craftengine.core.entity.player.Player> viewers =
+                    CePlayers.resolve(event.getWorld().getPlayers());
+            entity.despawn(viewers);
             ContraptionManager.remove(contraptionId);
             ContraptionLevel level = entity.state().level();
             if (level != null) {
@@ -101,16 +110,23 @@ public final class ContraptionChunkLifecycleListener implements Listener {
             BearingHammerListener.forgetAssembled(contraptionId);
         }
 
-        // Real entity-anchored bearings (MINECART) — save-then-teardown, not lossy.
+        // Real entity-anchored bearings (MINECART, GHAST) — save-then-teardown, not lossy.
         for (Entity entity : event.getChunk().getEntities()) {
-            if (!MinecartBearing.isBearing(entity) || !MinecartBearing.isAssembled(entity))
+            boolean minecart = MinecartBearing.isBearing(entity) && MinecartBearing.isAssembled(entity);
+            boolean ghast = GhastHarnessBearing.isBearing(entity) && GhastHarnessBearing.isAssembled(entity);
+            if (!minecart && !ghast)
                 continue;
-            UUID contraptionId = MinecartBearing.contraptionId(entity);
+            UUID contraptionId = minecart ? MinecartBearing.contraptionId(entity)
+                    : GhastHarnessBearing.contraptionId(entity);
             ContraptionEntity live = contraptionId == null ? null : ContraptionManager.get(contraptionId);
             if (live == null)
                 continue;
-            MinecartBearing.saveStructure(entity, live.state());
-            live.despawn(List.of());
+            if (minecart) {
+                MinecartBearing.saveStructure(entity, live.state());
+            } else {
+                GhastHarnessBearing.saveStructure(entity, live.state());
+            }
+            live.despawn(CePlayers.resolve(event.getWorld().getPlayers()));
             ContraptionManager.remove(contraptionId);
             ContraptionLevel level = live.state().level();
             if (level != null) {

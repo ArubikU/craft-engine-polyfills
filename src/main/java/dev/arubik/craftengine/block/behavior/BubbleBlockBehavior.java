@@ -54,7 +54,7 @@ public class BubbleBlockBehavior extends BukkitBlockBehavior {
   public void tick(Object thisBlock, Object[] args, Callable<Object> superMethod) throws Exception {
     Object level = args[1];
     BlockPos blockPos = LocationUtils.fromBlockPos(args[2]);
-    BukkitWorld bukkitWorld = new BukkitWorld(dev.arubik.craftengine.util.MNms.INSTANCE.method$Level$getCraftWorld(level));
+    BukkitWorld bukkitWorld = dev.arubik.craftengine.util.CeWorlds.of(dev.arubik.craftengine.util.MNms.INSTANCE.method$Level$getCraftWorld(level));
     dev.arubik.craftengine.util.MNms.INSTANCE.method$ScheduledTickAccess$scheduleBlockTick(level, args[2], thisBlock, 6);
     if (this.direction) {
       BlockPos current = blockPos.above();
@@ -105,7 +105,7 @@ public class BubbleBlockBehavior extends BukkitBlockBehavior {
   private void updateNeighbours(Object arg1, Object arg2, Object thisBlock) {
     World level = (World) arg1;
     BlockPos blockPos = (BlockPos) arg2;
-    BukkitWorld bukkitWorld = new BukkitWorld(dev.arubik.craftengine.util.MNms.INSTANCE.method$Level$getCraftWorld(level.minecraftWorld()));
+    BukkitWorld bukkitWorld = dev.arubik.craftengine.util.CeWorlds.of(dev.arubik.craftengine.util.MNms.INSTANCE.method$Level$getCraftWorld(level.minecraftWorld()));
     if (this.direction) {
       BlockPos current = blockPos.above();
       for (int i = 0; i < this.limit; i++) {

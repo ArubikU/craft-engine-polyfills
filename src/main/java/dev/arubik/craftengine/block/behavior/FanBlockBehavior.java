@@ -165,7 +165,7 @@ public class FanBlockBehavior extends BukkitBlockBehavior implements EntityBlock
       self.delayCounter = Math.max(0, behavior.tickDelay - 1);
 
       Direction facing = (Direction) blockState.get(behavior.facingProperty);
-      BukkitWorld bukkitWorld = new BukkitWorld(serverLevel.getWorld());
+      BukkitWorld bukkitWorld = dev.arubik.craftengine.util.CeWorlds.of(serverLevel.getWorld());
       net.minecraft.core.BlockPos nmsPos = new net.minecraft.core.BlockPos(cePos.x(), cePos.y(), cePos.z());
 
       // ---------------- LEGACY redstone-only mode ----------------
@@ -395,7 +395,9 @@ public class FanBlockBehavior extends BukkitBlockBehavior implements EntityBlock
     // lives inside a contraption's own mini ContraptionLevel, that never includes real-world
     // entities (e.g. a player standing near the flying contraption), so also push those, at the
     // real-world-equivalent position/direction from the bearing's live transform.
-    if (serverLevel instanceof dev.arubik.craftengine.contraption.level.ContraptionLevel contraptionLevel) {
+    dev.arubik.craftengine.contraption.level.ContraptionBoundary contraptionLevel =
+        dev.arubik.craftengine.contraption.level.ContraptionBoundary.of(serverLevel).orElse(null);
+    if (contraptionLevel != null) {
       net.minecraft.core.BlockPos nmsTargetPos = new net.minecraft.core.BlockPos(targetPos.x(), targetPos.y(), targetPos.z());
       net.minecraft.world.phys.Vec3 realCenter = contraptionLevel.realWorldPositionOf(nmsTargetPos);
       net.minecraft.world.phys.Vec3 realPush = contraptionLevel
@@ -462,7 +464,7 @@ public class FanBlockBehavior extends BukkitBlockBehavior implements EntityBlock
   }
 
   private boolean analyzeRedstone(Object level, Object posObj) {
-    BukkitWorld world = new BukkitWorld(((net.minecraft.server.level.ServerLevel) level).getWorld());
+    BukkitWorld world = dev.arubik.craftengine.util.CeWorlds.of(((net.minecraft.server.level.ServerLevel) level).getWorld());
     BlockPos pos = LocationUtils.fromBlockPos(posObj);
     for (Direction dir : Direction.values()) {
       BukkitExistingBlock neighbor = (BukkitExistingBlock) world.getBlock(pos.relative(dir).x(), pos.relative(dir).y(),

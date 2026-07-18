@@ -135,9 +135,42 @@ public final class MinerBehavior implements MovementBehavior, RpmConsumer {
         accumulatedDamage += MiningMath.damagePerTick(effectiveRpm, hardness);
 
         if (MiningMath.isBroken(accumulatedDamage, hardness)) {
-            ContraptionAccessor.breakBlockAndCollect(level, worldPos, virtualInventory);
+            // Public API veto (ContraptionBlockBreakEvent) — fired here rather than threaded into
+            // ContraptionAccessor#breakBlockAndCollect (which stays a pure world primitive with no
+            // event/entity coupling). Cancelling skips the break but still resets damage/stall below,
+            // so the block survives and the miner re-accumulates from scratch next cycle instead of
+            // re-firing the event every tick.
+            if (!fireBlockBreakCancelled(ctx, level, worldPos)) {
+                ContraptionAccessor.breakBlockAndCollect(level, worldPos, virtualInventory);
+            }
             accumulatedDamage = 0;
             stalled = false;
+        }
+    }
+
+    /**
+     * Fires {@link dev.arubik.craftengine.contraption.event.ContraptionBlockBreakEvent} and returns
+     * whether it was cancelled. Fail-open (returns {@code false} = "break it") if the owning facade
+     * can't be resolved or no live server is present — e.g. a pure-JVM unit test where
+     * {@code Bukkit.getPluginManager()} throws — so miner behavior is byte-identical to before this
+     * event existed whenever nobody is listening. Same shape as {@code ContraptionAssembler}'s own
+     * fire helpers.
+     */
+    private static boolean fireBlockBreakCancelled(MovementContext ctx, ServerLevel level, BlockPos worldPos) {
+        try {
+            dev.arubik.craftengine.contraption.ContraptionEntity entity =
+                    dev.arubik.craftengine.contraption.ContraptionManager.get(ctx.state().id());
+            if (entity == null) {
+                return false;
+            }
+            net.minecraft.world.level.block.state.BlockState state = level.getBlockState(worldPos);
+            dev.arubik.craftengine.contraption.event.ContraptionBlockBreakEvent event =
+                    new dev.arubik.craftengine.contraption.event.ContraptionBlockBreakEvent(
+                            entity, level.getWorld(), worldPos, state);
+            org.bukkit.Bukkit.getPluginManager().callEvent(event);
+            return event.isCancelled();
+        } catch (Throwable ignored) {
+            return false;
         }
     }
 

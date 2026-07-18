@@ -214,6 +214,146 @@ public class CepCommand implements CommandExecutor, TabCompleter {
             return true;
         });
 
+        // /cep show placement — logs what each in-contraption placement resolved to (contraption yaw,
+        // player yaw, the yaw it was placed with, and the resulting blockstate), for diagnosing an
+        // orientation report that cannot be reproduced without a client.
+        cases.put(new ArgumentList("show^", "placement^"), (sender, parsed) -> {
+            boolean on = !dev.arubik.craftengine.contraption.ContraptionInteractionListener.PLACEMENT_DEBUG;
+            dev.arubik.craftengine.contraption.ContraptionInteractionListener.PLACEMENT_DEBUG = on;
+            sender.sendMessage(MiniMessage.miniMessage().deserialize(on
+                    ? "<green>Placement logging ON — place a block in a contraption, then check the console."
+                    : "<gray>Placement logging off."));
+            return true;
+        });
+
+        // /cep show shulkers — drop the collider shulkers' invisible flag so the distance LOD tiers
+        // can be seen directly. Already-spawned colliders are re-sent, so it applies live.
+        cases.put(new ArgumentList("show^", "shulkers^"), (sender, parsed) -> {
+            boolean shown = dev.arubik.craftengine.contraption.render.ContraptionShulkerColliderSwarm
+                    .toggleShowColliders();
+            sender.sendMessage(MiniMessage.miniMessage().deserialize(shown
+                    ? "<green>Collider shulkers are now VISIBLE — walk toward a contraption to watch the LOD tiers (1 -> 4 -> 16 cubes per cell)."
+                    : "<gray>Collider shulkers are hidden again."));
+            return true;
+        });
+
+        // /cep contraption spawn <blockstate> — DEBUG: spawn a one-cell phys contraption of the given
+        // block in front of the player, so phys/LOD/collision can be exercised without hand-building
+        // and gluing a structure first. Accepts vanilla blockstate syntax
+        // (minecraft:oak_stairs[facing=north,half=bottom]).
+        cases.put(new ArgumentList("contraption^", "spawn^", String.class), (sender, parsed) -> {
+            if (!(sender instanceof Player player))
+                return true;
+            String input = (String) parsed[2];
+            net.minecraft.world.level.block.state.BlockState state;
+            try {
+                state = dev.arubik.craftengine.contraption.DebugPhysSpawn.parseBlockState(input);
+            } catch (IllegalArgumentException e) {
+                sender.sendMessage("§cNot a blockstate: §f" + input + "§c — try minecraft:iron_block or"
+                        + " minecraft:oak_stairs[facing=north,half=bottom].");
+                return true;
+            }
+            spawnDebugPhys(player, Map.of(BlockPos.ZERO, state), null, input);
+            return true;
+        });
+
+        // /cep contraption spawn structure <namespacedKey> — DEBUG: same, but built from a vanilla
+        // STRUCTURE TEMPLATE (a structure-block .nbt, e.g. minecraft:igloo/top) so a many-cell body can
+        // be dropped in one command.
+        cases.put(new ArgumentList("contraption^", "spawn^", "structure^", String.class), (sender, parsed) -> {
+            if (!(sender instanceof Player player))
+                return true;
+            String id = (String) parsed[3];
+            net.minecraft.server.level.ServerLevel level = ((CraftWorld) player.getWorld()).getHandle();
+            var cells = dev.arubik.craftengine.contraption.DebugPhysSpawn.structureCells(level, id);
+            if (cells.isEmpty() || cells.get().isEmpty()) {
+                sender.sendMessage("§cNo structure template §f" + id + "§c (or it holds no solid blocks)."
+                        + " Try minecraft:igloo/top.");
+                return true;
+            }
+            Map<BlockPos, net.minecraft.world.level.block.state.BlockState> states = new HashMap<>();
+            Map<BlockPos, net.minecraft.nbt.CompoundTag> blockEntities = new HashMap<>();
+            cells.get().forEach((local, info) -> {
+                states.put(local, info.state());
+                if (info.nbt() != null) {
+                    blockEntities.put(local, info.nbt());
+                }
+            });
+            spawnDebugPhys(player, states, blockEntities, id);
+            return true;
+        });
+
+        // /cep contraption killall — destroy every live contraption on the server, in every world.
+        // DISCARDS them: the captured blocks are NOT restored to the world (that's what disassemble is
+        // for) and the persisted records are deleted so nothing comes back on reload — see ContraptionKill
+        // for the full contract. Admin panic button for "contraptions are eating the tick budget".
+        cases.put(new ArgumentList("contraption^", "killall^"), (sender, parsed) -> {
+            if (!sender.hasPermission("cep.contraption.debug")) {
+                sender.sendMessage("§cYou don't have permission to kill contraptions.");
+                return true;
+            }
+            int live = dev.arubik.craftengine.contraption.ContraptionManager.count();
+            if (live == 0) {
+                sender.sendMessage("§7No live contraptions to kill.");
+                return true;
+            }
+            int killed = dev.arubik.craftengine.contraption.ContraptionKill.killAll();
+            sender.sendMessage("§cKilled §f" + killed + "§c contraption(s).§7 Their captured blocks were"
+                    + " DISCARDED (not restored to the world) and their saved records deleted — nothing"
+                    + " will come back on chunk reload or restart.");
+            CraftEnginePolyfills.instance().getLogger()
+                    .info("[contraption] killall by " + sender.getName() + " — " + killed + " destroyed");
+            return true;
+        });
+
+        // /cep contraption perf — per-phase timings + counts for the master tick loop. Instrumentation is
+        // off until this is first run (it costs a nanoTime pair per phase per tick), so the first call
+        // arms it and reports once the rolling window has samples.
+        cases.put(new ArgumentList("contraption^", "perf^"), (sender, parsed) -> {
+            if (!dev.arubik.craftengine.contraption.ContraptionPerf.enabled()) {
+                dev.arubik.craftengine.contraption.ContraptionPerf.setEnabled(true);
+                sender.sendMessage("§bContraption profiling ARMED§7 — run §f/cep contraption perf§7 again in"
+                        + " a few seconds to read the rolling average. §8/cep contraption perf off to disarm.");
+                return true;
+            }
+            sender.sendMessage(perfReport());
+            return true;
+        });
+
+        // TEMP spawn benchmark — console-runnable, no player needed.
+        cases.put(new ArgumentList("contraption^", "spawnbench^", Integer.class), (sender, parsed) -> {
+            int n = (Integer) parsed[2];
+            org.bukkit.World w = org.bukkit.Bukkit.getWorlds().get(0);
+            var state = dev.arubik.craftengine.contraption.DebugPhysSpawn.parseBlockState("minecraft:iron_block");
+            org.bukkit.Location s = w.getSpawnLocation();
+            long t0 = System.nanoTime();
+            for (int i = 0; i < n; i++) {
+                var ent = dev.arubik.craftengine.contraption.DebugPhysSpawn.spawn(w,
+                        new net.minecraft.world.phys.Vec3(s.getX() + i * 3, s.getY() + 80, s.getZ()),
+                        Map.of(BlockPos.ZERO, state), null);
+                // Dispose immediately — otherwise the bench leaks a level per spawn and later spawns
+                // measure a server bogged down by hundreds of empty dimensions, not the spawn cost itself.
+                if (ent != null) {
+                    dev.arubik.craftengine.contraption.ContraptionManager.remove(ent.state().id());
+                    if (ent.state().level() != null) {
+                        ent.state().level().dispose();
+                    }
+                }
+            }
+            double ms = (System.nanoTime() - t0) / 1e6;
+            sender.sendMessage(String.format("§bspawnbench: %d spawns in %.1fms = %.2fms each", n, ms, ms / n));
+            CraftEnginePolyfills.instance().getLogger()
+                    .info(String.format("[SpawnProfile] BENCH %d spawns total=%.1fms avg=%.2fms", n, ms, ms / n));
+            return true;
+        });
+
+        // /cep contraption perf off — disarm profiling so it stops costing anything.
+        cases.put(new ArgumentList("contraption^", "perf^", "off^"), (sender, parsed) -> {
+            dev.arubik.craftengine.contraption.ContraptionPerf.setEnabled(false);
+            sender.sendMessage("§7Contraption profiling disarmed.");
+            return true;
+        });
+
         // /cep contraption spike-stop — cancel + despawn the running swarm spike early.
         cases.put(new ArgumentList("contraption^", "spike-stop^"), (sender, parsed) -> {
             if (sender instanceof Player player)
@@ -432,6 +572,56 @@ public class CepCommand implements CommandExecutor, TabCompleter {
 
     private static String fmt(double d) {
         return String.format("%.3f", d);
+    }
+
+    /**
+     * Renders {@link dev.arubik.craftengine.contraption.ContraptionPerf}'s rolling averages. Times are the
+     * mean MILLISECONDS per tick spent in each phase — a tick's whole budget is 50ms, so the total here is
+     * directly comparable against it (and against the ~2.5ms that separates 20.0 TPS from 19.5).
+     */
+    private static String perfReport() {
+        int samples = dev.arubik.craftengine.contraption.ContraptionPerf.sampleCount();
+        if (samples == 0) {
+            return "§7Profiling armed but no ticks sampled yet — try again in a second.";
+        }
+        StringBuilder sb = new StringBuilder();
+        sb.append("§bContraption perf §7(mean over last §f").append(samples).append("§7 ticks, tick budget"
+                + " §f50ms§7)\n");
+        sb.append("§7 total in tickAll: §f")
+                .append(fmt(dev.arubik.craftengine.contraption.ContraptionPerf.totalMillis())).append(" ms\n");
+        for (var phase : dev.arubik.craftengine.contraption.ContraptionPerf.Phase.values()) {
+            sb.append("§8  • §7").append(phase.name().toLowerCase(java.util.Locale.ROOT)).append(": §f")
+                    .append(fmt(dev.arubik.craftengine.contraption.ContraptionPerf.millis(phase))).append(" ms\n");
+        }
+        sb.append("§7 contraptions: §f").append(dev.arubik.craftengine.contraption.ContraptionManager.count())
+                .append("§7 live — §a").append(fmt(dev.arubik.craftengine.contraption.ContraptionPerf.meanRendered()))
+                .append("§7 rendered, §8").append(fmt(dev.arubik.craftengine.contraption.ContraptionPerf.meanSkippedUnloaded()))
+                .append("§7 skipped (chunk unloaded), §8")
+                .append(fmt(dev.arubik.craftengine.contraption.ContraptionPerf.meanSkippedNoViewers()))
+                .append("§7 skipped (no viewers)\n");
+        sb.append("§7 cells rendered: §f")
+                .append(fmt(dev.arubik.craftengine.contraption.ContraptionPerf.meanCells()));
+        return sb.toString();
+    }
+
+    /** Shared tail of both {@code /cep contraption spawn} forms: place the body and report it. */
+    private static void spawnDebugPhys(Player player,
+            Map<BlockPos, net.minecraft.world.level.block.state.BlockState> states,
+            Map<BlockPos, net.minecraft.nbt.CompoundTag> blockEntities, String label) {
+        org.bukkit.Location eye = player.getEyeLocation();
+        net.minecraft.world.phys.Vec3 anchor = dev.arubik.craftengine.contraption.DebugPhysSpawn.spawnAnchor(
+                new net.minecraft.world.phys.Vec3(eye.getX(), eye.getY(), eye.getZ()),
+                new net.minecraft.world.phys.Vec3(eye.getDirection().getX(), eye.getDirection().getY(),
+                        eye.getDirection().getZ()));
+        dev.arubik.craftengine.contraption.ContraptionEntity entity = dev.arubik.craftengine.contraption.DebugPhysSpawn
+                .spawn(player.getWorld(), anchor, states, blockEntities);
+        if (entity == null) {
+            player.sendMessage("§cNothing solid to spawn from §f" + label + "§c.");
+            return;
+        }
+        player.sendMessage("§bPhysContraption §f" + entity.state().id() + "§b — §f" + entity.state().level().blockCount()
+                + "§b cell(s) from §f" + label + "§b, dropped at §f" + fmt(anchor.x) + ", " + fmt(anchor.y) + ", "
+                + fmt(anchor.z) + "§b.");
     }
 
 

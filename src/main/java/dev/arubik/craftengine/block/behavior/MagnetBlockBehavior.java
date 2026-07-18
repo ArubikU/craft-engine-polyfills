@@ -76,8 +76,10 @@ public class MagnetBlockBehavior extends BukkitBlockBehavior {
         // magnet correctly attracting real entities would need transform-aware math it doesn't have, so
         // restrict a captured magnet to the FAKE level (getLocalEntities); it still attracts co-captured
         // items/entities normally, just not real-world ones.
+        dev.arubik.craftengine.contraption.level.ContraptionBoundary cl =
+                dev.arubik.craftengine.contraption.level.ContraptionBoundary.of(serverLevel).orElse(null);
         java.util.List<net.minecraft.world.entity.Entity> targets =
-                (serverLevel instanceof dev.arubik.craftengine.contraption.level.ContraptionLevel cl)
+                (cl != null)
                         ? cl.getLocalEntities(net.minecraft.world.entity.Entity.class, aabb, e -> !e.isRemoved())
                         : serverLevel.getEntitiesOfClass(net.minecraft.world.entity.Entity.class, aabb,
                                 e -> !e.isRemoved());

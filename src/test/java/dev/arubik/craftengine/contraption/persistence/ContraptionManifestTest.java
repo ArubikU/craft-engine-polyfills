@@ -25,7 +25,7 @@ class ContraptionManifestTest {
     void byteRoundTripPreservesAllFields() throws Exception {
         UUID id = UUID.randomUUID();
         UUID world = UUID.randomUUID();
-        ContraptionManifest original = new ContraptionManifest(id, world, 1.5, 64.0, -3.25, 0.7853981, true, "abc.nbt");
+        ContraptionManifest original = new ContraptionManifest(id, world, 1.5, 64.0, -3.25, 0.7853981, 2.5, true, "abc.nbt");
 
         ContraptionManifest restored = ContraptionManifest.fromBytes(original.toBytes());
 
@@ -35,6 +35,7 @@ class ContraptionManifestTest {
         assertEquals(original.y(), restored.y(), 1e-9);
         assertEquals(original.z(), restored.z(), 1e-9);
         assertEquals(original.yawRadians(), restored.yawRadians(), 1e-9);
+        assertEquals(original.scale(), restored.scale(), 1e-9);
         assertEquals(original.stalled(), restored.stalled());
         assertEquals(original.nbtFileName(), restored.nbtFileName());
     }
@@ -42,7 +43,7 @@ class ContraptionManifestTest {
     @Test
     void fileRoundTrip(@TempDir Path tempDir) throws Exception {
         ContraptionManifest original = new ContraptionManifest(UUID.randomUUID(), UUID.randomUUID(),
-                0, 64, 0, 0, false, "miner_1.nbt");
+                0, 64, 0, 0, 1.0, false, "miner_1.nbt");
         Path file = tempDir.resolve("test.mcdata");
 
         original.save(file);

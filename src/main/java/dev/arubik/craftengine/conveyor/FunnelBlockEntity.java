@@ -4,7 +4,7 @@ import org.bukkit.craftbukkit.inventory.CraftItemStack;
 import org.joml.Vector3f;
 
 import dev.arubik.craftengine.block.entity.PersistentBlockEntity;
-import dev.arubik.craftengine.contraption.level.ContraptionLevel;
+import dev.arubik.craftengine.contraption.level.ContraptionBoundary;
 import net.momirealms.craftengine.core.block.ImmutableBlockState;
 import net.momirealms.craftengine.core.block.entity.BlockEntity;
 import net.momirealms.craftengine.core.block.entity.BlockEntityController;
@@ -429,7 +429,7 @@ public class FunnelBlockEntity extends PersistentBlockEntity implements Conveyor
         }
         BlockPos pos = blockEntity().pos();
         java.util.List<Player> viewers = ConveyorBlockEntity.viewersOf(world, pos);
-        ContraptionLevel contraption = ConveyorBlockEntity.contraptionOf(world);
+        ContraptionBoundary contraption = ConveyorBlockEntity.contraptionOf(world);
         if (display == null)
             display = new ConveyorItemDisplay();
         display.setNmsItem(CraftItemStack.asNMSCopy(transit));

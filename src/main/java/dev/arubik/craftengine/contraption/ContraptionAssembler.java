@@ -71,6 +71,27 @@ public final class ContraptionAssembler {
      */
     public static ContraptionEntity assemble(World bukkitWorld, BlockPos bearing, BearingType type,
             double rotationalRpm, double suPerBlock) {
+        return assemble(bukkitWorld, bearing, type, rotationalRpm, suPerBlock, null);
+    }
+
+    /**
+     * Owner-aware assemble (roadmap item #7, Phase C1/C2 — "Claims / protection system"): identical
+     * to {@link #assemble(World, BlockPos, BearingType, double, double)} but (a) records
+     * {@code assembler} as the contraption's owning player on the resulting
+     * {@link ContraptionState#setOwner}, and (b) consults the {@code protection} break gate for
+     * every captured cell BEFORE any real block is read/removed — capture <em>removes</em> the
+     * cells from the world, so this is the design's authoritative {@code canBreak} enforcement
+     * point ({@code .migration/ROADMAP-claims-and-phys.md} §1 "Capture (block removal)"). If ANY
+     * cell is protected the WHOLE assemble is aborted (a partial capture would strand blocks) and
+     * the triggering player, if online, is messaged. {@code assembler} may be {@code null} (an
+     * engine/redstone-driven assemble with no triggering player) — then no owner is set and the
+     * break gate is skipped (nobody to attribute the query to), matching prior behavior.
+     *
+     * <p><b>Phase 1</b>: the default {@code AllowAllProtection} makes the gate a pure no-op, so
+     * assembly behaves exactly as before; only owner-tracking is newly observable.
+     */
+    public static ContraptionEntity assemble(World bukkitWorld, BlockPos bearing, BearingType type,
+            double rotationalRpm, double suPerBlock, java.util.UUID assembler) {
         Set<BlockPos> structure = GlueRegistry.structureAt(bukkitWorld.getUID(), bearing);
         if (structure.isEmpty()) {
             return null;
@@ -89,6 +110,21 @@ public final class ContraptionAssembler {
             structure = new HashSet<>(structure);
             structure.remove(bearing);
         }
+        // Veto hook (public API) — fired BEFORE any real block is read/removed, with the final
+        // captured set resolved. Cancelling aborts assembly the same as an empty structure would.
+        if (fireAssembleCancelled(bukkitWorld, bearing, type, structure, null)) {
+            return null;
+        }
+        // Protection break gate (roadmap item #7 — authoritative canBreak, capture removes these
+        // cells). Default-allow in Phase 1; a real land-claim provider aborts the whole assemble if
+        // any cell is claimed. See #assemble(...UUID) javadoc.
+        if (!mayCaptureAll(bukkitWorld, structure, assembler)) {
+            org.bukkit.entity.Player p = assembler == null ? null : org.bukkit.Bukkit.getPlayer(assembler);
+            if (p != null) {
+                p.sendMessage("§cYou can't assemble here — part of this structure is protected.");
+            }
+            return null;
+        }
         ContraptionCapture.Result captured = ContraptionCapture.capture(level, structure, bearing);
         // Persist the structure's glue topology onto the captured level (2026-07-03) — read from
         // the world registry NOW (still populated), stored local so it survives restart in the
@@ -103,6 +139,7 @@ public final class ContraptionAssembler {
 
         ContraptionState state = new ContraptionState(UUID.randomUUID(), bukkitWorld.getUID(), captured.level(),
                 bearing.getX(), bearing.getY(), bearing.getZ());
+        state.setOwner(assembler); // roadmap item #7 Phase C1 — owning player (null for engine-driven)
         state.setFurniture(furnitureResult.furniture());
         // Task 1 (CONTRAPTIONS.md 2026-07-01 session): re-register any real player who was
         // sitting in a captured seat at the exact moment of assembly — see
@@ -125,7 +162,62 @@ public final class ContraptionAssembler {
         // BlockAnchoredContraptionStore. MINECART goes through MinecartBearing, never this method.
         dev.arubik.craftengine.contraption.persistence.BlockAnchoredContraptionStore.save(state, bearing, type,
                 rotationalRpm, suPerBlock);
+        fireAssembled(entity);
         return entity;
+    }
+
+    /**
+     * Protection break-gate over an entire to-be-captured structure (roadmap item #7). Capture
+     * REMOVES every cell from the world, so this is the authoritative {@code canBreak} enforcement
+     * point — if ANY cell is protected against {@code assembler}, the whole assemble must abort (a
+     * partial capture would strand blocks). Returns {@code true} (allow) when {@code assembler} is
+     * {@code null} (an engine/redstone-driven assemble with no triggering player to attribute the
+     * query to — matches prior behavior). In Phase 1 the default {@code AllowAllProtection} makes
+     * this always {@code true}; a real land-claim provider is what can return {@code false}.
+     */
+    private static boolean mayCaptureAll(World bukkitWorld, Set<BlockPos> structure, java.util.UUID assembler) {
+        if (assembler == null) {
+            return true;
+        }
+        for (BlockPos pos : structure) {
+            if (!dev.arubik.craftengine.contraption.protection.ContraptionProtectionRegistry
+                    .canBreak(assembler, bukkitWorld, pos)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * PhysContraption assembly entry point (roadmap item #9 — PhysContraption,
+     * {@code .migration/ROADMAP-claims-and-phys.md} §2). Assembles the glued structure at
+     * {@code physAnchor} through the SAME block-anchored capture path every other block-anchored
+     * bearing uses ({@link #assemble(World, BlockPos, BearingType, double, double)}), but with
+     * {@link BearingType#PHYS} so {@link #attachDefaultBehavior} attaches a
+     * {@code behavior.PhysicsBehavior} (gravity integrator) as the sole kinematics source instead of a
+     * pinning bearing — the captured structure then FALLS and comes to rest on the ground.
+     *
+     * <p>Two ways to trigger a PHYS assembly, both already wired without touching this class:
+     * <ol>
+     *   <li><b>Hammer</b> — right-clicking a {@code polyfills:bearing_block} whose YAML declares
+     *   {@code kind: phys} with a hammer. {@code BearingHammerListener#onInteractBlock} resolves that
+     *   block's {@link BearingType#PHYS} via {@code BearingBlockBehavior#typeAt} and routes it through
+     *   the generic {@code assemble(...)} branch (it is neither LINEAR nor MINECART), which reaches
+     *   the PHYS case above — no listener change required.</li>
+     *   <li><b>Programmatic</b> — this method, for tools/tests/redstone drivers that already hold a
+     *   {@link World}+{@link BlockPos} and want to assemble a phys contraption directly.</li>
+     * </ol>
+     *
+     * <p>{@code rpm}/{@code suPerBlock} are read from the anchor block's own config (harmless for a
+     * phys contraption, which has no motor) so the persistence record round-trips identically to any
+     * other block-anchored bearing. Returns {@code null} if there's nothing glued at {@code physAnchor}.
+     */
+    public static ContraptionEntity assemblePhysics(World bukkitWorld, BlockPos physAnchor) {
+        Level level = ((CraftWorld) bukkitWorld).getHandle();
+        double rpm = dev.arubik.craftengine.contraption.behavior.BearingBlockBehavior.rpmAt(level, physAnchor);
+        double suPerBlock = dev.arubik.craftengine.contraption.behavior.BearingBlockBehavior.suPerBlockAt(level,
+                physAnchor);
+        return assemble(bukkitWorld, physAnchor, BearingType.PHYS, rpm, suPerBlock, null);
     }
 
     /**
@@ -150,6 +242,11 @@ public final class ContraptionAssembler {
         if (structure.isEmpty()) {
             return null;
         }
+        // Veto hook (public API) — same pre-capture point/semantics as #assemble. A redstone-driven
+        // piston has no triggering player, so the cause is null.
+        if (fireAssembleCancelled(bukkitWorld, bearing, BearingType.LINEAR, structure, null)) {
+            return null;
+        }
         ContraptionCapture.Result captured = ContraptionCapture.capture(level, structure, bearing);
         ContraptionCapture.captureGlueEdges(worldId, captured.level(), bearing);
         ContraptionFurnitureCapture.Result furnitureResult =
@@ -167,6 +264,7 @@ public final class ContraptionAssembler {
         ContraptionEntity entity = ContraptionManager.register(new ContraptionEntity(state));
         dev.arubik.craftengine.contraption.persistence.BlockAnchoredContraptionStore.save(state, bearing,
                 BearingType.LINEAR, DEFAULT_ROTATIONAL_RPM, suPerBlock);
+        fireAssembled(entity);
         return entity;
     }
 
@@ -204,6 +302,11 @@ public final class ContraptionAssembler {
         ContraptionEntity entity = ContraptionManager.register(new ContraptionEntity(state));
         dev.arubik.craftengine.contraption.persistence.BlockAnchoredContraptionStore.save(state, bodyPos,
                 BearingType.LINEAR, speed, suPerBlock);
+        // Only the post (observation) event fires here: this is the internal euler/robin_euler
+        // re-grab of a previously-dropped load driven by the engine tick loop, not a fresh
+        // player/redstone assembly — vetoing it via the cancellable pre-event would leave the euler
+        // registry mid-cycle, so it isn't offered. Listeners still observe the resulting contraption.
+        fireAssembled(entity);
         return entity;
     }
 
@@ -243,6 +346,10 @@ public final class ContraptionAssembler {
      */
     public static void attachDefaultBehavior(Level level, BlockPos bearing, ContraptionState state, BearingType type,
             double rotationalRpm, double suPerBlock) {
+        // The one choke point where a state and its bearing kind are both known, on BOTH the assemble
+        // and the rehydrate path — so recording it here means a contraption never has to have its type
+        // re-derived from a block that may no longer be there. See ContraptionState#bearingType.
+        state.setBearingType(type);
         BlockPos motorPos = RealMotorLink.findAdjacentMotor(level, bearing);
         switch (type) {
             case LINEAR -> {
@@ -281,10 +388,24 @@ public final class ContraptionAssembler {
                         facing, bearing, motorPos, distance, baseSpeed, finalSuPerBlock, mode, rrDelay));
             }
             case ROTATIONAL -> state.addBehavior(new RotationalBearingBehavior(motorPos, rotationalRpm, suPerBlock));
+            case PHYS ->
+                // PhysContraption (roadmap item #9): no pinning bearing — attach the gravity integrator
+                // as the sole kinematics source, so the captured structure falls and rests on the
+                // ground. Milestone 1 (gravity + falling + ground collision only); see PhysicsBehavior.
+                // Rehydrate (BlockAnchoredContraptionStore) reaches this same case for a persisted PHYS
+                // record, so a phys contraption resumes falling after a chunk reload / restart.
+                state.addBehavior(new dev.arubik.craftengine.contraption.behavior.PhysicsBehavior());
             case MINECART -> {
                 // Never reached: MINECART bearings go through MinecartBearing.assemble, not
                 // this method (see BearingHammerListener) — MinecartFollowBehavior is
                 // attached there instead, once the anchor entity exists.
+            }
+            case GHAST -> {
+                // Never reached, for the same reason MINECART isn't: GHAST is entity-anchored and goes
+                // through GhastHarnessBearing.assemble (driven by GhastHarnessListener's hammer
+                // right-click). GhastFollowBehavior needs the anchor GHAST's UUID, which this
+                // method's block-anchored (Level, BlockPos, ...) signature cannot supply, so the behavior
+                // and the setBearingType call both happen there instead — once the ghast is known.
             }
         }
     }
@@ -297,6 +418,11 @@ public final class ContraptionAssembler {
      */
     public static void disassemble(World bukkitWorld, ContraptionEntity entity) {
         ContraptionState state = entity.state();
+        // Veto hook (public API) — fired BEFORE any teardown; cancelling leaves the contraption live
+        // and assembled exactly as it was.
+        if (fireDisassembleCancelled(entity)) {
+            return;
+        }
         // Remove the on-disk persistence file first thing (all disassemble callers are covered here,
         // so a later chunk-load can never resurrect a disassembled contraption) — see
         // BlockAnchoredContraptionStore#delete. No-op / harmless for a contraption that was never
@@ -332,6 +458,16 @@ public final class ContraptionAssembler {
         ContraptionCapture.restoreGlue(bukkitWorld.getUID(), state.level(), state.originBearingBlockPos(),
                 snappedBearing, quarterTurns);
         ContraptionCapture.restoreRotated(level, state.level(), snappedBearing, quarterTurns);
+        // Cheaply-available final resting footprint for ContraptionDisassembledEvent below — the exact
+        // world cells restoreRotated just wrote (same grid-snap + rotation), gathered BEFORE dispose()
+        // discards the level. Empty for the null-level unit-test path.
+        Set<BlockPos> restingPositions = new HashSet<>();
+        if (state.level() != null) {
+            for (BlockPos local : state.level().localPositions()) {
+                restingPositions.add(ContraptionMath.toWorld(ContraptionCapture.rotateLocal(local, quarterTurns),
+                        snappedBearing));
+            }
+        }
         // Reverse of ContraptionFurnitureCapture#captureNear (bug fix, this session — "al
         // disassemble debe... volver a spawnear el mueble real normal"): re-place a REAL
         // CraftEngine furniture entity for every captured piece, snapped to the SAME
@@ -369,6 +505,7 @@ public final class ContraptionAssembler {
             state.level().transferRemainingEntitiesToRealWorld();
             state.level().dispose();
         }
+        fireDisassembled(state.id(), bukkitWorld, snappedBearing, restingPositions);
     }
 
     /**
@@ -426,5 +563,60 @@ public final class ContraptionAssembler {
             move.put(ContraptionMath.toWorld(local, origin), ContraptionMath.toWorld(rotatedLocal, snappedBearing));
         }
         GlueRegistry.graphFor(worldId).translateAll(move);
+    }
+
+    /**
+     * Fires {@link dev.arubik.craftengine.contraption.event.ContraptionAssembleEvent} and returns
+     * whether it was cancelled. Fail-open (returns {@code false} = "proceed") if no live server is
+     * present — e.g. a pure-JVM unit test where {@code Bukkit.getPluginManager()} throws — so
+     * behavior is identical to before events existed whenever nobody is listening.
+     */
+    static boolean fireAssembleCancelled(World world, BlockPos bearing, BearingType type,
+            Set<BlockPos> structure, org.bukkit.entity.Player cause) {
+        try {
+            dev.arubik.craftengine.contraption.event.ContraptionAssembleEvent event =
+                    new dev.arubik.craftengine.contraption.event.ContraptionAssembleEvent(world, bearing, type,
+                            new HashSet<>(structure), cause);
+            org.bukkit.Bukkit.getPluginManager().callEvent(event);
+            return event.isCancelled();
+        } catch (Throwable ignored) {
+            return false;
+        }
+    }
+
+    /** Fires {@link dev.arubik.craftengine.contraption.event.ContraptionAssembledEvent}. See {@link #fireAssembleCancelled} for the fail-open rationale. */
+    static void fireAssembled(ContraptionEntity entity) {
+        try {
+            org.bukkit.Bukkit.getPluginManager()
+                    .callEvent(new dev.arubik.craftengine.contraption.event.ContraptionAssembledEvent(entity));
+        } catch (Throwable ignored) {
+        }
+    }
+
+    /**
+     * Fires {@link dev.arubik.craftengine.contraption.event.ContraptionDisassembleEvent} and returns
+     * whether it was cancelled. Fail-open under the same no-live-server conditions as
+     * {@link #fireAssembleCancelled}.
+     */
+    static boolean fireDisassembleCancelled(ContraptionEntity entity) {
+        try {
+            dev.arubik.craftengine.contraption.event.ContraptionDisassembleEvent event =
+                    new dev.arubik.craftengine.contraption.event.ContraptionDisassembleEvent(entity);
+            org.bukkit.Bukkit.getPluginManager().callEvent(event);
+            return event.isCancelled();
+        } catch (Throwable ignored) {
+            return false;
+        }
+    }
+
+    /** Fires {@link dev.arubik.craftengine.contraption.event.ContraptionDisassembledEvent}. See {@link #fireAssembleCancelled} for the fail-open rationale. */
+    static void fireDisassembled(UUID contraptionId, World world, BlockPos snappedBearing,
+            Set<BlockPos> restingPositions) {
+        try {
+            org.bukkit.Bukkit.getPluginManager()
+                    .callEvent(new dev.arubik.craftengine.contraption.event.ContraptionDisassembledEvent(
+                            contraptionId, world, snappedBearing, restingPositions));
+        } catch (Throwable ignored) {
+        }
     }
 }

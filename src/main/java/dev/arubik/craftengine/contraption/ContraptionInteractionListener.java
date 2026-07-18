@@ -19,6 +19,7 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
@@ -231,6 +232,55 @@ public final class ContraptionInteractionListener implements Listener {
     }
 
     /**
+     * Right-clicking ANY cell of a PHYS contraption with a hammer takes it apart, wherever the body is
+     * ("un phys contraption con right click de un hammer se deshace, en cualquier posicion del phys").
+     *
+     * <h2>Why this lives here and not in {@code BearingHammerListener}</h2>
+     * Every other bearing is disassembled by hammering its ANCHOR — a real block or a real minecart, both
+     * of which produce ordinary Bukkit events. A phys contraption has neither: it captured its anchor block
+     * and then fell away from where it stood, so there is nothing real left to click. Its cells are
+     * packet-only fake entities the server never spawned, so clicking one produces no event for that cell
+     * either. This listener's raycast is the only thing that knows a player is looking at a phys cell, which
+     * makes it the only place the hammer can be noticed at all.
+     *
+     * <p>Runs BEFORE {@link #forward}: the hammer must take the structure apart rather than be forwarded
+     * into the captured block as an ordinary right-click (which would, say, open the chest it landed on).
+     *
+     * <p>The disassemble restores the blocks at the body's current pose. A phys body is free to be rotated,
+     * tipped and scaled, and real blocks are none of those things — so the restore snaps to the grid, and a
+     * body caught mid-tumble lands on the nearest cells rather than at some fractional orientation. That is
+     * the same snap every other disassemble performs; it is only visible here because this is the one
+     * bearing whose body is routinely NOT grid-aligned.
+     */
+    private static boolean tryHammerDisassemblePhys(ServerPlayer player, Hit hit) {
+        ContraptionState state = hit.state();
+        if (state.bearingType() != BearingType.PHYS) {
+            return false;
+        }
+        org.bukkit.entity.Player bukkitPlayer = (org.bukkit.entity.Player) player.getBukkitEntity();
+        org.bukkit.inventory.ItemStack held = bukkitPlayer.getInventory().getItemInMainHand();
+        if (!dev.arubik.craftengine.multiblock.HammerItems
+                .isHammer(net.momirealms.craftengine.bukkit.api.CraftEngineItems.getCustomItemId(held))) {
+            return false;
+        }
+        ContraptionEntity entity = ContraptionManager.get(state.id());
+        org.bukkit.World world = org.bukkit.Bukkit.getWorld(state.worldId());
+        if (entity == null || world == null) {
+            // Consumed regardless: one right-click can arrive twice (interactAt then interact), and the
+            // second must not fall through into a level the first just disposed.
+            return true;
+        }
+        try {
+            ContraptionAssembler.disassemble(world, entity);
+            world.playSound(bukkitPlayer.getLocation(), org.bukkit.Sound.BLOCK_ANVIL_USE, 0.7f, 1.4f);
+            bukkitPlayer.sendMessage("§7Phys contraption disassembled, blocks restored.");
+        } catch (Throwable t) {
+            org.bukkit.Bukkit.getLogger().warning("[Contraption] phys hammer disassemble failed: " + t);
+        }
+        return true;
+    }
+
+    /**
      * @param localClip the hit point already in the contraption's LOCAL coordinate space (see
      *        {@link #raycast} — the ray is un-rotated into local space BEFORE clipping, so both this
      *        point and {@code face} are already local; no {@code realToLocal} round-trip is needed at
@@ -274,12 +324,18 @@ public final class ContraptionInteractionListener implements Listener {
             }
             Vec3 bearingPos = new Vec3(state.x(), state.y(), state.z());
             double yaw = state.yawRadians();
+            double pitch = state.pitchRadians();
+            double roll = state.rollRadians();
+            double scale = state.scale();
             // Un-rotate the ray into this contraption's LOCAL frame (both endpoints) — now the ray is
             // in the same axis-aligned space the captured cells live in, so a plain axis-aligned clip
-            // against each cell's local box is yaw-correct. realToLocal is rigid, so localEye/localEnd
-            // stay exactly maxDistance apart.
-            Vec3 localEye = ContraptionMath.realToLocal(eye, bearingPos, yaw);
-            Vec3 localEnd = ContraptionMath.realToLocal(end, bearingPos, yaw);
+            // against each cell's UNIT local box is correct at any yaw/pitch/scale. realToLocal is the
+            // exact inverse of the canonical renderPosition mapping (pivot/yaw/pitch aware, and it DIVIDES
+            // by scale), so passing pitch+scale here — previously only yaw was passed, so clicks on a
+            // tipped or resized contraption missed/hit the wrong cell — lands the ray in the un-scaled,
+            // un-tilted local frame where each cell is exactly [local, local+1] (localCellBox below).
+            Vec3 localEye = ContraptionMath.realToLocal(eye, bearingPos, yaw, pitch, roll, scale);
+            Vec3 localEnd = ContraptionMath.realToLocal(end, bearingPos, yaw, pitch, roll, scale);
             org.bukkit.Bukkit.getLogger().info("[Contraption] raycast vs contraption bearing=" + bearingPos
                     + " yaw=" + yaw + " cells=" + level.localPositions().size() + " localEye=" + localEye
                     + " localEnd=" + localEnd + " maxDist=" + maxDistance);
@@ -289,9 +345,11 @@ public final class ContraptionInteractionListener implements Listener {
                 if (clip.isEmpty()) {
                     continue;
                 }
-                // Distance measured in local space == distance in real space (rigid transform), so
-                // comparing against the best across contraptions is still apples-to-apples.
-                double distSq = localEye.distanceToSqr(clip.get());
+                // Distance measured in local space is 1/scale of real space (realToLocal divides by
+                // scale), so rescale to WORLD distance (×scale²) before comparing across contraptions —
+                // otherwise a larger-scaled contraption's hits would look spuriously "closer." At scale 1
+                // this is exactly the previous local==world distance.
+                double distSq = localEye.distanceToSqr(clip.get()) * scale * scale;
                 if (distSq < bestDistSq) {
                     bestDistSq = distSq;
                     // Face is the box face nearest the local hit point — now a genuine LOCAL face
@@ -340,12 +398,27 @@ public final class ContraptionInteractionListener implements Listener {
 
     /** See class javadoc "Dispatch hook". */
     static void forward(ServerPlayer player, Hit hit) {
+        // Checked HERE rather than at any one call site, because three separate paths reach this: the
+        // PlayerInteractEvent raycast, the PlayerInteractEntityEvent raycast, and — the one that actually
+        // matters for a phys contraption — ContraptionInteractPacketDebug's PacketEvents listener. A phys
+        // contraption's cells are packet-only fake entities the server never spawned, so a click on one is
+        // dropped by vanilla and only ever surfaces through that packet listener. Hooking the hammer into
+        // a single event handler put it on the one path the click never takes.
+        if (tryHammerDisassemblePhys(player, hit)) {
+            return;
+        }
         ContraptionLevel level = hit.state().level();
         if (level == null) {
             return;
         }
         BlockState blockState = level.getBlockState(hit.local());
         if (blockState.isAir()) {
+            return;
+        }
+
+        // Public API veto (ContraptionInteractEvent) — fired BEFORE any dispatch/placement runs.
+        // Cancelling makes this right-click a no-op, exactly as if the raycast had missed.
+        if (fireInteractCancelled(player, hit, true)) {
             return;
         }
 
@@ -466,6 +539,9 @@ public final class ContraptionInteractionListener implements Listener {
         org.bukkit.Bukkit.getLogger().info("[Contraption] menuBefore=" + menuBefore + " menuAfter=" + player.containerMenu);
         if (player.containerMenu != menuBefore) {
             fixVanillaMenuStillValid(player.containerMenu, level, hit.local());
+            // Menus with no block entity (crafting table, anvil, enchanting, ...) have no Container to
+            // swap and validate through a ContainerLevelAccess instead — see the method's javadoc.
+            fixVanillaMenuLevelAccess(player.containerMenu, level, hit.local());
         }
 
         // Force the display swarm to resend this cell's metadata right away (2026-07-02 session
@@ -563,6 +639,14 @@ public final class ContraptionInteractionListener implements Listener {
             return new PlaceOutcome(false);
         }
 
+        // Public API veto (ContraptionBlockPlaceEvent) — fired BEFORE the real vanilla/CE placement
+        // below. Cancelling returns a NON-consuming outcome so the item isn't consumed and nothing is
+        // written into the contraption, exactly as if placement had failed. The target cell is
+        // BlockPlaceContext's own resolved target (hitResult.getBlockPos()).
+        if (fireBlockPlaceCancelled(player, hit, hitResult.getBlockPos().immutable(), held, hand)) {
+            return new PlaceOutcome(false);
+        }
+
         // Chunk/CEChunk activation fix (2026-07-02 follow-up — "el fluid_block_tank... sus block
         // states no se actualiza"). Every OTHER way a block lands in a ContraptionLevel goes
         // through ContraptionLevel#putBlock, which calls ensureChunkTicking/activateCeChunk before
@@ -582,6 +666,66 @@ public final class ContraptionInteractionListener implements Listener {
         level.ensureChunkReady(targetPos);
         level.ensureChunkReady(targetPos.relative(hitResult.getDirection()));
 
+        // Place with the player's aim expressed in the CONTRAPTION's frame, restoring it afterwards.
+        //
+        // Every orientation decision vanilla and CraftEngine make — stairs, logs, furnaces, banners,
+        // getHorizontalDirection, getNearestLookingDirection — is derived from the player's live yRot,
+        // and both placement paths below read it off the player rather than taking it as an argument.
+        // But the block lands in the contraption's LOCAL frame, which the renderer then rotates by the
+        // contraption's yaw: a cell whose local facing is F is drawn facing F + yaw. Placing with the
+        // raw world yaw therefore stored F = D and drew D + yaw — the block came out turned by exactly
+        // the contraption's own rotation, which is what "las rotaciones salen raras" is.
+        //
+        // Rotating the player instead of the result is deliberate: it is the only way to reach every one
+        // of those derived decisions at once without reimplementing any of them, which this listener is
+        // careful never to do (see the class javadoc). The window is inside one synchronous call, so no
+        // packet observes it.
+        // BOTH yaws, because vanilla reads two different ones and a block's orientation depends on which.
+        //
+        // A furnace asks getHorizontalDirection() -> Entity#getDirection -> Direction.fromYRot(getYRot()):
+        // the BODY yaw. A piston asks getNearestLookingDirection() -> Direction.orderedByNearest ->
+        // getViewYRot(1.0F), and LivingEntity OVERRIDES that to return yHeadRot: the HEAD yaw. They are
+        // separate fields. Rotating only the body left every look-vector-derived block — pistons,
+        // observers, droppers — reading the player's real-world head yaw and orienting to the world while
+        // the yaw-derived ones correctly oriented to the contraption. That is exactly the reported split:
+        // "el furnace si se pone bien pero el piston es el que falla cuando el ghast rota".
+        float originalYaw = player.getYRot();
+        float originalHeadYaw = player.getYHeadRot();
+        float delta = (float) Math.toDegrees(hit.state().yawRadians());
+        float localYaw = originalYaw - delta;
+        player.setYRot(localYaw);
+        player.setYHeadRot(originalHeadYaw - delta);
+        try {
+            PlaceOutcome outcome = placeWithAim(level, player, hitResult, hand, held, targetPos);
+            if (PLACEMENT_DEBUG) {
+                org.bukkit.Bukkit.getLogger().info("[ContraptionRot] contraptionYaw="
+                        + String.format("%.1f", Math.toDegrees(hit.state().yawRadians()))
+                        + " playerYaw=" + String.format("%.1f", originalYaw)
+                        + " placedWithYaw=" + String.format("%.1f", localYaw)
+                        + " face=" + hitResult.getDirection()
+                        + " cell=" + targetPos
+                        + " -> " + level.getBlockState(targetPos));
+            }
+            return outcome;
+        } finally {
+            player.setYRot(originalYaw);
+            player.setYHeadRot(originalHeadYaw);
+        }
+    }
+
+    /**
+     * Logs what each placement actually resolved to. Off by default — this is diagnostic scaffolding for
+     * orientation reports, which cannot be reproduced without a client, and it is per-placement noise.
+     * Flip with {@code /cep show placement}.
+     */
+    public static volatile boolean PLACEMENT_DEBUG = false;
+
+    /**
+     * The two real placement paths, run with the player's yaw already rotated into the contraption's
+     * frame by {@link #tryPlace} — see there for why.
+     */
+    private static PlaceOutcome placeWithAim(ContraptionLevel level, ServerPlayer player, BlockHitResult hitResult,
+            InteractionHand hand, ItemStack held, BlockPos targetPos) {
         net.momirealms.craftengine.core.util.Key customItemId = net.momirealms.craftengine.bukkit.api.CraftEngineItems
                 .getCustomItemId(org.bukkit.craftbukkit.inventory.CraftItemStack.asBukkitCopy(held));
         if (customItemId != null) {
@@ -817,10 +961,65 @@ public final class ContraptionInteractionListener implements Listener {
         if (blockState.isAir()) {
             return;
         }
+        // Public API veto (ContraptionInteractEvent) — same hook as forward(), left-click variant.
+        // Cancelling skips the non-destructive attack dispatch entirely.
+        if (fireInteractCancelled(player, hit, false)) {
+            return;
+        }
         try {
             blockState.attack(level, hit.local(), player);
         } catch (Throwable ignored) {
             // Fail-open — see forward()'s own try/catch for the same rationale.
+        }
+    }
+
+    /**
+     * Fires {@link dev.arubik.craftengine.contraption.event.ContraptionInteractEvent} and returns
+     * whether it was cancelled. Fail-open (returns {@code false} = "proceed") if the owning facade
+     * can't be resolved or no live server is present, so a click behaves byte-identically to before
+     * this event existed whenever nobody is listening — same shape as {@code ContraptionAssembler}'s
+     * own fire helpers. {@code right} distinguishes the right-click ({@link #forward}) from the
+     * left-click ({@link #forwardAttack}) dispatch path.
+     */
+    private static boolean fireInteractCancelled(ServerPlayer player, Hit hit, boolean right) {
+        try {
+            ContraptionEntity entity = ContraptionManager.get(hit.state().id());
+            if (entity == null) {
+                return false;
+            }
+            dev.arubik.craftengine.contraption.event.ContraptionInteractEvent event =
+                    new dev.arubik.craftengine.contraption.event.ContraptionInteractEvent(
+                            (org.bukkit.entity.Player) player.getBukkitEntity(), entity, hit.local(), hit.face(),
+                            EquipmentSlot.HAND, right);
+            org.bukkit.Bukkit.getPluginManager().callEvent(event);
+            return event.isCancelled();
+        } catch (Throwable ignored) {
+            return false;
+        }
+    }
+
+    /**
+     * Fires {@link dev.arubik.craftengine.contraption.event.ContraptionBlockPlaceEvent} and returns
+     * whether it was cancelled. Fail-open under the same conditions as {@link #fireInteractCancelled}
+     * (unresolvable facade / no live server ⇒ proceed), so placement is byte-identical to before this
+     * event existed whenever nobody listens.
+     */
+    private static boolean fireBlockPlaceCancelled(ServerPlayer player, Hit hit, BlockPos targetLocal,
+            ItemStack held, InteractionHand hand) {
+        try {
+            ContraptionEntity entity = ContraptionManager.get(hit.state().id());
+            if (entity == null) {
+                return false;
+            }
+            EquipmentSlot slot = hand == InteractionHand.OFF_HAND ? EquipmentSlot.OFF_HAND : EquipmentSlot.HAND;
+            dev.arubik.craftengine.contraption.event.ContraptionBlockPlaceEvent event =
+                    new dev.arubik.craftengine.contraption.event.ContraptionBlockPlaceEvent(
+                            (org.bukkit.entity.Player) player.getBukkitEntity(), entity, targetLocal,
+                            org.bukkit.craftbukkit.inventory.CraftItemStack.asBukkitCopy(held), slot);
+            org.bukkit.Bukkit.getPluginManager().callEvent(event);
+            return event.isCancelled();
+        } catch (Throwable ignored) {
+            return false;
         }
     }
 
@@ -858,6 +1057,84 @@ public final class ContraptionInteractionListener implements Listener {
      * that menu keeps vanilla's original (broken, for a contraption) behavior — see this
      * listener's own class javadoc scoping note.
      */
+    /**
+     * The auto-close fix for menus with NO block entity — a crafting table, anvil, enchanting table,
+     * grindstone, loom, stonecutter, cartography table.
+     *
+     * <h2>Why {@link #fixVanillaMenuStillValid} cannot reach these</h2>
+     * That fix swaps a menu's {@code Container} field. A crafting table has no block entity and no
+     * container to swap: {@code CraftingMenu} validates through a {@link ContainerLevelAccess} instead,
+     * so the menu opened and vanilla closed it on the very next tick.
+     *
+     * <h2>Why the level/pos pair cannot be fixed, and the default can</h2>
+     * Verified against the mapped jar, {@code AbstractContainerMenu#stillValid} is:
+     * <pre>
+     * access.evaluate((level, pos) -&gt;
+     *     !level.getBlockState(pos).is(targetBlock) ? false : player.isWithinBlockInteractionRange(pos, 4.0),
+     *     true);
+     * </pre>
+     * Those two checks want DIFFERENT frames. The block only exists at the LOCAL pos inside the hidden
+     * {@link ContraptionLevel}, but the player's reach is measured in the REAL world — so handing the
+     * lambda the contraption's frame passes the block test and fails the range test, and handing it the
+     * real world's frame fails the block test (a contraption's cells are display entities; there is no
+     * real block there). No pair of arguments satisfies both, which is why this cannot be fixed by
+     * pointing the access somewhere better.
+     *
+     * <p>But that call ends in {@code , true)} — the default when {@code evaluate} yields nothing. An
+     * access that returns {@link Optional#empty()} therefore makes {@code stillValid} answer {@code true}
+     * without the lambda ever running. That is not a trick: it is exactly what
+     * {@link ContainerLevelAccess#NULL} is for, and what vanilla itself uses for a menu with no block
+     * behind it.
+     *
+     * <h2>Why {@code execute} must be overridden rather than inherited</h2>
+     * {@code execute}'s default implementation routes through {@code evaluate}, so an empty-returning
+     * access silently swallows it — and {@code CraftingMenu#removed} uses {@code execute} to run
+     * {@code clearContainer}, which is what hands the 3x3 grid back when the menu closes. Using
+     * {@code NULL} directly would therefore have made the crafting table work and <b>eaten every item
+     * left in the grid</b>. Overriding {@code execute} to run against the contraption's own level and
+     * local pos keeps that working, and is correct: for anything that ACTS on the block, the block
+     * genuinely is there.
+     *
+     * <p><b>Known limit, stated rather than hidden:</b> other {@code evaluate} callers now take their
+     * default too — an enchanting table in a contraption will read zero bookshelves, and an anvil will
+     * not damage itself. Those are worth a working menu, and a menu that closes instantly is worth
+     * nothing.
+     */
+    private static void fixVanillaMenuLevelAccess(AbstractContainerMenu menu, ContraptionLevel level, BlockPos local) {
+        if (menu == null) {
+            return;
+        }
+        ContainerLevelAccess patched = new ContainerLevelAccess() {
+            @Override
+            public <T> Optional<T> evaluate(java.util.function.BiFunction<net.minecraft.world.level.Level, BlockPos, T> function) {
+                return Optional.empty(); // stillValid falls back to its `true` default — see the javadoc
+            }
+
+            @Override
+            public void execute(java.util.function.BiConsumer<net.minecraft.world.level.Level, BlockPos> consumer) {
+                // NOT inherited: the default routes through evaluate above and would swallow this,
+                // taking CraftingMenu#removed's clearContainer with it — i.e. the player's grid.
+                consumer.accept(level, local);
+            }
+        };
+        try {
+            for (java.lang.reflect.Field field : allFields(menu.getClass())) {
+                if (field.getType() != ContainerLevelAccess.class) {
+                    continue;
+                }
+                field.setAccessible(true);
+                if (field.get(menu) == patched) {
+                    continue;
+                }
+                field.set(menu, patched);
+            }
+        } catch (Throwable t) {
+            // Best-effort, same rationale as fixVanillaMenuStillValid: a failure just leaves vanilla's
+            // original (instantly-closing, for a contraption) behaviour for this one menu.
+            org.bukkit.Bukkit.getLogger().warning("[Contraption] fixVanillaMenuLevelAccess threw: " + t);
+        }
+    }
+
     private static void fixVanillaMenuStillValid(AbstractContainerMenu menu, ContraptionLevel level, BlockPos local) {
         if (menu == null) {
             return;

@@ -159,6 +159,22 @@ public final class ContraptionInteractPacketDebug implements PacketListener {
             // finds nothing and no-ops. Everything read below (raycast/hasSeatUnderAim) touches
             // only immutable position data, which IS safe off-thread.
 
+            // Creative Phys Wand FIRST (2026-07-04 fix — "la creative phys wand sigue sin agarrar la
+            // contraption"). The wand's own Bukkit PlayerInteractEntityEvent handlers are dead code for
+            // the exact reason this whole class exists: a packet-only fake INTERACTION entity never
+            // produces that event. So the grab has to be dispatched from HERE, and it must come before
+            // the seat/block routing below — a wand-wielding creative player is grabbing the contraption,
+            // not sitting in it or opening a captured chest. wouldHandlePacketInteract is read-only
+            // (game mode + held item + the immutable-position raycast), safe on this Netty thread; the
+            // actual grab is hopped to the main thread like every other mutation here.
+            if (CreativePhysWandListener.wouldHandlePacketInteract(bukkitPlayer)) {
+                event.setCancelled(true);
+                org.bukkit.Bukkit.getScheduler().runTask(
+                        dev.arubik.craftengine.CraftEnginePolyfills.instance(),
+                        () -> CreativePhysWandListener.handlePacketInteract(bukkitPlayer));
+                return;
+            }
+
             // Seats first (see class javadoc "Furniture seats, same root cause") — sitting down
             // takes priority over whatever's visually behind the seat's hitbox mirror.
             // hasSeatUnderAim/raycast are both read-only (immutable position data only), so it's

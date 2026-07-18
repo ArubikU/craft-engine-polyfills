@@ -110,6 +110,13 @@ public class GasTransferHelper {
     public static Optional<GasCarrier> getCarrier(Level level, BlockPos pos) {
         if (level == null || pos == null)
             return Optional.empty();
+        // An unloaded chunk has no carrier, and asking anyway is not free: Level#getBlockState on an
+        // absent chunk goes through ServerChunkCache#getChunkFallback into syncLoad, which LOADS THE
+        // CHUNK synchronously on the server thread. Profiling put roughly a quarter of the whole
+        // server thread here — the gas graph walks neighbours outward, so every edge that left loaded
+        // terrain force-loaded a chunk, every tick, for a network nobody was near.
+        if (!level.hasChunkAt(pos))
+            return Optional.empty();
 
         ImmutableBlockState state = BlockStateUtils
                 .getOptionalCustomBlockState(level.getBlockState(pos))
