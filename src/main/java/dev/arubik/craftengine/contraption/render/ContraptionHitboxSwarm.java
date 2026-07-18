@@ -1550,10 +1550,17 @@ public final class ContraptionHitboxSwarm {
             // fully server-owned — direct setPos is exact, no client-prediction dance needed).
             entity.setPos(entity.getX() + push.x, entity.getY() + push.y, entity.getZ() + push.z);
             entity.setOldPosAndRot();
-            // Kill any velocity still driving it into the wall so it doesn't re-penetrate next tick.
+            // Momentum transfer (2026-07-17 — "enhance the push"): a rammed entity is KNOCKED in the shove
+            // direction at the contraption's own per-tick speed and keeps that velocity, so a fast structure
+            // flings it clear and it coasts to rest under its own friction — a battering ram, not a bulldozer
+            // blade that scrapes an entity along and lets it stop dead the instant the structure passes. Before,
+            // velocity into the wall was merely zeroed, so a rammed mob never gained outward momentum and would
+            // immediately re-close next tick or freeze. |push| is this tick's shove distance (= blocks/tick) and
+            // is already scaled by pushStrength, so it is exactly the knock speed. Horizontal only — an entity is
+            // never launched upward (same "walls, not floor" rule the bystander push follows).
             Vec3 vel = entity.getDeltaMovement();
-            double nvx = push.x != 0.0 && Math.signum(vel.x) == -Math.signum(push.x) ? 0.0 : vel.x;
-            double nvz = push.z != 0.0 && Math.signum(vel.z) == -Math.signum(push.z) ? 0.0 : vel.z;
+            double nvx = knockbackComponent(vel.x, push.x);
+            double nvz = knockbackComponent(vel.z, push.z);
             if (nvx != vel.x || nvz != vel.z) {
                 entity.setDeltaMovement(nvx, vel.y, nvz);
             }
@@ -1634,6 +1641,21 @@ public final class ContraptionHitboxSwarm {
      *   bystander player passes {@code allowCarryUp=false} and is never silently lifted this way.</li>
      * </ul>
      */
+    /**
+     * One axis of the momentum a rammed entity keeps after being shoved (see {@link #pushBackNearbyEntities}).
+     * Knocks the velocity to the shove speed in the shove direction, but never SLOWS an entity already moving
+     * that way faster (a mob fleeing ahead of the ram keeps its lead), and leaves the axis untouched when there
+     * is no shove on it ({@code push == 0}).
+     */
+    private static double knockbackComponent(double vel, double push) {
+        if (push == 0.0) {
+            return vel;
+        }
+        double dir = Math.signum(push);
+        double sameWay = dir == Math.signum(vel) ? Math.abs(vel) : 0.0;
+        return dir * Math.max(Math.abs(push), sameWay);
+    }
+
     private static Vec3 applyPushSettings(Vec3 push, Vec3 pos, Vec3 bearingWorldPos, List<Slot> solids,
             double halfWidth, double height, double yaw, ContraptionPushSettings settings, boolean allowCarryUp) {
         if (push.equals(Vec3.ZERO)) {
