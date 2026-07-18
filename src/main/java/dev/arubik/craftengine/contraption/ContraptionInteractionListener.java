@@ -218,13 +218,14 @@ public final class ContraptionInteractionListener implements Listener {
         org.bukkit.Bukkit.getLogger()
                 .info("[Contraption] interact raycast HIT local=" + hit.local() + " right=" + right);
 
-        // Captured blocks still can't be BROKEN directly (no client mining animation/packet
-        // exists against a virtual position), but vanilla's non-destructive left-click hook
-        // (BlockStateBase#attack — e.g. note-block-style "hit to toggle") IS a meaningful,
-        // reachable interaction here, so it gets forwarded like the right-click hooks below.
+        // Left-click now does BOTH: vanilla's non-destructive attack hook (BlockStateBase#attack —
+        // note-block-style "hit to toggle") is forwarded, AND a hold-to-mine dig is armed against the
+        // cell (ContraptionMining), which drives progressive server-side breaking with drops/tool/
+        // durability/animation — the client can't run its own mining loop against a packet-only cell.
         event.setCancelled(true);
         if (left) {
-            forwardAttack(player, hit);
+            forwardAttack(player, hit); // non-destructive attack hook (note-block toggle, etc.)
+            ContraptionMining.armDig(player, hit); // and drive progressive mining — see ContraptionMining
             return;
         }
 

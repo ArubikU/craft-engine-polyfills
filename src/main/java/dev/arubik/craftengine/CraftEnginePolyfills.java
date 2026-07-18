@@ -129,6 +129,10 @@ public final class CraftEnginePolyfills extends JavaPlugin {
         // contraption's real ContraptionLevel blocks; left-click is an explicit no-op.
         getServer().getPluginManager().registerEvents(new dev.arubik.craftengine.contraption.ContraptionInteractionListener(),
                 this);
+        // Block breaking INSIDE contraptions — the destructive twin of the placement path above. Holds
+        // left-click on a captured cell to mine it out at the correct tool speed, with drops, durability,
+        // crumbling particles and dig/break sounds (see ContraptionMining).
+        dev.arubik.craftengine.contraption.ContraptionMining.register(this);
         // Creative Phys Wand (roadmap item #9 — cml:creative_phys_wand): creative-only tool to GRAB a
         // contraption and drag it by the crosshair (reusing ContraptionEntity#teleport) and live-resize
         // it (ContraptionEntity#setScale). Owns a 1-tick drag task started via #start below (self-cancels
