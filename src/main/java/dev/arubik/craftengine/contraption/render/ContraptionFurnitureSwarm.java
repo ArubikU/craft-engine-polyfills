@@ -1267,11 +1267,21 @@ public final class ContraptionFurnitureSwarm {
          * pre-scale metadata ({@code w * 1.0f == w} exactly — no rounding).
          */
         private double scale = 1.0;
+        /**
+         * The box's CURRENT effective (unscaled) width/height — inflated to the axis-aligned bounding box of the
+         * base box once the contraption tips, since an {@code INTERACTION} box cannot rotate (2026-07-18 — user:
+         * "el interaction entity de los furnitures no se rota ... reescalo para simular la rotación"). Start at
+         * the base dims so a never-tilted piece is byte-for-byte the old behaviour and never resends metadata.
+         */
+        private float curWidth;
+        private float curHeight;
 
         InteractionHitboxCell(float width, float height, boolean interactive) {
             this.width = width;
             this.height = height;
             this.interactive = interactive;
+            this.curWidth = width;
+            this.curHeight = height;
         }
 
         void updateLocalOffset(Vec3 localOffset) {
@@ -1281,8 +1291,8 @@ public final class ContraptionFurnitureSwarm {
         private List<Object> metadata() {
             List<Object> values = new ArrayList<>();
             float s = (float) scale;
-            InteractionData.Width.addEntityData(width * s, values);
-            InteractionData.Height.addEntityData(height * s, values);
+            InteractionData.Width.addEntityData(curWidth * s, values);
+            InteractionData.Height.addEntityData(curHeight * s, values);
             InteractionData.Response.addEntityData(interactive, values);
             return values;
         }
@@ -1302,10 +1312,36 @@ public final class ContraptionFurnitureSwarm {
          */
         void render(List<Player> viewers, Vec3 bearingWorldPos, double yawRadians, double pitchRadians,
                 double rollRadians, double scale) {
-            Vec3 real = ContraptionMath.renderPosition(localOffset, bearingWorldPos, yawRadians, pitchRadians,
+            // Centre-anchor the box on the cell CENTRE, not its bottom face (an INTERACTION box grows UP from
+            // its position, so a tilted piece's box would hang off its rotated bottom otherwise — same fix the
+            // block hitboxes got). Project the centre (localOffset is the bottom-centre, so + height/2) and drop
+            // the spawn point by half the box's world height. At pitch == 0 && roll == 0 this cancels to the old
+            // bottom position exactly.
+            double halfBoxHeight = height * 0.5 * scale;
+            Vec3 centreLocal = new Vec3(localOffset.x, localOffset.y + height / 2.0, localOffset.z);
+            Vec3 centre = ContraptionMath.renderPosition(centreLocal, bearingWorldPos, yawRadians, pitchRadians,
                     rollRadians, scale);
-            boolean metaChanged = scale != this.scale;
+            Vec3 real = new Vec3(centre.x, centre.y - halfBoxHeight, centre.z);
+
+            // Rescale to simulate rotation: an INTERACTION box can't tilt, so once the contraption pitches/rolls,
+            // inflate the box to the axis-aligned bounding box of the base box under the live rotation — the box
+            // then still COVERS the tilted furniture (the standable/clickable surface follows the visual). The
+            // rotation is extracted from renderPosition itself (difference of a rotated axis and the origin, so
+            // it matches the exact yaw∘pitch∘roll the visual uses); scale is applied in metadata, so this uses
+            // scale 1. At pitch == 0 && roll == 0 it reduces to the base width/height and nothing resends.
+            Vec3 origin = ContraptionMath.renderPosition(Vec3.ZERO, bearingWorldPos, yawRadians, pitchRadians, rollRadians, 1.0);
+            Vec3 ex = ContraptionMath.renderPosition(new Vec3(width / 2.0, 0, 0), bearingWorldPos, yawRadians, pitchRadians, rollRadians, 1.0).subtract(origin);
+            Vec3 ey = ContraptionMath.renderPosition(new Vec3(0, height / 2.0, 0), bearingWorldPos, yawRadians, pitchRadians, rollRadians, 1.0).subtract(origin);
+            Vec3 ez = ContraptionMath.renderPosition(new Vec3(0, 0, width / 2.0), bearingWorldPos, yawRadians, pitchRadians, rollRadians, 1.0).subtract(origin);
+            float newWidth = (float) (2.0 * Math.max(
+                    Math.abs(ex.x) + Math.abs(ey.x) + Math.abs(ez.x),
+                    Math.abs(ex.z) + Math.abs(ey.z) + Math.abs(ez.z)));
+            float newHeight = (float) (2.0 * (Math.abs(ex.y) + Math.abs(ey.y) + Math.abs(ez.y)));
+
+            boolean metaChanged = scale != this.scale || newWidth != curWidth || newHeight != curHeight;
             this.scale = scale;
+            this.curWidth = newWidth;
+            this.curHeight = newHeight;
             Set<UUID> current = new HashSet<>();
             for (Player p : viewers) {
                 UUID id = uuidOf(p);
