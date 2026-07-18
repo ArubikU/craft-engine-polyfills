@@ -679,6 +679,26 @@ public final class AspContraptionLevel extends SlimeLevelInstance implements Con
         }
     }
 
+    @Override
+    public void tickMachines() {
+        for (BlockPos local : new HashSet<>(localPositions)) {
+            try {
+                net.momirealms.craftengine.core.block.entity.BlockEntity be = BukkitBlockEntityTypes.getIfLoaded(this, local);
+                if (be == null || !(be.controller instanceof AbstractMachineBlockEntity machine)) {
+                    continue;
+                }
+                net.minecraft.world.level.block.state.BlockState nms = getBlockState(local);
+                net.momirealms.craftengine.core.block.ImmutableBlockState ce =
+                        net.momirealms.craftengine.bukkit.util.BlockStateUtils.getOptionalCustomBlockState(nms).orElse(null);
+                if (ce == null) {
+                    continue;
+                }
+                machine.tick(this, local, ce);
+            } catch (Throwable ignored) {
+            }
+        }
+    }
+
     private void releaseChunkTickets() {
         try {
             JavaPlugin plugin = JavaPlugin.getPlugin(CraftEnginePolyfills.class);

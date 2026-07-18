@@ -77,6 +77,13 @@ public final class ContraptionEngine {
             ServerLevel level = bukkitWorld != null ? ((CraftWorld) bukkitWorld).getHandle() : null;
 
             ContraptionState state = entity.state();
+            // Drive the captured MACHINES one tick (2026-07-18 — "toca re registrarlos"). CraftEngine never
+            // ticks the hidden contraption world, so a captured copper fan is frozen unless we tick it here with
+            // the ContraptionLevel as its level — which is what lets its particles reach the real world and lets
+            // a fan push its phys body. No-op for a contraption with no machines.
+            if (state.level() != null) {
+                state.level().tickMachines();
+            }
             Vec3 posBefore = new Vec3(state.x(), state.y(), state.z());
             double yawBefore = state.yawRadians();
 

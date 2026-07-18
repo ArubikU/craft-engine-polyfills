@@ -90,6 +90,17 @@ public interface ContraptionLevel extends ContraptionBoundary {
 
     void putCeControllerData(BlockPos local, byte[] bytes);
 
+    /**
+     * Drives every captured MACHINE block-entity's own {@code tick} ONE game tick, with THIS level as its
+     * {@code level} (2026-07-18 — "desregistramos las máquinas ... toca re registrarlos"). Capture unregisters
+     * the ORIGINAL real-world machine to kill its duplicate emitter, and CraftEngine never ticks the hidden
+     * contraption world, so a captured copper fan otherwise sits frozen — no gas processing, no airflow, no
+     * thrust. Ticking it here with the ContraptionLevel as its level is exactly what makes
+     * {@code level instanceof ContraptionLevel} true inside the machine, so its particles route to the real
+     * world and (for a fan) it can push the phys body. Called once per game tick per contraption by the engine.
+     */
+    void tickMachines();
+
     byte[] getCeControllerData(BlockPos local);
 
     Set<BlockPos> localPositions();

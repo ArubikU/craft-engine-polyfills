@@ -818,6 +818,24 @@ implements ContraptionBoundary, ContraptionLevel {
         }
     }
 
+    @Override
+    public void tickMachines() {
+        for (BlockPos local : new HashSet<BlockPos>(this.localPositions)) {
+            try {
+                BlockEntityController blockEntityController;
+                net.momirealms.craftengine.core.block.entity.BlockEntity be = BukkitBlockEntityTypes.getIfLoaded((Level)this, (BlockPos)local);
+                if (be == null || !((blockEntityController = be.controller) instanceof AbstractMachineBlockEntity)) continue;
+                AbstractMachineBlockEntity machine = (AbstractMachineBlockEntity)blockEntityController;
+                net.minecraft.world.level.block.state.BlockState nms = this.getBlockState(local);
+                net.momirealms.craftengine.core.block.ImmutableBlockState ce =
+                        net.momirealms.craftengine.bukkit.util.BlockStateUtils.getOptionalCustomBlockState(nms).orElse(null);
+                if (ce == null) continue;
+                machine.tick((Level) this, local, ce);
+            }
+            catch (Throwable throwable) {}
+        }
+    }
+
     private void releaseChunkTickets() {
         try {
             JavaPlugin plugin = JavaPlugin.getPlugin(CraftEnginePolyfills.class);
