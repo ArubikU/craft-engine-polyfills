@@ -80,6 +80,15 @@ public class WeightBlockBehavior extends BukkitBlockBehavior {
                 if (behavior != null) {
                     return behavior.weight(); // explicit ballast block — its configured weight wins
                 }
+                // Balanced weights for the functional custom blocks (2026-07-18 — "balancea bien todas las
+                // máquinas y redstone para que no pesen mucho ... a las pipes ponles 0.25"). Detected by
+                // behavior so every current AND future machine/pipe/redstone block is covered, not a hardcoded
+                // id list. Before this they fell to the vanilla stone-family weight (15), which made a fan+tank
+                // thruster far too heavy to fly.
+                Double functional = functionalWeight(ce);
+                if (functional != null) {
+                    return functional;
+                }
             }
             // Vanilla (or any non-weight custom) block: use the material weight table below (2026-07-04
             // — "agrega una weight table a los bloques vanilla") so a contraption's mass/COM reflects
@@ -106,6 +115,40 @@ public class WeightBlockBehavior extends BukkitBlockBehavior {
     /** Loads {@code mass.yml}. Called once on enable. */
     public static void loadTable() {
         TABLE.load();
+    }
+
+    /** Balanced weight for a functional custom block: pipes barely weigh anything, machines/tanks are light, redstone control is light. */
+    public static final double PIPE_WEIGHT = 0.25;
+    public static final double MACHINE_WEIGHT = 4.0;
+    public static final double REDSTONE_WEIGHT = 1.0;
+
+    /**
+     * A balanced weight for a functional custom block by its BEHAVIOR, or {@code null} if it is not one (fall
+     * through to the material table). Pipes/carriers are near-weightless (they're thin conduits); machines,
+     * tanks and pumps are light so a fan-driven contraption can actually move; redstone control blocks are
+     * light too. Behavior-based so a new machine/pipe added later needs no change here.
+     */
+    private static Double functionalWeight(ImmutableBlockState ce) {
+        var b = ce.behavior();
+        if (b.getFirst(dev.arubik.craftengine.gas.behavior.GasPipeBehavior.class) != null
+                || b.getFirst(dev.arubik.craftengine.fluid.behavior.PipeBehavior.class) != null) {
+            return PIPE_WEIGHT;
+        }
+        if (b.getFirst(dev.arubik.craftengine.machine.block.MachineBlockBehavior.class) != null
+                || b.getFirst(dev.arubik.craftengine.gas.behavior.GasTankBehavior.class) != null
+                || b.getFirst(dev.arubik.craftengine.gas.behavior.CreativeGasTankBehavior.class) != null
+                || b.getFirst(dev.arubik.craftengine.gas.behavior.GasPumpBehavior.class) != null
+                || b.getFirst(dev.arubik.craftengine.fluid.behavior.PumpBehavior.class) != null
+                || b.getFirst(dev.arubik.craftengine.fluid.behavior.TankBlockBehavior.class) != null
+                || b.getFirst(dev.arubik.craftengine.fluid.behavior.FluidBlockTankBehavior.class) != null
+                || b.getFirst(dev.arubik.craftengine.block.behavior.FanBlockBehavior.class) != null) {
+            return MACHINE_WEIGHT;
+        }
+        if (b.getFirst(dev.arubik.craftengine.block.behavior.RedstoneController.class) != null
+                || b.getFirst(dev.arubik.craftengine.block.behavior.RedstoneOperator.class) != null) {
+            return REDSTONE_WEIGHT;
+        }
+        return null;
     }
 
     private static double vanillaWeight(BlockState state) {
@@ -151,6 +194,17 @@ public class WeightBlockBehavior extends BukkitBlockBehavior {
                 || n.equals("EMERALD_BLOCK") || n.contains("COPPER_BLOCK") || n.contains("ANVIL")
                 || n.contains("LODESTONE") || n.contains("RESPAWN_ANCHOR")) {
             return 30.0;
+        }
+        // Redstone / mechanism components — light control gear, NOT ballast (2026-07-18 — "redstone para que
+        // no pese mucho"). Checked BEFORE the stone family because "REDSTONE_WIRE"/"REDSTONE_TORCH" contain
+        // "STONE" and would otherwise be classed as heavy masonry. REDSTONE_BLOCK is deliberately excluded — a
+        // solid block of redstone IS ballast, and falls through to the metal/stone buckets.
+        if ((n.contains("REDSTONE") && !n.equals("REDSTONE_BLOCK")) || n.contains("REPEATER")
+                || n.contains("COMPARATOR") || n.contains("OBSERVER") || n.contains("PISTON")
+                || n.contains("DISPENSER") || n.contains("DROPPER") || n.contains("HOPPER")
+                || n.contains("LEVER") || n.contains("TRIPWIRE") || n.equals("TARGET") || n.equals("NOTE_BLOCK")
+                || n.contains("RAIL") || n.contains("PRESSURE_PLATE")) {
+            return 2.0;
         }
         // Stone / ore / masonry family — the default "heavy building material".
         if (n.contains("STONE") || n.contains("COBBLE") || n.contains("DEEPSLATE") || n.contains("BRICK")
