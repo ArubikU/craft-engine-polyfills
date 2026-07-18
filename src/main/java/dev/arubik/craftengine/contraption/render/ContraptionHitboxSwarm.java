@@ -666,6 +666,23 @@ public final class ContraptionHitboxSwarm {
      */
     public void render(List<Player> viewers, Vec3 bearingWorldPos, double yawRadians, double pitchRadians,
             double rollRadians, double scale, boolean moved) {
+        // Per-cell LOD for the INTERACTION entities too (2026-07-17 — user: "aplica LOD al interaction entity
+        // tho"). Like the shulker colliders, an interaction hitbox is only worth sending to a viewer who is
+        // close enough to actually click it; a big contraption otherwise streams one INTERACTION entity per
+        // cell to every viewer regardless of distance. Resolve viewer positions ONCE, then hand each slot only
+        // the viewers within reach of THAT cell — the slot spawns for those and despawns for anyone it was
+        // showing who has since moved out of range.
+        List<Player> resolvedViewers = new ArrayList<>(viewers.size());
+        List<Vec3> resolvedPositions = new ArrayList<>(viewers.size());
+        for (Player p : viewers) {
+            Object pp = p.platformPlayer();
+            if (pp instanceof org.bukkit.entity.Player bukkitPlayer) {
+                org.bukkit.Location loc = bukkitPlayer.getLocation();
+                resolvedViewers.add(p);
+                resolvedPositions.add(new Vec3(loc.getX(), loc.getY(), loc.getZ()));
+            }
+        }
+        double interactionCullSq = INTERACTION_LOD_RADIUS * INTERACTION_LOD_RADIUS;
         for (Slot slot : allSlots()) {
             // Center-anchor the interaction box on the cell CENTER, not its bottom face (2026-07-17 — user:
             // "las interaction entity sufren lo que sufrían los shulkers antes... junto a una cara en vez de
@@ -681,10 +698,23 @@ public final class ContraptionHitboxSwarm {
             Vec3 center = dev.arubik.craftengine.contraption.ContraptionMath.renderPosition(
                     new Vec3(slot.lx, slot.ly + slot.height / 2.0, slot.lz), bearingWorldPos, yawRadians,
                     pitchRadians, rollRadians, scale);
-            slot.render(viewers, center.x, center.y - halfBoxHeight, center.z, scale, moved);
+            List<Player> nearViewers = new ArrayList<>();
+            for (int i = 0; i < resolvedViewers.size(); i++) {
+                if (resolvedPositions.get(i).distanceToSqr(center) <= interactionCullSq) {
+                    nearViewers.add(resolvedViewers.get(i));
+                }
+            }
+            slot.render(nearViewers, viewers, center.x, center.y - halfBoxHeight, center.z, scale, moved);
         }
         shulkerColliders.render(viewers, bearingWorldPos, yawRadians, pitchRadians, rollRadians, scale, moved);
     }
+
+    /**
+     * Reach (blocks) within which a viewer is sent a cell's INTERACTION entity — the per-cell LOD radius for
+     * the click hitboxes (see {@link #render}). A hair beyond a player's ~6-block interaction range so the
+     * hitbox is already there when they come into reach, not popping in at the last moment.
+     */
+    private static final double INTERACTION_LOD_RADIUS = 10.0;
 
     public void despawnAll(List<Player> viewers) {
         for (Slot slot : autoSlots.values()) {
@@ -1972,7 +2002,15 @@ public final class ContraptionHitboxSwarm {
             player.sendPacket(despawnPacket, false);
         }
 
-        void render(List<Player> viewers, double x, double y, double z, double scale, boolean moved) {
+        /**
+         * @param nearViewers viewers within this cell's INTERACTION LOD range — spawned/updated (see
+         *        {@link #render}'s per-cell LOD)
+         * @param allViewers every online viewer — used only to DESPAWN this entity for anyone it was being
+         *        shown to who has since moved out of range (LOD despawn); an offline viewer isn't in the list,
+         *        so {@code retainAll} simply forgets them with no packet
+         */
+        void render(List<Player> nearViewers, List<Player> allViewers, double x, double y, double z, double scale,
+                boolean moved) {
             if (scale != renderScale) {
                 // Contraption resized (e.g. the phys wand): resize this box and resend its sized metadata to
                 // everyone already tracking it (newly-spawned viewers below already get the fresh size).
@@ -1981,7 +2019,7 @@ public final class ContraptionHitboxSwarm {
             }
             boolean resendScale = scaleDirty;
             Set<UUID> current = new HashSet<>();
-            for (Player p : viewers) {
+            for (Player p : nearViewers) {
                 UUID id = uuidOf(p);
                 if (id == null) {
                     continue;
@@ -2000,6 +2038,17 @@ public final class ContraptionHitboxSwarm {
             }
             if (resendScale) {
                 scaleDirty = false;
+            }
+            // LOD despawn: anyone we were showing this hitbox to who is no longer near (still online, just out
+            // of range) must be sent an explicit remove — retainAll alone only forgets them, leaving a stale
+            // entity on their client.
+            if (shownTo.size() > current.size()) {
+                for (Player p : allViewers) {
+                    UUID id = uuidOf(p);
+                    if (id != null && shownTo.contains(id) && !current.contains(id)) {
+                        despawn(p);
+                    }
+                }
             }
             shownTo.retainAll(current);
         }

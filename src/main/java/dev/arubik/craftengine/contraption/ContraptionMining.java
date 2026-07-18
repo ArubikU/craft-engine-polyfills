@@ -19,6 +19,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
@@ -69,12 +70,11 @@ public final class ContraptionMining implements Listener {
     }
 
     /**
-     * Milliseconds without a swing after which a session is considered released and cancelled (progress lost,
-     * as in vanilla). Generous because a held left-click's swing cadence depends on the tool's attack speed —
-     * a slow pickaxe re-swings only every ~16 ticks against a non-real target — and looking away already
-     * cancels instantly (the per-tick aim check), which is the common "stop mining" gesture.
+     * Consecutive ticks the player may look OFF the cell before the dig is cancelled and its progress lost.
+     * A small grace absorbs raycast jitter (aim wobbling across a cell edge, a moving contraption) without
+     * dropping the dig, while a genuine look-away still cancels within a fifth of a second.
      */
-    private static final long RELEASE_MS = 1500L;
+    private static final int AIM_GRACE_TICKS = 4;
 
     /** Flags for removing a mined cell: update clients, keep the known shape, and suppress vanilla drops (we drop ourselves). */
     private static final int REMOVE_FLAGS = Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE | Block.UPDATE_SUPPRESS_DROPS;
@@ -86,6 +86,7 @@ public final class ContraptionMining implements Listener {
         double progress;
         long lastSwingMs;
         int tickCounter;
+        int missTicks;
 
         Session(UUID contraptionId, BlockPos local, long nowMs) {
             this.contraptionId = contraptionId;
@@ -160,19 +161,14 @@ public final class ContraptionMining implements Listener {
         }
     }
 
-    /** Advances every live dig one tick: cancel on release/look-away, crumble the cell, break it when done. */
+    /** Advances every live dig one tick: cancel on look-away, crumble the cell, break it when done. */
     private static void tickAll() {
         if (SESSIONS.isEmpty()) {
             return;
         }
-        long now = System.currentTimeMillis();
         for (Iterator<Map.Entry<UUID, Session>> it = SESSIONS.entrySet().iterator(); it.hasNext();) {
             Map.Entry<UUID, Session> entry = it.next();
             Session s = entry.getValue();
-            if (now - s.lastSwingMs > RELEASE_MS) {
-                it.remove(); // released — progress is lost, exactly like letting go mid-dig in vanilla
-                continue;
-            }
             org.bukkit.entity.Player bukkit = Bukkit.getPlayer(entry.getKey());
             ContraptionEntity entity = ContraptionManager.get(s.contraptionId);
             if (bukkit == null || entity == null || entity.state().level() == null) {
@@ -180,12 +176,21 @@ public final class ContraptionMining implements Listener {
                 continue;
             }
             ServerPlayer player = ((CraftPlayer) bukkit).getHandle();
-            // Must still be aiming at the SAME cell — looking away cancels the dig immediately.
+            // Continuation is AIM-driven, not swing-cadence-driven (2026-07-17 — "los que no son insta break
+            // nunca terminan de romperse"): a held left-click against a packet-only cell does NOT reliably send
+            // continuous swings (the client attack-cooldown-gates re-swings on a fake target, and a wrong-tool
+            // dig takes several seconds), so keying the dig's life on recent swings killed it long before it
+            // finished. Instead the dig lives as long as the player keeps AIMING at the cell — the first swing
+            // arms it (see armDig), then aim carries it to completion. Looking away for a few ticks cancels it.
             Hit hit = ContraptionInteractionListener.raycast(player);
-            if (hit == null || !hit.state().id().equals(s.contraptionId) || !hit.local().equals(s.local)) {
-                it.remove();
-                continue;
+            boolean onCell = hit != null && hit.state().id().equals(s.contraptionId) && hit.local().equals(s.local);
+            if (!onCell) {
+                if (++s.missTicks > AIM_GRACE_TICKS) {
+                    it.remove(); // looked away — progress is lost, as in vanilla
+                }
+                continue; // a transient raycast miss (aim jitter) is tolerated; don't advance this tick
             }
+            s.missTicks = 0;
             ContraptionLevel level = entity.state().level();
             BlockState state = level.getBlockState(s.local);
             if (state.isAir()) {
@@ -205,6 +210,10 @@ public final class ContraptionMining implements Listener {
             double delta = hardness <= 0.0f ? 1.0 : digSpeed / hardness / (correctTool ? 30.0 : 100.0);
             s.progress += delta;
 
+            // Animate the arm while mining. The first-person swing is client-predicted, but broadcasting the
+            // swing keeps the player visibly working to everyone tracking them; the internal swing-timer gates
+            // the cadence so calling it every tick just sustains a continuous mining swing.
+            player.swing(InteractionHand.MAIN_HAND, true);
             // Crumble animation: a few of the block's own break particles each tick, growing with progress,
             // plus the block's hit sound roughly every quarter-second so the dig is audible while it works.
             emitCrumbs(player, level, s.local, state, s.progress);
