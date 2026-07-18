@@ -8,6 +8,7 @@ import org.joml.Vector3d;
 
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.Vec3;
 
 import dev.arubik.craftengine.contraption.ContraptionManager;
 import dev.arubik.craftengine.contraption.ContraptionState;
@@ -123,6 +124,13 @@ public final class ContraptionImpactDetonator {
             return;
         }
         float power = Math.min(MAX_POWER, BASE_POWER + POWER_PER_EXTRA_TNT * (tnt - 1));
+        // Leave the blast-resistant cells behind as real falling debris BEFORE tearing the structure down
+        // (2026-07-17 — "los no rompibles como obsi se quedan flotando"). Breakable cells are simply consumed
+        // by the blast below, exactly as a real explosion would eat them; obsidian and its kind survive and
+        // tumble out. Spawned before destroy() so the cells are still readable, and before explode() so the
+        // debris entities are already out of the block grid the blast carves.
+        Vec3 blastCenter = new Vec3(point.x, point.y, point.z);
+        ContraptionExplosives.spawnBlastSurvivors(state, realLevel, blastCenter, power);
         // Destroy the contraption BEFORE the blast, not after: the explosion is what removes its
         // cells from existence, and tearing down first means the crater is carved into a world the
         // structure has already left rather than one it is still standing in.

@@ -3,7 +3,11 @@ package dev.arubik.craftengine.contraption.explosive;
 import org.joml.Vector3d;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.item.FallingBlockEntity;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.TntBlock;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 
 import dev.arubik.craftengine.contraption.ContraptionState;
@@ -62,5 +66,66 @@ public final class ContraptionExplosives {
             return new Vec3(v.x, v.y, v.z);
         }
         return new Vec3(state.lastDeltaX(), state.lastDeltaY(), state.lastDeltaZ());
+    }
+
+    /**
+     * Blast resistance a cell must clear, per point of blast power, to SURVIVE the detonation. At the
+     * detonator's {@code BASE_POWER} of 4 this cutoff is 200 and at {@code MAX_POWER} of 10 it is 500 — so
+     * obsidian, netherite, ancient debris, reinforced deepslate (all {@code 1200}) always ride it out, an
+     * ender chest ({@code 600}) survives a small payload but not a big one, and stone ({@code 6}) or wood
+     * never do. Bigger payload, more energy, fewer survivors — matching "explote con energía similar a la
+     * cantidad de TNT" (2026-07-17).
+     */
+    public static final double SURVIVE_RESISTANCE_PER_POWER = 50.0;
+
+    /** Outward kick (blocks/tick) added to each surviving cell, away from the blast, so debris scatters. */
+    public static final double DEBRIS_SCATTER = 0.3;
+
+    /**
+     * Turns a detonating contraption's BLAST-RESISTANT cells into real falling-block debris (2026-07-17 —
+     * "los no rompibles como obsi ... se quedan flotando"). Everything else — air, the TNT itself, and every
+     * cell too weak to survive {@code power} — is left for the blast to consume. Each survivor is spawned as a
+     * vanilla {@link FallingBlockEntity} at its real-world position, inheriting the contraption's velocity at
+     * that point (so a survivor flung off a fast/spinning body keeps flying) plus a small outward kick from
+     * the blast centre, then tumbles and lands as a real block. Only spawned where the real cell is free —
+     * a survivor whose landing spot is already solid world is dropped rather than overwriting it.
+     *
+     * @return how many survivors were spawned
+     */
+    public static int spawnBlastSurvivors(ContraptionState state, ServerLevel realLevel, Vec3 blastCenter,
+            float power) {
+        ContraptionLevel level = state == null ? null : state.level();
+        if (level == null || realLevel == null) {
+            return 0;
+        }
+        double cutoff = power * SURVIVE_RESISTANCE_PER_POWER;
+        // Placing then converting each survivor uses vanilla's own quiet-ish fall() path; we only ever touch
+        // cells the real world has left empty (guarded below), so no neighbour cascade into standing terrain.
+        int quietFlags = Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE | Block.UPDATE_SUPPRESS_DROPS;
+        int spawned = 0;
+        for (BlockPos local : level.localPositions()) {
+            BlockState bs = level.getBlockState(local);
+            if (bs.isAir() || bs.getBlock() instanceof TntBlock) {
+                continue; // air, or the TNT that just went up — nothing to leave behind
+            }
+            if (bs.getBlock().getExplosionResistance() < cutoff) {
+                continue; // breakable — the blast eats it, exactly like a real explosion
+            }
+            Vec3 world = level.realWorldPositionOf(local);
+            BlockPos worldPos = BlockPos.containing(world.x, world.y, world.z);
+            BlockState existing = realLevel.getBlockState(worldPos);
+            if (!existing.isAir() && !existing.canBeReplaced()) {
+                continue; // its landing spot is real solid world — don't overwrite it
+            }
+            realLevel.setBlock(worldPos, bs, quietFlags);
+            FallingBlockEntity debris = FallingBlockEntity.fall(realLevel, worldPos, bs);
+            Vec3 inherited = velocityAt(state, world);
+            Vec3 outward = world.subtract(blastCenter);
+            double d = outward.length();
+            Vec3 scatter = d > 1.0E-6 ? outward.scale(DEBRIS_SCATTER / d) : Vec3.ZERO;
+            debris.setDeltaMovement(inherited.add(scatter));
+            spawned++;
+        }
+        return spawned;
     }
 }
