@@ -412,19 +412,8 @@ public final class PhysicsWorld {
      * contraption. Runs on the physics thread on the async path — the caller resolves the id/point/force on the
      * game thread, this only touches {@link PhysBody} state.
      */
-    private static volatile long thrustDbgLast = 0L;
-
     public static void applyThrust(UUID contraptionId, Vector3d worldPoint, Vector3d worldImpulse) {
         Entry entry = ENTRIES.get(contraptionId);
-        long now = System.currentTimeMillis();
-        if (dev.arubik.craftengine.machine.block.entity.FanMachineBlockEntity.DBG && now - thrustDbgLast > 1500L) {
-            thrustDbgLast = now;
-            PhysBody pb = entry == null ? null : entry.physBody;
-            org.bukkit.Bukkit.getLogger().info("[ThrustDBG] entryFound=" + (entry != null) + " impulse=" + worldImpulse
-                    + (pb == null ? "" : " kinematic=" + pb.kinematic + " static=" + pb.body.isStatic()
-                            + " asleep=" + pb.isAsleep() + " emptyShape=" + pb.shape.isEmpty()
-                            + " invMass=" + pb.body.inverseMass() + " vel=" + pb.body.linearVelocity));
-        }
         if (entry == null || entry.physBody == null) {
             return;
         }
