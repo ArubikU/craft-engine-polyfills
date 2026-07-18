@@ -234,7 +234,32 @@ public final class ContraptionHitboxSwarm {
         // the same way: it's the thing carryRiders/isStandingOnFootprint/overlapsAnySolid actually
         // key their manual collision math off of, needed unconditionally regardless of proximity,
         // and it's cheap (no VoxelShape query, no entity, just a plain Java object).
-        if (!anyPlayerNearby(viewers, bearingWorldPos, SHULKER_ACTIVATION_RADIUS)) {
+        // Gate against the whole STRUCTURE, not just its center (2026-07-17 — user: a shulker hitbox must be
+        // able to generate however far a cell sits from the contraption's center; LOD, not a hard radius, is
+        // what bounds the cost). Measuring only the distance to the bearing point meant a large contraption's
+        // far cells were excluded outright: a player standing on a cell 30 blocks from the center — right on
+        // top of the block — fell outside the 16-block gate and got no collider at all. Expand the activation
+        // radius by the structure's own circumscribed radius (the farthest cell's real-world distance from the
+        // bearing — one realWorldPositionOf sample, which already folds in rotation AND scale, since a rigid
+        // rotation+uniform-scale keeps the farthest LOCAL cell farthest in world), so the gate covers every
+        // cell no matter how far out. The per-CELL LOD below (see ContraptionShulkerColliderSwarm, FAR_EXIT)
+        // still culls precisely by each viewer's distance to each cell, so a far cell only actually renders a
+        // collider when a player is genuinely next to it — unlimited reach, bounded cost.
+        double structureRadius = 0.0;
+        BlockPos farthestOffset = null;
+        long maxLenSq = -1L;
+        for (BlockPos offset : allOffsets) {
+            long lenSq = (long) offset.getX() * offset.getX() + (long) offset.getY() * offset.getY()
+                    + (long) offset.getZ() * offset.getZ();
+            if (lenSq > maxLenSq) {
+                maxLenSq = lenSq;
+                farthestOffset = offset;
+            }
+        }
+        if (farthestOffset != null) {
+            structureRadius = level.realWorldPositionOf(farthestOffset).distanceTo(bearingWorldPos);
+        }
+        if (!anyPlayerNearby(viewers, bearingWorldPos, SHULKER_ACTIVATION_RADIUS + structureRadius)) {
             shulkerColliders.prune(java.util.Collections.emptySet(), viewers);
             return;
         }
