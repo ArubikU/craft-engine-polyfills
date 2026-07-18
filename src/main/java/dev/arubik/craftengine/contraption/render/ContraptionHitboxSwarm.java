@@ -644,9 +644,21 @@ public final class ContraptionHitboxSwarm {
     public void render(List<Player> viewers, Vec3 bearingWorldPos, double yawRadians, double pitchRadians,
             double rollRadians, double scale, boolean moved) {
         for (Slot slot : allSlots()) {
-            Vec3 pos = dev.arubik.craftengine.contraption.ContraptionMath.renderPosition(
-                    new Vec3(slot.lx, slot.ly, slot.lz), bearingWorldPos, yawRadians, pitchRadians, rollRadians, scale);
-            slot.render(viewers, pos.x, pos.y, pos.z, scale, moved);
+            // Center-anchor the interaction box on the cell CENTER, not its bottom face (2026-07-17 — user:
+            // "las interaction entity sufren lo que sufrían los shulkers antes... junto a una cara en vez de
+            // directo al centro del cubo"). A vanilla INTERACTION box is always axis-aligned and grows UP from
+            // its entity position, so anchoring at the cell's bottom-center made a TILTED cell's box hang off
+            // the rotated bottom face instead of hugging the cube — exactly the pre-fix shulker symptom. Project
+            // the cell CENTER (ly + height/2) through the transform, then drop the spawn point by half the box's
+            // world height so the box ends up centered on the rotated cube — the best a non-oriented box can do,
+            // matching the render's own center. At pitch == 0 && roll == 0 the +height/2 local projects to
+            // +height/2*scale in Y and the -halfBoxHeight cancels it exactly, so a flat or yaw-only contraption
+            // is byte-for-byte unchanged; only a tilted one moves, which is the whole point.
+            double halfBoxHeight = slot.height * 0.5 * scale;
+            Vec3 center = dev.arubik.craftengine.contraption.ContraptionMath.renderPosition(
+                    new Vec3(slot.lx, slot.ly + slot.height / 2.0, slot.lz), bearingWorldPos, yawRadians,
+                    pitchRadians, rollRadians, scale);
+            slot.render(viewers, center.x, center.y - halfBoxHeight, center.z, scale, moved);
         }
         shulkerColliders.render(viewers, bearingWorldPos, yawRadians, pitchRadians, rollRadians, scale, moved);
     }
