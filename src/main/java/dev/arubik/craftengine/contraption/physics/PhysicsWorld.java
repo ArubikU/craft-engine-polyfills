@@ -404,6 +404,42 @@ public final class PhysicsWorld {
         }
     }
 
+    /**
+     * Applies a single external impulse to a PhysContraption at a WORLD point — a THRUSTER (2026-07-18 — a
+     * copper fan mounted in a phys contraption reacts against the gas it expels to propel the structure). The
+     * impulse is applied at {@code worldPoint} so an off-centre thruster also produces torque (the same lever-arm
+     * math the explosion uses), which is what lets a ring of fans steer as well as push. No-op for a non-phys
+     * contraption. Runs on the physics thread on the async path — the caller resolves the id/point/force on the
+     * game thread, this only touches {@link PhysBody} state.
+     */
+    public static void applyThrust(UUID contraptionId, Vector3d worldPoint, Vector3d worldImpulse) {
+        Entry entry = ENTRIES.get(contraptionId);
+        if (entry == null || entry.physBody == null) {
+            return;
+        }
+        PhysBody body = entry.physBody;
+        Vector3d point = new Vector3d(worldPoint);
+        Vector3d impulse = new Vector3d(worldImpulse);
+        if (ASYNC) {
+            enqueue(() -> thrustBody(body, point, impulse));
+        } else {
+            thrustBody(body, point, impulse);
+        }
+    }
+
+    /** The thruster impulse — linear plus the torque from its lever arm. Touches only {@link PhysBody}, so it is physics-thread safe. */
+    private static void thrustBody(PhysBody physBody, Vector3d worldPoint, Vector3d impulse) {
+        if (physBody.kinematic || physBody.shape.isEmpty() || physBody.body.isStatic()) {
+            return;
+        }
+        RigidBody body = physBody.body;
+        body.linearVelocity.fma(body.inverseMass(), impulse);
+        Vector3d r = new Vector3d(worldPoint).sub(body.position);
+        Vector3d torque = new Vector3d(r).cross(impulse);
+        body.angularVelocity.add(new org.joml.Matrix3d(body.inverseInertiaWorld()).transform(torque));
+        physBody.wakeUp();
+    }
+
     /** Vanilla's blast radius is roughly twice the power, which is what {@code Explosion} itself uses. */
     private static final double EXPLOSION_RADIUS_PER_POWER = 2.0;
 

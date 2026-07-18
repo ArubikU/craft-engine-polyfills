@@ -305,6 +305,15 @@ public class FanMachineBlockEntity extends AbstractMachineBlockEntity {
         double pushStr = Math.max(MIN_PUSH, gc.pushStrength() * speedFactor());
         org.bukkit.Particle particle = gc.particle();
 
+        // Thruster (2026-07-18 — user: "si es un phys contraption, aplica fuerza al phys para hacer estructuras
+        // movibles ... dependa de la velocidad y el gas que se expulse"). A fan mounted in a PHYS contraption
+        // reacts against the gas it blows: expel a column of gas one way, get pushed the other (a jet). The
+        // reaction impulse is OPPOSITE the blow direction, applied at the fan's world position so an off-centre
+        // fan also steers (torque), and its magnitude scales with the gas's push velocity AND the column it
+        // drives ({@code pushStr × range}) — heavy steam is a strong thruster, nitrogen a gentle one, and
+        // overclock (already in pushStr) makes it stronger. No-op unless this fan is a cell of a phys body.
+        applyFanThrust(serverLevel, pos, facing, pushStr * range);
+
         // Walk the airflow column: stop at the first non-passable block; the PROCESS BLOCK along the way
         // sets the family for the WHOLE column (first one found wins).
         FanProcess family = FanProcess.NONE;
@@ -779,6 +788,51 @@ public class FanMachineBlockEntity extends AbstractMachineBlockEntity {
 
     private static double rand(double range) {
         return (java.util.concurrent.ThreadLocalRandom.current().nextDouble() * 2.0D - 1.0D) * range;
+    }
+
+    /**
+     * Impulse (per tick) a fan imparts to its phys contraption, per unit of {@code pushStr × range}. Tuned so a
+     * couple of heavy-steam fans lift a small structure while a single one only nudges a heavy one — thrusters
+     * you stack, not a single-block antigravity. Easy to retune.
+     */
+    private static final double THRUST_PER_PUSH = 0.3D;
+
+    /**
+     * If {@code serverLevel} is a PHYS contraption's hidden level, reacts this fan against the gas it expels:
+     * applies an impulse OPPOSITE {@code facing} (the blow direction), rotated from the contraption's local
+     * frame into the world, at the fan cell's world position. {@code magnitude} is {@code pushStr × range} — see
+     * the call site. No-op for a non-contraption level or a non-phys contraption.
+     */
+    private void applyFanThrust(net.minecraft.server.level.ServerLevel serverLevel, BlockPos cell, Direction facing,
+            double magnitude) {
+        if (!(serverLevel instanceof dev.arubik.craftengine.contraption.level.ContraptionLevel cl)) {
+            return; // an ordinary world fan — nothing to propel
+        }
+        dev.arubik.craftengine.contraption.ContraptionState owner = null;
+        for (dev.arubik.craftengine.contraption.ContraptionEntity ce
+                : dev.arubik.craftengine.contraption.ContraptionManager.all()) {
+            if (ce.state().level() == cl) {
+                owner = ce.state();
+                break;
+            }
+        }
+        if (owner == null || owner.bearingType() != dev.arubik.craftengine.contraption.BearingType.PHYS) {
+            return; // not a phys body — no rigid body to push
+        }
+        // Reaction = opposite the blow direction, expressed in the contraption's LOCAL frame, then rotated to
+        // world so the thrust follows however the body is currently turned.
+        net.minecraft.world.phys.Vec3 worldDir = cl.rotateToRealWorld(
+                new net.minecraft.world.phys.Vec3(-facing.getStepX(), -facing.getStepY(), -facing.getStepZ()));
+        double len = worldDir.length();
+        if (len < 1.0E-9) {
+            return;
+        }
+        double f = magnitude * THRUST_PER_PUSH / len;
+        net.minecraft.world.phys.Vec3 point = cl.realWorldPositionOf(
+                new net.minecraft.world.phys.Vec3(cell.getX() + 0.5, cell.getY() + 0.5, cell.getZ() + 0.5));
+        dev.arubik.craftengine.contraption.physics.PhysicsWorld.applyThrust(owner.id(),
+                new org.joml.Vector3d(point.x, point.y, point.z),
+                new org.joml.Vector3d(worldDir.x * f, worldDir.y * f, worldDir.z * f));
     }
 
     /**
