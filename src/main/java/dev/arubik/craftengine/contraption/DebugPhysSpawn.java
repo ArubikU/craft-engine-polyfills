@@ -132,7 +132,7 @@ public final class DebugPhysSpawn {
         boolean __prof = dev.arubik.craftengine.contraption.ContraptionPerf.enabled();
         long __t0 = __prof ? System.nanoTime() : 0;
         Level realLevel = ((CraftWorld) bukkitWorld).getHandle();
-        ContraptionLevel level = BukkitContraptionLevel.create(realLevel, anchor.x, anchor.y, anchor.z, 0.0);
+        ContraptionLevel level = ContraptionLevel.create(realLevel, anchor.x, anchor.y, anchor.z, 0.0);
         long __t1 = __prof ? System.nanoTime() : 0;
         level.putBlocks(cells, true);
         long __t2 = __prof ? System.nanoTime() : 0;

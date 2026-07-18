@@ -211,7 +211,7 @@ public final class ContraptionSplitter {
             Set<BlockPos> island) {
         ContraptionLevel childLevel;
         try {
-            childLevel = BukkitContraptionLevel.create(parentLevel.realLevel(), parentState.x(), parentState.y(),
+            childLevel = ContraptionLevel.create(parentLevel.realLevel(), parentState.x(), parentState.y(),
                     parentState.z(), parentState.yawRadians());
         } catch (Throwable t) {
             return null;

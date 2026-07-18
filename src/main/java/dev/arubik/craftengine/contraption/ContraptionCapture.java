@@ -57,7 +57,7 @@ public final class ContraptionCapture {
      * from the real world — see {@link #removeFromWorld} for that half.
      */
     public static Result capture(Level realLevel, Set<BlockPos> worldPositions, BlockPos bearingWorldPos) {
-        ContraptionLevel level = BukkitContraptionLevel.create(realLevel,
+        ContraptionLevel level = ContraptionLevel.create(realLevel,
                 bearingWorldPos.getX(), bearingWorldPos.getY(), bearingWorldPos.getZ(), 0);
 
         for (BlockPos pos : worldPositions) {

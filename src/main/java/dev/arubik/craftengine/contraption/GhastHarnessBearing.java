@@ -233,7 +233,7 @@ public final class GhastHarnessBearing {
         Location loc = ghast.getLocation();
         Vec3 anchor = new Vec3(loc.getX() + anchorOffset.x, loc.getY() + anchorOffset.y,
                 loc.getZ() + anchorOffset.z);
-        ContraptionLevel level = BukkitContraptionLevel.create(realLevel, anchor.x, anchor.y, anchor.z, 0.0);
+        ContraptionLevel level = ContraptionLevel.create(realLevel, anchor.x, anchor.y, anchor.z, 0.0);
         try {
             ContraptionStructureNbt.load(level, ContraptionStructureNbt.fromBytes(packed));
         } catch (IOException e) {
@@ -405,7 +405,7 @@ public final class GhastHarnessBearing {
         Location loc = ghast.getLocation();
         Vec3 anchor = new Vec3(loc.getX() + anchorOffset.x, loc.getY() + anchorOffset.y,
                 loc.getZ() + anchorOffset.z);
-        ContraptionLevel level = BukkitContraptionLevel.create(realLevel, anchor.x, anchor.y, anchor.z, 0.0);
+        ContraptionLevel level = ContraptionLevel.create(realLevel, anchor.x, anchor.y, anchor.z, 0.0);
         try {
             ContraptionStructureNbt.load(level, ContraptionStructureNbt.fromBytes(bytes));
         } catch (IOException e) {

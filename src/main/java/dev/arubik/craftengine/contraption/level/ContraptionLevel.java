@@ -31,6 +31,19 @@ import net.momirealms.craftengine.core.entity.player.Player;
  */
 public interface ContraptionLevel extends ContraptionBoundary {
 
+    /**
+     * Builds a contraption's hidden level at the given bearing transform — an in-memory ASP world when the
+     * ASP fork is present (zero folder, zero region I/O), otherwise a temp-folder-backed vanilla
+     * {@link BukkitContraptionLevel}. The single factory every capture/spawn/rehydrate path calls, so the
+     * choice is made once and nothing downstream cares which backs it.
+     */
+    static ContraptionLevel create(Level realLevel, double x, double y, double z, double yawRadians) {
+        if (AspSupport.available()) {
+            return AspSupport.create(realLevel, x, y, z, yawRadians);
+        }
+        return BukkitContraptionLevel.create(realLevel, x, y, z, yawRadians);
+    }
+
     /** The underlying NMS level — for code that must hand a real {@link ServerLevel} to vanilla/CraftEngine. */
     ServerLevel serverLevel();
 

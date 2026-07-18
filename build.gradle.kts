@@ -31,6 +31,13 @@ dependencies {
     // compatible release (2.2.0). Its API (BetterModel.model/create, Tracker.animate,
     // AnimationModifier) is identical to the 3.x sketch used by CrusherModelRenderer.
     compileOnly("io.github.toxicity188:bettermodel-bukkit-api:2.2.0")
+    // Advanced Slime Paper — compileOnly soft-dependency present only on the ASP fork. asp-api is the public
+    // API; asp-nms is a stub of ASP's server classes (SlimeLevelInstance extends ServerLevel, SlimeBootstrap,
+    // SlimeNMSBridgeImpl) so AspContraptionLevel can EXTEND SlimeLevelInstance and replicate its world-load
+    // flow. Loaded ONLY when the ASP API is found at runtime (ContraptionLevel.create's reflection-guarded
+    // factory), so a plain Paper server never touches these classes.
+    compileOnly(files("libs/asp-api-4.2.0.jar"))
+    compileOnly(files("libs/asp-nms.jar"))
     //implementation("net.bytebuddy:byte-buddy:${rootProject.properties["byte_buddy_version"]}")
     //implementation("net.bytebuddy:byte-buddy-agent:${rootProject.properties["byte_buddy_version"]}")
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.0")

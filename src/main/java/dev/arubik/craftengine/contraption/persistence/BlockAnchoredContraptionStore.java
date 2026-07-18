@@ -260,7 +260,7 @@ public final class BlockAnchoredContraptionStore {
         try {
             // Capture always creates the level at yaw 0 (see ContraptionCapture#capture); the live
             // transform is then applied via the state ctor + setYawRadians below.
-            ContraptionLevel level = BukkitContraptionLevel.create(realLevel, rec.x(), rec.y(), rec.z(), 0);
+            ContraptionLevel level = ContraptionLevel.create(realLevel, rec.x(), rec.y(), rec.z(), 0);
             ContraptionStructureNbt.load(level, structure);
             ContraptionState state = new ContraptionState(rec.id(), rec.worldId(), level, rec.x(), rec.y(), rec.z());
             state.setYawRadians(rec.yawRadians());

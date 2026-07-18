@@ -123,3 +123,5 @@ runs/
 .migration/
 testserver/
 logs/
+!libs/asp-api-4.2.0.jar
+!libs/asp-nms.jar
