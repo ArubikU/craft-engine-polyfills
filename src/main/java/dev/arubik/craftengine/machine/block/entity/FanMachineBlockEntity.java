@@ -770,8 +770,20 @@ public class FanMachineBlockEntity extends AbstractMachineBlockEntity {
         double sy = cy - facing.getStepY() * back + rand(lat) * (1 - Math.abs(facing.getStepY()));
         double sz = cz - facing.getStepZ() * back + rand(lat) * (1 - Math.abs(facing.getStepZ()));
         double flow = Math.max(0.06D, pushStrength * 0.9D); // stream speed scales with push strength
-        bukkitWorld.spawnParticle(particle, sx, sy, sz, 0,
-                facing.getStepX(), facing.getStepY(), facing.getStepZ(), flow);
+        // Emit into the REAL world when this fan is inside a CONTRAPTION (2026-07-18 — user: a phys-contraption
+        // fan emits no particles on ASP). The fan ticks inside the hidden ContraptionLevel, so spawnParticle on
+        // its Bukkit world drops the airflow into the invisible slime world. sendParticlesSource is a ServerLevel
+        // method the ContraptionLevel subclasses OVERRIDE to map the fake position into the real world AND rotate
+        // the stream velocity (count 0 = the offset IS the velocity), so the airflow shows where the contraption
+        // actually is; an ordinary world fan keeps the plain local spawn.
+        if (level instanceof dev.arubik.craftengine.contraption.level.ContraptionLevel) {
+            net.minecraft.core.particles.ParticleOptions nms = nmsParticle(particle);
+            level.sendParticlesSource(level.players(), null, nms, true, true, sx, sy, sz, 0,
+                    facing.getStepX(), facing.getStepY(), facing.getStepZ(), flow);
+        } else {
+            bukkitWorld.spawnParticle(particle, sx, sy, sz, 0,
+                    facing.getStepX(), facing.getStepY(), facing.getStepZ(), flow);
+        }
         net.minecraft.world.phys.AABB aabb = new net.minecraft.world.phys.AABB(
                 cx - 0.5D, cy - 0.5D, cz - 0.5D, cx + 0.5D, cy + 0.5D, cz + 0.5D);
         for (net.minecraft.world.entity.Entity nms :
@@ -788,6 +800,24 @@ public class FanMachineBlockEntity extends AbstractMachineBlockEntity {
 
     private static double rand(double range) {
         return (java.util.concurrent.ThreadLocalRandom.current().nextDouble() * 2.0D - 1.0D) * range;
+    }
+
+    /** The NMS particle for a Bukkit one — covers the fan's own gas particles; anything else streams as CLOUD. */
+    private static net.minecraft.core.particles.ParticleOptions nmsParticle(org.bukkit.Particle particle) {
+        if (particle == null) {
+            return net.minecraft.core.particles.ParticleTypes.CLOUD;
+        }
+        switch (particle) {
+            case SMOKE:
+                return net.minecraft.core.particles.ParticleTypes.SMOKE;
+            case LARGE_SMOKE:
+                return net.minecraft.core.particles.ParticleTypes.LARGE_SMOKE;
+            case SNOWFLAKE:
+                return net.minecraft.core.particles.ParticleTypes.SNOWFLAKE;
+            case CLOUD:
+            default:
+                return net.minecraft.core.particles.ParticleTypes.CLOUD;
+        }
     }
 
     /**
