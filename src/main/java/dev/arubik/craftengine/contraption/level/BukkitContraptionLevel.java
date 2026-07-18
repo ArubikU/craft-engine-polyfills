@@ -179,6 +179,57 @@ import org.bukkit.util.Vector;
 import org.joml.Quaternionf;
 import org.joml.Quaternionfc;
 
+/**
+ * A contraption's hidden mini-dimension, backed by a real vanilla {@link ServerLevel} the plugin builds
+ * itself. Implements {@link ContraptionLevel}; the ASP-backed alternative is {@code AspContraptionLevel}.
+ *
+ * <h2>ServerLevel / Level load analysis — what this dimension strips, and what it cannot</h2>
+ * A {@link ServerLevel} is built for a real, saved, populated multiplayer world. A contraption is a handful
+ * of blocks that lives for seconds and persists only as NBT. So this class carries a vanilla level but pays
+ * for as little of it as possible. Analysed against {@code net.minecraft.server.level.ServerLevel} /
+ * {@code net.minecraft.world.level.Level} (the mapped server jar):
+ *
+ * <h3>Construction cost — stripped where reachable</h3>
+ * <ul>
+ * <li><b>The natural-terrain generator.</b> The {@code ServerLevel} ctor builds a {@code ServerChunkCache}
+ *     and immediately calls {@code getGeneratorState()} on the level's generator. Handed the overworld
+ *     generator (the vanilla default) that computes structure placement for every structure set — tens of ms
+ *     for a dimension that never generates a single natural block. {@link #voidGenerator} passes a flat,
+ *     structureless {@link net.minecraft.world.level.levelgen.FlatLevelSource} instead, so the state is
+ *     trivial and every chunk is pure void — exactly right, since every cell is placed by hand.</li>
+ * <li><b>The real world folder.</b> {@code createAccess} makes a {@code uid.dat}/{@code session.lock}
+ *     directory on disk. It is created in OS temp ({@link #tmpSource}), deleted off-thread the moment the
+ *     contraption disposes, and wiped wholesale on boot — never in the server's world directory, and
+ *     nothing of value is ever written (see {@code noSave} below). It cannot be eliminated entirely: a
+ *     {@code CraftWorld} needs a {@code File}-based folder and {@code session.lock} needs a real
+ *     {@code FileChannel}, so the achievable minimum is "ephemeral, out of sight, deleted fast".</li>
+ * </ul>
+ *
+ * <h3>Per-tick cost — the server ticks every registered level; here is what each does for THIS one</h3>
+ * <ul>
+ * <li>{@code tickChunk} — <b>overridden empty.</b> Vanilla runs random block ticks (crop growth, fire
+ *     spread, fluid) for every ticking chunk; a contraption wants none, so the override skips them.
+ *     Belt-and-suspenders with {@code RANDOM_TICK_SPEED = 0} in {@link #quietGameRules}.</li>
+ * <li>{@code tickCustomSpawners} — <b>overridden empty.</b> No cats/phantoms/wandering-traders/sieges scan
+ *     a hidden dimension. Backed by {@code SPAWN_MOBS = false}.</li>
+ * <li>{@code advanceWeatherCycle} — private, cannot be individually overridden, but gated to a near-no-op by
+ *     {@code ADVANCE_WEATHER = false}.</li>
+ * <li>{@code tickTime} — <b>deliberately KEPT.</b> It calls {@code PrimaryLevelData.setGameTime} (verified in
+ *     the mapped jar), and captured machines (crushers/pumps/timers) read {@code getGameTime()} for their
+ *     cooldowns — freezing it would stall every machine. So this one stays; it is cheap anyway.</li>
+ * <li>{@code save}/{@code saveIncrementally} — <b>overridden empty</b>, and {@code noSave = true}, so
+ *     autosave and shutdown-save both skip this level: no region/level.dat is ever written. The only
+ *     persistence is the structure NBT on the bearing.</li>
+ * </ul>
+ *
+ * <h3>The irreducible floor</h3>
+ * The {@code ServerLevel} ctor's {@code new ServerChunkCache(...)} (a {@code final} field, direct
+ * {@code new} — no method to override) and its per-tick {@code ServerChunkCache.tick} are needed: the chunk
+ * cache is what ticks the captured block-entities and processes their scheduled block/fluid ticks, which is
+ * the whole point of using a real level rather than a plain block map. That cost is why the ASP path exists
+ * — an in-memory slime world removes the storage/region half of it — but it cannot be overridden away while
+ * a contraption IS a {@code ServerLevel}.
+ */
 public final class BukkitContraptionLevel
 extends ServerLevel
 implements ContraptionBoundary, ContraptionLevel {
