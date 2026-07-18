@@ -81,6 +81,16 @@ public final class XpbdSolver {
      */
     public static final double RESTITUTION = 0.0;
 
+    /**
+     * Closing speed (blocks/tick) below which restitution is suppressed — a contact this slow is a body
+     * settling, not an impact. Without the gate a bouncy body resting on slime would never come to rest:
+     * each substep of gravity (~0.005 blocks/tick of closing speed) would be handed back as a tiny hop and
+     * pumped straight back in next substep. {@code 0.1} is well above resting jitter and well below any real
+     * impact (a 1-block drop closes at ~0.28), so a genuine landing still bounces while a rest still rests.
+     * This is the same threshold idea Box2D uses ({@code b2_velocityThreshold}).
+     */
+    public static final double RESTITUTION_MIN_SPEED = 0.1;
+
     /** Coulomb friction coefficient at contacts. High enough that a resting body does not creep. */
     public static final double FRICTION = 0.7;
 
@@ -175,6 +185,16 @@ public final class XpbdSolver {
             // solve's normal impulse, which is ~0 for a body already at rest, so sliding friction did
             // essentially nothing (2026-07-17 — "falta friccion").
             double[] normalImpulse = new double[contacts.size()];
+            // The closing speed of each contact BEFORE the position solve absorbs it — captured now, while
+            // the velocities are still the freshly integrated (pre-solve) values. Restitution needs this:
+            // XPBD reads velocity back out of the position correction (see recoverVelocities), so by the time
+            // solveVelocities runs the approach velocity has already been resolved to ~0 and a bounce computed
+            // from it would be nearly nothing. This is the pre-solve relative normal velocity the restitution
+            // target is sized from (Müller et al. 2020, §3.5).
+            double[] approachSpeed = new double[contacts.size()];
+            for (int i = 0; i < contacts.size(); i++) {
+                approachSpeed[i] = approachNormalSpeed(contacts.get(i));
+            }
             for (int i = 0; i < POSITION_ITERATIONS; i++) {
                 solvePositions(contacts, h, normalImpulse);
             }
@@ -184,7 +204,7 @@ public final class XpbdSolver {
                 }
                 recoverVelocities(b, h);
             }
-            solveVelocities(contacts, normalImpulse);
+            solveVelocities(contacts, normalImpulse, approachSpeed);
         }
         for (PhysBody b : active) {
             finishTick(b, dt);
@@ -516,7 +536,20 @@ public final class XpbdSolver {
      * friction, both as impulses at the contact's lever arm — so friction on a far corner also
      * produces torque, which is what lets a body topple rather than skid.
      */
-    private static void solveVelocities(List<Contact> contacts, double[] normalImpulse) {
+    /** The relative normal velocity of a contact right now (negative = the two surfaces are approaching). */
+    private static double approachNormalSpeed(Contact c) {
+        Contact.Evaluation eval = c.evaluate();
+        if (eval.depth() < -SPECULATIVE_DISTANCE) {
+            return 0.0;
+        }
+        RigidBody a = c.bodyA();
+        RigidBody b = c.bodyB();
+        Vector3d rA = Contact.rA(a, eval.point());
+        Vector3d rB = b == null ? null : new Vector3d(eval.point()).sub(b.position);
+        return relativeVelocity(a, b, rA, rB).dot(eval.worldNormal());
+    }
+
+    private static void solveVelocities(List<Contact> contacts, double[] normalImpulse, double[] approachSpeed) {
         for (int idx = 0; idx < contacts.size(); idx++) {
             Contact c = contacts.get(idx);
             RigidBody a = c.bodyA();
@@ -540,9 +573,26 @@ public final class XpbdSolver {
             // skip the whole contact when vn >= 0 (the old bug): a body sliding along a surface it already
             // rests on has vn ~ 0, and it still has to be braked by friction. Friction below runs regardless,
             // capped by the SUSTAINED normal impulse the position solve accumulated.
+            // Per-contact restitution — the material bounce, no longer the hardcoded global RESTITUTION.
+            // Combined by taking the BOUNCIER surface (standard restitution-combine: a slime raft bounces off
+            // stone, an iron raft bounces off a slime floor). A bare-terrain contact (b == null) has only this
+            // body's own coefficient. The bounce TARGET is sized from the PRE-solve closing speed
+            // (approachSpeed) — not the current normal velocity, which the position solve has already resolved
+            // to ~0 (see the substep loop). Below RESTITUTION_MIN_SPEED a contact is settling, not an impact,
+            // so the target stays 0 and a body on slime comes to rest instead of jittering forever.
+            double e = a.restitution();
+            if (b != null) {
+                e = Math.max(e, b.restitution());
+            }
+            double vnPrev = approachSpeed[idx];
+            double target = (e > 0.0 && vnPrev < -RESTITUTION_MIN_SPEED) ? -e * vnPrev : 0.0;
+            // Bring the normal velocity UP to the target: for e == 0 (or a gentle contact) target is 0, so this
+            // is the ordinary dead-stop of an approaching/penetrating contact (vn < 0); for a real bounce the
+            // target is a positive separating speed and jn adds the rebound on top of the dead stop. Never a
+            // negative impulse — a contact already separating faster than the target is left alone.
             double jn = 0.0;
-            if (vn < 0.0) {
-                jn = -(1.0 + RESTITUTION) * vn / wSum;
+            if (vn < target) {
+                jn = (target - vn) / wSum;
                 applyVelocityImpulse(a, rA, new Vector3d(n).mul(jn), 1.0);
                 if (b != null) {
                     applyVelocityImpulse(b, rB, new Vector3d(n).mul(jn), -1.0);

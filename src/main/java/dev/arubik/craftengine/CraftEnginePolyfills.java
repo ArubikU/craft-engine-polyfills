@@ -35,6 +35,7 @@ public final class CraftEnginePolyfills extends JavaPlugin {
         dev.arubik.craftengine.contraption.behavior.WeightBlockBehavior.loadTable();
         dev.arubik.craftengine.contraption.physics.FloatabilityTable.load();
         dev.arubik.craftengine.contraption.physics.FrictionTable.load();
+        dev.arubik.craftengine.contraption.physics.RestitutionTable.load();
         // Restore the loose world glue graph persisted at last shutdown (2026-07-03 — "has que
         // las glue persista al apagar o reiniciar el sv"). Assembled contraptions carry their own
         // glue in their structure NBT; this is the unassembled real-world glue.

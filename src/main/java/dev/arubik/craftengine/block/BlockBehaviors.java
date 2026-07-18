@@ -213,6 +213,13 @@ public class BlockBehaviors {
                                 dev.arubik.craftengine.contraption.behavior.FrictionBlockBehavior.FACTORY_KEY,
                                 dev.arubik.craftengine.contraption.behavior.FrictionBlockBehavior.FACTORY);
 
+                // Per-block bounce (polyfills:restitution_block) — the normal-direction material property,
+                // the twin of friction, layered over restitution.yml + a built-in family table. See
+                // RestitutionTable.
+                RegistryUtils.registerBlockBehavior(
+                                dev.arubik.craftengine.contraption.behavior.RestitutionBlockBehavior.FACTORY_KEY,
+                                dev.arubik.craftengine.contraption.behavior.RestitutionBlockBehavior.FACTORY);
+
                 // (CraftingSamples deleted — real recipes are CraftEngine-native YAML on the vanilla table.)
                 // Populate sample workbench station recipes (3x2 + tool + condition/executor).
                 dev.arubik.craftengine.crafting.WorkbenchSamples.registerDefaults();

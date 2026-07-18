@@ -256,6 +256,48 @@ class XpbdSolverTest {
         return body;
     }
 
+    @Test
+    @DisplayName("per-block restitution: a bouncy body rebounds higher than a dead one")
+    void restitutionControlsBounce() {
+        // Same drop, same ground, same everything but the coefficient of restitution — so this isolates the
+        // normal-direction bounce exactly as frictionControlsSliding isolates the tangential brake.
+        PhysBody slime = droppedCube(0.8);
+        PhysBody dead = droppedCube(0.0);
+
+        double slimePeak = peakAfterLanding(slime);
+        double deadPeak = peakAfterLanding(dead);
+
+        assertTrue(slimePeak > deadPeak + 0.3,
+                "slime (0.8) must rebound higher than dead (0.0); slimePeak=" + slimePeak + " deadPeak=" + deadPeak);
+    }
+
+    /** A non-rotating unit cube dropped from a height onto solid ground, with the given restitution. */
+    private static PhysBody droppedCube(double restitution) {
+        PhysBody body = cube(1.0);
+        body.body.setMassProperties(1.0, new Matrix3d().zero()); // zero inverse inertia — isolate the bounce, no tumble
+        body.world = WorldBlockCache.solidRegion(-2, -1, -2, 2, -1, 2);
+        body.body.position.set(0.5, 4.5, 0.5);
+        body.body.setRestitution(restitution);
+        return body;
+    }
+
+    /** Highest COM height the body reaches AFTER it first touches the ground — its rebound peak. */
+    private static double peakAfterLanding(PhysBody body) {
+        boolean landed = false;
+        double peak = Double.NEGATIVE_INFINITY;
+        for (int t = 0; t < 80; t++) {
+            XpbdSolver.step(List.of(body), 1.0);
+            double y = body.body.position.y;
+            if (!landed && y <= 0.55) {
+                landed = true; // COM at 0.55 means the box bottom is ~flush with the ground
+            }
+            if (landed) {
+                peak = Math.max(peak, y);
+            }
+        }
+        return peak;
+    }
+
     /** A single-cell body of the given mass, local box [0,1]^3, its COM at the cell centre. */
     private static PhysBody cube(double mass) {
         org.joml.Vector3d com = new org.joml.Vector3d(0.5, 0.5, 0.5);

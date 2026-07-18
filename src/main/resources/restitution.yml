@@ -1,0 +1,30 @@
+# Per-block RESTITUTION for vanilla blocks — how much of a head-on impact a surface hands back as a bounce.
+#
+# It is a coefficient of restitution: the fraction of closing speed returned as separation at a contact.
+# Higher = bouncier.
+#
+#     0.0   dead stop — an ordinary block (the default for every block)
+#     0.8   slime block — flings a falling body back up
+#     0.5   bed — a firm bounce
+#     0.0   honey — sticky, absorbs the hit
+#
+# Restitution is a property of the CONTACT, not one block: the solver takes the BOUNCIER of the two touching
+# surfaces (the contraption's own mass-weighted mean and the block it strikes). So a slime raft bounces off
+# stone AND an iron raft bounces off a slime floor — the bouncier surface decides it. Below a small closing
+# speed the bounce is suppressed so a resting body settles instead of jittering (see XpbdSolver
+# RESTITUTION_MIN_SPEED).
+#
+# Lookup order, first match wins:
+#   1. a CraftEngine custom block's own `polyfills:restitution_block` behavior
+#   2. the `blocks:` map below
+#   3. the built-in family table (slime block, beds, honey)
+#   4. `default:` below
+#
+# Keys are Bukkit material names; a `minecraft:` prefix is accepted.
+
+default: 0.0
+
+blocks:
+#  SLIME_BLOCK: 0.8
+#  WHITE_BED: 0.5
+#  HONEY_BLOCK: 0.0

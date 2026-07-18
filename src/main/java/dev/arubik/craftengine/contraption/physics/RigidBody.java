@@ -59,6 +59,16 @@ public final class RigidBody {
      */
     private double friction = 0.7;
 
+    /**
+     * This body's own surface bounciness — the mass-weighted mean of its cells (see {@code RestitutionModel}),
+     * the normal-direction twin of {@link #friction}. Coefficient of restitution: fraction of closing speed
+     * returned as separation on impact. {@code 0} = dead stop (ordinary block), {@code 0.8} = slime-block
+     * bounce. Default {@code 0} keeps every non-bouncy body exactly as the solver's old hardcoded
+     * {@code RESTITUTION = 0}. The solver combines it with the surface struck (bounciest wins), so it is only
+     * ONE side of a contact.
+     */
+    private double restitution = 0.0;
+
     /** Scratch, reused to keep the per-substep solve allocation-free. */
     private final Matrix3d rotationScratch = new Matrix3d();
     private final Matrix3d inverseInertiaScratch = new Matrix3d();
@@ -87,6 +97,15 @@ public final class RigidBody {
 
     public double friction() {
         return friction;
+    }
+
+    /** Coefficient of restitution, clamped to {@code [0,1]} — 1 would return all closing speed (a perfect bounce). */
+    public void setRestitution(double restitution) {
+        this.restitution = restitution < 0.0 ? 0.0 : (restitution > 1.0 ? 1.0 : restitution);
+    }
+
+    public double restitution() {
+        return restitution;
     }
 
     /** {@code 1/(m·s³)} — the scaling law for mass under a uniform scale {@code s}. */
