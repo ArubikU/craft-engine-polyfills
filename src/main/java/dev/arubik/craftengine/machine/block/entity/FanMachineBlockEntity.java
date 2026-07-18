@@ -281,6 +281,13 @@ public class FanMachineBlockEntity extends AbstractMachineBlockEntity {
         if (facing == null)
             facing = Direction.NORTH;
 
+        if (DBG && dbgReady()) {
+            boolean isCl = serverLevel instanceof dev.arubik.craftengine.contraption.level.ContraptionLevel;
+            org.bukkit.Bukkit.getLogger().info("[FanDBG] pos=" + pos + " levelClass=" + serverLevel.getClass().getSimpleName()
+                    + " isContraptionLevel=" + isCl + " blowing=" + blowing + " tier=" + tier + " gasAvail=" + gasAvailable
+                    + " redstoneOff=" + redstoneOff + " facing=" + facing);
+        }
+
         // Keep the `powered` block-state in sync with the actual blowing state (drives the model swap).
         syncPowered(serverLevel, pos, blowing);
 
@@ -802,6 +809,24 @@ public class FanMachineBlockEntity extends AbstractMachineBlockEntity {
         return (java.util.concurrent.ThreadLocalRandom.current().nextDouble() * 2.0D - 1.0D) * range;
     }
 
+    /** TEMP diagnostics (2026-07-18 — "checa que pasa con el level"): throttled fan-in-contraption logging. */
+    public static boolean DBG = true;
+    private static volatile long dbgLast = 0L;
+
+    private static boolean dbgReady() {
+        long now = System.currentTimeMillis();
+        if (now - dbgLast > 1500L) {
+            dbgLast = now;
+            return true;
+        }
+        return false;
+    }
+
+    /** Public throttle for cross-class diagnostics (PhysicsWorld). */
+    public static boolean dbgReadyStatic() {
+        return dbgReady();
+    }
+
     /** The NMS particle for a Bukkit one — covers the fan's own gas particles; anything else streams as CLOUD. */
     private static net.minecraft.core.particles.ParticleOptions nmsParticle(org.bukkit.Particle particle) {
         if (particle == null) {
@@ -836,16 +861,22 @@ public class FanMachineBlockEntity extends AbstractMachineBlockEntity {
     private void applyFanThrust(net.minecraft.server.level.ServerLevel serverLevel, BlockPos cell, Direction facing,
             double magnitude) {
         if (!(serverLevel instanceof dev.arubik.craftengine.contraption.level.ContraptionLevel cl)) {
+            if (DBG && dbgReady()) org.bukkit.Bukkit.getLogger().info("[FanThrustDBG] not a ContraptionLevel: "
+                    + serverLevel.getClass().getSimpleName());
             return; // an ordinary world fan — nothing to propel
         }
         dev.arubik.craftengine.contraption.ContraptionState owner = null;
+        int scanned = 0;
         for (dev.arubik.craftengine.contraption.ContraptionEntity ce
                 : dev.arubik.craftengine.contraption.ContraptionManager.all()) {
+            scanned++;
             if (ce.state().level() == cl) {
                 owner = ce.state();
                 break;
             }
         }
+        if (DBG && dbgReady()) org.bukkit.Bukkit.getLogger().info("[FanThrustDBG] scanned=" + scanned + " ownerFound="
+                + (owner != null) + " bearing=" + (owner == null ? "?" : owner.bearingType()) + " mag=" + magnitude);
         if (owner == null || owner.bearingType() != dev.arubik.craftengine.contraption.BearingType.PHYS) {
             return; // not a phys body — no rigid body to push
         }

@@ -414,6 +414,13 @@ public final class PhysicsWorld {
      */
     public static void applyThrust(UUID contraptionId, Vector3d worldPoint, Vector3d worldImpulse) {
         Entry entry = ENTRIES.get(contraptionId);
+        if (dev.arubik.craftengine.machine.block.entity.FanMachineBlockEntity.DBG
+                && dev.arubik.craftengine.machine.block.entity.FanMachineBlockEntity.dbgReadyStatic()) {
+            PhysBody pb = entry == null ? null : entry.physBody;
+            org.bukkit.Bukkit.getLogger().info("[ThrustDBG] entryFound=" + (entry != null) + " impulse=" + worldImpulse
+                    + (pb == null ? "" : " kinematic=" + pb.kinematic + " static=" + pb.body.isStatic()
+                            + " emptyShape=" + pb.shape.isEmpty() + " invMass=" + pb.body.inverseMass()));
+        }
         if (entry == null || entry.physBody == null) {
             return;
         }
