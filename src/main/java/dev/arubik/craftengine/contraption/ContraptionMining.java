@@ -19,6 +19,8 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.network.protocol.game.ClientboundBlockDestructionPacket;
+import net.minecraft.network.protocol.game.ClientboundBlockUpdatePacket;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -87,6 +89,10 @@ public final class ContraptionMining implements Listener {
         long lastSwingMs;
         int tickCounter;
         int missTicks;
+        /** Real-world block the vanilla crack is currently faked onto for this dig, or null if none (see #crackTarget). */
+        BlockPos crackPos;
+        /** Last destroy stage (0-9) sent, or -1 if none — so a fresh stage is only sent when it actually changes. */
+        int crackStage = -1;
 
         Session(UUID contraptionId, BlockPos local, long nowMs) {
             this.contraptionId = contraptionId;
@@ -171,12 +177,17 @@ public final class ContraptionMining implements Listener {
             Map.Entry<UUID, Session> entry = it.next();
             Session s = entry.getValue();
             org.bukkit.entity.Player bukkit = Bukkit.getPlayer(entry.getKey());
-            ContraptionEntity entity = ContraptionManager.get(s.contraptionId);
-            if (bukkit == null || entity == null || entity.state().level() == null) {
-                it.remove();
+            if (bukkit == null) {
+                it.remove(); // player offline — their client is gone, nothing to clean up
                 continue;
             }
             ServerPlayer player = ((CraftPlayer) bukkit).getHandle();
+            ContraptionEntity entity = ContraptionManager.get(s.contraptionId);
+            if (entity == null || entity.state().level() == null) {
+                clearCrack(s, player); // contraption gone — revert any fake crack block on the player's client
+                it.remove();
+                continue;
+            }
             // Continuation is AIM-driven, not swing-cadence-driven (2026-07-17 — "los que no son insta break
             // nunca terminan de romperse"): a held left-click against a packet-only cell does NOT reliably send
             // continuous swings (the client attack-cooldown-gates re-swings on a fake target, and a wrong-tool
@@ -187,6 +198,7 @@ public final class ContraptionMining implements Listener {
             boolean onCell = hit != null && hit.state().id().equals(s.contraptionId) && hit.local().equals(s.local);
             if (!onCell) {
                 if (++s.missTicks > AIM_GRACE_TICKS) {
+                    clearCrack(s, player);
                     it.remove(); // looked away — progress is lost, as in vanilla
                 }
                 continue; // a transient raycast miss (aim jitter) is tolerated; don't advance this tick
@@ -195,12 +207,14 @@ public final class ContraptionMining implements Listener {
             ContraptionLevel level = entity.state().level();
             BlockState state = level.getBlockState(s.local);
             if (state.isAir()) {
+                clearCrack(s, player);
                 it.remove(); // already gone
                 continue;
             }
             ServerLevel cLevel = level.serverLevel();
             float hardness = state.getDestroySpeed(cLevel, s.local);
             if (hardness < 0.0f) {
+                clearCrack(s, player);
                 it.remove(); // unbreakable (bedrock-like) — nothing to do
                 continue;
             }
@@ -226,8 +240,31 @@ public final class ContraptionMining implements Listener {
                 playCellSound(level, s.local, st.getHitSound(), (st.getVolume() + 1.0f) / 8.0f, st.getPitch() * 0.5f);
             }
 
+            // Real vanilla destroy-stage crack, when possible. The overlay renders on whatever block the CLIENT
+            // has at a real BlockPos, and a contraption cell is a packet-only display over air — so we send the
+            // player a FAKE real block there for the crack to land on, then the stage. Only when the cell is
+            // grid-aligned, unrotated, scale-1 and over real air (see #crackTarget) does the axis-aligned fake
+            // block line up with the display; a rotated/moving/scaled cell returns null and rides on the
+            // particle crumble alone. Per-player packet — nobody else sees the fake block.
+            BlockPos ct = crackTarget(entity.state(), level, s.local, (ServerLevel) player.level());
+            if (ct != null) {
+                if (!ct.equals(s.crackPos)) {
+                    clearCrack(s, player); // dig walked onto a new aligned cell/pos — revert the old fake block
+                    player.connection.send(new ClientboundBlockUpdatePacket(ct, state));
+                    s.crackPos = ct;
+                }
+                int stage = Math.min(9, (int) (s.progress * 10.0));
+                if (stage != s.crackStage) {
+                    player.connection.send(new ClientboundBlockDestructionPacket(player.getId(), ct, stage));
+                    s.crackStage = stage;
+                }
+            } else {
+                clearCrack(s, player); // no longer eligible (started rotating/moving) — fall back to particles
+            }
+
             if (s.progress >= 1.0) {
                 breakCell(player, entity.state(), s.local, state, !correctTool, faceWorld);
+                clearCrack(s, player);
                 it.remove();
             }
         }
@@ -339,6 +376,41 @@ public final class ContraptionMining implements Listener {
         } catch (Throwable t) {
             Bukkit.getLogger().warning("[Contraption] mining teardown of emptied contraption failed: " + t);
         }
+    }
+
+    /**
+     * The real-world block a cell's vanilla crack overlay can be faked onto, or {@code null} if the cell is
+     * not eligible. Eligible only when the contraption is unrotated (pitch/roll ≈ 0), unscaled, and the cell's
+     * display cube lines up with a block-grid cell over real AIR — i.e. its centre sits at a block centre — so
+     * that an axis-aligned fake block matches the display. A rotated/moving/scaled cell, or one whose grid cell
+     * holds a real block, returns {@code null} (particle-only). Yaw is not tested directly: any yaw that keeps
+     * the cube on the grid (multiples of 90°, cube-preserving) still lands the centre on a block centre, and
+     * any other yaw shifts it off-centre and fails the check.
+     */
+    private static BlockPos crackTarget(ContraptionState state, ContraptionLevel level, BlockPos local,
+            ServerLevel realLevel) {
+        if (Math.abs(state.pitchRadians()) > 1.0E-3 || Math.abs(state.rollRadians()) > 1.0E-3
+                || Math.abs(state.scale() - 1.0) > 1.0E-3) {
+            return null;
+        }
+        Vec3 centre = level.realWorldPositionOf(new Vec3(local.getX() + 0.5, local.getY() + 0.5, local.getZ() + 0.5));
+        BlockPos bp = BlockPos.containing(centre.x, centre.y, centre.z);
+        if (Math.abs(centre.x - (bp.getX() + 0.5)) > 0.05 || Math.abs(centre.y - (bp.getY() + 0.5)) > 0.05
+                || Math.abs(centre.z - (bp.getZ() + 0.5)) > 0.05) {
+            return null; // display cube not aligned with a grid cell — the fake block would be offset
+        }
+        return realLevel.getBlockState(bp).isAir() ? bp : null;
+    }
+
+    /** Clears a dig's faked crack: removes the destroy-stage overlay and reverts the fake block to the real world's state. */
+    private static void clearCrack(Session s, ServerPlayer player) {
+        if (s.crackPos != null && player != null) {
+            player.connection.send(new ClientboundBlockDestructionPacket(player.getId(), s.crackPos, -1));
+            BlockState real = ((ServerLevel) player.level()).getBlockState(s.crackPos);
+            player.connection.send(new ClientboundBlockUpdatePacket(s.crackPos, real));
+        }
+        s.crackPos = null;
+        s.crackStage = -1;
     }
 
     /** A handful of the block's break particles at the aimed face, scaled up as the dig nears completion. */
