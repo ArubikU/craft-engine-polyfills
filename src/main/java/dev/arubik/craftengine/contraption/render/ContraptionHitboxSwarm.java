@@ -220,51 +220,37 @@ public final class ContraptionHitboxSwarm {
         // requirement ("todos deben tener hitbox solida", no exceptions).
         //
         // <p><b>"Optimal shulkering" (2026-07-02 session — "si no hay entidades ni players cerca
-        // al contraption no agregue shulkers")</b>: with the per-cell-only population above, a
-        // large contraption now spawns/tracks one shulker per cell — real per-tick cost
-        // (VoxelShape queries here, plus actual client-tracked entities) for structures nobody is
-        // anywhere near. {@code viewers} (see this class's rebuild javadoc / {@code
-        // ContraptionEngine.render}'s call site) is every ONLINE PLAYER IN THE WORLD, not a
-        // proximity-filtered set — CraftEngine's own player-visibility resolution has no distance
-        // cutoff here, so an empty {@code viewers} list alone would essentially never trigger on a
-        // populated server. Skip the whole shulker-population block (and prune every existing
-        // slot, despawning them) whenever no real player is within {@link #SHULKER_ACTIVATION_RADIUS}
-        // (16 blocks, explicit user-specified radius — "16 blocks nor 64") of the contraption's
-        // current bearing. The INTERACTION-based autoSlots layer above is deliberately NOT gated
-        // the same way: it's the thing carryRiders/isStandingOnFootprint/overlapsAnySolid actually
-        // key their manual collision math off of, needed unconditionally regardless of proximity,
-        // and it's cheap (no VoxelShape query, no entity, just a plain Java object).
-        // Gate against the whole STRUCTURE, not just its center (2026-07-17 — user: a shulker hitbox must be
-        // able to generate however far a cell sits from the contraption's center; LOD, not a hard radius, is
-        // what bounds the cost). Measuring only the distance to the bearing point meant a large contraption's
-        // far cells were excluded outright: a player standing on a cell 30 blocks from the center — right on
-        // top of the block — fell outside the 16-block gate and got no collider at all. Expand the activation
-        // radius by the structure's own circumscribed radius (the farthest cell's real-world distance from the
-        // bearing — one realWorldPositionOf sample, which already folds in rotation AND scale, since a rigid
-        // rotation+uniform-scale keeps the farthest LOCAL cell farthest in world), so the gate covers every
-        // cell no matter how far out. The per-CELL LOD below (see ContraptionShulkerColliderSwarm, FAR_EXIT)
-        // still culls precisely by each viewer's distance to each cell, so a far cell only actually renders a
-        // collider when a player is genuinely next to it — unlimited reach, bounded cost.
-        double structureRadius = 0.0;
-        BlockPos farthestOffset = null;
-        long maxLenSq = -1L;
-        for (BlockPos offset : allOffsets) {
-            long lenSq = (long) offset.getX() * offset.getX() + (long) offset.getY() * offset.getY()
-                    + (long) offset.getZ() * offset.getZ();
-            if (lenSq > maxLenSq) {
-                maxLenSq = lenSq;
-                farthestOffset = offset;
-            }
-        }
-        if (farthestOffset != null) {
-            structureRadius = level.realWorldPositionOf(farthestOffset).distanceTo(bearingWorldPos);
-        }
-        if (!anyPlayerNearby(viewers, bearingWorldPos, SHULKER_ACTIVATION_RADIUS + structureRadius)) {
+        // al contraption no agregue shulkers"; 2026-07-17 — "calcular los shulker solo por LOD")</b>: a
+        // shulker per cell is real per-tick cost (VoxelShape queries here, plus client-tracked entities),
+        // wasted on cells nobody is near. This used to be gated by ONE radius around the contraption's
+        // bearing, but that measured a single centre point and so excluded a big structure's far cells
+        // outright (a player standing ON a far cell was still far from the centre). It is now gated PER CELL
+        // by LOD (see the loop below and {@link #LOD_CULL_RADIUS}): each cell is skipped unless some viewer is
+        // within collision range of THAT cell, so reach is unlimited and cost scales with cells-near-players,
+        // not total cells. The INTERACTION-based autoSlots layer above is deliberately NOT gated: it's what
+        // carryRiders/isStandingOnFootprint/overlapsAnySolid key their manual collision math off of, needed
+        // unconditionally, and it's cheap (no VoxelShape query, no entity, just a plain Java object).
+        // Populate shulker colliders purely per-cell by LOD (2026-07-17 — user: "calcular los shulker solo
+        // por LOD; si no entran en ningún LOD no es necesario hacer las matemáticas para ellos"). For each
+        // cell, a cheap distance test decides whether ANY viewer is close enough to ever be handed a collider
+        // for it; only then is the expensive per-cell work (the VoxelShape query in cellFor, the entity
+        // setCell) done. A cell no viewer is near is left out of shulkerKeys, so prune() despawns any stale
+        // collider on it. This is what makes reach UNLIMITED at bounded cost — a 1000-cell structure only pays
+        // for the cells a player is actually next to, however far those sit from the structure's centre — and
+        // it replaces the old single "is a player near the bearing" radius gate, which measured one centre
+        // point and so wrongly excluded a big structure's far cells (a player standing ON a far cell was still
+        // far from the centre). Viewer positions are resolved ONCE here, not per cell.
+        List<Vec3> viewerPositions = resolveViewerPositions(viewers);
+        if (viewerPositions.isEmpty()) {
             shulkerColliders.prune(java.util.Collections.emptySet(), viewers);
             return;
         }
+        double cullRadiusSq = LOD_CULL_RADIUS * LOD_CULL_RADIUS;
         Set<Object> shulkerKeys = new HashSet<>();
         for (BlockPos offset : allOffsets) {
+            if (!anyWithinSq(viewerPositions, level.realWorldPositionOf(offset), cullRadiusSq)) {
+                continue; // out of every viewer's LOD range — no collider needed; prune removes any stale one
+            }
             CachedCell cell = cellFor(level, offset);
             if (cell.boxes == null) {
                 // No real collision at all (2026-07-02 session — "hay bloques que no deben tener
@@ -333,27 +319,39 @@ public final class ContraptionHitboxSwarm {
         return fresh;
     }
 
-    /** Radius (blocks) within which a real player must be for {@link #rebuild} to bother populating shulker colliders — see that method's "Optimal shulkering" javadoc. */
-    private static final double SHULKER_ACTIVATION_RADIUS = 16.0;
+    /**
+     * Per-cell LOD cull radius (blocks): a cell farther than this from EVERY viewer is skipped entirely in
+     * {@link #rebuild} — no VoxelShape query, no collider. Set just beyond the shulker swarm's own
+     * {@link ContraptionShulkerColliderSwarm#FAR_EXIT} despawn distance by a hysteresis margin, so a cell is
+     * handed to the swarm (which then manages its tier band) slightly before a player is close enough to
+     * collide, avoiding pop-in right at the boundary.
+     */
+    private static final double LOD_CULL_RADIUS = ContraptionShulkerColliderSwarm.FAR_EXIT + 2.0;
 
     /**
-     * Whether any of {@code viewers} (see {@link #rebuild}'s javadoc — this is every online
-     * player in the world, not pre-filtered by distance) has a real Bukkit position within
-     * {@code radius} blocks of {@code bearingWorldPos}. Best-effort: a viewer whose platform
-     * player type/position can't be resolved is simply skipped rather than treated as "nearby"
-     * (fails safe toward NOT spawning shulkers rather than always spawning them).
+     * The real Bukkit positions of {@code viewers} (every online player in the world — see {@link #rebuild}),
+     * resolved ONCE so the per-cell LOD test in {@link #rebuild} is plain arithmetic instead of re-resolving a
+     * platform player per cell. A viewer whose platform position can't be resolved is skipped (fails safe
+     * toward NOT spawning shulkers).
      */
-    private static boolean anyPlayerNearby(List<Player> viewers, Vec3 bearingWorldPos, double radius) {
-        double radiusSq = radius * radius;
+    private static List<Vec3> resolveViewerPositions(List<Player> viewers) {
+        List<Vec3> positions = new ArrayList<>(viewers.size());
         for (Player p : viewers) {
             Object pp = p.platformPlayer();
-            if (!(pp instanceof org.bukkit.entity.Player bukkitPlayer)) {
-                continue;
+            if (pp instanceof org.bukkit.entity.Player bukkitPlayer) {
+                org.bukkit.Location loc = bukkitPlayer.getLocation();
+                positions.add(new Vec3(loc.getX(), loc.getY(), loc.getZ()));
             }
-            org.bukkit.Location loc = bukkitPlayer.getLocation();
-            double dx = loc.getX() - bearingWorldPos.x;
-            double dy = loc.getY() - bearingWorldPos.y;
-            double dz = loc.getZ() - bearingWorldPos.z;
+        }
+        return positions;
+    }
+
+    /** Whether any of {@code positions} is within {@code sqrt(radiusSq)} of {@code point} — the per-cell LOD test. */
+    private static boolean anyWithinSq(List<Vec3> positions, Vec3 point, double radiusSq) {
+        for (Vec3 pos : positions) {
+            double dx = pos.x - point.x;
+            double dy = pos.y - point.y;
+            double dz = pos.z - point.z;
             if (dx * dx + dy * dy + dz * dz <= radiusSq) {
                 return true;
             }
