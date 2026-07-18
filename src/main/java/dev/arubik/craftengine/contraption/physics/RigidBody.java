@@ -52,6 +52,13 @@ public final class RigidBody {
     private final Matrix3d baseInverseInertiaLocal = new Matrix3d().zero();
     private double scale = 1.0;
 
+    /**
+     * This body's own surface friction — the mass-weighted mean of its cells (see {@code FrictionModel}).
+     * The solver combines it with the surface the body contacts, so it is only ONE side of a contact's
+     * grip. Default is the ordinary coefficient the solver used to hardcode.
+     */
+    private double friction = 0.7;
+
     /** Scratch, reused to keep the per-substep solve allocation-free. */
     private final Matrix3d rotationScratch = new Matrix3d();
     private final Matrix3d inverseInertiaScratch = new Matrix3d();
@@ -72,6 +79,14 @@ public final class RigidBody {
 
     public double scale() {
         return scale;
+    }
+
+    public void setFriction(double friction) {
+        this.friction = friction < 0.0 ? 0.0 : friction;
+    }
+
+    public double friction() {
+        return friction;
     }
 
     /** {@code 1/(m·s³)} — the scaling law for mass under a uniform scale {@code s}. */

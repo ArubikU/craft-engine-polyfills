@@ -169,8 +169,14 @@ public final class XpbdSolver {
             contacts.clear();
             generateContacts(active, contacts);
             recordImpacts(contacts, owners);
+            // The normal impulse each contact accumulates across the position iterations — this is the
+            // SUSTAINED contact force (weight, per substep), and it is what friction is capped against so a
+            // resting body actually resists sliding. Without it friction was proportional to the velocity
+            // solve's normal impulse, which is ~0 for a body already at rest, so sliding friction did
+            // essentially nothing (2026-07-17 — "falta friccion").
+            double[] normalImpulse = new double[contacts.size()];
             for (int i = 0; i < POSITION_ITERATIONS; i++) {
-                solvePositions(contacts, h);
+                solvePositions(contacts, h, normalImpulse);
             }
             for (PhysBody b : active) {
                 if (b.isAsleep()) {
@@ -178,7 +184,7 @@ public final class XpbdSolver {
                 }
                 recoverVelocities(b, h);
             }
-            solveVelocities(contacts);
+            solveVelocities(contacts, normalImpulse);
         }
         for (PhysBody b : active) {
             finishTick(b, dt);
@@ -395,8 +401,9 @@ public final class XpbdSolver {
      * lever arm turns into rotation instead of translation. Push a body near its COM and it mostly
      * slides; push it at a far corner and it mostly spins.
      */
-    private static void solvePositions(List<Contact> contacts, double h) {
-        for (Contact c : contacts) {
+    private static void solvePositions(List<Contact> contacts, double h, double[] normalImpulse) {
+        for (int idx = 0; idx < contacts.size(); idx++) {
+            Contact c = contacts.get(idx);
             // Re-evaluated against the CURRENT transform, never a cached depth: a resting body has
             // dozens of simultaneous ground contacts, and if each applied a correction sized from its
             // own stale measurement — blind to the fact that an earlier one already lifted the body
@@ -418,6 +425,7 @@ public final class XpbdSolver {
                 continue;
             }
             double lambda = depth / wSum;
+            normalImpulse[idx] += lambda; // accumulate the sustained contact force for friction (see solveVelocities)
             Vector3d p = new Vector3d(n).mul(lambda);
             applyPositionalImpulse(a, rA, p, 1.0);
             if (b != null) {
@@ -508,8 +516,9 @@ public final class XpbdSolver {
      * friction, both as impulses at the contact's lever arm — so friction on a far corner also
      * produces torque, which is what lets a body topple rather than skid.
      */
-    private static void solveVelocities(List<Contact> contacts) {
-        for (Contact c : contacts) {
+    private static void solveVelocities(List<Contact> contacts, double[] normalImpulse) {
+        for (int idx = 0; idx < contacts.size(); idx++) {
+            Contact c = contacts.get(idx);
             RigidBody a = c.bodyA();
             RigidBody b = c.bodyB();
             Contact.Evaluation eval = c.evaluate();
@@ -521,19 +530,23 @@ public final class XpbdSolver {
             Vector3d rB = b == null ? null : new Vector3d(eval.point()).sub(b.position);
             Vector3d relative = relativeVelocity(a, b, rA, rB);
             double vn = relative.dot(n);
-            if (vn >= 0.0) {
-                continue; // separating — nothing to resolve
-            }
             double wA = generalizedInverseMass(a, rA, n);
             double wB = b == null ? 0.0 : generalizedInverseMass(b, rB, n);
             double wSum = wA + wB;
             if (wSum <= 1.0E-12) {
                 continue;
             }
-            double jn = -(1.0 + RESTITUTION) * vn / wSum;
-            applyVelocityImpulse(a, rA, new Vector3d(n).mul(jn), 1.0);
-            if (b != null) {
-                applyVelocityImpulse(b, rB, new Vector3d(n).mul(jn), -1.0);
+            // Normal impulse only when APPROACHING — a separating/resting contact needs none. But do NOT
+            // skip the whole contact when vn >= 0 (the old bug): a body sliding along a surface it already
+            // rests on has vn ~ 0, and it still has to be braked by friction. Friction below runs regardless,
+            // capped by the SUSTAINED normal impulse the position solve accumulated.
+            double jn = 0.0;
+            if (vn < 0.0) {
+                jn = -(1.0 + RESTITUTION) * vn / wSum;
+                applyVelocityImpulse(a, rA, new Vector3d(n).mul(jn), 1.0);
+                if (b != null) {
+                    applyVelocityImpulse(b, rB, new Vector3d(n).mul(jn), -1.0);
+                }
             }
 
             Vector3d post = relativeVelocity(a, b, rA, rB);
@@ -550,8 +563,19 @@ public final class XpbdSolver {
                 continue;
             }
             // Coulomb: the friction impulse can never exceed μ·|normal impulse|, which is what makes
-            // a body slide once pushed hard enough sideways rather than being glued in place.
-            double jt = Math.max(-tangentSpeed / wtSum, -FRICTION * Math.abs(jn));
+            // a body slide once pushed hard enough sideways rather than being glued in place. μ is now
+            // per-contact — the GEOMETRIC MEAN of the two surfaces' friction (a's mass-weighted mean and
+            // b's, or a's again against terrain, since a bare-terrain contact has no b) — so an icy raft
+            // slides on stone AND a stone raft slides on ice, neither surface alone deciding it. Falls back
+            // to the global FRICTION only if a body never had its material set.
+            double muA = a.friction();
+            double muB = b == null ? muA : b.friction();
+            double mu = Math.sqrt(Math.max(0.0, muA) * Math.max(0.0, muB));
+            // Cap against the SUSTAINED normal impulse (accumulated by the position solve — the weight the
+            // contact holds up every substep) plus this substep's impact impulse, so friction bites on a
+            // resting/sliding body, not only during a hard landing.
+            double normalForce = normalImpulse[idx] + Math.abs(jn);
+            double jt = Math.max(-tangentSpeed / wtSum, -mu * normalForce);
             applyVelocityImpulse(a, rA, new Vector3d(tangent).mul(jt), 1.0);
             if (b != null) {
                 applyVelocityImpulse(b, rB, new Vector3d(tangent).mul(jt), -1.0);

@@ -642,10 +642,12 @@ public final class PhysicsWorld {
             Vector3d com = new Vector3d(mm.centerOfMass().x, mm.centerOfMass().y, mm.centerOfMass().z);
             CollisionShape newShape = CollisionShape.of(contraptionLevel, com);
             double floatability = FloatabilityModel.of(contraptionLevel).floatability();
+            double friction = FrictionModel.of(contraptionLevel).friction();
             enqueue(() -> {
                 body.shape = newShape;
                 body.body.setMassProperties(mm.inverseMass(), mm.inverseInertiaTensor());
                 body.floatability = floatability;
+                body.body.setFriction(friction);
                 body.wakeUp();
             });
             entry.initialized = false;
@@ -936,6 +938,7 @@ public final class PhysicsWorld {
             body.shape = CollisionShape.of(contraptionLevel, com);
             body.body.setMassProperties(entry.massModel.inverseMass(), entry.massModel.inverseInertiaTensor());
             body.floatability = FloatabilityModel.of(contraptionLevel).floatability();
+            body.body.setFriction(FrictionModel.of(contraptionLevel).friction());
             // The cell set changed, so the COM moved: the body's stored COM position now refers to a
             // different material point. Re-derive it from the state's (unchanged) bearing origin.
             entry.initialized = false;

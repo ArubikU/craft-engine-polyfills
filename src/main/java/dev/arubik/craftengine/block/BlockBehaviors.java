@@ -207,6 +207,12 @@ public class BlockBehaviors {
                                 dev.arubik.craftengine.contraption.behavior.FloatabilityBlockBehavior.FACTORY_KEY,
                                 dev.arubik.craftengine.contraption.behavior.FloatabilityBlockBehavior.FACTORY);
 
+                // Per-block surface grip (polyfills:friction_block) — the tangential material property, layered
+                // like mass/floatability over friction.yml + a built-in family table. See FrictionTable.
+                RegistryUtils.registerBlockBehavior(
+                                dev.arubik.craftengine.contraption.behavior.FrictionBlockBehavior.FACTORY_KEY,
+                                dev.arubik.craftengine.contraption.behavior.FrictionBlockBehavior.FACTORY);
+
                 // (CraftingSamples deleted — real recipes are CraftEngine-native YAML on the vanilla table.)
                 // Populate sample workbench station recipes (3x2 + tool + condition/executor).
                 dev.arubik.craftengine.crafting.WorkbenchSamples.registerDefaults();

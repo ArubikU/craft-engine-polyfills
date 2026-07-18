@@ -226,6 +226,36 @@ class XpbdSolverTest {
                 "a settled body should have shed its velocity, but |v|=" + body.body.linearVelocity.length());
     }
 
+    @Test
+    @DisplayName("per-block friction: a low-friction body slides farther than a high-friction one")
+    void frictionControlsSliding() {
+        // Rotation is disabled (zero inverse inertia) so this isolates SLIDING — a free cube would tumble
+        // under high friction and confound the distance. Friction's job is the tangential brake, which is
+        // exactly what a non-rotating slide measures.
+        PhysBody ice = slider();
+        ice.body.setFriction(0.05);
+        PhysBody honey = slider();
+        honey.body.setFriction(1.5);
+
+        for (int t = 0; t < 40; t++) {
+            XpbdSolver.step(List.of(ice), 1.0);
+            XpbdSolver.step(List.of(honey), 1.0);
+        }
+
+        assertTrue(ice.body.position.x > honey.body.position.x + 0.5,
+                "ice (0.05) must slide farther than honey (1.5); ice.x=" + ice.body.position.x
+                        + " honey.x=" + honey.body.position.x);
+    }
+
+    /** A non-rotating unit cube resting on solid ground, shoved along +X at 1 block/tick. */
+    private static PhysBody slider() {
+        PhysBody body = cube(1.0);
+        body.body.setMassProperties(1.0, new Matrix3d().zero()); // zero inverse inertia — no tumbling
+        body.world = WorldBlockCache.solidRegion(-5, -1, -5, 60, -1, 5);
+        body.body.linearVelocity.set(1.0, 0.0, 0.0);
+        return body;
+    }
+
     /** A single-cell body of the given mass, local box [0,1]^3, its COM at the cell centre. */
     private static PhysBody cube(double mass) {
         org.joml.Vector3d com = new org.joml.Vector3d(0.5, 0.5, 0.5);

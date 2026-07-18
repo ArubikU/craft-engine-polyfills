@@ -76,7 +76,10 @@ public final class ContactGenerator {
                                 continue;
                             }
                             Vector3d normal = new Vector3d();
-                            double planeD = shallowestExit(box, worldPoint, normal);
+                            double planeD = shallowestExposedExit(box, worldPoint, normal, world);
+                            if (Double.isNaN(planeD)) {
+                                continue; // every face of this box is buried inside other solid — no surface to push out on
+                            }
                             if (planeD - normal.dot(worldPoint) <= MIN_DEPTH) {
                                 continue;
                             }
@@ -261,6 +264,76 @@ public final class ContactGenerator {
      * <p>Returning the plane rather than the depth is what lets the constraint be re-evaluated later:
      * {@code depth = planeD − normal · point} holds for any subsequent position of the point.
      */
+    /**
+     * As {@link #shallowestExit} but never pushes a point out through a face that is buried against
+     * another solid block — the seam between two floor blocks, an interior wall joint, any face with a
+     * solid neighbour flush against it.
+     *
+     * <h2>Why this exists</h2>
+     * The world is voxels, and a body resting on a flat multi-block floor sinks a hair below the surface
+     * each substep before the solve lifts it back. A sample point that has slid just past a block boundary
+     * then sits barely inside the NEXT floor block, equidistant from that block's top face and its
+     * <i>internal</i> side face (the one flush against the block it just came from). {@link #shallowestExit}
+     * would pick whichever is a whisker shallower — and half the time that is the side face, whose normal
+     * points horizontally. A horizontal normal on a floor contact reads a slide as a head-on wall
+     * collision: the velocity solve kills the entire sliding velocity. The body catches on every seam
+     * between floor tiles and stops dead — which is exactly the friction test's "ice stops after one
+     * block" (2026-07-17).
+     *
+     * <p>The fix is the standard voxel face-cull: a face flush against a solid neighbour is not a real
+     * surface, so it is skipped. Only faces exposed to air can push a body out, so a flat floor presents
+     * only its top face and a sliding body glides across the seams. Returns {@link Double#NaN} if every
+     * face is occluded (a point fully entombed in solid), which the caller drops.
+     */
+    private static double shallowestExposedExit(AABB box, Vector3d p, Vector3d normalOut, WorldBlockCache world) {
+        double best = Double.POSITIVE_INFINITY;
+        double planeD = Double.NaN;
+        // -X, +X, -Y, +Y, -Z, +Z: (exit distance, outward normal, plane offset, probe point just outside)
+        double negX = p.x - box.minX;
+        if (negX < best && !solidAt(world, box.minX - PROBE, p.y, p.z)) {
+            best = negX; normalOut.set(-1.0, 0.0, 0.0); planeD = -box.minX;
+        }
+        double posX = box.maxX - p.x;
+        if (posX < best && !solidAt(world, box.maxX + PROBE, p.y, p.z)) {
+            best = posX; normalOut.set(1.0, 0.0, 0.0); planeD = box.maxX;
+        }
+        double negY = p.y - box.minY;
+        if (negY < best && !solidAt(world, p.x, box.minY - PROBE, p.z)) {
+            best = negY; normalOut.set(0.0, -1.0, 0.0); planeD = -box.minY;
+        }
+        double posY = box.maxY - p.y;
+        if (posY < best && !solidAt(world, p.x, box.maxY + PROBE, p.z)) {
+            best = posY; normalOut.set(0.0, 1.0, 0.0); planeD = box.maxY;
+        }
+        double negZ = p.z - box.minZ;
+        if (negZ < best && !solidAt(world, p.x, p.y, box.minZ - PROBE)) {
+            best = negZ; normalOut.set(0.0, 0.0, -1.0); planeD = -box.minZ;
+        }
+        double posZ = box.maxZ - p.z;
+        if (posZ < best && !solidAt(world, p.x, p.y, box.maxZ + PROBE)) {
+            normalOut.set(0.0, 0.0, 1.0); planeD = box.maxZ;
+        }
+        return planeD;
+    }
+
+    /**
+     * How far past a face to sample when deciding whether it is buried against a neighbour. Small enough
+     * to land inside a flush neighbour block (which abuts exactly at the face plane) and large enough to
+     * clear floating-point slop at the boundary.
+     */
+    private static final double PROBE = 1.0E-4;
+
+    /** Whether a world point lies inside any solid box of the cell that contains it. */
+    private static boolean solidAt(WorldBlockCache world, double x, double y, double z) {
+        int cx = (int) Math.floor(x), cy = (int) Math.floor(y), cz = (int) Math.floor(z);
+        for (AABB box : world.at(cx, cy, cz)) {
+            if (x >= box.minX && x <= box.maxX && y >= box.minY && y <= box.maxY && z >= box.minZ && z <= box.maxZ) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private static double shallowestExit(AABB box, Vector3d p, Vector3d normalOut) {
         double negX = p.x - box.minX, posX = box.maxX - p.x;
         double negY = p.y - box.minY, posY = box.maxY - p.y;
