@@ -1,13 +1,19 @@
 package dev.arubik.craftengine.contraption.persistence;
 
 import java.io.IOException;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import org.bukkit.World;
 import org.bukkit.craftbukkit.CraftWorld;
@@ -73,6 +79,42 @@ public final class BlockAnchoredContraptionStore {
     /** In-memory boot index: contraption id -> its manifest record. Populated by {@link #loadIndex}. */
     private static final Map<UUID, Record> INDEX = new HashMap<>();
 
+    /**
+     * Single background thread that does the gzip compression + disk write for {@link #save} — the
+     * profiled hot path was doing both synchronously on the server thread on every chunk unload
+     * (spark: {@code onChunkUnload} -> {@code save} -> {@code NbtIo.writeCompressed} -> gzip
+     * finish/flush ~= 21% of main-thread time). A SINGLE thread means all writes are globally
+     * ordered, so two writes to the same {@code <uuid>.dat} can never race or interleave. Daemon,
+     * mirroring {@code BukkitContraptionLevel}'s {@code cep-level-cleanup} executor. Volatile +
+     * recreated by {@link #flush} so a plugin re-enable (reload) has a live writer again.
+     */
+    private static volatile ExecutorService writer = newWriter();
+
+    private static ExecutorService newWriter() {
+        return Executors.newSingleThreadExecutor(r -> {
+            Thread t = new Thread(r, "cep-contraption-writer");
+            t.setDaemon(true);
+            return t;
+        });
+    }
+
+    /**
+     * Snapshots handed to {@link #writer} whose async gzip+write hasn't landed on disk yet, keyed
+     * by contraption id. {@link #rehydrate} consults this BEFORE reading the {@code .dat} so a
+     * chunk that unloads and immediately reloads (write still in flight) still restores from the
+     * fresh in-memory tag rather than a stale/absent file — the reload-before-write-completes race.
+     */
+    private static final Map<UUID, CompoundTag> PENDING = new ConcurrentHashMap<>();
+
+    /**
+     * Last root tag we queued to write per id — a content-equality dirty check. Chunk unloads
+     * re-dump byte-identical structure constantly (a parked, unchanged contraption's chunk loads
+     * and unloads as players wander past); when the freshly built tag {@code equals} this one the
+     * data is already persisted/queued and the whole gzip+write is skipped. Cleared on write
+     * FAILURE so a later identical save retries instead of being wrongly deduped away.
+     */
+    private static final Map<UUID, CompoundTag> LAST_WRITTEN = new ConcurrentHashMap<>();
+
     private static Path dir() {
         return CraftEnginePolyfills.instance().getDataFolder().toPath().resolve("contraptions");
     }
@@ -116,10 +158,15 @@ public final class BlockAnchoredContraptionStore {
         if (state == null || state.level() == null) {
             return;
         }
+        UUID id = state.id();
+        // Build the tag on the MAIN thread: the structure dump reads live block/block-entity state
+        // out of the hidden level and must see a consistent, non-mutating snapshot. Once built the
+        // CompoundTag is immutable and is safe to hand to another thread. Compression + disk I/O —
+        // the actual profiled cost — are NOT done here; they go to the background writer below.
+        CompoundTag root;
         try {
-            Files.createDirectories(dir());
-            CompoundTag root = new CompoundTag();
-            root.putString("id", state.id().toString());
+            root = new CompoundTag();
+            root.putString("id", id.toString());
             root.putString("world", state.worldId().toString());
             root.putInt("bx", bearingPos.getX());
             root.putInt("by", bearingPos.getY());
@@ -135,27 +182,104 @@ public final class BlockAnchoredContraptionStore {
             root.putDouble("rpm", rpm);
             root.putDouble("su", suPerBlock);
             root.put("structure", ContraptionStructureNbt.dump(state.level()));
-            NbtIo.writeCompressed(root, fileFor(state.id()));
-            // Keep the boot index in sync so an unload-then-reload within the same session
-            // (never restarted) still finds an up-to-date record.
-            INDEX.put(state.id(), new Record(state.id(), state.worldId(), bearingPos, state.x(), state.y(),
-                    state.z(), state.yawRadians(), state.pitchRadians(), state.rollRadians(), state.isStalled(),
-                    type, rpm, suPerBlock));
         } catch (Throwable t) {
             CraftEnginePolyfills.instance().getLogger()
-                    .warning("[Contraption] failed to save block-anchored contraption " + state.id() + ": " + t);
+                    .warning("[Contraption] failed to serialize block-anchored contraption " + id + ": " + t);
+            return;
         }
+        // Keep the boot index in sync so an unload-then-reload within the same session
+        // (never restarted) still finds an up-to-date record. INDEX is main-thread-only.
+        INDEX.put(id, new Record(id, state.worldId(), bearingPos, state.x(), state.y(),
+                state.z(), state.yawRadians(), state.pitchRadians(), state.rollRadians(), state.isStalled(),
+                type, rpm, suPerBlock));
+        // Dirty check: identical content to what we last queued for this id means it is already
+        // (being) persisted — skip the gzip+write entirely. This is where most chunk-unload saves
+        // are eliminated, since a parked contraption re-dumps byte-for-byte the same tag each time.
+        if (root.equals(LAST_WRITTEN.get(id))) {
+            return;
+        }
+        LAST_WRITTEN.put(id, root);
+        // Hand the immutable snapshot to the background writer (gzip + temp-file + atomic move).
+        // PENDING makes it visible to a racing rehydrate until the write lands on disk.
+        Path file = fileFor(id);
+        PENDING.put(id, root);
+        writer.execute(() -> writeNow(id, file, root));
+    }
+
+    /**
+     * Background-thread half of {@link #save}: gzip-compress {@code root} into a sibling
+     * {@code .tmp} file, then atomically move it over the real {@code .dat} so a crash mid-write
+     * can never leave a half-written (unreadable) file — a reader sees either the old complete
+     * file or the new complete file, never a torn one. Runs only on the single {@link #writer}
+     * thread, so writes to the same path are serialized by construction.
+     */
+    private static void writeNow(UUID id, Path file, CompoundTag root) {
+        try {
+            Files.createDirectories(file.getParent());
+            Path tmp = file.resolveSibling(file.getFileName().toString() + ".tmp");
+            NbtIo.writeCompressed(root, tmp);
+            try {
+                Files.move(tmp, file, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+            } catch (AtomicMoveNotSupportedException noAtomic) {
+                // Filesystem/platform without atomic replace — still far safer than writing the
+                // real file in place (the window for a torn file shrinks to the move itself).
+                Files.move(tmp, file, StandardCopyOption.REPLACE_EXISTING);
+            }
+        } catch (Throwable t) {
+            CraftEnginePolyfills.instance().getLogger()
+                    .warning("[Contraption] failed to write block-anchored contraption " + id + ": " + t);
+            // The dedup hash assumed this content reached disk; it didn't. Drop it so the next
+            // identical save is NOT skipped and gets a real retry.
+            LAST_WRITTEN.remove(id, root);
+        } finally {
+            // Only clear if we're still the latest snapshot — a newer save may have replaced us
+            // while this compression was running.
+            PENDING.remove(id, root);
+        }
+    }
+
+    /**
+     * Drains and stops the background {@link #writer}, blocking up to a bounded timeout so every
+     * queued gzip+disk write completes before the plugin/JVM goes away — the clean-shutdown
+     * guarantee against data loss. Called from {@code onDisable} after the final shutdown save
+     * loop has enqueued its writes. Recreates the writer afterward so a same-classloader re-enable
+     * (reload) still has a live executor.
+     */
+    public static void flush() {
+        ExecutorService w = writer;
+        w.shutdown();
+        try {
+            if (!w.awaitTermination(30, TimeUnit.SECONDS)) {
+                CraftEnginePolyfills.instance().getLogger().warning(
+                        "[Contraption] block-anchored writer did not drain within 30s; forcing stop "
+                                + "(" + PENDING.size() + " write(s) may be incomplete).");
+                w.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            w.shutdownNow();
+        }
+        writer = newWriter();
     }
 
     /** Removes the on-disk file (and the index entry) for a contraption — called on disassemble. */
     public static void delete(UUID id) {
         INDEX.remove(id);
-        try {
-            Files.deleteIfExists(fileFor(id));
-        } catch (Throwable t) {
-            CraftEnginePolyfills.instance().getLogger()
-                    .warning("[Contraption] failed to delete block-anchored contraption file " + id + ": " + t);
-        }
+        LAST_WRITTEN.remove(id);
+        PENDING.remove(id);
+        Path file = fileFor(id);
+        // Route the delete through the writer too, so it is ORDERED after any still-queued write
+        // for this id (write-then-delete ends deleted, never the reverse leaving a resurrected
+        // file). deleteIfExists also mops up a stray sibling .tmp from an interrupted write.
+        writer.execute(() -> {
+            try {
+                Files.deleteIfExists(file);
+                Files.deleteIfExists(file.resolveSibling(file.getFileName().toString() + ".tmp"));
+            } catch (Throwable t) {
+                CraftEnginePolyfills.instance().getLogger()
+                        .warning("[Contraption] failed to delete block-anchored contraption file " + id + ": " + t);
+            }
+        });
     }
 
     /**
@@ -249,13 +373,21 @@ public final class BlockAnchoredContraptionStore {
         }
         Level realLevel = ((CraftWorld) world).getHandle();
         CompoundTag structure;
-        try {
-            CompoundTag root = NbtIo.readCompressed(fileFor(rec.id()), NbtAccounter.unlimitedHeap());
-            structure = root.getCompoundOrEmpty("structure");
-        } catch (Throwable t) {
-            CraftEnginePolyfills.instance().getLogger()
-                    .warning("[Contraption] failed to read block-anchored structure for " + rec.id() + ": " + t);
-            return;
+        // Reload-before-write-completes race: if this contraption's last save is still queued in
+        // the background writer, its .dat may be absent or stale on disk. Prefer the in-memory
+        // snapshot so a rapid unload->reload restores the freshest structure, not an old file.
+        CompoundTag pending = PENDING.get(rec.id());
+        if (pending != null) {
+            structure = pending.getCompoundOrEmpty("structure");
+        } else {
+            try {
+                CompoundTag root = NbtIo.readCompressed(fileFor(rec.id()), NbtAccounter.unlimitedHeap());
+                structure = root.getCompoundOrEmpty("structure");
+            } catch (Throwable t) {
+                CraftEnginePolyfills.instance().getLogger()
+                        .warning("[Contraption] failed to read block-anchored structure for " + rec.id() + ": " + t);
+                return;
+            }
         }
         try {
             // Capture always creates the level at yaw 0 (see ContraptionCapture#capture); the live

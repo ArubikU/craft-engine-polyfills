@@ -298,6 +298,13 @@ public final class CraftEnginePolyfills extends JavaPlugin {
         } catch (Throwable t) {
             getLogger().warning("[Contraption] failed to save block-anchored contraptions on shutdown: " + t);
         }
+        // Drain the async block-anchored writer so every queued gzip+disk write (both the chunk-unload
+        // ones and the shutdown-loop ones just enqueued above) lands before the JVM/plugin goes away.
+        try {
+            dev.arubik.craftengine.contraption.persistence.BlockAnchoredContraptionStore.flush();
+        } catch (Throwable t) {
+            getLogger().warning("[Contraption] failed to flush block-anchored writer on shutdown: " + t);
+        }
         // Persist the loose world glue graph so glued-but-unassembled structures keep their glue
         // across a restart (2026-07-03). Assembled contraptions persist their own glue separately.
         try {

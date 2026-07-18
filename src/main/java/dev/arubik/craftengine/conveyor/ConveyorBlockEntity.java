@@ -81,6 +81,19 @@ public class ConveyorBlockEntity extends PersistentWorldlyBlockEntity implements
 
     /** Ticker counter for the pickup cadence. */
     private int tickCounter = 0;
+
+    /**
+     * How often (ticks) to re-scan indirect redstone power. An indirect-power scan checks all 6
+     * neighbours plus their emitters and is expensive to run every tick on every segment (it was
+     * ~28% of the server thread with many belts), yet redstone rarely changes. We poll it on this
+     * cadence and cache the result — a belt reacts to a redstone change within at most this window,
+     * which is imperceptible for a belt but turns an every-tick scan into a 1-in-{@value} one.
+     */
+    public static final int REDSTONE_SCAN_INTERVAL = 10;
+    /** Cached "powered" (= OFF) state from the last scan; consulted every tick, recomputed on cadence. */
+    private boolean redstonePoweredCache = false;
+    /** Countdown to the next redstone re-scan; -1 means "not yet initialised" (scan immediately). */
+    private int redstoneScanCooldown = -1;
     /** Lazy-load guard: hydrates progress/jitter/entryDir/prevPos fields on first tick. */
     private boolean stateLoaded = false;
     /** Set only when an item is added/removed; the tick flushes state just then. */
@@ -536,7 +549,9 @@ public class ConveyorBlockEntity extends PersistentWorldlyBlockEntity implements
         }
 
         // Redstone control (inverted): no signal = ON, signal = OFF. A powered belt stops.
-        if (redstonePowered(world, pos))
+        // The full indirect-power scan is throttled + cached (see redstonePoweredThrottled) so a
+        // belt only pays for it once every REDSTONE_SCAN_INTERVAL ticks instead of every tick.
+        if (redstonePoweredThrottled(world, pos))
             this.effectiveRpm = 0f;
 
         // Drive the 'activated' block-state (running when it has RPM) so the model/
@@ -733,14 +748,40 @@ public class ConveyorBlockEntity extends PersistentWorldlyBlockEntity implements
      * Accept a handed-off item at {@code startProgress}, adopting its carried jitter
      * and live display entity so the visual is continuous across the boundary.
      */
-    /** Inverted redstone: true (= OFF) when the block receives any redstone power. */
+    /**
+     * Throttled + cached view of {@link #redstonePowered}. The first tick reads immediately (so the
+     * initial state is correct on load/place) and seeds a per-position phase offset so a big grid of
+     * belts doesn't all re-scan on the same tick; thereafter it re-scans once every
+     * {@link #REDSTONE_SCAN_INTERVAL} ticks and returns the cached value in between. Main-thread only,
+     * so the plain instance fields need no synchronisation.
+     */
+    private boolean redstonePoweredThrottled(CEWorld world, BlockPos pos) {
+        if (redstoneScanCooldown < 0) {
+            // Stagger the recompute phase by position, then take an immediate (correct) first reading.
+            redstoneScanCooldown = Math.floorMod(pos.x() * 31 + pos.y() * 17 + pos.z(),
+                    REDSTONE_SCAN_INTERVAL);
+            redstonePoweredCache = redstonePowered(world, pos);
+        } else if (--redstoneScanCooldown <= 0) {
+            redstoneScanCooldown = REDSTONE_SCAN_INTERVAL;
+            redstonePoweredCache = redstonePowered(world, pos);
+        }
+        return redstonePoweredCache;
+    }
+
+    /**
+     * Inverted redstone: true (= OFF) when the block receives any redstone power. Scans the NMS
+     * level's {@link net.minecraft.world.level.SignalGetter#hasNeighborSignal} directly on the same
+     * handle CraftBlock#isBlockIndirectlyPowered would use — same result, but skips the per-call
+     * CraftBlock wrapper allocation. Only ever called from {@link #redstonePoweredThrottled}.
+     */
     private boolean redstonePowered(CEWorld world, BlockPos pos) {
         try {
-            org.bukkit.World bw = (org.bukkit.World) world.world().platformWorld();
-            return bw != null && bw.getBlockAt(pos.x(), pos.y(), pos.z()).isBlockIndirectlyPowered();
+            Object mw = world.world().minecraftWorld();
+            if (mw instanceof net.minecraft.world.level.SignalGetter sg)
+                return sg.hasNeighborSignal(new net.minecraft.core.BlockPos(pos.x(), pos.y(), pos.z()));
         } catch (Throwable t) {
-            return false;
         }
+        return false;
     }
 
     /** Comparator signal from how full the segment's item slots are (like a container). */
