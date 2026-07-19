@@ -105,6 +105,12 @@ public final class CraftEnginePolyfills extends JavaPlugin {
         // CHAINERY: right-click an endpoint with chain items to extend its length (add slack).
         getServer().getPluginManager().registerEvents(new dev.arubik.craftengine.chainery.ChaineryInteractListener(),
                 this);
+        // CHAINERY: packet-level detection of clicks on a chain's interaction hitboxes -> ChainInteractEvent.
+        try {
+            dev.arubik.craftengine.chainery.ChainInteractPacketListener.register();
+        } catch (Throwable t) {
+            getLogger().warning("[Chainery] failed to register chain interaction packet listener: " + t);
+        }
         // CHAINERY render clock: repositions every placed chain's links onto its live endpoints each tick,
         // so a chain tethered to a moving contraption follows it. (Physics coupling plugs in here in phase 2.)
         getServer().getScheduler().runTaskTimer(this, () -> {

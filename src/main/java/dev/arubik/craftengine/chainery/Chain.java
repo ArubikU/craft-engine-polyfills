@@ -46,6 +46,9 @@ public final class Chain {
      */
     public final transient List<ChainBlockDisplay> links = new ArrayList<>();
 
+    /** Live PACKET-ONLY interaction hitboxes (one per link) making the chain clickable — see ChainInteraction. */
+    public final transient List<ChainInteraction> hitboxes = new ArrayList<>();
+
     /** Live verlet rope for this span's sag/ground physics + render — NOT persisted, rebuilt on demand. */
     public final transient ChainRope rope = new ChainRope();
 

@@ -83,15 +83,24 @@ public final class ChainRenderer {
             }
             link.clearShown();
         }
+        // Interaction hitboxes: one per link, kept in lock-step so the chain is clickable per segment.
+        while (chain.hitboxes.size() < segs) {
+            chain.hitboxes.add(new ChainInteraction(chain.id, chain.hitboxes.size()));
+        }
+        while (chain.hitboxes.size() > segs) {
+            chain.hitboxes.remove(chain.hitboxes.size() - 1).remove(viewers);
+        }
         for (int r = 0; r < segs; r++) {
             int i0 = Math.min(r * stride, n - 1);
             int i1 = Math.min((r + 1) * stride, n - 1);
             org.joml.Vector3d p0 = rope.particle(i0);
             org.joml.Vector3d p1 = rope.particle(i1);
+            double mx = (p0.x + p1.x) / 2.0, my = (p0.y + p1.y) / 2.0, mz = (p0.z + p1.z) / 2.0;
             ChainBlockDisplay link = chain.links.get(r);
             link.setBlockState(base);
             link.setRotation(orient(p0, p1)); // full yaw+pitch: point the chain model along the block segment
-            link.render(viewers, (p0.x + p1.x) / 2.0, (p0.y + p1.y) / 2.0, (p0.z + p1.z) / 2.0);
+            link.render(viewers, mx, my, mz);
+            chain.hitboxes.get(r).render(viewers, mx, my, mz);
         }
     }
 
@@ -115,6 +124,10 @@ public final class ChainRenderer {
             link.clearShown();
         }
         chain.links.clear();
+        for (ChainInteraction hit : chain.hitboxes) {
+            hit.remove(viewers);
+        }
+        chain.hitboxes.clear();
     }
 
     /** View radius (blocks) past a chain's span within which a player is sent its links. */
