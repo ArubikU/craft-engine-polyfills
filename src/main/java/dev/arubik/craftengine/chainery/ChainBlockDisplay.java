@@ -32,6 +32,7 @@ public final class ChainBlockDisplay {
     private final java.util.Set<UUID> shownTo = java.util.concurrent.ConcurrentHashMap.newKeySet();
 
     private BlockState blockState;
+    private org.joml.Quaternionf rotation = new org.joml.Quaternionf();
     private boolean metaDirty = false;
 
     public ChainBlockDisplay() {
@@ -39,10 +40,22 @@ public final class ChainBlockDisplay {
                 .constructor$ClientboundRemoveEntitiesPacket(IntList.of(entityId));
     }
 
-    /** Sets the block state this link renders; flags a metadata resend if it changed (e.g. axis flipped). */
+    /** Sets the block state this link renders; flags a metadata resend if it changed. */
     public void setBlockState(BlockState state) {
         if (state != null && !state.equals(this.blockState)) {
             this.blockState = state;
+            this.metaDirty = true;
+        }
+    }
+
+    /**
+     * Sets the link's full 3D orientation (transformation LeftRotation) — this is what gives it yaw AND pitch,
+     * so the block model points along the rope segment in any direction, not just the block's cardinal axis.
+     */
+    public void setRotation(org.joml.Quaternionf rot) {
+        org.joml.Quaternionf next = rot != null ? rot : new org.joml.Quaternionf();
+        if (!next.equals(this.rotation, 1.0e-4f)) {
+            this.rotation = next;
             this.metaDirty = true;
         }
     }
@@ -52,11 +65,16 @@ public final class ChainBlockDisplay {
         if (blockState != null) {
             DisplayData.BlockDisplayData.BlockState.addEntityData(blockState, values);
         }
-        // Recentre the corner-anchored [0,1] block model onto the entity position, so the link sits centred on
-        // the rope particle midpoint we teleport it to.
-        DisplayData.Translation.addEntityData(new Vector3f(-0.5f, -0.5f, -0.5f), values);
+        // Orient the block MODEL by the transformation LeftRotation (yaw+pitch+roll, full 3D — the vanilla
+        // display rotation lever, same one ConveyorItemDisplay uses). Pivot about the model CENTRE: compose is
+        // Translation + LeftRotation·v, so Translation = LeftRotation·(-0.5,-0.5,-0.5) makes it LeftRotation·(v−½)
+        // — the model spins about its own centre, which sits on the rope particle midpoint we teleport it to.
+        Vector3f t = rotation.transform(new Vector3f(-0.5f, -0.5f, -0.5f));
+        DisplayData.Translation.addEntityData(t, values);
+        DisplayData.LeftRotation.addEntityData(rotation, values);
         DisplayData.BrightnessOverride.addEntityData((15 << 4) | (15 << 20), values);
         DisplayData.PosRotInterpolationDuration.addEntityData(1, values);
+        DisplayData.TransformationInterpolationDuration.addEntityData(2, values);
         return values;
     }
 

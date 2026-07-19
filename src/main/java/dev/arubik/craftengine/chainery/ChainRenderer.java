@@ -6,9 +6,7 @@ import java.util.List;
 import org.bukkit.World;
 
 import dev.arubik.craftengine.util.CeWorlds;
-import net.minecraft.core.Direction;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.momirealms.craftengine.bukkit.api.CraftEngineBlocks;
 import net.momirealms.craftengine.core.entity.player.Player;
 import net.momirealms.craftengine.core.util.Key;
@@ -33,8 +31,8 @@ public final class ChainRenderer {
      *   <li>a CraftEngine block id → its mapped vanilla state (which the pack renders as the custom model);</li>
      *   <li>else a vanilla item/block id → that block's default state (e.g. minecraft:iron_chain).</li>
      * </ul>
-     * Falls back to a vanilla chain. The base state is resolved once per render; per-link {@link #withAxis}
-     * then orients it along each segment via the block's own {@code axis} property (no display rotation needed).
+     * Falls back to a vanilla chain. The base state is resolved once per render; each link is then oriented
+     * along its segment by the display's LeftRotation ({@link #orient}), giving full yaw+pitch.
      */
     private static BlockState resolveBaseState(String linkId) {
         // 1) CraftEngine block (item id == block id is the common case; the id may also be a block id directly).
@@ -60,17 +58,6 @@ public final class ChainRenderer {
             return ((org.bukkit.craftbukkit.block.data.CraftBlockData) chain.createBlockData()).getState();
         }
         return null;
-    }
-
-    /** Orients a link's block state along {@code dir} via its {@code axis} property (if it has one). */
-    private static BlockState withAxis(BlockState base, org.joml.Vector3d dir) {
-        if (base == null || !base.hasProperty(BlockStateProperties.AXIS)) {
-            return base;
-        }
-        double ax = Math.abs(dir.x), ay = Math.abs(dir.y), az = Math.abs(dir.z);
-        Direction.Axis axis = (ay >= ax && ay >= az) ? Direction.Axis.Y
-                : (ax >= az ? Direction.Axis.X : Direction.Axis.Z);
-        return base.setValue(BlockStateProperties.AXIS, axis);
     }
 
     /**
@@ -99,9 +86,20 @@ public final class ChainRenderer {
             org.joml.Vector3d p0 = rope.particle(i);
             org.joml.Vector3d p1 = rope.particle(i + 1);
             ChainBlockDisplay link = chain.links.get(i);
-            link.setBlockState(withAxis(base, new org.joml.Vector3d(p1).sub(p0)));
+            link.setBlockState(base);
+            link.setRotation(orient(p0, p1)); // full yaw+pitch: point the chain model along the segment
             link.render(viewers, (p0.x + p1.x) / 2.0, (p0.y + p1.y) / 2.0, (p0.z + p1.z) / 2.0);
         }
+    }
+
+    /** Quaternion mapping the chain model's vertical (up/Y) axis onto the segment direction — full 3D orient. */
+    private static org.joml.Quaternionf orient(org.joml.Vector3d a, org.joml.Vector3d b) {
+        org.joml.Vector3f dir = new org.joml.Vector3f((float) (b.x - a.x), (float) (b.y - a.y), (float) (b.z - a.z));
+        if (dir.lengthSquared() < 1.0e-6f) {
+            dir.set(0, 1, 0);
+        }
+        dir.normalize();
+        return new org.joml.Quaternionf().rotationTo(new org.joml.Vector3f(0, 1, 0), dir);
     }
 
     /** Despawns every packet link of this chain for whoever can currently see it, and clears the handles. */

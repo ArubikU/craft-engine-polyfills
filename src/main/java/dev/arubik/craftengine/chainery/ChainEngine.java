@@ -76,8 +76,13 @@ public final class ChainEngine {
             }
             ChainRenderer.despawn(chain, world);
             Level level = ((CraftWorld) world).getHandle();
+            // Real-world static anchors at their original cells.
             removeEndpointBlock(world, level, chain.a);
             removeEndpointBlock(world, level, chain.b);
+            // Anchors that have been CAPTURED into a contraption live in the hologram, not at chain.a/chain.b —
+            // remove those from their contraption too, so a tension-snap clears the anchors everywhere (user:
+            // "al romper el chain por tensión no se desaparecen los anchors en el contraption y vida real").
+            removeCapturedAnchors(chain.id);
             if (dropItems) {
                 dropChainItems(world, chain);
             }
@@ -92,6 +97,34 @@ public final class ChainEngine {
             return; // already gone (the mined endpoint, or an unloaded chunk)
         }
         world.getBlockAt(pos.getX(), pos.getY(), pos.getZ()).setType(Material.AIR, false);
+    }
+
+    /** Removes any anchor cell bound to {@code chainId} from whatever contraption currently holds it. */
+    private static void removeCapturedAnchors(java.util.UUID chainId) {
+        int flags = net.minecraft.world.level.block.Block.UPDATE_CLIENTS
+                | net.minecraft.world.level.block.Block.UPDATE_KNOWN_SHAPE;
+        for (dev.arubik.craftengine.contraption.ContraptionEntity entity :
+                dev.arubik.craftengine.contraption.ContraptionManager.all()) {
+            try {
+                dev.arubik.craftengine.contraption.level.ContraptionLevel level = entity.state().level();
+                boolean changed = false;
+                for (BlockPos local : new java.util.HashSet<>(level.localPositions())) {
+                    net.momirealms.craftengine.core.block.entity.BlockEntity be =
+                            dev.arubik.craftengine.block.entity.BukkitBlockEntityTypes.getIfLoaded((Level) level, local);
+                    if (be != null && be.controller instanceof ChainBlockEntity cbe
+                            && chainId.equals(cbe.getChainId())) {
+                        level.setBlock(local, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), flags);
+                        changed = true;
+                    }
+                }
+                if (changed) {
+                    level.markCellsDirty();
+                    level.refreshLocalPositions();
+                }
+            } catch (Throwable ignored) {
+                // one contraption failing shouldn't block the rest of the sever
+            }
+        }
     }
 
     private static void dropChainItems(World world, Chain chain) {
