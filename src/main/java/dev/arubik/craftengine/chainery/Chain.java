@@ -31,10 +31,11 @@ public final class Chain {
     public int blocks;
 
     /**
-     * Live render handles (spawned display-entity UUIDs) — NOT persisted; rebuilt on load. Kept here so
-     * {@code ChainRenderer} can reposition or despawn this chain's links without re-deriving them.
+     * Live PACKET-ONLY link displays (fake item_display entities, one per rope segment) — NOT persisted,
+     * rebuilt on demand. Packet-based (no real Bukkit entities) so the render shares the same lightweight
+     * fake-entity path the phys contraption swarm uses. See {@code ChainRenderer}.
      */
-    public final transient List<UUID> renderEntities = new ArrayList<>();
+    public final transient List<dev.arubik.craftengine.conveyor.ConveyorItemDisplay> links = new ArrayList<>();
 
     /** Live verlet rope for this span's sag/ground physics + render — NOT persisted, rebuilt on demand. */
     public final transient ChainRope rope = new ChainRope();

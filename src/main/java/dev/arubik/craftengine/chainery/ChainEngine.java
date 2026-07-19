@@ -96,25 +96,37 @@ public final class ChainEngine {
 
     private static void dropChainItems(World world, Chain chain) {
         try {
-            var def = CraftEngineItems.byId(Key.of(chain.material.linkItem()));
-            if (def == null || chain.blocks <= 0) {
+            if (chain.blocks <= 0) {
                 return;
             }
-            ItemStack stack = def.buildBukkitItem();
-            stack.setAmount(Math.min(chain.blocks, stack.getMaxStackSize()));
             int remaining = chain.blocks;
             Location mid = new Location(world,
                     (chain.a.getX() + chain.b.getX()) / 2.0 + 0.5,
                     (chain.a.getY() + chain.b.getY()) / 2.0 + 0.5,
                     (chain.a.getZ() + chain.b.getZ()) / 2.0 + 0.5);
             while (remaining > 0) {
-                ItemStack drop = def.buildBukkitItem();
+                ItemStack drop = linkItemStack(chain.material.linkItem());
+                if (drop == null) {
+                    return;
+                }
                 drop.setAmount(Math.min(remaining, drop.getMaxStackSize()));
                 world.dropItemNaturally(mid, drop);
                 remaining -= drop.getAmount();
             }
         } catch (Throwable ignored) {
         }
+    }
+
+    /** Builds one link item — a CraftEngine item if {@code id} is one, else a vanilla item by material key.
+     *  Public so the renderer builds its display model from the SAME configured id (any CE or vanilla id). */
+    public static ItemStack linkItemStack(String id) {
+        var def = CraftEngineItems.byId(Key.of(id));
+        if (def != null) {
+            return def.buildBukkitItem();
+        }
+        org.bukkit.NamespacedKey mk = org.bukkit.NamespacedKey.fromString(id);
+        org.bukkit.Material m = mk == null ? null : org.bukkit.Registry.MATERIAL.get(mk);
+        return m == null ? null : new ItemStack(m);
     }
 
     // ---- per-tick render + rope physics ----
@@ -138,9 +150,15 @@ public final class ChainEngine {
      * follows its contraption — then (a) render the span onto them and (b) if the chain is stretched past its
      * span, pull the tethered contraption(s) back, snapping the chain if the pull exceeds its max tension.
      */
+    /** One tick's scan of every contraption: captured chain endpoints + the world cells the contraptions fill. */
+    private record Scan(java.util.Map<java.util.UUID, Live[]> endpoints,
+            java.util.Map<java.util.UUID, java.util.Set<Long>> occupancyByWorld) {
+    }
+
     public static void tickAll() {
-        // Index every chain endpoint that has been captured into a contraption: chainId -> role -> live pos+owner.
-        java.util.Map<java.util.UUID, Live[]> captured = indexCapturedEndpoints();
+        // One pass over every contraption: locate captured chain endpoints AND collect the world cells each
+        // contraption currently fills, so the rope can collide with moving contraption geometry too.
+        Scan scan = scanContraptions();
 
         for (Chain chain : ChainRegistry.all()) {
             try {
@@ -148,7 +166,7 @@ public final class ChainEngine {
                 if (world == null) {
                     continue;
                 }
-                Live[] ends = captured.get(chain.id);
+                Live[] ends = scan.endpoints().get(chain.id);
                 Live a = resolveEnd(world, chain, chain.a, ends, 0);
                 Live b = resolveEnd(world, chain, chain.b, ends, 1);
                 if (a == null || b == null) {
@@ -158,9 +176,10 @@ public final class ChainEngine {
                     continue; // the chain snapped this tick — it's already gone
                 }
                 // Real rope physics: step the verlet chain between the live anchors against the world's terrain
-                // (main thread here, so block reads are safe), then draw the links from its particles — a slack
-                // chain sags and rests on the floor, a taut one straightens.
-                ChainRope.Terrain terrain = terrainFor(world);
+                // AND the contraption cells (main thread here, so block reads are safe), then draw the links from
+                // its particles — a slack chain sags, rests on the floor, and drapes over contraption edges
+                // (tensión en esquinas), a taut one straightens.
+                ChainRope.Terrain terrain = terrainFor(world, scan.occupancyByWorld().get(chain.worldId));
                 chain.rope.step(a.pos(), b.pos(), chain.blocks, ROPE_ITERATIONS, ROPE_GRAVITY, ROPE_DAMPING, terrain);
                 ChainRenderer.syncRope(chain, world, chain.rope);
             } catch (Throwable ignored) {
@@ -169,9 +188,15 @@ public final class ChainEngine {
         }
     }
 
-    /** A solid-block probe over a live Bukkit world (main thread only). Unloaded chunks read as non-solid. */
-    private static ChainRope.Terrain terrainFor(World world) {
+    /**
+     * A solid-block probe over a live Bukkit world (main thread only), plus the contraption cells occupying it
+     * this tick (so the rope collides with moving contraption surfaces). Unloaded chunks read as non-solid.
+     */
+    private static ChainRope.Terrain terrainFor(World world, java.util.Set<Long> contraptionCells) {
         return (x, y, z) -> {
+            if (contraptionCells != null && contraptionCells.contains(net.minecraft.core.BlockPos.asLong(x, y, z))) {
+                return true;
+            }
             if (!world.isChunkLoaded(x >> 4, z >> 4)) {
                 return false;
             }
@@ -190,15 +215,22 @@ public final class ChainEngine {
         return new Live(new org.joml.Vector3d(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5), null, null);
     }
 
-    /** Scans every registered contraption for chain-endpoint block entities it has captured. */
-    private static java.util.Map<java.util.UUID, Live[]> indexCapturedEndpoints() {
-        java.util.Map<java.util.UUID, Live[]> map = new java.util.HashMap<>();
+    /** Scans every contraption once: captured chain endpoints + per-world occupancy of contraption cells. */
+    private static Scan scanContraptions() {
+        java.util.Map<java.util.UUID, Live[]> endpoints = new java.util.HashMap<>();
+        java.util.Map<java.util.UUID, java.util.Set<Long>> occupancy = new java.util.HashMap<>();
         for (dev.arubik.craftengine.contraption.ContraptionEntity entity :
                 dev.arubik.craftengine.contraption.ContraptionManager.all()) {
             try {
                 dev.arubik.craftengine.contraption.level.ContraptionLevel level = entity.state().level();
                 java.util.UUID cid = entity.state().id();
+                java.util.UUID worldId = entity.state().worldId();
+                java.util.Set<Long> cells = occupancy.computeIfAbsent(worldId, w -> new java.util.HashSet<>());
                 for (BlockPos local : level.localPositions()) {
+                    net.minecraft.world.phys.Vec3 w = level.realWorldPositionOf(local);
+                    // Occupancy: the world block this cell currently fills (rounded from its continuous pose).
+                    cells.add(net.minecraft.core.BlockPos.asLong(
+                            (int) Math.floor(w.x), (int) Math.floor(w.y), (int) Math.floor(w.z)));
                     net.momirealms.craftengine.core.block.entity.BlockEntity be =
                             dev.arubik.craftengine.block.entity.BukkitBlockEntityTypes.getIfLoaded((Level) level, local);
                     if (be == null || !(be.controller instanceof ChainBlockEntity cbe)) {
@@ -208,15 +240,14 @@ public final class ChainEngine {
                     if (chainId == null) {
                         continue;
                     }
-                    net.minecraft.world.phys.Vec3 w = level.realWorldPositionOf(local);
                     Live live = new Live(new org.joml.Vector3d(w.x, w.y, w.z), cid, entity.state());
-                    map.computeIfAbsent(chainId, k -> new Live[2])[cbe.getRole() == 0 ? 0 : 1] = live;
+                    endpoints.computeIfAbsent(chainId, k -> new Live[2])[cbe.getRole() == 0 ? 0 : 1] = live;
                 }
             } catch (Throwable ignored) {
-                // a single misbehaving contraption shouldn't abort the whole index
+                // a single misbehaving contraption shouldn't abort the whole scan
             }
         }
-        return map;
+        return new Scan(endpoints, occupancy);
     }
 
     /**

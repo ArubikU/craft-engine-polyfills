@@ -121,15 +121,28 @@ public class ChaineryItemBehavior extends ExtendedItemBehavior {
         return stack;
     }
 
-    /** Total count of the chain-link item ({@code itemId}) across the player's inventory. */
+    /**
+     * Whether {@code it} is the configured chain link — matches a CraftEngine custom id (e.g. {@code
+     * cml:iron_chain}) OR a plain vanilla item by its namespaced key (e.g. {@code minecraft:chain}), so the
+     * link can be either a CE item or a vanilla one depending on config.
+     */
+    public static boolean isLink(org.bukkit.inventory.ItemStack it, String linkId) {
+        if (it == null || it.getType().isAir()) {
+            return false;
+        }
+        Key ce = CraftEngineItems.getCustomItemId(it);
+        if (ce != null) {
+            return ce.toString().equals(linkId);
+        }
+        org.bukkit.NamespacedKey mk = it.getType().getKey();
+        return mk.toString().equals(linkId);
+    }
+
+    /** Total count of the chain-link item across the player's inventory. */
     private static int countChainItems(Player player, String itemId) {
         int total = 0;
         for (org.bukkit.inventory.ItemStack it : player.getInventory().getContents()) {
-            if (it == null || it.getType().isAir()) {
-                continue;
-            }
-            Key id = CraftEngineItems.getCustomItemId(it);
-            if (id != null && id.toString().equals(itemId)) {
+            if (isLink(it, itemId)) {
                 total += it.getAmount();
             }
         }
@@ -141,11 +154,7 @@ public class ChaineryItemBehavior extends ExtendedItemBehavior {
         org.bukkit.inventory.ItemStack[] contents = player.getInventory().getContents();
         for (int i = 0; i < contents.length && amount > 0; i++) {
             org.bukkit.inventory.ItemStack it = contents[i];
-            if (it == null || it.getType().isAir()) {
-                continue;
-            }
-            Key id = CraftEngineItems.getCustomItemId(it);
-            if (id == null || !id.toString().equals(itemId)) {
+            if (!isLink(it, itemId)) {
                 continue;
             }
             int take = Math.min(amount, it.getAmount());

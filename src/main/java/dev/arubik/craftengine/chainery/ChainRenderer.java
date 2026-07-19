@@ -2,129 +2,135 @@ package dev.arubik.craftengine.chainery;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
-import org.bukkit.Location;
 import org.bukkit.World;
-import org.bukkit.entity.Display.Billboard;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.ItemDisplay;
-import org.bukkit.persistence.PersistentDataType;
-import org.bukkit.util.Transformation;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
-import net.momirealms.craftengine.bukkit.api.CraftEngineItems;
-import net.momirealms.craftengine.core.util.Key;
+import dev.arubik.craftengine.conveyor.ConveyorItemDisplay;
+import dev.arubik.craftengine.util.CeWorlds;
+import net.momirealms.craftengine.core.entity.player.Player;
+import net.momirealms.craftengine.core.world.ChunkPos;
 
 /**
- * Dynamic render of a {@link Chain} span (CHAINERY — "usando el motor de renderizado renderizar la cadena de
- * manera dinámica"). Strings a row of {@link ItemDisplay}s showing the chain block's own model along a
- * slack catenary between the two endpoint centres, and {@link #update(Chain, World, org.joml.Vector3d,
- * org.joml.Vector3d)} repositions them each tick so a chain tied to a moving contraption follows its ends.
- *
- * <p>v1 uses vanilla display entities (robust, no dependency on the contraption swarm renderer); a chain
- * link is a small item-display oriented along its local segment, sagging by however much the rope is slack.
+ * PACKET-ONLY render of a {@link Chain} span (CHAINERY — user: "usa packets, no uses item displays reales,
+ * por algo te dije que uses el phys system"). One fake {@code item_display} per rope segment (reusing
+ * {@link ConveyorItemDisplay}, the same lightweight per-viewer packet entity the conveyor and contraption
+ * swarms use — no real Bukkit entities), positioned at the segment midpoint and oriented along it, so the
+ * links follow the verlet {@link ChainRope}'s real sag/ground-rest every tick.
  */
 public final class ChainRenderer {
 
     private ChainRenderer() {
     }
 
-    /** PDC marker so orphaned link displays (from a crash mid-life) can be swept on enable. */
-    public static final org.bukkit.NamespacedKey LINK_TAG =
-            org.bukkit.NamespacedKey.fromString("polyfills:chain_link");
-
-    private static final float LINK_SCALE = 0.6f;
+    private static final float LINK_SCALE = 0.9f;
 
     /**
-     * Draws {@code chain} from its verlet {@link ChainRope}: one display link per rope segment, positioned at
-     * the segment midpoint and oriented along it — so the render shows the real sag/ground-rest the sim
-     * produced, and follows it every tick. Spawns/despawns links to match the segment count.
+     * The NMS item a link renders as — built from the chain material's configured link id, so ANY CraftEngine
+     * item (copper_chain, gold_chain, …) or vanilla item works, showing that item's own model. Falls back to a
+     * vanilla chain if the id resolves to nothing.
+     */
+    private static Object linkNmsItem(String linkId) {
+        org.bukkit.inventory.ItemStack bukkit = ChainEngine.linkItemStack(linkId);
+        if (bukkit == null) {
+            org.bukkit.Material m = org.bukkit.Material.matchMaterial("CHAIN");
+            bukkit = new org.bukkit.inventory.ItemStack(m != null ? m : org.bukkit.Material.IRON_INGOT);
+        }
+        return org.bukkit.craftbukkit.inventory.CraftItemStack.asNMSCopy(bukkit);
+    }
+
+    /**
+     * Draws {@code chain} from its verlet {@link ChainRope}: one packet link per segment at the segment
+     * midpoint, oriented along it. Spawns/despawns links to match the segment count and syncs their position
+     * to whoever is tracking the chain's chunks.
      */
     public static void syncRope(Chain chain, World world, ChainRope rope) {
         int segs = Math.max(0, rope.particleCount() - 1);
+        List<Player> viewers = viewersFor(world, rope);
         if (segs == 0) {
             return;
         }
-        if (chain.renderEntities.size() != segs) {
-            despawn(chain, world);
-            org.bukkit.inventory.ItemStack model = modelItem(chain.material.linkItem());
-            for (int i = 0; i < segs; i++) {
-                org.joml.Vector3d p = rope.particle(i);
-                ItemDisplay disp = world.spawn(new Location(world, p.x, p.y, p.z), ItemDisplay.class, d -> {
-                    d.setItemStack(model);
-                    d.setBillboard(Billboard.FIXED);
-                    d.getPersistentDataContainer().set(LINK_TAG, PersistentDataType.STRING, chain.id.toString());
-                });
-                chain.renderEntities.add(disp.getUniqueId());
+        while (chain.links.size() < segs) {
+            ConveyorItemDisplay link = new ConveyorItemDisplay();
+            link.setNmsItem(linkNmsItem(chain.material.linkItem()));
+            link.setScale(LINK_SCALE);
+            chain.links.add(link);
+        }
+        while (chain.links.size() > segs) {
+            ConveyorItemDisplay link = chain.links.remove(chain.links.size() - 1);
+            for (Player p : viewers) {
+                link.despawn(p);
             }
+            link.clearShown();
         }
         for (int i = 0; i < segs; i++) {
-            Entity e = world.getEntity(chain.renderEntities.get(i));
-            if (!(e instanceof ItemDisplay disp)) {
-                continue;
-            }
             org.joml.Vector3d p0 = rope.particle(i);
             org.joml.Vector3d p1 = rope.particle(i + 1);
-            disp.teleport(new Location(world, (p0.x + p1.x) / 2.0, (p0.y + p1.y) / 2.0, (p0.z + p1.z) / 2.0));
-            disp.setTransformation(orient(p0, p1));
+            ConveyorItemDisplay link = chain.links.get(i);
+            link.setRotation(orient(p0, p1));
+            link.render(viewers, (p0.x + p1.x) / 2.0, (p0.y + p1.y) / 2.0, (p0.z + p1.z) / 2.0,
+                    link.consumeRotationDirty());
         }
     }
 
-    /** A transformation whose rotation maps the model's up axis onto the segment direction, scaled down. */
-    private static Transformation orient(org.joml.Vector3d a, org.joml.Vector3d b) {
+    /** Despawns every packet link of this chain for whoever can currently see it, and clears the handles. */
+    public static void despawn(Chain chain, World world) {
+        List<Player> viewers = world == null ? List.of() : viewersFor(world, chain.rope);
+        for (ConveyorItemDisplay link : chain.links) {
+            for (Player p : viewers) {
+                link.despawn(p);
+            }
+            link.clearShown();
+        }
+        chain.links.clear();
+    }
+
+    /** CE players tracking either endpoint's chunk (union) — the viewers a chain's links are sent to. */
+    private static List<Player> viewersFor(World world, ChainRope rope) {
+        List<Player> out = new ArrayList<>();
+        try {
+            int n = rope.particleCount();
+            if (n == 0) {
+                return out;
+            }
+            org.joml.Vector3d a = rope.particle(0);
+            org.joml.Vector3d b = rope.particle(n - 1);
+            var ce = CeWorlds.of(world);
+            addTracked(out, ce.getTrackedBy(new ChunkPos((int) Math.floor(a.x) >> 4, (int) Math.floor(a.z) >> 4)));
+            int bcx = (int) Math.floor(b.x) >> 4, bcz = (int) Math.floor(b.z) >> 4;
+            if (bcx != ((int) Math.floor(a.x) >> 4) || bcz != ((int) Math.floor(a.z) >> 4)) {
+                addTracked(out, ce.getTrackedBy(new ChunkPos(bcx, bcz)));
+            }
+        } catch (Throwable ignored) {
+            // no viewers this tick rather than an exception
+        }
+        return out;
+    }
+
+    private static void addTracked(List<Player> out, List<Player> tracked) {
+        if (tracked == null) {
+            return;
+        }
+        for (Player p : tracked) {
+            if (!out.contains(p)) {
+                out.add(p);
+            }
+        }
+    }
+
+    /** A rotation mapping the item model's up axis onto the segment direction. */
+    private static Quaternionf orient(org.joml.Vector3d a, org.joml.Vector3d b) {
         Vector3f dir = new Vector3f((float) (b.x - a.x), (float) (b.y - a.y), (float) (b.z - a.z));
         if (dir.lengthSquared() < 1.0e-6f) {
             dir.set(0, 1, 0);
         }
         dir.normalize();
-        Quaternionf rot = new Quaternionf().rotationTo(new Vector3f(0, 1, 0), dir);
-        return new Transformation(new Vector3f(0, 0, 0), rot,
-                new Vector3f(LINK_SCALE, LINK_SCALE, LINK_SCALE), new Quaternionf());
+        return new Quaternionf().rotationTo(new Vector3f(0, 1, 0), dir);
     }
 
-    /** Removes every display entity of this chain (by stored UUID), clearing the handle list. */
-    public static void despawn(Chain chain, World world) {
-        for (UUID id : chain.renderEntities) {
-            Entity e = world == null ? null : world.getEntity(id);
-            if (e != null) {
-                e.remove();
-            }
-        }
-        chain.renderEntities.clear();
-    }
-
-    private static org.bukkit.inventory.ItemStack modelItem(String blockId) {
-        // The rope links render as the VANILLA iron chain model (user: "para el chain base usa el modelo de
-        // iron_chain vanilla"). matchMaterial dodges a mapping quirk where Material.CHAIN isn't a compile const.
-        org.bukkit.Material chain = org.bukkit.Material.matchMaterial("CHAIN");
-        if (chain != null) {
-            return new org.bukkit.inventory.ItemStack(chain);
-        }
-        try {
-            var def = CraftEngineItems.byId(Key.of(blockId));
-            if (def != null) {
-                return def.buildBukkitItem();
-            }
-        } catch (Throwable ignored) {
-        }
-        return new org.bukkit.inventory.ItemStack(org.bukkit.Material.IRON_INGOT);
-    }
-
-    /** Sweeps orphaned chain-link displays (whose chain no longer exists) across all loaded worlds. */
+    /** No-op kept for the enable-time call: packet entities never persist as real orphans to sweep. */
     public static void sweepOrphans() {
-        List<UUID> live = new ArrayList<>();
-        for (Chain c : ChainRegistry.all()) {
-            live.addAll(c.renderEntities);
-        }
-        for (World w : org.bukkit.Bukkit.getWorlds()) {
-            for (Entity e : w.getEntitiesByClass(ItemDisplay.class)) {
-                String tag = e.getPersistentDataContainer().get(LINK_TAG, PersistentDataType.STRING);
-                if (tag != null && !live.contains(e.getUniqueId())) {
-                    e.remove();
-                }
-            }
-        }
+        // Packet-only links vanish on disconnect/reload; nothing to clean.
     }
 }

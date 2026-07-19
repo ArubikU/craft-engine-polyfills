@@ -49,9 +49,8 @@ public class ChaineryInteractListener implements Listener {
         if (chain == null) {
             return;
         }
-        // Only chain items of this chain's own material extend it.
-        Key handId = CraftEngineItems.getCustomItemId(hand);
-        if (handId == null || !handId.toString().equals(chain.material.linkItem())) {
+        // Only chain items of this chain's own material extend it (CE or vanilla — see isLink).
+        if (!ChaineryItemBehavior.isLink(hand, chain.material.linkItem())) {
             return;
         }
 
