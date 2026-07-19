@@ -130,6 +130,12 @@ public class WeightBlockBehavior extends BukkitBlockBehavior {
      */
     private static Double functionalWeight(ImmutableBlockState ce) {
         var b = ce.behavior();
+        // The PHYS anchor is the weightless pivot the whole structure hangs off — it must not add mass of its
+        // own (2026-07-18 — "reduce el peso del phys anchor a 0"). Other bearing kinds keep their block weight.
+        var bearing = b.getFirst(dev.arubik.craftengine.contraption.behavior.BearingBlockBehavior.class);
+        if (bearing != null && bearing.type() == dev.arubik.craftengine.contraption.BearingType.PHYS) {
+            return 0.0;
+        }
         if (b.getFirst(dev.arubik.craftengine.gas.behavior.GasPipeBehavior.class) != null
                 || b.getFirst(dev.arubik.craftengine.fluid.behavior.PipeBehavior.class) != null) {
             return PIPE_WEIGHT;
@@ -166,6 +172,11 @@ public class WeightBlockBehavior extends BukkitBlockBehavior {
             return override; // the owner's mass.yml wins over the built-in family bucket below
         }
         String n = m.name();
+        // TNT — a hollow block of powder, kept light (2026-07-18 — "bájale al TNT a 1, pesa mucho"), so a
+        // bomb contraption isn't dragged down by its own payload.
+        if (n.equals("TNT")) {
+            return 1.0;
+        }
         // Very light: cloth, plants, decoration.
         if (n.endsWith("_CARPET") || n.contains("SAPLING") || n.contains("FLOWER") || n.contains("LEAVES")
                 || n.contains("VINE") || n.contains("GRASS") && !n.equals("GRASS_BLOCK") || n.contains("FERN")

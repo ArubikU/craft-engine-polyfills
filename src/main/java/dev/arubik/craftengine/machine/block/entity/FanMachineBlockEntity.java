@@ -826,7 +826,7 @@ public class FanMachineBlockEntity extends AbstractMachineBlockEntity {
      * couple of heavy-steam fans lift a small structure while a single one only nudges a heavy one — thrusters
      * you stack, not a single-block antigravity. Easy to retune.
      */
-    private static final double THRUST_PER_PUSH = 0.6D;
+    private static final double THRUST_PER_PUSH = 1.0D;
 
     /**
      * If {@code serverLevel} is a PHYS contraption's hidden level, reacts this fan against the gas it expels:
