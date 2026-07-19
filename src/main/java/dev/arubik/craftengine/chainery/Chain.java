@@ -23,8 +23,12 @@ public final class Chain {
     public final BlockPos a;
     public final BlockPos b;
     public final ChainMaterial material;
-    /** Span length in blocks = items consumed to create it; also the rest length the physics holds. */
-    public final int blocks;
+    /**
+     * The chain's natural length in links (= items consumed). Starts at the taut span; right-clicking an
+     * endpoint with more chain items EXTENDS it (adds slack, so the rope sags instead of pulling taut). The
+     * rope pulls only once the endpoints are farther apart than this. Mutable — persisted on save.
+     */
+    public int blocks;
 
     /**
      * Live render handles (spawned display-entity UUIDs) — NOT persisted; rebuilt on load. Kept here so

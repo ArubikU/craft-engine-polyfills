@@ -102,6 +102,9 @@ public final class CraftEnginePolyfills extends JavaPlugin {
         // behaviors + stall gate + render, once per tick — mirrors the fluid driver above.
         getServer().getScheduler().runTaskTimer(this, dev.arubik.craftengine.contraption.ContraptionEngine::tickAll, 1L,
                 1L);
+        // CHAINERY: right-click an endpoint with chain items to extend its length (add slack).
+        getServer().getPluginManager().registerEvents(new dev.arubik.craftengine.chainery.ChaineryInteractListener(),
+                this);
         // CHAINERY render clock: repositions every placed chain's links onto its live endpoints each tick,
         // so a chain tethered to a moving contraption follows it. (Physics coupling plugs in here in phase 2.)
         getServer().getScheduler().runTaskTimer(this, () -> {
