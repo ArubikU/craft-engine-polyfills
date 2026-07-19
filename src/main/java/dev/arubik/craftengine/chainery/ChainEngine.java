@@ -131,8 +131,11 @@ public final class ChainEngine {
         }
     }
 
-    /** Sets an endpoint cell to air — but only if it is still one of this project's chain blocks. */
+    /** Sets an endpoint cell to air — but only if it's a chain block AND no OTHER chain still anchors there. */
     private static void removeEndpointBlock(World world, Level level, BlockPos pos) {
+        if (ChainRegistry.countAt(world.getUID(), pos) > 0) {
+            return; // a shared anchor still hosts another chain — keep it
+        }
         if (ChaineryBlockBehavior.getAt(level, pos) == null) {
             return; // already gone (the mined endpoint, or an unloaded chunk)
         }
@@ -217,6 +220,8 @@ public final class ChainEngine {
     private static final double ROPE_GRAVITY = -0.04;
     private static final double ROPE_DAMPING = 0.98;
     private static final int ROPE_ITERATIONS = 32; // more passes for the SUBDIV-finer particle count
+    /** Over-tension must persist this many ticks before a chain snaps — the assembly-spike margin. */
+    private static final int BREAK_GRACE_TICKS = 30;
 
     /**
      * Once per tick: resolve every chain's two endpoints to their LIVE world positions — a captured endpoint
@@ -379,8 +384,14 @@ public final class ChainEngine {
             return false;
         }
         if (r.broke()) {
-            breakChain(chain, true);
-            return true;
+            // MARGIN: don't snap on a one-tick spike (e.g. the instant a side is assembled into a phys body and
+            // the solver momentarily over-stretches the taut chain). Only break after the over-tension SUSTAINS.
+            if (++chain.overTensionTicks >= BREAK_GRACE_TICKS) {
+                breakChain(chain, true);
+                return true;
+            }
+        } else {
+            chain.overTensionTicks = 0;
         }
         axis.div(dist); // unit A->B
         org.joml.Vector3d impulse = new org.joml.Vector3d(axis).mul(r.impulse());

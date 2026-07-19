@@ -35,7 +35,7 @@ import net.momirealms.craftengine.core.util.Key;
  */
 public class ChaineryItemBehavior extends ExtendedItemBehavior {
 
-    private record Pending(UUID worldId, BlockPos pos, net.minecraft.core.Direction face) {
+    private record Pending(UUID worldId, BlockPos pos, net.minecraft.core.Direction face, boolean reuse) {
     }
 
     /** Straight distance between the two ATTACH points (each = anchor centre + half a block toward its face). */
@@ -86,14 +86,33 @@ public class ChaineryItemBehavior extends ExtendedItemBehavior {
         }
         event.setCancelled(true); // never let a stray block-place fire from the anchor gesture
 
-        // Anchor cell = the air just off the clicked face (like hanging a chain off a block).
-        Block target = clicked.getRelative(face);
-        if (!target.getType().isAir() && !target.isReplaceable()) {
-            player.sendActionBar(net.kyori.adventure.text.Component.text("§cNo hay espacio para anclar la cadena aquí"));
-            return stack;
+        // If the clicked block is ALREADY an anchor, REUSE it (share the anchor); else place a new anchor in the
+        // adjacent air. A shared anchor can host up to 4 chains.
+        net.minecraft.world.level.Level nms =
+                ((org.bukkit.craftbukkit.CraftWorld) clicked.getWorld()).getHandle();
+        BlockPos clickedPos = new BlockPos(clicked.getX(), clicked.getY(), clicked.getZ());
+        boolean reuse = ChaineryBlockBehavior.getAt(nms, clickedPos) != null;
+        World world;
+        BlockPos pos;
+        net.minecraft.core.Direction attach;
+        if (reuse) {
+            world = clicked.getWorld();
+            pos = clickedPos;
+            attach = null; // a shared anchor attaches at its centre
+            if (ChainRegistry.countAt(world.getUID(), pos) >= 4) {
+                player.sendActionBar(net.kyori.adventure.text.Component.text("§cEste anclaje ya tiene 4 cadenas"));
+                return stack;
+            }
+        } else {
+            Block target = clicked.getRelative(face);
+            if (!target.getType().isAir() && !target.isReplaceable()) {
+                player.sendActionBar(net.kyori.adventure.text.Component.text("§cNo hay espacio para anclar la cadena aquí"));
+                return stack;
+            }
+            world = target.getWorld();
+            pos = new BlockPos(target.getX(), target.getY(), target.getZ());
+            attach = attachFace(face);
         }
-        World world = target.getWorld();
-        BlockPos pos = new BlockPos(target.getX(), target.getY(), target.getZ());
 
         if (player.isSneaking()) {
             PENDING.remove(player.getUniqueId());
@@ -101,10 +120,9 @@ public class ChaineryItemBehavior extends ExtendedItemBehavior {
             return stack;
         }
 
-        net.minecraft.core.Direction attach = attachFace(face);
         Pending first = PENDING.get(player.getUniqueId());
         if (first == null || !first.worldId().equals(world.getUID())) {
-            PENDING.put(player.getUniqueId(), new Pending(world.getUID(), pos, attach));
+            PENDING.put(player.getUniqueId(), new Pending(world.getUID(), pos, attach, reuse));
             player.sendActionBar(net.kyori.adventure.text.Component.text("§aPunto A fijado — click derecho en el punto B"));
             return stack;
         }
@@ -113,6 +131,16 @@ public class ChaineryItemBehavior extends ExtendedItemBehavior {
         PENDING.remove(player.getUniqueId());
         if (first.pos().equals(pos)) {
             player.sendActionBar(net.kyori.adventure.text.Component.text("§cLos dos puntos no pueden ser el mismo"));
+            return stack;
+        }
+        // No duplicate edge / loop: two anchors can't be joined by two chains at once.
+        if (ChainRegistry.existsBetween(world.getUID(), first.pos(), pos)) {
+            player.sendActionBar(net.kyori.adventure.text.Component.text("§cYa existe una cadena entre estos anclajes"));
+            return stack;
+        }
+        // The second anchor may also be a reused one — respect the 4-chain cap there too.
+        if (reuse && ChainRegistry.countAt(world.getUID(), pos) >= 4) {
+            player.sendActionBar(net.kyori.adventure.text.Component.text("§cEste anclaje ya tiene 4 cadenas"));
             return stack;
         }
         // Measure the REAL span between the two ATTACH points (block centre + half-block toward the stuck face),
@@ -139,7 +167,8 @@ public class ChaineryItemBehavior extends ExtendedItemBehavior {
             player.sendActionBar(net.kyori.adventure.text.Component.text("§cBloque ancla inválido: " + material.anchorBlock()));
             return stack;
         }
-        if (!place(world, first.pos(), def) || !place(world, pos, def)) {
+        // Only place a NEW anchor block; a reused endpoint already has its anchor in the world.
+        if ((!first.reuse() && !place(world, first.pos(), def)) || (!reuse && !place(world, pos, def))) {
             player.sendActionBar(net.kyori.adventure.text.Component.text("§cNo se pudo colocar el ancla de la cadena"));
             return stack;
         }

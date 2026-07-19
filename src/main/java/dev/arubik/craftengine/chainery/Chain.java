@@ -59,6 +59,10 @@ public final class Chain {
     /** Live verlet rope for this span's sag/ground physics + render — NOT persisted, rebuilt on demand. */
     public final transient ChainRope rope = new ChainRope();
 
+    /** Consecutive ticks the chain has been over its break tension — a margin so a transient assembly spike
+     *  doesn't snap a taut chain; it only breaks after this stays high (see ChainEngine#applyRope). */
+    public transient int overTensionTicks = 0;
+
     public Chain(UUID id, UUID worldId, BlockPos a, BlockPos b, net.minecraft.core.Direction faceA,
             net.minecraft.core.Direction faceB, ChainMaterial material, int blocks,
             net.minecraft.nbt.CompoundTag data) {

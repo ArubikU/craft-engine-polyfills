@@ -28,8 +28,8 @@ public final class ChainRegistry {
     }
 
     private static final Map<UUID, Chain> CHAINS = new HashMap<>();
-    /** endpointKey(world,pos) -> chain id. Two entries per chain (both ends). */
-    private static final Map<String, UUID> BY_ENDPOINT = new HashMap<>();
+    /** endpointKey(world,pos) -> the SET of chains anchored there (an anchor can host several chains). */
+    private static final Map<String, java.util.Set<UUID>> BY_ENDPOINT = new HashMap<>();
 
     private static String endpointKey(UUID worldId, BlockPos pos) {
         return worldId + "|" + pos.asLong();
@@ -37,28 +37,69 @@ public final class ChainRegistry {
 
     public static void register(Chain chain) {
         CHAINS.put(chain.id, chain);
-        BY_ENDPOINT.put(endpointKey(chain.worldId, chain.a), chain.id);
-        BY_ENDPOINT.put(endpointKey(chain.worldId, chain.b), chain.id);
+        BY_ENDPOINT.computeIfAbsent(endpointKey(chain.worldId, chain.a), k -> new java.util.HashSet<>()).add(chain.id);
+        BY_ENDPOINT.computeIfAbsent(endpointKey(chain.worldId, chain.b), k -> new java.util.HashSet<>()).add(chain.id);
     }
 
     public static Chain get(UUID id) {
         return CHAINS.get(id);
     }
 
-    /** The chain whose endpoint sits at {@code (worldId, pos)}, or null. */
+    /** Any one chain anchored at {@code (worldId, pos)}, or null. */
     public static Chain at(UUID worldId, BlockPos pos) {
-        UUID id = BY_ENDPOINT.get(endpointKey(worldId, pos));
-        return id == null ? null : CHAINS.get(id);
+        java.util.Set<Chain> at = chainsAt(worldId, pos);
+        return at.isEmpty() ? null : at.iterator().next();
+    }
+
+    /** Every chain anchored at {@code (worldId, pos)}. */
+    public static java.util.Set<Chain> chainsAt(UUID worldId, BlockPos pos) {
+        java.util.Set<UUID> ids = BY_ENDPOINT.get(endpointKey(worldId, pos));
+        java.util.Set<Chain> out = new java.util.HashSet<>();
+        if (ids != null) {
+            for (UUID id : ids) {
+                Chain c = CHAINS.get(id);
+                if (c != null) {
+                    out.add(c);
+                }
+            }
+        }
+        return out;
+    }
+
+    /** How many chains are anchored at {@code (worldId, pos)} (the per-anchor cap is enforced by callers). */
+    public static int countAt(UUID worldId, BlockPos pos) {
+        java.util.Set<UUID> ids = BY_ENDPOINT.get(endpointKey(worldId, pos));
+        return ids == null ? 0 : ids.size();
+    }
+
+    /** Whether a chain already runs directly between anchors {@code a} and {@code b} (prevents duplicate edges). */
+    public static boolean existsBetween(UUID worldId, BlockPos a, BlockPos b) {
+        for (Chain c : chainsAt(worldId, a)) {
+            if ((c.a.equals(a) && c.b.equals(b)) || (c.a.equals(b) && c.b.equals(a))) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** Removes a chain from the registry (both endpoint index entries too). Does NOT touch the world. */
     public static Chain remove(UUID id) {
         Chain chain = CHAINS.remove(id);
         if (chain != null) {
-            BY_ENDPOINT.remove(endpointKey(chain.worldId, chain.a));
-            BY_ENDPOINT.remove(endpointKey(chain.worldId, chain.b));
+            unindex(endpointKey(chain.worldId, chain.a), id);
+            unindex(endpointKey(chain.worldId, chain.b), id);
         }
         return chain;
+    }
+
+    private static void unindex(String key, UUID id) {
+        java.util.Set<UUID> ids = BY_ENDPOINT.get(key);
+        if (ids != null) {
+            ids.remove(id);
+            if (ids.isEmpty()) {
+                BY_ENDPOINT.remove(key);
+            }
+        }
     }
 
     /** Snapshot of every live chain — safe to iterate while chains are being removed. */

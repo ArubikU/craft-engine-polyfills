@@ -52,8 +52,8 @@ public class ChaineryInteractListener implements Listener {
 
     private static void severAt(Block b) {
         try {
-            Chain chain = ChainRegistry.at(b.getWorld().getUID(), new BlockPos(b.getX(), b.getY(), b.getZ()));
-            if (chain != null) {
+            // An anchor can host several chains — break them all when it's destroyed.
+            for (Chain chain : ChainRegistry.chainsAt(b.getWorld().getUID(), new BlockPos(b.getX(), b.getY(), b.getZ()))) {
                 ChainEngine.breakChain(chain, true);
             }
         } catch (Throwable ignored) {
