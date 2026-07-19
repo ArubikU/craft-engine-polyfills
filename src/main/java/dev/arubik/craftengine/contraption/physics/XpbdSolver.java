@@ -107,6 +107,17 @@ public final class XpbdSolver {
     public static final double MAX_ANGULAR_VELOCITY = 0.15;
 
     /**
+     * Floor on total angular velocity (rad/tick) — the fan-flip NOISE GATE (2026-07-18, "4 fans simétricos
+     * hacia abajo y se voltea ... solo ejecutar movimientos reales"). A perfectly balanced fan array's torques
+     * sum to zero on paper, but floating-point residue leaks a sliver of spin every tick that integrates into a
+     * slow, unwanted flip. Below this threshold the spin is that residue — not a real movement — so it is zeroed.
+     * A genuine off-centre thrust builds spin well past this within a tick and still flips the body, so this
+     * suppresses the "porque sí" drift without disarming a deliberate flip. Sits just under a deliberate flip's
+     * per-tick spin and well over the numerical noise floor.
+     */
+    public static final double ANGULAR_NOISE_EPS = 0.0025;
+
+    /**
      * Fluid drag per unit of submerged volume. This is what settles a floating body instead of leaving
      * it bobbing: buoyancy alone is a spring, and a spring with no losses oscillates forever.
      */
@@ -665,13 +676,18 @@ public final class XpbdSolver {
         RigidBody body = b.body;
         body.linearVelocity.mul(Math.max(0.0, 1.0 - LINEAR_DAMPING * dt));
         body.angularVelocity.mul(Math.max(0.0, 1.0 - ANGULAR_DAMPING * dt));
-        // Spin clamp (2026-07-18 — "un fan sí debe poder voltear ... pero estabiliza para que no se voltee porque
-        // sí"). A fan CAN still flip a contraption — a sustained off-centre thrust accumulates rotation up to this
-        // ceiling and rolls it over deliberately — but a single numerical spike or a jitter burst can never snap
-        // it into a chaotic tumble, because the total angular velocity is capped. This is the stabilizing half of
-        // the fan-flip system; the per-fan angular kick is clamped in PhysicsWorld#thrustBody.
+        // Angular NOISE GATE (2026-07-18 — "4 fans simétricos hacia abajo y se voltea ... solo ejecutar los
+        // movimientos reales, no el ruido"). A balanced fan array's torques cancel to ~0 in theory, but
+        // floating-point residue leaks a hair of spin every tick that, unchecked, integrates into a slow flip.
+        // Below this threshold the spin is NOT a real movement, it is that residue, so it is zeroed — a genuine
+        // off-centre thrust produces spin well above it and still flips the body. This is what stops a symmetric
+        // setup drifting over "porque sí" while leaving a deliberate flip intact.
         double spin = body.angularVelocity.length();
-        if (spin > MAX_ANGULAR_VELOCITY) {
+        if (spin < ANGULAR_NOISE_EPS) {
+            body.angularVelocity.zero();
+        } else if (spin > MAX_ANGULAR_VELOCITY) {
+            // Spin clamp: a sustained off-centre thrust still flips the body, but capped so a single numerical
+            // spike can't snap it into a chaotic tumble.
             body.angularVelocity.mul(MAX_ANGULAR_VELOCITY / spin);
         }
         boolean resting = body.linearVelocity.length() < REST_LINEAR_EPSILON

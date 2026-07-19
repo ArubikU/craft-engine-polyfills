@@ -311,6 +311,89 @@ class XpbdSolverTest {
     }
 
 
+    // ------------------------------------------------------------------------------------------------
+    // Fan-flip stability (2026-07-18). "Coloqué 4 fans mirando hacia abajo en un cubo y se volteó tarde
+    // o temprano ... solo ejecutar los movimientos reales, no el ruido." A fan MUST still be able to flip
+    // a contraption — but a BALANCED array whose torques cancel to zero must not drift over "porque sí".
+    // The failure was pure numerical residue integrating into a slow flip; the noise gate in finishTick
+    // erases it. These reproduce the exact scenario at the solver level: real thrust impulses, applied at
+    // real lever arms, tick after tick — the only thing that differs is whether they are symmetric.
+    // ------------------------------------------------------------------------------------------------
+
+    /** Applies {@code impulse} at a body-frame offset from the COM exactly as {@code PhysicsWorld#thrustBody} does. */
+    private static void thrustAt(PhysBody body, Vector3d bodyOffset, Vector3d impulse) {
+        Vector3d r = body.body.orientation.transform(new Vector3d(bodyOffset), new Vector3d());
+        Vector3d dOmega = new Matrix3d(body.body.inverseInertiaWorld()).transform(new Vector3d(r).cross(impulse));
+        body.body.angularVelocity.add(dOmega);
+    }
+
+    /** The body's local +Y axis expressed in world — its "up". Stays (0,1,0) exactly while the body is level. */
+    private static Vector3d worldUp(PhysBody body) {
+        return body.body.orientation.transform(new Vector3d(0, 1, 0), new Vector3d());
+    }
+
+    @Test
+    @DisplayName("four symmetric downward thrusts never flip the body — a balanced fan array does not drift")
+    void symmetricThrustsDoNotFlip() {
+        PhysBody body = cube(4.0);
+        body.world = WorldBlockCache.EMPTY; // free flight isolates rotation — no ground to confound it
+        // Four thrust points arranged symmetrically about the COM, every one pushing straight down: the
+        // r×F torques cancel to zero, exactly like four fans on the four corners of a cube facing down.
+        Vector3d[] corners = {
+                new Vector3d(-0.3, 0, -0.3), new Vector3d(0.3, 0, -0.3),
+                new Vector3d(-0.3, 0, 0.3), new Vector3d(0.3, 0, 0.3),
+        };
+
+        for (int tick = 0; tick < 400; tick++) {
+            for (Vector3d corner : corners) {
+                thrustAt(body, corner, new Vector3d(0, -0.5, 0));
+            }
+            XpbdSolver.step(List.of(body), 1.0);
+        }
+
+        // Over 400 ticks the float residue would, ungated, have integrated into a visible flip. The gate
+        // erases it each tick, so the body's "up" must still point up.
+        double upY = worldUp(body).y;
+        assertTrue(upY > 0.999,
+                "a balanced fan array must not rotate 'porque sí'; up.y drifted to " + upY);
+    }
+
+    @Test
+    @DisplayName("a sustained off-centre thrust still flips the body — a fan can deliberately roll a contraption")
+    void offCentreThrustStillFlips() {
+        PhysBody body = cube(4.0);
+        body.world = WorldBlockCache.EMPTY;
+        // A single thrust well to one side of the COM: a genuine net torque, not noise. This is the case
+        // that MUST survive the gate, otherwise fans could never flip anything.
+        for (int tick = 0; tick < 400; tick++) {
+            thrustAt(body, new Vector3d(0.4, 0, 0), new Vector3d(0, -0.5, 0));
+            XpbdSolver.step(List.of(body), 1.0);
+        }
+
+        double upY = worldUp(body).y;
+        assertTrue(upY < 0.9,
+                "a real off-centre thrust must still tip the body; up.y=" + upY);
+    }
+
+    @Test
+    @DisplayName("the noise gate zeros residual spin but leaves a real rotation intact")
+    void noiseGateSeparatesResidueFromRealSpin() {
+        // Below ANGULAR_NOISE_EPS is residue and must vanish; above it is a real movement and must survive.
+        PhysBody noisy = cube(1.0);
+        noisy.world = WorldBlockCache.EMPTY;
+        noisy.body.angularVelocity.set(0.001, 0.001, 0.001); // |ω| ≈ 0.0017 < eps
+        XpbdSolver.step(List.of(noisy), 1.0);
+        assertTrue(noisy.body.angularVelocity.length() < 1e-9,
+                "residual spin below the gate must be zeroed, but |ω|=" + noisy.body.angularVelocity.length());
+
+        PhysBody spinning = cube(1.0);
+        spinning.world = WorldBlockCache.EMPTY;
+        spinning.body.angularVelocity.set(0.0, 0.05, 0.0); // well above eps — a real spin
+        XpbdSolver.step(List.of(spinning), 1.0);
+        assertTrue(spinning.body.angularVelocity.length() > 0.03,
+                "a real spin must survive the gate, but |ω|=" + spinning.body.angularVelocity.length());
+    }
+
     @Test
     @DisplayName("a floating body settles at the waterline instead of bobbing forever")
     void buoyantBodySettlesRatherThanOscillating() {
