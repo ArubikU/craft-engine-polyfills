@@ -4,12 +4,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.bukkit.World;
-import org.joml.Quaternionf;
-import org.joml.Vector3f;
 
-import dev.arubik.craftengine.conveyor.ConveyorItemDisplay;
 import dev.arubik.craftengine.util.CeWorlds;
+import net.minecraft.core.Direction;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.momirealms.craftengine.bukkit.api.CraftEngineBlocks;
 import net.momirealms.craftengine.core.entity.player.Player;
+import net.momirealms.craftengine.core.util.Key;
 import net.momirealms.craftengine.core.world.ChunkPos;
 
 /**
@@ -24,20 +26,51 @@ public final class ChainRenderer {
     private ChainRenderer() {
     }
 
-    private static final float LINK_SCALE = 0.9f;
-
     /**
-     * The NMS item a link renders as — built from the chain material's configured link id, so ANY CraftEngine
-     * item (copper_chain, gold_chain, …) or vanilla item works, showing that item's own model. Falls back to a
-     * vanilla chain if the id resolves to nothing.
+     * The BLOCK state a link renders as — resolved from the chain material's configured link id, so ANY id
+     * works and shows its real BLOCK model:
+     * <ul>
+     *   <li>a CraftEngine block id → its mapped vanilla state (which the pack renders as the custom model);</li>
+     *   <li>else a vanilla item/block id → that block's default state (e.g. minecraft:iron_chain).</li>
+     * </ul>
+     * Falls back to a vanilla chain. The base state is resolved once per render; per-link {@link #withAxis}
+     * then orients it along each segment via the block's own {@code axis} property (no display rotation needed).
      */
-    private static Object linkNmsItem(String linkId) {
-        org.bukkit.inventory.ItemStack bukkit = ChainEngine.linkItemStack(linkId);
-        if (bukkit == null) {
-            org.bukkit.Material m = org.bukkit.Material.matchMaterial("CHAIN");
-            bukkit = new org.bukkit.inventory.ItemStack(m != null ? m : org.bukkit.Material.IRON_INGOT);
+    private static BlockState resolveBaseState(String linkId) {
+        // 1) CraftEngine block (item id == block id is the common case; the id may also be a block id directly).
+        try {
+            var def = CraftEngineBlocks.byId(Key.of(linkId));
+            if (def != null) {
+                return (BlockState) def.defaultState().customBlockState().minecraftState();
+            }
+        } catch (Throwable ignored) {
         }
-        return org.bukkit.craftbukkit.inventory.CraftItemStack.asNMSCopy(bukkit);
+        // 2) Vanilla block by material key.
+        try {
+            org.bukkit.NamespacedKey mk = org.bukkit.NamespacedKey.fromString(linkId);
+            org.bukkit.Material m = mk == null ? null : org.bukkit.Registry.MATERIAL.get(mk);
+            if (m != null && m.isBlock()) {
+                return ((org.bukkit.craftbukkit.block.data.CraftBlockData) m.createBlockData()).getState();
+            }
+        } catch (Throwable ignored) {
+        }
+        // 3) Fallback: vanilla chain.
+        org.bukkit.Material chain = org.bukkit.Material.matchMaterial("CHAIN");
+        if (chain != null) {
+            return ((org.bukkit.craftbukkit.block.data.CraftBlockData) chain.createBlockData()).getState();
+        }
+        return null;
+    }
+
+    /** Orients a link's block state along {@code dir} via its {@code axis} property (if it has one). */
+    private static BlockState withAxis(BlockState base, org.joml.Vector3d dir) {
+        if (base == null || !base.hasProperty(BlockStateProperties.AXIS)) {
+            return base;
+        }
+        double ax = Math.abs(dir.x), ay = Math.abs(dir.y), az = Math.abs(dir.z);
+        Direction.Axis axis = (ay >= ax && ay >= az) ? Direction.Axis.Y
+                : (ax >= az ? Direction.Axis.X : Direction.Axis.Z);
+        return base.setValue(BlockStateProperties.AXIS, axis);
     }
 
     /**
@@ -51,14 +84,12 @@ public final class ChainRenderer {
         if (segs == 0) {
             return;
         }
+        BlockState base = resolveBaseState(chain.material.linkItem());
         while (chain.links.size() < segs) {
-            ConveyorItemDisplay link = new ConveyorItemDisplay();
-            link.setNmsItem(linkNmsItem(chain.material.linkItem()));
-            link.setScale(LINK_SCALE);
-            chain.links.add(link);
+            chain.links.add(new ChainBlockDisplay());
         }
         while (chain.links.size() > segs) {
-            ConveyorItemDisplay link = chain.links.remove(chain.links.size() - 1);
+            ChainBlockDisplay link = chain.links.remove(chain.links.size() - 1);
             for (Player p : viewers) {
                 link.despawn(p);
             }
@@ -67,17 +98,16 @@ public final class ChainRenderer {
         for (int i = 0; i < segs; i++) {
             org.joml.Vector3d p0 = rope.particle(i);
             org.joml.Vector3d p1 = rope.particle(i + 1);
-            ConveyorItemDisplay link = chain.links.get(i);
-            link.setRotation(orient(p0, p1));
-            link.render(viewers, (p0.x + p1.x) / 2.0, (p0.y + p1.y) / 2.0, (p0.z + p1.z) / 2.0,
-                    link.consumeRotationDirty());
+            ChainBlockDisplay link = chain.links.get(i);
+            link.setBlockState(withAxis(base, new org.joml.Vector3d(p1).sub(p0)));
+            link.render(viewers, (p0.x + p1.x) / 2.0, (p0.y + p1.y) / 2.0, (p0.z + p1.z) / 2.0);
         }
     }
 
     /** Despawns every packet link of this chain for whoever can currently see it, and clears the handles. */
     public static void despawn(Chain chain, World world) {
         List<Player> viewers = world == null ? List.of() : viewersFor(world, chain.rope);
-        for (ConveyorItemDisplay link : chain.links) {
+        for (ChainBlockDisplay link : chain.links) {
             for (Player p : viewers) {
                 link.despawn(p);
             }
@@ -117,16 +147,6 @@ public final class ChainRenderer {
                 out.add(p);
             }
         }
-    }
-
-    /** A rotation mapping the item model's up axis onto the segment direction. */
-    private static Quaternionf orient(org.joml.Vector3d a, org.joml.Vector3d b) {
-        Vector3f dir = new Vector3f((float) (b.x - a.x), (float) (b.y - a.y), (float) (b.z - a.z));
-        if (dir.lengthSquared() < 1.0e-6f) {
-            dir.set(0, 1, 0);
-        }
-        dir.normalize();
-        return new Quaternionf().rotationTo(new Vector3f(0, 1, 0), dir);
     }
 
     /** No-op kept for the enable-time call: packet entities never persist as real orphans to sweep. */

@@ -31,11 +31,12 @@ public final class Chain {
     public int blocks;
 
     /**
-     * Live PACKET-ONLY link displays (fake item_display entities, one per rope segment) — NOT persisted,
+     * Live PACKET-ONLY link displays (fake block_display entities, one per rope segment) — NOT persisted,
      * rebuilt on demand. Packet-based (no real Bukkit entities) so the render shares the same lightweight
-     * fake-entity path the phys contraption swarm uses. See {@code ChainRenderer}.
+     * fake-entity path the phys contraption swarm uses, and renders the link's real BLOCK model. See
+     * {@code ChainRenderer}.
      */
-    public final transient List<dev.arubik.craftengine.conveyor.ConveyorItemDisplay> links = new ArrayList<>();
+    public final transient List<ChainBlockDisplay> links = new ArrayList<>();
 
     /** Live verlet rope for this span's sag/ground physics + render — NOT persisted, rebuilt on demand. */
     public final transient ChainRope rope = new ChainRope();
