@@ -172,6 +172,29 @@ public class WeightBlockBehavior extends BukkitBlockBehavior {
             return override; // the owner's mass.yml wins over the built-in family bucket below
         }
         String n = m.name();
+        // Scale by the block's actual VOLUME — a stone slab must not weigh the same as a full stone block
+        // (2026-07-18 — "bájale el peso a las slabs ... no pueden pesar igual que un bloque"). Applied on top of
+        // the material family below, so it works for every material's slab/stairs/wall/fence/pane.
+        return familyWeight(n) * shapeFactor(n);
+    }
+
+    /** How much of a full block the shape actually fills — slabs half, stairs three-quarters, thin connectors less. */
+    private static double shapeFactor(String n) {
+        if (n.endsWith("_SLAB")) {
+            return 0.5;
+        }
+        if (n.endsWith("_STAIRS")) {
+            return 0.75;
+        }
+        if (n.endsWith("_WALL") || n.endsWith("_FENCE") || n.endsWith("_FENCE_GATE") || n.endsWith("_PANE")
+                || n.endsWith("_BARS") || n.endsWith("_TRAPDOOR") || n.endsWith("_DOOR")) {
+            return 0.4;
+        }
+        return 1.0;
+    }
+
+    /** The full-block weight for a material by name — the family table; scaled to the real shape by {@link #shapeFactor}. */
+    private static double familyWeight(String n) {
         // TNT — a hollow block of powder, kept light (2026-07-18 — "bájale al TNT a 1, pesa mucho"), so a
         // bomb contraption isn't dragged down by its own payload.
         if (n.equals("TNT")) {
