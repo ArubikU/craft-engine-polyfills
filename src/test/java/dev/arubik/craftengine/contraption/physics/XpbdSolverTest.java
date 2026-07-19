@@ -329,6 +329,7 @@ class XpbdSolverTest {
     private static void thrustAt(PhysBody body, Vector3d bodyOffset, Vector3d bodyImpulse) {
         Vector3d r = body.body.orientation.transform(new Vector3d(bodyOffset), new Vector3d());
         Vector3d impulse = body.body.orientation.transform(new Vector3d(bodyImpulse), new Vector3d());
+        body.body.linearVelocity.fma(body.body.inverseMass(), impulse); // linear push, like PhysicsWorld#thrustBody
         Vector3d dOmega = new Matrix3d(body.body.inverseInertiaWorld()).transform(new Vector3d(r).cross(impulse));
         body.body.angularVelocity.add(dOmega);
     }
@@ -379,6 +380,35 @@ class XpbdSolverTest {
         double upY = worldUp(body).y;
         assertTrue(upY < 0.9,
                 "a real off-centre thrust must still tip the body; up.y=" + upY);
+    }
+
+    @Test
+    @DisplayName("a symmetric 4-fan helicarrier lifts off and holds level under its own thrust")
+    void helicarrierClimbsAndHoldsLevel() {
+        // The blueprint modelled: ~4 copper fans + 2 creative gas tanks + a light slab deck ≈ mass 52, four
+        // downward-blowing fans at the corners (reaction lifts UP). Each steam+diamond fan ≈ 0.9 impulse; four
+        // of them beat gravity (0.04/tick) on this mass and the symmetric layout keeps the COM centred so it
+        // rises level. This is the "haz pruebas" for the design — if the mass or thrust were off it would sink.
+        PhysBody body = cube(52.0);
+        body.world = WorldBlockCache.EMPTY;
+        double startY = body.body.position.y;
+        Vector3d[] corners = {
+                new Vector3d(-0.4, 0, -0.4), new Vector3d(0.4, 0, -0.4),
+                new Vector3d(-0.4, 0, 0.4), new Vector3d(0.4, 0, 0.4),
+        };
+
+        for (int tick = 0; tick < 200; tick++) {
+            body.selfRightTicks = 4;
+            for (Vector3d corner : corners) {
+                thrustAt(body, corner, new Vector3d(0, 0.9, 0)); // fan blows down -> lift up
+            }
+            XpbdSolver.step(List.of(body), 1.0);
+        }
+
+        assertTrue(body.body.position.y > startY + 1.0,
+                "the helicarrier must beat gravity and climb; it rose only " + (body.body.position.y - startY));
+        assertTrue(worldUp(body).y > 0.99,
+                "a symmetric helicarrier must rise level, not tip; up.y=" + worldUp(body).y);
     }
 
     @Test
