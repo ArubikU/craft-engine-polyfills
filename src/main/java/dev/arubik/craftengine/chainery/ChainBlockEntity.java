@@ -37,6 +37,12 @@ public class ChainBlockEntity extends PersistentBlockEntity {
         set(CHAIN_ROLE, NbtType.BYTE, (byte) role);
     }
 
+    /** Which end this is: 0 = A, 1 = B (matches {@code Chain.a}/{@code Chain.b}). Defaults to 0. */
+    public int getRole() {
+        Byte r = get(CHAIN_ROLE, NbtType.BYTE);
+        return r == null ? 0 : (r == 0 ? 0 : 1);
+    }
+
     /** The chain this endpoint belongs to, or null if unbound / not yet written. */
     public UUID getChainId() {
         String s = get(CHAIN_ID, NbtType.STRING);

@@ -118,35 +118,143 @@ public final class ChainEngine {
         }
     }
 
-    // ---- per-tick render (physics hooks land here in phase 2) ----
+    // ---- per-tick render + rope physics ----
 
-    /** Repositions every live chain's render onto its current endpoint positions. */
+    /** A resolved live endpoint: its world position and, if it rides a contraption, that contraption. */
+    private record Live(org.joml.Vector3d pos, java.util.UUID contraptionId,
+            dev.arubik.craftengine.contraption.ContraptionState state) {
+    }
+
+    /** Spring stiffness of the tether pull (impulse per block of overshoot). Applied via PhysicsWorld#applyThrust,
+     *  which scales it by the body's inverse mass — so a heavier contraption is pulled less, as expected. */
+    private static final double ROPE_STIFFNESS = 6.0;
+
+    /**
+     * Once per tick: resolve every chain's two endpoints to their LIVE world positions — a captured endpoint
+     * follows its contraption — then (a) render the span onto them and (b) if the chain is stretched past its
+     * span, pull the tethered contraption(s) back, snapping the chain if the pull exceeds its max tension.
+     */
     public static void tickAll() {
+        // Index every chain endpoint that has been captured into a contraption: chainId -> role -> live pos+owner.
+        java.util.Map<java.util.UUID, Live[]> captured = indexCapturedEndpoints();
+
         for (Chain chain : ChainRegistry.all()) {
             try {
                 World world = Bukkit.getWorld(chain.worldId);
-                if (world == null || !endpointsLoaded(world, chain)) {
+                if (world == null) {
                     continue;
                 }
-                org.joml.Vector3d a = endpointWorld(chain.a);
-                org.joml.Vector3d b = endpointWorld(chain.b);
-                ChainRenderer.update(chain, world, a, b);
+                Live[] ends = captured.get(chain.id);
+                Live a = resolveEnd(world, chain, chain.a, ends, 0);
+                Live b = resolveEnd(world, chain, chain.b, ends, 1);
+                if (a == null || b == null) {
+                    continue; // an endpoint is in an unloaded chunk / not resolvable this tick
+                }
+                if (applyRope(chain, a, b)) {
+                    continue; // the chain snapped this tick — it's already gone
+                }
+                ChainRenderer.update(chain, world, a.pos(), b.pos());
             } catch (Throwable ignored) {
                 // one bad chain shouldn't stall the rest
             }
         }
     }
 
-    private static boolean endpointsLoaded(World world, Chain chain) {
-        return world.isChunkLoaded(chain.a.getX() >> 4, chain.a.getZ() >> 4)
-                && world.isChunkLoaded(chain.b.getX() >> 4, chain.b.getZ() >> 4);
+    /** Resolves one endpoint: prefer its captured (moving) position; else the static block centre if loaded. */
+    private static Live resolveEnd(World world, Chain chain, BlockPos pos, Live[] captured, int role) {
+        if (captured != null && captured[role] != null) {
+            return captured[role];
+        }
+        if (!world.isChunkLoaded(pos.getX() >> 4, pos.getZ() >> 4)) {
+            return null;
+        }
+        return new Live(new org.joml.Vector3d(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5), null, null);
+    }
+
+    /** Scans every registered contraption for chain-endpoint block entities it has captured. */
+    private static java.util.Map<java.util.UUID, Live[]> indexCapturedEndpoints() {
+        java.util.Map<java.util.UUID, Live[]> map = new java.util.HashMap<>();
+        for (dev.arubik.craftengine.contraption.ContraptionEntity entity :
+                dev.arubik.craftengine.contraption.ContraptionManager.all()) {
+            try {
+                dev.arubik.craftengine.contraption.level.ContraptionLevel level = entity.state().level();
+                java.util.UUID cid = entity.state().id();
+                for (BlockPos local : level.localPositions()) {
+                    net.momirealms.craftengine.core.block.entity.BlockEntity be =
+                            dev.arubik.craftengine.block.entity.BukkitBlockEntityTypes.getIfLoaded((Level) level, local);
+                    if (be == null || !(be.controller instanceof ChainBlockEntity cbe)) {
+                        continue;
+                    }
+                    java.util.UUID chainId = cbe.getChainId();
+                    if (chainId == null) {
+                        continue;
+                    }
+                    net.minecraft.world.phys.Vec3 w = level.realWorldPositionOf(local);
+                    Live live = new Live(new org.joml.Vector3d(w.x, w.y, w.z), cid, entity.state());
+                    map.computeIfAbsent(chainId, k -> new Live[2])[cbe.getRole() == 0 ? 0 : 1] = live;
+                }
+            } catch (Throwable ignored) {
+                // a single misbehaving contraption shouldn't abort the whole index
+            }
+        }
+        return map;
     }
 
     /**
-     * Current world position of an endpoint. v1: the block's centre. Phase 2 will resolve a moving endpoint
-     * (a chain block captured into a phys contraption) to its live rigid-body transform via PhysicsWorld.
+     * Applies the rope constraint for one chain and returns true if it SNAPPED (and was removed) this tick.
+     * Slack chains and chains between two static blocks do nothing. A stretched chain pulls its contraption
+     * endpoint(s) back toward the span with an impulse via {@code PhysicsWorld.applyThrust} (a no-op on a
+     * non-phys or static endpoint), and snaps if that pull exceeds {@link ChainMaterial#maxTension()}.
      */
-    private static org.joml.Vector3d endpointWorld(BlockPos pos) {
-        return new org.joml.Vector3d(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
+    private static boolean applyRope(Chain chain, Live a, Live b) {
+        // Nothing to pull if neither end rides a (phys) contraption.
+        if (a.contraptionId() == null && b.contraptionId() == null) {
+            return false;
+        }
+        org.joml.Vector3d axis = new org.joml.Vector3d(b.pos()).sub(a.pos());
+        double dist = axis.length();
+        if (dist < 1.0e-6) {
+            return false;
+        }
+        ChainPhysics.RopeResult r = ChainPhysics.resolve(dist, chain.blocks, chain.material.stretch(),
+                0.0 /* position-only; the solver's own damping supplies the velocity term */,
+                1.0 /* unit — PhysicsWorld scales by real inverse mass */,
+                chain.material.pull() * ROPE_STIFFNESS, chain.material.maxTension(), 1.0);
+        if (r.impulse() <= 0.0) {
+            return false;
+        }
+        if (r.broke()) {
+            breakChain(chain, true);
+            return true;
+        }
+        axis.div(dist); // unit A->B
+        org.joml.Vector3d impulse = new org.joml.Vector3d(axis).mul(r.impulse());
+        // Pull A toward B (+axis) and B toward A (-axis).
+        handleEnd(a, impulse);
+        handleEnd(b, new org.joml.Vector3d(impulse).negate());
+        return false;
+    }
+
+    /**
+     * Applies the taut-chain response to one endpoint by contraption type:
+     * <ul>
+     *   <li>PHYS — a real impulse at the endpoint (via {@code applyThrust}), so the rope yanks the body back
+     *       and, off-centre, torques it — the phys/phys rope and the phys/block tether.</li>
+     *   <li>LINEAR / ROTATIONAL — these bearings are kinematic (no rigid body, so an impulse is a no-op); the
+     *       chain running out instead STALLS the bearing, i.e. "el torque debe ponerse en 0" — the block
+     *       entity telling its contraption to stop this tick.</li>
+     * </ul>
+     */
+    private static void handleEnd(Live end, org.joml.Vector3d impulse) {
+        if (end.state() == null) {
+            return; // a static block anchor — nothing to move
+        }
+        dev.arubik.craftengine.contraption.BearingType type = end.state().bearingType();
+        if (type == dev.arubik.craftengine.contraption.BearingType.PHYS) {
+            dev.arubik.craftengine.contraption.physics.PhysicsWorld.applyThrust(end.contraptionId(), end.pos(), impulse);
+        } else if (type == dev.arubik.craftengine.contraption.BearingType.LINEAR
+                || type == dev.arubik.craftengine.contraption.BearingType.ROTATIONAL) {
+            end.state().setStalled(true); // chain maxed -> cut the bearing's torque
+        }
     }
 }
