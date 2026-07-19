@@ -40,8 +40,7 @@ public final class ChainEngine {
         Level level = ((CraftWorld) world).getHandle();
         bindEndpoint(level, a, chain.id, 0);
         bindEndpoint(level, b, chain.id, 1);
-        ChainRenderer.rebuild(chain, world);
-        return chain;
+        return chain; // the rope is stepped + rendered on the next tick (see tickAll)
     }
 
     private static void bindEndpoint(Level level, BlockPos pos, UUID chainId, int role) {
@@ -129,6 +128,11 @@ public final class ChainEngine {
      *  which scales it by the body's inverse mass — so a heavier contraption is pulled less, as expected. */
     private static final double ROPE_STIFFNESS = 6.0;
 
+    // Verlet rope step params (see ChainRope): gravity/tick, velocity retention, relaxation passes (stiffness).
+    private static final double ROPE_GRAVITY = -0.04;
+    private static final double ROPE_DAMPING = 0.98;
+    private static final int ROPE_ITERATIONS = 16;
+
     /**
      * Once per tick: resolve every chain's two endpoints to their LIVE world positions — a captured endpoint
      * follows its contraption — then (a) render the span onto them and (b) if the chain is stretched past its
@@ -153,11 +157,26 @@ public final class ChainEngine {
                 if (applyRope(chain, a, b)) {
                     continue; // the chain snapped this tick — it's already gone
                 }
-                ChainRenderer.update(chain, world, a.pos(), b.pos());
+                // Real rope physics: step the verlet chain between the live anchors against the world's terrain
+                // (main thread here, so block reads are safe), then draw the links from its particles — a slack
+                // chain sags and rests on the floor, a taut one straightens.
+                ChainRope.Terrain terrain = terrainFor(world);
+                chain.rope.step(a.pos(), b.pos(), chain.blocks, ROPE_ITERATIONS, ROPE_GRAVITY, ROPE_DAMPING, terrain);
+                ChainRenderer.syncRope(chain, world, chain.rope);
             } catch (Throwable ignored) {
                 // one bad chain shouldn't stall the rest
             }
         }
+    }
+
+    /** A solid-block probe over a live Bukkit world (main thread only). Unloaded chunks read as non-solid. */
+    private static ChainRope.Terrain terrainFor(World world) {
+        return (x, y, z) -> {
+            if (!world.isChunkLoaded(x >> 4, z >> 4)) {
+                return false;
+            }
+            return world.getBlockAt(x, y, z).getType().isSolid();
+        };
     }
 
     /** Resolves one endpoint: prefer its captured (moving) position; else the static block centre if loaded. */

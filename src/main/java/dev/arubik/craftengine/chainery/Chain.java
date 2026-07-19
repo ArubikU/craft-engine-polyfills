@@ -36,6 +36,9 @@ public final class Chain {
      */
     public final transient List<UUID> renderEntities = new ArrayList<>();
 
+    /** Live verlet rope for this span's sag/ground physics + render — NOT persisted, rebuilt on demand. */
+    public final transient ChainRope rope = new ChainRope();
+
     public Chain(UUID id, UUID worldId, BlockPos a, BlockPos b, ChainMaterial material, int blocks) {
         this.id = id;
         this.worldId = worldId;

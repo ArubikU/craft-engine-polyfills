@@ -35,71 +35,44 @@ public final class ChainRenderer {
     public static final org.bukkit.NamespacedKey LINK_TAG =
             org.bukkit.NamespacedKey.fromString("polyfills:chain_link");
 
-    /** Blocks between successive links along the span — model repeats every this many blocks. */
-    private static final double LINK_SPACING = 0.5;
     private static final float LINK_SCALE = 0.6f;
 
     /**
-     * (Re)builds the display entities for {@code chain}. Despawns any it already had, then spawns a fresh
-     * row between the two endpoint world-centres. Returns with {@code chain.renderEntities} repopulated.
+     * Draws {@code chain} from its verlet {@link ChainRope}: one display link per rope segment, positioned at
+     * the segment midpoint and oriented along it — so the render shows the real sag/ground-rest the sim
+     * produced, and follows it every tick. Spawns/despawns links to match the segment count.
      */
-    public static void rebuild(Chain chain, World world) {
-        despawn(chain, world);
-        org.joml.Vector3d a = center(chain.a);
-        org.joml.Vector3d b = center(chain.b);
-        spawnAlong(chain, world, a, b);
-    }
-
-    /** Moves this chain's existing links onto the segment {@code a→b} (world coords), rebuilding if the
-     *  link count no longer matches (endpoint moved far). */
-    public static void update(Chain chain, World world, org.joml.Vector3d a, org.joml.Vector3d b) {
-        int want = linkCount(a.distance(b), chain.blocks);
-        if (chain.renderEntities.size() != want) {
+    public static void syncRope(Chain chain, World world, ChainRope rope) {
+        int segs = Math.max(0, rope.particleCount() - 1);
+        if (segs == 0) {
+            return;
+        }
+        if (chain.renderEntities.size() != segs) {
             despawn(chain, world);
-            spawnAlong(chain, world, a, b);
-            return;
+            org.bukkit.inventory.ItemStack model = modelItem(chain.material.blockId());
+            for (int i = 0; i < segs; i++) {
+                org.joml.Vector3d p = rope.particle(i);
+                ItemDisplay disp = world.spawn(new Location(world, p.x, p.y, p.z), ItemDisplay.class, d -> {
+                    d.setItemStack(model);
+                    d.setBillboard(Billboard.FIXED);
+                    d.getPersistentDataContainer().set(LINK_TAG, PersistentDataType.STRING, chain.id.toString());
+                });
+                chain.renderEntities.add(disp.getUniqueId());
+            }
         }
-        placeLinks(chain, world, a, b);
-    }
-
-    private static void spawnAlong(Chain chain, World world, org.joml.Vector3d a, org.joml.Vector3d b) {
-        org.bukkit.inventory.ItemStack model = modelItem(chain.material.blockId());
-        int count = linkCount(a.distance(b), chain.blocks);
-        for (int i = 0; i < count; i++) {
-            Location loc = new Location(world, a.x, a.y, a.z);
-            ItemDisplay disp = world.spawn(loc, ItemDisplay.class, d -> {
-                d.setItemStack(model);
-                d.setBillboard(Billboard.FIXED);
-                d.getPersistentDataContainer().set(LINK_TAG, PersistentDataType.STRING, chain.id.toString());
-            });
-            chain.renderEntities.add(disp.getUniqueId());
-        }
-        placeLinks(chain, world, a, b);
-    }
-
-    private static void placeLinks(Chain chain, World world, org.joml.Vector3d a, org.joml.Vector3d b) {
-        int count = chain.renderEntities.size();
-        if (count == 0) {
-            return;
-        }
-        // Slack sag: how much longer the rope is than the straight gap, dropped into a shallow parabola.
-        double straight = a.distance(b);
-        double sag = Math.max(0.0, chain.blocks - straight) * 0.5;
-        for (int i = 0; i < count; i++) {
-            double t = count == 1 ? 0.5 : (double) i / (count - 1);
-            double x = a.x + (b.x - a.x) * t;
-            double y = a.y + (b.y - a.y) * t - sag * (4.0 * t * (1.0 - t)); // parabola, 0 at ends, max mid
-            double z = a.z + (b.z - a.z) * t;
+        for (int i = 0; i < segs; i++) {
             Entity e = world.getEntity(chain.renderEntities.get(i));
             if (!(e instanceof ItemDisplay disp)) {
                 continue;
             }
-            disp.teleport(new Location(world, x, y, z));
-            disp.setTransformation(orient(a, b));
+            org.joml.Vector3d p0 = rope.particle(i);
+            org.joml.Vector3d p1 = rope.particle(i + 1);
+            disp.teleport(new Location(world, (p0.x + p1.x) / 2.0, (p0.y + p1.y) / 2.0, (p0.z + p1.z) / 2.0));
+            disp.setTransformation(orient(p0, p1));
         }
     }
 
-    /** A transformation whose rotation maps the model's up axis onto the chain direction, scaled down. */
+    /** A transformation whose rotation maps the model's up axis onto the segment direction, scaled down. */
     private static Transformation orient(org.joml.Vector3d a, org.joml.Vector3d b) {
         Vector3f dir = new Vector3f((float) (b.x - a.x), (float) (b.y - a.y), (float) (b.z - a.z));
         if (dir.lengthSquared() < 1.0e-6f) {
@@ -122,16 +95,13 @@ public final class ChainRenderer {
         chain.renderEntities.clear();
     }
 
-    private static int linkCount(double straight, int blocks) {
-        double span = Math.max(straight, blocks); // slack rope is longer than the gap
-        return Math.max(1, (int) Math.round(span / LINK_SPACING));
-    }
-
-    private static org.joml.Vector3d center(net.minecraft.core.BlockPos p) {
-        return new org.joml.Vector3d(p.getX() + 0.5, p.getY() + 0.5, p.getZ() + 0.5);
-    }
-
     private static org.bukkit.inventory.ItemStack modelItem(String blockId) {
+        // The rope links render as the VANILLA iron chain model (user: "para el chain base usa el modelo de
+        // iron_chain vanilla"). matchMaterial dodges a mapping quirk where Material.CHAIN isn't a compile const.
+        org.bukkit.Material chain = org.bukkit.Material.matchMaterial("CHAIN");
+        if (chain != null) {
+            return new org.bukkit.inventory.ItemStack(chain);
+        }
         try {
             var def = CraftEngineItems.byId(Key.of(blockId));
             if (def != null) {

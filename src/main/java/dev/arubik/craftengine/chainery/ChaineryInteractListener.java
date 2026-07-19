@@ -25,7 +25,10 @@ import net.momirealms.craftengine.core.util.Key;
  */
 public class ChaineryInteractListener implements Listener {
 
-    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    // LOWEST + not-ignoring-cancelled: run BEFORE CraftEngine's block-item placement so cancelling here stops
+    // it placing a new chain block instead of extending (the earlier HIGH handler ran too late — "sigue sin
+    // aumentar").
+    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = false)
     public void onInteract(PlayerInteractEvent event) {
         if (event.getAction() != Action.RIGHT_CLICK_BLOCK) {
             return;

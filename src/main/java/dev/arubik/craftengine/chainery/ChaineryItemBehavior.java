@@ -16,6 +16,7 @@ import dev.arubik.craftengine.item.behavior.ExtendedItemBehavior;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.item.ItemStack;
 import net.momirealms.craftengine.bukkit.api.CraftEngineBlocks;
+import net.momirealms.craftengine.bukkit.api.CraftEngineItems;
 import net.momirealms.craftengine.core.block.BlockDefinition;
 import net.momirealms.craftengine.core.block.ImmutableBlockState;
 import net.momirealms.craftengine.core.block.UpdateFlags;
@@ -94,9 +95,12 @@ public class ChaineryItemBehavior extends ExtendedItemBehavior {
                     "§cDemasiado lejos: " + distance + " > máximo " + material.maxBlocks()));
             return stack;
         }
-        if (stack.getCount() < distance) {
+        // The linker is a reusable TOOL — it consumes the chain LINKS (cml:iron_chain) from the player's
+        // inventory, one per block, not itself.
+        int have = countChainItems(player, material.blockId());
+        if (have < distance) {
             player.sendActionBar(net.kyori.adventure.text.Component.text(
-                    "§cNecesitas " + distance + " cadenas (tienes " + stack.getCount() + ")"));
+                    "§cNecesitas " + distance + " cadenas (tienes " + have + ")"));
             return stack;
         }
 
@@ -111,10 +115,44 @@ public class ChaineryItemBehavior extends ExtendedItemBehavior {
         }
 
         ChainEngine.create(world, first.pos(), pos, material, distance);
-        stack.shrink(distance);
+        removeChainItems(player, material.blockId(), distance);
         player.sendActionBar(net.kyori.adventure.text.Component.text(
                 "§aCadena creada (" + distance + " bloques)"));
         return stack;
+    }
+
+    /** Total count of the chain-link item ({@code itemId}) across the player's inventory. */
+    private static int countChainItems(Player player, String itemId) {
+        int total = 0;
+        for (org.bukkit.inventory.ItemStack it : player.getInventory().getContents()) {
+            if (it == null || it.getType().isAir()) {
+                continue;
+            }
+            Key id = CraftEngineItems.getCustomItemId(it);
+            if (id != null && id.toString().equals(itemId)) {
+                total += it.getAmount();
+            }
+        }
+        return total;
+    }
+
+    /** Removes {@code amount} of the chain-link item from the player's inventory (assumes enough present). */
+    private static void removeChainItems(Player player, String itemId, int amount) {
+        org.bukkit.inventory.ItemStack[] contents = player.getInventory().getContents();
+        for (int i = 0; i < contents.length && amount > 0; i++) {
+            org.bukkit.inventory.ItemStack it = contents[i];
+            if (it == null || it.getType().isAir()) {
+                continue;
+            }
+            Key id = CraftEngineItems.getCustomItemId(it);
+            if (id == null || !id.toString().equals(itemId)) {
+                continue;
+            }
+            int take = Math.min(amount, it.getAmount());
+            it.setAmount(it.getAmount() - take);
+            amount -= take;
+        }
+        player.updateInventory();
     }
 
     private static boolean place(World world, BlockPos pos, BlockDefinition def) {
