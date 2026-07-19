@@ -177,7 +177,7 @@ public final class ChainEngine {
     // Verlet rope step params (see ChainRope): gravity/tick, velocity retention, relaxation passes (stiffness).
     private static final double ROPE_GRAVITY = -0.04;
     private static final double ROPE_DAMPING = 0.98;
-    private static final int ROPE_ITERATIONS = 16;
+    private static final int ROPE_ITERATIONS = 32; // more passes for the SUBDIV-finer particle count
 
     /**
      * Once per tick: resolve every chain's two endpoints to their LIVE world positions — a captured endpoint
@@ -255,6 +255,21 @@ public final class ChainEngine {
         return new Live(p, null, null);
     }
 
+    /** Marks every world block a cell at world-centre {@code w} with the given {@code scale} covers. */
+    private static void rasterizeCell(java.util.Set<Long> cells, net.minecraft.world.phys.Vec3 w, double scale) {
+        double r = 0.5 * Math.max(1.0, scale);
+        int lox = (int) Math.floor(w.x - r + 1.0e-6), hix = (int) Math.floor(w.x + r - 1.0e-6);
+        int loy = (int) Math.floor(w.y - r + 1.0e-6), hiy = (int) Math.floor(w.y + r - 1.0e-6);
+        int loz = (int) Math.floor(w.z - r + 1.0e-6), hiz = (int) Math.floor(w.z + r - 1.0e-6);
+        for (int x = lox; x <= hix; x++) {
+            for (int y = loy; y <= hiy; y++) {
+                for (int z = loz; z <= hiz; z++) {
+                    cells.add(net.minecraft.core.BlockPos.asLong(x, y, z));
+                }
+            }
+        }
+    }
+
     /** Scans every contraption once: captured chain endpoints + per-world occupancy of contraption cells. */
     private static Scan scanContraptions() {
         java.util.Map<java.util.UUID, Live[]> endpoints = new java.util.HashMap<>();
@@ -265,12 +280,13 @@ public final class ChainEngine {
                 dev.arubik.craftengine.contraption.level.ContraptionLevel level = entity.state().level();
                 java.util.UUID cid = entity.state().id();
                 java.util.UUID worldId = entity.state().worldId();
+                double scale = entity.state().scale();
                 java.util.Set<Long> cells = occupancy.computeIfAbsent(worldId, w -> new java.util.HashSet<>());
                 for (BlockPos local : level.localPositions()) {
                     net.minecraft.world.phys.Vec3 w = level.realWorldPositionOf(local);
-                    // Occupancy: the world block this cell currently fills (rounded from its continuous pose).
-                    cells.add(net.minecraft.core.BlockPos.asLong(
-                            (int) Math.floor(w.x), (int) Math.floor(w.y), (int) Math.floor(w.z)));
+                    // Occupancy: EVERY world block this cell fills — its scaled footprint (radius = scale/2), so a
+                    // scaled-up contraption blocks the rope across its whole size, not just one centre block.
+                    rasterizeCell(cells, w, scale);
                     net.momirealms.craftengine.core.block.entity.BlockEntity be =
                             dev.arubik.craftengine.block.entity.BukkitBlockEntityTypes.getIfLoaded((Level) level, local);
                     if (be == null || !(be.controller instanceof ChainBlockEntity cbe)) {

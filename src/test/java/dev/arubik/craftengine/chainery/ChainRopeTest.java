@@ -15,7 +15,7 @@ class ChainRopeTest {
 
     private static final double GRAVITY = -0.04;
     private static final double DAMPING = 0.98;
-    private static final int ITERS = 16;
+    private static final int ITERS = 32;
 
     private static ChainRope settle(ChainRope rope, Vector3d a, Vector3d b, int segments, ChainRope.Terrain t,
             int ticks) {

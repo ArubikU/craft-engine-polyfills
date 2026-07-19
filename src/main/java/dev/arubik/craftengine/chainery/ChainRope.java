@@ -19,15 +19,29 @@ public final class ChainRope {
         Terrain EMPTY = (x, y, z) -> false;
     }
 
-    private static final double SEG = 1.0; // one link per block
+    /**
+     * Collision sub-division: this many verlet particles PER BLOCK of chain. A segment can only tunnel through
+     * an obstacle thinner than its length, so finer segments (1/SUBDIV block) stop the rope from crossing a
+     * whole block when no full-block particle happens to land inside it (the "casi cualquier traspaso" fix).
+     * Render still draws one link per block by striding SUBDIV — see {@link #renderStride()}.
+     */
+    public static final int SUBDIV = 2;
+
+    private double seg = 1.0; // current segment length (1/SUBDIV block)
 
     private Vector3d[] pos;
     private Vector3d[] prev;
     private int particles;
 
-    /** Rebuilds to {@code segments} links laid straight from a to b (called on first step / when length changes). */
+    /** Particles-per-block stride the renderer samples so it draws one link per block, not one per sub-segment. */
+    public int renderStride() {
+        return SUBDIV;
+    }
+
+    /** Rebuilds to {@code segments} blocks of chain, sub-divided SUBDIV× for collision (first step / length change). */
     private void reset(Vector3d a, Vector3d b, int segments) {
-        particles = Math.max(2, segments + 1);
+        particles = Math.max(2, segments * SUBDIV + 1);
+        seg = 1.0 / SUBDIV;
         pos = new Vector3d[particles];
         prev = new Vector3d[particles];
         for (int i = 0; i < particles; i++) {
@@ -44,7 +58,7 @@ public final class ChainRope {
      */
     public void step(Vector3d a, Vector3d b, int segments, int iterations, double gravity, double damping,
             Terrain terrain) {
-        if (pos == null || particles != segments + 1) {
+        if (pos == null || particles != segments * SUBDIV + 1) {
             reset(a, b, segments);
         }
         // Verlet integrate the interior particles (ends are pinned, so skip them).
@@ -80,7 +94,7 @@ public final class ChainRope {
         if (d < 1.0e-9) {
             return;
         }
-        double diff = (d - SEG) / d * 0.5;
+        double diff = (d - seg) / d * 0.5;
         double cx = dx * diff, cy = dy * diff, cz = dz * diff;
         pos[i].add(cx, cy, cz);
         pos[j].sub(cx, cy, cz);

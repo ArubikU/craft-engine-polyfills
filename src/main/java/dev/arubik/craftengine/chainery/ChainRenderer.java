@@ -66,11 +66,14 @@ public final class ChainRenderer {
      * to whoever is tracking the chain's chunks.
      */
     public static void syncRope(Chain chain, World world, ChainRope rope) {
-        int segs = Math.max(0, rope.particleCount() - 1);
+        int n = rope.particleCount();
         List<Player> viewers = viewersFor(world, rope);
-        if (segs == 0) {
+        if (n < 2) {
             return;
         }
+        // The rope is sub-divided SUBDIV× for collision; draw ONE link per block by striding those sub-particles.
+        int stride = rope.renderStride();
+        int segs = Math.max(1, (n - 1 + stride - 1) / stride);
         BlockState base = resolveBaseState(chain.material.linkItem());
         while (chain.links.size() < segs) {
             chain.links.add(new ChainBlockDisplay());
@@ -82,12 +85,14 @@ public final class ChainRenderer {
             }
             link.clearShown();
         }
-        for (int i = 0; i < segs; i++) {
-            org.joml.Vector3d p0 = rope.particle(i);
-            org.joml.Vector3d p1 = rope.particle(i + 1);
-            ChainBlockDisplay link = chain.links.get(i);
+        for (int r = 0; r < segs; r++) {
+            int i0 = Math.min(r * stride, n - 1);
+            int i1 = Math.min((r + 1) * stride, n - 1);
+            org.joml.Vector3d p0 = rope.particle(i0);
+            org.joml.Vector3d p1 = rope.particle(i1);
+            ChainBlockDisplay link = chain.links.get(r);
             link.setBlockState(base);
-            link.setRotation(orient(p0, p1)); // full yaw+pitch: point the chain model along the segment
+            link.setRotation(orient(p0, p1)); // full yaw+pitch: point the chain model along the block segment
             link.render(viewers, (p0.x + p1.x) / 2.0, (p0.y + p1.y) / 2.0, (p0.z + p1.z) / 2.0);
         }
     }
