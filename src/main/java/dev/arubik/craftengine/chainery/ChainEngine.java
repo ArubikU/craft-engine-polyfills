@@ -36,7 +36,8 @@ public final class ChainEngine {
     /** Creates, registers, binds and renders a chain between two freshly-placed endpoint blocks. */
     public static Chain create(World world, BlockPos a, BlockPos b, net.minecraft.core.Direction faceA,
             net.minecraft.core.Direction faceB, ChainMaterial mat, int blocks) {
-        Chain chain = new Chain(UUID.randomUUID(), world.getUID(), a, b, faceA, faceB, mat, blocks);
+        Chain chain = new Chain(UUID.randomUUID(), world.getUID(), a, b, faceA, faceB, mat, blocks,
+                new net.minecraft.nbt.CompoundTag());
         ChainRegistry.register(chain);
         Level level = ((CraftWorld) world).getHandle();
         bindEndpoint(level, a, chain.id, 0);

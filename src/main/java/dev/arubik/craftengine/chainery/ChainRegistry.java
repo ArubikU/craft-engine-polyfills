@@ -86,6 +86,9 @@ public final class ChainRegistry {
             c.putDouble("mat_stretch", chain.material.stretch());
             c.putDouble("mat_tension", chain.material.maxTension());
             c.putDouble("mat_pull", chain.material.pull());
+            if (!chain.data.isEmpty()) {
+                c.put("data", chain.data.copy());
+            }
             list.add(c);
         }
         root.put("chains", list);
@@ -116,7 +119,8 @@ public final class ChainRegistry {
                         c.getDouble("mat_stretch").orElse(ChainMaterial.DEFAULT.stretch()),
                         c.getDouble("mat_tension").orElse(ChainMaterial.DEFAULT.maxTension()),
                         c.getDouble("mat_pull").orElse(ChainMaterial.DEFAULT.pull()));
-                register(new Chain(id, world, a, b, faceA, faceB, mat, blocks));
+                CompoundTag data = c.getCompound("data").orElseGet(CompoundTag::new);
+                register(new Chain(id, world, a, b, faceA, faceB, mat, blocks, data));
             } catch (Throwable bad) {
                 // skip a corrupt entry rather than abort the whole load
             }

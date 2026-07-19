@@ -39,6 +39,13 @@ public final class Chain {
     public int blocks;
 
     /**
+     * Persistent per-chain NBT — arbitrary data a plugin can stash on a chain (zipline config, owner, cooldowns,
+     * whatever), persisted with chains.dat and reachable from {@link ChainInteractEvent#getChain()}. Use the raw
+     * {@link net.minecraft.nbt.CompoundTag} directly, or the typed convenience getters/setters below.
+     */
+    public final net.minecraft.nbt.CompoundTag data;
+
+    /**
      * Live PACKET-ONLY link displays (fake block_display entities, one per rope segment) — NOT persisted,
      * rebuilt on demand. Packet-based (no real Bukkit entities) so the render shares the same lightweight
      * fake-entity path the phys contraption swarm uses, and renders the link's real BLOCK model. See
@@ -53,7 +60,8 @@ public final class Chain {
     public final transient ChainRope rope = new ChainRope();
 
     public Chain(UUID id, UUID worldId, BlockPos a, BlockPos b, net.minecraft.core.Direction faceA,
-            net.minecraft.core.Direction faceB, ChainMaterial material, int blocks) {
+            net.minecraft.core.Direction faceB, ChainMaterial material, int blocks,
+            net.minecraft.nbt.CompoundTag data) {
         this.id = id;
         this.worldId = worldId;
         this.a = a;
@@ -62,6 +70,45 @@ public final class Chain {
         this.faceB = faceB;
         this.material = material;
         this.blocks = blocks;
+        this.data = data != null ? data : new net.minecraft.nbt.CompoundTag();
+    }
+
+    // ---- typed convenience over the persistent NBT (or use the raw `data` CompoundTag) ----
+
+    public String getString(String key) {
+        return data.getString(key).orElse(null);
+    }
+
+    public void setString(String key, String value) {
+        if (value == null) {
+            data.remove(key);
+        } else {
+            data.putString(key, value);
+        }
+    }
+
+    public int getInt(String key, int def) {
+        return data.getInt(key).orElse(def);
+    }
+
+    public void setInt(String key, int value) {
+        data.putInt(key, value);
+    }
+
+    public double getDouble(String key, double def) {
+        return data.getDouble(key).orElse(def);
+    }
+
+    public void setDouble(String key, double value) {
+        data.putDouble(key, value);
+    }
+
+    public boolean has(String key) {
+        return data.contains(key);
+    }
+
+    public void removeData(String key) {
+        data.remove(key);
     }
 
     /** Straight-line rest length of the chain in blocks (the taut distance between endpoint centres). */
