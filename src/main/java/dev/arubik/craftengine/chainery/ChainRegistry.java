@@ -1,0 +1,128 @@
+package dev.arubik.craftengine.chainery;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.NbtAccounter;
+import net.minecraft.nbt.NbtIo;
+
+/**
+ * Global cross-world registry of every placed {@link Chain} (CHAINERY), keyed by chain id, with a reverse
+ * index from each endpoint {@code (world, pos)} to its chain so a block break can find and sever it in O(1).
+ * Modelled on {@code GlueRegistry}: an in-memory map plus gzip'd-NBT {@link #saveAll}/{@link #loadAll} on
+ * plugin disable/enable, so décor chains and contraption tethers both survive a restart.
+ */
+public final class ChainRegistry {
+
+    private ChainRegistry() {
+    }
+
+    private static final Map<UUID, Chain> CHAINS = new HashMap<>();
+    /** endpointKey(world,pos) -> chain id. Two entries per chain (both ends). */
+    private static final Map<String, UUID> BY_ENDPOINT = new HashMap<>();
+
+    private static String endpointKey(UUID worldId, BlockPos pos) {
+        return worldId + "|" + pos.asLong();
+    }
+
+    public static void register(Chain chain) {
+        CHAINS.put(chain.id, chain);
+        BY_ENDPOINT.put(endpointKey(chain.worldId, chain.a), chain.id);
+        BY_ENDPOINT.put(endpointKey(chain.worldId, chain.b), chain.id);
+    }
+
+    public static Chain get(UUID id) {
+        return CHAINS.get(id);
+    }
+
+    /** The chain whose endpoint sits at {@code (worldId, pos)}, or null. */
+    public static Chain at(UUID worldId, BlockPos pos) {
+        UUID id = BY_ENDPOINT.get(endpointKey(worldId, pos));
+        return id == null ? null : CHAINS.get(id);
+    }
+
+    /** Removes a chain from the registry (both endpoint index entries too). Does NOT touch the world. */
+    public static Chain remove(UUID id) {
+        Chain chain = CHAINS.remove(id);
+        if (chain != null) {
+            BY_ENDPOINT.remove(endpointKey(chain.worldId, chain.a));
+            BY_ENDPOINT.remove(endpointKey(chain.worldId, chain.b));
+        }
+        return chain;
+    }
+
+    /** Snapshot of every live chain — safe to iterate while chains are being removed. */
+    public static Collection<Chain> all() {
+        return new ArrayList<>(CHAINS.values());
+    }
+
+    // ---- persistence (mirror of GlueRegistry.saveAll/loadAll) ----
+
+    public static void saveAll(Path file) throws IOException {
+        CompoundTag root = new CompoundTag();
+        ListTag list = new ListTag();
+        for (Chain chain : CHAINS.values()) {
+            CompoundTag c = new CompoundTag();
+            c.putString("id", chain.id.toString());
+            c.putString("world", chain.worldId.toString());
+            c.putLong("a", chain.a.asLong());
+            c.putLong("b", chain.b.asLong());
+            c.putInt("blocks", chain.blocks);
+            c.putString("mat_block", chain.material.blockId());
+            c.putInt("mat_max", chain.material.maxBlocks());
+            c.putDouble("mat_stretch", chain.material.stretch());
+            c.putDouble("mat_tension", chain.material.maxTension());
+            c.putDouble("mat_pull", chain.material.pull());
+            list.add(c);
+        }
+        root.put("chains", list);
+        Files.createDirectories(file.getParent());
+        NbtIo.writeCompressed(root, file);
+    }
+
+    public static void loadAll(Path file) throws IOException {
+        if (!Files.exists(file)) {
+            return;
+        }
+        CompoundTag root = NbtIo.readCompressed(file, NbtAccounter.unlimitedHeap());
+        ListTag list = root.getListOrEmpty("chains");
+        for (int i = 0; i < list.size(); i++) {
+            CompoundTag c = list.getCompoundOrEmpty(i);
+            try {
+                UUID id = UUID.fromString(c.getString("id").orElseThrow());
+                UUID world = UUID.fromString(c.getString("world").orElseThrow());
+                BlockPos a = BlockPos.of(c.getLong("a").orElse(0L));
+                BlockPos b = BlockPos.of(c.getLong("b").orElse(0L));
+                int blocks = c.getInt("blocks").orElse(0);
+                ChainMaterial mat = new ChainMaterial(
+                        c.getString("mat_block").orElse(ChainMaterial.DEFAULT.blockId()),
+                        c.getInt("mat_max").orElse(ChainMaterial.DEFAULT.maxBlocks()),
+                        c.getDouble("mat_stretch").orElse(ChainMaterial.DEFAULT.stretch()),
+                        c.getDouble("mat_tension").orElse(ChainMaterial.DEFAULT.maxTension()),
+                        c.getDouble("mat_pull").orElse(ChainMaterial.DEFAULT.pull()));
+                register(new Chain(id, world, a, b, mat, blocks));
+            } catch (Throwable bad) {
+                // skip a corrupt entry rather than abort the whole load
+            }
+        }
+    }
+
+    /** For diagnostics/tests: number of live chains. */
+    public static int size() {
+        return CHAINS.size();
+    }
+
+    static List<Chain> snapshot() {
+        return new ArrayList<>(CHAINS.values());
+    }
+}

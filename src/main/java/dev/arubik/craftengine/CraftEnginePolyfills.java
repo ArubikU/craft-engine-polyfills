@@ -44,6 +44,14 @@ public final class CraftEnginePolyfills extends JavaPlugin {
         } catch (Throwable t) {
             getLogger().warning("[Contraption] failed to load persisted glue graph: " + t);
         }
+        // CHAINERY: restore placed chains (décor + contraption tethers) persisted at last shutdown, and
+        // sweep any orphaned link display-entities a crash may have left behind before we re-render.
+        try {
+            dev.arubik.craftengine.chainery.ChainRegistry.loadAll(getDataFolder().toPath().resolve("chains.dat"));
+            getServer().getScheduler().runTask(this, dev.arubik.craftengine.chainery.ChainRenderer::sweepOrphans);
+        } catch (Throwable t) {
+            getLogger().warning("[Chainery] failed to load persisted chains: " + t);
+        }
         // Boot-scan persisted block-anchored (LINEAR/ROTATIONAL) contraptions into an in-memory
         // index (2026-07-03 — restart persistence, the block-anchored analog of the minecart's
         // entity-PDC). NOT rehydrated immediately: the target world/chunk may not be loaded yet —
@@ -94,6 +102,14 @@ public final class CraftEnginePolyfills extends JavaPlugin {
         // behaviors + stall gate + render, once per tick — mirrors the fluid driver above.
         getServer().getScheduler().runTaskTimer(this, dev.arubik.craftengine.contraption.ContraptionEngine::tickAll, 1L,
                 1L);
+        // CHAINERY render clock: repositions every placed chain's links onto its live endpoints each tick,
+        // so a chain tethered to a moving contraption follows it. (Physics coupling plugs in here in phase 2.)
+        getServer().getScheduler().runTaskTimer(this, () -> {
+            try {
+                dev.arubik.craftengine.chainery.ChainEngine.tickAll();
+            } catch (Throwable ignored) {
+            }
+        }, 1L, 1L);
         // Contraption chunk lifecycle (CONTRAPTIONS.md Phase 6): anchor-keyed (not
         // current-position-keyed) load/unload wiring — see ContraptionChunkLifecycleListener's
         // javadoc for why this replaced the old ContraptionPersistence/ContraptionChunkListener.
@@ -311,6 +327,12 @@ public final class CraftEnginePolyfills extends JavaPlugin {
         }
         // Persist the loose world glue graph so glued-but-unassembled structures keep their glue
         // across a restart (2026-07-03). Assembled contraptions persist their own glue separately.
+        // CHAINERY: persist every placed chain so décor chains and contraption tethers survive a restart.
+        try {
+            dev.arubik.craftengine.chainery.ChainRegistry.saveAll(getDataFolder().toPath().resolve("chains.dat"));
+        } catch (Throwable t) {
+            getLogger().warning("[Chainery] failed to save chains on shutdown: " + t);
+        }
         try {
             dev.arubik.craftengine.contraption.GlueRegistry.saveAll(getDataFolder().toPath().resolve("glue.dat"));
         } catch (Throwable t) {

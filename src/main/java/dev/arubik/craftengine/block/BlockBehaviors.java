@@ -36,6 +36,8 @@ public class BlockBehaviors {
 
         public static final Key POLYFILL_SHULKER_BOX_HITBOX = Key.of("polyfills:shulker_box_hitbox");
 
+        public static final Key POLYFILL_CHAINERY_BLOCK = Key.of("polyfills:chainery_block");
+
         public static final Key POLYFILL_FLUID_DISPLAY = Key.of("polyfills:fluid_display");
 
         public static void register() {
@@ -82,6 +84,10 @@ public class BlockBehaviors {
                 RegistryUtils.registerBlockBehavior(
                                 dev.arubik.craftengine.gas.behavior.CreativeGasTankBehavior.FACTORY_KEY,
                                 dev.arubik.craftengine.gas.behavior.CreativeGasTankBehavior.FACTORY);
+
+                // Chainery — endpoint block for a rendered chain span (see chainery.ChaineryBlockBehavior)
+                RegistryUtils.registerBlockBehavior(POLYFILL_CHAINERY_BLOCK,
+                                dev.arubik.craftengine.chainery.ChaineryBlockBehavior.FACTORY);
 
                 // Machine Examples
                 RegistryUtils.registerBlockBehavior(
