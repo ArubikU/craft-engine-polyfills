@@ -5,6 +5,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import dev.arubik.craftengine.block.behavior.ConnectedBlockBehavior;
 import dev.arubik.craftengine.block.entity.PersistentBlockEntity;
 import dev.arubik.craftengine.block.entity.PersistentWorldlyBlockEntity;
 import dev.arubik.craftengine.contraption.behavior.MovementBehaviorRegistry;
@@ -165,6 +166,21 @@ public final class ContraptionCapture {
             settleLocalNeighbors(level, structuralLocals);
             settleLocalNeighbors(level, dependentLocals);
         }
+        // Connection-MODEL settle (2026-07-19 — "las pipes siguen funcionando pero el blockstate y su
+        // modelo mostrado no es el correcto, ni en el contraption world ni en el render"). The neighbor
+        // settle above drives vanilla's neighborChanged broadcast, but a CraftEngine connected block
+        // ({@link ConnectedBlockBehavior}: pipes, gas pipes, cables) derives its six connection faces
+        // ONLY from the updateShape hook — it does not override neighborChanged — so that pass never
+        // recomputed a pipe's MODEL at all. Fluid still flowed (routing is topology/capability based, not
+        // blockstate based), which is exactly why it "sigue funcionando" while showing the wrong model.
+        // Re-derive each connectable's own state directly (vanillaMakeState reads its live neighbours in
+        // the hologram, identical to what updateShape returns) and write it back, so the displayed model
+        // matches the assembled structure in BOTH the joinable contraption world and the render. Two
+        // passes for the same convergence reason the neighbor settle documents.
+        for (int pass = 0; pass < 2; pass++) {
+            settleConnectedModels(level, structuralLocals);
+            settleConnectedModels(level, dependentLocals);
+        }
         return new Result(level, resolveAutoBehaviors(level));
     }
 
@@ -182,6 +198,55 @@ public final class ContraptionCapture {
                 // best-effort — a single misbehaving neighbor update shouldn't abort the capture
             }
         }
+    }
+
+    /**
+     * Re-derives and writes the connection state of every CraftEngine connected block among {@code locals}
+     * (see the connection-MODEL settle comment in {@link #capture}). For each cell that carries a
+     * {@link ConnectedBlockBehavior}, computes its faces from scratch against its live neighbours via
+     * {@code vanillaMakeState} — the exact state its {@code updateShape} hook would return — and setBlock's
+     * it into the hologram when it differs, refreshing the displayed model. Non-connectable and vanilla
+     * cells are skipped. Uses {@code UPDATE_KNOWN_SHAPE | UPDATE_CLIENTS}: no cascading shape/neighbor
+     * update (nothing to pop redstone or re-trigger this pass), while CraftEngine's palette hook still
+     * fires on the state change and refreshes its renderer.
+     */
+    private static void settleConnectedModels(ContraptionLevel level, List<BlockPos> locals) {
+        Level nms = level.serverLevel();
+        int flags = Block.UPDATE_KNOWN_SHAPE | Block.UPDATE_CLIENTS;
+        for (BlockPos local : locals) {
+            try {
+                BlockState state = level.getBlockState(local);
+                ImmutableBlockState current = BlockStateUtils.getOptionalCustomBlockState(state).orElse(null);
+                if (current == null) {
+                    continue;
+                }
+                ConnectedBlockBehavior conn = asConnected(current.behavior());
+                if (conn == null) {
+                    continue;
+                }
+                ImmutableBlockState recomputed = (ImmutableBlockState) conn.vanillaMakeState(local, nms);
+                if (recomputed != null && !recomputed.equals(current)) {
+                    level.setBlock(local, (BlockState) recomputed.customBlockState().minecraftState(), flags);
+                }
+            } catch (Throwable ignored) {
+                // best-effort — one block's failed re-derivation shouldn't abort the capture
+            }
+        }
+    }
+
+    /** Unwraps a possibly-composite behaviour to its {@link ConnectedBlockBehavior}, or null if it has none. */
+    private static ConnectedBlockBehavior asConnected(Object behavior) {
+        if (behavior instanceof ConnectedBlockBehavior connected) {
+            return connected;
+        }
+        if (behavior instanceof net.momirealms.craftengine.core.block.behavior.BlockBehavior bb) {
+            try {
+                return bb.getFirst(ConnectedBlockBehavior.class);
+            } catch (Throwable ignored) {
+                // getFirst can throw on an unusual composite — treat as "no connected behavior"
+            }
+        }
+        return null;
     }
 
     /**
