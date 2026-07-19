@@ -31,11 +31,11 @@ public final class ChainBlockDisplay {
     private final Object despawnPacket;
     private final java.util.Set<UUID> shownTo = java.util.concurrent.ConcurrentHashMap.newKeySet();
 
-    /** Link model enlargement — 12.5% bigger so adjacent links overlap and close the inter-link gap. */
-    private static final float SCALE = 1.125f;
-
     private BlockState blockState;
     private org.joml.Quaternionf rotation = new org.joml.Quaternionf();
+    /** Non-uniform model scale: X/Z = link thickness, Y = length ALONG the chain (stretched to fill the segment,
+     *  which is how tension shows — a stretched rope has longer segments). */
+    private org.joml.Vector3f scale = new org.joml.Vector3f(1f, 1f, 1f);
     private boolean metaDirty = false;
 
     public ChainBlockDisplay() {
@@ -63,6 +63,16 @@ public final class ChainBlockDisplay {
         }
     }
 
+    /** Sets the link's model scale: {@code width} across the chain (X/Z), {@code length} along it (Y). Stretching
+     *  the length is what fills a longer (tensioned) segment so the chain stays continuous. */
+    public void setSize(float width, float length) {
+        org.joml.Vector3f next = new org.joml.Vector3f(width, length, width);
+        if (!next.equals(this.scale, 1.0e-4f)) {
+            this.scale = next;
+            this.metaDirty = true;
+        }
+    }
+
     private List<Object> metadata() {
         List<Object> values = new ArrayList<>();
         if (blockState != null) {
@@ -72,12 +82,12 @@ public final class ChainBlockDisplay {
         // display rotation lever, same one ConveyorItemDisplay uses). Pivot about the model CENTRE: compose is
         // Translation + LeftRotation·v, so Translation = LeftRotation·(-0.5,-0.5,-0.5) makes it LeftRotation·(v−½)
         // — the model spins about its own centre, which sits on the rope particle midpoint we teleport it to.
-        // Enlarge the link model 12.5% so consecutive links overlap instead of leaving a ~2px gap. Compose is
-        // Translation + LeftRotation·(Scale·v), so Translation = LeftRotation·(-0.5·SCALE) keeps it centre-pivoted.
-        Vector3f t = rotation.transform(new Vector3f(-0.5f * SCALE, -0.5f * SCALE, -0.5f * SCALE));
+        // Compose is Translation + LeftRotation·(Scale·v); Translation = LeftRotation·(-0.5·Scale) keeps the
+        // (possibly stretched) model centre-pivoted on the entity position (the segment midpoint).
+        Vector3f t = rotation.transform(new Vector3f(-0.5f * scale.x, -0.5f * scale.y, -0.5f * scale.z));
         DisplayData.Translation.addEntityData(t, values);
         DisplayData.LeftRotation.addEntityData(rotation, values);
-        DisplayData.Scale.addEntityData(new Vector3f(SCALE, SCALE, SCALE), values);
+        DisplayData.Scale.addEntityData(new Vector3f(scale), values);
         DisplayData.BrightnessOverride.addEntityData((15 << 4) | (15 << 20), values);
         DisplayData.PosRotInterpolationDuration.addEntityData(1, values);
         DisplayData.TransformationInterpolationDuration.addEntityData(2, values);

@@ -22,6 +22,9 @@ public final class ChainRenderer {
     private ChainRenderer() {
     }
 
+    /** Link thickness across the chain (X/Z). Slightly over 1 so adjacent links overlap sideways too. */
+    private static final float LINK_WIDTH = 1.05f;
+
     /**
      * The BLOCK state a link renders as — resolved from the chain material's configured link id, so ANY id
      * works and shows its real BLOCK model:
@@ -99,6 +102,10 @@ public final class ChainRenderer {
             ChainBlockDisplay link = chain.links.get(r);
             link.setBlockState(base);
             link.setRotation(orient(p0, p1)); // full yaw+pitch: point the chain model along the block segment
+            // Stretch the model ALONG the chain to exactly span this segment (tension = longer segments), so the
+            // links stay continuous with no gaps whether the rope is taut/stretched or slack/compressed.
+            float length = (float) Math.max(0.05, p0.distance(p1));
+            link.setSize(LINK_WIDTH, length);
             link.render(viewers, mx, my, mz);
             chain.hitboxes.get(r).render(viewers, mx, my, mz);
         }
