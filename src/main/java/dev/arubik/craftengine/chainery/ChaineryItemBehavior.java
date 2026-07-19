@@ -38,6 +38,19 @@ public class ChaineryItemBehavior extends ExtendedItemBehavior {
     private record Pending(UUID worldId, BlockPos pos, net.minecraft.core.Direction face) {
     }
 
+    /** Straight distance between the two ATTACH points (each = anchor centre + half a block toward its face). */
+    private static double attachDistance(BlockPos a, net.minecraft.core.Direction fa, BlockPos b,
+            net.minecraft.core.Direction fb) {
+        double ax = a.getX() + 0.5 + (fa == null ? 0 : 0.5 * fa.getStepX());
+        double ay = a.getY() + 0.5 + (fa == null ? 0 : 0.5 * fa.getStepY());
+        double az = a.getZ() + 0.5 + (fa == null ? 0 : 0.5 * fa.getStepZ());
+        double bx = b.getX() + 0.5 + (fb == null ? 0 : 0.5 * fb.getStepX());
+        double by = b.getY() + 0.5 + (fb == null ? 0 : 0.5 * fb.getStepY());
+        double bz = b.getZ() + 0.5 + (fb == null ? 0 : 0.5 * fb.getStepZ());
+        double dx = bx - ax, dy = by - ay, dz = bz - az;
+        return Math.sqrt(dx * dx + dy * dy + dz * dz);
+    }
+
     /** The anchor's attach face = the direction from the anchor cell back toward the clicked block. */
     private static net.minecraft.core.Direction attachFace(BlockFace clickedFace) {
         return switch (clickedFace.getOppositeFace()) {
@@ -102,7 +115,10 @@ public class ChaineryItemBehavior extends ExtendedItemBehavior {
             player.sendActionBar(net.kyori.adventure.text.Component.text("§cLos dos puntos no pueden ser el mismo"));
             return stack;
         }
-        int distance = (int) Math.round(Math.sqrt(first.pos().distSqr(pos)));
+        // Measure the REAL span between the two ATTACH points (block centre + half-block toward the stuck face),
+        // not block centre to block centre — else the face offsets (up to +1 block total) leave the rope
+        // stretched on creation and the fixed-size link models gap at the ends until you extend it.
+        int distance = (int) Math.round(attachDistance(first.pos(), first.face(), pos, attach));
         distance = Math.max(1, distance);
         if (distance > material.maxBlocks()) {
             player.sendActionBar(net.kyori.adventure.text.Component.text(

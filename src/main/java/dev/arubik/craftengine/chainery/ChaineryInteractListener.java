@@ -90,11 +90,28 @@ public class ChaineryInteractListener implements Listener {
             return;
         }
 
-        // It's an extend gesture — never let the block-item place a block from it.
+        // It's a chain gesture — never let the block-item place a block from it.
         event.setCancelled(true);
         event.setUseItemInHand(org.bukkit.event.Event.Result.DENY);
         event.setUseInteractedBlock(org.bukkit.event.Event.Result.DENY);
 
+        // SNEAK + right-click = REMOVE a link (refund the item), unless it would over-tension the chain.
+        if (event.getPlayer().isSneaking()) {
+            switch (ChainEngine.tryRemoveLink(chain)) {
+                case REMOVED -> {
+                    giveBack(event.getPlayer(), chain.material.linkItem());
+                    event.getPlayer().sendActionBar(net.kyori.adventure.text.Component.text(
+                            "§aCadena acortada — " + chain.blocks + " eslabones"));
+                }
+                case WOULD_BREAK -> event.getPlayer().sendActionBar(net.kyori.adventure.text.Component.text(
+                        "§cQuitar otra cadena la reventaría — tensión demasiado alta"));
+                case AT_MIN -> event.getPlayer().sendActionBar(net.kyori.adventure.text.Component.text(
+                        "§eLa cadena ya está al mínimo"));
+            }
+            return;
+        }
+
+        // Otherwise ADD a link (more slack).
         if (chain.blocks >= chain.material.maxBlocks()) {
             event.getPlayer().sendActionBar(net.kyori.adventure.text.Component.text(
                     "§eLa cadena ya está al máximo (" + chain.material.maxBlocks() + ")"));
@@ -104,5 +121,17 @@ public class ChaineryInteractListener implements Listener {
         hand.setAmount(hand.getAmount() - 1);
         event.getPlayer().sendActionBar(net.kyori.adventure.text.Component.text(
                 "§aCadena extendida — " + chain.blocks + "/" + chain.material.maxBlocks() + " eslabones (más holgura)"));
+    }
+
+    /** Refunds one chain link item to the player (drops it if the inventory is full). */
+    private static void giveBack(org.bukkit.entity.Player player, String linkId) {
+        org.bukkit.inventory.ItemStack item = ChainEngine.linkItemStack(linkId);
+        if (item == null) {
+            return;
+        }
+        java.util.Map<Integer, org.bukkit.inventory.ItemStack> left = player.getInventory().addItem(item);
+        for (org.bukkit.inventory.ItemStack overflow : left.values()) {
+            player.getWorld().dropItemNaturally(player.getLocation(), overflow);
+        }
     }
 }

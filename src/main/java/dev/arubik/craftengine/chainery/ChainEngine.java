@@ -52,6 +52,44 @@ public final class ChainEngine {
         }
     }
 
+    // ---- removing a link (with the tension safety math) ----
+
+    public enum RemoveResult {
+        REMOVED, WOULD_BREAK, AT_MIN
+    }
+
+    /**
+     * Removes one link from {@code chain} unless doing so would over-tension it. Shortening the rope past the
+     * endpoints' current span stretches it; the resulting pull is {@code pull·STIFFNESS·overshoot}, and the
+     * chain snaps once that exceeds {@code maxTension}. So the minimum safe length keeps
+     * {@code span − (blocks−1)·(1+stretch)} within {@code maxTension / (pull·STIFFNESS)} — if the next removal
+     * would cross that, this refuses and reports {@link RemoveResult#WOULD_BREAK}.
+     */
+    public static RemoveResult tryRemoveLink(Chain chain) {
+        if (chain.blocks <= 1) {
+            return RemoveResult.AT_MIN;
+        }
+        double span = currentSpan(chain);
+        double newEffectiveMax = (chain.blocks - 1) * (1.0 + chain.material.stretch());
+        double overshoot = span - newEffectiveMax;
+        double maxOvershoot = chain.material.maxTension() <= 0.0 ? Double.MAX_VALUE
+                : chain.material.maxTension() / Math.max(1.0e-6, chain.material.pull() * ROPE_STIFFNESS);
+        if (overshoot > maxOvershoot) {
+            return RemoveResult.WOULD_BREAK;
+        }
+        chain.blocks--;
+        return RemoveResult.REMOVED;
+    }
+
+    /** Current straight span between the chain's live endpoints (rope ends if stepped, else block distance). */
+    private static double currentSpan(Chain chain) {
+        int n = chain.rope.particleCount();
+        if (n >= 2) {
+            return chain.rope.particle(0).distance(chain.rope.particle(n - 1));
+        }
+        return Math.sqrt(chain.a.distSqr(chain.b));
+    }
+
     // ---- breaking ----
 
     /** Entry point from {@link ChainBlockEntity#onRemove()} — a real break at one end severs the whole span. */
