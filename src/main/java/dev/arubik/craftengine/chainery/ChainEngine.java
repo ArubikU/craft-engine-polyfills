@@ -96,7 +96,7 @@ public final class ChainEngine {
 
     private static void dropChainItems(World world, Chain chain) {
         try {
-            var def = CraftEngineItems.byId(Key.of(chain.material.blockId()));
+            var def = CraftEngineItems.byId(Key.of(chain.material.linkItem()));
             if (def == null || chain.blocks <= 0) {
                 return;
             }

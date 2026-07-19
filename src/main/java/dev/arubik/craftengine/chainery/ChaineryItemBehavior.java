@@ -97,25 +97,25 @@ public class ChaineryItemBehavior extends ExtendedItemBehavior {
         }
         // The linker is a reusable TOOL — it consumes the chain LINKS (cml:iron_chain) from the player's
         // inventory, one per block, not itself.
-        int have = countChainItems(player, material.blockId());
+        int have = countChainItems(player, material.linkItem());
         if (have < distance) {
             player.sendActionBar(net.kyori.adventure.text.Component.text(
                     "§cNecesitas " + distance + " cadenas (tienes " + have + ")"));
             return stack;
         }
 
-        BlockDefinition def = CraftEngineBlocks.byId(Key.of(material.blockId()));
+        BlockDefinition def = CraftEngineBlocks.byId(Key.of(material.anchorBlock()));
         if (def == null) {
-            player.sendActionBar(net.kyori.adventure.text.Component.text("§cBloque de cadena inválido: " + material.blockId()));
+            player.sendActionBar(net.kyori.adventure.text.Component.text("§cBloque ancla inválido: " + material.anchorBlock()));
             return stack;
         }
         if (!place(world, first.pos(), def) || !place(world, pos, def)) {
-            player.sendActionBar(net.kyori.adventure.text.Component.text("§cNo se pudo colocar el bloque de cadena"));
+            player.sendActionBar(net.kyori.adventure.text.Component.text("§cNo se pudo colocar el ancla de la cadena"));
             return stack;
         }
 
         ChainEngine.create(world, first.pos(), pos, material, distance);
-        removeChainItems(player, material.blockId(), distance);
+        removeChainItems(player, material.linkItem(), distance);
         player.sendActionBar(net.kyori.adventure.text.Component.text(
                 "§aCadena creada (" + distance + " bloques)"));
         return stack;

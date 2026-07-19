@@ -49,7 +49,7 @@ public final class ChainRenderer {
         }
         if (chain.renderEntities.size() != segs) {
             despawn(chain, world);
-            org.bukkit.inventory.ItemStack model = modelItem(chain.material.blockId());
+            org.bukkit.inventory.ItemStack model = modelItem(chain.material.linkItem());
             for (int i = 0; i < segs; i++) {
                 org.joml.Vector3d p = rope.particle(i);
                 ItemDisplay disp = world.spawn(new Location(world, p.x, p.y, p.z), ItemDisplay.class, d -> {

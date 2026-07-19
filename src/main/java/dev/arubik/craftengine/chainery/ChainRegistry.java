@@ -78,7 +78,8 @@ public final class ChainRegistry {
             c.putLong("a", chain.a.asLong());
             c.putLong("b", chain.b.asLong());
             c.putInt("blocks", chain.blocks);
-            c.putString("mat_block", chain.material.blockId());
+            c.putString("mat_anchor", chain.material.anchorBlock());
+            c.putString("mat_link", chain.material.linkItem());
             c.putInt("mat_max", chain.material.maxBlocks());
             c.putDouble("mat_stretch", chain.material.stretch());
             c.putDouble("mat_tension", chain.material.maxTension());
@@ -105,7 +106,8 @@ public final class ChainRegistry {
                 BlockPos b = BlockPos.of(c.getLong("b").orElse(0L));
                 int blocks = c.getInt("blocks").orElse(0);
                 ChainMaterial mat = new ChainMaterial(
-                        c.getString("mat_block").orElse(ChainMaterial.DEFAULT.blockId()),
+                        c.getString("mat_anchor").orElse(ChainMaterial.DEFAULT.anchorBlock()),
+                        c.getString("mat_link").orElse(ChainMaterial.DEFAULT.linkItem()),
                         c.getInt("mat_max").orElse(ChainMaterial.DEFAULT.maxBlocks()),
                         c.getDouble("mat_stretch").orElse(ChainMaterial.DEFAULT.stretch()),
                         c.getDouble("mat_tension").orElse(ChainMaterial.DEFAULT.maxTension()),
