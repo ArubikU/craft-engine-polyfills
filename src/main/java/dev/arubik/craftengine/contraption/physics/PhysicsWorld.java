@@ -428,15 +428,35 @@ public final class PhysicsWorld {
     }
 
     /** The thruster impulse — linear plus the torque from its lever arm. Touches only {@link PhysBody}, so it is physics-thread safe. */
+    /** Hard cap on a single fan's per-tick LINEAR thrust impulse, so a big overclocked stack can't fling the body. */
+    private static final double MAX_FAN_IMPULSE = 3.0;
+    /** Hard cap on the per-tick ANGULAR velocity a single fan may inject — the flip stays deliberate, never a jolt. */
+    private static final double MAX_FAN_SPIN = 0.03;
+
     private static void thrustBody(PhysBody physBody, Vector3d worldPoint, Vector3d impulse) {
         if (physBody.kinematic || physBody.shape.isEmpty() || physBody.body.isStatic()) {
             return;
         }
         RigidBody body = physBody.body;
+        // A fan MUST be able to flip the contraption (an off-centre thrust is a real torque), but the forces are
+        // CLAMPED so it only tips when the thrust genuinely warrants it, never spuriously from a jitter spike
+        // (2026-07-18 — "un fan sí debe ser capaz de voltear ... pero estabiliza las fuerzas para que no se
+        // voltee porque sí"). Clamp the linear impulse, apply it at the fan's cell so it still torques, then
+        // clamp the angular kick this one tick may add — a sustained off-centre push accumulates rotation across
+        // ticks and rolls the body over deliberately, while a single noisy tick can't snap it.
+        double mag = impulse.length();
+        if (mag > MAX_FAN_IMPULSE) {
+            impulse = new Vector3d(impulse).mul(MAX_FAN_IMPULSE / mag);
+        }
         body.linearVelocity.fma(body.inverseMass(), impulse);
         Vector3d r = new Vector3d(worldPoint).sub(body.position);
-        Vector3d torque = new Vector3d(r).cross(impulse);
-        body.angularVelocity.add(new org.joml.Matrix3d(body.inverseInertiaWorld()).transform(torque));
+        Vector3d dOmega = new org.joml.Matrix3d(body.inverseInertiaWorld())
+                .transform(new Vector3d(r).cross(impulse));
+        double spin = dOmega.length();
+        if (spin > MAX_FAN_SPIN) {
+            dOmega.mul(MAX_FAN_SPIN / spin);
+        }
+        body.angularVelocity.add(dOmega);
         physBody.wakeUp();
     }
 

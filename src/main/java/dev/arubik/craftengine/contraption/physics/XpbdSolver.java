@@ -99,6 +99,14 @@ public final class XpbdSolver {
     public static final double ANGULAR_DAMPING = 0.05;
 
     /**
+     * Ceiling on total angular velocity (rad/tick) — the fan-flip stability knob (2026-07-18). A sustained
+     * off-centre thrust still accumulates rotation up to this cap and flips the contraption over deliberately
+     * (~1 s for a half-turn at this value), but a numerical spike or jitter burst can never launch it into a
+     * chaotic tumble. So a fan CAN flip the structure, it just can't do it "porque sí".
+     */
+    public static final double MAX_ANGULAR_VELOCITY = 0.15;
+
+    /**
      * Fluid drag per unit of submerged volume. This is what settles a floating body instead of leaving
      * it bobbing: buoyancy alone is a spring, and a spring with no losses oscillates forever.
      */
@@ -657,6 +665,15 @@ public final class XpbdSolver {
         RigidBody body = b.body;
         body.linearVelocity.mul(Math.max(0.0, 1.0 - LINEAR_DAMPING * dt));
         body.angularVelocity.mul(Math.max(0.0, 1.0 - ANGULAR_DAMPING * dt));
+        // Spin clamp (2026-07-18 — "un fan sí debe poder voltear ... pero estabiliza para que no se voltee porque
+        // sí"). A fan CAN still flip a contraption — a sustained off-centre thrust accumulates rotation up to this
+        // ceiling and rolls it over deliberately — but a single numerical spike or a jitter burst can never snap
+        // it into a chaotic tumble, because the total angular velocity is capped. This is the stabilizing half of
+        // the fan-flip system; the per-fan angular kick is clamped in PhysicsWorld#thrustBody.
+        double spin = body.angularVelocity.length();
+        if (spin > MAX_ANGULAR_VELOCITY) {
+            body.angularVelocity.mul(MAX_ANGULAR_VELOCITY / spin);
+        }
         boolean resting = body.linearVelocity.length() < REST_LINEAR_EPSILON
                 && body.angularVelocity.length() < REST_ANGULAR_EPSILON;
         if (resting) {
