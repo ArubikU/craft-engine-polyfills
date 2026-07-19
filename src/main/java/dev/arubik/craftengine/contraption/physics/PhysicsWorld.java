@@ -432,6 +432,8 @@ public final class PhysicsWorld {
     private static final double MAX_FAN_IMPULSE = 3.0;
     /** Hard cap on the per-tick ANGULAR velocity a single fan may inject — the flip stays deliberate, never a jolt. */
     private static final double MAX_FAN_SPIN = 0.03;
+    /** Ticks self-levelling stays armed after a fan's last thrust, so a pulsing fan still holds the platform level. */
+    private static final int SELF_RIGHT_LINGER_TICKS = 4;
 
     private static void thrustBody(PhysBody physBody, Vector3d worldPoint, Vector3d impulse) {
         if (physBody.kinematic || physBody.shape.isEmpty() || physBody.body.isStatic()) {
@@ -457,6 +459,10 @@ public final class PhysicsWorld {
             dOmega.mul(MAX_FAN_SPIN / spin);
         }
         body.angularVelocity.add(dOmega);
+        // Arm active-thruster self-levelling for a few ticks (see PhysBody#selfRightTicks). Lingering a
+        // handful of ticks past the last thrust means a fan pulsing on/off still keeps the platform level
+        // instead of only levelling on the exact ticks a fan fired.
+        physBody.selfRightTicks = SELF_RIGHT_LINGER_TICKS;
         physBody.wakeUp();
     }
 

@@ -53,6 +53,18 @@ public final class PhysBody {
     /** When true the solver skips this body entirely (held by the wand, stalled, or asleep). */
     public boolean kinematic;
 
+    /**
+     * Ticks of active-thruster self-levelling remaining (2026-07-19 — "aunque los 4 fans estén al mismo
+     * overclock tarde o temprano se voltea la plataforma"). A fan thrust sets this; while it is positive the
+     * solver gently levels the body toward world-up but ONLY within a cone (see {@code XpbdSolver
+     * #SELF_RIGHT_CONE_COS}), so an all-same-overclock platform holds level against the imbalance torque an
+     * off-centre payload (tanks on one side) would otherwise tip it with, yet a deliberate hard off-centre
+     * thrust that pushes past the cone still rolls it clean over. Zero for a static/unpowered body, which
+     * therefore keeps whatever orientation it was left in — a wand-flipped contraption stays flipped, no
+     * spurious auto-upright.
+     */
+    public int selfRightTicks;
+
     /** Ticks this body has been below the rest thresholds — see {@link XpbdSolver#SLEEP_TICKS}. */
     int restTicks;
 

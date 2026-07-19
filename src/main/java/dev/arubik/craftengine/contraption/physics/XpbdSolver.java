@@ -118,6 +118,23 @@ public final class XpbdSolver {
     public static final double ANGULAR_NOISE_EPS = 0.0025;
 
     /**
+     * Active-thruster self-levelling (2026-07-19, "aunque los 4 fans estén al mismo overclock tarde o
+     * temprano se voltea la plataforma ... ejemplo 4 fans, pipes, creative tanks 2 y una plataforma de
+     * slabs"). An all-same-overclock fan array cannot balance an off-centre payload the way a real
+     * quadcopter trims its rotors, so the imbalance torque tips it until it flips. While a fan is thrusting
+     * ({@link PhysBody#selfRightTicks} &gt; 0) the solver adds a restoring spin that rotates the body's own
+     * up-axis back toward world-up, BUT only while it is still within this cone of upright — so the platform
+     * settles level against a normal imbalance, while a deliberate hard off-centre thrust that drives it past
+     * the cone escapes the restoring pull and still rolls the contraption over. Outside the cone, and for any
+     * body not currently under thrust, no levelling is applied at all.
+     */
+    public static final double SELF_RIGHT_CONE_COS = 0.70; // ~45.6° half-angle cone around world-up
+    /** Restoring spin per unit of tilt sine, capped by {@link #SELF_RIGHT_MAX}. */
+    public static final double SELF_RIGHT_GAIN = 0.15;
+    /** Ceiling on the self-levelling restoring spin (rad/tick) — a deliberate thrust above this still flips. */
+    public static final double SELF_RIGHT_MAX = 0.05;
+
+    /**
      * Fluid drag per unit of submerged volume. This is what settles a floating body instead of leaving
      * it bobbing: buoyancy alone is a spring, and a spring with no losses oscillates forever.
      */
@@ -676,6 +693,26 @@ public final class XpbdSolver {
         RigidBody body = b.body;
         body.linearVelocity.mul(Math.max(0.0, 1.0 - LINEAR_DAMPING * dt));
         body.angularVelocity.mul(Math.max(0.0, 1.0 - ANGULAR_DAMPING * dt));
+        // Active-thruster self-levelling (see SELF_RIGHT_* constants — "aunque los 4 fans estén al mismo
+        // overclock tarde o temprano se voltea"). Only while a fan is thrusting, and only inside the upright
+        // cone: adds a restoring spin that rotates the body's up-axis back toward world-up so a same-overclock
+        // platform holds level against an off-centre payload's imbalance torque, while a deliberate thrust that
+        // drives it PAST the cone escapes this pull and still flips. Damping above is the derivative term that
+        // keeps the restoration from oscillating.
+        if (b.selfRightTicks > 0) {
+            b.selfRightTicks--;
+            Vector3d up = body.orientation.transform(new Vector3d(0.0, 1.0, 0.0), new Vector3d());
+            if (up.y > SELF_RIGHT_CONE_COS) {
+                // axis = up × worldUp; |axis| = sin(tilt), and spinning about it tips up back toward vertical
+                // (its horizontal direction leaves the body's yaw untouched).
+                Vector3d axis = up.cross(0.0, 1.0, 0.0, new Vector3d());
+                double sinTilt = axis.length();
+                if (sinTilt > 1e-6) {
+                    double restore = Math.min(SELF_RIGHT_GAIN * sinTilt, SELF_RIGHT_MAX);
+                    body.angularVelocity.fma(restore / sinTilt, axis);
+                }
+            }
+        }
         // Angular NOISE GATE (2026-07-18 — "4 fans simétricos hacia abajo y se voltea ... solo ejecutar los
         // movimientos reales, no el ruido"). A balanced fan array's torques cancel to ~0 in theory, but
         // floating-point residue leaks a hair of spin every tick that, unchecked, integrates into a slow flip.

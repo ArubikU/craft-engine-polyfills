@@ -320,9 +320,15 @@ class XpbdSolverTest {
     // real lever arms, tick after tick — the only thing that differs is whether they are symmetric.
     // ------------------------------------------------------------------------------------------------
 
-    /** Applies {@code impulse} at a body-frame offset from the COM exactly as {@code PhysicsWorld#thrustBody} does. */
-    private static void thrustAt(PhysBody body, Vector3d bodyOffset, Vector3d impulse) {
+    /**
+     * Applies a fan-style thrust exactly as {@code PhysicsWorld#thrustBody} does: at a BODY-frame offset from
+     * the COM, along a BODY-frame direction — a real fan expels along its own facing, so BOTH the lever arm
+     * and the thrust rotate with the body (the torque is therefore constant in the body frame, which is what
+     * makes a genuinely off-centre thruster roll the body clean over instead of stalling at 90°).
+     */
+    private static void thrustAt(PhysBody body, Vector3d bodyOffset, Vector3d bodyImpulse) {
         Vector3d r = body.body.orientation.transform(new Vector3d(bodyOffset), new Vector3d());
+        Vector3d impulse = body.body.orientation.transform(new Vector3d(bodyImpulse), new Vector3d());
         Vector3d dOmega = new Matrix3d(body.body.inverseInertiaWorld()).transform(new Vector3d(r).cross(impulse));
         body.body.angularVelocity.add(dOmega);
     }
@@ -373,6 +379,44 @@ class XpbdSolverTest {
         double upY = worldUp(body).y;
         assertTrue(upY < 0.9,
                 "a real off-centre thrust must still tip the body; up.y=" + upY);
+    }
+
+    @Test
+    @DisplayName("a self-levelling fan platform holds level against a steady imbalance instead of flipping")
+    void selfLevellingHoldsAgainstImbalance() {
+        PhysBody body = cube(4.0);
+        body.world = WorldBlockCache.EMPTY;
+        // A steady, mild off-centre thrust — the imbalance torque a lopsided payload (2 tanks on one side)
+        // produces under a same-overclock fan array. Below the self-levelling cap, so it must be held level.
+        double minUpY = 1.0;
+        for (int tick = 0; tick < 600; tick++) {
+            body.selfRightTicks = 4; // a fan is thrusting this tick
+            thrustAt(body, new Vector3d(0.04, 0, 0), new Vector3d(0, -0.5, 0));
+            XpbdSolver.step(List.of(body), 1.0);
+            minUpY = Math.min(minUpY, worldUp(body).y);
+        }
+        // It must never approach the cone edge (~0.70) — self-levelling holds it near upright the whole time.
+        assertTrue(minUpY > 0.85,
+                "a same-overclock platform must hold level against an imbalance; up.y dipped to " + minUpY);
+    }
+
+    @Test
+    @DisplayName("a hard off-centre thrust still flips the platform even while self-levelling is armed")
+    void selfLevellingYieldsToADeliberateFlip() {
+        PhysBody body = cube(4.0);
+        body.world = WorldBlockCache.EMPTY;
+        // Self-levelling is armed every tick, but the lever arm is large: a deliberate flip, not an imbalance.
+        // It must escape the cone and roll the body right past inverted.
+        double minUpY = 1.0;
+        for (int tick = 0; tick < 400; tick++) {
+            body.selfRightTicks = 4;
+            thrustAt(body, new Vector3d(0.4, 0, 0), new Vector3d(0, -0.5, 0));
+            XpbdSolver.step(List.of(body), 1.0);
+            minUpY = Math.min(minUpY, worldUp(body).y);
+        }
+        assertTrue(minUpY < -0.5,
+                "a deliberate hard thrust must overpower self-levelling and flip past inverted; lowest up.y="
+                        + minUpY);
     }
 
     @Test
