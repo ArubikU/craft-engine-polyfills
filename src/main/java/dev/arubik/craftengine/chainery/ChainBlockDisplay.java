@@ -31,6 +31,9 @@ public final class ChainBlockDisplay {
     private final Object despawnPacket;
     private final java.util.Set<UUID> shownTo = java.util.concurrent.ConcurrentHashMap.newKeySet();
 
+    /** Link model enlargement — 12.5% bigger so adjacent links overlap and close the inter-link gap. */
+    private static final float SCALE = 1.125f;
+
     private BlockState blockState;
     private org.joml.Quaternionf rotation = new org.joml.Quaternionf();
     private boolean metaDirty = false;
@@ -69,9 +72,12 @@ public final class ChainBlockDisplay {
         // display rotation lever, same one ConveyorItemDisplay uses). Pivot about the model CENTRE: compose is
         // Translation + LeftRotation·v, so Translation = LeftRotation·(-0.5,-0.5,-0.5) makes it LeftRotation·(v−½)
         // — the model spins about its own centre, which sits on the rope particle midpoint we teleport it to.
-        Vector3f t = rotation.transform(new Vector3f(-0.5f, -0.5f, -0.5f));
+        // Enlarge the link model 12.5% so consecutive links overlap instead of leaving a ~2px gap. Compose is
+        // Translation + LeftRotation·(Scale·v), so Translation = LeftRotation·(-0.5·SCALE) keeps it centre-pivoted.
+        Vector3f t = rotation.transform(new Vector3f(-0.5f * SCALE, -0.5f * SCALE, -0.5f * SCALE));
         DisplayData.Translation.addEntityData(t, values);
         DisplayData.LeftRotation.addEntityData(rotation, values);
+        DisplayData.Scale.addEntityData(new Vector3f(SCALE, SCALE, SCALE), values);
         DisplayData.BrightnessOverride.addEntityData((15 << 4) | (15 << 20), values);
         DisplayData.PosRotInterpolationDuration.addEntityData(1, values);
         DisplayData.TransformationInterpolationDuration.addEntityData(2, values);

@@ -5,12 +5,10 @@ import java.util.List;
 
 import org.bukkit.World;
 
-import dev.arubik.craftengine.util.CeWorlds;
 import net.minecraft.world.level.block.state.BlockState;
 import net.momirealms.craftengine.bukkit.api.CraftEngineBlocks;
 import net.momirealms.craftengine.core.entity.player.Player;
 import net.momirealms.craftengine.core.util.Key;
-import net.momirealms.craftengine.core.world.ChunkPos;
 
 /**
  * PACKET-ONLY render of a {@link Chain} span (CHAINERY — user: "usa packets, no uses item displays reales,
@@ -119,37 +117,38 @@ public final class ChainRenderer {
         chain.links.clear();
     }
 
-    /** CE players tracking either endpoint's chunk (union) — the viewers a chain's links are sent to. */
+    /** View radius (blocks) past a chain's span within which a player is sent its links. */
+    private static final double VIEW_RANGE = 96.0;
+
+    /**
+     * CE players near the chain — every Bukkit player in the world within {@link #VIEW_RANGE} of the span,
+     * wrapped to a CE player. Uses live nearby players (not chunk-tracking) so a player that just logged in or
+     * walked into range reliably gets the links spawned on the next tick (fixes "no se renderiza al entrar").
+     */
     private static List<Player> viewersFor(World world, ChainRope rope) {
         List<Player> out = new ArrayList<>();
-        try {
-            int n = rope.particleCount();
-            if (n == 0) {
-                return out;
+        int n = rope.particleCount();
+        if (n == 0) {
+            return out;
+        }
+        org.joml.Vector3d a = rope.particle(0);
+        org.joml.Vector3d b = rope.particle(n - 1);
+        double mx = (a.x + b.x) / 2.0, my = (a.y + b.y) / 2.0, mz = (a.z + b.z) / 2.0;
+        double reach = 0.5 * a.distance(b) + VIEW_RANGE;
+        double reach2 = reach * reach;
+        for (org.bukkit.entity.Player bp : world.getPlayers()) {
+            org.bukkit.Location l = bp.getLocation();
+            double dx = l.getX() - mx, dy = l.getY() - my, dz = l.getZ() - mz;
+            if (dx * dx + dy * dy + dz * dz > reach2) {
+                continue;
             }
-            org.joml.Vector3d a = rope.particle(0);
-            org.joml.Vector3d b = rope.particle(n - 1);
-            var ce = CeWorlds.of(world);
-            addTracked(out, ce.getTrackedBy(new ChunkPos((int) Math.floor(a.x) >> 4, (int) Math.floor(a.z) >> 4)));
-            int bcx = (int) Math.floor(b.x) >> 4, bcz = (int) Math.floor(b.z) >> 4;
-            if (bcx != ((int) Math.floor(a.x) >> 4) || bcz != ((int) Math.floor(a.z) >> 4)) {
-                addTracked(out, ce.getTrackedBy(new ChunkPos(bcx, bcz)));
+            try {
+                out.add(net.momirealms.craftengine.bukkit.api.BukkitAdaptor.adapt(bp));
+            } catch (Throwable ignored) {
+                // skip a player that can't be wrapped this tick
             }
-        } catch (Throwable ignored) {
-            // no viewers this tick rather than an exception
         }
         return out;
-    }
-
-    private static void addTracked(List<Player> out, List<Player> tracked) {
-        if (tracked == null) {
-            return;
-        }
-        for (Player p : tracked) {
-            if (!out.contains(p)) {
-                out.add(p);
-            }
-        }
     }
 
     /** No-op kept for the enable-time call: packet entities never persist as real orphans to sweep. */

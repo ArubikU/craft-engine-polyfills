@@ -25,6 +25,42 @@ import net.momirealms.craftengine.core.util.Key;
  */
 public class ChaineryInteractListener implements Listener {
 
+    /**
+     * Severs any chain whose endpoint sits at a just-broken block — via the REGISTRY endpoint index (which
+     * persists in chains.dat), not the block entity, so a mine/explosion after a server restart still breaks
+     * the chain even if the anchor block-entity's id didn't survive the reload ("al reiniciar el sv ... si
+     * rompo un anchor la chain no se rompe"). Covers player mining and both explosion kinds.
+     */
+    @EventHandler(ignoreCancelled = true)
+    public void onBreak(org.bukkit.event.block.BlockBreakEvent event) {
+        severAt(event.getBlock());
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onBlockExplode(org.bukkit.event.block.BlockExplodeEvent event) {
+        for (Block b : event.blockList()) {
+            severAt(b);
+        }
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onEntityExplode(org.bukkit.event.entity.EntityExplodeEvent event) {
+        for (Block b : event.blockList()) {
+            severAt(b);
+        }
+    }
+
+    private static void severAt(Block b) {
+        try {
+            Chain chain = ChainRegistry.at(b.getWorld().getUID(), new BlockPos(b.getX(), b.getY(), b.getZ()));
+            if (chain != null) {
+                ChainEngine.breakChain(chain, true);
+            }
+        } catch (Throwable ignored) {
+            // never let a chain-sever failure abort the block break
+        }
+    }
+
     // LOWEST + not-ignoring-cancelled: run BEFORE CraftEngine's block-item placement so cancelling here stops
     // it placing a new chain block instead of extending (the earlier HIGH handler ran too late — "sigue sin
     // aumentar").
