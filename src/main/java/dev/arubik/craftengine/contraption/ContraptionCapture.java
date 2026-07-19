@@ -177,9 +177,10 @@ public final class ContraptionCapture {
         // the hologram, identical to what updateShape returns) and write it back, so the displayed model
         // matches the assembled structure in BOTH the joinable contraption world and the render. Two
         // passes for the same convergence reason the neighbor settle documents.
+        Level nms = level.serverLevel();
         for (int pass = 0; pass < 2; pass++) {
-            settleConnectedModels(level, structuralLocals);
-            settleConnectedModels(level, dependentLocals);
+            settleConnectedModels(nms, structuralLocals);
+            settleConnectedModels(nms, dependentLocals);
         }
         return new Result(level, resolveAutoBehaviors(level));
     }
@@ -200,22 +201,29 @@ public final class ContraptionCapture {
         }
     }
 
+    /** Flags for a connection-model rewrite: refresh the client/CE renderer, but cascade no shape/neighbor update. */
+    private static final int CONNECT_MODEL_FLAGS =
+            Block.UPDATE_KNOWN_SHAPE | Block.UPDATE_CLIENTS;
+
     /**
-     * Re-derives and writes the connection state of every CraftEngine connected block among {@code locals}
+     * Re-derives and writes the connection state of every CraftEngine connected block among {@code positions}
      * (see the connection-MODEL settle comment in {@link #capture}). For each cell that carries a
      * {@link ConnectedBlockBehavior}, computes its faces from scratch against its live neighbours via
      * {@code vanillaMakeState} — the exact state its {@code updateShape} hook would return — and setBlock's
-     * it into the hologram when it differs, refreshing the displayed model. Non-connectable and vanilla
-     * cells are skipped. Uses {@code UPDATE_KNOWN_SHAPE | UPDATE_CLIENTS}: no cascading shape/neighbor
-     * update (nothing to pop redstone or re-trigger this pass), while CraftEngine's palette hook still
-     * fires on the state change and refreshes its renderer.
+     * it into {@code level} when it differs, refreshing the displayed model. Non-connectable and vanilla
+     * cells are skipped. Uses {@link #CONNECT_MODEL_FLAGS}: no cascading shape/neighbor update (nothing to
+     * pop redstone or re-trigger this pass), while CraftEngine's palette hook still fires on the state
+     * change and refreshes its renderer.
+     *
+     * <p>Works on ANY {@link Level} against ANY position set, so it serves BOTH the capture side (the
+     * hologram's {@code serverLevel()} + local cells) and the disassemble side (the real world + the
+     * restored world positions) — the {@code neighborChanged}-only settle each of those runs never
+     * recomputes a connected block's faces.
      */
-    private static void settleConnectedModels(ContraptionLevel level, List<BlockPos> locals) {
-        Level nms = level.serverLevel();
-        int flags = Block.UPDATE_KNOWN_SHAPE | Block.UPDATE_CLIENTS;
-        for (BlockPos local : locals) {
+    private static void settleConnectedModels(Level level, Iterable<BlockPos> positions) {
+        for (BlockPos pos : positions) {
             try {
-                BlockState state = level.getBlockState(local);
+                BlockState state = level.getBlockState(pos);
                 ImmutableBlockState current = BlockStateUtils.getOptionalCustomBlockState(state).orElse(null);
                 if (current == null) {
                     continue;
@@ -224,12 +232,12 @@ public final class ContraptionCapture {
                 if (conn == null) {
                     continue;
                 }
-                ImmutableBlockState recomputed = (ImmutableBlockState) conn.vanillaMakeState(local, nms);
+                ImmutableBlockState recomputed = (ImmutableBlockState) conn.vanillaMakeState(pos, level);
                 if (recomputed != null && !recomputed.equals(current)) {
-                    level.setBlock(local, (BlockState) recomputed.customBlockState().minecraftState(), flags);
+                    level.setBlock(pos, (BlockState) recomputed.customBlockState().minecraftState(), CONNECT_MODEL_FLAGS);
                 }
             } catch (Throwable ignored) {
-                // best-effort — one block's failed re-derivation shouldn't abort the capture
+                // best-effort — one block's failed re-derivation shouldn't abort the pass
             }
         }
     }
@@ -830,6 +838,26 @@ public final class ContraptionCapture {
         // Pass 2: deferred settle in the same tier order -- structure settles before redstone.
         settleNeighbors(realLevel, structural);
         settleNeighbors(realLevel, dependent);
+
+        // Pass 3: connection-MODEL settle for CE connected blocks (2026-07-19 — "al desensamblar las
+        // pipes quedan raras"). settleNeighbors above drives neighborChanged, which ConnectedBlockBehavior
+        // does not override, so a restored pipe kept the connection faces it carried out of the hologram —
+        // computed against contraption-local neighbours, and possibly rotated stale (BlockState#rotate does
+        // not turn the north/east/... enum faces). Re-derive each connectable's own state against its REAL
+        // neighbours now that the whole structure has landed, so the pipe's model matches what it actually
+        // touches in the world. Two passes for the same convergence reason capture uses.
+        List<BlockPos> structuralWorld = new ArrayList<>();
+        List<BlockPos> dependentWorld = new ArrayList<>();
+        for (Placement p : structural) {
+            structuralWorld.add(p.worldPos());
+        }
+        for (Placement p : dependent) {
+            dependentWorld.add(p.worldPos());
+        }
+        for (int pass = 0; pass < 2; pass++) {
+            settleConnectedModels(realLevel, structuralWorld);
+            settleConnectedModels(realLevel, dependentWorld);
+        }
     }
 
     /**
