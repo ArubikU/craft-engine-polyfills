@@ -22,6 +22,14 @@ public final class Chain {
     /** The two endpoint chain-block positions. */
     public final BlockPos a;
     public final BlockPos b;
+    /**
+     * The face each endpoint's anchor is stuck to (the direction from the anchor's centre toward the surface
+     * it hangs off), so the chain attaches at that FACE, not the anchor's centre — a half-block offset applied
+     * at resolve time (and rotated with the contraption for a captured anchor). Null = centre (legacy/no face).
+     */
+    public final net.minecraft.core.Direction faceA;
+    public final net.minecraft.core.Direction faceB;
+
     public final ChainMaterial material;
     /**
      * The chain's natural length in links (= items consumed). Starts at the taut span; right-clicking an
@@ -41,11 +49,14 @@ public final class Chain {
     /** Live verlet rope for this span's sag/ground physics + render — NOT persisted, rebuilt on demand. */
     public final transient ChainRope rope = new ChainRope();
 
-    public Chain(UUID id, UUID worldId, BlockPos a, BlockPos b, ChainMaterial material, int blocks) {
+    public Chain(UUID id, UUID worldId, BlockPos a, BlockPos b, net.minecraft.core.Direction faceA,
+            net.minecraft.core.Direction faceB, ChainMaterial material, int blocks) {
         this.id = id;
         this.worldId = worldId;
         this.a = a;
         this.b = b;
+        this.faceA = faceA;
+        this.faceB = faceB;
         this.material = material;
         this.blocks = blocks;
     }

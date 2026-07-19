@@ -77,6 +77,8 @@ public final class ChainRegistry {
             c.putString("world", chain.worldId.toString());
             c.putLong("a", chain.a.asLong());
             c.putLong("b", chain.b.asLong());
+            c.putByte("faceA", (byte) (chain.faceA == null ? -1 : chain.faceA.get3DDataValue()));
+            c.putByte("faceB", (byte) (chain.faceB == null ? -1 : chain.faceB.get3DDataValue()));
             c.putInt("blocks", chain.blocks);
             c.putString("mat_anchor", chain.material.anchorBlock());
             c.putString("mat_link", chain.material.linkItem());
@@ -104,6 +106,8 @@ public final class ChainRegistry {
                 UUID world = UUID.fromString(c.getString("world").orElseThrow());
                 BlockPos a = BlockPos.of(c.getLong("a").orElse(0L));
                 BlockPos b = BlockPos.of(c.getLong("b").orElse(0L));
+                net.minecraft.core.Direction faceA = faceFrom(c.getByte("faceA").orElse((byte) -1));
+                net.minecraft.core.Direction faceB = faceFrom(c.getByte("faceB").orElse((byte) -1));
                 int blocks = c.getInt("blocks").orElse(0);
                 ChainMaterial mat = new ChainMaterial(
                         c.getString("mat_anchor").orElse(ChainMaterial.DEFAULT.anchorBlock()),
@@ -112,11 +116,16 @@ public final class ChainRegistry {
                         c.getDouble("mat_stretch").orElse(ChainMaterial.DEFAULT.stretch()),
                         c.getDouble("mat_tension").orElse(ChainMaterial.DEFAULT.maxTension()),
                         c.getDouble("mat_pull").orElse(ChainMaterial.DEFAULT.pull()));
-                register(new Chain(id, world, a, b, mat, blocks));
+                register(new Chain(id, world, a, b, faceA, faceB, mat, blocks));
             } catch (Throwable bad) {
                 // skip a corrupt entry rather than abort the whole load
             }
         }
+    }
+
+    /** Decodes a persisted 3D-data face value, or null for the -1 sentinel (no face / centre). */
+    private static net.minecraft.core.Direction faceFrom(byte v) {
+        return v < 0 ? null : net.minecraft.core.Direction.from3DDataValue(v);
     }
 
     /** For diagnostics/tests: number of live chains. */

@@ -34,8 +34,9 @@ public final class ChainEngine {
     // ---- creation ----
 
     /** Creates, registers, binds and renders a chain between two freshly-placed endpoint blocks. */
-    public static Chain create(World world, BlockPos a, BlockPos b, ChainMaterial mat, int blocks) {
-        Chain chain = new Chain(UUID.randomUUID(), world.getUID(), a, b, mat, blocks);
+    public static Chain create(World world, BlockPos a, BlockPos b, net.minecraft.core.Direction faceA,
+            net.minecraft.core.Direction faceB, ChainMaterial mat, int blocks) {
+        Chain chain = new Chain(UUID.randomUUID(), world.getUID(), a, b, faceA, faceB, mat, blocks);
         ChainRegistry.register(chain);
         Level level = ((CraftWorld) world).getHandle();
         bindEndpoint(level, a, chain.id, 0);
@@ -237,7 +238,7 @@ public final class ChainEngine {
         };
     }
 
-    /** Resolves one endpoint: prefer its captured (moving) position; else the static block centre if loaded. */
+    /** Resolves one endpoint: prefer its captured (moving) position; else the static anchor's attach FACE. */
     private static Live resolveEnd(World world, Chain chain, BlockPos pos, Live[] captured, int role) {
         if (captured != null && captured[role] != null) {
             return captured[role];
@@ -245,7 +246,13 @@ public final class ChainEngine {
         if (!world.isChunkLoaded(pos.getX() >> 4, pos.getZ() >> 4)) {
             return null;
         }
-        return new Live(new org.joml.Vector3d(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5), null, null);
+        // Attach at the anchor's FACE (half a block off centre toward the surface it hangs from), not its centre.
+        org.joml.Vector3d p = new org.joml.Vector3d(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
+        net.minecraft.core.Direction face = role == 0 ? chain.faceA : chain.faceB;
+        if (face != null) {
+            p.add(face.getStepX() * 0.5, face.getStepY() * 0.5, face.getStepZ() * 0.5);
+        }
+        return new Live(p, null, null);
     }
 
     /** Scans every contraption once: captured chain endpoints + per-world occupancy of contraption cells. */
@@ -273,7 +280,17 @@ public final class ChainEngine {
                     if (chainId == null) {
                         continue;
                     }
-                    Live live = new Live(new org.joml.Vector3d(w.x, w.y, w.z), cid, entity.state());
+                    // Attach at the anchor's FACE, rotated with the contraption so it tracks the surface as it moves.
+                    org.joml.Vector3d p = new org.joml.Vector3d(w.x, w.y, w.z);
+                    Chain chain = ChainRegistry.get(chainId);
+                    net.minecraft.core.Direction face = chain == null ? null
+                            : (cbe.getRole() == 0 ? chain.faceA : chain.faceB);
+                    if (face != null) {
+                        net.minecraft.world.phys.Vec3 rd = level.rotateToRealWorld(
+                                new net.minecraft.world.phys.Vec3(face.getStepX(), face.getStepY(), face.getStepZ()));
+                        p.add(rd.x * 0.5, rd.y * 0.5, rd.z * 0.5);
+                    }
+                    Live live = new Live(p, cid, entity.state());
                     endpoints.computeIfAbsent(chainId, k -> new Live[2])[cbe.getRole() == 0 ? 0 : 1] = live;
                 }
             } catch (Throwable ignored) {

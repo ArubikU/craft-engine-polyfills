@@ -35,7 +35,20 @@ import net.momirealms.craftengine.core.util.Key;
  */
 public class ChaineryItemBehavior extends ExtendedItemBehavior {
 
-    private record Pending(UUID worldId, BlockPos pos) {
+    private record Pending(UUID worldId, BlockPos pos, net.minecraft.core.Direction face) {
+    }
+
+    /** The anchor's attach face = the direction from the anchor cell back toward the clicked block. */
+    private static net.minecraft.core.Direction attachFace(BlockFace clickedFace) {
+        return switch (clickedFace.getOppositeFace()) {
+            case UP -> net.minecraft.core.Direction.UP;
+            case DOWN -> net.minecraft.core.Direction.DOWN;
+            case NORTH -> net.minecraft.core.Direction.NORTH;
+            case SOUTH -> net.minecraft.core.Direction.SOUTH;
+            case EAST -> net.minecraft.core.Direction.EAST;
+            case WEST -> net.minecraft.core.Direction.WEST;
+            default -> null;
+        };
     }
 
     /** Per-player first point awaiting its second click. */
@@ -75,9 +88,10 @@ public class ChaineryItemBehavior extends ExtendedItemBehavior {
             return stack;
         }
 
+        net.minecraft.core.Direction attach = attachFace(face);
         Pending first = PENDING.get(player.getUniqueId());
         if (first == null || !first.worldId().equals(world.getUID())) {
-            PENDING.put(player.getUniqueId(), new Pending(world.getUID(), pos));
+            PENDING.put(player.getUniqueId(), new Pending(world.getUID(), pos, attach));
             player.sendActionBar(net.kyori.adventure.text.Component.text("§aPunto A fijado — click derecho en el punto B"));
             return stack;
         }
@@ -114,7 +128,7 @@ public class ChaineryItemBehavior extends ExtendedItemBehavior {
             return stack;
         }
 
-        ChainEngine.create(world, first.pos(), pos, material, distance);
+        ChainEngine.create(world, first.pos(), pos, first.face(), attach, material, distance);
         removeChainItems(player, material.linkItem(), distance);
         player.sendActionBar(net.kyori.adventure.text.Component.text(
                 "§aCadena creada (" + distance + " bloques)"));
