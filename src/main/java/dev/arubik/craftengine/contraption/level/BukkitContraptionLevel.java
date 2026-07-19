@@ -823,21 +823,37 @@ implements ContraptionBoundary, ContraptionLevel {
     }
 
     @Override
-    public void tickMachines() {
+    public void tickBlockEntities() {
+        CEWorld ceWorld = CraftEngine.instance().worldManager().getWorld(this.getWorld().getUID());
         for (BlockPos local : new HashSet<BlockPos>(this.localPositions)) {
             try {
-                BlockEntityController blockEntityController;
                 net.momirealms.craftengine.core.block.entity.BlockEntity be = BukkitBlockEntityTypes.getIfLoaded((Level)this, (BlockPos)local);
-                if (be == null || !((blockEntityController = be.controller) instanceof AbstractMachineBlockEntity)) continue;
-                AbstractMachineBlockEntity machine = (AbstractMachineBlockEntity)blockEntityController;
+                if (be == null || be.controller == null) continue;
                 net.minecraft.world.level.block.state.BlockState nms = this.getBlockState(local);
                 net.momirealms.craftengine.core.block.ImmutableBlockState ce =
                         net.momirealms.craftengine.bukkit.util.BlockStateUtils.getOptionalCustomBlockState(nms).orElse(null);
                 if (ce == null) continue;
-                machine.tick((Level) this, local, ce);
+                if (ceWorld != null) {
+                    // Every CE block entity via its own ticker — machines, tanks, pumps, pipes.
+                    @SuppressWarnings({ "rawtypes", "unchecked" })
+                    net.momirealms.craftengine.core.block.entity.tick.BlockEntityTicker ticker =
+                            be.controller.createBlockEntityTicker(ceWorld, ce);
+                    if (ticker != null) {
+                        ticker.tick(ceWorld, new net.momirealms.craftengine.core.world.BlockPos(local.getX(),
+                                local.getY(), local.getZ()), ce, be.controller);
+                    }
+                } else if (be.controller instanceof AbstractMachineBlockEntity machine) {
+                    machine.tick((Level) this, local, ce);
+                }
             }
             catch (Throwable throwable) {}
         }
+        try {
+            dev.arubik.craftengine.fluid.graph.GasEngine.tickAll((Level) this);
+        } catch (Throwable ignored) {}
+        try {
+            dev.arubik.craftengine.fluid.graph.FluidEngine.tickAll((Level) this);
+        } catch (Throwable ignored) {}
     }
 
     private void releaseChunkTickets() {

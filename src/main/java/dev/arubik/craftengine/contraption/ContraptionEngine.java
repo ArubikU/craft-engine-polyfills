@@ -82,7 +82,7 @@ public final class ContraptionEngine {
             // the ContraptionLevel as its level — which is what lets its particles reach the real world and lets
             // a fan push its phys body. No-op for a contraption with no machines.
             if (state.level() != null) {
-                state.level().tickMachines();
+                state.level().tickBlockEntities();
             }
             Vec3 posBefore = new Vec3(state.x(), state.y(), state.z());
             double yawBefore = state.yawRadians();

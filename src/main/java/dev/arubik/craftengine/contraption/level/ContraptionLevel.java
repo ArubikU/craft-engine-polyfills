@@ -91,15 +91,16 @@ public interface ContraptionLevel extends ContraptionBoundary {
     void putCeControllerData(BlockPos local, byte[] bytes);
 
     /**
-     * Drives every captured MACHINE block-entity's own {@code tick} ONE game tick, with THIS level as its
-     * {@code level} (2026-07-18 — "desregistramos las máquinas ... toca re registrarlos"). Capture unregisters
-     * the ORIGINAL real-world machine to kill its duplicate emitter, and CraftEngine never ticks the hidden
-     * contraption world, so a captured copper fan otherwise sits frozen — no gas processing, no airflow, no
-     * thrust. Ticking it here with the ContraptionLevel as its level is exactly what makes
-     * {@code level instanceof ContraptionLevel} true inside the machine, so its particles route to the real
-     * world and (for a fan) it can push the phys body. Called once per game tick per contraption by the engine.
+     * Drives EVERY captured CraftEngine block-entity's own ticker ONE game tick, then equalizes this level's
+     * gas/fluid networks (2026-07-18 — "debes tickear todas las CE block entity no solo las machines, y obvio
+     * los gases y liquidos"). CraftEngine never ticks the hidden contraption world, so without this a captured
+     * fan is frozen, a captured pipe never registers its transport seed, and a tank/pump never runs. Ticking
+     * through each block-entity's OWN CraftEngine ticker covers machines, tanks, pumps AND pipes uniformly, with
+     * this level as their world (so {@code level instanceof ContraptionLevel} stays true — particles/thrust);
+     * the {@code GasEngine}/{@code FluidEngine} pass right after moves gas/fluid through the pipes those ticks
+     * just seeded. Called once per game tick per contraption by the engine.
      */
-    void tickMachines();
+    void tickBlockEntities();
 
     byte[] getCeControllerData(BlockPos local);
 

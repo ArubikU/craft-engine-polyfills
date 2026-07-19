@@ -683,11 +683,12 @@ public final class AspContraptionLevel extends SlimeLevelInstance implements Con
     }
 
     @Override
-    public void tickMachines() {
+    public void tickBlockEntities() {
+        CEWorld ceWorld = CraftEngine.instance().worldManager().getWorld(getWorld().getUID());
         for (BlockPos local : new HashSet<>(localPositions)) {
             try {
                 net.momirealms.craftengine.core.block.entity.BlockEntity be = BukkitBlockEntityTypes.getIfLoaded(this, local);
-                if (be == null || !(be.controller instanceof AbstractMachineBlockEntity machine)) {
+                if (be == null || be.controller == null) {
                     continue;
                 }
                 net.minecraft.world.level.block.state.BlockState nms = getBlockState(local);
@@ -696,9 +697,31 @@ public final class AspContraptionLevel extends SlimeLevelInstance implements Con
                 if (ce == null) {
                     continue;
                 }
-                machine.tick(this, local, ce);
+                if (ceWorld != null) {
+                    // Tick EVERY CE block entity through its own CraftEngine ticker — machines, tanks, pumps AND
+                    // pipes. The ticker hands a machine world.minecraftWorld() = THIS level (contraption-aware),
+                    // and a pipe registers its GasEngine/FluidEngine seed here.
+                    @SuppressWarnings({ "rawtypes", "unchecked" })
+                    net.momirealms.craftengine.core.block.entity.tick.BlockEntityTicker ticker =
+                            be.controller.createBlockEntityTicker(ceWorld, ce);
+                    if (ticker != null) {
+                        ticker.tick(ceWorld, new net.momirealms.craftengine.core.world.BlockPos(local.getX(),
+                                local.getY(), local.getZ()), ce, be.controller);
+                    }
+                } else if (be.controller instanceof AbstractMachineBlockEntity machine) {
+                    machine.tick(this, local, ce); // no CEWorld — keep at least the machines alive
+                }
             } catch (Throwable ignored) {
             }
+        }
+        // Move gas/fluid through the pipes the ticks above just seeded, within THIS level.
+        try {
+            dev.arubik.craftengine.fluid.graph.GasEngine.tickAll(this);
+        } catch (Throwable ignored) {
+        }
+        try {
+            dev.arubik.craftengine.fluid.graph.FluidEngine.tickAll(this);
+        } catch (Throwable ignored) {
         }
     }
 
