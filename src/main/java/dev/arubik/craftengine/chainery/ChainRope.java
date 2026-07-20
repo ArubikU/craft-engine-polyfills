@@ -143,6 +143,19 @@ public final class ChainRope {
         return pos == null ? 0 : particles;
     }
 
+    /**
+     * Nudges the particle nearest {@code i} by {@code delta} — a verlet impulse: displacing the position (while
+     * prev stays) injects velocity, so the rope swings. Endpoints are pinned, so a hit near an end pushes the
+     * closest interior particle instead. No-op before the first step.
+     */
+    public void applyImpulse(int i, Vector3d delta) {
+        if (pos == null || particles < 3) {
+            return;
+        }
+        int idx = Math.max(1, Math.min(particles - 2, i));
+        pos[idx].add(delta);
+    }
+
     /** World position of particle {@code i} (0..particleCount-1). Returned instance is live — copy if kept. */
     public Vector3d particle(int i) {
         return pos[i];

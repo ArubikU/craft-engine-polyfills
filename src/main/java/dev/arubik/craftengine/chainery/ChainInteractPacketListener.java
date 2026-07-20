@@ -71,6 +71,7 @@ public final class ChainInteractPacketListener implements PacketListener {
                     () -> {
                         if (attack) {
                             playBreakSound(player.getWorld(), chain.material.linkItem(), point);
+                            applyHitForce(player, chain, ref.segment());
                         } else {
                             handleRightClick(player, chain, sneak);
                         }
@@ -127,6 +128,33 @@ public final class ChainInteractPacketListener implements PacketListener {
         }
         for (org.bukkit.inventory.ItemStack overflow : player.getInventory().addItem(item).values()) {
             player.getWorld().dropItemNaturally(player.getLocation(), overflow);
+        }
+    }
+
+    /** Impulse (blocks) per point of attack damage — how hard a hit swings the rope. */
+    private static final double HIT_FORCE_PER_DAMAGE = 0.12;
+
+    /**
+     * Swings the rope at the hit link with a force proportional to the damage the hit WOULD do (user: "aplica una
+     * fuerza proporcional al daño que debería hacer, para que sea más dinámico") — attack-damage attribute scaled
+     * by the swing charge (a spammed, uncharged hit barely nudges it; a full swing whips it), along the aim.
+     */
+    private static void applyHitForce(org.bukkit.entity.Player player, Chain chain, int segment) {
+        try {
+            double dmg = 1.0;
+            org.bukkit.attribute.AttributeInstance attr =
+                    player.getAttribute(org.bukkit.attribute.Attribute.ATTACK_DAMAGE);
+            if (attr != null) {
+                dmg = Math.max(0.5, attr.getValue());
+            }
+            float charge = player.getAttackCooldown(); // 0..1 — how charged the swing was
+            double f = dmg * Math.max(0.15f, charge) * HIT_FORCE_PER_DAMAGE;
+            org.bukkit.util.Vector look = player.getLocation().getDirection();
+            Vector3d delta = new Vector3d(look.getX() * f, look.getY() * f, look.getZ() * f);
+            int n = chain.rope.particleCount();
+            int stride = chain.rope.renderStride();
+            chain.rope.applyImpulse(Math.min(segment * stride + stride / 2, n - 2), delta);
+        } catch (Throwable ignored) {
         }
     }
 
