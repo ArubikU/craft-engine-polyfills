@@ -23,12 +23,13 @@ public final class Chain {
     public final BlockPos a;
     public final BlockPos b;
     /**
-     * The face each endpoint's anchor is stuck to (the direction from the anchor's centre toward the surface
-     * it hangs off), so the chain attaches at that FACE, not the anchor's centre — a half-block offset applied
-     * at resolve time (and rotated with the contraption for a captured anchor). Null = centre (legacy/no face).
+     * The attach offset for each endpoint — the vector from the anchor cell's CENTRE to the exact point the
+     * chain hooks onto, computed from the connected block's real collision box (so it hangs off a slab's top,
+     * a fence's post, a stair's step, not just a flat cell face). Applied at resolve time and rotated with the
+     * contraption for a captured anchor. Null = centre (no offset).
      */
-    public final net.minecraft.core.Direction faceA;
-    public final net.minecraft.core.Direction faceB;
+    public final org.joml.Vector3d offsetA;
+    public final org.joml.Vector3d offsetB;
 
     public final ChainMaterial material;
     /**
@@ -63,15 +64,15 @@ public final class Chain {
      *  doesn't snap a taut chain; it only breaks after this stays high (see ChainEngine#applyRope). */
     public transient int overTensionTicks = 0;
 
-    public Chain(UUID id, UUID worldId, BlockPos a, BlockPos b, net.minecraft.core.Direction faceA,
-            net.minecraft.core.Direction faceB, ChainMaterial material, int blocks,
+    public Chain(UUID id, UUID worldId, BlockPos a, BlockPos b, org.joml.Vector3d offsetA,
+            org.joml.Vector3d offsetB, ChainMaterial material, int blocks,
             net.minecraft.nbt.CompoundTag data) {
         this.id = id;
         this.worldId = worldId;
         this.a = a;
         this.b = b;
-        this.faceA = faceA;
-        this.faceB = faceB;
+        this.offsetA = offsetA;
+        this.offsetB = offsetB;
         this.material = material;
         this.blocks = blocks;
         this.data = data != null ? data : new net.minecraft.nbt.CompoundTag();

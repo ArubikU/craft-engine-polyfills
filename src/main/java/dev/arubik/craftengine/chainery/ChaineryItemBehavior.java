@@ -35,33 +35,51 @@ import net.momirealms.craftengine.core.util.Key;
  */
 public class ChaineryItemBehavior extends ExtendedItemBehavior {
 
-    private record Pending(UUID worldId, BlockPos pos, net.minecraft.core.Direction face, boolean reuse) {
+    private record Pending(UUID worldId, BlockPos pos, org.joml.Vector3d offset, boolean reuse) {
     }
 
-    /** Straight distance between the two ATTACH points (each = anchor centre + half a block toward its face). */
-    private static double attachDistance(BlockPos a, net.minecraft.core.Direction fa, BlockPos b,
-            net.minecraft.core.Direction fb) {
-        double ax = a.getX() + 0.5 + (fa == null ? 0 : 0.5 * fa.getStepX());
-        double ay = a.getY() + 0.5 + (fa == null ? 0 : 0.5 * fa.getStepY());
-        double az = a.getZ() + 0.5 + (fa == null ? 0 : 0.5 * fa.getStepZ());
-        double bx = b.getX() + 0.5 + (fb == null ? 0 : 0.5 * fb.getStepX());
-        double by = b.getY() + 0.5 + (fb == null ? 0 : 0.5 * fb.getStepY());
-        double bz = b.getZ() + 0.5 + (fb == null ? 0 : 0.5 * fb.getStepZ());
+    /** Straight distance between the two ATTACH points (anchor centre + its hitbox offset). */
+    private static double attachDistance(BlockPos a, org.joml.Vector3d oa, BlockPos b, org.joml.Vector3d ob) {
+        double ax = a.getX() + 0.5 + (oa == null ? 0 : oa.x);
+        double ay = a.getY() + 0.5 + (oa == null ? 0 : oa.y);
+        double az = a.getZ() + 0.5 + (oa == null ? 0 : oa.z);
+        double bx = b.getX() + 0.5 + (ob == null ? 0 : ob.x);
+        double by = b.getY() + 0.5 + (ob == null ? 0 : ob.y);
+        double bz = b.getZ() + 0.5 + (ob == null ? 0 : ob.z);
         double dx = bx - ax, dy = by - ay, dz = bz - az;
         return Math.sqrt(dx * dx + dy * dy + dz * dz);
     }
 
-    /** The anchor's attach face = the direction from the anchor cell back toward the clicked block. */
-    private static net.minecraft.core.Direction attachFace(BlockFace clickedFace) {
-        return switch (clickedFace.getOppositeFace()) {
-            case UP -> net.minecraft.core.Direction.UP;
-            case DOWN -> net.minecraft.core.Direction.DOWN;
-            case NORTH -> net.minecraft.core.Direction.NORTH;
-            case SOUTH -> net.minecraft.core.Direction.SOUTH;
-            case EAST -> net.minecraft.core.Direction.EAST;
-            case WEST -> net.minecraft.core.Direction.WEST;
-            default -> null;
-        };
+    /**
+     * The attach offset from the anchor cell's centre to the exact hook point on the clicked block's REAL
+     * collision box (the face-centre of that box on the clicked side) — so the chain hangs off a slab's top, a
+     * fence post, a stair step, etc., not a flat cell face. Falls back to the flat face if the box is degenerate.
+     */
+    private static org.joml.Vector3d attachOffset(Block clicked, BlockFace face) {
+        Block anchor = clicked.getRelative(face);
+        double acx = anchor.getX() + 0.5, acy = anchor.getY() + 0.5, acz = anchor.getZ() + 0.5;
+        org.bukkit.util.BoundingBox bb = clicked.getBoundingBox();
+        double px, py, pz;
+        if (bb == null || bb.getVolume() <= 0.0) {
+            px = clicked.getX() + 0.5;
+            py = clicked.getY() + 0.5;
+            pz = clicked.getZ() + 0.5;
+        } else {
+            px = bb.getCenterX();
+            py = bb.getCenterY();
+            pz = bb.getCenterZ();
+            switch (face) {
+                case UP -> py = bb.getMaxY();
+                case DOWN -> py = bb.getMinY();
+                case NORTH -> pz = bb.getMinZ();
+                case SOUTH -> pz = bb.getMaxZ();
+                case EAST -> px = bb.getMaxX();
+                case WEST -> px = bb.getMinX();
+                default -> {
+                }
+            }
+        }
+        return new org.joml.Vector3d(px - acx, py - acy, pz - acz);
     }
 
     /** Per-player first point awaiting its second click. */
@@ -94,11 +112,13 @@ public class ChaineryItemBehavior extends ExtendedItemBehavior {
         boolean reuse = ChaineryBlockBehavior.getAt(nms, clickedPos) != null;
         World world;
         BlockPos pos;
-        net.minecraft.core.Direction attach;
+        org.joml.Vector3d attach;
         if (reuse) {
             world = clicked.getWorld();
             pos = clickedPos;
-            attach = null; // a shared anchor attaches at its centre
+            // Inherit the offset an existing chain already uses here, so all chains on a shared anchor connect at
+            // the SAME point (not one at the centre and one on the hitbox).
+            attach = ChainRegistry.offsetAt(world.getUID(), pos);
             if (ChainRegistry.countAt(world.getUID(), pos) >= 4) {
                 player.sendActionBar(net.kyori.adventure.text.Component.text("§cEste anclaje ya tiene 4 cadenas"));
                 return stack;
@@ -111,7 +131,7 @@ public class ChaineryItemBehavior extends ExtendedItemBehavior {
             }
             world = target.getWorld();
             pos = new BlockPos(target.getX(), target.getY(), target.getZ());
-            attach = attachFace(face);
+            attach = attachOffset(clicked, face); // hook onto the clicked block's real hitbox
         }
 
         if (player.isSneaking()) {
@@ -146,7 +166,7 @@ public class ChaineryItemBehavior extends ExtendedItemBehavior {
         // Measure the REAL span between the two ATTACH points (block centre + half-block toward the stuck face),
         // not block centre to block centre — else the face offsets (up to +1 block total) leave the rope
         // stretched on creation and the fixed-size link models gap at the ends until you extend it.
-        int distance = (int) Math.round(attachDistance(first.pos(), first.face(), pos, attach));
+        int distance = (int) Math.round(attachDistance(first.pos(), first.offset(), pos, attach));
         distance = Math.max(1, distance);
         if (distance > material.maxBlocks()) {
             player.sendActionBar(net.kyori.adventure.text.Component.text(
@@ -173,7 +193,7 @@ public class ChaineryItemBehavior extends ExtendedItemBehavior {
             return stack;
         }
 
-        ChainEngine.create(world, first.pos(), pos, first.face(), attach, material, distance);
+        ChainEngine.create(world, first.pos(), pos, first.offset(), attach, material, distance);
         removeChainItems(player, material.linkItem(), distance);
         player.sendActionBar(net.kyori.adventure.text.Component.text(
                 "§aCadena creada (" + distance + " bloques)"));

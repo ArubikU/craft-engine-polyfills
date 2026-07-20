@@ -72,6 +72,20 @@ public final class ChainRegistry {
         return ids == null ? 0 : ids.size();
     }
 
+    /** The attach offset an existing chain uses at {@code (worldId, pos)}, so a REUSED anchor connects at the same
+     *  point (not the centre). Null if none / centre. */
+    public static org.joml.Vector3d offsetAt(UUID worldId, BlockPos pos) {
+        for (Chain c : chainsAt(worldId, pos)) {
+            if (c.a.equals(pos) && c.offsetA != null) {
+                return c.offsetA;
+            }
+            if (c.b.equals(pos) && c.offsetB != null) {
+                return c.offsetB;
+            }
+        }
+        return null;
+    }
+
     /** Whether a chain already runs directly between anchors {@code a} and {@code b} (prevents duplicate edges). */
     public static boolean existsBetween(UUID worldId, BlockPos a, BlockPos b) {
         for (Chain c : chainsAt(worldId, a)) {
@@ -118,8 +132,16 @@ public final class ChainRegistry {
             c.putString("world", chain.worldId.toString());
             c.putLong("a", chain.a.asLong());
             c.putLong("b", chain.b.asLong());
-            c.putByte("faceA", (byte) (chain.faceA == null ? -1 : chain.faceA.get3DDataValue()));
-            c.putByte("faceB", (byte) (chain.faceB == null ? -1 : chain.faceB.get3DDataValue()));
+            if (chain.offsetA != null) {
+                c.putDouble("offAx", chain.offsetA.x);
+                c.putDouble("offAy", chain.offsetA.y);
+                c.putDouble("offAz", chain.offsetA.z);
+            }
+            if (chain.offsetB != null) {
+                c.putDouble("offBx", chain.offsetB.x);
+                c.putDouble("offBy", chain.offsetB.y);
+                c.putDouble("offBz", chain.offsetB.z);
+            }
             c.putInt("blocks", chain.blocks);
             c.putString("mat_anchor", chain.material.anchorBlock());
             c.putString("mat_link", chain.material.linkItem());
@@ -150,8 +172,12 @@ public final class ChainRegistry {
                 UUID world = UUID.fromString(c.getString("world").orElseThrow());
                 BlockPos a = BlockPos.of(c.getLong("a").orElse(0L));
                 BlockPos b = BlockPos.of(c.getLong("b").orElse(0L));
-                net.minecraft.core.Direction faceA = faceFrom(c.getByte("faceA").orElse((byte) -1));
-                net.minecraft.core.Direction faceB = faceFrom(c.getByte("faceB").orElse((byte) -1));
+                org.joml.Vector3d offA = c.contains("offAx") ? new org.joml.Vector3d(
+                        c.getDouble("offAx").orElse(0.0), c.getDouble("offAy").orElse(0.0),
+                        c.getDouble("offAz").orElse(0.0)) : null;
+                org.joml.Vector3d offB = c.contains("offBx") ? new org.joml.Vector3d(
+                        c.getDouble("offBx").orElse(0.0), c.getDouble("offBy").orElse(0.0),
+                        c.getDouble("offBz").orElse(0.0)) : null;
                 int blocks = c.getInt("blocks").orElse(0);
                 ChainMaterial mat = new ChainMaterial(
                         c.getString("mat_anchor").orElse(ChainMaterial.DEFAULT.anchorBlock()),
@@ -161,16 +187,11 @@ public final class ChainRegistry {
                         c.getDouble("mat_tension").orElse(ChainMaterial.DEFAULT.maxTension()),
                         c.getDouble("mat_pull").orElse(ChainMaterial.DEFAULT.pull()));
                 CompoundTag data = c.getCompound("data").orElseGet(CompoundTag::new);
-                register(new Chain(id, world, a, b, faceA, faceB, mat, blocks, data));
+                register(new Chain(id, world, a, b, offA, offB, mat, blocks, data));
             } catch (Throwable bad) {
                 // skip a corrupt entry rather than abort the whole load
             }
         }
-    }
-
-    /** Decodes a persisted 3D-data face value, or null for the -1 sentinel (no face / centre). */
-    private static net.minecraft.core.Direction faceFrom(byte v) {
-        return v < 0 ? null : net.minecraft.core.Direction.from3DDataValue(v);
     }
 
     /** For diagnostics/tests: number of live chains. */

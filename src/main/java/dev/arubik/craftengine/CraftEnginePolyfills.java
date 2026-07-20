@@ -119,6 +119,14 @@ public final class CraftEnginePolyfills extends JavaPlugin {
             } catch (Throwable ignored) {
             }
         }, 1L, 1L);
+        // CHAINERY autosave: onDisable saves too, but a crash / force-kill skips it — persist every 60s so at
+        // most a minute of chain edits is ever lost.
+        getServer().getScheduler().runTaskTimer(this, () -> {
+            try {
+                dev.arubik.craftengine.chainery.ChainRegistry.saveAll(getDataFolder().toPath().resolve("chains.dat"));
+            } catch (Throwable ignored) {
+            }
+        }, 1200L, 1200L);
         // Contraption chunk lifecycle (CONTRAPTIONS.md Phase 6): anchor-keyed (not
         // current-position-keyed) load/unload wiring — see ContraptionChunkLifecycleListener's
         // javadoc for why this replaced the old ContraptionPersistence/ContraptionChunkListener.

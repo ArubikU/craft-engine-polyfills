@@ -34,9 +34,9 @@ public final class ChainEngine {
     // ---- creation ----
 
     /** Creates, registers, binds and renders a chain between two freshly-placed endpoint blocks. */
-    public static Chain create(World world, BlockPos a, BlockPos b, net.minecraft.core.Direction faceA,
-            net.minecraft.core.Direction faceB, ChainMaterial mat, int blocks) {
-        Chain chain = new Chain(UUID.randomUUID(), world.getUID(), a, b, faceA, faceB, mat, blocks,
+    public static Chain create(World world, BlockPos a, BlockPos b, org.joml.Vector3d offsetA,
+            org.joml.Vector3d offsetB, ChainMaterial mat, int blocks) {
+        Chain chain = new Chain(UUID.randomUUID(), world.getUID(), a, b, offsetA, offsetB, mat, blocks,
                 new net.minecraft.nbt.CompoundTag());
         ChainRegistry.register(chain);
         Level level = ((CraftWorld) world).getHandle();
@@ -290,11 +290,11 @@ public final class ChainEngine {
         if (!world.isChunkLoaded(pos.getX() >> 4, pos.getZ() >> 4)) {
             return null;
         }
-        // Attach at the anchor's FACE (half a block off centre toward the surface it hangs from), not its centre.
+        // Attach at the offset point on the connected block's real hitbox, not the anchor centre.
         org.joml.Vector3d p = new org.joml.Vector3d(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
-        net.minecraft.core.Direction face = role == 0 ? chain.faceA : chain.faceB;
-        if (face != null) {
-            p.add(face.getStepX() * 0.5, face.getStepY() * 0.5, face.getStepZ() * 0.5);
+        org.joml.Vector3d off = role == 0 ? chain.offsetA : chain.offsetB;
+        if (off != null) {
+            p.add(off);
         }
         return new Live(p, null, null);
     }
@@ -340,15 +340,15 @@ public final class ChainEngine {
                     if (chainId == null) {
                         continue;
                     }
-                    // Attach at the anchor's FACE, rotated with the contraption so it tracks the surface as it moves.
+                    // Attach at the hitbox offset, rotated with the contraption so it tracks the surface as it moves.
                     org.joml.Vector3d p = new org.joml.Vector3d(w.x, w.y, w.z);
                     Chain chain = ChainRegistry.get(chainId);
-                    net.minecraft.core.Direction face = chain == null ? null
-                            : (cbe.getRole() == 0 ? chain.faceA : chain.faceB);
-                    if (face != null) {
+                    org.joml.Vector3d off = chain == null ? null
+                            : (cbe.getRole() == 0 ? chain.offsetA : chain.offsetB);
+                    if (off != null) {
                         net.minecraft.world.phys.Vec3 rd = level.rotateToRealWorld(
-                                new net.minecraft.world.phys.Vec3(face.getStepX(), face.getStepY(), face.getStepZ()));
-                        p.add(rd.x * 0.5, rd.y * 0.5, rd.z * 0.5);
+                                new net.minecraft.world.phys.Vec3(off.x, off.y, off.z));
+                        p.add(rd.x, rd.y, rd.z);
                     }
                     Live live = new Live(p, cid, entity.state());
                     endpoints.computeIfAbsent(chainId, k -> new Live[2])[cbe.getRole() == 0 ? 0 : 1] = live;
