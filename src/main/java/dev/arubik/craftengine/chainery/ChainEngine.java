@@ -69,12 +69,11 @@ public final class ChainEngine {
         if (chain.blocks <= 1) {
             return RemoveResult.AT_MIN;
         }
+        // Mirror the physics break: removing a link is refused if the resulting length would be over-stretched
+        // past MAX_STRETCH for the current span (so a 5.4-block diagonal keeps a sensible minimum ≈ span/1.8).
         double span = currentSpan(chain);
         double newEffectiveMax = (chain.blocks - 1) * (1.0 + chain.material.stretch());
-        double overshoot = span - newEffectiveMax;
-        double maxOvershoot = chain.material.maxTension() <= 0.0 ? Double.MAX_VALUE
-                : chain.material.maxTension() / Math.max(1.0e-6, chain.material.pull() * ROPE_STIFFNESS);
-        if (overshoot > maxOvershoot) {
+        if (chain.material.maxTension() > 0.0 && span > newEffectiveMax * (1.0 + ChainPhysics.MAX_STRETCH)) {
             return RemoveResult.WOULD_BREAK;
         }
         chain.blocks--;

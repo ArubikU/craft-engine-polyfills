@@ -57,18 +57,16 @@ class ChainPhysicsTest {
     }
 
     @Test
-    @DisplayName("a chain yanked harder than its max tension snaps")
+    @DisplayName("a chain stretched past its relative limit snaps")
     void overTensionBreaksTheChain() {
-        // Ends already past the span AND ripping apart fast: the impulse needed to hold them exceeds maxTension.
-        double dist = 8.0;
+        // Stretched well past its natural length (10 vs 5 = 2x > the 1.8x limit): it must snap.
         double maxLen = 5.0;
-        double separating = 20.0; // violent pull-apart
-        ChainPhysics.RopeResult r = ChainPhysics.resolve(dist, maxLen, 0.0, separating, 2.0, 1.0, 5.0, DT);
-        assertTrue(r.broke(), "a chain pulled past its max tension must break; impulse=" + r.impulse());
+        ChainPhysics.RopeResult r = ChainPhysics.resolve(10.0, maxLen, 0.0, 5.0, 2.0, 1.0, 60.0, DT);
+        assertTrue(r.broke(), "a chain stretched past its relative limit must break; impulse=" + r.impulse());
 
-        // The SAME stretch under a gentle pull (and a higher tension rating) must NOT break.
-        ChainPhysics.RopeResult gentle = ChainPhysics.resolve(dist, maxLen, 0.0, 0.1, 2.0, 0.2, 60.0, DT);
-        assertFalse(gentle.broke(), "a gently-loaded chain must not break; impulse=" + gentle.impulse());
+        // Only modestly stretched (6 vs 5 = 1.2x, under the 1.8x limit): must NOT break, however it's pulled.
+        ChainPhysics.RopeResult gentle = ChainPhysics.resolve(6.0, maxLen, 0.0, 20.0, 2.0, 1.0, 60.0, DT);
+        assertFalse(gentle.broke(), "a modestly-stretched chain must not break; impulse=" + gentle.impulse());
     }
 
     @Test

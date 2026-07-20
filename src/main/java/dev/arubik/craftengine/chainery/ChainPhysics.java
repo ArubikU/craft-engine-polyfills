@@ -50,7 +50,13 @@ public final class ChainPhysics {
         if (impulse <= 0.0) {
             return RopeResult.SLACK;
         }
-        boolean broke = maxTension > 0.0 && impulse > maxTension;
+        // Break on RELATIVE over-stretch, not an absolute impulse: a chain snaps once it's stretched past its
+        // natural length by more than MAX_STRETCH (so the minimum length for a span scales WITH the span — a
+        // 5.4-block diagonal can't be held by 1 link). maxTension just enables/disables breaking.
+        boolean broke = maxTension > 0.0 && dist > effectiveMax * (1.0 + MAX_STRETCH);
         return new RopeResult(impulse, broke);
     }
+
+    /** Max fractional over-stretch before a chain snaps (0.8 = up to 1.8x its natural length). */
+    public static final double MAX_STRETCH = 0.8;
 }
