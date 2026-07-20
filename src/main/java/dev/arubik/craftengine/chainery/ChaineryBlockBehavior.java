@@ -37,6 +37,24 @@ public class ChaineryBlockBehavior extends BukkitBlockBehavior implements Entity
         return new ChainBlockEntity(blockEntity);
     }
 
+    /**
+     * Event-driven support check (user: "usaré el block/neighbors update del anchor behavior en vez de tickear").
+     * When a neighbour of this anchor changes — e.g. the wall/floor it's stuck to is mined — sever any chain
+     * whose support block is now gone, instead of polling it every tick.
+     */
+    @Override
+    public void neighborChanged(Object thisBlock, Object[] args) {
+        try {
+            Level level = (Level) args[1];
+            BlockPos pos = (BlockPos) args[2];
+            if (level instanceof net.minecraft.server.level.ServerLevel server) {
+                ChainEngine.onAnchorNeighborChanged(server, pos);
+            }
+        } catch (Throwable ignored) {
+            // never let the support check disrupt the neighbour-update pass
+        }
+    }
+
     /** Loaded {@link ChainBlockEntity} at {@code pos}, or null. */
     public static ChainBlockEntity getAt(Level level, BlockPos pos) {
         BlockEntity be = dev.arubik.craftengine.block.entity.BukkitBlockEntityTypes.getIfLoaded(level, pos);

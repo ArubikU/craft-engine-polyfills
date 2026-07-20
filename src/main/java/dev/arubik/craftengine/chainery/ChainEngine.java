@@ -250,13 +250,6 @@ public final class ChainEngine {
                 if (a == null || b == null) {
                     continue; // an endpoint is in an unloaded chunk / not resolvable this tick
                 }
-                // Support-dependent anchors: a STATIC anchor stuck to a block breaks (and takes the chain with it)
-                // if that support block is gone — "si se pegó a una pared y se rompe la cadena debe romperse".
-                if ((a.contraptionId() == null && supportGone(world, chain.a, chain.offsetA))
-                        || (b.contraptionId() == null && supportGone(world, chain.b, chain.offsetB))) {
-                    breakChain(chain, true);
-                    continue;
-                }
                 if (applyRope(chain, a, b)) {
                     continue; // the chain snapped this tick — it's already gone
                 }
@@ -269,6 +262,21 @@ public final class ChainEngine {
                 ChainRenderer.syncRope(chain, world, chain.rope);
             } catch (Throwable ignored) {
                 // one bad chain shouldn't stall the rest
+            }
+        }
+    }
+
+    /**
+     * A neighbour of an anchor at {@code pos} changed — sever any chain there whose support block is now gone.
+     * Called from {@link ChaineryBlockBehavior#neighborChanged} (event-driven, replaces the per-tick poll).
+     */
+    public static void onAnchorNeighborChanged(net.minecraft.server.level.ServerLevel level, BlockPos pos) {
+        org.bukkit.World world = level.getWorld();
+        java.util.UUID worldId = world.getUID();
+        for (Chain chain : ChainRegistry.chainsAt(worldId, pos)) {
+            org.joml.Vector3d off = chain.a.equals(pos) ? chain.offsetA : chain.offsetB;
+            if (supportGone(world, pos, off)) {
+                breakChain(chain, true);
             }
         }
     }
