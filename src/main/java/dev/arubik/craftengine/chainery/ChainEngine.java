@@ -542,10 +542,35 @@ public final class ChainEngine {
         }
         dev.arubik.craftengine.contraption.BearingType type = end.state().bearingType();
         if (type == dev.arubik.craftengine.contraption.BearingType.PHYS) {
+            // A rigid body — impulse at the endpoint (scaled by inverse mass), so it yanks + torques.
             dev.arubik.craftengine.contraption.physics.PhysicsWorld.applyThrust(end.contraptionId(), end.pos(), impulse);
+        } else if (type == dev.arubik.craftengine.contraption.BearingType.MINECART
+                || type == dev.arubik.craftengine.contraption.BearingType.GHAST) {
+            // Entity-anchored (a real minecart/ghast carries it) — push its ANCHOR ENTITY toward the tension so a
+            // moving end drags the other (user: "entre 2 minecart el que se mueve debería jalar al otro", and a
+            // phys pulling a minecart). A minecart on rails takes the along-rail component; a ghast moves freely.
+            pullAnchorEntity(end.state(), impulse);
         } else if (type == dev.arubik.craftengine.contraption.BearingType.LINEAR
                 || type == dev.arubik.craftengine.contraption.BearingType.ROTATIONAL) {
-            end.state().setStalled(true); // chain maxed -> cut the bearing's torque
+            end.state().setStalled(true); // block-anchored, can't be dragged — chain maxed cuts its torque
         }
+    }
+
+    /** Velocity added to an anchor entity per unit of rope impulse (entities take velocity, not a mass-scaled impulse). */
+    private static final double ENTITY_PULL_FACTOR = 0.03;
+
+    /** Nudges a MINECART/GHAST contraption's real anchor entity toward the chain tension. */
+    private static void pullAnchorEntity(dev.arubik.craftengine.contraption.ContraptionState state,
+            org.joml.Vector3d impulse) {
+        java.util.UUID id = state.anchorEntityId();
+        if (id == null) {
+            return;
+        }
+        org.bukkit.entity.Entity e = Bukkit.getEntity(id);
+        if (e == null) {
+            return;
+        }
+        e.setVelocity(e.getVelocity().add(new org.bukkit.util.Vector(
+                impulse.x * ENTITY_PULL_FACTOR, impulse.y * ENTITY_PULL_FACTOR, impulse.z * ENTITY_PULL_FACTOR)));
     }
 }
