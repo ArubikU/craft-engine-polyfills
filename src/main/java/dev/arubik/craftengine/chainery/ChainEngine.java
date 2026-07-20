@@ -250,6 +250,13 @@ public final class ChainEngine {
                 if (a == null || b == null) {
                     continue; // an endpoint is in an unloaded chunk / not resolvable this tick
                 }
+                // Support-dependent anchors: a STATIC anchor stuck to a block breaks (and takes the chain with it)
+                // if that support block is gone — "si se pegó a una pared y se rompe la cadena debe romperse".
+                if ((a.contraptionId() == null && supportGone(world, chain.a, chain.offsetA))
+                        || (b.contraptionId() == null && supportGone(world, chain.b, chain.offsetB))) {
+                    breakChain(chain, true);
+                    continue;
+                }
                 if (applyRope(chain, a, b)) {
                     continue; // the chain snapped this tick — it's already gone
                 }
@@ -264,6 +271,33 @@ public final class ChainEngine {
                 // one bad chain shouldn't stall the rest
             }
         }
+    }
+
+    /**
+     * Whether the block a static anchor is stuck to has been removed. The offset points from the anchor cell
+     * toward the support block's surface, so the support is the neighbour in the offset's dominant direction.
+     * Returns false when there's no offset (centre attach), or the support chunk isn't loaded (unknown → keep).
+     */
+    private static boolean supportGone(World world, BlockPos anchor, org.joml.Vector3d off) {
+        if (off == null) {
+            return false;
+        }
+        double ax = Math.abs(off.x), ay = Math.abs(off.y), az = Math.abs(off.z);
+        if (ax < 0.1 && ay < 0.1 && az < 0.1) {
+            return false; // attaches at the centre — no single support block
+        }
+        int sx = anchor.getX(), sy = anchor.getY(), sz = anchor.getZ();
+        if (ay >= ax && ay >= az) {
+            sy += off.y > 0 ? 1 : -1;
+        } else if (ax >= az) {
+            sx += off.x > 0 ? 1 : -1;
+        } else {
+            sz += off.z > 0 ? 1 : -1;
+        }
+        if (!world.isChunkLoaded(sx >> 4, sz >> 4)) {
+            return false; // don't sever on unknown terrain
+        }
+        return !world.getBlockAt(sx, sy, sz).getType().isSolid();
     }
 
     /**

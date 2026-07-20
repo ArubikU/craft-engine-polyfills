@@ -35,13 +35,19 @@ public final class ChainInteraction {
     private final UUID uuid = UUID.randomUUID();
     private final Object despawnPacket;
     private final java.util.Set<UUID> shownTo = ConcurrentHashMap.newKeySet();
-    private float width = 0.55f;
-    private float height = 0.55f;
+    private float width = 0.45f;
+    private float height = 0.45f;
 
     public ChainInteraction(UUID chainId, int segment) {
         this.despawnPacket = dev.arubik.craftengine.util.MNms.INSTANCE
                 .constructor$ClientboundRemoveEntitiesPacket(IntList.of(entityId));
         BY_ENTITY.put(entityId, new Ref(chainId, segment));
+    }
+
+    /** Sets the hitbox size (metadata is only re-sent on spawn, so set before first render). */
+    public void setSize(float w, float h) {
+        this.width = w;
+        this.height = h;
     }
 
     private List<Object> metadata() {

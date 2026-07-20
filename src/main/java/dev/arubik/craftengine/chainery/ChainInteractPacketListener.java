@@ -47,17 +47,38 @@ public final class ChainInteractPacketListener implements PacketListener {
             if (player == null) {
                 return;
             }
-            ChainInteractEvent.Action action = raw == WrapperPlayClientInteractEntity.InteractAction.ATTACK
-                    ? ChainInteractEvent.Action.LEFT_CLICK
+        boolean attack = raw == WrapperPlayClientInteractEntity.InteractAction.ATTACK;
+            ChainInteractEvent.Action action = attack ? ChainInteractEvent.Action.LEFT_CLICK
                     : ChainInteractEvent.Action.RIGHT_CLICK;
             // The clicked link's centre = midpoint of its rope segment (best-effort point for the event).
             Vector3d point = pointOf(chain, ref.segment());
             event.setCancelled(true); // consume the click; handlers decide what it means
             org.bukkit.Bukkit.getScheduler().runTask(dev.arubik.craftengine.CraftEnginePolyfills.instance(),
-                    () -> org.bukkit.Bukkit.getPluginManager()
-                            .callEvent(new ChainInteractEvent(player, chain, action, ref.segment(), point)));
+                    () -> {
+                        if (attack) {
+                            playBreakSound(player.getWorld(), chain.material.linkItem(), point);
+                        }
+                        org.bukkit.Bukkit.getPluginManager()
+                                .callEvent(new ChainInteractEvent(player, chain, action, ref.segment(), point));
+                    });
         } catch (Throwable ignored) {
             // never let a chain click crash the netty decode path
+        }
+    }
+
+    /** Plays the chain block's own break sound at {@code point} (user: "si las golpeas ... suene el break sound"). */
+    private static void playBreakSound(org.bukkit.World world, String linkId, Vector3d point) {
+        try {
+            net.minecraft.world.level.block.state.BlockState state = ChainRenderer.resolveBaseState(linkId);
+            if (state == null) {
+                return;
+            }
+            net.minecraft.world.level.block.SoundType st = state.getSoundType();
+            net.minecraft.server.level.ServerLevel nms =
+                    ((org.bukkit.craftbukkit.CraftWorld) world).getHandle();
+            nms.playSound(null, point.x, point.y, point.z, st.getBreakSound(),
+                    net.minecraft.sounds.SoundSource.BLOCKS, st.getVolume(), st.getPitch());
+        } catch (Throwable ignored) {
         }
     }
 

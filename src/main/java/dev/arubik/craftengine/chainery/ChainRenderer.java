@@ -25,6 +25,9 @@ public final class ChainRenderer {
     /** Link thickness across the chain (X/Z). Slightly over 1 so adjacent links overlap sideways too. */
     private static final float LINK_WIDTH = 1.05f;
 
+    /** Interaction hitboxes per rendered link — 3× the links, spread along each segment to fill the gaps. */
+    private static final int HITBOX_PER_LINK = 3;
+
     /**
      * The BLOCK state a link renders as — resolved from the chain material's configured link id, so ANY id
      * works and shows its real BLOCK model:
@@ -35,7 +38,7 @@ public final class ChainRenderer {
      * Falls back to a vanilla chain. The base state is resolved once per render; each link is then oriented
      * along its segment by the display's LeftRotation ({@link #orient}), giving full yaw+pitch.
      */
-    private static BlockState resolveBaseState(String linkId) {
+    public static BlockState resolveBaseState(String linkId) {
         // 1) CraftEngine block (item id == block id is the common case; the id may also be a block id directly).
         try {
             var def = CraftEngineBlocks.byId(Key.of(linkId));
@@ -86,11 +89,13 @@ public final class ChainRenderer {
             }
             link.clearShown();
         }
-        // Interaction hitboxes: one per link, kept in lock-step so the chain is clickable per segment.
-        while (chain.hitboxes.size() < segs) {
-            chain.hitboxes.add(new ChainInteraction(chain.id, chain.hitboxes.size()));
+        // Interaction hitboxes: HITBOX_PER_LINK per link (small boxes filling the spaces between links so the
+        // whole chain is clickable). Each carries its link (block) index for the interaction event.
+        int wantHits = segs * HITBOX_PER_LINK;
+        while (chain.hitboxes.size() < wantHits) {
+            chain.hitboxes.add(new ChainInteraction(chain.id, chain.hitboxes.size() / HITBOX_PER_LINK));
         }
-        while (chain.hitboxes.size() > segs) {
+        while (chain.hitboxes.size() > wantHits) {
             chain.hitboxes.remove(chain.hitboxes.size() - 1).remove(viewers);
         }
         for (int r = 0; r < segs; r++) {
@@ -107,7 +112,12 @@ public final class ChainRenderer {
             float length = (float) Math.max(0.05, p0.distance(p1));
             link.setSize(LINK_WIDTH, length);
             link.render(viewers, mx, my, mz);
-            chain.hitboxes.get(r).render(viewers, mx, my, mz);
+            // Spread this link's hitboxes evenly along its segment to fill the gaps.
+            for (int j = 0; j < HITBOX_PER_LINK; j++) {
+                double t = (j + 0.5) / HITBOX_PER_LINK;
+                chain.hitboxes.get(r * HITBOX_PER_LINK + j).render(viewers,
+                        p0.x + (p1.x - p0.x) * t, p0.y + (p1.y - p0.y) * t, p0.z + (p1.z - p0.z) * t);
+            }
         }
     }
 
