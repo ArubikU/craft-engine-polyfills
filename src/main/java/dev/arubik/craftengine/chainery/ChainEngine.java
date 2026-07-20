@@ -571,7 +571,17 @@ public final class ChainEngine {
     /** Nudges a MINECART/GHAST contraption's real anchor entity toward the chain tension. */
     private static void pullAnchorEntity(dev.arubik.craftengine.contraption.ContraptionState state,
             org.joml.Vector3d impulse) {
+        // GHAST sets anchorEntityId; a MINECART does NOT (its cart id lives on the MinecartFollowBehavior), so
+        // fall back to that — otherwise a minecart tether resolved to a null entity and nothing was pulled.
         java.util.UUID id = state.anchorEntityId();
+        if (id == null) {
+            for (dev.arubik.craftengine.contraption.MovementBehavior b : state.behaviors()) {
+                if (b instanceof dev.arubik.craftengine.contraption.behavior.MinecartFollowBehavior follow) {
+                    id = follow.entityId();
+                    break;
+                }
+            }
+        }
         if (id == null) {
             return;
         }
