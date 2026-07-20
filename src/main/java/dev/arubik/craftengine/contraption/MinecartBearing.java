@@ -134,6 +134,7 @@ public final class MinecartBearing {
         UUID id = UUID.randomUUID();
         ContraptionState state = new ContraptionState(id, bukkitWorld.getUID(), captured.level(),
                 bearingPos.getX(), bearingPos.getY(), bearingPos.getZ());
+        state.setBearingType(BearingType.MINECART); // was never set — left bearingType null (broke the chain tether)
         state.setFurniture(furnitureResult.furniture());
         // Task 1 parity (see ContraptionAssembler#assemble's matching block): re-register any
         // real player who was sitting in a captured seat at the exact moment of assembly.
@@ -330,6 +331,7 @@ public final class MinecartBearing {
             return;
         }
         ContraptionState state = new ContraptionState(id, bukkitWorld.getUID(), level, loc.getX(), loc.getY(), loc.getZ());
+        state.setBearingType(BearingType.MINECART);
         // Restore the persisted uniform SCALE (roadmap item #9). ContraptionStructureNbt#load already put the
         // saved value back on the level; reaffirm it onto the state (which re-pushes the full transform),
         // so a scaled minecart contraption rehydrates at its saved size. 1.0 (default) for a pre-scale blob.

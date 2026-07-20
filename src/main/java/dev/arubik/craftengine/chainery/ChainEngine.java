@@ -549,15 +549,12 @@ public final class ChainEngine {
         } else if (type == dev.arubik.craftengine.contraption.BearingType.MINECART
                 || type == dev.arubik.craftengine.contraption.BearingType.GHAST) {
             // Entity-anchored (a real minecart/ghast carries it) — push its ANCHOR ENTITY toward the tension so a
-            // moving end drags the other (user: "entre 2 minecart el que se mueve debería jalar al otro", and a
-            // phys pulling a minecart). A minecart on rails takes the along-rail component; a ghast moves freely.
+            // moving end drags the other. (bearingType is now set at assembly — see MinecartBearing/GhastHarness.)
             pullAnchorEntity(end.state(), impulse);
         } else if (type == dev.arubik.craftengine.contraption.BearingType.LINEAR
                 || type == dev.arubik.craftengine.contraption.BearingType.ROTATIONAL) {
-            // A block-anchored bearing can't be dragged, but its MOVING chain endpoint DOES pull the other end
-            // (handled by that end above — a rotating bearing works like a winch). Only STALL it when the chain is
-            // MAXED (over its break stretch): the other end can't yield, so cut the torque before it rips through
-            // ("si la cadena no da para más, el torque a 0"). While the chain still has give, let it keep turning.
+            // Block-anchored: can't be dragged; its moving endpoint already pulls the OTHER end (winch). Only STALL
+            // it when the chain is MAXED so it doesn't rip through.
             if (maxed) {
                 end.state().setStalled(true);
             }
