@@ -131,8 +131,8 @@ public final class ChainInteractPacketListener implements PacketListener {
         }
     }
 
-    /** Impulse (blocks) per point of attack damage — how hard a hit swings the rope. */
-    private static final double HIT_FORCE_PER_DAMAGE = 0.12;
+    /** Impulse (blocks) per point of attack damage — how hard a hit swings the rope (3x, per request). */
+    private static final double HIT_FORCE_PER_DAMAGE = 0.36;
 
     /**
      * Swings the rope at the hit link with a force proportional to the damage the hit WOULD do (user: "aplica una
