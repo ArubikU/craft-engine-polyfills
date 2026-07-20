@@ -564,8 +564,9 @@ public final class ChainEngine {
         }
     }
 
-    /** Velocity added to an anchor entity per unit of rope impulse (entities take velocity, not a mass-scaled impulse). */
-    private static final double ENTITY_PULL_FACTOR = 0.03;
+    /** Velocity added to an anchor entity per unit of rope impulse (entities take velocity, not a mass-scaled
+     *  impulse) — strong so a tethered minecart/ghast actually follows a fast pull instead of the chain snapping. */
+    private static final double ENTITY_PULL_FACTOR = 0.25;
 
     /** Nudges a MINECART/GHAST contraption's real anchor entity toward the chain tension. */
     private static void pullAnchorEntity(dev.arubik.craftengine.contraption.ContraptionState state,

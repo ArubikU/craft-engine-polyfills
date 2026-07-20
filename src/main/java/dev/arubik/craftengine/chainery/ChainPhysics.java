@@ -50,13 +50,16 @@ public final class ChainPhysics {
         if (impulse <= 0.0) {
             return RopeResult.SLACK;
         }
-        // Break on RELATIVE over-stretch, not an absolute impulse: a chain snaps once it's stretched past its
-        // natural length by more than MAX_STRETCH (so the minimum length for a span scales WITH the span — a
-        // 5.4-block diagonal can't be held by 1 link). maxTension just enables/disables breaking.
-        boolean broke = maxTension > 0.0 && dist > effectiveMax * (1.0 + MAX_STRETCH);
+        // Break on RELATIVE over-stretch, not an absolute impulse. The DYNAMIC break uses a looser limit than the
+        // remove-link minimum, so a movable end being dragged (a minecart/ghast/phys following the pull) has room
+        // to catch up before the chain snaps — it drags instead of instantly tearing.
+        boolean broke = maxTension > 0.0 && dist > effectiveMax * (1.0 + BREAK_STRETCH);
         return new RopeResult(impulse, broke);
     }
 
-    /** Max fractional over-stretch before a chain snaps (0.8 = up to 1.8x its natural length). */
+    /** Max fractional over-stretch the REMOVE-link check allows (0.8 = 1.8x) — sets the minimum length for a span. */
     public static final double MAX_STRETCH = 0.8;
+
+    /** Max fractional over-stretch before the LIVE physics snaps a chain (looser, so a dragged end can catch up). */
+    public static final double BREAK_STRETCH = 2.0;
 }

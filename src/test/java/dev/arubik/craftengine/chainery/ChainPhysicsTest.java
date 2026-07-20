@@ -59,14 +59,15 @@ class ChainPhysicsTest {
     @Test
     @DisplayName("a chain stretched past its relative limit snaps")
     void overTensionBreaksTheChain() {
-        // Stretched well past its natural length (10 vs 5 = 2x > the 1.8x limit): it must snap.
+        // Stretched well past the dynamic limit (18 vs 5 = 3.6x > the 3x live-break limit): it must snap.
         double maxLen = 5.0;
-        ChainPhysics.RopeResult r = ChainPhysics.resolve(10.0, maxLen, 0.0, 5.0, 2.0, 1.0, 60.0, DT);
-        assertTrue(r.broke(), "a chain stretched past its relative limit must break; impulse=" + r.impulse());
+        ChainPhysics.RopeResult r = ChainPhysics.resolve(18.0, maxLen, 0.0, 5.0, 2.0, 1.0, 60.0, DT);
+        assertTrue(r.broke(), "a chain stretched past the live-break limit must break; impulse=" + r.impulse());
 
-        // Only modestly stretched (6 vs 5 = 1.2x, under the 1.8x limit): must NOT break, however it's pulled.
-        ChainPhysics.RopeResult gentle = ChainPhysics.resolve(6.0, maxLen, 0.0, 20.0, 2.0, 1.0, 60.0, DT);
-        assertFalse(gentle.broke(), "a modestly-stretched chain must not break; impulse=" + gentle.impulse());
+        // Stretched but within the dynamic limit (10 vs 5 = 2x, under 3x — a dragged end can still catch up): must
+        // NOT break, however hard it's pulled.
+        ChainPhysics.RopeResult gentle = ChainPhysics.resolve(10.0, maxLen, 0.0, 20.0, 2.0, 1.0, 60.0, DT);
+        assertFalse(gentle.broke(), "a chain within the live-break limit must not break; impulse=" + gentle.impulse());
     }
 
     @Test
