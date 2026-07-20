@@ -520,9 +520,11 @@ public final class ChainEngine {
         }
         axis.div(dist); // unit A->B
         org.joml.Vector3d impulse = new org.joml.Vector3d(axis).mul(r.impulse());
-        // Pull A toward B (+axis) and B toward A (-axis).
-        handleEnd(a, impulse);
-        handleEnd(b, new org.joml.Vector3d(impulse).negate());
+        // Pull A toward B (+axis) and B toward A (-axis). `maxed` = the chain is over its break stretch, i.e. the
+        // other end can't yield — only THEN does a block-anchored bearing stall; below that it keeps moving/pulling.
+        boolean maxed = r.broke();
+        handleEnd(a, impulse, maxed);
+        handleEnd(b, new org.joml.Vector3d(impulse).negate(), maxed);
         return false;
     }
 
@@ -536,7 +538,7 @@ public final class ChainEngine {
      *       entity telling its contraption to stop this tick.</li>
      * </ul>
      */
-    private static void handleEnd(Live end, org.joml.Vector3d impulse) {
+    private static void handleEnd(Live end, org.joml.Vector3d impulse, boolean maxed) {
         if (end.state() == null) {
             return; // a static block anchor — nothing to move
         }
@@ -552,7 +554,13 @@ public final class ChainEngine {
             pullAnchorEntity(end.state(), impulse);
         } else if (type == dev.arubik.craftengine.contraption.BearingType.LINEAR
                 || type == dev.arubik.craftengine.contraption.BearingType.ROTATIONAL) {
-            end.state().setStalled(true); // block-anchored, can't be dragged — chain maxed cuts its torque
+            // A block-anchored bearing can't be dragged, but its MOVING chain endpoint DOES pull the other end
+            // (handled by that end above — a rotating bearing works like a winch). Only STALL it when the chain is
+            // MAXED (over its break stretch): the other end can't yield, so cut the torque before it rips through
+            // ("si la cadena no da para más, el torque a 0"). While the chain still has give, let it keep turning.
+            if (maxed) {
+                end.state().setStalled(true);
+            }
         }
     }
 
