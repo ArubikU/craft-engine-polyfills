@@ -18,6 +18,9 @@ import org.joml.Vector3d;
  */
 public final class ChainInteractPacketListener implements PacketListener {
 
+    /** Per-player last right-click nanotime — dedupes the INTERACT + INTERACT_AT pair a single right-click sends. */
+    private static final java.util.Map<java.util.UUID, Long> LAST_RIGHT = new java.util.concurrent.ConcurrentHashMap<>();
+
     public static void register() {
         PacketEvents.getAPI().getEventManager()
                 .registerListener(new ChainInteractPacketListener(), PacketListenerPriority.LOW);
@@ -30,11 +33,6 @@ public final class ChainInteractPacketListener implements PacketListener {
         }
         try {
             WrapperPlayClientInteractEntity wrapper = new WrapperPlayClientInteractEntity(event);
-            // INTERACT_AT duplicates INTERACT for the same right-click — ignore it to fire exactly once.
-            WrapperPlayClientInteractEntity.InteractAction raw = wrapper.getAction();
-            if (raw == WrapperPlayClientInteractEntity.InteractAction.INTERACT_AT) {
-                return;
-            }
             ChainInteraction.Ref ref = ChainInteraction.refOf(wrapper.getEntityId());
             if (ref == null) {
                 return; // not one of our chain links
@@ -47,16 +45,38 @@ public final class ChainInteractPacketListener implements PacketListener {
             if (player == null) {
                 return;
             }
-        boolean attack = raw == WrapperPlayClientInteractEntity.InteractAction.ATTACK;
+            WrapperPlayClientInteractEntity.InteractAction raw = wrapper.getAction();
+            boolean attack = raw == WrapperPlayClientInteractEntity.InteractAction.ATTACK;
+            // Right-click on an INTERACTION entity arrives as INTERACT_AT and/or INTERACT — accept BOTH (that's
+            // why right-click "no servía": earlier code only took INTERACT and the client was sending INTERACT_AT)
+            // and dedupe so the pair fires once.
+            boolean rightClick = raw == WrapperPlayClientInteractEntity.InteractAction.INTERACT
+                    || raw == WrapperPlayClientInteractEntity.InteractAction.INTERACT_AT;
+            event.setCancelled(true); // consume the click; handlers decide what it means
+            if (!attack && !rightClick) {
+                return;
+            }
+            if (rightClick) {
+                long now = System.nanoTime();
+                Long last = LAST_RIGHT.put(player.getUniqueId(), now);
+                if (last != null && now - last < 150_000_000L) {
+                    return; // duplicate of the same physical right-click
+                }
+            }
+            boolean sneak = player.isSneaking();
             ChainInteractEvent.Action action = attack ? ChainInteractEvent.Action.LEFT_CLICK
                     : ChainInteractEvent.Action.RIGHT_CLICK;
-            // The clicked link's centre = midpoint of its rope segment (best-effort point for the event).
             Vector3d point = pointOf(chain, ref.segment());
-            event.setCancelled(true); // consume the click; handlers decide what it means
             org.bukkit.Bukkit.getScheduler().runTask(dev.arubik.craftengine.CraftEnginePolyfills.instance(),
                     () -> {
                         if (attack) {
                             playBreakSound(player.getWorld(), chain.material.linkItem(), point);
+                        } else {
+                            // Default visible feedback so a right/sneak-right click is obviously detected; plugins
+                            // still get the event to do their own thing (ziplines, etc.).
+                            player.sendActionBar(net.kyori.adventure.text.Component.text(
+                                    (sneak ? "§eShift+click en cadena — " : "§aClick en cadena — ")
+                                            + chain.blocks + " eslabones"));
                         }
                         org.bukkit.Bukkit.getPluginManager()
                                 .callEvent(new ChainInteractEvent(player, chain, action, ref.segment(), point));

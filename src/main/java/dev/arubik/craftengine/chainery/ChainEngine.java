@@ -92,6 +92,16 @@ public final class ChainEngine {
 
     // ---- breaking ----
 
+    /** Removes EVERY chain (admin cleanup / {@code /cep chainery clear}). Returns how many were removed. */
+    public static int clearAll() {
+        int n = 0;
+        for (Chain chain : ChainRegistry.all()) {
+            breakChain(chain, false); // no drops — this is a wipe, not a mine
+            n++;
+        }
+        return n;
+    }
+
     /** Entry point from {@link ChainBlockEntity#onRemove()} — a real break at one end severs the whole span. */
     public static void onEndpointBroken(UUID chainId) {
         Chain chain = ChainRegistry.get(chainId);
@@ -250,6 +260,13 @@ public final class ChainEngine {
                 if (a == null || b == null) {
                     continue; // an endpoint is in an unloaded chunk / not resolvable this tick
                 }
+                // Orphan cleanup: a STATIC (non-captured) endpoint whose anchor block is gone means the chain lost
+                // its anchor — e.g. a captured chain that reloaded from chains.dat WITHOUT its contraption link
+                // ("al reiniciar respawnean sin padres, bugeadas e irrompibles"). Remove it so it doesn't hang.
+                if (isOrphan(world, chain.a, a) || isOrphan(world, chain.b, b)) {
+                    breakChain(chain, false);
+                    continue;
+                }
                 if (applyRope(chain, a, b)) {
                     continue; // the chain snapped this tick — it's already gone
                 }
@@ -306,6 +323,19 @@ public final class ChainEngine {
             return false; // don't sever on unknown terrain
         }
         return !world.getBlockAt(sx, sy, sz).getType().isSolid();
+    }
+
+    /** True if a STATIC endpoint's anchor block is gone (chunk loaded, no chain block there) — an orphan. A
+     *  captured endpoint (rides a contraption) is never an orphan. */
+    private static boolean isOrphan(World world, BlockPos pos, Live live) {
+        if (live.contraptionId() != null) {
+            return false; // captured — its anchor is in the contraption, not at pos
+        }
+        if (!world.isChunkLoaded(pos.getX() >> 4, pos.getZ() >> 4)) {
+            return false; // unknown terrain — don't remove
+        }
+        Level nms = ((CraftWorld) world).getHandle();
+        return ChaineryBlockBehavior.getAt(nms, pos) == null;
     }
 
     /**
@@ -369,7 +399,10 @@ public final class ChainEngine {
                 double scale = entity.state().scale();
                 java.util.Set<Long> cells = occupancy.computeIfAbsent(worldId, w -> new java.util.HashSet<>());
                 for (BlockPos local : level.localPositions()) {
-                    net.minecraft.world.phys.Vec3 w = level.realWorldPositionOf(local);
+                    // Use the cell CENTRE (the BlockPos overload transforms the integer CORNER, which drifts the
+                    // captured connection point by ~half a cell vs the static path's pos+0.5).
+                    net.minecraft.world.phys.Vec3 w = level.realWorldPositionOf(new net.minecraft.world.phys.Vec3(
+                            local.getX() + 0.5, local.getY() + 0.5, local.getZ() + 0.5));
                     // Occupancy: EVERY world block this cell fills — its scaled footprint (radius = scale/2), so a
                     // scaled-up contraption blocks the rope across its whole size, not just one centre block.
                     rasterizeCell(cells, w, scale);

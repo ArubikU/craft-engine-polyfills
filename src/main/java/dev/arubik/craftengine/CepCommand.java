@@ -306,6 +306,23 @@ public class CepCommand implements CommandExecutor, TabCompleter {
             return true;
         });
 
+        // /cep chainery clear — remove EVERY chain (render, hitboxes, anchors, registry). Admin cleanup, e.g.
+        // for chains left orphaned/bugged. No item drops.
+        cases.put(new ArgumentList("chainery^", "clear^"), (sender, parsed) -> {
+            if (!sender.hasPermission("cep.contraption.debug")) {
+                sender.sendMessage("§cNo tienes permiso.");
+                return true;
+            }
+            int removed = dev.arubik.craftengine.chainery.ChainEngine.clearAll();
+            try {
+                dev.arubik.craftengine.chainery.ChainRegistry.saveAll(
+                        CraftEnginePolyfills.instance().getDataFolder().toPath().resolve("chains.dat"));
+            } catch (Throwable ignored) {
+            }
+            sender.sendMessage("§cRemovidas §f" + removed + "§c cadena(s).");
+            return true;
+        });
+
         // /cep contraption perf — per-phase timings + counts for the master tick loop. Instrumentation is
         // off until this is first run (it costs a nanoTime pair per phase per tick), so the first call
         // arms it and reports once the rolling window has samples.
