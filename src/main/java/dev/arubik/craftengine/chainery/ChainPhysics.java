@@ -60,6 +60,6 @@ public final class ChainPhysics {
     /** Max fractional over-stretch the REMOVE-link check allows (0.8 = 1.8x) — sets the minimum length for a span. */
     public static final double MAX_STRETCH = 0.8;
 
-    /** Max fractional over-stretch before the LIVE physics snaps a chain (looser, so a dragged end can catch up). */
-    public static final double BREAK_STRETCH = 2.0;
+    /** Max fractional over-stretch before the LIVE physics snaps a chain (1.2 = 2.2x — a dragged end can catch up). */
+    public static final double BREAK_STRETCH = 1.2;
 }
