@@ -40,6 +40,16 @@ public final class Chain {
     public int blocks;
 
     /**
+     * If an endpoint has been captured into a contraption, that contraption's id + the anchor's LOCAL cell —
+     * persisted, so the chain reconnects to the contraption after a restart even if the block-entity link was
+     * lost (esp. a chain joining TWO contraptions). Null = the endpoint is static at {@link #a}/{@link #b}.
+     */
+    public java.util.UUID contraptionA;
+    public java.util.UUID contraptionB;
+    public BlockPos localA;
+    public BlockPos localB;
+
+    /**
      * Persistent per-chain NBT — arbitrary data a plugin can stash on a chain (zipline config, owner, cooldowns,
      * whatever), persisted with chains.dat and reachable from {@link ChainInteractEvent#getChain()}. Use the raw
      * {@link net.minecraft.nbt.CompoundTag} directly, or the typed convenience getters/setters below.
@@ -63,6 +73,10 @@ public final class Chain {
     /** Consecutive ticks the chain has been over its break tension — a margin so a transient assembly spike
      *  doesn't snap a taut chain; it only breaks after this stays high (see ChainEngine#applyRope). */
     public transient int overTensionTicks = 0;
+
+    /** Consecutive ticks an endpoint has looked orphaned (anchor gone, not captured) — grace so a captured chain
+     *  isn't deleted in the window between restart and its contraption reloading (see ChainEngine#tickAll). */
+    public transient int orphanTicks = 0;
 
     public Chain(UUID id, UUID worldId, BlockPos a, BlockPos b, org.joml.Vector3d offsetA,
             org.joml.Vector3d offsetB, ChainMaterial material, int blocks,

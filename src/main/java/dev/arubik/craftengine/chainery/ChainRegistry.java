@@ -149,6 +149,14 @@ public final class ChainRegistry {
             c.putDouble("mat_stretch", chain.material.stretch());
             c.putDouble("mat_tension", chain.material.maxTension());
             c.putDouble("mat_pull", chain.material.pull());
+            if (chain.contraptionA != null && chain.localA != null) {
+                c.putString("conA", chain.contraptionA.toString());
+                c.putLong("locA", chain.localA.asLong());
+            }
+            if (chain.contraptionB != null && chain.localB != null) {
+                c.putString("conB", chain.contraptionB.toString());
+                c.putLong("locB", chain.localB.asLong());
+            }
             if (!chain.data.isEmpty()) {
                 c.put("data", chain.data.copy());
             }
@@ -187,7 +195,16 @@ public final class ChainRegistry {
                         c.getDouble("mat_tension").orElse(ChainMaterial.DEFAULT.maxTension()),
                         c.getDouble("mat_pull").orElse(ChainMaterial.DEFAULT.pull()));
                 CompoundTag data = c.getCompound("data").orElseGet(CompoundTag::new);
-                register(new Chain(id, world, a, b, offA, offB, mat, blocks, data));
+                Chain chain = new Chain(id, world, a, b, offA, offB, mat, blocks, data);
+                if (c.contains("conA")) {
+                    chain.contraptionA = UUID.fromString(c.getString("conA").orElseThrow());
+                    chain.localA = BlockPos.of(c.getLong("locA").orElse(0L));
+                }
+                if (c.contains("conB")) {
+                    chain.contraptionB = UUID.fromString(c.getString("conB").orElseThrow());
+                    chain.localB = BlockPos.of(c.getLong("locB").orElse(0L));
+                }
+                register(chain);
             } catch (Throwable bad) {
                 // skip a corrupt entry rather than abort the whole load
             }

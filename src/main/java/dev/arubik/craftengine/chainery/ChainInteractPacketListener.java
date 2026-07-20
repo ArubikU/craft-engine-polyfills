@@ -72,17 +72,61 @@ public final class ChainInteractPacketListener implements PacketListener {
                         if (attack) {
                             playBreakSound(player.getWorld(), chain.material.linkItem(), point);
                         } else {
-                            // Default visible feedback so a right/sneak-right click is obviously detected; plugins
-                            // still get the event to do their own thing (ziplines, etc.).
-                            player.sendActionBar(net.kyori.adventure.text.Component.text(
-                                    (sneak ? "§eShift+click en cadena — " : "§aClick en cadena — ")
-                                            + chain.blocks + " eslabones"));
+                            handleRightClick(player, chain, sneak);
                         }
                         org.bukkit.Bukkit.getPluginManager()
                                 .callEvent(new ChainInteractEvent(player, chain, action, ref.segment(), point));
                     });
         } catch (Throwable ignored) {
             // never let a chain click crash the netty decode path
+        }
+    }
+
+    /**
+     * The add/remove-links system, driven by clicking the CHAIN itself (user: "la idea es que funcione el sistema
+     * de agregar y quitar eslabones"): sneak-right removes a link (refunds it, refuses if it'd over-tension),
+     * right-click with chain items adds a link, otherwise just shows the current length.
+     */
+    private static void handleRightClick(org.bukkit.entity.Player player, Chain chain, boolean sneak) {
+        if (sneak) {
+            switch (ChainEngine.tryRemoveLink(chain)) {
+                case REMOVED -> {
+                    giveBack(player, chain.material.linkItem());
+                    player.sendActionBar(net.kyori.adventure.text.Component.text(
+                            "§aCadena acortada — " + chain.blocks + " eslabones"));
+                }
+                case WOULD_BREAK -> player.sendActionBar(net.kyori.adventure.text.Component.text(
+                        "§cQuitar otra cadena la reventaría — tensión demasiado alta"));
+                case AT_MIN -> player.sendActionBar(net.kyori.adventure.text.Component.text(
+                        "§eLa cadena ya está al mínimo"));
+            }
+            return;
+        }
+        org.bukkit.inventory.ItemStack hand = player.getInventory().getItemInMainHand();
+        if (ChaineryItemBehavior.isLink(hand, chain.material.linkItem())) {
+            if (chain.blocks >= chain.material.maxBlocks()) {
+                player.sendActionBar(net.kyori.adventure.text.Component.text(
+                        "§eLa cadena ya está al máximo (" + chain.material.maxBlocks() + ")"));
+                return;
+            }
+            chain.blocks += 1;
+            hand.setAmount(hand.getAmount() - 1);
+            player.sendActionBar(net.kyori.adventure.text.Component.text(
+                    "§aCadena extendida — " + chain.blocks + "/" + chain.material.maxBlocks() + " eslabones"));
+        } else {
+            player.sendActionBar(net.kyori.adventure.text.Component.text(
+                    "§7Cadena — " + chain.blocks + " eslabones (click con cadenas para alargar, sneak para acortar)"));
+        }
+    }
+
+    /** Refunds one chain link item to the player (drops it if the inventory is full). */
+    private static void giveBack(org.bukkit.entity.Player player, String linkId) {
+        org.bukkit.inventory.ItemStack item = ChainEngine.linkItemStack(linkId);
+        if (item == null) {
+            return;
+        }
+        for (org.bukkit.inventory.ItemStack overflow : player.getInventory().addItem(item).values()) {
+            player.getWorld().dropItemNaturally(player.getLocation(), overflow);
         }
     }
 

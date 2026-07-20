@@ -232,6 +232,9 @@ public final class ChainEngine {
     private static final int ROPE_ITERATIONS = 32; // more passes for the SUBDIV-finer particle count
     /** Over-tension must persist this many ticks before a chain snaps — the assembly-spike margin. */
     private static final int BREAK_GRACE_TICKS = 30;
+    /** An orphaned chain (anchor gone, not captured) is only removed after this long — grace for a captured
+     *  chain's contraption to reload after a restart before we give up on it (~10s). */
+    private static final int ORPHAN_GRACE_TICKS = 200;
 
     /**
      * Once per tick: resolve every chain's two endpoints to their LIVE world positions — a captured endpoint
@@ -260,13 +263,17 @@ public final class ChainEngine {
                 if (a == null || b == null) {
                     continue; // an endpoint is in an unloaded chunk / not resolvable this tick
                 }
-                // Orphan cleanup: a STATIC (non-captured) endpoint whose anchor block is gone means the chain lost
-                // its anchor — e.g. a captured chain that reloaded from chains.dat WITHOUT its contraption link
-                // ("al reiniciar respawnean sin padres, bugeadas e irrompibles"). Remove it so it doesn't hang.
+                // Orphan handling: a STATIC (non-captured) endpoint whose anchor block is gone. This is TRUE for a
+                // captured chain in the window between restart and its contraption reloading, so DON'T delete right
+                // away — grace it: skip rendering while orphaned, and only remove after ORPHAN_GRACE_TICKS (the
+                // contraption clearly isn't coming back), which is what finally clears a genuinely dead chain.
                 if (isOrphan(world, chain.a, a) || isOrphan(world, chain.b, b)) {
-                    breakChain(chain, false);
-                    continue;
+                    if (++chain.orphanTicks >= ORPHAN_GRACE_TICKS) {
+                        breakChain(chain, false);
+                    }
+                    continue; // don't render at the stale position while orphaned
                 }
+                chain.orphanTicks = 0;
                 if (applyRope(chain, a, b)) {
                     continue; // the chain snapped this tick — it's already gone
                 }
@@ -354,10 +361,43 @@ public final class ChainEngine {
         };
     }
 
-    /** Resolves one endpoint: prefer its captured (moving) position; else the static anchor's attach FACE. */
+    /** Resolves one endpoint: this-tick capture (block entity) → persisted capture (contraption id) → static. */
     private static Live resolveEnd(World world, Chain chain, BlockPos pos, Live[] captured, int role) {
         if (captured != null && captured[role] != null) {
-            return captured[role];
+            return captured[role]; // the scan found the anchor's block entity this tick
+        }
+        // Persisted-capture fallback: reconnect to the recorded contraption even if the block-entity link was lost
+        // (a restart), without depending on the block entity at all.
+        java.util.UUID cid = role == 0 ? chain.contraptionA : chain.contraptionB;
+        BlockPos local = role == 0 ? chain.localA : chain.localB;
+        if (cid != null && local != null) {
+            dev.arubik.craftengine.contraption.ContraptionEntity ent =
+                    dev.arubik.craftengine.contraption.ContraptionManager.get(cid);
+            if (ent == null) {
+                return null; // contraption not loaded (or gone) — wait; orphan grace decides if it's really gone
+            }
+            dev.arubik.craftengine.contraption.level.ContraptionLevel lvl = ent.state().level();
+            if (!lvl.localPositions().contains(local)) {
+                // The anchor left this contraption (disassembled / split) — forget the capture, fall through to static.
+                if (role == 0) {
+                    chain.contraptionA = null;
+                    chain.localA = null;
+                } else {
+                    chain.contraptionB = null;
+                    chain.localB = null;
+                }
+            } else {
+                net.minecraft.world.phys.Vec3 w = lvl.realWorldPositionOf(new net.minecraft.world.phys.Vec3(
+                        local.getX() + 0.5, local.getY() + 0.5, local.getZ() + 0.5));
+                org.joml.Vector3d p = new org.joml.Vector3d(w.x, w.y, w.z);
+                org.joml.Vector3d off = role == 0 ? chain.offsetA : chain.offsetB;
+                if (off != null) {
+                    net.minecraft.world.phys.Vec3 rd = lvl.rotateToRealWorld(
+                            new net.minecraft.world.phys.Vec3(off.x, off.y, off.z));
+                    p.add(rd.x, rd.y, rd.z);
+                }
+                return new Live(p, cid, ent.state());
+            }
         }
         if (!world.isChunkLoaded(pos.getX() >> 4, pos.getZ() >> 4)) {
             return null;
@@ -427,6 +467,17 @@ public final class ChainEngine {
                     }
                     Live live = new Live(p, cid, entity.state());
                     endpoints.computeIfAbsent(chainId, k -> new Live[2])[cbe.getRole() == 0 ? 0 : 1] = live;
+                    // Record where this captured endpoint lives, so it reconnects after a restart even without the
+                    // block-entity link (the key fix for a chain joining two contraptions).
+                    if (chain != null) {
+                        if (cbe.getRole() == 0) {
+                            chain.contraptionA = cid;
+                            chain.localA = local.immutable();
+                        } else {
+                            chain.contraptionB = cid;
+                            chain.localB = local.immutable();
+                        }
+                    }
                 }
             } catch (Throwable ignored) {
                 // a single misbehaving contraption shouldn't abort the whole scan
