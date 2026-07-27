@@ -121,22 +121,12 @@ public class BlockBehaviors {
                                 POLYFILL_FLUID_DISPLAY,
                                 dev.arubik.craftengine.fluid.render.FluidDisplayElementConfig.FACTORY);
 
-                // New features: upgrade machine, vapor motor, conveyor, JIT crafting
-                RegistryUtils.registerBlockBehavior(
-                                dev.arubik.craftengine.machine.examples.UpgradeableFurnaceBehavior.POLYFILL_UPGRADEABLE_FURNACE,
-                                dev.arubik.craftengine.machine.examples.UpgradeableFurnaceBehavior.FACTORY);
+                // Crusher / vapor furnace / smeltery / upgradeable furnace are gone: they are
+                // machines/*.json driven by polyfills:data_machine now.
+                // New features: vapor motor, conveyor, JIT crafting
                 RegistryUtils.registerBlockBehavior(
                                 dev.arubik.craftengine.rotation.GasMotorMk1Behavior.POLYFILL_GAS_MOTOR_MK1,
                                 dev.arubik.craftengine.rotation.GasMotorMk1Behavior.FACTORY);
-                RegistryUtils.registerBlockBehavior(
-                                dev.arubik.craftengine.machine.examples.VaporFurnaceMk1Behavior.POLYFILL_VAPOR_FURNACE_MK1,
-                                dev.arubik.craftengine.machine.examples.VaporFurnaceMk1Behavior.FACTORY);
-                RegistryUtils.registerBlockBehavior(
-                                dev.arubik.craftengine.machine.examples.CrusherBehavior.POLYFILL_CRUSHER,
-                                dev.arubik.craftengine.machine.examples.CrusherBehavior.FACTORY);
-                RegistryUtils.registerBlockBehavior(
-                                dev.arubik.craftengine.machine.examples.SmelteryBehavior.POLYFILL_SMELTERY,
-                                dev.arubik.craftengine.machine.examples.SmelteryBehavior.FACTORY);
                 RegistryUtils.registerBlockBehavior(
                                 dev.arubik.craftengine.machine.examples.RefineryBehavior.POLYFILL_REFINERY,
                                 dev.arubik.craftengine.machine.examples.RefineryBehavior.FACTORY);

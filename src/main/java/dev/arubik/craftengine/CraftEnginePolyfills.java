@@ -260,6 +260,7 @@ public final class CraftEnginePolyfills extends JavaPlugin {
         dev.arubik.craftengine.multiblock.MultiBlockLoader.bootstrap();
         dev.arubik.craftengine.crafting.WorkbenchLoader.bootstrap();
         dev.arubik.craftengine.machine.upgrade.UpgradeLoader.bootstrap();
+        dev.arubik.craftengine.machine.MachineDefinitionLoader.bootstrap();
         // Same construction-order reason as pipes: a multiblock behavior copies its
         // schema and IO provider when CraftEngine builds it, before the reload event.
         dev.arubik.craftengine.multiblock.MultiBlockLoader.load();
@@ -267,6 +268,9 @@ public final class CraftEnginePolyfills extends JavaPlugin {
         // while loading its own packs, which happens before CraftEngineReloadEvent, and a
         // pipe behavior takes its connect set at construction time.
         dev.arubik.craftengine.pipe.PipeTypeLoader.load();
+        // Machine definitions likewise: the data_machine behavior resolves its definition
+        // when CraftEngine constructs the block, which is before the reload event.
+        dev.arubik.craftengine.machine.MachineDefinitionLoader.load();
         dev.arubik.craftengine.data.Registries.addLoader("machine_recipes",
                 dev.arubik.craftengine.data.Registries.PHASE_RECIPES,
                 dev.arubik.craftengine.machine.recipe.loader.RecipeManager::loadRecipes);

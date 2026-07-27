@@ -110,15 +110,14 @@ public final class MachineDefinitionLoader {
         }
 
         // Upgrade slots live at reserved container indices 0..count-1 and are shown on
-        // their own page, never the main one. A main-page slot pointing into that range
-        // would silently share storage with an upgrade module, so reject it loudly.
+        // their own page. A STORAGE slot pointing into that range would share a stack
+        // with an upgrade module, so reject those. The info slot is exempt: it renders a
+        // computed icon rather than holding an item, and the real crusher genuinely puts
+        // it at index 4 while reserving 0..8, because the two live on different pages.
         int reserved = upgrades.isInline() ? 0 : upgrades.count();
         rejectReserved(view, inputs, reserved, "input");
         rejectReserved(view, outputs, reserved, "output");
         rejectReserved(view, fuels, reserved, "fuel");
-        if (info >= 0 && info < reserved)
-            throw view.error("'info' slot " + info + " collides with the " + reserved
-                    + " reserved upgrade slots (0.." + (reserved - 1) + ")");
 
         List<MachineDefinition.TankSpec> fluidTanks = parseTanks(view, "fluid_tanks");
         List<MachineDefinition.TankSpec> gasTanks = parseTanks(view, "gas_tanks");

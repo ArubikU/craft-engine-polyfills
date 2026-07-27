@@ -188,17 +188,24 @@ public class RecipeManager {
         return null;
     }
 
+    /** The item id field, which existing data files spell either `id` or `item`. */
+    private static String inputId(JsonObject obj) {
+        JsonElement id = obj.has("id") ? obj.get("id") : obj.get("item");
+        if (id == null)
+            throw new IllegalArgumentException("input needs an 'id' (or 'item')");
+        return id.getAsString();
+    }
+
     private static RecipeInput parseInput(JsonObject obj) {
         String type = obj.get("type").getAsString();
         int amount = obj.has("amount") ? obj.get("amount").getAsInt() : 1;
 
         if ("item".equals(type)) {
             net.minecraft.world.item.Item item = BuiltInRegistries.ITEM
-                    .get(Identifier.parse(obj.get("id").getAsString())).get().value();
+                    .get(Identifier.parse(inputId(obj))).get().value();
             return new ItemInput(new net.minecraft.world.item.ItemStack(item, amount), false);
         } else if ("custom_item".equals(type)) {
-            String id = obj.get("id").getAsString();
-            return new CraftEngineItemInput(id, amount);
+            return new CraftEngineItemInput(inputId(obj), amount);
         } else if ("item_tag".equals(type)) {
             String tagString = obj.get("tag").getAsString();
             net.minecraft.tags.TagKey<Item> key = (net.minecraft.tags.TagKey<Item>) net.momirealms.craftengine.bukkit.util.ItemTags
@@ -207,10 +214,10 @@ public class RecipeManager {
         } else if ("fluid".equals(type)) {
             // valueOf accepts both the legacy name ("WATER") and a namespaced id
             // ("polyfills:my_acid"), so data-defined fluids work here too.
-            FluidType fType = FluidType.valueOf(obj.get("id").getAsString());
+            FluidType fType = FluidType.valueOf(inputId(obj));
             return new FluidInput(new FluidStack(fType, amount), false);
         } else if ("gas".equals(type)) {
-            GasType gType = GasType.valueOf(obj.get("id").getAsString());
+            GasType gType = GasType.valueOf(inputId(obj));
             return new GasInput(new GasStack(gType, amount));
         }
         throw new IllegalArgumentException("Unknown input type: " + type);

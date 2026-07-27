@@ -102,6 +102,11 @@ public final class DataFiles {
         for (String resource : bundled) {
             if (!updated.add(resource))
                 continue;
+            // A server that predates the manifest already has these on disk; record them
+            // as seeded rather than asking CraftEngine to overwrite and log a warning.
+            File target = new File(plugin.getDataFolder(), resource);
+            if (target.isFile())
+                continue;
             plugin.saveDefaultResource(resource);
         }
         if (updated.size() != alreadySeeded.size())

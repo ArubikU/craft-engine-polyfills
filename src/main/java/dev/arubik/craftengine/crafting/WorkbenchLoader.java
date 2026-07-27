@@ -129,10 +129,9 @@ public final class WorkbenchLoader {
     private static float[] vec(JsonView view, String field, float[] fallback) {
         if (!view.has(field))
             return fallback;
-        List<Integer> ints = view.intList(field);
-        if (ints.size() == 3)
-            return new float[] { ints.get(0), ints.get(1), ints.get(2) };
         var raw = view.raw().get(field);
+        // Pixel coordinates are routinely fractional (13.5), so these are read as floats
+        // rather than through the integer list helper.
         if (raw.isJsonArray() && raw.getAsJsonArray().size() == 3) {
             var array = raw.getAsJsonArray();
             return new float[] { array.get(0).getAsFloat(), array.get(1).getAsFloat(), array.get(2).getAsFloat() };
