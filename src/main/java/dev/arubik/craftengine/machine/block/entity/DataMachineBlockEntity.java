@@ -37,9 +37,19 @@ import net.kyori.adventure.text.Component;
  * bespoke ones (pumps scanning for a vein, the fan's process families) keep
  * their own classes.
  */
-public class DataMachineBlockEntity extends AbstractMachineBlockEntity {
+public class DataMachineBlockEntity extends AbstractMachineBlockEntity
+        implements dev.arubik.craftengine.rotation.RpmConsumer {
 
     private final MachineDefinition definition;
+
+    // ---- rotational power (only live when the definition declares consumes_stress) ----
+
+    /** Delivered rpm from the strongest adjacent motor; 0 when unpowered or overstressed. */
+    private float inputRpm = 0f;
+    private dev.arubik.craftengine.rotation.RpmProvider activeMotor;
+    /** SU the current recipe demands, reported to the motor so it can overstress. */
+    private int lastSuLoad = 0;
+    private int stressGrace = 0;
 
     public DataMachineBlockEntity(net.momirealms.craftengine.core.block.entity.BlockEntity blockEntity,
             MachineDefinition definition) {
@@ -186,6 +196,97 @@ public class DataMachineBlockEntity extends AbstractMachineBlockEntity {
         this.bars = bars != null ? bars : List.of();
     }
 
+    @Override
+    public void setInputRpm(float rpm) {
+        this.inputRpm = rpm;
+    }
+
+    @Override
+    public float getInputRpm() {
+        return inputRpm;
+    }
+
+    /**
+     * Whether the machine can currently run: a matched recipe it has the rpm for, or —
+     * with no recipe loaded — any rpm at all, so the gauge lights up when a motor is
+     * attached.
+     */
+    private boolean hasPower() {
+        if (!definition.power().consumesStress())
+            return true;
+        AbstractProcessingRecipe recipe = getMatchingRecipe(getNMSLevel());
+        return recipe == null ? inputRpm > 0f : canProcess(getNMSLevel(), recipe);
+    }
+
+    /** A stress consumer additionally needs the rpm its recipe demands. */
+    @Override
+    protected boolean canProcess(Level level, AbstractProcessingRecipe recipe) {
+        if (!super.canProcess(level, recipe))
+            return false;
+        if (!definition.power().consumesStress())
+            return true;
+        return recipe.getMinRpm() <= 0 || inputRpm >= effectiveRpm(recipe);
+    }
+
+    @Override
+    public void tick(Level level, net.minecraft.core.BlockPos pos,
+            net.momirealms.craftengine.core.block.ImmutableBlockState state) {
+        if (definition.power().consumesStress() && !level.isClientSide())
+            pullRotationalPower(level);
+        super.tick(level, pos, state);
+        if (definition.power().consumesStress() && !level.isClientSide())
+            reportStressLoad();
+    }
+
+    /**
+     * Picks the strongest adjacent motor and takes its delivered rpm.
+     *
+     * <p>
+     * Selection is by <em>potential</em> rpm rather than live rpm so a motor stalled at
+     * zero precisely because of this machine's load is still found — selecting by live
+     * rpm would drop the load, let it recover, and flicker.
+     */
+    private void pullRotationalPower(Level level) {
+        this.activeMotor = null;
+        float bestPotential = 0f;
+        float delivered = 0f;
+        var cePos = new net.momirealms.craftengine.core.world.BlockPos(getMachinePos().getX(),
+                getMachinePos().getY(), getMachinePos().getZ());
+        for (net.minecraft.core.Direction d : net.minecraft.core.Direction.values()) {
+            var be = dev.arubik.craftengine.block.entity.BukkitBlockEntityTypes
+                    .getIfLoaded(level, getMachinePos().relative(d));
+            if (be != null && be.controller instanceof dev.arubik.craftengine.rotation.RpmProvider p
+                    && p.isRpmSource() && p.potentialRpm() > bestPotential) {
+                if (!p.rpmReaches(cePos))
+                    continue;
+                bestPotential = p.potentialRpm();
+                delivered = p.getRpm();
+                this.activeMotor = p;
+            }
+        }
+        this.inputRpm = delivered;
+    }
+
+    /**
+     * Reports the recipe's SU demand to the motor, held for a grace window.
+     *
+     * <p>
+     * Without the grace the load would drop the instant the machine stalls, the motor
+     * would un-overstress, and an underpowered motor would briefly run it anyway.
+     */
+    private void reportStressLoad() {
+        AbstractProcessingRecipe recipe = getMatchingRecipe(getNMSLevel());
+        int demand = recipe != null ? effectiveSu(recipe) : 0;
+        if (demand > 0) {
+            lastSuLoad = demand;
+            stressGrace = definition.power().stressGraceTicks();
+        }
+        if (stressGrace > 0 && lastSuLoad > 0 && activeMotor != null) {
+            activeMotor.reportStressLoad(lastSuLoad);
+            stressGrace--;
+        }
+    }
+
     /** Bar id -> what it reads, from the definition's `source`. */
     private String barSource(String barId) {
         for (MachineDefinition.BarRef ref : definition.bars())
@@ -232,8 +333,35 @@ public class DataMachineBlockEntity extends AbstractMachineBlockEntity {
             return new double[] { tank.getGas(getNMSLevel(), getMachinePos()).getAmount(), tank.getCapacity() };
         }
         if (source.equals("fuel"))
-            return new double[] { burnTime, maxBurnTime };
+            return new double[] { burnTime, Math.max(1, maxBurnTime) };
+        if (source.equals("progress"))
+            return new double[] { getProgress(), Math.max(1, getMaxProgress()) };
+        // A power gauge is a lamp, not a fill: on while the machine is actually running
+        // or at least powered and ready. The numbers behind it ride in the placeholders.
+        if (source.equals("rpm") || source.equals("power"))
+            return new double[] { (isProcessing() || hasPower()) ? 100 : 0, 100 };
         return super.barStat(id);
+    }
+
+    /**
+     * Values a gauge's name/lore can interpolate.
+     *
+     * <p>
+     * A power gauge shows what the current recipe demands versus what is arriving —
+     * without this the rpm bar could light up but never say why it was short.
+     */
+    @Override
+    public java.util.Map<String, String> barPlaceholders(String id) {
+        String source = barSource(id);
+        if (source.equals("rpm") || source.equals("power")) {
+            AbstractProcessingRecipe recipe = getMatchingRecipe(getNMSLevel());
+            java.util.Map<String, String> out = new java.util.HashMap<>();
+            out.put("rpm", String.valueOf((int) getInputRpm()));
+            out.put("req", String.valueOf(recipe != null ? effectiveRpm(recipe) : 0));
+            out.put("su", String.valueOf(recipe != null ? effectiveSu(recipe) : 0));
+            return out;
+        }
+        return super.barPlaceholders(id);
     }
 
     /** The stored type, so a gauge can pick its per-liquid/per-gas art. */

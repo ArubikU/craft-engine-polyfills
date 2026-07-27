@@ -1,0 +1,11 @@
+{
+  "id": "polyfills:rpm",
+  "model": "row",
+  "name": "lang:polyfill.ui.rpm",
+  "generate": {
+    "empty_icon": "cml:gui_empty",
+    "lore": ["%rpm% / %req% rpm", "%su% su"],
+    "parts": [ { "levels": 1 } ],
+    "types": { "default": "cml:rpm_on" }
+  }
+}
