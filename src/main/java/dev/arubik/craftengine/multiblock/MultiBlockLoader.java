@@ -26,6 +26,7 @@ import net.momirealms.craftengine.core.util.Key;
  *   "id": "polyfills:industrial_smelter",
  *   "keys": {
  *     "I": { "blocks": "minecraft:iron_block" },
+ *     "M": { "custom_block": "cml:refinery_mixer" },
  *     "#": { "blocks": "#minecraft:logs" },
  *     ".": "any"
  *   },
@@ -38,6 +39,8 @@ import net.momirealms.craftengine.core.util.Key;
  *         ["III", "I.I", "III"],
  *         ["III", "III", "III"]
  *       ],
+ *       "part_block_id": "cml:smelter_part",
+ *       "machine": { ...the machines/*.json body: slots, tanks, bars, buttons... },
  *       "io": {
  *         "default": "open",
  *         "rules": [
@@ -82,30 +85,64 @@ public final class MultiBlockLoader {
 
         // A null value marks a don't-care cell; BlockPredicate has no "match anything"
         // form, so absence is how the interior of a hollow box is expressed.
-        Map<Character, BlockPredicate> keys = new HashMap<>();
-        for (var entry : view.object("keys").raw().entrySet()) {
-            if (entry.getKey().length() != 1)
-                throw view.error("key '" + entry.getKey() + "' must be exactly one character");
-            char symbol = entry.getKey().charAt(0);
-            var value = entry.getValue();
-            if (value.isJsonPrimitive() && isAny(value.getAsString())) {
-                keys.put(symbol, null);
-                continue;
-            }
-            keys.put(symbol, VanillaData.parse(BlockPredicate.CODEC, value,
-                    view.path() + " > keys > " + entry.getKey()));
-        }
+        Map<Character, MultiBlockSchema.PartMatcher> keys = parseKeys(view);
 
         List<MultiBlockDefinition.Mode> modes = new ArrayList<>();
         for (JsonView modeView : view.objectList("modes"))
-            modes.add(parseMode(modeView, keys));
+            modes.add(parseMode(modeView, keys, id));
         if (modes.isEmpty())
             throw view.error("needs at least one entry in 'modes'");
 
         MultiBlockDefinition.REGISTRY.register(id, new MultiBlockDefinition(id, modes));
     }
 
-    private static MultiBlockDefinition.Mode parseMode(JsonView view, Map<Character, BlockPredicate> keys) {
+    /**
+     * Parses the {@code keys} legend of a structure body.
+     *
+     * <p>
+     * Exposed so {@code multiblock_machines/*.json} can describe its shape with the
+     * same grammar rather than inventing a second one.
+     */
+    public static Map<Character, MultiBlockSchema.PartMatcher> parseKeys(JsonView view) {
+        Map<Character, MultiBlockSchema.PartMatcher> keys = new HashMap<>();
+        for (var entry : view.object("keys").raw().entrySet()) {
+            if (entry.getKey().length() != 1)
+                throw view.error("key '" + entry.getKey() + "' must be exactly one character");
+            char symbol = entry.getKey().charAt(0);
+            var value = entry.getValue();
+            String where = view.path() + " > keys > " + entry.getKey();
+
+            if (value.isJsonPrimitive() && isAny(value.getAsString())) {
+                keys.put(symbol, null); // don't-care cell
+                continue;
+            }
+            // A CraftEngine custom block is not in the vanilla block registry, so
+            // BlockPredicate cannot name one. `custom_block` matches by CE block id
+            // instead, which is what a structure made of this plugin's own blocks needs.
+            if (value.isJsonObject() && value.getAsJsonObject().has("custom_block")) {
+                Key blockId = Key.of(value.getAsJsonObject().get("custom_block").getAsString());
+                keys.put(symbol, (level, pos) -> {
+                    try {
+                        var custom = net.momirealms.craftengine.bukkit.util.BlockStateUtils
+                                .getOptionalCustomBlockState(level.getBlockState(pos));
+                        return custom.isPresent() && custom.get().owner() != null
+                                && blockId.equals(custom.get().owner().value().id());
+                    } catch (Throwable ignored) {
+                        return false;
+                    }
+                });
+                continue;
+            }
+            BlockPredicate predicate = VanillaData.parse(BlockPredicate.CODEC, value, where);
+            keys.put(symbol, (level, pos) -> level instanceof net.minecraft.server.level.ServerLevel serverLevel
+                    && predicate.matches(serverLevel, pos));
+        }
+        return keys;
+    }
+
+    /** Parses one shape + its per-cell I/O. Shared with the multiblock-machine loader. */
+    public static MultiBlockDefinition.Mode parseMode(JsonView view,
+            Map<Character, MultiBlockSchema.PartMatcher> keys, Key ownerId) {
         List<Integer> core = view.intList("core");
         if (core.size() != 3)
             throw view.error("'core' must be [x, y, z]");
@@ -127,14 +164,10 @@ public final class MultiBlockLoader {
                     if (!keys.containsKey(symbol))
                         throw view.error("layer " + y + " row " + z + " uses key '" + symbol
                                 + "' which is not in 'keys'");
-                    BlockPredicate predicate = keys.get(symbol);
-                    if (predicate == null)
+                    MultiBlockSchema.PartMatcher matcher = keys.get(symbol);
+                    if (matcher == null)
                         continue; // don't-care cell
-                    schema.addPart(x, y, z, (level, pos) -> {
-                        if (!(level instanceof net.minecraft.server.level.ServerLevel serverLevel))
-                            return false;
-                        return predicate.matches(serverLevel, pos);
-                    });
+                    schema.addPart(x, y, z, matcher);
                 }
                 z++;
             }
@@ -142,7 +175,18 @@ public final class MultiBlockLoader {
         }
 
         MultiBlockDefinition.IOSpec io = view.has("io") ? parseIO(view.object("io")) : null;
-        return new MultiBlockDefinition.Mode(view.string("name", "default"), schema, io);
+        String name = view.string("name", "default");
+        // A mode may carry the machine the assembled structure becomes. Its id is the
+        // multiblock's id plus the mode name, so two modes of one core do not collide.
+        dev.arubik.craftengine.machine.MachineDefinition machine = null;
+        if (view.has("machine")) {
+            Key machineId = Key.of("polyfills", ownerId.value() + "_" + name);
+            machine = dev.arubik.craftengine.machine.MachineDefinitionLoader
+                    .parse(view.object("machine"), machineId);
+            dev.arubik.craftengine.machine.MachineDefinition.REGISTRY.register(machineId, machine);
+        }
+        return new MultiBlockDefinition.Mode(name, schema, io, machine,
+                view.string("part_block_id", "craftengine:multiblock_part"));
     }
 
     private static MultiBlockDefinition.IOSpec parseIO(JsonView view) {

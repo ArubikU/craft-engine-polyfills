@@ -39,12 +39,19 @@ public final class MultiBlockDefinition {
      * chest, the iron shell makes a smelter. Modes are tried in order, so put the
      * most specific first.
      *
-     * @param name   written to the core's {@code machine_type} blockstate, when it
-     *               has one
-     * @param schema the shell this mode requires
-     * @param io     per-cell I/O, or {@code null} to leave every face open
+     * @param name    written to the core's {@code machine_type} blockstate, when it
+     *                has one
+     * @param schema  the shell this mode requires
+     * @param io      per-cell I/O, or {@code null} to leave every face open
+     * @param machine what the assembled structure DOES — slots, tanks, menu, buttons.
+     *                A shape on its own is inert, so the machine lives inside the mode
+     *                rather than in a file beside it: one core block can assemble into
+     *                genuinely different machines depending on the shell built around
+     *                it, and each of those needs its own menu
+     * @param partBlockId the block a matched cell becomes while this mode is formed
      */
-    public record Mode(String name, MultiBlockSchema schema, IOSpec io) {
+    public record Mode(String name, MultiBlockSchema schema, IOSpec io,
+            dev.arubik.craftengine.machine.MachineDefinition machine, String partBlockId) {
     }
 
     private final Key id;

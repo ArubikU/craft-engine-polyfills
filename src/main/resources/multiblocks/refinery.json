@@ -1,0 +1,110 @@
+{
+  "id": "polyfills:refinery",
+  "keys": {
+    "M": {
+      "custom_block": "cml:refinery_mixer"
+    },
+    ".": "any"
+  },
+  "modes": [
+    {
+      "name": "refinery",
+      "core": [
+        0,
+        0,
+        0
+      ],
+      "layers": [
+        [
+          "."
+        ],
+        [
+          "M"
+        ]
+      ],
+      "part_block_id": "cml:refinery",
+      "io": {
+        "default": "closed",
+        "rules": [
+          {
+            "at": [
+              0,
+              1,
+              0
+            ],
+            "input": {
+              "types": [
+                "fluid",
+                "gas"
+              ],
+              "faces": [
+                "up"
+              ]
+            }
+          }
+        ]
+      },
+      "machine": {
+        "recipe_type": "refinery",
+        "title": "Refinery",
+        "menu_size": 54,
+        "fuel_required": false,
+        "slots": {
+          "input": [
+            21,
+            22
+          ],
+          "output": [
+            24
+          ],
+          "info": {
+            "slot": 4,
+            "type": "tank",
+            "source": "fluid:fluid"
+          }
+        },
+        "fluid_tanks": [
+          {
+            "name": "fluid",
+            "capacity": 8000
+          }
+        ],
+        "gas_tanks": [
+          {
+            "name": "gas",
+            "capacity": 8000
+          }
+        ],
+        "bars": [
+          {
+            "id": "polyfills:progress",
+            "slots": [
+              13
+            ],
+            "source": "progress"
+          },
+          {
+            "id": "polyfills:fluid",
+            "slots": [
+              27,
+              18,
+              9,
+              0
+            ],
+            "source": "fluid:fluid"
+          },
+          {
+            "id": "polyfills:gas",
+            "slots": [
+              35,
+              26,
+              17,
+              8
+            ],
+            "source": "gas:gas"
+          }
+        ]
+      }
+    }
+  ]
+}

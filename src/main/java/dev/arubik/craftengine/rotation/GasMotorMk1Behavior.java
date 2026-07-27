@@ -66,9 +66,30 @@ public class GasMotorMk1Behavior extends MachineBlockBehavior {
         @Override
         public BlockBehavior create(BlockDefinition block, ConfigSection arguments) {
             MachineBlockBehavior base = (MachineBlockBehavior) MachineBlockBehavior.FACTORY.create(block, arguments);
-            int capacity = Utils.getAsInt(arguments.getOrDefault("vapor-capacity", 10000), "vapor-capacity");
+
+            // A motors/*.json definition supplies the fuel table, buffer and grid; the
+            // block config still wins where it names something, so existing packs keep
+            // their values.
+            // The block config names its motor, the same way a machine block names its
+            // machine — a motor does not claim a block.
+            Object configured = arguments.get("motor");
+            MotorDefinition motor = configured != null
+                    ? MotorDefinition.byName(String.valueOf(configured))
+                    : null;
 
             Map<GasType, GasSpec> gases = new HashMap<>();
+            if (motor != null)
+                for (Map.Entry<Key, MotorDefinition.FuelOutput> e
+                        : motor.fuelsOfKind(MotorDefinition.FuelKind.GAS).entrySet()) {
+                    GasType gt = GasType.byName(e.getKey().toString());
+                    if (gt != null)
+                        gases.put(gt, new GasSpec(e.getValue().rpm(), e.getValue().su(),
+                                e.getValue().perTick()));
+                }
+            int capacity = Utils.getAsInt(
+                    arguments.getOrDefault("vapor-capacity", motor != null ? motor.buffer() : 10000),
+                    "vapor-capacity");
+
             Object gObj = arguments.get("gases");
             if (gObj instanceof Map<?, ?> gMap) {
                 for (Map.Entry<?, ?> e : gMap.entrySet()) {

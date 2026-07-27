@@ -77,6 +77,20 @@ public class DataMachineBehavior extends MachineBlockBehavior {
         return machine;
     }
 
+    /** Parses the block config's {@code upgrades:} section; shared with the multiblock variant. */
+    public static java.util.Map<Key, List<dev.arubik.craftengine.machine.attribute.MachineAttributes.Mod>>
+            parseUpgrades(Object raw) {
+        java.util.Map<Key, List<dev.arubik.craftengine.machine.attribute.MachineAttributes.Mod>> out =
+                new java.util.HashMap<>();
+        if (raw instanceof java.util.Map<?, ?> map)
+            for (java.util.Map.Entry<?, ?> e : map.entrySet()) {
+                List<dev.arubik.craftengine.machine.attribute.MachineAttributes.Mod> mods = parseMods(e.getValue());
+                if (!mods.isEmpty())
+                    out.put(parseKey(String.valueOf(e.getKey())), mods);
+            }
+        return out;
+    }
+
     private static List<dev.arubik.craftengine.machine.attribute.MachineAttributes.Mod> parseMods(Object value) {
         List<dev.arubik.craftengine.machine.attribute.MachineAttributes.Mod> out = new java.util.ArrayList<>();
         if (!(value instanceof List<?> list))
@@ -118,16 +132,7 @@ public class DataMachineBehavior extends MachineBlockBehavior {
 
             // The attribute upgrade map keeps living in the block config, same shape the
             // Java machines already use, so migrating one needs no rewrite of its upgrades.
-            java.util.Map<Key, List<dev.arubik.craftengine.machine.attribute.MachineAttributes.Mod>> upgradeDefs =
-                    new java.util.HashMap<>();
-            Object raw = arguments.get("upgrades");
-            if (raw instanceof java.util.Map<?, ?> map) {
-                for (java.util.Map.Entry<?, ?> e : map.entrySet()) {
-                    List<dev.arubik.craftengine.machine.attribute.MachineAttributes.Mod> mods = parseMods(e.getValue());
-                    if (!mods.isEmpty())
-                        upgradeDefs.put(parseKey(String.valueOf(e.getKey())), mods);
-                }
-            }
+            var upgradeDefs = parseUpgrades(arguments.get("upgrades"));
 
             return new DataMachineBehavior(block, definition,
                     MachineMenuConfig.parse(arguments::get),

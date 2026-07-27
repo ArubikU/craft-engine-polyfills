@@ -31,6 +31,10 @@ import net.momirealms.craftengine.core.util.Key;
  *   "fluid_tanks": [ { "name": "input", "capacity": 8000, "filter": "polyfills:water" } ],
  *   "gas_tanks":   [ { "name": "output", "capacity": 8000 } ],
  *   "fuel_required": true,
+ *   "paging": {                     // storage spanning several screens
+ *     "pages": 3, "slots": 45,
+ *     "prev_slot": 45, "next_slot": 53, "indicator_slot": 49
+ *   },
  *   "bars": [                       // gauges from bars/*.json, positioned here
  *     { "id": "polyfills:fuel",     "slots": [40] },
  *     { "id": "polyfills:progress", "slots": [13] },
@@ -182,10 +186,21 @@ public final class MachineDefinitionLoader {
                     b.string("source", barId.value())));
         }
 
+        MachineDefinition.PagingSpec paging = MachineDefinition.PagingSpec.none();
+        if (view.has("paging")) {
+            JsonView pg = view.object("paging");
+            paging = new MachineDefinition.PagingSpec(
+                    pg.rangedInt("pages", 1, 1, 64),
+                    pg.rangedInt("slots", menuSize, 1, menuSize),
+                    pg.rangedInt("prev_slot", -1, -1, menuSize - 1),
+                    pg.rangedInt("next_slot", -1, -1, menuSize - 1),
+                    pg.rangedInt("indicator_slot", -1, -1, menuSize - 1));
+        }
+
         return new MachineDefinition(id,
                 view.string("recipe_type", id.value()), view.string("title", id.value()), menuSize,
                 inputs, outputs, fuels, upgrades, info, fluidTanks, gasTanks,
-                view.bool("fuel_required", true), io, buttons, power, bars, infoSpec);
+                view.bool("fuel_required", true), io, buttons, power, bars, infoSpec, paging);
     }
 
     private static List<MachineDefinition.TankSpec> parseTanks(JsonView view, String field) {

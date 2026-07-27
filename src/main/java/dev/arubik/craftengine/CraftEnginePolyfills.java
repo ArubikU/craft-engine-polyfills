@@ -262,6 +262,8 @@ public final class CraftEnginePolyfills extends JavaPlugin {
         dev.arubik.craftengine.machine.upgrade.UpgradeLoader.bootstrap();
         dev.arubik.craftengine.machine.menu.bar.BarLoader.bootstrap();
         dev.arubik.craftengine.machine.menu.bar.BarLoader.load();
+        dev.arubik.craftengine.rotation.MotorLoader.bootstrap();
+        dev.arubik.craftengine.rotation.MotorLoader.load();
         dev.arubik.craftengine.machine.MachineDefinitionLoader.bootstrap();
         // Same construction-order reason as pipes: a multiblock behavior copies its
         // schema and IO provider when CraftEngine builds it, before the reload event.

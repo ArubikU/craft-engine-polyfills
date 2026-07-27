@@ -1,0 +1,34 @@
+{
+  "id": "polyfills:multipage_chest",
+  "keys": {
+    "L": { "blocks": "#minecraft:logs" },
+    "T": { "blocks": "#minecraft:trapdoors" },
+    ".": "any"
+  },
+  "modes": [
+    {
+      "name": "multipage_chest",
+      "core": [1, 1, 1],
+      "layers": [
+        ["LLL", "LLL", "LLL"],
+        ["LLL", "L.L", "LLL"],
+        ["LLL", "LTL", "LLL"]
+      ],
+      "part_block_id": "craftengine:multiblock_part",
+      "io": { "default": "open" },
+      "machine": {
+        "recipe_type": "multipage_chest",
+        "title": "Multi-Page Chest",
+        "menu_size": 54,
+        "fuel_required": false,
+        "paging": {
+          "pages": 3,
+          "slots": 45,
+          "prev_slot": 45,
+          "next_slot": 53,
+          "indicator_slot": 49
+        }
+      }
+    }
+  ]
+}

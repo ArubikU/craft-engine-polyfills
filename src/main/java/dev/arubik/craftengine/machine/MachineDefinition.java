@@ -118,6 +118,31 @@ public final class MachineDefinition {
         }
     }
 
+    /**
+     * Paged storage: a container that holds more than one screen of items.
+     *
+     * <p>
+     * The menu shows one page at a time and the rest lives in persistence, so the
+     * declared {@code menu_size} is a page, not the whole inventory. A machine
+     * without this has a single page and behaves exactly as before.
+     *
+     * @param pages     how many pages, 1 meaning ordinary storage
+     * @param slots     storage slots per page
+     * @param prevSlot  menu slot of the previous-page button, or -1
+     * @param nextSlot  menu slot of the next-page button, or -1
+     * @param indicator menu slot showing "page n/m", or -1
+     */
+    public record PagingSpec(int pages, int slots, int prevSlot, int nextSlot, int indicator) {
+
+        public static PagingSpec none() {
+            return new PagingSpec(1, 0, -1, -1, -1);
+        }
+
+        public boolean isPaged() {
+            return pages > 1;
+        }
+    }
+
     /** A tank the machine owns. */
     public record TankSpec(String name, int capacity, Key filter) {
     }
@@ -182,6 +207,7 @@ public final class MachineDefinition {
     private final UpgradeSpec upgrades;
     private final int infoSlot;
     private final InfoSpec info;
+    private final PagingSpec paging;
     private final List<TankSpec> fluidTanks;
     private final List<TankSpec> gasTanks;
     private final boolean fuelRequired;
@@ -193,7 +219,7 @@ public final class MachineDefinition {
     public MachineDefinition(Key id, String recipeType, String title, int menuSize, int[] inputSlots,
             int[] outputSlots, int[] fuelSlots, UpgradeSpec upgrades, int infoSlot, List<TankSpec> fluidTanks,
             List<TankSpec> gasTanks, boolean fuelRequired, IOConfiguration io, List<ButtonSpec> buttons,
-            PowerSpec power, List<BarRef> bars, InfoSpec info) {
+            PowerSpec power, List<BarRef> bars, InfoSpec info, PagingSpec paging) {
         this.id = id;
         this.recipeType = recipeType;
         this.title = title;
@@ -211,6 +237,7 @@ public final class MachineDefinition {
         this.power = power == null ? PowerSpec.none() : power;
         this.bars = bars == null ? List.of() : List.copyOf(bars);
         this.info = info == null ? InfoSpec.none() : info;
+        this.paging = paging == null ? PagingSpec.none() : paging;
     }
 
     public Key id() {
@@ -251,6 +278,11 @@ public final class MachineDefinition {
 
     public UpgradeSpec upgrades() {
         return upgrades;
+    }
+
+    /** Paged storage, if this machine has more than one page. */
+    public PagingSpec paging() {
+        return paging;
     }
 
     /** What the readout icon shows and where. */

@@ -65,24 +65,31 @@ public class GasMotorMk1BlockEntity extends AbstractMachineBlockEntity implement
      * machine had already moved to data. The rpm it actually delivers still comes
      * per-gas from the block config, since that varies by fuel rather than by motor.
      */
-    private dev.arubik.craftengine.machine.MachineDefinition motorDefinition() {
-        return dev.arubik.craftengine.machine.MachineDefinition.byName("polyfills:gas_motor_mk1");
+    /**
+     * This motor's definition from {@code motors/*.json}.
+     *
+     * <p>
+     * The grid size and overclock headroom were constants; they come from data now so
+     * a second motor needs no second class. Falls back to the historical values when
+     * no definition is present.
+     */
+    private MotorDefinition motorDefinition() {
+        return MotorDefinition.byName("polyfills:gas_motor_mk1");
     }
 
     private int upgradeSlotCount() {
         var d = motorDefinition();
-        return d != null && d.upgrades().size() > 0 ? d.upgrades().size() : UPGRADE_SLOTS;
+        return d != null ? d.upgradeSlots() : UPGRADE_SLOTS;
     }
 
     private int baseUnlockedCount() {
         var d = motorDefinition();
-        return d != null && d.upgrades().size() > 0 ? d.upgrades().baseUnlocked() : BASE_UNLOCKED;
+        return d != null ? d.baseUnlocked() : BASE_UNLOCKED;
     }
 
-    /** Overclock headroom before any upgrade, from data; defaults to the historical 2.0. */
     private float baseOverclock() {
         var d = motorDefinition();
-        return d != null ? d.power().baseOverclock() : BASE_OC;
+        return d != null ? d.baseOverclock() : BASE_OC;
     }
 
 
@@ -524,6 +531,36 @@ public class GasMotorMk1BlockEntity extends AbstractMachineBlockEntity implement
         } catch (Throwable t) {
             return null;
         }
+    }
+
+    /**
+     * Whether the shaft drives the block at {@code consumerPos}.
+     *
+     * <p>
+     * Which faces a motor drives is declared in {@code motors/*.json} as
+     * facing-relative directions, so one definition works at every rotation and a
+     * motor with several outputs needs no code. Falls back to the single front face
+     * when no definition is present.
+     */
+    @Override
+    public boolean rpmReaches(net.momirealms.craftengine.core.world.BlockPos consumerPos) {
+        var def = motorDefinition();
+        if (def == null || def.outputFaces().isEmpty())
+            return dev.arubik.craftengine.rotation.RpmProvider.super.rpmReaches(consumerPos);
+        Direction facing = getFacing(getNMSLevel());
+        if (facing == null)
+            return false;
+        for (var relative : def.outputFaces()) {
+            Direction world = dev.arubik.craftengine.multiblock.DirectionalIOHelper
+                    .getVerticalWorldDirection(relative, facing);
+            if (world == null)
+                continue;
+            BlockPos head = getMachinePos().relative(world);
+            if (head.getX() == consumerPos.x() && head.getY() == consumerPos.y()
+                    && head.getZ() == consumerPos.z())
+                return true;
+        }
+        return false;
     }
 
     // ---------------- RpmProvider ----------------
