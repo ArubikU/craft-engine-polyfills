@@ -24,7 +24,8 @@ import net.momirealms.craftengine.core.util.Key;
  *     "input":  [20],
  *     "output": [24, 25],
  *     "fuel":   [11],
- *     "info":   4,
+ *     "info":   4,                          // recipe readout; or
+ *     // "info": { "slot": 4, "type": "tank", "source": "fluid:buffer" }
  *     "upgrade": { "count": 9, "base_unlocked": 3 }   // reserved indices 0..8, own page
  *   },
  *   "fluid_tanks": [ { "name": "input", "capacity": 8000, "filter": "polyfills:water" } ],
@@ -94,7 +95,22 @@ public final class MachineDefinitionLoader {
         int[] inputs = toArray(slots.intList("input"), view, menuSize, "input");
         int[] outputs = toArray(slots.intList("output"), view, menuSize, "output");
         int[] fuels = toArray(slots.intList("fuel"), view, menuSize, "fuel");
-        int info = slots.has("info") ? slots.rangedInt("info", -1, 0, menuSize - 1) : -1;
+        // `info` is either a bare slot (a recipe readout, the common case) or an object
+        // choosing the kind: { slot, type: recipe|tank, source: "fluid:<tank>" }.
+        int info = -1;
+        MachineDefinition.InfoSpec infoSpec = MachineDefinition.InfoSpec.none();
+        if (slots.has("info")) {
+            var rawInfo = slots.raw().get("info");
+            if (rawInfo.isJsonObject()) {
+                JsonView iv = slots.object("info");
+                info = iv.rangedInt("slot", -1, 0, menuSize - 1);
+                infoSpec = new MachineDefinition.InfoSpec(info, iv.string("type", "recipe"),
+                        iv.string("source", ""));
+            } else {
+                info = slots.rangedInt("info", -1, 0, menuSize - 1);
+                infoSpec = new MachineDefinition.InfoSpec(info, "recipe", "");
+            }
+        }
 
         MachineDefinition.UpgradeSpec upgrades = new MachineDefinition.UpgradeSpec(0, 0);
         if (slots.has("upgrade")) {
@@ -169,7 +185,7 @@ public final class MachineDefinitionLoader {
         return new MachineDefinition(id,
                 view.string("recipe_type", id.value()), view.string("title", id.value()), menuSize,
                 inputs, outputs, fuels, upgrades, info, fluidTanks, gasTanks,
-                view.bool("fuel_required", true), io, buttons, power, bars);
+                view.bool("fuel_required", true), io, buttons, power, bars, infoSpec);
     }
 
     private static List<MachineDefinition.TankSpec> parseTanks(JsonView view, String field) {

@@ -287,6 +287,75 @@ public class DataMachineBlockEntity extends AbstractMachineBlockEntity
         }
     }
 
+    /**
+     * The readout icon: the current recipe, or the current tank contents.
+     *
+     * <p>
+     * Both kinds existed as hand-written methods on individual machines; which one a
+     * machine shows is now its {@code info.type}.
+     */
+    private org.bukkit.inventory.ItemStack infoIcon() {
+        MachineDefinition.InfoSpec spec = definition.info();
+        if (!spec.isTank())
+            return dev.arubik.craftengine.machine.menu.RecipeInfoIcon.build(this, getMachineId(),
+                    getUpgradeModifiers().speedMultiplier(), curGeneration);
+
+        String source = spec.source();
+        boolean gas = source.startsWith("gas");
+        String tankName = source.contains(":") ? source.substring(source.indexOf(':') + 1) : "";
+        long amount = 0, capacity = 0;
+        net.kyori.adventure.text.Component contents =
+                dev.arubik.craftengine.machine.menu.MenuText.tr(
+                        gas ? "polyfill.gas.empty" : "polyfill.liquid.empty",
+                        net.kyori.adventure.text.format.NamedTextColor.WHITE);
+        org.bukkit.Material material = org.bukkit.Material.BUCKET;
+
+        if (gas) {
+            var tank = gasTank(tankName);
+            if (tank != null) {
+                var stored = tank.getGas(getNMSLevel(), getMachinePos());
+                amount = stored.getAmount();
+                capacity = tank.getCapacity();
+                if (!stored.isEmpty())
+                    contents = dev.arubik.craftengine.machine.menu.MenuText.tr(
+                            stored.getType().translationKey(),
+                            net.kyori.adventure.text.format.NamedTextColor.WHITE);
+            }
+        } else {
+            var tank = fluidTank(tankName);
+            if (tank != null) {
+                var stored = tank.getFluid(getNMSLevel(), getMachinePos());
+                amount = stored.getAmount();
+                capacity = tank.getCapacity();
+                if (!stored.isEmpty()) {
+                    contents = dev.arubik.craftengine.machine.menu.MenuText.tr(
+                            stored.getType().translationKey(),
+                            net.kyori.adventure.text.format.NamedTextColor.WHITE);
+                    if (stored.getType() == dev.arubik.craftengine.fluid.FluidType.LAVA)
+                        material = org.bukkit.Material.LAVA_BUCKET;
+                    else if (stored.getType() == dev.arubik.craftengine.fluid.FluidType.WATER)
+                        material = org.bukkit.Material.WATER_BUCKET;
+                }
+            }
+        }
+
+        var stack = new org.bukkit.inventory.ItemStack(material);
+        var meta = stack.getItemMeta();
+        if (meta != null) {
+            var gray = net.kyori.adventure.text.format.NamedTextColor.GRAY;
+            var aqua = net.kyori.adventure.text.format.NamedTextColor.AQUA;
+            meta.displayName(dev.arubik.craftengine.machine.menu.MenuText.noI(
+                    dev.arubik.craftengine.machine.menu.MenuText
+                            .tr(gas ? "polyfill.ui.gas" : "polyfill.ui.fluid", aqua)
+                            .append(net.kyori.adventure.text.Component.text(": ", gray))
+                            .append(contents)));
+            meta.lore(java.util.List.of(dev.arubik.craftengine.machine.menu.MenuText.noI(
+                    net.kyori.adventure.text.Component.text(amount + " / " + capacity + " mB", gray))));
+            stack.setItemMeta(meta);
+        }
+        return stack;
+    }
+
     /** Bar id -> what it reads, from the definition's `source`. */
     private String barSource(String barId) {
         for (MachineDefinition.BarRef ref : definition.bars())
@@ -656,10 +725,7 @@ public class DataMachineBlockEntity extends AbstractMachineBlockEntity
         // Recipe readout icon, same shared component the Java machines use.
         int infoSlot = definition.infoSlot() >= 0 ? definition.infoSlot() : menuConfig.infoSlot;
         if (infoSlot >= 0)
-            layout.setDynamicProvider(infoSlot,
-                    (machine, tick) -> dev.arubik.craftengine.machine.menu.RecipeInfoIcon.build(machine,
-                            getMachineId(), machine.getUpgradeModifiers().speedMultiplier(),
-                            this.curGeneration));
+            layout.setDynamicProvider(infoSlot, (machine, tick) -> infoIcon());
         return layout;
     }
 

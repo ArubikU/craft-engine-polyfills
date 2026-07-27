@@ -95,9 +95,6 @@ public class BlockBehaviors {
                                 dev.arubik.craftengine.chainery.ChaineryBlockBehavior.FACTORY);
 
                 // Machine Examples
-                RegistryUtils.registerBlockBehavior(
-                                dev.arubik.craftengine.machine.examples.TestMachineBehavior.FACTORY_KEY,
-                                dev.arubik.craftengine.machine.examples.TestMachineBehavior.FACTORY);
 
                 // MultiBlock Examples
                 RegistryUtils.registerBlockBehavior(

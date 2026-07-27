@@ -2,9 +2,63 @@
   "id": "polyfills:test_machine",
   "recipe_type": "test_machine",
   "title": "Test Machine",
-  "menu_size": 27,
+  "menu_size": 54,
   "fuel_required": true,
-  "slots": { "input": [11], "output": [15], "fuel": [20] },
-  "fluid_tanks": [ { "name": "input", "capacity": 10000 } ],
-  "gas_tanks":   [ { "name": "output", "capacity": 10000 } ]
+  "slots": {
+    "input": [
+      11
+    ],
+    "output": [
+      15
+    ],
+    "fuel": [
+      20
+    ],
+    "info": {
+      "slot": 4,
+      "type": "tank",
+      "source": "fluid:input"
+    }
+  },
+  "fluid_tanks": [
+    {
+      "name": "input",
+      "capacity": 10000
+    }
+  ],
+  "gas_tanks": [
+    {
+      "name": "output",
+      "capacity": 10000
+    }
+  ],
+  "bars": [
+    {
+      "id": "polyfills:progress",
+      "slots": [
+        13
+      ],
+      "source": "progress"
+    },
+    {
+      "id": "polyfills:fluid",
+      "slots": [
+        27,
+        18,
+        9,
+        0
+      ],
+      "source": "fluid:input"
+    },
+    {
+      "id": "polyfills:gas",
+      "slots": [
+        35,
+        26,
+        17,
+        8
+      ],
+      "source": "gas:output"
+    }
+  ]
 }

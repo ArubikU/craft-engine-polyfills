@@ -94,7 +94,7 @@ public class MachineBlockBehavior extends ConnectableBlockBehavior
 
     /**
      * Base machine behavior backs an abstract entity, so it creates no controller.
-     * Concrete machine behaviors (e.g. TestMachineBehavior) override this.
+     * Concrete machine behaviors override this.
      */
     @Override
     public BlockEntityController createBlockEntityController(BlockEntity blockEntity) {

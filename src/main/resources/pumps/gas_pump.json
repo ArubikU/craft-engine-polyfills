@@ -20,7 +20,11 @@
       "fuel": [
         11
       ],
-      "info": 4,
+      "info": {
+        "slot": 4,
+        "type": "tank",
+        "source": "gas:buffer"
+      },
       "upgrade": {
         "count": 9,
         "base_unlocked": 3

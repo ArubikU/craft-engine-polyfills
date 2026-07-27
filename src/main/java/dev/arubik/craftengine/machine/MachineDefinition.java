@@ -95,6 +95,29 @@ public final class MachineDefinition {
     public record BarRef(Key bar, int[] slots, String source) {
     }
 
+    /**
+     * The readout icon: what the machine is doing right now.
+     *
+     * <p>
+     * Two kinds exist and both were hand-written per machine — a recipe readout
+     * (what is being made, how fast) and a tank status (what is stored, how much).
+     * A machine picks one.
+     *
+     * @param slot   menu slot, or -1 for none
+     * @param type   {@code recipe} or {@code tank}
+     * @param source for {@code tank}: {@code fluid:<name>} or {@code gas:<name>}
+     */
+    public record InfoSpec(int slot, String type, String source) {
+
+        public static InfoSpec none() {
+            return new InfoSpec(-1, "recipe", "");
+        }
+
+        public boolean isTank() {
+            return "tank".equalsIgnoreCase(type);
+        }
+    }
+
     /** A tank the machine owns. */
     public record TankSpec(String name, int capacity, Key filter) {
     }
@@ -158,6 +181,7 @@ public final class MachineDefinition {
     private final int[] fuelSlots;
     private final UpgradeSpec upgrades;
     private final int infoSlot;
+    private final InfoSpec info;
     private final List<TankSpec> fluidTanks;
     private final List<TankSpec> gasTanks;
     private final boolean fuelRequired;
@@ -169,7 +193,7 @@ public final class MachineDefinition {
     public MachineDefinition(Key id, String recipeType, String title, int menuSize, int[] inputSlots,
             int[] outputSlots, int[] fuelSlots, UpgradeSpec upgrades, int infoSlot, List<TankSpec> fluidTanks,
             List<TankSpec> gasTanks, boolean fuelRequired, IOConfiguration io, List<ButtonSpec> buttons,
-            PowerSpec power, List<BarRef> bars) {
+            PowerSpec power, List<BarRef> bars, InfoSpec info) {
         this.id = id;
         this.recipeType = recipeType;
         this.title = title;
@@ -186,6 +210,7 @@ public final class MachineDefinition {
         this.buttons = List.copyOf(buttons);
         this.power = power == null ? PowerSpec.none() : power;
         this.bars = bars == null ? List.of() : List.copyOf(bars);
+        this.info = info == null ? InfoSpec.none() : info;
     }
 
     public Key id() {
@@ -228,7 +253,12 @@ public final class MachineDefinition {
         return upgrades;
     }
 
-    /** Slot showing the recipe readout, or -1 for none. */
+    /** What the readout icon shows and where. */
+    public InfoSpec info() {
+        return info;
+    }
+
+    /** Slot showing the readout, or -1 for none. */
     public int infoSlot() {
         return infoSlot;
     }
