@@ -350,6 +350,10 @@ public final class ContraptionAssembler {
         // and the rehydrate path — so recording it here means a contraption never has to have its type
         // re-derived from a block that may no longer be there. See ContraptionState#bearingType.
         state.setBearingType(type);
+        // Blast-immunity flag from the bearing block's config (default false) — see BearingBlockBehavior. Read here
+        // (the one choke point where the bearing block is still known), persisted so it survives restart.
+        state.setExplosionProof(dev.arubik.craftengine.contraption.behavior.BearingBlockBehavior
+                .explosionProofAt(level, bearing));
         BlockPos motorPos = RealMotorLink.findAdjacentMotor(level, bearing);
         switch (type) {
             case LINEAR -> {
@@ -395,6 +399,12 @@ public final class ContraptionAssembler {
                 // Rehydrate (BlockAnchoredContraptionStore) reaches this same case for a persisted PHYS
                 // record, so a phys contraption resumes falling after a chunk reload / restart.
                 state.addBehavior(new dev.arubik.craftengine.contraption.behavior.PhysicsBehavior());
+            case VEHICLE ->
+                // A piloted phys contraption: same free rigid body, but the behavior is the
+                // VehicleControlBehavior (extends PhysicsBehavior), which additionally reads its driver's
+                // input each tick and applies steering thrust. Rehydrate reaches this case too, so a saved
+                // vehicle comes back drivable.
+                state.addBehavior(new dev.arubik.craftengine.contraption.behavior.VehicleControlBehavior());
             case MINECART -> {
                 // Never reached: MINECART bearings go through MinecartBearing.assemble, not
                 // this method (see BearingHammerListener) — MinecartFollowBehavior is
@@ -505,7 +515,7 @@ public final class ContraptionAssembler {
             state.level().transferRemainingEntitiesToRealWorld();
             state.level().dispose();
         }
-        fireDisassembled(state.id(), bukkitWorld, snappedBearing, restingPositions);
+        fireDisassembled(state.id(), bukkitWorld, snappedBearing, restingPositions, quarterTurns);
     }
 
     /**
@@ -611,11 +621,11 @@ public final class ContraptionAssembler {
 
     /** Fires {@link dev.arubik.craftengine.contraption.event.ContraptionDisassembledEvent}. See {@link #fireAssembleCancelled} for the fail-open rationale. */
     static void fireDisassembled(UUID contraptionId, World world, BlockPos snappedBearing,
-            Set<BlockPos> restingPositions) {
+            Set<BlockPos> restingPositions, int quarterTurns) {
         try {
             org.bukkit.Bukkit.getPluginManager()
                     .callEvent(new dev.arubik.craftengine.contraption.event.ContraptionDisassembledEvent(
-                            contraptionId, world, snappedBearing, restingPositions));
+                            contraptionId, world, snappedBearing, restingPositions, quarterTurns));
         } catch (Throwable ignored) {
         }
     }

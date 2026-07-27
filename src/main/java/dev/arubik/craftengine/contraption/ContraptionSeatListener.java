@@ -249,6 +249,8 @@ public final class ContraptionSeatListener implements Listener {
      * path only unmounts + clears bookkeeping and never attempts the teleport.
      */
     static void dismount(ContraptionState state, UUID id, boolean skipTeleport) {
+        // Standing up releases the helm if this rider was driving (steer-vehicle).
+        VehicleDriverRegistry.clearDriver(id);
         org.bukkit.entity.Player bukkit = skipTeleport ? null : org.bukkit.Bukkit.getPlayer(id);
 
         ContraptionFurnitureSwarm.SeatSlot occupiedSlot = null;
@@ -369,6 +371,7 @@ public final class ContraptionSeatListener implements Listener {
         Vec3 end = eye.add(look.scale(maxDistance));
 
         ContraptionState bestState = null;
+        ContraptionEntity bestEntity = null;
         ContraptionFurnitureSwarm.SeatSlot bestSlot = null;
         double bestDistSq = Double.MAX_VALUE;
         for (ContraptionEntity entity : ContraptionManager.all()) {
@@ -393,6 +396,7 @@ public final class ContraptionSeatListener implements Listener {
                 if (distSq < bestDistSq) {
                     bestDistSq = distSq;
                     bestState = state;
+                    bestEntity = entity;
                     bestSlot = slot;
                 }
             }
@@ -429,6 +433,37 @@ public final class ContraptionSeatListener implements Listener {
         // The scale is INTENTIONALLY never restored on dismount — see
         // ContraptionSeatMount#applyContraptionScale's javadoc before "repairing" that into a restore.
         ContraptionSeatMount.applyContraptionScale(bukkitPlayer, bestState.scale());
+        // Steer-vehicle: the first player to take a DRIVER seat on a VEHICLE contraption becomes its pilot
+        // (user: "conduce el primero en sentarse"). A seat is a driver seat if its furniture id is registered
+        // as a vehicle_seat; if the vehicle has NO marked seat at all, ANY seat drives (so it works out of the
+        // box with any furniture). Passengers just ride.
+        if (bestState.bearingType() == BearingType.VEHICLE
+                && VehicleDriverRegistry.driverOf(bestState.id()) == null
+                && isDriverSeat(bestEntity, bestSlot)) {
+            VehicleDriverRegistry.setDriver(bestState.id(), player.getUUID());
+            org.bukkit.entity.Player bp = org.bukkit.Bukkit.getPlayer(player.getUUID());
+            if (bp != null) {
+                bp.sendActionBar(net.kyori.adventure.text.Component.text(
+                        "§bAl timón — WASD mover, A/D girar, salto subir, sprint bajar, agáchate para bajar."));
+            }
+        }
         return true;
+    }
+
+    /** Whether {@code slot} confers driving: it's a marked vehicle_seat, or the vehicle has no marked seat at
+     *  all (fallback so any seat drives). Block seats ({@code furniture == null}) count only under the fallback. */
+    private static boolean isDriverSeat(ContraptionEntity entity, ContraptionFurnitureSwarm.SeatSlot slot) {
+        boolean anyMarked = false;
+        for (ContraptionFurnitureSwarm.SeatSlot s : entity.furnitureSwarm().seatSlots()) {
+            if (s.furniture != null && VehicleDriverRegistry.isVehicleSeat(s.furniture.definitionId().toString())) {
+                anyMarked = true;
+                break;
+            }
+        }
+        if (!anyMarked) {
+            return true; // no dedicated helm on this vehicle — any seat drives
+        }
+        return slot.furniture != null
+                && VehicleDriverRegistry.isVehicleSeat(slot.furniture.definitionId().toString());
     }
 }

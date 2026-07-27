@@ -43,6 +43,19 @@ public class ChaineryInteractListener implements Listener {
         }
     }
 
+    /**
+     * When a contraption disassembles, re-anchor any chains it was carrying to the world cells their anchor
+     * blocks landed on — otherwise the endpoints stay pinned to their stale pre-assembly positions and the
+     * chains bug out ("al hacer disassembly ... las chains no se acomodan solas"). See
+     * {@link ChainEngine#onContraptionDisassembled}.
+     */
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = false)
+    public void onContraptionDisassembled(
+            dev.arubik.craftengine.contraption.event.ContraptionDisassembledEvent event) {
+        ChainEngine.onContraptionDisassembled(event.getContraptionId(), event.getWorld(),
+                event.getRestingPositions(), event.getQuarterTurns());
+    }
+
     @EventHandler(ignoreCancelled = true)
     public void onEntityExplode(org.bukkit.event.entity.EntityExplodeEvent event) {
         for (Block b : event.blockList()) {

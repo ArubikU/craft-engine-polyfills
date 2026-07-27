@@ -13,6 +13,7 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerAnimationEvent;
 import org.bukkit.event.player.PlayerAnimationType;
+import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.plugin.Plugin;
 
 import net.minecraft.core.BlockPos;
@@ -78,6 +79,24 @@ public final class ContraptionMining implements Listener {
      */
     private static final int AIM_GRACE_TICKS = 4;
 
+    /**
+     * How recently the player must have SWUNG for the dig to keep advancing — the "held button" test (fix for
+     * Rick's "when you stop holding down the button it still mines"). The old dig was purely aim-driven: one
+     * swing armed it, then merely LOOKING at the cell carried it to completion, so a single tap mined the whole
+     * cell. Progress now only advances while a swing landed within this window, i.e. the button is actually held.
+     *
+     * <p>Sized ABOVE a slow tool's attack-cooldown cadence: the crosshair sits on the cell's SHULKER/INTERACTION
+     * colliders, so a held left-click attacks them and the client gates re-swings by attack speed (a pickaxe
+     * ~0.83s). A window over that never starves a genuine hold, while releasing the button — no more swings —
+     * freezes the dig within ~0.9s. Crucially we FREEZE (hold progress) rather than reset on a gap, so a slow
+     * cadence between swings can never lose progress ("los que no son insta break nunca terminan" regression);
+     * only looking away ({@link #AIM_GRACE_TICKS}) drops it, exactly like vanilla releasing to a different block.
+     */
+    private static final long SWING_HOLD_MS = 900L;
+
+    /** After a drop, ignore swings for this long — see {@link #LAST_DROP_MS}. */
+    private static final long DROP_SWING_GRACE_MS = 250L;
+
     /** Flags for removing a mined cell: update clients, keep the known shape, and suppress vanilla drops (we drop ourselves). */
     private static final int REMOVE_FLAGS = Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE | Block.UPDATE_SUPPRESS_DROPS;
 
@@ -110,6 +129,16 @@ public final class ContraptionMining implements Listener {
     /** When each player last RIGHT-clicked a contraption (a use). A swing within a breath of one is a use-swing, not a mine. */
     private static final Map<UUID, Long> LAST_USE_MS = new ConcurrentHashMap<>();
 
+    /**
+     * When each player last DROPPED an item. Pressing Q makes the client send the DROP action packet and THEN a
+     * swing packet ({@code LocalPlayer.dropItem} calls {@code swing(MAIN_HAND)}), so that swing used to arm a dig
+     * and — in creative — instantly break whatever cell the player was looking at (Rick: "when you drop an item
+     * against a contraption it breaks the cell you're currently looking at"). The drop packet is processed BEFORE
+     * the swing, so {@link PlayerDropItemEvent} records the time here and {@link #onSwing} ignores the swing that
+     * follows within {@link #DROP_SWING_GRACE_MS}.
+     */
+    private static final Map<UUID, Long> LAST_DROP_MS = new ConcurrentHashMap<>();
+
     /** Records a right-click use so the following arm-swing is not mistaken for a mining attack. Called from the interact dispatch. */
     public static void noteUse(UUID playerId) {
         LAST_USE_MS.put(playerId, System.currentTimeMillis());
@@ -139,8 +168,14 @@ public final class ContraptionMining implements Listener {
         // called noteUse; skip arming if a use landed in the last breath. Genuine left-clicks never call
         // noteUse, so they still arm.
         java.util.UUID playerId = ((CraftPlayer) event.getPlayer()).getUniqueId();
+        long nowMs = System.currentTimeMillis();
         Long lastUse = LAST_USE_MS.get(playerId);
-        if (lastUse != null && System.currentTimeMillis() - lastUse < 250L) {
+        if (lastUse != null && nowMs - lastUse < 250L) {
+            return;
+        }
+        // A Q-drop sends the drop packet then a swing (LocalPlayer.dropItem swings) — that swing is not a mine.
+        Long lastDrop = LAST_DROP_MS.get(playerId);
+        if (lastDrop != null && nowMs - lastDrop < DROP_SWING_GRACE_MS) {
             return;
         }
         ServerPlayer player = ((CraftPlayer) event.getPlayer()).getHandle();
@@ -148,6 +183,16 @@ public final class ContraptionMining implements Listener {
         if (hit != null) {
             armDig(player, hit);
         }
+    }
+
+    /**
+     * Records a Q-drop so the swing the client sends right after it (see {@link #LAST_DROP_MS}) does not arm a
+     * dig / creative-break the looked-at cell. Fires before that swing since the client sends the drop packet
+     * first. MONITOR/ignoreCancelled so a cancelled drop still suppresses its swing (the swing was still sent).
+     */
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = false)
+    public void onDrop(PlayerDropItemEvent event) {
+        LAST_DROP_MS.put(event.getPlayer().getUniqueId(), System.currentTimeMillis());
     }
 
     /**
@@ -206,12 +251,12 @@ public final class ContraptionMining implements Listener {
                 it.remove();
                 continue;
             }
-            // Continuation is AIM-driven, not swing-cadence-driven (2026-07-17 — "los que no son insta break
-            // nunca terminan de romperse"): a held left-click against a packet-only cell does NOT reliably send
-            // continuous swings (the client attack-cooldown-gates re-swings on a fake target, and a wrong-tool
-            // dig takes several seconds), so keying the dig's life on recent swings killed it long before it
-            // finished. Instead the dig lives as long as the player keeps AIMING at the cell — the first swing
-            // arms it (see armDig), then aim carries it to completion. Looking away for a few ticks cancels it.
+            // Continuation needs BOTH a held button AND aim on the cell (fix — Rick: "when you stop holding the
+            // button it still mines"). The dig's LIFE is aim-driven (looking away for a few ticks cancels it), but
+            // its PROGRESS only advances while the player keeps swinging — the held-button test below. Freezing
+            // (not resetting) on a swing gap is what lets a slow attack-cooldown cadence between swings advance
+            // without ever losing progress, avoiding the earlier "los que no son insta break nunca terminan"
+            // regression that a hard swing-timeout cancel caused. The first swing arms the dig (see armDig).
             Hit hit = ContraptionInteractionListener.raycast(player);
             boolean onCell = hit != null && hit.state().id().equals(s.contraptionId) && hit.local().equals(s.local);
             if (!onCell) {
@@ -222,6 +267,12 @@ public final class ContraptionMining implements Listener {
                 continue; // a transient raycast miss (aim jitter) is tolerated; don't advance this tick
             }
             s.missTicks = 0;
+            // Held-button gate: advance only while the player is actively swinging (button held). No swing within
+            // SWING_HOLD_MS means the button was released — freeze the dig here (keep progress, no break) until they
+            // resume swinging or look away. This is what stops a single tap from mining the whole cell.
+            if (System.currentTimeMillis() - s.lastSwingMs > SWING_HOLD_MS) {
+                continue;
+            }
             ContraptionLevel level = entity.state().level();
             BlockState state = level.getBlockState(s.local);
             if (state.isAir()) {
@@ -293,6 +344,54 @@ public final class ContraptionMining implements Listener {
      * via {@code suppressDrops} = true for a wrong tool, matching vanilla's "wrong tool, no drops"), damages
      * the tool, and plays the block's break sound + a burst of particles.
      */
+    /**
+     * Breaks every contraption cell that can no longer survive after {@code origin} was removed, climbing the
+     * stack (bamboo, sugar cane, torches, rails …). Replaces the vanilla scheduled-tick cascade, which never runs
+     * in the hidden level (it isn't in the server's level-tick loop). Each broken cell drops its loot in the real
+     * world at its own cell centre; a guard + seen-set bound the walk.
+     */
+    private static void cascadeUnsupported(ContraptionLevel level, ServerLevel cLevel, ServerLevel realLevel,
+            BlockPos origin) {
+        java.util.ArrayDeque<BlockPos> queue = new java.util.ArrayDeque<>();
+        java.util.Set<BlockPos> seen = new java.util.HashSet<>();
+        for (net.minecraft.core.Direction d : net.minecraft.core.Direction.values()) {
+            queue.add(origin.relative(d));
+        }
+        int guard = 0;
+        while (!queue.isEmpty() && guard++ < 4096) {
+            BlockPos p = queue.poll();
+            if (!seen.add(p)) {
+                continue;
+            }
+            BlockState s = level.getBlockState(p);
+            if (s.isAir()) {
+                continue;
+            }
+            boolean survives;
+            try {
+                survives = s.canSurvive(cLevel, p);
+            } catch (Throwable t) {
+                survives = true; // a block whose survival check needs context we can't give — leave it be
+            }
+            if (survives) {
+                continue; // still supported (a normal block, or a plant whose base is intact)
+            }
+            Vec3 c = level.realWorldPositionOf(new Vec3(p.getX() + 0.5, p.getY() + 0.5, p.getZ() + 0.5));
+            BlockPos realPos = BlockPos.containing(c.x, c.y, c.z);
+            try {
+                for (ItemStack drop : Block.getDrops(s, cLevel, p, level.getBlockEntity(p))) {
+                    Block.popResource(realLevel, realPos, drop);
+                }
+            } catch (Throwable ignored) {
+                // no-loot block, or a drop that needs a tool context — still remove it below
+            }
+            level.setBlock(p, Blocks.AIR.defaultBlockState(), REMOVE_FLAGS);
+            for (net.minecraft.core.Direction d : net.minecraft.core.Direction.values()) {
+                queue.add(p.relative(d));
+            }
+        }
+    }
+
     private static void breakCell(ServerPlayer player, ContraptionState state, BlockPos local, BlockState blockState,
             boolean wrongTool, Vec3 faceWorld) {
         ContraptionLevel level = state.level();
@@ -346,6 +445,16 @@ public final class ContraptionMining implements Listener {
         // its cells dirty, so the engine's per-tick rebuild drops this cell's display/hitbox and the physics
         // world re-derives mass/shape next sync.
         level.setBlock(local, Blocks.AIR.defaultBlockState(), REMOVE_FLAGS);
+        // Cascade the support loss up the stack (user: "al romper un bambú sigue sin romperse todos los bambús").
+        // Vanilla would do this through SCHEDULED block ticks (bamboo's neighborChanged schedules a tick that
+        // then checks canSurvive), but the hidden contraption level is NOT in the server's level-tick loop, so
+        // those scheduled ticks never fire — updateNeighborsAt alone does nothing. So we walk it ourselves: any
+        // neighbour cell that can no longer survive (bamboo/sugar-cane/torch/rail with its support gone) is
+        // broken here, its loot dropped in the real world, and its own neighbours enqueued — climbing the whole
+        // bamboo tower in one pass. updateNeighborsAt is still fired for the (rare) support-dependent block that a
+        // future ticking path might handle, but the manual cascade is what actually clears the stack.
+        cascadeUnsupported(level, cLevel, realLevel, local);
+        level.updateNeighborsAt(local, blockState.getBlock());
         level.markCellsDirty();
 
         // Tool durability — one point per block broken, as vanilla, skipped in creative. hurtAndBreak is a
@@ -480,5 +589,6 @@ public final class ContraptionMining implements Listener {
         SESSIONS.remove(playerId);
         LAST_CREATIVE_BREAK_MS.remove(playerId);
         LAST_USE_MS.remove(playerId);
+        LAST_DROP_MS.remove(playerId);
     }
 }

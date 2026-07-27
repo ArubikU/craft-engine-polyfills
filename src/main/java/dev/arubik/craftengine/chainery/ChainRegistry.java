@@ -106,6 +106,25 @@ public final class ChainRegistry {
         return chain;
     }
 
+    /**
+     * Moves one endpoint of {@code chain} ({@code role} 0 = A, 1 = B) to {@code newPos}, keeping the reverse
+     * index in sync. Used when a captured anchor disassembles somewhere other than where it was assembled — the
+     * chain must follow its restored block to the new world cell instead of pointing at the stale original one.
+     */
+    public static void reanchor(Chain chain, int role, BlockPos newPos) {
+        BlockPos old = role == 0 ? chain.a : chain.b;
+        if (old.equals(newPos)) {
+            return;
+        }
+        unindex(endpointKey(chain.worldId, old), chain.id);
+        if (role == 0) {
+            chain.a = newPos.immutable();
+        } else {
+            chain.b = newPos.immutable();
+        }
+        BY_ENDPOINT.computeIfAbsent(endpointKey(chain.worldId, newPos), k -> new java.util.HashSet<>()).add(chain.id);
+    }
+
     private static void unindex(String key, UUID id) {
         java.util.Set<UUID> ids = BY_ENDPOINT.get(key);
         if (ids != null) {

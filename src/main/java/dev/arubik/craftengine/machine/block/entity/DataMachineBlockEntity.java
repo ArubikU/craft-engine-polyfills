@@ -186,6 +186,77 @@ public class DataMachineBlockEntity extends AbstractMachineBlockEntity {
         this.bars = bars != null ? bars : List.of();
     }
 
+    /** Bar id -> what it reads, from the definition's `source`. */
+    private String barSource(String barId) {
+        for (MachineDefinition.BarRef ref : definition.bars())
+            if (ref.bar().value().equals(barId))
+                return ref.source();
+        return barId;
+    }
+
+    /** The named tank, or the first one, or null. */
+    private dev.arubik.craftengine.fluid.FluidTank fluidTank(String name) {
+        for (var t : fluidTanks)
+            if (t.getName().equalsIgnoreCase(name))
+                return t;
+        return fluidTanks.isEmpty() ? null : fluidTanks.get(0);
+    }
+
+    private dev.arubik.craftengine.gas.GasTank gasTank(String name) {
+        for (var t : gasTanks)
+            if (t.getName().equalsIgnoreCase(name))
+                return t;
+        return gasTanks.isEmpty() ? null : gasTanks.get(0);
+    }
+
+    /**
+     * Current value/max for a gauge, resolved through the definition's `source`.
+     *
+     * <p>
+     * Without this a machine with two tanks had no way to say which gauge showed
+     * which — the base class only knew {@code progress}.
+     */
+    @Override
+    public double[] barStat(String id) {
+        String source = barSource(id);
+        if (source.startsWith("fluid:") || source.equals("fluid")) {
+            var tank = fluidTank(source.startsWith("fluid:") ? source.substring(6) : "");
+            if (tank == null)
+                return new double[] { 0, 0 };
+            return new double[] { tank.getFluid(getNMSLevel(), getMachinePos()).getAmount(), tank.getCapacity() };
+        }
+        if (source.startsWith("gas:") || source.equals("gas")) {
+            var tank = gasTank(source.startsWith("gas:") ? source.substring(4) : "");
+            if (tank == null)
+                return new double[] { 0, 0 };
+            return new double[] { tank.getGas(getNMSLevel(), getMachinePos()).getAmount(), tank.getCapacity() };
+        }
+        if (source.equals("fuel"))
+            return new double[] { burnTime, maxBurnTime };
+        return super.barStat(id);
+    }
+
+    /** The stored type, so a gauge can pick its per-liquid/per-gas art. */
+    @Override
+    public String barSubtype(String id) {
+        String source = barSource(id);
+        if (source.startsWith("fluid:") || source.equals("fluid")) {
+            var tank = fluidTank(source.startsWith("fluid:") ? source.substring(6) : "");
+            if (tank == null)
+                return "";
+            var stored = tank.getFluid(getNMSLevel(), getMachinePos());
+            return stored.isEmpty() ? "" : stored.getType().name().toLowerCase(java.util.Locale.ROOT);
+        }
+        if (source.startsWith("gas:") || source.equals("gas")) {
+            var tank = gasTank(source.startsWith("gas:") ? source.substring(4) : "");
+            if (tank == null)
+                return "";
+            var stored = tank.getGas(getNMSLevel(), getMachinePos());
+            return stored.isEmpty() ? "" : stored.getType().name().toLowerCase(java.util.Locale.ROOT);
+        }
+        return super.barSubtype(id);
+    }
+
     /** Which page the open menu is showing: 0 main, 1 upgrades, 2 overclock. */
     private int page = 0;
     private float overclock = 0f;

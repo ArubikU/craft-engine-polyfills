@@ -304,7 +304,15 @@ public final class ContraptionEntity {
         // Furniture-owned real entities (meta ItemDisplay + hitbox colliders) are excluded here —
         // see ContraptionEntityMirrorSwarm's own javadoc, "Furniture-owned real entities excluded"
         // — they're already mirrored by furnitureSwarm.render below.
-        entityMirrorSwarm.render(viewers, state.level(), state.furniture());
+        entityMirrorSwarm.render(viewers, state.level(), state.furniture(), pitch, roll, scale);
+        // Eject anything that has fallen into the contraption's void back into the real world (drops its items
+        // at its last visible position) — see ContraptionVoidDrop. Main thread here, with the real level.
+        if (realLevel != null) {
+            ContraptionVoidDrop.handle(state.level(), realLevel);
+            // Stick real-world projectiles onto this contraption on impact (they stay real-world entities; we only
+            // compute the hit and pin them to the moving hull) — see ContraptionProjectileCollision.
+            ContraptionProjectileCollision.tick(state, state.level(), realLevel);
+        }
         itemPickupSwarm.tick(state.level());
         // Scale threaded into BOTH mirrors (2026-07-16 fix, roadmap item #9): a scaled contraption's
         // CraftEngine entity-renderer block visuals and its captured furniture used to stay at size 1

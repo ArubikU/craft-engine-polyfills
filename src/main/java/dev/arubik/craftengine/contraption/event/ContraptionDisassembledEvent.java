@@ -31,19 +31,24 @@ public class ContraptionDisassembledEvent extends Event {
     private final World world;
     private final BlockPos snappedBearing;
     private final Set<BlockPos> restingPositions;
+    private final int quarterTurns;
 
     /**
      * @param contraptionId    the id of the now-gone contraption
      * @param world            the world its blocks were restored into
      * @param snappedBearing   the grid-snapped world position of the bearing origin after disassembly
      * @param restingPositions the world positions the restored blocks landed on — wrapped unmodifiable, never null
+     * @param quarterTurns     the grid-snapped yaw the structure was restored at, in 90° steps (0..3) — the same
+     *                         rotation the block positions were snapped through, so listeners can rotate any
+     *                         local-frame vector (e.g. a chain's attach offset) into the restored world frame
      */
     public ContraptionDisassembledEvent(UUID contraptionId, World world, BlockPos snappedBearing,
-            Set<BlockPos> restingPositions) {
+            Set<BlockPos> restingPositions, int quarterTurns) {
         this.contraptionId = contraptionId;
         this.world = world;
         this.snappedBearing = snappedBearing;
         this.restingPositions = Collections.unmodifiableSet(restingPositions);
+        this.quarterTurns = quarterTurns;
     }
 
     /** The id of the contraption that just disassembled. */
@@ -69,6 +74,11 @@ public class ContraptionDisassembledEvent extends Event {
     /** The (unmodifiable) set of world positions the restored blocks landed on. */
     public Set<BlockPos> getRestingPositions() {
         return restingPositions;
+    }
+
+    /** The grid-snapped restore yaw in 90° steps (0..3) — rotate a local-frame vector by this to reach the world frame. */
+    public int getQuarterTurns() {
+        return quarterTurns;
     }
 
     @Override

@@ -93,15 +93,13 @@ public final class FluidType {
             String drainSound,
             Key vanillaFluid,
             String tankVariant,
-            String translationKey,
-            String barItemTemplate,
-            int barLevels) {
+            String translationKey) {
 
         /** Neutral defaults, used as the base a data file overrides field by field. */
         public static FluidProperties defaults(String path) {
             return new FluidProperties(MB_PER_BUCKET, MB_PER_BUCKET, 4, 2, "water", 0xFFFFFFFF, 1.0, 1.0,
                     "minecraft:item.bucket.empty", "minecraft:item.bucket.fill", null, "water",
-                    "polyfill.liquid." + path, "cml:fluidlvl_%s_%d", 16);
+                    "polyfill.liquid." + path);
         }
     }
 
@@ -144,7 +142,7 @@ public final class FluidType {
         FluidType type = new FluidType(id, path.toUpperCase(Locale.ROOT),
                 new FluidProperties(unitMb, mbPerFullBlock, blockCollectDelay, carrierIoDelay, renderFamily, color,
                         density, viscosity, fillSound, drainSound, vanillaFluid, tankVariant,
-                        "polyfill.liquid." + path, "cml:fluidlvl_%s_%d", 16));
+                        "polyfill.liquid." + path));
         return REGISTRY.register(id, type);
     }
 
@@ -300,23 +298,6 @@ public final class FluidType {
         return EMPTY;
     }
 
-    /**
-     * The item id for one fill level of this liquid's gauge, e.g. level 7 of water.
-     *
-     * <p>
-     * Declared once per fluid rather than repeated in every machine's bar config —
-     * a gauge showing water looks the same in a furnace and in a refinery, so the
-     * machine only says where the bar goes and the fluid says how it looks.
-     */
-    public String barItem(int level) {
-        int clamped = Math.max(0, Math.min(properties.barLevels() - 1, level));
-        return String.format(properties.barItemTemplate(), properties.renderFamily(), clamped);
-    }
-
-    /** How many fill levels this liquid's gauge has. */
-    public int barLevels() {
-        return properties.barLevels();
-    }
 
     /** Minecraft i18n key for this liquid, resolved client-side from the pack lang. */
     public String translationKey() {

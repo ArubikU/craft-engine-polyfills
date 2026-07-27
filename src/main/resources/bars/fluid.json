@@ -1,11 +1,8 @@
 {
   "id": "polyfills:fluid",
   "model": "column",
-  "family": "water",
   "name": "lang:polyfill.ui.fluid",
   "generate": {
-    "source": "fluid",
-    "item": "cml:%family%_%suffix%_%level%",
     "empty_icon": "cml:gui_empty",
     "lore": ["%value%/%max% mB", "%percent%%"],
     "parts": [
@@ -13,6 +10,16 @@
       { "suffix": "midbot", "levels": 18 },
       { "suffix": "midtop", "levels": 18 },
       { "suffix": "top",    "levels": 16 }
-    ]
+    ],
+    "types": {
+      "default":     "cml:water_%suffix%_%level%",
+      "water":       "cml:water_%suffix%_%level%",
+      "lava":        "cml:lava_%suffix%_%level%",
+      "slime":       "cml:lava_%suffix%_%level%",
+      "honey":       "cml:lava_%suffix%_%level%",
+      "experience":  "cml:xp_%suffix%_%level%",
+      "milk":        "cml:water_%suffix%_%level%",
+      "powder_snow": "cml:water_%suffix%_%level%"
+    }
   }
 }

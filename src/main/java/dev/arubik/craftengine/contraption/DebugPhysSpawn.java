@@ -129,6 +129,13 @@ public final class DebugPhysSpawn {
      */
     public static ContraptionEntity spawn(World bukkitWorld, Vec3 anchor, Map<BlockPos, BlockState> cells,
             Map<BlockPos, CompoundTag> blockEntities) {
+        return spawn(bukkitWorld, anchor, cells, blockEntities, BearingType.PHYS);
+    }
+
+    /** As {@link #spawn(World, Vec3, Map, Map)} but assembles as {@code type} (PHYS or VEHICLE) — the vehicle
+     *  variant attaches a {@code VehicleControlBehavior} so a driver can steer it. */
+    public static ContraptionEntity spawn(World bukkitWorld, Vec3 anchor, Map<BlockPos, BlockState> cells,
+            Map<BlockPos, CompoundTag> blockEntities, BearingType type) {
         boolean __prof = dev.arubik.craftengine.contraption.ContraptionPerf.enabled();
         long __t0 = __prof ? System.nanoTime() : 0;
         Level realLevel = ((CraftWorld) bukkitWorld).getHandle();
@@ -157,7 +164,7 @@ public final class DebugPhysSpawn {
         // Through the normal path, not a hand-rolled PhysicsBehavior: this is what records
         // BearingType.PHYS on the state, which is what makes the body persist/rehydrate and read as a
         // phys contraption everywhere else. rpm/su are inert for PHYS (no motor) — see the PHYS case.
-        ContraptionAssembler.attachDefaultBehavior(realLevel, BlockPos.containing(anchor), state, BearingType.PHYS,
+        ContraptionAssembler.attachDefaultBehavior(realLevel, BlockPos.containing(anchor), state, type,
                 ContraptionAssembler.DEFAULT_ROTATIONAL_RPM,
                 dev.arubik.craftengine.contraption.behavior.BearingBlockBehavior.DEFAULT_SU_PER_BLOCK);
         ContraptionEntity entity = ContraptionManager.register(new ContraptionEntity(state));

@@ -79,22 +79,53 @@ public final class ChainInteraction {
         player.sendPacket(despawnPacket, false);
     }
 
-    /** Per-viewer spawn/move, same shape as the other chain packet entities. */
+    /**
+     * Per-viewer spawn/move, same shape as the other chain packet entities. A viewer that was showing this
+     * entity but is NOT in {@code viewers} this tick is sent a despawn — so a LOD pass that drops far viewers/
+     * segments from the list actually removes the client-side interaction box (before, {@code retainAll} only
+     * forgot them, leaving a ghost entity the client kept forever).
+     */
     public void render(List<Player> viewers, double x, double y, double z) {
         java.util.Set<UUID> current = new java.util.HashSet<>();
+        java.util.Map<UUID, Player> live = new java.util.HashMap<>();
         for (Player p : viewers) {
             UUID id = uuidOf(p);
             if (id == null) {
                 continue;
             }
             current.add(id);
+            live.put(id, p);
             if (shownTo.add(id)) {
                 spawn(p, x, y, z);
             } else {
                 updatePosition(p, x, y, z);
             }
         }
-        shownTo.retainAll(current);
+        // Despawn for anyone who was shown last tick but dropped out of range this tick (LOD / walked away).
+        for (UUID gone : new java.util.HashSet<>(shownTo)) {
+            if (!current.contains(gone)) {
+                Player p = live.get(gone);
+                if (p == null) {
+                    p = playerByUuid(gone);
+                }
+                if (p != null) {
+                    despawn(p);
+                }
+                shownTo.remove(gone);
+            }
+        }
+    }
+
+    private static Player playerByUuid(UUID id) {
+        org.bukkit.entity.Player b = org.bukkit.Bukkit.getPlayer(id);
+        if (b == null) {
+            return null;
+        }
+        try {
+            return net.momirealms.craftengine.bukkit.api.BukkitAdaptor.adapt(b);
+        } catch (Throwable ignored) {
+            return null;
+        }
     }
 
     /** Despawns for the given viewers and drops this entity from the global lookup. */

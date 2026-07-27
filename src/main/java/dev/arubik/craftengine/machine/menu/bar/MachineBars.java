@@ -71,58 +71,50 @@ public final class MachineBars {
     }
 
     /**
-     * Builds per-slot segments from the fluid or gas registry.
+     * Builds per-slot segments from the gauge's own type table.
      *
      * <pre>{@code
-     * generate:
-     *   source: fluid                            # fluid | gas | none
-     *   item: "cml:%family%_%suffix%_%level%"    # every item id this gauge uses
-     *   lore: ["%value%/%max% mB", "%percent%%"]
-     *   parts:                                   # one per slot, in slot order
-     *     - { suffix: bottom, levels: 16 }
-     *     - { suffix: midbot, levels: 18 }
+     * empty_icon: "cml:gui_empty"
+     * lore: ["%value%/%max% mB", "%percent%%"]
+     * parts:                                  # one per slot, in slot order
+     *   - { suffix: bottom, levels: 16 }
+     *   - { suffix: midbot, levels: 18 }
+     * types:                                  # the item every level of every type draws
+     *   default:    "cml:water_%suffix%_%level%"
+     *   water:      "cml:water_%suffix%_%level%"
+     *   lava:       "cml:lava_%suffix%_%level%"
+     *   experience: "cml:xp_%suffix%_%level%"
      * }</pre>
      *
      * <p>
+     * The type table lives here rather than on the liquid because it is a property of
+     * this gauge's art, not of the liquid: two gauges may draw the same liquid with
+     * different models. {@code default} covers a type the table does not name, so a
+     * liquid added later still renders.
+     *
+     * <p>
      * Each level's range is {@code round(i * 100 / levels)}, which reproduces the
-     * hand-written ranges exactly. The item id comes from the {@code item} template
-     * — the models a gauge uses are stated in the file rather than assembled in
-     * code — with {@code %family%} filled in per registered type, so adding a liquid
-     * gives it a gauge with no edit at all. {@code source: none} skips the registry
-     * and emits one untyped run, which is what the fuel and progress gauges need.
+     * hand-written 16- and 18-level ranges exactly.
      */
     private static List<List<MachineBar.BarState>> generateSegments(Object o, String barName) {
         if (!(o instanceof Map<?, ?> gen))
             return null;
-        String source = str(gen.get("source"), "fluid");
-        boolean gas = "gas".equalsIgnoreCase(source);
-        boolean typed = !"none".equalsIgnoreCase(source);
-        String template = str(gen.get("item"), null);
-        if (template == null)
-            return null; // a gauge must say which items it draws
+        if (!(gen.get("parts") instanceof List<?> parts) || parts.isEmpty())
+            return null;
         String emptyIcon = str(gen.get("empty_icon"), "cml:gui_empty");
         List<String> lore = new ArrayList<>();
         if (gen.get("lore") instanceof List<?> ll)
             for (Object l : ll)
                 lore.add(String.valueOf(l));
-        if (!(gen.get("parts") instanceof List<?> parts) || parts.isEmpty())
-            return null;
 
-        // Family -> the type whose name labels it, plus every other type sharing it.
-        record Variant(String family, String type) {
-        }
-        List<Variant> variants = new ArrayList<>();
-        if (typed && gas) {
-            for (var t : dev.arubik.craftengine.gas.GasType.REGISTRY.values())
-                if (!t.isEmpty())
-                    variants.add(new Variant(t.id().value(), t.name().toLowerCase(java.util.Locale.ROOT)));
-        } else if (typed) {
-            for (var t : dev.arubik.craftengine.fluid.FluidType.REGISTRY.values())
-                if (t != dev.arubik.craftengine.fluid.FluidType.EMPTY)
-                    variants.add(new Variant(t.renderFamily(), t.name().toLowerCase(java.util.Locale.ROOT)));
-        }
-        String defaultFamily = variants.isEmpty() ? str(gen.get("family"), "")
-                : variants.get(0).family();
+        // type name -> item template. `default` is the untyped run the bar falls back to.
+        Map<String, String> templates = new java.util.LinkedHashMap<>();
+        if (gen.get("types") instanceof Map<?, ?> typeMap)
+            for (Map.Entry<?, ?> e : typeMap.entrySet())
+                templates.put(String.valueOf(e.getKey()), String.valueOf(e.getValue()));
+        String fallback = templates.remove("default");
+        if (fallback == null && templates.isEmpty())
+            return null; // a gauge must say which items it draws
 
         List<List<MachineBar.BarState>> out = new ArrayList<>();
         for (Object partObj : parts) {
@@ -133,11 +125,12 @@ public final class MachineBars {
             List<MachineBar.BarState> states = new ArrayList<>();
             states.add(new MachineBar.BarState(0, 0, emptyIcon, null, List.of(), null));
 
-            // The default (untyped) run first, matching how the hand-written bars put the
-            // fallback family ahead of the type-qualified entries.
-            appendLevels(states, template, defaultFamily, suffix, levels, barName, lore, null);
-            for (Variant v : variants)
-                appendLevels(states, template, v.family(), suffix, levels, barName, lore, v.type());
+            // Untyped run first, matching how the hand-written bars put the fallback
+            // ahead of the type-qualified entries.
+            if (fallback != null)
+                appendLevels(states, fallback, suffix, levels, barName, lore, null);
+            for (Map.Entry<String, String> e : templates.entrySet())
+                appendLevels(states, e.getValue(), suffix, levels, barName, lore, e.getKey());
             out.add(states);
         }
         return out;
@@ -147,14 +140,12 @@ public final class MachineBars {
         return value == null ? fallback : String.valueOf(value);
     }
 
-    private static void appendLevels(List<MachineBar.BarState> states, String template, String family,
+    private static void appendLevels(List<MachineBar.BarState> states, String template,
             String suffix, int levels, String barName, List<String> lore, String type) {
         int previous = 0;
         for (int i = 1; i <= levels; i++) {
             int max = (int) Math.round(i * 100.0 / levels);
-            String item = template.replace("%family%", family)
-                    .replace("%suffix%", suffix)
-                    .replace("%level%", Integer.toString(i));
+            String item = template.replace("%suffix%", suffix).replace("%level%", Integer.toString(i));
             states.add(new MachineBar.BarState(previous + 1, max, item, barName, lore, type));
             previous = max;
         }

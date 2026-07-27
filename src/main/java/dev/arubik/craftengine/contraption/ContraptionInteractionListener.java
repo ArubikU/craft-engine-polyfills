@@ -205,18 +205,16 @@ public final class ContraptionInteractionListener implements Listener {
         ServerPlayer player = ((CraftPlayer) event.getPlayer()).getHandle();
         Hit hit = raycast(player);
         if (hit == null) {
-            if (!ContraptionManager.all().isEmpty()) {
-                // A contraption exists but the raycast missed every one of its cells — log once
-                // so a "nothing happens on click" report can be told apart from "hit but the
-                // dispatch itself failed" without guessing (DEBUG-only, this listener has no
-                // other diagnostic output today).
+            if (PLACEMENT_DEBUG && !ContraptionManager.all().isEmpty()) {
                 org.bukkit.Bukkit.getLogger().info("[Contraption] interact raycast: no hit (" + right + "/"
                         + left + ") for " + event.getPlayer().getName());
             }
             return; // not looking at any contraption cell — let vanilla/CE handle the real click normally
         }
-        org.bukkit.Bukkit.getLogger()
-                .info("[Contraption] interact raycast HIT local=" + hit.local() + " right=" + right);
+        if (PLACEMENT_DEBUG) {
+            org.bukkit.Bukkit.getLogger()
+                    .info("[Contraption] interact raycast HIT local=" + hit.local() + " right=" + right);
+        }
 
         // Left-click now does BOTH: vanilla's non-destructive attack hook (BlockStateBase#attack —
         // note-block-style "hit to toggle") is forwarded, AND a hold-to-mine dig is armed against the
@@ -255,7 +253,8 @@ public final class ContraptionInteractionListener implements Listener {
      */
     private static boolean tryHammerDisassemblePhys(ServerPlayer player, Hit hit) {
         ContraptionState state = hit.state();
-        if (state.bearingType() != BearingType.PHYS) {
+        // A VEHICLE is a PHYS body too (piloted), so the same hammer-any-cell disassemble applies to it.
+        if (state.bearingType() != BearingType.PHYS && state.bearingType() != BearingType.VEHICLE) {
             return false;
         }
         org.bukkit.entity.Player bukkitPlayer = (org.bukkit.entity.Player) player.getBukkitEntity();
@@ -272,9 +271,14 @@ public final class ContraptionInteractionListener implements Listener {
             return true;
         }
         try {
+            // Release the driver (if any) before the body is gone, so no dangling helm binding survives.
+            java.util.UUID driver = VehicleDriverRegistry.driverOf(state.id());
+            if (driver != null) {
+                VehicleDriverRegistry.clearDriver(driver);
+            }
             ContraptionAssembler.disassemble(world, entity);
             world.playSound(bukkitPlayer.getLocation(), org.bukkit.Sound.BLOCK_ANVIL_USE, 0.7f, 1.4f);
-            bukkitPlayer.sendMessage("§7Phys contraption disassembled, blocks restored.");
+            bukkitPlayer.sendMessage("§7Contraption disassembled, blocks restored.");
         } catch (Throwable t) {
             org.bukkit.Bukkit.getLogger().warning("[Contraption] phys hammer disassemble failed: " + t);
         }
@@ -735,8 +739,10 @@ public final class ContraptionInteractionListener implements Listener {
                 .getCustomItemId(org.bukkit.craftbukkit.inventory.CraftItemStack.asBukkitCopy(held));
         if (customItemId != null) {
             boolean placed = tryPlaceCraftEngineCustomItem(level, player, hitResult, hand, held);
-            org.bukkit.Bukkit.getLogger().info("[Contraption] CE-item placement id=" + customItemId + " hand=" + hand
-                    + " placed=" + placed);
+            if (PLACEMENT_DEBUG) {
+                org.bukkit.Bukkit.getLogger().info("[Contraption] CE-item placement id=" + customItemId + " hand="
+                        + hand + " placed=" + placed);
+            }
             if (placed) {
                 playPlaceSound(level, targetPos, hitResult.getDirection());
             }
@@ -749,8 +755,10 @@ public final class ContraptionInteractionListener implements Listener {
 
         BlockPlaceContext context = new BlockPlaceContext(level.serverLevel(), player, hand, held, hitResult);
         InteractionResult result = blockItem.place(context);
-        org.bukkit.Bukkit.getLogger().info("[Contraption] vanilla placement item=" + held + " hand=" + hand
-                + " result=" + result + " consumes=" + result.consumesAction());
+        if (PLACEMENT_DEBUG) {
+            org.bukkit.Bukkit.getLogger().info("[Contraption] vanilla placement item=" + held + " hand=" + hand
+                    + " result=" + result + " consumes=" + result.consumesAction());
+        }
         if (result.consumesAction()) {
             playPlaceSound(level, targetPos, hitResult.getDirection());
         }

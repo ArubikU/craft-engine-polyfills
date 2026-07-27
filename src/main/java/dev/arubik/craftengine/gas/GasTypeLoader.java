@@ -65,9 +65,7 @@ public final class GasTypeLoader {
                 view.key("vent_particle", "minecraft", base.ventParticle()),
                 view.rangedInt("vent_per_particle", base.ventPerParticle(), 1, 100000),
                 view.rangedDouble("vent_spread", base.ventSpread(), 0.0, 8.0),
-                view.rangedDouble("vent_speed", base.ventSpeed(), 0.0, 8.0),
-                view.string("bar_item_template", base.barItemTemplate()),
-                view.rangedInt("bar_levels", base.barLevels(), 1, 64)));
+                view.rangedDouble("vent_speed", base.ventSpeed(), 0.0, 8.0)));
     }
 
     /** Accepts {@code "#RRGGBB"}, {@code "#AARRGGBB"} or a raw integer. */

@@ -65,6 +65,8 @@ public final class MinecartBearing {
     private static final NamespacedKey ASSEMBLED = key("contraption_assembled");
     private static final NamespacedKey CONTRAPTION_ID = key("contraption_id");
     private static final NamespacedKey STRUCTURE = key("contraption_structure");
+    private static final NamespacedKey YAW = key("contraption_yaw");
+    private static final NamespacedKey EXPLOSION_PROOF = key("contraption_explosion_proof");
     /** Marks a held ItemStack as a packed minecart contraption (see {@link #pickUpToItem}/{@link #placeFromItem}). */
     private static final NamespacedKey ITEM_MARKER = key("contraption_minecart_item");
 
@@ -98,6 +100,9 @@ public final class MinecartBearing {
         }
 
         Set<BlockPos> structure = GlueRegistry.structureAt(bukkitWorld.getUID(), bearingPos);
+        // Read the blast-immunity flag NOW, while the bearing block is still in the world (capture removes it below).
+        double explosionProof = dev.arubik.craftengine.contraption.behavior.BearingBlockBehavior
+                .explosionProofAt(realLevel, bearingPos);
         // Veto hook (public API) — parity with ContraptionAssembler#assemble, fired BEFORE any real
         // block is read/removed. Cancelling aborts (returns null, same as no rail beneath would).
         if (ContraptionAssembler.fireAssembleCancelled(bukkitWorld, bearingPos, BearingType.MINECART, structure, null)) {
@@ -135,6 +140,7 @@ public final class MinecartBearing {
         ContraptionState state = new ContraptionState(id, bukkitWorld.getUID(), captured.level(),
                 bearingPos.getX(), bearingPos.getY(), bearingPos.getZ());
         state.setBearingType(BearingType.MINECART); // was never set — left bearingType null (broke the chain tether)
+        state.setExplosionProof(explosionProof);
         state.setFurniture(furnitureResult.furniture());
         // Task 1 parity (see ContraptionAssembler#assemble's matching block): re-register any
         // real player who was sitting in a captured seat at the exact moment of assembly.
@@ -212,7 +218,7 @@ public final class MinecartBearing {
             state.level().dispose();
         }
         minecart.remove();
-        ContraptionAssembler.fireDisassembled(state.id(), bukkitWorld, snapped, restingPositions);
+        ContraptionAssembler.fireDisassembled(state.id(), bukkitWorld, snapped, restingPositions, quarterTurns);
     }
 
     /**
@@ -269,7 +275,7 @@ public final class MinecartBearing {
         } catch (Throwable ignored) {
             // the whole contraption is being torn down regardless
         }
-        ContraptionAssembler.fireDisassembled(state.id(), bukkitWorld, snapped, restingPositions);
+        ContraptionAssembler.fireDisassembled(state.id(), bukkitWorld, snapped, restingPositions, quarterTurns);
     }
 
     private static void tag(Entity minecart, UUID contraptionId, boolean assembled) {
@@ -293,6 +299,13 @@ public final class MinecartBearing {
         try {
             byte[] bytes = ContraptionStructureNbt.toBytes(ContraptionStructureNbt.dump(state.level()));
             minecart.getPersistentDataContainer().set(STRUCTURE, PersistentDataType.BYTE_ARRAY, bytes);
+            // Persist the contraption's CURRENT accumulated yaw so it keeps its orientation across a restart
+            // (user: "al reiniciar el sv el minecart bearing... pierde su orientacion original"). The structure
+            // NBT only holds the block layout at capture (yaw 0); the yaw grows as the minecart turns, so it must
+            // be saved separately and re-applied on #rehydrate — mirrors the ghast's yawOffset persistence.
+            minecart.getPersistentDataContainer().set(YAW, PersistentDataType.DOUBLE, state.yawRadians());
+            minecart.getPersistentDataContainer().set(EXPLOSION_PROOF, PersistentDataType.DOUBLE,
+                    state.explosionProof());
         } catch (IOException e) {
             CraftEnginePolyfills.instance().getLogger()
                     .warning("[Contraption] failed to save minecart bearing structure: " + e);
@@ -344,6 +357,20 @@ public final class MinecartBearing {
         state.setFurniture(ContraptionFurnitureCapture.restoreIntoFakeLevel(level, level.furnitureRecords()));
         for (MovementBehavior autoBehavior : ContraptionCapture.resolveAutoBehaviors(level)) {
             state.addBehavior(autoBehavior);
+        }
+        // Restore the persisted orientation (user: "al reiniciar el sv el minecart bearing... pierde su
+        // orientacion original"). The state is constructed at yaw 0 and the structure NBT only holds the
+        // capture-time (yaw-0) block layout, so the accumulated yaw the contraption had turned to must be
+        // re-applied here. MinecartFollowBehavior baselines its raw-yaw accumulator to state.yawRadians() on
+        // its first tick (rawAccumYaw = refAccumYaw = state.yawRadians()), so setting it BEFORE the behavior
+        // is added makes the cart's future turns accumulate from this restored orientation instead of 0.
+        Double savedProof = minecart.getPersistentDataContainer().get(EXPLOSION_PROOF, PersistentDataType.DOUBLE);
+        if (savedProof != null) {
+            state.setExplosionProof(savedProof);
+        }
+        Double savedYaw = minecart.getPersistentDataContainer().get(YAW, PersistentDataType.DOUBLE);
+        if (savedYaw != null) {
+            state.setYawRadians(savedYaw);
         }
         state.addBehavior(new MinecartFollowBehavior(minecart.getUniqueId()));
         ContraptionManager.register(new ContraptionEntity(state));

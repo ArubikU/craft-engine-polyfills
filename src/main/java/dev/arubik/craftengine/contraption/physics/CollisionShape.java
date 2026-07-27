@@ -59,6 +59,27 @@ public final class CollisionShape {
      */
     public static final int MAX_SAMPLE_POINTS = 2048;
 
+    /**
+     * #1 (Sable's {@code RapierVoxelColliderBakery.Util.memoize} keyed on BlockState) — a block's collision
+     * VoxelShape at the origin depends ONLY on its state, so it is computed once per distinct state ever seen and
+     * reused for every cell and every rebuild. A big platform of one block used to re-run {@code getCollisionShape}
+     * once per cell per rebuild; now it is a single map hit. The set of distinct states is finite, so the cache is
+     * bounded in practice; ConcurrentHashMap because the shape build can run off the game thread.
+     */
+    private static final java.util.Map<BlockState, VoxelShape> SHAPE_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
+
+    private static VoxelShape collisionShapeOf(BlockState state) {
+        return SHAPE_CACHE.computeIfAbsent(state, s -> {
+            try {
+                return s.getCollisionShape(EmptyBlockGetter.INSTANCE, BlockPos.ZERO);
+            } catch (Exception e) {
+                // A block whose shape queries its own level/BE can't resolve against EmptyBlockGetter — a full
+                // cube (blunt) beats dropping the cell (a hole the body falls through).
+                return Shapes.block();
+            }
+        });
+    }
+
     private final List<AABB> boxes;
     private final List<Vector3d> samplePoints;
     private final double boundingRadius;
@@ -83,22 +104,35 @@ public final class CollisionShape {
         if (level == null) {
             return EMPTY;
         }
+        // #4 (Sable idea) — cached raw block access: cells are read through the last LevelChunk instead of a
+        // fresh chunk-source lookup per cell, so a compact structure's cells (mostly one chunk) skip the getChunk
+        // map walk. Falls back to level.getBlockState if the ServerLevel isn't reachable.
+        net.minecraft.server.level.ServerLevel sl = null;
+        try {
+            sl = level.serverLevel();
+        } catch (Throwable ignored) {
+            sl = null;
+        }
+        long lastChunkKey = Long.MIN_VALUE;
+        net.minecraft.world.level.chunk.LevelChunk lastChunk = null;
         VoxelShape combined = Shapes.empty();
         boolean any = false;
         for (BlockPos local : level.localPositions()) {
-            BlockState state = level.getBlockState(local);
+            BlockState state;
+            if (sl != null) {
+                long ck = net.minecraft.world.level.ChunkPos.asLong(local.getX() >> 4, local.getZ() >> 4);
+                if (lastChunk == null || ck != lastChunkKey) {
+                    lastChunkKey = ck;
+                    lastChunk = sl.getChunk(local.getX() >> 4, local.getZ() >> 4);
+                }
+                state = lastChunk.getBlockState(local);
+            } else {
+                state = level.getBlockState(local);
+            }
             if (state.isAir()) {
                 continue;
             }
-            VoxelShape shape;
-            try {
-                shape = state.getCollisionShape(EmptyBlockGetter.INSTANCE, BlockPos.ZERO);
-            } catch (Exception e) {
-                // A block whose shape queries its own level/BE cannot be resolved against
-                // EmptyBlockGetter. Fall back to a full cube rather than dropping the cell — a
-                // missing collider is a hole the body falls through; an oversized one is merely blunt.
-                shape = Shapes.block();
-            }
+            VoxelShape shape = collisionShapeOf(state); // #1 — memoized per BlockState
             if (shape.isEmpty()) {
                 continue; // genuinely non-colliding (torch, plant) — contributes no geometry
             }
@@ -164,16 +198,41 @@ public final class CollisionShape {
                 }
             }
         }
+        // #2 (Sable's interior-face culling) — optimize().toAabbs() already collapses cell-internal faces, but two
+        // MERGED boxes that touch still each spawn samples on their shared face, which is buried inside the union
+        // and can never be a contact point. Drop any sample strictly inside another box: it trims the per-substep
+        // contact cloud (the sample loop runs every substep) with no loss of manifold on the true outer surface.
         List<Vector3d> out = new ArrayList<>(corners.size() + faces.size());
-        out.addAll(corners);
+        for (Vector3d p : corners) {
+            if (!strictlyInsideAny(p, boxes)) {
+                out.add(p);
+            }
+        }
         for (Vector3d p : faces) {
             if (out.size() >= MAX_SAMPLE_POINTS) {
                 break;
             }
-            out.add(p);
+            if (!strictlyInsideAny(p, boxes)) {
+                out.add(p);
+            }
         }
         return out;
     }
+
+    /** Whether {@code p} sits strictly inside any box (all axes between min and max by more than {@link #INSIDE_EPS})
+     *  — i.e. buried in the union, so it can never touch anything and is not worth sampling. */
+    private static boolean strictlyInsideAny(Vector3d p, List<AABB> boxes) {
+        for (AABB b : boxes) {
+            if (p.x > b.minX + INSIDE_EPS && p.x < b.maxX - INSIDE_EPS
+                    && p.y > b.minY + INSIDE_EPS && p.y < b.maxY - INSIDE_EPS
+                    && p.z > b.minZ + INSIDE_EPS && p.z < b.maxZ - INSIDE_EPS) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static final double INSIDE_EPS = 1.0E-4;
 
     /** Walks one face of {@code box} on a {@link #SAMPLE_SPACING} grid, skipping the corners already emitted. */
     private static void addFaceSamples(List<Vector3d> out, AABB box, int axis, int side) {

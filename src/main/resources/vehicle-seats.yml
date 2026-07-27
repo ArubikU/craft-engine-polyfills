@@ -1,0 +1,12 @@
+# Driver seats for VEHICLE contraptions (steer-vehicle feature).
+#
+# List the furniture ids whose seats take the HELM: the first player to sit in one of these on a
+# VEHICLE contraption becomes its driver (WASD move, A/D turn, jump up, sprint down); anyone else is
+# a passenger. Ids use the same "namespace:name" spelling as everywhere else (e.g. cml:vehicle_seat).
+#
+# Fallback: if a vehicle has NO seat from this list, ANY seat drives — so a vehicle works out of the
+# box with any chair. Add dedicated helm furniture here to REQUIRE a specific seat instead.
+#
+# Edited live: re-read on plugin enable and on CraftEngine reload.
+seats:
+  - cml:vehicle_seat

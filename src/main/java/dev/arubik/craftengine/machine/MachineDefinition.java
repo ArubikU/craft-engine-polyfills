@@ -84,10 +84,15 @@ public final class MachineDefinition {
     /**
      * A gauge this machine shows: which {@code bars/*.json} definition, and where.
      *
-     * @param bar   the definition id
-     * @param slots menu slots it occupies; empty uses the definition's own default
+     * @param bar    the definition id
+     * @param slots  menu slots it occupies
+     * @param source what the gauge reads: {@code progress}, {@code fuel}, or
+     *               {@code fluid:<tank>} / {@code gas:<tank>} naming one of this
+     *               machine's tanks. A machine with two tanks needs this to say which
+     *               gauge shows which; it defaults to the bar's own id, which covers
+     *               the single-tank case
      */
-    public record BarRef(Key bar, int[] slots) {
+    public record BarRef(Key bar, int[] slots, String source) {
     }
 
     /** A tank the machine owns. */

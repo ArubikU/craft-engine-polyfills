@@ -400,6 +400,27 @@ public class BearingBlockBehavior extends BukkitBlockBehavior implements EntityB
         return behavior == null ? DEFAULT_SU_PER_BLOCK : behavior.suPerBlock();
     }
 
+    /** Config blast immunity 0..1: 0 = cells break normally, 1 = immune (only pushed), between = partial. */
+    private double explosionProof;
+
+    public double explosionProof() {
+        return explosionProof;
+    }
+
+    void setExplosionProof(double explosionProof) {
+        this.explosionProof = Math.max(0.0, Math.min(1.0, explosionProof));
+    }
+
+    /** The {@code explosionProof} value (0..1) of the bearing block at {@code pos}, or 0 if there's no bearing there. */
+    public static double explosionProofAt(Level level, BlockPos pos) {
+        BlockState state = level.getBlockState(pos);
+        ImmutableBlockState ce = BlockStateUtils.getOptionalCustomBlockState(state).orElse(null);
+        if (ce == null || ce.isEmpty())
+            return 0.0;
+        BearingBlockBehavior behavior = ce.behavior().getFirst(BearingBlockBehavior.class);
+        return behavior == null ? 0.0 : behavior.explosionProof();
+    }
+
     public static class Factory implements BlockBehaviorFactory<BlockBehavior> {
         @Override
         public BlockBehavior create(BlockDefinition block, ConfigSection arguments) {
@@ -452,12 +473,30 @@ public class BearingBlockBehavior extends BukkitBlockBehavior implements EntityB
             List<MachineBar> bars = MachineBars.parse(arguments.get("bars"));
             MachineMenuConfig menuConfig = MachineMenuConfig.parse(arguments::get);
 
-            return new BearingBlockBehavior(block, type, rpm, suPerBlock, distance, speed, pistonMode, rrDelay,
-                    headBlock, pipeNS, pipeWE, pipeUD, upgrades, bars, menuConfig);
+            BearingBlockBehavior behavior = new BearingBlockBehavior(block, type, rpm, suPerBlock, distance, speed,
+                    pistonMode, rrDelay, headBlock, pipeNS, pipeWE, pipeUD, upgrades, bars, menuConfig);
+            behavior.setExplosionProof(parseProof(arguments.getOrDefault("explosionProof", 0.0)));
+            return behavior;
         }
 
         private static String str(Object o) {
             return o == null ? null : o.toString();
+        }
+
+        /** Parses {@code explosionProof} as a 0..1 float, accepting legacy {@code true}/{@code false}. */
+        private static double parseProof(Object o) {
+            String s = String.valueOf(o).trim();
+            if (s.equalsIgnoreCase("true")) {
+                return 1.0;
+            }
+            if (s.equalsIgnoreCase("false")) {
+                return 0.0;
+            }
+            try {
+                return Double.parseDouble(s);
+            } catch (NumberFormatException e) {
+                return 0.0;
+            }
         }
 
         /** Parse one upgrade item's attribute-modifier list — identical to FanMachineBehavior.parseMods. */

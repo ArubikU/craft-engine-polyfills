@@ -22,7 +22,7 @@ import net.momirealms.craftengine.core.util.Key;
  *   "mb_per_full_block": 1000,  // mB to place one block in the world
  *   "block_collect_delay": 12,  // ticks between pulls when harvesting world blocks
  *   "carrier_io_delay": 8,      // ticks between carrier-to-carrier transfers
- *   "render_family": "lava",    // pack model family: water | lava | xp
+ *   "render_family": "lava",    // pack model family for the world/tank: water | lava | xp
  *   "tank_variant": "lava",     // value written to the tank's `fluidtype` blockstate
  *   "color": "#CF5A16",
  *   "density": 3.0,             // relative to water; drives gravity head
@@ -75,9 +75,7 @@ public final class FluidTypeLoader {
                 view.string("drain_sound", base.drainSound()),
                 view.has("vanilla_fluid") ? view.key("vanilla_fluid", "minecraft") : base.vanillaFluid(),
                 view.string("tank_variant", base.tankVariant()),
-                view.string("translation_key", base.translationKey()),
-                view.string("bar_item_template", base.barItemTemplate()),
-                view.rangedInt("bar_levels", base.barLevels(), 1, 64)));
+                view.string("translation_key", base.translationKey())));
     }
 
     /** Accepts {@code "#RRGGBB"}, {@code "#AARRGGBB"} or a raw integer. */

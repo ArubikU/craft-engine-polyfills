@@ -28,6 +28,12 @@ public final class ChainRenderer {
     /** Interaction hitboxes per rendered link — 3× the links, spread along each segment to fill the gaps. */
     private static final int HITBOX_PER_LINK = 3;
 
+    /** Max INTERACTION hitboxes spawned in one 1-block world cell per tick, across ALL chains — the density cap
+     *  that stops N stacked chains between two blocks from spawning ~N×hitboxes of overlapping clickboxes. A
+     *  click in that cell still resolves to whichever chain kept a box there (they overlap, so it's ambiguous
+     *  anyway). Sized to let a lone chain's own {@link #HITBOX_PER_LINK} boxes through, but collapse a pile-up. */
+    private static final int MAX_HITBOXES_PER_CELL = 3;
+
     /**
      * The BLOCK state a link renders as — resolved from the chain material's configured link id, so ANY id
      * works and shows its real BLOCK model:
@@ -69,7 +75,8 @@ public final class ChainRenderer {
      * midpoint, oriented along it. Spawns/despawns links to match the segment count and syncs their position
      * to whoever is tracking the chain's chunks.
      */
-    public static void syncRope(Chain chain, World world, ChainRope rope) {
+    public static void syncRope(Chain chain, World world, ChainRope rope,
+            java.util.Map<Long, Integer> interactionBudget) {
         int n = rope.particleCount();
         List<Player> viewers = viewersFor(world, rope);
         if (n < 2) {
@@ -112,11 +119,32 @@ public final class ChainRenderer {
             float length = (float) Math.max(0.05, p0.distance(p1));
             link.setSize(LINK_WIDTH, length);
             link.render(viewers, mx, my, mz);
-            // Spread this link's hitboxes evenly along its segment to fill the gaps.
+            // LOD the interaction entities (user: "aplica LOD a los interaction entity de los chains"): a chain
+            // link is only CLICKABLE from close up (interaction reach is a few blocks), so its hitboxes are sent
+            // ONLY to viewers within INTERACT_RANGE of THIS segment — not to every one of the up-to-96-block visual
+            // viewers, and not for the far segments of a long chain. A 32-link chain thus spawns ~a handful of
+            // interaction entities around the player instead of 96×viewers of them.
+            List<Player> near = interactViewersFor(viewers, mx, my, mz);
             for (int j = 0; j < HITBOX_PER_LINK; j++) {
                 double t = (j + 0.5) / HITBOX_PER_LINK;
-                chain.hitboxes.get(r * HITBOX_PER_LINK + j).render(viewers,
-                        p0.x + (p1.x - p0.x) * t, p0.y + (p1.y - p0.y) * t, p0.z + (p1.z - p0.z) * t);
+                double hx = p0.x + (p1.x - p0.x) * t;
+                double hy = p0.y + (p1.y - p0.y) * t;
+                double hz = p0.z + (p1.z - p0.z) * t;
+                // Density LOD: a world cell only needs a few clickable boxes — once MAX_PER_CELL hitboxes (from
+                // this or any other chain this tick) already fill this cell, cull the rest (render to nobody →
+                // despawn). Only consumed when there's actually a near viewer to show it to.
+                List<Player> show = near;
+                if (!near.isEmpty()) {
+                    long cell = net.minecraft.core.BlockPos.asLong((int) Math.floor(hx),
+                            (int) Math.floor(hy), (int) Math.floor(hz));
+                    int count = interactionBudget.getOrDefault(cell, 0);
+                    if (count >= MAX_HITBOXES_PER_CELL) {
+                        show = List.of();
+                    } else {
+                        interactionBudget.put(cell, count + 1);
+                    }
+                }
+                chain.hitboxes.get(r * HITBOX_PER_LINK + j).render(show, hx, hy, hz);
             }
         }
     }
@@ -149,6 +177,33 @@ public final class ChainRenderer {
 
     /** View radius (blocks) past a chain's span within which a player is sent its links. */
     private static final double VIEW_RANGE = 96.0;
+
+    /** LOD radius (blocks) within which a player is sent a segment's INTERACTION hitboxes — a bit beyond the
+     *  client's ~3-6 block interaction reach so an edge click / a moving zipline rider still registers, while far
+     *  viewers and the far segments of a long chain get no interaction entities at all. */
+    private static final double INTERACT_RANGE = 24.0;
+
+    /** The subset of {@code viewers} within {@link #INTERACT_RANGE} of segment centre {@code (x,y,z)} — the only
+     *  ones a segment's clickable hitboxes are worth spawning for (see the LOD note in {@link #syncRope}). */
+    private static List<Player> interactViewersFor(List<Player> viewers, double x, double y, double z) {
+        double r2 = INTERACT_RANGE * INTERACT_RANGE;
+        List<Player> near = null;
+        for (Player p : viewers) {
+            Object pp = p.platformPlayer();
+            if (!(pp instanceof org.bukkit.entity.Player b)) {
+                continue;
+            }
+            org.bukkit.Location l = b.getLocation();
+            double dx = l.getX() - x, dy = l.getY() - y, dz = l.getZ() - z;
+            if (dx * dx + dy * dy + dz * dz <= r2) {
+                if (near == null) {
+                    near = new ArrayList<>(viewers.size());
+                }
+                near.add(p);
+            }
+        }
+        return near == null ? List.of() : near;
+    }
 
     /**
      * CE players near the chain — every Bukkit player in the world within {@link #VIEW_RANGE} of the span,

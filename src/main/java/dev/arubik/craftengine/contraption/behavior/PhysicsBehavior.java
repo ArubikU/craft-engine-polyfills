@@ -33,7 +33,7 @@ import dev.arubik.craftengine.contraption.physics.RigidBody;
  * {@code ContraptionState}, and returning a velocity here as well would apply this tick's motion
  * twice.
  */
-public final class PhysicsBehavior implements MovementBehavior {
+public class PhysicsBehavior implements MovementBehavior {
 
     /**
      * The simulated body, attached by {@link PhysicsWorld} on the first tick after assembly.

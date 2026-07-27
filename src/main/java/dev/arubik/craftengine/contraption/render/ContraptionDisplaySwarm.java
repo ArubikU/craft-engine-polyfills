@@ -559,7 +559,24 @@ public final class ContraptionDisplaySwarm {
             // blocks tile seamlessly. At scale 1 / pitch 0 this is byte-for-byte the pre-scale/pre-pitch
             // orbit (ContraptionMath#renderPosition's fast paths).
             BlockPos local = e.getKey();
-            Vec3 center = new Vec3(local.getX() + 0.5, local.getY() + 0.5, local.getZ() + 0.5);
+            // An OffsetType.XZ block (bamboo, grass, ...) is drawn shifted by a per-position pseudo-random
+            // horizontal offset. Vanilla applies it to BOTH the model AND the collision shape, so they align.
+            // Our shulker collider already gets it for free (it comes from BlockState#getCollisionShape(level,
+            // local), and bamboo's getCollisionShape does SHAPE.move(getOffset(pos))) — but the packet
+            // block_display does NOT (the client never applies getOffset to a display entity), so the model sat
+            // at the plain cell centre while the collider sat at centre+offset: "el bambú no coincide con su
+            // collision box". Fix: shift the display by the SAME offset the collider uses. It is keyed off the
+            // LOCAL cell pos (fixed per cell, exactly as getCollisionShape computes it — NOT the moving world
+            // pos), added in the LOCAL frame BEFORE renderPosition so it rotates/scales with the body just like
+            // the collider does. No-op for non-offset blocks.
+            double offX = 0.0, offZ = 0.0;
+            BlockState offState = e.getValue().displayState();
+            if (offState != null) {
+                net.minecraft.world.phys.Vec3 boff = offState.getOffset(local);
+                offX = boff.x;
+                offZ = boff.z;
+            }
+            Vec3 center = new Vec3(local.getX() + 0.5 + offX, local.getY() + 0.5, local.getZ() + 0.5 + offZ);
             Vec3 pos = ContraptionMath.renderPosition(center, bearingWorldPos, yawRadians, pitchRadians, rollRadians,
                     scale);
             int[] ambient = ambientAt(realLevel, local, pos, refreshLight);
@@ -813,6 +830,11 @@ public final class ContraptionDisplaySwarm {
          * kept only for {@link #lightEmission} (see {@link #rawState}). Only a RENDER-state change dirties
          * metadata — the raw state is not in any packet, so a change there alone must not cost a resend.
          */
+        /** The render {@link BlockState} this cell's block_display shows — used to compute its client XZ offset. */
+        BlockState displayState() {
+            return blockState;
+        }
+
         void updateIfChanged(BlockState current, BlockState rawCurrent) {
             this.rawState = rawCurrent;
             if (!current.equals(this.blockState)) {
@@ -1031,6 +1053,13 @@ public final class ContraptionDisplaySwarm {
             // full-bright constant anymore. blockLight/skyLight are clamped 0-15 by the swarm
             // before ever reaching here (see #ambientBlockLightWithEmitters/#ambientAt).
             DisplayData.BrightnessOverride.addEntityData((blockLight << 4) | (skyLight << 20), values);
+            // Smooth the TRANSFORM too (the LeftRotation pitch/roll tilt lives here, NOT in the position packet).
+            // Without this, a tilt change resent via metadata SNAPS — the abrupt jump the user saw when an
+            // already-asleep body (whose displays already exist) recomputes: "cuando un body ya está dormido igual
+            // debes suavizar eso para que el tilt no sea brusco". Delay 0 = start now; duration = the same
+            // distance-LOD window the position uses, so the tilt eases in over N ticks instead of popping.
+            DisplayData.TransformationInterpolationDelay.addEntityData(0, values);
+            DisplayData.TransformationInterpolationDuration.addEntityData(Math.max(2, interpDuration), values);
             // Smooths BOTH the per-tick position AND the entity-yaw rotation. Now distance-scaled
             // (2026-07-03 LOD): a far viewer that only receives an update every N ticks gets an
             // N-tick interpolation window so the motion still looks continuous on 1/N the packets.

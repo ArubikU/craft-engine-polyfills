@@ -1,11 +1,8 @@
 {
   "id": "polyfills:gas",
   "model": "column",
-  "family": "steam",
   "name": "lang:polyfill.ui.gas",
   "generate": {
-    "source": "gas",
-    "item": "cml:%family%_%suffix%_%level%",
     "empty_icon": "cml:gui_empty",
     "lore": ["%value%/%max% mB", "%percent%%"],
     "parts": [
@@ -13,6 +10,12 @@
       { "suffix": "midbot", "levels": 18 },
       { "suffix": "midtop", "levels": 18 },
       { "suffix": "top",    "levels": 16 }
-    ]
+    ],
+    "types": {
+      "default":     "cml:steam_%suffix%_%level%",
+      "steam":       "cml:steam_%suffix%_%level%",
+      "heavy_steam": "cml:steam_%suffix%_%level%",
+      "nitrogen":    "cml:nitrogen_%suffix%_%level%"
+    }
   }
 }

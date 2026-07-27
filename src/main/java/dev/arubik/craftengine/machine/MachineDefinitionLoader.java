@@ -33,7 +33,8 @@ import net.momirealms.craftengine.core.util.Key;
  *   "bars": [                       // gauges from bars/*.json, positioned here
  *     { "id": "polyfills:fuel",     "slots": [40] },
  *     { "id": "polyfills:progress", "slots": [13] },
- *     { "id": "polyfills:fluid",    "slots": [27, 18, 9, 0] }
+ *     { "id": "polyfills:fluid",    "slots": [27, 18, 9, 0], "source": "fluid:water" },
+ *     { "id": "polyfills:gas",      "slots": [35, 26, 17, 8], "source": "gas:steam" }
  *   ],
  *   "power": {                      // rotational power, if this machine uses any
  *     "consumes_stress": true,      // needs an rpm/SU supply (recipes carry the amounts)
@@ -160,7 +161,9 @@ public final class MachineDefinitionLoader {
             int[] barSlots = new int[slotList.size()];
             for (int i = 0; i < barSlots.length; i++)
                 barSlots[i] = requireInMenu(view, slotList.get(i), menuSize, "bars.slots");
-            bars.add(new MachineDefinition.BarRef(b.key("id", "polyfills"), barSlots));
+            Key barId = b.key("id", "polyfills");
+            bars.add(new MachineDefinition.BarRef(barId, barSlots,
+                    b.string("source", barId.value())));
         }
 
         return new MachineDefinition(id,

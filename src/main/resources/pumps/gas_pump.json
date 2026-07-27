@@ -59,13 +59,15 @@
         "id": "polyfills:fuel",
         "slots": [
           40
-        ]
+        ],
+        "source": "fuel"
       },
       {
         "id": "polyfills:progress",
         "slots": [
           13
-        ]
+        ],
+        "source": "progress"
       },
       {
         "id": "polyfills:gas",
@@ -74,7 +76,8 @@
           26,
           17,
           8
-        ]
+        ],
+        "source": "gas:buffer"
       }
     ]
   }

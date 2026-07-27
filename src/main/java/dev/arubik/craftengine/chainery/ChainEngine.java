@@ -101,6 +101,76 @@ public final class ChainEngine {
         return n;
     }
 
+    /**
+     * A contraption just disassembled — re-anchor every chain endpoint it was carrying to wherever that anchor
+     * block actually landed (user: "al hacer disassembly ... las chains no se acomodan solas ... se bugean").
+     * The captured {@code chain_anchor} blocks are restored into the world at {@code restingPositions} with their
+     * {@link ChainBlockEntity} bindings intact; but the chain's static endpoint still points at the ORIGINAL
+     * pre-assembly cell, which is wrong once the contraption moved before it was taken apart. For each restored
+     * anchor cell we read its bindings and move the matching chain endpoint onto it, dropping the now-stale
+     * contraption capture so the endpoint resolves statically at its true new home.
+     */
+    public static void onContraptionDisassembled(UUID contraptionId, World world,
+            java.util.Set<BlockPos> restingPositions, int quarterTurns) {
+        if (world == null || restingPositions == null || restingPositions.isEmpty()) {
+            return;
+        }
+        Level level = ((CraftWorld) world).getHandle();
+        for (BlockPos pos : restingPositions) {
+            ChainBlockEntity be = ChaineryBlockBehavior.getAt(level, pos);
+            if (be == null) {
+                continue;
+            }
+            for (ChainBlockEntity.Binding binding : be.bindings()) {
+                Chain chain = ChainRegistry.get(binding.chainId());
+                if (chain == null) {
+                    continue;
+                }
+                int role = binding.role();
+                BlockPos endpoint = role == 0 ? chain.a : chain.b;
+                if (endpoint.equals(pos)) {
+                    continue; // already where its block landed — nothing stale to fix
+                }
+                // Follow the block to its real resting cell and forget the capture, so resolveEnd treats it as a
+                // plain static anchor here. KEEP the exact attach offset (user: "al restaurar un chain desde un
+                // contraption pierde el punto exacto de soporte y se queda en el centro del bloque") — the support
+                // block is restored alongside the anchor, so the face point is still valid; only rotate the offset
+                // by the disassembly quarter-turns to match the restored orientation. Clear the velocity sample so
+                // there's no re-anchor spike.
+                ChainRegistry.reanchor(chain, role, pos);
+                if (role == 0) {
+                    chain.contraptionA = null;
+                    chain.localA = null;
+                    chain.offsetA = rotateOffsetYaw(chain.offsetA, quarterTurns);
+                    chain.lastEndA = null;
+                } else {
+                    chain.contraptionB = null;
+                    chain.localB = null;
+                    chain.offsetB = rotateOffsetYaw(chain.offsetB, quarterTurns);
+                    chain.lastEndB = null;
+                }
+                chain.orphanTicks = 0;
+            }
+        }
+    }
+
+    /** Rotates a local-frame attach offset by {@code quarterTurns} 90° steps around Y — matching
+     *  {@code ContraptionCapture.rotateLocal}'s {@code (x,z)->(-z,x)} so the restored offset lines up with the
+     *  grid-snapped block. Null-safe (a centre attach stays centre). */
+    private static org.joml.Vector3d rotateOffsetYaw(org.joml.Vector3d off, int quarterTurns) {
+        if (off == null) {
+            return null;
+        }
+        double x = off.x, z = off.z;
+        int turns = ((quarterTurns % 4) + 4) % 4;
+        for (int i = 0; i < turns; i++) {
+            double nx = -z, nz = x;
+            x = nx;
+            z = nz;
+        }
+        return new org.joml.Vector3d(x, off.y, z);
+    }
+
     /** Entry point from {@link ChainBlockEntity#onRemove()} — a real break at one end severs the whole span. */
     public static void onEndpointBroken(UUID chainId) {
         Chain chain = ChainRegistry.get(chainId);
@@ -126,8 +196,8 @@ public final class ChainEngine {
             ChainRenderer.despawn(chain, world);
             Level level = ((CraftWorld) world).getHandle();
             // Real-world static anchors at their original cells.
-            removeEndpointBlock(world, level, chain.a);
-            removeEndpointBlock(world, level, chain.b);
+            removeEndpointBlock(world, level, chain.a, chain.id);
+            removeEndpointBlock(world, level, chain.b, chain.id);
             // Anchors that have been CAPTURED into a contraption live in the hologram, not at chain.a/chain.b —
             // remove those from their contraption too, so a tension-snap clears the anchors everywhere (user:
             // "al romper el chain por tensión no se desaparecen los anchors en el contraption y vida real").
@@ -141,11 +211,17 @@ public final class ChainEngine {
     }
 
     /** Sets an endpoint cell to air — but only if it's a chain block AND no OTHER chain still anchors there. */
-    private static void removeEndpointBlock(World world, Level level, BlockPos pos) {
+    private static void removeEndpointBlock(World world, Level level, BlockPos pos, UUID chainId) {
+        // Drop this chain's binding from the anchor block entity first, so a shared junction stops listing the
+        // now-severed span (and getChainId/scan never resolve a dead id).
+        ChainBlockEntity be = ChaineryBlockBehavior.getAt(level, pos);
+        if (be != null) {
+            be.unbind(chainId);
+        }
         if (ChainRegistry.countAt(world.getUID(), pos) > 0) {
             return; // a shared anchor still hosts another chain — keep it
         }
-        if (ChaineryBlockBehavior.getAt(level, pos) == null) {
+        if (be == null) {
             return; // already gone (the mined endpoint, or an unloaded chunk)
         }
         world.getBlockAt(pos.getX(), pos.getY(), pos.getZ()).setType(Material.AIR, false);
@@ -163,10 +239,14 @@ public final class ChainEngine {
                 for (BlockPos local : new java.util.HashSet<>(level.localPositions())) {
                     net.momirealms.craftengine.core.block.entity.BlockEntity be =
                             dev.arubik.craftengine.block.entity.BukkitBlockEntityTypes.getIfLoaded((Level) level, local);
-                    if (be != null && be.controller instanceof ChainBlockEntity cbe
-                            && chainId.equals(cbe.getChainId())) {
-                        level.setBlock(local, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), flags);
-                        changed = true;
+                    if (be != null && be.controller instanceof ChainBlockEntity cbe) {
+                        boolean wasBound = cbe.bindings().stream().anyMatch(bd -> chainId.equals(bd.chainId()));
+                        if (wasBound && cbe.unbind(chainId) == 0) {
+                            // Only air the captured cell once NO other chain still anchors here — a shared junction
+                            // keeps its anchor for the chains that remain.
+                            level.setBlock(local, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), flags);
+                            changed = true;
+                        }
                     }
                 }
                 if (changed) {
@@ -250,6 +330,12 @@ public final class ChainEngine {
         // contraption currently fills, so the rope can collide with moving contraption geometry too.
         Scan scan = scanContraptions();
 
+        // Shared per-tick interaction-density budget (user: "aplica reducción cuando hay varias cerca en 1 mismo
+        // lugar ... 32 chains entre 2 bloques => ~100 interactions"). Counts how many INTERACTION hitboxes have
+        // been spawned in each world cell this tick, across ALL chains, so ChainRenderer can cap the overlap —
+        // 32 stacked chains in one block collapse to a handful of clickable boxes instead of ~100.
+        java.util.Map<Long, Integer> interactionBudget = new java.util.HashMap<>();
+
         for (Chain chain : ChainRegistry.all()) {
             try {
                 World world = Bukkit.getWorld(chain.worldId);
@@ -282,7 +368,7 @@ public final class ChainEngine {
                 // (tensión en esquinas), a taut one straightens.
                 ChainRope.Terrain terrain = terrainFor(world, scan.occupancyByWorld().get(chain.worldId));
                 chain.rope.step(a.pos(), b.pos(), chain.blocks, ROPE_ITERATIONS, ROPE_GRAVITY, ROPE_DAMPING, terrain);
-                ChainRenderer.syncRope(chain, world, chain.rope);
+                ChainRenderer.syncRope(chain, world, chain.rope, interactionBudget);
             } catch (Throwable ignored) {
                 // one bad chain shouldn't stall the rest
             }
@@ -294,6 +380,13 @@ public final class ChainEngine {
      * Called from {@link ChaineryBlockBehavior#neighborChanged} (event-driven, replaces the per-tick poll).
      */
     public static void onAnchorNeighborChanged(net.minecraft.server.level.ServerLevel level, BlockPos pos) {
+        // A contraption capture removes the support blocks under/beside captured anchors as it pulls the structure
+        // in, which fires this exact neighbour-change — but that is assembly, NOT a real support loss, so it must
+        // not sever (bug: "si armo un contraption que adentro tiene 2 chain, estas se rompen y sus anchor quedan
+        // huérfanos"). Same capture flag ChainBlockEntity#onRemove uses to tell assembly from a genuine mine.
+        if (dev.arubik.craftengine.contraption.ContraptionCapture.isRemovingForCapture()) {
+            return;
+        }
         org.bukkit.World world = level.getWorld();
         java.util.UUID worldId = world.getUID();
         for (Chain chain : ChainRegistry.chainsAt(worldId, pos)) {
@@ -450,31 +543,33 @@ public final class ChainEngine {
                     if (be == null || !(be.controller instanceof ChainBlockEntity cbe)) {
                         continue;
                     }
-                    java.util.UUID chainId = cbe.getChainId();
-                    if (chainId == null) {
-                        continue;
-                    }
-                    // Attach at the hitbox offset, rotated with the contraption so it tracks the surface as it moves.
-                    org.joml.Vector3d p = new org.joml.Vector3d(w.x, w.y, w.z);
-                    Chain chain = ChainRegistry.get(chainId);
-                    org.joml.Vector3d off = chain == null ? null
-                            : (cbe.getRole() == 0 ? chain.offsetA : chain.offsetB);
-                    if (off != null) {
-                        net.minecraft.world.phys.Vec3 rd = level.rotateToRealWorld(
-                                new net.minecraft.world.phys.Vec3(off.x, off.y, off.z));
-                        p.add(rd.x, rd.y, rd.z);
-                    }
-                    Live live = new Live(p, cid, entity.state());
-                    endpoints.computeIfAbsent(chainId, k -> new Live[2])[cbe.getRole() == 0 ? 0 : 1] = live;
-                    // Record where this captured endpoint lives, so it reconnects after a restart even without the
-                    // block-entity link (the key fix for a chain joining two contraptions).
-                    if (chain != null) {
-                        if (cbe.getRole() == 0) {
-                            chain.contraptionA = cid;
-                            chain.localA = local.immutable();
-                        } else {
-                            chain.contraptionB = cid;
-                            chain.localB = local.immutable();
+                    // A junction cell hosts up to 4 chains — resolve EVERY chain bound here, not just the last
+                    // one (fix: "solo el ultimo chain funciona ... el resto desaparece al armar el contraption").
+                    for (ChainBlockEntity.Binding binding : cbe.bindings()) {
+                        java.util.UUID chainId = binding.chainId();
+                        int role = binding.role();
+                        // Attach at the hitbox offset, rotated with the contraption so it tracks the surface as it moves.
+                        org.joml.Vector3d p = new org.joml.Vector3d(w.x, w.y, w.z);
+                        Chain chain = ChainRegistry.get(chainId);
+                        org.joml.Vector3d off = chain == null ? null
+                                : (role == 0 ? chain.offsetA : chain.offsetB);
+                        if (off != null) {
+                            net.minecraft.world.phys.Vec3 rd = level.rotateToRealWorld(
+                                    new net.minecraft.world.phys.Vec3(off.x, off.y, off.z));
+                            p.add(rd.x, rd.y, rd.z);
+                        }
+                        Live live = new Live(p, cid, entity.state());
+                        endpoints.computeIfAbsent(chainId, k -> new Live[2])[role == 0 ? 0 : 1] = live;
+                        // Record where this captured endpoint lives, so it reconnects after a restart even without
+                        // the block-entity link (the key fix for a chain joining two contraptions).
+                        if (chain != null) {
+                            if (role == 0) {
+                                chain.contraptionA = cid;
+                                chain.localA = local.immutable();
+                            } else {
+                                chain.contraptionB = cid;
+                                chain.localB = local.immutable();
+                            }
                         }
                     }
                 }
@@ -501,8 +596,21 @@ public final class ChainEngine {
         if (dist < 1.0e-6) {
             return false;
         }
+        // Damping term: the endpoints' relative velocity ALONG the axis (positive = separating), derived from how
+        // far each end moved since last tick. Feeding this into the solver turns the tether from a pure position
+        // spring (which pumps energy and oscillates forever — "nunca se redujo la energía") into a damped one that
+        // bleeds off relative motion and settles. First coupled tick has no previous sample → 0 (no damping yet).
+        double separating = 0.0;
+        if (chain.lastEndA != null && chain.lastEndB != null) {
+            org.joml.Vector3d unit = new org.joml.Vector3d(axis).div(dist);
+            org.joml.Vector3d velA = new org.joml.Vector3d(a.pos()).sub(chain.lastEndA);
+            org.joml.Vector3d velB = new org.joml.Vector3d(b.pos()).sub(chain.lastEndB);
+            separating = velB.sub(velA).dot(unit); // (vB - vA)·unit — relative rate along A->B
+        }
+        chain.lastEndA = new org.joml.Vector3d(a.pos());
+        chain.lastEndB = new org.joml.Vector3d(b.pos());
         ChainPhysics.RopeResult r = ChainPhysics.resolve(dist, chain.blocks, chain.material.stretch(),
-                0.0 /* position-only; the solver's own damping supplies the velocity term */,
+                separating,
                 1.0 /* unit — PhysicsWorld scales by real inverse mass */,
                 chain.material.pull() * ROPE_STIFFNESS, chain.material.maxTension(), 1.0);
         if (r.impulse() <= 0.0) {

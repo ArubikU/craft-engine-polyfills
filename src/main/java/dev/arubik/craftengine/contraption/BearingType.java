@@ -26,5 +26,14 @@ public enum BearingType {
     ROTATIONAL,
     MINECART,
     PHYS,
-    GHAST
+    GHAST,
+    /**
+     * A PILOTED phys contraption (the "vehicle bearing"). Kinematically identical to {@link #PHYS} — a free
+     * rigid body under gravity, collision and buoyancy — but its default behavior is a
+     * {@code VehicleControlBehavior} (which EXTENDS {@code PhysicsBehavior}), so a seated/standing driver's
+     * live movement input (WASD + jump/sprint) is turned into thrust/steering impulses each tick via
+     * {@code PhysicsWorld.applyThrust}. Everything else (solver, body-vs-body collision, buoyancy,
+     * power-to-mass via inverse mass, self-levelling) is inherited from the PHYS path unchanged.
+     */
+    VEHICLE
 }

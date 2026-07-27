@@ -54,6 +54,10 @@ public final class PhysicsWorld {
     /** Transform divergence beyond this means an external mutator moved the contraption — resync. */
     private static final double RESYNC_EPSILON = 1.0E-6;
 
+    /** Max local COM move (blocks) still handled by the SMOOTH position shift; beyond it (a split/fracture) the
+     *  body is re-anchored to its state bearing instead, so a fragment can't be flung by a huge COM jump. */
+    private static final double COM_SMOOTH_SHIFT_MAX = 1.0;
+
     private static final Map<UUID, Entry> ENTRIES = new HashMap<>();
 
     /**
@@ -150,6 +154,27 @@ public final class PhysicsWorld {
 
     /** The active bodies grouped by world, republished by the game thread every tick for the thread to solve. */
     private static volatile Map<UUID, List<PhysBody>> ACTIVE = Map.of();
+
+    /** Presence-LOD radius: a body with no player this close is frozen (not solved) this tick — see the pumps. */
+    private static final double PHYS_LOD_RANGE = 96.0;
+    private static final double PHYS_LOD_RANGE_SQ = PHYS_LOD_RANGE * PHYS_LOD_RANGE;
+
+    /**
+     * Whether any player in {@code level} is within {@link #PHYS_LOD_RANGE} of the contraption — the presence
+     * gate for the physics LOD (inspired by BlockShips' idle/unmanned tiers). Nobody near ⇒ nobody can see it
+     * move, so freezing it wastes no fidelity; a driver or a passing player is within range, so a piloted or
+     * observed contraption always simulates. Cheap: one squared-distance test per online player in the world.
+     */
+    private static boolean anyPlayerNear(ServerLevel level, ContraptionState state) {
+        double x = state.x(), y = state.y(), z = state.z();
+        for (net.minecraft.server.level.ServerPlayer p : level.players()) {
+            double dx = p.getX() - x, dy = p.getY() - y, dz = p.getZ() - z;
+            if (dx * dx + dy * dy + dz * dz <= PHYS_LOD_RANGE_SQ) {
+                return true;
+            }
+        }
+        return false;
+    }
 
     private static volatile Thread PHYS_THREAD;
     private static volatile boolean RUNNING;
@@ -341,24 +366,102 @@ public final class PhysicsWorld {
      * scaled by its volume, so a full block catches more of the blast than a slab.
      */
     public static void applyExplosion(UUID worldId, double x, double y, double z, double power) {
-        for (Map.Entry<UUID, Entry> e : ENTRIES.entrySet()) {
-            ContraptionEntity entity = ContraptionManager.get(e.getKey());
-            if (entity == null || !entity.state().worldId().equals(worldId)) {
+        // EVERY contraption in the world is subject to the blast, not just phys bodies (minecart/ghast/linear
+        // contraptions are contraptions too): each has its cells carved by resistance; only the phys ones ALSO
+        // take a push impulse (the others are entity/block-driven and don't have a rigid body to push).
+        for (ContraptionEntity entity : ContraptionManager.all()) {
+            ContraptionState st = entity.state();
+            if (!st.worldId().equals(worldId)) {
                 continue;
             }
-            PhysBody physBody = e.getValue().physBody;
-            if (physBody.shape.isEmpty()) {
-                continue;
+            Entry e = ENTRIES.get(st.id());
+            if (e != null && e.physBody != null && !e.physBody.shape.isEmpty()) {
+                PhysBody physBody = e.physBody;
+                // The impulse math reads/writes the physics-owned RigidBody, so on the async path it runs as a
+                // command on the physics thread; entity resolution above stays on the game thread.
+                if (ASYNC) {
+                    enqueue(() -> explodeBody(physBody, x, y, z, power));
+                } else {
+                    explodeBody(physBody, x, y, z, power);
+                }
             }
-            // The impulse math reads and writes the (physics-owned) RigidBody, so on the async path it runs
-            // as a command on the physics thread; the entity resolution above stays on the game thread
-            // because it touches ContraptionManager/state. Inline on the sync path.
-            if (ASYNC) {
-                enqueue(() -> explodeBody(physBody, x, y, z, power));
-            } else {
-                explodeBody(physBody, x, y, z, power);
+            // Carve cells by resistance unless fully blast-immune (explosionProof == 1). Game thread here — it
+            // touches the hidden level; shape/mass re-derive next syncMain.
+            if (st.explosionProof() < 1.0) {
+                ServerLevel real = resolveLevel(st);
+                if (real != null) {
+                    carveExplosion(st, x, y, z, power, real);
+                }
             }
         }
+    }
+
+    /** Distance to which a blast of {@code power} reaches — matches {@link #explodeBody}'s own radius. */
+    // (EXPLOSION_RADIUS_PER_POWER is defined near the impulse constants below.)
+
+    /**
+     * Removes the captured cells a real-world blast reaches, by explosion resistance. A cell inside the radius is
+     * consumed when its block's {@code getExplosionResistance()} is below {@code power ·
+     * SURVIVE_RESISTANCE_PER_POWER · falloff} (falloff = {@code 1 − d/radius}, so the core carves hardest and the
+     * rim barely) — obsidian/netherite ride any blast out, stone/wood near the centre don't, exactly like a real
+     * explosion. Each broken cell drops its item in the real world at its live position.
+     */
+    private static void carveExplosion(ContraptionState state, double x, double y, double z, double power,
+            ServerLevel realLevel) {
+        dev.arubik.craftengine.contraption.level.ContraptionLevel level = state.level();
+        if (level == null) {
+            return;
+        }
+        double radius = power * EXPLOSION_RADIUS_PER_POWER;
+        Vec3 blast = new Vec3(x, y, z);
+        // Break threshold, SCALED DOWN by (1 - explosionProof): a cell breaks when its resistance is under it, so
+        // proof 0 leaves the full threshold (breaks normally), proof 1 makes it 0 (nothing breaks), and 0.5 halves
+        // it (harder — fewer/tougher cells break). "Si está a la mitad se usa mates."
+        double cutoffBase = power
+                * dev.arubik.craftengine.contraption.explosive.ContraptionExplosives.SURVIVE_RESISTANCE_PER_POWER
+                * (1.0 - state.explosionProof());
+        java.util.List<net.minecraft.core.BlockPos> toBreak = new java.util.ArrayList<>();
+        for (net.minecraft.core.BlockPos local : level.localPositions()) {
+            Vec3 world = level.realWorldPositionOf(
+                    new Vec3(local.getX() + 0.5, local.getY() + 0.5, local.getZ() + 0.5));
+            double d = world.distanceTo(blast);
+            if (d > radius) {
+                continue;
+            }
+            net.minecraft.world.level.block.state.BlockState bs = level.getBlockState(local);
+            if (bs.isAir()) {
+                continue;
+            }
+            double falloff = 1.0 - d / radius;
+            if (bs.getBlock().getExplosionResistance() < cutoffBase * falloff) {
+                toBreak.add(local.immutable());
+            }
+        }
+        if (toBreak.isEmpty()) {
+            return;
+        }
+        int quiet = net.minecraft.world.level.block.Block.UPDATE_CLIENTS
+                | net.minecraft.world.level.block.Block.UPDATE_KNOWN_SHAPE;
+        for (net.minecraft.core.BlockPos local : toBreak) {
+            net.minecraft.world.level.block.state.BlockState bs = level.getBlockState(local);
+            if (bs.isAir()) {
+                continue;
+            }
+            Vec3 world = level.realWorldPositionOf(
+                    new Vec3(local.getX() + 0.5, local.getY() + 0.5, local.getZ() + 0.5));
+            net.minecraft.core.BlockPos wp = net.minecraft.core.BlockPos.containing(world.x, world.y, world.z);
+            try {
+                for (net.minecraft.world.item.ItemStack drop : net.minecraft.world.level.block.Block.getDrops(
+                        bs, realLevel, local, level.getBlockEntity(local))) {
+                    net.minecraft.world.level.block.Block.popResource(realLevel, wp, drop);
+                }
+            } catch (Throwable ignored) {
+                // no-loot / context-needing drop — still remove the cell below
+            }
+            level.setBlock(local, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), quiet);
+        }
+        level.markCellsDirty();
+        level.refreshLocalPositions();
     }
 
     /** The per-body explosion impulse. Touches only {@link PhysBody} state — safe on the physics thread. */
@@ -425,6 +528,72 @@ public final class PhysicsWorld {
         } else {
             thrustBody(body, point, impulse);
         }
+    }
+
+    /**
+     * A PURE-TRANSLATION drive impulse through the body's center of mass — no lever arm, so it never spins the
+     * body (unlike {@link #applyThrust}, whose off-centre point torques). This is what a VEHICLE's steering uses:
+     * the driver pushes the whole hull, and self-levelling keeps it upright, instead of every keypress also
+     * rolling it. Thread-safe the same way {@code applyThrust} is (enqueued on the async path); clamped and
+     * mass-scaled, so a heavier vehicle accelerates slower off the same input (power-to-mass).
+     */
+    public static void applyThrustCentral(UUID contraptionId, Vector3d worldImpulse) {
+        Entry entry = ENTRIES.get(contraptionId);
+        if (entry == null || entry.physBody == null) {
+            return;
+        }
+        PhysBody body = entry.physBody;
+        Vector3d impulse = new Vector3d(worldImpulse);
+        if (ASYNC) {
+            enqueue(() -> thrustCentralBody(body, impulse));
+        } else {
+            thrustCentralBody(body, impulse);
+        }
+    }
+
+    /** Max yaw rate (rad/tick) a VEHICLE's steering may command — a firm but not teleporting turn. */
+    private static final double MAX_YAW_RATE = 0.22;
+
+    /**
+     * Arcade yaw steering for a VEHICLE: SETS the body's world-frame yaw rate this tick (not an impulse), so the
+     * hull turns to follow the driver like a horse follows the rider's look, ignoring the tiny incidental yaw a
+     * free body would otherwise have. Roll/pitch are untouched — self-levelling still keeps the deck flat. Clamped
+     * and thread-safe (enqueued on the async path). A rate of 0 also firmly stops yaw drift.
+     */
+    public static void setYawRate(UUID contraptionId, double omegaY) {
+        Entry entry = ENTRIES.get(contraptionId);
+        if (entry == null || entry.physBody == null) {
+            return;
+        }
+        PhysBody body = entry.physBody;
+        double w = Math.max(-MAX_YAW_RATE, Math.min(MAX_YAW_RATE, omegaY));
+        Runnable r = () -> {
+            if (body.kinematic || body.body.isStatic()) {
+                return;
+            }
+            body.body.angularVelocity.y = w;
+            if (w != 0.0) {
+                body.wakeUp();
+            }
+        };
+        if (ASYNC) {
+            enqueue(r);
+        } else {
+            r.run();
+        }
+    }
+
+    private static void thrustCentralBody(PhysBody physBody, Vector3d impulse) {
+        if (physBody.kinematic || physBody.shape.isEmpty() || physBody.body.isStatic()) {
+            return;
+        }
+        double mag = impulse.length();
+        if (mag > MAX_FAN_IMPULSE) {
+            impulse = new Vector3d(impulse).mul(MAX_FAN_IMPULSE / mag);
+        }
+        physBody.body.linearVelocity.fma(physBody.body.inverseMass(), impulse);
+        physBody.selfRightTicks = SELF_RIGHT_LINGER_TICKS;
+        physBody.wakeUp();
     }
 
     /** The thruster impulse — linear plus the torque from its lever arm. Touches only {@link PhysBody}, so it is physics-thread safe. */
@@ -543,6 +712,10 @@ public final class PhysicsWorld {
             physics.attach(entry.physBody, entry.massModel);
             states.put(entry, state);
             levels.put(state.worldId(), level);
+            // Presence LOD — see #anyPlayerNear. Skip solving a body nobody is near this tick.
+            if (!anyPlayerNear(level, state)) {
+                continue;
+            }
             byWorld.computeIfAbsent(state.worldId(), w -> new ArrayList<>()).add(entry);
         }
         if (byWorld.isEmpty()) {
@@ -630,6 +803,11 @@ public final class PhysicsWorld {
             physics.attach(entry.physBody, entry.massModel);
             states.put(entry, state);
             levels.put(state.worldId(), level);
+            // Presence LOD — see #anyPlayerNear. A body with no player near is frozen at its last pose this
+            // tick (not solved, not re-baked, not written back) and wakes the instant a player comes close.
+            if (!anyPlayerNear(level, state)) {
+                continue;
+            }
             byWorld.computeIfAbsent(state.worldId(), w -> new ArrayList<>()).add(entry);
         }
         ENTRIES.keySet().removeIf(id -> ContraptionManager.get(id) == null);
@@ -695,8 +873,12 @@ public final class PhysicsWorld {
         PhysBody body = entry.physBody;
 
         int shape = contraptionLevel == null ? 0 : contraptionLevel.localPositions().hashCode();
-        boolean cellsChanged = !entry.shapeObserved || shape != entry.lastShapeHash;
+        boolean firstObservation = !entry.shapeObserved;
+        boolean cellsChanged = firstObservation || shape != entry.lastShapeHash;
         if (cellsChanged) {
+            // Old COM BEFORE we overwrite the mass model — needed to keep the STRUCTURE still across the change.
+            Vector3d oldCom = new Vector3d(entry.massModel.centerOfMass().x, entry.massModel.centerOfMass().y,
+                    entry.massModel.centerOfMass().z);
             entry.lastShapeHash = shape;
             entry.shapeObserved = true;
             MassModel mm = MassModel.of(contraptionLevel);
@@ -707,15 +889,64 @@ public final class PhysicsWorld {
             double friction = FrictionModel.of(contraptionLevel).friction();
             java.util.function.ToDoubleFunction<Vector3d> restitutionField =
                     buildRestitutionField(contraptionLevel, com, body.body);
+            // SMOOTH mass/COM recompute (user: "que se recompute más suavemente la física para que no se aloque").
+            // A cell coming or going (an anvil falling out, a block placed) moves the COM, and the body's pose is
+            // stored COM-relative. The old path re-anchored the body to the STATE bearing every time, which pinned
+            // the bearing cell and teleported the REST of the structure by the COM delta — a jolt each recompute,
+            // and with a block bouncing in/out per tick that jolt loop is the "física loca". Instead, on a
+            // cell-only change shift the body position by the WORLD-space COM delta so the structure stays exactly
+            // where it is (only the internal COM reference moves), and DON'T force a bearing re-anchor. Velocity is
+            // left untouched — a body losing a piece keeps its velocity (the piece carries its own away), which is
+            // already correct, so no momentum fix is needed.
+            double scaleNow = entry.lastScale > 0 ? entry.lastScale : 1.0;
+            Vector3d comDelta = firstObservation ? null : new Vector3d(com).sub(oldCom);
+            // A SPLIT/fracture drops a whole island of cells at once, so the COM jumps far. The smooth COM-shift
+            // below is right for incremental edits, but on a big jump the entry's mass snapshot is briefly out of
+            // sync with the splitter's own re-base (it clears cells AFTER this sync), and shifting by that huge
+            // delta would fling the original piece (user: "al separar un contraption el COM se bugea y mueve mucho
+            // el original"). So for a large COM move, fall back to the robust bearing re-anchor (foreignMove),
+            // which pins the piece to its STATE position regardless of the mass snapshot.
+            boolean bigComJump = comDelta != null && comDelta.length() > COM_SMOOTH_SHIFT_MAX;
+            if (bigComJump) {
+                comDelta = null;
+            }
+            final Vector3d comShift = comDelta;
             enqueue(() -> {
+                // Preserve the sleep state (user: el contraption "sigue tilteando un momento ... se reajusta").
+                // The tilt is the body being WOKEN on every edit and re-settling its resting pose under the new
+                // mass. A settled (asleep) contraption should absorb a block add/remove silently — the new
+                // mass/shape are stored, the structure is kept put by the COM shift below, and it is NOT woken, so
+                // it never re-solves and never rocks. A genuinely moving (awake) body still re-solves as it should.
+                // "Settled" is broader than fully-asleep: a body needs SLEEP_TICKS (20) consecutive at-rest ticks
+                // to actually sleep, so one that just came to rest is still AWAKE with ~0 velocity. Waking it on an
+                // edit still re-solves its pose (the small residual tilt). So treat any near-rest body as settled:
+                // don't wake it, and zero its tiny velocities so the next solve starts from clean rest instead of
+                // re-kicking. NOT force-slept — a real change (support removed) must still be able to make it fall.
+                boolean settled = body.isAsleep()
+                        || (body.body.linearVelocity.length() < XpbdSolver.REST_LINEAR_EPSILON
+                                && body.body.angularVelocity.length() < XpbdSolver.REST_ANGULAR_EPSILON);
+                if (comShift != null && comShift.lengthSquared() > 1.0e-12) {
+                    Vector3d worldShift = new Vector3d(comShift).mul(scaleNow).rotate(body.body.orientation);
+                    body.body.position.add(worldShift);
+                }
                 body.shape = newShape;
                 body.body.setMassProperties(mm.inverseMass(), mm.inverseInertiaTensor());
                 body.floatability = floatability;
                 body.body.setFriction(friction);
                 body.body.setRestitutionField(restitutionField);
-                body.wakeUp();
+                if (settled) {
+                    body.body.linearVelocity.zero();
+                    body.body.angularVelocity.zero();
+                } else {
+                    body.wakeUp();
+                }
             });
-            entry.initialized = false;
+            // The FIRST observation (initial placement) and a big COM jump (split/fracture) both need the robust
+            // bearing re-anchor (foreignMove pins the piece to its STATE position); an ordinary incremental edit is
+            // handled by the smooth COM shift above, so don't re-snap it.
+            if (firstObservation || bigComJump) {
+                entry.initialized = false;
+            }
         }
 
         double scale = state.scale();

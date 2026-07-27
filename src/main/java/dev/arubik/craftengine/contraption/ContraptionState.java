@@ -316,6 +316,20 @@ public final class ContraptionState {
         this.bearingType = bearingType;
     }
 
+    /** Blast immunity 0..1: 0 = cells break normally, 1 = never break (only pushed), between = partial (the carve
+     *  scales the break threshold by {@code 1 - explosionProof}). A bearing-config float. */
+    private double explosionProof;
+
+    /** Blast immunity 0..1 — 0 breakable, 1 immune, partial in between. Default 0. */
+    public double explosionProof() {
+        return explosionProof;
+    }
+
+    /** Sets blast immunity (clamped 0..1). Recorded at assemble (from the bearing's config), restored on rehydrate. */
+    public void setExplosionProof(double explosionProof) {
+        this.explosionProof = Math.max(0.0, Math.min(1.0, explosionProof));
+    }
+
     /** The anchor entity excluded from this contraption's own collision, or {@code null} — see {@link #anchorEntityId}. */
     public UUID anchorEntityId() {
         return anchorEntityId;

@@ -105,14 +105,25 @@ public final class WorldBlockCache {
         int minY = (int) Math.floor(region.minY), maxY = (int) Math.floor(region.maxY);
         int minZ = (int) Math.floor(region.minZ), maxZ = (int) Math.floor(region.maxZ);
         BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
+        // #4 (Sable's LevelAccelerator) — cached raw block access for the bake's hot loop, which reads a region
+        // scaling with body size CUBED. getChunkNow (non-forcing, null if unloaded — so it still never
+        // force-loads, replacing hasChunkAt) is fetched once per chunk instead of a chunk-source walk per block,
+        // and every block in a column (y inner) reads straight from that LevelChunk.
+        long lastChunkKey = Long.MIN_VALUE;
+        net.minecraft.world.level.chunk.LevelChunk lastChunk = null;
         for (int x = minX; x <= maxX; x++) {
             for (int z = minZ; z <= maxZ; z++) {
-                if (!level.hasChunkAt(x, z)) {
+                long ck = net.minecraft.world.level.ChunkPos.asLong(x >> 4, z >> 4);
+                if (lastChunk == null || ck != lastChunkKey) {
+                    lastChunkKey = ck;
+                    lastChunk = level.getChunkSource().getChunkNow(x >> 4, z >> 4);
+                }
+                if (lastChunk == null) {
                     continue; // never force-load from the physics path
                 }
                 for (int y = minY; y <= maxY; y++) {
                     cursor.set(x, y, z);
-                    BlockState state = level.getBlockState(cursor);
+                    BlockState state = lastChunk.getBlockState(cursor);
                     if (state.isAir()) {
                         continue;
                     }

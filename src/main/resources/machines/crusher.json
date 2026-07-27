@@ -46,7 +46,8 @@
       "id": "polyfills:progress",
       "slots": [
         13
-      ]
+      ],
+      "source": "progress"
     }
   ]
 }

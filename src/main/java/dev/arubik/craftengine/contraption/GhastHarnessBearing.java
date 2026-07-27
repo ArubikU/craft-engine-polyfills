@@ -579,6 +579,6 @@ public final class GhastHarnessBearing {
         if (ghast != null) {
             untag(ghast);
         }
-        ContraptionAssembler.fireDisassembled(state.id(), bukkitWorld, snapped, restingPositions);
+        ContraptionAssembler.fireDisassembled(state.id(), bukkitWorld, snapped, restingPositions, quarterTurns);
     }
 }

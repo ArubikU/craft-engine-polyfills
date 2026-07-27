@@ -51,14 +51,12 @@ public final class GasType {
             Key ventParticle,
             int ventPerParticle,
             double ventSpread,
-            double ventSpeed,
-            String barItemTemplate,
-            int barLevels) {
+            double ventSpeed) {
 
         /** Neutral defaults, used as the base a data file overrides field by field. */
         public static GasProperties defaults(String path) {
             return new GasProperties(path, "polyfill.gas." + path, 0xFFFFFFFF, 1.0, "empty",
-                    Key.of("minecraft", "cloud"), 50, 0.2, 0.05, "cml:gaslvl_%s_%d", 16);
+                    Key.of("minecraft", "cloud"), 50, 0.2, 0.05);
         }
     }
 
@@ -84,7 +82,7 @@ public final class GasType {
         Key id = Key.of(NAMESPACE, path);
         GasType type = new GasType(id, path.toUpperCase(Locale.ROOT),
                 new GasProperties(displayName, "polyfill.gas." + path, color, density, variant,
-                        Key.of("minecraft", "cloud"), 50, 0.2, 0.05, "cml:gaslvl_%s_%d", 16));
+                        Key.of("minecraft", "cloud"), 50, 0.2, 0.05));
         return REGISTRY.register(id, type);
     }
 
@@ -189,15 +187,6 @@ public final class GasType {
         return properties.tankVariant();
     }
 
-    /** The item id for one fill level of this gas's gauge; see {@code FluidType#barItem}. */
-    public String barItem(int level) {
-        int clamped = Math.max(0, Math.min(properties.barLevels() - 1, level));
-        return String.format(properties.barItemTemplate(), id.value(), clamped);
-    }
-
-    public int barLevels() {
-        return properties.barLevels();
-    }
 
     public boolean isEmpty() {
         return this == EMPTY;

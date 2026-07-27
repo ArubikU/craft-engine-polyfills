@@ -19,17 +19,18 @@ public final class Chain {
     public final UUID id;
     /** Bukkit world UID both endpoints live in (a chain never spans two worlds). */
     public final UUID worldId;
-    /** The two endpoint chain-block positions. */
-    public final BlockPos a;
-    public final BlockPos b;
+    /** The two endpoint chain-block positions. Mutable: a captured endpoint that disassembles elsewhere is
+     *  re-anchored to wherever its restored block landed (see {@code ChainRegistry.reanchor}). */
+    public BlockPos a;
+    public BlockPos b;
     /**
      * The attach offset for each endpoint — the vector from the anchor cell's CENTRE to the exact point the
      * chain hooks onto, computed from the connected block's real collision box (so it hangs off a slab's top,
      * a fence's post, a stair's step, not just a flat cell face). Applied at resolve time and rotated with the
      * contraption for a captured anchor. Null = centre (no offset).
      */
-    public final org.joml.Vector3d offsetA;
-    public final org.joml.Vector3d offsetB;
+    public org.joml.Vector3d offsetA;
+    public org.joml.Vector3d offsetB;
 
     public final ChainMaterial material;
     /**
@@ -77,6 +78,12 @@ public final class Chain {
     /** Consecutive ticks an endpoint has looked orphaned (anchor gone, not captured) — grace so a captured chain
      *  isn't deleted in the window between restart and its contraption reloading (see ChainEngine#tickAll). */
     public transient int orphanTicks = 0;
+
+    /** Previous tick's resolved endpoint world positions — used to derive the endpoints' along-axis velocity so the
+     *  tether pull can DAMP relative motion (else it's an undamped spring that oscillates forever). Null until first
+     *  coupled tick; see {@code ChainEngine#applyRope}. */
+    public transient org.joml.Vector3d lastEndA;
+    public transient org.joml.Vector3d lastEndB;
 
     public Chain(UUID id, UUID worldId, BlockPos a, BlockPos b, org.joml.Vector3d offsetA,
             org.joml.Vector3d offsetB, ChainMaterial material, int blocks,

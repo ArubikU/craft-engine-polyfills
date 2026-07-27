@@ -73,7 +73,7 @@ public final class BlockAnchoredContraptionStore {
      */
     public record Record(UUID id, UUID worldId, BlockPos bearingPos, double x, double y, double z,
             double yawRadians, double pitchRadians, double rollRadians, boolean stalled, BearingType type,
-            double rpm, double suPerBlock) {
+            double rpm, double suPerBlock, double explosionProof) {
     }
 
     /** In-memory boot index: contraption id -> its manifest record. Populated by {@link #loadIndex}. */
@@ -181,6 +181,7 @@ public final class BlockAnchoredContraptionStore {
             root.putString("type", type.name());
             root.putDouble("rpm", rpm);
             root.putDouble("su", suPerBlock);
+            root.putDouble("explosionProof", state.explosionProof());
             root.put("structure", ContraptionStructureNbt.dump(state.level()));
         } catch (Throwable t) {
             CraftEnginePolyfills.instance().getLogger()
@@ -191,7 +192,7 @@ public final class BlockAnchoredContraptionStore {
         // (never restarted) still finds an up-to-date record. INDEX is main-thread-only.
         INDEX.put(id, new Record(id, state.worldId(), bearingPos, state.x(), state.y(),
                 state.z(), state.yawRadians(), state.pitchRadians(), state.rollRadians(), state.isStalled(),
-                type, rpm, suPerBlock));
+                type, rpm, suPerBlock, state.explosionProof()));
         // Dirty check: identical content to what we last queued for this id means it is already
         // (being) persisted — skip the gzip+write entirely. This is where most chunk-unload saves
         // are eliminated, since a parked contraption re-dumps byte-for-byte the same tag each time.
@@ -333,7 +334,7 @@ public final class BlockAnchoredContraptionStore {
                 // contraptions were being rehydrated with before pitch/roll were stored at all.
                 root.getDouble("pitch").orElse(0.0), root.getDouble("roll").orElse(0.0),
                 root.getBoolean("stalled").orElse(false), type, root.getDouble("rpm").orElse(0.0),
-                root.getDouble("su").orElse(0.0));
+                root.getDouble("su").orElse(0.0), root.getDouble("explosionProof").orElse(0.0));
     }
 
     /**
@@ -415,6 +416,9 @@ public final class BlockAnchoredContraptionStore {
             // a fresh scan for a real adjacent motor at the bearing block (same helper assembly uses).
             ContraptionAssembler.attachDefaultBehavior(realLevel, rec.bearingPos(), state, rec.type(), rec.rpm(),
                     rec.suPerBlock());
+            // attachDefaultBehavior re-reads the flag from the bearing block, which is gone for a PHYS/VEHICLE
+            // body — so restore the PERSISTED value, authoritative across restart.
+            state.setExplosionProof(rec.explosionProof());
             ContraptionManager.register(new ContraptionEntity(state));
             // Re-register the assembled-anchor bookkeeping so a later disassemble/unload finds it.
             dev.arubik.craftengine.contraption.BearingHammerListener.markAssembled(rec.worldId(), rec.bearingPos(),
