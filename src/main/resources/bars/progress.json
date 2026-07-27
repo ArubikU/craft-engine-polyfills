@@ -1,0 +1,12 @@
+{
+  "id": "polyfills:progress",
+  "model": "row",
+  "name": "lang:polyfill.ui.progress",
+  "generate": {
+    "source": "none",
+    "item": "cml:progress_%level%",
+    "empty_icon": "cml:gui_empty",
+    "lore": ["%percent%%"],
+    "parts": [ { "levels": 16 } ]
+  }
+}

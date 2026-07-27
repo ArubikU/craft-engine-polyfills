@@ -30,6 +30,11 @@ import net.momirealms.craftengine.core.util.Key;
  *   "fluid_tanks": [ { "name": "input", "capacity": 8000, "filter": "polyfills:water" } ],
  *   "gas_tanks":   [ { "name": "output", "capacity": 8000 } ],
  *   "fuel_required": true,
+ *   "bars": [                       // gauges from bars/*.json, positioned here
+ *     { "id": "polyfills:fuel",     "slots": [40] },
+ *     { "id": "polyfills:progress", "slots": [13] },
+ *     { "id": "polyfills:fluid",    "slots": [27, 18, 9, 0] }
+ *   ],
  *   "power": {                      // rotational power, if this machine uses any
  *     "consumes_stress": true,      // needs an rpm/SU supply (recipes carry the amounts)
  *     "su_exponent": 1.25,          // SU = suCost * (1+overclock)^exponent
@@ -147,10 +152,21 @@ public final class MachineDefinitionLoader {
                     (float) p.rangedDouble("base_overclock", 2.0, 0.0, 64.0));
         }
 
+        // `bars` names definitions from bars/*.json and says where each one goes, so a
+        // gauge shared by several machines is written once.
+        List<MachineDefinition.BarRef> bars = new ArrayList<>();
+        for (JsonView b : view.objectList("bars")) {
+            List<Integer> slotList = b.intList("slots");
+            int[] barSlots = new int[slotList.size()];
+            for (int i = 0; i < barSlots.length; i++)
+                barSlots[i] = requireInMenu(view, slotList.get(i), menuSize, "bars.slots");
+            bars.add(new MachineDefinition.BarRef(b.key("id", "polyfills"), barSlots));
+        }
+
         return new MachineDefinition(id,
                 view.string("recipe_type", id.value()), view.string("title", id.value()), menuSize,
                 inputs, outputs, fuels, upgrades, info, fluidTanks, gasTanks,
-                view.bool("fuel_required", true), io, buttons, power);
+                view.bool("fuel_required", true), io, buttons, power, bars);
     }
 
     private static List<MachineDefinition.TankSpec> parseTanks(JsonView view, String field) {
@@ -208,6 +224,12 @@ public final class MachineDefinitionLoader {
                     else
                         config.addOutput(type, face);
         }
+    }
+
+    private static int requireInMenu(JsonView view, int slot, int menuSize, String field) {
+        if (slot < 0 || slot >= menuSize)
+            throw view.error("'" + field + "' slot " + slot + " is outside the menu (size " + menuSize + ")");
+        return slot;
     }
 
     private static void rejectReserved(JsonView view, int[] slots, int reserved, String field) {

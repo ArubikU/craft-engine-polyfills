@@ -439,7 +439,20 @@ public class DataMachineBlockEntity extends AbstractMachineBlockEntity {
         else
             for (MachineMenuConfig.Button button : menuConfig.buttons)
                 installButton(layout, button);
-        MachineBars.install(layout, bars);
+        // Bars declared by the machine definition win; the block config remains the
+        // fallback so a pack that has not adopted bars/*.json still renders.
+        List<MachineBar> effectiveBars = bars;
+        if (!definition.bars().isEmpty()) {
+            List<MachineBar> resolved = new java.util.ArrayList<>();
+            for (MachineDefinition.BarRef ref : definition.bars()) {
+                var def = dev.arubik.craftengine.machine.menu.bar.BarDefinition.REGISTRY.get(ref.bar());
+                if (def != null)
+                    resolved.add(def.toBar(ref.slots()));
+            }
+            if (!resolved.isEmpty())
+                effectiveBars = resolved;
+        }
+        MachineBars.install(layout, effectiveBars);
 
         // Recipe readout icon, same shared component the Java machines use.
         int infoSlot = definition.infoSlot() >= 0 ? definition.infoSlot() : menuConfig.infoSlot;

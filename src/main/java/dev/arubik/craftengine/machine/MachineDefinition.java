@@ -81,6 +81,15 @@ public final class MachineDefinition {
         }
     }
 
+    /**
+     * A gauge this machine shows: which {@code bars/*.json} definition, and where.
+     *
+     * @param bar   the definition id
+     * @param slots menu slots it occupies; empty uses the definition's own default
+     */
+    public record BarRef(Key bar, int[] slots) {
+    }
+
     /** A tank the machine owns. */
     public record TankSpec(String name, int capacity, Key filter) {
     }
@@ -150,11 +159,12 @@ public final class MachineDefinition {
     private final IOConfiguration io;
     private final List<ButtonSpec> buttons;
     private final PowerSpec power;
+    private final List<BarRef> bars;
 
     public MachineDefinition(Key id, String recipeType, String title, int menuSize, int[] inputSlots,
             int[] outputSlots, int[] fuelSlots, UpgradeSpec upgrades, int infoSlot, List<TankSpec> fluidTanks,
             List<TankSpec> gasTanks, boolean fuelRequired, IOConfiguration io, List<ButtonSpec> buttons,
-            PowerSpec power) {
+            PowerSpec power, List<BarRef> bars) {
         this.id = id;
         this.recipeType = recipeType;
         this.title = title;
@@ -170,6 +180,7 @@ public final class MachineDefinition {
         this.io = io;
         this.buttons = List.copyOf(buttons);
         this.power = power == null ? PowerSpec.none() : power;
+        this.bars = bars == null ? List.of() : List.copyOf(bars);
     }
 
     public Key id() {
@@ -242,6 +253,11 @@ public final class MachineDefinition {
     /** How this machine consumes or produces rotational power. */
     public PowerSpec power() {
         return power;
+    }
+
+    /** Gauges this machine shows, resolved against {@code bars/*.json}. */
+    public List<BarRef> bars() {
+        return bars;
     }
 
     public static MachineDefinition byName(String name) {

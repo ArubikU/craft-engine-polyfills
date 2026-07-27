@@ -54,6 +54,12 @@ public final class MachineBars {
             // present, every slot maps its local fill % to a fill-model item via its own ranges
             // (type-aware). This makes the fluid/fuel/progress bars fully declarative (no hardcoding).
             List<List<MachineBar.BarState>> segments = parseSegments(def.get("segments"));
+            // `generate:` builds those segments from the fluid/gas registry instead of
+            // listing every level of every type by hand — that listing ran to ~290 lines
+            // per machine and had to be duplicated, in full, for each machine showing the
+            // same gauge.
+            if (segments == null || segments.isEmpty())
+                segments = generateSegments(def.get("generate"), name);
 
             boolean any = states.values().stream().anyMatch(l -> !l.isEmpty())
                     || (segments != null && !segments.isEmpty());
@@ -62,6 +68,96 @@ public final class MachineBars {
             out.add(new MachineBar(id, model, slots, states, family, name, segments));
         }
         return out;
+    }
+
+    /**
+     * Builds per-slot segments from the fluid or gas registry.
+     *
+     * <pre>{@code
+     * generate:
+     *   source: fluid                            # fluid | gas | none
+     *   item: "cml:%family%_%suffix%_%level%"    # every item id this gauge uses
+     *   lore: ["%value%/%max% mB", "%percent%%"]
+     *   parts:                                   # one per slot, in slot order
+     *     - { suffix: bottom, levels: 16 }
+     *     - { suffix: midbot, levels: 18 }
+     * }</pre>
+     *
+     * <p>
+     * Each level's range is {@code round(i * 100 / levels)}, which reproduces the
+     * hand-written ranges exactly. The item id comes from the {@code item} template
+     * — the models a gauge uses are stated in the file rather than assembled in
+     * code — with {@code %family%} filled in per registered type, so adding a liquid
+     * gives it a gauge with no edit at all. {@code source: none} skips the registry
+     * and emits one untyped run, which is what the fuel and progress gauges need.
+     */
+    private static List<List<MachineBar.BarState>> generateSegments(Object o, String barName) {
+        if (!(o instanceof Map<?, ?> gen))
+            return null;
+        String source = str(gen.get("source"), "fluid");
+        boolean gas = "gas".equalsIgnoreCase(source);
+        boolean typed = !"none".equalsIgnoreCase(source);
+        String template = str(gen.get("item"), null);
+        if (template == null)
+            return null; // a gauge must say which items it draws
+        String emptyIcon = str(gen.get("empty_icon"), "cml:gui_empty");
+        List<String> lore = new ArrayList<>();
+        if (gen.get("lore") instanceof List<?> ll)
+            for (Object l : ll)
+                lore.add(String.valueOf(l));
+        if (!(gen.get("parts") instanceof List<?> parts) || parts.isEmpty())
+            return null;
+
+        // Family -> the type whose name labels it, plus every other type sharing it.
+        record Variant(String family, String type) {
+        }
+        List<Variant> variants = new ArrayList<>();
+        if (typed && gas) {
+            for (var t : dev.arubik.craftengine.gas.GasType.REGISTRY.values())
+                if (!t.isEmpty())
+                    variants.add(new Variant(t.id().value(), t.name().toLowerCase(java.util.Locale.ROOT)));
+        } else if (typed) {
+            for (var t : dev.arubik.craftengine.fluid.FluidType.REGISTRY.values())
+                if (t != dev.arubik.craftengine.fluid.FluidType.EMPTY)
+                    variants.add(new Variant(t.renderFamily(), t.name().toLowerCase(java.util.Locale.ROOT)));
+        }
+        String defaultFamily = variants.isEmpty() ? str(gen.get("family"), "")
+                : variants.get(0).family();
+
+        List<List<MachineBar.BarState>> out = new ArrayList<>();
+        for (Object partObj : parts) {
+            if (!(partObj instanceof Map<?, ?> part))
+                continue;
+            String suffix = str(part.get("suffix"), "");
+            int levels = part.get("levels") == null ? 16 : ((Number) part.get("levels")).intValue();
+            List<MachineBar.BarState> states = new ArrayList<>();
+            states.add(new MachineBar.BarState(0, 0, emptyIcon, null, List.of(), null));
+
+            // The default (untyped) run first, matching how the hand-written bars put the
+            // fallback family ahead of the type-qualified entries.
+            appendLevels(states, template, defaultFamily, suffix, levels, barName, lore, null);
+            for (Variant v : variants)
+                appendLevels(states, template, v.family(), suffix, levels, barName, lore, v.type());
+            out.add(states);
+        }
+        return out;
+    }
+
+    private static String str(Object value, String fallback) {
+        return value == null ? fallback : String.valueOf(value);
+    }
+
+    private static void appendLevels(List<MachineBar.BarState> states, String template, String family,
+            String suffix, int levels, String barName, List<String> lore, String type) {
+        int previous = 0;
+        for (int i = 1; i <= levels; i++) {
+            int max = (int) Math.round(i * 100.0 / levels);
+            String item = template.replace("%family%", family)
+                    .replace("%suffix%", suffix)
+                    .replace("%level%", Integer.toString(i));
+            states.add(new MachineBar.BarState(previous + 1, max, item, barName, lore, type));
+            previous = max;
+        }
     }
 
     /** Parse a per-slot {@code segments:} list — each element is {@code {states: [...]}} (or a bare list). */

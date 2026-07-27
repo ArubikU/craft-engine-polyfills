@@ -53,6 +53,29 @@
         "name": "buffer",
         "capacity": 8000
       }
+    ],
+    "bars": [
+      {
+        "id": "polyfills:fuel",
+        "slots": [
+          40
+        ]
+      },
+      {
+        "id": "polyfills:progress",
+        "slots": [
+          13
+        ]
+      },
+      {
+        "id": "polyfills:fluid",
+        "slots": [
+          27,
+          18,
+          9,
+          0
+        ]
+      }
     ]
   }
 }

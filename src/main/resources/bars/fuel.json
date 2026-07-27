@@ -1,0 +1,12 @@
+{
+  "id": "polyfills:fuel",
+  "model": "row",
+  "name": "lang:polyfill.ui.fuel",
+  "generate": {
+    "source": "none",
+    "item": "cml:fuel_%level%",
+    "empty_icon": "cml:gui_empty",
+    "lore": ["%percent%%"],
+    "parts": [ { "levels": 16 } ]
+  }
+}

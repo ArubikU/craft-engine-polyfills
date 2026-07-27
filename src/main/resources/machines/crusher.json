@@ -40,5 +40,13 @@
     "consumes_stress": true,
     "su_exponent": 1.25,
     "stress_grace_ticks": 20
-  }
+  },
+  "bars": [
+    {
+      "id": "polyfills:progress",
+      "slots": [
+        13
+      ]
+    }
+  ]
 }
