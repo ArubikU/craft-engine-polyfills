@@ -25,15 +25,26 @@ public final class StationRecipe implements CraftingRecipeLike, RecipeCondition,
 
     private final CraftingRecipe base;
     private final Key requiredTool;
+    /**
+     * The station this recipe belongs to.
+     *
+     * <p>
+     * Recipes used to be bound to a station purely by their required tool, which
+     * meant two stations could never share a tool. The workbench id is now the
+     * binding; the tool is just an ingredient in a special slot. Null on a recipe
+     * from an older file that only named a tool.
+     */
+    private final Key workbench;
     private final int toolUsesPerCraft;
     private final RecipeCondition condition;
     private final RecipeExecutor executor;
     /** Per-output drop chance (0..100), aligned to base.outputs(); 100 = guaranteed. */
     private final int[] chances;
 
-    private StationRecipe(CraftingRecipe base, Key requiredTool, int toolUsesPerCraft,
+    private StationRecipe(CraftingRecipe base, Key workbench, Key requiredTool, int toolUsesPerCraft,
             RecipeCondition condition, RecipeExecutor executor, int[] chances) {
         this.base = base;
+        this.workbench = workbench;
         this.requiredTool = requiredTool;
         this.toolUsesPerCraft = Math.max(1, toolUsesPerCraft);
         this.condition = condition;
@@ -79,6 +90,11 @@ public final class StationRecipe implements CraftingRecipeLike, RecipeCondition,
     }
 
     /** The id of the item that must sit in the TOOL slot (custom or vanilla key). */
+    /** The station this recipe belongs to, or null if it only named a tool. */
+    public Key workbench() {
+        return workbench;
+    }
+
     public Key requiredTool() {
         return requiredTool;
     }
@@ -127,6 +143,7 @@ public final class StationRecipe implements CraftingRecipeLike, RecipeCondition,
         private CraftingRecipe.ShapedBuilder shaped;
         private CraftingRecipe.ShapelessBuilder shapeless;
         private Key requiredTool;
+        private Key workbench;
         private int toolUsesPerCraft = 1;
         private RecipeCondition condition;
         private RecipeExecutor executor;
@@ -162,6 +179,12 @@ public final class StationRecipe implements CraftingRecipeLike, RecipeCondition,
                 shapeless = CraftingRecipe.shapeless(id);
             }
             return shapeless;
+        }
+
+        /** Binds this recipe to a data-defined station. */
+        public Builder workbench(Key id) {
+            this.workbench = id;
+            return this;
         }
 
         public Builder requiredTool(Key tool) {
@@ -200,7 +223,7 @@ public final class StationRecipe implements CraftingRecipeLike, RecipeCondition,
             for (int i = 0; i < ch.length; i++) {
                 ch[i] = chances.getOrDefault(i, 100);
             }
-            return new StationRecipe(base, requiredTool, toolUsesPerCraft, condition, executor, ch);
+            return new StationRecipe(base, workbench, requiredTool, toolUsesPerCraft, condition, executor, ch);
         }
     }
 }

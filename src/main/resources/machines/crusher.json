@@ -1,0 +1,44 @@
+{
+  "id": "polyfills:crusher",
+  "recipe_type": "crusher",
+  "title": "Crusher",
+  "menu_size": 54,
+  "fuel_required": false,
+  "slots": {
+    "input": [
+      12
+    ],
+    "output": [
+      14
+    ],
+    "info": 4,
+    "upgrade": {
+      "count": 9,
+      "base_unlocked": 3
+    }
+  },
+  "buttons": [
+    {
+      "slot": 33,
+      "icon": "cml:upgrade_button",
+      "action": "open_page:1",
+      "name": "polyfill.ui.upgrades",
+      "lore": [
+        "polyfill.ui.upgrades_desc"
+      ]
+    },
+    {
+      "slot": 29,
+      "icon": "cml:overclock_button",
+      "action": "open_page:2",
+      "name": "polyfill.ui.overclock",
+      "locked_icon": "cml:locked_icon",
+      "locked_when": "no_overclock"
+    }
+  ],
+  "power": {
+    "consumes_stress": true,
+    "su_exponent": 1.25,
+    "stress_grace_ticks": 20
+  }
+}

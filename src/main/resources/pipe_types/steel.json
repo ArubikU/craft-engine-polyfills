@@ -1,0 +1,40 @@
+{
+  "id": "polyfills:steel",
+  "block": "cml:iron_pipe",
+  "resource": "gas",
+  "capacity": 1000,
+  "transfer_per_tick": 100,
+  "conductance": 1000.0,
+  "tier": 1,
+  "connects_to": [
+    "cml:gas_pump",
+    "cml:gas_valve",
+    "cml:gas_tank"
+  ],
+  "preview_namespace": "cml",
+  "preview_prefix": "pipe_preview_steel",
+  "mask_order": [
+    "south",
+    "west",
+    "north",
+    "east",
+    "up",
+    "down"
+  ],
+  "preview_offset": [
+    0.5,
+    0.5,
+    0.5
+  ],
+  "preview_scale": 1.0,
+  "replaceable_blocks": [
+    "minecraft:air",
+    "minecraft:cave_air",
+    "minecraft:void_air",
+    "minecraft:water",
+    "minecraft:lava",
+    "minecraft:short_grass",
+    "minecraft:tall_grass",
+    "minecraft:snow"
+  ]
+}

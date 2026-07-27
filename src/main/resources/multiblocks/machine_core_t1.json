@@ -1,0 +1,37 @@
+{
+  "id": "polyfills:machine_core_t1",
+  "keys": {
+    "C": { "blocks": "minecraft:copper_block" },
+    "I": { "blocks": "minecraft:iron_block" },
+    ".": "any"
+  },
+  "modes": [
+    {
+      "name": "smelter",
+      "core": [1, 1, 1],
+      "layers": [
+        ["III", "III", "III"],
+        ["III", "I.I", "III"],
+        ["III", "III", "III"]
+      ],
+      "io": {
+        "default": "closed",
+        "rules": [
+          { "y_above": 0, "input":  { "types": ["item"], "faces": ["all_but_down"] } },
+          { "y": 0,       "input":  { "types": ["item"], "faces": ["horizontal"] } },
+          { "y_below": 0, "output": { "types": ["item"], "faces": ["down"] } }
+        ]
+      }
+    },
+    {
+      "name": "chest",
+      "core": [1, 1, 1],
+      "layers": [
+        ["CCC", "CCC", "CCC"],
+        ["CCC", "C.C", "CCC"],
+        ["CCC", "CCC", "CCC"]
+      ],
+      "io": { "default": "open" }
+    }
+  ]
+}

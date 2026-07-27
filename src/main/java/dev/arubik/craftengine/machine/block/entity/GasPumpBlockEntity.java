@@ -168,10 +168,33 @@ public class GasPumpBlockEntity extends AbstractMachineBlockEntity {
 
     // ---------------- upgrades ----------------
 
+    /**
+     * The pump's machine half, from {@code pumps/*.json}.
+     *
+     * <p>
+     * A pump's world scan stays in Java, but its upgrade grid is ordinary machine
+     * surface and now comes from data like every other machine's. Falls back to the
+     * historical 9/3 when no definition is present.
+     */
+    private dev.arubik.craftengine.machine.MachineDefinition machineDefinition() {
+        return dev.arubik.craftengine.machine.MachineDefinition.byName(getMachineId());
+    }
+
+    private int upgradeSlotCount() {
+        var d = machineDefinition();
+        return d != null && d.upgrades().size() > 0 ? d.upgrades().size() : UPGRADE_SLOTS;
+    }
+
+    private int baseUnlockedCount() {
+        var d = machineDefinition();
+        return d != null && d.upgrades().size() > 0 ? d.upgrades().baseUnlocked() : BASE_UNLOCKED;
+    }
+
     @Override
     public int[] getUpgradeSlots() {
-        int[] s = new int[UPGRADE_SLOTS];
-        for (int i = 0; i < UPGRADE_SLOTS; i++)
+        int count = upgradeSlotCount();
+        int[] s = new int[count];
+        for (int i = 0; i < count; i++)
             s[i] = i;
         return s;
     }
@@ -196,14 +219,16 @@ public class GasPumpBlockEntity extends AbstractMachineBlockEntity {
     @Override
     protected void recomputeUpgrades() {
         List<Mod> all = new ArrayList<>();
-        for (int i = 0; i < UPGRADE_SLOTS; i++) {
+        for (int i = 0; i < upgradeSlotCount(); i++) {
             List<Mod> m = modsOf(i);
             if (m != null)
                 all.addAll(m);
         }
         int extra = (int) Math.round(MachineAttributes.compute(all)
                 .getOrDefault(MachineAttributes.EXTRA_SLOTS, 0.0));
-        this.curUnlocked = Math.max(BASE_UNLOCKED, Math.min(UPGRADE_SLOTS, BASE_UNLOCKED + extra));
+        int count = upgradeSlotCount();
+        int base = baseUnlockedCount();
+        this.curUnlocked = Math.max(base, Math.min(count, base + extra));
 
         List<Mod> active = new ArrayList<>();
         for (int i = 0; i < curUnlocked; i++) {
@@ -684,7 +709,7 @@ public class GasPumpBlockEntity extends AbstractMachineBlockEntity {
                 dev.arubik.craftengine.machine.menu.GuiTitles.title(getMachineId(), "upgrade");
         l.setTitleComponent(title != null ? title
                 : MenuText.noI(MenuText.tr("polyfill.ui.upgrades", NamedTextColor.AQUA)));
-        for (int i = 0; i < UPGRADE_SLOTS; i++) {
+        for (int i = 0; i < upgradeSlotCount(); i++) {
             if (i < unlocked) {
                 l.addSlot(i, MenuSlotType.INPUT);
             } else {

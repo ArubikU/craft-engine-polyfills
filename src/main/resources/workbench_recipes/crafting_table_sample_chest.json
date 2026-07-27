@@ -1,0 +1,6 @@
+{
+  "workbench": "polyfills:crafting_table",
+  "pattern": ["PPP", "P P", "PPP"],
+  "keys": { "P": "minecraft:oak_planks" },
+  "outputs": [ { "id": "minecraft:chest", "count": 1 } ]
+}

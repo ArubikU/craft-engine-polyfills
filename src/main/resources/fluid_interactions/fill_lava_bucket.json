@@ -1,0 +1,7 @@
+{
+  "kind": "fill",
+  "item": { "items": "minecraft:lava_bucket" },
+  "fluid": "polyfills:lava",
+  "amount": 1000,
+  "results": [ { "id": "minecraft:bucket" } ]
+}

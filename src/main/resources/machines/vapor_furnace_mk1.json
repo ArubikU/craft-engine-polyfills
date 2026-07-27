@@ -1,0 +1,76 @@
+{
+  "id": "polyfills:vapor_furnace_mk1",
+  "recipe_type": "vapor_furnace_mk1",
+  "title": "Vapor Furnace Mk1",
+  "menu_size": 54,
+  "fuel_required": true,
+  "slots": {
+    "input": [
+      11,
+      12
+    ],
+    "output": [
+      14,
+      15
+    ],
+    "fuel": [
+      31
+    ],
+    "info": 4,
+    "upgrade": {
+      "count": 9,
+      "base_unlocked": 3
+    }
+  },
+  "buttons": [
+    {
+      "slot": 33,
+      "icon": "cml:upgrade_button",
+      "action": "open_page:1",
+      "name": "polyfill.ui.upgrades",
+      "lore": [
+        "polyfill.ui.upgrades_desc"
+      ]
+    },
+    {
+      "slot": 29,
+      "icon": "cml:overclock_button",
+      "action": "open_page:2",
+      "name": "polyfill.ui.overclock",
+      "locked_icon": "cml:locked_icon",
+      "locked_when": "no_overclock"
+    },
+    {
+      "slot": 36,
+      "icon": "cml:empty_button",
+      "action": "deplete_fluid:water",
+      "name": "polyfill.ui.deplete",
+      "lore": [
+        "polyfill.ui.fluid"
+      ]
+    },
+    {
+      "slot": 44,
+      "icon": "cml:empty_button",
+      "action": "deplete_gas:steam",
+      "name": "polyfill.ui.deplete",
+      "lore": [
+        "polyfill.ui.gas"
+      ]
+    }
+  ],
+  "fluid_tanks": [
+    {
+      "name": "water",
+      "capacity": 8000,
+      "filter": "polyfills:water"
+    }
+  ],
+  "gas_tanks": [
+    {
+      "name": "steam",
+      "capacity": 8000,
+      "filter": "polyfills:steam"
+    }
+  ]
+}

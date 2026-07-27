@@ -1,0 +1,16 @@
+{
+  "id": "polyfills:water",
+  "unit_mb": 1000,
+  "mb_per_full_block": 1000,
+  "block_collect_delay": 4,
+  "carrier_io_delay": 2,
+  "render_family": "water",
+  "tank_variant": "water",
+  "color": "#3F76E4",
+  "density": 1.0,
+  "viscosity": 1.0,
+  "fill_sound": "minecraft:item.bucket.empty",
+  "drain_sound": "minecraft:item.bucket.fill",
+  "vanilla_fluid": "minecraft:water",
+  "translation_key": "polyfill.liquid.water"
+}

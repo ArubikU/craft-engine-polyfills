@@ -1,0 +1,7 @@
+{
+  "kind": "fill",
+  "item": { "items": "minecraft:honey_bottle" },
+  "fluid": "polyfills:honey",
+  "amount": 250,
+  "results": [ { "id": "minecraft:glass_bottle" } ]
+}

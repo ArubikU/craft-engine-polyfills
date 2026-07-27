@@ -84,12 +84,23 @@ public class MachinePumpBehavior extends MachineBlockBehavior {
             List<MachineBar> bars = MachineBars.parse(arguments.get("bars"));
             MachineMenuConfig menuConfig = MachineMenuConfig.parse(arguments::get);
 
-            int capacity = intOr(arguments.get("capacity"), 8000);
-            int extractPerTick = intOr(arguments.get("extract_per_tick"), 1000);
-            int pushPerTick = intOr(arguments.get("push_per_tick"), 1000);
-            int pressure = intOr(arguments.get("pressure"), 10);
+            // Pump tuning comes from pump_types/*.json, selected by `pump_type:` or by this
+            // block's id; explicit YAML keys still win, so an existing pack keeps its values.
+            dev.arubik.craftengine.pipe.PumpType pump = null;
+            Object configuredPump = arguments.get("pump_type");
+            if (configuredPump != null)
+                pump = dev.arubik.craftengine.pipe.PumpType.byName(String.valueOf(configuredPump));
+            if (pump == null)
+                pump = dev.arubik.craftengine.pipe.PumpType.byBlockId(block.id());
+            if (pump == null)
+                pump = dev.arubik.craftengine.pipe.PumpType.MACHINE_PUMP;
+
+            int capacity = intOr(arguments.get("capacity"), pump.capacity());
+            int extractPerTick = intOr(arguments.get("extract_per_tick"), pump.extractPerTick());
+            int pushPerTick = intOr(arguments.get("push_per_tick"), pump.pushPerTick());
+            int pressure = intOr(arguments.get("pressure"), pump.pressure());
             // Ticks between pump operations (extract+push). Overclock shortens this interval.
-            int extractTickRate = intOr(arguments.get("extract_tick_rate"), 10);
+            int extractTickRate = intOr(arguments.get("extract_tick_rate"), pump.extractTickRate());
 
             // A pump only connects on its UP (out) and DOWN (in) local faces.
             java.util.List<net.minecraft.core.Direction> faces = java.util.List.of(

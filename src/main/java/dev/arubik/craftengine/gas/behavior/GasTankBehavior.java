@@ -12,6 +12,7 @@ import dev.arubik.craftengine.gas.GasKeys;
 import dev.arubik.craftengine.gas.GasStack;
 import dev.arubik.craftengine.gas.GasType;
 import dev.arubik.craftengine.gas.GasCarrierImpl;
+
 import dev.arubik.craftengine.util.TypedKey;
 import dev.arubik.craftengine.util.Utils;
 import net.kyori.adventure.text.Component;
@@ -36,6 +37,7 @@ import net.momirealms.craftengine.core.block.entity.BlockEntity;
 import net.momirealms.craftengine.core.block.entity.BlockEntityController;
 import net.momirealms.craftengine.core.block.property.EnumProperty;
 import net.momirealms.craftengine.core.block.property.IntegerProperty;
+import net.momirealms.craftengine.core.block.property.Property;
 import net.momirealms.craftengine.core.world.context.BlockPlaceContext;
 import net.momirealms.craftengine.core.world.context.UseOnContext;
 
@@ -43,7 +45,7 @@ public class GasTankBehavior extends ConnectableBlockBehavior implements EntityB
 
     public static final Factory FACTORY = new Factory();
 
-    public final EnumProperty<GasType> gasTypeProperty;
+    public final Property<String> gasTypeProperty;
     public final IntegerProperty levelProperty;
 
     public final Set<GasType> acceptedGases = Set.of(GasType.values());
@@ -52,7 +54,7 @@ public class GasTankBehavior extends ConnectableBlockBehavior implements EntityB
     public GasTankBehavior(BlockDefinition block,
             EnumProperty<net.momirealms.craftengine.core.util.Direction> horizontalDirectionProperty,
             EnumProperty<net.momirealms.craftengine.core.util.Direction> verticalDirectionProperty,
-            EnumProperty<GasType> gasTypeProperty,
+            Property<String> gasTypeProperty,
             IntegerProperty levelProperty) {
         // Gas connects on all 6 faces (no gravity/direction) so the engine network forms regardless of
         // how pipes/pumps are placed around the tank (was UP/DOWN only).
@@ -70,7 +72,7 @@ public class GasTankBehavior extends ConnectableBlockBehavior implements EntityB
                     .get("horizontal");
             EnumProperty<net.momirealms.craftengine.core.util.Direction> v = (EnumProperty<net.momirealms.craftengine.core.util.Direction>) block
                     .getProperty("vertical");
-            EnumProperty<GasType> f = (EnumProperty<GasType>) block.getProperty("gastype");
+            Property<String> f = (Property<String>) block.getProperty("gastype");
             IntegerProperty level = (IntegerProperty) block.getProperty("level");
             return new GasTankBehavior(block, h, v, f, level);
         }
@@ -129,7 +131,7 @@ public class GasTankBehavior extends ConnectableBlockBehavior implements EntityB
 
     @Override
     public ImmutableBlockState updateStateForPlacement(BlockPlaceContext context, ImmutableBlockState state) {
-        GasType stores = state.get(gasTypeProperty);
+        GasType stores = GasType.byTankVariant(state.get(gasTypeProperty));
         if (stores != null && stores != GasType.EMPTY) {
             int level = state.get(levelProperty);
             executeBlockEntity((Level) context.getLevel().minecraftWorld(),
@@ -298,7 +300,8 @@ public class GasTankBehavior extends ConnectableBlockBehavior implements EntityB
             Optional<ImmutableBlockState> state = BlockStateUtils.getOptionalCustomBlockState(level.getBlockState(pos));
             if (state.isPresent()) {
                 ImmutableBlockState newState = state.get().with(levelProperty, lev)
-                        .with(gasTypeProperty, stored.getType());
+                        .with(gasTypeProperty, stored.getType() == null ? "empty"
+                                : stored.getType().tankVariant());
                 ((net.minecraft.world.level.LevelWriter) level).setBlock(pos,
                         (net.minecraft.world.level.block.state.BlockState) newState.customBlockState().minecraftState(),
                         3);

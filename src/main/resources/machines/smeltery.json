@@ -1,0 +1,9 @@
+{
+  "id": "polyfills:smeltery",
+  "recipe_type": "smeltery",
+  "title": "Smeltery",
+  "menu_size": 27,
+  "fuel_required": true,
+  "slots": { "input": [11], "output": [15], "fuel": [20], "info": 4 },
+  "fluid_tanks": [ { "name": "output", "capacity": 8000 } ]
+}

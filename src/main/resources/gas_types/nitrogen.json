@@ -1,0 +1,12 @@
+{
+  "id": "polyfills:nitrogen",
+  "display_name": "Nitrogen",
+  "translation_key": "polyfill.gas.nitrogen",
+  "color": "#A8C8E8",
+  "density": 0.97,
+  "tank_variant": "nitrogen",
+  "vent_particle": "minecraft:cloud",
+  "vent_per_particle": 50,
+  "vent_spread": 0.2,
+  "vent_speed": 0.05
+}

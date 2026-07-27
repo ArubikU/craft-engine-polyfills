@@ -19,27 +19,8 @@ public class FluidCollector {
      * Delay específico para recolectar desde bloques (permite diferenciar de I/O)
      */
     public static int blockCollectDelay(FluidType t) {
-        if (t == null)
-            return 1;
-        switch (t) {
-            case LAVA:
-                return 12;
-            case SLIME:
-                return 10;
-            case HONEY:
-                return 8;
-            case POWDER_SNOW:
-                return 6;
-            case WATER:
-                return 4;
-            case MILK:
-                return 2;
-            case EXPERIENCE:
-                return 1;
-            case EMPTY:
-            default:
-                return 1;
-        }
+        // The per-fluid number now lives in the fluid's data-driven properties.
+        return FluidType.blockCollectDelay(t);
     }
 
     /**

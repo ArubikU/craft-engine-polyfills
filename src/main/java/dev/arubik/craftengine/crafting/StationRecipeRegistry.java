@@ -68,6 +68,16 @@ public final class StationRecipeRegistry {
     }
 
     /** First station recipe whose required tool is {@code toolId}, if any. */
+    /** Recipes belonging to a data-defined station. */
+    public java.util.List<StationRecipe> byWorkbench(Key workbenchId) {
+        java.util.List<StationRecipe> out = new java.util.ArrayList<>();
+        for (StationRecipe r : recipes) {
+            if (workbenchId != null && workbenchId.equals(r.workbench()))
+                out.add(r);
+        }
+        return out;
+    }
+
     public Optional<StationRecipe> byTool(Key toolId) {
         if (toolId != null) {
             for (StationRecipe r : recipes) {

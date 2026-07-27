@@ -47,6 +47,11 @@ public class FluidTank {
         return key;
     }
 
+    /** The tank's name, which a menu button targets to empty just this one. */
+    public String getName() {
+        return name;
+    }
+
     public int getCapacity() {
         return capacity;
     }

@@ -29,6 +29,67 @@ public class CepCommand implements CommandExecutor, TabCompleter {
     private final Map<ArgumentList, BiFunction<CommandSender, Object[], Boolean>> cases = new HashMap<>();
 
     public CepCommand() {
+        // /cep data registries — what the data-driven load phase produced, and whether
+        // it is sealed. Registration is only legal while these read "open".
+        cases.put(new ArgumentList("data^", "registries^"), (sender, parsed) -> {
+            sender.sendMessage(MiniMessage.miniMessage().deserialize(
+                    "<gray>Data registries <white>(" + (dev.arubik.craftengine.data.Registries.isFrozen()
+                            ? "<red>frozen" : "<green>open") + "<white>)"));
+            for (var registry : dev.arubik.craftengine.data.Registries.all()) {
+                sender.sendMessage(MiniMessage.miniMessage().deserialize(
+                        "  <aqua>" + registry.name() + "<gray>: <white>" + registry.size()
+                                + "<gray> entries, " + (registry.isFrozen() ? "<red>frozen" : "<green>open")
+                                + "<gray>, " + (registry.clearsOnReload() ? "rebuilt" : "identity-stable")
+                                + " on reload"));
+            }
+            for (var loader : dev.arubik.craftengine.data.Registries.loaders()) {
+                sender.sendMessage(MiniMessage.miniMessage().deserialize(
+                        "  <dark_gray>loader <gray>" + loader.name() + " <dark_gray>@ phase " + loader.phase()));
+            }
+            return true;
+        });
+
+        // /cep data fluids — the open liquid registry with each entry's tunables.
+        cases.put(new ArgumentList("data^", "fluids^"), (sender, parsed) -> {
+            for (var fluid : dev.arubik.craftengine.fluid.FluidType.REGISTRY) {
+                var p = fluid.value().properties();
+                sender.sendMessage(MiniMessage.miniMessage().deserialize(
+                        "<aqua>" + fluid.id() + " <gray>unit=<white>" + p.unitMb()
+                                + " <gray>block=<white>" + p.mbPerFullBlock()
+                                + " <gray>density=<white>" + p.density()
+                                + " <gray>viscosity=<white>" + p.viscosity()
+                                + " <gray>render=<white>" + p.renderFamily()));
+            }
+            return true;
+        });
+
+        // /cep data gases — same, for gases.
+        cases.put(new ArgumentList("data^", "gases^"), (sender, parsed) -> {
+            for (var gas : dev.arubik.craftengine.gas.GasType.REGISTRY) {
+                var p = gas.value().properties();
+                sender.sendMessage(MiniMessage.miniMessage().deserialize(
+                        "<aqua>" + gas.id() + " <gray>density=<white>" + p.density()
+                                + " <gray>vent=<white>" + p.ventParticle()
+                                + " <gray>per-particle=<white>" + p.ventPerParticle()));
+            }
+            return true;
+        });
+
+        // /cep data pipes — the open pipe-tier registry.
+        cases.put(new ArgumentList("data^", "pipes^"), (sender, parsed) -> {
+            for (var pipe : dev.arubik.craftengine.pipe.PipeType.REGISTRY) {
+                var p = pipe.value().properties();
+                sender.sendMessage(MiniMessage.miniMessage().deserialize(
+                        "<aqua>" + pipe.id() + " <gray>block=<white>" + p.blockId()
+                                + " <gray>carries=<white>" + p.resource()
+                                + " <gray>cap=<white>" + p.capacity()
+                                + " <gray>rate=<white>" + p.transferPerTick()
+                                + " <gray>conductance=<white>" + p.conductance()
+                                + " <gray>tier=<white>" + p.tier()));
+            }
+            return true;
+        });
+
         // Ejemplo: /cepolyfill data get <string> <int>
         cases.put(new ArgumentList("data^","get^", XAxisCoordinate.class,YAxisCoordinate.class,ZAxisCoordinate.class), (sender, parsed) -> {
 
@@ -254,6 +315,80 @@ public class CepCommand implements CommandExecutor, TabCompleter {
                 return true;
             }
             spawnDebugPhys(player, Map.of(BlockPos.ZERO, state), null, input);
+            return true;
+        });
+
+        // /cep vehicle spawn <blockstate> — spawn a one-cell VEHICLE contraption in front of you and make
+        // you its driver, so the steer-vehicle path (WASD thrust, A/D yaw, jump/sprint up/down) can be tested
+        // without building a hull. Stand on it (the collider floor carries you) and drive.
+        cases.put(new ArgumentList("vehicle^", "spawn^", String.class), (sender, parsed) -> {
+            if (!(sender instanceof Player player))
+                return true;
+            String input = (String) parsed[2];
+            net.minecraft.world.level.block.state.BlockState state;
+            try {
+                state = dev.arubik.craftengine.contraption.DebugPhysSpawn.parseBlockState(input);
+            } catch (IllegalArgumentException e) {
+                sender.sendMessage("§cNot a blockstate: §f" + input + "§c — try minecraft:iron_block.");
+                return true;
+            }
+            org.bukkit.Location eye = player.getEyeLocation();
+            net.minecraft.world.phys.Vec3 anchor = dev.arubik.craftengine.contraption.DebugPhysSpawn.spawnAnchor(
+                    new net.minecraft.world.phys.Vec3(eye.getX(), eye.getY(), eye.getZ()),
+                    new net.minecraft.world.phys.Vec3(eye.getDirection().getX(), eye.getDirection().getY(),
+                            eye.getDirection().getZ()));
+            dev.arubik.craftengine.contraption.ContraptionEntity entity =
+                    dev.arubik.craftengine.contraption.DebugPhysSpawn.spawn(player.getWorld(), anchor,
+                            Map.of(BlockPos.ZERO, state), null,
+                            dev.arubik.craftengine.contraption.BearingType.VEHICLE);
+            if (entity == null) {
+                sender.sendMessage("§cNothing solid to spawn from §f" + input + "§c.");
+                return true;
+            }
+            dev.arubik.craftengine.contraption.VehicleDriverRegistry.setDriver(entity.state().id(),
+                    player.getUniqueId());
+            sender.sendMessage("§bVehicle §f" + entity.state().id() + "§b spawned — you are the driver."
+                    + " §7WASD to move, A/D turn, jump up, sprint down. §f/cep vehicle stop§7 to release.");
+            return true;
+        });
+
+        // /cep vehicle drive — become the driver of the nearest VEHICLE contraption within 16 blocks.
+        cases.put(new ArgumentList("vehicle^", "drive^"), (sender, parsed) -> {
+            if (!(sender instanceof Player player))
+                return true;
+            dev.arubik.craftengine.contraption.ContraptionEntity best = null;
+            double bestSq = 16.0 * 16.0;
+            for (dev.arubik.craftengine.contraption.ContraptionEntity e :
+                    dev.arubik.craftengine.contraption.ContraptionManager.all()) {
+                var st = e.state();
+                if (st.bearingType() != dev.arubik.craftengine.contraption.BearingType.VEHICLE
+                        || !st.worldId().equals(player.getWorld().getUID())) {
+                    continue;
+                }
+                double dx = st.x() - player.getX(), dy = st.y() - player.getY(), dz = st.z() - player.getZ();
+                double d2 = dx * dx + dy * dy + dz * dz;
+                if (d2 < bestSq) {
+                    bestSq = d2;
+                    best = e;
+                }
+            }
+            if (best == null) {
+                sender.sendMessage("§cNo vehicle contraption within 16 blocks.");
+                return true;
+            }
+            dev.arubik.craftengine.contraption.VehicleDriverRegistry.setDriver(best.state().id(),
+                    player.getUniqueId());
+            sender.sendMessage("§bDriving vehicle §f" + best.state().id() + "§b. §7WASD/turn/jump/sprint.");
+            return true;
+        });
+
+        // /cep vehicle stop — stop driving whatever you were.
+        cases.put(new ArgumentList("vehicle^", "stop^"), (sender, parsed) -> {
+            if (!(sender instanceof Player player))
+                return true;
+            java.util.UUID freed = dev.arubik.craftengine.contraption.VehicleDriverRegistry
+                    .clearDriver(player.getUniqueId());
+            sender.sendMessage(freed == null ? "§7You weren't driving anything." : "§bReleased the vehicle.");
             return true;
         });
 

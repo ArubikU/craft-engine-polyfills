@@ -1,0 +1,7 @@
+{
+  "kind": "fill",
+  "item": { "items": "minecraft:slime_block" },
+  "fluid": "polyfills:slime",
+  "amount": 999,
+  "results": []
+}

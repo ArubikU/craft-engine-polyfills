@@ -1,0 +1,13 @@
+{
+  "id": "polyfills:empty",
+  "unit_mb": 0,
+  "mb_per_full_block": 0,
+  "block_collect_delay": 1,
+  "carrier_io_delay": 1,
+  "render_family": "water",
+  "tank_variant": "empty",
+  "color": "#00000000",
+  "density": 0.0,
+  "viscosity": 1.0,
+  "translation_key": "polyfill.liquid.empty"
+}

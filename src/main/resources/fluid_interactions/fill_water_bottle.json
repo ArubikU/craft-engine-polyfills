@@ -1,0 +1,11 @@
+{
+  "kind": "fill",
+  "priority": 10,
+  "item": {
+    "items": "minecraft:potion",
+    "components": { "minecraft:potion_contents": { "potion": "minecraft:water" } }
+  },
+  "fluid": "polyfills:water",
+  "amount": 250,
+  "results": [ { "id": "minecraft:glass_bottle" } ]
+}

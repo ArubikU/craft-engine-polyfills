@@ -1,0 +1,7 @@
+{
+  "kind": "drain",
+  "item": { "items": "minecraft:bucket" },
+  "fluid": "polyfills:milk",
+  "amount": 1000,
+  "results": [ { "id": "minecraft:milk_bucket" } ]
+}

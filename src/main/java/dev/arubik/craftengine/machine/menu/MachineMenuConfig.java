@@ -84,10 +84,34 @@ public final class MachineMenuConfig {
 
         public final Kind kind;
         public final int page; // for OPEN_PAGE
+        /**
+         * For DEPLETE_FLUID / DEPLETE_GAS: which tank to empty.
+         *
+         * <p>
+         * {@code "all"} (the default, and what a bare {@code deplete_fluid} means)
+         * empties every tank; anything else names a single tank, which is what a
+         * machine with more than one needs.
+         */
+        public final String target;
 
         private Action(Kind kind, int page) {
+            this(kind, page, "all");
+        }
+
+        private Action(Kind kind, int page, String target) {
             this.kind = kind;
             this.page = page;
+            this.target = target == null || target.isBlank() ? "all" : target.trim();
+        }
+
+        /** Whether this action applies to a tank of the given name. */
+        public boolean targets(String tankName) {
+            return "all".equalsIgnoreCase(target) || target.equalsIgnoreCase(tankName);
+        }
+
+        private static String suffix(String t) {
+            int i = t.indexOf(':');
+            return i < 0 ? "all" : t.substring(i + 1);
         }
 
         public static Action parse(String s) {
@@ -105,10 +129,11 @@ public final class MachineMenuConfig {
                 }
                 return new Action(Kind.OPEN_PAGE, page);
             }
-            if (t.equals("deplete_fluid"))
-                return new Action(Kind.DEPLETE_FLUID, 0);
-            if (t.equals("deplete_gas"))
-                return new Action(Kind.DEPLETE_GAS, 0);
+            // `deplete_fluid`, `deplete_fluid:all` and `deplete_fluid:<tank>` are all valid.
+            if (t.startsWith("deplete_fluid"))
+                return new Action(Kind.DEPLETE_FLUID, 0, suffix(t));
+            if (t.startsWith("deplete_gas"))
+                return new Action(Kind.DEPLETE_GAS, 0, suffix(t));
             return new Action(Kind.NONE, 0);
         }
     }

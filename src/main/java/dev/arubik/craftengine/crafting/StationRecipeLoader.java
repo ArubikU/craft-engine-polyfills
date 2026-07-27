@@ -83,8 +83,16 @@ public final class StationRecipeLoader {
     private static StationRecipe parse(JsonObject json, String name) {
         Key id = Key.of("polyfills", "station_" + name);
         StationRecipe.Builder b = StationRecipe.builder(id)
-                .requiredTool(key(json.get("tool").getAsString()))
                 .toolUsesPerCraft(json.has("tool_uses") ? json.get("tool_uses").getAsInt() : 1);
+        // `workbench` binds the recipe to a station from workbenches/*.json. `tool` is
+        // still accepted — it is an ingredient in the station's tool slot, and on older
+        // files with no `workbench` it remains the only thing identifying the station.
+        if (json.has("workbench"))
+            b.workbench(key(json.get("workbench").getAsString()));
+        if (json.has("tool"))
+            b.requiredTool(key(json.get("tool").getAsString()));
+        if (!json.has("workbench") && !json.has("tool"))
+            throw new IllegalArgumentException("station recipe needs a 'workbench' or a 'tool'");
 
         CraftingRecipe.ShapedBuilder shaped = b.shaped();
         JsonArray pattern = json.getAsJsonArray("pattern");

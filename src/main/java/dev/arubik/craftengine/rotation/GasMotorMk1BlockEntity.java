@@ -56,6 +56,36 @@ public class GasMotorMk1BlockEntity extends AbstractMachineBlockEntity implement
     /** Overclock headroom over a gas's base before any upgrade (2x = the requested 32→64). */
     private static final float BASE_OC = 2.0f;
 
+    /**
+     * The motor's machine half, from {@code machines/gas_motor_mk1.json}.
+     *
+     * <p>
+     * A generator is the mirror of a consumer: it has the same upgrade grid and the
+     * same base-overclock knob, and those were constants here while every consuming
+     * machine had already moved to data. The rpm it actually delivers still comes
+     * per-gas from the block config, since that varies by fuel rather than by motor.
+     */
+    private dev.arubik.craftengine.machine.MachineDefinition motorDefinition() {
+        return dev.arubik.craftengine.machine.MachineDefinition.byName("polyfills:gas_motor_mk1");
+    }
+
+    private int upgradeSlotCount() {
+        var d = motorDefinition();
+        return d != null && d.upgrades().size() > 0 ? d.upgrades().size() : UPGRADE_SLOTS;
+    }
+
+    private int baseUnlockedCount() {
+        var d = motorDefinition();
+        return d != null && d.upgrades().size() > 0 ? d.upgrades().baseUnlocked() : BASE_UNLOCKED;
+    }
+
+    /** Overclock headroom before any upgrade, from data; defaults to the historical 2.0. */
+    private float baseOverclock() {
+        var d = motorDefinition();
+        return d != null ? d.power().baseOverclock() : BASE_OC;
+    }
+
+
     private final int vaporCapacity;
     private final Map<GasType, GasSpec> gases;
     /** item id → its attribute modifiers (a single item may buff one attr, debuff another). */
@@ -199,18 +229,18 @@ public class GasMotorMk1BlockEntity extends AbstractMachineBlockEntity implement
     /** Freeze a slot-giver while a slot it unlocks is occupied (pulling it would orphan items). */
     @Override
     public boolean canTakeFromSlot(int slot) {
-        if (slot < 0 || slot >= UPGRADE_SLOTS || !givesSlots(slot))
+        if (slot < 0 || slot >= upgradeSlotCount() || !givesSlots(slot))
             return true;
         java.util.List<dev.arubik.craftengine.machine.attribute.MachineAttributes.Mod> all = new java.util.ArrayList<>();
-        for (int i = 0; i < UPGRADE_SLOTS; i++) {
+        for (int i = 0; i < upgradeSlotCount(); i++) {
             var mods = modsOf(i);
             if (mods != null)
                 all.addAll(mods);
         }
-        int newUnlocked = Math.max(BASE_UNLOCKED, Math.min(UPGRADE_SLOTS,
-                BASE_UNLOCKED + extraSlotsOf(all) - extraSlotsOf(modsOf(slot))));
+        int newUnlocked = Math.max(baseUnlockedCount(), Math.min(upgradeSlotCount(),
+                baseUnlockedCount() + extraSlotsOf(all) - extraSlotsOf(modsOf(slot))));
         int highestOccupied = -1;
-        for (int i = 0; i < UPGRADE_SLOTS; i++) {
+        for (int i = 0; i < upgradeSlotCount(); i++) {
             net.minecraft.world.item.ItemStack it = getItem(i);
             if (it != null && !it.isEmpty())
                 highestOccupied = i;
@@ -226,7 +256,7 @@ public class GasMotorMk1BlockEntity extends AbstractMachineBlockEntity implement
         var MA = dev.arubik.craftengine.machine.attribute.MachineAttributes.EXTRA_SLOTS;
         // Pass 1: how many slots are unlocked (EXTRA_SLOTS from ALL installed upgrades).
         java.util.List<dev.arubik.craftengine.machine.attribute.MachineAttributes.Mod> all = new java.util.ArrayList<>();
-        for (int i = 0; i < UPGRADE_SLOTS; i++) {
+        for (int i = 0; i < upgradeSlotCount(); i++) {
             var mods = modsOf(i);
             if (mods != null)
                 all.addAll(mods);
@@ -234,7 +264,8 @@ public class GasMotorMk1BlockEntity extends AbstractMachineBlockEntity implement
         int extra = (int) Math.round(dev.arubik.craftengine.machine.attribute.MachineAttributes.compute(all)
                 .getOrDefault(MA, 0.0));
         Agg a = new Agg();
-        a.unlocked = Math.max(BASE_UNLOCKED, Math.min(UPGRADE_SLOTS, BASE_UNLOCKED + extra));
+        a.unlocked = Math.max(baseUnlockedCount(),
+                Math.min(upgradeSlotCount(), baseUnlockedCount() + extra));
         // Pass 2: effect attributes only from upgrades in unlocked slots.
         java.util.List<dev.arubik.craftengine.machine.attribute.MachineAttributes.Mod> active = new java.util.ArrayList<>();
         for (int i = 0; i < a.unlocked; i++) {
@@ -270,7 +301,7 @@ public class GasMotorMk1BlockEntity extends AbstractMachineBlockEntity implement
     }
 
     private float ocFactor(Agg a) {
-        return BASE_OC * (1f + (float) a.overclockLimit);
+        return baseOverclock() * (1f + (float) a.overclockLimit);
     }
 
     private float rpmMax(Level level, Agg a) {
@@ -323,7 +354,7 @@ public class GasMotorMk1BlockEntity extends AbstractMachineBlockEntity implement
             return;
         org.bukkit.World bw = lvl.getWorld();
         BlockPos pos = getMachinePos();
-        for (int i = 0; i < UPGRADE_SLOTS; i++) {
+        for (int i = 0; i < upgradeSlotCount(); i++) {
             net.minecraft.world.item.ItemStack nms = getItem(i);
             if (nms == null || nms.isEmpty())
                 continue;
@@ -646,7 +677,7 @@ public class GasMotorMk1BlockEntity extends AbstractMachineBlockEntity implement
                 "Upgrades (" + unlocked + "/" + UPGRADE_SLOTS + ")");
         l.setTitleComponent(noI(tr("polyfill.ui.upgrades", NamedTextColor.DARK_AQUA)
                 .append(lit(" (" + unlocked + "/" + UPGRADE_SLOTS + ")", NamedTextColor.GRAY))));
-        for (int i = 0; i < UPGRADE_SLOTS; i++) {
+        for (int i = 0; i < upgradeSlotCount(); i++) {
             if (i < unlocked) {
                 l.addSlot(i, MenuSlotType.INPUT);
             } else {

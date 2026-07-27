@@ -1,0 +1,12 @@
+{
+  "id": "polyfills:crafting_table",
+  "title": "Crafting Table",
+  "size": 54,
+  "grid": { "width": 3, "height": 3 },
+  "slots": {
+    "input":  [11, 12, 13, 20, 21, 22, 29, 30, 31],
+    "output": [24],
+    "render": [ { "slot": 24, "position": [8, 14, 8], "scale": 0.4 } ]
+  },
+  "structure": { "type": "single" }
+}

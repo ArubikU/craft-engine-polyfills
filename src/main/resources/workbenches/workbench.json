@@ -1,0 +1,17 @@
+{
+  "id": "polyfills:workbench",
+  "title": "Engineer's Workbench",
+  "size": 36,
+  "grid": { "width": 3, "height": 2 },
+  "slots": {
+    "input":  [11, 12, 13, 20, 21, 22],
+    "output": [15, 24],
+    "tool":   [9],
+    "render": [
+      { "slot": 9,  "position": [4, 13.5, 4], "scale": 0.5 },
+      { "slot": 15, "position": [4, 13.5, 4], "scale": 0.375 },
+      { "slot": 24, "position": [7, 14.5, 4], "rotation": [0, 0, 22], "scale": 0.375 }
+    ]
+  },
+  "structure": { "type": "horizontal_double" }
+}

@@ -1,0 +1,15 @@
+{
+  "id": "polyfills:slime",
+  "unit_mb": 111,
+  "mb_per_full_block": 999,
+  "block_collect_delay": 10,
+  "carrier_io_delay": 8,
+  "render_family": "lava",
+  "tank_variant": "slime",
+  "color": "#7CB55B",
+  "density": 1.4,
+  "viscosity": 8.0,
+  "fill_sound": "minecraft:item.bucket.empty",
+  "drain_sound": "minecraft:item.bucket.fill",
+  "translation_key": "polyfill.liquid.slime"
+}

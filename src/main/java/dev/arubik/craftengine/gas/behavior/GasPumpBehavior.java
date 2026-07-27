@@ -38,8 +38,9 @@ public class GasPumpBehavior extends ConnectableBlockBehavior
     public static final Factory FACTORY = new Factory();
     private static final int PRESSURE_BOOST = 8;
 
-    protected static final int CAPACITY = GasPipeBehavior.CAPACITY;
-    protected static final int TRANSFER_PER_TICK = GasPipeBehavior.TRANSFER_PER_TICK * 10;
+    // Sized relative to a plain steel pipe, which is itself data-driven now.
+    protected static final int CAPACITY = GasPipeBehavior.defaultCapacity();
+    protected static final int TRANSFER_PER_TICK = GasPipeBehavior.defaultTransferPerTick() * 10;
 
     public GasPumpBehavior(BlockDefinition block,
             net.momirealms.craftengine.core.block.property.EnumProperty<net.momirealms.craftengine.core.util.Direction> horizontalDirectionProperty,

@@ -32,7 +32,6 @@ public class UpgradeableFurnaceBlockEntity extends AbstractMachineBlockEntity {
     public static final int SLOT_FUEL = 2;
     public static final int[] UPGRADE_SLOTS = { 3, 4, 5 };
 
-    private static boolean upgradesRegistered = false;
 
     private final MachineLayout layout = new MachineLayout(
             org.bukkit.event.inventory.InventoryType.CHEST, 9, "Upgradeable Furnace")
@@ -96,15 +95,11 @@ public class UpgradeableFurnaceBlockEntity extends AbstractMachineBlockEntity {
      * </ul>
      */
     public static void registerDefaultUpgrades(UpgradeRegistry registry) {
-        if (upgradesRegistered && registry == UpgradeRegistry.global()) {
-            return;
-        }
-        registry.register(Key.of("minecraft:sugar"), UpgradeType.SPEED, 1.0d, 3);
-        registry.register(Key.of("minecraft:redstone"), UpgradeType.EFFICIENCY, 0.2d, 3);
-        registry.register(Key.of("minecraft:glowstone_dust"), UpgradeType.YIELD, 0.5d, 0);
-        if (registry == UpgradeRegistry.global()) {
-            upgradesRegistered = true;
-        }
+        // Intentionally empty. The three upgrades this used to register lazily (from a
+        // block-entity constructor, behind a static guard that never reset on reload)
+        // now live in upgrades/*.json and are loaded by UpgradeLoader on every load
+        // pass. Kept as a no-op so a private per-machine registry can still opt out of
+        // the global set without this call disappearing from the call sites.
     }
 
     @Override

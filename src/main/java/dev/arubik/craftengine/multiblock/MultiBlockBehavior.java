@@ -211,11 +211,21 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
             dev.arubik.craftengine.machine.block.MachineBlockBehavior base = (dev.arubik.craftengine.machine.block.MachineBlockBehavior) dev.arubik.craftengine.machine.block.MachineBlockBehavior.FACTORY
                     .create(block, arguments);
             String partBlockId = (String) arguments.getOrDefault("part_block_id", "craftengine:multiblock_part");
-            BlockPos coreOffset = BlockPos.ZERO;
-            MultiBlockSchema schema = new MultiBlockSchema(coreOffset);
-            return new MultiBlockBehavior(block, schema, partBlockId, base.getConnectableFaces(),
-                    base.horizontalDirectionProperty, base.verticalDirectionProperty,
+
+            // `multiblock: <id>` selects a shape + IO layout from multiblocks/*.json.
+            // Without it the schema stays empty, which is what the Java-defined
+            // subclasses expect — they build their own in the constructor.
+            MultiBlockDefinition definition = MultiBlockDefinition
+                    .byName(String.valueOf(arguments.getOrDefault("multiblock", "")));
+            MultiBlockDefinition.Mode mode = definition == null ? null : definition.primary();
+
+            MultiBlockSchema schema = mode != null ? mode.schema() : new MultiBlockSchema(BlockPos.ZERO);
+            MultiBlockBehavior behavior = new MultiBlockBehavior(block, schema, partBlockId,
+                    base.getConnectableFaces(), base.horizontalDirectionProperty, base.verticalDirectionProperty,
                     base.defaultIOConfig);
+            if (mode != null && mode.io() != null)
+                behavior.withIOProvider(mode.io());
+            return behavior;
         }
     }
 
@@ -394,11 +404,11 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
         if (!isOwnBlockAt(level, corePos))
             return false;
         BlockPos coreOffset = schema.getCoreOffset();
-        for (Map.Entry<BlockPos, java.util.function.Predicate<BlockState>> e : schema.getParts().entrySet()) {
+        for (Map.Entry<BlockPos, MultiBlockSchema.PartMatcher> e : schema.getParts().entrySet()) {
             BlockPos partPos = corePos.offset(rotate(e.getKey().subtract(coreOffset), facing));
             if (partPos.equals(corePos))
                 continue;
-            if (!e.getValue().test(level.getBlockState(partPos)))
+            if (!e.getValue().test(level, partPos))
                 return false;
         }
         return true;
@@ -531,7 +541,7 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
         System.out.println("[MultiBlockBehavior] Schema has " + schema.getParts().size() + " parts");
 
         // 1. Verify all parts match the schema
-        for (Map.Entry<BlockPos, java.util.function.Predicate<BlockState>> entry : schema.getParts().entrySet()) {
+        for (Map.Entry<BlockPos, MultiBlockSchema.PartMatcher> entry : schema.getParts().entrySet()) {
             BlockPos partSchemaPos = entry.getKey();
             BlockPos relativePos = partSchemaPos.subtract(coreOffset);
             BlockPos rotatedRelative = rotate(relativePos, facing);
@@ -546,7 +556,7 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
             }
 
             BlockState state = level.getBlockState(partPos);
-            boolean matches = entry.getValue().test(state);
+            boolean matches = entry.getValue().test(level, partPos);
             System.out.println(
                     "[MultiBlockBehavior]   Block at " + partPos + ": " + state.getBlock() + " matches: " + matches);
 
@@ -610,7 +620,7 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
         Object nmsStateObject = partBlock.defaultState().customBlockState().minecraftState();
 
         // 5. Replace all schema blocks with part blocks
-        for (Map.Entry<BlockPos, java.util.function.Predicate<BlockState>> entry : schema.getParts().entrySet()) {
+        for (Map.Entry<BlockPos, MultiBlockSchema.PartMatcher> entry : schema.getParts().entrySet()) {
             BlockPos partSchemaPos = entry.getKey();
             BlockPos relativePos = partSchemaPos.subtract(coreOffset);
             BlockPos rotatedRelative = rotate(relativePos, facing);
@@ -690,7 +700,7 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
         Direction facing = getFacing(level, corePos);
         BlockPos coreOffset = schema.getCoreOffset();
 
-        for (Map.Entry<BlockPos, java.util.function.Predicate<BlockState>> entry : schema.getParts().entrySet()) {
+        for (Map.Entry<BlockPos, MultiBlockSchema.PartMatcher> entry : schema.getParts().entrySet()) {
             BlockPos partSchemaPos = entry.getKey();
             BlockPos relativePos = partSchemaPos.subtract(coreOffset);
             BlockPos rotatedRelative = rotate(relativePos, facing);
@@ -847,7 +857,7 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
         System.out.println("[MultiBlockBehavior] Schema has " + schema.getParts().size() + " parts");
 
         // 1. Verify all parts match the schema
-        for (Map.Entry<BlockPos, java.util.function.Predicate<BlockState>> entry : schema.getParts().entrySet()) {
+        for (Map.Entry<BlockPos, MultiBlockSchema.PartMatcher> entry : schema.getParts().entrySet()) {
             BlockPos partSchemaPos = entry.getKey();
             BlockPos relativePos = partSchemaPos.subtract(coreOffset);
             BlockPos rotatedRelative = rotate(relativePos, facing);
@@ -862,7 +872,7 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
             }
 
             BlockState state = level.getBlockState(partPos);
-            boolean matches = entry.getValue().test(state);
+            boolean matches = entry.getValue().test(level, partPos);
             System.out.println(
                     "[MultiBlockBehavior]   Block at " + partPos + ": " + state.getBlock() + " matches: " + matches);
 
@@ -894,7 +904,7 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
         BukkitWorld world = dev.arubik.craftengine.util.CeWorlds.of(((net.minecraft.server.level.ServerLevel) level).getWorld());
 
         // 5. Replace all schema blocks with part blocks
-        for (Map.Entry<BlockPos, java.util.function.Predicate<BlockState>> entry : schema.getParts().entrySet()) {
+        for (Map.Entry<BlockPos, MultiBlockSchema.PartMatcher> entry : schema.getParts().entrySet()) {
             BlockPos partSchemaPos = entry.getKey();
             BlockPos relativePos = partSchemaPos.subtract(coreOffset);
             BlockPos rotatedRelative = rotate(relativePos, facing);
@@ -1040,7 +1050,7 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
         // Restore all parts
         System.out
                 .println("[MultiBlockBehavior]   Starting part restoration for " + schema.getParts().size() + " parts");
-        for (Map.Entry<BlockPos, java.util.function.Predicate<BlockState>> entry : schema.getParts().entrySet()) {
+        for (Map.Entry<BlockPos, MultiBlockSchema.PartMatcher> entry : schema.getParts().entrySet()) {
             BlockPos partSchemaPos = entry.getKey();
             BlockPos relativePos = partSchemaPos.subtract(coreOffset);
             BlockPos rotatedRelative = rotate(relativePos, facing);

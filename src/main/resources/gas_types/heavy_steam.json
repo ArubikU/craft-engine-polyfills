@@ -1,0 +1,12 @@
+{
+  "id": "polyfills:heavy_steam",
+  "display_name": "Heavy Steam",
+  "translation_key": "polyfill.gas.heavy_steam",
+  "color": "#BFD4DC",
+  "density": 2.0,
+  "tank_variant": "heavy_steam",
+  "vent_particle": "minecraft:cloud",
+  "vent_per_particle": 50,
+  "vent_spread": 0.2,
+  "vent_speed": 0.05
+}

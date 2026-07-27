@@ -1,0 +1,12 @@
+{
+  "id": "polyfills:steam",
+  "display_name": "Steam",
+  "translation_key": "polyfill.gas.steam",
+  "color": "#E8F4F8",
+  "density": 1.0,
+  "tank_variant": "steam",
+  "vent_particle": "minecraft:cloud",
+  "vent_per_particle": 50,
+  "vent_spread": 0.2,
+  "vent_speed": 0.05
+}

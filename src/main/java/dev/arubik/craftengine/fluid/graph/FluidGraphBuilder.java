@@ -32,6 +32,24 @@ public final class FluidGraphBuilder {
     private static final double SUBMERGENCE_RAMP = 1.0;
     private static final int MAX_BLOCKS = 4096; // safety cap on a single network scan
 
+    /**
+     * The conductance a single block contributes to an edge: its pipe tier's value if
+     * it is a data-defined pipe, otherwise the default (tanks, pumps, machine ports,
+     * and any pipe block with no {@code pipe_types} entry).
+     */
+    private static double edgeConductance(net.minecraft.world.level.Level level, BlockPos pos) {
+        try {
+            var state = net.momirealms.craftengine.bukkit.util.BlockStateUtils
+                    .getOptionalCustomBlockState(level.getBlockState(pos));
+            if (state.isEmpty())
+                return DEFAULT_CONDUCTANCE;
+            var type = dev.arubik.craftengine.pipe.PipeType.byBlockId(state.get().owner().value().id());
+            return type == null ? DEFAULT_CONDUCTANCE : type.conductance();
+        } catch (Throwable ignored) {
+            return DEFAULT_CONDUCTANCE;
+        }
+    }
+
     private FluidGraphBuilder() {
     }
 
@@ -104,7 +122,10 @@ public final class FluidGraphBuilder {
                 if (!bothTanks && !typeIncompatible
                         && aIdx < bIdx && edgeKeys.add(((long) aIdx << 32) | (bIdx & 0xffffffffL))) {
                     int valve = valveCheck(level, pos, np);
-                    double conductance = DEFAULT_CONDUCTANCE;
+                    // Per-tier conductance (previously a single global constant, deferred as
+                    // "Phase 3"): an edge is only as fast as its slower end, so a narrow pipe
+                    // spliced into a wide run throttles that run exactly where it should.
+                    double conductance = Math.min(edgeConductance(level, pos), edgeConductance(level, np));
                     double emf = pumpEmf(level, pos, np);
                     // Tank ↔ non-tank edge: the connection only flows OUT while the group's fluid surface is
                     // ABOVE the connected member, and the flow SPEED ramps with how deep that member is

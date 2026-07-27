@@ -42,22 +42,51 @@ public class GasPipeBehavior extends ConnectedBlockBehavior implements EntityBlo
 
     public static final Factory FACTORY = new Factory();
 
-    protected static final int CAPACITY = 1000; // mb
-    protected static final int TRANSFER_PER_TICK = 100; // mb/tick
+    /**
+     * Legacy default capacity, kept so {@link dev.arubik.craftengine.gas.behavior.GasPumpBehavior}
+     * can size itself relative to a pipe. Reads the built-in steel tier; per-instance
+     * code should call {@link #capacity()}.
+     */
+    protected static int defaultCapacity() {
+        return dev.arubik.craftengine.pipe.PipeType.STEEL.capacity();
+    }
+
+    /** Legacy default throughput; see {@link #defaultCapacity()}. */
+    protected static int defaultTransferPerTick() {
+        return dev.arubik.craftengine.pipe.PipeType.STEEL.transferPerTick();
+    }
 
     protected final BlockDefinition block;
+
+    /** The data-driven kind this pipe is; held live so retuning takes effect. */
+    protected final dev.arubik.craftengine.pipe.PipeType pipeType;
 
     // Round-robin caching: guardar última dirección exitosa por posición
     private final java.util.Map<Long, Integer> lastSuccessfulDirection = new java.util.concurrent.ConcurrentHashMap<>();
 
     public GasPipeBehavior(BlockDefinition block) {
+        this(block, dev.arubik.craftengine.pipe.PipeType.STEEL);
+    }
+
+    public GasPipeBehavior(BlockDefinition block, dev.arubik.craftengine.pipe.PipeType pipeType) {
         super(block, new java.util.ArrayList<>(), new HashSet<>(),
-                new HashSet<>(java.util.Arrays.asList("cml:gas_pump", "cml:gas_valve", "cml:gas_tank")), true);
+                new HashSet<>(pipeType.connectsTo()), true);
         this.block = block;
+        this.pipeType = pipeType;
         // Gas connects on every face (no gravity/direction). This list drives canConnectTo, which the
         // hydraulic GasEngine uses to build the network — it was empty, so NOTHING connected (every gas
         // node came out isolated). Mirror the fluid PipeBehavior.
         this.connectableFaces = java.util.Arrays.asList(Direction.values());
+    }
+
+    /** mB this pipe segment buffers, from its {@link dev.arubik.craftengine.pipe.PipeType}. */
+    protected int capacity() {
+        return pipeType.capacity();
+    }
+
+    /** mB/tick this pipe moves, from its {@link dev.arubik.craftengine.pipe.PipeType}. */
+    protected int transferPerTick() {
+        return pipeType.transferPerTick();
     }
 
     private int controllerId;
@@ -120,7 +149,7 @@ public class GasPipeBehavior extends ConnectedBlockBehavior implements EntityBlo
 
     @Override
     public int insertGas(Level level, BlockPos pos, GasStack stack, net.minecraft.core.Direction direction) {
-        return GasCarrierImpl.insertGas(level, pos, stack, CAPACITY, GasKeys.GAS);
+        return GasCarrierImpl.insertGas(level, pos, stack, capacity(), GasKeys.GAS);
     }
 
     @Override
@@ -212,7 +241,7 @@ public class GasPipeBehavior extends ConnectedBlockBehavior implements EntityBlo
         }
 
         GasStack stored = getStoredGas(level, from);
-        int transferRate = TRANSFER_PER_TICK; // Default rate for pipes
+        int transferRate = transferPerTick(); // Default rate for pipes
 
         switch (action) {
             case PUMP: {
@@ -233,9 +262,9 @@ public class GasPipeBehavior extends ConnectedBlockBehavior implements EntityBlo
                         GasStack pipeStored = getStoredGas(level, from);
                         int free;
                         if (pipeStored.isEmpty())
-                            free = CAPACITY;
+                            free = capacity();
                         else if (pipeStored.getType() == theirStored.getType())
-                            free = CAPACITY - pipeStored.getAmount();
+                            free = capacity() - pipeStored.getAmount();
                         else
                             free = 0;
                         if (free <= 0)
@@ -387,7 +416,17 @@ public class GasPipeBehavior extends ConnectedBlockBehavior implements EntityBlo
     public static class Factory implements BlockBehaviorFactory<BlockBehavior> {
         @Override
         public BlockBehavior create(BlockDefinition block, ConfigSection args) {
-            return new GasPipeBehavior(block);
+            // `pipe_type: polyfills:steel` selects the data-driven tier; unset or unknown
+            // falls back to steel so existing packs keep working.
+            dev.arubik.craftengine.pipe.PipeType type = null;
+            Object configured = args == null ? null : args.get("pipe_type");
+            if (configured != null)
+                type = dev.arubik.craftengine.pipe.PipeType.byName(String.valueOf(configured));
+            if (type == null)
+                type = dev.arubik.craftengine.pipe.PipeType.byBlockId(block.id());
+            if (type == null)
+                type = dev.arubik.craftengine.pipe.PipeType.STEEL;
+            return new GasPipeBehavior(block, type);
         }
     }
 
@@ -412,7 +451,7 @@ public class GasPipeBehavior extends ConnectedBlockBehavior implements EntityBlo
         GasStack stored = getStoredGas(level, pos);
 
         if (held == null || held.isEmpty() && player.isShiftKeyDown()) {
-            player.getBukkitEntity().sendActionBar(gasInfo(stored, CAPACITY));
+            player.getBukkitEntity().sendActionBar(gasInfo(stored, capacity()));
             return net.momirealms.craftengine.core.entity.player.InteractionResult.SUCCESS_AND_CANCEL;
         }
         return net.momirealms.craftengine.core.entity.player.InteractionResult.PASS;

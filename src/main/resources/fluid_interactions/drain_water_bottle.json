@@ -1,0 +1,10 @@
+{
+  "kind": "drain",
+  "item": { "items": "minecraft:glass_bottle" },
+  "fluid": "polyfills:water",
+  "amount": 250,
+  "results": [
+    { "id": "minecraft:potion",
+      "components": { "minecraft:potion_contents": { "potion": "minecraft:water" } } }
+  ]
+}

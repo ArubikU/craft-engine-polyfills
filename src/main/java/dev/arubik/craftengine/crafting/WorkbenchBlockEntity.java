@@ -33,6 +33,10 @@ public class WorkbenchBlockEntity extends PersistentBlockEntity {
     private ConveyorItemDisplay out1Display;  // secondary output, tilted to the right
     private int lastBpHash, lastOut0Hash, lastOut1Hash;
 
+    /** Per-slot displays for a data-defined station, keyed by container slot. */
+    private final java.util.Map<Integer, ConveyorItemDisplay> slotDisplays = new java.util.HashMap<>();
+    private final java.util.Map<Integer, Integer> slotHashes = new java.util.HashMap<>();
+
     private WorkbenchBehavior cfgBehavior; // render config, injected by createMasterController
 
     public WorkbenchBlockEntity(BlockEntity blockEntity) {
@@ -162,6 +166,15 @@ public class WorkbenchBlockEntity extends PersistentBlockEntity {
     private void render(CEWorld world, BlockPos masterPos) {
         Direction facing = facing();
         WorkbenchBehavior cfg = cfgBehavior != null ? cfgBehavior : getBlockBehavior(WorkbenchBehavior.class);
+
+        // A station bound to a workbenches/*.json definition draws the slots that file
+        // declares. Everything else keeps the legacy three fixed displays, so packs that
+        // never adopted a definition are unaffected.
+        WorkbenchDefinition definition = cfg != null ? cfg.definition() : null;
+        if (definition != null && !definition.renderSlots().isEmpty()) {
+            renderDeclaredSlots(world, masterPos, facing, cfg, definition);
+            return;
+        }
         float[] bpPos = cfg != null ? cfg.blueprintPos : new float[] { 4f, 13.5f, 4f };
         float bpScale = cfg != null ? cfg.blueprintScale : 0.5f;
         float[] outPos = cfg != null ? cfg.outputPos : new float[] { 4f, 13.5f, 4f };
@@ -237,6 +250,75 @@ public class WorkbenchBlockEntity extends PersistentBlockEntity {
             out1Display = null;
             lastOut1Hash = 0;
         }
+    }
+
+    /**
+     * Draws each {@code render} entry of a data-defined station.
+     *
+     * <p>
+     * The renderer is bound to this block entity rather than to the position it draws
+     * at — the slot index is the only thing an entry names, and the item is whatever
+     * that slot currently holds.
+     */
+    private void renderDeclaredSlots(CEWorld world, BlockPos masterPos, Direction facing,
+            WorkbenchBehavior cfg, WorkbenchDefinition definition) {
+        java.util.List<net.momirealms.craftengine.core.entity.player.Player> viewers =
+                world.world().getTrackedBy(new ChunkPos(masterPos));
+        java.util.Set<Integer> drawn = new java.util.HashSet<>();
+
+        for (WorkbenchDefinition.RenderSlot entry : definition.renderSlots()) {
+            org.bukkit.inventory.ItemStack item = itemForRenderSlot(definition, entry.slot());
+            if (item == null || item.getType().isAir())
+                continue;
+            drawn.add(entry.slot());
+
+            WorkbenchBehavior.RenderOverride ov = override(cfg, item);
+            float[] pos = addPos(entry.position(), ov);
+            BlockPos cell = entry.onRightHalf() ? HorizontalDoubleGeometry.rightCell(masterPos, facing) : masterPos;
+            Vector3f o = localOffset(pos[0], pos[1], pos[2], facing);
+
+            ConveyorItemDisplay display = slotDisplays.computeIfAbsent(entry.slot(),
+                    k -> new ConveyorItemDisplay());
+            display.setScale(entry.scale() + (ov != null ? ov.scale : 0f));
+            display.setRotation(flatRotation(facing, addRot(entry.rotation(), ov)));
+            int hash = item.hashCode();
+            display.setNmsItem(org.bukkit.craftbukkit.inventory.CraftItemStack.asNMSCopy(item));
+            display.render(viewers, cell.x() + o.x, cell.y() + o.y, cell.z() + o.z,
+                    hash != slotHashes.getOrDefault(entry.slot(), 0));
+            display.consumeRotationDirty();
+            slotHashes.put(entry.slot(), hash);
+        }
+
+        // Anything that stopped having an item this tick loses its display.
+        for (java.util.Iterator<java.util.Map.Entry<Integer, ConveyorItemDisplay>> it =
+                slotDisplays.entrySet().iterator(); it.hasNext();) {
+            java.util.Map.Entry<Integer, ConveyorItemDisplay> e = it.next();
+            if (drawn.contains(e.getKey()))
+                continue;
+            despawn(world, masterPos, e.getValue());
+            slotHashes.remove(e.getKey());
+            it.remove();
+        }
+    }
+
+    /**
+     * What a declared render slot shows.
+     *
+     * <p>
+     * A tool slot shows the stored blueprint and an output slot shows what that
+     * blueprint's recipe produces (a preview, which is why it is not simply the
+     * container's contents); anything else shows the item actually sitting there.
+     */
+    private org.bukkit.inventory.ItemStack itemForRenderSlot(WorkbenchDefinition definition, int slot) {
+        if (definition.isToolSlot(slot))
+            return getBlueprint();
+        java.util.List<Integer> outputs = definition.layout().outputSlots();
+        int outputIndex = outputs.indexOf(slot);
+        if (outputIndex >= 0) {
+            java.util.List<org.bukkit.inventory.ItemStack> produced = blueprintRecipeOutputs(getBlueprint());
+            return outputIndex < produced.size() ? produced.get(outputIndex) : null;
+        }
+        return null;
     }
 
     /** Output item(s) the stored blueprint's recipe produces (static result, independent of inputs). */

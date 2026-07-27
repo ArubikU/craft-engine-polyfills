@@ -1,0 +1,16 @@
+{
+  "id": "polyfills:lava",
+  "unit_mb": 1000,
+  "mb_per_full_block": 1000,
+  "block_collect_delay": 12,
+  "carrier_io_delay": 8,
+  "render_family": "lava",
+  "tank_variant": "lava",
+  "color": "#CF5A16",
+  "density": 3.0,
+  "viscosity": 12.0,
+  "fill_sound": "minecraft:item.bucket.empty_lava",
+  "drain_sound": "minecraft:item.bucket.fill_lava",
+  "vanilla_fluid": "minecraft:lava",
+  "translation_key": "polyfill.liquid.lava"
+}

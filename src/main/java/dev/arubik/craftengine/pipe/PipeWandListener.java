@@ -58,19 +58,9 @@ public class PipeWandListener implements Listener {
         NORMAL, STRAIGHT, POINTED, MAGIC
     }
 
-    /** The pipe transport resource a held pipe handles (selects block id + preview item prefix). */
-    private enum PipeKind {
-        COPPER("cml:copper_pipe", "pipe_preview_copper"),
-        STEEL("cml:iron_pipe", "pipe_preview_steel");
-
-        final String blockId;
-        final String previewPrefix;
-
-        PipeKind(String blockId, String previewPrefix) {
-            this.blockId = blockId;
-            this.previewPrefix = previewPrefix;
-        }
-    }
+    // The pipe kinds this wand can place used to be a private enum pairing a hardcoded
+    // block id with a hardcoded preview-item prefix. Both now come from the data-driven
+    // PipeType registry, so a pack can add a tier without touching this class.
 
     private final Map<UUID, Mode> modes = new HashMap<>();
     /** STRAIGHT/MAGIC: pending point A awaiting B. */
@@ -99,7 +89,7 @@ public class PipeWandListener implements Listener {
                 continue;
             }
             ItemStack hand = player.getInventory().getItemInMainHand();
-            PipeKind kind = pipeKind(hand);
+            PipeType kind = pipeKind(hand);
             if (kind == null)
                 continue;
             if (modes.getOrDefault(id, Mode.NORMAL) != Mode.MAGIC)
@@ -138,7 +128,7 @@ public class PipeWandListener implements Listener {
 
         org.bukkit.entity.Player player = event.getPlayer();
         ItemStack hand = player.getInventory().getItemInMainHand();
-        PipeKind kind = pipeKind(hand);
+        PipeType kind = pipeKind(hand);
         if (kind == null)
             return;
 
@@ -231,7 +221,7 @@ public class PipeWandListener implements Listener {
 
     // ------------------------------------------------------------- STRAIGHT / MAGIC
 
-    private void leftClickTwoPoint(org.bukkit.entity.Player player, org.bukkit.World world, PipeKind kind,
+    private void leftClickTwoPoint(org.bukkit.entity.Player player, org.bukkit.World world, PipeType kind,
             ItemStack hand, int[] aimed, boolean magic) {
         UUID id = player.getUniqueId();
         int[] a = pointA.get(id);
@@ -256,7 +246,7 @@ public class PipeWandListener implements Listener {
 
     // ----------------------------------------------------------------- POINTED
 
-    private void leftClickPointed(org.bukkit.entity.Player player, org.bukkit.World world, PipeKind kind,
+    private void leftClickPointed(org.bukkit.entity.Player player, org.bukkit.World world, PipeType kind,
             int[] aimed) {
         UUID id = player.getUniqueId();
         List<int[]> pts = pointed.computeIfAbsent(id, k -> new ArrayList<>());
@@ -283,7 +273,7 @@ public class PipeWandListener implements Listener {
         }
     }
 
-    private void commitPointed(org.bukkit.entity.Player player, org.bukkit.World world, PipeKind kind,
+    private void commitPointed(org.bukkit.entity.Player player, org.bukkit.World world, PipeType kind,
             ItemStack hand) {
         UUID id = player.getUniqueId();
         List<int[]> pts = pointed.get(id);
@@ -303,7 +293,7 @@ public class PipeWandListener implements Listener {
     // ------------------------------------------------------------- placement
 
     /** NORMAL mode: place a single pipe at the aimed cell. */
-    private void placeOne(org.bukkit.entity.Player player, org.bukkit.World world, PipeKind kind,
+    private void placeOne(org.bukkit.entity.Player player, org.bukkit.World world, PipeType kind,
             ItemStack hand, int[] cell) {
         placeRoute(player, world, kind, hand, List.of(new PipeRoute.Cell(cell[0], cell[1], cell[2])));
     }
@@ -314,10 +304,10 @@ public class PipeWandListener implements Listener {
      * one pipe per cell from the held stack (creative is free); out of pipes → place what we can,
      * cut, and report. Existing same-type pipe cells are skipped (already a pipe), not re-placed.
      */
-    private void placeRoute(org.bukkit.entity.Player player, org.bukkit.World world, PipeKind kind,
+    private void placeRoute(org.bukkit.entity.Player player, org.bukkit.World world, PipeType kind,
             ItemStack hand, List<PipeRoute.Cell> cells) {
         clearPreview(player);
-        BlockDefinition def = CraftEngineBlocks.byId(Key.of(kind.blockId));
+        BlockDefinition def = CraftEngineBlocks.byId(kind.blockId());
         if (def == null) {
             msg(player, NamedTextColor.RED, "polyfill.pipewand.no_world");
             return;
@@ -328,7 +318,7 @@ public class PipeWandListener implements Listener {
             Block block = world.getBlockAt(c.x, c.y, c.z);
             if (isExistingPipe(world, kind, c.x, c.y, c.z))
                 continue;
-            if (!isReplaceable(block)) {
+            if (!isReplaceable(block, kind)) {
                 msg(player, NamedTextColor.RED, "polyfill.pipewand.place_blocked", c.x, c.y, c.z);
                 return;
             }
@@ -376,7 +366,7 @@ public class PipeWandListener implements Listener {
      * Replace the player's preview with one glowing translucent pipe per cell, each showing the
      * connection variant computed by the SAME rule the placed block uses ({@link #maskFor}).
      */
-    private void showPreview(org.bukkit.entity.Player player, org.bukkit.World world, PipeKind kind,
+    private void showPreview(org.bukkit.entity.Player player, org.bukkit.World world, PipeType kind,
             List<PipeRoute.Cell> cells) {
         clearPreview(player);
         Player cePlayer = cePlayer(player);
@@ -398,8 +388,10 @@ public class PipeWandListener implements Listener {
                 continue;
             PipePreviewDisplay d = new PipePreviewDisplay();
             d.setNmsItem(org.bukkit.craftbukkit.inventory.CraftItemStack.asNMSCopy(model));
-            d.setScale(1f, 1f, 1f);
-            d.render(viewers, c.x + 0.5, c.y + 0.5, c.z + 0.5);
+            float[] off = kind.previewOffset();
+            float sc = kind.previewScale();
+            d.setScale(sc, sc, sc);
+            d.render(viewers, c.x + off[0], c.y + off[1], c.z + off[2]);
             list.add(d);
         }
         previews.put(player.getUniqueId(), list);
@@ -412,17 +404,14 @@ public class PipeWandListener implements Listener {
      * placed pipe would connect to the existing world block there per the real connection logic
      * ({@link ConnectedBlockBehavior#shouldConnect}, evaluated against the live world).
      */
-    private String maskFor(org.bukkit.World world, PipeKind kind, ConnectedBlockBehavior conn,
+    private String maskFor(org.bukkit.World world, PipeType kind, ConnectedBlockBehavior conn,
             PipeRoute.Cell c, Set<Long> routeSet) {
         net.minecraft.world.level.Level level = conn != null ? nmsLevel(world) : null;
         net.minecraft.core.BlockPos pos = level != null ? new net.minecraft.core.BlockPos(c.x, c.y, c.z) : null;
-        // Char order MUST match the block config variant->appearance mapping: south, west, north,
-        // east, up, down.
-        net.minecraft.core.Direction[] order = {
-                net.minecraft.core.Direction.SOUTH, net.minecraft.core.Direction.WEST,
-                net.minecraft.core.Direction.NORTH, net.minecraft.core.Direction.EAST,
-                net.minecraft.core.Direction.UP, net.minecraft.core.Direction.DOWN
-        };
+        // Char order MUST match the block config's variant->appearance mapping. It defaults
+        // to south, west, north, east, up, down, and a pipe kind whose pack spells its
+        // variants differently overrides it via `mask_order` in pipe_types/*.json.
+        net.minecraft.core.Direction[] order = maskOrder(kind);
         StringBuilder sb = new StringBuilder(6);
         for (net.minecraft.core.Direction dir : order) {
             boolean connected = false;
@@ -441,10 +430,36 @@ public class PipeWandListener implements Listener {
         return sb.toString();
     }
 
+    /**
+     * The six directions a pipe kind's connection mask spells, in pack order. Falls
+     * back to the standard s,w,n,e,u,d if a data file names a direction that does not
+     * exist, since a wrong-length or misspelled order would silently show the wrong
+     * elbow rather than fail.
+     */
+    private static net.minecraft.core.Direction[] maskOrder(PipeType kind) {
+        java.util.List<String> names = kind.maskOrder();
+        net.minecraft.core.Direction[] order = new net.minecraft.core.Direction[6];
+        for (int i = 0; i < 6; i++) {
+            net.minecraft.core.Direction dir = i < names.size()
+                    ? net.minecraft.core.Direction.byName(names.get(i).toLowerCase(java.util.Locale.ROOT))
+                    : null;
+            if (dir == null)
+                return DEFAULT_MASK_ORDER;
+            order[i] = dir;
+        }
+        return order;
+    }
+
+    private static final net.minecraft.core.Direction[] DEFAULT_MASK_ORDER = {
+            net.minecraft.core.Direction.SOUTH, net.minecraft.core.Direction.WEST,
+            net.minecraft.core.Direction.NORTH, net.minecraft.core.Direction.EAST,
+            net.minecraft.core.Direction.UP, net.minecraft.core.Direction.DOWN
+    };
+
     /** The render-only preview item for a pipe kind + 6-char mask. */
-    private static ItemStack previewItem(PipeKind kind, String mask) {
+    private static ItemStack previewItem(PipeType kind, String mask) {
         try {
-            var d = CraftEngineItems.byId(Key.of("cml", kind.previewPrefix + "_" + mask));
+            var d = CraftEngineItems.byId(Key.of(kind.previewNamespace(), kind.previewPrefix() + "_" + mask));
             if (d != null)
                 return d.buildBukkitItem();
         } catch (Throwable ignored) {
@@ -475,8 +490,8 @@ public class PipeWandListener implements Listener {
 
     /** The route validator: a cell is buildable ONLY when air/replaceable — the route never overlaps a
      *  placed block (existing pipes/machines are connected-to at the route's edges, not tunneled through). */
-    private PipeRoute.CellValidator validator(org.bukkit.World world, PipeKind kind) {
-        return (x, y, z) -> isReplaceable(world.getBlockAt(x, y, z));
+    private PipeRoute.CellValidator validator(org.bukkit.World world, PipeType kind) {
+        return (x, y, z) -> isReplaceable(world.getBlockAt(x, y, z), kind);
     }
 
     private static PipeRoute.Waypoint wp(int[] a) {
@@ -491,26 +506,32 @@ public class PipeWandListener implements Listener {
     }
 
     /** True when the held item is a pipe block; returns which transport kind, else null. */
-    private static PipeKind pipeKind(ItemStack item) {
+    private static PipeType pipeKind(ItemStack item) {
         if (item == null)
             return null;
         Key handId = CraftEngineItems.getCustomItemId(item);
         if (handId == null)
             return null;
+        // The registry is keyed by the block a pipe kind places, so a data-defined tier
+        // is recognised here with no code change. The behavior-class sniff below is only
+        // a fallback for a pipe block that has no PipeType entry yet.
+        PipeType byBlock = PipeType.byBlockId(handId);
+        if (byBlock != null)
+            return byBlock;
         BlockDefinition def = CraftEngineBlocks.byId(handId);
         if (def == null)
             return null;
         Object beh = behaviorOf(def);
         if (isOrWraps(beh, GasPipeBehavior.class))
-            return PipeKind.STEEL;
+            return PipeType.STEEL;
         if (isOrWraps(beh, PipeBehavior.class))
-            return PipeKind.COPPER;
+            return PipeType.COPPER;
         return null;
     }
 
     /** The ConnectedBlockBehavior of a pipe kind's block (for the real connection rule). */
-    private static ConnectedBlockBehavior connectedBehavior(PipeKind kind) {
-        BlockDefinition def = CraftEngineBlocks.byId(Key.of(kind.blockId));
+    private static ConnectedBlockBehavior connectedBehavior(PipeType kind) {
+        BlockDefinition def = CraftEngineBlocks.byId(kind.blockId());
         if (def == null)
             return null;
         Object beh = behaviorOf(def);
@@ -544,25 +565,29 @@ public class PipeWandListener implements Listener {
         return false;
     }
 
-    private boolean isExistingPipe(org.bukkit.World world, PipeKind kind, int x, int y, int z) {
+    private boolean isExistingPipe(org.bukkit.World world, PipeType kind, int x, int y, int z) {
         try {
             ImmutableBlockState state = CraftEngineBlocks.getCustomBlockState(world.getBlockAt(x, y, z));
             if (state == null)
                 return false;
-            Class<?> want = kind == PipeKind.STEEL ? GasPipeBehavior.class : PipeBehavior.class;
+            Class<?> want = kind.resource() == PipeType.Resource.GAS ? GasPipeBehavior.class
+                    : PipeBehavior.class;
             return isOrWraps(state.behavior(), want);
         } catch (Throwable t) {
             return false;
         }
     }
 
-    private static boolean isReplaceable(Block block) {
+    /** Whether a route may be carved through this block, per the pipe kind's data. */
+    private static boolean isReplaceable(Block block, PipeType kind) {
         if (block == null)
             return false;
-        org.bukkit.Material m = block.getType();
-        return m.isAir() || m == org.bukkit.Material.WATER || m == org.bukkit.Material.LAVA
-                || m == org.bukkit.Material.SHORT_GRASS || m == org.bukkit.Material.TALL_GRASS
-                || m == org.bukkit.Material.SNOW;
+        org.bukkit.NamespacedKey key = block.getType().getKey();
+        String id = key.getNamespace() + ":" + key.getKey();
+        for (String allowed : kind.replaceableBlocks())
+            if (allowed.equalsIgnoreCase(id))
+                return true;
+        return false;
     }
 
     private static net.minecraft.world.level.Level nmsLevel(org.bukkit.World world) {

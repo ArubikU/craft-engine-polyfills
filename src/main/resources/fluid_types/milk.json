@@ -1,0 +1,15 @@
+{
+  "id": "polyfills:milk",
+  "unit_mb": 1000,
+  "mb_per_full_block": 1000,
+  "block_collect_delay": 2,
+  "carrier_io_delay": 2,
+  "render_family": "water",
+  "tank_variant": "milk",
+  "color": "#FFFFFF",
+  "density": 1.0,
+  "viscosity": 1.2,
+  "fill_sound": "minecraft:item.bucket.empty",
+  "drain_sound": "minecraft:item.bucket.fill",
+  "translation_key": "polyfill.liquid.milk"
+}

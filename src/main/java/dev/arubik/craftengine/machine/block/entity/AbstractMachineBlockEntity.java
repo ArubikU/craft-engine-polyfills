@@ -655,7 +655,14 @@ public abstract class AbstractMachineBlockEntity extends PersistentWorldlyBlockE
     // --- Overclocking System ---
 
     /**
-     * Gets whether this machine is currently in overclocked mode.
+     * Whether this machine is currently overclocked.
+     *
+     * <p>
+     * Gates {@code requireOverclocked} recipes and now also drives the
+     * {@code OVERCLOCKING} value of the {@code machine_mode} blockstate — that value
+     * existed in the enum but nothing ever set it, so a pack could never render an
+     * overclocked machine differently. Machines with a manual overclock slider
+     * override this to include it.
      */
     public boolean isOverclocked() {
         return overclockedTicks > 0;
@@ -1792,12 +1799,14 @@ public abstract class AbstractMachineBlockEntity extends PersistentWorldlyBlockE
             return; // Block doesn't have this property
         }
 
-        // Determine new mode based on burnTime
+        // Determine new mode. OVERCLOCKING is a working state, so it is only reachable
+        // while the machine is actually running — MachineMode declared the value but
+        // nothing ever set it, so a pack could never render an overclocked machine.
         MachineMode currentMode = state.get(machineModeProp);
         MachineMode newMode;
 
         if (burnTime > 0) {
-            newMode = MachineMode.WORKING;
+            newMode = isOverclocked() ? MachineMode.OVERCLOCKING : MachineMode.WORKING;
         } else {
             newMode = MachineMode.IDLE;
         }

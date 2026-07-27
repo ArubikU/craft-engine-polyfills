@@ -1,0 +1,58 @@
+{
+  "id": "polyfills:gas_pump",
+  "block": "cml:gas_pump",
+  "resource": "gas",
+  "pump": {
+    "extract_per_tick": 1000,
+    "push_per_tick": 1000,
+    "pressure": 8,
+    "extract_tick_rate": 20,
+    "max_points": 8.0,
+    "max_vein_blocks": 512,
+    "mb_per_point": 10
+  },
+  "machine": {
+    "recipe_type": "gas_pump",
+    "title": "Gas Pump",
+    "menu_size": 54,
+    "fuel_required": true,
+    "slots": {
+      "fuel": [
+        11
+      ],
+      "info": 4,
+      "upgrade": {
+        "count": 9,
+        "base_unlocked": 3
+      }
+    },
+    "buttons": [
+      {
+        "slot": 33,
+        "icon": "cml:upgrade_button",
+        "action": "open_page:1",
+        "name": "polyfill.ui.upgrades"
+      },
+      {
+        "slot": 29,
+        "icon": "cml:overclock_button",
+        "action": "open_page:2",
+        "name": "polyfill.ui.overclock",
+        "locked_icon": "cml:locked_icon",
+        "locked_when": "no_overclock"
+      },
+      {
+        "slot": 44,
+        "icon": "cml:empty_button",
+        "action": "deplete_gas:buffer",
+        "name": "polyfill.ui.deplete"
+      }
+    ],
+    "gas_tanks": [
+      {
+        "name": "buffer",
+        "capacity": 4000
+      }
+    ]
+  }
+}

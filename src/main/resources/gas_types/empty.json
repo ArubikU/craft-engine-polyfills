@@ -1,0 +1,12 @@
+{
+  "id": "polyfills:empty",
+  "display_name": "Empty",
+  "translation_key": "polyfill.gas.empty",
+  "color": "#00000000",
+  "density": 0.0,
+  "tank_variant": "empty",
+  "vent_particle": "minecraft:cloud",
+  "vent_per_particle": 50,
+  "vent_spread": 0.2,
+  "vent_speed": 0.05
+}

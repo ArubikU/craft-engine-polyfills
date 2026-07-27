@@ -1,0 +1,7 @@
+{
+  "kind": "fill",
+  "item": { "items": "minecraft:powder_snow_bucket" },
+  "fluid": "polyfills:powder_snow",
+  "amount": 1000,
+  "results": [ { "id": "minecraft:bucket" } ]
+}

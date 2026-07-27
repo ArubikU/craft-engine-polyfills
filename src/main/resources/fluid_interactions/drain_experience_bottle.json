@@ -1,0 +1,7 @@
+{
+  "kind": "drain",
+  "item": { "items": "minecraft:glass_bottle" },
+  "fluid": "polyfills:experience",
+  "amount": 10,
+  "results": [ { "id": "minecraft:experience_bottle" } ]
+}

@@ -535,9 +535,12 @@ public class FluidBlockTankBehavior extends ConnectableBlockBehavior implements 
                     : Math.max(1, Math.min(lvlProp.max, (int) Math.round(memberFill * lvlProp.max)));
             ns = ns.with(lvlProp, lev);
         }
-        EnumProperty<FluidType> ftProp = (EnumProperty<FluidType>) (Object) cur.getProperty("fluidtype");
+        // The blockstate carries the fixed pack appearance, not the open fluid registry.
+        net.momirealms.craftengine.core.block.property.Property<String> ftProp =
+                (net.momirealms.craftengine.core.block.property.Property<String>) (Object) cur.getProperty("fluidtype");
         if (ftProp != null)
-            ns = ns.with(ftProp, type);
+            ns = ns.with(ftProp, type == null ? "empty"
+                    : type.tankVariant());
         if (ns != cur) {
             try {
                 ((net.minecraft.world.level.LevelWriter) level).setBlock(pos,

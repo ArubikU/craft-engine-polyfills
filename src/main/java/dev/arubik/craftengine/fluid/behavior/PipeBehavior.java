@@ -46,23 +46,51 @@ public class PipeBehavior extends ConnectedBlockBehavior implements EntityBlock,
     public static final boolean PIPE_DBG = false;
     private static long lastPipeDbg = 0;
 
-    protected static final int CAPACITY = 1000; // mb
-    protected static final int TRANSFER_PER_TICK = 100; // mb/tick
+    /**
+     * Legacy default capacity, kept so {@link PumpBehavior} can size itself relative
+     * to a pipe. Reads the built-in copper tier; per-instance code should call
+     * {@link #capacity()} instead, which honours the pipe's actual kind.
+     */
+    protected static int defaultCapacity() {
+        return dev.arubik.craftengine.pipe.PipeType.COPPER.capacity();
+    }
+
+    /** Legacy default throughput; see {@link #defaultCapacity()}. */
+    protected static int defaultTransferPerTick() {
+        return dev.arubik.craftengine.pipe.PipeType.COPPER.transferPerTick();
+    }
 
     protected final BlockDefinition block;
+
+    /**
+     * The data-driven kind this pipe is. Held as a live reference rather than
+     * copied fields, so retuning it in {@code pipe_types/*.json} takes effect
+     * without reconstructing the behavior.
+     */
+    protected final dev.arubik.craftengine.pipe.PipeType pipeType;
 
     // Round-robin caching: guardar última dirección exitosa por posición
     private final java.util.Map<Long, Integer> lastSuccessfulDirection = new java.util.concurrent.ConcurrentHashMap<>();
 
     public PipeBehavior(BlockDefinition block) {
-        // NOTE: cml:iron_pump is intentionally NOT in this blanket connect set. The pump is now a
+        this(block, dev.arubik.craftengine.pipe.PipeType.COPPER);
+    }
+
+    public PipeBehavior(BlockDefinition block, dev.arubik.craftengine.pipe.PipeType pipeType) {
+        // NOTE: cml:iron_pump is intentionally NOT in the connect set. The pump is now a
         // full machine with a directional FLUID IO config (in=DOWN/out=UP, facing-relative), so the
         // pipe must connect to it ONLY through the face-aware carrierConnectsHere() path — which
         // honors the pump's actual IN/OUT world faces — not via an all-sides custom-block match.
         super(block, new java.util.ArrayList<>(), new HashSet<>(),
-                new HashSet<>(java.util.Arrays.asList("cml:copper_valve", "cml:copper_tank")), true);
+                new HashSet<>(pipeType.connectsTo()), true);
         this.block = block;
+        this.pipeType = pipeType;
         this.connectableFaces = java.util.Arrays.asList(Direction.values());
+    }
+
+    /** mB this pipe segment buffers, from its {@link dev.arubik.craftengine.pipe.PipeType}. */
+    protected int capacity() {
+        return pipeType.capacity();
     }
 
     private int controllerId;
@@ -125,15 +153,15 @@ public class PipeBehavior extends ConnectedBlockBehavior implements EntityBlock,
 
     @Override
     public long getCapacity(Level level, BlockPos pos) {
-        // Pipes can buffer up to 1000 mB (high throughput, as originally designed). The conservative
-        // solver drains them toward equilibrium (≈0 when a tank below has room). Full 0-residual at rest
-        // would come from edge-contraction (roadmap Phase 1b).
-        return 1000L;
+        // Buffer size is per pipe kind now. The conservative solver drains a pipe toward
+        // equilibrium (≈0 when a tank below has room); full 0-residual at rest would come
+        // from edge-contraction (roadmap Phase 1b).
+        return capacity();
     }
 
     @Override
     public int insertFluid(Level level, BlockPos pos, FluidStack stack, net.minecraft.core.Direction direction) {
-        return dev.arubik.craftengine.fluid.FluidCarrierImpl.insertFluid(level, pos, stack, CAPACITY, 0, direction);
+        return dev.arubik.craftengine.fluid.FluidCarrierImpl.insertFluid(level, pos, stack, capacity(), 0, direction);
     }
 
     @Override
@@ -186,7 +214,17 @@ public class PipeBehavior extends ConnectedBlockBehavior implements EntityBlock,
     public static class Factory implements BlockBehaviorFactory<BlockBehavior> {
         @Override
         public BlockBehavior create(BlockDefinition block, ConfigSection args) {
-            return new PipeBehavior(block);
+            // `pipe_type: polyfills:copper` in the block config selects the data-driven
+            // tier; unset or unknown falls back to copper so existing packs keep working.
+            dev.arubik.craftengine.pipe.PipeType type = null;
+            Object configured = args == null ? null : args.get("pipe_type");
+            if (configured != null)
+                type = dev.arubik.craftengine.pipe.PipeType.byName(String.valueOf(configured));
+            if (type == null)
+                type = dev.arubik.craftengine.pipe.PipeType.byBlockId(block.id());
+            if (type == null)
+                type = dev.arubik.craftengine.pipe.PipeType.COPPER;
+            return new PipeBehavior(block, type);
         }
     }
 
@@ -211,7 +249,7 @@ public class PipeBehavior extends ConnectedBlockBehavior implements EntityBlock,
         FluidStack stored = getStored(level, pos);
 
         if (held == null || held.isEmpty() && player.isShiftKeyDown()) {
-            player.getBukkitEntity().sendActionBar(TankBlockBehavior.fluidInfo(stored, CAPACITY, pos.getY()));
+            player.getBukkitEntity().sendActionBar(TankBlockBehavior.fluidInfo(stored, capacity(), pos.getY()));
             return net.momirealms.craftengine.core.entity.player.InteractionResult.SUCCESS_AND_CANCEL;
         }
         return net.momirealms.craftengine.core.entity.player.InteractionResult.PASS;

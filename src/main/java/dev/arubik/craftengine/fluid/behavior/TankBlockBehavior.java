@@ -37,6 +37,7 @@ import net.momirealms.craftengine.core.block.entity.BlockEntity;
 import net.momirealms.craftengine.core.block.entity.BlockEntityController;
 import net.momirealms.craftengine.core.block.property.EnumProperty;
 import net.momirealms.craftengine.core.block.property.IntegerProperty;
+import net.momirealms.craftengine.core.block.property.Property;
 import net.momirealms.craftengine.core.world.context.BlockPlaceContext;
 import net.momirealms.craftengine.core.world.context.UseOnContext;
 import net.momirealms.craftengine.libraries.nbt.CompoundTag;
@@ -44,13 +45,15 @@ import net.momirealms.craftengine.libraries.nbt.CompoundTag;
 import net.momirealms.craftengine.core.block.entity.tick.BlockEntityTicker;
 import net.momirealms.craftengine.core.world.CEWorld;
 
+
+
 public class TankBlockBehavior extends ConnectableBlockBehavior implements EntityBlock, FluidCarrier {
 
     public static final Factory FACTORY = new Factory();
 
     public static final int TRANSFER_PER_TICK = 100;
 
-    public final EnumProperty<FluidType> fluidTypeProperty;
+    public final Property<String> fluidTypeProperty;
     public final IntegerProperty levelProperty; // puede ser null si no se registra realmente
 
     public final Set<FluidType> acceptedFluids = Set.of(FluidType.values());
@@ -59,7 +62,7 @@ public class TankBlockBehavior extends ConnectableBlockBehavior implements Entit
     public TankBlockBehavior(BlockDefinition block,
             EnumProperty<net.momirealms.craftengine.core.util.Direction> horizontalDirectionProperty,
             EnumProperty<net.momirealms.craftengine.core.util.Direction> verticalDirectionProperty,
-            EnumProperty<FluidType> fluidTypeProperty,
+            Property<String> fluidTypeProperty,
             IntegerProperty levelProperty) {
         super(block,
                 List.of(Direction.UP, Direction.DOWN), horizontalDirectionProperty, verticalDirectionProperty);
@@ -75,7 +78,7 @@ public class TankBlockBehavior extends ConnectableBlockBehavior implements Entit
                     .get("horizontal");
             EnumProperty<net.momirealms.craftengine.core.util.Direction> v = (EnumProperty<net.momirealms.craftengine.core.util.Direction>) block
                     .getProperty("vertical");
-            EnumProperty<FluidType> f = (EnumProperty<FluidType>) block.getProperty("fluidtype");
+            Property<String> f = (Property<String>) block.getProperty("fluidtype");
             IntegerProperty level = (IntegerProperty) block.getProperty("level");
             return new TankBlockBehavior(block, h, v, f, level);
         }
@@ -222,18 +225,20 @@ public class TankBlockBehavior extends ConnectableBlockBehavior implements Entit
      */
     static void playFillOrEmptySound(Level level, net.minecraft.core.BlockPos pos, FluidType type,
             boolean filling) {
-        net.minecraft.sounds.SoundEvent sound = switch (type) {
-            case LAVA -> filling ? net.minecraft.sounds.SoundEvents.BUCKET_EMPTY_LAVA
-                    : net.minecraft.sounds.SoundEvents.BUCKET_FILL_LAVA;
-            case WATER -> filling ? net.minecraft.sounds.SoundEvents.BUCKET_EMPTY
-                    : net.minecraft.sounds.SoundEvents.BUCKET_FILL;
-            case POWDER_SNOW -> filling ? net.minecraft.sounds.SoundEvents.BUCKET_EMPTY_POWDER_SNOW
-                    : net.minecraft.sounds.SoundEvents.BUCKET_FILL_POWDER_SNOW;
-            case MILK -> filling ? net.minecraft.sounds.SoundEvents.BUCKET_EMPTY
-                    : net.minecraft.sounds.SoundEvents.BUCKET_FILL;
-            default -> filling ? net.minecraft.sounds.SoundEvents.BUCKET_EMPTY
-                    : net.minecraft.sounds.SoundEvents.BUCKET_FILL;
-        };
+        // Both sound ids are per-fluid data now; fall back to the plain bucket sounds
+        // if a data file names a sound this server does not have.
+        net.minecraft.sounds.SoundEvent fallback = filling ? net.minecraft.sounds.SoundEvents.BUCKET_EMPTY
+                : net.minecraft.sounds.SoundEvents.BUCKET_FILL;
+        net.minecraft.sounds.SoundEvent sound = fallback;
+        if (type != null) {
+            String id = filling ? type.fillSound() : type.drainSound();
+            if (id != null && !id.isBlank()) {
+                var resolved = net.minecraft.core.registries.BuiltInRegistries.SOUND_EVENT
+                        .getOptional(net.minecraft.resources.Identifier.parse(id));
+                if (resolved.isPresent())
+                    sound = resolved.get();
+            }
+        }
         level.playSound(null, pos, sound, net.minecraft.sounds.SoundSource.BLOCKS, 1.0F, 1.0F);
     }
 
@@ -257,7 +262,7 @@ public class TankBlockBehavior extends ConnectableBlockBehavior implements Entit
 
     @Override
     public ImmutableBlockState updateStateForPlacement(BlockPlaceContext context, ImmutableBlockState state) {
-        FluidType stores = state.get(fluidTypeProperty);
+        FluidType stores = FluidType.byTankVariant(state.get(fluidTypeProperty));
         if (stores != null && stores != FluidType.EMPTY) {
             int level = state.get(levelProperty);
             executeBlockEntity((Level) context.getLevel().minecraftWorld(),
@@ -452,7 +457,7 @@ public class TankBlockBehavior extends ConnectableBlockBehavior implements Entit
                 // throws "Property level not found in cml:copper_tank". Looking them up per-call fixes it.
                 IntegerProperty lvlProp = (IntegerProperty)(Object) cur.getProperty("level");
                 @SuppressWarnings("unchecked")
-                EnumProperty<FluidType> ftProp = (EnumProperty<FluidType>) (Object) cur.getProperty("fluidtype");
+                Property<String> ftProp = (Property<String>) (Object) cur.getProperty("fluidtype");
                 if (lvlProp == null)
                     return;
                 int lev = (int) Math.ceil((stored.getAmount() / (double) MAX_CAPACITY) * lvlProp.max);
@@ -462,13 +467,14 @@ public class TankBlockBehavior extends ConnectableBlockBehavior implements Entit
                 // — the fluid amount/persistence was already updated by the insert/extract that called us,
                 // so a small change that doesn't move the level bucket needs no block update.
                 Integer curLev = cur.get(lvlProp);
-                FluidType curFt = ftProp != null ? cur.get(ftProp) : null;
-                if (curLev != null && curLev == lev && (ftProp == null || curFt == stored.getType()))
+                String curFt = ftProp != null ? cur.get(ftProp) : null;
+                String wantFt = stored.getType() == null ? "empty" : stored.getType().tankVariant();
+                if (curLev != null && curLev == lev && (ftProp == null || wantFt.equals(curFt)))
                     return;
 
                 ImmutableBlockState newState = cur.with(lvlProp, lev);
                 if (ftProp != null)
-                    newState = newState.with(ftProp, stored.getType());
+                    newState = newState.with(ftProp, wantFt);
 
                 ((net.minecraft.world.level.LevelWriter) level).setBlock(pos,
                         (net.minecraft.world.level.block.state.BlockState) newState.customBlockState().minecraftState(),

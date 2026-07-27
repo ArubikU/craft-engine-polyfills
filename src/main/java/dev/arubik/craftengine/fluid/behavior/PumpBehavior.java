@@ -39,8 +39,9 @@ public class PumpBehavior extends ConnectableBlockBehavior
     /** Pressure the pump stamps onto pumped fluid — config `pressure` (default 8). Higher = lifts farther. */
     private final int pressureBoost;
 
-    protected static final int CAPACITY = PipeBehavior.CAPACITY; // uniformidad
-    protected static final int TRANSFER_PER_TICK = PipeBehavior.TRANSFER_PER_TICK * 10;
+    // Sized relative to a plain copper pipe, which is itself data-driven now.
+    protected static final int CAPACITY = PipeBehavior.defaultCapacity();
+    protected static final int TRANSFER_PER_TICK = PipeBehavior.defaultTransferPerTick() * 10;
 
     public PumpBehavior(BlockDefinition block,
             net.momirealms.craftengine.core.block.property.EnumProperty<net.momirealms.craftengine.core.util.Direction> horizontalDirectionProperty,

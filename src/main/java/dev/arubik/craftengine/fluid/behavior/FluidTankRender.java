@@ -264,12 +264,7 @@ public final class FluidTankRender {
 
     /** Build the level item cml:fluidlvl_&lt;type&gt;_&lt;0..15&gt; for an explicit level index. */
     private static ItemStack levelItem(FluidType type, int lvl) {
-        String tn = switch (type) {
-            case WATER, MILK, POWDER_SNOW -> "water";
-            case LAVA, HONEY, SLIME -> "lava";
-            case EXPERIENCE -> "xp";
-            default -> "water";
-        };
+        String tn = type == null ? "water" : type.renderFamily();
         lvl = Math.max(0, Math.min(15, lvl));
         try {
             var d = CraftEngineItems.byId(Key.of("cml", "fluidlvl_" + tn + "_" + lvl));

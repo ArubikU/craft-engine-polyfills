@@ -1,0 +1,7 @@
+{
+  "kind": "reaction",
+  "item": { "items": "minecraft:lava_bucket" },
+  "fluid": "polyfills:water",
+  "amount": 1000,
+  "results": [ { "id": "minecraft:bucket" }, { "id": "minecraft:obsidian" } ]
+}

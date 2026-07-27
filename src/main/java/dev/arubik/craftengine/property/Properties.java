@@ -1,9 +1,7 @@
 package dev.arubik.craftengine.property;
 
-import dev.arubik.craftengine.fluid.FluidType;
 import net.minecraft.world.level.block.state.properties.RedstoneSide;
 import net.momirealms.craftengine.core.block.property.EnumProperty;
-import net.momirealms.craftengine.core.block.property.Property;
 import net.momirealms.craftengine.core.util.Key;
 
 public class Properties {
@@ -23,8 +21,12 @@ public class Properties {
                                 EnumProperty.factory(RedstoneSide.class));
                 net.momirealms.craftengine.core.block.property.Properties.register(CONNECTED_FACE,
                                 EnumProperty.factory(ConnectedFace.class));
-                net.momirealms.craftengine.core.block.property.Properties.register(FLUID_TYPE,
-                                EnumProperty.factory(FluidType.class));
+                // NOTE: polyfills:fluid_type is deliberately NOT registered any more. Tanks now
+                // declare their fluid appearance with CraftEngine's built-in `string` property,
+                // whose value set lives in the block config:
+                //   fluidtype: { type: string, default: empty, values: [empty, water, ...] }
+                // A custom enum property would have forced the set of liquids closed in Java,
+                // which is exactly what the data-driven FluidType registry exists to avoid.
                 net.momirealms.craftengine.core.block.property.Properties.register(MULTIBLOCK_ROLE,
                                 EnumProperty.factory(dev.arubik.craftengine.multiblock.MultiBlockRole.class));
                 net.momirealms.craftengine.core.block.property.Properties.register(MACHINE_MODE,

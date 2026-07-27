@@ -41,6 +41,11 @@ public class BlockBehaviors {
         public static final Key POLYFILL_FLUID_DISPLAY = Key.of("polyfills:fluid_display");
 
         public static void register() {
+                // One generic machine behavior for every machines/*.json definition, so a new
+                // machine needs a data file and a block config rather than a Java class.
+                RegistryUtils.registerBlockBehavior(
+                                dev.arubik.craftengine.machine.block.behavior.DataMachineBehavior.FACTORY_KEY,
+                                dev.arubik.craftengine.machine.block.behavior.DataMachineBehavior.FACTORY);
                 RegistryUtils.registerBlockBehavior(POLYFILL_BUBBLE_BLOCK, BubbleBlockBehavior.FACTORY);
                 RegistryUtils.registerBlockBehavior(POLYFILL_TEARING_CROP_BLOCK, TearingCropBlockBehavior.FACTORY);
                 RegistryUtils.registerBlockBehavior(POLYFILL_TEARING_BLOCK_SPAWN, TearingBlockSpawnBehavior.FACTORY);

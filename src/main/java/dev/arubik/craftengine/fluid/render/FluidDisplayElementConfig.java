@@ -156,16 +156,8 @@ public final class FluidDisplayElementConfig implements BlockEntityElementConfig
     }
 
     private static String fluidName(FluidType type) {
-        switch (type) {
-            case LAVA:
-            case HONEY:
-            case SLIME:
-                return "lava";
-            case EXPERIENCE:
-                return "xp";
-            default:
-                return "water";
-        }
+        // Which pack model family draws this liquid is a per-fluid data property now.
+        return type == null ? "water" : type.renderFamily();
     }
 
     private org.bukkit.inventory.ItemStack levelItem(String name, int lvl) {
@@ -224,7 +216,12 @@ public final class FluidDisplayElementConfig implements BlockEntityElementConfig
             Vector3f scale = Utils.getAsVector3f(a.getOrDefault("scale", 1f), "scale");
             boolean fromBlock = !"explicit"
                     .equalsIgnoreCase(String.valueOf(a.getOrDefault("fluid-source", "block")));
-            FluidType type = Utils.getAsEnum(a.getOrDefault("fluid-type", "EMPTY"), FluidType.class, FluidType.EMPTY);
+            // Fluids are a registry rather than an enum, so this resolves by legacy name
+            // ("WATER") or namespaced id ("polyfills:water"), including data-defined ones.
+            Object rawType = a.getOrDefault("fluid-type", "EMPTY");
+            FluidType type = rawType instanceof FluidType known ? known
+                    : java.util.Optional.ofNullable(FluidType.byName(String.valueOf(rawType)))
+                            .orElse(FluidType.EMPTY);
             long amount = (long) Utils.getAsInt(a.getOrDefault("fluid-amount", 0), "fluid-amount");
             long max = (long) Utils.getAsInt(a.getOrDefault("fluid-max", 1), "fluid-max");
             boolean capB = Boolean.parseBoolean(String.valueOf(a.getOrDefault("cap-bottom", true)));

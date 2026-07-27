@@ -47,6 +47,15 @@ public class WorkbenchBehavior extends HorizontalDoubleBlockBehavior {
 
     private final String title;
     private final StationRecipeRegistry registry;
+    /**
+     * The data definition this station follows, or null for a config-only workbench.
+     *
+     * <p>
+     * Carries the slot layout, the tool slots, the world-render slots and the
+     * structure kind (single / horizontal double / multiblock), so those stop being
+     * properties of this Java class.
+     */
+    private WorkbenchDefinition definition;
 
     // ---- tabletop render config (pixel coords authored for facing=south; rotate with facing) ----
     public float[] blueprintPos = { 4f, 13.5f, 4f };
@@ -74,6 +83,15 @@ public class WorkbenchBehavior extends HorizontalDoubleBlockBehavior {
         super(block, facingProperty, halfProperty);
         this.title = title != null ? title : "Engineer's Workbench";
         this.registry = registry != null ? registry : StationRecipeRegistry.global();
+    }
+
+    /** The data definition backing this station, or null. */
+    public WorkbenchDefinition definition() {
+        return definition;
+    }
+
+    public void setDefinition(WorkbenchDefinition definition) {
+        this.definition = definition;
     }
 
     protected AbstractCraftingMenu createMenu(Player player) {
@@ -135,6 +153,18 @@ public class WorkbenchBehavior extends HorizontalDoubleBlockBehavior {
             String facingProp = (String) arguments.getOrDefault("facing_property", DEFAULT_FACING_PROPERTY);
             String halfProp = (String) arguments.getOrDefault("half_property", DEFAULT_HALF_PROPERTY);
             WorkbenchBehavior b = new WorkbenchBehavior(block, title, StationRecipeRegistry.global(), facingProp, halfProp);
+            // `workbench: <id>` binds this block to a workbenches/*.json definition. Without
+            // it the behavior keeps its legacy config-only shape, so existing packs are
+            // unaffected.
+            Object wb = arguments.get("workbench");
+            if (wb != null) {
+                WorkbenchDefinition def = WorkbenchDefinition.byName(String.valueOf(wb));
+                if (def == null)
+                    throw new IllegalArgumentException("Block " + block.id() + " names workbench '" + wb
+                            + "' which matches no entry in workbenches/*.json. Known: "
+                            + WorkbenchDefinition.REGISTRY.keys());
+                b.setDefinition(def);
+            }
             b.blueprintPos = vec(arguments, "blueprint_pos", b.blueprintPos);
             b.blueprintScale = flt(arguments, "blueprint_scale", b.blueprintScale);
             b.outputPos = vec(arguments, "output_pos", b.outputPos);

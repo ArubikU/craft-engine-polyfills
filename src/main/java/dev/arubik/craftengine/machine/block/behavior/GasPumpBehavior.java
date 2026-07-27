@@ -81,10 +81,20 @@ public class GasPumpBehavior extends MachineBlockBehavior {
             List<MachineBar> bars = MachineBars.parse(arguments.get("bars"));
             MachineMenuConfig menuConfig = MachineMenuConfig.parse(arguments::get);
 
-            int capacity = intOr(arguments.get("capacity"), 4000);
-            int mbPerPoint = intOr(arguments.get("mb_per_point"), 10);
-            int pressure = intOr(arguments.get("pressure"), 8);
-            int extractTickRate = intOr(arguments.get("extract_tick_rate"), 20);
+            // Same as the fluid pump: defaults come from pump_types/*.json, explicit YAML wins.
+            dev.arubik.craftengine.pipe.PumpType pump = null;
+            Object configuredPump = arguments.get("pump_type");
+            if (configuredPump != null)
+                pump = dev.arubik.craftengine.pipe.PumpType.byName(String.valueOf(configuredPump));
+            if (pump == null)
+                pump = dev.arubik.craftengine.pipe.PumpType.byBlockId(block.id());
+            if (pump == null)
+                pump = dev.arubik.craftengine.pipe.PumpType.GAS_PUMP;
+
+            int capacity = intOr(arguments.get("capacity"), pump.capacity());
+            int mbPerPoint = intOr(arguments.get("mb_per_point"), pump.mbPerPoint());
+            int pressure = intOr(arguments.get("pressure"), pump.pressure());
+            int extractTickRate = intOr(arguments.get("extract_tick_rate"), pump.extractTickRate());
 
             // Pipe links only on the pump's IN/OUT local faces (like the iron pump).
             java.util.List<net.minecraft.core.Direction> faces = java.util.List.of(

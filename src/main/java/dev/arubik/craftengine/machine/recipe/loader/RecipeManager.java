@@ -45,54 +45,17 @@ public class RecipeManager {
         RECIPES.clear();
         FUELS.clear();
 
-        File dataFolder = CraftEnginePolyfills.instance().getDataFolder();
-
-        File recipeFolder = new File(dataFolder, "recipes");
-        if (!recipeFolder.exists()) {
-            recipeFolder.mkdirs();
-            seedBundled("recipes");
-        }
-        loadRecursive(recipeFolder, false);
-
-        File fuelFolder = new File(dataFolder, "fuels");
-        if (!fuelFolder.exists()) {
-            fuelFolder.mkdirs();
-            seedBundled("fuels");
-        }
-        loadRecursive(fuelFolder, true);
+        // DataFiles handles seeding, recursion and per-file error isolation; a malformed
+        // file is reported with its name and field path and only that file is skipped.
+        dev.arubik.craftengine.data.DataFiles.loadDirectory("recipes",
+                (view, name) -> parseRecipe(view.raw(), name));
+        dev.arubik.craftengine.data.DataFiles.loadDirectory("fuels",
+                (view, name) -> parseFuel(view.raw(), name));
 
         CraftEnginePolyfills.instance().getLogger()
                 .info("Loaded " + RECIPES.values().stream().mapToInt(List::size).sum() + " recipes.");
         CraftEnginePolyfills.instance().getLogger()
                 .info("Loaded " + FUELS.values().stream().mapToInt(List::size).sum() + " fuel types.");
-    }
-
-    /** Copy bundled jar resources under {@code dir/} into the data folder on first run. */
-    private static void seedBundled(String dir) {
-        for (String res : CraftEnginePolyfills.instance().listBundledResources(dir, ".json")) {
-            CraftEnginePolyfills.instance().saveDefaultResource(res);
-        }
-    }
-
-    private static void loadRecursive(File directory, boolean isFuel) {
-        for (File file : directory.listFiles()) {
-            if (file.isDirectory()) {
-                loadRecursive(file, isFuel);
-            } else if (file.getName().endsWith(".json")) {
-                try (FileReader reader = new FileReader(file)) {
-                    JsonObject json = GSON.fromJson(reader, JsonObject.class);
-                    if (isFuel) {
-                        parseFuel(json, file.getName());
-                    } else {
-                        parseRecipe(json, file.getName());
-                    }
-                } catch (Exception e) {
-                    CraftEnginePolyfills.instance().getLogger().log(Level.SEVERE,
-                            "Failed to load " + (isFuel ? "fuel" : "recipe") + ": " + file.getName(),
-                            e);
-                }
-            }
-        }
     }
 
     private static void parseFuel(JsonObject json, String filename) {
@@ -242,10 +205,12 @@ public class RecipeManager {
                     .getOrCreate(Key.of(tagString));
             return new TagInput(key, amount);
         } else if ("fluid".equals(type)) {
-            FluidType fType = FluidType.valueOf(obj.get("id").getAsString().toUpperCase());
+            // valueOf accepts both the legacy name ("WATER") and a namespaced id
+            // ("polyfills:my_acid"), so data-defined fluids work here too.
+            FluidType fType = FluidType.valueOf(obj.get("id").getAsString());
             return new FluidInput(new FluidStack(fType, amount), false);
         } else if ("gas".equals(type)) {
-            GasType gType = GasType.valueOf(obj.get("id").getAsString().toUpperCase());
+            GasType gType = GasType.valueOf(obj.get("id").getAsString());
             return new GasInput(new GasStack(gType, amount));
         }
         throw new IllegalArgumentException("Unknown input type: " + type);
@@ -253,27 +218,31 @@ public class RecipeManager {
 
     private static RecipeOutput parseOutput(JsonObject obj) {
         String type = obj.get("type").getAsString();
-        int amount = obj.has("amount") ? obj.get("amount").getAsInt() : 1;
+        // `amount` may be a plain number, a vanilla number provider, or a list of them
+        // summed — so an output can be "1 to 3" without inventing chance-output pairs.
+        dev.arubik.craftengine.data.Amount amount = dev.arubik.craftengine.data.Amount
+                .parse(dev.arubik.craftengine.data.JsonView.of(obj, "output"), "amount", 1);
+        int flatAmount = amount.isConstant() ? amount.constant() : 1;
         float chance = obj.has("chance") ? obj.get("chance").getAsFloat() : 1.0f;
 
         if ("item".equals(type)) {
             net.minecraft.world.item.Item item = BuiltInRegistries.ITEM
                     .get(Identifier.parse(obj.get("id").getAsString())).get().value();
-            return new ItemOutput(new net.minecraft.world.item.ItemStack(item, amount), chance);
+            return new ItemOutput(new net.minecraft.world.item.ItemStack(item, flatAmount), chance, amount);
         } else if ("custom_item".equals(type)) {
             String id = obj.get("id").getAsString();
             net.minecraft.world.item.ItemStack stack = ((CraftItemStack) CraftEngineItems.byId(Key.of(id))
                     .buildBukkitItem()).handle;
-            stack.setCount(amount);
-            return new ItemOutput(stack, chance);
+            stack.setCount(flatAmount);
+            return new ItemOutput(stack, chance, amount);
         } else if ("gas".equals(type)) {
-            GasType gType = GasType.valueOf(obj.get("id").getAsString().toUpperCase());
-            return new GasOutput(new GasStack(gType, amount), chance);
+            GasType gType = GasType.valueOf(obj.get("id").getAsString());
+            return new GasOutput(new GasStack(gType, flatAmount), chance, amount);
         } else if ("fluid".equals(type)) {
-            FluidType fType = FluidType.valueOf(obj.get("id").getAsString().toUpperCase());
-            return new FluidOutput(new FluidStack(fType, amount), chance);
+            FluidType fType = FluidType.valueOf(obj.get("id").getAsString());
+            return new FluidOutput(new FluidStack(fType, flatAmount), chance, amount);
         } else if ("xp".equals(type)) {
-            return new XpOutput((float) amount);
+            return new XpOutput(flatAmount, amount);
         }
         throw new IllegalArgumentException("Unknown output type: " + type);
     }

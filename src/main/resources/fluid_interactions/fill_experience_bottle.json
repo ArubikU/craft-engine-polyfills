@@ -1,0 +1,11 @@
+{
+  "kind": "fill",
+  "item": { "items": "minecraft:experience_bottle" },
+  "fluid": "polyfills:experience",
+  "amount": [
+    { "type": "minecraft:constant", "value": 3 },
+    { "type": "minecraft:uniform", "min": 0, "max": 4 },
+    { "type": "minecraft:uniform", "min": 0, "max": 4 }
+  ],
+  "results": [ { "id": "minecraft:glass_bottle" } ]
+}

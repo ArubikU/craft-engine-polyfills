@@ -1,0 +1,15 @@
+{
+  "id": "polyfills:experience",
+  "unit_mb": 1,
+  "mb_per_full_block": 1,
+  "block_collect_delay": 1,
+  "carrier_io_delay": 1,
+  "render_family": "xp",
+  "tank_variant": "experience",
+  "color": "#7FE02B",
+  "density": 0.2,
+  "viscosity": 0.5,
+  "fill_sound": "minecraft:item.bucket.empty",
+  "drain_sound": "minecraft:item.bucket.fill",
+  "translation_key": "polyfill.liquid.experience"
+}
