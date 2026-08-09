@@ -2,8 +2,6 @@ package dev.arubik.craftengine.fluid.behavior;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
-
 import dev.arubik.craftengine.block.behavior.ConnectableBlockBehavior;
 import dev.arubik.craftengine.block.entity.BukkitBlockEntityTypes;
 import dev.arubik.craftengine.block.entity.PersistentBlockEntity;
@@ -56,7 +54,6 @@ public class TankBlockBehavior extends ConnectableBlockBehavior implements Entit
     public final Property<String> fluidTypeProperty;
     public final IntegerProperty levelProperty; // puede ser null si no se registra realmente
 
-    public final Set<FluidType> acceptedFluids = Set.of(FluidType.values());
     public final int MAX_CAPACITY = 5000; // 5 cubos (1000mb cada uno)
 
     public TankBlockBehavior(BlockDefinition block,
@@ -214,7 +211,8 @@ public class TankBlockBehavior extends ConnectableBlockBehavior implements Entit
     public boolean canAccept(FluidStack fluid) {
         if (fluid == null || fluid.isEmpty())
             return false;
-        return acceptedFluids.contains(fluid.getType());
+        FluidType type = fluid.getType();
+        return type != null && !type.isEmpty() && FluidType.REGISTRY.contains(type.id());
     }
 
     /**

@@ -43,9 +43,9 @@ public class StorageBlockEntity extends PersistentWorldlyBlockEntity {
 
     private net.minecraft.network.chat.Component titleComponent() {
         String t = (title == null) ? "Storage" : title;
-        java.util.regex.Matcher m = java.util.regex.Pattern.compile("^<lang:([^>]+)>$").matcher(t.trim());
-        if (m.matches())
-            return net.minecraft.network.chat.Component.translatable(m.group(1));
+        String key = dev.arubik.craftengine.machine.menu.MenuText.normalizedI18nKey(t);
+        if (key != null)
+            return net.minecraft.network.chat.Component.translatable(key);
         return net.minecraft.network.chat.Component.literal(t);
     }
 

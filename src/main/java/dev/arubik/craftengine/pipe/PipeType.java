@@ -95,8 +95,9 @@ public final class PipeType {
 
     // ------------------------------------------------------------- built-ins
 
-    public static final PipeType COPPER = builtin("copper", Key.of("cml", "copper_pipe"), Resource.FLUID,
-            1000, 100, 1000.0, 1, Set.of("cml:copper_valve", "cml:copper_tank"), "pipe_preview_copper");
+        public static final PipeType COPPER = builtin("copper", Key.of("cml", "copper_pipe"), Resource.FLUID,
+            1000, 100, 1000.0, 1, Set.of("cml:copper_valve", "cml:copper_tank", "cml:fluid_block_tank"),
+            "pipe_preview_copper");
 
     public static final PipeType STEEL = builtin("steel", Key.of("cml", "iron_pipe"), Resource.GAS,
             1000, 100, 1000.0, 1, Set.of("cml:gas_pump", "cml:gas_valve", "cml:gas_tank"), "pipe_preview_steel");

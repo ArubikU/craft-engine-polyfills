@@ -709,12 +709,7 @@ public class PistonBearingBlockEntity extends AbstractMachineBlockEntity {
     }
 
     private static Component label(String s, NamedTextColor color) {
-        if (s == null)
-            return Component.empty();
-        String key = s.startsWith("lang:") ? s.substring(5) : s;
-        if (key.contains(".") && !key.contains(" "))
-            return MenuText.tr(key, color);
-        return MenuText.lit(s, color);
+        return MenuText.textOrTranslatable(s, color);
     }
 
     private static Component[] lore(List<String> lines) {

@@ -19,7 +19,6 @@ import net.momirealms.craftengine.core.util.Key;
  * <pre>{@code
  * {
  *   "id": "polyfills:gas_motor_mk1",
- *   "buffer": 10000,                  // fuel buffer for gas/fluid fuels, mB
  *   "output_faces": ["front"],        // where the shaft drives, facing-relative
  *   "upgrade_slots": 9,
  *   "base_unlocked": 3,
@@ -31,7 +30,7 @@ import net.momirealms.craftengine.core.util.Key;
  *     "item":  { "minecraft:coal":  { "rpm": 16, "su": 256, "burn_time": 1600 } }
  *   },
  *
- *   "machine": { ...the machines/*.json body: slots, bars, buttons... }
+ *   "machine": { ...the machines/*.json body: slots, tanks, bars, buttons... }
  * }
  * }</pre>
  *
@@ -62,7 +61,7 @@ public final class MotorLoader {
         Key id = view.has("id") ? view.key("id", "polyfills")
                 : Key.of("polyfills", stripExtension(fileName));
 
-        // Fuels are grouped by kind: a gas or liquid burns out of the buffer, an item
+        // Fuels are grouped by kind: a gas or liquid burns out of its tank, an item
         // burns out of a slot, so the two carry different numbers.
         Map<Key, MotorDefinition.FuelOutput> fuels = new LinkedHashMap<>();
         JsonView fuelSection = view.object("fuels");
@@ -110,7 +109,6 @@ public final class MotorLoader {
 
         int upgradeSlots = view.rangedInt("upgrade_slots", 9, 0, 54);
         MotorDefinition.REGISTRY.register(id, new MotorDefinition(id, machine,
-                view.rangedInt("buffer", 10000, 1, Integer.MAX_VALUE),
                 fuels, List.copyOf(outputFaces), upgradeSlots,
                 view.rangedInt("base_unlocked", Math.min(3, upgradeSlots), 0, Math.max(1, upgradeSlots)),
                 (float) view.rangedDouble("base_overclock", 2.0, 0.0, 64.0)));

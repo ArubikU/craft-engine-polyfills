@@ -1,6 +1,5 @@
 {
   "id": "polyfills:gas_motor_mk1",
-  "buffer": 10000,
   "output_faces": ["front"],
   "upgrade_slots": 9,
   "base_unlocked": 3,
@@ -19,12 +18,40 @@
     "menu_size": 54,
     "fuel_required": false,
     "slots": {
-      "info": { "slot": 4, "type": "tank", "source": "gas:buffer" },
+      "info": { "slot": 4, "type": "tank", "source": "gas:vapor" },
       "upgrade": { "count": 9, "base_unlocked": 3 }
     },
-    "gas_tanks": [ { "name": "buffer", "capacity": 10000 } ],
+    "buttons": [
+      {
+        "slot": 33,
+        "icon": "cml:upgrade_button",
+        "action": "open_page:1",
+        "name": "polyfill.ui.upgrades",
+        "lore": [
+          "polyfill.ui.upgrades_desc"
+        ]
+      },
+      {
+        "slot": 29,
+        "icon": "cml:overclock_button",
+        "action": "open_page:2",
+        "name": "polyfill.ui.overclock",
+        "locked_icon": "cml:locked_icon",
+        "locked_when": "no_overclock"
+      },
+      {
+        "slot": 44,
+        "icon": "cml:empty_button",
+        "action": "deplete_gas:vapor",
+        "name": "polyfill.ui.deplete",
+        "lore": [
+          "polyfill.ui.gas"
+        ]
+      }
+    ],
+    "gas_tanks": [ { "name": "vapor", "capacity": 10000 } ],
     "bars": [
-      { "id": "polyfills:gas", "slots": [35, 26, 17, 8], "source": "gas:buffer" },
+      { "id": "polyfills:gas", "slots": [35, 26, 17, 8], "source": "gas:vapor" },
       { "id": "polyfills:rpm", "slots": [31], "source": "rpm" }
     ]
   }

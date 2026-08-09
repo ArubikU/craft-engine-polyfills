@@ -117,7 +117,7 @@ public class MachineMenu implements InventoryHolder {
                 continue;
             if (suppressInputPull && (type == MenuSlotType.INPUT || type == MenuSlotType.FUEL))
                 continue; // don't overwrite a pending player placement
-            net.minecraft.world.item.ItemStack nms = machine.getItem(i);
+            net.minecraft.world.item.ItemStack nms = machine.getItem(layout.getMachineSlot(i));
             inventory.setItem(i, dev.arubik.craftengine.util.BridgeUtils.toBukkit(nms));
         }
     }
@@ -132,13 +132,13 @@ public class MachineMenu implements InventoryHolder {
         if (type == MenuSlotType.INPUT || type == MenuSlotType.OUTPUT || type == MenuSlotType.FUEL) {
             org.bukkit.inventory.ItemStack bukkit = inventory.getItem(slot);
             if (bukkit == null || bukkit.getType() == org.bukkit.Material.AIR || isGhost(bukkit)) {
-                machine.setItem(slot, net.minecraft.world.item.ItemStack.EMPTY); // ghost = empty
+                machine.setItem(layout.getMachineSlot(slot), net.minecraft.world.item.ItemStack.EMPTY); // ghost = empty
             } else {
                 // Use cast as requested, but fall back to NMS copy if it's a generic itemstack
                 if (bukkit instanceof CraftItemStack) {
-                    machine.setItem(slot, ((CraftItemStack) bukkit).handle);
+                    machine.setItem(layout.getMachineSlot(slot), ((CraftItemStack) bukkit).handle);
                 } else {
-                    machine.setItem(slot, CraftItemStack.asNMSCopy(bukkit));
+                    machine.setItem(layout.getMachineSlot(slot), CraftItemStack.asNMSCopy(bukkit));
                 }
             }
         }

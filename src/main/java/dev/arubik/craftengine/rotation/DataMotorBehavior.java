@@ -9,7 +9,7 @@ import dev.arubik.craftengine.gas.GasType;
 import dev.arubik.craftengine.machine.attribute.MachineAttributes;
 import dev.arubik.craftengine.machine.attribute.MachineAttributes.Mod;
 import dev.arubik.craftengine.machine.block.MachineBlockBehavior;
-import dev.arubik.craftengine.rotation.GasMotorMk1BlockEntity.GasSpec;
+import dev.arubik.craftengine.rotation.DataMotorBlockEntity.GasSpec;
 import dev.arubik.craftengine.util.Utils;
 import net.momirealms.craftengine.core.block.BlockDefinition;
 import net.momirealms.craftengine.core.block.behavior.BlockBehavior;
@@ -36,22 +36,24 @@ import net.momirealms.craftengine.core.util.Key;
  * </pre>
  * operation = add | multiply_base | multiply_total.
  */
-public class GasMotorMk1Behavior extends MachineBlockBehavior {
+public class DataMotorBehavior extends MachineBlockBehavior {
 
-    public static final Key POLYFILL_GAS_MOTOR_MK1 = Key.of("polyfills:gas_motor_mk1");
+    public static final Key FACTORY_KEY = Key.of("polyfills:data_motor");
     public static final Factory FACTORY = new Factory();
 
+    private final MotorDefinition motor;
     private final int vaporCapacity;
     private final Map<GasType, GasSpec> gases;
     private final Map<Key, List<Mod>> upgradeDefs;
 
-    public GasMotorMk1Behavior(BlockDefinition block,
+    public DataMotorBehavior(BlockDefinition block,
             java.util.List<net.minecraft.core.Direction> connectableFaces,
             net.momirealms.craftengine.core.block.property.EnumProperty<net.momirealms.craftengine.core.util.Direction> horizontalDirectionProperty,
             net.momirealms.craftengine.core.block.property.EnumProperty<net.momirealms.craftengine.core.util.Direction> verticalDirectionProperty,
             dev.arubik.craftengine.multiblock.IOConfiguration ioConfig,
-            int vaporCapacity, Map<GasType, GasSpec> gases, Map<Key, List<Mod>> upgradeDefs) {
+            MotorDefinition motor, int vaporCapacity, Map<GasType, GasSpec> gases, Map<Key, List<Mod>> upgradeDefs) {
         super(block, connectableFaces, horizontalDirectionProperty, verticalDirectionProperty, ioConfig);
+        this.motor = motor;
         this.vaporCapacity = vaporCapacity;
         this.gases = gases;
         this.upgradeDefs = upgradeDefs;
@@ -59,7 +61,7 @@ public class GasMotorMk1Behavior extends MachineBlockBehavior {
 
     @Override
     public BlockEntityController createBlockEntityController(BlockEntity blockEntity) {
-        return new GasMotorMk1BlockEntity(blockEntity, vaporCapacity, gases, upgradeDefs);
+        return new DataMotorBlockEntity(blockEntity, motor, vaporCapacity, gases, upgradeDefs);
     }
 
     public static class Factory implements BlockBehaviorFactory<BlockBehavior> {
@@ -67,7 +69,7 @@ public class GasMotorMk1Behavior extends MachineBlockBehavior {
         public BlockBehavior create(BlockDefinition block, ConfigSection arguments) {
             MachineBlockBehavior base = (MachineBlockBehavior) MachineBlockBehavior.FACTORY.create(block, arguments);
 
-            // A motors/*.json definition supplies the fuel table, buffer and grid; the
+            // A motors/*.json definition supplies the fuel table, tank and grid; the
             // block config still wins where it names something, so existing packs keep
             // their values.
             // The block config names its motor, the same way a machine block names its
@@ -87,7 +89,7 @@ public class GasMotorMk1Behavior extends MachineBlockBehavior {
                                 e.getValue().perTick()));
                 }
             int capacity = Utils.getAsInt(
-                    arguments.getOrDefault("vapor-capacity", motor != null ? motor.buffer() : 10000),
+                    arguments.getOrDefault("vapor-capacity", defaultVaporCapacity(motor)),
                     "vapor-capacity");
 
             Object gObj = arguments.get("gases");
@@ -114,9 +116,9 @@ public class GasMotorMk1Behavior extends MachineBlockBehavior {
                 }
             }
 
-            return new GasMotorMk1Behavior(block, base.getConnectableFaces(),
+            return new DataMotorBehavior(block, base.getConnectableFaces(),
                     base.horizontalDirectionProperty, base.verticalDirectionProperty,
-                    base.getIOConfiguration(null, null), capacity, gases, upgrades);
+                    base.getIOConfiguration(null, null), motor, capacity, gases, upgrades);
         }
 
         /** A modifier list is a YAML list of {attribute, operation, value} maps. */
@@ -141,6 +143,12 @@ public class GasMotorMk1Behavior extends MachineBlockBehavior {
         private static Object get(Map<?, ?> m, String k, Object def) {
             Object v = m.get(k);
             return v != null ? v : def;
+        }
+
+        private static int defaultVaporCapacity(MotorDefinition motor) {
+            if (motor == null || motor.machine() == null || motor.machine().gasTanks().isEmpty())
+                return 10000;
+            return motor.machine().gasTanks().get(0).capacity();
         }
 
         private static GasType parseGas(String s) {

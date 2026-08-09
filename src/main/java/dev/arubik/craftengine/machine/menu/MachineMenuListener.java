@@ -50,7 +50,7 @@ public class MachineMenuListener implements Listener {
                     case INPUT:
                     case FUEL:
                         // Frozen slots (e.g. an upgrade holding others unlocked) reject changes.
-                        if (!menu.getMachine().canTakeFromSlot(slot)) {
+                        if (!menu.getMachine().canTakeFromSlot(layout.getMachineSlot(slot))) {
                             event.setCancelled(true);
                             break;
                         }
@@ -88,7 +88,7 @@ public class MachineMenuListener implements Listener {
                     org.bukkit.inventory.ItemStack moving = event.getCurrentItem();
                     if (moving != null && !moving.getType().isAir()) {
                         var m = menu.getMachine();
-                        int[] targets = m.isFuelItem(moving) ? m.getFuelSlots() : m.getInputSlots();
+                        int[] targets = layout.getSlotsOfType(m.isFuelItem(moving) ? MenuSlotType.FUEL : MenuSlotType.INPUT);
                         org.bukkit.inventory.ItemStack leftover = mergeInto(event.getInventory(), targets,
                                 moving.clone());
                         event.setCurrentItem(leftover);

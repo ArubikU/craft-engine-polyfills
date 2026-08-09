@@ -305,7 +305,7 @@ public class DataMachineBlockEntity extends AbstractMachineBlockEntity
         String tankName = source.contains(":") ? source.substring(source.indexOf(':') + 1) : "";
         long amount = 0, capacity = 0;
         net.kyori.adventure.text.Component contents =
-                dev.arubik.craftengine.machine.menu.MenuText.tr(
+                dev.arubik.craftengine.machine.menu.MenuText.textOrTranslatable(
                         gas ? "polyfill.gas.empty" : "polyfill.liquid.empty",
                         net.kyori.adventure.text.format.NamedTextColor.WHITE);
         org.bukkit.Material material = org.bukkit.Material.BUCKET;
@@ -317,7 +317,7 @@ public class DataMachineBlockEntity extends AbstractMachineBlockEntity
                 amount = stored.getAmount();
                 capacity = tank.getCapacity();
                 if (!stored.isEmpty())
-                    contents = dev.arubik.craftengine.machine.menu.MenuText.tr(
+                        contents = dev.arubik.craftengine.machine.menu.MenuText.textOrTranslatable(
                             stored.getType().translationKey(),
                             net.kyori.adventure.text.format.NamedTextColor.WHITE);
             }
@@ -328,7 +328,7 @@ public class DataMachineBlockEntity extends AbstractMachineBlockEntity
                 amount = stored.getAmount();
                 capacity = tank.getCapacity();
                 if (!stored.isEmpty()) {
-                    contents = dev.arubik.craftengine.machine.menu.MenuText.tr(
+                        contents = dev.arubik.craftengine.machine.menu.MenuText.textOrTranslatable(
                             stored.getType().translationKey(),
                             net.kyori.adventure.text.format.NamedTextColor.WHITE);
                     if (stored.getType() == dev.arubik.craftengine.fluid.FluidType.LAVA)

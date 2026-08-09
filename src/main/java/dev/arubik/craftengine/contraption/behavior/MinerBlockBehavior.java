@@ -40,7 +40,7 @@ import net.minecraft.world.level.block.state.BlockState;
  *   {@link RpmConsumer}, pull-scanning its 6 neighbor {@code BlockPos} each tick for the
  *   strongest adjacent {@link RpmProvider} — the exact idiom {@code CrusherBlockEntity}/
  *   {@code SmelteryBlockEntity} already use for a real motor. This means a miner block next
- *   to a real {@code GasMotorMk1BlockEntity} spins even before ever being glued into a
+ *   to a real {@code DataMotorBlockEntity} spins even before ever being glued into a
  *   contraption.</li>
  *   <li><b>Captured into a contraption</b>: {@link #buildMovementBehavior} (registered as a
  *   {@code MovementBehaviorRegistry.Factory} in {@code BlockBehaviors.register()}) builds a

@@ -289,11 +289,11 @@ public final class MachineBars {
         return new ItemStack(mat != null ? mat : Material.GRAY_STAINED_GLASS_PANE);
     }
 
-    /** {@code lang:key} -> translatable; otherwise literal text with %placeholders% substituted. */
+    /** {@code lang:key} / {@code <lang:key>} / raw dotted keys -> translatable; otherwise literal text. */
     private static Component component(String s, double value, double max, int percent, int seg,
             java.util.Map<String, String> ph) {
-        if (s.startsWith("lang:"))
-            return Component.translatable(s.substring(5)).color(NamedTextColor.WHITE);
+        if (dev.arubik.craftengine.machine.menu.MenuText.isI18nKey(s))
+            return dev.arubik.craftengine.machine.menu.MenuText.textOrTranslatable(s, NamedTextColor.WHITE);
         String txt = s.replace("%value%", fmt(value))
                 .replace("%max%", fmt(max))
                 .replace("%percent%", String.valueOf(percent))

@@ -11,6 +11,7 @@ public class MachineLayout {
     private final int size;
 
     private final Map<Integer, MenuSlotType> slotTypes = new HashMap<>(); // Standard Map
+    private final Map<Integer, Integer> machineSlots = new HashMap<>();
     private final Map<Integer, DynamicItemProvider> dynamicProviders = new HashMap<>();
     private final Map<Integer, java.util.function.BiConsumer<dev.arubik.craftengine.machine.block.entity.AbstractMachineBlockEntity, org.bukkit.entity.Player>> buttonActions = new HashMap<>();
     private DynamicTitleProvider titleProvider;
@@ -45,6 +46,13 @@ public class MachineLayout {
 
     public MachineLayout addSlot(int slot, MenuSlotType type) {
         setSlotType(slot, type);
+        machineSlots.put(slot, slot);
+        return this;
+    }
+
+    public MachineLayout addSlot(int slot, MenuSlotType type, int machineSlot) {
+        setSlotType(slot, type);
+        machineSlots.put(slot, machineSlot);
         return this;
     }
 
@@ -81,6 +89,18 @@ public class MachineLayout {
 
     public MenuSlotType getSlotType(int slot) {
         return slotTypes.getOrDefault(slot, MenuSlotType.BACKGROUND);
+    }
+
+    public int getMachineSlot(int slot) {
+        return machineSlots.getOrDefault(slot, slot);
+    }
+
+    public int[] getSlotsOfType(MenuSlotType type) {
+        return slotTypes.entrySet().stream()
+                .filter(e -> e.getValue() == type)
+                .mapToInt(Map.Entry::getKey)
+                .sorted()
+                .toArray();
     }
 
     public DynamicItemProvider getProvider(int slot) {

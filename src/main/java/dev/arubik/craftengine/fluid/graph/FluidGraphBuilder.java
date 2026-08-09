@@ -317,7 +317,8 @@ public final class FluidGraphBuilder {
         if (behaviorAt(level, pos, dev.arubik.craftengine.fluid.behavior.MachinePumpBehavior.class) != null
                 || behaviorAt(level, pos, dev.arubik.craftengine.fluid.behavior.PumpBehavior.class) != null)
             return FluidNode.Kind.PUMP;
-        if (behaviorAt(level, pos, dev.arubik.craftengine.fluid.behavior.TankBlockBehavior.class) != null)
+        if (behaviorAt(level, pos, dev.arubik.craftengine.fluid.behavior.TankBlockBehavior.class) != null
+                || behaviorAt(level, pos, dev.arubik.craftengine.fluid.behavior.FluidBlockTankBehavior.class) != null)
             return FluidNode.Kind.TANK;
         if (behaviorAt(level, pos, dev.arubik.craftengine.fluid.behavior.PipeBehavior.class) != null)
             return FluidNode.Kind.PIPE;

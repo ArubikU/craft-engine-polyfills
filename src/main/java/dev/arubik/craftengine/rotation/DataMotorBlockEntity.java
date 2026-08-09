@@ -1,6 +1,7 @@
 package dev.arubik.craftengine.rotation;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.bukkit.event.inventory.ClickType;
@@ -14,8 +15,11 @@ import dev.arubik.craftengine.block.entity.BukkitBlockEntityTypes;
 import dev.arubik.craftengine.gas.GasStack;
 import dev.arubik.craftengine.gas.GasTank;
 import dev.arubik.craftengine.gas.GasType;
+import dev.arubik.craftengine.machine.MachineDefinition;
 import dev.arubik.craftengine.machine.block.entity.AbstractMachineBlockEntity;
 import dev.arubik.craftengine.machine.menu.MachineMenu;
+import dev.arubik.craftengine.machine.menu.MachineMenuConfig;
+import dev.arubik.craftengine.machine.menu.MenuText;
 import dev.arubik.craftengine.machine.menu.layout.MachineLayout;
 import dev.arubik.craftengine.machine.menu.layout.MenuSlotType;
 import dev.arubik.craftengine.machine.recipe.AbstractProcessingRecipe;
@@ -46,7 +50,7 @@ import net.momirealms.craftengine.core.util.Key;
  *       {@code generation}.</li>
  * </ul>
  */
-public class GasMotorMk1BlockEntity extends AbstractMachineBlockEntity implements RpmProvider {
+public class DataMotorBlockEntity extends AbstractMachineBlockEntity implements RpmProvider {
 
     public record GasSpec(float rpm, float su, int gasPerTick) {
     }
@@ -57,15 +61,6 @@ public class GasMotorMk1BlockEntity extends AbstractMachineBlockEntity implement
     private static final float BASE_OC = 2.0f;
 
     /**
-     * The motor's machine half, from {@code machines/gas_motor_mk1.json}.
-     *
-     * <p>
-     * A generator is the mirror of a consumer: it has the same upgrade grid and the
-     * same base-overclock knob, and those were constants here while every consuming
-     * machine had already moved to data. The rpm it actually delivers still comes
-     * per-gas from the block config, since that varies by fuel rather than by motor.
-     */
-    /**
      * This motor's definition from {@code motors/*.json}.
      *
      * <p>
@@ -73,8 +68,14 @@ public class GasMotorMk1BlockEntity extends AbstractMachineBlockEntity implement
      * a second motor needs no second class. Falls back to the historical values when
      * no definition is present.
      */
+    private final MotorDefinition definition;
+
     private MotorDefinition motorDefinition() {
-        return MotorDefinition.byName("polyfills:gas_motor_mk1");
+        return definition;
+    }
+
+    private MachineDefinition machineDefinition() {
+        return definition == null ? null : definition.machine();
     }
 
     private int upgradeSlotCount() {
@@ -111,7 +112,7 @@ public class GasMotorMk1BlockEntity extends AbstractMachineBlockEntity implement
     /** Stress (SU) the driven network reported last tick (for the UI). */
     private float lastStressLoad = 0f;
 
-    private int page = 0; // 0 main, 1 upgrades
+    private int page = 0; // 0 main, 1 upgrades, 2 overclock
     private int lastRenderedUnlocked = BASE_UNLOCKED;
     private MachineMenu active;
 
@@ -119,10 +120,11 @@ public class GasMotorMk1BlockEntity extends AbstractMachineBlockEntity implement
     private static final TypedKey<Float> KEY_SU_T = TypedKey.of("craftengine", "adv_motor_tsu", NbtType.FLOAT);
     private static final TypedKey<Float> KEY_RPM = TypedKey.of("craftengine", "adv_motor_rpm", NbtType.FLOAT);
 
-    public GasMotorMk1BlockEntity(BlockEntity blockEntity, int vaporCapacity,
+    public DataMotorBlockEntity(BlockEntity blockEntity, MotorDefinition definition, int vaporCapacity,
             Map<GasType, GasSpec> gases,
             Map<Key, java.util.List<dev.arubik.craftengine.machine.attribute.MachineAttributes.Mod>> upgradeDefs) {
-        super(blockEntity, UPGRADE_SLOTS);
+        super(blockEntity, definition != null ? definition.upgradeSlots() : UPGRADE_SLOTS);
+        this.definition = definition;
         this.vaporCapacity = vaporCapacity > 0 ? vaporCapacity : 10000;
         this.gases = (gases == null || gases.isEmpty()) ? defaultGases() : gases;
         this.upgradeDefs = upgradeDefs == null ? new HashMap<>() : upgradeDefs;
@@ -317,6 +319,35 @@ public class GasMotorMk1BlockEntity extends AbstractMachineBlockEntity implement
 
     private float suMax(Level level, Agg a) {
         return refSpec(level).su() * ocFactor(a);
+    }
+
+    private float overclockLimit() {
+        return ocFactor(aggregate()) - 1f;
+    }
+
+    private float currentOverclock() {
+        GasSpec spec = refSpec(getNMSLevel());
+        if (spec == null || spec.rpm() <= 0f || spec.su() <= 0f)
+            return 0f;
+        float rpmFactor = targetRpm / spec.rpm();
+        float suFactor = targetSu / spec.su();
+        return Math.min(rpmFactor, suFactor) - 1f;
+    }
+
+    public void bumpOverclock(boolean up, ClickType click) {
+        GasSpec spec = refSpec(getNMSLevel());
+        if (spec == null)
+            return;
+        Agg a = aggregate();
+        if (a.overclockLimit <= 0.0)
+            return;
+        float next = currentOverclock() + (up ? 1f : -1f)
+                * dev.arubik.craftengine.machine.menu.OverclockMenu.step(click);
+        next = (float) clamp(next, -0.99, overclockLimit());
+        float factor = Math.max(0f, 1f + next);
+        targetRpm = Math.max(0f, Math.min(rpmMax(getNMSLevel(), a), spec.rpm() * factor));
+        targetSu = Math.max(0f, Math.min(suMax(getNMSLevel(), a), spec.su() * factor));
+        setChanged();
     }
 
     // ---------------- tuning buttons ----------------
@@ -611,13 +642,17 @@ public class GasMotorMk1BlockEntity extends AbstractMachineBlockEntity implement
 
     @Override
     protected String getMachineId() {
-        return "gas_motor_mk1";
+        return definition != null && definition.machine() != null ? definition.machine().recipeType() : "motor";
     }
 
     // ---------------- menu (chest, two pages) ----------------
     @Override
     public MachineLayout getLayout() {
-        return page == 1 ? buildUpgradeLayout() : buildMainLayout();
+        return switch (page) {
+            case 1 -> buildUpgradeLayout();
+            case 2 -> buildOverclockLayout();
+            default -> buildMainLayout();
+        };
     }
 
     @Override
@@ -646,11 +681,13 @@ public class GasMotorMk1BlockEntity extends AbstractMachineBlockEntity implement
     }
 
     private MachineLayout buildMainLayout() {
-        MachineLayout l = new MachineLayout(org.bukkit.event.inventory.InventoryType.CHEST, 27,
-                "Vapor Motor MkII");
+        MachineDefinition machineDef = machineDefinition();
+        MachineLayout l = new MachineLayout(org.bukkit.event.inventory.InventoryType.CHEST,
+                machineDef != null ? machineDef.menuSize() : 27,
+                machineDef != null ? machineDef.title() : "Motor");
         l.setTitleComponent(noI(tr("polyfill.ui.motor_title", NamedTextColor.DARK_AQUA)));
         l.setDynamicProvider(2, (m, t) -> {
-            GasMotorMk1BlockEntity s = (GasMotorMk1BlockEntity) m;
+            DataMotorBlockEntity s = (DataMotorBlockEntity) m;
             GasStack g = s.gasTanks.get(0).getGas(s.getNMSLevel(), s.getMachinePos());
             GasType gt = (g == null || g.isEmpty()) ? GasType.EMPTY : g.getType();
             int amount = (g == null) ? 0 : g.getAmount();
@@ -662,7 +699,7 @@ public class GasMotorMk1BlockEntity extends AbstractMachineBlockEntity implement
                             s.lastConsumed + "/" + s.lastDemand + " mB/t", NamedTextColor.WHITE));
         });
         l.setDynamicProvider(4, (m, t) -> {
-            GasMotorMk1BlockEntity s = (GasMotorMk1BlockEntity) m;
+            DataMotorBlockEntity s = (DataMotorBlockEntity) m;
             return tIcon(org.bukkit.Material.CLOCK, tr("polyfill.ui.output", NamedTextColor.YELLOW),
                     kv("polyfill.ui.rpm", NamedTextColor.GRAY, String.format("%.0f", s.currentRpm), NamedTextColor.WHITE),
                     kv("polyfill.ui.stress", NamedTextColor.GRAY,
@@ -673,9 +710,9 @@ public class GasMotorMk1BlockEntity extends AbstractMachineBlockEntity implement
         // RPM row: − / value / +
         l.addClickButton(11, (m, t) -> tIcon(org.bukkit.Material.RED_STAINED_GLASS_PANE,
                 tr("polyfill.ui.rpm_minus", NamedTextColor.RED), tr("polyfill.ui.tune_hint", NamedTextColor.GRAY)),
-                (m, p, c) -> ((GasMotorMk1BlockEntity) m).bumpRpm(false, c));
+                (m, p, c) -> ((DataMotorBlockEntity) m).bumpRpm(false, c));
         l.setDynamicProvider(12, (m, t) -> {
-            GasMotorMk1BlockEntity s = (GasMotorMk1BlockEntity) m;
+            DataMotorBlockEntity s = (DataMotorBlockEntity) m;
             return tIcon(org.bukkit.Material.LIGHTNING_ROD,
                     kv("polyfill.ui.rpm", NamedTextColor.YELLOW, String.format("%.0f", s.targetRpm), NamedTextColor.WHITE),
                     kv("polyfill.ui.max", NamedTextColor.GRAY,
@@ -683,13 +720,13 @@ public class GasMotorMk1BlockEntity extends AbstractMachineBlockEntity implement
         });
         l.addClickButton(13, (m, t) -> tIcon(org.bukkit.Material.GREEN_STAINED_GLASS_PANE,
                 tr("polyfill.ui.rpm_plus", NamedTextColor.GREEN), tr("polyfill.ui.tune_hint", NamedTextColor.GRAY)),
-                (m, p, c) -> ((GasMotorMk1BlockEntity) m).bumpRpm(true, c));
+                (m, p, c) -> ((DataMotorBlockEntity) m).bumpRpm(true, c));
         // SU row: − / value / +
         l.addClickButton(15, (m, t) -> tIcon(org.bukkit.Material.RED_STAINED_GLASS_PANE,
                 tr("polyfill.ui.su_minus", NamedTextColor.RED), tr("polyfill.ui.tune_hint", NamedTextColor.GRAY)),
-                (m, p, c) -> ((GasMotorMk1BlockEntity) m).bumpSu(false, c));
+                (m, p, c) -> ((DataMotorBlockEntity) m).bumpSu(false, c));
         l.setDynamicProvider(16, (m, t) -> {
-            GasMotorMk1BlockEntity s = (GasMotorMk1BlockEntity) m;
+            DataMotorBlockEntity s = (DataMotorBlockEntity) m;
             return tIcon(org.bukkit.Material.REDSTONE_BLOCK,
                     kv("polyfill.ui.su", NamedTextColor.RED, String.format("%.0f", s.targetSu), NamedTextColor.WHITE),
                     kv("polyfill.ui.max", NamedTextColor.GRAY,
@@ -697,15 +734,62 @@ public class GasMotorMk1BlockEntity extends AbstractMachineBlockEntity implement
         });
         l.addClickButton(17, (m, t) -> tIcon(org.bukkit.Material.GREEN_STAINED_GLASS_PANE,
                 tr("polyfill.ui.su_plus", NamedTextColor.GREEN), tr("polyfill.ui.tune_hint", NamedTextColor.GRAY)),
-                (m, p, c) -> ((GasMotorMk1BlockEntity) m).bumpSu(true, c));
-        l.addButton(22, (m, t) -> tIcon(org.bukkit.Material.ANVIL, tr("polyfill.ui.upgrades", NamedTextColor.GOLD),
-                tr("polyfill.ui.upgrades_desc", NamedTextColor.GRAY)),
-                (m, p) -> ((GasMotorMk1BlockEntity) m).openPage(p, 1));
-        l.addButton(24, (m, t) -> tIcon(org.bukkit.Material.BUCKET, tr("polyfill.ui.deplete", NamedTextColor.RED),
-                tr("polyfill.ui.deplete_desc", NamedTextColor.GRAY)),
-                (m, p) -> ((GasMotorMk1BlockEntity) m).depleteTank());
+                (m, p, c) -> ((DataMotorBlockEntity) m).bumpSu(true, c));
+        if (machineDef != null)
+            for (MachineDefinition.ButtonSpec button : machineDef.buttons())
+                installButton(l, toButton(button));
         l.fillBackground(icon(org.bukkit.Material.GRAY_STAINED_GLASS_PANE, " "));
         return l;
+    }
+
+    private static MachineMenuConfig.Button toButton(MachineDefinition.ButtonSpec spec) {
+        return new MachineMenuConfig.Button(spec.slot(), spec.icon(),
+                MachineMenuConfig.Action.parse(spec.action()), spec.name(), spec.lore(),
+                spec.lockedIcon(), MachineMenuConfig.LockedWhen.parse(spec.lockedWhen()));
+    }
+
+    private void installButton(MachineLayout layout, MachineMenuConfig.Button button) {
+        layout.addButton(button.slot, (m, tick) -> {
+            DataMotorBlockEntity self = (DataMotorBlockEntity) m;
+            boolean locked = self.isButtonLocked(button);
+            String iconSpec = locked && button.lockedIcon != null ? button.lockedIcon : button.icon;
+            return MenuText.iconItem(parseKey(iconSpec), org.bukkit.Material.PAPER,
+                    label(button.name, NamedTextColor.AQUA), lore(button.lore));
+        }, (m, player) -> {
+            DataMotorBlockEntity self = (DataMotorBlockEntity) m;
+            if (self.isButtonLocked(button))
+                return;
+            switch (button.action.kind) {
+                case OPEN_PAGE -> self.openPage(player, button.action.page);
+                case DEPLETE_GAS -> self.depleteTank();
+                case DEPLETE_FLUID, NONE -> {
+                }
+            }
+        });
+    }
+
+    private boolean isButtonLocked(MachineMenuConfig.Button button) {
+        return button.lockedWhen == MachineMenuConfig.LockedWhen.NO_OVERCLOCK && aggregate().overclockLimit <= 0.0;
+    }
+
+    private static Component label(String value, NamedTextColor color) {
+        return MenuText.textOrTranslatable(value, color);
+    }
+
+    private static Component[] lore(List<String> lines) {
+        if (lines == null || lines.isEmpty())
+            return new Component[0];
+        Component[] out = new Component[lines.size()];
+        for (int i = 0; i < lines.size(); i++)
+            out[i] = label(lines.get(i), NamedTextColor.GRAY);
+        return out;
+    }
+
+    private static Key parseKey(String spec) {
+        if (spec == null)
+            return Key.of("cml", "gui_empty");
+        int i = spec.indexOf(':');
+        return i < 0 ? Key.of("cml", spec) : Key.of(spec.substring(0, i), spec.substring(i + 1));
     }
 
     private MachineLayout buildUpgradeLayout() {
@@ -716,7 +800,7 @@ public class GasMotorMk1BlockEntity extends AbstractMachineBlockEntity implement
                 .append(lit(" (" + unlocked + "/" + UPGRADE_SLOTS + ")", NamedTextColor.GRAY))));
         for (int i = 0; i < upgradeSlotCount(); i++) {
             if (i < unlocked) {
-                l.addSlot(i, MenuSlotType.INPUT);
+                l.addSlot(i, MenuSlotType.INPUT, i);
             } else {
                 l.setDynamicProvider(i, (m, t) -> tIcon(org.bukkit.Material.BARRIER,
                         tr("polyfill.ui.locked", NamedTextColor.RED),
@@ -724,13 +808,24 @@ public class GasMotorMk1BlockEntity extends AbstractMachineBlockEntity implement
             }
         }
         l.setDynamicProvider(13, (m, t) -> {
-            int u = ((GasMotorMk1BlockEntity) m).aggregate().unlocked;
+            int u = ((DataMotorBlockEntity) m).aggregate().unlocked;
             return tIcon(org.bukkit.Material.PAPER,
                     kv("polyfill.ui.active_slots", NamedTextColor.YELLOW, u + "/" + UPGRADE_SLOTS, NamedTextColor.WHITE),
                     tr("polyfill.ui.active_slots_desc", NamedTextColor.GRAY));
         });
         l.addButton(17, (m, t) -> tIcon(org.bukkit.Material.ARROW, tr("polyfill.ui.back", NamedTextColor.YELLOW)),
-                (m, p) -> ((GasMotorMk1BlockEntity) m).openPage(p, 0));
+                (m, p) -> ((DataMotorBlockEntity) m).openPage(p, 0));
+        l.fillBackground(icon(org.bukkit.Material.GRAY_STAINED_GLASS_PANE, " "));
+        return l;
+    }
+
+    private MachineLayout buildOverclockLayout() {
+        MachineLayout l = dev.arubik.craftengine.machine.menu.OverclockMenu.build(
+                getMachineId(), NamedTextColor.RED,
+                () -> this.currentOverclock(),
+                () -> this.overclockLimit(),
+                (up, click) -> bumpOverclock(up, click),
+                p -> openPage(p, 0));
         l.fillBackground(icon(org.bukkit.Material.GRAY_STAINED_GLASS_PANE, " "));
         return l;
     }

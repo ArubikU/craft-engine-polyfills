@@ -224,7 +224,7 @@ public final class CraftEnginePolyfills extends JavaPlugin {
                 this);
         getServer().getPluginManager().registerEvents(new dev.arubik.craftengine.conveyor.ConveyorIoBreakListener(),
                 this);
-        getServer().getPluginManager().registerEvents(new dev.arubik.craftengine.rotation.GasMotorBreakListener(),
+        getServer().getPluginManager().registerEvents(new dev.arubik.craftengine.rotation.DataMotorBreakListener(),
                 this);
         getServer().getPluginManager().registerEvents(new dev.arubik.craftengine.machine.block.MachineBreakListener(),
                 this);

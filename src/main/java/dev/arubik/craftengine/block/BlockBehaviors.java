@@ -120,10 +120,10 @@ public class BlockBehaviors {
 
                 // Crusher / vapor furnace / smeltery / upgradeable furnace are gone: they are
                 // machines/*.json driven by polyfills:data_machine now.
-                // New features: vapor motor, conveyor, JIT crafting
+                // Motors are data-defined by motors/*.json and mounted through one behavior.
                 RegistryUtils.registerBlockBehavior(
-                                dev.arubik.craftengine.rotation.GasMotorMk1Behavior.POLYFILL_GAS_MOTOR_MK1,
-                                dev.arubik.craftengine.rotation.GasMotorMk1Behavior.FACTORY);
+                                dev.arubik.craftengine.rotation.DataMotorBehavior.FACTORY_KEY,
+                                dev.arubik.craftengine.rotation.DataMotorBehavior.FACTORY);
                 RegistryUtils.registerBlockBehavior(
                                 dev.arubik.craftengine.conveyor.ConveyorBehavior.POLYFILL_CONVEYOR,
                                 dev.arubik.craftengine.conveyor.ConveyorBehavior.FACTORY);

@@ -16,8 +16,8 @@ import net.momirealms.craftengine.core.util.Key;
  * <p>
  * Machines that <em>consume</em> rpm and SU became data-driven; the things that
  * <em>produce</em> it stayed as one Java class per motor, with the fuel table in
- * the block config and the buffer, upgrade grid and overclock headroom as
- * constants. A motor is now a file.
+ * the block config and the tank, upgrade grid and overclock headroom as constants.
+ * A motor is now a file.
  *
  * <p>
  * A motor is a machine that happens to turn a shaft — it has the same menu,
@@ -27,7 +27,6 @@ import net.momirealms.craftengine.core.util.Key;
  *
  * @param id            registry id
  * @param machine       the menu surface: slots, tanks, bars, buttons
- * @param buffer        internal fuel buffer, in mB (fluid and gas fuels)
  * @param fuels         what it can burn and what each yields
  * @param outputFaces   which faces the shaft drives, relative to the block's
  *                      facing, so one definition works at every rotation
@@ -35,7 +34,7 @@ import net.momirealms.craftengine.core.util.Key;
  * @param baseUnlocked  how many of those are usable before any EXTRA_SLOTS upgrade
  * @param baseOverclock overclock headroom over a fuel's base rpm before upgrades
  */
-public record MotorDefinition(Key id, MachineDefinition machine, int buffer, Map<Key, FuelOutput> fuels,
+public record MotorDefinition(Key id, MachineDefinition machine, Map<Key, FuelOutput> fuels,
         List<RelativeDirection> outputFaces, int upgradeSlots, int baseUnlocked, float baseOverclock) {
 
     /** Every data-defined motor. Rebuilt on reload. */

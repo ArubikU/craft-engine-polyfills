@@ -50,9 +50,9 @@
       "source": "progress"
     },
     {
-      "id": "polyfills:rpm",
+      "id": "polyfills:fuel",
       "slots": [
-        31
+        40
       ],
       "source": "rpm"
     }

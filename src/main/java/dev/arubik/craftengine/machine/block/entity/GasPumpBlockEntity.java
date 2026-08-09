@@ -678,12 +678,7 @@ public class GasPumpBlockEntity extends AbstractMachineBlockEntity {
     }
 
     private static net.kyori.adventure.text.Component label(String s, NamedTextColor color) {
-        if (s == null)
-            return net.kyori.adventure.text.Component.empty();
-        String key = s.startsWith("lang:") ? s.substring(5) : s;
-        if (key.contains(".") && !key.contains(" "))
-            return MenuText.tr(key, color);
-        return MenuText.lit(s, color);
+        return MenuText.textOrTranslatable(s, color);
     }
 
     private static net.kyori.adventure.text.Component[] lore(List<String> lines) {

@@ -116,6 +116,43 @@ public final class MenuText {
         return Component.translatable(key).color(color);
     }
 
+    /**
+     * Parse a menu label that may be either a literal or a translation key.
+     * Supports plain keys like {@code polyfill.ui.back}, {@code lang:polyfill.ui.back},
+     * and {@code <lang:polyfill.ui.back>}.
+     */
+    public static Component textOrTranslatable(String value, NamedTextColor color) {
+        if (value == null)
+            return Component.empty();
+        String key = normalizedI18nKey(value);
+        if (key != null)
+            return tr(key, color);
+        return lit(value, color);
+    }
+
+    /** Returns the normalized translation key if {@code value} looks like i18n, otherwise null. */
+    public static String normalizedI18nKey(String value) {
+        if (value == null)
+            return null;
+        String key = value.trim();
+        if (key.isEmpty())
+            return null;
+        if (key.startsWith("<lang:") && key.endsWith(">"))
+            key = key.substring(6, key.length() - 1).trim();
+        else if (key.startsWith("lang:"))
+            key = key.substring(5).trim();
+        if (key.isEmpty() || key.indexOf(' ') >= 0)
+            return null;
+        if (key.contains(".") || key.contains(":"))
+            return key;
+        return null;
+    }
+
+    /** Whether the string should be treated as a translation key instead of a literal. */
+    public static boolean isI18nKey(String value) {
+        return normalizedI18nKey(value) != null;
+    }
+
     /** Plain literal (numbers / separators). */
     public static Component lit(String s, NamedTextColor color) {
         return Component.text(s, color);

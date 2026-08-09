@@ -8,7 +8,8 @@
   "tier": 1,
   "connects_to": [
     "cml:copper_valve",
-    "cml:copper_tank"
+    "cml:copper_tank",
+    "cml:fluid_block_tank"
   ],
   "preview_namespace": "cml",
   "preview_prefix": "pipe_preview_copper",
