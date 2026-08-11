@@ -35,16 +35,16 @@ public class ContraptionBlockElement implements ContraptionElement {
     private CompoundTag blockEntityNbt;
 
     // Packet render state
-    private final int entityId;
-    private final UUID entityUuid;
-    private final Object despawnPacket;
-    private final Set<UUID> shownTo = ConcurrentHashMap.newKeySet();
-    private boolean metaDirty = true;
-    private int lastBlockLight = -1;
-    private int lastSkyLight = -1;
-    private double lastPitch, lastRoll, lastScale = 1.0;
-    private final boolean hasEntityRenderer;
-    private final float modelYawOffsetDegrees;
+    protected final int entityId;
+    protected final UUID entityUuid;
+    protected final Object despawnPacket;
+    protected final Set<UUID> shownTo = ConcurrentHashMap.newKeySet();
+    protected boolean metaDirty = true;
+    protected int lastBlockLight = -1;
+    protected int lastSkyLight = -1;
+    protected double lastPitch, lastRoll, lastScale = 1.0;
+    protected final boolean hasEntityRenderer;
+    protected final float modelYawOffsetDegrees;
 
     public ContraptionBlockElement(BlockPos localPos, BlockState blockState, CompoundTag blockEntityNbt) {
         this(localPos, blockState, blockEntityNbt, false, 0f);
@@ -255,7 +255,7 @@ public class ContraptionBlockElement implements ContraptionElement {
         }
     }
 
-    private void spawn(Player viewer, Vec3 pos, float yawDeg) {
+    protected void spawn(Player viewer, Vec3 pos, float yawDeg) {
         Object spawnPacket = MNms.INSTANCE.constructor$ClientboundAddEntityPacket(
                 entityId, entityUuid,
                 pos.x, pos.y, pos.z,
@@ -265,13 +265,13 @@ public class ContraptionBlockElement implements ContraptionElement {
         sendMetadata(List.of(viewer));
     }
 
-    private void sendPositionSync(Player viewer, Vec3 pos, float yawDeg) {
+    protected void sendPositionSync(Player viewer, Vec3 pos, float yawDeg) {
         Object syncPacket = MNms.INSTANCE.constructor$ClientboundEntityPositionSyncPacket(
                 entityId, pos.x, pos.y, pos.z, yawDeg, 0f, false);
         viewer.sendPacket(syncPacket, false);
     }
 
-    private void sendMetadata(List<Player> viewers) {
+    protected void sendMetadata(List<Player> viewers) {
         List<Object> values = buildMetadataValues();
         if (values.isEmpty()) return;
         Object metaPacket = MNms.INSTANCE.constructor$ClientboundSetEntityDataPacket(entityId, values);
@@ -282,7 +282,7 @@ public class ContraptionBlockElement implements ContraptionElement {
         }
     }
 
-    private List<Object> buildMetadataValues() {
+    protected List<Object> buildMetadataValues() {
         var values = new java.util.ArrayList<Object>();
         DisplayData.BlockDisplayData.BlockState.addEntityData(hasEntityRenderer ? Blocks.AIR.defaultBlockState() : blockState, values);
         float s = (float) lastScale;
