@@ -26,17 +26,20 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class ContraptionCampfireElement extends ContraptionBlockElement {
 
     private static final int SLOTS = 4;
+    // Vanilla campfire cooking positions: 2x2 grid at the four quadrants (matches CampfireBlockEntity item layout)
     private static final Vec3[] ITEM_OFFSETS = {
-        new Vec3( 0.0,  0.31, -0.3125),
-        new Vec3( 0.0,  0.31,  0.3125),
-        new Vec3(-0.3125, 0.31, 0.0),
-        new Vec3( 0.3125, 0.31, 0.0),
+        new Vec3(-0.3125, 0.5, -0.3125),  // NW
+        new Vec3( 0.3125, 0.5, -0.3125),  // NE
+        new Vec3(-0.3125, 0.5,  0.3125),  // SW
+        new Vec3( 0.3125, 0.5,  0.3125),  // SE
     };
     private static final int DAMAGE_INTERVAL_TICKS = 20;
+    private static final int SMOKE_INTERVAL_TICKS = 20; // vanilla: once per ~20 ticks
 
     private final boolean isSoul;
     private final ItemStack[] slots = new ItemStack[SLOTS];
     private int damageTimer = 0;
+    private int smokeTimer = 0;
 
     // 4 ITEM_DISPLAY entities for cooking items
     private final int[] itemEntityIds = new int[SLOTS];
@@ -74,10 +77,11 @@ public final class ContraptionCampfireElement extends ContraptionBlockElement {
     public void tick(RenderContext ctx) {
         super.tick(ctx); // syncs blockState from level
 
-        // Re-read cooking items from level BE — vanilla forward handles placement/removal
+        // Re-read cooking items from level BE + tick campfire BE to process cooking
         if (ctx.level() != null) {
             var be = ctx.level().getBlockEntity(localPos());
             if (be instanceof net.minecraft.world.level.block.entity.CampfireBlockEntity campfire) {
+                // tickBlockEntities() now handles vanilla BEs globally — no manual tick needed here
                 for (int i = 0; i < SLOTS; i++) {
                     ItemStack live = campfire.getItems().get(i);
                     if (!live.equals(slots[i])) {
@@ -121,7 +125,11 @@ public final class ContraptionCampfireElement extends ContraptionBlockElement {
             if (itemDirty[i]) { sendItemMeta(ctx.viewers(), i); itemDirty[i] = false; }
         }
 
-        spawnParticles(ctx);
+        smokeTimer++;
+        if (smokeTimer >= SMOKE_INTERVAL_TICKS) {
+            smokeTimer = 0;
+            spawnParticles(ctx);
+        }
     }
 
     @Override
@@ -162,9 +170,14 @@ public final class ContraptionCampfireElement extends ContraptionBlockElement {
         var box = new net.minecraft.world.phys.AABB(worldCenter.x - r, worldCenter.y, worldCenter.z - r,
                 worldCenter.x + r, worldCenter.y + 1.5 * ctx.scale(), worldCenter.z + r);
         try {
-            for (var entity : sl.getEntities((net.minecraft.world.entity.Entity) null, box,
-                    e -> !(e instanceof net.minecraft.world.entity.player.Player))) {
-                entity.hurtServer(sl, sl.damageSources().inFire(), isSoul ? 2f : 1f);
+            for (var entity : sl.getEntities((net.minecraft.world.entity.Entity) null, box, e -> true)) {
+                try {
+                    // Use hurtServer for authoritative server-side damage; fall back to hurt
+                    boolean damaged = false;
+                    try { damaged = entity.hurtServer(sl, sl.damageSources().inFire(), isSoul ? 2f : 1f); }
+                    catch (Throwable ignored2) {}
+                    if (!damaged) entity.hurt(sl.damageSources().inFire(), isSoul ? 2f : 1f);
+                } catch (Throwable ignored) {}
             }
         } catch (Throwable ignored) {}
     }

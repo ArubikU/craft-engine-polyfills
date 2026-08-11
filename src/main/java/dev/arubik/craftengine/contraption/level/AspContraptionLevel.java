@@ -715,6 +715,22 @@ public final class AspContraptionLevel extends SlimeLevelInstance implements Con
             } catch (Throwable ignored) {
             }
         }
+        // Also tick vanilla block entities (furnace, campfire, etc.)
+        for (BlockPos local : new HashSet<>(localPositions)) {
+            try {
+                net.minecraft.world.level.block.entity.BlockEntity be = getBlockEntity(local);
+                if (be == null) continue;
+                net.minecraft.world.level.block.state.BlockState bs = getBlockState(local);
+                if (net.momirealms.craftengine.bukkit.util.BlockStateUtils
+                        .getOptionalCustomBlockState(bs).isPresent()) continue;
+                if (bs.getBlock() instanceof net.minecraft.world.level.block.EntityBlock eb) {
+                    @SuppressWarnings({"unchecked", "rawtypes"})
+                    net.minecraft.world.level.block.entity.BlockEntityTicker ticker =
+                            eb.getTicker(this, bs, be.getType());
+                    if (ticker != null) ticker.tick(this, local, bs, be);
+                }
+            } catch (Throwable ignored) {}
+        }
         // Move gas/fluid through the pipes the ticks above just seeded, within THIS level.
         try {
             dev.arubik.craftengine.fluid.graph.GasEngine.tickAll(this);

@@ -849,6 +849,24 @@ implements ContraptionBoundary, ContraptionLevel {
             }
             catch (Throwable throwable) {}
         }
+        // Also tick vanilla block entities (furnace, campfire, etc.) — CE loop only covers CE blocks
+        for (BlockPos local : new HashSet<BlockPos>(this.localPositions)) {
+            try {
+                net.minecraft.world.level.block.entity.BlockEntity be = this.getBlockEntity(local);
+                if (be == null) continue;
+                net.minecraft.world.level.block.state.BlockState bs = this.getBlockState(local);
+                // Skip CE-managed BEs (already ticked above)
+                if (net.momirealms.craftengine.bukkit.util.BlockStateUtils
+                        .getOptionalCustomBlockState(bs).isPresent()) continue;
+                // Use EntityBlock interface if the block implements it
+                if (bs.getBlock() instanceof net.minecraft.world.level.block.EntityBlock eb) {
+                    @SuppressWarnings({"unchecked", "rawtypes"})
+                    net.minecraft.world.level.block.entity.BlockEntityTicker ticker =
+                            eb.getTicker(this, bs, be.getType());
+                    if (ticker != null) ticker.tick(this, local, bs, be);
+                }
+            } catch (Throwable ignored) {}
+        }
         try {
             dev.arubik.craftengine.fluid.graph.GasEngine.tickAll((Level) this);
         } catch (Throwable ignored) {}
