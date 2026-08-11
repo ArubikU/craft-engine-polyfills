@@ -3,6 +3,7 @@ package dev.arubik.craftengine.contraption.element;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.phys.Vec3;
 import net.momirealms.craftengine.core.entity.player.Player;
 import net.momirealms.craftengine.core.util.Key;
@@ -43,6 +44,10 @@ public interface ContraptionElement {
     void despawn(List<Player> viewers);
 
     void disassemble(ServerLevel level, BlockPos bearingPos, int quarterTurns);
+
+    // ---- interaction ----
+
+    default boolean onInteract(Player player, int entityId, Vec3 hitPos, InteractionHand hand) { return false; }
 
     // ---- persistence (opt-in) ----
 
