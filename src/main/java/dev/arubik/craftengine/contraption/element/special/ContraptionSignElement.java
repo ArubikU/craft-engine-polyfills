@@ -128,7 +128,7 @@ public abstract class ContraptionSignElement extends ContraptionBlockElement {
     }
 
     private Vec3 textPos(RenderContext ctx, Direction facing, boolean back) {
-        double outward = back ? -0.41 : 0.41;
+        double outward = back ? -0.38 : 0.38;
         Vec3 local = new Vec3(
                 localPos().getX() + 0.5 + facing.getStepX() * outward,
                 localPos().getY() + textYCenter(),

@@ -134,6 +134,21 @@ public final class ContraptionSkullElement implements ContraptionElement {
         }
     }
 
+    @Override
+    public boolean onInteract(net.minecraft.server.level.ServerPlayer player,
+                               dev.arubik.craftengine.contraption.core.ContraptionState state,
+                               net.minecraft.world.phys.Vec3 hitPos,
+                               net.minecraft.world.InteractionHand hand,
+                               boolean rightClick) {
+        Direction face = Direction.getNearest(hitPos.x - localPos.getX() - 0.5,
+                hitPos.y - localPos.getY() - 0.5, hitPos.z - localPos.getZ() - 0.5);
+        var hit = new dev.arubik.craftengine.contraption.ContraptionInteractionListener.Hit(
+                state, localPos, hitPos, face);
+        if (rightClick) dev.arubik.craftengine.contraption.ContraptionInteractionListener.forward(player, hit);
+        else dev.arubik.craftengine.contraption.ContraptionInteractionListener.forwardAttack(player, hit);
+        return true;
+    }
+
     private void spawn(Player viewer, Vec3 pos, float yaw) {
         viewer.sendPackets(List.of(
                 MNms.INSTANCE.constructor$ClientboundAddEntityPacket(entityId, uuid, pos.x, pos.y, pos.z,
@@ -156,11 +171,9 @@ public final class ContraptionSkullElement implements ContraptionElement {
         // Skull face rotation: wall skulls face outward, floor skulls use rotation property (0-15)
         Quaternionf rot = buildSkullRotation();
         DisplayData.LeftRotation.addEntityData(rot, meta);
-        // ITEM_DISPLAY head model renders centered at entity origin; scale 1.0 = natural head size (~0.5 block)
         float s = (float) lastScale;
         if (s != 1f) DisplayData.Scale.addEntityData(new Vector3f(s, s, s), meta);
-        // No Translation — ITEM_DISPLAY models are already centered, unlike BLOCK_DISPLAY (0→1 cube)
-        DisplayData.BrightnessOverride.addEntityData((15 << 4) | (15 << 20), meta);
+        // No hardcoded brightness — skull inherits real-world light like other elements
         DisplayData.PosRotInterpolationDuration.addEntityData(2, meta);
         return meta;
     }
