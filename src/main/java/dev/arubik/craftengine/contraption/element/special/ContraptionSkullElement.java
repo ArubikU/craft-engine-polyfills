@@ -140,8 +140,14 @@ public final class ContraptionSkullElement implements ContraptionElement {
                                net.minecraft.world.phys.Vec3 hitPos,
                                net.minecraft.world.InteractionHand hand,
                                boolean rightClick) {
-        Direction face = Direction.getNearest(hitPos.x - localPos.getX() - 0.5,
-                hitPos.y - localPos.getY() - 0.5, hitPos.z - localPos.getZ() - 0.5);
+        // Derive face from hit position relative to block center
+        double dx = hitPos.x - localPos.getX() - 0.5;
+        double dy = hitPos.y - localPos.getY() - 0.5;
+        double dz = hitPos.z - localPos.getZ() - 0.5;
+        double ax = Math.abs(dx), ay = Math.abs(dy), az = Math.abs(dz);
+        Direction face = ax >= ay && ax >= az ? (dx > 0 ? Direction.EAST : Direction.WEST)
+                : ay >= az ? (dy > 0 ? Direction.UP : Direction.DOWN)
+                : (dz > 0 ? Direction.SOUTH : Direction.NORTH);
         var hit = new dev.arubik.craftengine.contraption.ContraptionInteractionListener.Hit(
                 state, localPos, hitPos, face);
         if (rightClick) dev.arubik.craftengine.contraption.ContraptionInteractionListener.forward(player, hit);
