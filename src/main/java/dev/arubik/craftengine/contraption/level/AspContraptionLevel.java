@@ -31,7 +31,8 @@ import com.infernalsuite.asp.level.SlimeLevelInstance;
 
 import dev.arubik.craftengine.CraftEnginePolyfills;
 import dev.arubik.craftengine.block.entity.BukkitBlockEntityTypes;
-import dev.arubik.craftengine.contraption.ContraptionMath;
+import dev.arubik.craftengine.contraption.assembly.ContraptionMath;
+import dev.arubik.craftengine.contraption.core.ContraptionLevel;
 import dev.arubik.craftengine.machine.block.entity.AbstractMachineBlockEntity;
 import dev.arubik.craftengine.util.CeWorlds;
 
@@ -674,7 +675,7 @@ public final class AspContraptionLevel extends SlimeLevelInstance implements Con
             try {
                 net.momirealms.craftengine.core.block.entity.BlockEntity be = BukkitBlockEntityTypes.getIfLoaded(this, local);
                 BlockEntityController controller = be == null ? null : be.controller;
-                if (controller instanceof AbstractMachineBlockEntity machine) {
+                if (controller instanceof dev.arubik.craftengine.machine.block.entity.AbstractMachineBlockEntity machine) {
                     machine.unregister();
                 }
             } catch (Throwable ignored) {
@@ -708,8 +709,8 @@ public final class AspContraptionLevel extends SlimeLevelInstance implements Con
                         ticker.tick(ceWorld, new net.momirealms.craftengine.core.world.BlockPos(local.getX(),
                                 local.getY(), local.getZ()), ce, be.controller);
                     }
-                } else if (be.controller instanceof AbstractMachineBlockEntity machine) {
-                    machine.tick(this, local, ce); // no CEWorld — keep at least the machines alive
+                } else if (be.controller instanceof dev.arubik.craftengine.contraption.api.ContraptionTickable tickable) {
+                    tickable.tick(this, local, ce); // no CEWorld — keep at least the machines alive
                 }
             } catch (Throwable ignored) {
             }

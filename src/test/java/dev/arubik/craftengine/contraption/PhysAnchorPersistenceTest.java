@@ -8,7 +8,12 @@ import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import dev.arubik.craftengine.contraption.listener.BearingHammerListener;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.level.Level;
 
 /**
  * Pins the anchor re-keying that lets a PHYS contraption survive a restart.
@@ -31,7 +36,8 @@ import net.minecraft.core.BlockPos;
  */
 class PhysAnchorPersistenceTest {
 
-    private static final UUID WORLD = UUID.randomUUID();
+    private static final ResourceKey<Level> WORLD =
+        ResourceKey.create(Registries.DIMENSION, Identifier.parse("minecraft:test"));
 
     @Test
     @DisplayName("re-anchoring a moving phys body drops the key it moved off")

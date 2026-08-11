@@ -5,11 +5,19 @@ package dev.arubik.craftengine.rotation;
  *
  * <p>SHARED ROTATION CONTRACT — do not change this signature; the conveyor
  * feature depends on it.</p>
+ *
+ * <p>Extends {@link dev.arubik.craftengine.contraption.api.PowerSource} so contraption
+ * behaviors can consume rotational power through the generic power API.
  */
-public interface RpmProvider {
+public interface RpmProvider extends dev.arubik.craftengine.contraption.api.PowerSource {
 
     /** Current rotational output, in revolutions-per-minute. 0 when not producing (or stalled). */
     float getRpm();
+
+    @Override
+    default float getPower() {
+        return getRpm();
+    }
 
     /**
      * The rotational output this source WOULD drive ignoring overstress — i.e. the speed used to
@@ -22,12 +30,22 @@ public interface RpmProvider {
         return getRpm();
     }
 
+    @Override
+    default float getPotentialPower() {
+        return potentialRpm();
+    }
+
     /**
      * True for a genuine power SOURCE (a motor). A relay (conveyor router that just passes power
      * through) returns false, so machines that must be driven directly by a motor can exclude it.
      */
     default boolean isRpmSource() {
         return true;
+    }
+
+    @Override
+    default boolean isPowerSource() {
+        return isRpmSource();
     }
 
     /**
@@ -63,5 +81,10 @@ public interface RpmProvider {
         net.momirealms.craftengine.core.world.BlockPos head = rpmHeadPos();
         return head == null || (head.x() == consumerPos.x() && head.y() == consumerPos.y()
                 && head.z() == consumerPos.z());
+    }
+
+    @Override
+    default boolean powerReaches(net.momirealms.craftengine.core.world.BlockPos consumerPos) {
+        return rpmReaches(consumerPos);
     }
 }

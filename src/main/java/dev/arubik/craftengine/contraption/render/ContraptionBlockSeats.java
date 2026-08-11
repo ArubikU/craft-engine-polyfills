@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-import dev.arubik.craftengine.contraption.level.ContraptionLevel;
+import dev.arubik.craftengine.contraption.core.ContraptionLevel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.phys.Vec3;
 import net.momirealms.craftengine.bukkit.block.behavior.SeatBlockBehavior;

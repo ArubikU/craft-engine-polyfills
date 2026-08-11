@@ -12,11 +12,12 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 
 import dev.arubik.craftengine.CraftEnginePolyfills;
-import dev.arubik.craftengine.contraption.ContraptionEntity;
-import dev.arubik.craftengine.contraption.GhastHarness;
 import dev.arubik.craftengine.contraption.ContraptionWorlds;
 import dev.arubik.craftengine.contraption.MovementBehavior;
 import dev.arubik.craftengine.contraption.MovementContext;
+import dev.arubik.craftengine.contraption.bearing.GhastHarness;
+import dev.arubik.craftengine.contraption.core.ContraptionEntity;
+import dev.arubik.craftengine.contraption.core.ContraptionState;
 import net.minecraft.world.entity.animal.happyghast.HappyGhast;
 import net.minecraft.world.phys.Vec3;
 
@@ -66,7 +67,7 @@ import net.minecraft.world.phys.Vec3;
  * ghast pierde su norte y al re abrir el sv se acomoda al norte del happy ghast"). {@link #yawOffset} is
  * constructed from persistence, exactly like {@link #anchorOffset} beside it, because it is exactly as
  * un-derivable from geometry — see {@link GhastHarness#captureYawOffset} for why measuring it against a
- * later heading is not an approximation but a redefinition, and {@code GhastHarnessBearing}'s
+ * later heading is not an approximation but a redefinition, and {@code GhastContraptionType}'s
  * {@code ANCHOR_YAW} for where it is stored on both persistence paths (the ghast's PDC and the packed
  * harness item). The lazy first-tick measurement this class used to do survives ONLY for an assembly made
  * before that key existed, whose PDC/harness genuinely carries no offset and for which no correct value can
@@ -95,7 +96,7 @@ import net.minecraft.world.phys.Vec3;
  * re-render of every cell.
  *
  * <p><b>Anchor offset.</b> {@link #anchorOffset} is the vector from the ghast to the contraption's origin
- * cell recorded at capture time — see {@code GhastHarnessBearing}'s "Why the anchor offset is
+ * cell recorded at capture time — see {@code GhastContraptionType}'s "Why the anchor offset is
  * per-contraption". It is no longer merely ADDED to the ghast's position: it is one input to
  * {@link GhastHarness#bearingOrigin}, which folds it into a bearing origin that orbits the ghast's centre
  * as the yaw changes. It therefore no longer cancels in the {@code now - last} deltas (a rotating anchor
@@ -215,7 +216,7 @@ public final class GhastFollowBehavior implements MovementBehavior {
         // re-anchor path applies — see MinecartFollowBehavior's "Portal crossing" javadoc for the full
         // design (owning facade recovered via ContraptionWorlds' reverse index; no ContraptionEntity
         // reference needs threading through MovementContext).
-        if (!entity.getWorld().getUID().equals(ctx.state().worldId())) {
+        if (!((org.bukkit.craftbukkit.CraftWorld) entity.getWorld()).getHandle().dimension().equals(ctx.state().worldId())) {
             ContraptionEntity facade = ContraptionWorlds.owning(ctx.state().level()).orElse(null);
             if (facade != null) {
                 Vec3 origin = originOf(entity, ctx.state().yawRadians());
@@ -296,8 +297,8 @@ public final class GhastFollowBehavior implements MovementBehavior {
         // equality check against the stored value: every tick would see a difference, re-push the same
         // clamped number, and force a full re-render of every cell forever. Clamping first makes the
         // comparison a fixed point.
-        ghastScale = Math.max(dev.arubik.craftengine.contraption.ContraptionState.MIN_SCALE,
-                Math.min(dev.arubik.craftengine.contraption.ContraptionState.MAX_SCALE, ghastScale));
+        ghastScale = Math.max(ContraptionState.MIN_SCALE,
+                Math.min(ContraptionState.MAX_SCALE, ghastScale));
         if (Math.abs(ghastScale - ctx.state().scale()) < SCALE_EPSILON) {
             return;
         }

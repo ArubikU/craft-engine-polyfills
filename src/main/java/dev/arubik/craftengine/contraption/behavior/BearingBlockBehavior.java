@@ -16,7 +16,6 @@ import net.momirealms.craftengine.core.plugin.config.ConfigSection;
 import net.momirealms.craftengine.core.util.Key;
 
 import dev.arubik.craftengine.block.entity.BukkitBlockEntityTypes;
-import dev.arubik.craftengine.contraption.BearingType;
 import dev.arubik.craftengine.machine.attribute.MachineAttributes;
 import dev.arubik.craftengine.machine.attribute.MachineAttributes.Mod;
 import dev.arubik.craftengine.machine.menu.MachineMenuConfig;
@@ -76,7 +75,7 @@ public class BearingBlockBehavior extends BukkitBlockBehavior implements EntityB
     /** Default ROUND_ROBIN / ROBIN_EULER dwell at the extended end, in ticks (5s). */
     public static final long DEFAULT_ROUND_ROBIN_DELAY_TICKS = 100;
 
-    private final BearingType type;
+    private final Key type;
     /** The bearing's OWN configured target rotation/movement speed — used as-is when no real
      * motor is adjacent, and as the un-throttled base value reported into {@link #suPerBlock}
      * scaling when one is (see {@code RotationalBearingBehavior}/{@code LinearActuatorBehavior}). */
@@ -104,7 +103,7 @@ public class BearingBlockBehavior extends BukkitBlockBehavior implements EntityB
     private final List<MachineBar> bars;
     private final MachineMenuConfig menuConfig;
 
-    public BearingBlockBehavior(BlockDefinition customBlock, BearingType type, double rpm, double suPerBlock,
+    public BearingBlockBehavior(BlockDefinition customBlock, Key type, double rpm, double suPerBlock,
             int distance, double speedBlocksPerSec, PistonBearingBehavior.Mode pistonMode, long roundRobinDelayTicks,
             String headBlockId, String pipeBlockNS, String pipeBlockWE, String pipeBlockUD,
             Map<Key, List<Mod>> upgradeDefs, List<MachineBar> bars, MachineMenuConfig menuConfig) {
@@ -137,7 +136,7 @@ public class BearingBlockBehavior extends BukkitBlockBehavior implements EntityB
 
     @Override
     public BlockEntityController createBlockEntityController(BlockEntity blockEntity) {
-        if (type != BearingType.LINEAR)
+        if (!type.equals(Key.of("polyfills", "linear")))
             // NEVER null (2026-07-04 fix — "rompiste el minecart bearing... no se ensambla"): this
             // exact same null-return pattern already crashed CraftEngine's own chunk deserializer for
             // LINEAR part!=0 pieces (fixed below); ROTATIONAL/MINECART bearings had the SAME flaw at
@@ -175,7 +174,7 @@ public class BearingBlockBehavior extends BukkitBlockBehavior implements EntityB
     @Override
     public net.momirealms.craftengine.core.entity.player.InteractionResult useWithoutItem(
             net.momirealms.craftengine.core.world.context.UseOnContext context, ImmutableBlockState state) {
-        if (type != BearingType.LINEAR)
+        if (!type.equals(Key.of("polyfills", "linear")))
             return net.momirealms.craftengine.core.entity.player.InteractionResult.PASS;
         try {
             net.minecraft.server.level.ServerLevel level = ((org.bukkit.craftbukkit.CraftWorld) ((net.momirealms.craftengine.bukkit.world.BukkitWorld) context
@@ -239,7 +238,7 @@ public class BearingBlockBehavior extends BukkitBlockBehavior implements EntityB
         return b == null ? null : b.pipeBlockIdForAxis(axis);
     }
 
-    public BearingType type() {
+    public Key type() {
         return type;
     }
 
@@ -361,10 +360,10 @@ public class BearingBlockBehavior extends BukkitBlockBehavior implements EntityB
     }
 
     /**
-     * Returns the {@link BearingType} of the bearing block at {@code pos}, or {@code null} if
+     * Returns the contraption type of the bearing block at {@code pos}, or {@code null} if
      * there is no CraftEngine custom block there, or it isn't a bearing at all.
      */
-    public static BearingType typeAt(Level level, BlockPos pos) {
+    public static Key typeAt(Level level, BlockPos pos) {
         BlockState state = level.getBlockState(pos);
         ImmutableBlockState ce = BlockStateUtils.getOptionalCustomBlockState(state).orElse(null);
         if (ce == null || ce.isEmpty())
@@ -430,13 +429,7 @@ public class BearingBlockBehavior extends BukkitBlockBehavior implements EntityB
             // inner "type" field would collide with the dispatch key (both YAML-duplicate and,
             // even if it parsed, would read back the dispatch string instead of the bearing kind).
             String kindArg = arguments.getOrDefault("kind", "linear").toString().toLowerCase(java.util.Locale.ROOT);
-            BearingType type;
-            try {
-                type = BearingType.valueOf(kindArg.toUpperCase(java.util.Locale.ROOT));
-            } catch (IllegalArgumentException e) {
-                throw new IllegalArgumentException(
-                        "Invalid bearing 'kind': " + kindArg + " (expected linear, rotational, or minecart)");
-            }
+            Key type = Key.of("polyfills", kindArg);
             double rpm = Double.parseDouble(arguments.getOrDefault("rpm", Double.valueOf(DEFAULT_RPM)).toString());
             double suPerBlock = Double
                     .parseDouble(arguments.getOrDefault("suPerBlock", Double.valueOf(DEFAULT_SU_PER_BLOCK)).toString());

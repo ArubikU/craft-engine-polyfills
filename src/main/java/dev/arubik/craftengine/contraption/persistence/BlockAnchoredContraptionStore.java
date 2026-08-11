@@ -19,21 +19,25 @@ import org.bukkit.World;
 import org.bukkit.craftbukkit.CraftWorld;
 
 import dev.arubik.craftengine.CraftEnginePolyfills;
-import dev.arubik.craftengine.contraption.BearingType;
-import dev.arubik.craftengine.contraption.ContraptionAssembler;
-import dev.arubik.craftengine.contraption.ContraptionCapture;
-import dev.arubik.craftengine.contraption.ContraptionEntity;
-import dev.arubik.craftengine.contraption.ContraptionFurnitureCapture;
-import dev.arubik.craftengine.contraption.ContraptionManager;
-import dev.arubik.craftengine.contraption.ContraptionState;
 import dev.arubik.craftengine.contraption.MovementBehavior;
-import dev.arubik.craftengine.contraption.level.ContraptionLevel;
+import dev.arubik.craftengine.contraption.api.ContraptionTypeRegistry;
+import dev.arubik.craftengine.contraption.assembly.ContraptionAssembler;
+import dev.arubik.craftengine.contraption.assembly.ContraptionCapture;
+import dev.arubik.craftengine.contraption.core.ContraptionEntity;
+import dev.arubik.craftengine.contraption.core.ContraptionLevel;
+import dev.arubik.craftengine.contraption.core.ContraptionManager;
+import dev.arubik.craftengine.contraption.core.ContraptionState;
+import dev.arubik.craftengine.contraption.furniture.ContraptionFurnitureCapture;
 import dev.arubik.craftengine.contraption.level.BukkitContraptionLevel;
+import dev.arubik.craftengine.contraption.listener.BearingHammerListener;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtAccounter;
 import net.minecraft.nbt.NbtIo;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.Level;
+import net.momirealms.craftengine.core.util.Key;
 
 /**
  * Disk-backed restart/chunk-unload persistence for the two BLOCK-ANCHORED contraption bearing
@@ -46,7 +50,7 @@ import net.minecraft.world.level.Level;
  * <p><b>Format</b>: one combined gzip'd {@link CompoundTag} per contraption at
  * {@code <dataFolder>/contraptions/<uuid>.dat} — a single atomic read/write per contraption.
  * The root tag carries the manifest fields (id, world, live x/y/z/yaw, stalled, the FIXED
- * bearing anchor block pos, the {@link BearingType}, rpm and suPerBlock) AND the full
+ * bearing anchor block pos, the contraption type, rpm and suPerBlock) AND the full
  * {@link ContraptionStructureNbt#dump} (blocks + glue + furniture) under a {@code "structure"}
  * sub-tag. Block-anchored needs MORE than the minecart's structure-only dump because there is
  * no live block/entity to re-derive type/rpm from at boot except the bearing block itself,
@@ -71,8 +75,8 @@ public final class BlockAnchoredContraptionStore {
      *        where it was left. Absent from files written before this existed; those read as 0, i.e.
      *        exactly the upright pose they were restored with anyway.
      */
-    public record Record(UUID id, UUID worldId, BlockPos bearingPos, double x, double y, double z,
-            double yawRadians, double pitchRadians, double rollRadians, boolean stalled, BearingType type,
+    public record Record(UUID id, net.minecraft.resources.ResourceKey<Level> worldId, BlockPos bearingPos, double x, double y, double z,
+            double yawRadians, double pitchRadians, double rollRadians, boolean stalled, Key type,
             double rpm, double suPerBlock, double explosionProof) {
     }
 
@@ -129,12 +133,12 @@ public final class BlockAnchoredContraptionStore {
      * like {@code MinecartBearing#saveStructure}). Best-effort: a failure is logged, never thrown.
      */
     /**
-     * The {@link BearingType} to persist for {@code state}: its OWN recorded type, falling back to the
-     * anchor block only when it has none, and to {@link BearingType#ROTATIONAL} when neither answers.
+     * The contraption type to persist for {@code state}: its OWN recorded type, falling back to the
+     * anchor block only when it has none, and to ROTATIONAL when neither answers.
      *
      * <h2>Why the state wins over the block</h2>
      * Re-reading the anchor block is sound for LINEAR/ROTATIONAL, whose bearing stays put in the world
-     * and pins the structure to it. It is wrong for {@link BearingType#PHYS}, and silently so: a phys
+     * and pins the structure to it. It is wrong for PHYS, and silently so: a phys
      * contraption has no pinning bearing, its anchor block is captured INTO the structure, and the body
      * then FALLS AWAY from the anchor coordinates. By save time the world there is ordinary air, the
      * lookup returns null, and the ROTATIONAL fallback was taken — so every phys contraption was written
@@ -142,18 +146,18 @@ public final class BlockAnchoredContraptionStore {
      *
      * @param level the real world to consult for the fallback; may be {@code null}
      */
-    public static BearingType typeToPersist(ContraptionState state, net.minecraft.world.level.Level level,
+    public static Key typeToPersist(ContraptionState state, net.minecraft.world.level.Level level,
             BlockPos anchor) {
-        BearingType recorded = state == null ? null : state.bearingType();
+        Key recorded = state == null ? null : state.bearingType();
         if (recorded != null) {
             return recorded;
         }
-        BearingType fromBlock = level == null ? null
+        Key fromBlock = level == null ? null
                 : dev.arubik.craftengine.contraption.behavior.BearingBlockBehavior.typeAt(level, anchor);
-        return fromBlock != null ? fromBlock : BearingType.ROTATIONAL;
+        return fromBlock != null ? fromBlock : Key.of("polyfills", "rotational");
     }
 
-    public static void save(ContraptionState state, BlockPos bearingPos, BearingType type, double rpm,
+    public static void save(ContraptionState state, BlockPos bearingPos, Key type, double rpm,
             double suPerBlock) {
         if (state == null || state.level() == null) {
             return;
@@ -178,11 +182,11 @@ public final class BlockAnchoredContraptionStore {
             root.putDouble("pitch", state.pitchRadians());
             root.putDouble("roll", state.rollRadians());
             root.putBoolean("stalled", state.isStalled());
-            root.putString("type", type.name());
+            root.putString("type", type.namespace() + ":" + type.value());
             root.putDouble("rpm", rpm);
             root.putDouble("su", suPerBlock);
             root.putDouble("explosionProof", state.explosionProof());
-            root.put("structure", ContraptionStructureNbt.dump(state.level()));
+            root.put("structure", ContraptionStorage.dumpLevel(state.level()));
         } catch (Throwable t) {
             CraftEnginePolyfills.instance().getLogger()
                     .warning("[Contraption] failed to serialize block-anchored contraption " + id + ": " + t);
@@ -319,14 +323,21 @@ public final class BlockAnchoredContraptionStore {
 
     private static Record readManifest(CompoundTag root) {
         UUID id = UUID.fromString(root.getString("id").orElseThrow());
-        UUID world = UUID.fromString(root.getString("world").orElseThrow());
+        String worldStr = root.getString("world").orElseThrow();
+        Identifier worldLoc = Identifier.parse(worldStr);
+        ResourceKey<Level> world = ResourceKey.create(
+            net.minecraft.core.registries.Registries.DIMENSION, worldLoc);
         BlockPos bearingPos = new BlockPos(root.getInt("bx").orElse(0), root.getInt("by").orElse(0),
                 root.getInt("bz").orElse(0));
-        BearingType type;
-        try {
-            type = BearingType.valueOf(root.getString("type").orElse("ROTATIONAL"));
-        } catch (IllegalArgumentException e) {
-            type = BearingType.ROTATIONAL;
+        Key type;
+        String typeStr = root.getString("type").orElse("ROTATIONAL");
+        if (typeStr.contains(":")) {
+            // New format: namespace:value
+            String[] parts = typeStr.split(":", 2);
+            type = Key.of(parts[0], parts[1]);
+        } else {
+            // Legacy format: enum name (LINEAR, ROTATIONAL, MINECART, PHYS, GHAST, VEHICLE)
+            type = Key.of("polyfills", typeStr.toLowerCase());
         }
         return new Record(id, world, bearingPos, root.getDouble("x").orElse(0.0), root.getDouble("y").orElse(0.0),
                 root.getDouble("z").orElse(0.0), root.getDouble("yaw").orElse(0.0),
@@ -344,10 +355,11 @@ public final class BlockAnchoredContraptionStore {
      * per bearing entity found in a loading chunk.
      */
     public static void rehydrateChunk(World world, int chunkX, int chunkZ) {
-        UUID worldId = world.getUID();
+        Level realLevel = ((CraftWorld) world).getHandle();
+        net.minecraft.resources.ResourceKey<Level> worldKey = realLevel.dimension();
         List<Record> hits = new ArrayList<>();
         for (Record rec : INDEX.values()) {
-            if (!rec.worldId().equals(worldId)) {
+            if (!rec.worldId().equals(worldKey)) {
                 continue;
             }
             if ((rec.bearingPos().getX() >> 4) != chunkX || (rec.bearingPos().getZ() >> 4) != chunkZ) {
@@ -394,7 +406,7 @@ public final class BlockAnchoredContraptionStore {
             // Capture always creates the level at yaw 0 (see ContraptionCapture#capture); the live
             // transform is then applied via the state ctor + setYawRadians below.
             ContraptionLevel level = ContraptionLevel.create(realLevel, rec.x(), rec.y(), rec.z(), 0);
-            ContraptionStructureNbt.load(level, structure);
+            ContraptionStorage.loadLevel(level, structure);
             ContraptionState state = new ContraptionState(rec.id(), rec.worldId(), level, rec.x(), rec.y(), rec.z());
             state.setYawRadians(rec.yawRadians());
             // A PHYS body persists the pose it was actually left in, tilt included (see Record). Zero for
@@ -412,17 +424,23 @@ public final class BlockAnchoredContraptionStore {
             for (MovementBehavior autoBehavior : ContraptionCapture.resolveAutoBehaviors(level)) {
                 state.addBehavior(autoBehavior);
             }
-            // Re-attach the MOVEMENT behavior for the saved bearing type using the saved rpm/su and
-            // a fresh scan for a real adjacent motor at the bearing block (same helper assembly uses).
-            ContraptionAssembler.attachDefaultBehavior(realLevel, rec.bearingPos(), state, rec.type(), rec.rpm(),
-                    rec.suPerBlock());
-            // attachDefaultBehavior re-reads the flag from the bearing block, which is gone for a PHYS/VEHICLE
+            // Re-attach the MOVEMENT behavior for the saved type using the saved rpm/su and
+            // a fresh scan for a real adjacent motor at the bearing block.
+            BlockPos motorPos = dev.arubik.craftengine.contraption.behavior.RealMotorLink.findAdjacentMotor(realLevel, rec.bearingPos());
+            dev.arubik.craftengine.contraption.api.ContraptionType typeImpl = ContraptionTypeRegistry.get(rec.type());
+            if (typeImpl != null) {
+                typeImpl.attachBehaviors(state, realLevel, rec.bearingPos());
+            } else {
+                // Fallback for types not yet in registry (backwards compatibility)
+                ContraptionAssembler.attachDefaultBehavior(realLevel, rec.bearingPos(), state, rec.type(), rec.rpm(),
+                        rec.suPerBlock());
+            }
+            // attachBehavior re-reads the flag from the bearing block, which is gone for a PHYS/VEHICLE
             // body — so restore the PERSISTED value, authoritative across restart.
             state.setExplosionProof(rec.explosionProof());
             ContraptionManager.register(new ContraptionEntity(state));
             // Re-register the assembled-anchor bookkeeping so a later disassemble/unload finds it.
-            dev.arubik.craftengine.contraption.BearingHammerListener.markAssembled(rec.worldId(), rec.bearingPos(),
-                    rec.id());
+            BearingHammerListener.markAssembled(rec.worldId(), rec.bearingPos(), rec.id());
         } catch (Throwable t) {
             CraftEnginePolyfills.instance().getLogger()
                     .warning("[Contraption] failed to rehydrate block-anchored contraption " + rec.id() + ": " + t);

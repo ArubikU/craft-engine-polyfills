@@ -4,7 +4,7 @@ import org.joml.Vector3d;
 
 import net.minecraft.world.phys.Vec3;
 
-import dev.arubik.craftengine.contraption.ContraptionState;
+import dev.arubik.craftengine.contraption.core.ContraptionState;
 import dev.arubik.craftengine.contraption.MovementBehavior;
 import dev.arubik.craftengine.contraption.MovementContext;
 import dev.arubik.craftengine.contraption.physics.PhysBody;

@@ -4,7 +4,7 @@ import org.bukkit.event.Cancellable;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 
-import dev.arubik.craftengine.contraption.ContraptionEntity;
+import dev.arubik.craftengine.contraption.core.ContraptionEntity;
 
 /**
  * Fired on the main thread just BEFORE a contraption disassembles — before any teardown runs

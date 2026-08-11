@@ -1,6 +1,6 @@
 package dev.arubik.craftengine.contraption.behavior;
 
-import dev.arubik.craftengine.contraption.ContraptionMath;
+import dev.arubik.craftengine.contraption.assembly.ContraptionMath;
 import dev.arubik.craftengine.contraption.MovementBehavior;
 import dev.arubik.craftengine.contraption.MovementContext;
 import dev.arubik.craftengine.rotation.RpmConsumer;

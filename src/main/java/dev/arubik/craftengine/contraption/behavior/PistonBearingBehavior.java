@@ -206,7 +206,7 @@ public final class PistonBearingBehavior implements MovementBehavior {
     /**
      * True once the piston has fully EXTENDED — the owner then turns its load into REAL blocks at the
      * extended position (the standard "become solid at rest" for BOTH modes now, 2026-07-03 unify).
-     * See {@code ContraptionEngine.tickAll} / {@code EulerExtendedRegistry}.
+     * See {@code ContraptionEngine.tickAll} / {@link dev.arubik.craftengine.contraption.type.LinearContraptionType}.
      */
     public boolean wantsDisassembleAtEnd() {
         return phase == Phase.AT_END && reachedEndThisCycle;

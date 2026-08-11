@@ -4,9 +4,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 import dev.arubik.craftengine.contraption.ContraptionAccessor;
-import dev.arubik.craftengine.contraption.ContraptionMath;
 import dev.arubik.craftengine.contraption.MovementBehavior;
 import dev.arubik.craftengine.contraption.MovementContext;
+import dev.arubik.craftengine.contraption.assembly.ContraptionMath;
+import dev.arubik.craftengine.contraption.core.ContraptionEntity;
+import dev.arubik.craftengine.contraption.core.ContraptionManager;
 import dev.arubik.craftengine.rotation.RpmConsumer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -158,8 +160,8 @@ public final class MinerBehavior implements MovementBehavior, RpmConsumer {
      */
     private static boolean fireBlockBreakCancelled(MovementContext ctx, ServerLevel level, BlockPos worldPos) {
         try {
-            dev.arubik.craftengine.contraption.ContraptionEntity entity =
-                    dev.arubik.craftengine.contraption.ContraptionManager.get(ctx.state().id());
+            ContraptionEntity entity =
+                    ContraptionManager.get(ctx.state().id());
             if (entity == null) {
                 return false;
             }

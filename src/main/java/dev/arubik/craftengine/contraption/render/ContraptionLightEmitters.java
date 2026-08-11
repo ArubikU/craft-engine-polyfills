@@ -1,6 +1,6 @@
 package dev.arubik.craftengine.contraption.render;
 
-import dev.arubik.craftengine.contraption.level.ContraptionLevel;
+import dev.arubik.craftengine.contraption.core.ContraptionLevel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.state.BlockState;
 
@@ -29,7 +29,7 @@ import net.minecraft.world.level.block.state.BlockState;
  * self-lighting convention as {@link ContraptionDisplaySwarm#ambientBlockLightWithEmitters} — a
  * light-emitting block's own position counts as its own distance-0 contribution.
  */
-final class ContraptionLightEmitters {
+public final class ContraptionLightEmitters {
 
     private ContraptionLightEmitters() {
     }
@@ -40,7 +40,7 @@ final class ContraptionLightEmitters {
      * (no captured-block data available, e.g. unit-test path) returns {@code ambientBlockLight}
      * unchanged.
      */
-    static int withEmitterFalloff(ContraptionLevel level, BlockPos targetLocal, int ambientBlockLight) {
+    public static int withEmitterFalloff(ContraptionLevel level, BlockPos targetLocal, int ambientBlockLight) {
         if (level == null) {
             return ambientBlockLight;
         }

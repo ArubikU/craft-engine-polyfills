@@ -7,8 +7,8 @@ import org.bukkit.event.HandlerList;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 
-import dev.arubik.craftengine.contraption.ContraptionEntity;
-import dev.arubik.craftengine.contraption.ContraptionState;
+import dev.arubik.craftengine.contraption.core.ContraptionEntity;
+import dev.arubik.craftengine.contraption.core.ContraptionState;
 import net.minecraft.core.BlockPos;
 
 /**

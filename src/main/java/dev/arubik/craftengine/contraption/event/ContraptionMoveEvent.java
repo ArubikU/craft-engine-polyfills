@@ -5,7 +5,7 @@ import org.bukkit.World;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 
-import dev.arubik.craftengine.contraption.ContraptionEntity;
+import dev.arubik.craftengine.contraption.core.ContraptionEntity;
 import net.minecraft.world.phys.Vec3;
 
 /**

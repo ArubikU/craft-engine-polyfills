@@ -11,9 +11,17 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 
 import dev.arubik.craftengine.contraption.behavior.PhysicsBehavior;
+import dev.arubik.craftengine.contraption.core.ContraptionEngine;
+import dev.arubik.craftengine.contraption.core.ContraptionEntity;
+import dev.arubik.craftengine.contraption.core.ContraptionManager;
+import dev.arubik.craftengine.contraption.core.ContraptionState;
 
 /**
  * Pins the chain that carries a player standing on a PHYS contraption.
@@ -43,6 +51,9 @@ class PhysicsDragTest {
         net.minecraft.server.Bootstrap.bootStrap();
     }
 
+    private static final ResourceKey<Level> TEST_WORLD =
+        ResourceKey.create(Registries.DIMENSION, Identifier.parse("minecraft:test"));
+
     @AfterEach
     void clearRegistry() {
         for (ContraptionEntity e : java.util.List.copyOf(ContraptionManager.all())) {
@@ -52,7 +63,7 @@ class PhysicsDragTest {
 
     /** Pure kinematics — no ContraptionLevel needed (see ContraptionState's null-tolerance javadoc). */
     private static ContraptionState state() {
-        return new ContraptionState(UUID.randomUUID(), UUID.randomUUID(), null, 0, 64, 0);
+        return new ContraptionState(UUID.randomUUID(), TEST_WORLD, null, 0, 64, 0);
     }
 
     @Test

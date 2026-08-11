@@ -11,8 +11,8 @@ import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 import org.jetbrains.annotations.Nullable;
 
-import dev.arubik.craftengine.contraption.BearingType;
 import net.minecraft.core.BlockPos;
+import net.momirealms.craftengine.core.util.Key;
 
 /**
  * Fired on the main thread just BEFORE a contraption assembles — after the block set to be
@@ -33,7 +33,7 @@ public class ContraptionAssembleEvent extends Event implements Cancellable {
 
     private final World world;
     private final BlockPos bearing;
-    private final BearingType type;
+    private final Key type;
     private final Set<BlockPos> capturedPositions;
     private final Player cause;
     private boolean cancelled;
@@ -41,12 +41,12 @@ public class ContraptionAssembleEvent extends Event implements Cancellable {
     /**
      * @param world             the real Bukkit world the bearing lives in
      * @param bearing           the bearing block's world position (local-space origin of the contraption)
-     * @param type              which bearing kind is assembling (LINEAR / ROTATIONAL / MINECART)
+     * @param type              which contraption type is assembling
      * @param capturedPositions the block positions about to be captured — wrapped unmodifiable, never null
      * @param cause             the player who triggered the assembly, or {@code null} if unknown
      *                          (e.g. a redstone-driven piston or a persistence rehydrate)
      */
-    public ContraptionAssembleEvent(World world, BlockPos bearing, BearingType type,
+    public ContraptionAssembleEvent(World world, BlockPos bearing, Key type,
             Set<BlockPos> capturedPositions, @Nullable Player cause) {
         this.world = world;
         this.bearing = bearing;
@@ -70,8 +70,8 @@ public class ContraptionAssembleEvent extends Event implements Cancellable {
         return new Location(world, bearing.getX(), bearing.getY(), bearing.getZ());
     }
 
-    /** Which bearing kind is assembling. */
-    public BearingType getType() {
+    /** Which contraption type is assembling. */
+    public Key getType() {
         return type;
     }
 

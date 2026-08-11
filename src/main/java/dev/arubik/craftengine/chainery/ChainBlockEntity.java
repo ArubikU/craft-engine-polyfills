@@ -7,7 +7,7 @@ import java.util.UUID;
 import org.bukkit.NamespacedKey;
 
 import dev.arubik.craftengine.block.entity.PersistentBlockEntity;
-import dev.arubik.craftengine.contraption.ContraptionCapture;
+import dev.arubik.craftengine.contraption.assembly.ContraptionCapture;
 import dev.arubik.craftengine.util.NbtType;
 import net.momirealms.craftengine.core.block.entity.BlockEntity;
 

@@ -8,7 +8,7 @@ import java.util.UUID;
 
 import org.bukkit.craftbukkit.CraftWorld;
 
-import dev.arubik.craftengine.contraption.level.ContraptionLevel;
+import dev.arubik.craftengine.contraption.core.ContraptionLevel;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.item.ItemEntity;
@@ -94,7 +94,7 @@ public final class ContraptionItemPickupSwarm {
     }
 
     /** True if {@code mirrorUuid} is one of this swarm's own real-world pickup mirrors (any contraption). */
-    static boolean isMirror(UUID mirrorUuid) {
+    public static boolean isMirror(UUID mirrorUuid) {
         return MIRROR_TO_SOURCE.containsKey(mirrorUuid);
     }
 

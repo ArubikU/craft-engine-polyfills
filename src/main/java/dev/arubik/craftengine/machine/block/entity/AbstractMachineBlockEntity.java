@@ -29,7 +29,8 @@ import java.util.Optional;
 import java.util.function.Consumer;
 
 public abstract class AbstractMachineBlockEntity extends PersistentWorldlyBlockEntity
-        implements dev.arubik.craftengine.conveyor.ConveyorDisplayReceiver {
+        implements dev.arubik.craftengine.contraption.api.ContraptionTickable,
+        dev.arubik.craftengine.conveyor.ConveyorDisplayReceiver {
 
     protected int progress = 0;
     // Fractional carry so a speed multiplier BELOW 1.0 (underclock) actually slows processing:

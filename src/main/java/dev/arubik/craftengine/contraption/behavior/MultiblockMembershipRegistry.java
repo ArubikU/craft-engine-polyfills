@@ -16,7 +16,7 @@ import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import net.momirealms.craftengine.bukkit.util.BlockStateUtils;
 import net.momirealms.craftengine.core.block.ImmutableBlockState;
 
-import dev.arubik.craftengine.fluid.behavior.FluidBlockTankBehavior;
+import dev.arubik.craftengine.contraption.api.MultiblockMember;
 import dev.arubik.craftengine.multiblock.HorizontalDoubleBlockBehavior;
 import dev.arubik.craftengine.multiblock.HorizontalDoubleGeometry;
 import dev.arubik.craftengine.multiblock.MultiBlockBehavior;
@@ -86,23 +86,15 @@ public final class MultiblockMembershipRegistry {
         if (ce == null) {
             return null;
         }
-        FluidBlockTankBehavior tank = ce.behavior().getFirst(FluidBlockTankBehavior.class);
-        if (tank == null || !tank.isTank(level, pos)) {
+        MultiblockMember member = ce.behavior().getFirst(MultiblockMember.class);
+        if (member == null || !member.isStructureComplete(level, pos)) {
             return null;
         }
-        FluidBlockTankBehavior.Group group = tank.scanGroup(level, pos);
-        if (group.count <= 1) {
+        Set<BlockPos> positions = member.getStructurePositions(level, pos);
+        if (positions.size() <= 1) {
             return null; // singleton — nothing extra to pull in
         }
-        Set<BlockPos> members = new HashSet<>();
-        for (int dy = 0; dy < group.height; dy++) {
-            for (int dx = 0; dx < group.width; dx++) {
-                for (int dz = 0; dz < group.width; dz++) {
-                    members.add(new BlockPos(group.minX + dx, group.minY + dy, group.minZ + dz));
-                }
-            }
-        }
-        return members;
+        return positions;
     }
 
     // ---------------- 2. multiblock machine (schema-driven, any facing) ----------------

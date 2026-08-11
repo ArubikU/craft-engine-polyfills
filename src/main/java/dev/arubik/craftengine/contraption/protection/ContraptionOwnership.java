@@ -2,7 +2,7 @@ package dev.arubik.craftengine.contraption.protection;
 
 import java.util.UUID;
 
-import dev.arubik.craftengine.contraption.ContraptionState;
+import dev.arubik.craftengine.contraption.core.ContraptionState;
 
 /**
  * Contraption-<b>ownership</b> (anti-theft) checks — the second, purely-internal ownership axis

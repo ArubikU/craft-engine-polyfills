@@ -10,14 +10,20 @@ import org.bukkit.entity.Entity;
 
 import dev.arubik.craftengine.contraption.behavior.GhastFollowBehavior;
 import dev.arubik.craftengine.contraption.behavior.MinecartFollowBehavior;
-import dev.arubik.craftengine.contraption.level.ContraptionLevel;
+import dev.arubik.craftengine.contraption.core.ContraptionEntity;
+import dev.arubik.craftengine.contraption.core.ContraptionLevel;
+import dev.arubik.craftengine.contraption.core.ContraptionManager;
+import dev.arubik.craftengine.contraption.core.ContraptionState;
+import dev.arubik.craftengine.contraption.listener.BearingHammerListener;
+import dev.arubik.craftengine.contraption.player.CePlayers;
+import dev.arubik.craftengine.contraption.type.GhastContraptionType;
 
 /**
  * <b>Destroys live contraptions outright — the admin panic button behind {@code /cep contraption killall}.</b>
  *
  * <p><b>This is a DISCARD, not a disassemble. The captured blocks are destroyed, not returned to the
  * world.</b> That is the deliberate difference from {@link ContraptionAssembler#disassemble} (and
- * {@link MinecartBearing#disassembleInPlace} / {@link GhastHarnessBearing#disassembleInPlace}), which exist
+ * {@link MinecartBearing#disassembleInPlace} / {@link GhastContraptionType#disassembleInPlace}), which exist
  * precisely to land a contraption's structure back into the world as real blocks and should be preferred
  * whenever the goal is to remove a contraption without losing what a player built. This path exists for the
  * case those cannot serve: contraptions are eating the tick budget and have to stop existing NOW, including
@@ -37,7 +43,7 @@ import dev.arubik.craftengine.contraption.level.ContraptionLevel;
  *       pre-existing scenery), so removing it is both necessary — a surviving cart re-hydrates the whole
  *       contraption the next time its chunk loads — and correct.</li>
  *   <li><b>Ghast-anchored</b>: the ghast is a real, pre-existing mob and is left ALIVE; only its bearing
- *       tags are stripped ({@link GhastHarnessBearing#forget}), which is what stops the rehydrate.</li>
+ *       tags are stripped ({@link GhastContraptionType#forget}), which is what stops the rehydrate.</li>
  * </ul>
  *
  * <p>Main-thread only.
@@ -73,7 +79,9 @@ public final class ContraptionKill {
         UUID id = state.id();
         World world = null;
         try {
-            world = Bukkit.getWorld(state.worldId());
+            net.minecraft.server.MinecraftServer server = ((org.bukkit.craftbukkit.CraftServer) Bukkit.getServer()).getServer();
+            net.minecraft.server.level.ServerLevel level = server.getLevel(state.worldId());
+            world = level != null ? level.getWorld() : null;
         } catch (Throwable ignored) {
             // no live server (unit-test path) — nothing to despawn to
         }
@@ -137,7 +145,7 @@ public final class ContraptionKill {
                 } else if (b instanceof GhastFollowBehavior follow) {
                     Entity ghast = Bukkit.getEntity(follow.entityId());
                     if (ghast != null) {
-                        GhastHarnessBearing.forget(ghast);
+                        GhastContraptionType.forget(ghast);
                     }
                 }
             } catch (Throwable t) {

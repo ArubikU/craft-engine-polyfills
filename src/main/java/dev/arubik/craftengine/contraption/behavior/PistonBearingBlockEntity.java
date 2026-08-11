@@ -8,6 +8,9 @@ import org.bukkit.Material;
 import org.bukkit.event.inventory.ClickType;
 
 import dev.arubik.craftengine.block.entity.BukkitBlockEntityTypes;
+import dev.arubik.craftengine.contraption.assembly.ContraptionAssembler;
+import dev.arubik.craftengine.contraption.core.ContraptionEntity;
+import dev.arubik.craftengine.contraption.core.ContraptionManager;
 import dev.arubik.craftengine.machine.attribute.MachineAttributes;
 import dev.arubik.craftengine.machine.attribute.MachineAttributes.Mod;
 import dev.arubik.craftengine.machine.block.entity.AbstractMachineBlockEntity;
@@ -392,11 +395,12 @@ public class PistonBearingBlockEntity extends AbstractMachineBlockEntity {
         prevRedstone = redstone;
 
         org.bukkit.World world = sl.getWorld();
-        java.util.UUID worldId = world.getUID();
-        java.util.UUID cid = dev.arubik.craftengine.contraption.BearingHammerListener
+        net.minecraft.resources.ResourceKey<net.minecraft.world.level.Level> worldId =
+            ((org.bukkit.craftbukkit.CraftWorld) world).getHandle().dimension();
+        java.util.UUID cid = dev.arubik.craftengine.contraption.listener.BearingHammerListener
                 .assembledContraptionAt(worldId, pos);
-        dev.arubik.craftengine.contraption.ContraptionEntity entity =
-                cid != null ? dev.arubik.craftengine.contraption.ContraptionManager.get(cid) : null;
+        ContraptionEntity entity =
+                cid != null ? ContraptionManager.get(cid) : null;
 
         // Cache how many blocks are/will be moved, for the menu's live total su/rpm preview
         // (2026-07-03 — "el ui no muestra el rpm y su que usara ... de lo que esta pegado").
@@ -407,13 +411,13 @@ public class PistonBearingBlockEntity extends AbstractMachineBlockEntity {
                     .facingVecAt(sl, pos);
             net.minecraft.core.BlockPos front = pos.offset((int) Math.round(f.x), (int) Math.round(f.y),
                     (int) Math.round(f.z));
-            this.attachedBlocks = Math.max(1, dev.arubik.craftengine.contraption.GlueRegistry
-                    .structureAt(worldId, front).size());
+            this.attachedBlocks = Math.max(1, dev.arubik.craftengine.contraption.glue.GlueRegistry
+                    .structureAt(sl.dimension(), front).size());
         }
 
         if (entity == null) {
-            // At rest. If the load is EXTENDED-solid, EulerExtendedRegistry owns re-grab → skip.
-            if (dev.arubik.craftengine.contraption.EulerExtendedRegistry.isExtendedSolid(worldId, pos)) {
+            // At rest. If the load is EXTENDED-solid, LinearContraptionType owns re-grab → skip.
+            if (dev.arubik.craftengine.contraption.type.LinearContraptionType.isExtendedSolid(worldId, pos)) {
                 homeDwellTimer = 0;
                 return;
             }
@@ -432,10 +436,10 @@ public class PistonBearingBlockEntity extends AbstractMachineBlockEntity {
             }
             if (go) {
                 homeDwellTimer = 0;
-                dev.arubik.craftengine.contraption.ContraptionEntity e =
-                        dev.arubik.craftengine.contraption.ContraptionAssembler.assemblePiston(world, pos);
+                ContraptionEntity e =
+                        ContraptionAssembler.assemblePiston(world, pos);
                 if (e != null) {
-                    dev.arubik.craftengine.contraption.BearingHammerListener.markAssembled(worldId, pos, e.state().id());
+                    dev.arubik.craftengine.contraption.listener.BearingHammerListener.markAssembled(worldId, pos, e.state().id());
                 }
             }
             return;
@@ -443,7 +447,7 @@ public class PistonBearingBlockEntity extends AbstractMachineBlockEntity {
 
         // Moving contraption: when it finishes RETRACTING, turn the load into real blocks at home.
         // (Reaching the extended end is handled by ContraptionEngine via wantsDisassembleAtEnd →
-        // EulerExtendedRegistry, which drops it as real EXTENDED-solid blocks + shaft.)
+        // LinearContraptionType, which drops it as real EXTENDED-solid blocks + shaft.)
         homeDwellTimer = 0;
         PistonBearingBehavior piston = null;
         for (dev.arubik.craftengine.contraption.MovementBehavior b : entity.state().behaviors()) {
@@ -454,10 +458,10 @@ public class PistonBearingBlockEntity extends AbstractMachineBlockEntity {
         }
         if (piston != null && piston.isFullyRetracted()) {
             try {
-                dev.arubik.craftengine.contraption.ContraptionAssembler.disassemble(world, entity);
+                ContraptionAssembler.disassemble(world, entity);
             } catch (Throwable ignored) {
             }
-            dev.arubik.craftengine.contraption.BearingHammerListener.forgetAssembled(cid);
+            dev.arubik.craftengine.contraption.listener.BearingHammerListener.forgetAssembled(cid);
         }
     }
 
@@ -473,13 +477,16 @@ public class PistonBearingBlockEntity extends AbstractMachineBlockEntity {
             return;
         }
         net.minecraft.core.BlockPos pos = getMachinePos();
-        java.util.UUID cid = dev.arubik.craftengine.contraption.BearingHammerListener
-                .assembledContraptionAt(cachedWorldId, pos);
+        net.minecraft.resources.ResourceKey<net.minecraft.world.level.Level> worldId =
+                ((org.bukkit.craftbukkit.CraftWorld) org.bukkit.Bukkit.getWorld(cachedWorldId))
+                .getHandle().dimension();
+        java.util.UUID cid = dev.arubik.craftengine.contraption.listener.BearingHammerListener
+                .assembledContraptionAt(worldId, pos);
         if (cid == null) {
             return;
         }
-        dev.arubik.craftengine.contraption.ContraptionEntity entity =
-                dev.arubik.craftengine.contraption.ContraptionManager.get(cid);
+        ContraptionEntity entity =
+                ContraptionManager.get(cid);
         if (entity == null) {
             return;
         }

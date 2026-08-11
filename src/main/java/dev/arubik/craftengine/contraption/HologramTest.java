@@ -1,5 +1,15 @@
 package dev.arubik.craftengine.contraption;
 
+import dev.arubik.craftengine.contraption.assembly.ContraptionAssembler;
+import dev.arubik.craftengine.contraption.assembly.ContraptionCapture;
+import dev.arubik.craftengine.contraption.assembly.ContraptionMath;
+import dev.arubik.craftengine.contraption.core.ContraptionEntity;
+import dev.arubik.craftengine.contraption.core.ContraptionManager;
+import dev.arubik.craftengine.contraption.core.ContraptionState;
+import dev.arubik.craftengine.contraption.furniture.ContraptionFurnitureCapture;
+import dev.arubik.craftengine.contraption.glue.GlueRegistry;
+import dev.arubik.craftengine.contraption.player.CePlayers;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -32,8 +42,8 @@ public final class HologramTest {
     public static void start(Plugin plugin, org.bukkit.World bukkitWorld, BlockPos bearing) {
         stop(bukkitWorld);
 
-        Set<BlockPos> structure = GlueRegistry.structureAt(bukkitWorld.getUID(), bearing);
         Level level = ((CraftWorld) bukkitWorld).getHandle();
+        Set<BlockPos> structure = GlueRegistry.structureAt(level.dimension(), bearing);
         // Same multiblock auto-expansion as ContraptionAssembler#assemble (CONTRAPTIONS.md —
         // gluing even one cell of a multiblock, e.g. one fluid_block_tank corner, must still
         // capture the whole multiblock) — this test harness must match production behavior or
@@ -42,7 +52,7 @@ public final class HologramTest {
         structure = ContraptionAssembler.expandMultiblockMembers(level, structure);
         ContraptionCapture.Result captured = ContraptionCapture.capture(level, structure, bearing);
         // Persist glue topology onto the captured level — parity with ContraptionAssembler#assemble.
-        ContraptionCapture.captureGlueEdges(bukkitWorld.getUID(), captured.level(), bearing);
+        ContraptionCapture.captureGlueEdges(level.dimension(), captured.level(), bearing);
         // Furniture scan BEFORE the blocks are removed — mirrors ContraptionAssembler#assemble
         // exactly (bug fix, this session — "el furniture original no desaparece y tampoco
         // aparece la representacion"): this test harness used to skip furniture capture
@@ -54,7 +64,8 @@ public final class HologramTest {
         ContraptionFurnitureCapture.Result furnitureResult = ContraptionFurnitureCapture.captureNear(level, structure, bearing, captured.level());
         ContraptionCapture.removeFromWorld(level, structure);
 
-        ContraptionState state = new ContraptionState(UUID.randomUUID(), bukkitWorld.getUID(), captured.level(),
+        ContraptionState state = new ContraptionState(UUID.randomUUID(),
+                ((org.bukkit.craftbukkit.CraftWorld) bukkitWorld).getHandle().dimension(), captured.level(),
                 bearing.getX(), bearing.getY(), bearing.getZ());
         state.setFurniture(furnitureResult.furniture());
         for (Map.Entry<UUID, Vec3> e : furnitureResult.seatedRiders().entrySet()) {
@@ -170,7 +181,7 @@ public final class HologramTest {
         // always start at yaw 0, so quarterTurns is just the current yaw's drift from that
         // origin, snapped to the nearest cardinal direction.
         int quarterTurns = ContraptionMath.quarterTurnsBetween(0, state.yawRadians());
-        ContraptionCapture.restoreGlue(run.bukkitWorld.getUID(), state.level(), state.originBearingBlockPos(),
+        ContraptionCapture.restoreGlue(level.dimension(), state.level(), state.originBearingBlockPos(),
                 snappedBearing, quarterTurns);
         ContraptionCapture.restoreRotated(level, state.level(), snappedBearing, quarterTurns);
         // Reverse of ContraptionFurnitureCapture#captureNear — see

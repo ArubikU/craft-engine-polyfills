@@ -48,7 +48,8 @@ import net.momirealms.craftengine.core.world.context.UseOnContext;
  * calls every tick. The hydraulic engine collapses the group to a single graph node (see
  * {@link dev.arubik.craftengine.fluid.graph.FluidGraphBuilder}).</p>
  */
-public class FluidBlockTankBehavior extends ConnectableBlockBehavior implements EntityBlock, FluidCarrier {
+public class FluidBlockTankBehavior extends ConnectableBlockBehavior
+        implements EntityBlock, FluidCarrier, dev.arubik.craftengine.contraption.api.MultiblockMember {
 
     public static final Factory FACTORY = new Factory();
 
@@ -726,5 +727,36 @@ public class FluidBlockTankBehavior extends ConnectableBlockBehavior implements 
                 }
             }
         }
+    }
+
+    // MultiblockMember interface (contraption API)
+
+    @Override
+    public java.util.Set<BlockPos> getStructurePositions(Level level, BlockPos pos) {
+        Group g = scanGroup(level, pos);
+        if (g == null)
+            return java.util.Set.of(pos);
+        java.util.Set<BlockPos> positions = new HashSet<>();
+        // Reconstruct positions from controller + width/height
+        for (int y = 0; y < g.height; y++) {
+            for (int x = 0; x < g.width; x++) {
+                for (int z = 0; z < g.width; z++) {
+                    positions.add(g.controller.offset(x, y, z));
+                }
+            }
+        }
+        return positions;
+    }
+
+    @Override
+    public BlockPos getControllerPosition(Level level, BlockPos pos) {
+        Group g = scanGroup(level, pos);
+        return g == null ? pos : g.controller;
+    }
+
+    @Override
+    public boolean isStructureComplete(Level level, BlockPos pos) {
+        Group g = scanGroup(level, pos);
+        return g != null && g.count > 0;
     }
 }

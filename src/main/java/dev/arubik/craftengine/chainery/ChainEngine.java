@@ -11,6 +11,11 @@ import org.bukkit.World;
 import org.bukkit.craftbukkit.CraftWorld;
 import org.bukkit.inventory.ItemStack;
 
+import dev.arubik.craftengine.contraption.assembly.ContraptionCapture;
+import dev.arubik.craftengine.contraption.core.ContraptionEntity;
+import dev.arubik.craftengine.contraption.core.ContraptionLevel;
+import dev.arubik.craftengine.contraption.core.ContraptionManager;
+import dev.arubik.craftengine.contraption.core.ContraptionState;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 import net.momirealms.craftengine.bukkit.api.CraftEngineItems;
@@ -231,10 +236,10 @@ public final class ChainEngine {
     private static void removeCapturedAnchors(java.util.UUID chainId) {
         int flags = net.minecraft.world.level.block.Block.UPDATE_CLIENTS
                 | net.minecraft.world.level.block.Block.UPDATE_KNOWN_SHAPE;
-        for (dev.arubik.craftengine.contraption.ContraptionEntity entity :
-                dev.arubik.craftengine.contraption.ContraptionManager.all()) {
+        for (ContraptionEntity entity :
+                ContraptionManager.all()) {
             try {
-                dev.arubik.craftengine.contraption.level.ContraptionLevel level = entity.state().level();
+                ContraptionLevel level = entity.state().level();
                 boolean changed = false;
                 for (BlockPos local : new java.util.HashSet<>(level.localPositions())) {
                     net.momirealms.craftengine.core.block.entity.BlockEntity be =
@@ -298,7 +303,7 @@ public final class ChainEngine {
 
     /** A resolved live endpoint: its world position and, if it rides a contraption, that contraption. */
     private record Live(org.joml.Vector3d pos, java.util.UUID contraptionId,
-            dev.arubik.craftengine.contraption.ContraptionState state) {
+            ContraptionState state) {
     }
 
     /** Spring stiffness of the tether pull (impulse per block of overshoot). Applied via PhysicsWorld#applyThrust,
@@ -322,7 +327,7 @@ public final class ChainEngine {
      */
     /** One tick's scan of every contraption: captured chain endpoints + the world cells the contraptions fill. */
     private record Scan(java.util.Map<java.util.UUID, Live[]> endpoints,
-            java.util.Map<java.util.UUID, java.util.Set<Long>> occupancyByWorld) {
+            java.util.Map<net.minecraft.resources.ResourceKey<net.minecraft.world.level.Level>, java.util.Set<Long>> occupancyByWorld) {
     }
 
     public static void tickAll() {
@@ -384,7 +389,7 @@ public final class ChainEngine {
         // in, which fires this exact neighbour-change — but that is assembly, NOT a real support loss, so it must
         // not sever (bug: "si armo un contraption que adentro tiene 2 chain, estas se rompen y sus anchor quedan
         // huérfanos"). Same capture flag ChainBlockEntity#onRemove uses to tell assembly from a genuine mine.
-        if (dev.arubik.craftengine.contraption.ContraptionCapture.isRemovingForCapture()) {
+        if (ContraptionCapture.isRemovingForCapture()) {
             return;
         }
         org.bukkit.World world = level.getWorld();
@@ -463,12 +468,12 @@ public final class ChainEngine {
         java.util.UUID cid = role == 0 ? chain.contraptionA : chain.contraptionB;
         BlockPos local = role == 0 ? chain.localA : chain.localB;
         if (cid != null && local != null) {
-            dev.arubik.craftengine.contraption.ContraptionEntity ent =
-                    dev.arubik.craftengine.contraption.ContraptionManager.get(cid);
+            ContraptionEntity ent =
+                    ContraptionManager.get(cid);
             if (ent == null) {
                 return null; // contraption not loaded (or gone) — wait; orphan grace decides if it's really gone
             }
-            dev.arubik.craftengine.contraption.level.ContraptionLevel lvl = ent.state().level();
+            ContraptionLevel lvl = ent.state().level();
             if (!lvl.localPositions().contains(local)) {
                 // The anchor left this contraption (disassembled / split) — forget the capture, fall through to static.
                 if (role == 0) {
@@ -521,13 +526,13 @@ public final class ChainEngine {
     /** Scans every contraption once: captured chain endpoints + per-world occupancy of contraption cells. */
     private static Scan scanContraptions() {
         java.util.Map<java.util.UUID, Live[]> endpoints = new java.util.HashMap<>();
-        java.util.Map<java.util.UUID, java.util.Set<Long>> occupancy = new java.util.HashMap<>();
-        for (dev.arubik.craftengine.contraption.ContraptionEntity entity :
-                dev.arubik.craftengine.contraption.ContraptionManager.all()) {
+        java.util.Map<net.minecraft.resources.ResourceKey<net.minecraft.world.level.Level>, java.util.Set<Long>> occupancy = new java.util.HashMap<>();
+        for (ContraptionEntity entity :
+                ContraptionManager.all()) {
             try {
-                dev.arubik.craftengine.contraption.level.ContraptionLevel level = entity.state().level();
+                ContraptionLevel level = entity.state().level();
                 java.util.UUID cid = entity.state().id();
-                java.util.UUID worldId = entity.state().worldId();
+                net.minecraft.resources.ResourceKey<net.minecraft.world.level.Level> worldId = entity.state().worldId();
                 double scale = entity.state().scale();
                 java.util.Set<Long> cells = occupancy.computeIfAbsent(worldId, w -> new java.util.HashSet<>());
                 for (BlockPos local : level.localPositions()) {
@@ -650,17 +655,17 @@ public final class ChainEngine {
         if (end.state() == null) {
             return; // a static block anchor — nothing to move
         }
-        dev.arubik.craftengine.contraption.BearingType type = end.state().bearingType();
-        if (type == dev.arubik.craftengine.contraption.BearingType.PHYS) {
+        Key type = end.state().bearingType();
+        if (Key.of("polyfills", "phys").equals(type)) {
             // A rigid body — impulse at the endpoint (scaled by inverse mass), so it yanks + torques.
             dev.arubik.craftengine.contraption.physics.PhysicsWorld.applyThrust(end.contraptionId(), end.pos(), impulse);
-        } else if (type == dev.arubik.craftengine.contraption.BearingType.MINECART
-                || type == dev.arubik.craftengine.contraption.BearingType.GHAST) {
+        } else if (Key.of("polyfills", "minecart").equals(type)
+                || Key.of("polyfills", "ghast").equals(type)) {
             // Entity-anchored (a real minecart/ghast carries it) — push its ANCHOR ENTITY toward the tension so a
             // moving end drags the other. (bearingType is now set at assembly — see MinecartBearing/GhastHarness.)
             pullAnchorEntity(end.state(), impulse);
-        } else if (type == dev.arubik.craftengine.contraption.BearingType.LINEAR
-                || type == dev.arubik.craftengine.contraption.BearingType.ROTATIONAL) {
+        } else if (Key.of("polyfills", "linear").equals(type)
+                || Key.of("polyfills", "rotational").equals(type)) {
             // Block-anchored: can't be dragged; its moving endpoint already pulls the OTHER end (winch). Only STALL
             // it when the chain is MAXED so it doesn't rip through.
             if (maxed) {
@@ -674,7 +679,7 @@ public final class ChainEngine {
     private static final double ENTITY_PULL_FACTOR = 0.25;
 
     /** Nudges a MINECART/GHAST contraption's real anchor entity toward the chain tension. */
-    private static void pullAnchorEntity(dev.arubik.craftengine.contraption.ContraptionState state,
+    private static void pullAnchorEntity(ContraptionState state,
             org.joml.Vector3d impulse) {
         // GHAST sets anchorEntityId; a MINECART does NOT (its cart id lives on the MinecartFollowBehavior), so
         // fall back to that — otherwise a minecart tether resolved to a null entity and nothing was pulled.

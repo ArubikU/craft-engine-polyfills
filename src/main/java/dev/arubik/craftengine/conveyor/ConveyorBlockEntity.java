@@ -9,8 +9,9 @@ import org.bukkit.craftbukkit.inventory.CraftItemStack;
 import org.joml.Vector3f;
 
 import dev.arubik.craftengine.block.entity.PersistentWorldlyBlockEntity;
+import dev.arubik.craftengine.contraption.assembly.ContraptionCapture;
 import dev.arubik.craftengine.contraption.level.ContraptionBoundary;
-import dev.arubik.craftengine.contraption.level.ContraptionLevel;
+import dev.arubik.craftengine.contraption.core.ContraptionLevel;
 import dev.arubik.craftengine.rotation.RpmConsumer;
 import net.minecraft.world.level.Level;
 import net.momirealms.craftengine.core.block.BlockDefinition;
@@ -1315,7 +1316,7 @@ public class ConveyorBlockEntity extends PersistentWorldlyBlockEntity implements
         // romperlas por el medio no se rompe todo" (a MIDDLE break tore nothing down) and "si al
         // romper el inicio o final no actualiza el conveyor anterior" (a START/END break left the
         // neighbour's part/prevPos stale, since those paths sit below this guard too).
-        if (dev.arubik.craftengine.contraption.ContraptionCapture.isRemovingForCapture())
+        if (ContraptionCapture.isRemovingForCapture())
             return;
 
         ConveyorBlockEntity up = upstreamConveyor(world, pos, facing);

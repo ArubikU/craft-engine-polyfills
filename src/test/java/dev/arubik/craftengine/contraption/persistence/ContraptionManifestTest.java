@@ -10,7 +10,12 @@ import org.junit.jupiter.api.io.TempDir;
 
 import org.junit.jupiter.api.BeforeAll;
 
-import dev.arubik.craftengine.contraption.ContraptionState;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.level.Level;
+
+import dev.arubik.craftengine.contraption.core.ContraptionState;
 
 /** Byte-blob and file round-trip for {@link ContraptionManifest}. */
 class ContraptionManifestTest {
@@ -21,11 +26,13 @@ class ContraptionManifestTest {
         net.minecraft.server.Bootstrap.bootStrap();
     }
 
+    private static final ResourceKey<Level> TEST_WORLD =
+        ResourceKey.create(Registries.DIMENSION, Identifier.parse("minecraft:test"));
+
     @Test
     void byteRoundTripPreservesAllFields() throws Exception {
         UUID id = UUID.randomUUID();
-        UUID world = UUID.randomUUID();
-        ContraptionManifest original = new ContraptionManifest(id, world, 1.5, 64.0, -3.25, 0.7853981, 2.5, true, "abc.nbt");
+        ContraptionManifest original = new ContraptionManifest(id, TEST_WORLD, 1.5, 64.0, -3.25, 0.7853981, 2.5, true, "abc.nbt");
 
         ContraptionManifest restored = ContraptionManifest.fromBytes(original.toBytes());
 
@@ -42,7 +49,7 @@ class ContraptionManifestTest {
 
     @Test
     void fileRoundTrip(@TempDir Path tempDir) throws Exception {
-        ContraptionManifest original = new ContraptionManifest(UUID.randomUUID(), UUID.randomUUID(),
+        ContraptionManifest original = new ContraptionManifest(UUID.randomUUID(), TEST_WORLD,
                 0, 64, 0, 0, 1.0, false, "miner_1.nbt");
         Path file = tempDir.resolve("test.mcdata");
 
@@ -54,7 +61,7 @@ class ContraptionManifestTest {
 
     @Test
     void of_capturesStateFieldsExactly() throws Exception {
-        ContraptionState state = new ContraptionState(UUID.randomUUID(), UUID.randomUUID(), null,
+        ContraptionState state = new ContraptionState(UUID.randomUUID(), TEST_WORLD, null,
                 10, 65, -2);
         state.setYawRadians(1.23);
         state.setStalled(true);

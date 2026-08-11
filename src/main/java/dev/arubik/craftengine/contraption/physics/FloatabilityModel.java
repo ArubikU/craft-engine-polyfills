@@ -5,7 +5,7 @@ import net.minecraft.world.level.block.state.BlockState;
 
 import dev.arubik.craftengine.contraption.behavior.FloatabilityBlockBehavior;
 import dev.arubik.craftengine.contraption.behavior.WeightBlockBehavior;
-import dev.arubik.craftengine.contraption.level.ContraptionLevel;
+import dev.arubik.craftengine.contraption.core.ContraptionLevel;
 
 /**
  * How a contraption behaves in a fluid — the buoyancy twin of {@code MassModel}.

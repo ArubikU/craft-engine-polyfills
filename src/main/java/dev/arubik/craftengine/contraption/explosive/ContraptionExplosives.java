@@ -10,8 +10,8 @@ import net.minecraft.world.level.block.TntBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 
-import dev.arubik.craftengine.contraption.ContraptionState;
-import dev.arubik.craftengine.contraption.level.ContraptionLevel;
+import dev.arubik.craftengine.contraption.core.ContraptionState;
+import dev.arubik.craftengine.contraption.core.ContraptionLevel;
 import dev.arubik.craftengine.contraption.physics.PhysBody;
 import dev.arubik.craftengine.contraption.physics.PhysicsWorld;
 import dev.arubik.craftengine.contraption.physics.RigidBody;

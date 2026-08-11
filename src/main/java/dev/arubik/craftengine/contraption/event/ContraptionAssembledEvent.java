@@ -3,7 +3,7 @@ package dev.arubik.craftengine.contraption.event;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 
-import dev.arubik.craftengine.contraption.ContraptionEntity;
+import dev.arubik.craftengine.contraption.core.ContraptionEntity;
 
 /**
  * Fired on the main thread just AFTER a contraption has successfully assembled — the real

@@ -10,8 +10,17 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import dev.arubik.craftengine.contraption.behavior.LinearActuatorBehavior;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
+
+import dev.arubik.craftengine.contraption.behavior.LinearActuatorBehavior;
+import dev.arubik.craftengine.contraption.core.ContraptionEngine;
+import dev.arubik.craftengine.contraption.core.ContraptionEntity;
+import dev.arubik.craftengine.contraption.core.ContraptionManager;
+import dev.arubik.craftengine.contraption.core.ContraptionState;
 
 /** Master-clock stall-gate + kinematics behaviour for {@link ContraptionEngine}. */
 class ContraptionEngineTest {
@@ -22,6 +31,9 @@ class ContraptionEngineTest {
         net.minecraft.server.Bootstrap.bootStrap();
     }
 
+    private static final ResourceKey<Level> TEST_WORLD =
+        ResourceKey.create(Registries.DIMENSION, Identifier.parse("minecraft:test"));
+
     @AfterEach
     void clearRegistry() {
         for (ContraptionEntity e : java.util.List.copyOf(ContraptionManager.all())) {
@@ -31,7 +43,7 @@ class ContraptionEngineTest {
 
     /** Pure kinematics test — no ContraptionLevel needed (see ContraptionState's javadoc on null-tolerance). */
     private static ContraptionEntity register() {
-        ContraptionState state = new ContraptionState(UUID.randomUUID(), UUID.randomUUID(), null, 0, 64, 0);
+        ContraptionState state = new ContraptionState(UUID.randomUUID(), TEST_WORLD, null, 0, 64, 0);
         return ContraptionManager.register(new ContraptionEntity(state));
     }
 

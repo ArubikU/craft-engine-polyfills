@@ -6,7 +6,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Entity;
 
-import dev.arubik.craftengine.contraption.ContraptionEntity;
+import dev.arubik.craftengine.contraption.core.ContraptionEntity;
 import dev.arubik.craftengine.contraption.ContraptionWorlds;
 import dev.arubik.craftengine.contraption.MovementBehavior;
 import dev.arubik.craftengine.contraption.MovementContext;
@@ -237,7 +237,7 @@ public final class MinecartFollowBehavior implements MovementBehavior {
         // no spurious cross-world jump. The owning facade is recovered from the hidden level through
         // ContraptionWorlds' reverse index (item #5) — no ContraptionEntity reference needs threading
         // through MovementContext.
-        if (!entity.getWorld().getUID().equals(ctx.state().worldId())) {
+        if (!((org.bukkit.craftbukkit.CraftWorld) entity.getWorld()).getHandle().dimension().equals(ctx.state().worldId())) {
             ContraptionEntity facade = ContraptionWorlds.owning(ctx.state().level()).orElse(null);
             if (facade != null) {
                 Location at = entity.getLocation();

@@ -10,8 +10,9 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 
-import dev.arubik.craftengine.contraption.ContraptionManager;
-import dev.arubik.craftengine.contraption.ContraptionState;
+import dev.arubik.craftengine.contraption.core.ContraptionEntity;
+import dev.arubik.craftengine.contraption.core.ContraptionManager;
+import dev.arubik.craftengine.contraption.core.ContraptionState;
 import dev.arubik.craftengine.contraption.physics.PhysBody;
 import dev.arubik.craftengine.contraption.physics.XpbdSolver;
 
@@ -147,7 +148,7 @@ public final class ContraptionImpactDetonator {
      * blocks inside its own crater.
      */
     private static void destroy(ContraptionState state) {
-        dev.arubik.craftengine.contraption.ContraptionEntity entity = ContraptionManager.get(state.id());
+        ContraptionEntity entity = ContraptionManager.get(state.id());
         if (entity == null) {
             return;
         }
@@ -156,13 +157,15 @@ public final class ContraptionImpactDetonator {
             // the viewers it is HANDED and then clears its own records, so an empty list sends zero
             // despawn packets while still forgetting the entities existed — stranding the blown-up
             // structure's fake blocks on every client that could see it.
-            org.bukkit.World bukkitWorld = org.bukkit.Bukkit.getWorld(state.worldId());
+            net.minecraft.server.MinecraftServer server = ((org.bukkit.craftbukkit.CraftServer) org.bukkit.Bukkit.getServer()).getServer();
+            net.minecraft.server.level.ServerLevel serverLevel = server.getLevel(state.worldId());
+            org.bukkit.World bukkitWorld = serverLevel != null ? serverLevel.getWorld() : null;
             entity.despawn(bukkitWorld == null ? java.util.List.of()
-                    : dev.arubik.craftengine.contraption.CePlayers.resolve(bukkitWorld.getPlayers()));
+                    : dev.arubik.craftengine.contraption.player.CePlayers.resolve(bukkitWorld.getPlayers()));
             ContraptionManager.remove(state.id());
             dev.arubik.craftengine.contraption.physics.PhysicsWorld.remove(state.id());
             dev.arubik.craftengine.contraption.persistence.BlockAnchoredContraptionStore.delete(state.id());
-            dev.arubik.craftengine.contraption.BearingHammerListener.forgetAssembled(state.id());
+            dev.arubik.craftengine.contraption.listener.BearingHammerListener.forgetAssembled(state.id());
             var level = state.level();
             if (level != null) {
                 level.dispose();

@@ -5,9 +5,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.UUID;
 
-import dev.arubik.craftengine.contraption.ContraptionNbt;
-import dev.arubik.craftengine.contraption.ContraptionState;
+import dev.arubik.craftengine.contraption.core.ContraptionState;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
+
+import net.minecraft.world.level.Level;
 
 /**
  * Light per-contraption manifest (CONTRAPTIONS.md §1 "Persistence"): UUID, world,
@@ -15,8 +18,12 @@ import net.minecraft.nbt.CompoundTag;
  * blob — NOT the captured blocks themselves. Scanned cheaply on boot to re-instantiate
  * facades; the heavy blob only loads into RAM when a contraption actually needs to
  * simulate. Saved on stop/interval/{@code onDisable} only — never every tick.
+ *
+ * <p>Migration note (2026-08-10): {@code worldId} changed from Bukkit UUID to NMS ResourceKey.
+ * Serialized as ResourceLocation string (e.g. "minecraft:overworld"). Old files with UUID are
+ * automatically converted via Bukkit.getWorld(uuid).getHandle().dimension() on load.
  */
-public record ContraptionManifest(UUID id, UUID worldId, double x, double y, double z, double yawRadians,
+public record ContraptionManifest(UUID id, ResourceKey<Level> worldId, double x, double y, double z, double yawRadians,
         double scale, boolean stalled, String nbtFileName) {
 
     public static ContraptionManifest of(ContraptionState state, String nbtFileName) {
@@ -27,7 +34,7 @@ public record ContraptionManifest(UUID id, UUID worldId, double x, double y, dou
     public CompoundTag toTag() {
         CompoundTag tag = new CompoundTag();
         tag.putString("id", id.toString());
-        tag.putString("world", worldId.toString());
+        tag.putString("world", worldId.identifier().getNamespace() + ":" + worldId.identifier().getPath());
         tag.putDouble("x", x);
         tag.putDouble("y", y);
         tag.putDouble("z", z);
@@ -42,9 +49,27 @@ public record ContraptionManifest(UUID id, UUID worldId, double x, double y, dou
     }
 
     public static ContraptionManifest fromTag(CompoundTag tag) {
+        String worldStr = tag.getString("world").orElseThrow();
+        ResourceKey<Level> worldKey;
+
+        // Migration: try parsing as Identifier first, fall back to UUID (old format)
+        if (worldStr.contains(":")) {
+            // New format: "minecraft:overworld"
+            Identifier loc = Identifier.parse(worldStr);
+            worldKey = ResourceKey.create(net.minecraft.core.registries.Registries.DIMENSION, loc);
+        } else {
+            // Old format: UUID string - convert via Bukkit World lookup
+            UUID worldUuid = UUID.fromString(worldStr);
+            org.bukkit.World bukkitWorld = org.bukkit.Bukkit.getWorld(worldUuid);
+            if (bukkitWorld == null) {
+                throw new IllegalStateException("Cannot migrate old manifest: world " + worldUuid + " not found");
+            }
+            worldKey = ((org.bukkit.craftbukkit.CraftWorld) bukkitWorld).getHandle().dimension();
+        }
+
         return new ContraptionManifest(
                 UUID.fromString(tag.getString("id").orElseThrow()),
-                UUID.fromString(tag.getString("world").orElseThrow()),
+                worldKey,
                 tag.getDouble("x").orElse(0.0),
                 tag.getDouble("y").orElse(0.0),
                 tag.getDouble("z").orElse(0.0),
@@ -55,11 +80,11 @@ public record ContraptionManifest(UUID id, UUID worldId, double x, double y, dou
     }
 
     public byte[] toBytes() throws IOException {
-        return ContraptionNbt.toBytes(toTag());
+        return ContraptionStorage.toBytes(toTag());
     }
 
     public static ContraptionManifest fromBytes(byte[] bytes) throws IOException {
-        return fromTag(ContraptionNbt.fromBytes(bytes));
+        return fromTag(ContraptionStorage.fromBytes(bytes));
     }
 
     public void save(Path file) throws IOException {

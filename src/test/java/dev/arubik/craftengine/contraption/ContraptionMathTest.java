@@ -7,6 +7,8 @@ import org.junit.jupiter.api.Test;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.phys.Vec3;
 
+import dev.arubik.craftengine.contraption.assembly.ContraptionMath;
+
 /** Pure bearing-relative coordinate math for {@link ContraptionMath}. */
 class ContraptionMathTest {
 

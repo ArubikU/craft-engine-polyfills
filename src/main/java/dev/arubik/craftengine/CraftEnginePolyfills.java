@@ -1,16 +1,19 @@
 package dev.arubik.craftengine;
 
-import java.util.Properties;
-
 import org.bukkit.plugin.java.JavaPlugin;
 
 import com.github.retrooper.packetevents.PacketEvents;
 
 import dev.arubik.craftengine.block.BlockBehaviors;
+import dev.arubik.craftengine.contraption.core.ContraptionEngine;
+import dev.arubik.craftengine.contraption.core.ContraptionEntity;
+import dev.arubik.craftengine.contraption.core.ContraptionLevel;
+import dev.arubik.craftengine.contraption.core.ContraptionManager;
 import dev.arubik.craftengine.item.ItemBehaviors;
 import dev.arubik.craftengine.item.ItemListener;
 import io.github.retrooper.packetevents.factory.spigot.SpigotPacketEventsBuilder;
 import net.momirealms.craftengine.core.plugin.CraftEngine;
+import net.momirealms.craftengine.core.util.Key;
 
 public final class CraftEnginePolyfills extends JavaPlugin {
     private static CraftEnginePolyfills instance;
@@ -21,6 +24,8 @@ public final class CraftEnginePolyfills extends JavaPlugin {
         dev.arubik.craftengine.property.Properties.register();
         PacketEvents.setAPI(SpigotPacketEventsBuilder.build(this));
         PacketEvents.getAPI().load();
+        // Register built-in contraption types
+        dev.arubik.craftengine.contraption.api.ContraptionTypeRegistry.registerBuiltinTypes();
         initPlugin();
         getLogger().info("CraftEngine Polyfills Loaded");
     }
@@ -42,7 +47,7 @@ public final class CraftEnginePolyfills extends JavaPlugin {
         // las glue persista al apagar o reiniciar el sv"). Assembled contraptions carry their own
         // glue in their structure NBT; this is the unassembled real-world glue.
         try {
-            dev.arubik.craftengine.contraption.GlueRegistry.loadAll(getDataFolder().toPath().resolve("glue.dat"));
+            dev.arubik.craftengine.contraption.glue.GlueRegistry.loadAll(getDataFolder().toPath().resolve("glue.dat"));
         } catch (Throwable t) {
             getLogger().warning("[Contraption] failed to load persisted glue graph: " + t);
         }
@@ -70,7 +75,7 @@ public final class CraftEnginePolyfills extends JavaPlugin {
         // Euler/robin_euler extended-solid piston bearings (dropped their load, awaiting a redstone
         // pulse / dwell timer to re-grab it) — restore so the trigger survives restart.
         try {
-            dev.arubik.craftengine.contraption.EulerExtendedRegistry.loadAll(getDataFolder().toPath().resolve("euler.dat"));
+            dev.arubik.craftengine.contraption.type.LinearContraptionType.loadExtendedSolids(getDataFolder().toPath().resolve("euler.dat"));
         } catch (Throwable t) {
             getLogger().warning("[Contraption] failed to load euler-extended bearings: " + t);
         }
@@ -102,7 +107,7 @@ public final class CraftEnginePolyfills extends JavaPlugin {
         }, 1L, 3L); // every 3 ticks — fluid/gas equalize fine at ~7Hz, and the per-tick BFS rebuild is costly
         // Contraption master clock (CONTRAPTIONS.md §5 Phase 3): every registered contraption's
         // behaviors + stall gate + render, once per tick — mirrors the fluid driver above.
-        getServer().getScheduler().runTaskTimer(this, dev.arubik.craftengine.contraption.ContraptionEngine::tickAll, 1L,
+        getServer().getScheduler().runTaskTimer(this, ContraptionEngine::tickAll, 1L,
                 1L);
         // CHAINERY: right-click an endpoint with chain items to extend its length (add slack).
         getServer().getPluginManager().registerEvents(new dev.arubik.craftengine.chainery.ChaineryInteractListener(),
@@ -132,26 +137,19 @@ public final class CraftEnginePolyfills extends JavaPlugin {
         // Contraption chunk lifecycle (CONTRAPTIONS.md Phase 6): anchor-keyed (not
         // current-position-keyed) load/unload wiring — see ContraptionChunkLifecycleListener's
         // javadoc for why this replaced the old ContraptionPersistence/ContraptionChunkListener.
-        getServer().getPluginManager().registerEvents(new dev.arubik.craftengine.contraption.ContraptionChunkLifecycleListener(),
+        getServer().getPluginManager().registerEvents(new dev.arubik.craftengine.contraption.listener.ContraptionChunkLifecycleListener(),
                 this);
-        // Steer-vehicle driver registry — drops a driver on logout (BearingType.VEHICLE).
+        // Steer-vehicle driver registry — drops a driver on logout (VEHICLE type).
         getServer().getPluginManager().registerEvents(dev.arubik.craftengine.contraption.VehicleDriverRegistry.INSTANCE,
                 this);
         // Bearing hammer-trigger assemble/disassemble (CONTRAPTIONS.md §5 Phase 6).
-        getServer().getPluginManager().registerEvents(new dev.arubik.craftengine.contraption.BearingHammerListener(),
+        getServer().getPluginManager().registerEvents(new dev.arubik.craftengine.contraption.listener.BearingHammerListener(),
                 this);
-        // Minecart-bearing data-loss guard (belt-and-suspenders on top of setInvulnerable —
-        // see MinecartBearing.DamageGuard's own javadoc): cancels VehicleDamageEvent/
-        // VehicleDestroyEvent for any bearing minecart so the only way to remove one is the
-        // explicit hammer-driven MinecartBearing#disassemble flow.
-        getServer().getPluginManager().registerEvents(new dev.arubik.craftengine.contraption.MinecartBearing.DamageGuard(),
+        // Universal contraption lifecycle: placement, damage, death, unequip teardown
+        getServer().getPluginManager().registerEvents(new dev.arubik.craftengine.contraption.listener.ContraptionLifecycleListener(),
                 this);
-        // Happy-ghast harness contraption: equipping a harness on an adult ghast assembles a contraption
-        // pre-filled with a hollow 4x4x4 shell of the harness's wool colour; removing it with shears hands
-        // the whole structure back inside the harness item (like the minecart's save-to-item). See
-        // GhastHarnessListener's javadoc for why EntityEquipmentChangedEvent is the detection hook and why
-        // the item still has to be stamped from the interact event.
-        getServer().getPluginManager().registerEvents(new dev.arubik.craftengine.contraption.GhastHarnessListener(),
+        // Ghast contraption type: handles harness-unequip disassemble (shear/command/dispenser removal)
+        getServer().getPluginManager().registerEvents(dev.arubik.craftengine.contraption.type.GhastContraptionType.INSTANCE,
                 this);
         // Glue wand item tool (CONTRAPTIONS.md §1): WorldEdit-style two-corner AREA glue with
         // cml:slime_glue — right-click pos1, right-click pos2 elsewhere to instantly glue the
@@ -175,8 +173,8 @@ public final class CraftEnginePolyfills extends JavaPlugin {
         // contraption and drag it by the crosshair (reusing ContraptionEntity#teleport) and live-resize
         // it (ContraptionEntity#setScale). Owns a 1-tick drag task started via #start below (self-cancels
         // per-grab when a grabber logs off / leaves creative / puts the wand away / the contraption dies).
-        dev.arubik.craftengine.contraption.CreativePhysWandListener physWand =
-                new dev.arubik.craftengine.contraption.CreativePhysWandListener();
+        dev.arubik.craftengine.contraption.listener.CreativePhysWandListener physWand =
+                new dev.arubik.craftengine.contraption.listener.CreativePhysWandListener();
         getServer().getPluginManager().registerEvents(physWand, this);
         physWand.start(this);
         // A TNT cell lit inside ANY contraption is ejected as a real PrimedTnt into the real world at
@@ -194,7 +192,7 @@ public final class CraftEnginePolyfills extends JavaPlugin {
                 new dev.arubik.craftengine.contraption.physics.PhysicsWorldListener(), this);
         // Furniture-seat completion: sit down (right-click a free seat slot, runs BEFORE the
         // block-cell listener above) / stand up (sneak) after a contraption has been assembled.
-        getServer().getPluginManager().registerEvents(new dev.arubik.craftengine.contraption.ContraptionSeatListener(),
+        getServer().getPluginManager().registerEvents(new dev.arubik.craftengine.contraption.listener.ContraptionSeatListener(),
                 this);
         // Dropped-item bridge (2026-07-01 session): a real player picking up one of
         // ContraptionItemPickupSwarm's real-world mirror ItemEntitys also discards the matching
@@ -334,9 +332,9 @@ public final class CraftEnginePolyfills extends JavaPlugin {
         // to exist. Only flushes entities into the real world at their current mirrored
         // position — vanilla's own save-on-shutdown then covers them like any other real entity.
         try {
-            for (dev.arubik.craftengine.contraption.ContraptionEntity entity : dev.arubik.craftengine.contraption.ContraptionManager
+            for (ContraptionEntity entity : ContraptionManager
                     .all()) {
-                dev.arubik.craftengine.contraption.level.ContraptionLevel level = entity.state().level();
+                ContraptionLevel level = entity.state().level();
                 if (level != null) {
                     level.transferRemainingEntitiesToRealWorld();
                 }
@@ -350,19 +348,21 @@ public final class CraftEnginePolyfills extends JavaPlugin {
         // vanilla). This mirrors the minecart's structure being re-saved on unload; onDisable is
         // the shutdown equivalent since chunks aren't individually unloaded on a clean stop.
         try {
-            var anchors = dev.arubik.craftengine.contraption.BearingHammerListener.assembledAnchorsSnapshot();
-            for (dev.arubik.craftengine.contraption.ContraptionEntity entity : dev.arubik.craftengine.contraption.ContraptionManager
+            var anchors = dev.arubik.craftengine.contraption.listener.BearingHammerListener.assembledAnchorsSnapshot();
+            for (ContraptionEntity entity : ContraptionManager
                     .all()) {
                 var anchor = anchors.get(entity.state().id());
                 if (anchor == null) {
                     continue; // not block-anchored (e.g. minecart) — handled elsewhere
                 }
-                org.bukkit.World world = getServer().getWorld(anchor.worldId());
-                if (world == null) {
+                net.minecraft.server.MinecraftServer server = ((org.bukkit.craftbukkit.CraftServer) getServer()).getServer();
+                net.minecraft.server.level.ServerLevel serverLevel = server.getLevel(anchor.worldId());
+                if (serverLevel == null) {
                     continue;
                 }
-                net.minecraft.world.level.Level realLevel = ((org.bukkit.craftbukkit.CraftWorld) world).getHandle();
-                dev.arubik.craftengine.contraption.BearingType type =
+                org.bukkit.World world = serverLevel.getWorld();
+                net.minecraft.world.level.Level realLevel = serverLevel;
+                Key type =
                         dev.arubik.craftengine.contraption.persistence.BlockAnchoredContraptionStore
                                 .typeToPersist(entity.state(), realLevel, anchor.pos());
                 double rpm = dev.arubik.craftengine.contraption.behavior.BearingBlockBehavior.rpmAt(realLevel,
@@ -391,13 +391,13 @@ public final class CraftEnginePolyfills extends JavaPlugin {
             getLogger().warning("[Chainery] failed to save chains on shutdown: " + t);
         }
         try {
-            dev.arubik.craftengine.contraption.GlueRegistry.saveAll(getDataFolder().toPath().resolve("glue.dat"));
+            dev.arubik.craftengine.contraption.glue.GlueRegistry.saveAll(getDataFolder().toPath().resolve("glue.dat"));
         } catch (Throwable t) {
             getLogger().warning("[Contraption] failed to save glue graph on shutdown: " + t);
         }
         // Euler/robin_euler extended-solid bearings — persist so their redstone/timer trigger survives.
         try {
-            dev.arubik.craftengine.contraption.EulerExtendedRegistry.saveAll(getDataFolder().toPath().resolve("euler.dat"));
+            dev.arubik.craftengine.contraption.type.LinearContraptionType.saveExtendedSolids(getDataFolder().toPath().resolve("euler.dat"));
         } catch (Throwable t) {
             getLogger().warning("[Contraption] failed to save euler-extended bearings: " + t);
         }

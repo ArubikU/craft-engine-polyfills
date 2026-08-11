@@ -2,7 +2,7 @@ package dev.arubik.craftengine.contraption.render;
 
 import org.joml.Vector3f;
 
-import dev.arubik.craftengine.contraption.ContraptionMath;
+import dev.arubik.craftengine.contraption.assembly.ContraptionMath;
 import net.minecraft.world.phys.Vec3;
 import net.momirealms.craftengine.core.entity.seat.SeatConfig;
 

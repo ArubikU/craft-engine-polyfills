@@ -22,6 +22,7 @@ import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.protocol.game.ClientboundBlockDestructionPacket;
 import net.minecraft.network.protocol.game.ClientboundBlockUpdatePacket;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -37,7 +38,11 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 
 import dev.arubik.craftengine.contraption.ContraptionInteractionListener.Hit;
-import dev.arubik.craftengine.contraption.level.ContraptionLevel;
+import dev.arubik.craftengine.contraption.core.ContraptionEntity;
+import dev.arubik.craftengine.contraption.core.ContraptionLevel;
+import dev.arubik.craftengine.contraption.core.ContraptionManager;
+import dev.arubik.craftengine.contraption.core.ContraptionState;
+import dev.arubik.craftengine.contraption.player.CePlayers;
 
 /**
  * <b>Mining blocks OUT of a contraption</b> — the destructive twin of {@link ContraptionInteractionListener}'s
@@ -500,14 +505,16 @@ public final class ContraptionMining implements Listener {
     private static void teardownEmpty(ContraptionState state) {
         try {
             ContraptionEntity entity = ContraptionManager.get(state.id());
-            org.bukkit.World bukkitWorld = Bukkit.getWorld(state.worldId());
+            MinecraftServer server = ((org.bukkit.craftbukkit.CraftServer) Bukkit.getServer()).getServer();
+            ServerLevel serverLevel = server.getLevel(state.worldId());
+            org.bukkit.World bukkitWorld = serverLevel != null ? serverLevel.getWorld() : null;
             if (entity != null) {
                 entity.despawn(bukkitWorld == null ? List.of() : CePlayers.resolve(bukkitWorld.getPlayers()));
             }
             ContraptionManager.remove(state.id());
             dev.arubik.craftengine.contraption.physics.PhysicsWorld.remove(state.id());
             dev.arubik.craftengine.contraption.persistence.BlockAnchoredContraptionStore.delete(state.id());
-            dev.arubik.craftengine.contraption.BearingHammerListener.forgetAssembled(state.id());
+            dev.arubik.craftengine.contraption.listener.BearingHammerListener.forgetAssembled(state.id());
             ContraptionLevel level = state.level();
             if (level != null) {
                 level.dispose();

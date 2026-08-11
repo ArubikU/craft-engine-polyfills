@@ -8,6 +8,10 @@ import org.bukkit.Material;
 import org.bukkit.event.inventory.ClickType;
 import dev.arubik.craftengine.util.NbtType;
 
+import dev.arubik.craftengine.contraption.core.ContraptionEntity;
+import dev.arubik.craftengine.contraption.core.ContraptionLevel;
+import dev.arubik.craftengine.contraption.core.ContraptionManager;
+import dev.arubik.craftengine.contraption.core.ContraptionState;
 import dev.arubik.craftengine.gas.GasStack;
 import dev.arubik.craftengine.gas.GasTank;
 import dev.arubik.craftengine.gas.GasType;
@@ -776,7 +780,7 @@ public class FanMachineBlockEntity extends AbstractMachineBlockEntity {
         // method the ContraptionLevel subclasses OVERRIDE to map the fake position into the real world AND rotate
         // the stream velocity (count 0 = the offset IS the velocity), so the airflow shows where the contraption
         // actually is; an ordinary world fan keeps the plain local spawn.
-        if (level instanceof dev.arubik.craftengine.contraption.level.ContraptionLevel) {
+        if (level instanceof ContraptionLevel) {
             net.minecraft.core.particles.ParticleOptions nms = nmsParticle(particle);
             level.sendParticlesSource(level.players(), null, nms, true, true, sx, sy, sz, 0,
                     facing.getStepX(), facing.getStepY(), facing.getStepZ(), flow);
@@ -836,18 +840,18 @@ public class FanMachineBlockEntity extends AbstractMachineBlockEntity {
      */
     private void applyFanThrust(net.minecraft.server.level.ServerLevel serverLevel, BlockPos cell, Direction facing,
             double magnitude) {
-        if (!(serverLevel instanceof dev.arubik.craftengine.contraption.level.ContraptionLevel cl)) {
+        if (!(serverLevel instanceof ContraptionLevel cl)) {
             return; // an ordinary world fan — nothing to propel
         }
-        dev.arubik.craftengine.contraption.ContraptionState owner = null;
-        for (dev.arubik.craftengine.contraption.ContraptionEntity ce
-                : dev.arubik.craftengine.contraption.ContraptionManager.all()) {
+        ContraptionState owner = null;
+        for (ContraptionEntity ce
+                : ContraptionManager.all()) {
             if (ce.state().level() == cl) {
                 owner = ce.state();
                 break;
             }
         }
-        if (owner == null || owner.bearingType() != dev.arubik.craftengine.contraption.BearingType.PHYS) {
+        if (owner == null || !net.momirealms.craftengine.core.util.Key.of("polyfills", "phys").equals(owner.bearingType())) {
             return; // not a phys body — no rigid body to push
         }
         // Reaction = opposite the blow direction, expressed in the contraption's LOCAL frame, then rotated to

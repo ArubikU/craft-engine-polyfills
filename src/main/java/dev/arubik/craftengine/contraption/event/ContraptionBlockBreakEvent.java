@@ -6,7 +6,7 @@ import org.bukkit.event.Cancellable;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 
-import dev.arubik.craftengine.contraption.ContraptionEntity;
+import dev.arubik.craftengine.contraption.core.ContraptionEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.state.BlockState;
 

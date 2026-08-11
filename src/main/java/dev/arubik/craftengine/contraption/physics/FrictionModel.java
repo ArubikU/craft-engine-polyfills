@@ -5,7 +5,7 @@ import net.minecraft.world.level.block.state.BlockState;
 
 import dev.arubik.craftengine.contraption.behavior.FrictionBlockBehavior;
 import dev.arubik.craftengine.contraption.behavior.WeightBlockBehavior;
-import dev.arubik.craftengine.contraption.level.ContraptionLevel;
+import dev.arubik.craftengine.contraption.core.ContraptionLevel;
 
 /**
  * A contraption's own surface grip — the mass-weighted mean of its cells' friction, the tangential twin

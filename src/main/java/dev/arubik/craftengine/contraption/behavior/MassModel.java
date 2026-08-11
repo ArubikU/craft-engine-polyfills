@@ -6,7 +6,7 @@ import net.minecraft.world.phys.Vec3;
 
 import org.joml.Matrix3d;
 
-import dev.arubik.craftengine.contraption.level.ContraptionLevel;
+import dev.arubik.craftengine.contraption.core.ContraptionLevel;
 
 /**
  * The aggregate mass model of one PhysContraption: total {@link #totalMass}, the mass-weighted

@@ -1,4 +1,7 @@
 package dev.arubik.craftengine.contraption;
+import dev.arubik.craftengine.contraption.glue.GlueGraph;
+import dev.arubik.craftengine.contraption.glue.GlueRegistry;
+import dev.arubik.craftengine.contraption.player.CePlayers;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -176,7 +179,8 @@ public class GlueWandListener implements Listener {
 
         event.setCancelled(true);
         UUID id = player.getUniqueId();
-        UUID worldId = clicked.getWorld().getUID();
+        net.minecraft.resources.ResourceKey<net.minecraft.world.level.Level> worldId =
+            ((org.bukkit.craftbukkit.CraftWorld) clicked.getWorld()).getHandle().dimension();
         BlockPos pos = new BlockPos(clicked.getX(), clicked.getY(), clicked.getZ());
 
         if (player.isSneaking()) {
@@ -242,7 +246,7 @@ public class GlueWandListener implements Listener {
      * {@link GlueGraph#connectedComponents()} sees the whole box as a single component. Returns
      * the number of blocks (cells) covered by the box.
      */
-    private int glueBox(UUID worldId, BlockPos a, BlockPos b) {
+    private int glueBox(net.minecraft.resources.ResourceKey<net.minecraft.world.level.Level> worldId, BlockPos a, BlockPos b) {
         int minX = Math.min(a.getX(), b.getX()), maxX = Math.max(a.getX(), b.getX());
         int minY = Math.min(a.getY(), b.getY()), maxY = Math.max(a.getY(), b.getY());
         int minZ = Math.min(a.getZ(), b.getZ()), maxZ = Math.max(a.getZ(), b.getZ());
@@ -326,7 +330,8 @@ public class GlueWandListener implements Listener {
             world = null;
         } else {
             world = looked.getWorld();
-            UUID worldId = world.getUID();
+            net.minecraft.resources.ResourceKey<net.minecraft.world.level.Level> worldId =
+                ((org.bukkit.craftbukkit.CraftWorld) world).getHandle().dimension();
             GlueGraph graph = GlueRegistry.graphFor(worldId);
             BlockPos center = new BlockPos(looked.getX(), looked.getY(), looked.getZ());
             wanted = graph.hasNode(center) ? bfsWithinRadius(graph, center, PASSIVE_RADIUS) : Set.of();

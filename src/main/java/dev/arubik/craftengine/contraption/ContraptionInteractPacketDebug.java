@@ -7,6 +7,12 @@ import com.github.retrooper.packetevents.event.PacketReceiveEvent;
 import com.github.retrooper.packetevents.protocol.packettype.PacketType;
 import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientInteractEntity;
 
+import dev.arubik.craftengine.contraption.bearing.MinecartBearing;
+import dev.arubik.craftengine.contraption.core.ContraptionEntity;
+import dev.arubik.craftengine.contraption.core.ContraptionManager;
+import dev.arubik.craftengine.contraption.listener.ContraptionSeatListener;
+import dev.arubik.craftengine.contraption.listener.CreativePhysWandListener;
+
 /**
  * Real fix (2026-07-01 debugging session — "right-click a chest inside a contraption does
  * nothing"). CONFIRMED root cause, proven via a raw packet-level test: our packet-only fake

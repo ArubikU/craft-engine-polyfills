@@ -1,5 +1,6 @@
 package dev.arubik.craftengine.contraption.level;
 
+import dev.arubik.craftengine.contraption.core.ContraptionLevel;
 import net.minecraft.world.level.Level;
 
 /**
@@ -8,7 +9,7 @@ import net.minecraft.world.level.Level;
  * plain Paper server loads this class harmlessly, finds ASP absent, and NEVER loads {@link AspContraptionLevel}
  * (whose ASP-typed references would otherwise fail to link).
  */
-final class AspSupport {
+public final class AspSupport {
 
     private static final boolean AVAILABLE;
 
@@ -27,12 +28,12 @@ final class AspSupport {
     }
 
     /** True when the ASP fork's API is on the classpath. */
-    static boolean available() {
+    public static boolean available() {
         return AVAILABLE;
     }
 
     /** Only ever called when {@link #available()} is true, which is what keeps {@link AspContraptionLevel} unloaded on plain Paper. */
-    static ContraptionLevel create(Level realLevel, double x, double y, double z, double yawRadians) {
+    public static ContraptionLevel create(Level realLevel, double x, double y, double z, double yawRadians) {
         return AspContraptionLevel.create(realLevel, x, y, z, yawRadians);
     }
 }

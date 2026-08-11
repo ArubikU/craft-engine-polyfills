@@ -2,6 +2,9 @@ package dev.arubik.craftengine.contraption;
 
 import java.util.Optional;
 
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
+import org.bukkit.craftbukkit.CraftServer;
 import org.bukkit.craftbukkit.entity.CraftPlayer;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -10,7 +13,12 @@ import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
 
-import dev.arubik.craftengine.contraption.level.ContraptionLevel;
+import dev.arubik.craftengine.contraption.assembly.ContraptionAssembler;
+import dev.arubik.craftengine.contraption.assembly.ContraptionMath;
+import dev.arubik.craftengine.contraption.core.ContraptionEntity;
+import dev.arubik.craftengine.contraption.core.ContraptionLevel;
+import dev.arubik.craftengine.contraption.core.ContraptionManager;
+import dev.arubik.craftengine.contraption.core.ContraptionState;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerPlayer;
@@ -27,6 +35,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
+import net.momirealms.craftengine.core.util.Key;
 
 /**
  * Task 2 (CONTRAPTIONS.md 2026-07-01 session) — forwards real player interaction into the
@@ -178,7 +187,7 @@ public final class ContraptionInteractionListener implements Listener {
         // cell near a real minecart bearing and swallow the click meant for
         // BearingHammerListener#onInteractEntity. Skip entirely for a bearing entity — it has its
         // own dedicated handler.
-        if (dev.arubik.craftengine.contraption.MinecartBearing.isBearing(event.getRightClicked())) {
+        if (dev.arubik.craftengine.contraption.bearing.MinecartBearing.isBearing(event.getRightClicked())) {
             return;
         }
         ServerPlayer player = ((CraftPlayer) event.getPlayer()).getHandle();
@@ -254,7 +263,8 @@ public final class ContraptionInteractionListener implements Listener {
     private static boolean tryHammerDisassemblePhys(ServerPlayer player, Hit hit) {
         ContraptionState state = hit.state();
         // A VEHICLE is a PHYS body too (piloted), so the same hammer-any-cell disassemble applies to it.
-        if (state.bearingType() != BearingType.PHYS && state.bearingType() != BearingType.VEHICLE) {
+        if (!net.momirealms.craftengine.core.util.Key.of("polyfills", "phys").equals(state.bearingType())
+                && !net.momirealms.craftengine.core.util.Key.of("polyfills", "vehicle").equals(state.bearingType())) {
             return false;
         }
         org.bukkit.entity.Player bukkitPlayer = (org.bukkit.entity.Player) player.getBukkitEntity();
@@ -264,7 +274,13 @@ public final class ContraptionInteractionListener implements Listener {
             return false;
         }
         ContraptionEntity entity = ContraptionManager.get(state.id());
-        org.bukkit.World world = org.bukkit.Bukkit.getWorld(state.worldId());
+        org.bukkit.World world = null;
+        try {
+            MinecraftServer server = ((CraftServer) org.bukkit.Bukkit.getServer()).getServer();
+            ServerLevel level = server.getLevel(state.worldId());
+            world = level != null ? level.getWorld() : null;
+        } catch (Throwable ignored) {
+        }
         if (entity == null || world == null) {
             // Consumed regardless: one right-click can arrive twice (interactAt then interact), and the
             // second must not fall through into a level the first just disposed.
@@ -1000,10 +1016,12 @@ public final class ContraptionInteractionListener implements Listener {
             if (entity == null) {
                 return false;
             }
+            dev.arubik.craftengine.contraption.element.ContraptionElement element =
+                    hit.state().elementByLocalPos(hit.local());
             dev.arubik.craftengine.contraption.event.ContraptionInteractEvent event =
                     new dev.arubik.craftengine.contraption.event.ContraptionInteractEvent(
                             (org.bukkit.entity.Player) player.getBukkitEntity(), entity, hit.local(), hit.face(),
-                            EquipmentSlot.HAND, right);
+                            EquipmentSlot.HAND, right, element);
             org.bukkit.Bukkit.getPluginManager().callEvent(event);
             return event.isCancelled();
         } catch (Throwable ignored) {

@@ -16,8 +16,11 @@ import net.minecraft.world.level.entity.EntityTypeTest;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
+import dev.arubik.craftengine.contraption.assembly.ContraptionMath;
+import dev.arubik.craftengine.contraption.core.ContraptionEntity;
+import dev.arubik.craftengine.contraption.core.ContraptionLevel;
+import dev.arubik.craftengine.contraption.core.ContraptionState;
 import dev.arubik.craftengine.contraption.level.ContraptionBoundary;
-import dev.arubik.craftengine.contraption.level.ContraptionLevel;
 
 /**
  * Central resolver for "which contraption owns this level" and "find an entity that may live in
@@ -71,7 +74,7 @@ public final class ContraptionWorlds {
      * never build a real {@link ContraptionLevel} are unaffected. Idempotent — re-registering the same
      * level simply overwrites its entry.
      */
-    static void index(ContraptionEntity entity) {
+    public static void index(ContraptionEntity entity) {
         if (entity == null) {
             return;
         }
@@ -86,7 +89,7 @@ public final class ContraptionWorlds {
      * at {@code entity} (defensive against a stale double-remove after the level was re-registered to a
      * different facade). No-op for a null/level-less facade.
      */
-    static void unindex(ContraptionEntity entity) {
+    public static void unindex(ContraptionEntity entity) {
         if (entity == null) {
             return;
         }

@@ -15,9 +15,9 @@ import net.minecraft.world.level.block.entity.HopperBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 
 import dev.arubik.craftengine.contraption.ContraptionAccessor;
-import dev.arubik.craftengine.contraption.ContraptionEntity;
+import dev.arubik.craftengine.contraption.core.ContraptionEntity;
 import dev.arubik.craftengine.contraption.ContraptionWorlds;
-import dev.arubik.craftengine.contraption.level.ContraptionLevel;
+import dev.arubik.craftengine.contraption.core.ContraptionLevel;
 
 /**
  * <b>Roadmap item #6 — the captured-hopper ↔ real-world item I/O bridge</b> (design §4 "Block

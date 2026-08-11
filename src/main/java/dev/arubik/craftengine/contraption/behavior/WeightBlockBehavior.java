@@ -133,7 +133,7 @@ public class WeightBlockBehavior extends BukkitBlockBehavior {
         // The PHYS anchor is the weightless pivot the whole structure hangs off — it must not add mass of its
         // own (2026-07-18 — "reduce el peso del phys anchor a 0"). Other bearing kinds keep their block weight.
         var bearing = b.getFirst(dev.arubik.craftengine.contraption.behavior.BearingBlockBehavior.class);
-        if (bearing != null && bearing.type() == dev.arubik.craftengine.contraption.BearingType.PHYS) {
+        if (bearing != null && net.momirealms.craftengine.core.util.Key.of("polyfills", "phys").equals(bearing.type())) {
             return 0.0;
         }
         if (b.getFirst(dev.arubik.craftengine.gas.behavior.GasPipeBehavior.class) != null

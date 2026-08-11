@@ -11,6 +11,15 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.level.Level;
+
+import dev.arubik.craftengine.contraption.core.ContraptionEntity;
+import dev.arubik.craftengine.contraption.core.ContraptionManager;
+import dev.arubik.craftengine.contraption.core.ContraptionState;
+
 /**
  * Registry + facade behaviour for {@link ContraptionManager}/{@link ContraptionEntity} that
  * doesn't need a real {@link dev.arubik.craftengine.contraption.level.ContraptionLevel}
@@ -27,8 +36,11 @@ class ContraptionManagerTest {
         net.minecraft.server.Bootstrap.bootStrap();
     }
 
+    private static final ResourceKey<Level> TEST_WORLD =
+        ResourceKey.create(Registries.DIMENSION, Identifier.parse("minecraft:test"));
+
     private static ContraptionEntity entityWithNullLevel() {
-        ContraptionState state = new ContraptionState(UUID.randomUUID(), UUID.randomUUID(), null, 0, 64, 0);
+        ContraptionState state = new ContraptionState(UUID.randomUUID(), TEST_WORLD, null, 0, 64, 0);
         return new ContraptionEntity(state);
     }
 

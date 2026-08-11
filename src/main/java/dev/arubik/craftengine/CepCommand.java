@@ -13,6 +13,10 @@ import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 
 import dev.arubik.craftengine.block.entity.PersistentBlockEntity;
+import dev.arubik.craftengine.contraption.assembly.ContraptionCapture;
+import dev.arubik.craftengine.contraption.core.ContraptionEntity;
+import dev.arubik.craftengine.contraption.core.ContraptionLevel;
+import dev.arubik.craftengine.contraption.core.ContraptionManager;
 import dev.arubik.craftengine.util.ArgumentList;
 import dev.arubik.craftengine.util.ArgumentList.XAxisCoordinate;
 import dev.arubik.craftengine.util.ArgumentList.YAxisCoordinate;
@@ -20,6 +24,7 @@ import dev.arubik.craftengine.util.ArgumentList.ZAxisCoordinate;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
+import net.momirealms.craftengine.core.util.Key;
 
 import java.util.*;
 import java.util.function.BiFunction;
@@ -337,10 +342,10 @@ public class CepCommand implements CommandExecutor, TabCompleter {
                     new net.minecraft.world.phys.Vec3(eye.getX(), eye.getY(), eye.getZ()),
                     new net.minecraft.world.phys.Vec3(eye.getDirection().getX(), eye.getDirection().getY(),
                             eye.getDirection().getZ()));
-            dev.arubik.craftengine.contraption.ContraptionEntity entity =
+            ContraptionEntity entity =
                     dev.arubik.craftengine.contraption.DebugPhysSpawn.spawn(player.getWorld(), anchor,
                             Map.of(BlockPos.ZERO, state), null,
-                            dev.arubik.craftengine.contraption.BearingType.VEHICLE);
+                            Key.of("polyfills", "vehicle"));
             if (entity == null) {
                 sender.sendMessage("§cNothing solid to spawn from §f" + input + "§c.");
                 return true;
@@ -356,13 +361,13 @@ public class CepCommand implements CommandExecutor, TabCompleter {
         cases.put(new ArgumentList("vehicle^", "drive^"), (sender, parsed) -> {
             if (!(sender instanceof Player player))
                 return true;
-            dev.arubik.craftengine.contraption.ContraptionEntity best = null;
+            ContraptionEntity best = null;
             double bestSq = 16.0 * 16.0;
-            for (dev.arubik.craftengine.contraption.ContraptionEntity e :
-                    dev.arubik.craftengine.contraption.ContraptionManager.all()) {
+            for (ContraptionEntity e :
+                    ContraptionManager.all()) {
                 var st = e.state();
-                if (st.bearingType() != dev.arubik.craftengine.contraption.BearingType.VEHICLE
-                        || !st.worldId().equals(player.getWorld().getUID())) {
+                if (!Key.of("polyfills", "vehicle").equals(st.bearingType())
+                        || !st.worldId().equals(((org.bukkit.craftbukkit.CraftWorld) player.getWorld()).getHandle().dimension())) {
                     continue;
                 }
                 double dx = st.x() - player.getX(), dy = st.y() - player.getY(), dz = st.z() - player.getZ();
@@ -427,7 +432,7 @@ public class CepCommand implements CommandExecutor, TabCompleter {
                 sender.sendMessage("§cYou don't have permission to kill contraptions.");
                 return true;
             }
-            int live = dev.arubik.craftengine.contraption.ContraptionManager.count();
+            int live = ContraptionManager.count();
             if (live == 0) {
                 sender.sendMessage("§7No live contraptions to kill.");
                 return true;
@@ -486,7 +491,7 @@ public class CepCommand implements CommandExecutor, TabCompleter {
                 // Dispose immediately — otherwise the bench leaks a level per spawn and later spawns
                 // measure a server bogged down by hundreds of empty dimensions, not the spawn cost itself.
                 if (ent != null) {
-                    dev.arubik.craftengine.contraption.ContraptionManager.remove(ent.state().id());
+                    ContraptionManager.remove(ent.state().id());
                     if (ent.state().level() != null) {
                         ent.state().level().dispose();
                     }
@@ -527,8 +532,8 @@ public class CepCommand implements CommandExecutor, TabCompleter {
                 return true;
             }
             BlockPos pos = new BlockPos(tb.getX(), tb.getY(), tb.getZ());
-            Set<BlockPos> structure = dev.arubik.craftengine.contraption.GlueRegistry
-                    .structureAt(tb.getWorld().getUID(), pos);
+            Set<BlockPos> structure = dev.arubik.craftengine.contraption.glue.GlueRegistry
+                    .structureAt(((org.bukkit.craftbukkit.CraftWorld) tb.getWorld()).getHandle().dimension(), pos);
             sender.sendMessage("§bStructure§7: §f" + structure.size() + "§7 block(s) glued together.");
             return true;
         });
@@ -545,17 +550,17 @@ public class CepCommand implements CommandExecutor, TabCompleter {
                 return true;
             }
             BlockPos bearing = new BlockPos(tb.getX(), tb.getY(), tb.getZ());
-            Set<BlockPos> structure = dev.arubik.craftengine.contraption.GlueRegistry
-                    .structureAt(tb.getWorld().getUID(), bearing);
             net.minecraft.world.level.Level level = ((CraftWorld) tb.getWorld()).getHandle();
+            Set<BlockPos> structure = dev.arubik.craftengine.contraption.glue.GlueRegistry
+                    .structureAt(level.dimension(), bearing);
 
-            dev.arubik.craftengine.contraption.ContraptionCapture.Result captured = dev.arubik.craftengine.contraption.ContraptionCapture
+            ContraptionCapture.Result captured = ContraptionCapture
                     .capture(level, structure, bearing);
             sender.sendMessage("§bCaptured §f" + captured.level().blockCount() + "§b block(s). Blanking for 2s, then restoring...");
-            dev.arubik.craftengine.contraption.ContraptionCapture.removeFromWorld(level, structure);
+            ContraptionCapture.removeFromWorld(level, structure);
 
             org.bukkit.Bukkit.getScheduler().runTaskLater(CraftEnginePolyfills.instance(), () -> {
-                dev.arubik.craftengine.contraption.ContraptionCapture.restore(level, captured.level(), bearing);
+                ContraptionCapture.restore(level, captured.level(), bearing);
                 sender.sendMessage("§aRestored §f" + captured.level().blockCount() + "§a block(s) from the captured NBT blob.");
             }, 40L);
             return true;
@@ -683,7 +688,7 @@ public class CepCommand implements CommandExecutor, TabCompleter {
             net.minecraft.server.level.ServerPlayer nmsPlayer = ((org.bukkit.craftbukkit.entity.CraftPlayer) player).getHandle();
             dev.arubik.craftengine.contraption.ContraptionInteractionListener.Hit hit =
                     dev.arubik.craftengine.contraption.ContraptionInteractionListener.raycast(nmsPlayer);
-            dev.arubik.craftengine.contraption.level.ContraptionLevel level = hit != null ? hit.state().level() : null;
+            ContraptionLevel level = hit != null ? hit.state().level() : null;
             if (level == null) {
                 sender.sendMessage("§cYou're not looking at a contraption — aim at one and try again.");
                 return true;
@@ -745,7 +750,7 @@ public class CepCommand implements CommandExecutor, TabCompleter {
             sb.append("§8  • §7").append(phase.name().toLowerCase(java.util.Locale.ROOT)).append(": §f")
                     .append(fmt(dev.arubik.craftengine.contraption.ContraptionPerf.millis(phase))).append(" ms\n");
         }
-        sb.append("§7 contraptions: §f").append(dev.arubik.craftengine.contraption.ContraptionManager.count())
+        sb.append("§7 contraptions: §f").append(ContraptionManager.count())
                 .append("§7 live — §a").append(fmt(dev.arubik.craftengine.contraption.ContraptionPerf.meanRendered()))
                 .append("§7 rendered, §8").append(fmt(dev.arubik.craftengine.contraption.ContraptionPerf.meanSkippedUnloaded()))
                 .append("§7 skipped (chunk unloaded), §8")
@@ -765,7 +770,7 @@ public class CepCommand implements CommandExecutor, TabCompleter {
                 new net.minecraft.world.phys.Vec3(eye.getX(), eye.getY(), eye.getZ()),
                 new net.minecraft.world.phys.Vec3(eye.getDirection().getX(), eye.getDirection().getY(),
                         eye.getDirection().getZ()));
-        dev.arubik.craftengine.contraption.ContraptionEntity entity = dev.arubik.craftengine.contraption.DebugPhysSpawn
+        ContraptionEntity entity = dev.arubik.craftengine.contraption.DebugPhysSpawn
                 .spawn(player.getWorld(), anchor, states, blockEntities);
         if (entity == null) {
             player.sendMessage("§cNothing solid to spawn from §f" + label + "§c.");

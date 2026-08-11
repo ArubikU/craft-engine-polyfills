@@ -18,14 +18,15 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 
-import dev.arubik.craftengine.contraption.ContraptionEntity;
-import dev.arubik.craftengine.contraption.ContraptionManager;
-import dev.arubik.craftengine.contraption.ContraptionState;
+import dev.arubik.craftengine.contraption.core.ContraptionEntity;
+import dev.arubik.craftengine.contraption.core.ContraptionManager;
+import dev.arubik.craftengine.contraption.core.ContraptionState;
 import dev.arubik.craftengine.contraption.MovementBehavior;
 import dev.arubik.craftengine.contraption.behavior.MassModel;
 import dev.arubik.craftengine.contraption.behavior.PhysicsBehavior;
-import dev.arubik.craftengine.contraption.level.ContraptionLevel;
+import dev.arubik.craftengine.contraption.core.ContraptionLevel;
 import dev.arubik.craftengine.contraption.level.BukkitContraptionLevel;
+import net.momirealms.craftengine.core.util.Key;
 
 /**
  * Fractures a PhysContraption whose cells no longer form one connected solid into one independent
@@ -244,14 +245,14 @@ public final class ContraptionSplitter {
         // Attaching the behavior alone left bearingType null, so every check keyed on the type — the
         // hammer's disassemble, the persistence type resolver — silently did not apply to fragments, which
         // are exactly the bodies a player most wants to clear up.
-        childState.setBearingType(dev.arubik.craftengine.contraption.BearingType.PHYS);
+        childState.setBearingType(net.momirealms.craftengine.core.util.Key.of("polyfills", "phys"));
         childState.addBehavior(new PhysicsBehavior());
         ContraptionEntity child = ContraptionManager.register(new ContraptionEntity(childState));
         // A fragment is a first-class phys contraption, so it persists like one: register its anchor at
         // birth for the same reason DebugPhysSpawn does (every save path keys off this map). Without it a
         // fragment survived only until the next restart — the case a player is most likely to leave lying
         // around. PhysicsWorld#writeBack re-anchors it as it falls.
-        dev.arubik.craftengine.contraption.BearingHammerListener.markAssembled(childState.worldId(),
+        dev.arubik.craftengine.contraption.listener.BearingHammerListener.markAssembled(childState.worldId(),
                 net.minecraft.core.BlockPos.containing(childState.x(), childState.y(), childState.z()),
                 childState.id());
         return child;

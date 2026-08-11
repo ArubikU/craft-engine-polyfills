@@ -12,7 +12,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
-import dev.arubik.craftengine.contraption.level.ContraptionLevel;
+import dev.arubik.craftengine.contraption.core.ContraptionLevel;
 import dev.arubik.craftengine.util.MNms;
 import it.unimi.dsi.fastutil.ints.IntList;
 import net.minecraft.core.BlockPos;

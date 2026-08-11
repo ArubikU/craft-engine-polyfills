@@ -1,5 +1,6 @@
 package dev.arubik.craftengine.contraption;
 
+import dev.arubik.craftengine.contraption.player.PlayerCarry;
 import it.unimi.dsi.fastutil.ints.IntList;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.server.level.ServerPlayer;

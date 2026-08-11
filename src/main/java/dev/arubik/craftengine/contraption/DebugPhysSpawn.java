@@ -9,7 +9,11 @@ import org.bukkit.World;
 import org.bukkit.craftbukkit.CraftWorld;
 import org.bukkit.craftbukkit.block.data.CraftBlockData;
 
-import dev.arubik.craftengine.contraption.level.ContraptionLevel;
+import dev.arubik.craftengine.contraption.assembly.ContraptionAssembler;
+import dev.arubik.craftengine.contraption.core.ContraptionEntity;
+import dev.arubik.craftengine.contraption.core.ContraptionLevel;
+import dev.arubik.craftengine.contraption.core.ContraptionManager;
+import dev.arubik.craftengine.contraption.core.ContraptionState;
 import dev.arubik.craftengine.contraption.level.BukkitContraptionLevel;
 import dev.arubik.craftengine.contraption.physics.PhysicsWorld;
 import net.minecraft.core.BlockPos;
@@ -22,6 +26,7 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
 import net.minecraft.world.phys.Vec3;
+import net.momirealms.craftengine.core.util.Key;
 
 /**
  * Builds a PhysContraption from cells supplied by a caller rather than from a glued structure
@@ -32,7 +37,7 @@ import net.minecraft.world.phys.Vec3;
  * exist, glued, at a real anchor, and it CAPTURES them (removing them from the world). This tool's
  * whole point is to test phys/LOD/collision without hand-building anything, so there is no real
  * structure to scan and nothing to remove. What is shared is everything downstream of capture —
- * {@link ContraptionAssembler#attachDefaultBehavior} is called with {@link BearingType#PHYS} exactly
+ * {@link ContraptionAssembler#attachDefaultBehavior} is called with PHYS type exactly
  * as the capture path does, so the resulting contraption is indistinguishable to
  * {@link PhysicsWorld} from one a hammer assembled: same {@code PhysicsBehavior}, same recorded
  * bearing type.
@@ -129,13 +134,13 @@ public final class DebugPhysSpawn {
      */
     public static ContraptionEntity spawn(World bukkitWorld, Vec3 anchor, Map<BlockPos, BlockState> cells,
             Map<BlockPos, CompoundTag> blockEntities) {
-        return spawn(bukkitWorld, anchor, cells, blockEntities, BearingType.PHYS);
+        return spawn(bukkitWorld, anchor, cells, blockEntities, net.momirealms.craftengine.core.util.Key.of("polyfills", "phys"));
     }
 
     /** As {@link #spawn(World, Vec3, Map, Map)} but assembles as {@code type} (PHYS or VEHICLE) — the vehicle
      *  variant attaches a {@code VehicleControlBehavior} so a driver can steer it. */
     public static ContraptionEntity spawn(World bukkitWorld, Vec3 anchor, Map<BlockPos, BlockState> cells,
-            Map<BlockPos, CompoundTag> blockEntities, BearingType type) {
+            Map<BlockPos, CompoundTag> blockEntities, net.momirealms.craftengine.core.util.Key type) {
         boolean __prof = dev.arubik.craftengine.contraption.ContraptionPerf.enabled();
         long __t0 = __prof ? System.nanoTime() : 0;
         Level realLevel = ((CraftWorld) bukkitWorld).getHandle();
@@ -159,10 +164,10 @@ public final class DebugPhysSpawn {
             level.dispose();
             return null;
         }
-        ContraptionState state = new ContraptionState(UUID.randomUUID(), bukkitWorld.getUID(), level, anchor.x,
+        ContraptionState state = new ContraptionState(UUID.randomUUID(), realLevel.dimension(), level, anchor.x,
                 anchor.y, anchor.z);
         // Through the normal path, not a hand-rolled PhysicsBehavior: this is what records
-        // BearingType.PHYS on the state, which is what makes the body persist/rehydrate and read as a
+        // PHYS type on the state, which is what makes the body persist/rehydrate and read as a
         // phys contraption everywhere else. rpm/su are inert for PHYS (no motor) — see the PHYS case.
         ContraptionAssembler.attachDefaultBehavior(realLevel, BlockPos.containing(anchor), state, type,
                 ContraptionAssembler.DEFAULT_ROTATIONAL_RPM,
@@ -171,11 +176,12 @@ public final class DebugPhysSpawn {
         PhysicsWorld.ensureBody(state);
         // Register the persistence anchor NOW, not on the first solver step: every save path keys off the
         // assembled-anchor map, so a body that is spawned and then never steps (spawned during a stop, or
-        // asleep from birth) would otherwise never be written to disk at all. Recording BearingType.PHYS on
+        // asleep from birth) would otherwise never be written to disk at all. Recording PHYS type on
         // the state is necessary but NOT sufficient for persistence — this is the part that was missing, and
         // why phys contraptions vanished on restart. PhysicsWorld#writeBack keeps this key on the live chunk
         // from here on.
-        dev.arubik.craftengine.contraption.BearingHammerListener.markAssembled(bukkitWorld.getUID(),
+        dev.arubik.craftengine.contraption.listener.BearingHammerListener.markAssembled(
+                ((org.bukkit.craftbukkit.CraftWorld) bukkitWorld).getHandle().dimension(),
                 BlockPos.containing(anchor), state.id());
         return entity;
     }

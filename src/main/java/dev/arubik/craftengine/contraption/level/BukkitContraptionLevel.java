@@ -87,10 +87,11 @@ package dev.arubik.craftengine.contraption.level;
 import com.mojang.serialization.Lifecycle;
 import dev.arubik.craftengine.CraftEnginePolyfills;
 import dev.arubik.craftengine.block.entity.BukkitBlockEntityTypes;
-import dev.arubik.craftengine.contraption.ContraptionMath;
+import dev.arubik.craftengine.contraption.assembly.ContraptionMath;
 import dev.arubik.craftengine.contraption.ContraptionWorlds;
 import dev.arubik.craftengine.contraption.level.ContraptionBoundary;
-import dev.arubik.craftengine.contraption.level.ContraptionLevel.FurnitureRecord;
+import dev.arubik.craftengine.contraption.core.ContraptionLevel;
+import dev.arubik.craftengine.contraption.core.ContraptionLevel.FurnitureRecord;
 import dev.arubik.craftengine.machine.block.entity.AbstractMachineBlockEntity;
 import dev.arubik.craftengine.util.CeWorlds;
 import java.io.IOException;
@@ -814,7 +815,7 @@ implements ContraptionBoundary, ContraptionLevel {
             try {
                 BlockEntityController blockEntityController;
                 net.momirealms.craftengine.core.block.entity.BlockEntity be = BukkitBlockEntityTypes.getIfLoaded((Level)this, (BlockPos)local);
-                if (be == null || !((blockEntityController = be.controller) instanceof AbstractMachineBlockEntity)) continue;
+                if (be == null || !((blockEntityController = be.controller) instanceof dev.arubik.craftengine.contraption.api.ContraptionTickable)) continue;
                 AbstractMachineBlockEntity machine = (AbstractMachineBlockEntity)blockEntityController;
                 machine.unregister();
             }
@@ -842,8 +843,8 @@ implements ContraptionBoundary, ContraptionLevel {
                         ticker.tick(ceWorld, new net.momirealms.craftengine.core.world.BlockPos(local.getX(),
                                 local.getY(), local.getZ()), ce, be.controller);
                     }
-                } else if (be.controller instanceof AbstractMachineBlockEntity machine) {
-                    machine.tick((Level) this, local, ce);
+                } else if (be.controller instanceof dev.arubik.craftengine.contraption.api.ContraptionTickable tickable) {
+                    tickable.tick((Level) this, local, ce);
                 }
             }
             catch (Throwable throwable) {}

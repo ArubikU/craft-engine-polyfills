@@ -6,8 +6,8 @@ import org.bukkit.Bukkit;
 import org.bukkit.World;
 import org.bukkit.util.BoundingBox;
 
-import dev.arubik.craftengine.contraption.ContraptionState;
-import dev.arubik.craftengine.contraption.level.ContraptionLevel;
+import dev.arubik.craftengine.contraption.core.ContraptionState;
+import dev.arubik.craftengine.contraption.core.ContraptionLevel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.util.Mth;
 
@@ -57,7 +57,9 @@ public final class ContraptionMoveGuard {
         }
         World world;
         try {
-            world = Bukkit.getWorld(state.worldId());
+            net.minecraft.server.MinecraftServer server = ((org.bukkit.craftbukkit.CraftServer) Bukkit.getServer()).getServer();
+            net.minecraft.server.level.ServerLevel serverLevel = server.getLevel(state.worldId());
+            world = serverLevel != null ? serverLevel.getWorld() : null;
         } catch (Throwable t) {
             return true; // no live server (pure-JVM test) — behave as before
         }

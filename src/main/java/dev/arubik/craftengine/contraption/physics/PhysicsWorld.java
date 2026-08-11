@@ -11,15 +11,18 @@ import org.bukkit.craftbukkit.CraftWorld;
 import org.joml.Quaterniond;
 import org.joml.Vector3d;
 
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 
-import dev.arubik.craftengine.contraption.ContraptionEntity;
-import dev.arubik.craftengine.contraption.ContraptionManager;
-import dev.arubik.craftengine.contraption.ContraptionState;
 import dev.arubik.craftengine.contraption.MovementBehavior;
 import dev.arubik.craftengine.contraption.behavior.MassModel;
 import dev.arubik.craftengine.contraption.behavior.PhysicsBehavior;
+import dev.arubik.craftengine.contraption.core.ContraptionEntity;
+import dev.arubik.craftengine.contraption.core.ContraptionLevel;
+import dev.arubik.craftengine.contraption.core.ContraptionManager;
+import dev.arubik.craftengine.contraption.core.ContraptionState;
 
 /**
  * Drives the physics solve for every PhysContraption, once per game tick, grouped by world.
@@ -153,7 +156,7 @@ public final class PhysicsWorld {
     private static final java.util.Queue<Runnable> COMMANDS = new java.util.concurrent.ConcurrentLinkedQueue<>();
 
     /** The active bodies grouped by world, republished by the game thread every tick for the thread to solve. */
-    private static volatile Map<UUID, List<PhysBody>> ACTIVE = Map.of();
+    private static volatile Map<ResourceKey<Level>, List<PhysBody>> ACTIVE = Map.of();
 
     /** Presence-LOD radius: a body with no player this close is frozen (not solved) this tick — see the pumps. */
     private static final double PHYS_LOD_RANGE = 96.0;
@@ -183,7 +186,7 @@ public final class PhysicsWorld {
     private static final long STEP_NANOS = 50_000_000L;
 
     /** The active bodies grouped by world as ENTRIES, so the thread can publish each one's transform. */
-    private static volatile Map<UUID, List<Entry>> ACTIVE_ENTRIES = Map.of();
+    private static volatile Map<ResourceKey<Level>, List<Entry>> ACTIVE_ENTRIES = Map.of();
 
     /** Starts the physics thread if async is on and it isn't already running. Idempotent; call on enable. */
     public static synchronized void startThread() {
@@ -202,7 +205,7 @@ public final class PhysicsWorld {
     private static void runPhysics() {
         while (RUNNING) {
             long t0 = System.nanoTime();
-            Map<UUID, List<Entry>> active;
+            Map<ResourceKey<Level>, List<Entry>> active;
             LOCK.lock();
             try {
                 Runnable c;
@@ -302,7 +305,7 @@ public final class PhysicsWorld {
      * <p>Sleeping is only sound if something wakes the body when the world it fell asleep against
      * changes. This is that something.
      */
-    public static void wakeNear(UUID worldId, double x, double y, double z) {
+    public static void wakeNear(ResourceKey<Level> worldId, double x, double y, double z) {
         for (Map.Entry<UUID, Entry> e : ENTRIES.entrySet()) {
             ContraptionEntity entity = ContraptionManager.get(e.getKey());
             if (entity == null || !entity.state().worldId().equals(worldId)) {
@@ -365,7 +368,7 @@ public final class PhysicsWorld {
      * map while barely nudging a heavy one, which is what people expect from TNT. Each box's share is
      * scaled by its volume, so a full block catches more of the blast than a slab.
      */
-    public static void applyExplosion(UUID worldId, double x, double y, double z, double power) {
+    public static void applyExplosion(ResourceKey<Level> worldId, double x, double y, double z, double power) {
         // EVERY contraption in the world is subject to the blast, not just phys bodies (minecart/ghast/linear
         // contraptions are contraptions too): each has its cells carved by resistance; only the phys ones ALSO
         // take a push impulse (the others are entity/block-driven and don't have a rigid body to push).
@@ -408,7 +411,7 @@ public final class PhysicsWorld {
      */
     private static void carveExplosion(ContraptionState state, double x, double y, double z, double power,
             ServerLevel realLevel) {
-        dev.arubik.craftengine.contraption.level.ContraptionLevel level = state.level();
+        ContraptionLevel level = state.level();
         if (level == null) {
             return;
         }
@@ -679,8 +682,8 @@ public final class PhysicsWorld {
     }
 
     private static void stepAllSync() {
-        Map<UUID, List<Entry>> byWorld = new LinkedHashMap<>();
-        Map<UUID, ServerLevel> levels = new HashMap<>();
+        Map<ResourceKey<Level>, List<Entry>> byWorld = new LinkedHashMap<>();
+        Map<ResourceKey<Level>, ServerLevel> levels = new HashMap<>();
         Map<Entry, ContraptionState> states = new HashMap<>();
         // Contraptions whose cell set changed this tick, and which may therefore have fractured.
         // Collected during the pass and split AFTER it, because splitting registers new contraptions
@@ -724,7 +727,7 @@ public final class PhysicsWorld {
         // Retire bodies whose contraption is gone, or ENTRIES grows without bound across a session.
         ENTRIES.keySet().removeIf(id -> ContraptionManager.get(id) == null);
 
-        for (Map.Entry<UUID, List<Entry>> group : byWorld.entrySet()) {
+        for (Map.Entry<ResourceKey<Level>, List<Entry>> group : byWorld.entrySet()) {
             ServerLevel level = levels.get(group.getKey());
             List<PhysBody> bodies = new ArrayList<>(group.getValue().size());
             for (Entry entry : group.getValue()) {
@@ -777,9 +780,9 @@ public final class PhysicsWorld {
      * plus impact detonation and fracture. It never blocks on the solve.
      */
     private static void asyncPump() {
-        Map<UUID, List<Entry>> byWorld = new LinkedHashMap<>();
+        Map<ResourceKey<Level>, List<Entry>> byWorld = new LinkedHashMap<>();
         Map<Entry, ContraptionState> states = new HashMap<>();
-        Map<UUID, ServerLevel> levels = new HashMap<>();
+        Map<ResourceKey<Level>, ServerLevel> levels = new HashMap<>();
         List<ContraptionEntity> splitCandidates = null;
 
         for (ContraptionEntity entity : ContraptionManager.all()) {
@@ -813,7 +816,7 @@ public final class PhysicsWorld {
         ENTRIES.keySet().removeIf(id -> ContraptionManager.get(id) == null);
 
         // Terrain bake (reads live blocks — game thread only), installed on the body via a command.
-        for (Map.Entry<UUID, List<Entry>> group : byWorld.entrySet()) {
+        for (Map.Entry<ResourceKey<Level>, List<Entry>> group : byWorld.entrySet()) {
             ServerLevel level = levels.get(group.getKey());
             for (Entry entry : group.getValue()) {
                 PhysBody body = entry.physBody;
@@ -833,7 +836,7 @@ public final class PhysicsWorld {
         }
 
         // Apply each body's last published result on the game thread.
-        for (Map.Entry<UUID, List<Entry>> group : byWorld.entrySet()) {
+        for (Map.Entry<ResourceKey<Level>, List<Entry>> group : byWorld.entrySet()) {
             ServerLevel level = levels.get(group.getKey());
             for (Entry entry : group.getValue()) {
                 BodyTransform pub = entry.published;
@@ -1035,7 +1038,7 @@ public final class PhysicsWorld {
             behavior.setPendingMotion(
                     new Vec3(bearing.x - state.x(), bearing.y - state.y(), bearing.z - state.z()),
                     euler[0], euler[1], euler[2]);
-            dev.arubik.craftengine.contraption.BearingHammerListener.markAssembled(state.worldId(),
+            dev.arubik.craftengine.contraption.listener.BearingHammerListener.markAssembled(state.worldId(),
                     net.minecraft.core.BlockPos.containing(bearing.x, bearing.y, bearing.z), state.id());
         }
         entry.lastWrittenPosition = bearing;
@@ -1332,7 +1335,7 @@ public final class PhysicsWorld {
         // to, so the two can never disagree. markAssembled drops the previous key, and is a no-op while the
         // body stays within one block — which is most ticks, and all of them once it is asleep.
         if (behavior != null) {
-            dev.arubik.craftengine.contraption.BearingHammerListener.markAssembled(state.worldId(),
+            dev.arubik.craftengine.contraption.listener.BearingHammerListener.markAssembled(state.worldId(),
                     net.minecraft.core.BlockPos.containing(bearing.x, bearing.y, bearing.z), state.id());
         }
 
@@ -1360,7 +1363,7 @@ public final class PhysicsWorld {
      * Returns a constant-zero function when the body has no bouncy cell, so an ordinary structure pays nothing.
      */
     private static java.util.function.ToDoubleFunction<Vector3d> buildRestitutionField(
-            dev.arubik.craftengine.contraption.level.ContraptionLevel level, Vector3d com, RigidBody body) {
+            ContraptionLevel level, Vector3d com, RigidBody body) {
         java.util.Map<Long, Float> restMap = new java.util.HashMap<>();
         for (net.minecraft.core.BlockPos local : level.localPositions()) {
             net.minecraft.world.level.block.state.BlockState state = level.getBlockState(local);
@@ -1421,7 +1424,9 @@ public final class PhysicsWorld {
 
     private static ServerLevel resolveLevel(ContraptionState state) {
         try {
-            org.bukkit.World world = org.bukkit.Bukkit.getWorld(state.worldId());
+            net.minecraft.server.MinecraftServer server = ((org.bukkit.craftbukkit.CraftServer) org.bukkit.Bukkit.getServer()).getServer();
+            net.minecraft.server.level.ServerLevel serverLevel = server.getLevel(state.worldId());
+            org.bukkit.World world = serverLevel != null ? serverLevel.getWorld() : null;
             return world == null ? null : ((CraftWorld) world).getHandle();
         } catch (Throwable t) {
             return null;

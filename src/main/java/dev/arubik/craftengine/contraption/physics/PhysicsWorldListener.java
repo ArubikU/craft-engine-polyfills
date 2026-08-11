@@ -64,7 +64,9 @@ public final class PhysicsWorldListener implements Listener {
     }
 
     private static void wake(Block block) {
-        PhysicsWorld.wakeNear(block.getWorld().getUID(),
+        org.bukkit.World bukkitWorld = block.getWorld();
+        net.minecraft.world.level.Level level = ((org.bukkit.craftbukkit.CraftWorld) bukkitWorld).getHandle();
+        PhysicsWorld.wakeNear(level.dimension(),
                 block.getX() + 0.5, block.getY() + 0.5, block.getZ() + 0.5);
     }
 
@@ -80,7 +82,8 @@ public final class PhysicsWorldListener implements Listener {
         if (at == null || world == null) {
             return;
         }
-        PhysicsWorld.applyExplosion(world.getUID(), at.getX(), at.getY(), at.getZ(), ASSUMED_EXPLOSION_POWER);
-        PhysicsWorld.wakeNear(world.getUID(), at.getX(), at.getY(), at.getZ());
+        net.minecraft.world.level.Level level = ((org.bukkit.craftbukkit.CraftWorld) world).getHandle();
+        PhysicsWorld.applyExplosion(level.dimension(), at.getX(), at.getY(), at.getZ(), ASSUMED_EXPLOSION_POWER);
+        PhysicsWorld.wakeNear(level.dimension(), at.getX(), at.getY(), at.getZ());
     }
 }

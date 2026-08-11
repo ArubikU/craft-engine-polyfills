@@ -22,6 +22,7 @@ import net.momirealms.craftengine.bukkit.entity.data.BaseEntityData;
 import net.momirealms.craftengine.bukkit.entity.data.monster.ShulkerData;
 import net.momirealms.craftengine.core.entity.player.Player;
 
+import dev.arubik.craftengine.contraption.assembly.ContraptionMath;
 import dev.arubik.craftengine.util.MNms;
 import it.unimi.dsi.fastutil.ints.IntList;
 
@@ -414,7 +415,7 @@ public final class ContraptionShulkerColliderSwarm {
     public void render(List<Player> viewers, Vec3 bearingWorldPos, double yawRadians, double pitchRadians,
             double rollRadians, double scale, boolean moved) {
         for (Slot slot : fixedSlots.values()) {
-            Vec3 pos = dev.arubik.craftengine.contraption.ContraptionMath.renderPosition(
+            Vec3 pos = ContraptionMath.renderPosition(
                     slot.localCenter(), bearingWorldPos, yawRadians, pitchRadians, rollRadians, scale);
             // A fixed slot has no LOD tier to fall through, so the exclusion is applied as an explicit
             // wanted-set: every viewer but the excluded one. Passing the set (rather than null) is what
@@ -456,7 +457,7 @@ public final class ContraptionShulkerColliderSwarm {
         }
         Map<CellGroup, Vec3> anchors = new IdentityHashMap<>();
         for (CellGroup g : live) {
-            anchors.put(g, dev.arubik.craftengine.contraption.ContraptionMath.renderPosition(
+            anchors.put(g, ContraptionMath.renderPosition(
                     g.anchor, bearingWorldPos, yawRadians, pitchRadians, rollRadians, scale));
         }
 
@@ -502,7 +503,7 @@ public final class ContraptionShulkerColliderSwarm {
                     continue;
                 }
                 for (Slot slot : tierSlots) {
-                    Vec3 pos = dev.arubik.craftengine.contraption.ContraptionMath.renderPosition(
+                    Vec3 pos = ContraptionMath.renderPosition(
                             slot.localCenter(), bearingWorldPos, yawRadians, pitchRadians, rollRadians,
                             scale);
                     slot.render(viewers, want, pos.x, pos.y, pos.z, scale, moved);

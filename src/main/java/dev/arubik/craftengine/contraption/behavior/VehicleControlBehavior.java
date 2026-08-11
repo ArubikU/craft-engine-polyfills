@@ -2,21 +2,24 @@ package dev.arubik.craftengine.contraption.behavior;
 
 import java.util.UUID;
 
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
+import org.bukkit.craftbukkit.CraftServer;
 import org.bukkit.craftbukkit.entity.CraftPlayer;
 import org.bukkit.entity.Player;
 import org.joml.Vector3d;
 
 import dev.arubik.craftengine.CraftEnginePolyfills;
-import dev.arubik.craftengine.contraption.ContraptionState;
+import dev.arubik.craftengine.contraption.core.ContraptionState;
 import dev.arubik.craftengine.contraption.MovementContext;
 import dev.arubik.craftengine.contraption.VehicleDriverRegistry;
 import dev.arubik.craftengine.contraption.physics.PhysicsWorld;
 import net.minecraft.server.level.ServerPlayer;
 
 /**
- * The steer-vehicle brain (BearingType.VEHICLE). It IS a {@link PhysicsBehavior} — a free rigid body under
+ * The steer-vehicle brain (VEHICLE type). It IS a {@link PhysicsBehavior} — a free rigid body under
  * gravity, collision and buoyancy, solved by {@code PhysicsWorld}/{@code XpbdSolver} exactly like any PHYS
  * contraption — and adds driving on top: each tick it reads its driver's live input and turns it into motion.
  *
@@ -57,7 +60,13 @@ public class VehicleControlBehavior extends PhysicsBehavior {
         super.tick(ctx);
 
         ContraptionState state = ctx.state();
-        World world = Bukkit.getWorld(state.worldId());
+        World world = null;
+        try {
+            MinecraftServer server = ((CraftServer) Bukkit.getServer()).getServer();
+            ServerLevel level = server.getLevel(state.worldId());
+            world = level != null ? level.getWorld() : null;
+        } catch (Throwable ignored) {
+        }
         UUID driverId = VehicleDriverRegistry.driverOf(state.id());
         if (driverId == null) {
             releaseChunks(world);

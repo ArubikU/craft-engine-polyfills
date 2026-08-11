@@ -13,12 +13,14 @@ import org.bukkit.Material;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import dev.arubik.craftengine.contraption.bearing.GhastHarness;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.phys.AABB;
 
 /**
  * The two pure rules behind the happy-ghast harness contraption: which items are harnesses, and which
- * world cells a ghast occupies (the cells {@link GhastHarnessBearing#gluedStructureAround} probes the
+ * world cells a ghast occupies (the cells {@link GhastContraptionType#gluedStructureAround} probes the
  * glue graph at).
  *
  * <p>Pure: {@link GhastHarness} touches no server state, so both are provable without a live server.

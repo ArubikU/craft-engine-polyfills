@@ -1,5 +1,6 @@
 package dev.arubik.craftengine.contraption;
 
+import dev.arubik.craftengine.contraption.core.ContraptionState;
 import net.minecraft.server.level.ServerLevel;
 
 /**

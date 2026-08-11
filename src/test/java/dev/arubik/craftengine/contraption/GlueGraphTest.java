@@ -10,6 +10,7 @@ import java.util.Set;
 
 import org.junit.jupiter.api.Test;
 
+import dev.arubik.craftengine.contraption.glue.GlueGraph;
 import net.minecraft.core.BlockPos;
 
 /** Pure adjacency/fracture-graph tests for {@link GlueGraph} — no NMS runtime needed. */

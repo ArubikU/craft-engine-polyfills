@@ -6,8 +6,9 @@ import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 import org.bukkit.inventory.EquipmentSlot;
 
-import dev.arubik.craftengine.contraption.ContraptionEntity;
-import dev.arubik.craftengine.contraption.ContraptionState;
+import dev.arubik.craftengine.contraption.core.ContraptionEntity;
+import dev.arubik.craftengine.contraption.core.ContraptionState;
+import dev.arubik.craftengine.contraption.element.ContraptionElement;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 
@@ -40,6 +41,7 @@ public class ContraptionInteractEvent extends Event implements Cancellable {
     private final Direction face;
     private final EquipmentSlot hand;
     private final boolean rightClick;
+    private final ContraptionElement element;
     private boolean cancelled;
 
     /**
@@ -51,15 +53,17 @@ public class ContraptionInteractEvent extends Event implements Cancellable {
      *                   the listener handles only the main hand to dodge Bukkit's main/off double-fire)
      * @param rightClick {@code true} for a right-click (interact/placement dispatch), {@code false} for
      *                   a left-click (non-destructive {@code attack} dispatch)
+     * @param element    the resolved ContraptionElement at the hit position, or null if none matched
      */
     public ContraptionInteractEvent(Player player, ContraptionEntity entity, BlockPos localPos,
-            Direction face, EquipmentSlot hand, boolean rightClick) {
+            Direction face, EquipmentSlot hand, boolean rightClick, ContraptionElement element) {
         this.player = player;
         this.entity = entity;
         this.localPos = localPos;
         this.face = face;
         this.hand = hand;
         this.rightClick = rightClick;
+        this.element = element;
     }
 
     /** The real-world player who clicked. */
@@ -100,6 +104,11 @@ public class ContraptionInteractEvent extends Event implements Cancellable {
     /** {@code true} for a left-click (attack), {@code false} for a right-click. Inverse of {@link #isRightClick()}. */
     public boolean isLeftClick() {
         return !rightClick;
+    }
+
+    /** The resolved ContraptionElement at the hit position, or {@code null} if no element matched. */
+    public ContraptionElement getElement() {
+        return element;
     }
 
     @Override

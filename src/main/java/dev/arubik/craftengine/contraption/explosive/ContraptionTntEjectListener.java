@@ -14,8 +14,8 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.TntBlock;
 import net.minecraft.world.phys.Vec3;
 
-import dev.arubik.craftengine.contraption.ContraptionEntity;
-import dev.arubik.craftengine.contraption.ContraptionState;
+import dev.arubik.craftengine.contraption.core.ContraptionEntity;
+import dev.arubik.craftengine.contraption.core.ContraptionState;
 import dev.arubik.craftengine.contraption.ContraptionWorlds;
 import dev.arubik.craftengine.contraption.level.ContraptionBoundary;
 
