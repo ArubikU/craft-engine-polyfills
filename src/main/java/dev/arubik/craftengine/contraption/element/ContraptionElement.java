@@ -4,6 +4,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.momirealms.craftengine.core.entity.player.Player;
 import net.momirealms.craftengine.core.util.Key;
@@ -34,6 +35,10 @@ public interface ContraptionElement {
      * when a player clicks a packet entity, the owning element is resolved via these IDs.
      */
     int[] entityIds();
+
+    default AABB interactionBounds(RenderContext ctx) {
+        return null;
+    }
 
     // ---- lifecycle ----
 
