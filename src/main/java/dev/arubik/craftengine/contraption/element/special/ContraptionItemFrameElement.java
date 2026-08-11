@@ -1,8 +1,11 @@
-package dev.arubik.craftengine.contraption.element;
+package dev.arubik.craftengine.contraption.element.special;
 
 import dev.arubik.craftengine.contraption.assembly.ContraptionMath;
 import dev.arubik.craftengine.contraption.config.ContraptionConfig;
 import dev.arubik.craftengine.contraption.core.ContraptionState;
+import dev.arubik.craftengine.contraption.element.ContraptionElement;
+import dev.arubik.craftengine.contraption.element.ElementTypes;
+import dev.arubik.craftengine.contraption.element.RenderContext;
 import dev.arubik.craftengine.util.MNms;
 import it.unimi.dsi.fastutil.ints.IntList;
 import net.minecraft.core.BlockPos;

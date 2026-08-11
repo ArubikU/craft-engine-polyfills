@@ -32,6 +32,11 @@ public final class ElementBuilder {
         for (BlockPos local : level.localPositions()) {
             BlockState blockState = level.getBlockState(local);
             if (blockState == null || blockState.isAir()) continue;
+            // Special elements for blocks with custom behavior
+            if (blockState.getBlock() instanceof net.minecraft.world.level.block.CampfireBlock) {
+                elements.add(new dev.arubik.craftengine.contraption.element.special.ContraptionCampfireElement(local, blockState));
+                continue;
+            }
             CompoundTag beTag = level.saveBlockEntity(local);
             elements.add(new ContraptionBlockElement(local, blockState, beTag));
         }
@@ -42,10 +47,9 @@ public final class ElementBuilder {
                     cf.definitionId(), cf.variantName(), cf.liveFurniture()));
         }
 
-        // Capture item frames as dedicated elements (full interact + render)
         for (net.minecraft.world.entity.Entity entity : level.getAllEntities()) {
             if (entity instanceof net.minecraft.world.entity.decoration.ItemFrame frame) {
-                elements.add(new ContraptionItemFrameElement(
+                elements.add(new dev.arubik.craftengine.contraption.element.special.ContraptionItemFrameElement(
                         frame.getUUID(),
                         frame.position(),
                         frame.getDirection(),

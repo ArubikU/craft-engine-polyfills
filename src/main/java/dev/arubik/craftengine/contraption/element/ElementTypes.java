@@ -25,6 +25,8 @@ public final class ElementTypes {
     public static final Key INTERACTION = Key.of("polyfills", "interaction");
     public static final Key ITEM_FRAME = Key.of("polyfills", "item_frame");
     public static final Key PISTON_SHAFT = Key.of("polyfills", "piston_shaft");
+    public static final Key CAMPFIRE = Key.of("polyfills", "campfire");
+    public static final Key ENTITY_RENDERER = Key.of("polyfills", "entity_renderer");
     public static final Key FLUID = Key.of("polyfills", "fluid");
     public static final Key MARKER = ContraptionMarkerElement.TYPE;
 
