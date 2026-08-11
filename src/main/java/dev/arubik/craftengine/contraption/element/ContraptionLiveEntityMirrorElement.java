@@ -80,6 +80,7 @@ public final class ContraptionLiveEntityMirrorElement implements ContraptionElem
         for (Entity entity : level.getAllEntities()) {
             if (entity == null || entity.isRemoved()) continue;
             if (furnitureIds.contains(entity.getId())) continue;
+            if (isHandledElsewhere(entity)) continue;
             if (!canMirror(entity)) {
                 eject(entity, level);
                 continue;
@@ -140,6 +141,11 @@ public final class ContraptionLiveEntityMirrorElement implements ContraptionElem
     private static boolean canMirror(Entity entity) {
         return entity instanceof ItemEntity
                 || entity instanceof net.minecraft.world.entity.item.FallingBlockEntity;
+    }
+
+    private static boolean isHandledElsewhere(Entity entity) {
+        // Item frames have their own ContraptionItemFrameElement — don't eject or mirror them
+        return entity instanceof net.minecraft.world.entity.decoration.ItemFrame;
     }
 
     private static void eject(Entity entity, ContraptionLevel level) {

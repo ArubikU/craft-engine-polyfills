@@ -42,6 +42,18 @@ public final class ElementBuilder {
                     cf.definitionId(), cf.variantName(), cf.liveFurniture()));
         }
 
+        // Capture item frames as dedicated elements (full interact + render)
+        for (net.minecraft.world.entity.Entity entity : level.getAllEntities()) {
+            if (entity instanceof net.minecraft.world.entity.decoration.ItemFrame frame) {
+                elements.add(new ContraptionItemFrameElement(
+                        frame.getUUID(),
+                        frame.position(),
+                        frame.getDirection(),
+                        frame.getItem(),
+                        frame.getRotation()));
+            }
+        }
+
         ContraptionLiveEntityMirrorElement entityMirror = new ContraptionLiveEntityMirrorElement();
         entityMirror.setFurniture(state.furniture());
         elements.add(entityMirror);
