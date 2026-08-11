@@ -61,6 +61,8 @@ public final class ContraptionItemFrameElement implements ContraptionElement {
         this.itemRemovePacket  = MNms.INSTANCE.constructor$ClientboundRemoveEntitiesPacket(IntList.of(itemEntityId));
     }
 
+    public UUID sourceEntityId() { return sourceEntityId; }
+
     @Override public Key type() { return ElementTypes.ITEM_FRAME; }
     @Override public Vec3 localOffset() { return localPos; }
     @Override public boolean isValid() { return true; }

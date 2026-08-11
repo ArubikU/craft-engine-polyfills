@@ -45,6 +45,7 @@ public final class ContraptionEntityRendererElement implements ContraptionElemen
         this.localPos = localPos;
     }
 
+    public BlockPos localPos() { return localPos; }
     @Override public Key type() { return ElementTypes.ENTITY_RENDERER; }
     @Override public Vec3 localOffset() {
         return new Vec3(localPos.getX() + 0.5, localPos.getY() + 0.5, localPos.getZ() + 0.5);

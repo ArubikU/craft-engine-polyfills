@@ -11,45 +11,85 @@ import net.minecraft.world.level.block.state.properties.BedPart;
 import net.momirealms.craftengine.core.plugin.CraftEngine;
 import net.momirealms.craftengine.core.world.CEWorld;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
-/**
- * Derives the full set of ContraptionElements from a ContraptionLevel + furniture list.
- * Called when a contraption spawns its rendering entity — elements are ephemeral render objects,
- * not persisted. The level (blocks, BEs, CE controller data) and furniture records are the
- * authoritative source; elements are rebuilt from them on every spawn/load.
- */
 public final class ElementBuilder {
 
     private ElementBuilder() {}
 
     public static void rebuild(ContraptionState state) {
+        rebuild(state, List.of());
+    }
+
+    /**
+     * Diff-based rebuild: reuses existing block elements whose localPos is unchanged,
+     * despawns elements for positions no longer present, creates elements for new positions.
+     * Called every tick — must not create new entity instances for unchanged cells.
+     */
+    public static void rebuild(ContraptionState state, java.util.List<net.momirealms.craftengine.core.entity.player.Player> viewers) {
         ContraptionLevel level = state.level();
         if (level == null) {
+            // Despawn all existing block elements
+            for (ContraptionElement e : state.elements()) {
+                if (isRebuildable(e)) e.despawn(viewers);
+            }
             state.setElements(List.of());
             return;
         }
 
-        List<ContraptionElement> elements = new ArrayList<>();
+        // Index existing block-position elements by localPos
+        Map<BlockPos, ContraptionBlockElement> existingByPos = new HashMap<>();
+        for (ContraptionElement e : state.elements()) {
+            if (e instanceof ContraptionBlockElement be) {
+                existingByPos.put(be.localPos(), be);
+            }
+        }
 
-        for (BlockPos local : level.localPositions()) {
+        Set<BlockPos> livePositions = level.localPositions();
+        List<ContraptionElement> elements = new ArrayList<>();
+        Set<BlockPos> usedPositions = new HashSet<>();
+
+        for (BlockPos local : livePositions) {
             BlockState blockState = level.getBlockState(local);
             if (blockState == null || blockState.isAir()) continue;
+
+            // Reuse existing element if the block type hasn't changed
+            ContraptionBlockElement existing = existingByPos.get(local);
+            if (existing != null && existing.blockState() != null
+                    && existing.blockState().getBlock() == blockState.getBlock()) {
+                elements.add(existing);
+                usedPositions.add(local);
+                // If entity renderer is needed, also carry over or add it
+                if (existing.hasEntityRenderer) {
+                    // check if entity renderer element already exists for this pos
+                    boolean hasRenderer = false;
+                    for (ContraptionElement e : state.elements()) {
+                        if (e instanceof ContraptionEntityRendererElement er
+                                && er.localPos() != null && er.localPos().equals(local)) {
+                            elements.add(er);
+                            hasRenderer = true;
+                            break;
+                        }
+                    }
+                    if (!hasRenderer) elements.add(new ContraptionEntityRendererElement(local));
+                }
+                continue;
+            }
+
+            // New or changed block — create fresh element
             CompoundTag beTag = level.saveBlockEntity(local);
 
-            // Special elements for blocks with custom behavior
             if (blockState.getBlock() instanceof net.minecraft.world.level.block.AbstractSkullBlock) {
                 elements.add(new dev.arubik.craftengine.contraption.element.special.ContraptionSkullElement(local, blockState, beTag));
-                continue;
+                usedPositions.add(local); continue;
             }
             if (blockState.getBlock() instanceof net.minecraft.world.level.block.JukeboxBlock) {
                 elements.add(new dev.arubik.craftengine.contraption.element.special.ContraptionJukeboxElement(local, blockState, beTag));
-                continue;
+                usedPositions.add(local); continue;
             }
             if (blockState.getBlock() instanceof net.minecraft.world.level.block.CampfireBlock) {
                 elements.add(new dev.arubik.craftengine.contraption.element.special.ContraptionCampfireElement(local, blockState));
-                continue;
+                usedPositions.add(local); continue;
             }
             if (blockState.getBlock() instanceof net.minecraft.world.level.block.AbstractBannerBlock
                     || blockState.getBlock() instanceof net.minecraft.world.level.block.SignBlock
@@ -57,69 +97,113 @@ public final class ElementBuilder {
                     || blockState.getBlock() instanceof net.minecraft.world.level.block.CeilingHangingSignBlock
                     || blockState.getBlock() instanceof net.minecraft.world.level.block.WallHangingSignBlock) {
                 elements.add(new dev.arubik.craftengine.contraption.element.special.ContraptionSignElement(local, blockState, beTag));
-                continue;
+                usedPositions.add(local); continue;
             }
 
-            // Bed foot: skip entirely — the head cell draws the whole bed visual.
             if (blockState.getBlock() instanceof BedBlock
                     && blockState.getValue(BedBlock.PART) == BedPart.FOOT) {
-                continue;
+                usedPositions.add(local); continue;
             }
 
             boolean hasEntityRenderer = hasConstantEntityRenderer(level, local);
             float modelYawOffset = 0f;
 
             if (!hasEntityRenderer && blockState.getBlock() instanceof BedBlock) {
-                // HEAD half: BedSpecialRenderer hardcodes SOUTH — correct by adding the captured facing yaw.
                 modelYawOffset = blockState.getValue(BedBlock.FACING).toYRot();
-                // Only add the element if the foot partner is also captured (half-captured bed → invisible).
                 BlockPos partner = local.relative(BedBlock.getConnectedDirection(blockState));
-                if (!level.localPositions().contains(partner)) {
-                    continue; // half-captured bed — render nothing
-                }
+                if (!livePositions.contains(partner)) { usedPositions.add(local); continue; }
                 BlockState partnerState = level.getBlockState(partner);
                 boolean paired = partnerState.getBlock() == blockState.getBlock()
                         && partnerState.getValue(BedBlock.PART) == BedPart.FOOT
                         && partnerState.getValue(BedBlock.FACING) == blockState.getValue(BedBlock.FACING);
-                if (!paired) continue;
+                if (!paired) { usedPositions.add(local); continue; }
             }
 
             elements.add(new ContraptionBlockElement(local, blockState, beTag, hasEntityRenderer, modelYawOffset));
+            usedPositions.add(local);
+            if (hasEntityRenderer) elements.add(new ContraptionEntityRendererElement(local));
+        }
 
-            if (hasEntityRenderer) {
-                elements.add(new ContraptionEntityRendererElement(local));
+        // Despawn elements for removed positions
+        for (Map.Entry<BlockPos, ContraptionBlockElement> entry : existingByPos.entrySet()) {
+            if (!usedPositions.contains(entry.getKey())) {
+                entry.getValue().despawn(viewers);
+                // Also despawn the interaction overlay cells for this element
+                // (overlay handles this via its ownerOf map being stale — no explicit action needed)
             }
         }
 
-        for (ContraptionFurniture cf : state.furniture()) {
-            elements.add(new ContraptionFurnitureElement(
-                    cf.localOffset(), cf.yawOffsetDegrees(),
-                    cf.definitionId(), cf.variantName(), cf.liveFurniture()));
+        // Preserve singleton elements (hitbox, overlay, piston shaft, entity mirror, furniture)
+        // reuse existing instances so they keep their internal state
+        ContraptionHitboxElement hitbox = null;
+        ContraptionInteractionOverlayElement overlay = null;
+        ContraptionPistonShaftElement shaft = null;
+        ContraptionLiveEntityMirrorElement mirror = null;
+        for (ContraptionElement e : state.elements()) {
+            if (e instanceof ContraptionHitboxElement h && hitbox == null) hitbox = h;
+            else if (e instanceof ContraptionInteractionOverlayElement o && overlay == null) overlay = o;
+            else if (e instanceof ContraptionPistonShaftElement s && shaft == null) shaft = s;
+            else if (e instanceof ContraptionLiveEntityMirrorElement m && mirror == null) mirror = m;
         }
 
+        // Furniture: reuse by definitionId+variantName key
+        Map<String, ContraptionFurnitureElement> existingFurniture = new HashMap<>();
+        for (ContraptionElement e : state.elements()) {
+            if (e instanceof ContraptionFurnitureElement fe) {
+                existingFurniture.put(fe.definitionId() + "/" + fe.variantName(), fe);
+            }
+        }
+        for (ContraptionFurniture cf : state.furniture()) {
+            String key = cf.definitionId() + "/" + cf.variantName();
+            ContraptionFurnitureElement fe = existingFurniture.get(key);
+            if (fe != null) {
+                elements.add(fe);
+            } else {
+                elements.add(new ContraptionFurnitureElement(
+                        cf.localOffset(), cf.yawOffsetDegrees(),
+                        cf.definitionId(), cf.variantName(), cf.liveFurniture()));
+            }
+        }
+
+        // Item frames: reuse by sourceEntityId
+        Map<java.util.UUID, dev.arubik.craftengine.contraption.element.special.ContraptionItemFrameElement> existingFrames = new HashMap<>();
+        for (ContraptionElement e : state.elements()) {
+            if (e instanceof dev.arubik.craftengine.contraption.element.special.ContraptionItemFrameElement ife) {
+                existingFrames.put(ife.sourceEntityId(), ife);
+            }
+        }
         for (net.minecraft.world.entity.Entity entity : level.getAllEntities()) {
             if (entity instanceof net.minecraft.world.entity.decoration.ItemFrame frame) {
-                elements.add(new dev.arubik.craftengine.contraption.element.special.ContraptionItemFrameElement(
-                        frame.getUUID(),
-                        frame.position(),
-                        frame.getDirection(),
-                        frame.getItem(),
-                        frame.getRotation()));
+                var existing2 = existingFrames.get(frame.getUUID());
+                if (existing2 != null) {
+                    elements.add(existing2);
+                } else {
+                    elements.add(new dev.arubik.craftengine.contraption.element.special.ContraptionItemFrameElement(
+                            frame.getUUID(), frame.position(), frame.getDirection(),
+                            frame.getItem(), frame.getRotation()));
+                }
             }
         }
 
-        ContraptionLiveEntityMirrorElement entityMirror = new ContraptionLiveEntityMirrorElement();
-        entityMirror.setFurniture(state.furniture());
-        elements.add(entityMirror);
+        // Singletons — reuse existing or create
+        if (mirror == null) { mirror = new ContraptionLiveEntityMirrorElement(); }
+        mirror.setFurniture(state.furniture());
+        elements.add(mirror);
 
-        elements.add(new ContraptionHitboxElement());
-        elements.add(new ContraptionInteractionOverlayElement());
-        elements.add(new ContraptionPistonShaftElement());
+        elements.add(hitbox != null ? hitbox : new ContraptionHitboxElement());
+        elements.add(overlay != null ? overlay : new ContraptionInteractionOverlayElement());
+        elements.add(shaft != null ? shaft : new ContraptionPistonShaftElement());
 
         state.setElements(elements);
     }
 
-    /** True when the CE chunk at this position declares an entity-renderer config for the current blockstate. */
+    /** Elements that should be despawned when removed from the list. */
+    private static boolean isRebuildable(ContraptionElement e) {
+        return e instanceof ContraptionBlockElement
+                || e instanceof ContraptionFurnitureElement
+                || e instanceof dev.arubik.craftengine.contraption.element.special.ContraptionItemFrameElement;
+    }
+
     static boolean hasConstantEntityRenderer(ContraptionLevel level, BlockPos local) {
         try {
             org.bukkit.World w = level.getWorld();

@@ -242,7 +242,7 @@ public final class ContraptionEntity {
         // Bake internal emitter light map (O(emitters×cells) once, not per-element per-tick).
         state.lightMap().bake(state.level());
         // Build element list FIRST so hitboxElement() can be found below.
-        dev.arubik.craftengine.contraption.element.ElementBuilder.rebuild(state);
+        dev.arubik.craftengine.contraption.element.ElementBuilder.rebuild(state, viewers);
         Vec3 bearing = new Vec3(state.x(), state.y(), state.z());
         var hb = hitboxElement();
         if (hb != null) hb.rebuild(state.level(), viewers, bearing);
