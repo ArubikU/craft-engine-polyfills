@@ -248,10 +248,8 @@ public final class ContraptionSplitter {
         childState.setBearingType(net.momirealms.craftengine.core.util.Key.of("polyfills", "phys"));
         childState.addBehavior(new PhysicsBehavior());
         ContraptionEntity child = ContraptionManager.register(new ContraptionEntity(childState));
-        // A fragment is a first-class phys contraption, so it persists like one: register its anchor at
-        // birth for the same reason DebugPhysSpawn does (every save path keys off this map). Without it a
-        // fragment survived only until the next restart — the case a player is most likely to leave lying
-        // around. PhysicsWorld#writeBack re-anchors it as it falls.
+        // Transfer matching block elements from parent so there's no despawn/respawn flash on split
+        transferElements(parentState, childState, island);
         dev.arubik.craftengine.contraption.listener.BearingHammerListener.markAssembled(childState.worldId(),
                 net.minecraft.core.BlockPos.containing(childState.x(), childState.y(), childState.z()),
                 childState.id());
@@ -259,10 +257,34 @@ public final class ContraptionSplitter {
     }
 
     /**
+     * Moves block elements whose localPos is in {@code island} from parent to child element list.
+     * Avoids despawn+respawn flash when a contraption splits — the elements keep their packet entity
+     * IDs and shownTo state, so viewers see no visual change on the split tick.
+     */
+    private static void transferElements(ContraptionState parent, ContraptionState child,
+            Set<BlockPos> island) {
+        java.util.List<dev.arubik.craftengine.contraption.element.ContraptionElement> parentElems =
+                new java.util.ArrayList<>(parent.elements());
+        java.util.List<dev.arubik.craftengine.contraption.element.ContraptionElement> childElems =
+                new java.util.ArrayList<>(child.elements());
+
+        java.util.Iterator<dev.arubik.craftengine.contraption.element.ContraptionElement> it =
+                parentElems.iterator();
+        while (it.hasNext()) {
+            dev.arubik.craftengine.contraption.element.ContraptionElement e = it.next();
+            if (e instanceof dev.arubik.craftengine.contraption.element.ContraptionBlockElement block) {
+                if (island.contains(block.localPos())) {
+                    childElems.add(block);
+                    it.remove();
+                }
+            }
+        }
+        parent.setElements(parentElems);
+        child.setElements(childElems);
+    }
+
+    /**
      * Sets {@code body}'s velocity to the parent's velocity AT THIS BODY'S center of mass.
-     *
-     * <p>{@link PhysicsWorld#ensureBody} has already placed {@code body.position} at the fragment's
-     * COM, so the lever arm is simply the difference of the two COM positions.
      */
     private static void inheritVelocity(PhysBody body, Vector3d parentCom, Vector3d parentLinear,
             Vector3d parentAngular) {
