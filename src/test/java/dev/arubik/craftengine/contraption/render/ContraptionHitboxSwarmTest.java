@@ -9,12 +9,6 @@ import org.junit.jupiter.api.Test;
 
 import net.minecraft.core.BlockPos;
 
-/**
- * Exposed-top-cell detection for {@link ContraptionHitboxSwarm} (Phase-0 spike #1
- * granularity finding), tested via the pure {@link ContraptionHitboxSwarm#topCellsOf}
- * extraction — {@code rebuild(ContraptionLevel)} itself needs a real
- * {@code net.minecraft.world.level.Level} subclass, not constructible in a pure-JVM test.
- */
 class ContraptionHitboxSwarmTest {
 
     @BeforeAll
@@ -29,29 +23,29 @@ class ContraptionHitboxSwarmTest {
 
     @Test
     void singleBlock_isItsOwnTopCell() {
-        assertEquals(Set.of(p(0, 0, 0)), ContraptionHitboxSwarm.topCellsOf(Set.of(p(0, 0, 0))));
+        assertEquals(Set.of(p(0, 0, 0)), dev.arubik.craftengine.contraption.element.ContraptionHitboxElement.topCellsOf(Set.of(p(0, 0, 0))));
     }
 
     @Test
     void twoStackedBlocks_onlyTopOneIsExposed() {
         Set<BlockPos> occupied = Set.of(p(0, 0, 0), p(0, 1, 0));
-        assertEquals(Set.of(p(0, 1, 0)), ContraptionHitboxSwarm.topCellsOf(occupied));
+        assertEquals(Set.of(p(0, 1, 0)), dev.arubik.craftengine.contraption.element.ContraptionHitboxElement.topCellsOf(occupied));
     }
 
     @Test
     void flatPlatform_everyCellIsExposed() {
         Set<BlockPos> occupied = Set.of(p(0, 0, 0), p(1, 0, 0), p(0, 0, 1));
-        assertEquals(occupied, ContraptionHitboxSwarm.topCellsOf(occupied));
+        assertEquals(occupied, dev.arubik.craftengine.contraption.element.ContraptionHitboxElement.topCellsOf(occupied));
     }
 
     @Test
     void emptySet_hasNoTopCells() {
-        assertEquals(Set.of(), ContraptionHitboxSwarm.topCellsOf(Set.of()));
+        assertEquals(Set.of(), dev.arubik.craftengine.contraption.element.ContraptionHitboxElement.topCellsOf(Set.of()));
     }
 
     @Test
     void threeStackedBlocks_onlyTheVeryTopIsExposed() {
         Set<BlockPos> occupied = Set.of(p(0, 0, 0), p(0, 1, 0), p(0, 2, 0));
-        assertEquals(Set.of(p(0, 2, 0)), ContraptionHitboxSwarm.topCellsOf(occupied));
+        assertEquals(Set.of(p(0, 2, 0)), dev.arubik.craftengine.contraption.element.ContraptionHitboxElement.topCellsOf(occupied));
     }
 }

@@ -630,7 +630,9 @@ public final class ContraptionEntity {
         // position ever computed. ContraptionSeatListener.dismount does the actual
         // unmount+teleport (shared logic) — this just drives it for every still-seated rider.
         // Seat dismount — ContraptionSeatListener removed, handled by interaction system
-        state.seatedRiders().clear();
+        for (java.util.UUID id : state.seatedRiders().keySet()) {
+            state.removeSeatedRider(id);
+        }
     }
 
     /**
@@ -639,7 +641,8 @@ public final class ContraptionEntity {
      * real blocks are already back in the world.
      */
     public void despawnHitboxesOnly(List<Player> viewers) {
-        hitboxElement().despawnAll(viewers);
+        var h = hitboxElement();
+        if (h != null) h.despawnAll(viewers);
     }
 
     /**

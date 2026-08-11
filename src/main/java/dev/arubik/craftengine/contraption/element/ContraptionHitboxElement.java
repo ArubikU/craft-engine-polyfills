@@ -321,7 +321,7 @@ public final class ContraptionHitboxElement implements ContraptionElement {
         return top;
     }
 
-    static Set<BlockPos> topCellsOf(Set<BlockPos> occupied) {
+    public static Set<BlockPos> topCellsOf(Set<BlockPos> occupied) {
         Set<BlockPos> top = new HashSet<>();
         for (BlockPos offset : occupied) {
             if (!occupied.contains(offset.above())) {
