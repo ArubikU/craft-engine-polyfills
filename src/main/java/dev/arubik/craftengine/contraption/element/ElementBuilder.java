@@ -103,18 +103,18 @@ public final class ElementBuilder {
                 elements.add(new dev.arubik.craftengine.contraption.element.special.ContraptionCampfireElement(local, blockState));
                 usedPositions.add(local); continue;
             }
-            if (blockState.getBlock() instanceof net.minecraft.world.level.block.AbstractBannerBlock
-                    || blockState.getBlock() instanceof net.minecraft.world.level.block.SignBlock
+            if (blockState.getBlock() instanceof net.minecraft.world.level.block.SignBlock
                     || blockState.getBlock() instanceof net.minecraft.world.level.block.WallSignBlock
                     || blockState.getBlock() instanceof net.minecraft.world.level.block.CeilingHangingSignBlock
-                    || blockState.getBlock() instanceof net.minecraft.world.level.block.WallHangingSignBlock) {
+                    || blockState.getBlock() instanceof net.minecraft.world.level.block.WallHangingSignBlock
+                    || blockState.getBlock() instanceof net.minecraft.world.level.block.AbstractBannerBlock) {
                 var existingSign = existingSpecialByPos.get(local);
                 if (existingSign instanceof dev.arubik.craftengine.contraption.element.special.ContraptionSignElement sg
                         && sg.blockState().getBlock() == blockState.getBlock()) {
                     elements.add(sg);
                 } else {
                     if (existingSign != null) existingSign.despawn(viewers);
-                    elements.add(new dev.arubik.craftengine.contraption.element.special.ContraptionSignElement(local, blockState, beTag));
+                    elements.add(buildSignElement(local, blockState, beTag));
                 }
                 usedPositions.add(local); continue;
             }
@@ -224,6 +224,18 @@ public final class ElementBuilder {
         return e instanceof ContraptionBlockElement
                 || e instanceof ContraptionFurnitureElement
                 || e instanceof dev.arubik.craftengine.contraption.element.special.ContraptionItemFrameElement;
+    }
+
+    private static dev.arubik.craftengine.contraption.element.special.ContraptionSignElement
+            buildSignElement(net.minecraft.core.BlockPos local, net.minecraft.world.level.block.state.BlockState bs,
+                             net.minecraft.nbt.CompoundTag beTag) {
+        if (bs.getBlock() instanceof net.minecraft.world.level.block.WallSignBlock)
+            return new dev.arubik.craftengine.contraption.element.special.ContraptionWallSignElement(local, bs, beTag);
+        if (bs.getBlock() instanceof net.minecraft.world.level.block.WallHangingSignBlock)
+            return new dev.arubik.craftengine.contraption.element.special.ContraptionHangingSignElement(local, bs, beTag, false);
+        if (bs.getBlock() instanceof net.minecraft.world.level.block.CeilingHangingSignBlock)
+            return new dev.arubik.craftengine.contraption.element.special.ContraptionHangingSignElement(local, bs, beTag, true);
+        return new dev.arubik.craftengine.contraption.element.special.ContraptionStandingSignElement(local, bs, beTag);
     }
 
     static boolean hasConstantEntityRenderer(ContraptionLevel level, BlockPos local) {

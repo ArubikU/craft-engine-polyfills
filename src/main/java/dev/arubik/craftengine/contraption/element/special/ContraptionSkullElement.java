@@ -18,6 +18,7 @@ import net.minecraft.world.level.block.WallSkullBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.shapes.VoxelShape;
 import net.momirealms.craftengine.bukkit.entity.data.DisplayData;
 import net.momirealms.craftengine.core.entity.player.Player;
 import net.momirealms.craftengine.core.util.Key;
@@ -69,9 +70,23 @@ public final class ContraptionSkullElement implements ContraptionElement {
 
     @Override
     public List<AABB> interactionBounds() {
+        if (blockState == null || blockState.isAir()) return List.of();
+        try {
+            VoxelShape shape = blockState.getInteractionShape(
+                    net.minecraft.world.level.EmptyBlockGetter.INSTANCE, localPos);
+            if (shape.isEmpty()) shape = blockState.getShape(
+                    net.minecraft.world.level.EmptyBlockGetter.INSTANCE, localPos);
+            if (shape.isEmpty()) return List.of();
+            List<AABB> boxes = new ArrayList<>();
+            for (AABB box : shape.toAabbs()) {
+                boxes.add(box.move(localPos.getX(), localPos.getY(), localPos.getZ()));
+            }
+            return boxes;
+        } catch (Throwable ignored) {
+            
         return List.of(new AABB(localPos.getX() + 0.25, localPos.getY(), localPos.getZ() + 0.25,
                 localPos.getX() + 0.75, localPos.getY() + 0.5, localPos.getZ() + 0.75));
-    }
+    }}
 
     @Override
     public void tick(RenderContext ctx) {
