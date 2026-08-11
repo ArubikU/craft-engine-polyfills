@@ -60,6 +60,7 @@ public final class ElementBuilder {
 
         elements.add(new ContraptionHitboxElement());
         elements.add(new ContraptionInteractionOverlayElement());
+        elements.add(new ContraptionPistonShaftElement());
 
         state.setElements(elements);
     }

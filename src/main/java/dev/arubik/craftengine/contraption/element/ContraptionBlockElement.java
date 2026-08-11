@@ -27,10 +27,6 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * Block element: a single captured vanilla/CE block rendered as a BLOCK_DISPLAY packet entity.
- * Owns its own Cell render state — spawn, position-sync, metadata, despawn.
- */
 public final class ContraptionBlockElement implements ContraptionElement {
 
     private final BlockPos localPos;
@@ -106,7 +102,6 @@ public final class ContraptionBlockElement implements ContraptionElement {
     @Override
     public boolean onInteract(ServerPlayer player, ContraptionState state, Vec3 hitPos, InteractionHand hand, boolean rightClick) {
         Direction face = nearestFace(hitPos);
-        // localClip: hitPos is already in local space from the overlay (bearing transform applied by caller)
         ContraptionInteractionListener.Hit hit = new ContraptionInteractionListener.Hit(state, localPos, hitPos, face);
         if (rightClick) {
             ContraptionInteractionListener.forward(player, hit);
@@ -247,8 +242,6 @@ public final class ContraptionBlockElement implements ContraptionElement {
             }
         }
     }
-
-    // ---- private render helpers ----
 
     private void spawn(Player viewer, Vec3 pos, float yawDeg) {
         Object spawnPacket = MNms.INSTANCE.constructor$ClientboundAddEntityPacket(

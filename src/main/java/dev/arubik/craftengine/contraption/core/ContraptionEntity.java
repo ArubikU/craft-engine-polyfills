@@ -30,8 +30,7 @@ public final class ContraptionEntity {
     private final ContraptionItemPickupSwarm itemPickupSwarm = new ContraptionItemPickupSwarm();
     private final ContraptionBlockEntityElementMirror elementMirror = new ContraptionBlockEntityElementMirror();
     /** 6-directional extending-piston shaft (pipe + head) render — only active for a piston bearing. */
-    private final dev.arubik.craftengine.contraption.render.ContraptionPistonShaftSwarm shaftSwarm =
-            new dev.arubik.craftengine.contraption.render.ContraptionPistonShaftSwarm();
+    // shaftSwarm removed — piston shaft handled by ContraptionPistonShaftElement
 
     // Packet-volume optimization (2026-07-01 session — "optimizemos el envio de packets... para
     // solo actualizar lo necesario"): a stalled/idle contraption's bearing transform doesn't
@@ -177,7 +176,7 @@ public final class ContraptionEntity {
         hitboxElement().despawnAll(viewers);
         elementMirror.despawnAll(viewers);
         // seatElement seats migrated to ContraptionSeatElement — despawn handled by element loop
-        shaftSwarm.despawnAll(viewers);
+        // piston shaft despawn handled by element loop
         for (dev.arubik.craftengine.contraption.element.ContraptionElement e : state.elements()) {
             e.despawn(viewers);
         }
@@ -354,26 +353,23 @@ public final class ContraptionEntity {
             }
         }
         if (piston == null || realLevel == null) {
-            shaftSwarm.despawnAll(viewers);
+            // piston shaft despawn handled by element loop
             return;
         }
         double extended = piston.extendedBlocks();
-        if (extended <= 1.0e-6) {
-            shaftSwarm.despawnAll(viewers);
-            return;
-        }
         Vec3 facing = piston.direction();
         net.minecraft.core.BlockPos bearingPos = state.originBearingBlockPos();
-        // Resolved directly to CraftEngine ITEM ids (2026-07-03 fix — "los entity renderer no se
-        // estan renderizando en tu shaft ... solo renderizabas bloques solidos y no los que usan
-        // entity"): the shaft/head appearances are entity-renderer-bound over a null block model,
-        // which only becomes visible via a real ITEM_DISPLAY entity (see
-        // ContraptionPistonShaftSwarm's class javadoc for the full root-cause) — no blockstate
-        // roundtrip needed at all here, the item ids are already a static 1:1 mapping from facing.
-        String headItemId = dev.arubik.craftengine.contraption.render.ContraptionPistonShaftSwarm.headItem();
-        String shaftItemId = dev.arubik.craftengine.contraption.render.ContraptionPistonShaftSwarm.shaftItemFor(facing);
-        Vec3 bearingCorner = new Vec3(bearingPos.getX(), bearingPos.getY(), bearingPos.getZ());
-        shaftSwarm.render(viewers, bearingCorner, facing, extended, headItemId, shaftItemId, moved);
+        String headItemId = dev.arubik.craftengine.contraption.element.ContraptionPistonShaftElement.headItem();
+        String shaftItemId = dev.arubik.craftengine.contraption.element.ContraptionPistonShaftElement.shaftItemFor(facing);
+        var shaftElem = pistonShaftElement();
+        if (shaftElem != null) shaftElem.updateShaft(facing, extended, headItemId, shaftItemId);
+    }
+
+    private dev.arubik.craftengine.contraption.element.ContraptionPistonShaftElement pistonShaftElement() {
+        for (dev.arubik.craftengine.contraption.element.ContraptionElement e : state.elements()) {
+            if (e instanceof dev.arubik.craftengine.contraption.element.ContraptionPistonShaftElement s) return s;
+        }
+        return null;
     }
 
     /**
@@ -623,7 +619,7 @@ public final class ContraptionEntity {
         itemPickupSwarm.despawnAll();
         elementMirror.despawnAll(viewers);
         // Block seats despawned via element loop below
-        shaftSwarm.despawnAll(viewers);
+        // piston shaft despawn handled by element loop
         for (dev.arubik.craftengine.contraption.element.ContraptionElement e : state.elements()) {
             e.despawn(viewers);
         }

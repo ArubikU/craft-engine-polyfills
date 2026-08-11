@@ -1,0 +1,7 @@
+# Contraption system configuration
+
+item_frame:
+  # CE item ID to use as the frame model (ITEM_DISPLAY mode).
+  # Leave empty to use vanilla EntityType.ITEM_FRAME for the frame.
+  # Example: model: "cml:item_frame"
+  model: ""

@@ -43,6 +43,9 @@ public final class CraftEnginePolyfills extends JavaPlugin {
         // Driver-seat furniture ids for VEHICLE contraptions — owner-editable list (vehicle-seats.yml).
         dev.arubik.craftengine.contraption.VehicleDriverRegistry.load();
         dev.arubik.craftengine.contraption.physics.RestitutionTable.load();
+        saveDefaultResource("contraptions.yml");
+        dev.arubik.craftengine.contraption.config.ContraptionConfig.load(
+                getDataFolder(), getClass().getClassLoader());
         // Restore the loose world glue graph persisted at last shutdown (2026-07-03 — "has que
         // las glue persista al apagar o reiniciar el sv"). Assembled contraptions carry their own
         // glue in their structure NBT; this is the unassembled real-world glue.

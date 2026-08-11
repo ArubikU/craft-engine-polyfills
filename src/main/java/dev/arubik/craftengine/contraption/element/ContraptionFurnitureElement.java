@@ -103,7 +103,6 @@ public final class ContraptionFurnitureElement implements ContraptionElement {
     public void render(RenderContext ctx) {
         if (mirrors.isEmpty()) return;
 
-        // Compute lighting
         int blockLight = 15;
         int skyLight = 15;
         if (ctx.realLevel() != null) {
@@ -198,8 +197,6 @@ public final class ContraptionFurnitureElement implements ContraptionElement {
         CraftEngineFurniture.place(loc, definitionId, variantName, true);
     }
 
-    // ---- cell building ----
-
     private void buildCells() {
         mirrors.clear();
         FurnitureDefinition def = CraftEngineFurniture.byId(definitionId);
@@ -230,8 +227,6 @@ public final class ContraptionFurnitureElement implements ContraptionElement {
         }
         return null;
     }
-
-    // ---- mirror cells ----
 
     private static abstract class MirrorCell {
         final int entityId;
@@ -355,8 +350,6 @@ public final class ContraptionFurnitureElement implements ContraptionElement {
                     entityId, pos.x, pos.y, pos.z, 0f, 0f, false), false);
         }
     }
-
-    // ---- utility ----
 
     private static Vec3 rotateVec(Vec3 v, int quarterTurns) {
         return switch (quarterTurns & 3) {
