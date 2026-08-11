@@ -331,7 +331,7 @@ public final class ContraptionEntity {
         if (elements.isEmpty()) return;
         dev.arubik.craftengine.contraption.element.RenderContext ctx =
                 new dev.arubik.craftengine.contraption.element.RenderContext(
-                        viewers, bearing, yaw, pitch, roll, scale, moved, state.level(), realLevel, state.lightMap());
+                        viewers, bearing, yaw, pitch, roll, scale, moved, state.level(), realLevel, state.lightMap(), elements);
         for (dev.arubik.craftengine.contraption.element.ContraptionElement element : elements) {
             if (!element.isValid()) continue;
             element.tick(ctx);

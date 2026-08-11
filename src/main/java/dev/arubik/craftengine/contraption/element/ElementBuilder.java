@@ -47,6 +47,7 @@ public final class ElementBuilder {
         elements.add(entityMirror);
 
         elements.add(new ContraptionHitboxElement());
+        elements.add(new ContraptionInteractionOverlayElement());
 
         state.setElements(elements);
     }

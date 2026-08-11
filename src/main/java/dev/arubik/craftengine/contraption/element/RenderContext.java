@@ -21,7 +21,8 @@ public record RenderContext(
         boolean moved,
         ContraptionLevel level,
         ServerLevel realLevel,
-        ContraptionLightMap lightMap
+        ContraptionLightMap lightMap,
+        List<ContraptionElement> elements
 ) {
     public double yawDegrees() {
         return Math.toDegrees(yawRadians);

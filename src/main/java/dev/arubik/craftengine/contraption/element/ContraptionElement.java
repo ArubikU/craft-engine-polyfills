@@ -11,52 +11,34 @@ import net.momirealms.craftengine.core.util.Key;
 
 import java.util.List;
 
-/**
- * Self-contained contraption element — the atomic unit of a contraption's captured structure.
- *
- * <p>Each element owns its data, renders itself via packet entities, handles its lifecycle,
- * and exposes its packet entity IDs so interaction events can resolve back to the element.
- * Pure NMS — no Bukkit dependency.
- *
- * <p>Most elements are ephemeral (derived from ContraptionLevel on spawn, never serialized).
- * A persistent element overrides {@link #isPersistent()} and {@link #toNbt()} to survive
- * across serialization cycles independently of the level's own block/furniture data.
- */
 public interface ContraptionElement {
 
     Key type();
-
     Vec3 localOffset();
-
     boolean isValid();
 
-    /**
-     * Packet entity IDs owned by this element. Used for interaction dispatch:
-     * when a player clicks a packet entity, the owning element is resolved via these IDs.
-     */
+    /** All packet entity IDs owned by this element — BLOCK_DISPLAY, ITEM, etc. */
     int[] entityIds();
 
-    default List<AABB> interactionBounds(RenderContext ctx) {
-        return List.of();
-    }
+    /**
+     * Local-space AABBs used to create INTERACTION click-detection entities.
+     * The overlay element reads these, manages entity lifecycle and LOD, and dispatches onInteract.
+     * Return empty list for non-interactable elements (hitbox, entity mirror, etc.).
+     */
+    default List<AABB> interactionBounds() { return List.of(); }
+
+    /** Called by the interaction overlay when a player clicks one of this element's interaction entities. */
+    default boolean onInteract(Player player, int entityId, Vec3 hitPos, InteractionHand hand) { return false; }
 
     // ---- lifecycle ----
 
     default void tick(RenderContext ctx) {}
-
     void render(RenderContext ctx);
-
     void despawn(List<Player> viewers);
-
     void disassemble(ServerLevel level, BlockPos bearingPos, int quarterTurns);
-
-    // ---- interaction ----
-
-    default boolean onInteract(Player player, int entityId, Vec3 hitPos, InteractionHand hand) { return false; }
 
     // ---- persistence (opt-in) ----
 
     default boolean isPersistent() { return false; }
-
     default CompoundTag toNbt() { return null; }
 }

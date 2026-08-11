@@ -1027,6 +1027,16 @@ public final class ContraptionState {
         return entityIdIndex.get(entityId);
     }
 
+    /** Resolve element from an INTERACTION overlay entity ID (click-detection entities). */
+    public ContraptionElement elementByInteractionEntityId(int entityId) {
+        for (ContraptionElement e : elements) {
+            if (e instanceof dev.arubik.craftengine.contraption.element.ContraptionInteractionOverlayElement overlay) {
+                return overlay.ownerOf(entityId);
+            }
+        }
+        return null;
+    }
+
     public ContraptionElement elementByLocalPos(BlockPos local) {
         for (ContraptionElement e : elements) {
             Vec3 offset = e.localOffset();

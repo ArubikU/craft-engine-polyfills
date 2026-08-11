@@ -23,32 +23,7 @@ import net.minecraft.world.phys.Vec3;
 import net.momirealms.craftengine.core.entity.player.Player;
 import net.momirealms.craftengine.core.util.Key;
 
-/**
- * Packet-only invisible {@code INTERACTION} hitbox swarm for a moving contraption
- * (CONTRAPTIONS.md §5 Phase 4). Same entity type real CraftEngine furniture uses for ITS
- * OWN colliders ({@code BukkitCollider}/{@code ColliderType.INTERACTION}) — a real vanilla
- * hitbox-only entity with arbitrary, continuous {@code width}/{@code height} metadata,
- * bottom-anchored (box spans X/Z ±width/2 around the entity, Y from 0 to height above it) —
- * NOT grid-snapped to a fixed 1×1×1 like the old {@code SHULKER}-based version this replaces.
- * (Furniture's OWN collider is a REAL spawned NMS entity with genuine server physics; ours
- * stays packet-only, consistent with every other swarm in this package — so "collision" here
- * is still this class's own manual standing-check math, just no longer forced onto block
- * boundaries.)
- *
- * <p>Default behaviour is unchanged: {@link #rebuild} still derives one slot per EXPOSED TOP
- * surface cell (a captured block with no captured block directly above it, Phase-0 spike #1's
- * granularity finding) at a full 1×1×1 footprint. What's NEW is the underlying {@link Slot}
- * model itself — a continuous local offset + explicit width/height, not an integer
- * {@link BlockPos} with an implied fixed size — so a future caller (e.g. a captured
- * furniture piece wanting its own real footprint instead of the shared block-grid one) can
- * push an arbitrary offset/size hitbox via {@link #addCustomSlot} into the SAME swarm.
- *
- * <p>Also owns the player-carry step: every tick, whichever online players are standing on
- * one of these cells' footprint get the contraption's last-applied delta fed through
- * {@link PlayerCarry}. Axis-aligned only for now (yaw ignored) — matches Phase 3's
- * linear-only-kinematics MVP scope; rotation support is deferred with continuous rotation
- * itself (CONTRAPTIONS.md §7).
- */
+/** Packet-only hitbox + carry swarm for a moving contraption. */
 public final class ContraptionHitboxElement implements ContraptionElement {
 
     // ---- ContraptionElement interface ----
@@ -101,77 +76,26 @@ public final class ContraptionHitboxElement implements ContraptionElement {
     private final List<Slot> customSlots = new ArrayList<>();
     private final Set<UUID> currentRiders = new HashSet<>();
 
-    /**
-     * Per-player footstep-timing state (Bug-2 fix, 2026-07-02 session — "walking on a contraption
-     * block plays no step sound"). A player walking across a packet-only SHULKER floor hears no
-     * vanilla footstep sounds, because vanilla's {@code Entity#playStepSound} is driven by the REAL
-     * block under the player, which is air in the real world for a contraption deck. This tracks,
-     * per standing player, the last real-world XZ position a step sound was emitted from, so a step
-     * can be re-emitted every {@link #STEP_DISTANCE} blocks of horizontal travel — approximating
-     * vanilla's own {@code moveDist}-based cadence ({@code nextStep = floor(moveDist)+1}, confirmed
-     * via javap) without needing access to the entity's private {@code moveDist}/{@code nextStep}
-     * fields. Cleaned up in {@link #carryRiders} the moment a player stops standing on the footprint
-     * (and on {@link #despawnAll}) so it never leaks across quit/teardown.
-     */
+    // Per-player last-step XZ position; cleared when player leaves footprint.
     private final Map<UUID, double[]> stepState = new HashMap<>();
 
-    /**
-     * Horizontal distance (blocks) a rider must walk across the contraption deck before the next
-     * footstep sound fires. ~2 blocks matches vanilla's effective walking cadence (its
-     * {@code moveDist} accumulates ~0.6 of each tick's horizontal travel, and a step fires each
-     * time it crosses an integer, i.e. roughly every 1.6-2 blocks actually walked).
-     */
+    // ~2 blocks matches vanilla's walking cadence (moveDist-based, ~1.6-2 blocks/step)
     private static final double STEP_DISTANCE = 2.0;
 
-    /** Minimum downward speed (blocks/tick) at the landing tick for a fall sound to fire (below this reads as a normal step-down, not a fall). */
+    // Below this downward speed at landing, treat as step-down not fall
     private static final double FALL_MIN_SPEED = 0.35;
 
-    /**
-     * Additional, more-precise CraftEngine-style SHULKER collider layer (2026-07-02 session —
-     * see {@link ContraptionShulkerColliderSwarm}'s own javadoc for the full CraftEngine
-     * decompile writeup). Purely additive to the {@code INTERACTION}-based slots above: a
-     * caller with a fractional/moving local offset (e.g. a captured furniture piece that isn't
-     * grid-snapped) pushes it here via {@link #addShulkerSlot} instead of/in addition to a
-     * regular top-cell slot. Lifecycle (render/despawn) is driven from the same methods this
-     * class already exposes so {@code ContraptionEntity} doesn't need a second field.
-     */
     private final ContraptionShulkerColliderSwarm shulkerColliders = new ContraptionShulkerColliderSwarm();
 
-    /**
-     * Withholds the SOLID shulker colliders from one viewer — see
-     * {@link ContraptionShulkerColliderSwarm#setExcludedViewer}. Only the shulkers need this: the
-     * INTERACTION cells this class spawns do not override {@code canBeCollidedWith}, so a client never
-     * treats them as obstacles.
-     */
+    // INTERACTION slots have no canBeCollidedWith override; only shulkers need viewer exclusion
     public void setColliderExcludedViewer(java.util.UUID viewer) {
         shulkerColliders.setExcludedViewer(viewer);
     }
 
-    /**
-     * (Re)builds the auto-derived slots from a captured level; custom slots (see
-     * {@link #addCustomSlot}) survive a rebuild. Keyed by offset (like
-     * {@code ContraptionDisplaySwarm.cells}) so an unchanged top-cell REUSES its existing
-     * {@link Slot} (same entity id, same {@code shownTo} tracking) instead of despawning and
-     * respawning it — this used to unconditionally {@code clear()} and rebuild every slot from
-     * scratch on every single tick (since {@code ContraptionEngine} calls this every tick), which
-     * both leaked a full set of orphaned client-side entities every tick (old ones dropped from
-     * the list without ever being sent a despawn packet) AND caused the disassemble-time
-     * {@link #despawnAll} to only ever know about the LAST tick's slots. Only a top-cell that
-     * genuinely stops/starts existing (e.g. a piston head appearing/retracting) should ever
-     * cause a despawn/spawn here.
-     */
     public void rebuild(ContraptionLevel level, List<Player> viewers, Vec3 bearingWorldPos) {
-        // Drop cache entries for cells that no longer exist BEFORE anything reads the cache, so a
-        // cell that leaves and returns within one tick can't resolve against its own stale shape.
+        // Drop stale cache entries before any cell reads them
         cellCache.keySet().retainAll(level.localPositions());
-        // Every captured cell gets its own INTERACTION + shulker hitbox now (2026-07-02 session —
-        // "veo que no pones shulker y interaction a todos los bloques ... debes ponerle shulker a
-        // todo" — a multi-cell structure like a tall fluid_block_tank used to only get ONE hitbox
-        // total, at its single exposed-top cell, so side faces of anything below the top (or every
-        // cell of a >1-tall column) had no INTERACTION/shulker at all — no click-interact, no
-        // standing/collision surface. topCellsOf's exposed-top-only result is STILL used, but only
-        // for the carry/standing-footprint check below (see isStandingOnFootprint) — click/collision
-        // hitboxes now cover the full footprint, full stop.
+        // Every cell gets click/collision hitboxes; topCellsOf only for carry footprint
         Set<BlockPos> allOffsets = level.localPositions();
         java.util.Iterator<Map.Entry<BlockPos, Slot>> it = autoSlots.entrySet().iterator();
         while (it.hasNext()) {
@@ -181,108 +105,21 @@ public final class ContraptionHitboxElement implements ContraptionElement {
             }
         }
         for (BlockPos offset : allOffsets) {
-            // INTERACTION's box is centred ±width/2 around the entity's own X/Z (bottom-anchored
-            // on Y) — offset.getX()/getZ() are the block's CORNER, so +0.5 centres the 1-wide box
-            // exactly on the block's real footprint (without this the box sits half a block off
-            // on both axes, visibly floating diagonally beside the block it's meant to cover).
-            //
-            // standTopY/standBottomY (2026-07-02 session, carry-fix follow-up — "los shulker de
-            // slabs y stairs y figuras no normales no agarran el sistema de carry"): the
-            // INTERACTION entity itself is DELIBERATELY still spawned at the flat full-cell
-            // width=1/height=1 box below (see this loop's own long-standing comment above and
-            // rebuild()'s class-level javadoc: "click/collision hitboxes now cover the full
-            // footprint, full stop" — clicking/interacting anywhere in the cell must keep working
-            // regardless of the real block's shape). But isStandingOnFootprint (the CARRY
-            // candidate check — see topSlotsOnly()/carryRiders()) was keying off that SAME flat
-            // height=1 assumption to compute a slot's real top surface, so a player standing on a
-            // slab's REAL collision surface (e.g. a bottom slab's top face at y+0.5, not the
-            // flat-assumed y+1.0) fell either outside or only accidentally inside the standing
-            // window depending on slab orientation — see isStandingOnFootprint's javadoc for the
-            // exact numbers. computeCell already derives the real per-cell shape's
-            // minY/height from the same BlockState#getCollisionShape this class's shulker
-            // population loop (below) uses for the passive visual collider — reuse that exact
-            // derivation here too, rather than duplicating the VoxelShape query, and store the
-            // result on the Slot alongside (not instead of) its flat width/height so both the
-            // full-cell INTERACTION spawn AND the shape-accurate carry check can each read the
-            // field they actually need.
+            // +0.5 centres the INTERACTION box on the block footprint (offset is the block corner)
             ShulkerParams standParams = cellFor(level, offset).params;
             double standBottomY = standParams != null ? standParams.yOffset : 0.0;
             double standTopY = standParams != null ? standParams.yOffset + standParams.scale : 1.0;
-            // hasCollision mirrors computeCell's own null-means-no-collision result (torches,
-            // tripwire, most plants, etc. — see that method's shape.isEmpty() javadoc) — see the
-            // Slot#hasCollision field javadoc for why overlapsAnySolid/resolvePushOut need this.
+            // null params means no real collision (torch, plant, etc.)
             boolean hasCollision = standParams != null;
             Slot slot = autoSlots.computeIfAbsent(offset,
                     o -> new Slot(o.getX() + 0.5, o.getY(), o.getZ() + 0.5, 1f, 1f, standBottomY, standTopY));
-            // Refresh the shape-derived stand window on every rebuild even for a REUSED slot
-            // (computeIfAbsent above only runs the factory for a brand-new key) — the underlying
-            // block at this offset can change type in place (e.g. a stair replaced by a full
-            // block) without the BlockPos key itself ever disappearing from allOffsets, so a
-            // stale stand-window would otherwise survive indefinitely across such an in-place swap.
+            // Refresh shape-derived window even on reused slots — block type can change in place
             slot.standBottomY = standBottomY;
             slot.standTopY = standTopY;
             slot.hasCollision = hasCollision;
         }
 
-        // Auto-populate a shulker collider per captured cell too (2026-07-02 session — "al hacer
-        // un spawn holo el contraption no tiene shulker hitbox" — ContraptionShulkerColliderSwarm
-        // was wired as opt-in infrastructure but nothing ever actually called addSlot on it, so
-        // every contraption had zero shulker colliders regardless). Keyed by the same BlockPos
-        // offset as the INTERACTION slot above so ContraptionShulkerColliderSwarm's own
-        // key-based diffing reuses/prunes correctly across rebuilds.
-        //
-        // Shape-aware sizing: each cell's REAL NMS collision shape (BlockState#getCollisionShape —
-        // full precision, available here because ContraptionLevel genuinely IS a ServerLevel,
-        // unlike GlueWandListener#outlineBlock which only has Bukkit's Block#getBoundingBox to work
-        // with) is handed to the swarm whole, merged and flattened to AABBs by #computeCell. A
-        // shulker's box is a CUBE, so ONE of them can never be a stair — which is why the swarm
-        // spends a distance-dependent NUMBER of them per cell instead of trying to pick better
-        // parameters for a single one (see ContraptionShulkerColliderSwarm#renderCells and
-        // ShulkerBoxFit). This layer's job ends at supplying the geometry; how many entities it
-        // becomes, for whom, is the swarm's.
-        //
-        // <p><b>2026-07-02 session, LATER same day — the peek-merge "save entities" optimization
-        // that used to live here has been REMOVED</b> ("no todos tienen una shulker hitbox solida
-        // por alguna razon solo la y0 del coso ... debes ponerle shulker a todo" + concrete 4-tall
-        // tower repro: layer1 ✓, layer2 ✗, layer3 ✗, layer4 ✓). Root cause (decompile-verified
-        // against vanilla's actual Shulker.makeBoundingBox/getProgressAabb): a peek-grown shulker
-        // box is still just ONE cube-ish box spanning the whole merged run — e.g. a 2-tall merge
-        // anchored at the bottom cell produces a single solid volume from the bottom cell's floor
-        // to the TOP cell's ceiling, with NO horizontal surface anywhere in between. A player
-        // "standing on top of" the bottom cell of a merged run is actually standing at the
-        // MIDDLE-HEIGHT of that one box, which has nothing to land ON there (you can only rest on
-        // the very top of the whole merged box, or get shoved out sideways if you clip into its
-        // middle) — so every cell except the true top and true bottom of any merged run had no
-        // real standable surface, exactly matching the reported layer2/layer3-broken pattern. A
-        // shulker's peek can only ever grow a SINGLE box along ONE axis; it fundamentally cannot
-        // reproduce N independent per-cell floors, so there is no peek-parameter fix for this —
-        // merging must not happen at all if every cell needs its own real standable top surface.
-        // Every captured cell now gets its OWN dedicated scale=1(or shape-derived)/peek=0 shulker,
-        // unconditionally — more entities, but the only way every single cell genuinely has a
-        // correct, independent solid floor a player can stand on, matching the explicit
-        // requirement ("todos deben tener hitbox solida", no exceptions).
-        //
-        // <p><b>"Optimal shulkering" (2026-07-02 session — "si no hay entidades ni players cerca
-        // al contraption no agregue shulkers"; 2026-07-17 — "calcular los shulker solo por LOD")</b>: a
-        // shulker per cell is real per-tick cost (VoxelShape queries here, plus client-tracked entities),
-        // wasted on cells nobody is near. This used to be gated by ONE radius around the contraption's
-        // bearing, but that measured a single centre point and so excluded a big structure's far cells
-        // outright (a player standing ON a far cell was still far from the centre). It is now gated PER CELL
-        // by LOD (see the loop below and {@link #LOD_CULL_RADIUS}): each cell is skipped unless some viewer is
-        // within collision range of THAT cell, so reach is unlimited and cost scales with cells-near-players,
-        // not total cells. The INTERACTION-based autoSlots layer above is deliberately NOT gated: it's what
-        // carryRiders/isStandingOnFootprint/overlapsAnySolid key their manual collision math off of, needed
-        // unconditionally, and it's cheap (no VoxelShape query, no entity, just a plain Java object).
-        // Populate shulker colliders purely per-cell by LOD (2026-07-17 — user: "calcular los shulker solo
-        // por LOD; si no entran en ningún LOD no es necesario hacer las matemáticas para ellos"). For each
-        // cell, a cheap distance test decides whether ANY viewer is close enough to ever be handed a collider
-        // for it; only then is the expensive per-cell work (the VoxelShape query in cellFor, the entity
-        // setCell) done. A cell no viewer is near is left out of shulkerKeys, so prune() despawns any stale
-        // collider on it. This is what makes reach UNLIMITED at bounded cost — a 1000-cell structure only pays
-        // for the cells a player is actually next to, however far those sit from the structure's centre — and
-        // it replaces the old single "is a player near the bearing" radius gate, which measured one centre
-        // point and so wrongly excluded a big structure's far cells (a player standing ON a far cell was still
-        // far from the centre). Viewer positions are resolved ONCE here, not per cell.
+        // One shulker per cell, LOD-gated per cell (not a single centre-radius) — viewer positions resolved once
         List<Vec3> viewerPositions = resolveViewerPositions(viewers);
         if (viewerPositions.isEmpty()) {
             shulkerColliders.prune(java.util.Collections.emptySet(), viewers);
@@ -296,36 +133,18 @@ public final class ContraptionHitboxElement implements ContraptionElement {
             }
             CachedCell cell = cellFor(level, offset);
             if (cell.boxes == null) {
-                // No real collision at all (2026-07-02 session — "hay bloques que no deben tener
-                // solid hitbox como antorchas"): deliberately DON'T add this offset to shulkerKeys
-                // either, so prune() below removes any stale slot left over from a PREVIOUS
-                // rebuild where this same cell held a solid block (e.g. a torch placed where a
-                // full block used to be) — see #computeCell's javadoc for which shapes hit
-                // this path.
+                // No real collision (torch, plant, etc.) — also prune any stale slot on this offset
                 continue;
             }
             shulkerKeys.add(offset);
-            // Hand over the cell's REAL merged geometry rather than a pre-chosen single box: the
-            // swarm decides how many shulkers to spend on it per viewer, from that viewer's
-            // distance (see ContraptionShulkerColliderSwarm#renderCells). Passing the CACHED list
-            // instance matters — the swarm's identity check is what makes an unchanged cell free.
             shulkerColliders.setCell(offset, cell.boxes, viewers);
         }
         shulkerColliders.prune(shulkerKeys, viewers);
     }
 
-    /**
-     * Per-cell derived collision geometry, cached against the {@code BlockState} it came from — see
-     * {@link #cellFor}.
-     */
     private static final class CachedCell {
         final net.minecraft.world.level.block.state.BlockState state;
-        /** The single-box approximation driving the carry/stand window; null when the cell has no collision at all. */
         final ShulkerParams params;
-        /**
-         * The cell's merged collision boxes translated into the bearing-local frame, for the shulker
-         * swarm's LOD fit; null exactly when {@link #params} is (they share one shape query).
-         */
         final List<net.minecraft.world.phys.AABB> boxes;
 
         CachedCell(net.minecraft.world.level.block.state.BlockState state, ShulkerParams params,
@@ -336,21 +155,9 @@ public final class ContraptionHitboxElement implements ContraptionElement {
         }
     }
 
-    /**
-     * Per-cell shape cache. {@link #rebuild} runs every tick for every cell, and a
-     * {@code VoxelShape} query plus {@code optimize()/toAabbs()} is far too expensive to repeat at
-     * that rate — but a cell's geometry is a pure function of its {@code BlockState}, which only
-     * changes when a block genuinely changes. Entries are dropped for vanished cells at the top of
-     * {@link #rebuild} and wholesale in {@link #despawnAll}.
-     */
+    // Geometry cache; BlockState identity comparison is exact (vanilla interns every state instance)
     private final Map<BlockPos, CachedCell> cellCache = new HashMap<>();
 
-    /**
-     * This cell's cached geometry, recomputed only when its {@code BlockState} changed. The identity
-     * comparison is exact, not an optimization gamble: vanilla interns every {@code BlockState} into
-     * a single instance per property combination, so two states are the same object iff they are the
-     * same state.
-     */
     private CachedCell cellFor(ContraptionLevel level, BlockPos offset) {
         net.minecraft.world.level.block.state.BlockState state = level.getBlockState(offset);
         CachedCell cached = cellCache.get(offset);
@@ -362,21 +169,9 @@ public final class ContraptionHitboxElement implements ContraptionElement {
         return fresh;
     }
 
-    /**
-     * Per-cell LOD cull radius (blocks): a cell farther than this from EVERY viewer is skipped entirely in
-     * {@link #rebuild} — no VoxelShape query, no collider. Set just beyond the shulker swarm's own
-     * {@link ContraptionShulkerColliderSwarm#FAR_EXIT} despawn distance by a hysteresis margin, so a cell is
-     * handed to the swarm (which then manages its tier band) slightly before a player is close enough to
-     * collide, avoiding pop-in right at the boundary.
-     */
+    // Slightly beyond FAR_EXIT so the swarm gets cells before they're collision-range; avoids pop-in
     private static final double LOD_CULL_RADIUS = ContraptionShulkerColliderSwarm.FAR_EXIT + 2.0;
 
-    /**
-     * The real Bukkit positions of {@code viewers} (every online player in the world — see {@link #rebuild}),
-     * resolved ONCE so the per-cell LOD test in {@link #rebuild} is plain arithmetic instead of re-resolving a
-     * platform player per cell. A viewer whose platform position can't be resolved is skipped (fails safe
-     * toward NOT spawning shulkers).
-     */
     private static List<Vec3> resolveViewerPositions(List<Player> viewers) {
         List<Vec3> positions = new ArrayList<>(viewers.size());
         for (Player p : viewers) {
@@ -389,7 +184,6 @@ public final class ContraptionHitboxElement implements ContraptionElement {
         return positions;
     }
 
-    /** Whether any of {@code positions} is within {@code sqrt(radiusSq)} of {@code point} — the per-cell LOD test. */
     private static boolean anyWithinSq(List<Vec3> positions, Vec3 point, double radiusSq) {
         for (Vec3 pos : positions) {
             double dx = pos.x - point.x;
@@ -402,21 +196,11 @@ public final class ContraptionHitboxElement implements ContraptionElement {
         return false;
     }
 
-    /**
-     * Derived shulker parameters for one captured cell — see {@link #computeCell}.
-     */
     private static final class ShulkerParams {
         final float scale;
         final net.minecraft.core.Direction attachFace;
         final int peek;
-        /**
-         * Extra local Y offset (added on top of the cell's raw {@code offset.getY()} corner)
-         * so the shulker's bottom-anchored box actually lands at the real shape's
-         * {@code bounds.minY} instead of always the cell's floor — e.g. an upper slab
-         * ({@code minY=0.5,maxY=1.0}) needs {@code yOffset=0.5} so its {@code scale=0.5} box
-         * sits in the TOP half of the cell, not the bottom half. Zero for the full-cube/fallback
-         * case (shape spans the whole cell, or unknown, so no shift is meaningful).
-         */
+        // Extra Y offset so the shulker box sits at the shape's real minY (e.g. 0.5 for upper slab)
         final double yOffset;
 
         ShulkerParams(float scale, net.minecraft.core.Direction attachFace, int peek) {
@@ -434,64 +218,15 @@ public final class ContraptionHitboxElement implements ContraptionElement {
     /** {@code scale=1, attachFace=DOWN, peek=0, yOffset=0} — the previous always-full-cube fallback. */
     private static final ShulkerParams FULL_CUBE = new ShulkerParams(1f, net.minecraft.core.Direction.DOWN, 0);
 
-    /**
-     * Resolves one captured cell's {@code BlockState} into both of the things the rest of this class
-     * needs from its REAL collision shape, from a SINGLE {@code BlockState#getCollisionShape} query
-     * (the genuine NMS {@code VoxelShape}):
-     * <ul>
-     *   <li>{@link CachedCell#boxes} — the shape merged, {@code optimize()}d and flattened to AABBs
-     *   in the bearing-local frame. This is the input to the shulker swarm's distance-LOD fit, which
-     *   spends N cubes on it (see {@link ShulkerBoxFit}); it is the ONLY thing that lets a stair or
-     *   a door collide as itself, since one shulker is one cube and can never be either.</li>
-     *   <li>{@link CachedCell#params} — the single-box approximation the CARRY/standing window is
-     *   built from ({@code standBottomY}/{@code standTopY} in {@link #rebuild}). This deliberately
-     *   stays single-box and stays the shape's overall {@code bounds()}: it answers "what height is
-     *   this cell's top surface", which has one answer per cell regardless of how many colliders the
-     *   cell is currently drawn with, and which must not vary by viewer.</li>
-     * </ul>
-     *
-     * <p>{@code params}' Y-extent becomes {@code scale} (a slab's {@code [0,0.5]} reports
-     * {@code 0.5}; a full block {@code 1}) with {@code attachFace=DOWN} and {@code yOffset} shifted
-     * so the box's bottom sits at the shape's real {@code minY} (an upper slab's {@code 0.5}, not
-     * always 0).
-     *
-     * <p>{@code peek} is always {@code 0}. A peek-grown box is one continuous solid volume with no
-     * standable surface at any intermediate cell boundary, which is why the vertical-run peek-merge
-     * that once lived in {@link #rebuild} caused "middle layers have no real hitbox" — see that
-     * method's javadoc.
-     *
-     * <p>A {@code null} {@code params}/{@code boxes} means the cell is genuinely passable (torch,
-     * plant, open door) and gets no collider at all.
-     */
     private static CachedCell computeCell(ContraptionLevel level, BlockPos offset,
             net.minecraft.world.level.block.state.BlockState state) {
         if (state.isAir()) {
-            // Defensive only — rebuild()'s caller loop iterates level.localPositions(), which
-            // ContraptionLevel#resync already excludes air from (see that class's own javadoc),
-            // so this branch is normally unreachable from the real call site. Kept as a genuine
-            // "no collider" result rather than FULL_CUBE on principle: air should never be solid,
-            // and returning FULL_CUBE here used to be actively wrong if this method is ever called
-            // from anywhere else in the future.
             return noCollision(state);
         }
         try {
-            // Open door/trapdoor special-case (2026-07-02 session follow-up — "shulker swarm:
-            // closed doors/trapdoors = solid hitbox, open doors = no solid hitbox traspasable like
-            // torches"): an OPEN door/trapdoor's REAL collision shape is NOT shape.isEmpty() — a
-            // door swings to lie flat against a wall, so it still occupies a thin (~0.1875 block)
-            // sliver of space, and a trapdoor swings up to hug the wall the same way. Critically,
-            // this thin sliver's bounding box is GEOMETRICALLY INDISTINGUISHABLE from the CLOSED
-            // shape's own bounding box via bounds() alone: both states are "thin along one
-            // horizontal axis (~0.1875), full along the other, full Y height" — opening just
-            // rotates/relocates WHICH face the slab sits flush against, it doesn't change the
-            // box's own dimensions. A height-extent-only check (below) can't tell them apart
-            // (both measure height≈1.0), and neither can an X/Z-footprint-only check (both have
-            // the same ~0.1875 x 1.0 footprint) — so this must be resolved from the block's own
-            // `open` BlockState property directly, not from shape geometry. Explicitly checking
-            // for DoorBlock/TrapDoorBlock's OPEN property before ever consulting the shape means
-            // a genuinely open door/trapdoor is treated exactly like shape.isEmpty() below (no
-            // shulker slot at all, fully passable, matching a torch) while every other shape
-            // (slabs, stairs, a CLOSED door/trapdoor) is completely unaffected by this check.
+            // Open door/trapdoor: shape.isEmpty() doesn't catch it (open door still has a thin slab volume);
+            // must check the OPEN property directly to treat open doors as passable like torches
+
             net.minecraft.world.level.block.Block block = state.getBlock();
             if (block instanceof net.minecraft.world.level.block.DoorBlock
                     && state.hasProperty(net.minecraft.world.level.block.DoorBlock.OPEN)
@@ -505,25 +240,15 @@ public final class ContraptionHitboxElement implements ContraptionElement {
             }
             net.minecraft.world.phys.shapes.VoxelShape shape = state.getCollisionShape(level.serverLevel(), offset);
             if (shape.isEmpty()) {
-                // No real collision at all — e.g. torches, tripwire, most plants/flowers, rails,
-                // signs, buttons, etc. (2026-07-02 session — "hay bloques que no deben tener solid
-                // hitbox como antorchas"). This used to return FULL_CUBE with a comment claiming
-                // "cube fallback is harmless" — backwards: a block a real player can walk straight
-                // through was getting a full solid 1x1x1 shulker collider, i.e. exactly the reported
-                // bug (a torch blocking movement/giving pushback like a full block). Returning null
-                // tells the caller (rebuild()) to skip adding a shulker slot for this cell entirely.
+                // Genuinely passable (torch, rail, button, etc.) — no collider
                 return noCollision(state);
             }
             net.minecraft.world.phys.AABB bounds = shape.bounds();
             double height = bounds.maxY - bounds.minY;
             if (height <= 0.0 || height > 1.0) {
-                return fullCube(state, offset); // degenerate/oversized shape — don't trust it, fall back to the safe default
+                return fullCube(state, offset); // degenerate/oversized — safe fallback
             }
-            // optimize() runs vanilla's greedy box merging before toAabbs() flattens the shape, so a
-            // stair arrives as its true 2 regions rather than the raw voxel soup — the LOD fit's
-            // budget is spent per region, so the region count is what its quality rides on. Boxes are
-            // translated into the bearing-local frame here (a VoxelShape is authored cell-relative),
-            // matching the frame every swarm's local offsets already use.
+            // optimize() merges voxels before toAabbs(); translate to bearing-local frame
             List<net.minecraft.world.phys.AABB> boxes = new ArrayList<>();
             for (net.minecraft.world.phys.AABB box : shape.optimize().toAabbs()) {
                 boxes.add(box.move(offset.getX(), offset.getY(), offset.getZ()));
@@ -551,15 +276,6 @@ public final class ContraptionHitboxElement implements ContraptionElement {
                 offset.getX() + 1.0, offset.getY() + 1.0, offset.getZ() + 1.0)));
     }
 
-    /**
-     * Registers an extra hitbox slot at a CONTINUOUS bearing-local offset with its own
-     * width/height, independent of the block grid — the "furniture-style dynamic hitbox"
-     * capability this class's javadoc describes. Survives {@link #rebuild} (auto-derived
-     * slots are cleared/regenerated; custom ones are additive and caller-owned — call
-     * {@link #clearCustomSlots} to remove them explicitly). {@code width} is the box's X/Z
-     * span (centered on the offset); {@code height} is its Y span (from the offset upward) —
-     * same convention vanilla's own {@code Interaction} entity uses.
-     */
     public void addCustomSlot(double localX, double localY, double localZ, float width, float height) {
         customSlots.add(new Slot(localX, localY, localZ, width, height));
     }
@@ -568,13 +284,6 @@ public final class ContraptionHitboxElement implements ContraptionElement {
         customSlots.clear();
     }
 
-    /**
-     * Pushes/updates one CraftEngine-style SHULKER collider slot at a continuous bearing-local
-     * offset (see {@link ContraptionShulkerColliderSwarm} javadoc) — {@code key} must be stable
-     * across ticks/rebuilds for the same logical slot (e.g. a captured furniture cell's own id)
-     * so it gets reused rather than despawned+respawned. {@code scale} follows vanilla shulker
-     * {@code Scale} attribute convention (1.0 = full-block box).
-     */
     public void addShulkerSlot(Object key, double localX, double localY, double localZ, float scale) {
         shulkerColliders.addSlot(key, localX, localY, localZ, scale);
     }
@@ -598,13 +307,7 @@ public final class ContraptionHitboxElement implements ContraptionElement {
         return all;
     }
 
-    /**
-     * Carry/standing-footprint candidate slots — exposed-top cells only (see
-     * {@link #carryRiders}'s javadoc for why this stays narrower than {@link #allSlots}, which
-     * every cell now contributes to for click/collision purposes). Custom slots are included:
-     * they're an explicit caller-pushed footprint (e.g. a captured furniture's own hitbox) and
-     * were already part of {@code allSlots()}'s carry contribution before this change.
-     */
+    // Exposed-top cells only for carry — see carryRiders for why narrower than allSlots
     private List<Slot> topSlotsOnly() {
         Set<BlockPos> topOffsets = topCellsOf(autoSlots.keySet());
         List<Slot> top = new ArrayList<>(topOffsets.size() + customSlots.size());
@@ -618,12 +321,6 @@ public final class ContraptionHitboxElement implements ContraptionElement {
         return top;
     }
 
-    /**
-     * Pure exposed-top-cell detection (Phase-0 spike #1 granularity finding), extracted so
-     * it's unit-testable without needing a real {@link ContraptionLevel} (which is a
-     * genuine {@code net.minecraft.world.level.Level} subclass, not constructible in a
-     * pure-JVM test).
-     */
     static Set<BlockPos> topCellsOf(Set<BlockPos> occupied) {
         Set<BlockPos> top = new HashSet<>();
         for (BlockPos offset : occupied) {
@@ -634,79 +331,19 @@ public final class ContraptionHitboxElement implements ContraptionElement {
         return top;
     }
 
-    /**
-     * Render every hitbox slot for the given viewers at the bearing's current world-space
-     * position, rotated around the bearing by {@code yawRadians} (2026-07-02 session — "el
-     * /cepolyfill contraption rotate ... no veo que afecte a sus interaction shulker" — this
-     * used to just add the raw local offset with no rotation at all, so a rotated contraption's
-     * hitboxes stayed stuck at their UN-rotated positions while the visual blocks/models
-     * correctly rotated via {@code ContraptionDisplaySwarm}/{@code ContraptionMath.renderPosition}).
-     * {@code moved} (packet-volume optimization — see {@code ContraptionEntity#render}): false
-     * for a stalled/idle contraption whose bearing transform didn't change since the last call —
-     * skips resending position-sync packets (a pure rotation still counts as "moved").
-     */
     public void render(List<Player> viewers, Vec3 bearingWorldPos, double yawRadians, boolean moved) {
         render(viewers, bearingWorldPos, yawRadians, 0.0, 1.0, moved);
     }
 
-    /**
-     * Scale-aware {@link #render(List, Vec3, double, boolean)} (roadmap item #9 — per-contraption
-     * {@code scale}): the whole collider swarm is sized/spaced to match the scaled visual so a resized
-     * contraption is collidable at its rendered size. Two things scale together, both keyed off the same
-     * {@code scale}:
-     * <ul>
-     *   <li><b>Inter-cell SPACING</b> — each slot's local offset is projected through
-     *   {@link ContraptionMath#renderPosition(Vec3, Vec3, double, double, double)} with {@code scale}, so
-     *   the colliders spread apart (or together) about the bearing pivot exactly like the block-display
-     *   cells do.</li>
-     *   <li><b>Box SIZE</b> — the {@code INTERACTION} slot's width/height and the shulker collider's
-     *   {@code Scale} attribute are both multiplied by {@code scale} (see {@link Slot#render} /
-     *   {@link ContraptionShulkerColliderSwarm#render}), so each individual box grows/shrinks with the
-     *   model.</li>
-     * </ul>
-     *
-     * <p><b>Documented approximation.</b> This scales the collider GEOMETRY, but the manual
-     * standing/side-collision math ({@link #carryRiders} et al., which read each slot's un-scaled local
-     * {@code width}/{@code standTopY}) is NOT scale-corrected in this pass — a scaled contraption's visual
-     * colliders match its size, but the fine-grained carry/pushback resolution still reasons in the
-     * un-scaled local footprint (acceptable best-effort, consistent with this whole layer being packet-only
-     * discrete "collision"). At {@code scale == 1.0} everything below reduces byte-for-byte to the pre-scale
-     * behaviour (renderPosition's scale-1 fast path; {@code width*1.0}/{@code Scale*1.0} identities; no
-     * scale-resend packets ever emitted).
-     */
     public void render(List<Player> viewers, Vec3 bearingWorldPos, double yawRadians, double scale, boolean moved) {
         render(viewers, bearingWorldPos, yawRadians, 0.0, scale, moved);
     }
 
-    /**
-     * Pitch-aware {@link #render(List, Vec3, double, double, boolean)} (roadmap item #9 phase 5 — TIPPING).
-     * Each slot's local offset is projected through the SAME
-     * {@link ContraptionMath#renderPosition(Vec3, Vec3, double, double, double)} the block_display cells use —
-     * now with the identical {@code pitchRadians} (previously hard-coded {@code 0.0} here), so a tipping
-     * contraption's interaction/shulker colliders orbit to the SAME tilted cell positions the visual blocks
-     * do instead of staying flat while the display tips. The boxes themselves stay axis-aligned (an
-     * {@code INTERACTION}/{@code SHULKER} box cannot tilt) — this aligns their CENTRES to the canonical
-     * {@code renderPosition} mapping, the best a non-oriented box can do. At {@code pitch == 0} this is
-     * byte-for-byte the pre-pitch behaviour ({@code renderPosition}'s pitch-0 fast path), so every
-     * never-tipped bearing/minecart contraption is unchanged.
-     */
     public void render(List<Player> viewers, Vec3 bearingWorldPos, double yawRadians, double pitchRadians,
             double scale, boolean moved) {
         render(viewers, bearingWorldPos, yawRadians, pitchRadians, 0.0, scale, moved);
     }
 
-    /**
-     * Pitch+ROLL-aware {@link #render(List, Vec3, double, double, double, boolean)} (roadmap item #9 phase 6 —
-     * ROLL). Each slot's local offset is projected through the SAME
-     * {@link ContraptionMath#renderPosition(Vec3, Vec3, double, double, double, double)} the block_display cells
-     * use — now with the identical {@code pitchRadians} AND {@code rollRadians} — so a body leaning in any
-     * horizontal direction toward its heavy side keeps its interaction/shulker collider CENTRES aligned with the
-     * visual blocks instead of the colliders staying flat. The boxes themselves stay axis-aligned (an
-     * {@code INTERACTION}/{@code SHULKER} box cannot tilt), aligning their centres to the canonical
-     * {@code renderPosition} mapping — the best a non-oriented box can do. At {@code pitch == 0 && roll == 0}
-     * this is byte-for-byte the pre-tilt behaviour ({@code renderPosition}'s tilt-0 fast path), so every
-     * never-leaned bearing/minecart contraption is unchanged.
-     */
     public void render(List<Player> viewers, Vec3 bearingWorldPos, double yawRadians, double pitchRadians,
             double rollRadians, double scale, boolean moved) {
         // INTERACTION entities removed — each element manages its own via interactionBounds()

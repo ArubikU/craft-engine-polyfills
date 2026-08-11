@@ -7,13 +7,17 @@ import it.unimi.dsi.fastutil.ints.IntList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.shapes.VoxelShape;
 import net.momirealms.craftengine.bukkit.entity.data.DisplayData;
 import net.momirealms.craftengine.core.entity.player.Player;
 import net.momirealms.craftengine.core.util.Key;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -73,6 +77,33 @@ public final class ContraptionBlockElement implements ContraptionElement {
     @Override
     public boolean isValid() {
         return blockState != null && !blockState.isAir();
+    }
+
+    @Override
+    public List<AABB> interactionBounds() {
+        if (blockState == null || blockState.isAir()) return List.of();
+        try {
+            VoxelShape shape = blockState.getInteractionShape(
+                    net.minecraft.world.level.EmptyBlockGetter.INSTANCE, localPos);
+            if (shape.isEmpty()) shape = blockState.getShape(
+                    net.minecraft.world.level.EmptyBlockGetter.INSTANCE, localPos);
+            if (shape.isEmpty()) return List.of();
+            List<AABB> boxes = new ArrayList<>();
+            for (AABB box : shape.toAabbs()) {
+                boxes.add(box.move(localPos.getX(), localPos.getY(), localPos.getZ()));
+            }
+            return boxes;
+        } catch (Throwable ignored) {
+            return List.of(new AABB(localPos.getX(), localPos.getY(), localPos.getZ(),
+                    localPos.getX() + 1.0, localPos.getY() + 1.0, localPos.getZ() + 1.0));
+        }
+    }
+
+    @Override
+    public boolean onInteract(Player player, int entityId, Vec3 hitPos, InteractionHand hand) {
+        // Dispatch to ContraptionInteractionListener.forward() via the existing interact event chain
+        // The caller (ContraptionInteractPacketDebug) will fire ContraptionInteractEvent + forward()
+        return false; // let the caller's existing dispatch handle it
     }
 
     @Override

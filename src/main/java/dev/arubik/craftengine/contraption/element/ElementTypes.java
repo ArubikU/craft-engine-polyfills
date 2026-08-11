@@ -22,6 +22,7 @@ public final class ElementTypes {
     public static final Key SEAT = Key.of("polyfills", "seat");
     public static final Key ENTITY = Key.of("polyfills", "entity");
     public static final Key HITBOX = Key.of("polyfills", "hitbox");
+    public static final Key INTERACTION = Key.of("polyfills", "interaction");
     public static final Key FLUID = Key.of("polyfills", "fluid");
     public static final Key MARKER = ContraptionMarkerElement.TYPE;
 
