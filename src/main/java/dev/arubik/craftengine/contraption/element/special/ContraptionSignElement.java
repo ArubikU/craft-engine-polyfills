@@ -47,6 +47,8 @@ public final class ContraptionSignElement extends ContraptionBlockElement {
 
     private Component frontText = Component.empty();
     private Component backText = Component.empty();
+    private boolean frontGlowing = false;
+    private boolean backGlowing = false;
     private boolean textDirty = true;
 
     public ContraptionSignElement(BlockPos localPos, BlockState blockState, CompoundTag beTag) {
@@ -72,11 +74,13 @@ public final class ContraptionSignElement extends ContraptionBlockElement {
         if (be instanceof net.minecraft.world.level.block.entity.SignBlockEntity sign) {
             Component lf = buildTextComponent(sign.getFrontText());
             Component lb = buildTextComponent(sign.getBackText());
-            // Force dirty if we previously had empty text — ensures spawned viewers get text
+            boolean fg = sign.getFrontText().hasGlowingText();
+            boolean bg = sign.getBackText().hasGlowingText();
             if (!lf.equals(frontText) || !lb.equals(backText)
-                    || frontText.getString().isEmpty() || backText.getString().isEmpty()) {
-                frontText = lf;
-                backText  = lb;
+                    || frontText.getString().isEmpty() || backText.getString().isEmpty()
+                    || fg != frontGlowing || bg != backGlowing) {
+                frontText = lf; backText = lb;
+                frontGlowing = fg; backGlowing = bg;
                 textDirty = true;
             }
         }
@@ -106,8 +110,8 @@ public final class ContraptionSignElement extends ContraptionBlockElement {
         }
 
         if (textDirty) {
-            sendTextMeta(ctx.viewers(), frontId, frontShown, frontText, tiltQ);
-            sendTextMeta(ctx.viewers(), backId,  backShown,  backText, tiltQ);
+            sendTextMeta(ctx.viewers(), frontId, frontShown, frontText, tiltQ, frontGlowing);
+            sendTextMeta(ctx.viewers(), backId,  backShown,  backText, tiltQ, backGlowing);
             textDirty = false;
         }
     }
@@ -187,8 +191,8 @@ public final class ContraptionSignElement extends ContraptionBlockElement {
     }
 
     private void sendTextMeta(List<Player> viewers, int eid, Set<UUID> shown, Component text,
-                               org.joml.Quaternionf tiltQ) {
-        List<Object> meta = buildTextMeta(text, tiltQ);
+                               org.joml.Quaternionf tiltQ, boolean glowing) {
+        List<Object> meta = buildTextMeta(text, tiltQ, glowing);
         Object pkt = MNms.INSTANCE.constructor$ClientboundSetEntityDataPacket(eid, meta);
         for (Player p : viewers) { if (shown.contains(p.uuid())) p.sendPacket(pkt, false); }
     }
@@ -198,19 +202,22 @@ public final class ContraptionSignElement extends ContraptionBlockElement {
                 eid, pos.x, pos.y, pos.z, yaw, 0f, false), false);
     }
 
-    private List<Object> buildTextMeta(Component text) {
-        return buildTextMeta(text, null);
+    private List<Object> buildTextMeta(Component text, org.joml.Quaternionf tiltQ) {
+        return buildTextMeta(text, tiltQ, false);
     }
 
-    private List<Object> buildTextMeta(Component text, org.joml.Quaternionf tiltQ) {
+    private List<Object> buildTextMeta(Component text, org.joml.Quaternionf tiltQ, boolean glowing) {
         List<Object> meta = new ArrayList<>();
         if (text != null && !text.getString().isEmpty()) {
             DisplayData.TextDisplayData.Text.addEntityData(text, meta);
         }
         DisplayData.TextDisplayData.BackgroundColor.addEntityData(0x00000000, meta);
-        // Apply pitch/roll tilt so text follows contraption orientation
         if (tiltQ != null) {
             DisplayData.LeftRotation.addEntityData(tiltQ, meta);
+        }
+        // Glowing text = full brightness override (self-lit, like vanilla glow ink effect)
+        if (glowing) {
+            DisplayData.BrightnessOverride.addEntityData((15 << 4) | (15 << 20), meta);
         }
         DisplayData.Scale.addEntityData(new org.joml.Vector3f(0.45f, 0.45f, 0.45f), meta);
         DisplayData.PosRotInterpolationDuration.addEntityData(2, meta);
@@ -219,14 +226,134 @@ public final class ContraptionSignElement extends ContraptionBlockElement {
 
     private static Component buildTextComponent(net.minecraft.world.level.block.entity.SignText signText) {
         try {
-            StringBuilder sb = new StringBuilder();
+            // Build multi-line component preserving each line's formatting
+            net.minecraft.network.chat.MutableComponent result = null;
             for (int i = 0; i < 4; i++) {
-                if (i > 0) sb.append("\n");
                 Component line = signText.getMessage(i, false);
-                if (line != null) sb.append(line.getString());
+                if (line == null) line = Component.empty();
+                if (result == null) {
+                    result = line.copy();
+                } else {
+                    result = result.append(Component.literal("\n")).append(line);
+                }
             }
-            return Component.literal(sb.toString());
+            if (result == null) return Component.empty();
+            // Apply sign dye color
+            net.minecraft.world.item.DyeColor dyeColor = signText.getColor();
+            int rgb = dyeColor.getTextColor();
+            result = result.withStyle(s -> s.withColor(rgb));
+            return result;
         } catch (Throwable ignored) { return Component.empty(); }
+    }
+
+    @Override
+    public boolean onInteract(net.minecraft.server.level.ServerPlayer player,
+                               dev.arubik.craftengine.contraption.core.ContraptionState state,
+                               net.minecraft.world.phys.Vec3 hitPos,
+                               net.minecraft.world.InteractionHand hand,
+                               boolean rightClick) {
+        if (!rightClick) {
+            // Left-click: forward to super (attack dispatch via ContraptionInteractionListener)
+            return super.onInteract(player, state, hitPos, hand, false);
+        }
+
+        var be = state.level() != null ? state.level().getBlockEntity(localPos()) : null;
+        if (!(be instanceof net.minecraft.world.level.block.entity.SignBlockEntity sign)) return false;
+
+        net.minecraft.world.item.ItemStack held = player.getItemInHand(hand);
+
+        // Wax: honeycomb waxes the sign (prevents future editing)
+        if (!held.isEmpty() && held.is(net.minecraft.world.item.Items.HONEYCOMB)) {
+            if (!sign.isWaxed()) {
+                sign.setWaxed(true);
+                textDirty = true;
+                if (!player.isCreative()) held.shrink(1);
+                player.level().playSound(null, player.blockPosition(),
+                        net.minecraft.sounds.SoundEvents.HONEYCOMB_WAX_ON,
+                        net.minecraft.sounds.SoundSource.BLOCKS, 1f, 1f);
+            }
+            return true;
+        }
+
+        // Determine which face the player is looking at using hit position relative to sign facing
+        boolean isFront = isFrontFace(hitPos);
+
+        // Dye: change text color
+        if (!held.isEmpty() && held.getItem() instanceof net.minecraft.world.item.DyeItem dye) {
+            net.minecraft.world.item.DyeColor color = dye.getDyeColor();
+            try {
+                java.lang.reflect.Method setter = isFront
+                        ? net.minecraft.world.level.block.entity.SignBlockEntity.class.getDeclaredMethod("setFrontText",
+                            net.minecraft.world.level.block.entity.SignText.class)
+                        : net.minecraft.world.level.block.entity.SignBlockEntity.class.getDeclaredMethod("setBackText",
+                            net.minecraft.world.level.block.entity.SignText.class);
+                setter.setAccessible(true);
+                var signText = isFront ? sign.getFrontText() : sign.getBackText();
+                setter.invoke(sign, signText.setColor(color));
+            } catch (Throwable ignored) {}
+            if (!player.isCreative()) held.shrink(1);
+            textDirty = true;
+            player.level().playSound(null, player.blockPosition(),
+                    net.minecraft.sounds.SoundEvents.DYE_USE,
+                    net.minecraft.sounds.SoundSource.BLOCKS, 1f, 1f);
+            return true;
+        }
+
+        // Glow ink sac: toggle glowing text
+        if (!held.isEmpty() && held.is(net.minecraft.world.item.Items.GLOW_INK_SAC)) {
+            toggleGlow(sign, isFront, true);
+            if (!player.isCreative()) held.shrink(1);
+            textDirty = true;
+            player.level().playSound(null, player.blockPosition(),
+                    net.minecraft.sounds.SoundEvents.GLOW_INK_SAC_USE,
+                    net.minecraft.sounds.SoundSource.BLOCKS, 1f, 1f);
+            return true;
+        }
+
+        // Ink sac: remove glow
+        if (!held.isEmpty() && held.is(net.minecraft.world.item.Items.INK_SAC)) {
+            toggleGlow(sign, isFront, false);
+            if (!player.isCreative()) held.shrink(1);
+            textDirty = true;
+            player.level().playSound(null, player.blockPosition(),
+                    net.minecraft.sounds.SoundEvents.INK_SAC_USE,
+                    net.minecraft.sounds.SoundSource.BLOCKS, 1f, 1f);
+            return true;
+        }
+
+        // Open sign editor (unless waxed)
+        // NOTE: ServerboundSignUpdatePacket interceptor needed to route text back to ContraptionLevel BE
+        if (!sign.isWaxed()) {
+            try {
+                player.openTextEdit(sign, isFront);
+            } catch (Throwable ignored) {}
+            return true;
+        }
+
+        return false;
+    }
+
+    /** True if hit position is on the front face of the sign (player looking at same side as sign text). */
+    private boolean isFrontFace(net.minecraft.world.phys.Vec3 hitPos) {
+        Direction facing = getFacing();
+        double bx = localPos().getX() + 0.5, bz = localPos().getZ() + 0.5;
+        double dot = facing.getStepX() * (hitPos.x - bx) + facing.getStepZ() * (hitPos.z - bz);
+        return dot >= 0;
+    }
+
+    private static void toggleGlow(net.minecraft.world.level.block.entity.SignBlockEntity sign,
+                                    boolean front, boolean glow) {
+        try {
+            String methodName = front ? "setFrontText" : "setBackText";
+            String getMethodName = front ? "getFrontText" : "getBackText";
+            var getText = net.minecraft.world.level.block.entity.SignBlockEntity.class
+                    .getMethod(getMethodName);
+            var setText = net.minecraft.world.level.block.entity.SignBlockEntity.class
+                    .getDeclaredMethod(methodName, net.minecraft.world.level.block.entity.SignText.class);
+            setText.setAccessible(true);
+            var signText = (net.minecraft.world.level.block.entity.SignText) getText.invoke(sign);
+            setText.invoke(sign, signText.setHasGlowingText(glow));
+        } catch (Throwable ignored) {}
     }
 
     private void readText(CompoundTag nbt) {
