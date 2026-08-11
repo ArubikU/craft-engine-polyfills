@@ -360,34 +360,6 @@ public final class ContraptionHitboxElement implements ContraptionElement {
         shulkerColliders.clear(viewers);
     }
 
-    /**
-     * Carries whichever of {@code candidates} are currently standing on this swarm's
-     * footprint, using {@code deltaX/Y/Z} (the contraption's last-applied per-tick delta —
-     * zero while stalled, which naturally stops carrying without any extra bookkeeping).
-     *
-     * <p>Deliberately narrower than {@link #rebuild}'s click/collision hitbox population
-     * (2026-07-02 session, same change that made every cell — not just exposed-top ones — get an
-     * INTERACTION/shulker slot): the standing/carry check below still uses ONLY the exposed-top
-     * slots ({@link #topCellsOf}), not {@link #allSlots}. Reason: {@link #isStandingOnFootprint}'s
-     * height window is {@code topY - 0.3} to {@code topY + 0.9} — plenty lenient for "which exact
-     * cell is a player's feet resting on" when there's only one candidate cell per column, but two
-     * vertically-stacked cells are exactly 1 block apart, well inside that window's ~1.2-block
-     * span. If every cell (not just the true top) contributed a carry-footprint slot, a player
-     * standing on TOP of a 2-tall structure would ALSO match the cell one level below — harmless
-     * here since both belong to the same swarm/contraption (same delta either way), but it stops
-     * being harmless the moment two adjacent standalone contraptions of different heights get
-     * close enough for their columns to overlap in the height window, at which point restricting
-     * to true top-cells is what keeps "standing on the top of THIS contraption" from also being
-     * true one level down. Narrowing the height window itself was the other option considered,
-     * but that risks breaking legitimate edge-of-block standing tolerance that already works
-     * today; scoping the candidate slot set is the smaller, more surgical fix.
-     */
-    /**
-     * Read-only snapshot of whichever real players are currently tracked as "standing on this
-     * swarm's footprint" (2026-07-02 session — teardown fall-through fix, see {@code
-     * ContraptionEntity#currentRiderIds}'s javadoc for the caller). Purely additive accessor —
-     * doesn't touch {@link #currentRiders}'s own update logic in {@link #carryRiders}.
-     */
     public Set<UUID> currentRiderIds() {
         return java.util.Collections.unmodifiableSet(currentRiders);
     }
@@ -396,17 +368,7 @@ public final class ContraptionHitboxElement implements ContraptionElement {
         carryRiders(candidates, bearingWorldPos, deltaX, deltaY, deltaZ, null, yaw, 0.0);
     }
 
-    /**
-     * The world-space displacement a rider at {@code riderPos} must be carried by THIS tick, given
-     * the contraption's translational delta ({@code dx,dy,dz}) AND its rotational delta
-     * ({@code yawDelta}) — 2026-07-03 "rotation carry falla en el rotation bearing". A pure
-     * ROTATIONAL bearing has zero translational delta, but every off-axis cell (and the rider on it)
-     * sweeps a real arc: this maps the rider's current footprint point into the local frame
-     * ({@code realToLocal} at the NEW transform), re-projects it under the PREVIOUS tick's transform
-     * ({@code bearing-Δtranslation}, {@code yaw-Δyaw}), and returns new−old — the exact per-tick
-     * movement of the ground under the rider, uniformly covering translation, rotation, or both.
-     * Fast-paths pure translation (yawDelta==0) to the unchanged {@code (dx,dy,dz)}.
-     */
+    // Rotation-aware carry delta: arc + translation; fast-paths to (dx,dy,dz) when yawDelta==0
     private static Vec3 riderCarryDelta(Vec3 riderPos, Vec3 bearingNew, double dx, double dy, double dz,
             double yawNew, double yawDelta) {
         if (yawDelta == 0.0) {
@@ -418,13 +380,6 @@ public final class ContraptionHitboxElement implements ContraptionElement {
         return new Vec3(riderPos.x - oldPoint.x, riderPos.y - oldPoint.y, riderPos.z - oldPoint.z);
     }
 
-    /**
-     * {@code level} overload (Bug-2 fix, 2026-07-02 session — footstep/fall sounds): the level is
-     * needed only to read the captured {@code BlockState} at the cell a standing rider is over, so
-     * its {@code SoundType#getStepSound}/{@code getFallSound} can be played manually (see
-     * {@link #maybePlayStepSound}). {@code null} is tolerated (footstep sounds simply skipped) for
-     * any caller/test path without a live level; everything else is unchanged.
-     */
     public void carryRiders(List<ServerPlayer> candidates, Vec3 bearingWorldPos, double deltaX, double deltaY, double deltaZ,
             ContraptionLevel level, double yaw, double yawDelta) {
         List<Slot> slots = topSlotsOnly();
@@ -439,21 +394,10 @@ public final class ContraptionHitboxElement implements ContraptionElement {
                 UUID id = sp.getUUID();
                 boolean wasRiding = currentRiders.contains(id);
                 ridingNow.add(id);
-                // Footstep / landing sounds (Bug-2). Emitted BEFORE the carry nudge, keyed off the
-                // rider's current real position — see #maybePlayStepSound.
                 if (level != null) {
                     maybePlayStepSound(sp, bearingWorldPos, level, wasRiding, yaw);
                 }
-                // Side-collision clamp (2026-07-02 session — "chequea bien las hitbox solidas en
-                // las 4 direcciones, a veces por el movimiento deja moverse dentro de las bounding
-                // box de otros (shulker) por el mismo carry"). See #clampDeltaForSideCollision's
-                // javadoc for the full reasoning — this is the ONLY place that ever validated the
-                // carry delta before; previously it was applied completely blind to whether the
-                // resulting position would embed the rider inside a neighboring captured cell's
-                // own solid volume.
                 Vec3 riderPos = sp.position();
-                // Rotational-aware carry delta (2026-07-03) — arc + translation, so a rider on a
-                // spinning ROTATIONAL contraption is carried around, not just left in place.
                 Vec3 carryVec = riderCarryDelta(riderPos, bearingWorldPos, deltaX, deltaY, deltaZ, yaw, yawDelta);
                 Vec3 clamped = clampDeltaForSideCollision(riderPos, bearingWorldPos, carryVec.x, carryVec.y, carryVec.z, yaw);
                 PlayerCarry.carry(sp, clamped.x, clamped.y, clamped.z);
@@ -469,28 +413,6 @@ public final class ContraptionHitboxElement implements ContraptionElement {
         currentRiders.addAll(ridingNow);
     }
 
-    /**
-     * Manually emits footstep and landing sounds for a rider standing on the contraption deck
-     * (Bug-2 fix, 2026-07-02 session). Vanilla's own {@code Entity#playStepSound}/fall logic reads
-     * the REAL block under the player ({@code level.getBlockState(below)}), which is air in the
-     * real world where a contraption visually is (its blocks live in the hidden
-     * {@link ContraptionLevel}), so no footstep or fall sound ever plays. This reads the captured
-     * {@code BlockState} at whichever top cell the rider is over, and plays its
-     * {@code SoundType}'s step/fall sound through {@link ContraptionLevel}'s own
-     * {@code playSeededSound} override (which redirects to the real world at the bearing transform,
-     * so the sound reaches the real-world player at the right place).
-     *
-     * <ul>
-     *   <li><b>Fall sound</b>: on the tick a player transitions from not-standing to standing
-     *   ({@code wasRiding == false}) with enough downward speed ({@link #FALL_MIN_SPEED}), play the
-     *   block's {@code getFallSound} once (volume 0.5, pitch 1.0 — vanilla's own fall-sound levels),
-     *   and seed the step accumulator so a footstep doesn't also fire the same tick.</li>
-     *   <li><b>Step sound</b>: otherwise, accumulate horizontal (XZ) distance travelled since the
-     *   last step and, once it crosses {@link #STEP_DISTANCE}, play {@code getStepSound} at
-     *   vanilla's {@code getVolume()*0.15} volume / {@code getPitch()} pitch (confirmed via javap
-     *   against this project's mapped server jar, {@code Entity#playStepSound} bytecode).</li>
-     * </ul>
-     */
     private void maybePlayStepSound(ServerPlayer sp, Vec3 bearingWorldPos, ContraptionLevel level, boolean wasRiding, double yaw) {
         BlockPos cell = standingCellOf(sp.position(), bearingWorldPos, yaw);
         if (cell == null) {
@@ -505,8 +427,6 @@ public final class ContraptionHitboxElement implements ContraptionElement {
         UUID id = sp.getUUID();
 
         if (!wasRiding) {
-            // Just landed on / stepped onto the footprint this tick. A real downward speed means a
-            // fall (play the fall sound); otherwise just start tracking steps without a sound.
             double downSpeed = -sp.getDeltaMovement().y;
             if (downSpeed >= FALL_MIN_SPEED) {
                 net.minecraft.sounds.SoundEvent fall = soundType.getFallSound();
@@ -545,17 +465,7 @@ public final class ContraptionHitboxElement implements ContraptionElement {
         }
     }
 
-    /**
-     * The captured top-cell {@link BlockPos} offset a rider at real-world {@code pos} is standing
-     * on, or {@code null} if none — the same footprint math {@link #isStandingOnFootprint} uses,
-     * but returns WHICH cell (needed to read that cell's {@code BlockState}/{@code SoundType}).
-     * When multiple top cells qualify (edge tolerance overlap) the one whose XZ centre is nearest
-     * the rider wins, so a walking player's footstep reflects the block they're most over.
-     */
     private BlockPos standingCellOf(Vec3 pos, Vec3 bearingWorldPos, double yaw) {
-        // Yaw-aware, matching isStandingOnFootprint (2026-07-03): un-rotate the rider into the local
-        // frame the slots live in before the footprint test, so footstep sounds resolve the correct
-        // cell on a rail-following (yaw-rotated) minecart contraption, not just at yaw≈0.
         Vec3 local = ContraptionMath.realToLocal(pos, bearingWorldPos, yaw);
         Set<BlockPos> topOffsets = topCellsOf(autoSlots.keySet());
         BlockPos best = null;
@@ -583,79 +493,17 @@ public final class ContraptionHitboxElement implements ContraptionElement {
         return best;
     }
 
-    /**
-     * How far above a rider's real foot Y the side-collision box starts (see {@link #overlapsAnySolid}).
-     * Just past {@link #isStandingOnFootprint}'s 0.3 below-top standing tolerance, so "resting on a
-     * cell's top face" never registers as "embedded in that cell" and zeroes the horizontal carry.
-     */
+    // Just past the 0.3 below-top standing tolerance so "resting on top" != "embedded in"
     private static final double FLOOR_CLEARANCE = 0.35;
-
-    /** Half-width of a standard vanilla player hitbox (0.6 wide) — see {@link #clampDeltaForSideCollision}. */
-    /** Below this per-tick movement (squared) a contraption counts as static — no player shove. See
-     *  {@link #pushBackNearbyBystanders}. 0.02 blocks/tick squared: well under any real drive, above jitter. */
+    // Below this delta (blocks/tick)^2 the contraption is static — skip bystander shove
     private static final double STATIC_DELTA_SQ = 0.02 * 0.02;
-
     private static final double RIDER_HALF_WIDTH = 0.3;
-    /** Standard vanilla standing player hitbox height — see {@link #clampDeltaForSideCollision}. */
     private static final double RIDER_HEIGHT = 1.8;
 
-    /**
-     * Side-collision validation for the carry delta (2026-07-02 session — "chequea bien las
-     * hitbox solidas en las 4 direcciones, a veces por el movimiento deja moverse dentro de las
-     * bounding box de otros (shulker) por el mismo carry").
-     *
-     * <p><b>What existed before this fix: nothing.</b> {@link #isStandingOnFootprint} is a
-     * "is this rider's feet resting on top of a slot's TOP surface" check (a Y-window test, see
-     * its own javadoc) — it has never had any notion of "would moving this rider sideways by the
-     * platform's delta push them through a solid FACE of some other cell." {@code carryRiders}/
-     * {@code carryEntities}/{@code carryNearbyEntities} all just did
-     * {@code pos + delta}, unconditionally, every tick — completely blind to every OTHER captured
-     * cell's own volume. Per this project's own established convention (see this class's and
-     * {@code ContraptionShulkerColliderSwarm}'s class javadocs), there is no real server-side
-     * collision here at all — every hitbox in this system is packet-only, so "solid" only ever
-     * means "this class's own manual AABB math says so." That manual math previously only existed
-     * for the vertical/standing case; there was NO horizontal counterpart whatsoever, so a rider
-     * riding a contraption that moves sideways toward an adjacent captured cell (or toward another
-     * contraption's cell) could freely end up with their own hitbox overlapping that cell's box —
-     * "clipping into the neighbor" exactly as reported.
-     *
-     * <p><b>The fix</b>: before handing {@code deltaX/Y/Z} to {@code PlayerCarry}/a direct
-     * reposition, build the rider's CURRENT real-world AABB (standard player hitbox dimensions —
-     * these routines don't have access to the entity's real bounding box for a generic
-     * {@code Entity} candidate, and a fixed vanilla-standard box is a reasonable, simple
-     * approximation for this manual check) and test it against every OTHER captured cell's own
-     * real-world AABB (every {@code allSlots()} entry, translated via the exact same
-     * {@link ContraptionMath#renderPosition} math the render swarms already use — reusing it here
-     * rather than inventing new coordinate math per this task's explicit instruction). "Every
-     * OTHER" deliberately excludes whichever slot(s) the rider is currently standing ON TOP of
-     * (found via {@code slots}, the top-only candidate list already computed by the caller) —
-     * standing on your own platform's top surface, and being carried along with it, is the
-     * intended/desired behavior this whole carry system exists for; only a DIFFERENT cell's solid
-     * volume should ever block the rider.
-     *
-     * <p>Resolution is a simple per-axis separating clamp, not a full swept-AABB physics resolver
-     * (this task's own instructions call that acceptable): test the full 3-axis delta first: if
-     * applying it as-is doesn't overlap anything, use it unchanged (the common case, zero extra
-     * cost beyond the checks). If it WOULD overlap, try zeroing X only, then Z only, then both
-     * X+Z (Y is never clamped here — vertical carry is governed entirely by
-     * {@code isStandingOnFootprint}'s own window, and clamping Y would fight normal
-     * standing-on-top vertical carry, e.g. a rising platform, which is never itself a "side"
-     * collision) — the first candidate that doesn't overlap wins, so a diagonal push that's only
-     * blocked along one axis still lets the rider slide along the other, matching ordinary
-     * axis-aligned collision sliding behavior instead of freezing the rider outright.
-     */
     private Vec3 clampDeltaForSideCollision(Vec3 riderPos, Vec3 bearingWorldPos, double deltaX, double deltaY, double deltaZ, double yaw) {
         return clampDeltaForSideCollisionGeneric(riderPos, bearingWorldPos, deltaX, deltaY, deltaZ, allSlots(), RIDER_HALF_WIDTH, RIDER_HEIGHT, yaw);
     }
 
-    /**
-     * Entity-agnostic version of {@link #clampDeltaForSideCollision} — same axis-separating-clamp
-     * algorithm, but parameterized on the carried thing's own half-width/height instead of the
-     * fixed vanilla player dimensions, so {@link #carryEntities} can pass a mob/item/boat's real
-     * {@code getBbWidth()/getBbHeight()} instead of assuming every rider is player-shaped.
-     * {@code solids} is passed in (rather than recomputed) so {@link #carryEntities} can compute
-     * {@link #allSlots} once outside its per-entity loop instead of once per candidate.
-     */
     private static Vec3 clampDeltaForSideCollisionGeneric(Vec3 pos, Vec3 bearingWorldPos, double deltaX, double deltaY, double deltaZ,
             List<Slot> solids, double halfWidth, double height, double yaw) {
         if (deltaX == 0.0 && deltaZ == 0.0) {
@@ -682,79 +530,18 @@ public final class ContraptionHitboxElement implements ContraptionElement {
         return new Vec3(0.0, deltaY, 0.0); // every candidate overlapped — carry vertically only, don't push sideways at all
     }
 
-    /**
-     * Whether a carried thing's hitbox (half-width/height as given, centered/foot-anchored at
-     * {@code targetPos} the same way a real Minecraft entity's bounding box is) would overlap ANY
-     * captured cell's real-world AABB (every {@link #allSlots} entry — full footprint, not just
-     * top cells, matching {@link #rebuild}'s "every cell gets a hitbox" javadoc). See
-     * {@link #clampDeltaForSideCollisionGeneric} for how this is used (the standing-on-top
-     * cell(s) are NOT excluded here on purpose — see below).
-     *
-     * <p>Why the standing cell doesn't need its own exclusion despite "every OTHER cell": a
-     * rider's feet rest at/above a slot's TOP face (see {@link #isStandingOnFootprint}'s
-     * {@code topY} math) — their hitbox (from foot level upward) never actually overlaps that
-     * same slot's own volume, so no explicit exclusion list is needed... <b>provided this
-     * method's own solid-box Y-extent uses that SAME real top face, not the flat full-cell
-     * height.</b>
-     *
-     * <p><b>2026-07-02 session, carry-fix follow-up #2 — "cofres stairs slabs cactus no
-     * sostienen al jugador como si lo hacen bloques completos"</b>: this method used to build
-     * each slot's solid Y-extent as {@code [ly, ly + slot.height)} — {@code slot.height} is
-     * ALWAYS the flat full-cell {@code 1f} (see {@code rebuild}'s {@code Slot} construction,
-     * deliberately kept at 1/1 for the INTERACTION click/collision spawn regardless of the real
-     * block's shape). For a block whose REAL standable top is below the cell ceiling — a chest
-     * ({@code standTopY≈0.875}), cactus ({@code≈0.9375}), or a bottom slab ({@code 0.5}) — a
-     * rider genuinely standing on that real surface has feet at
-     * {@code ly + standTopY < ly + 1.0 = the OLD maxY}, so their foot-level Y
-     * ({@code rMinY = standTopY}) fell BELOW the old {@code maxY}, i.e. STILL inside
-     * {@code [minY, maxY)} — the rider's own standing position registered as "embedded in this
-     * cell's own solid volume." {@link #clampDeltaForSideCollisionGeneric} never clamps Y, only
-     * X/Z, so this Y-only false positive could never be resolved by any of its 4 candidates —
-     * EVERY candidate (full delta, X-clamped, Z-clamped, both-clamped) still "overlapped" this
-     * same self-cell, falling through to its last resort ({@code new Vec3(0, deltaY, 0)}), i.e.
-     * the horizontal carry delta got silently zeroed EVERY TICK for exactly these shapes — matching
-     * the reported symptom precisely: passive standing/collision was fine (the shulker collider
-     * layer already used the real shape correctly), but the moment the contraption actually moved,
-     * the rider was left behind/fell off relative to it, since only Y ever got carried (never X/Z).
-     * A true full cube was never affected: {@code standTopY == height == 1.0} there, so
-     * {@code rMinY(1.0) < maxY(1.0)} is false (strict {@code <}) — no false overlap. Now uses the
-     * REAL shape-derived {@code [standBottomY, standTopY)} window (falls back to {@code [0,height]}
-     * for legacy/custom slots, identical to the old behavior for those) so a rider standing exactly
-     * on a shape's real top is never again mistaken for "inside" that same cell.
-     *
-     * <p>Slots with {@link Slot#hasCollision} {@code false} (torches, tripwire, most plants/flowers,
-     * etc. — see {@code computeCell}'s {@code shape.isEmpty()} javadoc) are skipped entirely —
-     * see that field's own javadoc for the companion "torch shoves the player like a full block"
-     * bug this closes.
-     */
     private static boolean overlapsAnySolid(Vec3 targetPos, Vec3 bearingWorldPos, List<Slot> solids, double halfWidth, double height, double yaw) {
         return overlapsAnySolid(targetPos, bearingWorldPos, solids, halfWidth, height, yaw, 0.0, 0.0, 1.0);
     }
 
-    /**
-     * Pitch/roll/scale-aware overlap test (2026-07-17 — "que solo haga [push] si se esta dentro del AABB
-     * bounding box del bloque considerando su yaw y pitch"). A yaw-only un-rotation lines the box test up
-     * with the cells of a contraption that only spins, but a phys contraption that PITCHES or ROLLS has its
-     * cells tilted out of the world-axis-aligned frame, so the yaw-only test both misses entities genuinely
-     * inside a tilted block and falsely reports ones that only look adjacent from above — exactly the push
-     * misbehaviour. Un-rotating by the full orientation puts the entity in the same tilted frame the cells
-     * live in, so "inside the block's box" means inside the ACTUAL oriented box.
-     */
+    // Full orientation un-rotation so "inside block" is tested in the actual tilted frame
     private static boolean overlapsAnySolid(Vec3 targetPos, Vec3 bearingWorldPos, List<Slot> solids,
             double halfWidth, double height, double yaw, double pitch, double roll, double scale) {
         Vec3 local = ContraptionMath.realToLocal(
                 targetPos, bearingWorldPos, yaw, pitch, roll, scale <= 0 ? 1.0 : scale);
         double rMinX = local.x - halfWidth, rMaxX = local.x + halfWidth;
         double rMinZ = local.z - halfWidth, rMaxZ = local.z + halfWidth;
-        // Raise the rider's collision floor above the standing tolerance band (2026-07-03 — "el tren
-        // sigue sin agarrarme"). isStandingOnFootprint accepts a rider whose feet sit up to 0.3
-        // BELOW a cell's top face as "standing on" it, so a carried rider's real feet dip slightly
-        // into the very cell they stand on. Using their raw foot Y here made overlapsAnySolid report
-        // that self-cell as a collision on EVERY candidate delta, so clampDeltaForSideCollision
-        // fell through to zeroing the whole horizontal carry every tick — the rider never moved with
-        // the platform. Starting the collision box just above that tolerance band lets "resting on
-        // top" stop counting as "embedded in", while a genuinely taller neighbor wall (≥ ~1.3 above
-        // the floor) still overlaps and blocks. FLOOR_CLEARANCE (0.35) is just past the 0.3 window.
+        // Raise floor above standing tolerance so "resting on top" doesn't read as "embedded"
         double rMinY = local.y + FLOOR_CLEARANCE, rMaxY = local.y + height;
         for (Slot slot : solids) {
             if (!slot.hasCollision) {
@@ -796,58 +583,8 @@ public final class ContraptionHitboxElement implements ContraptionElement {
         return isStandingOnFootprint(pos, bearingWorldPos, slots, 0.0, yaw);
     }
 
-    /**
-     * {@code deltaY} — this tick's platform vertical delta (world-space blocks; 0 for a purely
-     * horizontal/idle contraption) — see the widened-window comment below (2026-07-02 session,
-     * vertical-lift carry-desync fix: "cuando se mueve hacia arriba los shulkers y el carry del
-     * contraption fallan un poco. el jugador se unde").
-     *
-     * <p><b>Root cause investigated</b>: the render/carry call order in {@code ContraptionEngine}
-     * is NOT the problem — {@code stepKinematics} advances {@code state.x/y/z} FIRST, then
-     * {@code ContraptionEntity#render} sends the shulker/hitbox position-sync packets at that SAME
-     * already-advanced bearing, then {@code carryRiders} reads {@code state.lastDeltaY()} and checks
-     * this method against that SAME bearing — shulker visual position and carry math always agree
-     * on "where is the platform this tick," so there is no cross-tick position mismatch here.
-     *
-     * <p>The actual gap is {@code PlayerCarry.carry}'s own early-return gates (that file is
-     * read-only reference for this session — see its class javadoc): while the rider has the jump
-     * key held OR any directional (WASD) key held, {@code PlayerCarry.carry} returns BEFORE ever
-     * touching Y — meaning on a continuously-rising lift, any tick the player jumps or so much as
-     * taps a movement key, that tick's vertical carry impulse is silently dropped entirely while
-     * the shulker/hitbox floor has already moved up. On a purely horizontal contraption this was
-     * harmless (dy was 0 anyway); on a vertical lift it is not — real gravity keeps pulling the
-     * player down every one of those skipped ticks while the platform underneath them keeps
-     * rising, which is exactly "el jugador se unde." That gap can only be closed inside
-     * {@code PlayerCarry} itself (skipping the Y-carry tick during jump/WASD input is deliberate
-     * client-authority-respecting design there, not an oversight) — NOT something this class's
-     * carry call site can fix by itself.
-     *
-     * <p>What THIS method can and does fix: on a fast-moving lift, the player's real Y (subject to
-     * the gap above, plus ordinary per-tick fall/jump physics) can drift outside the old fixed
-     * {@code [topY-0.3, topY+0.9]} (1.2-block) window within a single tick, especially right after
-     * one of the skipped-carry ticks above. When that happens the rider was being unregistered from
-     * {@code currentRiders} (an explicit {@code PlayerCarry.release} call) and re-registered the
-     * next tick it re-entered the window — a flapping on/off classification that reads exactly like
-     * intermittent "sinking then catching" on a rising platform: released tick loses ANY carry
-     * impulse at all (even the ticks that otherwise would have applied dy), which is strictly worse
-     * than the base gap above. Widening the window's lower/upper bound by {@code |deltaY|} (the
-     * platform's own this-tick vertical travel) keeps a rider who's merely trailing the platform by
-     * about one tick's worth of vertical motion still classified as "riding," so the very next
-     * non-jumping/non-WASD tick resumes the additive Y carry instead of the player having to fully
-     * re-enter a now out-of-date fixed window first.
-     */
+    // deltaY widens the Y window so a rider trailing the platform by ~1 tick stays classified as riding
     private static boolean isStandingOnFootprint(Vec3 pos, Vec3 bearingWorldPos, List<Slot> slots, double deltaY, double yaw) {
-        // Yaw-aware footprint test (2026-07-03 session — "el minecart s emueve pero no me mueve a
-        // mi"). A minecart contraption is yaw-rotated to follow the rail direction, so its blocks
-        // RENDER at rotated world positions (via ContraptionMath.renderPosition) while the slot
-        // offsets (slot.lx/lz) stay in the un-rotated local frame. The old check compared the
-        // rider's raw WORLD position against bearingWorldPos + slot.lx (axis-aligned) — correct only
-        // at yaw≈0, wrong for any rail-following train, so the rider standing on the visibly-rotated
-        // deck never matched any slot and was never carried (nor got footstep sounds). Fix: undo the
-        // contraption's rotation on the rider's position first (realToLocal is renderPosition's exact
-        // inverse — pivot/yaw aware), then compare in the same local frame the slots live in. Yaw is
-        // a rotation about the vertical axis, so Y is unaffected: local.y == pos.y - bearingWorldPos.y
-        // and the slot's local top is simply slot.ly + slot.standTopY.
         Vec3 local = ContraptionMath.realToLocal(pos, bearingWorldPos, yaw);
         double verticalSlack = Math.min(Math.abs(deltaY), 1.0); // cap: never trust more than 1 block/tick of slack
         for (Slot slot : slots) {
@@ -858,28 +595,8 @@ public final class ContraptionHitboxElement implements ContraptionElement {
             double maxX = slot.lx + slot.width / 2.0;
             double minZ = slot.lz - slot.width / 2.0;
             double maxZ = slot.lz + slot.width / 2.0;
-            // Real shape-derived top surface (2026-07-02 session, carry-fix follow-up — "los
-            // shulker de slabs y stairs y figuras no normales no agarran el sistema de carry").
-            // This used to be `slot.ly + slot.height`, i.e. always the cell's FULL flat height
-            // (height is always 1f for every auto-derived slot — see rebuild()'s Slot construction
-            // — regardless of the real captured block's shape). For a BOTTOM slab (real collision
-            // surface at local Y 0..0.5, so its true top face is cell-local y+0.5) that flat
-            // assumption put topY a full 0.5 blocks too HIGH (cell-local y+1.0 instead of y+0.5).
-            // With this method's existing -0.3/+0.9 tolerance window, a player's real feet resting
-            // on the slab's actual surface (world Y = bearingY + slot.ly + 0.5) fell BELOW
-            // (topY - 0.3) = bearingY + slot.ly + 0.7 — i.e. 0.2 blocks outside the window's lower
-            // bound — so bottom slabs never registered as "standing on the footprint" and were
-            // silently skipped by carryRiders/carryEntities every tick (never carried, and never
-            // released either since they were never added to currentRiders in the first place —
-            // matches the reported "left behind"/"falls through relative to the structure"
-            // symptom exactly). A TOP slab's real surface (local Y 0.5..1.0, true top at y+1.0)
-            // happened to coincide with the flat assumption by luck of top-slab geometry, which is
-            // why the bug appeared shape/orientation-dependent rather than uniformly broken.
-            // slot.standTopY now holds the REAL shape-derived local top (see computeCell /
-            // this slot's construction in rebuild()), so this now correctly resolves to
-            // bearingY + slot.ly + 0.5 for a bottom slab, matching its genuine collision surface.
-            double topY = slot.ly + slot.standTopY; // local top face (Y unaffected by yaw)
-            double localFeetY = local.y; // == pos.y - bearingWorldPos.y
+            double topY = slot.ly + slot.standTopY;
+            double localFeetY = local.y;
             if (local.x >= minX - 0.3 && local.x <= maxX + 0.3
                     && local.z >= minZ - 0.3 && local.z <= maxZ + 0.3
                     && localFeetY >= topY - 0.3 - verticalSlack && localFeetY <= topY + 0.9 + verticalSlack) {
@@ -889,29 +606,6 @@ public final class ContraptionHitboxElement implements ContraptionElement {
         return false;
     }
 
-    /**
-     * Non-player counterpart to {@link #carryRiders} (2026-07-02 session — "otras entidades que
-     * no sean jugador no se mantienen sobre la contraption y la atraviesan": mobs, dropped items,
-     * boats, etc. standing on a moving contraption's footprint were never carried at all, so they
-     * got left behind — or fell straight through, since these hitbox slots are packet-only and
-     * give a non-player entity zero real collision either).
-     *
-     * <p>Unlike {@link #carryRiders}, a non-player {@link Entity}'s position is fully
-     * server-authoritative — there's no client prediction to fight, so this skips
-     * {@code PlayerCarry}'s whole velocity-nudge/ack-gating dance entirely and just directly
-     * repositions the entity via {@link Entity#setPos} (same convention vanilla itself uses to
-     * carry an entity standing on something that pushes it — e.g. a piston's
-     * {@code MovingPistonBlock} shoving entities along, or a boat/minecart's own
-     * {@code Entity#move} integrating its velocity into position every tick): update both
-     * coordinates and the tracked bounding box, then notify {@link Entity#setOldPosAndRot} so
-     * nearby clients' interpolation doesn't visibly snap. Position resync to observers happens
-     * automatically afterward the same way it already does for any other server-side entity move
-     * (next tracked-entity update packet), no extra packet plumbing needed here.
-     *
-     * <p>Reuses the exact same exposed-top-cell footprint slots and {@link #isStandingOnFootprint}
-     * math {@link #carryRiders} uses — "standing on top of this contraption" means the same thing
-     * regardless of whether the rider is a player or not.
-     */
     public void carryEntities(List<net.minecraft.world.entity.Entity> candidates, Vec3 bearingWorldPos, double deltaX, double deltaY, double deltaZ, double yaw) {
         if (deltaX == 0.0 && deltaY == 0.0 && deltaZ == 0.0) {
             return;
@@ -926,12 +620,6 @@ public final class ContraptionHitboxElement implements ContraptionElement {
                 continue;
             }
             if (isStandingOnFootprint(entity.position(), bearingWorldPos, slots, yaw)) {
-                // Side-collision clamp (see ContraptionHitboxElement#clampDeltaForSideCollision's
-                // javadoc — same "otherwise blindly repositions by the platform's delta with zero
-                // check against a NEIGHBORING cell's own solid volume" bug carryRiders had, just
-                // for non-player entities: their own real bounding box half-extents/height are
-                // used instead of a fixed player-sized box since a generic Entity here could be
-                // anything from an item to a boat).
                 double halfWidth = entity.getBbWidth() / 2.0;
                 double height = entity.getBbHeight();
                 Vec3 pos = entity.position();
@@ -942,28 +630,6 @@ public final class ContraptionHitboxElement implements ContraptionElement {
         }
     }
 
-    /**
-     * Convenience wrapper for {@link #carryEntities(List, Vec3, double, double, double)} that
-     * also does the real-world entity gather + candidate filtering itself (2026-07-02 session).
-     * Kept HERE rather than in {@code ContraptionEntity}/{@code ContraptionEngine} specifically
-     * so the exclusion check below can call {@link ContraptionItemPickupSwarm#isMirror}, which is
-     * package-private (deliberately not widened — that class is a concurrent agent's read-only
-     * file right now) and only reachable from other classes in this same {@code render} package.
-     *
-     * <p>Scoped to a small AABB around the contraption's current real-world bounding box (footprint
-     * top-cell slots + a 1-block margin, not the whole world) — cheap, proportional to contraption
-     * size. Excludes real {@link ServerPlayer}s (those ride the separate {@link #carryRiders} path,
-     * which needs {@code PlayerCarry}'s client-prediction-aware nudging instead of a raw
-     * teleport) and any {@link ItemEntity} that is one of {@link ContraptionItemPickupSwarm}'s own
-     * real-world pickup mirrors (those are already independently kept in sync with the
-     * contraption's live transform every tick by that swarm — see its class javadoc; carrying them
-     * AGAIN here would double-apply the delta and make them drift away twice as fast).
-     *
-     * <p>{@code anchorEntityId} (nullable) is the entity the contraption is anchored to and driven BY —
-     * a harnessed ghast flying inside its own structure. Carrying it would add the delta it itself
-     * produced back onto its own position, doubling its speed every tick. See
-     * {@code ContraptionState#anchorEntityId}.
-     */
     public void carryNearbyEntities(net.minecraft.world.level.Level realLevel, Vec3 bearingWorldPos, double deltaX, double deltaY, double deltaZ, double yaw, java.util.UUID anchorEntityId) {
         if (deltaX == 0.0 && deltaY == 0.0 && deltaZ == 0.0) {
             return;
@@ -983,11 +649,7 @@ public final class ContraptionHitboxElement implements ContraptionElement {
             minZ = Math.min(minZ, bearingWorldPos.z + slot.lz - slot.width / 2.0);
             maxZ = Math.max(maxZ, bearingWorldPos.z + slot.lz + slot.width / 2.0);
         }
-        // This gather box is built from the UN-rotated local footprint; a yaw-rotated contraption's
-        // real footprint can bulge past it (rotating a box of half-extents (a,b) grows its AABB by up
-        // to a+b per axis). Inflate by that worst-case span so a rotated minecart train's riders are
-        // still gathered (the membership test below, isStandingOnFootprint, is exact — this only
-        // needs to not under-cover) (2026-07-03).
+        // Inflate gather box for yaw rotation — local footprint under-covers a rotated contraption
         double rotationMargin = ((maxX - minX) + (maxZ - minZ)) / 2.0;
         net.minecraft.world.phys.AABB bounds = new net.minecraft.world.phys.AABB(minX, minY, minZ, maxX, maxY, maxZ).inflate(1.0 + rotationMargin);
         List<net.minecraft.world.entity.Entity> nearby;

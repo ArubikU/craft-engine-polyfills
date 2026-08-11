@@ -1,11 +1,14 @@
 package dev.arubik.craftengine.contraption.element;
 
 import dev.arubik.craftengine.contraption.assembly.ContraptionMath;
+import dev.arubik.craftengine.contraption.core.ContraptionState;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.decoration.ArmorStand;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.momirealms.craftengine.core.entity.player.Player;
 import net.momirealms.craftengine.core.util.Key;
@@ -57,6 +60,34 @@ public final class ContraptionSeatElement implements ContraptionElement {
             return new int[]{mount.getId()};
         }
         return new int[0];
+    }
+
+    /** 0.8×0.8×0.8 cube at local seat offset — standard click detection area for a seat. */
+    @Override
+    public List<AABB> interactionBounds() {
+        double x = localOffset.x, y = localOffset.y, z = localOffset.z;
+        return List.of(new AABB(x - 0.4, y - 0.4, z - 0.4, x + 0.4, y + 0.4, z + 0.4));
+    }
+
+    @Override
+    public boolean onInteract(ServerPlayer player, ContraptionState state, Vec3 hitPos, InteractionHand hand, boolean rightClick) {
+        if (!rightClick) return false;
+        ServerLevel level;
+        try {
+            level = (ServerLevel) player.level();
+        } catch (ClassCastException ignored) {
+            return false;
+        }
+        // Dismount if already seated here
+        if (player.getUUID().equals(occupantId)) {
+            ejectRider();
+            return true;
+        }
+        // Mount at world position
+        Vec3 bearing = new Vec3(state.x(), state.y(), state.z());
+        Vec3 worldPos = ContraptionMath.renderPosition(localOffset, bearing,
+                state.yawRadians(), state.pitchRadians(), state.rollRadians(), state.scale());
+        return mount(player, level, worldPos);
     }
 
     public boolean isOccupied() {

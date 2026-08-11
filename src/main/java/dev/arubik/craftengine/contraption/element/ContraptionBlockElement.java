@@ -1,12 +1,16 @@
 package dev.arubik.craftengine.contraption.element;
 
+import dev.arubik.craftengine.contraption.ContraptionInteractionListener;
 import dev.arubik.craftengine.contraption.assembly.ContraptionMath;
 import dev.arubik.craftengine.contraption.core.ContraptionLevel;
+import dev.arubik.craftengine.contraption.core.ContraptionState;
 import dev.arubik.craftengine.util.MNms;
 import it.unimi.dsi.fastutil.ints.IntList;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.state.BlockState;
@@ -100,10 +104,25 @@ public final class ContraptionBlockElement implements ContraptionElement {
     }
 
     @Override
-    public boolean onInteract(Player player, int entityId, Vec3 hitPos, InteractionHand hand) {
-        // Dispatch to ContraptionInteractionListener.forward() via the existing interact event chain
-        // The caller (ContraptionInteractPacketDebug) will fire ContraptionInteractEvent + forward()
-        return false; // let the caller's existing dispatch handle it
+    public boolean onInteract(ServerPlayer player, ContraptionState state, Vec3 hitPos, InteractionHand hand, boolean rightClick) {
+        Direction face = nearestFace(hitPos);
+        // localClip: hitPos is already in local space from the overlay (bearing transform applied by caller)
+        ContraptionInteractionListener.Hit hit = new ContraptionInteractionListener.Hit(state, localPos, hitPos, face);
+        if (rightClick) {
+            ContraptionInteractionListener.forward(player, hit);
+        } else {
+            ContraptionInteractionListener.forwardAttack(player, hit);
+        }
+        return true;
+    }
+
+    private Direction nearestFace(Vec3 localHit) {
+        double bx = localPos.getX() + 0.5, by = localPos.getY() + 0.5, bz = localPos.getZ() + 0.5;
+        double dx = localHit.x - bx, dy = localHit.y - by, dz = localHit.z - bz;
+        double ax = Math.abs(dx), ay = Math.abs(dy), az = Math.abs(dz);
+        if (ax >= ay && ax >= az) return dx > 0 ? Direction.EAST : Direction.WEST;
+        if (ay >= az) return dy > 0 ? Direction.UP : Direction.DOWN;
+        return dz > 0 ? Direction.SOUTH : Direction.NORTH;
     }
 
     @Override

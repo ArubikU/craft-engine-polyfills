@@ -28,7 +28,9 @@ public interface ContraptionElement {
     default List<AABB> interactionBounds() { return List.of(); }
 
     /** Called by the interaction overlay when a player clicks one of this element's interaction entities. */
-    default boolean onInteract(Player player, int entityId, Vec3 hitPos, InteractionHand hand) { return false; }
+    default boolean onInteract(net.minecraft.server.level.ServerPlayer player,
+                               dev.arubik.craftengine.contraption.core.ContraptionState state,
+                               Vec3 hitPos, InteractionHand hand, boolean rightClick) { return false; }
 
     // ---- lifecycle ----
 

@@ -418,7 +418,7 @@ public final class ContraptionInteractionListener implements Listener {
     }
 
     /** See class javadoc "Dispatch hook". */
-    static void forward(ServerPlayer player, Hit hit) {
+    public static void forward(ServerPlayer player, Hit hit) {
         // Mark this as a right-click USE so the arm-swing the client sends alongside it is not mistaken for a
         // mining attack (2026-07-18 — "right y left click se consideran igual"). Every right-click dispatch —
         // block interact, entity interact, and the phys-contraption packet path — funnels through here.
@@ -981,7 +981,7 @@ public final class ContraptionInteractionListener implements Listener {
      * {@code useItemOn} are below, for parity with any future/third-party custom block that
      * relies on it.
      */
-    private static void forwardAttack(ServerPlayer player, Hit hit) {
+    public static void forwardAttack(ServerPlayer player, Hit hit) {
         ContraptionLevel level = hit.state().level();
         if (level == null) {
             return;

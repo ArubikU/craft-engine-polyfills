@@ -188,33 +188,63 @@ public final class ContraptionInteractPacketDebug implements PacketListener {
             // Player#teleport plus ContraptionState/SeatSlot bookkeeping for a seat, or the
             // block-entity-touching dispatch for a block cell — is hopped onto the main thread as
             // before; only ONE of the two ever actually mutates anything for a given click.
+            int clickedEntityId = wrapper.getEntityId();
+
+            // Try overlay interaction system first: resolve element from overlay entity ID
+            dev.arubik.craftengine.contraption.element.ContraptionElement overlayElement =
+                    resolveOverlayElement(clickedEntityId);
+            if (overlayElement != null) {
+                dev.arubik.craftengine.contraption.core.ContraptionState overlayState =
+                        resolveOverlayState(clickedEntityId);
+                if (overlayState != null) {
+                    event.setCancelled(true);
+                    final net.minecraft.server.level.ServerPlayer sp = player;
+                    final var elem = overlayElement;
+                    final var st = overlayState;
+                    // hitPos: transform player eye ray to local space approximation
+                    net.minecraft.world.phys.Vec3 eyePos = sp.getEyePosition(1.0f);
+                    net.minecraft.world.phys.Vec3 lookDir = sp.getLookAngle();
+                    net.minecraft.world.phys.Vec3 hitPos = eyePos.add(lookDir.scale(4.0));
+                    org.bukkit.Bukkit.getScheduler().runTask(
+                            dev.arubik.craftengine.CraftEnginePolyfills.instance(),
+                            () -> elem.onInteract(sp, st, hitPos, net.minecraft.world.InteractionHand.MAIN_HAND, true));
+                    return;
+                }
+            }
+
+            // Fall back to raycast for blocks not yet exposing interaction bounds
             ContraptionInteractionListener.Hit blockHit = ContraptionInteractionListener.raycast(player);
             if (blockHit != null) {
                 event.setCancelled(true);
                 org.bukkit.Bukkit.getScheduler().runTask(
                         dev.arubik.craftengine.CraftEnginePolyfills.instance(),
-                        () -> {
-                            if (false) { // seat handling moved to interaction system
-                                return;
-                            }
-                            // Seat candidate but tryHandleSit failed (e.g. another player grabbed
-                            // the seat between the synchronous check and this main-thread tick, or
-                            // this player is already seated/riding something) — fall back to the
-                            // block raycast/dispatch for the same click, same as if there had been
-                            // no seat candidate at all.
-                            ContraptionInteractionListener.Hit resolvedBlockHit = blockHit != null ? blockHit
-                                    : ContraptionInteractionListener.raycast(player);
-                            if (resolvedBlockHit != null) {
-                                org.bukkit.Bukkit.getLogger().info("[Contraption][PACKET] fake-entity click (id="
-                                        + wrapper.getEntityId() + ") resolved via raycast — dispatching on main "
-                                        + "thread since PlayerInteractEntityEvent never fires for packet-only entities.");
-                                ContraptionInteractionListener.forward(player, resolvedBlockHit);
-                            }
-                        });
+                        () -> ContraptionInteractionListener.forward(player, blockHit));
             }
         } catch (Throwable t) {
             org.bukkit.Bukkit.getLogger().warning("[Contraption][PACKET] failed to handle INTERACT_ENTITY: " + t);
         }
+    }
+
+    private static dev.arubik.craftengine.contraption.element.ContraptionElement resolveOverlayElement(int entityId) {
+        for (dev.arubik.craftengine.contraption.core.ContraptionEntity entity :
+                dev.arubik.craftengine.contraption.core.ContraptionManager.all()) {
+            dev.arubik.craftengine.contraption.core.ContraptionState state = entity.state();
+            dev.arubik.craftengine.contraption.element.ContraptionElement elem =
+                    state.elementByInteractionEntityId(entityId);
+            if (elem != null) return elem;
+        }
+        return null;
+    }
+
+    private static dev.arubik.craftengine.contraption.core.ContraptionState resolveOverlayState(int entityId) {
+        for (dev.arubik.craftengine.contraption.core.ContraptionEntity entity :
+                dev.arubik.craftengine.contraption.core.ContraptionManager.all()) {
+            dev.arubik.craftengine.contraption.core.ContraptionState state = entity.state();
+            dev.arubik.craftengine.contraption.element.ContraptionElement elem =
+                    state.elementByInteractionEntityId(entityId);
+            if (elem != null) return state;
+        }
+        return null;
     }
 
     /**
