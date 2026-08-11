@@ -261,22 +261,12 @@ public final class ContraptionInteractPacketDebug implements PacketListener {
             org.bukkit.entity.Player bukkitPlayer = org.bukkit.Bukkit.getPlayer(event.getUser().getUUID());
             if (!(bukkitPlayer instanceof org.bukkit.craftbukkit.entity.CraftPlayer cp)) return;
 
-            // Read packet manually: BlockPos (long), isFront (bool), lines (4 strings)
-            var buf = event.getByteBuf();
-            // Save reader index to reset if not contraption sign
-            int savedIndex = ((io.netty.buffer.ByteBuf) buf).readerIndex();
-            long posLong = ((io.netty.buffer.ByteBuf) buf).readLong();
-            boolean isFront = ((io.netty.buffer.ByteBuf) buf).readBoolean();
-            String[] lines = new String[4];
-            for (int i = 0; i < 4; i++) {
-                // PacketEvents string: varInt length + UTF8 bytes
-                int len = readVarInt((io.netty.buffer.ByteBuf) buf);
-                byte[] bytes = new byte[Math.min(len, 384)];
-                ((io.netty.buffer.ByteBuf) buf).readBytes(bytes);
-                lines[i] = new String(bytes, java.nio.charset.StandardCharsets.UTF_8);
-            }
+            var wrapper = new com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientUpdateSign(event);
+            var v = wrapper.getBlockPosition();
+            String[] lines = wrapper.getTextLines();
+            boolean isFront = wrapper.isFrontText();
 
-            net.minecraft.core.BlockPos blockPos = net.minecraft.core.BlockPos.of(posLong);
+            net.minecraft.core.BlockPos blockPos = new net.minecraft.core.BlockPos(v.getX(), v.getY(), v.getZ());
 
             for (dev.arubik.craftengine.contraption.core.ContraptionEntity entity :
                     dev.arubik.craftengine.contraption.core.ContraptionManager.all()) {
@@ -297,16 +287,7 @@ public final class ContraptionInteractPacketDebug implements PacketListener {
                 });
                 return;
             }
-            // Not a contraption sign — reset reader so vanilla handles it
-            ((io.netty.buffer.ByteBuf) buf).readerIndex(savedIndex);
         } catch (Throwable ignored) {}
-    }
-
-    private static int readVarInt(io.netty.buffer.ByteBuf buf) {
-        int value = 0, shift = 0;
-        byte b;
-        do { b = buf.readByte(); value |= (b & 0x7F) << shift; shift += 7; } while ((b & 0x80) != 0);
-        return value;
     }
 
     public static void applySignText(net.minecraft.world.level.block.entity.SignBlockEntity sign,

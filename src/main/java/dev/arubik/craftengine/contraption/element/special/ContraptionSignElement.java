@@ -71,6 +71,9 @@ public final class ContraptionSignElement extends ContraptionBlockElement {
         super.tick(ctx);
         if (ctx.level() == null) return;
         var be = ctx.level().getBlockEntity(localPos());
+        if (be != null && !(be instanceof net.minecraft.world.level.block.entity.SignBlockEntity)) {
+            org.bukkit.Bukkit.getLogger().info("[Sign] BE at " + localPos() + " is " + be.getClass().getSimpleName() + " not SignBlockEntity");
+        }
         if (be instanceof net.minecraft.world.level.block.entity.SignBlockEntity sign) {
             Component lf = buildTextComponent(sign.getFrontText());
             Component lb = buildTextComponent(sign.getBackText());
@@ -268,9 +271,13 @@ public final class ContraptionSignElement extends ContraptionBlockElement {
                 sign.setWaxed(true);
                 textDirty = true;
                 if (!player.isCreative()) held.shrink(1);
-                player.level().playSound(null, player.blockPosition(),
-                        net.minecraft.sounds.SoundEvents.HONEYCOMB_WAX_ON,
-                        net.minecraft.sounds.SoundSource.BLOCKS, 1f, 1f);
+                if (player.level() instanceof net.minecraft.server.level.ServerLevel sl) {
+                    sl.playSound(null, player.blockPosition(),
+                            net.minecraft.sounds.SoundEvents.HONEYCOMB_WAX_ON,
+                            net.minecraft.sounds.SoundSource.BLOCKS, 1f, 1f);
+                    sl.sendParticles(net.minecraft.core.particles.ParticleTypes.WAX_ON,
+                            player.getX(), player.getY() + 1, player.getZ(), 7, 0.5, 0.5, 0.5, 0);
+                }
             }
             return true;
         }
