@@ -62,8 +62,8 @@ public final class ContraptionSkullElement implements ContraptionElement {
                     localPos.getY() + 0.25,
                     localPos.getZ() + 0.5 - facing.getStepZ() * 0.25);
         }
-        // Floor skull: sits on floor, entity at floor level (model height 0.5 from origin)
-        return new Vec3(localPos.getX() + 0.5, localPos.getY(), localPos.getZ() + 0.5);
+        // Floor skull: 0.5 block tall, center at 0.25 above floor
+        return new Vec3(localPos.getX() + 0.5, localPos.getY() + 0.25, localPos.getZ() + 0.5);
     }
     @Override public boolean isValid() { return blockState != null && !blockState.isAir(); }
     @Override public int[] entityIds() { return new int[]{entityId}; }
