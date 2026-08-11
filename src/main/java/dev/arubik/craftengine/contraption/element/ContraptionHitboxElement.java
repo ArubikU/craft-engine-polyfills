@@ -675,56 +675,11 @@ public final class ContraptionHitboxElement implements ContraptionElement {
         carryEntities(candidates, bearingWorldPos, deltaX, deltaY, deltaZ, yaw);
     }
 
-    /**
-     * Solid pushback for a BYSTANDER player — one who is NOT being carried (not standing on top
-     * of this contraption's footprint per {@link #isStandingOnFootprint}), but whose current
-     * position would end up embedded inside one of this contraption's captured cells after this
-     * tick's movement (e.g. the contraption is moving TOWARD a player who is independently
-     * walking INTO it) (2026-07-02 session — "si te mueves en dirección contraria al movimiento
-     * contra el muro, lo atraviesas — el muro debería empujarte").
-     *
-     * <p><b>Root cause this addresses:</b> {@link #carryRiders}'s side-collision clamp (see
-     * {@link #clampDeltaForSideCollision}) only ever runs for candidates ALREADY confirmed
-     * standing on top of the footprint (i.e. already being carried) — it validates the CARRY
-     * delta applied to a rider, never a bystander's own independently-WASD-driven position. A
-     * player merely standing in the path of an approaching contraption (not on top of it) was
-     * never a candidate for ANY check at all: {@link #carryRiders} skips them (not on the
-     * footprint), and this system has no other collision mechanism for a player's own movement —
-     * the real vanilla-style physics that's supposed to stop this
-     * ({@code ContraptionShulkerColliderSwarm}'s genuine SHULKER entity, which the client's own
-     * local physics engine collides against for real) only works if the shulker's last-sent
-     * position is not lagging behind the server's authoritative position by the time the player's
-     * own client-predicted movement reaches it — a real, inherent network-timing race this
-     * server-side check cannot fully close on its own, but CAN backstop: once the player's
-     * reported position (from their last {@code ServerboundMovePlayerPacket}, i.e.
-     * {@code ServerPlayer#position()}) is already geometrically inside where a cell is ABOUT TO
-     * be this tick, push them back out immediately rather than leaving it entirely to client-side
-     * collision that may have already been beaten by a fast enough approach.
-     *
-     * <p>Deliberately NOT part of {@link #carryRiders}'s candidate loop (which is scoped to
-     * "already standing on top") — this iterates EVERY nearby real player regardless of carry
-     * status, and reuses {@link PlayerCarry#carry} (the same velocity-based nudge mechanism, per
-     * this project's explicit "vuelve al empujon" preference) rather than inventing a second
-     * transport, for consistency between "being carried along" and "being shoved out of the way."
-     * Resolution is the same per-axis separating logic {@link #clampDeltaForSideCollisionGeneric}
-     * already uses: compute how far OUT of the (post-movement) solid volume the player needs to
-     * move along the shortest axis, and push exactly that far — a genuine solid-pushback (closer
-     * to vanilla piston-push behavior) rather than a "ride along" carry.
-     */
     public void pushBackNearbyBystanders(net.minecraft.world.level.Level realLevel, Vec3 bearingWorldPos,
             double deltaX, double deltaY, double deltaZ, double yaw) {
         pushBackNearbyBystanders(realLevel, bearingWorldPos, deltaX, deltaY, deltaZ, yaw, ContraptionPushSettings.DEFAULT);
     }
 
-    /**
-     * {@link ContraptionPushSettings}-aware overload (2026-07-15 session — "contraption collide
-     * detection and settings to push up"): the bystander shove is scaled by
-     * {@link ContraptionPushSettings#pushStrength} and, when
-     * {@link ContraptionPushSettings#pushUpEnabled} is set, a shove against a lip no taller than
-     * {@link ContraptionPushSettings#maxStepUpHeight} is converted into an upward step-up lift
-     * instead (see {@link #applyPushSettings}). {@link ContraptionPushSettings#DEFAULT} reproduces
-     * the pre-settings behavior exactly ({@code pushStrength=1}, {@code pushUpEnabled=false}).
-     */
     public void pushBackNearbyBystanders(net.minecraft.world.level.Level realLevel, Vec3 bearingWorldPos,
             double deltaX, double deltaY, double deltaZ, double yaw, ContraptionPushSettings settings) {
         pushBackNearbyBystanders(realLevel, bearingWorldPos, deltaX, deltaY, deltaZ, yaw, 0.0, 0.0, 1.0, settings);
@@ -734,12 +689,7 @@ public final class ContraptionHitboxElement implements ContraptionElement {
     public void pushBackNearbyBystanders(net.minecraft.world.level.Level realLevel, Vec3 bearingWorldPos,
             double deltaX, double deltaY, double deltaZ, double yaw, double pitch, double roll, double scale,
             ContraptionPushSettings settings) {
-        // A STATIC contraption never shoves a PLAYER (2026-07-17 — "si un contraption esta estatico no
-        // aplicar pushup a player, solo a entidades"): a player's own packet-only SHULKER colliders already
-        // stop them walking into it, so a server-side push here is redundant and only ever fires
-        // spuriously — that is the "me sacan volando cuando no deberian". Non-players have no shulker, so
-        // pushBackNearbyEntities still pushes them when static. Threshold, not exact zero, because the async
-        // solver reports tiny resting jitter that is not real movement.
+        // Static contraption: skip player shove (shulkers handle it); non-players still pushed via pushBackNearbyEntities
         if (deltaX * deltaX + deltaY * deltaY + deltaZ * deltaZ < STATIC_DELTA_SQ) {
             return;
         }
@@ -761,8 +711,6 @@ public final class ContraptionHitboxElement implements ContraptionElement {
             minZ = Math.min(minZ, bearingWorldPos.z + slot.lz - slot.width / 2.0);
             maxZ = Math.max(maxZ, bearingWorldPos.z + slot.lz + slot.width / 2.0);
         }
-        // Widen for yaw rotation just like carryNearbyEntities (2026-07-03) — the local footprint box
-        // under-covers a rotated contraption's real footprint.
         double rotationMargin = ((maxX - minX) + (maxZ - minZ)) / 2.0;
         net.minecraft.world.phys.AABB bounds = new net.minecraft.world.phys.AABB(minX, minY, minZ, maxX, maxY, maxZ).inflate(2.0 + rotationMargin);
         List<ServerPlayer> nearby;
@@ -782,14 +730,9 @@ public final class ContraptionHitboxElement implements ContraptionElement {
             Vec3 playerPos = sp.position();
             Vec3 push = computeSolidPush(playerPos, bearingWorldPos, solids, RIDER_HALF_WIDTH, RIDER_HEIGHT, yaw,
                     pitch, roll, scale, deltaX, deltaY, deltaZ);
-            // Apply configurable strength + opt-in step-up (a bystander player is never silently
-            // "carried up" — allowCarryUp=false — only shoved, or lifted-over-a-lip when pushUp on).
             push = applyPushSettings(push, playerPos, bearingWorldPos, solids, RIDER_HALF_WIDTH, RIDER_HEIGHT, yaw,
                     settings, false);
-            // WALLS ONLY, never the floor (2026-07-17 — "solo contra paredes no contra el suelo que pise").
-            // A bystander is shoved sideways out of a wall's path; they must never be lifted, which is what
-            // read as being launched into the air. Vertical support is carryRiders' job (standing on top),
-            // not this out-of-the-way shove.
+            // Walls only — never lift a bystander (carryRiders owns vertical support)
             if (push.x == 0.0 && push.z == 0.0) {
                 continue;
             }
@@ -797,43 +740,12 @@ public final class ContraptionHitboxElement implements ContraptionElement {
         }
     }
 
-    /**
-     * Non-player counterpart to {@link #pushBackNearbyBystanders} (2026-07-03 — "entidades que no
-     * son players no pueden interactuar bien con las contraption, las atraviesan"). The contraption's
-     * blocks live in a hidden {@code ContraptionLevel} and its colliders are packet-only (client-side
-     * for players only), so a real mob/animal/item runs its server-side physics against the EMPTY
-     * real world and walks straight through the structure. This gives them server-authoritative
-     * solid collision: every nearby non-player entity that is embedded in — or being run over by —
-     * a solid cell is directly repositioned out (its own real bounding box drives the push extent,
-     * not a fixed player size), and any velocity still driving it INTO the wall is zeroed so it
-     * doesn't immediately re-penetrate next tick.
-     *
-     * <p>Excludes real players (owned by {@link #pushBackNearbyBystanders}) and
-     * {@link ContraptionItemPickupSwarm}'s mirror items (already position-synced by that swarm);
-     * entities standing on TOP are left to {@link #carryNearbyEntities} (a rider, not a bystander).
-     */
     public void pushBackNearbyEntities(net.minecraft.world.level.Level realLevel, Vec3 bearingWorldPos,
             double deltaX, double deltaY, double deltaZ, double yaw) {
         pushBackNearbyEntities(realLevel, bearingWorldPos, deltaX, deltaY, deltaZ, yaw, ContraptionPushSettings.DEFAULT,
                 null);
     }
 
-    /**
-     * {@link ContraptionPushSettings}-aware overload (2026-07-15 session — see
-     * {@link #pushBackNearbyBystanders(net.minecraft.world.level.Level, Vec3, double, double, double, double, ContraptionPushSettings)}).
-     * In addition to {@link ContraptionPushSettings#pushStrength} scaling and the
-     * {@link ContraptionPushSettings#pushUpEnabled} step-up path, a non-player entity honors
-     * {@link ContraptionPushSettings#carryEntities}: when set and a step-up lip within
-     * {@link ContraptionPushSettings#maxStepUpHeight} exists, the entity is lifted UP onto the step
-     * (horizontal shove suppressed) rather than shoved back. {@link ContraptionPushSettings#DEFAULT}
-     * reproduces the pre-settings behavior exactly.
-     *
-     * <p>{@code anchorEntityId} (nullable) is exempt: the entity the contraption is anchored to and
-     * driven by flies INSIDE its own structure by design (a harnessed ghast — "self block of this
-     * contraption should not affect the same ghast"), so it must never be shoved out of its own walls.
-     * See {@code ContraptionState#anchorEntityId}. Only that one entity — every other ghast, including
-     * another harnessed one, still collides normally.
-     */
     public void pushBackNearbyEntities(net.minecraft.world.level.Level realLevel, Vec3 bearingWorldPos,
             double deltaX, double deltaY, double deltaZ, double yaw, ContraptionPushSettings settings,
             java.util.UUID anchorEntityId) {
@@ -891,25 +803,14 @@ public final class ContraptionHitboxElement implements ContraptionElement {
             double height = entity.getBbHeight();
             Vec3 push = computeSolidPush(entity.position(), bearingWorldPos, solids, halfWidth, height, yaw,
                     pitch, roll, scale, deltaX, deltaY, deltaZ);
-            // Configurable strength + opt-in step-up; allowCarryUp=true so carryEntities can lift a
-            // non-rider onto the step instead of shoving it back (see applyPushSettings).
             push = applyPushSettings(push, entity.position(), bearingWorldPos, solids, halfWidth, height, yaw,
                     settings, true);
             if (push.equals(Vec3.ZERO)) {
                 continue;
             }
-            // Server-authoritative reposition (unlike a player, a non-player entity's position is
-            // fully server-owned — direct setPos is exact, no client-prediction dance needed).
             entity.setPos(entity.getX() + push.x, entity.getY() + push.y, entity.getZ() + push.z);
             entity.setOldPosAndRot();
-            // Momentum transfer (2026-07-17 — "enhance the push"): a rammed entity is KNOCKED in the shove
-            // direction at the contraption's own per-tick speed and keeps that velocity, so a fast structure
-            // flings it clear and it coasts to rest under its own friction — a battering ram, not a bulldozer
-            // blade that scrapes an entity along and lets it stop dead the instant the structure passes. Before,
-            // velocity into the wall was merely zeroed, so a rammed mob never gained outward momentum and would
-            // immediately re-close next tick or freeze. |push| is this tick's shove distance (= blocks/tick) and
-            // is already scaled by pushStrength, so it is exactly the knock speed. Horizontal only — an entity is
-            // never launched upward (same "walls, not floor" rule the bystander push follows).
+            // Transfer momentum: rammed entity keeps the shove speed so fast structures fling, not scrape
             Vec3 vel = entity.getDeltaMovement();
             double nvx = knockbackComponent(vel.x, push.x);
             double nvz = knockbackComponent(vel.z, push.z);
@@ -919,46 +820,16 @@ public final class ContraptionHitboxElement implements ContraptionElement {
         }
     }
 
-    /**
-     * The push an entity/player at {@code pos} needs to NOT be run over by (or embedded in) the
-     * contraption this tick — the shared core of both {@link #pushBackNearbyBystanders} (players)
-     * and {@link #pushBackNearbyEntities} (mobs/items/etc.), returning {@link Vec3#ZERO} when the
-     * thing is clear.
-     *
-     * <p>Two regimes, in order:
-     * <ul>
-     *   <li><b>Embedded now / about to be</b> (the original working behavior, 2026-07-03): if
-     *   {@code pos} — or {@code pos + platformΔ} — already overlaps a solid, {@link #resolvePushOut}
-     *   ejects it sideways; if that returns zero (touching but not yet penetrating) it's shoved
-     *   along the platform's own horizontal travel {@code (dx,dz)} so the wall doesn't reach it.</li>
-     *   <li><b>Swept (high speed)</b> ("cuando el contraption se mueve muy rapido no le da tiempo a
-     *   empujar ... lo traspasa"): at high platform speed a wall can jump ENTIRELY past a thin
-     *   entity between ticks, so neither endpoint above overlaps and it's missed. {@link
-     *   #resolveSweptPushOut} tests the entity against each solid box EXPANDED backward by this
-     *   tick's platform delta (the volume the wall swept through) and, if the wall passed through,
-     *   shoves the entity to just AHEAD of the wall's leading face so it rides in front instead of
-     *   being left behind/clipped.</li>
-     * </ul>
-     */
     private static Vec3 computeSolidPush(Vec3 pos, Vec3 bearingWorldPos, List<Slot> solids, double halfWidth,
             double height, double yaw, double dx, double dy, double dz) {
         return computeSolidPush(pos, bearingWorldPos, solids, halfWidth, height, yaw, 0.0, 0.0, 1.0, dx, dy, dz);
     }
 
-    /**
-     * Pitch/roll/scale-aware push (2026-07-17). Only the DETECTION (is the entity inside a solid) is made
-     * orientation-aware — the resulting shove stays horizontal-in-yaw, which is what a pushed-out entity
-     * wants regardless of the contraption's tilt. See {@link #overlapsAnySolid}.
-     */
     private static Vec3 computeSolidPush(Vec3 pos, Vec3 bearingWorldPos, List<Slot> solids, double halfWidth,
             double height, double yaw, double pitch, double roll, double scale, double dx, double dy, double dz) {
         Vec3 target = new Vec3(pos.x + dx, pos.y + dy, pos.z + dz);
         boolean now = overlapsAnySolid(pos, bearingWorldPos, solids, halfWidth, height, yaw, pitch, roll, scale);
         boolean next = overlapsAnySolid(target, bearingWorldPos, solids, halfWidth, height, yaw, pitch, roll, scale);
-        // Heading gate (2026-07-17 — "y/o si esta dirigiendose ... evitar miss behaviors"): if the entity
-        // is not inside a solid NOW and won't be after the contraption's move, only a genuine sweep toward
-        // it should push it. resolveSweptPushOut already restricts to the swept volume, so an entity that is
-        // merely adjacent and not being driven into is left alone rather than nudged every tick.
         if (now || next) {
             Vec3 push = resolvePushOut(pos, bearingWorldPos, solids, halfWidth, height, yaw);
             if (!push.equals(Vec3.ZERO)) {
@@ -969,36 +840,7 @@ public final class ContraptionHitboxElement implements ContraptionElement {
         return resolveSweptPushOut(pos, bearingWorldPos, solids, halfWidth, height, yaw, dx, dy, dz);
     }
 
-    /**
-     * Applies {@link ContraptionPushSettings} to a raw solid-pushback vector (2026-07-15 session —
-     * "contraption collide detection and settings to push up"). Purely a post-processing layer on
-     * top of {@link #computeSolidPush}'s result — the underlying collision MATH is untouched, so
-     * {@link ContraptionPushSettings#DEFAULT} ({@code pushStrength=1}, {@code pushUpEnabled=false},
-     * {@code carryEntities=false}) returns the input push unchanged and behavior is identical to
-     * before this setting existed.
-     *
-     * <ul>
-     *   <li><b>Strength</b>: the horizontal shove is scaled by
-     *   {@link ContraptionPushSettings#pushStrength} (default {@code 1.0} — a no-op).</li>
-     *   <li><b>Opt-in step-up</b> (guarded by {@link ContraptionPushSettings#pushUpEnabled}, off by
-     *   default so this whole branch is dormant): when a horizontal shove would push the thing
-     *   back and the solid directly under/around it presents a lip no taller than
-     *   {@link ContraptionPushSettings#maxStepUpHeight} above its feet (measured via
-     *   {@link #lipHeightAboveFeet}), the thing is lifted UP by that lip height (times
-     *   {@link ContraptionPushSettings#pushUpStrength}) so it steps up over the lip instead of
-     *   being shoved back.</li>
-     *   <li><b>Carry up</b> ({@code allowCarryUp} + {@link ContraptionPushSettings#carryEntities},
-     *   non-player entities only): when a step-up lift is applied, the horizontal shove is
-     *   suppressed so the entity is carried up onto the step rather than also pushed sideways. A
-     *   bystander player passes {@code allowCarryUp=false} and is never silently lifted this way.</li>
-     * </ul>
-     */
-    /**
-     * One axis of the momentum a rammed entity keeps after being shoved (see {@link #pushBackNearbyEntities}).
-     * Knocks the velocity to the shove speed in the shove direction, but never SLOWS an entity already moving
-     * that way faster (a mob fleeing ahead of the ram keeps its lead), and leaves the axis untouched when there
-     * is no shove on it ({@code push == 0}).
-     */
+    // Shove speed in shove direction, but never slows an entity already moving faster that way
     private static double knockbackComponent(double vel, double push) {
         if (push == 0.0) {
             return vel;
@@ -1031,14 +873,6 @@ public final class ContraptionHitboxElement implements ContraptionElement {
         return new Vec3(px, py, pz);
     }
 
-    /**
-     * Height (blocks) of the tallest solid top face above the thing's feet among every
-     * {@code hasCollision} slot whose XZ footprint the thing overlaps — i.e. the "lip" a step-up
-     * would have to clear (see {@link #applyPushSettings}). Works in the local slot frame (un-rotate
-     * {@code pos} by {@code yaw}, matching {@link #overlapsAnySolid}) and reuses each slot's real
-     * shape-derived top ({@code slot.standTopY}). Returns {@code 0.0} when no overlapping solid rises
-     * above the feet. Read-only geometry query — does not affect the existing collision math.
-     */
     private static double lipHeightAboveFeet(Vec3 pos, Vec3 bearingWorldPos, List<Slot> solids,
             double halfWidth, double yaw) {
         Vec3 local = ContraptionMath.realToLocal(pos, bearingWorldPos, yaw);
@@ -1063,14 +897,6 @@ public final class ContraptionHitboxElement implements ContraptionElement {
         return bestTop - feetY;
     }
 
-    /**
-     * High-speed swept pushback (2026-07-03): detects a solid wall that passed ENTIRELY through
-     * {@code pos} this tick (neither the current nor the post-move point overlaps, so
-     * {@link #computeSolidPush}'s point tests miss it) and returns a push that lands the entity just
-     * ahead of that wall's leading face along the platform's own travel. Works in the local slot
-     * frame (un-rotate {@code pos} and the platform delta by {@code yaw}), then rotates the push
-     * back to world. Horizontal-only (a purely vertical platform move never "runs over" sideways).
-     */
     private static Vec3 resolveSweptPushOut(Vec3 pos, Vec3 bearingWorldPos, List<Slot> solids, double halfWidth,
             double height, double yaw, double dx, double dy, double dz) {
         if (dx == 0.0 && dz == 0.0) {
@@ -1121,26 +947,7 @@ public final class ContraptionHitboxElement implements ContraptionElement {
         return ContraptionMath.rotateYaw(new Vec3(bestPushX, 0.0, bestPushZ), yaw);
     }
 
-    /**
-     * Shortest-axis separating push to get {@code playerPos}'s hitbox (player-sized, standing at
-     * its CURRENT — not yet moved — position) fully clear of every overlapping solid slot.
-     * Computes, per overlapping solid, the minimal X/Z penetration depth and returns the smallest
-     * magnitude correction of the two axes (never touches Y — vertical resolution is
-     * {@link #carryRiders}'s job when the player is actually standing on top; a bystander merely
-     * caught in a wall's path is only ever pushed sideways, matching vanilla piston pushback's own
-     * horizontal-only shove for a wall closing in).
-     *
-     * <p>2026-07-02 session, torch-pushback follow-up ("la antorcha esta siendo tomada en cuenta
-     * en el AABB como full block empujando al jugador fuera de si") — same fix as
-     * {@link #overlapsAnySolid}: uses the real shape-derived {@code [standBottomY, standTopY)}
-     * window instead of the flat {@code [0, height)} one, and skips any {@link Slot#hasCollision}
-     * {@code false} cell (torches, tripwire, etc.) entirely — those never contribute a penetration
-     * depth, so a captured torch can no longer shove a bystander at all.
-     */
     private static Vec3 resolvePushOut(Vec3 playerPos, Vec3 bearingWorldPos, List<Slot> solids, double halfWidth, double height, double yaw) {
-        // Yaw-aware (2026-07-03): resolve the separating push in the local slot frame (un-rotate the
-        // player first), then rotate the resulting push vector back into world space before it's
-        // handed to PlayerCarry — matches overlapsAnySolid's own local-frame test above.
         Vec3 local = ContraptionMath.realToLocal(playerPos, bearingWorldPos, yaw);
         double rMinX = local.x - halfWidth, rMaxX = local.x + halfWidth;
         double rMinZ = local.z - halfWidth, rMaxZ = local.z + halfWidth;
@@ -1193,7 +1000,6 @@ public final class ContraptionHitboxElement implements ContraptionElement {
         return autoSlots.size() + customSlots.size();
     }
 
-    /**
     /** Geometry-only slot for carry/pushback math — no packet entity. */
     static final class Slot {
         final double lx, ly, lz;
