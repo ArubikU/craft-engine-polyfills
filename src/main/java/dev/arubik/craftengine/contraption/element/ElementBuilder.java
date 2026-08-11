@@ -36,8 +36,17 @@ public final class ElementBuilder {
         for (BlockPos local : level.localPositions()) {
             BlockState blockState = level.getBlockState(local);
             if (blockState == null || blockState.isAir()) continue;
+            CompoundTag beTag = level.saveBlockEntity(local);
 
             // Special elements for blocks with custom behavior
+            if (blockState.getBlock() instanceof net.minecraft.world.level.block.AbstractSkullBlock) {
+                elements.add(new dev.arubik.craftengine.contraption.element.special.ContraptionSkullElement(local, blockState, beTag));
+                continue;
+            }
+            if (blockState.getBlock() instanceof net.minecraft.world.level.block.JukeboxBlock) {
+                elements.add(new dev.arubik.craftengine.contraption.element.special.ContraptionJukeboxElement(local, blockState, beTag));
+                continue;
+            }
             if (blockState.getBlock() instanceof net.minecraft.world.level.block.CampfireBlock) {
                 elements.add(new dev.arubik.craftengine.contraption.element.special.ContraptionCampfireElement(local, blockState));
                 continue;
@@ -67,7 +76,6 @@ public final class ElementBuilder {
                 if (!paired) continue;
             }
 
-            CompoundTag beTag = level.saveBlockEntity(local);
             elements.add(new ContraptionBlockElement(local, blockState, beTag, hasEntityRenderer, modelYawOffset));
 
             if (hasEntityRenderer) {
