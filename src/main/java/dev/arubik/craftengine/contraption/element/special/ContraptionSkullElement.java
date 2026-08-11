@@ -47,8 +47,23 @@ public final class ContraptionSkullElement implements ContraptionElement {
         this.despawnPacket = MNms.INSTANCE.constructor$ClientboundRemoveEntitiesPacket(IntList.of(entityId));
     }
 
+    public BlockPos localPos() { return localPos; }
+    public BlockState blockState() { return blockState; }
     @Override public Key type() { return ElementTypes.SKULL; }
-    @Override public Vec3 localOffset() { return new Vec3(localPos.getX() + 0.5, localPos.getY() + 0.5, localPos.getZ() + 0.5); }
+
+    @Override
+    public Vec3 localOffset() {
+        // Wall skull: positioned at face center, 4/16 out, Y center at 8/16 above block bottom
+        if (blockState.getBlock() instanceof WallSkullBlock) {
+            Direction facing = blockState.getValue(WallSkullBlock.FACING);
+            return new Vec3(
+                    localPos.getX() + 0.5 + facing.getStepX() * (4.0/16.0),
+                    localPos.getY() + 8.0/16.0,
+                    localPos.getZ() + 0.5 + facing.getStepZ() * (4.0/16.0));
+        }
+        // Floor skull: center of skull (8/16 wide, 8/16 tall, Y center at 4/16)
+        return new Vec3(localPos.getX() + 0.5, localPos.getY() + 4.0/16.0, localPos.getZ() + 0.5);
+    }
     @Override public boolean isValid() { return blockState != null && !blockState.isAir(); }
     @Override public int[] entityIds() { return new int[]{entityId}; }
 
@@ -121,7 +136,8 @@ public final class ContraptionSkullElement implements ContraptionElement {
         // Skull face rotation: wall skulls face outward, floor skulls use rotation property (0-15)
         Quaternionf rot = buildSkullRotation();
         DisplayData.LeftRotation.addEntityData(rot, meta);
-        float s = (float) lastScale * 0.625f; // skull is 10/16 of a block
+        // Skull item display: 0.5 scale (8/16 of a block), centered on entity position
+        float s = (float) lastScale * 0.5f;
         DisplayData.Scale.addEntityData(new Vector3f(s, s, s), meta);
         DisplayData.Translation.addEntityData(new Vector3f(-0.5f * s, -0.5f * s, -0.5f * s), meta);
         DisplayData.BrightnessOverride.addEntityData((15 << 4) | (15 << 20), meta);

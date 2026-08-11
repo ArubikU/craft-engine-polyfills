@@ -186,7 +186,7 @@ public final class ContraptionSignElement extends ContraptionBlockElement {
         if (text != null && !text.getString().isEmpty()) {
             DisplayData.TextDisplayData.Text.addEntityData(text, meta);
         }
-        DisplayData.TextDisplayData.BackgroundColor.addEntityData(0x40000000, meta);
+        DisplayData.TextDisplayData.BackgroundColor.addEntityData(0x00000000, meta); // fully transparent
         // No LeftRotation — entity yaw handles facing (same as BLOCK_DISPLAY yaw convention)
         DisplayData.Scale.addEntityData(new org.joml.Vector3f(0.45f, 0.45f, 0.45f), meta);
         DisplayData.PosRotInterpolationDuration.addEntityData(2, meta);

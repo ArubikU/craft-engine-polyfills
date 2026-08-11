@@ -37,11 +37,16 @@ public final class ElementBuilder {
             return;
         }
 
-        // Index existing block-position elements by localPos
+        // Index all existing position-keyed elements (block + special subclasses)
         Map<BlockPos, ContraptionBlockElement> existingByPos = new HashMap<>();
+        Map<BlockPos, ContraptionElement> existingSpecialByPos = new HashMap<>();
         for (ContraptionElement e : state.elements()) {
             if (e instanceof ContraptionBlockElement be) {
                 existingByPos.put(be.localPos(), be);
+            } else if (e instanceof dev.arubik.craftengine.contraption.element.special.ContraptionSkullElement sk) {
+                existingSpecialByPos.put(sk.localPos(), sk);
+            } else if (e instanceof dev.arubik.craftengine.contraption.element.special.ContraptionSignElement sg) {
+                existingSpecialByPos.put(sg.localPos(), sg);
             }
         }
 
@@ -80,7 +85,14 @@ public final class ElementBuilder {
             CompoundTag beTag = level.saveBlockEntity(local);
 
             if (blockState.getBlock() instanceof net.minecraft.world.level.block.AbstractSkullBlock) {
-                elements.add(new dev.arubik.craftengine.contraption.element.special.ContraptionSkullElement(local, blockState, beTag));
+                var existingSkull = existingSpecialByPos.get(local);
+                if (existingSkull instanceof dev.arubik.craftengine.contraption.element.special.ContraptionSkullElement sk
+                        && sk.blockState().getBlock() == blockState.getBlock()) {
+                    elements.add(sk);
+                } else {
+                    if (existingSkull != null) existingSkull.despawn(viewers);
+                    elements.add(new dev.arubik.craftengine.contraption.element.special.ContraptionSkullElement(local, blockState, beTag));
+                }
                 usedPositions.add(local); continue;
             }
             if (blockState.getBlock() instanceof net.minecraft.world.level.block.JukeboxBlock) {
@@ -96,7 +108,14 @@ public final class ElementBuilder {
                     || blockState.getBlock() instanceof net.minecraft.world.level.block.WallSignBlock
                     || blockState.getBlock() instanceof net.minecraft.world.level.block.CeilingHangingSignBlock
                     || blockState.getBlock() instanceof net.minecraft.world.level.block.WallHangingSignBlock) {
-                elements.add(new dev.arubik.craftengine.contraption.element.special.ContraptionSignElement(local, blockState, beTag));
+                var existingSign = existingSpecialByPos.get(local);
+                if (existingSign instanceof dev.arubik.craftengine.contraption.element.special.ContraptionSignElement sg
+                        && sg.blockState().getBlock() == blockState.getBlock()) {
+                    elements.add(sg);
+                } else {
+                    if (existingSign != null) existingSign.despawn(viewers);
+                    elements.add(new dev.arubik.craftengine.contraption.element.special.ContraptionSignElement(local, blockState, beTag));
+                }
                 usedPositions.add(local); continue;
             }
 
@@ -128,8 +147,11 @@ public final class ElementBuilder {
         for (Map.Entry<BlockPos, ContraptionBlockElement> entry : existingByPos.entrySet()) {
             if (!usedPositions.contains(entry.getKey())) {
                 entry.getValue().despawn(viewers);
-                // Also despawn the interaction overlay cells for this element
-                // (overlay handles this via its ownerOf map being stale — no explicit action needed)
+            }
+        }
+        for (Map.Entry<BlockPos, ContraptionElement> entry : existingSpecialByPos.entrySet()) {
+            if (!usedPositions.contains(entry.getKey())) {
+                entry.getValue().despawn(viewers);
             }
         }
 
