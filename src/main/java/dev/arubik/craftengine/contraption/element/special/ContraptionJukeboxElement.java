@@ -22,15 +22,40 @@ public final class ContraptionJukeboxElement extends ContraptionBlockElement {
     private int ticksPlaying = 0;
     private int discLengthTicks = 0;
     private net.minecraft.sounds.SoundEvent playingSound = null;
-    // Last world position sound was emitted from — re-emit if moved more than threshold
     private Vec3 lastSoundPos = null;
-    private static final double RESYNC_DIST_SQ = 4.0 * 4.0; // 4 blocks before resyncing position
+    private static final double RESYNC_DIST_SQ = 4.0 * 4.0;
+    // Stable seed per jukebox element — same seed = same sound instance (can be stopped by seed)
+    private final long soundSeed;
 
     public ContraptionJukeboxElement(BlockPos localPos, BlockState blockState, CompoundTag beTag) {
         super(localPos, blockState, beTag, false, 0f);
+        // Derive seed from localPos for stability across reuses
+        this.soundSeed = (long) localPos.hashCode() * 0x9e3779b97f4a7c15L;
     }
 
     @Override public Key type() { return ElementTypes.JUKEBOX; }
+
+    @Override
+    public void despawn(java.util.List<net.momirealms.craftengine.core.entity.player.Player> viewers) {
+        super.despawn(viewers);
+        if (isPlaying) stopSoundAllWorlds();
+        isPlaying = false;
+    }
+
+    @Override
+    public void disassemble(ServerLevel level, BlockPos bearingPos, int quarterTurns) {
+        super.disassemble(level, bearingPos, quarterTurns);
+        if (isPlaying) { stopSound(level); isPlaying = false; }
+    }
+
+    private void stopSoundAllWorlds() {
+        try {
+            for (var world : org.bukkit.Bukkit.getWorlds()) {
+                var sl = ((org.bukkit.craftbukkit.CraftWorld) world).getHandle();
+                stopSound(sl);
+            }
+        } catch (Throwable ignored) {}
+    }
 
     @Override
     public void tick(RenderContext ctx) {
@@ -57,7 +82,7 @@ public final class ContraptionJukeboxElement extends ContraptionBlockElement {
                 // Client can't seek, so we restart — brief glitch but correct position
                 stopSound(sl);
                 sl.playSeededSound(null, worldPos.x, worldPos.y, worldPos.z,
-                        playingSound, net.minecraft.sounds.SoundSource.RECORDS, 4f, 1f, 0L);
+                        playingSound, net.minecraft.sounds.SoundSource.RECORDS, 4f, 1f, soundSeed);
                 lastSoundPos = worldPos;
             }
         }
@@ -95,7 +120,7 @@ public final class ContraptionJukeboxElement extends ContraptionBlockElement {
                     discLengthTicks = resolveDiscLength(disc, sl);
                     lastSoundPos = worldPos;
                     sl.playSeededSound(null, worldPos.x, worldPos.y, worldPos.z,
-                            sound, net.minecraft.sounds.SoundSource.RECORDS, 4f, 1f, 0L);
+                            sound, net.minecraft.sounds.SoundSource.RECORDS, 4f, 1f, soundSeed);
                 }
             }
         } catch (Throwable ignored) {}

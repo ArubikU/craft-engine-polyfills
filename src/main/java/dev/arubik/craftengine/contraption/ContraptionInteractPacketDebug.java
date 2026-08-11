@@ -114,6 +114,11 @@ public final class ContraptionInteractPacketDebug implements PacketListener {
 
     @Override
     public void onPacketReceive(PacketReceiveEvent event) {
+        // Intercept sign text update — routes edit back to ContraptionLevel BE
+        if (event.getPacketType().equals(PacketType.Play.Client.UPDATE_SIGN)) {
+            handleSignUpdate(event);
+            return;
+        }
         if (!event.getPacketType().equals(PacketType.Play.Client.INTERACT_ENTITY)) {
             return;
         }
@@ -245,6 +250,80 @@ public final class ContraptionInteractPacketDebug implements PacketListener {
             if (elem != null) return state;
         }
         return null;
+    }
+
+    /**
+     * Routes ServerboundSignUpdatePacket to the ContraptionLevel sign BE.
+     * Uses raw packet data via PacketEvents byte buffer since WrapperPlayClientUpdateSign API varies.
+     */
+    private static void handleSignUpdate(com.github.retrooper.packetevents.event.PacketReceiveEvent event) {
+        try {
+            org.bukkit.entity.Player bukkitPlayer = org.bukkit.Bukkit.getPlayer(event.getUser().getUUID());
+            if (!(bukkitPlayer instanceof org.bukkit.craftbukkit.entity.CraftPlayer cp)) return;
+
+            // Read packet manually: BlockPos (long), isFront (bool), lines (4 strings)
+            var buf = event.getByteBuf();
+            // Save reader index to reset if not contraption sign
+            int savedIndex = ((io.netty.buffer.ByteBuf) buf).readerIndex();
+            long posLong = ((io.netty.buffer.ByteBuf) buf).readLong();
+            boolean isFront = ((io.netty.buffer.ByteBuf) buf).readBoolean();
+            String[] lines = new String[4];
+            for (int i = 0; i < 4; i++) {
+                // PacketEvents string: varInt length + UTF8 bytes
+                int len = readVarInt((io.netty.buffer.ByteBuf) buf);
+                byte[] bytes = new byte[Math.min(len, 384)];
+                ((io.netty.buffer.ByteBuf) buf).readBytes(bytes);
+                lines[i] = new String(bytes, java.nio.charset.StandardCharsets.UTF_8);
+            }
+
+            net.minecraft.core.BlockPos blockPos = net.minecraft.core.BlockPos.of(posLong);
+
+            for (dev.arubik.craftengine.contraption.core.ContraptionEntity entity :
+                    dev.arubik.craftengine.contraption.core.ContraptionManager.all()) {
+                var level = entity.state().level();
+                if (level == null) continue;
+                if (!level.localPositions().contains(blockPos)) continue;
+                var be = level.getBlockEntity(blockPos);
+                if (!(be instanceof net.minecraft.world.level.block.entity.SignBlockEntity sign)) continue;
+
+                event.setCancelled(true);
+                final String[] finalLines = lines;
+                final boolean finalFront = isFront;
+                org.bukkit.Bukkit.getScheduler().runTask(
+                        dev.arubik.craftengine.CraftEnginePolyfills.instance(), () -> {
+                    try {
+                        applySignText(sign, finalLines, finalFront);
+                    } catch (Throwable ignored) {}
+                });
+                return;
+            }
+            // Not a contraption sign — reset reader so vanilla handles it
+            ((io.netty.buffer.ByteBuf) buf).readerIndex(savedIndex);
+        } catch (Throwable ignored) {}
+    }
+
+    private static int readVarInt(io.netty.buffer.ByteBuf buf) {
+        int value = 0, shift = 0;
+        byte b;
+        do { b = buf.readByte(); value |= (b & 0x7F) << shift; shift += 7; } while ((b & 0x80) != 0);
+        return value;
+    }
+
+    public static void applySignText(net.minecraft.world.level.block.entity.SignBlockEntity sign,
+                                      String[] lines, boolean front) {
+        try {
+            net.minecraft.world.level.block.entity.SignText current =
+                    front ? sign.getFrontText() : sign.getBackText();
+            net.minecraft.world.level.block.entity.SignText updated = current;
+            for (int i = 0; i < 4 && i < lines.length; i++) {
+                updated = updated.setMessage(i, net.minecraft.network.chat.Component.literal(lines[i]));
+            }
+            String method = front ? "setFrontText" : "setBackText";
+            var m = net.minecraft.world.level.block.entity.SignBlockEntity.class
+                    .getDeclaredMethod(method, net.minecraft.world.level.block.entity.SignText.class);
+            m.setAccessible(true);
+            m.invoke(sign, updated);
+        } catch (Throwable ignored) {}
     }
 
     /**
