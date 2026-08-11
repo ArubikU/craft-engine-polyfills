@@ -136,10 +136,10 @@ public final class ContraptionSkullElement implements ContraptionElement {
         // Skull face rotation: wall skulls face outward, floor skulls use rotation property (0-15)
         Quaternionf rot = buildSkullRotation();
         DisplayData.LeftRotation.addEntityData(rot, meta);
-        // Skull item display: 0.5 scale (8/16 of a block), centered on entity position
-        float s = (float) lastScale * 0.5f;
-        DisplayData.Scale.addEntityData(new Vector3f(s, s, s), meta);
-        DisplayData.Translation.addEntityData(new Vector3f(-0.5f * s, -0.5f * s, -0.5f * s), meta);
+        // ITEM_DISPLAY head model renders centered at entity origin; scale 1.0 = natural head size (~0.5 block)
+        float s = (float) lastScale;
+        if (s != 1f) DisplayData.Scale.addEntityData(new Vector3f(s, s, s), meta);
+        // No Translation — ITEM_DISPLAY models are already centered, unlike BLOCK_DISPLAY (0→1 cube)
         DisplayData.BrightnessOverride.addEntityData((15 << 4) | (15 << 20), meta);
         DisplayData.PosRotInterpolationDuration.addEntityData(2, meta);
         return meta;
