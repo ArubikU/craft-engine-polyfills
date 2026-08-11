@@ -51,6 +51,14 @@ public final class ElementBuilder {
                 elements.add(new dev.arubik.craftengine.contraption.element.special.ContraptionCampfireElement(local, blockState));
                 continue;
             }
+            if (blockState.getBlock() instanceof net.minecraft.world.level.block.AbstractBannerBlock
+                    || blockState.getBlock() instanceof net.minecraft.world.level.block.SignBlock
+                    || blockState.getBlock() instanceof net.minecraft.world.level.block.WallSignBlock
+                    || blockState.getBlock() instanceof net.minecraft.world.level.block.CeilingHangingSignBlock
+                    || blockState.getBlock() instanceof net.minecraft.world.level.block.WallHangingSignBlock) {
+                elements.add(new dev.arubik.craftengine.contraption.element.special.ContraptionSignElement(local, blockState, beTag));
+                continue;
+            }
 
             // Bed foot: skip entirely — the head cell draws the whole bed visual.
             if (blockState.getBlock() instanceof BedBlock
