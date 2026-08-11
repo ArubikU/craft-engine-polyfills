@@ -256,8 +256,11 @@ public final class ContraptionSignElement extends ContraptionBlockElement {
                                net.minecraft.world.InteractionHand hand,
                                boolean rightClick) {
         if (!rightClick) {
-            // Left-click: forward to super (attack dispatch via ContraptionInteractionListener)
             return super.onInteract(player, state, hitPos, hand, false);
+        }
+        // Right-shift with empty hand → fall through to super (vanilla block interact)
+        if (player.isShiftKeyDown() && player.getItemInHand(hand).isEmpty()) {
+            return super.onInteract(player, state, hitPos, hand, true);
         }
 
         var be = state.level() != null ? state.level().getBlockEntity(localPos()) : null;
@@ -272,11 +275,12 @@ public final class ContraptionSignElement extends ContraptionBlockElement {
                 textDirty = true;
                 if (!player.isCreative()) held.shrink(1);
                 if (player.level() instanceof net.minecraft.server.level.ServerLevel sl) {
-                    sl.playSound(null, player.blockPosition(),
+                    net.minecraft.world.phys.Vec3 wp = worldPos(state);
+                    sl.playSound(null, net.minecraft.core.BlockPos.containing(wp),
                             net.minecraft.sounds.SoundEvents.HONEYCOMB_WAX_ON,
                             net.minecraft.sounds.SoundSource.BLOCKS, 1f, 1f);
                     sl.sendParticles(net.minecraft.core.particles.ParticleTypes.WAX_ON,
-                            player.getX(), player.getY() + 1, player.getZ(), 7, 0.5, 0.5, 0.5, 0);
+                            wp.x, wp.y + 0.5, wp.z, 7, 0.4, 0.4, 0.4, 0);
                 }
             }
             return true;
@@ -338,6 +342,13 @@ public final class ContraptionSignElement extends ContraptionBlockElement {
         }
 
         return false;
+    }
+
+    private net.minecraft.world.phys.Vec3 worldPos(dev.arubik.craftengine.contraption.core.ContraptionState state) {
+        return dev.arubik.craftengine.contraption.assembly.ContraptionMath.renderPosition(
+                localOffset(),
+                new net.minecraft.world.phys.Vec3(state.x(), state.y(), state.z()),
+                state.yawRadians(), state.pitchRadians(), state.rollRadians(), state.scale());
     }
 
     /** True if hit position is on the front face of the sign (player looking at same side as sign text). */
