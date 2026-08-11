@@ -54,16 +54,16 @@ public final class ContraptionSkullElement implements ContraptionElement {
 
     @Override
     public Vec3 localOffset() {
-        // Wall skull: positioned at face center, 4/16 out, Y center at 8/16 above block bottom
         if (blockState.getBlock() instanceof WallSkullBlock) {
             Direction facing = blockState.getValue(WallSkullBlock.FACING);
+            // Skull attaches to the wall opposite to facing; center = block center shifted toward wall
             return new Vec3(
-                    localPos.getX() + 0.5 + facing.getStepX() * (4.0/16.0),
-                    localPos.getY() + 8.0/16.0,
-                    localPos.getZ() + 0.5 + facing.getStepZ() * (4.0/16.0));
+                    localPos.getX() + 0.5 - facing.getStepX() * 0.25,
+                    localPos.getY() + 0.25,
+                    localPos.getZ() + 0.5 - facing.getStepZ() * 0.25);
         }
-        // Floor skull: center of skull (8/16 wide, 8/16 tall, Y center at 4/16)
-        return new Vec3(localPos.getX() + 0.5, localPos.getY() + 4.0/16.0, localPos.getZ() + 0.5);
+        // Floor skull: sits on floor, entity at floor level (model height 0.5 from origin)
+        return new Vec3(localPos.getX() + 0.5, localPos.getY(), localPos.getZ() + 0.5);
     }
     @Override public boolean isValid() { return blockState != null && !blockState.isAir(); }
     @Override public int[] entityIds() { return new int[]{entityId}; }
@@ -96,6 +96,11 @@ public final class ContraptionSkullElement implements ContraptionElement {
         if (ctx.pitchRadians() != lastPitch || ctx.rollRadians() != lastRoll || ctx.scale() != lastScale) {
             lastPitch = ctx.pitchRadians(); lastRoll = ctx.rollRadians(); lastScale = ctx.scale();
             metaDirty = true;
+        }
+        // Re-read skull NBT from level BE each tick so player head profile loads after placement
+        if (!metaDirty && skullNbt == null) {
+            var be = ctx.level().getBlockEntity(localPos);
+            if (be != null) metaDirty = true; // force meta update when BE appears
         }
     }
 
@@ -169,16 +174,11 @@ public final class ContraptionSkullElement implements ContraptionElement {
                             .result().orElse(null));
             return head;
         }
-        var skullType = blockState.getBlock() instanceof SkullBlock skull ? skull.getType() : null;
-        if (skullType == null) return new ItemStack(Items.SKELETON_SKULL);
-        return switch (skullType.toString().toLowerCase()) {
-            case "wither_skeleton" -> new ItemStack(Items.WITHER_SKELETON_SKULL);
-            case "zombie"          -> new ItemStack(Items.ZOMBIE_HEAD);
-            case "creeper"         -> new ItemStack(Items.CREEPER_HEAD);
-            case "piglin"          -> new ItemStack(Items.PIGLIN_HEAD);
-            case "dragon"          -> new ItemStack(Items.DRAGON_HEAD);
-            default                -> new ItemStack(Items.SKELETON_SKULL);
-        };
+        // Get skull item directly from the block — works for all skull types regardless of enum naming
+        net.minecraft.world.item.Item blockItem = blockState.getBlock().asItem();
+        return blockItem != net.minecraft.world.item.Items.AIR
+                ? new ItemStack(blockItem)
+                : new ItemStack(Items.SKELETON_SKULL);
     }
 
     private Quaternionf buildSkullRotation() {
