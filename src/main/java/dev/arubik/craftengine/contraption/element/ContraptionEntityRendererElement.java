@@ -95,7 +95,8 @@ public final class ContraptionEntityRendererElement implements ContraptionElemen
         Quaternionf tiltQ = (ctx.pitchRadians() == 0.0 && ctx.rollRadians() == 0.0) ? null
                 : new Quaternionf().rotateX((float) ctx.pitchRadians()).rotateZ((float) ctx.rollRadians());
         for (Cell cell : cells) {
-            cell.render(ctx.viewers(), ctx.bearing(), ctx.yawRadians(), ctx.scale(),
+            cell.render(ctx.viewers(), ctx.bearing(), ctx.yawRadians(),
+                    ctx.pitchRadians(), ctx.rollRadians(), ctx.scale(),
                     tiltQ, blockLight, skyLight, ctx.moved());
         }
     }
@@ -173,11 +174,12 @@ public final class ContraptionEntityRendererElement implements ContraptionElemen
             return !next.equals(lastRotation, 1e-4f);
         }
 
-        void render(List<Player> viewers, Vec3 bearing, double yawRadians, double scale,
+        void render(List<Player> viewers, Vec3 bearing, double yawRadians, double pitchRadians,
+                    double rollRadians, double scale,
                     Quaternionf tiltQ, int blockLight, int skyLight, boolean moved) {
             Vector3f off = offset();
             Vec3 localWithOff = new Vec3(local.getX() + off.x, local.getY() + off.y, local.getZ() + off.z);
-            Vec3 worldPos = ContraptionMath.renderPosition(localWithOff, bearing, yawRadians, 0.0, 0.0, scale);
+            Vec3 worldPos = ContraptionMath.renderPosition(localWithOff, bearing, yawRadians, pitchRadians, rollRadians, scale);
             float yawDeg = baseYaw() + (float) Math.toDegrees(yawRadians);
             Quaternionf rotation = modelRotation(tiltQ);
             boolean metaChanged = blockLight != lastBlockLight || skyLight != lastSkyLight

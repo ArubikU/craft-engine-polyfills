@@ -85,24 +85,25 @@ public final class ContraptionSignElement extends ContraptionBlockElement {
         super.render(ctx); // BLOCK_DISPLAY via inherited render
 
         Direction facing = getFacing();
-        float yawDeg = (float) ctx.yawDegrees();
+        float contraptionYaw = (float) ctx.yawDegrees();
 
-        // Front text — offset 0.01 blocks toward the sign's face
-        Vec3 frontPos = textPos(ctx, facing,  0.01);
-        // Back text  — offset 0.01 blocks toward the sign's back
-        Vec3 backPos  = textPos(ctx, facing, -0.01);
+        Vec3 frontPos = textPos(ctx, facing, false);
+        Vec3 backPos  = textPos(ctx, facing, true);
+        // Text entity yaw: sign face direction + contraption yaw
+        float frontYaw = facingToEntityYaw(facing) + contraptionYaw;
+        float backYaw  = facingToEntityYaw(facing.getOpposite()) + contraptionYaw;
 
         for (Player viewer : ctx.viewers()) {
-            if (frontShown.add(viewer.uuid())) spawnText(viewer, frontId, frontUuid, frontPos, yawDeg, false);
-            else if (ctx.moved()) syncPos(viewer, frontId, frontPos, yawDeg);
+            if (frontShown.add(viewer.uuid())) spawnText(viewer, frontId, frontUuid, frontPos, contraptionYaw, false);
+            else if (ctx.moved()) syncPos(viewer, frontId, frontPos, frontYaw);
 
-            if (backShown.add(viewer.uuid())) spawnText(viewer, backId, backUuid, backPos, yawDeg, true);
-            else if (ctx.moved()) syncPos(viewer, backId, backPos, yawDeg);
+            if (backShown.add(viewer.uuid())) spawnText(viewer, backId, backUuid, backPos, contraptionYaw, true);
+            else if (ctx.moved()) syncPos(viewer, backId, backPos, backYaw);
         }
 
         if (textDirty) {
-            sendTextMeta(ctx.viewers(), frontId, frontShown, frontText, facing, false);
-            sendTextMeta(ctx.viewers(), backId,  backShown,  backText,  facing.getOpposite(), true);
+            sendTextMeta(ctx.viewers(), frontId, frontShown, frontText);
+            sendTextMeta(ctx.viewers(), backId,  backShown,  backText);
             textDirty = false;
         }
     }
@@ -121,31 +122,56 @@ public final class ContraptionSignElement extends ContraptionBlockElement {
     private Direction getFacing() {
         if (blockState().getBlock() instanceof WallSignBlock)        return blockState().getValue(WallSignBlock.FACING);
         if (blockState().getBlock() instanceof WallHangingSignBlock) return blockState().getValue(WallHangingSignBlock.FACING);
-        return Direction.SOUTH; // floor/ceiling signs default south (rotation handled by block model yaw)
+        return Direction.SOUTH;
     }
 
-    private Vec3 textPos(RenderContext ctx, Direction facing, double offset) {
+    /** Yaw in degrees that makes a TEXT_DISPLAY face in the given direction (same convention as entity yaw). */
+    private static float facingToEntityYaw(Direction dir) {
+        return switch (dir) {
+            case SOUTH -> 0f;
+            case WEST  -> 90f;
+            case NORTH -> 180f;
+            case EAST  -> 270f;
+            default    -> 0f;
+        };
+    }
+
+    /**
+     * World-space position of the text surface. Wall signs: text is on the face at ~0.4375 blocks
+     * from the block center toward the facing direction; Y center ~0.5625 above block floor.
+     * Hanging/floor signs approximate.
+     */
+    private Vec3 textPos(RenderContext ctx, Direction facing, boolean back) {
+        // Sign text surface: 0.4375 blocks out from the block center toward the sign's face
+        double outward = back ? -0.4375 : 0.4375;
+        // Y: sign board center — wall signs sit at 4/16..12/16 in the block, center = 8/16 = 0.5
+        double yCenter = isHangingSign() ? 0.25 : 0.5;
         Vec3 local = new Vec3(
-                localPos().getX() + 0.5 + facing.getStepX() * offset,
-                localPos().getY() + 0.55,
-                localPos().getZ() + 0.5 + facing.getStepZ() * offset);
+                localPos().getX() + 0.5 + facing.getStepX() * outward,
+                localPos().getY() + yCenter,
+                localPos().getZ() + 0.5 + facing.getStepZ() * outward);
         return ContraptionMath.renderPosition(local, ctx.bearing(),
                 ctx.yawRadians(), ctx.pitchRadians(), ctx.rollRadians(), ctx.scale());
     }
 
-    private void spawnText(Player viewer, int eid, UUID uuid, Vec3 pos, float yaw, boolean back) {
-        Direction facing = getFacing();
-        if (back) facing = facing.getOpposite();
+    private boolean isHangingSign() {
+        return blockState().getBlock() instanceof CeilingHangingSignBlock
+                || blockState().getBlock() instanceof WallHangingSignBlock;
+    }
+
+    private void spawnText(Player viewer, int eid, UUID uuid, Vec3 pos, float contraptionYaw, boolean back) {
+        Direction facing = back ? getFacing().getOpposite() : getFacing();
+        // Entity yaw = sign face direction + contraption yaw (TEXT_DISPLAY uses entity yaw for facing, like BLOCK_DISPLAY)
+        float textYaw = facingToEntityYaw(facing) + contraptionYaw;
         viewer.sendPackets(List.of(
                 MNms.INSTANCE.constructor$ClientboundAddEntityPacket(eid, uuid, pos.x, pos.y, pos.z,
-                        0f, yaw, EntityType.TEXT_DISPLAY, 0, Vec3.ZERO, 0),
-                MNms.INSTANCE.constructor$ClientboundSetEntityDataPacket(eid,
-                        buildTextMeta(back ? backText : frontText, facing))
+                        0f, textYaw, EntityType.TEXT_DISPLAY, 0, Vec3.ZERO, 0),
+                MNms.INSTANCE.constructor$ClientboundSetEntityDataPacket(eid, buildTextMeta(back ? backText : frontText))
         ), false);
     }
 
-    private void sendTextMeta(List<Player> viewers, int eid, Set<UUID> shown, Component text, Direction facing, boolean flip) {
-        List<Object> meta = buildTextMeta(text, flip ? facing.getOpposite() : facing);
+    private void sendTextMeta(List<Player> viewers, int eid, Set<UUID> shown, Component text) {
+        List<Object> meta = buildTextMeta(text);
         Object pkt = MNms.INSTANCE.constructor$ClientboundSetEntityDataPacket(eid, meta);
         for (Player p : viewers) { if (shown.contains(p.uuid())) p.sendPacket(pkt, false); }
     }
@@ -155,27 +181,16 @@ public final class ContraptionSignElement extends ContraptionBlockElement {
                 eid, pos.x, pos.y, pos.z, yaw, 0f, false), false);
     }
 
-    private List<Object> buildTextMeta(Component text, Direction facing) {
+    private List<Object> buildTextMeta(Component text) {
         List<Object> meta = new ArrayList<>();
         if (text != null && !text.getString().isEmpty()) {
             DisplayData.TextDisplayData.Text.addEntityData(text, meta);
         }
-        DisplayData.TextDisplayData.BackgroundColor.addEntityData(0x40000000, meta); // dark semi-transparent
-        DisplayData.LeftRotation.addEntityData(faceRotation(facing), meta);
+        DisplayData.TextDisplayData.BackgroundColor.addEntityData(0x40000000, meta);
+        // No LeftRotation — entity yaw handles facing (same as BLOCK_DISPLAY yaw convention)
         DisplayData.Scale.addEntityData(new org.joml.Vector3f(0.45f, 0.45f, 0.45f), meta);
         DisplayData.PosRotInterpolationDuration.addEntityData(2, meta);
         return meta;
-    }
-
-    private static Quaternionf faceRotation(Direction dir) {
-        return switch (dir) {
-            case NORTH -> new Quaternionf().rotateY((float) Math.toRadians(180));
-            case SOUTH -> new Quaternionf();
-            case WEST  -> new Quaternionf().rotateY((float) Math.toRadians(90));
-            case EAST  -> new Quaternionf().rotateY((float) Math.toRadians(270));
-            case UP    -> new Quaternionf().rotateX((float) Math.toRadians(-90));
-            case DOWN  -> new Quaternionf().rotateX((float) Math.toRadians(90));
-        };
     }
 
     private static Component buildTextComponent(net.minecraft.world.level.block.entity.SignText signText) {
