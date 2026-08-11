@@ -5,7 +5,11 @@ import dev.arubik.craftengine.contraption.core.ContraptionState;
 import dev.arubik.craftengine.contraption.furniture.ContraptionFurniture;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.level.block.BedBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BedPart;
+import net.momirealms.craftengine.core.plugin.CraftEngine;
+import net.momirealms.craftengine.core.world.CEWorld;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -32,13 +36,43 @@ public final class ElementBuilder {
         for (BlockPos local : level.localPositions()) {
             BlockState blockState = level.getBlockState(local);
             if (blockState == null || blockState.isAir()) continue;
+
             // Special elements for blocks with custom behavior
             if (blockState.getBlock() instanceof net.minecraft.world.level.block.CampfireBlock) {
                 elements.add(new dev.arubik.craftengine.contraption.element.special.ContraptionCampfireElement(local, blockState));
                 continue;
             }
+
+            // Bed foot: skip entirely — the head cell draws the whole bed visual.
+            if (blockState.getBlock() instanceof BedBlock
+                    && blockState.getValue(BedBlock.PART) == BedPart.FOOT) {
+                continue;
+            }
+
+            boolean hasEntityRenderer = hasConstantEntityRenderer(level, local);
+            float modelYawOffset = 0f;
+
+            if (!hasEntityRenderer && blockState.getBlock() instanceof BedBlock) {
+                // HEAD half: BedSpecialRenderer hardcodes SOUTH — correct by adding the captured facing yaw.
+                modelYawOffset = blockState.getValue(BedBlock.FACING).toYRot();
+                // Only add the element if the foot partner is also captured (half-captured bed → invisible).
+                BlockPos partner = local.relative(BedBlock.getConnectedDirection(blockState));
+                if (!level.localPositions().contains(partner)) {
+                    continue; // half-captured bed — render nothing
+                }
+                BlockState partnerState = level.getBlockState(partner);
+                boolean paired = partnerState.getBlock() == blockState.getBlock()
+                        && partnerState.getValue(BedBlock.PART) == BedPart.FOOT
+                        && partnerState.getValue(BedBlock.FACING) == blockState.getValue(BedBlock.FACING);
+                if (!paired) continue;
+            }
+
             CompoundTag beTag = level.saveBlockEntity(local);
-            elements.add(new ContraptionBlockElement(local, blockState, beTag));
+            elements.add(new ContraptionBlockElement(local, blockState, beTag, hasEntityRenderer, modelYawOffset));
+
+            if (hasEntityRenderer) {
+                elements.add(new ContraptionEntityRendererElement(local));
+            }
         }
 
         for (ContraptionFurniture cf : state.furniture()) {
@@ -67,5 +101,20 @@ public final class ElementBuilder {
         elements.add(new ContraptionPistonShaftElement());
 
         state.setElements(elements);
+    }
+
+    /** True when the CE chunk at this position declares an entity-renderer config for the current blockstate. */
+    static boolean hasConstantEntityRenderer(ContraptionLevel level, BlockPos local) {
+        try {
+            org.bukkit.World w = level.getWorld();
+            CEWorld ceWorld = CraftEngine.instance().worldManager().getWorld(w.getUID());
+            if (ceWorld == null) return false;
+            net.momirealms.craftengine.core.world.BlockPos cePos =
+                    new net.momirealms.craftengine.core.world.BlockPos(local.getX(), local.getY(), local.getZ());
+            net.momirealms.craftengine.core.world.chunk.CEChunk chunk = ceWorld.getChunkAtIfLoaded(cePos);
+            return chunk != null && chunk.getConstantBlockEntityRenderer(cePos) != null;
+        } catch (Throwable ignored) {
+            return false;
+        }
     }
 }

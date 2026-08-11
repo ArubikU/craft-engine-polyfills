@@ -12,7 +12,6 @@ import dev.arubik.craftengine.contraption.furniture.ContraptionSeatMount;
 import dev.arubik.craftengine.contraption.listener.ContraptionProjectileCollision;
 import dev.arubik.craftengine.contraption.listener.ContraptionVoidDrop;
 import dev.arubik.craftengine.contraption.player.CePlayers;
-import dev.arubik.craftengine.contraption.render.ContraptionBlockEntityElementMirror;
 import dev.arubik.craftengine.contraption.render.ContraptionItemPickupSwarm;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.phys.Vec3;
@@ -28,7 +27,6 @@ public final class ContraptionEntity {
 
     private final ContraptionState state;
     private final ContraptionItemPickupSwarm itemPickupSwarm = new ContraptionItemPickupSwarm();
-    private final ContraptionBlockEntityElementMirror elementMirror = new ContraptionBlockEntityElementMirror();
     /** 6-directional extending-piston shaft (pipe + head) render — only active for a piston bearing. */
     // shaftSwarm removed — piston shaft handled by ContraptionPistonShaftElement
 
@@ -174,7 +172,6 @@ public final class ContraptionEntity {
      */
     public void suspendRender(List<Player> viewers) {
         hitboxElement().despawnAll(viewers);
-        elementMirror.despawnAll(viewers);
         // seatElement seats migrated to ContraptionSeatElement — despawn handled by element loop
         // piston shaft despawn handled by element loop
         for (dev.arubik.craftengine.contraption.element.ContraptionElement e : state.elements()) {
@@ -245,7 +242,6 @@ public final class ContraptionEntity {
         Vec3 bearing = new Vec3(state.x(), state.y(), state.z());
         // displaySwarm.rebuild removed — elements are built by ElementBuilder.rebuild below
         hitboxElement().rebuild(state.level(), viewers, bearing);
-        elementMirror.rebuild(state.level(), viewers);
         // Bake internal emitter light map (O(emitters×cells) once, not per-element per-tick).
         state.lightMap().bake(state.level());
         // Derive ephemeral element list from the level's current blocks + state's furniture records.
@@ -314,7 +310,6 @@ public final class ContraptionEntity {
         // (and, for furniture, at unscaled POSITIONS too — it projects via ContraptionMath directly,
         // whereas the element mirror goes through ContraptionLevel#realWorldPositionOf, which already
         // carried the level's scale). See each swarm's own "Uniform scale" render javadoc.
-        elementMirror.render(viewers, state.level(), realLevel, scale);
         // Pitch+roll threaded (2026-07-16 follow-up to the same-day scale fix): captured furniture used to
         // project through a yaw+scale-only transform, so a TIPPING/LEANING contraption tilted its blocks
         // while its sofas/lamps stayed level inside the rolled hull — and its furniture colliders with them.
@@ -358,7 +353,6 @@ public final class ContraptionEntity {
         }
         double extended = piston.extendedBlocks();
         Vec3 facing = piston.direction();
-        net.minecraft.core.BlockPos bearingPos = state.originBearingBlockPos();
         String headItemId = dev.arubik.craftengine.contraption.element.ContraptionPistonShaftElement.headItem();
         String shaftItemId = dev.arubik.craftengine.contraption.element.ContraptionPistonShaftElement.shaftItemFor(facing);
         var shaftElem = pistonShaftElement();
@@ -617,7 +611,6 @@ public final class ContraptionEntity {
      */
     public void despawnRest(List<Player> viewers) {
         itemPickupSwarm.despawnAll();
-        elementMirror.despawnAll(viewers);
         // Block seats despawned via element loop below
         // piston shaft despawn handled by element loop
         for (dev.arubik.craftengine.contraption.element.ContraptionElement e : state.elements()) {

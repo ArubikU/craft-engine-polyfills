@@ -28,37 +28,30 @@ import org.joml.Vector3f;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * Campfire element — BLOCK_DISPLAY (vanilla campfire model), 4 ITEM_DISPLAY cooking slots,
- * interact to add/remove items, fire damage to entities on a lit campfire.
- */
 public final class ContraptionCampfireElement implements ContraptionElement {
 
     private static final int SLOTS = 4;
-    /** Item offsets relative to block center (N/S/E/W), matching vanilla placement positions. */
     private static final Vec3[] ITEM_OFFSETS = {
-        new Vec3( 0.0,  0.31, -0.3125),  // N
-        new Vec3( 0.0,  0.31,  0.3125),  // S
-        new Vec3(-0.3125, 0.31,  0.0),   // W
-        new Vec3( 0.3125, 0.31,  0.0),   // E
+        new Vec3( 0.0,  0.31, -0.3125),
+        new Vec3( 0.0,  0.31,  0.3125),
+        new Vec3(-0.3125, 0.31,  0.0),
+        new Vec3( 0.3125, 0.31,  0.0),
     };
-    private static final float DAMAGE_PER_TICK = 1.0f;
     private static final int DAMAGE_INTERVAL_TICKS = 20;
 
     private final BlockPos localPos;
     private BlockState blockState;
+    private final boolean isSoul;
 
     private final ItemStack[] slots = new ItemStack[SLOTS];
     private int damageTimer = 0;
 
-    // BLOCK_DISPLAY entity
     private final int blockEntityId = net.minecraft.world.entity.Entity.nextEntityId();
     private final UUID blockUuid = UUID.randomUUID();
     private final Object blockRemovePacket;
     private final Set<net.momirealms.craftengine.core.entity.player.Player> blockShownTo = ConcurrentHashMap.newKeySet();
     private boolean blockMetaDirty = true;
 
-    // ITEM_DISPLAY entities per slot
     private final int[] itemEntityIds = new int[SLOTS];
     private final UUID[] itemUuids = new UUID[SLOTS];
     private final Object[] itemRemovePackets = new Object[SLOTS];
@@ -69,6 +62,7 @@ public final class ContraptionCampfireElement implements ContraptionElement {
     public ContraptionCampfireElement(BlockPos localPos, BlockState blockState) {
         this.localPos = localPos;
         this.blockState = blockState;
+        this.isSoul = blockState.is(Blocks.SOUL_CAMPFIRE);
         Arrays.fill(this.slots, ItemStack.EMPTY);
         this.blockRemovePacket = MNms.INSTANCE.constructor$ClientboundRemoveEntitiesPacket(IntList.of(blockEntityId));
         this.itemShownTo = new Set[SLOTS];
@@ -103,14 +97,12 @@ public final class ContraptionCampfireElement implements ContraptionElement {
     public void tick(RenderContext ctx) {
         if (ctx.level() == null) return;
 
-        // Sync blockstate
         BlockState live = ctx.level().getBlockState(localPos);
         if (!live.equals(blockState)) {
             blockState = live;
             blockMetaDirty = true;
         }
 
-        // Fire damage: lit campfire damages entities on footprint every second
         if (isLit() && ctx.realLevel() != null) {
             damageTimer++;
             if (damageTimer >= DAMAGE_INTERVAL_TICKS) {
@@ -154,6 +146,30 @@ public final class ContraptionCampfireElement implements ContraptionElement {
                 itemDirty[i] = false;
             }
         }
+
+        spawnParticles(ctx, worldPos);
+    }
+
+    private void spawnParticles(RenderContext ctx, Vec3 worldPos) {
+        if (!isLit() || !(ctx.realLevel() instanceof ServerLevel sl)) return;
+        net.minecraft.core.particles.ParticleOptions smokeType = isSoul
+                ? net.minecraft.core.particles.ParticleTypes.CAMPFIRE_SIGNAL_SMOKE
+                : net.minecraft.core.particles.ParticleTypes.CAMPFIRE_COSY_SMOKE;
+        try {
+            sl.sendParticles(smokeType, worldPos.x, worldPos.y + 1.0, worldPos.z, 1, 0.2, 0, 0.2, 0.01);
+            for (int i = 0; i < SLOTS; i++) {
+                if (!slots[i].isEmpty()) {
+                    Vec3 slotLocal = new Vec3(
+                            localPos.getX() + 0.5 + ITEM_OFFSETS[i].x,
+                            localPos.getY() + ITEM_OFFSETS[i].y,
+                            localPos.getZ() + 0.5 + ITEM_OFFSETS[i].z);
+                    Vec3 itemWorld = ContraptionMath.renderPosition(slotLocal, ctx.bearing(),
+                            ctx.yawRadians(), ctx.pitchRadians(), ctx.rollRadians(), ctx.scale());
+                    sl.sendParticles(net.minecraft.core.particles.ParticleTypes.SMOKE,
+                            itemWorld.x, itemWorld.y + 0.3, itemWorld.z, 1, 0.05, 0.05, 0.05, 0.01);
+                }
+            }
+        } catch (Throwable ignored) {}
     }
 
     @Override
@@ -168,7 +184,6 @@ public final class ContraptionCampfireElement implements ContraptionElement {
 
     @Override
     public void disassemble(ServerLevel level, BlockPos bearingPos, int quarterTurns) {
-        // Place campfire block and restore cooking items to block entity
         BlockPos worldPos = ContraptionMath.toWorld(
                 rotateLocal(localPos, quarterTurns), bearingPos);
         level.setBlock(worldPos, blockState.rotate(rotationFromQuarterTurns(quarterTurns)), 3);
@@ -184,7 +199,6 @@ public final class ContraptionCampfireElement implements ContraptionElement {
     public boolean onInteract(ServerPlayer player, ContraptionState state, Vec3 hitPos,
                                InteractionHand hand, boolean rightClick) {
         if (!rightClick) {
-            // left-click: remove nearest cooking item
             for (int i = 0; i < SLOTS; i++) {
                 if (!slots[i].isEmpty()) {
                     ItemStack drop = slots[i].copy();
@@ -207,7 +221,6 @@ public final class ContraptionCampfireElement implements ContraptionElement {
 
         ItemStack held = player.getItemInHand(hand);
 
-        // Shovel → extinguish
         if (!held.isEmpty() && held.getItem() instanceof net.minecraft.world.item.ShovelItem) {
             if (isLit()) {
                 blockState = blockState.setValue(CampfireBlock.LIT, false);
@@ -217,10 +230,8 @@ public final class ContraptionCampfireElement implements ContraptionElement {
             return true;
         }
 
-        // Empty hand → nothing
         if (held.isEmpty()) return false;
 
-        // Food/cookable → place in first free slot
         for (int i = 0; i < SLOTS; i++) {
             if (slots[i].isEmpty()) {
                 slots[i] = held.copyWithCount(1);
@@ -232,8 +243,6 @@ public final class ContraptionCampfireElement implements ContraptionElement {
         }
         return false;
     }
-
-    // ---- rendering helpers ----
 
     private boolean isLit() {
         try {
@@ -283,7 +292,6 @@ public final class ContraptionCampfireElement implements ContraptionElement {
                     org.bukkit.craftbukkit.inventory.CraftItemStack.asBukkitCopy(slots[slot]));
             DisplayData.ItemDisplayData.ItemStack.addEntityData(nms, meta);
         }
-        // Flat item rotation, facing up like vanilla campfire cooking display
         DisplayData.LeftRotation.addEntityData(new Quaternionf().rotateX((float) Math.toRadians(-90)), meta);
         DisplayData.Scale.addEntityData(new Vector3f(0.375f, 0.375f, 0.375f), meta);
         DisplayData.BrightnessOverride.addEntityData((15 << 4) | (15 << 20), meta);
@@ -304,11 +312,12 @@ public final class ContraptionCampfireElement implements ContraptionElement {
         double r = 0.7 * ctx.scale();
         AABB box = new AABB(worldCenter.x - r, worldCenter.y, worldCenter.z - r,
                 worldCenter.x + r, worldCenter.y + 1.5 * ctx.scale(), worldCenter.z + r);
+        float dmg = isSoul ? 2.0f : 1.0f;
         try {
             for (net.minecraft.world.entity.Entity entity : sl.getEntities(
                     (net.minecraft.world.entity.Entity) null, box,
                     e -> !(e instanceof Player))) {
-                entity.hurtServer(sl, sl.damageSources().inFire(), DAMAGE_PER_TICK);
+                entity.hurtServer(sl, sl.damageSources().inFire(), dmg);
             }
         } catch (Throwable ignored) {}
     }

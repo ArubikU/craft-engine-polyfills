@@ -12,6 +12,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
@@ -42,15 +43,26 @@ public final class ContraptionBlockElement implements ContraptionElement {
     private int lastBlockLight = -1;
     private int lastSkyLight = -1;
     private double lastPitch, lastRoll, lastScale = 1.0;
+    private final boolean hasEntityRenderer;
+    private final float modelYawOffsetDegrees;
 
     public ContraptionBlockElement(BlockPos localPos, BlockState blockState, CompoundTag blockEntityNbt) {
+        this(localPos, blockState, blockEntityNbt, false, 0f);
+    }
+
+    public ContraptionBlockElement(BlockPos localPos, BlockState blockState, CompoundTag blockEntityNbt,
+                                   boolean hasEntityRenderer, float modelYawOffsetDegrees) {
         this.localPos = localPos;
         this.blockState = blockState;
         this.blockEntityNbt = blockEntityNbt;
+        this.hasEntityRenderer = hasEntityRenderer;
+        this.modelYawOffsetDegrees = modelYawOffsetDegrees;
         this.entityId = net.minecraft.world.entity.Entity.nextEntityId();
         this.entityUuid = UUID.randomUUID();
         this.despawnPacket = MNms.INSTANCE.constructor$ClientboundRemoveEntitiesPacket(IntList.of(entityId));
     }
+
+    /** Keep 3-arg ctor working by delegating. */
 
     @Override
     public Key type() {
@@ -141,7 +153,7 @@ public final class ContraptionBlockElement implements ContraptionElement {
         Vec3 pos = ContraptionMath.renderPosition(center, ctx.bearing(),
                 ctx.yawRadians(), ctx.pitchRadians(), ctx.rollRadians(), ctx.scale());
 
-        float yawDeg = (float) ctx.yawDegrees();
+        float yawDeg = (float) ctx.yawDegrees() + modelYawOffsetDegrees;
 
         if (ctx.pitchRadians() != lastPitch || ctx.rollRadians() != lastRoll || ctx.scale() != lastScale) {
             lastPitch = ctx.pitchRadians();
@@ -272,7 +284,7 @@ public final class ContraptionBlockElement implements ContraptionElement {
 
     private List<Object> buildMetadataValues() {
         var values = new java.util.ArrayList<Object>();
-        DisplayData.BlockDisplayData.BlockState.addEntityData(blockState, values);
+        DisplayData.BlockDisplayData.BlockState.addEntityData(hasEntityRenderer ? Blocks.AIR.defaultBlockState() : blockState, values);
         float s = (float) lastScale;
         boolean scaled = lastScale != 1.0;
         if (lastPitch == 0.0 && lastRoll == 0.0) {
@@ -293,6 +305,7 @@ public final class ContraptionBlockElement implements ContraptionElement {
             }
         }
         DisplayData.PosRotInterpolationDuration.addEntityData(2, values);
+        DisplayData.TransformationInterpolationDuration.addEntityData(2, values);
         if (lastBlockLight >= 0 && lastSkyLight >= 0) {
             DisplayData.BrightnessOverride.addEntityData((lastBlockLight << 4) | (lastSkyLight << 20), values);
         }
