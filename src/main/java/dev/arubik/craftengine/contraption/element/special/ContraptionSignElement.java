@@ -72,7 +72,9 @@ public final class ContraptionSignElement extends ContraptionBlockElement {
         if (be instanceof net.minecraft.world.level.block.entity.SignBlockEntity sign) {
             Component lf = buildTextComponent(sign.getFrontText());
             Component lb = buildTextComponent(sign.getBackText());
-            if (!lf.equals(frontText) || !lb.equals(backText)) {
+            // Force dirty if we previously had empty text — ensures spawned viewers get text
+            if (!lf.equals(frontText) || !lb.equals(backText)
+                    || frontText.getString().isEmpty() || backText.getString().isEmpty()) {
                 frontText = lf;
                 backText  = lb;
                 textDirty = true;
@@ -143,7 +145,8 @@ public final class ContraptionSignElement extends ContraptionBlockElement {
      */
     private Vec3 textPos(RenderContext ctx, Direction facing, boolean back) {
         // Sign text surface: 0.4375 blocks out from the block center toward the sign's face
-        double outward = back ? -0.4375 : 0.4375;
+        // 0.44 = just past the sign face (0.4375 = 7/16) so text renders in front of the sign block model
+        double outward = back ? -0.44 : 0.44;
         // Y: sign board center — wall signs sit at 4/16..12/16 in the block, center = 8/16 = 0.5
         double yCenter = isHangingSign() ? 0.25 : 0.5;
         Vec3 local = new Vec3(
