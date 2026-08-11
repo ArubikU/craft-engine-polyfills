@@ -227,8 +227,7 @@ public final class ContraptionCampfireElement extends ContraptionBlockElement {
                 : org.bukkit.craftbukkit.inventory.CraftItemStack.asNMSCopy(
                         org.bukkit.craftbukkit.inventory.CraftItemStack.asBukkitCopy(slots[slot]));
         DisplayData.ItemDisplayData.ItemStack.addEntityData(nms, meta);
-        // Vanilla CampfireBlockEntityRenderer per-slot Y rotations (each corner faces outward diagonally)
-        float[] slotYDeg = {-45f, 45f, 135f, -135f};
+        float[] slotYDeg = {-135f, -45f, 45f, 135f};
         Quaternionf rot = new Quaternionf()
                 .rotateY((float) Math.toRadians(slotYDeg[slot]))
                 .rotateX((float) Math.toRadians(-90));
