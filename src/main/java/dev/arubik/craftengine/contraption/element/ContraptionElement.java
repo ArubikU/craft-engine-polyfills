@@ -36,8 +36,8 @@ public interface ContraptionElement {
      */
     int[] entityIds();
 
-    default AABB interactionBounds(RenderContext ctx) {
-        return null;
+    default List<AABB> interactionBounds(RenderContext ctx) {
+        return List.of();
     }
 
     // ---- lifecycle ----
