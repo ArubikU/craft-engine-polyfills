@@ -28,7 +28,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-public final class ContraptionBlockElement implements ContraptionElement {
+public class ContraptionBlockElement implements ContraptionElement {
 
     private final BlockPos localPos;
     private BlockState blockState;
