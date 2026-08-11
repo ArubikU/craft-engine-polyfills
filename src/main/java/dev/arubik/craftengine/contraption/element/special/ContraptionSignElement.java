@@ -52,7 +52,7 @@ public final class ContraptionSignElement extends ContraptionBlockElement {
     private boolean textDirty = true;
 
     public ContraptionSignElement(BlockPos localPos, BlockState blockState, CompoundTag beTag) {
-        super(localPos, blockState, beTag, false, 0f);
+        super(localPos, blockState, beTag, false, standingSignYawOffset(blockState));
         this.frontRemove = MNms.INSTANCE.constructor$ClientboundRemoveEntitiesPacket(IntList.of(frontId));
         this.backRemove  = MNms.INSTANCE.constructor$ClientboundRemoveEntitiesPacket(IntList.of(backId));
         readText(beTag);
@@ -342,6 +342,17 @@ public final class ContraptionSignElement extends ContraptionBlockElement {
         }
 
         return false;
+    }
+
+    /** For standing signs, returns the ROTATION_16 yaw so BLOCK_DISPLAY entity yaw handles facing.
+     *  Wall/hanging signs: 0 (blockstate FACING already encodes direction correctly). */
+    private static float standingSignYawOffset(BlockState blockState) {
+        if (blockState.getBlock() instanceof WallSignBlock) return 0f;
+        if (blockState.getBlock() instanceof WallHangingSignBlock) return 0f;
+        if (blockState.hasProperty(net.minecraft.world.level.block.state.properties.BlockStateProperties.ROTATION_16)) {
+            return blockState.getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.ROTATION_16) * 22.5f;
+        }
+        return 0f;
     }
 
     private net.minecraft.world.phys.Vec3 worldPos(dev.arubik.craftengine.contraption.core.ContraptionState state) {
