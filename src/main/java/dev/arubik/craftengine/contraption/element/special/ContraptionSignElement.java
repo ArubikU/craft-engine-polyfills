@@ -128,7 +128,8 @@ public abstract class ContraptionSignElement extends ContraptionBlockElement {
     }
 
     private Vec3 textPos(RenderContext ctx, Direction facing, boolean back) {
-        double outward = back ? -0.38 : 0.38;
+        // 1/16 pixel offset from sign surface to avoid Z-fighting; text is on/near block center
+        double outward = back ? -1.0/16.0 : 1.0/16.0;
         Vec3 local = new Vec3(
                 localPos().getX() + 0.5 + facing.getStepX() * outward,
                 localPos().getY() + textYCenter(),
