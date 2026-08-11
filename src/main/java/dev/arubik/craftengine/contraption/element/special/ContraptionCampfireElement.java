@@ -221,11 +221,12 @@ public final class ContraptionCampfireElement extends ContraptionBlockElement {
 
     private List<Object> buildItemMeta(int slot) {
         List<Object> meta = new ArrayList<>();
-        if (!slots[slot].isEmpty()) {
-            Object nms = org.bukkit.craftbukkit.inventory.CraftItemStack.asNMSCopy(
-                    org.bukkit.craftbukkit.inventory.CraftItemStack.asBukkitCopy(slots[slot]));
-            DisplayData.ItemDisplayData.ItemStack.addEntityData(nms, meta);
-        }
+        // Always send item data — sending EMPTY explicitly clears the visual (omitting it keeps the last displayed item)
+        Object nms = slots[slot].isEmpty()
+                ? org.bukkit.craftbukkit.inventory.CraftItemStack.asNMSCopy(org.bukkit.inventory.ItemStack.empty())
+                : org.bukkit.craftbukkit.inventory.CraftItemStack.asNMSCopy(
+                        org.bukkit.craftbukkit.inventory.CraftItemStack.asBukkitCopy(slots[slot]));
+        DisplayData.ItemDisplayData.ItemStack.addEntityData(nms, meta);
         // Vanilla CampfireBlockEntityRenderer per-slot Y rotations (each corner faces outward diagonally)
         float[] slotYDeg = {-45f, 45f, 135f, -135f};
         Quaternionf rot = new Quaternionf()
