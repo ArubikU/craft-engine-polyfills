@@ -8,7 +8,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import dev.arubik.craftengine.contraption.ContraptionPushSettings;
@@ -17,14 +16,10 @@ import dev.arubik.craftengine.contraption.core.ContraptionLevel;
 import dev.arubik.craftengine.contraption.player.PlayerCarry;
 import dev.arubik.craftengine.contraption.render.ContraptionItemPickupSwarm;
 import dev.arubik.craftengine.contraption.render.ContraptionShulkerColliderSwarm;
-import dev.arubik.craftengine.util.MNms;
-import it.unimi.dsi.fastutil.ints.IntList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.phys.Vec3;
-import net.momirealms.craftengine.bukkit.entity.data.InteractionData;
 import net.momirealms.craftengine.core.entity.player.Player;
 import net.momirealms.craftengine.core.util.Key;
 
@@ -182,9 +177,6 @@ public final class ContraptionHitboxElement implements ContraptionElement {
         while (it.hasNext()) {
             Map.Entry<BlockPos, Slot> e = it.next();
             if (!allOffsets.contains(e.getKey())) {
-                for (Player p : viewers) {
-                    e.getValue().despawn(p);
-                }
                 it.remove();
             }
         }
@@ -717,67 +709,12 @@ public final class ContraptionHitboxElement implements ContraptionElement {
      */
     public void render(List<Player> viewers, Vec3 bearingWorldPos, double yawRadians, double pitchRadians,
             double rollRadians, double scale, boolean moved) {
-        // Per-cell LOD for the INTERACTION entities too (2026-07-17 — user: "aplica LOD al interaction entity
-        // tho"). Like the shulker colliders, an interaction hitbox is only worth sending to a viewer who is
-        // close enough to actually click it; a big contraption otherwise streams one INTERACTION entity per
-        // cell to every viewer regardless of distance. Resolve viewer positions ONCE, then hand each slot only
-        // the viewers within reach of THAT cell — the slot spawns for those and despawns for anyone it was
-        // showing who has since moved out of range.
-        List<Player> resolvedViewers = new ArrayList<>(viewers.size());
-        List<Vec3> resolvedPositions = new ArrayList<>(viewers.size());
-        for (Player p : viewers) {
-            Object pp = p.platformPlayer();
-            if (pp instanceof org.bukkit.entity.Player bukkitPlayer) {
-                org.bukkit.Location loc = bukkitPlayer.getLocation();
-                resolvedViewers.add(p);
-                resolvedPositions.add(new Vec3(loc.getX(), loc.getY(), loc.getZ()));
-            }
-        }
-        double interactionCullSq = INTERACTION_LOD_RADIUS * INTERACTION_LOD_RADIUS;
-        for (Slot slot : allSlots()) {
-            // Center-anchor the interaction box on the cell CENTER, not its bottom face (2026-07-17 — user:
-            // "las interaction entity sufren lo que sufrían los shulkers antes... junto a una cara en vez de
-            // directo al centro del cubo"). A vanilla INTERACTION box is always axis-aligned and grows UP from
-            // its entity position, so anchoring at the cell's bottom-center made a TILTED cell's box hang off
-            // the rotated bottom face instead of hugging the cube — exactly the pre-fix shulker symptom. Project
-            // the cell CENTER (ly + height/2) through the transform, then drop the spawn point by half the box's
-            // world height so the box ends up centered on the rotated cube — the best a non-oriented box can do,
-            // matching the render's own center. At pitch == 0 && roll == 0 the +height/2 local projects to
-            // +height/2*scale in Y and the -halfBoxHeight cancels it exactly, so a flat or yaw-only contraption
-            // is byte-for-byte unchanged; only a tilted one moves, which is the whole point.
-            double halfBoxHeight = slot.height * 0.5 * scale;
-            Vec3 center = ContraptionMath.renderPosition(
-                    new Vec3(slot.lx, slot.ly + slot.height / 2.0, slot.lz), bearingWorldPos, yawRadians,
-                    pitchRadians, rollRadians, scale);
-            List<Player> nearViewers = new ArrayList<>();
-            for (int i = 0; i < resolvedViewers.size(); i++) {
-                if (resolvedPositions.get(i).distanceToSqr(center) <= interactionCullSq) {
-                    nearViewers.add(resolvedViewers.get(i));
-                }
-            }
-            slot.render(nearViewers, viewers, center.x, center.y - halfBoxHeight, center.z, scale, moved);
-        }
+        // INTERACTION entities removed — each element manages its own via interactionBounds()
         shulkerColliders.render(viewers, bearingWorldPos, yawRadians, pitchRadians, rollRadians, scale, moved);
     }
 
-    /**
-     * Reach (blocks) within which a viewer is sent a cell's INTERACTION entity — the per-cell LOD radius for
-     * the click hitboxes (see {@link #render}). A hair beyond a player's ~6-block interaction range so the
-     * hitbox is already there when they come into reach, not popping in at the last moment.
-     */
-    private static final double INTERACTION_LOD_RADIUS = 10.0;
-
     public void despawnAll(List<Player> viewers) {
-        for (Slot slot : autoSlots.values()) {
-            for (Player p : viewers) {
-                slot.despawn(p);
-            }
-        }
-        for (Slot slot : customSlots) {
-            for (Player p : viewers) {
-                slot.despawn(p);
-            }
-        }
+        // Slots are geometry-only — no packet entities to despawn
         autoSlots.clear();
         customSlots.clear();
         currentRiders.clear();
@@ -1958,59 +1895,13 @@ public final class ContraptionHitboxElement implements ContraptionElement {
     }
 
     /**
-     * One invisible fake {@code INTERACTION} entity — a continuous bearing-local offset
-     * ({@code lx,ly,lz}) plus its own {@code width}/{@code height}, bottom-anchored exactly
-     * like vanilla's own {@code Interaction} collider (box: X/Z ±width/2 around the offset,
-     * Y from the offset upward by height). No invisible-flag/attach-face hackery needed —
-     * unlike the SHULKER this replaces, Interaction has no client-rendered model at all.
-     */
+    /** Geometry-only slot for carry/pushback math — no packet entity. */
     static final class Slot {
         final double lx, ly, lz;
         final float width, height;
-        /**
-         * Real shape-derived local Y bounds of this cell's actual collision surface (2026-07-02
-         * session, carry-fix follow-up — see the long comment at this slot's construction site in
-         * {@link #rebuild} for the full root-cause writeup). Defaults to {@code [0, height]} — the
-         * flat full-cell assumption — for any {@link Slot} built via the legacy 5-arg constructor
-         * (custom/shulker-adjacent slots that don't go through {@code computeCell}), so
-         * behavior for those is completely unchanged. Mutable (not {@code final}) so {@link #rebuild}
-         * can refresh it on a REUSED slot when the underlying block changes shape in place without
-         * the slot itself being despawned/recreated.
-         */
+        // Shape-derived stand window — mutable so rebuild can refresh on in-place block swap
         double standBottomY, standTopY;
-        /**
-         * Whether this cell's REAL captured block has any collision at all (2026-07-02 session,
-         * torch-pushback follow-up — "la antorcha esta siendo tomada en cuenta en el AABB como
-         * full block empujando al jugador fuera de si"). {@code true} by default for any
-         * {@link Slot} built via the legacy 5-arg constructor (custom/shulker-adjacent slots that
-         * don't go through {@code computeCell} — unchanged "always solid" behavior for
-         * those), and set from {@code computeCell(level, offset) != null} for auto-derived
-         * cells in {@link #rebuild} — mirrors EXACTLY the same real-shape check the passive
-         * shulker-collider layer already uses to skip a cell entirely (torches, tripwire, most
-         * plants, etc. — see {@code computeCell}'s {@code shape.isEmpty()} javadoc). Before
-         * this field existed, {@link #overlapsAnySolid}/{@link #resolvePushOut} (the side-collision
-         * clamp and bystander-pushback machinery) iterated {@link #allSlots} unconditionally
-         * treating EVERY cell as a solid flat {@code width}x{@code height} box regardless of the
-         * real block's actual collision shape — so a captured torch, which should have ZERO real
-         * collision, still shoved players away like a full block. Mutable (not {@code final}) for
-         * the same in-place-block-swap reason {@link #standBottomY}/{@link #standTopY} are.
-         */
         boolean hasCollision = true;
-        private final int entityId = nextEntityId();
-        private final UUID uuid = UUID.randomUUID();
-        private final Object despawnPacket;
-        private final Set<UUID> shownTo = ConcurrentHashMap.newKeySet();
-
-        /**
-         * Live uniform contraption SCALE (roadmap item #9) this slot's box is currently sized by — its
-         * {@code INTERACTION} width/height are sent as {@code width*renderScale}/{@code height*renderScale}
-         * (see {@link #metadata}). {@code 1.0} means "un-scaled, exactly as before this field existed"
-         * ({@code width*1.0}/{@code height*1.0} are the float-exact identities, so the scale-1 spawn packet is
-         * byte-for-byte unchanged). A change flags {@link #scaleDirty} for a metadata resend to existing viewers.
-         */
-        private double renderScale = 1.0;
-        /** Set when {@link #renderScale} changes; cleared once {@link #render} resends the sized metadata to every current viewer. */
-        private volatile boolean scaleDirty = false;
 
         Slot(double lx, double ly, double lz, float width, float height) {
             this(lx, ly, lz, width, height, 0.0, height);
@@ -2024,89 +1915,6 @@ public final class ContraptionHitboxElement implements ContraptionElement {
             this.height = height;
             this.standBottomY = standBottomY;
             this.standTopY = standTopY;
-            this.despawnPacket = MNms.INSTANCE.constructor$ClientboundRemoveEntitiesPacket(IntList.of(entityId));
-        }
-
-        private List<Object> metadata() {
-            List<Object> values = new ArrayList<>();
-            // Box sized by the live contraption scale (roadmap item #9); at renderScale == 1.0 these are the
-            // float-exact width/height, so the scale-1 packet is byte-for-byte the pre-scale one.
-            InteractionData.Width.addEntityData((float) (width * renderScale), values);
-            InteractionData.Height.addEntityData((float) (height * renderScale), values);
-            InteractionData.Response.addEntityData(false, values); // no "hit" feedback needed — carry-only
-            return values;
-        }
-
-        void spawn(Player player, double x, double y, double z) {
-            Object addPacket = MNms.INSTANCE.constructor$ClientboundAddEntityPacket(
-                    entityId, uuid, x, y, z, 0f, 0f, EntityType.INTERACTION, 0, Vec3.ZERO, 0);
-            Object dataPacket = MNms.INSTANCE.constructor$ClientboundSetEntityDataPacket(entityId, metadata());
-            player.sendPackets(List.of(addPacket, dataPacket), false);
-        }
-
-        void updatePosition(Player player, double x, double y, double z) {
-            player.sendPacket(MNms.INSTANCE
-                    .constructor$ClientboundEntityPositionSyncPacket(entityId, x, y, z, 0f, 0f, false), false);
-        }
-
-        void despawn(Player player) {
-            player.sendPacket(despawnPacket, false);
-        }
-
-        /**
-         * @param nearViewers viewers within this cell's INTERACTION LOD range — spawned/updated (see
-         *        {@link #render}'s per-cell LOD)
-         * @param allViewers every online viewer — used only to DESPAWN this entity for anyone it was being
-         *        shown to who has since moved out of range (LOD despawn); an offline viewer isn't in the list,
-         *        so {@code retainAll} simply forgets them with no packet
-         */
-        void render(List<Player> nearViewers, List<Player> allViewers, double x, double y, double z, double scale,
-                boolean moved) {
-            if (scale != renderScale) {
-                // Contraption resized (e.g. the phys wand): resize this box and resend its sized metadata to
-                // everyone already tracking it (newly-spawned viewers below already get the fresh size).
-                renderScale = scale;
-                scaleDirty = true;
-            }
-            boolean resendScale = scaleDirty;
-            Set<UUID> current = new HashSet<>();
-            for (Player p : nearViewers) {
-                UUID id = uuidOf(p);
-                if (id == null) {
-                    continue;
-                }
-                current.add(id);
-                if (shownTo.add(id)) {
-                    spawn(p, x, y, z);
-                } else {
-                    if (moved) {
-                        updatePosition(p, x, y, z);
-                    }
-                    if (resendScale) {
-                        p.sendPacket(MNms.INSTANCE.constructor$ClientboundSetEntityDataPacket(entityId, metadata()), false);
-                    }
-                }
-            }
-            if (resendScale) {
-                scaleDirty = false;
-            }
-            // LOD despawn: anyone we were showing this hitbox to who is no longer near (still online, just out
-            // of range) must be sent an explicit remove — retainAll alone only forgets them, leaving a stale
-            // entity on their client.
-            if (shownTo.size() > current.size()) {
-                for (Player p : allViewers) {
-                    UUID id = uuidOf(p);
-                    if (id != null && shownTo.contains(id) && !current.contains(id)) {
-                        despawn(p);
-                    }
-                }
-            }
-            shownTo.retainAll(current);
-        }
-
-        private static UUID uuidOf(Player player) {
-            Object pp = player.platformPlayer();
-            return pp instanceof org.bukkit.entity.Player b ? b.getUniqueId() : null;
         }
     }
 

@@ -10,7 +10,6 @@ import dev.arubik.craftengine.contraption.MovementBehavior;
 import dev.arubik.craftengine.contraption.assembly.ContraptionMath;
 import dev.arubik.craftengine.contraption.furniture.ContraptionSeatMount;
 import dev.arubik.craftengine.contraption.listener.ContraptionProjectileCollision;
-import dev.arubik.craftengine.contraption.listener.ContraptionSeatListener;
 import dev.arubik.craftengine.contraption.listener.ContraptionVoidDrop;
 import dev.arubik.craftengine.contraption.player.CePlayers;
 import dev.arubik.craftengine.contraption.render.ContraptionBlockEntityElementMirror;
@@ -226,11 +225,6 @@ public final class ContraptionEntity {
     public void setScale(double scale) {
         state.setScale(scale);
         markMoved();
-    }
-
-    /** Exposed for {@code ContraptionSeatListener} to reach the swarm's sittable seat slots. */
-    public ContraptionFurnitureSwarm furnitureSwarm() {
-        return furnitureSwarm;
     }
 
     /**
@@ -639,9 +633,8 @@ public final class ContraptionEntity {
         // the player is left mounted on an entity about to be orphaned/removed with no landing
         // position ever computed. ContraptionSeatListener.dismount does the actual
         // unmount+teleport (shared logic) — this just drives it for every still-seated rider.
-        for (java.util.UUID id : state.seatedRiders().keySet()) {
-            ContraptionSeatListener.dismount(state, id);
-        }
+        // Seat dismount — ContraptionSeatListener removed, handled by interaction system
+        state.seatedRiders().clear();
     }
 
     /**

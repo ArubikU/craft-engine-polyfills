@@ -10,7 +10,6 @@ import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientIn
 import dev.arubik.craftengine.contraption.bearing.MinecartBearing;
 import dev.arubik.craftengine.contraption.core.ContraptionEntity;
 import dev.arubik.craftengine.contraption.core.ContraptionManager;
-import dev.arubik.craftengine.contraption.listener.ContraptionSeatListener;
 import dev.arubik.craftengine.contraption.listener.CreativePhysWandListener;
 
 /**
@@ -189,16 +188,13 @@ public final class ContraptionInteractPacketDebug implements PacketListener {
             // Player#teleport plus ContraptionState/SeatSlot bookkeeping for a seat, or the
             // block-entity-touching dispatch for a block cell — is hopped onto the main thread as
             // before; only ONE of the two ever actually mutates anything for a given click.
-            boolean seatCandidate = ContraptionSeatListener.hasSeatUnderAim(player);
-            ContraptionInteractionListener.Hit blockHit = seatCandidate ? null : ContraptionInteractionListener.raycast(player);
-            if (seatCandidate || blockHit != null) {
+            ContraptionInteractionListener.Hit blockHit = ContraptionInteractionListener.raycast(player);
+            if (blockHit != null) {
                 event.setCancelled(true);
                 org.bukkit.Bukkit.getScheduler().runTask(
                         dev.arubik.craftengine.CraftEnginePolyfills.instance(),
                         () -> {
-                            if (seatCandidate && ContraptionSeatListener.tryHandleSit(player)) {
-                                org.bukkit.Bukkit.getLogger().info("[Contraption][PACKET] fake-entity click (id="
-                                        + wrapper.getEntityId() + ") resolved as a seat sit-down.");
+                            if (false) { // seat handling moved to interaction system
                                 return;
                             }
                             // Seat candidate but tryHandleSit failed (e.g. another player grabbed

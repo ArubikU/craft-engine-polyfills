@@ -190,10 +190,7 @@ public final class CraftEnginePolyfills extends JavaPlugin {
         // real entities. See the listener's javadoc.
         getServer().getPluginManager().registerEvents(
                 new dev.arubik.craftengine.contraption.physics.PhysicsWorldListener(), this);
-        // Furniture-seat completion: sit down (right-click a free seat slot, runs BEFORE the
-        // block-cell listener above) / stand up (sneak) after a contraption has been assembled.
-        getServer().getPluginManager().registerEvents(new dev.arubik.craftengine.contraption.listener.ContraptionSeatListener(),
-                this);
+        // Seat listener removed — handled by element interaction system
         // Dropped-item bridge (2026-07-01 session): a real player picking up one of
         // ContraptionItemPickupSwarm's real-world mirror ItemEntitys also discards the matching
         // internal item still sitting inside the owning ContraptionLevel — see that swarm's javadoc.
