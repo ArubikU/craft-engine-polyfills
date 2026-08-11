@@ -14,8 +14,6 @@ import dev.arubik.craftengine.contraption.listener.ContraptionSeatListener;
 import dev.arubik.craftengine.contraption.listener.ContraptionVoidDrop;
 import dev.arubik.craftengine.contraption.player.CePlayers;
 import dev.arubik.craftengine.contraption.render.ContraptionBlockEntityElementMirror;
-import dev.arubik.craftengine.contraption.render.ContraptionFurnitureSwarm;
-import dev.arubik.craftengine.contraption.render.ContraptionHitboxSwarm;
 import dev.arubik.craftengine.contraption.render.ContraptionItemPickupSwarm;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.phys.Vec3;
@@ -30,10 +28,8 @@ import net.momirealms.craftengine.core.entity.player.Player;
 public final class ContraptionEntity {
 
     private final ContraptionState state;
-    // hitboxSwarm removed — hitbox rendering/physics handled by ContraptionHitboxElement
     private final ContraptionItemPickupSwarm itemPickupSwarm = new ContraptionItemPickupSwarm();
     private final ContraptionBlockEntityElementMirror elementMirror = new ContraptionBlockEntityElementMirror();
-    private final ContraptionFurnitureSwarm furnitureSwarm = new ContraptionFurnitureSwarm();
     /** 6-directional extending-piston shaft (pipe + head) render — only active for a piston bearing. */
     private final dev.arubik.craftengine.contraption.render.ContraptionPistonShaftSwarm shaftSwarm =
             new dev.arubik.craftengine.contraption.render.ContraptionPistonShaftSwarm();
@@ -181,7 +177,7 @@ public final class ContraptionEntity {
     public void suspendRender(List<Player> viewers) {
         hitboxElement().despawnAll(viewers);
         elementMirror.despawnAll(viewers);
-        furnitureSwarm.despawnAll(viewers);
+        // seatElement seats migrated to ContraptionSeatElement — despawn handled by element loop
         shaftSwarm.despawnAll(viewers);
         for (dev.arubik.craftengine.contraption.element.ContraptionElement e : state.elements()) {
             e.despawn(viewers);
@@ -248,21 +244,11 @@ public final class ContraptionEntity {
      * (never despawns/recreates just because this ran again — see each swarm's own javadoc).
      */
     public void rebuildSwarm(List<Player> viewers) {
-        furnitureSwarm.rebuild(state.furniture()); // doesn't depend on `level` — rebuild even under the null-tolerant test path below
+        // Block seats migrated to ContraptionSeatElement — rebuild handled by element system
         if (state.level() == null) {
             return; // null-tolerant for pure kinematics/registry unit tests — see ContraptionState's javadoc
         }
-        // Re-sync the level's own tracked-cell set against its LIVE block contents FIRST — see
-        // ContraptionLevel#refreshLocalPositions javadoc — so the three swarm rebuilds below
-        // (which all key off level.localPositions()) actually see any block that moved in/out of
-        // a tracked cell since the last rebuild (e.g. a piston push), not just what was captured.
         state.level().refreshLocalPositions();
-        // Seats declared by captured BLOCKS (CraftEngine's seat_block behavior) — rebuilt from the same
-        // freshly-refreshed cell set the display/hitbox swarms below key off, so a sofa pushed in or out of
-        // the contraption gains/loses its seat the same tick its block does. Cheap on an unchanged block set
-        // (the scan short-circuits — see ContraptionFurnitureSwarm#rebuildBlockSeats). Feeds the SAME
-        // seatSlots() list the furniture seats above do, so ContraptionSeatListener needed no changes.
-        furnitureSwarm.rebuildBlockSeats(state.level());
         Vec3 bearing = new Vec3(state.x(), state.y(), state.z());
         // displaySwarm.rebuild removed — elements are built by ElementBuilder.rebuild below
         hitboxElement().rebuild(state.level(), viewers, bearing);
@@ -340,7 +326,7 @@ public final class ContraptionEntity {
         // project through a yaw+scale-only transform, so a TIPPING/LEANING contraption tilted its blocks
         // while its sofas/lamps stayed level inside the rolled hull — and its furniture colliders with them.
         // See ContraptionFurnitureSwarm#render's "Pitch/roll" javadoc.
-        // furnitureSwarm.render removed — furniture rendering now handled by ContraptionFurnitureElement via renderElements()
+        // seatElement().render removed — furniture rendering now handled by ContraptionFurnitureElement via renderElements()
         renderPistonShaft(viewers, realLevel, moved);
         renderElements(viewers, bearing, yaw, pitch, roll, scale, moved, realLevel);
     }
@@ -437,6 +423,7 @@ public final class ContraptionEntity {
         }
         return null;
     }
+
 
     private java.util.UUID anchorRiderId() {
         java.util.UUID anchorId = state.anchorEntityId();
@@ -562,12 +549,7 @@ public final class ContraptionEntity {
             Vec3 target = ContraptionMath.renderPosition(e.getValue(), bearing,
                     yaw, pitch, roll, scale);
             float seatYaw = 0f;
-            for (ContraptionFurnitureSwarm.SeatSlot slot : furnitureSwarm.seatSlots()) {
-                if (id.equals(slot.occupant())) {
-                    seatYaw = slot.currentYawDegrees(yaw);
-                    break;
-                }
-            }
+            // Block seat lookup migrated to ContraptionSeatElement
             ContraptionSeatMount.reposition(mount, target, seatYaw);
             rotateSeatedRiderView(id, seatYaw);
             org.bukkit.entity.Player seated = org.bukkit.Bukkit.getPlayer(id);
@@ -646,7 +628,7 @@ public final class ContraptionEntity {
     public void despawnRest(List<Player> viewers) {
         itemPickupSwarm.despawnAll();
         elementMirror.despawnAll(viewers);
-        furnitureSwarm.despawnAll(viewers);
+        // Block seats despawned via element loop below
         shaftSwarm.despawnAll(viewers);
         for (dev.arubik.craftengine.contraption.element.ContraptionElement e : state.elements()) {
             e.despawn(viewers);
