@@ -239,13 +239,13 @@ public final class ContraptionEntity {
             return; // null-tolerant for pure kinematics/registry unit tests — see ContraptionState's javadoc
         }
         state.level().refreshLocalPositions();
-        Vec3 bearing = new Vec3(state.x(), state.y(), state.z());
-        // displaySwarm.rebuild removed — elements are built by ElementBuilder.rebuild below
-        hitboxElement().rebuild(state.level(), viewers, bearing);
         // Bake internal emitter light map (O(emitters×cells) once, not per-element per-tick).
         state.lightMap().bake(state.level());
-        // Derive ephemeral element list from the level's current blocks + state's furniture records.
+        // Build element list FIRST so hitboxElement() can be found below.
         dev.arubik.craftengine.contraption.element.ElementBuilder.rebuild(state);
+        Vec3 bearing = new Vec3(state.x(), state.y(), state.z());
+        var hb = hitboxElement();
+        if (hb != null) hb.rebuild(state.level(), viewers, bearing);
     }
 
     /**
