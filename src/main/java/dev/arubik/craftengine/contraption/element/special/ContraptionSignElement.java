@@ -98,22 +98,38 @@ public abstract class ContraptionSignElement extends ContraptionBlockElement {
         org.joml.Quaternionf tiltQ = (ctx.pitchRadians() == 0.0 && ctx.rollRadians() == 0.0) ? null
                 : new org.joml.Quaternionf().rotateX((float) ctx.pitchRadians()).rotateZ((float) ctx.rollRadians());
 
+        // Sample ambient light at sign world position
+        int blockLight = 15, skyLight = 15;
+        if (ctx.realLevel() != null) {
+            try {
+                Vec3 worldCenter = ContraptionMath.renderPosition(localOffset(), ctx.bearing(),
+                        ctx.yawRadians(), ctx.pitchRadians(), ctx.rollRadians(), ctx.scale());
+                net.minecraft.core.BlockPos at = net.minecraft.core.BlockPos.containing(worldCenter);
+                blockLight = ctx.realLevel().getLightEngine()
+                        .getLayerListener(net.minecraft.world.level.LightLayer.BLOCK).getLightValue(at);
+                skyLight = ctx.realLevel().getLightEngine()
+                        .getLayerListener(net.minecraft.world.level.LightLayer.SKY).getLightValue(at);
+            } catch (Throwable ignored) {}
+        }
+        if (ctx.lightMap() != null) blockLight = ctx.lightMap().combinedBlockLight(localPos(), blockLight);
+        final int bl = blockLight, sl = skyLight;
+
         Vec3 frontPos = textPos(ctx, facing, false);
         Vec3 backPos  = textPos(ctx, facing, true);
         float frontYaw = getTextEntityYaw(contraptionYaw, false);
         float backYaw  = getTextEntityYaw(contraptionYaw, true);
 
         for (Player viewer : ctx.viewers()) {
-            if (frontShown.add(viewer.uuid())) spawnText(viewer, frontId, frontUuid, frontPos, frontYaw, false, tiltQ);
+            if (frontShown.add(viewer.uuid())) spawnText(viewer, frontId, frontUuid, frontPos, frontYaw, false, tiltQ, bl, sl);
             else if (ctx.moved()) syncPos(viewer, frontId, frontPos, frontYaw);
 
-            if (backShown.add(viewer.uuid())) spawnText(viewer, backId, backUuid, backPos, backYaw, true, tiltQ);
+            if (backShown.add(viewer.uuid())) spawnText(viewer, backId, backUuid, backPos, backYaw, true, tiltQ, bl, sl);
             else if (ctx.moved()) syncPos(viewer, backId, backPos, backYaw);
         }
 
         if (textDirty) {
-            sendTextMeta(ctx.viewers(), frontId, frontShown, frontText, tiltQ, frontGlowing);
-            sendTextMeta(ctx.viewers(), backId,  backShown,  backText, tiltQ, backGlowing);
+            sendTextMeta(ctx.viewers(), frontId, frontShown, frontText, tiltQ, frontGlowing, bl, sl);
+            sendTextMeta(ctx.viewers(), backId,  backShown,  backText, tiltQ, backGlowing, bl, sl);
             textDirty = false;
         }
     }
@@ -128,8 +144,9 @@ public abstract class ContraptionSignElement extends ContraptionBlockElement {
     }
 
     private Vec3 textPos(RenderContext ctx, Direction facing, boolean back) {
-        // 1/16 pixel offset from sign surface to avoid Z-fighting; text is on/near block center
-        double outward = back ? -1.0/16.0 : 1.0/16.0;
+        // Wall sign geometry: board front face is at -1/16 from block center toward facing.
+        // back face is at +1/16 (board is 1/16 thick, centered at 0). Small offset avoids Z-fighting.
+        double outward = back ? 2.0/16.0 : -1.0/16.0;
         Vec3 local = new Vec3(
                 localPos().getX() + 0.5 + facing.getStepX() * outward,
                 localPos().getY() + textYCenter(),
@@ -139,20 +156,20 @@ public abstract class ContraptionSignElement extends ContraptionBlockElement {
     }
 
     private void spawnText(Player viewer, int eid, UUID uuid, Vec3 pos, float yaw, boolean back,
-                           org.joml.Quaternionf tiltQ) {
+                           org.joml.Quaternionf tiltQ, int bl, int sl) {
         viewer.sendPackets(List.of(
                 MNms.INSTANCE.constructor$ClientboundAddEntityPacket(eid, uuid, pos.x, pos.y, pos.z,
                         0f, yaw, EntityType.TEXT_DISPLAY, 0, Vec3.ZERO, 0),
                 MNms.INSTANCE.constructor$ClientboundSetEntityDataPacket(eid,
                         buildTextMeta(back ? backText : frontText, tiltQ,
-                                back ? backGlowing : frontGlowing))
+                                back ? backGlowing : frontGlowing, bl, sl))
         ), false);
     }
 
     private void sendTextMeta(List<Player> viewers, int eid, Set<UUID> shown, Component text,
-                               org.joml.Quaternionf tiltQ, boolean glowing) {
+                               org.joml.Quaternionf tiltQ, boolean glowing, int bl, int sl) {
         Object pkt = MNms.INSTANCE.constructor$ClientboundSetEntityDataPacket(eid,
-                buildTextMeta(text, tiltQ, glowing));
+                buildTextMeta(text, tiltQ, glowing, bl, sl));
         for (Player p : viewers) { if (shown.contains(p.uuid())) p.sendPacket(pkt, false); }
     }
 
@@ -161,14 +178,20 @@ public abstract class ContraptionSignElement extends ContraptionBlockElement {
                 eid, pos.x, pos.y, pos.z, yaw, 0f, false), false);
     }
 
-    private List<Object> buildTextMeta(Component text, org.joml.Quaternionf tiltQ, boolean glowing) {
+    private List<Object> buildTextMeta(Component text, org.joml.Quaternionf tiltQ, boolean glowing,
+                                        int blockLight, int skyLight) {
         List<Object> meta = new ArrayList<>();
         if (text != null && !text.getString().isEmpty()) {
             DisplayData.TextDisplayData.Text.addEntityData(text, meta);
         }
         DisplayData.TextDisplayData.BackgroundColor.addEntityData(0x00000000, meta);
         if (tiltQ != null) DisplayData.LeftRotation.addEntityData(tiltQ, meta);
-        if (glowing) DisplayData.BrightnessOverride.addEntityData((15 << 4) | (15 << 20), meta);
+        // Glowing ink = full bright override; otherwise use real-world ambient light
+        if (glowing) {
+            DisplayData.BrightnessOverride.addEntityData((15 << 4) | (15 << 20), meta);
+        } else {
+            DisplayData.BrightnessOverride.addEntityData((blockLight << 4) | (skyLight << 20), meta);
+        }
         DisplayData.Scale.addEntityData(new org.joml.Vector3f(0.45f, 0.45f, 0.45f), meta);
         DisplayData.PosRotInterpolationDuration.addEntityData(2, meta);
         return meta;
@@ -239,7 +262,11 @@ public abstract class ContraptionSignElement extends ContraptionBlockElement {
             return true;
         }
         if (!sign.isWaxed()) {
-            try { player.openTextEdit(sign, isFront); } catch (Throwable ignored) {}
+            try {
+                // Send packet directly — bypasses Paper's level check (sign is in ContraptionLevel, not player's level)
+                player.connection.send(new net.minecraft.network.protocol.game.ClientboundOpenSignEditorPacket(
+                        localPos(), isFront));
+            } catch (Throwable ignored) {}
             return true;
         }
         return false;
