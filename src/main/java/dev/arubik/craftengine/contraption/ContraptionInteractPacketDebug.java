@@ -258,35 +258,32 @@ public final class ContraptionInteractPacketDebug implements PacketListener {
      */
     private static void handleSignUpdate(com.github.retrooper.packetevents.event.PacketReceiveEvent event) {
         try {
-            org.bukkit.entity.Player bukkitPlayer = org.bukkit.Bukkit.getPlayer(event.getUser().getUUID());
-            if (!(bukkitPlayer instanceof org.bukkit.craftbukkit.entity.CraftPlayer cp)) return;
+            java.util.UUID playerId = event.getUser().getUUID();
+            // Check pending edit context (set when sign editor was opened)
+            var pending = dev.arubik.craftengine.contraption.element.special.ContraptionSignElement
+                    .PENDING_EDITS.remove(playerId);
+            if (pending == null) return; // not a contraption sign edit
+
+            event.setCancelled(true);
 
             var wrapper = new com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientUpdateSign(event);
-            var v = wrapper.getBlockPosition();
             String[] lines = wrapper.getTextLines();
-            boolean isFront = wrapper.isFrontText();
+            // Use isFront from pending context (more reliable than packet's flag for fake pos)
+            final boolean isFront = pending.isFront();
+            final dev.arubik.craftengine.contraption.element.special.ContraptionSignElement.PendingSignEdit ctx = pending;
+            final String[] finalLines = lines;
 
-            net.minecraft.core.BlockPos blockPos = new net.minecraft.core.BlockPos(v.getX(), v.getY(), v.getZ());
-
-            for (dev.arubik.craftengine.contraption.core.ContraptionEntity entity :
-                    dev.arubik.craftengine.contraption.core.ContraptionManager.all()) {
-                var level = entity.state().level();
-                if (level == null) continue;
-                if (!level.localPositions().contains(blockPos)) continue;
-                var be = level.getBlockEntity(blockPos);
-                if (!(be instanceof net.minecraft.world.level.block.entity.SignBlockEntity sign)) continue;
-
-                event.setCancelled(true);
-                final String[] finalLines = lines;
-                final boolean finalFront = isFront;
-                org.bukkit.Bukkit.getScheduler().runTask(
-                        dev.arubik.craftengine.CraftEnginePolyfills.instance(), () -> {
-                    try {
-                        applySignText(sign, finalLines, finalFront);
-                    } catch (Throwable ignored) {}
-                });
-                return;
-            }
+            org.bukkit.Bukkit.getScheduler().runTask(
+                    dev.arubik.craftengine.CraftEnginePolyfills.instance(), () -> {
+                try {
+                    var level = ctx.state().level();
+                    if (level == null) return;
+                    var be = level.getBlockEntity(ctx.localPos());
+                    if (be instanceof net.minecraft.world.level.block.entity.SignBlockEntity sign) {
+                        applySignText(sign, finalLines, isFront);
+                    }
+                } catch (Throwable ignored) {}
+            });
         } catch (Throwable ignored) {}
     }
 

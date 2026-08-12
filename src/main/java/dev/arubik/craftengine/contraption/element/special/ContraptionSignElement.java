@@ -24,6 +24,13 @@ import java.util.concurrent.ConcurrentHashMap;
 /** Abstract base for all sign element types. Handles text entities, interact, tick. */
 public abstract class ContraptionSignElement extends ContraptionBlockElement {
 
+    /** Pending sign edits: player UUID → context needed to route ServerboundSignUpdatePacket. */
+    public static final java.util.concurrent.ConcurrentHashMap<java.util.UUID, PendingSignEdit> PENDING_EDITS =
+            new java.util.concurrent.ConcurrentHashMap<>();
+
+    public record PendingSignEdit(dev.arubik.craftengine.contraption.core.ContraptionState state,
+                                   net.minecraft.core.BlockPos localPos, boolean isFront) {}
+
     private final int frontId = net.minecraft.world.entity.Entity.nextEntityId();
     private final UUID frontUuid = UUID.randomUUID();
     private final Object frontRemove;
@@ -263,9 +270,14 @@ public abstract class ContraptionSignElement extends ContraptionBlockElement {
         }
         if (!sign.isWaxed()) {
             try {
-                // Send packet directly — bypasses Paper's level check (sign is in ContraptionLevel, not player's level)
+                // Store edit context so UPDATE_SIGN interceptor can route the reply back
+                PENDING_EDITS.put(player.getUUID(), new PendingSignEdit(state, localPos(), isFront));
+                // Client needs a sign block at the fake pos before the editor GUI shows
+                net.minecraft.core.BlockPos fakePos = new net.minecraft.core.BlockPos(0, -60, 0);
+                player.connection.send(new net.minecraft.network.protocol.game.ClientboundBlockUpdatePacket(
+                        fakePos, blockState()));
                 player.connection.send(new net.minecraft.network.protocol.game.ClientboundOpenSignEditorPacket(
-                        localPos(), isFront));
+                        fakePos, isFront));
             } catch (Throwable ignored) {}
             return true;
         }
