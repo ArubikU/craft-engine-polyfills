@@ -60,7 +60,7 @@ public final class ContraptionSkullElement implements ContraptionElement {
             // Skull attaches to the wall opposite to facing; center = block center shifted toward wall
             return new Vec3(
                     localPos.getX() + 0.5 - facing.getStepX() * 0.25,
-                    localPos.getY() + 0.25,
+                    localPos.getY() + 0.5,
                     localPos.getZ() + 0.5 - facing.getStepZ() * 0.25);
         }
         // Floor skull: 0.5 block tall, center at 0.25 above floor

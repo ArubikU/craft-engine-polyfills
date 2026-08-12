@@ -141,21 +141,32 @@ public final class CollisionShape {
             any = true;
         }
         if (!any) {
-            // All blocks have empty collision (e.g., signs, torches) — use a minimal bounding box
-            // so the phys body has a valid shape and gravity/physics still apply
-            int count = 0;
-            double sumX = 0, sumY = 0, sumZ = 0;
+            // All blocks have empty collision (signs, torches, etc.) — use outline/interaction shape
+            // so the phys body has geometry and gravity applies.
+            VoxelShape outlineCombined = Shapes.empty();
+            boolean anyOutline = false;
             for (BlockPos local : level.localPositions()) {
-                sumX += local.getX() + 0.5; sumY += local.getY() + 0.5; sumZ += local.getZ() + 0.5;
-                count++;
+                BlockState state = level.getBlockState(local);
+                if (state.isAir()) continue;
+                try {
+                    VoxelShape outline = state.getShape(EmptyBlockGetter.INSTANCE, local);
+                    if (!outline.isEmpty()) {
+                        outlineCombined = Shapes.joinUnoptimized(outlineCombined,
+                                outline.move(local.getX(), local.getY(), local.getZ()), BooleanOp.OR);
+                        anyOutline = true;
+                    }
+                } catch (Throwable ignored) {}
             }
-            if (count == 0) return EMPTY;
-            double cx = sumX/count - centerOfMass.x;
-            double cy = sumY/count - centerOfMass.y;
-            double cz = sumZ/count - centerOfMass.z;
-            AABB tiny = new AABB(cx-0.1, cy-0.1, cz-0.1, cx+0.1, cy+0.1, cz+0.1);
-            return new CollisionShape(List.of(tiny),
-                    List.of(new Vector3d(cx, cy, cz)), 0.2);
+            if (!anyOutline) return EMPTY;
+            List<AABB> merged = outlineCombined.optimize().toAabbs();
+            List<AABB> boxes = new ArrayList<>(merged.size());
+            for (AABB box : merged) {
+                boxes.add(box.move(-centerOfMass.x, -centerOfMass.y, -centerOfMass.z));
+            }
+            List<Vector3d> samples = buildSamplePoints(boxes);
+            double radius = 0.0;
+            for (Vector3d p : samples) radius = Math.max(radius, p.length());
+            return new CollisionShape(List.copyOf(boxes), List.copyOf(samples), radius);
         }
         List<AABB> merged = combined.optimize().toAabbs();
         List<AABB> boxes = new ArrayList<>(merged.size());

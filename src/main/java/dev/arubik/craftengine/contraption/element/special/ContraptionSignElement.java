@@ -264,7 +264,7 @@ public abstract class ContraptionSignElement extends ContraptionBlockElement {
         if (!(be instanceof net.minecraft.world.level.block.entity.SignBlockEntity sign)) return false;
 
         net.minecraft.world.item.ItemStack held = player.getItemInHand(hand);
-        boolean isFront = isFrontFace(hitPos);
+        boolean isFront = isFrontFace(hitPos, state);
 
         if (!held.isEmpty() && held.is(net.minecraft.world.item.Items.HONEYCOMB)) {
             if (!sign.isWaxed()) {
@@ -366,22 +366,29 @@ public abstract class ContraptionSignElement extends ContraptionBlockElement {
     }
 
     /**
-     * Mirrors SignBlockEntity.isFacingFrontText(): player angle vs sign Y rotation.
-     * Uses hitPos as a proxy for the player-to-sign vector direction.
+     * hitPos is world-space. Sign center must also be converted to world space.
+     * signYRot must include the contraption's own yaw rotation.
      */
-    private boolean isFrontFace(Vec3 hitPos) {
+    private boolean isFrontFace(Vec3 hitPos, dev.arubik.craftengine.contraption.core.ContraptionState state) {
         try {
             if (blockState().getBlock() instanceof net.minecraft.world.level.block.SignBlock signBlock) {
-                // Sign hitbox center (from signBlock.getSignHitboxCenterPosition)
-                net.minecraft.world.phys.Vec3 center = signBlock.getSignHitboxCenterPosition(blockState());
-                double dx = hitPos.x - (localPos().getX() + center.x);
-                double dz = hitPos.z - (localPos().getZ() + center.z);
-                float signYRot = signBlock.getYRotationDegrees(blockState());
+                // Convert sign hitbox center to world space
+                net.minecraft.world.phys.Vec3 localCenter = signBlock.getSignHitboxCenterPosition(blockState());
+                Vec3 worldCenter = dev.arubik.craftengine.contraption.assembly.ContraptionMath.renderPosition(
+                        new Vec3(localPos().getX() + localCenter.x,
+                                 localPos().getY() + localCenter.y,
+                                 localPos().getZ() + localCenter.z),
+                        new Vec3(state.x(), state.y(), state.z()),
+                        state.yawRadians(), state.pitchRadians(), state.rollRadians(), state.scale());
+                double dx = hitPos.x - worldCenter.x;
+                double dz = hitPos.z - worldCenter.z;
+                // Sign's own Y rotation + contraption's yaw
+                float signYRot = signBlock.getYRotationDegrees(blockState())
+                        + (float) Math.toDegrees(state.yawRadians());
                 float playerAngle = (float)(Math.atan2(dz, dx) * 180.0 / Math.PI) - 90.0f;
                 return net.minecraft.util.Mth.degreesDifferenceAbs(signYRot, playerAngle) <= 90.0f;
             }
         } catch (Throwable ignored) {}
-        // Fallback: dot product
         Direction facing = getFacing();
         double dot = facing.getStepX() * (hitPos.x - localPos().getX() - 0.5)
                    + facing.getStepZ() * (hitPos.z - localPos().getZ() - 0.5);
