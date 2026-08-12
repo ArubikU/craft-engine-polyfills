@@ -33,7 +33,16 @@ public final class ContraptionHangingSignElement extends ContraptionSignElement 
     }
 
     @Override
-    protected float textYCenter() { return 0.25f; }
+    protected float textYCenter() {
+        // Hanging sign board: chains at top, board at Y 0-12/16, text center ≈ 6/16 = 0.375
+        return 0.375f;
+    }
+
+    @Override
+    protected double textOutwardOffset(boolean back) {
+        // Hanging sign board: same 2-pixel thickness, front at 9/16, back at 7/16 from facing center
+        return back ? (7.0/16.0 - 8.0/16.0 - 0.005) : (9.0/16.0 - 8.0/16.0);
+    }
 
     private static int rotation16(BlockState bs) {
         return bs.hasProperty(BlockStateProperties.ROTATION_16)

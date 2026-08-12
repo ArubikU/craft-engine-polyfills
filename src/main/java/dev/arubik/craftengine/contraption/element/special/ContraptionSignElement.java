@@ -150,10 +150,19 @@ public abstract class ContraptionSignElement extends ContraptionBlockElement {
         }
     }
 
+    /**
+     * Offset from block center toward facing direction to place the text surface.
+     * Wall sign: board at Z 0-2/16, front face at 2/16 → offset = 2/16 - 8/16 = -6/16.
+     * Standing sign: board at Z 7-9/16, front face at 9/16 → offset = 9/16 - 8/16 = +1/16.
+     * back=true inverts to the back face of the board.
+     */
+    protected double textOutwardOffset(boolean back) {
+        // Default: wall sign geometry (subclasses override for standing/hanging)
+        return back ? (-8.0/16.0 + 0.005) : (-6.0/16.0);
+    }
+
     private Vec3 textPos(RenderContext ctx, Direction facing, boolean back) {
-        // Sign board center is at block center + 0 offset toward facing.
-        // Tiny epsilon to avoid Z-fighting with BLOCK_DISPLAY.
-        double outward = back ? -0.01 : 0.02;
+        double outward = textOutwardOffset(back);
         Vec3 local = new Vec3(
                 localPos().getX() + 0.5 + facing.getStepX() * outward,
                 localPos().getY() + textYCenter(),

@@ -22,4 +22,11 @@ public final class ContraptionWallSignElement extends ContraptionSignElement {
     protected Direction getFacing() {
         return blockState().getValue(WallSignBlock.FACING);
     }
+
+    @Override
+    protected double textOutwardOffset(boolean back) {
+        // Wall sign board: Z 0-2/16 against wall, text front at 2/16, back at 0/16
+        // From block center 8/16: front = 2/16 - 8/16 = -6/16, back = 0 - 8/16 = -8/16 + epsilon
+        return back ? (-8.0/16.0 + 0.005) : (-6.0/16.0);
+    }
 }
