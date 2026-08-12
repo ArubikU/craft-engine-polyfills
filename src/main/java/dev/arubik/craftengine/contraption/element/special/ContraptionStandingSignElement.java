@@ -25,8 +25,13 @@ public final class ContraptionStandingSignElement extends ContraptionSignElement
 
     @Override
     protected double textOutwardOffset(boolean back) {
-        // Standing sign board: Z 7-9/16 centered at block center, text at 9/16 front, 7/16 back
         return back ? (7.0/16.0 - 8.0/16.0 - 0.005) : (9.0/16.0 - 8.0/16.0);
+    }
+
+    @Override
+    protected float textYCenter() {
+        // Standing sign board Y 4-12/16, text slightly above center (+2/16)
+        return 0.5f + 2.0f/16.0f;
     }
 
     private static int rotation16(BlockState bs) {

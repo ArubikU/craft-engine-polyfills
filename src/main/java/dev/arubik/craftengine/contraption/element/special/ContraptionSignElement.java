@@ -121,7 +121,7 @@ public abstract class ContraptionSignElement extends ContraptionBlockElement {
                 : new org.joml.Quaternionf().rotateX((float) ctx.pitchRadians()).rotateZ((float) ctx.rollRadians());
 
         // Sample ambient light at sign world position
-        int blockLight = 15, skyLight = 15;
+        int blockLight = -1, skyLight = -1; // -1 = no override, uses client default
         if (ctx.realLevel() != null) {
             try {
                 Vec3 worldCenter = ContraptionMath.renderPosition(localOffset(), ctx.bearing(),
@@ -220,9 +220,10 @@ public abstract class ContraptionSignElement extends ContraptionBlockElement {
         // Glowing ink = full bright override; otherwise use real-world ambient light
         if (glowing) {
             DisplayData.BrightnessOverride.addEntityData((15 << 4) | (15 << 20), meta);
-        } else {
+        } else if (blockLight >= 0 && skyLight >= 0) {
             DisplayData.BrightnessOverride.addEntityData((blockLight << 4) | (skyLight << 20), meta);
         }
+        // No override = client uses natural light (TEXT_DISPLAY default)
         DisplayData.Scale.addEntityData(new org.joml.Vector3f(0.45f, 0.45f, 0.45f), meta);
         DisplayData.PosRotInterpolationDuration.addEntityData(2, meta);
         return meta;
@@ -294,12 +295,23 @@ public abstract class ContraptionSignElement extends ContraptionBlockElement {
         }
         if (!sign.isWaxed()) {
             try {
+                // If already pending (double-click), just re-open the editor
+                var existing = PENDING_EDITS.get(player.getUUID());
+                if (existing != null && existing.fakeWorldPos() != null) {
+                    var fakeBE2 = existing.fakeWorldLevel().getBlockEntity(existing.fakeWorldPos());
+                    if (fakeBE2 instanceof net.minecraft.world.level.block.entity.SignBlockEntity fakeSign2) {
+                        fakeSign2.setAllowedPlayerEditor(player.getUUID());
+                        player.connection.send(new net.minecraft.network.protocol.game.ClientboundOpenSignEditorPacket(
+                                existing.fakeWorldPos(), true));
+                        return true;
+                    }
+                }
                 PENDING_EDITS.put(player.getUUID(), new PendingSignEdit(state, localPos(), isFront));
-                // Place fake sign in the REAL world 10 blocks below the player, behind them
-                // so it's within range (4 blocks) but not visible
+                // Place fake sign 3 blocks east (within 4-block range but not in player's view)
                 net.minecraft.server.level.ServerLevel realLevel =
                         (net.minecraft.server.level.ServerLevel) player.level();
-                net.minecraft.core.BlockPos fakePos = player.blockPosition().below(5);
+                net.minecraft.core.BlockPos fakePos = player.blockPosition()
+                        .east(3).atY(player.blockPosition().getY());
 
                 // Place real sign block so the sign BE is valid and within range
                 realLevel.setBlock(fakePos, blockState(), 2);
@@ -345,7 +357,23 @@ public abstract class ContraptionSignElement extends ContraptionBlockElement {
         } catch (Throwable ignored) {}
     }
 
+    /**
+     * Mirrors SignBlockEntity.isFacingFrontText(): player angle vs sign Y rotation.
+     * Uses hitPos as a proxy for the player-to-sign vector direction.
+     */
     private boolean isFrontFace(Vec3 hitPos) {
+        try {
+            if (blockState().getBlock() instanceof net.minecraft.world.level.block.SignBlock signBlock) {
+                // Sign hitbox center (from signBlock.getSignHitboxCenterPosition)
+                net.minecraft.world.phys.Vec3 center = signBlock.getSignHitboxCenterPosition(blockState());
+                double dx = hitPos.x - (localPos().getX() + center.x);
+                double dz = hitPos.z - (localPos().getZ() + center.z);
+                float signYRot = signBlock.getYRotationDegrees(blockState());
+                float playerAngle = (float)(Math.atan2(dz, dx) * 180.0 / Math.PI) - 90.0f;
+                return net.minecraft.util.Mth.degreesDifferenceAbs(signYRot, playerAngle) <= 90.0f;
+            }
+        } catch (Throwable ignored) {}
+        // Fallback: dot product
         Direction facing = getFacing();
         double dot = facing.getStepX() * (hitPos.x - localPos().getX() - 0.5)
                    + facing.getStepZ() * (hitPos.z - localPos().getZ() - 0.5);
