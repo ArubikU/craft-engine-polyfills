@@ -12,12 +12,13 @@ public final class ContraptionConfig {
     private static ContraptionConfig INSTANCE = new ContraptionConfig();
 
     private String itemFrameModel = "";
+    private String waterFluidType = "";
+    private String lavaFluidType = "";
+    private double lavaDamage = 4.0;
 
     private ContraptionConfig() {}
 
-    public static ContraptionConfig get() {
-        return INSTANCE;
-    }
+    public static ContraptionConfig get() { return INSTANCE; }
 
     public static void load(File dataFolder, ClassLoader classLoader) {
         INSTANCE = new ContraptionConfig();
@@ -34,15 +35,23 @@ public final class ContraptionConfig {
                 cfg = new YamlConfiguration();
             }
         }
-        INSTANCE.itemFrameModel = cfg.getString("item_frame.model", "").trim();
+        INSTANCE.itemFrameModel   = cfg.getString("item_frame.model", "").trim();
+        INSTANCE.waterFluidType   = cfg.getString("fluid_render.water_fluid_type", "").trim();
+        INSTANCE.lavaFluidType    = cfg.getString("fluid_render.lava_fluid_type", "").trim();
+        INSTANCE.lavaDamage       = cfg.getDouble("fluid_render.lava_damage", 4.0);
     }
 
-    /** CE item ID to use as the item frame model, or empty string for vanilla ITEM_FRAME entity. */
-    public String itemFrameModel() {
-        return itemFrameModel;
-    }
+    public String itemFrameModel() { return itemFrameModel; }
+    public boolean useCustomItemFrame() { return !itemFrameModel.isEmpty(); }
 
-    public boolean useCustomItemFrame() {
-        return !itemFrameModel.isEmpty();
-    }
+    /** CE fluid type ID for vanilla water rendering, or empty = disabled. */
+    public String waterFluidType() { return waterFluidType; }
+    public boolean renderWater() { return !waterFluidType.isEmpty(); }
+
+    /** CE fluid type ID for vanilla lava rendering, or empty = disabled. */
+    public String lavaFluidType() { return lavaFluidType; }
+    public boolean renderLava() { return !lavaFluidType.isEmpty(); }
+
+    /** Lava damage per second to entities inside a contraption's lava cells. */
+    public double lavaDamage() { return lavaDamage; }
 }

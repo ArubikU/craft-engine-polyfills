@@ -5,3 +5,18 @@ item_frame:
   # Leave empty to use vanilla EntityType.ITEM_FRAME for the frame.
   # Example: model: "cml:item_frame"
   model: ""
+
+fluid_render:
+  # CE fluid type ID to use for rendering vanilla water blocks inside contraptions.
+  # FluidRendererElement will use cml:fluidlvl_<water_fluid_type>_<level> items.
+  # Leave empty to skip water rendering.
+  # Example: water_fluid_type: "water"
+  water_fluid_type: ""
+
+  # CE fluid type ID to use for rendering vanilla lava blocks inside contraptions.
+  # Leave empty to skip lava rendering.
+  # Example: lava_fluid_type: "lava"
+  lava_fluid_type: ""
+
+  # Lava damage applied to entities inside a contraption's lava cells (per second).
+  lava_damage: 4.0

@@ -141,6 +141,20 @@ public final class ElementBuilder {
             elements.add(new ContraptionBlockElement(local, blockState, beTag, hasEntityRenderer, modelYawOffset));
             usedPositions.add(local);
             if (hasEntityRenderer) elements.add(new ContraptionEntityRendererElement(local));
+
+            // Vanilla fluid overlay (water/lava/waterlogged blocks)
+            net.minecraft.world.level.material.FluidState fs = blockState.getFluidState();
+            if (!fs.isEmpty()) {
+                boolean lava = fs.getType() == net.minecraft.world.level.material.Fluids.LAVA
+                        || fs.getType() == net.minecraft.world.level.material.Fluids.FLOWING_LAVA;
+                boolean enabled = lava
+                        ? dev.arubik.craftengine.contraption.config.ContraptionConfig.get().renderLava()
+                        : dev.arubik.craftengine.contraption.config.ContraptionConfig.get().renderWater();
+                if (enabled) {
+                    elements.add(new dev.arubik.craftengine.contraption.element.special.ContraptionVanillaFluidElement(
+                            local, lava, fs.getAmount()));
+                }
+            }
         }
 
         // Despawn elements for removed positions
