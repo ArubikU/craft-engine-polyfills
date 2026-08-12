@@ -309,7 +309,11 @@ public final class CreativePhysWandListener implements Listener {
         dist = clamp(dist, minGrabDistance(target), MAX_GRAB_DISTANCE);
         grabbed.put(id, target.id());
         grabDistance.put(id, dist);
-        setKinematic(target.id(), true);
+        // Force-based: don't pin kinematic — solver integrates our velocity each tick.
+        // Zero velocity so it doesn't shoot off from accumulated momentum.
+        dev.arubik.craftengine.contraption.physics.PhysicsWorld.setLinearVelocity(
+                target.id(), new org.joml.Vector3d(0, 0, 0));
+        dev.arubik.craftengine.contraption.physics.PhysicsWorld.dampAngularVelocity(target.id(), 0);
         player.sendActionBar(Component.text(
                 "Grabbed — drag with your crosshair. Right-click to drop, scroll to resize, sneak+scroll to reach.",
                 NamedTextColor.AQUA));
@@ -483,13 +487,22 @@ public final class CreativePhysWandListener implements Listener {
             if (!player.getWorld().getUID().equals(entity.state().worldId())) {
                 entity.teleport(player.getWorld(), tx, ty, tz, entity.state().yawRadians());
             } else {
-                // Ensure destination chunk is loaded — isAtLoadedChunk gates render
+                // Ensure destination chunk is loaded
                 int cx = net.minecraft.util.Mth.floor(tx) >> 4;
                 int cz = net.minecraft.util.Mth.floor(tz) >> 4;
                 if (!player.getWorld().isChunkLoaded(cx, cz)) {
                     player.getWorld().loadChunk(cx, cz, false);
                 }
-                entity.state().setPosition(tx, ty, tz);
+                // Force-based grab: PD controller sets velocity toward target each tick.
+                // Body is non-kinematic — solver integrates velocity; PD counteracts gravity.
+                double bx = entity.state().x(), by = entity.state().y(), bz = entity.state().z();
+                double dx = tx - bx, dy = ty - by, dz = tz - bz;
+                // PD controller: desired_velocity = kP * error
+                double kP = 10.0; // snappiness
+                dev.arubik.craftengine.contraption.physics.PhysicsWorld.setLinearVelocity(
+                        contraptionId, new org.joml.Vector3d(dx * kP, dy * kP, dz * kP));
+                dev.arubik.craftengine.contraption.physics.PhysicsWorld.dampAngularVelocity(
+                        contraptionId, 0.1); // kill spin while held
             }
         }
     }

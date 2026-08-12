@@ -554,6 +554,31 @@ public final class PhysicsWorld {
         }
     }
 
+    /** Directly sets the linear velocity of a body (thread-safe via command queue). */
+    public static void setLinearVelocity(UUID contraptionId, org.joml.Vector3d velocity) {
+        Entry entry = ENTRIES.get(contraptionId);
+        if (entry == null || entry.physBody == null) return;
+        PhysBody phys = entry.physBody;
+        Vector3d v = new Vector3d(velocity.x, velocity.y, velocity.z);
+        if (ASYNC) {
+            enqueue(() -> { phys.body.linearVelocity.set(v); phys.wakeUp(); });
+        } else {
+            phys.body.linearVelocity.set(v); phys.wakeUp();
+        }
+    }
+
+    /** Dampens angular velocity (wand grab — no spinning). */
+    public static void dampAngularVelocity(UUID contraptionId, double factor) {
+        Entry entry = ENTRIES.get(contraptionId);
+        if (entry == null || entry.physBody == null) return;
+        PhysBody phys = entry.physBody;
+        if (ASYNC) {
+            enqueue(() -> phys.body.angularVelocity.mul(factor));
+        } else {
+            phys.body.angularVelocity.mul(factor);
+        }
+    }
+
     /** Max yaw rate (rad/tick) a VEHICLE's steering may command — a firm but not teleporting turn. */
     private static final double MAX_YAW_RATE = 0.22;
 
