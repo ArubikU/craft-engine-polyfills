@@ -151,7 +151,11 @@ public final class ContraptionEngine {
                 // keep advancing regardless of who is looking, or it would silently freeze mid-travel and
                 // resume from a stale pose — and they touch only the hidden mini-dimension, which is
                 // permanently chunk-ticketed and always loaded (see ContraptionLevel#ensureChunkTicking).
-                boolean chunkLoaded = isAtLoadedChunk(bukkitWorld, state);
+                // HELD bodies (creative phys wand) are always treated as chunk-loaded — the wand loads
+                // chunks as needed, and ContraptionEngine runs before the wand tick so the chunk at the
+                // lerped position isn't loaded yet when this check runs.
+                boolean chunkLoaded = dev.arubik.craftengine.contraption.physics.PhysicsWorld.isHeld(state.id())
+                        || isAtLoadedChunk(bukkitWorld, state);
                 try {
                     render(entity, bukkitWorld, level, viewerCache, carryCache, chunkLoaded, perf);
                 } catch (Throwable ignored) {

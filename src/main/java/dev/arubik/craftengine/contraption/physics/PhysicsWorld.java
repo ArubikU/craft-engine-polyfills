@@ -74,15 +74,21 @@ public final class PhysicsWorld {
      */
     private static final java.util.Set<UUID> HELD = java.util.concurrent.ConcurrentHashMap.newKeySet();
 
+    /** Bodies currently in post-release damping: UUID → remaining ticks. */
+    private static final java.util.concurrent.ConcurrentHashMap<UUID, Integer> RELEASE_DAMPING =
+            new java.util.concurrent.ConcurrentHashMap<>();
+    private static final int RELEASE_DAMPING_TICKS = 5;
+
     /** Pins/unpins a contraption kinematic independently of the stall system. See {@link #HELD}. */
     public static void setHeld(UUID contraptionId, boolean held) {
-        if (contraptionId == null) {
-            return;
-        }
+        if (contraptionId == null) return;
         if (held) {
             HELD.add(contraptionId);
+            RELEASE_DAMPING.remove(contraptionId);
         } else {
             HELD.remove(contraptionId);
+            // 5-tick soft landing: scale velocity down so clipping doesn't launch it
+            RELEASE_DAMPING.put(contraptionId, RELEASE_DAMPING_TICKS);
         }
     }
 
@@ -780,8 +786,22 @@ public final class PhysicsWorld {
             solveInParallel(bodies);
             for (Entry entry : group.getValue()) {
                 writeBack(entry, states.get(entry));
-                // The solver only recorded that a crash happened; acting on it needs the world, and must
-                // therefore happen out here on the main thread, after the step. See the detonator.
+                // Post-release damping: scale velocity down for 5 ticks after wand release
+                ContraptionState relState = states.get(entry);
+                if (relState != null) {
+                    Integer dampTicks = RELEASE_DAMPING.get(relState.id());
+                    if (dampTicks != null) {
+                        if (dampTicks <= 0) {
+                            RELEASE_DAMPING.remove(relState.id());
+                        } else {
+                            RELEASE_DAMPING.put(relState.id(), dampTicks - 1);
+                            // Scale velocity: starts at 0.2 factor, increases to 1.0 over 5 ticks
+                            double factor = 0.2 + 0.16 * (RELEASE_DAMPING_TICKS - dampTicks);
+                            entry.physBody.body.linearVelocity.mul(factor);
+                            entry.physBody.body.angularVelocity.mul(factor);
+                        }
+                    }
+                }
                 try {
                     dev.arubik.craftengine.contraption.explosive.ContraptionImpactDetonator.afterStep(
                             entry.physBody, states.get(entry), level);
