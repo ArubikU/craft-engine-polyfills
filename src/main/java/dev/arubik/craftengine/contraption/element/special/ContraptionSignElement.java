@@ -144,9 +144,9 @@ public abstract class ContraptionSignElement extends ContraptionBlockElement {
     }
 
     private Vec3 textPos(RenderContext ctx, Direction facing, boolean back) {
-        // Wall sign geometry: board front face is at -1/16 from block center toward facing.
-        // back face is at +1/16 (board is 1/16 thick, centered at 0). Small offset avoids Z-fighting.
-        double outward = back ? 2.0/16.0 : -1.0/16.0;
+        // Sign board center is at block center + 0 offset toward facing.
+        // Tiny epsilon to avoid Z-fighting with BLOCK_DISPLAY.
+        double outward = back ? 0.02 : -0.01;
         Vec3 local = new Vec3(
                 localPos().getX() + 0.5 + facing.getStepX() * outward,
                 localPos().getY() + textYCenter(),
