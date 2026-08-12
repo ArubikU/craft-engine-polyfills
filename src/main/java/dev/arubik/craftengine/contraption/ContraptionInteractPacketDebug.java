@@ -273,6 +273,8 @@ public final class ContraptionInteractPacketDebug implements PacketListener {
             final dev.arubik.craftengine.contraption.element.special.ContraptionSignElement.PendingSignEdit ctx = pending;
             final String[] finalLines = lines;
 
+            org.bukkit.entity.Player finalBukkitPlayer = org.bukkit.Bukkit.getPlayer(playerId);
+            net.minecraft.server.level.ServerPlayer finalServerPlayer = finalBukkitPlayer instanceof org.bukkit.craftbukkit.entity.CraftPlayer cp2 ? cp2.getHandle() : null;
             org.bukkit.Bukkit.getScheduler().runTask(
                     dev.arubik.craftengine.CraftEnginePolyfills.instance(), () -> {
                 try {
@@ -282,8 +284,7 @@ public final class ContraptionInteractPacketDebug implements PacketListener {
                     if (be instanceof net.minecraft.world.level.block.entity.SignBlockEntity sign) {
                         applySignText(sign, finalLines, isFront);
                     }
-                    // Remove fake sign from real world
-                    ctx.cleanup();
+                    ctx.cleanup(finalServerPlayer);
                 } catch (Throwable ignored) {}
             });
         } catch (Throwable ignored) {}
