@@ -29,7 +29,22 @@ public abstract class ContraptionSignElement extends ContraptionBlockElement {
             new java.util.concurrent.ConcurrentHashMap<>();
 
     public record PendingSignEdit(dev.arubik.craftengine.contraption.core.ContraptionState state,
-                                   net.minecraft.core.BlockPos localPos, boolean isFront) {}
+                                   net.minecraft.core.BlockPos localPos, boolean isFront,
+                                   net.minecraft.core.BlockPos fakeWorldPos,
+                                   net.minecraft.server.level.ServerLevel fakeWorldLevel) {
+        public PendingSignEdit(dev.arubik.craftengine.contraption.core.ContraptionState state,
+                               net.minecraft.core.BlockPos localPos, boolean isFront) {
+            this(state, localPos, isFront, null, null);
+        }
+        public void cleanup() {
+            if (fakeWorldPos != null && fakeWorldLevel != null) {
+                try {
+                    fakeWorldLevel.setBlock(fakeWorldPos,
+                            net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 2);
+                } catch (Throwable ignored) {}
+            }
+        }
+    }
 
     private final int frontId = net.minecraft.world.entity.Entity.nextEntityId();
     private final UUID frontUuid = UUID.randomUUID();
@@ -279,14 +294,39 @@ public abstract class ContraptionSignElement extends ContraptionBlockElement {
         }
         if (!sign.isWaxed()) {
             try {
-                // Store edit context so UPDATE_SIGN interceptor can route the reply back
                 PENDING_EDITS.put(player.getUUID(), new PendingSignEdit(state, localPos(), isFront));
-                // Client needs a sign block at the fake pos before the editor GUI shows
-                net.minecraft.core.BlockPos fakePos = new net.minecraft.core.BlockPos(0, -60, 0);
-                player.connection.send(new net.minecraft.network.protocol.game.ClientboundBlockUpdatePacket(
-                        fakePos, blockState()));
-                player.connection.send(new net.minecraft.network.protocol.game.ClientboundOpenSignEditorPacket(
-                        fakePos, isFront));
+                // Place fake sign in the REAL world 10 blocks below the player, behind them
+                // so it's within range (4 blocks) but not visible
+                net.minecraft.server.level.ServerLevel realLevel =
+                        (net.minecraft.server.level.ServerLevel) player.level();
+                net.minecraft.core.BlockPos fakePos = player.blockPosition().below(5);
+
+                // Place real sign block so the sign BE is valid and within range
+                realLevel.setBlock(fakePos, blockState(), 2);
+                var fakeBE = realLevel.getBlockEntity(fakePos);
+                if (fakeBE instanceof net.minecraft.world.level.block.entity.SignBlockEntity fakeSign) {
+                    // Copy text from ContraptionLevel sign so player sees current content
+                    fakeSign.setAllowedPlayerEditor(player.getUUID());
+                    // Copy text
+                    dev.arubik.craftengine.contraption.ContraptionInteractPacketDebug.applySignText(fakeSign,
+                            new String[]{sign.getText(isFront).getMessage(0,false).getString(),
+                                    sign.getText(isFront).getMessage(1,false).getString(),
+                                    sign.getText(isFront).getMessage(2,false).getString(),
+                                    sign.getText(isFront).getMessage(3,false).getString()},
+                            true);
+                    // Open editor pointing to the real fake sign
+                    player.connection.send(new net.minecraft.network.protocol.game.ClientboundOpenSignEditorPacket(
+                            fakePos, true));
+                    // Store fakePos for cleanup after edit
+                    PENDING_EDITS.put(player.getUUID(),
+                            new PendingSignEdit(state, localPos(), isFront, fakePos, realLevel));
+                } else {
+                    // Fallback: fake block packet approach
+                    player.connection.send(new net.minecraft.network.protocol.game.ClientboundBlockUpdatePacket(
+                            fakePos, blockState()));
+                    player.connection.send(new net.minecraft.network.protocol.game.ClientboundOpenSignEditorPacket(
+                            fakePos, isFront));
+                }
             } catch (Throwable ignored) {}
             return true;
         }

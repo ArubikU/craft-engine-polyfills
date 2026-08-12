@@ -282,6 +282,8 @@ public final class ContraptionInteractPacketDebug implements PacketListener {
                     if (be instanceof net.minecraft.world.level.block.entity.SignBlockEntity sign) {
                         applySignText(sign, finalLines, isFront);
                     }
+                    // Remove fake sign from real world
+                    ctx.cleanup();
                 } catch (Throwable ignored) {}
             });
         } catch (Throwable ignored) {}
