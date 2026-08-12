@@ -146,7 +146,7 @@ public abstract class ContraptionSignElement extends ContraptionBlockElement {
     private Vec3 textPos(RenderContext ctx, Direction facing, boolean back) {
         // Sign board center is at block center + 0 offset toward facing.
         // Tiny epsilon to avoid Z-fighting with BLOCK_DISPLAY.
-        double outward = back ? 0.02 : -0.01;
+        double outward = back ? -0.01 : 0.02;
         Vec3 local = new Vec3(
                 localPos().getX() + 0.5 + facing.getStepX() * outward,
                 localPos().getY() + textYCenter(),
