@@ -126,8 +126,19 @@ public abstract class ContraptionSignElement extends ContraptionBlockElement {
 
         Direction facing = getFacing();
         float contraptionYaw = (float) ctx.yawDegrees();
-        org.joml.Quaternionf tiltQ = (ctx.pitchRadians() == 0.0 && ctx.rollRadians() == 0.0) ? null
-                : new org.joml.Quaternionf().rotateX((float) ctx.pitchRadians()).rotateZ((float) ctx.rollRadians());
+        org.joml.Quaternionf tiltQ = null;
+        if (ctx.pitchRadians() != 0.0 || ctx.rollRadians() != 0.0) {
+            // World tilt quaternion
+            org.joml.Quaternionf worldTilt = new org.joml.Quaternionf()
+                    .rotateX((float) ctx.pitchRadians())
+                    .rotateZ((float) ctx.rollRadians());
+            // Sign face orientation (yaw only — entity yaw handles this)
+            float faceYaw = getTextEntityYaw(contraptionYaw, false);
+            org.joml.Quaternionf faceQ = new org.joml.Quaternionf()
+                    .rotateY((float) Math.toRadians(-faceYaw));
+            // Express world tilt in sign face local frame: inv(faceQ) * worldTilt * faceQ
+            tiltQ = faceQ.invert(new org.joml.Quaternionf()).mul(worldTilt).mul(faceQ);
+        }
 
         // Sample ambient light at sign world position
         int blockLight = -1, skyLight = -1; // -1 = no override, uses client default
@@ -386,13 +397,15 @@ public abstract class ContraptionSignElement extends ContraptionBlockElement {
                 float signYRot = signBlock.getYRotationDegrees(blockState())
                         + (float) Math.toDegrees(state.yawRadians());
                 float playerAngle = (float)(Math.atan2(dz, dx) * 180.0 / Math.PI) - 90.0f;
-                return net.minecraft.util.Mth.degreesDifferenceAbs(signYRot, playerAngle) <= 90.0f;
+                // Invert: isFacingFrontText returns true when player faces the front
+                // but we check from the hitPos which approaches from the opposite side
+                return net.minecraft.util.Mth.degreesDifferenceAbs(signYRot, playerAngle) > 90.0f;
             }
         } catch (Throwable ignored) {}
         Direction facing = getFacing();
         double dot = facing.getStepX() * (hitPos.x - localPos().getX() - 0.5)
                    + facing.getStepZ() * (hitPos.z - localPos().getZ() - 0.5);
-        return dot >= 0;
+        return dot < 0;
     }
 
     private Vec3 worldPos(ContraptionState state) {
