@@ -318,6 +318,9 @@ public final class CreativePhysWandListener implements Listener {
         grabbed.put(id, target.id());
         grabDistance.put(id, dist);
         setKinematic(target.id(), true); // pin so gravity/solver don't fight
+        org.bukkit.Bukkit.getLogger().info("[Wand] GRABBED id=" + target.id()
+                + " pos=(" + String.format("%.1f,%.1f,%.1f", target.x(), target.y(), target.z()) + ")"
+                + " held=" + dev.arubik.craftengine.contraption.physics.PhysicsWorld.isHeld(target.id()));
         player.sendActionBar(Component.text(
                 "Grabbed — drag with your crosshair. Right-click to drop, scroll to resize, sneak+scroll to reach.",
                 NamedTextColor.AQUA));
@@ -509,9 +512,11 @@ public final class CreativePhysWandListener implements Listener {
                     player.getWorld().loadChunk(cx, cz2, false);
                 }
                 entity.state().setPosition(nx, ny, nz);
-                // Keep physics body in sync so writeBack doesn't snap position back next tick
                 dev.arubik.craftengine.contraption.physics.PhysicsWorld.syncBodyPosition(
                         contraptionId, nx, ny, nz);
+                org.bukkit.Bukkit.getLogger().info("[Wand] tick pos=(" + String.format("%.1f,%.1f,%.1f", nx, ny, nz)
+                        + ") held=" + dev.arubik.craftengine.contraption.physics.PhysicsWorld.isHeld(contraptionId)
+                        + " suspended=" + entity.renderSuspended());
             }
         }
     }
