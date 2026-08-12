@@ -483,6 +483,12 @@ public final class CreativePhysWandListener implements Listener {
             if (!player.getWorld().getUID().equals(entity.state().worldId())) {
                 entity.teleport(player.getWorld(), tx, ty, tz, entity.state().yawRadians());
             } else {
+                // Ensure destination chunk is loaded — isAtLoadedChunk gates render
+                int cx = net.minecraft.util.Mth.floor(tx) >> 4;
+                int cz = net.minecraft.util.Mth.floor(tz) >> 4;
+                if (!player.getWorld().isChunkLoaded(cx, cz)) {
+                    player.getWorld().loadChunk(cx, cz, false);
+                }
                 entity.state().setPosition(tx, ty, tz);
             }
         }
