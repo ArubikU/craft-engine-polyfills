@@ -622,10 +622,10 @@ public final class ContraptionEngine {
         // observe it, and carry is stateless per tick, so it simply resumes the moment someone arrives.
         if (!chunkLoaded || viewers.isEmpty()) {
             if (!entity.renderSuspended()) {
-                org.bukkit.Bukkit.getLogger().warning("[Contraption] suspendRender id=" + state.id()
+                org.bukkit.Bukkit.getLogger().warning("[Contraption] suspendRender id=" + entity.state().id()
                         + " chunkLoaded=" + chunkLoaded + " viewers=" + viewers.size()
-                        + " pos=(" + String.format("%.1f,%.1f,%.1f", state.x(), state.y(), state.z()) + ")"
-                        + " held=" + dev.arubik.craftengine.contraption.physics.PhysicsWorld.isHeld(state.id()));
+                        + " pos=(" + String.format("%.1f,%.1f,%.1f", entity.state().x(), entity.state().y(), entity.state().z()) + ")"
+                        + " held=" + dev.arubik.craftengine.contraption.physics.PhysicsWorld.isHeld(entity.state().id()));
                 entity.suspendRender(viewers);
             }
             if (perf) {
