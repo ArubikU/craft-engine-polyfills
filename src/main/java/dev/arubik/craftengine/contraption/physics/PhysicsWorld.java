@@ -567,6 +567,21 @@ public final class PhysicsWorld {
         }
     }
 
+    /** Moves the physics body to the given world position (wand drag — keeps writeBack from snapping back). */
+    public static void syncBodyPosition(UUID contraptionId, double x, double y, double z) {
+        Entry entry = ENTRIES.get(contraptionId);
+        if (entry == null || entry.physBody == null) return;
+        PhysBody phys = entry.physBody;
+        // localCom offset (COM may differ from bearing origin)
+        Vector3d com = localCom(entry);
+        Vector3d target = new Vector3d(x + com.x, y + com.y, z + com.z);
+        if (ASYNC) {
+            enqueue(() -> { phys.body.position.set(target); phys.wakeUp(); });
+        } else {
+            phys.body.position.set(target); phys.wakeUp();
+        }
+    }
+
     /** Dampens angular velocity (wand grab — no spinning). */
     public static void dampAngularVelocity(UUID contraptionId, double factor) {
         Entry entry = ENTRIES.get(contraptionId);

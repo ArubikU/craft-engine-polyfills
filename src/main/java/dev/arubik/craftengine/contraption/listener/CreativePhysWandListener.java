@@ -143,6 +143,10 @@ public final class CreativePhysWandListener implements Listener {
     /** player id -> current grab distance (blocks in front of the eye the bearing is held at). */
     private final Map<UUID, Double> grabDistance = new HashMap<>();
 
+    /** Cooldown ticks remaining after grab/release — prevents double-triggering. */
+    private final Map<UUID, Integer> grabCooldown = new HashMap<>();
+    private static final int GRAB_COOLDOWN_TICKS = 5;
+
     /**
      * The live registered instance, for the PACKET bridge (2026-07-04 fix — see
      * {@link #wouldHandlePacketInteract}). {@code ContraptionInteractPacketDebug} is a static
@@ -293,6 +297,10 @@ public final class CreativePhysWandListener implements Listener {
     /** Grabs the aimed contraption, or releases the currently-held one if already grabbing. */
     private void toggleGrab(Player player) {
         UUID id = player.getUniqueId();
+        // 5-tick cooldown between grab/release to prevent accidental double-trigger
+        int cooldown = grabCooldown.getOrDefault(id, 0);
+        if (cooldown > 0) return;
+        grabCooldown.put(id, GRAB_COOLDOWN_TICKS);
         if (grabbed.containsKey(id)) {
             setKinematic(grabbed.remove(id), false);
             grabDistance.remove(id);
@@ -309,11 +317,7 @@ public final class CreativePhysWandListener implements Listener {
         dist = clamp(dist, minGrabDistance(target), MAX_GRAB_DISTANCE);
         grabbed.put(id, target.id());
         grabDistance.put(id, dist);
-        // Force-based: don't pin kinematic — solver integrates our velocity each tick.
-        // Zero velocity so it doesn't shoot off from accumulated momentum.
-        dev.arubik.craftengine.contraption.physics.PhysicsWorld.setLinearVelocity(
-                target.id(), new org.joml.Vector3d(0, 0, 0));
-        dev.arubik.craftengine.contraption.physics.PhysicsWorld.dampAngularVelocity(target.id(), 0);
+        setKinematic(target.id(), true); // pin so gravity/solver don't fight
         player.sendActionBar(Component.text(
                 "Grabbed — drag with your crosshair. Right-click to drop, scroll to resize, sneak+scroll to reach.",
                 NamedTextColor.AQUA));
@@ -444,6 +448,13 @@ public final class CreativePhysWandListener implements Listener {
      * the wand away, or whose contraption disassembled (null-checked via {@link ContraptionManager#get}).
      */
     private void tickDrag() {
+        // Decrement cooldowns
+        grabCooldown.entrySet().removeIf(e -> {
+            int remaining = e.getValue() - 1;
+            if (remaining <= 0) return true;
+            e.setValue(remaining);
+            return false;
+        });
         Iterator<Map.Entry<UUID, UUID>> it = grabbed.entrySet().iterator();
         while (it.hasNext()) {
             Map.Entry<UUID, UUID> e = it.next();
@@ -487,22 +498,20 @@ public final class CreativePhysWandListener implements Listener {
             if (!player.getWorld().getUID().equals(entity.state().worldId())) {
                 entity.teleport(player.getWorld(), tx, ty, tz, entity.state().yawRadians());
             } else {
-                // Ensure destination chunk is loaded
-                int cx = net.minecraft.util.Mth.floor(tx) >> 4;
-                int cz = net.minecraft.util.Mth.floor(tz) >> 4;
-                if (!player.getWorld().isChunkLoaded(cx, cz)) {
-                    player.getWorld().loadChunk(cx, cz, false);
-                }
-                // Force-based grab: PD controller sets velocity toward target each tick.
-                // Body is non-kinematic — solver integrates velocity; PD counteracts gravity.
+                // Smooth lerp toward target — feels like magnetic force, stays kinematic (no gravity fight)
                 double bx = entity.state().x(), by = entity.state().y(), bz = entity.state().z();
-                double dx = tx - bx, dy = ty - by, dz = tz - bz;
-                // PD controller: desired_velocity = kP * error
-                double kP = 10.0; // snappiness
-                dev.arubik.craftengine.contraption.physics.PhysicsWorld.setLinearVelocity(
-                        contraptionId, new org.joml.Vector3d(dx * kP, dy * kP, dz * kP));
-                dev.arubik.craftengine.contraption.physics.PhysicsWorld.dampAngularVelocity(
-                        contraptionId, 0.1); // kill spin while held
+                double nx = bx + (tx - bx) * 0.35;
+                double ny = by + (ty - by) * 0.35;
+                double nz = bz + (tz - bz) * 0.35;
+                int cx = net.minecraft.util.Mth.floor(nx) >> 4;
+                int cz2 = net.minecraft.util.Mth.floor(nz) >> 4;
+                if (!player.getWorld().isChunkLoaded(cx, cz2)) {
+                    player.getWorld().loadChunk(cx, cz2, false);
+                }
+                entity.state().setPosition(nx, ny, nz);
+                // Keep physics body in sync so writeBack doesn't snap position back next tick
+                dev.arubik.craftengine.contraption.physics.PhysicsWorld.syncBodyPosition(
+                        contraptionId, nx, ny, nz);
             }
         }
     }
