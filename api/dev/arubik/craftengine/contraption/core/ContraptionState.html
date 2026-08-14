@@ -25,6 +25,55 @@
   <a href="https://github.com/Arubik/craft-engine-polyfills" class="gh-link"><i data-lucide="github"></i></a>
 </div>
 <div class="layout">
+<nav class="sidebar">
+  <div class="nav-section">
+    <div class="nav-section-header"><i data-lucide="package"></i> formula</div>
+    <ul class="nav-items">
+      <li><a href="../../../../../../api/dev/arubik/craftengine/machine/render/formula/PolyFormula.html">PolyFormula</a></li>
+      <li><a href="../../../../../../api/dev/arubik/craftengine/machine/render/formula/PolyValue.html">PolyValue</a></li>
+      <li><a href="../../../../../../api/dev/arubik/craftengine/machine/render/formula/PolyContext.html">PolyContext</a></li>
+      <li><a href="../../../../../../api/dev/arubik/craftengine/machine/render/formula/PolyScript.html">PolyScript</a></li>
+    </ul>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-header"><i data-lucide="package"></i> render</div>
+    <ul class="nav-items">
+      <li><a href="../../../../../../api/dev/arubik/craftengine/machine/render/RendererSpec.html">RendererSpec</a></li>
+      <li><a href="../../../../../../api/dev/arubik/craftengine/machine/render/RendererManager.html">RendererManager</a></li>
+    </ul>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-header"><i data-lucide="package"></i> machine</div>
+    <ul class="nav-items">
+      <li><a href="../../../../../../api/dev/arubik/craftengine/machine/MachineDefinition.html">MachineDefinition</a></li>
+    </ul>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-header"><i data-lucide="package"></i> contraption</div>
+    <ul class="nav-items">
+      <li><a href="../../../../../../api/dev/arubik/craftengine/contraption/core/ContraptionEntity.html">ContraptionEntity</a></li>
+      <li><a href="../../../../../../api/dev/arubik/craftengine/contraption/core/ContraptionState.html">ContraptionState</a></li>
+      <li><a href="../../../../../../api/dev/arubik/craftengine/contraption/api/ContraptionType.html">ContraptionType</a></li>
+      <li><a href="../../../../../../api/dev/arubik/craftengine/contraption/api/PowerSource.html">PowerSource</a></li>
+      <li><a href="../../../../../../api/dev/arubik/craftengine/contraption/api/PowerConsumer.html">PowerConsumer</a></li>
+    </ul>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-header"><i data-lucide="package"></i> fluid / gas</div>
+    <ul class="nav-items">
+      <li><a href="../../../../../../api/dev/arubik/craftengine/fluid/FluidTank.html">FluidTank</a></li>
+      <li><a href="../../../../../../api/dev/arubik/craftengine/gas/GasTank.html">GasTank</a></li>
+    </ul>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-header"><i data-lucide="arrow-left"></i> Navigation</div>
+    <ul class="nav-items">
+      <li><a href="../../../../../../api/index.html">API Index</a></li>
+      <li><a href="../../../../../../docs/getting-started.html">Docs</a></li>
+      <li><a href="../../../../../../index.html">Home</a></li>
+    </ul>
+  </div>
+</nav>
 <main class="content api-content" style="padding-top:2rem">
   <div class="breadcrumbs">
     <a href="../../../../../../api/index.html">API</a><span class="sep">/</span>
@@ -40,10 +89,154 @@
   <pre><code class="language-java">public final class ContraptionState {</code></pre>
   <h2>Public API</h2>
   <div class="method-entry">
+    <div class="method-sig">public final class ContraptionState </div>
+  </div>
+  <div class="method-entry">
     <div class="method-sig">public static final double MIN_SCALE = 0.1;</div>
   </div>
   <div class="method-entry">
     <div class="method-sig">public static final double MAX_SCALE = 10.0;</div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public ContraptionState(UUID id, ResourceKey<Level> worldId, ContraptionLevel level, double x, double y, double z) </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public Key bearingType() </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public void setBearingType(Key bearingType) </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public net.minecraft.world.phys.Vec3 anchorOffset() </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public java.util.OptionalDouble yawOffset() </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public double explosionProof() </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public void setExplosionProof(double explosionProof) </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public UUID anchorEntityId() </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public void setAnchorEntityId(UUID anchorEntityId) </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public UUID id() </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public ResourceKey<Level> worldId() </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public ContraptionLevel level() </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public net.minecraft.core.BlockPos originBearingBlockPos() </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public double x() </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public double y() </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public double z() </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public void setPosition(double x, double y, double z) </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public double yawRadians() </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public void setYawRadians(double yawRadians) </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public void setAnchorOffset(net.minecraft.world.phys.Vec3 anchorOffset) </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public void setYawOffset(java.util.OptionalDouble yawOffset) </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public double pitchRadians() </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public void setPitchRadians(double pitchRadians) </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public double rollRadians() </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public void setRollRadians(double rollRadians) </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public double scale() </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public void setScale(double scale) </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public void setAnchor(ResourceKey<Level> worldId, double x, double y, double z, double yawRadians) </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public boolean isStalled() </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public void setStalled(boolean stalled) </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public List<MovementBehavior> behaviors() </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public void addBehavior(MovementBehavior behavior) </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public void setLastDelta(double dx, double dy, double dz) </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public double lastDeltaX() </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public double lastDeltaY() </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public double lastDeltaZ() </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public void setLastYawDelta(double dyaw) </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public double lastYawDelta() </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public void setLastPitchDelta(double dpitch) </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public double lastPitchDelta() </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public void setLastRollDelta(double droll) </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public double lastRollDelta() </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public List<ContraptionFurniture> furniture() </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public void setFurniture(List<ContraptionFurniture> furniture) </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public float globalRpm() </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public void setGlobalRpm(float globalRpm) </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public void resetSuDemand() </div>
   </div>
 </main>
 </div>

@@ -25,6 +25,55 @@
   <a href="https://github.com/Arubik/craft-engine-polyfills" class="gh-link"><i data-lucide="github"></i></a>
 </div>
 <div class="layout">
+<nav class="sidebar">
+  <div class="nav-section">
+    <div class="nav-section-header"><i data-lucide="package"></i> formula</div>
+    <ul class="nav-items">
+      <li><a href="../../../../../api/dev/arubik/craftengine/machine/render/formula/PolyFormula.html">PolyFormula</a></li>
+      <li><a href="../../../../../api/dev/arubik/craftengine/machine/render/formula/PolyValue.html">PolyValue</a></li>
+      <li><a href="../../../../../api/dev/arubik/craftengine/machine/render/formula/PolyContext.html">PolyContext</a></li>
+      <li><a href="../../../../../api/dev/arubik/craftengine/machine/render/formula/PolyScript.html">PolyScript</a></li>
+    </ul>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-header"><i data-lucide="package"></i> render</div>
+    <ul class="nav-items">
+      <li><a href="../../../../../api/dev/arubik/craftengine/machine/render/RendererSpec.html">RendererSpec</a></li>
+      <li><a href="../../../../../api/dev/arubik/craftengine/machine/render/RendererManager.html">RendererManager</a></li>
+    </ul>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-header"><i data-lucide="package"></i> machine</div>
+    <ul class="nav-items">
+      <li><a href="../../../../../api/dev/arubik/craftengine/machine/MachineDefinition.html">MachineDefinition</a></li>
+    </ul>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-header"><i data-lucide="package"></i> contraption</div>
+    <ul class="nav-items">
+      <li><a href="../../../../../api/dev/arubik/craftengine/contraption/core/ContraptionEntity.html">ContraptionEntity</a></li>
+      <li><a href="../../../../../api/dev/arubik/craftengine/contraption/core/ContraptionState.html">ContraptionState</a></li>
+      <li><a href="../../../../../api/dev/arubik/craftengine/contraption/api/ContraptionType.html">ContraptionType</a></li>
+      <li><a href="../../../../../api/dev/arubik/craftengine/contraption/api/PowerSource.html">PowerSource</a></li>
+      <li><a href="../../../../../api/dev/arubik/craftengine/contraption/api/PowerConsumer.html">PowerConsumer</a></li>
+    </ul>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-header"><i data-lucide="package"></i> fluid / gas</div>
+    <ul class="nav-items">
+      <li><a href="../../../../../api/dev/arubik/craftengine/fluid/FluidTank.html">FluidTank</a></li>
+      <li><a href="../../../../../api/dev/arubik/craftengine/gas/GasTank.html">GasTank</a></li>
+    </ul>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-header"><i data-lucide="arrow-left"></i> Navigation</div>
+    <ul class="nav-items">
+      <li><a href="../../../../../api/index.html">API Index</a></li>
+      <li><a href="../../../../../docs/getting-started.html">Docs</a></li>
+      <li><a href="../../../../../index.html">Home</a></li>
+    </ul>
+  </div>
+</nav>
 <main class="content api-content" style="padding-top:2rem">
   <div class="breadcrumbs">
     <a href="../../../../../api/index.html">API</a><span class="sep">/</span>
@@ -40,82 +89,109 @@
   <pre><code class="language-java">public final class ContraptionInteractionListener implements Listener {</code></pre>
   <h2>Public API</h2>
   <div class="method-entry">
+    <div class="method-sig">public final class ContraptionInteractionListener implements Listener </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public void debugRawInteract(PlayerInteractEvent event) </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public void debugRawInteractEntity(org.bukkit.event.player.PlayerInteractEntityEvent event) </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public void onInteractEntity(org.bukkit.event.player.PlayerInteractEntityEvent event) </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public void onInteract(PlayerInteractEvent event) </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public record Hit(ContraptionState state, BlockPos local, Vec3 localClip, Direction face) </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public static Hit raycast(ServerPlayer player) </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public static void forward(ServerPlayer player, Hit hit) </div>
+  </div>
+  <div class="method-entry">
     <div class="method-sig">public static volatile boolean PLACEMENT_DEBUG = false;</div>
   </div>
   <div class="method-entry">
-    <div class="method-sig">@Override</div>
+    <div class="method-sig">public static void forwardAttack(ServerPlayer player, Hit hit) </div>
   </div>
   <div class="method-entry">
-    <div class="method-sig">@Override</div>
+    <div class="method-sig">public <T> Optional<T> evaluate(java.util.function.BiFunction<net.minecraft.world.level.Level, BlockPos, T> function) </div>
   </div>
   <div class="method-entry">
-    <div class="method-sig">@Override</div>
+    <div class="method-sig">public void execute(java.util.function.BiConsumer<net.minecraft.world.level.Level, BlockPos> consumer) </div>
   </div>
   <div class="method-entry">
-    <div class="method-sig">@Override</div>
+    <div class="method-sig">public boolean stillValid(Player player) </div>
   </div>
   <div class="method-entry">
-    <div class="method-sig">@Override</div>
+    <div class="method-sig">public int getContainerSize() </div>
   </div>
   <div class="method-entry">
-    <div class="method-sig">@Override</div>
+    <div class="method-sig">public boolean isEmpty() </div>
   </div>
   <div class="method-entry">
-    <div class="method-sig">@Override</div>
+    <div class="method-sig">public ItemStack getItem(int slot) </div>
   </div>
   <div class="method-entry">
-    <div class="method-sig">@Override</div>
+    <div class="method-sig">public ItemStack removeItem(int slot, int amount) </div>
   </div>
   <div class="method-entry">
-    <div class="method-sig">@Override</div>
+    <div class="method-sig">public ItemStack removeItemNoUpdate(int slot) </div>
   </div>
   <div class="method-entry">
-    <div class="method-sig">@Override</div>
+    <div class="method-sig">public void setItem(int slot, ItemStack stack) </div>
   </div>
   <div class="method-entry">
-    <div class="method-sig">@Override</div>
+    <div class="method-sig">public void setChanged() </div>
   </div>
   <div class="method-entry">
-    <div class="method-sig">@Override</div>
+    <div class="method-sig">public int getMaxStackSize() </div>
   </div>
   <div class="method-entry">
-    <div class="method-sig">@Override</div>
+    <div class="method-sig">public int getMaxStackSize(ItemStack stack) </div>
   </div>
   <div class="method-entry">
-    <div class="method-sig">@Override</div>
+    <div class="method-sig">public void startOpen(net.minecraft.world.entity.ContainerUser user) </div>
   </div>
   <div class="method-entry">
-    <div class="method-sig">@Override</div>
+    <div class="method-sig">public void stopOpen(net.minecraft.world.entity.ContainerUser user) </div>
   </div>
   <div class="method-entry">
-    <div class="method-sig">@Override</div>
+    <div class="method-sig">public java.util.List<net.minecraft.world.entity.ContainerUser> getEntitiesWithContainerOpen() </div>
   </div>
   <div class="method-entry">
-    <div class="method-sig">@Override</div>
+    <div class="method-sig">public boolean canPlaceItem(int slot, ItemStack stack) </div>
   </div>
   <div class="method-entry">
-    <div class="method-sig">@Override</div>
+    <div class="method-sig">public boolean canTakeItem(Container target, int slot, ItemStack stack) </div>
   </div>
   <div class="method-entry">
-    <div class="method-sig">@Override</div>
+    <div class="method-sig">public void clearContent() </div>
   </div>
   <div class="method-entry">
-    <div class="method-sig">@Override</div>
+    <div class="method-sig">public java.util.List<ItemStack> getContents() </div>
   </div>
   <div class="method-entry">
-    <div class="method-sig">@Override</div>
+    <div class="method-sig">public void onOpen(org.bukkit.craftbukkit.entity.CraftHumanEntity who) </div>
   </div>
   <div class="method-entry">
-    <div class="method-sig">@Override</div>
+    <div class="method-sig">public void onClose(org.bukkit.craftbukkit.entity.CraftHumanEntity who) </div>
   </div>
   <div class="method-entry">
-    <div class="method-sig">@Override</div>
+    <div class="method-sig">public java.util.List<org.bukkit.entity.HumanEntity> getViewers() </div>
   </div>
   <div class="method-entry">
-    <div class="method-sig">@Override</div>
+    <div class="method-sig">public org.bukkit.inventory.InventoryHolder getOwner() </div>
   </div>
   <div class="method-entry">
-    <div class="method-sig">@Override</div>
+    <div class="method-sig">public void setMaxStackSize(int size) </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public org.bukkit.Location getLocation() </div>
   </div>
 </main>
 </div>

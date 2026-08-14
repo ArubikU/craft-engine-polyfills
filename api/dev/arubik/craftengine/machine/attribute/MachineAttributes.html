@@ -25,6 +25,55 @@
   <a href="https://github.com/Arubik/craft-engine-polyfills" class="gh-link"><i data-lucide="github"></i></a>
 </div>
 <div class="layout">
+<nav class="sidebar">
+  <div class="nav-section">
+    <div class="nav-section-header"><i data-lucide="package"></i> formula</div>
+    <ul class="nav-items">
+      <li><a href="../../../../../../api/dev/arubik/craftengine/machine/render/formula/PolyFormula.html">PolyFormula</a></li>
+      <li><a href="../../../../../../api/dev/arubik/craftengine/machine/render/formula/PolyValue.html">PolyValue</a></li>
+      <li><a href="../../../../../../api/dev/arubik/craftengine/machine/render/formula/PolyContext.html">PolyContext</a></li>
+      <li><a href="../../../../../../api/dev/arubik/craftengine/machine/render/formula/PolyScript.html">PolyScript</a></li>
+    </ul>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-header"><i data-lucide="package"></i> render</div>
+    <ul class="nav-items">
+      <li><a href="../../../../../../api/dev/arubik/craftengine/machine/render/RendererSpec.html">RendererSpec</a></li>
+      <li><a href="../../../../../../api/dev/arubik/craftengine/machine/render/RendererManager.html">RendererManager</a></li>
+    </ul>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-header"><i data-lucide="package"></i> machine</div>
+    <ul class="nav-items">
+      <li><a href="../../../../../../api/dev/arubik/craftengine/machine/MachineDefinition.html">MachineDefinition</a></li>
+    </ul>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-header"><i data-lucide="package"></i> contraption</div>
+    <ul class="nav-items">
+      <li><a href="../../../../../../api/dev/arubik/craftengine/contraption/core/ContraptionEntity.html">ContraptionEntity</a></li>
+      <li><a href="../../../../../../api/dev/arubik/craftengine/contraption/core/ContraptionState.html">ContraptionState</a></li>
+      <li><a href="../../../../../../api/dev/arubik/craftengine/contraption/api/ContraptionType.html">ContraptionType</a></li>
+      <li><a href="../../../../../../api/dev/arubik/craftengine/contraption/api/PowerSource.html">PowerSource</a></li>
+      <li><a href="../../../../../../api/dev/arubik/craftengine/contraption/api/PowerConsumer.html">PowerConsumer</a></li>
+    </ul>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-header"><i data-lucide="package"></i> fluid / gas</div>
+    <ul class="nav-items">
+      <li><a href="../../../../../../api/dev/arubik/craftengine/fluid/FluidTank.html">FluidTank</a></li>
+      <li><a href="../../../../../../api/dev/arubik/craftengine/gas/GasTank.html">GasTank</a></li>
+    </ul>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-header"><i data-lucide="arrow-left"></i> Navigation</div>
+    <ul class="nav-items">
+      <li><a href="../../../../../../api/index.html">API Index</a></li>
+      <li><a href="../../../../../../docs/getting-started.html">Docs</a></li>
+      <li><a href="../../../../../../index.html">Home</a></li>
+    </ul>
+  </div>
+</nav>
 <main class="content api-content" style="padding-top:2rem">
   <div class="breadcrumbs">
     <a href="../../../../../../api/index.html">API</a><span class="sep">/</span>
@@ -40,10 +89,43 @@
   <pre><code class="language-java">public final class MachineAttributes {</code></pre>
   <h2>Public API</h2>
   <div class="method-entry">
+    <div class="method-sig">public final class MachineAttributes </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public enum Operation </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public record Mod(Key attribute, Operation operation, double amount) </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public static final Key OVERCLOCK_LIMIT = Key.of("polyfill", "overclock_limit"); // extra oc headroom (frac)</div>
+  </div>
+  <div class="method-entry">
     <div class="method-sig">public static final Key FUEL_EFFICIENCY = Key.of("polyfill", "fuel_efficiency");</div>
   </div>
   <div class="method-entry">
+    <div class="method-sig">public static final Key GENERATION = Key.of("polyfill", "generation");           // output bonus (frac)</div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public static final Key EXTRA_SLOTS = Key.of("polyfill", "extra_slots");         // unlocked upgrade slots</div>
+  </div>
+  <div class="method-entry">
     <div class="method-sig">public static final Key PRESSURE = Key.of("polyfill", "pressure");</div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public static void register(Key attribute, double base) </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public static double base(Key attribute) </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public static boolean isAttribute(Key attribute) </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public static Map<Key, Double> compute(List<Mod> modifiers) </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public static Operation parseOperation(String s) </div>
   </div>
 </main>
 </div>

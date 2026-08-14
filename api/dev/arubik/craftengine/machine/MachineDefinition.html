@@ -25,6 +25,55 @@
   <a href="https://github.com/Arubik/craft-engine-polyfills" class="gh-link"><i data-lucide="github"></i></a>
 </div>
 <div class="layout">
+<nav class="sidebar">
+  <div class="nav-section">
+    <div class="nav-section-header"><i data-lucide="package"></i> formula</div>
+    <ul class="nav-items">
+      <li><a href="../../../../../api/dev/arubik/craftengine/machine/render/formula/PolyFormula.html">PolyFormula</a></li>
+      <li><a href="../../../../../api/dev/arubik/craftengine/machine/render/formula/PolyValue.html">PolyValue</a></li>
+      <li><a href="../../../../../api/dev/arubik/craftengine/machine/render/formula/PolyContext.html">PolyContext</a></li>
+      <li><a href="../../../../../api/dev/arubik/craftengine/machine/render/formula/PolyScript.html">PolyScript</a></li>
+    </ul>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-header"><i data-lucide="package"></i> render</div>
+    <ul class="nav-items">
+      <li><a href="../../../../../api/dev/arubik/craftengine/machine/render/RendererSpec.html">RendererSpec</a></li>
+      <li><a href="../../../../../api/dev/arubik/craftengine/machine/render/RendererManager.html">RendererManager</a></li>
+    </ul>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-header"><i data-lucide="package"></i> machine</div>
+    <ul class="nav-items">
+      <li><a href="../../../../../api/dev/arubik/craftengine/machine/MachineDefinition.html">MachineDefinition</a></li>
+    </ul>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-header"><i data-lucide="package"></i> contraption</div>
+    <ul class="nav-items">
+      <li><a href="../../../../../api/dev/arubik/craftengine/contraption/core/ContraptionEntity.html">ContraptionEntity</a></li>
+      <li><a href="../../../../../api/dev/arubik/craftengine/contraption/core/ContraptionState.html">ContraptionState</a></li>
+      <li><a href="../../../../../api/dev/arubik/craftengine/contraption/api/ContraptionType.html">ContraptionType</a></li>
+      <li><a href="../../../../../api/dev/arubik/craftengine/contraption/api/PowerSource.html">PowerSource</a></li>
+      <li><a href="../../../../../api/dev/arubik/craftengine/contraption/api/PowerConsumer.html">PowerConsumer</a></li>
+    </ul>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-header"><i data-lucide="package"></i> fluid / gas</div>
+    <ul class="nav-items">
+      <li><a href="../../../../../api/dev/arubik/craftengine/fluid/FluidTank.html">FluidTank</a></li>
+      <li><a href="../../../../../api/dev/arubik/craftengine/gas/GasTank.html">GasTank</a></li>
+    </ul>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-header"><i data-lucide="arrow-left"></i> Navigation</div>
+    <ul class="nav-items">
+      <li><a href="../../../../../api/index.html">API Index</a></li>
+      <li><a href="../../../../../docs/getting-started.html">Docs</a></li>
+      <li><a href="../../../../../index.html">Home</a></li>
+    </ul>
+  </div>
+</nav>
 <main class="content api-content" style="padding-top:2rem">
   <div class="breadcrumbs">
     <a href="../../../../../api/index.html">API</a><span class="sep">/</span>
@@ -40,6 +89,9 @@
   <pre><code class="language-java">public final class MachineDefinition {</code></pre>
   <h2>Public API</h2>
   <div class="method-entry">
+    <div class="method-sig">public final class MachineDefinition </div>
+  </div>
+  <div class="method-entry">
     <div class="method-sig">public static final Registry<MachineDefinition> REGISTRY = Registries.create("machine");</div>
   </div>
   <div class="method-entry">
@@ -49,10 +101,118 @@
     <div class="method-sig">public record PowerSpec(boolean consumesStress, double suExponent, int stressGraceTicks,</div>
   </div>
   <div class="method-entry">
+    <div class="method-sig">public static PowerSpec none() </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public record BarRef(Key bar, int[] slots, String source) </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public record InfoSpec(int slot, String type, String source) </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public static InfoSpec none() </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public boolean isTank() </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public record PagingSpec(int pages, int slots, int prevSlot, int nextSlot, int indicator) </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public static PagingSpec none() </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public boolean isPaged() </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public record TankSpec(String name, int capacity, Key filter) </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public record UpgradeSpec(int count, int baseUnlocked, int[] explicitSlots) </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public UpgradeSpec(int count, int baseUnlocked) </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public boolean isInline() </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public int[] slots() </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public int size() </div>
+  </div>
+  <div class="method-entry">
     <div class="method-sig">public MachineDefinition(Key id, String recipeType, String title, int menuSize, int[] inputSlots,</div>
   </div>
   <div class="method-entry">
-    <div class="method-sig">@Override</div>
+    <div class="method-sig">public Key id() </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public String recipeType() </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public String title() </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public int menuSize() </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public int[] inputSlots() </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public int[] outputSlots() </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public int[] fuelSlots() </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public UpgradeSpec upgrades() </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public PagingSpec paging() </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public InfoSpec info() </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public int infoSlot() </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public List<TankSpec> fluidTanks() </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public List<TankSpec> gasTanks() </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public boolean fuelRequired() </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public IOConfiguration io() </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public List<ButtonSpec> buttons() </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public PowerSpec power() </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public List<BarRef> bars() </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public Map<String, dev.arubik.craftengine.machine.render.variable.VariableSpec> variables() </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public List<dev.arubik.craftengine.machine.render.RendererSpec> renderers() </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public Map<Key, List<dev.arubik.craftengine.machine.attribute.MachineAttributes.Mod>> upgradeDefs() </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public static MachineDefinition byName(String name) </div>
+  </div>
+  <div class="method-entry">
+    <div class="method-sig">public String toString() </div>
   </div>
 </main>
 </div>

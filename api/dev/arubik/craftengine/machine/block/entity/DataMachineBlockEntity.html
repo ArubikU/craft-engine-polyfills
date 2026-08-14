@@ -25,6 +25,55 @@
   <a href="https://github.com/Arubik/craft-engine-polyfills" class="gh-link"><i data-lucide="github"></i></a>
 </div>
 <div class="layout">
+<nav class="sidebar">
+  <div class="nav-section">
+    <div class="nav-section-header"><i data-lucide="package"></i> formula</div>
+    <ul class="nav-items">
+      <li><a href="../../../../../../../api/dev/arubik/craftengine/machine/render/formula/PolyFormula.html">PolyFormula</a></li>
+      <li><a href="../../../../../../../api/dev/arubik/craftengine/machine/render/formula/PolyValue.html">PolyValue</a></li>
+      <li><a href="../../../../../../../api/dev/arubik/craftengine/machine/render/formula/PolyContext.html">PolyContext</a></li>
+      <li><a href="../../../../../../../api/dev/arubik/craftengine/machine/render/formula/PolyScript.html">PolyScript</a></li>
+    </ul>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-header"><i data-lucide="package"></i> render</div>
+    <ul class="nav-items">
+      <li><a href="../../../../../../../api/dev/arubik/craftengine/machine/render/RendererSpec.html">RendererSpec</a></li>
+      <li><a href="../../../../../../../api/dev/arubik/craftengine/machine/render/RendererManager.html">RendererManager</a></li>
+    </ul>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-header"><i data-lucide="package"></i> machine</div>
+    <ul class="nav-items">
+      <li><a href="../../../../../../../api/dev/arubik/craftengine/machine/MachineDefinition.html">MachineDefinition</a></li>
+    </ul>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-header"><i data-lucide="package"></i> contraption</div>
+    <ul class="nav-items">
+      <li><a href="../../../../../../../api/dev/arubik/craftengine/contraption/core/ContraptionEntity.html">ContraptionEntity</a></li>
+      <li><a href="../../../../../../../api/dev/arubik/craftengine/contraption/core/ContraptionState.html">ContraptionState</a></li>
+      <li><a href="../../../../../../../api/dev/arubik/craftengine/contraption/api/ContraptionType.html">ContraptionType</a></li>
+      <li><a href="../../../../../../../api/dev/arubik/craftengine/contraption/api/PowerSource.html">PowerSource</a></li>
+      <li><a href="../../../../../../../api/dev/arubik/craftengine/contraption/api/PowerConsumer.html">PowerConsumer</a></li>
+    </ul>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-header"><i data-lucide="package"></i> fluid / gas</div>
+    <ul class="nav-items">
+      <li><a href="../../../../../../../api/dev/arubik/craftengine/fluid/FluidTank.html">FluidTank</a></li>
+      <li><a href="../../../../../../../api/dev/arubik/craftengine/gas/GasTank.html">GasTank</a></li>
+    </ul>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-header"><i data-lucide="arrow-left"></i> Navigation</div>
+    <ul class="nav-items">
+      <li><a href="../../../../../../../api/index.html">API Index</a></li>
+      <li><a href="../../../../../../../docs/getting-started.html">Docs</a></li>
+      <li><a href="../../../../../../../index.html">Home</a></li>
+    </ul>
+  </div>
+</nav>
 <main class="content api-content" style="padding-top:2rem">
   <div class="breadcrumbs">
     <a href="../../../../../../../api/index.html">API</a><span class="sep">/</span>
@@ -40,88 +89,82 @@
   <pre><code class="language-java">public class DataMachineBlockEntity extends AbstractMachineBlockEntity</code></pre>
   <h2>Public API</h2>
   <div class="method-entry">
+    <div class="method-sig">public class DataMachineBlockEntity extends AbstractMachineBlockEntity</div>
+  </div>
+  <div class="method-entry">
     <div class="method-sig">public DataMachineBlockEntity(net.momirealms.craftengine.core.block.entity.BlockEntity blockEntity,</div>
   </div>
   <div class="method-entry">
-    <div class="method-sig">@Override</div>
+    <div class="method-sig">public dev.arubik.craftengine.machine.render.RendererManager rendererManager() </div>
   </div>
   <div class="method-entry">
-    <div class="method-sig">@Override</div>
+    <div class="method-sig">public MachineDefinition definition() </div>
   </div>
   <div class="method-entry">
-    <div class="method-sig">@Override</div>
+    <div class="method-sig">public int[] getInputSlots() </div>
   </div>
   <div class="method-entry">
-    <div class="method-sig">@Override</div>
+    <div class="method-sig">public int[] getOutputSlots() </div>
   </div>
   <div class="method-entry">
-    <div class="method-sig">@Override</div>
+    <div class="method-sig">public int[] getFuelSlots() </div>
   </div>
   <div class="method-entry">
-    <div class="method-sig">@Override</div>
+    <div class="method-sig">public int[] getUpgradeSlots() </div>
   </div>
   <div class="method-entry">
-    <div class="method-sig">@Override</div>
+    <div class="method-sig">public void setMenuConfig(MachineMenuConfig config) </div>
   </div>
   <div class="method-entry">
-    <div class="method-sig">@Override</div>
+    <div class="method-sig">public void setBars(List<MachineBar> bars) </div>
   </div>
   <div class="method-entry">
-    <div class="method-sig">@Override</div>
+    <div class="method-sig">public void setInputRpm(float rpm) </div>
   </div>
   <div class="method-entry">
-    <div class="method-sig">@Override</div>
-  </div>
-  <div class="method-entry">
-    <div class="method-sig">@Override</div>
-  </div>
-  <div class="method-entry">
-    <div class="method-sig">@Override</div>
-  </div>
-  <div class="method-entry">
-    <div class="method-sig">@Override</div>
+    <div class="method-sig">public float getInputRpm() </div>
   </div>
   <div class="method-entry">
     <div class="method-sig">public void tick(Level level, net.minecraft.core.BlockPos pos,</div>
   </div>
   <div class="method-entry">
-    <div class="method-sig">@Override</div>
+    <div class="method-sig">public void unregister() </div>
   </div>
   <div class="method-entry">
-    <div class="method-sig">@Override</div>
+    <div class="method-sig">public double[] barStat(String id) </div>
   </div>
   <div class="method-entry">
-    <div class="method-sig">@Override</div>
+    <div class="method-sig">public java.util.Map<String, String> barPlaceholders(String id) </div>
   </div>
   <div class="method-entry">
-    <div class="method-sig">@Override</div>
+    <div class="method-sig">public String barSubtype(String id) </div>
   </div>
   <div class="method-entry">
     <div class="method-sig">public void setUpgradeDefs(java.util.Map<net.momirealms.craftengine.core.util.Key,</div>
   </div>
   <div class="method-entry">
-    <div class="method-sig">@Override</div>
+    <div class="method-sig">public MachineMenu getMenu() </div>
   </div>
   <div class="method-entry">
-    <div class="method-sig">@Override</div>
+    <div class="method-sig">public void openMenu(net.minecraft.world.entity.player.Player player) </div>
   </div>
   <div class="method-entry">
-    <div class="method-sig">@Override</div>
+    <div class="method-sig">public void openPage(org.bukkit.entity.Player player, int newPage) </div>
   </div>
   <div class="method-entry">
-    <div class="method-sig">@Override</div>
+    <div class="method-sig">public MachineLayout getLayout() </div>
   </div>
   <div class="method-entry">
-    <div class="method-sig">@Override</div>
+    <div class="method-sig">public int effectiveRpm(AbstractProcessingRecipe recipe) </div>
   </div>
   <div class="method-entry">
-    <div class="method-sig">@Override</div>
+    <div class="method-sig">public int effectiveSu(AbstractProcessingRecipe recipe) </div>
   </div>
   <div class="method-entry">
-    <div class="method-sig">@Override</div>
+    <div class="method-sig">public boolean isOverclocked() </div>
   </div>
   <div class="method-entry">
-    <div class="method-sig">@Override</div>
+    <div class="method-sig">public void bumpOverclock(boolean up, org.bukkit.event.inventory.ClickType click) </div>
   </div>
 </main>
 </div>

@@ -72,6 +72,55 @@ header_template() {
   <a href="https://github.com/Arubik/craft-engine-polyfills" class="gh-link"><i data-lucide="github"></i></a>
 </div>
 <div class="layout">
+<nav class="sidebar">
+  <div class="nav-section">
+    <div class="nav-section-header"><i data-lucide="package"></i> formula</div>
+    <ul class="nav-items">
+      <li><a href="${css_path%docs/assets/style.css}api/dev/arubik/craftengine/machine/render/formula/PolyFormula.html">PolyFormula</a></li>
+      <li><a href="${css_path%docs/assets/style.css}api/dev/arubik/craftengine/machine/render/formula/PolyValue.html">PolyValue</a></li>
+      <li><a href="${css_path%docs/assets/style.css}api/dev/arubik/craftengine/machine/render/formula/PolyContext.html">PolyContext</a></li>
+      <li><a href="${css_path%docs/assets/style.css}api/dev/arubik/craftengine/machine/render/formula/PolyScript.html">PolyScript</a></li>
+    </ul>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-header"><i data-lucide="package"></i> render</div>
+    <ul class="nav-items">
+      <li><a href="${css_path%docs/assets/style.css}api/dev/arubik/craftengine/machine/render/RendererSpec.html">RendererSpec</a></li>
+      <li><a href="${css_path%docs/assets/style.css}api/dev/arubik/craftengine/machine/render/RendererManager.html">RendererManager</a></li>
+    </ul>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-header"><i data-lucide="package"></i> machine</div>
+    <ul class="nav-items">
+      <li><a href="${css_path%docs/assets/style.css}api/dev/arubik/craftengine/machine/MachineDefinition.html">MachineDefinition</a></li>
+    </ul>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-header"><i data-lucide="package"></i> contraption</div>
+    <ul class="nav-items">
+      <li><a href="${css_path%docs/assets/style.css}api/dev/arubik/craftengine/contraption/core/ContraptionEntity.html">ContraptionEntity</a></li>
+      <li><a href="${css_path%docs/assets/style.css}api/dev/arubik/craftengine/contraption/core/ContraptionState.html">ContraptionState</a></li>
+      <li><a href="${css_path%docs/assets/style.css}api/dev/arubik/craftengine/contraption/api/ContraptionType.html">ContraptionType</a></li>
+      <li><a href="${css_path%docs/assets/style.css}api/dev/arubik/craftengine/contraption/api/PowerSource.html">PowerSource</a></li>
+      <li><a href="${css_path%docs/assets/style.css}api/dev/arubik/craftengine/contraption/api/PowerConsumer.html">PowerConsumer</a></li>
+    </ul>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-header"><i data-lucide="package"></i> fluid / gas</div>
+    <ul class="nav-items">
+      <li><a href="${css_path%docs/assets/style.css}api/dev/arubik/craftengine/fluid/FluidTank.html">FluidTank</a></li>
+      <li><a href="${css_path%docs/assets/style.css}api/dev/arubik/craftengine/gas/GasTank.html">GasTank</a></li>
+    </ul>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-header"><i data-lucide="arrow-left"></i> Navigation</div>
+    <ul class="nav-items">
+      <li><a href="${css_path%docs/assets/style.css}api/index.html">API Index</a></li>
+      <li><a href="${css_path%docs/assets/style.css}docs/getting-started.html">Docs</a></li>
+      <li><a href="${css_path%docs/assets/style.css}index.html">Home</a></li>
+    </ul>
+  </div>
+</nav>
 <main class="content api-content" style="padding-top:2rem">
   <div class="breadcrumbs">
     <a href="${css_path%docs/assets/style.css}api/index.html">API</a><span class="sep">/</span>
@@ -116,8 +165,8 @@ for entry in "${PACKAGES[@]}"; do
     # Extract class declaration line
     class_decl=$(echo "$source_content" | grep -E "^public (final |sealed |abstract )?(class|interface|record|enum) " | head -1)
 
-    # Extract public methods
-    public_methods=$(echo "$source_content" | grep -E "^\s+(public |@Override)" | grep -v "import\|//\|{$" | head -40)
+    # Extract public methods (match any indentation level)
+    public_methods=$(echo "$source_content" | grep -E "^\s*public\s+" | grep -v "^public\s+(final|sealed|abstract)?\s*(class|interface|record|enum)" | grep -v "import" | head -50)
 
     # Extract javadoc (first /** ... */ block)
     class_javadoc=$(echo "$source_content" | sed -n '/\/\*\*/,/\*\//p' | head -20 | sed 's/^ \* //' | grep -v '^\/' | grep -v '^\*')
