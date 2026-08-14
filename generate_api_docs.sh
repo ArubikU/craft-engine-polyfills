@@ -32,6 +32,7 @@ PACKAGES=(
   "block/behavior:RendererBehavior"
   "contraption/api:ContraptionHitboxProvider ContraptionTickable ContraptionType ContraptionTypeRegistry PowerConsumer PowerSource"
   "contraption:ContraptionWorlds MovementBehavior MovementContext ContraptionInteractionListener"
+  "contraption/event:ContraptionAssembleEvent ContraptionAssembledEvent ContraptionBlockBreakEvent ContraptionBlockPlaceEvent ContraptionDisassembleEvent ContraptionDisassembledEvent ContraptionInteractEvent ContraptionMoveEvent ContraptionSpawnEvent"
 )
 
 # HTML header template
