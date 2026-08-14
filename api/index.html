@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>API Reference — CraftEngine Polyfills</title>
+<link rel="stylesheet" href="../docs/assets/style.css">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+</head>
+<body>
+<div class="topbar" role="banner">
+  <a href="../index.html" class="logo"><i data-lucide="code-2"></i> CraftEngine Polyfills <span class="badge">0.0.4</span></a>
+  <div class="spacer"></div>
+  <a href="../docs/getting-started.html">Docs</a>
+  <a href="index.html" style="color:var(--accent);font-weight:700">API</a>
+  <a href="https://github.com/Arubik/craft-engine-polyfills" class="gh-link"><i data-lucide="github"></i></a>
+</div>
+<div class="layout">
+<nav class="sidebar">
+  <div class="nav-section">
+    <div class="nav-section-header"><i data-lucide="package"></i> machine.render.formula</div>
+    <ul class="nav-items">
+      <li><a href="dev/arubik/craftengine/machine/render/formula/PolyFormula.html">PolyFormula</a></li>
+      <li><a href="dev/arubik/craftengine/machine/render/formula/PolyValue.html">PolyValue</a></li>
+      <li><a href="dev/arubik/craftengine/machine/render/formula/PolyContext.html">PolyContext</a></li>
+      <li><a href="dev/arubik/craftengine/machine/render/formula/PolyClass.html">PolyClass</a></li>
+      <li><a href="dev/arubik/craftengine/machine/render/formula/PolyScript.html">PolyScript</a></li>
+    </ul>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-header"><i data-lucide="package"></i> machine.render</div>
+    <ul class="nav-items">
+      <li><a href="dev/arubik/craftengine/machine/render/RendererSpec.html">RendererSpec</a></li>
+      <li><a href="dev/arubik/craftengine/machine/render/RendererManager.html">RendererManager</a></li>
+    </ul>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-header"><i data-lucide="package"></i> machine</div>
+    <ul class="nav-items">
+      <li><a href="dev/arubik/craftengine/machine/MachineDefinition.html">MachineDefinition</a></li>
+    </ul>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-header"><i data-lucide="package"></i> contraption.core</div>
+    <ul class="nav-items">
+      <li><a href="dev/arubik/craftengine/contraption/core/ContraptionEntity.html">ContraptionEntity</a></li>
+      <li><a href="dev/arubik/craftengine/contraption/core/ContraptionState.html">ContraptionState</a></li>
+    </ul>
+  </div>
+</nav>
+<main class="content">
+  <h1>API Reference</h1>
+  <p class="lead">JavaDoc-style class reference for CraftEngine Polyfills.</p>
+
+  <h2>dev.arubik.craftengine.machine.render.formula</h2>
+  <table class="ref-table">
+    <thead><tr><th>Class</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td><a href="dev/arubik/craftengine/machine/render/formula/PolyFormula.html"><code>PolyFormula</code></a></td><td>Typed expression engine — compile once, evaluate per tick.</td></tr>
+      <tr><td><a href="dev/arubik/craftengine/machine/render/formula/PolyValue.html"><code>PolyValue</code></a></td><td>Sealed union of all value types (Num, Bool, Item, Str, Array, Obj, Null).</td></tr>
+      <tr><td><a href="dev/arubik/craftengine/machine/render/formula/PolyContext.html"><code>PolyContext</code></a></td><td>Immutable evaluation scope — variables + registered PolyClasses.</td></tr>
+      <tr><td><a href="dev/arubik/craftengine/machine/render/formula/PolyClass.html"><code>PolyClass</code></a></td><td>Interface for namespace objects (Block, World, Inventory, etc).</td></tr>
+      <tr><td><a href="dev/arubik/craftengine/machine/render/formula/PolyScript.html"><code>PolyScript</code></a></td><td>Loads .pf script files with for/while/if and variable assignments.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>dev.arubik.craftengine.machine.render</h2>
+  <table class="ref-table">
+    <thead><tr><th>Class</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td><a href="dev/arubik/craftengine/machine/render/RendererSpec.html"><code>RendererSpec</code></a></td><td>Sealed interface with 9 renderer type records (BetterModel, Particle, etc).</td></tr>
+      <tr><td><a href="dev/arubik/craftengine/machine/render/RendererManager.html"><code>RendererManager</code></a></td><td>Runtime driver — ticks all renderers per-player via NMS packets.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>dev.arubik.craftengine.machine</h2>
+  <table class="ref-table">
+    <thead><tr><th>Class</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td><a href="dev/arubik/craftengine/machine/MachineDefinition.html"><code>MachineDefinition</code></a></td><td>Parsed machine JSON — slots, tanks, bars, upgrades, power, renderers.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>dev.arubik.craftengine.contraption.core</h2>
+  <table class="ref-table">
+    <thead><tr><th>Class</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td><a href="dev/arubik/craftengine/contraption/core/ContraptionEntity.html"><code>ContraptionEntity</code></a></td><td>Render facade — owns swarms, elements, culling, teleport.</td></tr>
+      <tr><td><a href="dev/arubik/craftengine/contraption/core/ContraptionState.html"><code>ContraptionState</code></a></td><td>Brain — block map, NBT, transform, seated riders, physics ID.</td></tr>
+    </tbody>
+  </table>
+</main>
+</div>
+<script>if(window.lucide) lucide.createIcons();</script>
+</body>
+</html>
