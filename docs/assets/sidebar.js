@@ -52,10 +52,12 @@
     ]},
   ];
 
-  // Determine base path for links (handle being in /docs/ or /docs/block-behaviors/)
+  // Determine base path: from /docs/ pages prefix='', from /docs/block-behaviors/ prefix='../'
+  // For links going to /api/ (start with ../), add extra ../ when in subdir
   const path = window.location.pathname;
   const inSubdir = path.includes('/block-behaviors/');
-  const prefix = inSubdir ? '../' : '';
+  const prefix = inSubdir ? '../' : '';  // for docs-internal links
+  const rootPrefix = inSubdir ? '../../' : '../';  // for links going to /api/ or /index.html
 
   const nav = document.querySelector('.sidebar');
   if (!nav) return;
@@ -66,7 +68,13 @@
     html += `<div class="nav-section-header"><i data-lucide="${s.icon}"></i> ${s.title} <span class="caret">&#9660;</span></div>`;
     html += `<ul class="nav-items">`;
     s.items.forEach(item => {
-      const href = item.href.startsWith('../') ? item.href : prefix + item.href;
+      let href;
+      if (item.href.startsWith('../')) {
+        // Link goes outside /docs/ (e.g. ../api/index.html) — use rootPrefix
+        href = rootPrefix + item.href.substring(3); // strip ../ and prepend correct root
+      } else {
+        href = prefix + item.href;
+      }
       const active = path.endsWith(item.href.replace(prefix, '')) ? ' class="active"' : '';
       html += `<li><a href="${href}"${active}>${item.label}</a></li>`;
     });
