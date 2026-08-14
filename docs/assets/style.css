@@ -453,17 +453,6 @@ tbody td:first-child { font-family: var(--font-mono); font-size: 0.82rem; color:
 .cls { color: var(--orange); }
 .op  { color: var(--text); }
 
-/* ---- Page header strip ----------------------------------------------- */
-.page-header {
-  background: linear-gradient(180deg, var(--bg-2) 0%, transparent 100%);
-  border-bottom: 1px solid var(--border);
-  padding: 2rem 0 1.5rem;
-  margin: -2.5rem -3rem 2.5rem;
-  padding-left: 3rem;
-  padding-right: 3rem;
-}
-.page-header h1 { margin-bottom: 0.35rem; }
-.page-header .subtitle { color: var(--text-muted); font-size: 0.95rem; }
 
 /* ---- Responsive ------------------------------------------------------ */
 @media (max-width: 900px) {

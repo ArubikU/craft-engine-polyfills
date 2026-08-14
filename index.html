@@ -1,195 +1,166 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>CraftEngine Polyfills — Documentation</title>
-  <link rel="stylesheet" href="docs/assets/style.css" />
-  <style>
-    /* Landing page extra styles */
-    .hero {
-      text-align: center;
-      padding: 5rem 2rem 3rem;
-    }
-    .hero h1 { font-size: 2.6rem; margin-bottom: 1rem; }
-    .hero .sub { font-size: 1.15rem; color: var(--text-muted); max-width: 600px; margin: 0 auto 2.5rem; }
-    .hero .badges { display: flex; justify-content: center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 2.5rem; }
-    .hero-btn {
-      display: inline-flex; align-items: center; gap: 0.4rem;
-      padding: 0.65rem 1.4rem;
-      border-radius: 6px;
-      font-weight: 600;
-      font-size: 0.95rem;
-      text-decoration: none;
-      transition: filter 0.15s;
-    }
-    .hero-btn:hover { filter: brightness(1.12); }
-    .hero-btn.primary { background: var(--accent); color: #0d1117; }
-    .hero-btn.secondary { background: var(--bg-3); color: var(--text); border: 1px solid var(--border); }
-
-    .feature-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 1rem;
-      max-width: 960px;
-      margin: 0 auto 4rem;
-      padding: 0 1.5rem;
-    }
-    .feature-card {
-      background: var(--bg-2);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 1.25rem 1.1rem;
-      text-decoration: none;
-      color: var(--text);
-      transition: border-color 0.15s, background 0.15s;
-    }
-    .feature-card:hover { border-color: var(--accent); background: var(--bg-3); text-decoration: none; }
-    .feature-card .icon { font-size: 1.6rem; margin-bottom: 0.6rem; display: block; }
-    .feature-card h3 { font-size: 1rem; color: #e6edf3; margin-bottom: 0.35rem; }
-    .feature-card p  { font-size: 0.85rem; color: var(--text-muted); margin: 0; line-height: 1.5; }
-
-    .section-title {
-      text-align: center;
-      font-size: 1.6rem;
-      margin-bottom: 1.5rem;
-      color: #f0f6fc;
-    }
-    .divider { border: none; border-top: 1px solid var(--border); margin: 2rem auto; max-width: 960px; }
-
-    .no-sidebar .layout { display: block; }
-    .no-sidebar .sidebar { display: none; }
-    .no-sidebar .content { padding: 0; }
-  </style>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>CraftEngine Polyfills — Documentation</title>
+<link rel="stylesheet" href="docs/assets/style.css">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<style>
+  .hero { text-align: center; padding: 4rem 2rem 2rem; border-bottom: 1px solid var(--border); margin-bottom: 2rem; }
+  .hero h1 { font-size: 2.4rem; margin-top: 0; }
+  .hero .subtitle { color: var(--text-muted); font-size: 1.1rem; max-width: 640px; margin: 0.5rem auto 1.5rem; }
+  .hero-links { display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap; }
+  .hero-links a { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.5rem 1.2rem; border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 0.9rem; transition: border-color .2s, background .2s; }
+  .hero-links a:hover { border-color: var(--accent); background: rgba(88,166,255,0.05); text-decoration: none; }
+  .hero-links a.primary { background: var(--accent-dim); border-color: var(--accent); color: #fff; }
+  .hero-links a.primary:hover { background: var(--accent); }
+  .sections { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.5rem; padding: 0 2rem 3rem; max-width: 1100px; margin: 0 auto; }
+  .section-card { background: var(--bg-2); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; transition: border-color .2s; }
+  .section-card:hover { border-color: var(--accent); }
+  .section-card h3 { display: flex; align-items: center; gap: 0.5rem; font-size: 1rem; color: var(--accent); margin-bottom: 0.6rem; margin-top: 0; }
+  .section-card p { color: var(--text-muted); font-size: 0.85rem; margin-bottom: 0.8rem; }
+  .section-card ul { list-style: none; padding: 0; margin: 0; }
+  .section-card li { margin-bottom: 0.3rem; }
+  .section-card li a { color: var(--text); font-size: 0.85rem; display: flex; align-items: center; gap: 0.3rem; }
+  .section-card li a:hover { color: var(--accent); }
+  .section-card li a::before { content: '\2192'; color: var(--accent); font-size: 0.75rem; }
+  .search-global { max-width: 480px; margin: 0 auto 2rem; position: relative; }
+  .search-global input { width: 100%; padding: 0.7rem 1rem 0.7rem 2.5rem; background: var(--bg-2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 0.95rem; outline: none; }
+  .search-global input:focus { border-color: var(--accent); }
+  .search-global .icon { position: absolute; left: 0.8rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); }
+  .search-global .results { position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: var(--bg-2); border: 1px solid var(--border); border-radius: 8px; max-height: 400px; overflow-y: auto; display: none; z-index: 100; }
+  .search-global .results.show { display: block; }
+  .search-global .results a { display: block; padding: 0.6rem 1rem; color: var(--text); font-size: 0.85rem; border-bottom: 1px solid var(--border); text-decoration: none; }
+  .search-global .results a:last-child { border-bottom: none; }
+  .search-global .results a:hover { background: var(--bg-3); }
+  .search-global .results .path { color: var(--text-muted); font-size: 0.75rem; }
+  .search-global .results .title { color: var(--accent); }
+</style>
 </head>
-<body class="no-sidebar">
-
-<!-- Top bar -->
-<header class="topbar">
-  <button class="hamburger" id="hamburger" aria-label="Menu">&#9776;</button>
-  <a href="index.html" class="logo">
-    ⚙️ CraftEngine Polyfills <span class="badge">1.21.11</span>
-  </a>
+<body>
+<div class="topbar" role="banner">
+  <a href="index.html" class="logo"><i data-lucide="code-2"></i> CraftEngine Polyfills</a>
   <div class="spacer"></div>
-  <div class="search-wrap">
-    <span class="search-icon">&#128269;</span>
-    <input id="search" type="search" placeholder="Search docs…" autocomplete="off" />
-    <div id="search-results"></div>
-  </div>
-  <a href="https://github.com/Arubik/craft-engine-polyfills" class="gh-link">
-    &#128279; GitHub
-  </a>
-</header>
-
-<div class="layout">
-  <!-- Sidebar (hidden on landing, but kept for search) -->
-  <nav class="sidebar">
-    <div class="nav-section">
-      <div class="nav-section-header">&#128196; Getting Started <span class="caret">&#9660;</span></div>
-      <ul class="nav-items">
-        <li><a href="docs/getting-started.html">Introduction</a></li>
-      </ul>
-    </div>
-    <div class="nav-section">
-      <div class="nav-section-header">&#9881; Machines <span class="caret">&#9660;</span></div>
-      <ul class="nav-items">
-        <li><a href="docs/machines.html">JSON Config Reference</a></li>
-        <li><a href="docs/machines-api.html">Java API</a></li>
-        <li><a href="docs/upgrades.html">Upgrade System</a></li>
-        <li><a href="docs/bars.html">Bars &amp; Gauges</a></li>
-      </ul>
-    </div>
-    <div class="nav-section">
-      <div class="nav-section-header">&#128221; PolyFormula <span class="caret">&#9660;</span></div>
-      <ul class="nav-items">
-        <li><a href="docs/polyformula.html">Language Reference</a></li>
-        <li><a href="docs/renderers.html">Renderer System</a></li>
-      </ul>
-    </div>
-    <div class="nav-section">
-      <div class="nav-section-header">&#128260; Contraptions <span class="caret">&#9660;</span></div>
-      <ul class="nav-items">
-        <li><a href="docs/contraptions.html">Contraption System</a></li>
-      </ul>
-    </div>
-    <div class="nav-section">
-      <div class="nav-section-header">&#127795; Fluids &amp; Pipes <span class="caret">&#9660;</span></div>
-      <ul class="nav-items">
-        <li><a href="docs/pipes-fluids.html">Pipes, Fluids &amp; Gas</a></li>
-      </ul>
-    </div>
-  </nav>
-
-  <main class="content" style="background:var(--bg);">
-    <!-- Hero -->
-    <section class="hero">
-      <h1>CraftEngine Polyfills</h1>
-      <p class="sub">
-        A Paper 1.21.11 plugin that extends CraftEngine with data-driven machines,
-        multiblocks, contraptions, fluid pipe networks, and the PolyFormula scripting engine.
-      </p>
-      <div class="badges">
-        <span class="badge badge-blue">Paper 1.21.11</span>
-        <span class="badge badge-green">CraftEngine 0.7+</span>
-        <span class="badge badge-yellow">Java 21</span>
-        <span class="badge badge-blue">BetterModel support</span>
-      </div>
-      <div style="display:flex;justify-content:center;gap:1rem;flex-wrap:wrap;">
-        <a href="docs/getting-started.html" class="hero-btn primary">&#128214; Get Started</a>
-        <a href="docs/machines.html" class="hero-btn secondary">&#9881; Machine Config</a>
-        <a href="docs/polyformula.html" class="hero-btn secondary">&#128221; PolyFormula</a>
-      </div>
-    </section>
-
-    <hr class="divider" />
-
-    <!-- Feature cards -->
-    <h2 class="section-title">What's included</h2>
-    <div class="feature-grid">
-      <a href="docs/machines.html" class="feature-card">
-        <span class="icon">&#9881;</span>
-        <h3>Data-Driven Machines</h3>
-        <p>Define machines entirely in JSON — slots, tanks, upgrades, recipes, gauges and renderers. No Java required.</p>
-      </a>
-      <a href="docs/polyformula.html" class="feature-card">
-        <span class="icon">&#128221;</span>
-        <h3>PolyFormula Engine</h3>
-        <p>80+ built-in functions, PolyClasses (Inventory, Machine, World, Player…), .pf scripts with if/for, compiled per-tick.</p>
-      </a>
-      <a href="docs/renderers.html" class="feature-card">
-        <span class="icon">&#127909;</span>
-        <h3>Renderer System</h3>
-        <p>BetterModel, ModelEngine, ItemDisplay, TextDisplay, BlockDisplay, Particle, Sound — all formula-driven.</p>
-      </a>
-      <a href="docs/contraptions.html" class="feature-card">
-        <span class="icon">&#128260;</span>
-        <h3>Contraption System</h3>
-        <p>Moving structures with XPBD physics, bearing blocks, piston bearings, vehicle control and entity culling.</p>
-      </a>
-      <a href="docs/pipes-fluids.html" class="feature-card">
-        <span class="icon">&#127795;</span>
-        <h3>Fluid &amp; Gas Networks</h3>
-        <p>Graph-solved pipe networks with pressure, conductance, tanks, valves, pumps, and visual fill indicators.</p>
-      </a>
-      <a href="docs/upgrades.html" class="feature-card">
-        <span class="icon">&#128200;</span>
-        <h3>Upgrade System</h3>
-        <p>Mojang-style attribute modifiers (ADD / MULTIPLY_BASE / MULTIPLY_TOTAL) with per-machine upgrade slot grids.</p>
-      </a>
-      <a href="docs/bars.html" class="feature-card">
-        <span class="icon">&#128202;</span>
-        <h3>Bars &amp; Gauges</h3>
-        <p>Progress bars, fuel meters, fluid and gas level indicators — defined in bars/*.json, referenced by machine JSON.</p>
-      </a>
-      <a href="docs/machines-api.html" class="feature-card">
-        <span class="icon">&#128196;</span>
-        <h3>Java API</h3>
-        <p>DataMachineBlockEntity, MachineDefinition, RendererManager — full class and method documentation.</p>
-      </a>
-    </div>
-  </main>
+  <a href="docs/getting-started.html" style="color:var(--text-muted);font-size:0.9rem">Docs</a>
+  <a href="api/index.html" style="color:var(--text-muted);font-size:0.9rem">API</a>
+  <a href="https://github.com/Arubik/craft-engine-polyfills" class="gh-link"><i data-lucide="github"></i></a>
 </div>
-
-<script src="docs/assets/main.js"></script>
+<div style="margin-top:var(--topbar-h)">
+  <div class="hero">
+    <h1>CraftEngine Polyfills</h1>
+    <p class="subtitle">Data-driven extension layer for CraftEngine — machines, contraptions, fluids, and a full PolyFormula scripting engine. Paper 1.21.11.</p>
+    <div class="hero-links">
+      <a href="docs/getting-started.html" class="primary"><i data-lucide="book-open" width="16" height="16"></i> Getting Started</a>
+      <a href="api/index.html"><i data-lucide="file-code" width="16" height="16"></i> API Reference</a>
+      <a href="https://github.com/Arubik/craft-engine-polyfills"><i data-lucide="github" width="16" height="16"></i> Source</a>
+    </div>
+  </div>
+  <div class="search-global">
+    <span class="icon"><i data-lucide="search" width="16" height="16"></i></span>
+    <input id="global-search" type="search" placeholder="Search docs, API classes, behaviors..." autocomplete="off">
+    <div class="results" id="global-results"></div>
+  </div>
+  <div class="sections">
+    <div class="section-card">
+      <h3><i data-lucide="terminal" width="18" height="18"></i> PolyFormula Engine</h3>
+      <p>Typed expression engine — 80+ builtins, 20 PolyClasses, .pf scripts with for/while loops.</p>
+      <ul>
+        <li><a href="docs/polyformula.html">Language Reference</a></li>
+        <li><a href="api/dev/arubik/craftengine/machine/render/formula/PolyFormula.html">PolyFormula API</a></li>
+        <li><a href="api/dev/arubik/craftengine/machine/render/formula/PolyValue.html">PolyValue API</a></li>
+      </ul>
+    </div>
+    <div class="section-card">
+      <h3><i data-lucide="layers" width="18" height="18"></i> Renderer System</h3>
+      <p>9 renderer types — BetterModel, particles, item/text/block displays, sounds, armor stands.</p>
+      <ul>
+        <li><a href="docs/renderers.html">Config Reference</a></li>
+        <li><a href="api/dev/arubik/craftengine/machine/render/RendererSpec.html">RendererSpec API</a></li>
+        <li><a href="api/dev/arubik/craftengine/machine/render/RendererManager.html">RendererManager API</a></li>
+      </ul>
+    </div>
+    <div class="section-card">
+      <h3><i data-lucide="cpu" width="18" height="18"></i> Machines</h3>
+      <p>Data-driven machines with upgrades, multi-page menus, fluid/gas tanks, overclock.</p>
+      <ul>
+        <li><a href="docs/machines.html">JSON Config Reference</a></li>
+        <li><a href="docs/upgrades.html">Upgrade System</a></li>
+        <li><a href="docs/bars.html">Gauges &amp; Bars</a></li>
+      </ul>
+    </div>
+    <div class="section-card">
+      <h3><i data-lucide="puzzle" width="18" height="18"></i> Block Behaviors</h3>
+      <p>28 custom behaviors — pipes, fans, pumps, crops, redstone logic, renderer, storage.</p>
+      <ul>
+        <li><a href="docs/block-behaviors.html">Overview</a></li>
+        <li><a href="docs/block-behaviors/renderer.html">polyfills:renderer</a></li>
+        <li><a href="docs/block-behaviors/data-machine.html">polyfills:data_machine</a></li>
+      </ul>
+    </div>
+    <div class="section-card">
+      <h3><i data-lucide="box" width="18" height="18"></i> Contraptions</h3>
+      <p>Moving structures — XPBD physics, entity culling, fluid rendering, machine elements.</p>
+      <ul>
+        <li><a href="docs/contraptions.html">System Overview</a></li>
+        <li><a href="api/dev/arubik/craftengine/contraption/core/ContraptionEntity.html">ContraptionEntity API</a></li>
+      </ul>
+    </div>
+    <div class="section-card">
+      <h3><i data-lucide="droplets" width="18" height="18"></i> Fluids &amp; Pipes</h3>
+      <p>8 fluid types, 4 gas types, pipe networks with pressure/conductance, pumps, valves.</p>
+      <ul>
+        <li><a href="docs/pipes-fluids.html">Network Reference</a></li>
+        <li><a href="api/dev/arubik/craftengine/fluid/FluidTank.html">FluidTank API</a></li>
+      </ul>
+    </div>
+  </div>
+</div>
+<script>
+const searchIndex=[
+{title:"Getting Started",path:"docs/getting-started.html",tags:"install setup requirements"},
+{title:"PolyFormula Engine",path:"docs/polyformula.html",tags:"expression formula scripting variable condition"},
+{title:"Renderer System",path:"docs/renderers.html",tags:"bettermodel particle item_display text_display sound"},
+{title:"Machine Config",path:"docs/machines.html",tags:"json slots tanks bars buttons paging"},
+{title:"Upgrades",path:"docs/upgrades.html",tags:"upgrade attribute generation overclock fuel_efficiency"},
+{title:"Bars",path:"docs/bars.html",tags:"progress fuel fluid gas bar gauge"},
+{title:"Contraptions",path:"docs/contraptions.html",tags:"contraption physics entity_culling fluid_render"},
+{title:"Pipes & Fluids",path:"docs/pipes-fluids.html",tags:"pipe fluid gas network pump valve tank"},
+{title:"Block Behaviors",path:"docs/block-behaviors.html",tags:"behavior polyfills fan spike magnet bubble renderer"},
+{title:"polyfills:renderer",path:"docs/block-behaviors/renderer.html",tags:"renderer particle display formula"},
+{title:"polyfills:data_machine",path:"docs/block-behaviors/data-machine.html",tags:"machine data_machine recipe"},
+{title:"polyfills:gas_pump",path:"docs/block-behaviors/gas-pump.html",tags:"gas pump nitrogen extraction"},
+{title:"polyfills:pipe_block",path:"docs/block-behaviors/pipe-block.html",tags:"pipe fluid gas network"},
+{title:"polyfills:fan_block",path:"docs/block-behaviors/fan-block.html",tags:"fan wind propel blast"},
+{title:"PolyFormula",path:"api/dev/arubik/craftengine/machine/render/formula/PolyFormula.html",tags:"compile evaluate formula expression"},
+{title:"PolyValue",path:"api/dev/arubik/craftengine/machine/render/formula/PolyValue.html",tags:"num bool item str array obj null value"},
+{title:"PolyContext",path:"api/dev/arubik/craftengine/machine/render/formula/PolyContext.html",tags:"context builder variables classes"},
+{title:"RendererSpec",path:"api/dev/arubik/craftengine/machine/render/RendererSpec.html",tags:"renderer spec bettermodel particle sound"},
+{title:"RendererManager",path:"api/dev/arubik/craftengine/machine/render/RendererManager.html",tags:"manager tick nms packets"},
+{title:"MachineDefinition",path:"api/dev/arubik/craftengine/machine/MachineDefinition.html",tags:"machine definition slots tanks"},
+{title:"ContraptionEntity",path:"api/dev/arubik/craftengine/contraption/core/ContraptionEntity.html",tags:"contraption entity render swarm"},
+{title:"ContraptionState",path:"api/dev/arubik/craftengine/contraption/core/ContraptionState.html",tags:"state anchor transform riders"},
+{title:"BlockClass",path:"api/dev/arubik/craftengine/machine/render/formula/BlockClass.html",tags:"block nbt redstone property"},
+{title:"WorldClass",path:"api/dev/arubik/craftengine/machine/render/formula/WorldClass.html",tags:"world time weather biome entities"},
+{title:"PlayerClass",path:"api/dev/arubik/craftengine/machine/render/formula/PlayerClass.html",tags:"player health inventory permission"},
+{title:"ItemClass",path:"api/dev/arubik/craftengine/machine/render/formula/ItemClass.html",tags:"item amount name lore enchant tag"},
+{title:"MachineClass",path:"api/dev/arubik/craftengine/machine/render/formula/MachineClass.html",tags:"machine facing player_facing player_in_range"},
+{title:"InventoryClass",path:"api/dev/arubik/craftengine/machine/render/formula/InventoryClass.html",tags:"inventory slot count_of has"},
+{title:"ContraptionClass",path:"api/dev/arubik/craftengine/machine/render/formula/ContraptionClass.html",tags:"contraption speed riders yaw pitch roll"},
+{title:"FluidTank",path:"api/dev/arubik/craftengine/fluid/FluidTank.html",tags:"fluid tank capacity level"},
+{title:"GasTank",path:"api/dev/arubik/craftengine/gas/GasTank.html",tags:"gas tank capacity level"},
+];
+const input=document.getElementById('global-search');
+const results=document.getElementById('global-results');
+input.addEventListener('input',()=>{
+  const q=input.value.toLowerCase().trim();
+  if(!q){results.classList.remove('show');return;}
+  const m=searchIndex.filter(e=>e.title.toLowerCase().includes(q)||e.tags.includes(q)).slice(0,12);
+  if(!m.length){results.classList.remove('show');return;}
+  results.innerHTML=m.map(e=>`<a href="${e.path}"><span class="title">${e.title}</span><br><span class="path">${e.path}</span></a>`).join('');
+  results.classList.add('show');
+});
+input.addEventListener('blur',()=>setTimeout(()=>results.classList.remove('show'),200));
+</script>
+<script>if(window.lucide) lucide.createIcons();</script>
 </body>
 </html>
