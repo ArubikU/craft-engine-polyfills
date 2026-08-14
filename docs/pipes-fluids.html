@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pipes, Fluids &amp; Gas — CraftEngine Polyfills</title>
+  <link rel="stylesheet" href="assets/style.css" />
+</head>
+<body>
+<header class="topbar">
+  <button class="hamburger" id="hamburger" aria-label="Menu">&#9776;</button>
+  <a href="../index.html" class="logo">⚙️ CraftEngine Polyfills <span class="badge">1.21.11</span></a>
+  <div class="spacer"></div>
+  <div class="search-wrap">
+    <span class="search-icon">&#128269;</span>
+    <input id="search" type="search" placeholder="Search docs…" autocomplete="off" />
+    <div id="search-results"></div>
+  </div>
+  <a href="https://github.com/Arubik/craft-engine-polyfills" class="gh-link">&#128279; GitHub</a>
+</header>
+<div class="layout">
+  <nav class="sidebar">
+    <div class="nav-section">
+      <div class="nav-section-header">&#128196; Getting Started <span class="caret">&#9660;</span></div>
+      <ul class="nav-items"><li><a href="getting-started.html">Introduction</a></li></ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header">&#9881; Machines <span class="caret">&#9660;</span></div>
+      <ul class="nav-items">
+        <li><a href="machines.html">JSON Config Reference</a></li>
+        <li><a href="machines-api.html">Java API</a></li>
+        <li><a href="upgrades.html">Upgrade System</a></li>
+        <li><a href="bars.html">Bars &amp; Gauges</a></li>
+      </ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header">&#128221; PolyFormula <span class="caret">&#9660;</span></div>
+      <ul class="nav-items">
+        <li><a href="polyformula.html">Language Reference</a></li>
+        <li><a href="renderers.html">Renderer System</a></li>
+      </ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header">&#128260; Contraptions <span class="caret">&#9660;</span></div>
+      <ul class="nav-items"><li><a href="contraptions.html">Contraption System</a></li></ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header">&#127795; Fluids &amp; Pipes <span class="caret">&#9660;</span></div>
+      <ul class="nav-items"><li><a href="pipes-fluids.html">Pipes, Fluids &amp; Gas</a></li></ul>
+    </div>
+  </nav>
+  <main class="content">
+    <div class="content-inner">
+      <div class="breadcrumbs"><a href="../index.html">Home</a><span>/</span>Pipes, Fluids &amp; Gas</div>
+
+      <div class="page-header">
+        <h1>Pipes, Fluids &amp; Gas</h1>
+        <p class="subtitle">Graph-solved pressure networks: pipe types, fluid types, gas types, tanks, valves, and pumps.</p>
+      </div>
+
+      <h2 id="overview">Network Architecture</h2>
+      <p>The fluid and gas network is modeled as a <strong>graph</strong> where:</p>
+      <ul>
+        <li><strong>Nodes</strong> are tanks, machines with tanks, valves, and pumps.</li>
+        <li><strong>Edges</strong> are pipe connections between adjacent nodes.</li>
+        <li>Each tick, the <code>FluidNetworkSolver</code> runs a pressure-based flow algorithm — fluid flows from high-pressure nodes to low-pressure nodes along edges, up to each edge's <code>transfer_per_tick</code> capacity.</li>
+      </ul>
+      <p>Gas networks use the same graph structure and solver as fluid networks.</p>
+
+      <h2 id="pipe-types">Pipe Types</h2>
+      <p>Pipe types are defined in <code>plugins/CraftEnginePolyfills/pipe_types/*.json</code>.</p>
+      <pre data-lang="json"><code>{
+  "id": "polyfills:copper",
+  "block": "cml:copper_pipe",
+  "resource": "fluid",
+  "capacity": 1000,
+  "transfer_per_tick": 100,
+  "conductance": 1000.0,
+  "tier": 1,
+  "connects_to": [
+    "cml:copper_valve",
+    "cml:copper_tank",
+    "cml:fluid_block_tank"
+  ],
+  "preview_namespace": "cml",
+  "preview_prefix": "pipe_preview_copper",
+  "mask_order": ["south", "west", "north", "east", "up", "down"],
+  "preview_offset": [0.5, 0.5, 0.5],
+  "preview_scale": 1.0,
+  "replaceable_blocks": [
+    "minecraft:air", "minecraft:cave_air", "minecraft:void_air",
+    "minecraft:water", "minecraft:lava"
+  ]
+}</code></pre>
+
+      <div class="table-wrap"><table>
+        <thead><tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>id</td><td>Key</td><td>Required</td><td>Namespaced pipe type ID.</td></tr>
+          <tr><td>block</td><td>Str</td><td>Required</td><td>CE block ID that represents this pipe in the world.</td></tr>
+          <tr><td>resource</td><td>Str</td><td><code>"fluid"</code></td><td><code>"fluid"</code> or <code>"gas"</code>. Determines which network type this pipe belongs to.</td></tr>
+          <tr><td>capacity</td><td>Int</td><td>Required</td><td>Internal buffer capacity in mB.</td></tr>
+          <tr><td>transfer_per_tick</td><td>Int</td><td>Required</td><td>Maximum mB transferred per game tick across this pipe segment.</td></tr>
+          <tr><td>conductance</td><td>Float</td><td>1000.0</td><td>Flow conductance (inverse of resistance). Higher = fluid flows through more easily.</td></tr>
+          <tr><td>tier</td><td>Int</td><td>1</td><td>Tier level; higher-tier pipes can only connect to same or compatible tiers.</td></tr>
+          <tr><td>connects_to</td><td>Array&lt;Str&gt;</td><td><code>[]</code></td><td>CE block IDs of tanks, valves, and other endpoints this pipe can connect to.</td></tr>
+          <tr><td>preview_namespace / preview_prefix</td><td>Str</td><td>—</td><td>Block ID namespace and prefix for connection preview models (ghost blocks shown when placing).</td></tr>
+          <tr><td>mask_order</td><td>Array&lt;Str&gt;</td><td>—</td><td>Face order for the pipe connection bitmask. Controls which model variant is chosen.</td></tr>
+          <tr><td>preview_offset</td><td>Array[3]</td><td>[0.5,0.5,0.5]</td><td>Centre offset for preview model rendering.</td></tr>
+          <tr><td>preview_scale</td><td>Float</td><td>1.0</td><td>Scale of preview model.</td></tr>
+          <tr><td>replaceable_blocks</td><td>Array&lt;Str&gt;</td><td>—</td><td>Blocks that can be automatically replaced when placing pipes (air, water, tall grass etc).</td></tr>
+        </tbody>
+      </table></div>
+
+      <h2 id="fluid-types">Fluid Types</h2>
+      <p>Fluid types are defined in <code>plugins/CraftEnginePolyfills/fluid_types/*.json</code>.</p>
+      <pre data-lang="json"><code>{
+  "id": "polyfills:water",
+  "unit_mb": 1000,
+  "mb_per_full_block": 1000,
+  "block_collect_delay": 4,
+  "carrier_io_delay": 2,
+  "render_family": "water",
+  "tank_variant": "water",
+  "color": "#3F76E4",
+  "density": 1.0,
+  "viscosity": 1.0,
+  "fill_sound": "minecraft:item.bucket.empty",
+  "drain_sound": "minecraft:item.bucket.fill",
+  "vanilla_fluid": "minecraft:water",
+  "translation_key": "polyfill.liquid.water",
+  "contraption_item_pattern": "cml:fluidlvl_water_{level}"
+}</code></pre>
+
+      <div class="table-wrap"><table>
+        <thead><tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>id</td><td>Key</td><td>Required</td><td>Namespaced fluid type ID.</td></tr>
+          <tr><td>unit_mb</td><td>Int</td><td>1000</td><td>mB per "unit" for display purposes (e.g. 1 bucket = 1000 mB).</td></tr>
+          <tr><td>mb_per_full_block</td><td>Int</td><td>1000</td><td>mB collected when draining a full source block from the world.</td></tr>
+          <tr><td>block_collect_delay</td><td>Int</td><td>4</td><td>Ticks between world-block collection attempts by a pump.</td></tr>
+          <tr><td>carrier_io_delay</td><td>Int</td><td>2</td><td>Ticks between bucket/bottle transfer attempts at a carrier block.</td></tr>
+          <tr><td>render_family</td><td>Str</td><td>—</td><td>Texture family used for fluid rendering inside tanks and contraptions.</td></tr>
+          <tr><td>tank_variant</td><td>Str</td><td>—</td><td>Tank model variant key used in BetterModel or CE item tank rendering.</td></tr>
+          <tr><td>color</td><td>Str</td><td>—</td><td>Hex color for UI tinting (#RRGGBB).</td></tr>
+          <tr><td>density</td><td>Float</td><td>1.0</td><td>Fluid density relative to water. Affects pressure in height calculations.</td></tr>
+          <tr><td>viscosity</td><td>Float</td><td>1.0</td><td>Flow resistance multiplier (higher = flows slower through pipes).</td></tr>
+          <tr><td>fill_sound</td><td>Str</td><td>—</td><td>Sound played when filling a container with this fluid.</td></tr>
+          <tr><td>drain_sound</td><td>Str</td><td>—</td><td>Sound played when draining.</td></tr>
+          <tr><td>vanilla_fluid</td><td>Str</td><td>null</td><td>Minecraft fluid this maps to for world interaction (e.g. <code>"minecraft:water"</code>).</td></tr>
+          <tr><td>translation_key</td><td>Str</td><td>—</td><td>Lang key for the fluid's display name.</td></tr>
+          <tr><td>contraption_item_pattern</td><td>Str</td><td>null</td><td>CE item ID pattern for fluid level indicators inside contraptions. <code>{level}</code> is replaced with 0–8.</td></tr>
+        </tbody>
+      </table></div>
+
+      <h2 id="gas-types">Gas Types</h2>
+      <p>Gas types are defined in <code>plugins/CraftEnginePolyfills/gas_types/*.json</code>. Same format as fluid types with identical fields. Gases use a separate solver but the same graph structure.</p>
+
+      <h3>Built-in Gas Types</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>ID</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>polyfills:steam</td><td>Steam produced by the vapor furnace. High temperature, medium viscosity.</td></tr>
+          <tr><td>polyfills:heavy_steam</td><td>Dense high-pressure steam variant.</td></tr>
+          <tr><td>polyfills:nitrogen</td><td>Inert gas used in industrial refinery processes.</td></tr>
+        </tbody>
+      </table></div>
+
+      <h2 id="fluid-interactions">Fluid Interactions</h2>
+      <p>Fluid interactions define how a player with a bucket or bottle interacts with a fluid carrier block. They live in <code>plugins/CraftEnginePolyfills/fluid_interactions/*.json</code>.</p>
+      <pre data-lang="json"><code>{
+  "type": "fill",
+  "fluid": "polyfills:water",
+  "item_in":  "minecraft:water_bucket",
+  "item_out": "minecraft:bucket",
+  "amount":   1000
+}</code></pre>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Key</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>type</td><td><code>"fill"</code> — player adds fluid to the carrier. <code>"drain"</code> — player takes fluid from the carrier.</td></tr>
+          <tr><td>fluid</td><td>Fluid type being transferred.</td></tr>
+          <tr><td>item_in</td><td>Item the player must be holding.</td></tr>
+          <tr><td>item_out</td><td>Item returned to the player after the interaction.</td></tr>
+          <tr><td>amount</td><td>mB transferred.</td></tr>
+        </tbody>
+      </table></div>
+
+      <h2 id="pumps">Pumps</h2>
+      <p>Pump definitions live in <code>plugins/CraftEnginePolyfills/pumps/*.json</code>. A pump is a machine that actively moves fluid from a source to a destination against gravity using fuel.</p>
+      <pre data-lang="json"><code>{
+  "id": "polyfills:machine_pump",
+  "block": "cml:machine_pump",
+  "fuel_type": "machine_pump",
+  "max_height": 16,
+  "collect_radius": 1
+}</code></pre>
+
+      <h2 id="fluid-tank-java">FluidTank Java API</h2>
+      <div class="class-block">
+        <div class="class-sig"><span class="kw">public class</span> <span class="cls">FluidTank</span>
+          <span class="ext">// package: dev.arubik.craftengine.fluid</span>
+        </div>
+      </div>
+      <div class="api-block">
+        <div class="api-header">
+          <div class="api-sig"><span class="kw">public</span> <span class="cls">FluidTank</span>(String name, int capacity)<br/>
+<span class="kw">public</span> <span class="cls">FluidTank</span>(String name, int capacity, <span class="cls">FluidType</span> filter)</div>
+        </div>
+        <div class="api-body"><p>Create a new fluid tank with optional filter.</p></div>
+      </div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Method</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>name()</td><td>String</td><td>Tank name identifier.</td></tr>
+          <tr><td>getLevel()</td><td>int</td><td>Current fill in mB.</td></tr>
+          <tr><td>getCapacity()</td><td>int</td><td>Maximum capacity in mB.</td></tr>
+          <tr><td>getFraction()</td><td>float</td><td>Fill fraction 0.0–1.0.</td></tr>
+          <tr><td>isEmpty()</td><td>boolean</td><td>True when level == 0.</td></tr>
+          <tr><td>isFull()</td><td>boolean</td><td>True when level == capacity.</td></tr>
+          <tr><td>getFluidType()</td><td>FluidType</td><td>Current stored fluid type, or null if empty.</td></tr>
+          <tr><td>getFilter()</td><td>FluidType</td><td>Accepted fluid type, or null for unfiltered.</td></tr>
+          <tr><td>canAccept(FluidType)</td><td>boolean</td><td>True if the tank can accept this fluid (matches filter or is empty and unfiltered).</td></tr>
+          <tr><td>fill(FluidStack, bool simulate)</td><td>int</td><td>Fill tank; returns amount actually filled. Pass simulate=true to dry-run.</td></tr>
+          <tr><td>drain(int amount, bool simulate)</td><td>FluidStack</td><td>Drain up to amount mB; returns drained stack.</td></tr>
+        </tbody>
+      </table></div>
+
+      <h2 id="gas-tank-java">GasTank Java API</h2>
+      <p>Identical interface to <code>FluidTank</code> but for gas. Package: <code>dev.arubik.craftengine.gas</code>.</p>
+
+      <h2 id="network-solver">Network Solver</h2>
+      <div class="class-block">
+        <div class="class-sig"><span class="kw">public class</span> <span class="cls">FluidNetworkSolver</span>
+          <span class="ext">// package: dev.arubik.craftengine.fluid.graph</span>
+        </div>
+        <p>Solves one fluid network graph per tick using a pressure-gradient algorithm. The solver:</p>
+        <ol>
+          <li>Assigns a pressure value to each node based on its fill level and height (density × height × gravity).</li>
+          <li>For each edge (pipe), computes flow = conductance × Δpressure, clamped to transfer_per_tick.</li>
+          <li>Applies flows atomically to avoid oscillation.</li>
+        </ol>
+      </div>
+
+      <h2 id="block-behaviors">Block Behaviors</h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Behavior</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>PipeBehavior</td><td>Marks a block as a pipe segment. Handles connection state updates.</td></tr>
+          <tr><td>TankBlockBehavior</td><td>A standalone tank block. Exposes a FluidTank or GasTank node to the network.</td></tr>
+          <tr><td>FluidBlockTankBehavior</td><td>Drains/fills vanilla fluid blocks (source water/lava) from the world.</td></tr>
+          <tr><td>ValveBehavior</td><td>Controllable gate valve. Redstone signal opens/closes the connection.</td></tr>
+          <tr><td>PumpBehavior</td><td>Actively pumps fluid from source to destination using fuel.</td></tr>
+          <tr><td>MachinePumpBehavior</td><td>Machine variant that uses the machine's fuel system.</td></tr>
+          <tr><td>FluidCarrier</td><td>Block that accepts bucket/bottle interactions based on fluid_interactions/*.json.</td></tr>
+          <tr><td>FluidDisplay</td><td>Renders a fluid level indicator (fill animation) on the block.</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+  </main>
+</div>
+<script src="assets/main.js"></script>
+</body>
+</html>

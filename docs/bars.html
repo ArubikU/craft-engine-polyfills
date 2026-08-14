@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bars &amp; Gauges — CraftEngine Polyfills</title>
+  <link rel="stylesheet" href="assets/style.css" />
+</head>
+<body>
+<header class="topbar">
+  <button class="hamburger" id="hamburger" aria-label="Menu">&#9776;</button>
+  <a href="../index.html" class="logo">⚙️ CraftEngine Polyfills <span class="badge">1.21.11</span></a>
+  <div class="spacer"></div>
+  <div class="search-wrap">
+    <span class="search-icon">&#128269;</span>
+    <input id="search" type="search" placeholder="Search docs…" autocomplete="off" />
+    <div id="search-results"></div>
+  </div>
+  <a href="https://github.com/Arubik/craft-engine-polyfills" class="gh-link">&#128279; GitHub</a>
+</header>
+<div class="layout">
+  <nav class="sidebar">
+    <div class="nav-section">
+      <div class="nav-section-header">&#128196; Getting Started <span class="caret">&#9660;</span></div>
+      <ul class="nav-items"><li><a href="getting-started.html">Introduction</a></li></ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header">&#9881; Machines <span class="caret">&#9660;</span></div>
+      <ul class="nav-items">
+        <li><a href="machines.html">JSON Config Reference</a></li>
+        <li><a href="machines-api.html">Java API</a></li>
+        <li><a href="upgrades.html">Upgrade System</a></li>
+        <li><a href="bars.html">Bars &amp; Gauges</a></li>
+      </ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header">&#128221; PolyFormula <span class="caret">&#9660;</span></div>
+      <ul class="nav-items">
+        <li><a href="polyformula.html">Language Reference</a></li>
+        <li><a href="renderers.html">Renderer System</a></li>
+      </ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header">&#128260; Contraptions <span class="caret">&#9660;</span></div>
+      <ul class="nav-items"><li><a href="contraptions.html">Contraption System</a></li></ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header">&#127795; Fluids &amp; Pipes <span class="caret">&#9660;</span></div>
+      <ul class="nav-items"><li><a href="pipes-fluids.html">Pipes, Fluids &amp; Gas</a></li></ul>
+    </div>
+  </nav>
+  <main class="content">
+    <div class="content-inner">
+      <div class="breadcrumbs"><a href="../index.html">Home</a><span>/</span><a href="machines.html">Machines</a><span>/</span>Bars &amp; Gauges</div>
+
+      <div class="page-header">
+        <h1>Bars &amp; Gauges</h1>
+        <p class="subtitle">Progress indicators, fuel meters, fluid level and gas gauges — defined in bars/*.json and referenced by machine JSON.</p>
+      </div>
+
+      <h2 id="overview">Overview</h2>
+      <p>A <strong>bar</strong> is a multi-level visual gauge that occupies one or more menu slots. The server selects which item to display in each slot based on the current fill level, cycling through a set of pre-rendered icons.</p>
+      <p>Bars are defined in <code>plugins/CraftEnginePolyfills/bars/*.json</code> and referenced by their ID in machine definitions under the <code>"bars"</code> array.</p>
+
+      <h2 id="bar-file-format">Bar File Format</h2>
+      <pre data-lang="json"><code>{
+  "id": "polyfills:progress",
+  "model": "row",
+  "name": "lang:polyfill.ui.progress",
+  "generate": {
+    "empty_icon": "cml:gui_empty",
+    "lore": ["%percent%%"],
+    "parts": [ { "levels": 16 } ],
+    "types": { "default": "cml:progress_%level%" }
+  }
+}</code></pre>
+
+      <div class="table-wrap"><table>
+        <thead><tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>id</td><td>Key</td><td>Required</td><td>Namespaced bar ID referenced in machine definitions.</td></tr>
+          <tr><td>model</td><td>Str</td><td><code>"row"</code></td><td>Layout model. <code>"row"</code> = single horizontal row of items. <code>"column"</code> = vertical column.</td></tr>
+          <tr><td>name</td><td>Str</td><td><code>""</code></td><td>Display name for the bar (lang key or literal).</td></tr>
+          <tr><td>generate</td><td>Object</td><td>Required</td><td>Icon generation spec. See below.</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3 id="generate-spec">Generate Spec</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Key</th><th>Type</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>empty_icon</td><td>Str</td><td>CE item ID for empty/zero-level slots.</td></tr>
+          <tr><td>lore</td><td>Array&lt;Str&gt;</td><td>Tooltip lines. <code>%percent%</code> is replaced with fill percent, <code>%level%</code> with current level index.</td></tr>
+          <tr><td>parts</td><td>Array</td><td>List of bar segment definitions. Each has a <code>levels</code> count (number of icon levels for this segment).</td></tr>
+          <tr><td>types</td><td>Object</td><td>Icon patterns. Key <code>"default"</code> applies to all segments unless a segment-specific key is given. Value is a CE item ID pattern where <code>%level%</code> is substituted.</td></tr>
+        </tbody>
+      </table></div>
+
+      <h2 id="builtin-bars">Built-in Bars</h2>
+      <p>These bars are shipped with the plugin and can be referenced directly in machine JSON:</p>
+
+      <h3>polyfills:progress</h3>
+      <pre data-lang="json"><code>{
+  "id": "polyfills:progress",
+  "model": "row",
+  "name": "lang:polyfill.ui.progress",
+  "generate": {
+    "empty_icon": "cml:gui_empty",
+    "lore": ["%percent%%"],
+    "parts": [ { "levels": 16 } ],
+    "types": { "default": "cml:progress_%level%" }
+  }
+}</code></pre>
+      <p>16-level progress bar. Reference as <code>"source": "progress"</code>.</p>
+
+      <h3>polyfills:fuel</h3>
+      <pre data-lang="json"><code>{
+  "id": "polyfills:fuel",
+  "model": "row",
+  "name": "lang:polyfill.ui.fuel",
+  "generate": {
+    "empty_icon": "cml:fuel_empty",
+    "lore": ["%percent%%"],
+    "parts": [ { "levels": 14 } ],
+    "types": { "default": "cml:fuel_%level%" }
+  }
+}</code></pre>
+      <p>14-level fuel/RPM bar. Reference as <code>"source": "fuel"</code> or <code>"source": "rpm"</code>.</p>
+
+      <h3>polyfills:fluid</h3>
+      <pre data-lang="json"><code>{
+  "id": "polyfills:fluid",
+  "model": "column",
+  "name": "lang:polyfill.ui.fluid",
+  "generate": {
+    "empty_icon": "cml:fluid_empty",
+    "lore": ["%level% mB"],
+    "parts": [ { "levels": 8 } ],
+    "types": { "default": "cml:fluid_%level%" }
+  }
+}</code></pre>
+      <p>8-level fluid column gauge. Reference as <code>"source": "fluid:tank_name"</code>. Multiple slots fill from bottom to top.</p>
+
+      <h3>polyfills:gas</h3>
+      <pre data-lang="json"><code>{
+  "id": "polyfills:gas",
+  "model": "column",
+  "name": "lang:polyfill.ui.gas",
+  "generate": {
+    "empty_icon": "cml:gas_empty",
+    "lore": ["%level% mB"],
+    "parts": [ { "levels": 8 } ],
+    "types": { "default": "cml:gas_%level%" }
+  }
+}</code></pre>
+      <p>8-level gas column gauge. Reference as <code>"source": "gas:tank_name"</code>.</p>
+
+      <h3>polyfills:rpm</h3>
+      <p>RPM / stress indicator. Reference as <code>"source": "rpm"</code>.</p>
+
+      <h2 id="machine-usage">Using Bars in Machine Definitions</h2>
+      <pre data-lang="json"><code>"bars": [
+  {
+    "id": "polyfills:progress",
+    "slots": [13],
+    "source": "progress"
+  },
+  {
+    "id": "polyfills:fuel",
+    "slots": [40],
+    "source": "rpm"
+  },
+  {
+    "id": "polyfills:fluid",
+    "slots": [27, 18, 9, 0],
+    "source": "fluid:water_input"
+  },
+  {
+    "id": "polyfills:gas",
+    "slots": [35, 26, 17, 8],
+    "source": "gas:steam_output"
+  }
+]</code></pre>
+      <div class="callout tip"><strong>Tip</strong>Fluid and gas column bars use multiple slots filled bottom-to-top. List slots from <em>bottom</em> to <em>top</em> so the fill animation looks correct. In the example above, slot 27 is the bottom of the 4-tall fluid column.</div>
+
+      <h2 id="source-values">Source Values</h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Source</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>progress</td><td>Recipe progress fraction (0–1).</td></tr>
+          <tr><td>fuel</td><td>Fuel burn fraction (0–1) — how much of the current fuel item remains.</td></tr>
+          <tr><td>rpm</td><td>RPM fraction of machine's maximum RPM.</td></tr>
+          <tr><td>fluid:&lt;tank_name&gt;</td><td>Fill fraction of the named fluid tank.</td></tr>
+          <tr><td>gas:&lt;tank_name&gt;</td><td>Fill fraction of the named gas tank.</td></tr>
+        </tbody>
+      </table></div>
+
+      <h2 id="bar-api">Java API</h2>
+      <div class="class-block">
+        <div class="class-sig"><span class="kw">public class</span> <span class="cls">BarDefinition</span>
+          <span class="ext">// package: dev.arubik.craftengine.machine.menu.bar</span>
+        </div>
+        <p>Holds the parsed bar spec. Loaded from JSON by <code>BarLoader</code>.</p>
+      </div>
+      <div class="class-block">
+        <div class="class-sig"><span class="kw">public class</span> <span class="cls">MachineBar</span>
+          <span class="ext">// package: dev.arubik.craftengine.machine.menu.bar</span>
+        </div>
+        <p>A live bar instance attached to one machine menu. Updates its slot items each time the machine's state changes.</p>
+        <div class="api-block">
+          <div class="api-header">
+            <div class="api-sig"><span class="kw">public void</span> <span class="mth">update</span>(double fraction)</div>
+          </div>
+          <div class="api-body"><p>Update the bar to the given fill fraction (0.0–1.0), selecting appropriate icon items for each slot.</p></div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+<script src="assets/main.js"></script>
+</body>
+</html>

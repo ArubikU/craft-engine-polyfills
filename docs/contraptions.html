@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Contraption System — CraftEngine Polyfills</title>
+  <link rel="stylesheet" href="assets/style.css" />
+</head>
+<body>
+<header class="topbar">
+  <button class="hamburger" id="hamburger" aria-label="Menu">&#9776;</button>
+  <a href="../index.html" class="logo">⚙️ CraftEngine Polyfills <span class="badge">1.21.11</span></a>
+  <div class="spacer"></div>
+  <div class="search-wrap">
+    <span class="search-icon">&#128269;</span>
+    <input id="search" type="search" placeholder="Search docs…" autocomplete="off" />
+    <div id="search-results"></div>
+  </div>
+  <a href="https://github.com/Arubik/craft-engine-polyfills" class="gh-link">&#128279; GitHub</a>
+</header>
+<div class="layout">
+  <nav class="sidebar">
+    <div class="nav-section">
+      <div class="nav-section-header">&#128196; Getting Started <span class="caret">&#9660;</span></div>
+      <ul class="nav-items"><li><a href="getting-started.html">Introduction</a></li></ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header">&#9881; Machines <span class="caret">&#9660;</span></div>
+      <ul class="nav-items">
+        <li><a href="machines.html">JSON Config Reference</a></li>
+        <li><a href="machines-api.html">Java API</a></li>
+        <li><a href="upgrades.html">Upgrade System</a></li>
+        <li><a href="bars.html">Bars &amp; Gauges</a></li>
+      </ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header">&#128221; PolyFormula <span class="caret">&#9660;</span></div>
+      <ul class="nav-items">
+        <li><a href="polyformula.html">Language Reference</a></li>
+        <li><a href="renderers.html">Renderer System</a></li>
+      </ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header">&#128260; Contraptions <span class="caret">&#9660;</span></div>
+      <ul class="nav-items"><li><a href="contraptions.html">Contraption System</a></li></ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header">&#127795; Fluids &amp; Pipes <span class="caret">&#9660;</span></div>
+      <ul class="nav-items"><li><a href="pipes-fluids.html">Pipes, Fluids &amp; Gas</a></li></ul>
+    </div>
+  </nav>
+  <main class="content">
+    <div class="content-inner">
+      <div class="breadcrumbs"><a href="../index.html">Home</a><span>/</span>Contraptions</div>
+
+      <div class="page-header">
+        <h1>Contraption System</h1>
+        <p class="subtitle">Moving structures captured into an isolated sub-level with XPBD physics, bearings, vehicle control, and entity culling.</p>
+      </div>
+
+      <h2 id="overview">What Is a Contraption?</h2>
+      <p>A <strong>contraption</strong> is a set of blocks captured from the world and moved as a rigid unit. The blocks live in an isolated <code>ContraptionLevel</code> (a custom NMS <code>Level</code> subclass) and are rendered to players as a collection of display entities — one per block. Physical interactions with the contraption happen through collision detection against the display entities' hitboxes.</p>
+
+      <h3>Lifecycle</h3>
+      <ol>
+        <li><strong>Assembly</strong> — A bearing block (piston bearing, rotational bearing, minecart bearing, ghast harness) is powered. <code>ContraptionAssembler</code> BFS-flood-fills connected blocks into a block list.</li>
+        <li><strong>Capture</strong> — Captured blocks are removed from the world and stored in the contraption level. Display entities are spawned at the bearing position.</li>
+        <li><strong>Motion</strong> — Each tick, the physics solver (XPBD) advances the contraption's pose. Display entities receive teleport packets to match.</li>
+        <li><strong>Disassembly</strong> — The bearing is depowered or the contraption is killed. Blocks are placed back into the world.</li>
+      </ol>
+
+      <h2 id="bearing-types">Bearing Types</h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Bearing</th><th>Class</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>Piston Bearing</td><td>PistonBearingBehavior</td><td>Linear extension/retraction. Powered by redstone; stroke length is configurable.</td></tr>
+          <tr><td>Rotational Bearing</td><td>RotationalBearingBehavior</td><td>Continuous rotation around the bearing axis. Speed driven by a motor.</td></tr>
+          <tr><td>Minecart Bearing</td><td>MinecartBearing</td><td>Attaches the contraption to a minecart entity; contraption follows the cart along rails.</td></tr>
+          <tr><td>Ghast Harness</td><td>GhastHarness</td><td>Attaches to a ghast entity; contraption floats and moves with the ghast.</td></tr>
+        </tbody>
+      </table></div>
+
+      <h2 id="contraptions-yml">contraptions.yml Reference</h2>
+      <p>The main config file lives at <code>plugins/CraftEnginePolyfills/contraptions.yml</code>.</p>
+
+      <h3 id="entity-culling">Entity Culling</h3>
+      <pre data-lang="yaml"><code>entity_culling:
+  # Master toggle. Disable to send all element packets to every player (legacy).
+  enabled: true
+
+  # Maximum distance (blocks) from the bearing at which display entities
+  # are sent. Players beyond this distance receive despawn packets.
+  view_distance: 64.0
+
+  frustum:
+    # Enable directional frustum culling.
+    enabled: false
+
+    # Total field-of-view cone in degrees.
+    fov: 120.0
+
+    # Distance within which frustum culling is bypassed (always show).
+    near_bypass: 16.0
+
+    # Expand the target sphere by this many blocks for the frustum check.
+    # Compensates for large contraptions whose parts extend beyond the centre.
+    expansion: 8.0</code></pre>
+
+      <div class="table-wrap"><table>
+        <thead><tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>entity_culling.enabled</td><td>Bool</td><td>true</td><td>Master culling toggle.</td></tr>
+          <tr><td>entity_culling.view_distance</td><td>Float</td><td>64.0</td><td>Display entity send radius in blocks.</td></tr>
+          <tr><td>entity_culling.frustum.enabled</td><td>Bool</td><td>false</td><td>Frustum (FOV) culling toggle.</td></tr>
+          <tr><td>entity_culling.frustum.fov</td><td>Float</td><td>120.0</td><td>Total FOV cone in degrees.</td></tr>
+          <tr><td>entity_culling.frustum.near_bypass</td><td>Float</td><td>16.0</td><td>Distance inside which frustum is skipped.</td></tr>
+          <tr><td>entity_culling.frustum.expansion</td><td>Float</td><td>8.0</td><td>Extra radius added to contraption sphere for frustum test.</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3 id="fluid-render">Fluid Rendering</h3>
+      <pre data-lang="yaml"><code>fluid_render:
+  enabled: true
+  water: "polyfills:water"
+  lava:  "polyfills:lava"
+  lava_damage: 4.0
+  render_waterlogged: true
+  render_flowing: true
+  render_source: true
+  simulate_flow: false</code></pre>
+
+      <div class="table-wrap"><table>
+        <thead><tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>fluid_render.enabled</td><td>Bool</td><td>true</td><td>Master toggle for fluid rendering inside contraptions.</td></tr>
+          <tr><td>fluid_render.water</td><td>Str</td><td>"polyfills:water"</td><td>Fluid type ID for vanilla water blocks. Empty = disabled.</td></tr>
+          <tr><td>fluid_render.lava</td><td>Str</td><td>"polyfills:lava"</td><td>Fluid type ID for vanilla lava blocks. Empty = disabled.</td></tr>
+          <tr><td>fluid_render.lava_damage</td><td>Float</td><td>4.0</td><td>Fire damage per second to entities inside captured lava cells.</td></tr>
+          <tr><td>fluid_render.render_waterlogged</td><td>Bool</td><td>true</td><td>Render water inside waterlogged blocks.</td></tr>
+          <tr><td>fluid_render.render_flowing</td><td>Bool</td><td>true</td><td>Render flowing water/lava blocks.</td></tr>
+          <tr><td>fluid_render.render_source</td><td>Bool</td><td>true</td><td>Render source (still) water/lava blocks.</td></tr>
+          <tr><td>fluid_render.simulate_flow</td><td>Bool</td><td>false</td><td>Allow fluid to flow and spread within the contraption level. Usually causes lag or unexpected spread — enable intentionally only.</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3 id="other-config">Other Config Keys</h3>
+      <pre data-lang="yaml"><code>item_frame:
+  # CE item ID for the item frame model. Empty = vanilla ITEM_FRAME entity.
+  model: ""</code></pre>
+
+      <h2 id="physics-model">Physics Model</h2>
+      <p>Contraptions use an XPBD (Extended Position-Based Dynamics) solver with four material axes:</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>File</th><th>Property</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>mass.yml</td><td>Mass per block type</td><td>Heavier blocks require more force to accelerate. Defaults loaded from plugin; overrides per block material.</td></tr>
+          <tr><td>friction.yml</td><td>Friction per block type</td><td>Surface friction used in sliding contact resolution.</td></tr>
+          <tr><td>restitution.yml</td><td>Restitution per block type</td><td>Bounciness (0 = fully inelastic, 1 = fully elastic).</td></tr>
+          <tr><td>floatability.yml</td><td>Floatability per block type</td><td>Whether the block contributes buoyancy when submerged.</td></tr>
+        </tbody>
+      </table></div>
+
+      <h2 id="block-behaviors">Contraption Block Behaviors</h2>
+      <p>These block behaviors modify how blocks behave when captured in a contraption:</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Behavior</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>BearingBlockBehavior</td><td>Marks a block as a bearing anchor; assembly starts here.</td></tr>
+          <tr><td>MoverBlockBehavior</td><td>Provides a translational force (piston-like).</td></tr>
+          <tr><td>WeightBlockBehavior</td><td>Adds extra mass to a single block for physics.</td></tr>
+          <tr><td>FrictionBlockBehavior</td><td>Overrides surface friction for this block.</td></tr>
+          <tr><td>RestitutionBlockBehavior</td><td>Overrides restitution for this block.</td></tr>
+          <tr><td>FloatabilityBlockBehavior</td><td>Overrides buoyancy for this block.</td></tr>
+          <tr><td>MinerBlockBehavior</td><td>Block that drills/mines terrain ahead of the contraption.</td></tr>
+          <tr><td>LinearActuatorBehavior</td><td>Provides controlled linear extension within the contraption.</td></tr>
+          <tr><td>PhysicsBehavior</td><td>General physics interaction override.</td></tr>
+          <tr><td>ContraptionHopperBridge</td><td>Allows hoppers inside contraptions to transfer items to/from the real world.</td></tr>
+        </tbody>
+      </table></div>
+
+      <h2 id="vehicle-control">Vehicle Control</h2>
+      <p>Vehicle-capable contraptions use the <code>VehicleControlBehavior</code>. Seats are defined in <code>vehicle-seats.yml</code>. Players riding a contraption send directional input through <code>VehicleDriverRegistry</code>, which translates it into force vectors applied by the physics solver.</p>
+
+      <h2 id="contraption-api">Contraption API Interfaces</h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Interface</th><th>Package</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>ContraptionType</td><td>contraption/api/</td><td>Marker interface for contraption type registration.</td></tr>
+          <tr><td>ContraptionTickable</td><td>contraption/api/</td><td>Block behaviors implementing this are ticked each physics step.</td></tr>
+          <tr><td>ContraptionHitboxProvider</td><td>contraption/api/</td><td>Provides custom hitbox geometry for a block type inside contraptions.</td></tr>
+          <tr><td>PowerSource</td><td>contraption/api/</td><td>A block that generates rotational power for the contraption's internal network.</td></tr>
+          <tr><td>PowerConsumer</td><td>contraption/api/</td><td>A block that draws from the internal rotational network.</td></tr>
+          <tr><td>MultiblockMember</td><td>contraption/api/</td><td>A block that participates in a multiblock structure inside a contraption.</td></tr>
+        </tbody>
+      </table></div>
+
+      <h2 id="contraption-class">Contraption PolyClass</h2>
+      <p>When expressions run in a contraption context (e.g. a machine inside a moving contraption), the <code>Contraption</code> PolyClass is available:</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Property</th><th>Type</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>speed</td><td>Num</td><td>Current angular velocity (radians/tick for rotational, blocks/tick for linear).</td></tr>
+          <tr><td>is_moving</td><td>Bool</td><td>True when the contraption is in motion.</td></tr>
+          <tr><td>block_count</td><td>Num</td><td>Total captured block count.</td></tr>
+        </tbody>
+      </table></div>
+
+      <h2 id="glue-hammer">Assembly Tools</h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Item</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>Glue Wand</td><td>Right-click a block to mark it as "glued" — it joins contraptions assembled by adjacent bearings even if it would otherwise stop flood-fill.</td></tr>
+          <tr><td>Hammer</td><td>Right-click a multiblock anchor to trigger multiblock assembly.</td></tr>
+        </tbody>
+      </table></div>
+
+      <h2 id="perf">Performance Notes</h2>
+      <ul>
+        <li>Enable <code>entity_culling</code> — this is the single biggest client-side optimization. Set <code>view_distance</code> to match your server's render distance.</li>
+        <li>Enable <code>frustum</code> culling for servers with many players viewing large contraptions simultaneously.</li>
+        <li>Keep contraptions under ~500 blocks for stable physics ticks (16ms budget).</li>
+        <li>Avoid <code>simulate_flow: true</code> unless the contraption intentionally contains flowing fluid — it adds a fluid BFS each tick.</li>
+      </ul>
+    </div>
+  </main>
+</div>
+<script src="assets/main.js"></script>
+</body>
+</html>

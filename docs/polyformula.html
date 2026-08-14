@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PolyFormula — CraftEngine Polyfills</title>
+  <link rel="stylesheet" href="assets/style.css" />
+</head>
+<body>
+<header class="topbar">
+  <button class="hamburger" id="hamburger" aria-label="Menu">&#9776;</button>
+  <a href="../index.html" class="logo">⚙️ CraftEngine Polyfills <span class="badge">1.21.11</span></a>
+  <div class="spacer"></div>
+  <div class="search-wrap">
+    <span class="search-icon">&#128269;</span>
+    <input id="search" type="search" placeholder="Search docs…" autocomplete="off" />
+    <div id="search-results"></div>
+  </div>
+  <a href="https://github.com/Arubik/craft-engine-polyfills" class="gh-link">&#128279; GitHub</a>
+</header>
+<div class="layout">
+  <nav class="sidebar">
+    <div class="nav-section">
+      <div class="nav-section-header">&#128196; Getting Started <span class="caret">&#9660;</span></div>
+      <ul class="nav-items"><li><a href="getting-started.html">Introduction</a></li></ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header">&#9881; Machines <span class="caret">&#9660;</span></div>
+      <ul class="nav-items">
+        <li><a href="machines.html">JSON Config Reference</a></li>
+        <li><a href="machines-api.html">Java API</a></li>
+        <li><a href="upgrades.html">Upgrade System</a></li>
+        <li><a href="bars.html">Bars &amp; Gauges</a></li>
+      </ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header">&#128221; PolyFormula <span class="caret">&#9660;</span></div>
+      <ul class="nav-items">
+        <li><a href="polyformula.html">Language Reference</a></li>
+        <li><a href="renderers.html">Renderer System</a></li>
+      </ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header">&#128260; Contraptions <span class="caret">&#9660;</span></div>
+      <ul class="nav-items"><li><a href="contraptions.html">Contraption System</a></li></ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header">&#127795; Fluids &amp; Pipes <span class="caret">&#9660;</span></div>
+      <ul class="nav-items"><li><a href="pipes-fluids.html">Pipes, Fluids &amp; Gas</a></li></ul>
+    </div>
+  </nav>
+  <main class="content">
+    <div class="content-inner">
+      <div class="breadcrumbs"><a href="../index.html">Home</a><span>/</span>PolyFormula</div>
+
+      <div class="page-header">
+        <h1>PolyFormula Engine</h1>
+        <p class="subtitle">Typed expression engine used by machine renderers, variable declarations, and .pf scripts.</p>
+      </div>
+
+      <h2 id="overview">Overview</h2>
+      <p><code>PolyFormula</code> is a compile-once, evaluate-many expression engine. Expressions are compiled once at load time to an AST and evaluated each tick against a <code>PolyContext</code> containing the machine state, inventory, tanks, and other domain objects.</p>
+
+      <pre data-lang="java"><code>// Compile once
+PolyFormula f = PolyFormula.compile("is_empty(slot(0)) || rpm > 200");
+
+// Evaluate each tick
+boolean active = f.evaluateBool(ctx);
+double  speed  = PolyFormula.compile("max(0.05, overclock)").evaluateNum(ctx);
+String  label  = PolyFormula.compile("format('%d%%', floor(progress/max_progress*100))").evaluateStr(ctx);</code></pre>
+
+      <h2 id="value-types">Value Types</h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Type</th><th>Java Class</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>Num</td><td><code>PolyValue.Num</code></td><td>64-bit double. Coerces to bool (<code>!= 0</code>), string (decimal), integer.</td></tr>
+          <tr><td>Bool</td><td><code>PolyValue.Bool</code></td><td><code>true</code> or <code>false</code>. Coerces to num (1/0), string ("true"/"false").</td></tr>
+          <tr><td>Str</td><td><code>PolyValue.Str</code></td><td>UTF-16 string. Coerces to num via parseDouble, bool via non-empty.</td></tr>
+          <tr><td>Item</td><td><code>PolyValue.Item</code></td><td>A Bukkit <code>ItemStack</code> (or null for AIR). Supports property suffix chain.</td></tr>
+          <tr><td>Array</td><td><code>PolyValue.Array</code></td><td>Ordered list of <code>PolyValue</code>s. Supports <code>[n]</code> subscript and functional ops.</td></tr>
+          <tr><td>Obj</td><td><code>PolyValue.Obj</code></td><td>Wraps a <code>PolyClass</code> instance (Inventory, Machine, World…).</td></tr>
+          <tr><td>Null</td><td><code>PolyValue.Null</code></td><td>Absent value. <code>asNum()</code>=0, <code>asBool()</code>=false, <code>asStr()</code>="".</td></tr>
+        </tbody>
+      </table></div>
+
+      <h2 id="grammar">Grammar</h2>
+      <p>Operator precedence, lowest to highest:</p>
+      <pre data-lang="text"><code>ternary   →  condition ? trueVal : falseVal
+or        →  a || b
+and       →  a && b
+not       →  !a
+compare   →  a == b  |  a != b  |  a < b  |  a <= b  |  a > b  |  a >= b
+coalesce  →  a ?? b          (returns a unless a is null/AIR-item)
+add       →  a + b  |  a - b
+mul       →  a * b  |  a / b  |  a % b
+pow       →  a ^ b           (right-associative)
+unary     →  -a
+primary   →  NUMBER | STRING | $name | name | name.prop | name.method(args)
+          |  ClassName.prop | ClassName.method(args) | (expr)</code></pre>
+
+      <h3 id="literals">Literals</h3>
+      <ul>
+        <li><strong>Number:</strong> <code>42</code>, <code>3.14</code>, <code>1e6</code>, <code>.5</code></li>
+        <li><strong>String:</strong> <code>"text"</code> or <code>'text'</code> with <code>\n \t \r \\</code> escapes</li>
+        <li><strong>Boolean:</strong> <code>true</code> / <code>false</code> (or <code>TRUE</code> / <code>FALSE</code>)</li>
+        <li><strong>Constants:</strong> <code>PI</code>, <code>TAU</code>, <code>E</code>, <code>INF</code>, <code>NAN</code></li>
+        <li><strong>Variables:</strong> <code>$name</code> or bare <code>name</code> — looked up in the current <code>PolyContext</code></li>
+      </ul>
+
+      <h3 id="member-access">Member access and chains</h3>
+      <pre data-lang="text"><code>slot(9).amount           // Item property via ItemClass
+slot(9).lore[0]          // Item lore, subscript first line
+Inventory.slot(9)        // Inventory PolyClass method
+Workbench.input(0).type  // Class method + property chain
+Machine.location.x       // Nested Obj property</code></pre>
+
+      <h2 id="builtin-functions">Built-in Functions</h2>
+
+      <h3 id="inventory-fns">Inventory &amp; Item</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Function</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>slot(n)</td><td>Item</td><td>Shorthand for <code>Inventory.slot(n)</code> — item at slot <em>n</em>.</td></tr>
+          <tr><td>slots(a, b, …)</td><td>Array&lt;Item&gt;</td><td>Items at the listed slot indices. Supports range: <code>slots(9..15)</code>.</td></tr>
+          <tr><td>is_empty(item)</td><td>Bool</td><td>True if item is null or AIR.</td></tr>
+          <tr><td>is_not_empty(item)</td><td>Bool</td><td>Inverse of <code>is_empty</code>.</td></tr>
+          <tr><td>has_item(item, "id")</td><td>Bool</td><td>True if item's material matches the given namespaced key.</td></tr>
+          <tr><td>item_count(item)</td><td>Num</td><td>Stack count of the item (or sum if Array).</td></tr>
+          <tr><td>item_id(item)</td><td>Str</td><td>Namespaced material key, e.g. <code>"minecraft:diamond"</code>.</td></tr>
+          <tr><td>matches(item, "id")</td><td>Bool</td><td>Alias of <code>has_item</code>.</td></tr>
+          <tr><td>item_has_tag(item, "tag")</td><td>Bool</td><td>True if item's material is in the given Bukkit item tag.</td></tr>
+          <tr><td>CraftEngineItem("ns:id")</td><td>Item</td><td>Build a CraftEngine custom item by ID.</td></tr>
+          <tr><td>VanillaItem("ns:id")</td><td>Item</td><td>Build a vanilla Bukkit item by material key.</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3 id="tank-fns">Tank Functions</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Function</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>FluidTank("name")</td><td>Num</td><td>Fill fraction (0–1) of the named fluid tank.</td></tr>
+          <tr><td>FluidTank("name", "prop")</td><td>varies</td><td>Named property: <code>level</code>, <code>capacity</code>, <code>fraction</code>, <code>percent</code>, <code>is_empty</code>, <code>is_full</code>.</td></tr>
+          <tr><td>GasTank("name")</td><td>Num</td><td>Fill fraction (0–1) of the named gas tank.</td></tr>
+          <tr><td>GasTank("name", "prop")</td><td>varies</td><td>Same properties as FluidTank.</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3 id="player-fns">Player &amp; Machine Position</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Function</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>player_facing("face")</td><td>Bool</td><td>True when a player's ray hits the named face. Shorthand for <code>Machine.player_facing(…)</code>.</td></tr>
+          <tr><td>player_facing("face", "zone")</td><td>Bool</td><td>Same, with zone precision: <code>"top"</code>, <code>"NE"</code>, <code>"1-2"</code> (4×4 grid), etc.</td></tr>
+          <tr><td>player_in_range(dist)</td><td>Bool</td><td>True if any player is within <em>dist</em> blocks of the machine.</td></tr>
+          <tr><td>player_above()</td><td>Bool</td><td>Any player in a 45° upward cone within 24 blocks.</td></tr>
+          <tr><td>player_below()</td><td>Bool</td><td>Any player in a 45° downward cone within 24 blocks.</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3 id="workbench-fns">Workbench Shortcuts</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Function</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>input(n)</td><td>Item</td><td>Workbench input slot <em>n</em>. Shorthand for <code>Workbench.input(n)</code>.</td></tr>
+          <tr><td>output(n)</td><td>Item</td><td>Workbench output slot <em>n</em>.</td></tr>
+          <tr><td>tool(n)</td><td>Item</td><td>Workbench tool slot <em>n</em>.</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3 id="math-fns">Math</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Function</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>abs(x)</td><td>Absolute value.</td></tr>
+          <tr><td>sqrt(x)</td><td>Square root.</td></tr>
+          <tr><td>pow(x, n)</td><td>x to the power n. Also <code>x ^ n</code> operator.</td></tr>
+          <tr><td>log(x) / log10(x) / exp(x)</td><td>Natural log, log-base-10, e^x.</td></tr>
+          <tr><td>sign(x)</td><td>−1, 0, or 1.</td></tr>
+          <tr><td>mod(x, m)</td><td>x modulo m. Also <code>x % m</code> operator.</td></tr>
+          <tr><td>frac(x)</td><td>Fractional part: x − floor(x).</td></tr>
+          <tr><td>floor(x) / ceil(x) / round(x) / trunc(x)</td><td>Rounding functions.</td></tr>
+          <tr><td>min(a, b) / max(a, b)</td><td>Minimum / maximum.</td></tr>
+          <tr><td>clamp(v, lo, hi)</td><td>Clamp v to [lo, hi].</td></tr>
+          <tr><td>lerp(a, b, t)</td><td>Linear interpolation: a + (b−a)×t.</td></tr>
+          <tr><td>map(v, flo, fhi, tlo, thi)</td><td>Range remap: maps v from [flo,fhi] to [tlo,thi].</td></tr>
+          <tr><td>step(edge, x)</td><td>0 if x &lt; edge, 1 otherwise.</td></tr>
+          <tr><td>smoothstep(e0, e1, x)</td><td>Smooth Hermite interpolation.</td></tr>
+          <tr><td>within(v, center, r)</td><td>|v−center| &lt;= r.</td></tr>
+          <tr><td>distance(x1,y1,z1, x2,y2,z2)</td><td>3D Euclidean distance.</td></tr>
+          <tr><td>distance_sq(…)</td><td>Squared distance (cheaper — no sqrt).</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3 id="trig-fns">Trigonometry</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Function</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>sin(r) / cos(r) / tan(r)</td><td>Trig functions (radians).</td></tr>
+          <tr><td>asin(x) / acos(x) / atan(x)</td><td>Inverse trig (returns radians).</td></tr>
+          <tr><td>atan2(y, x)</td><td>Four-quadrant atan.</td></tr>
+          <tr><td>deg(r)</td><td>Radians → degrees.</td></tr>
+          <tr><td>rad(d)</td><td>Degrees → radians.</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3 id="array-fns">Array &amp; Functional</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Function</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>array(a, b, …)</td><td>Array</td><td>Construct an array from arguments.</td></tr>
+          <tr><td>range(end)</td><td>Array</td><td>0 to end−1 step 1.</td></tr>
+          <tr><td>range(start, end)</td><td>Array</td><td>start to end−1.</td></tr>
+          <tr><td>range(start, end, step)</td><td>Array</td><td>With explicit step.</td></tr>
+          <tr><td>size(a) / length(a)</td><td>Num</td><td>Length of array or string.</td></tr>
+          <tr><td>sum(a)</td><td>Num</td><td>Sum of numeric array elements.</td></tr>
+          <tr><td>any(a) / some(a)</td><td>Bool</td><td>True if any element is truthy.</td></tr>
+          <tr><td>all(a)</td><td>Bool</td><td>True if all elements are truthy.</td></tr>
+          <tr><td>none(a)</td><td>Bool</td><td>True if no element is truthy.</td></tr>
+          <tr><td>map(array, "expr")</td><td>Array</td><td>Evaluate <em>expr</em> for each element (bound as <code>e</code>).</td></tr>
+          <tr><td>filter(array, "expr")</td><td>Array</td><td>Keep elements where <em>expr</em> is truthy.</td></tr>
+          <tr><td>reduce(array, init, "expr")</td><td>Any</td><td>Fold with <code>acc</code> = accumulator, <code>e</code> = current element.</td></tr>
+          <tr><td>flat(a) / flatten(a)</td><td>Array</td><td>Flatten one level of nested arrays.</td></tr>
+          <tr><td>zip(a, b)</td><td>Array&lt;Array&gt;</td><td>Pair elements: [[a0,b0], [a1,b1], …].</td></tr>
+          <tr><td>unique(a)</td><td>Array</td><td>Deduplicate preserving order (string equality).</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3 id="string-fns">String</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Function</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>format(fmt, …)</td><td>Java-style <code>String.format</code>. E.g. <code>format("%d%%", floor(pct))</code>.</td></tr>
+          <tr><td>concat(a, b, …)</td><td>Concatenate all args as strings. Also <code>a + b</code> when either side is a Str.</td></tr>
+          <tr><td>substring(s, start, end)</td><td>Substring from start (inclusive) to end (exclusive).</td></tr>
+          <tr><td>replace(s, old, new)</td><td>Replace all occurrences.</td></tr>
+          <tr><td>contains(s, sub)</td><td>True if string contains substring (or array contains element).</td></tr>
+          <tr><td>str(x)</td><td>Coerce to string.</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3 id="time-fns">Time &amp; Random</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Function</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>tick()</td><td>Num</td><td>Current server tick count (from World or Machine context, falls back to server main tick).</td></tr>
+          <tr><td>seconds(ticks)</td><td>Num</td><td>Convert ticks to seconds (÷20).</td></tr>
+          <tr><td>ticks(seconds)</td><td>Num</td><td>Convert seconds to ticks (×20).</td></tr>
+          <tr><td>world_time()</td><td>Num</td><td>Day-time ticks (0–24000).</td></tr>
+          <tr><td>world_day()</td><td>Bool</td><td>True when sun is above horizon.</td></tr>
+          <tr><td>random()</td><td>Num</td><td>Random float 0–1.</td></tr>
+          <tr><td>random(max)</td><td>Num</td><td>Random float 0–max.</td></tr>
+          <tr><td>random(min, max)</td><td>Num</td><td>Random float in [min, max).</td></tr>
+          <tr><td>random_int(max)</td><td>Num</td><td>Random integer 0 to max−1.</td></tr>
+          <tr><td>random_int(min, max)</td><td>Num</td><td>Random integer in [min, max).</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3 id="control-fns">Control &amp; Type</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Function</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>if(cond, t, f)</td><td>Ternary as a function. Also <code>cond ? t : f</code> operator.</td></tr>
+          <tr><td>not(x)</td><td>Boolean negation. Also <code>!x</code> operator.</td></tr>
+          <tr><td>coalesce(a, b, …)</td><td>First non-null value. Also <code>a ?? b</code> operator.</td></tr>
+          <tr><td>int(x) / float(x) / bool(x) / str(x)</td><td>Explicit type coercions.</td></tr>
+          <tr><td>type_of(x)</td><td>Returns one of: <code>"num"</code>, <code>"bool"</code>, <code>"str"</code>, <code>"item"</code>, <code>"array"</code>, <code>"obj"</code>, <code>"null"</code>.</td></tr>
+          <tr><td>is_null(x) / is_num(x) / is_str(x) / is_item(x) / is_array(x)</td><td>Type predicates.</td></tr>
+          <tr><td>ping(player)</td><td>Player latency in milliseconds.</td></tr>
+          <tr><td>rgb(r, g, b)</td><td>Pack 0–255 components into ARGB integer (opaque). For text display background.</td></tr>
+          <tr><td>rgba(r, g, b, a)</td><td>Pack 0–255 RGBA into ARGB integer.</td></tr>
+        </tbody>
+      </table></div>
+
+      <h2 id="polyclasses">PolyClasses</h2>
+      <p>PolyClasses are named domain objects available in renderer expressions. Access them as <code>ClassName.property</code> or <code>ClassName.method(args)</code>.</p>
+
+      <!-- Machine class -->
+      <h3 id="class-machine">Machine</h3>
+      <div class="class-block">
+        <div class="class-sig"><span class="kw">class</span> <span class="cls">Machine</span> <span class="ext">// position &amp; facing of the machine block</span></div>
+        <div class="table-wrap"><table class="prop-table">
+          <thead><tr><th>Property</th><th>Type</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td>x / y / z</td><td>Num</td><td>Integer block coordinates.</td></tr>
+            <tr><td>facing</td><td>Str</td><td>Direction the machine faces: <code>"north"</code> | <code>"south"</code> | <code>"east"</code> | <code>"west"</code> | <code>"up"</code> | <code>"down"</code>.</td></tr>
+            <tr><td>facing_angle</td><td>Num</td><td>Yaw in degrees. south=0°, west=90°, north=180°, east=270°.</td></tr>
+            <tr><td>location</td><td>Obj(Location)</td><td>Location object for chaining.</td></tr>
+            <tr><td>world</td><td>Obj(World)</td><td>World object for chaining.</td></tr>
+            <tr><td>has_nearby_player</td><td>Bool</td><td>Any player within 8 blocks.</td></tr>
+            <tr><td>nearest_player_yaw</td><td>Num</td><td>Yaw to face nearest player (Minecraft convention).</td></tr>
+            <tr><td>nearest_player_pitch</td><td>Num</td><td>Pitch to look at nearest player's eye.</td></tr>
+            <tr><td>nearest_player_distance</td><td>Num</td><td>Distance to nearest player (999999 if none).</td></tr>
+            <tr><td>player_yaw / player_pitch</td><td>Num</td><td>Alias of nearest_player_yaw/pitch.</td></tr>
+          </tbody>
+        </table></div>
+        <div class="table-wrap"><table class="prop-table">
+          <thead><tr><th>Method</th><th>Returns</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td>player_facing("face")</td><td>Bool</td><td>Ray hits named face.</td></tr>
+            <tr><td>player_facing("face", "zone")</td><td>Bool</td><td>Ray hits face in zone. Zone formats: <code>"top"</code>/<code>"bottom"</code>/<code>"left"</code>/<code>"right"</code> (half), <code>"top-left"</code>/… (quarter), <code>"N"</code>/<code>"NE"</code>/… (octant), <code>"0-0"</code>…<code>"3-3"</code> (4×4 sixteenth), comma list, or range <code>"1..2-1..2"</code>.</td></tr>
+            <tr><td>player_in_range(dist)</td><td>Bool</td><td>Any player within dist blocks.</td></tr>
+            <tr><td>player_above()</td><td>Bool</td><td>Player in 45° upward cone (range 24).</td></tr>
+            <tr><td>player_below()</td><td>Bool</td><td>Player in 45° downward cone (range 24).</td></tr>
+            <tr><td>nearest_player(radius?)</td><td>Obj(Player)</td><td>Nearest player as a Player object.</td></tr>
+            <tr><td>nearby_players(dist)</td><td>Array&lt;Obj(Player)&gt;</td><td>All players within dist blocks.</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+
+      <!-- Inventory class -->
+      <h3 id="class-inventory">Inventory</h3>
+      <div class="class-block">
+        <div class="class-sig"><span class="kw">class</span> <span class="cls">Inventory</span> <span class="ext">// machine block entity inventory</span></div>
+        <div class="table-wrap"><table class="prop-table">
+          <thead><tr><th>Property / Method</th><th>Returns</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td>size</td><td>Num</td><td>Total slot count.</td></tr>
+            <tr><td>contents</td><td>Array&lt;Item&gt;</td><td>All non-AIR items.</td></tr>
+            <tr><td>slot(n)</td><td>Item</td><td>Item at slot n.</td></tr>
+            <tr><td>slots(a, b, …)</td><td>Array&lt;Item&gt;</td><td>Items at listed slots. Range syntax: <code>slots(9..15)</code>.</td></tr>
+            <tr><td>count_of("id")</td><td>Num</td><td>Total item count matching material/CE id.</td></tr>
+            <tr><td>has("id")</td><td>Bool</td><td>True if any matching item present.</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+
+      <!-- Item class -->
+      <h3 id="class-item">Item (suffix properties)</h3>
+      <div class="class-block">
+        <div class="class-sig"><span class="ext">// Accessed via suffix chain: slot(9).property or Workbench.input(0).method(…)</span></div>
+        <div class="table-wrap"><table class="prop-table">
+          <thead><tr><th>Property</th><th>Type</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td>amount</td><td>Num</td><td>Stack count.</td></tr>
+            <tr><td>type / id</td><td>Str</td><td>Namespaced key (CE id preferred over vanilla id).</td></tr>
+            <tr><td>ce_id</td><td>Str|Null</td><td>CE custom item key, or null if not a CE item.</td></tr>
+            <tr><td>is_ce_item</td><td>Bool</td><td>True if this is a CraftEngine custom item.</td></tr>
+            <tr><td>material</td><td>Str</td><td>Lower-cased Bukkit material enum name.</td></tr>
+            <tr><td>name</td><td>Str</td><td>Display name (plain text) or formatted material name.</td></tr>
+            <tr><td>lore</td><td>Str</td><td>All lore lines joined with <code>\n</code>. Use <code>[n]</code> to index.</td></tr>
+            <tr><td>durability / max_durability</td><td>Num</td><td>Remaining / max durability.</td></tr>
+            <tr><td>is_empty</td><td>Bool</td><td>True if null or AIR.</td></tr>
+            <tr><td>is_stackable / max_stack</td><td>Bool/Num</td><td>Stack size info.</td></tr>
+            <tr><td>custom_model_data</td><td>Num</td><td>Custom model data int, or 0.</td></tr>
+          </tbody>
+        </table></div>
+        <div class="table-wrap"><table class="prop-table">
+          <thead><tr><th>Method</th><th>Returns</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td>lore_line(n)</td><td>Str</td><td>nth lore line.</td></tr>
+            <tr><td>has_enchant("id")</td><td>Bool</td><td>True if enchantment present.</td></tr>
+            <tr><td>enchant_level("id")</td><td>Num</td><td>Enchantment level or 0.</td></tr>
+            <tr><td>matches("id")</td><td>Bool</td><td>True if material matches.</td></tr>
+            <tr><td>is_tagged("tag")</td><td>Bool</td><td>True if material is in Bukkit item tag.</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+
+      <!-- World class -->
+      <h3 id="class-world">World</h3>
+      <div class="class-block">
+        <div class="class-sig"><span class="kw">class</span> <span class="cls">World</span> <span class="ext">// server level — auto-resolves contraption sub-levels to real parent</span></div>
+        <div class="table-wrap"><table class="prop-table">
+          <thead><tr><th>Property / Method</th><th>Type</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td>name</td><td>Str</td><td>Level dimension key path (e.g. <code>"overworld"</code>).</td></tr>
+            <tr><td>environment</td><td>Str</td><td><code>"overworld"</code> | <code>"the_nether"</code> | <code>"the_end"</code> | …</td></tr>
+            <tr><td>time</td><td>Num</td><td>Day-time ticks 0–24000.</td></tr>
+            <tr><td>full_time</td><td>Num</td><td>Absolute game-time ticks.</td></tr>
+            <tr><td>is_day / is_night</td><td>Bool</td><td>Sun above/below horizon.</td></tr>
+            <tr><td>is_raining / is_thundering</td><td>Bool</td><td>Weather flags.</td></tr>
+            <tr><td>moon_phase</td><td>Num</td><td>Phase index 0–7.</td></tr>
+            <tr><td>difficulty</td><td>Str</td><td><code>"peaceful"</code> | <code>"easy"</code> | <code>"normal"</code> | <code>"hard"</code>.</td></tr>
+            <tr><td>players</td><td>Array&lt;Obj(Player)&gt;</td><td>All players in this world.</td></tr>
+            <tr><td>player_count()</td><td>Num</td><td>Number of players in this world.</td></tr>
+            <tr><td>biome(x, y, z)</td><td>Str</td><td>Namespaced biome key at position.</td></tr>
+            <tr><td>block(x, y, z)</td><td>Obj(Block)</td><td>Block at position.</td></tr>
+            <tr><td>entity_count(x,y,z,r)</td><td>Num</td><td>Entities within radius r of position.</td></tr>
+            <tr><td>entities(x,y,z,r)</td><td>Array&lt;Obj(Entity)&gt;</td><td>All entities within radius.</td></tr>
+            <tr><td>players_in_range(x,y,z,r)</td><td>Array&lt;Obj(Player)&gt;</td><td>Players within radius.</td></tr>
+            <tr><td>light(x, y, z)</td><td>Num</td><td>Combined light level (0–15).</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+
+      <!-- Player class -->
+      <h3 id="class-player">Player</h3>
+      <div class="class-block">
+        <div class="class-sig"><span class="kw">class</span> <span class="cls">Player</span> <span class="ext">// server player — obtained from Machine.nearest_player() or World.players</span></div>
+        <div class="table-wrap"><table class="prop-table">
+          <thead><tr><th>Property / Method</th><th>Type</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td>name / display_name</td><td>Str</td><td>Login name / display name (plain text).</td></tr>
+            <tr><td>health / max_health</td><td>Num</td><td>Current / max health.</td></tr>
+            <tr><td>food</td><td>Num</td><td>Food level 0–20.</td></tr>
+            <tr><td>level / exp</td><td>Num</td><td>XP level / progress within level (0–1).</td></tr>
+            <tr><td>game_mode</td><td>Str</td><td><code>"survival"</code> | <code>"creative"</code> | <code>"adventure"</code> | <code>"spectator"</code>.</td></tr>
+            <tr><td>is_sneaking / is_sprinting / is_flying / is_op</td><td>Bool</td><td>State flags.</td></tr>
+            <tr><td>x / y / z</td><td>Num</td><td>World position.</td></tr>
+            <tr><td>location</td><td>Obj(Location)</td><td>Location object.</td></tr>
+            <tr><td>world</td><td>Obj(World)</td><td>Player's current world.</td></tr>
+            <tr><td>inventory</td><td>Obj(Inventory)</td><td>Player's inventory.</td></tr>
+            <tr><td>main_hand</td><td>Item</td><td>Item in main hand.</td></tr>
+            <tr><td>has_item("id")</td><td>Bool</td><td>Any matching item anywhere in inventory.</td></tr>
+            <tr><td>item_count("id")</td><td>Num</td><td>Total count of matching items.</td></tr>
+            <tr><td>has_permission("perm")</td><td>Bool</td><td>Permission check.</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+
+      <!-- FluidTanks / GasTanks class -->
+      <h3 id="class-tanks">FluidTanks / GasTanks</h3>
+      <div class="class-block">
+        <div class="class-sig"><span class="kw">class</span> <span class="cls">FluidTanks</span> / <span class="cls">GasTanks</span></div>
+        <p>Access individual tanks by name. The <code>FluidTank("name", "prop")</code> builtin is the shorthand.</p>
+        <div class="table-wrap"><table class="prop-table">
+          <thead><tr><th>Property (per tank)</th><th>Type</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td>level</td><td>Num</td><td>Current fill amount in mB.</td></tr>
+            <tr><td>capacity</td><td>Num</td><td>Maximum capacity in mB.</td></tr>
+            <tr><td>fraction</td><td>Num</td><td>Fill fraction 0.0–1.0.</td></tr>
+            <tr><td>percent</td><td>Num</td><td>Fill percent 0.0–100.0.</td></tr>
+            <tr><td>is_empty</td><td>Bool</td><td>True when level == 0.</td></tr>
+            <tr><td>is_full</td><td>Bool</td><td>True when level == capacity.</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+
+      <!-- Upgrades class -->
+      <h3 id="class-upgrades">Upgrades</h3>
+      <div class="class-block">
+        <div class="class-sig"><span class="kw">class</span> <span class="cls">Upgrades</span></div>
+        <div class="table-wrap"><table class="prop-table">
+          <thead><tr><th>Property / Method</th><th>Type</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td>count("item_id")</td><td>Num</td><td>How many of the given CE item are installed.</td></tr>
+            <tr><td>inventory</td><td>Array&lt;Item&gt;</td><td>All items in the upgrade grid.</td></tr>
+            <tr><td>slots</td><td>Num</td><td>Number of unlocked upgrade slots.</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+
+      <!-- MultiBlock / Workbench / Block / Entity / Location / Contraption classes -->
+      <h3 id="class-others">Other PolyClasses</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Class</th><th>Key properties / methods</th></tr></thead>
+        <tbody>
+          <tr><td><code>MultiBlock</code></td><td><code>mode</code> (current mode name), <code>width / height / depth</code>, <code>core_x/y/z</code>.</td></tr>
+          <tr><td><code>Workbench</code></td><td><code>input(n)</code>, <code>output(n)</code>, <code>tool(n)</code> — slots by role.</td></tr>
+          <tr><td><code>Block</code></td><td><code>type</code> (material key), <code>is_air</code>, <code>is_solid</code>, <code>light_level</code>.</td></tr>
+          <tr><td><code>Entity</code></td><td><code>type</code>, <code>x/y/z</code>, <code>health</code>, <code>name</code>, <code>is_alive</code>, <code>location</code>.</td></tr>
+          <tr><td><code>Location</code></td><td><code>x/y/z</code>, <code>yaw</code>, <code>pitch</code>, <code>world</code>. Obtained from machine position or entity.</td></tr>
+          <tr><td><code>Contraption</code></td><td><code>speed</code> (angular velocity), <code>is_moving</code>, <code>block_count</code>.</td></tr>
+        </tbody>
+      </table></div>
+
+      <h2 id="polyscript">PolyScript (.pf files)</h2>
+      <p>A <code>.pf</code> file is a script that defines named variables available to all renderer specs that declare <code>"run": "scriptname"</code>. The script is evaluated sequentially before rendering; later assignments can reference earlier ones.</p>
+
+      <pre data-lang="pf"><code># crusher.pf — renderer script for the crusher machine
+# Variables here are available to all renderers that declare "run": "crusher"
+
+# Simple assignment
+speed_mult  = max(0.05, overclock)
+running     = processing && rpm > 0
+
+# Particle intensity scales with rpm
+smoke_count = running ? clamp(floor(rpm / 10), 1, 6) : 0
+
+# Vertical pulse via trig
+pulse_y = max_progress > 0 ? sin(progress / max_progress * TAU) * 0.1 : 0
+
+# If / else if / else
+if running && overclock > 2.5 {
+    glow = true
+    turbo = true
+} else if running {
+    glow = false
+    turbo = false
+} else {
+    glow = false
+    turbo = false
+}
+
+# For loop — iterate over upgrade items
+upgrade_bonus = 0
+for item in Upgrades.inventory {
+    upgrade_bonus = upgrade_bonus + item_count(item)
+}</code></pre>
+
+      <h3 id="script-format">Script Format</h3>
+      <ul>
+        <li>Lines starting with <code>#</code> are comments.</li>
+        <li>Assignments: <code>name = expr</code></li>
+        <li>If/else: <code>if condition { … } else if … { … } else { … }</code> — opening brace on same line as condition.</li>
+        <li>For: <code>for varName in iterExpr { … }</code> — binds each element as <code>varName</code> (also <code>e</code> / <code>element</code>).</li>
+        <li>Variables written inside a branch or loop are visible to subsequent statements.</li>
+      </ul>
+
+      <h2 id="machine-variables">Machine Context Variables</h2>
+      <p>These variables are always available in machine renderer contexts (no class prefix needed):</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Variable</th><th>Type</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>rpm</td><td>Num</td><td>Rotational speed delivered by the current motor (0 if unpowered).</td></tr>
+          <tr><td>overclock</td><td>Num</td><td>Current overclock multiplier (1.0 = normal speed).</td></tr>
+          <tr><td>processing</td><td>Bool</td><td>True when the machine is actively running a recipe.</td></tr>
+          <tr><td>progress</td><td>Num</td><td>Current recipe progress ticks.</td></tr>
+          <tr><td>max_progress</td><td>Num</td><td>Total ticks for the current recipe.</td></tr>
+          <tr><td>fuel_level</td><td>Num</td><td>Fuel ticks remaining.</td></tr>
+          <tr><td>max_fuel</td><td>Num</td><td>Max fuel of the current fuel item.</td></tr>
+        </tbody>
+      </table></div>
+
+      <h2 id="examples">Practical Examples</h2>
+      <pre data-lang="text"><code># Show BetterModel animation only while running and powered
+"when": "processing && rpm > 0"
+
+# Scale animation speed to overclock (min 5% to prevent freeze)
+"speed": "max(0.05, overclock)"
+
+# Particle count scales with RPM, capped at 6
+"count": "running ? clamp(floor(rpm / 10), 1, 6) : 0"
+
+# Text display showing fluid fill percent
+"text": "format('Water: %d%%', floor(FluidTank('water', 'percent')))"
+
+# Rotate item display to face nearest player (look-at billboard)
+"rot_y": "Machine.nearest_player_yaw"
+
+# Animated bounce: full sine wave per progress cycle
+"location": [0.5, "1.0 + sin(progress / max_progress * TAU) * 0.15", 0.5]
+
+# Conditional particle only when overclock is high
+"when": "processing && overclock > 1.5"
+
+# Use CE item in renderer
+"item": "CraftEngineItem('cml:upgrade_diamond')"</code></pre>
+    </div>
+  </main>
+</div>
+<script src="assets/main.js"></script>
+</body>
+</html>

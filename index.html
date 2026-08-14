@@ -1,131 +1,195 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CraftEngine Polyfills — Documentation</title>
-<style>
-  :root { --bg: #0d1117; --surface: #161b22; --border: #30363d; --accent: #58a6ff; --text: #c9d1d9; --muted: #8b949e; }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; line-height: 1.6; }
-  header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 1rem 2rem; display: flex; align-items: center; gap: 1rem; }
-  header h1 { font-size: 1.25rem; color: var(--accent); }
-  header span { color: var(--muted); font-size: 0.9rem; }
-  .container { max-width: 1100px; margin: 0 auto; padding: 2rem; }
-  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; margin-top: 2rem; }
-  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1.25rem; transition: border-color .2s; }
-  .card:hover { border-color: var(--accent); }
-  .card h2 { font-size: 1rem; color: var(--accent); margin-bottom: .5rem; }
-  .card p { font-size: .875rem; color: var(--muted); }
-  .card ul { margin-top: .5rem; padding-left: 1.2rem; font-size: .8rem; color: var(--muted); }
-  .badge { display: inline-block; background: #1f6feb33; color: var(--accent); border: 1px solid #1f6feb66; border-radius: 4px; padding: 2px 8px; font-size: .75rem; margin-bottom: .5rem; }
-  h1.hero { font-size: 2rem; margin-bottom: .5rem; }
-  p.lead { color: var(--muted); font-size: 1.05rem; margin-bottom: 1rem; }
-  a { color: var(--accent); text-decoration: none; }
-  a:hover { text-decoration: underline; }
-  .wip { background: #3d1f00; border: 1px solid #f0883e55; border-radius: 8px; padding: 1rem; margin-top: 1.5rem; color: #f0883e; font-size: .875rem; }
-</style>
-</head>
-<body>
-<header>
-  <h1>CraftEngine Polyfills</h1>
-  <span>Documentation — Work in Progress</span>
-</header>
-<div class="container">
-  <h1 class="hero">CraftEngine Polyfills</h1>
-  <p class="lead">Data-driven extension layer for CraftEngine — machines, contraptions, fluid rendering, and a powerful PolyFormula scripting engine.</p>
-  <div class="wip">⚠️ Documentation is being written. Pages will be added progressively.</div>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CraftEngine Polyfills — Documentation</title>
+  <link rel="stylesheet" href="docs/assets/style.css" />
+  <style>
+    /* Landing page extra styles */
+    .hero {
+      text-align: center;
+      padding: 5rem 2rem 3rem;
+    }
+    .hero h1 { font-size: 2.6rem; margin-bottom: 1rem; }
+    .hero .sub { font-size: 1.15rem; color: var(--text-muted); max-width: 600px; margin: 0 auto 2.5rem; }
+    .hero .badges { display: flex; justify-content: center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 2.5rem; }
+    .hero-btn {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      padding: 0.65rem 1.4rem;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      text-decoration: none;
+      transition: filter 0.15s;
+    }
+    .hero-btn:hover { filter: brightness(1.12); }
+    .hero-btn.primary { background: var(--accent); color: #0d1117; }
+    .hero-btn.secondary { background: var(--bg-3); color: var(--text); border: 1px solid var(--border); }
 
-  <div class="grid">
-    <div class="card">
-      <div class="badge">Core</div>
-      <h2>PolyFormula Engine</h2>
-      <p>Typed expression engine for renderer conditions, animations, and positions.</p>
-      <ul>
-        <li>PolyValue types: Num, Bool, Item, Str, Array, Obj</li>
-        <li>30+ built-in functions (sin, clamp, map, filter…)</li>
-        <li>% operator, ternary ?:, null-coalescing ??</li>
-        <li>.pf script files with for/while loops</li>
-      </ul>
-    </div>
-    <div class="card">
-      <div class="badge">Rendering</div>
-      <h2>renderers System</h2>
-      <p>Data-driven visual effects for any machine, multiblock, motor, or CE block.</p>
-      <ul>
-        <li>BetterModel, ModelEngine, ItemDisplay, TextDisplay</li>
-        <li>Particle (shaped: disc, sphere, cylinder…)</li>
-        <li>Sound, ArmorStand, BlockDisplay</li>
-        <li>location field: relative offset or absolute world pos</li>
-        <li>positions array for multi-point rendering</li>
-      </ul>
-    </div>
-    <div class="card">
-      <div class="badge">Context</div>
-      <h2>PolyClasses</h2>
-      <p>Rich cross-integrated value system available in every expression.</p>
-      <ul>
-        <li>Machine, MultiBlock, Contraption, World, Location</li>
-        <li>Player, Entity, Inventory, Block, Item</li>
-        <li>FluidTanks, GasTanks, Upgrades, Workbench</li>
-        <li>Full chaining: World.block(x,y,z).redstone</li>
-      </ul>
-    </div>
-    <div class="card">
-      <div class="badge">Machines</div>
-      <h2>Data-Driven Machines</h2>
-      <p>Define machines entirely in JSON — no Java required.</p>
-      <ul>
-        <li>slots, tanks, bars, buttons, paging</li>
-        <li>upgrade.definitions in machine JSON</li>
-        <li>MachineAttributes: generation, overclock_limit, fuel_efficiency</li>
-        <li>MultiBlock machines with per-part rendering</li>
-      </ul>
-    </div>
-    <div class="card">
-      <div class="badge">Contraptions</div>
-      <h2>Contraption System</h2>
-      <p>Moving structures with physics, fluid rendering, and machine elements.</p>
-      <ul>
-        <li>Entity culling (distance + frustum, configurable)</li>
-        <li>Vanilla fluid rendering with CE item patterns</li>
-        <li>ContraptionMachineRendererElement</li>
-        <li>Contraption PolyClass: speed, riders, anchor_entity</li>
-      </ul>
-    </div>
-    <div class="card">
-      <div class="badge">Scripting</div>
-      <h2>.pf Script Files</h2>
-      <p>PolyScript files in <code>scripts/</code> folder, referenced by renderers via <code>"run": "name"</code>.</p>
-      <ul>
-        <li>Named variable assignments</li>
-        <li>if / else if / else blocks</li>
-        <li>for item in array: loops</li>
-        <li>while condition: loops (max 1000 iterations)</li>
-        <li>i++, i--, i += expr operators</li>
-      </ul>
-    </div>
-    <div class="card">
-      <div class="badge">Behaviors</div>
-      <h2>polyfill:renderer Behavior</h2>
-      <p>Add the renderer system to any CE custom block without a machine.</p>
-      <ul>
-        <li>Full PolyFormula context (redstone, block state, container)</li>
-        <li>Same renderer types as machines</li>
-        <li>Particles, text, item displays, sounds</li>
-      </ul>
-    </div>
-    <div class="card">
-      <div class="badge">Source</div>
-      <h2>Repository</h2>
-      <p>Source code and examples on GitHub.</p>
-      <ul>
-        <li><a href="https://github.com/Arubik/craft-engine-polyfills">github.com/Arubik/craft-engine-polyfills</a></li>
-        <li>Branch: migrate/craftengine-26</li>
-        <li>Examples: crusher.json, crusher.pf, workbench.json</li>
-      </ul>
-    </div>
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1rem;
+      max-width: 960px;
+      margin: 0 auto 4rem;
+      padding: 0 1.5rem;
+    }
+    .feature-card {
+      background: var(--bg-2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.25rem 1.1rem;
+      text-decoration: none;
+      color: var(--text);
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .feature-card:hover { border-color: var(--accent); background: var(--bg-3); text-decoration: none; }
+    .feature-card .icon { font-size: 1.6rem; margin-bottom: 0.6rem; display: block; }
+    .feature-card h3 { font-size: 1rem; color: #e6edf3; margin-bottom: 0.35rem; }
+    .feature-card p  { font-size: 0.85rem; color: var(--text-muted); margin: 0; line-height: 1.5; }
+
+    .section-title {
+      text-align: center;
+      font-size: 1.6rem;
+      margin-bottom: 1.5rem;
+      color: #f0f6fc;
+    }
+    .divider { border: none; border-top: 1px solid var(--border); margin: 2rem auto; max-width: 960px; }
+
+    .no-sidebar .layout { display: block; }
+    .no-sidebar .sidebar { display: none; }
+    .no-sidebar .content { padding: 0; }
+  </style>
+</head>
+<body class="no-sidebar">
+
+<!-- Top bar -->
+<header class="topbar">
+  <button class="hamburger" id="hamburger" aria-label="Menu">&#9776;</button>
+  <a href="index.html" class="logo">
+    ⚙️ CraftEngine Polyfills <span class="badge">1.21.11</span>
+  </a>
+  <div class="spacer"></div>
+  <div class="search-wrap">
+    <span class="search-icon">&#128269;</span>
+    <input id="search" type="search" placeholder="Search docs…" autocomplete="off" />
+    <div id="search-results"></div>
   </div>
+  <a href="https://github.com/Arubik/craft-engine-polyfills" class="gh-link">
+    &#128279; GitHub
+  </a>
+</header>
+
+<div class="layout">
+  <!-- Sidebar (hidden on landing, but kept for search) -->
+  <nav class="sidebar">
+    <div class="nav-section">
+      <div class="nav-section-header">&#128196; Getting Started <span class="caret">&#9660;</span></div>
+      <ul class="nav-items">
+        <li><a href="docs/getting-started.html">Introduction</a></li>
+      </ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header">&#9881; Machines <span class="caret">&#9660;</span></div>
+      <ul class="nav-items">
+        <li><a href="docs/machines.html">JSON Config Reference</a></li>
+        <li><a href="docs/machines-api.html">Java API</a></li>
+        <li><a href="docs/upgrades.html">Upgrade System</a></li>
+        <li><a href="docs/bars.html">Bars &amp; Gauges</a></li>
+      </ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header">&#128221; PolyFormula <span class="caret">&#9660;</span></div>
+      <ul class="nav-items">
+        <li><a href="docs/polyformula.html">Language Reference</a></li>
+        <li><a href="docs/renderers.html">Renderer System</a></li>
+      </ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header">&#128260; Contraptions <span class="caret">&#9660;</span></div>
+      <ul class="nav-items">
+        <li><a href="docs/contraptions.html">Contraption System</a></li>
+      </ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header">&#127795; Fluids &amp; Pipes <span class="caret">&#9660;</span></div>
+      <ul class="nav-items">
+        <li><a href="docs/pipes-fluids.html">Pipes, Fluids &amp; Gas</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <main class="content" style="background:var(--bg);">
+    <!-- Hero -->
+    <section class="hero">
+      <h1>CraftEngine Polyfills</h1>
+      <p class="sub">
+        A Paper 1.21.11 plugin that extends CraftEngine with data-driven machines,
+        multiblocks, contraptions, fluid pipe networks, and the PolyFormula scripting engine.
+      </p>
+      <div class="badges">
+        <span class="badge badge-blue">Paper 1.21.11</span>
+        <span class="badge badge-green">CraftEngine 0.7+</span>
+        <span class="badge badge-yellow">Java 21</span>
+        <span class="badge badge-blue">BetterModel support</span>
+      </div>
+      <div style="display:flex;justify-content:center;gap:1rem;flex-wrap:wrap;">
+        <a href="docs/getting-started.html" class="hero-btn primary">&#128214; Get Started</a>
+        <a href="docs/machines.html" class="hero-btn secondary">&#9881; Machine Config</a>
+        <a href="docs/polyformula.html" class="hero-btn secondary">&#128221; PolyFormula</a>
+      </div>
+    </section>
+
+    <hr class="divider" />
+
+    <!-- Feature cards -->
+    <h2 class="section-title">What's included</h2>
+    <div class="feature-grid">
+      <a href="docs/machines.html" class="feature-card">
+        <span class="icon">&#9881;</span>
+        <h3>Data-Driven Machines</h3>
+        <p>Define machines entirely in JSON — slots, tanks, upgrades, recipes, gauges and renderers. No Java required.</p>
+      </a>
+      <a href="docs/polyformula.html" class="feature-card">
+        <span class="icon">&#128221;</span>
+        <h3>PolyFormula Engine</h3>
+        <p>80+ built-in functions, PolyClasses (Inventory, Machine, World, Player…), .pf scripts with if/for, compiled per-tick.</p>
+      </a>
+      <a href="docs/renderers.html" class="feature-card">
+        <span class="icon">&#127909;</span>
+        <h3>Renderer System</h3>
+        <p>BetterModel, ModelEngine, ItemDisplay, TextDisplay, BlockDisplay, Particle, Sound — all formula-driven.</p>
+      </a>
+      <a href="docs/contraptions.html" class="feature-card">
+        <span class="icon">&#128260;</span>
+        <h3>Contraption System</h3>
+        <p>Moving structures with XPBD physics, bearing blocks, piston bearings, vehicle control and entity culling.</p>
+      </a>
+      <a href="docs/pipes-fluids.html" class="feature-card">
+        <span class="icon">&#127795;</span>
+        <h3>Fluid &amp; Gas Networks</h3>
+        <p>Graph-solved pipe networks with pressure, conductance, tanks, valves, pumps, and visual fill indicators.</p>
+      </a>
+      <a href="docs/upgrades.html" class="feature-card">
+        <span class="icon">&#128200;</span>
+        <h3>Upgrade System</h3>
+        <p>Mojang-style attribute modifiers (ADD / MULTIPLY_BASE / MULTIPLY_TOTAL) with per-machine upgrade slot grids.</p>
+      </a>
+      <a href="docs/bars.html" class="feature-card">
+        <span class="icon">&#128202;</span>
+        <h3>Bars &amp; Gauges</h3>
+        <p>Progress bars, fuel meters, fluid and gas level indicators — defined in bars/*.json, referenced by machine JSON.</p>
+      </a>
+      <a href="docs/machines-api.html" class="feature-card">
+        <span class="icon">&#128196;</span>
+        <h3>Java API</h3>
+        <p>DataMachineBlockEntity, MachineDefinition, RendererManager — full class and method documentation.</p>
+      </a>
+    </div>
+  </main>
 </div>
+
+<script src="docs/assets/main.js"></script>
 </body>
 </html>

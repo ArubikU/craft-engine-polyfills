@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Getting Started — CraftEngine Polyfills</title>
+  <link rel="stylesheet" href="assets/style.css" />
+</head>
+<body>
+<header class="topbar">
+  <button class="hamburger" id="hamburger" aria-label="Menu">&#9776;</button>
+  <a href="../index.html" class="logo">⚙️ CraftEngine Polyfills <span class="badge">1.21.11</span></a>
+  <div class="spacer"></div>
+  <div class="search-wrap">
+    <span class="search-icon">&#128269;</span>
+    <input id="search" type="search" placeholder="Search docs…" autocomplete="off" />
+    <div id="search-results"></div>
+  </div>
+  <a href="https://github.com/Arubik/craft-engine-polyfills" class="gh-link">&#128279; GitHub</a>
+</header>
+<div class="layout">
+  <nav class="sidebar">
+    <div class="nav-section">
+      <div class="nav-section-header">&#128196; Getting Started <span class="caret">&#9660;</span></div>
+      <ul class="nav-items">
+        <li><a href="getting-started.html">Introduction</a></li>
+      </ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header">&#9881; Machines <span class="caret">&#9660;</span></div>
+      <ul class="nav-items">
+        <li><a href="machines.html">JSON Config Reference</a></li>
+        <li><a href="machines-api.html">Java API</a></li>
+        <li><a href="upgrades.html">Upgrade System</a></li>
+        <li><a href="bars.html">Bars &amp; Gauges</a></li>
+      </ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header">&#128221; PolyFormula <span class="caret">&#9660;</span></div>
+      <ul class="nav-items">
+        <li><a href="polyformula.html">Language Reference</a></li>
+        <li><a href="renderers.html">Renderer System</a></li>
+      </ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header">&#128260; Contraptions <span class="caret">&#9660;</span></div>
+      <ul class="nav-items">
+        <li><a href="contraptions.html">Contraption System</a></li>
+      </ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header">&#127795; Fluids &amp; Pipes <span class="caret">&#9660;</span></div>
+      <ul class="nav-items">
+        <li><a href="pipes-fluids.html">Pipes, Fluids &amp; Gas</a></li>
+      </ul>
+    </div>
+  </nav>
+  <main class="content">
+    <div class="content-inner">
+      <div class="breadcrumbs"><a href="../index.html">Home</a><span>/</span>Getting Started</div>
+
+      <div class="page-header">
+        <h1>Getting Started</h1>
+        <p class="subtitle">Everything you need to install CraftEngine Polyfills and understand its architecture.</p>
+      </div>
+
+      <h2 id="requirements">Requirements</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Dependency</th><th>Version</th><th>Required</th></tr></thead>
+          <tbody>
+            <tr><td>Paper / Folia</td><td>1.21.11+</td><td><span class="badge badge-red">Required</span></td></tr>
+            <tr><td>CraftEngine</td><td>0.7+</td><td><span class="badge badge-red">Required</span></td></tr>
+            <tr><td>Java</td><td>21+</td><td><span class="badge badge-red">Required</span></td></tr>
+            <tr><td>BetterModel</td><td>Latest</td><td><span class="badge badge-yellow">Optional</span></td></tr>
+            <tr><td>ModelEngine R4</td><td>R4.0.6+</td><td><span class="badge badge-yellow">Optional</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2 id="installation">Installation</h2>
+      <ol>
+        <li>Drop <code>craft-engine-polyfills-&lt;version&gt;.jar</code> into your <code>plugins/</code> folder.</li>
+        <li>Ensure <strong>CraftEngine</strong> is installed and loaded <em>before</em> this plugin.</li>
+        <li>Start the server. Config files and default resource packs are extracted on first run.</li>
+        <li>Reload with <code>/cep reload</code> after editing any JSON definition.</li>
+      </ol>
+      <div class="callout tip"><strong>Tip</strong>All machine, multiblock, pipe, and fluid definitions are hot-reloadable — no server restart needed after a <code>/cep reload</code>.</div>
+
+      <h2 id="file-layout">File Layout</h2>
+      <pre data-lang="text"><code>plugins/CraftEnginePolyfills/
+├── machines/          ← machine JSON definitions
+├── motors/            ← motor definitions
+├── multiblocks/       ← multiblock JSON definitions
+├── pipe_types/        ← pipe type definitions
+├── fluid_types/       ← fluid type definitions
+├── gas_types/         ← gas type definitions
+├── bars/              ← gauge bar definitions
+├── fuels/             ← fuel recipe definitions
+├── pumps/             ← pump definitions
+├── recipes/           ← machine recipes
+├── scripts/           ← .pf renderer scripts
+├── contraptions.yml   ← contraption system config
+├── floatability.yml   ← block floatability overrides
+├── friction.yml       ← block friction overrides
+├── mass.yml           ← block mass overrides
+└── restitution.yml    ← block restitution overrides</code></pre>
+
+      <h2 id="commands">Commands</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Command</th><th>Permission</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td>/cep reload</td><td>cep.admin</td><td>Reload all definition files and scripts without server restart.</td></tr>
+            <tr><td>/cep debug contraption</td><td>cep.admin</td><td>Spawn a debug contraption for physics testing.</td></tr>
+            <tr><td>/cep debug hologram</td><td>cep.admin</td><td>Show holographic debug info overlay.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2 id="architecture">Architecture Overview</h2>
+      <p>CraftEngine Polyfills is organized into these major subsystems:</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Subsystem</th><th>Package</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td>Machines</td><td><code>machine/</code></td><td>Data-driven block entity machines with recipes, tanks, upgrades, and renderers. No per-machine Java class required.</td></tr>
+            <tr><td>PolyFormula</td><td><code>machine/render/formula/</code></td><td>Typed expression engine used by renderer specs, variable declarations, and .pf scripts.</td></tr>
+            <tr><td>Renderers</td><td><code>machine/render/</code></td><td>Visual layer: BetterModel, ModelEngine, displays, particles, sounds — all driven by PolyFormula.</td></tr>
+            <tr><td>Multiblocks</td><td><code>multiblock/</code></td><td>Multi-block structures assembled by hammer, with mode-based machine definitions and IO rules.</td></tr>
+            <tr><td>Contraptions</td><td><code>contraption/</code></td><td>Moving structures captured into a sub-level with XPBD physics, bearings, and vehicle seats.</td></tr>
+            <tr><td>Fluid Network</td><td><code>fluid/graph/</code></td><td>Graph-solved pressure network for pipes, tanks, valves, and pumps.</td></tr>
+            <tr><td>Gas Network</td><td><code>fluid/graph/GasEngine</code></td><td>Same solver as fluids but for gaseous fluids (steam, nitrogen…).</td></tr>
+            <tr><td>Blocks</td><td><code>block/</code></td><td>Custom block behaviors: fans, lights, redstone diodes, connectable pipes, storage, crops.</td></tr>
+            <tr><td>Chainery</td><td><code>chainery/</code></td><td>Physics-coupled chain block &amp; item — rope-like connections between blocks.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2 id="quick-machine">Quick Example: Data Machine</h2>
+      <p>The minimum JSON for a working single-slot machine:</p>
+      <pre data-lang="json"><code>{
+  "id": "polyfills:my_crusher",
+  "recipe_type": "my_crusher",
+  "title": "My Crusher",
+  "menu_size": 27,
+  "fuel_required": false,
+  "slots": {
+    "input":  [0],
+    "output": [2],
+    "info":   4,
+    "upgrade": { "count": 3, "base_unlocked": 1 }
+  },
+  "power": { "consumes_stress": true },
+  "bars": [
+    { "id": "polyfills:progress", "slots": [1], "source": "progress" }
+  ]
+}</code></pre>
+      <p>Place the file in <code>plugins/CraftEnginePolyfills/machines/my_crusher.json</code> and run <code>/cep reload</code>. Then in your CraftEngine pack YAML, add a block behavior of type <code>data_machine</code> with <code>machine: polyfills:my_crusher</code>.</p>
+
+      <div class="callout note"><strong>Note</strong>The <code>recipe_type</code> field is the namespace under which this machine's recipes are looked up. It can differ from the machine <code>id</code>, letting you share recipes across machines or replace a Java machine without invalidating recipes.</div>
+
+      <h2 id="next-steps">Next Steps</h2>
+      <ul>
+        <li><a href="machines.html">Full machine JSON reference</a> — every key documented with types and defaults.</li>
+        <li><a href="polyformula.html">PolyFormula reference</a> — all 80+ builtins, operators, and PolyClasses.</li>
+        <li><a href="renderers.html">Renderer system</a> — animate machines with BetterModel, displays, and particles.</li>
+        <li><a href="upgrades.html">Upgrade system</a> — attribute modifiers, upgrade slot grids, overclock.</li>
+        <li><a href="contraptions.html">Contraption system</a> — physics, bearings, and entity culling config.</li>
+        <li><a href="pipes-fluids.html">Pipe &amp; fluid reference</a> — define pipe types, fluid types, and network behavior.</li>
+      </ul>
+    </div>
+  </main>
+</div>
+<script src="assets/main.js"></script>
+</body>
+</html>

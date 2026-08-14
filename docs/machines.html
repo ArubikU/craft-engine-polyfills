@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Machine Config Reference — CraftEngine Polyfills</title>
+  <link rel="stylesheet" href="assets/style.css" />
+</head>
+<body>
+<header class="topbar">
+  <button class="hamburger" id="hamburger" aria-label="Menu">&#9776;</button>
+  <a href="../index.html" class="logo">⚙️ CraftEngine Polyfills <span class="badge">1.21.11</span></a>
+  <div class="spacer"></div>
+  <div class="search-wrap">
+    <span class="search-icon">&#128269;</span>
+    <input id="search" type="search" placeholder="Search docs…" autocomplete="off" />
+    <div id="search-results"></div>
+  </div>
+  <a href="https://github.com/Arubik/craft-engine-polyfills" class="gh-link">&#128279; GitHub</a>
+</header>
+<div class="layout">
+  <nav class="sidebar">
+    <div class="nav-section">
+      <div class="nav-section-header">&#128196; Getting Started <span class="caret">&#9660;</span></div>
+      <ul class="nav-items"><li><a href="getting-started.html">Introduction</a></li></ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header">&#9881; Machines <span class="caret">&#9660;</span></div>
+      <ul class="nav-items">
+        <li><a href="machines.html">JSON Config Reference</a></li>
+        <li><a href="machines-api.html">Java API</a></li>
+        <li><a href="upgrades.html">Upgrade System</a></li>
+        <li><a href="bars.html">Bars &amp; Gauges</a></li>
+      </ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header">&#128221; PolyFormula <span class="caret">&#9660;</span></div>
+      <ul class="nav-items">
+        <li><a href="polyformula.html">Language Reference</a></li>
+        <li><a href="renderers.html">Renderer System</a></li>
+      </ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header">&#128260; Contraptions <span class="caret">&#9660;</span></div>
+      <ul class="nav-items"><li><a href="contraptions.html">Contraption System</a></li></ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header">&#127795; Fluids &amp; Pipes <span class="caret">&#9660;</span></div>
+      <ul class="nav-items"><li><a href="pipes-fluids.html">Pipes, Fluids &amp; Gas</a></li></ul>
+    </div>
+  </nav>
+  <main class="content">
+    <div class="content-inner">
+      <div class="breadcrumbs"><a href="../index.html">Home</a><span>/</span>Machine JSON Config</div>
+
+      <div class="page-header">
+        <h1>Machine JSON Config Reference</h1>
+        <p class="subtitle">Every field in a machine definition file, with types, defaults, and examples.</p>
+      </div>
+
+      <h2 id="file-location">File Location</h2>
+      <p>Place machine definition files in <code>plugins/CraftEnginePolyfills/machines/*.json</code>. They are reloaded with <code>/cep reload</code>.</p>
+
+      <h2 id="top-level">Top-Level Fields</h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>id</td><td>Str</td><td>Required</td><td>Namespaced machine identifier, e.g. <code>"polyfills:crusher"</code>. Must be unique across all loaded definitions.</td></tr>
+          <tr><td>recipe_type</td><td>Str</td><td>Required</td><td>Recipe namespace under which recipes are looked up. May differ from <code>id</code> to share recipes with a Java machine.</td></tr>
+          <tr><td>title</td><td>Str</td><td>Required</td><td>Menu window title (supports lang keys).</td></tr>
+          <tr><td>menu_size</td><td>Int</td><td>Required</td><td>Chest inventory size: 9, 18, 27, 36, 45, or 54.</td></tr>
+          <tr><td>fuel_required</td><td>Bool</td><td><code>false</code></td><td>Whether the machine halts without fuel items in its fuel slots.</td></tr>
+          <tr><td>slots</td><td>Object</td><td>Required</td><td>Slot configuration. See <a href="#slots">Slots</a> section.</td></tr>
+          <tr><td>fluid_tanks</td><td>Array</td><td><code>[]</code></td><td>Fluid tank declarations. See <a href="#tanks">Tanks</a> section.</td></tr>
+          <tr><td>gas_tanks</td><td>Array</td><td><code>[]</code></td><td>Gas tank declarations. Same format as fluid_tanks.</td></tr>
+          <tr><td>io</td><td>Object</td><td>null</td><td>Directional IO configuration. See <a href="#io">IO Configuration</a>.</td></tr>
+          <tr><td>power</td><td>Object</td><td>none</td><td>Rotational power spec. See <a href="#power">Power Spec</a>.</td></tr>
+          <tr><td>bars</td><td>Array</td><td><code>[]</code></td><td>Gauge bars to show. See <a href="#bars">Bars</a>.</td></tr>
+          <tr><td>buttons</td><td>Array</td><td><code>[]</code></td><td>Action buttons on the main page. See <a href="#buttons">Buttons</a>.</td></tr>
+          <tr><td>variables</td><td>Object</td><td><code>{}</code></td><td>Named PolyFormula variable declarations evaluated each tick.</td></tr>
+          <tr><td>renderers</td><td>Array</td><td><code>[]</code></td><td>Visual renderer specs. See <a href="renderers.html">Renderer System</a>.</td></tr>
+          <tr><td>paging</td><td>Object</td><td>null</td><td>Multi-page storage config. See <a href="#paging">Paging</a>.</td></tr>
+        </tbody>
+      </table></div>
+
+      <h2 id="slots">Slots</h2>
+      <pre data-lang="json"><code>"slots": {
+  "input":  [12],
+  "output": [14],
+  "fuel":   [11, 15],
+  "info":   4,
+  "upgrade": {
+    "count": 9,
+    "base_unlocked": 3,
+    "definitions": { ... }
+  }
+}</code></pre>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Key</th><th>Type</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>input</td><td>Array&lt;Int&gt;</td><td>Menu slot indices that accept input items.</td></tr>
+          <tr><td>output</td><td>Array&lt;Int&gt;</td><td>Menu slot indices where output items are placed.</td></tr>
+          <tr><td>fuel</td><td>Array&lt;Int&gt;</td><td>Menu slot indices for fuel items. Required when <code>fuel_required: true</code>.</td></tr>
+          <tr><td>info</td><td>Int or Object</td><td>Slot index for the recipe readout icon. Or object with <code>slot</code>, <code>type</code> (<code>"recipe"</code> | <code>"tank"</code>), and <code>source</code> (e.g. <code>"fluid:water_input"</code>).</td></tr>
+          <tr><td>upgrade</td><td>Object</td><td>Upgrade grid configuration. See <a href="#upgrade-spec">Upgrade Spec</a>.</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3 id="upgrade-spec">Upgrade Spec</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>count</td><td>Int</td><td>0</td><td>Total upgrade slots. Uses reserved container indices 0..count−1 (separate page). Mutually exclusive with <code>slots</code>.</td></tr>
+          <tr><td>base_unlocked</td><td>Int</td><td>1</td><td>How many slots are usable before any EXTRA_SLOTS upgrade.</td></tr>
+          <tr><td>slots</td><td>Array&lt;Int&gt;</td><td>null</td><td>Explicit menu slot indices for upgrade grid (inline mode). Mutually exclusive with <code>count</code>.</td></tr>
+          <tr><td>definitions</td><td>Object</td><td><code>{}</code></td><td>Maps CE item key → list of attribute modifier objects. See <a href="upgrades.html">Upgrade System</a>.</td></tr>
+        </tbody>
+      </table></div>
+
+      <h2 id="tanks">Tanks</h2>
+      <pre data-lang="json"><code>"fluid_tanks": [
+  { "name": "water_input",  "capacity": 10000, "filter": "polyfills:water" }
+],
+"gas_tanks": [
+  { "name": "steam_output", "capacity": 10000, "filter": "polyfills:steam" }
+]</code></pre>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>name</td><td>Str</td><td>Required</td><td>Unique tank name within this machine. Referenced in bars, info, and PolyFormula.</td></tr>
+          <tr><td>capacity</td><td>Int</td><td>Required</td><td>Maximum fluid capacity in mB.</td></tr>
+          <tr><td>filter</td><td>Key</td><td>null</td><td>Namespaced fluid/gas type key that restricts what this tank accepts. Null = accepts any.</td></tr>
+        </tbody>
+      </table></div>
+
+      <h2 id="power">Power Spec</h2>
+      <pre data-lang="json"><code>"power": {
+  "consumes_stress": true,
+  "su_exponent": 1.25,
+  "stress_grace_ticks": 20,
+  "generates_rpm": 0,
+  "generates_su": 0,
+  "base_overclock": 2.0
+}</code></pre>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>consumes_stress</td><td>Bool</td><td>false</td><td>Whether the machine needs rotational supply. False = fuel-only machine.</td></tr>
+          <tr><td>su_exponent</td><td>Float</td><td>1.25</td><td>SU scales as (1 + overclock)^su_exponent. &gt;1.0 = overclocking costs more stress.</td></tr>
+          <tr><td>stress_grace_ticks</td><td>Int</td><td>20</td><td>Ticks the machine keeps running after supply dips below demand.</td></tr>
+          <tr><td>generates_rpm</td><td>Float</td><td>0</td><td>RPM this machine adds to the network (generator machines).</td></tr>
+          <tr><td>generates_su</td><td>Int</td><td>0</td><td>SU capacity this machine contributes.</td></tr>
+          <tr><td>base_overclock</td><td>Float</td><td>2.0</td><td>Maximum overclock multiplier before any upgrade modifications.</td></tr>
+        </tbody>
+      </table></div>
+
+      <h2 id="bars">Bars</h2>
+      <pre data-lang="json"><code>"bars": [
+  { "id": "polyfills:progress", "slots": [13],     "source": "progress" },
+  { "id": "polyfills:fuel",     "slots": [40],     "source": "rpm" },
+  { "id": "polyfills:fluid",    "slots": [27, 18], "source": "fluid:water_input" },
+  { "id": "polyfills:gas",      "slots": [35, 26], "source": "gas:steam_output" }
+]</code></pre>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>id</td><td>Key</td><td>Required</td><td>Bar definition ID from <code>bars/*.json</code>.</td></tr>
+          <tr><td>slots</td><td>Array&lt;Int&gt;</td><td>Required</td><td>Menu slot indices the bar occupies. Multiple slots = multi-cell bar.</td></tr>
+          <tr><td>source</td><td>Str</td><td>bar id</td><td>What the gauge reads: <code>"progress"</code>, <code>"fuel"</code>, <code>"rpm"</code>, <code>"fluid:&lt;name&gt;"</code>, or <code>"gas:&lt;name&gt;"</code>.</td></tr>
+        </tbody>
+      </table></div>
+
+      <h2 id="buttons">Buttons</h2>
+      <pre data-lang="json"><code>"buttons": [
+  {
+    "slot": 33,
+    "icon": "cml:upgrade_button",
+    "action": "open_page:1",
+    "name": "polyfill.ui.upgrades",
+    "lore": ["polyfill.ui.upgrades_desc"]
+  },
+  {
+    "slot": 29,
+    "icon": "cml:overclock_button",
+    "action": "open_page:2",
+    "name": "polyfill.ui.overclock",
+    "locked_icon": "cml:locked_icon",
+    "locked_when": "no_overclock"
+  }
+]</code></pre>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>slot</td><td>Int</td><td>Required</td><td>Menu slot for this button.</td></tr>
+          <tr><td>icon</td><td>Str</td><td>Required</td><td>CE item ID for the button icon.</td></tr>
+          <tr><td>action</td><td>Str</td><td>Required</td><td>Button action: <code>"open_page:N"</code> (open page N), <code>"deplete_fluid"</code>, <code>"deplete_gas"</code>.</td></tr>
+          <tr><td>name</td><td>Str</td><td><code>""</code></td><td>Display name — a lang key or literal string.</td></tr>
+          <tr><td>lore</td><td>Array&lt;Str&gt;</td><td><code>[]</code></td><td>Tooltip lines — lang keys or literals.</td></tr>
+          <tr><td>locked_icon</td><td>Str</td><td>null</td><td>Alternate icon shown when the button is locked.</td></tr>
+          <tr><td>locked_when</td><td>Str</td><td>null</td><td>Condition that locks this button. Currently supports <code>"no_overclock"</code> (machine has no overclock headroom).</td></tr>
+        </tbody>
+      </table></div>
+
+      <h2 id="paging">Paging (Multi-page Storage)</h2>
+      <pre data-lang="json"><code>"paging": {
+  "pages": 3,
+  "slots": 45,
+  "prev_slot": 45,
+  "next_slot": 53,
+  "indicator_slot": 49
+}</code></pre>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>pages</td><td>Int</td><td>1</td><td>Number of pages. 1 = ordinary non-paged storage.</td></tr>
+          <tr><td>slots</td><td>Int</td><td>0</td><td>Storage slots per page.</td></tr>
+          <tr><td>prev_slot</td><td>Int</td><td>-1</td><td>Menu slot for the previous-page button. -1 = none.</td></tr>
+          <tr><td>next_slot</td><td>Int</td><td>-1</td><td>Menu slot for the next-page button. -1 = none.</td></tr>
+          <tr><td>indicator_slot</td><td>Int</td><td>-1</td><td>Menu slot showing "page N/M". -1 = none.</td></tr>
+        </tbody>
+      </table></div>
+
+      <h2 id="io">IO Configuration</h2>
+      <p>IO configuration controls which faces accept or emit which resource types. Defined directly in machine JSON or in multiblock mode JSON.</p>
+      <pre data-lang="json"><code>"io": {
+  "default": "closed",
+  "rules": [
+    { "y_above": 0, "input":  { "types": ["item"], "faces": ["all_but_down"] } },
+    { "y": 0,       "input":  { "types": ["item"], "faces": ["horizontal"] } },
+    { "y_below": 0, "output": { "types": ["item"], "faces": ["down"] } }
+  ]
+}</code></pre>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Key</th><th>Type</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>default</td><td>Str</td><td><code>"open"</code> — all faces open. <code>"closed"</code> — all faces closed.</td></tr>
+          <tr><td>rules</td><td>Array</td><td>List of directional IO rules (applies to multiblock members).</td></tr>
+        </tbody>
+      </table></div>
+
+      <h2 id="complete-example">Complete Example: Crusher</h2>
+      <pre data-lang="json"><code>{
+  "id": "polyfills:crusher",
+  "recipe_type": "crusher",
+  "title": "Crusher",
+  "menu_size": 54,
+  "fuel_required": false,
+  "slots": {
+    "input":  [12],
+    "output": [14],
+    "info":   4,
+    "upgrade": {
+      "count": 9,
+      "base_unlocked": 3,
+      "definitions": {
+        "cml:upgrade_iron":    [{ "attribute": "polyfill:generation",  "operation": "add", "value": 0.05 }],
+        "cml:upgrade_diamond": [
+          { "attribute": "polyfill:generation",      "operation": "add", "value": 0.18 },
+          { "attribute": "polyfill:overclock_limit", "operation": "add", "value": 0.5  },
+          { "attribute": "polyfill:fuel_efficiency", "operation": "add", "value": 0.15 }
+        ]
+      }
+    }
+  },
+  "power": {
+    "consumes_stress": true,
+    "su_exponent": 1.25,
+    "stress_grace_ticks": 20
+  },
+  "bars": [
+    { "id": "polyfills:progress", "slots": [13], "source": "progress" },
+    { "id": "polyfills:fuel",     "slots": [40], "source": "rpm" }
+  ],
+  "buttons": [
+    {
+      "slot": 33, "icon": "cml:upgrade_button", "action": "open_page:1",
+      "name": "polyfill.ui.upgrades"
+    },
+    {
+      "slot": 29, "icon": "cml:overclock_button", "action": "open_page:2",
+      "name": "polyfill.ui.overclock",
+      "locked_icon": "cml:locked_icon", "locked_when": "no_overclock"
+    }
+  ],
+  "variables": {
+    "running":    "processing && rpm > 0",
+    "speed_mult": "max(0.05, overclock)"
+  },
+  "renderers": [
+    {
+      "type": "bettermodel",
+      "model_id": "crusher",
+      "animation": "on",
+      "speed": "speed_mult",
+      "when": "running",
+      "run": "crusher"
+    }
+  ]
+}</code></pre>
+
+      <h2 id="recipe-format">Recipe Format</h2>
+      <p>Recipes live in <code>plugins/CraftEnginePolyfills/recipes/*.json</code>. The <code>type</code> field must match the machine's <code>recipe_type</code>.</p>
+      <pre data-lang="json"><code>{
+  "type": "crusher",
+  "inputs": [
+    { "item": "minecraft:cobblestone", "amount": 1 }
+  ],
+  "outputs": [
+    { "item": "minecraft:gravel", "amount": 1, "chance": 1.0 },
+    { "item": "minecraft:flint",  "amount": 1, "chance": 0.1 }
+  ],
+  "time": 100,
+  "rpm": 20,
+  "su": 16
+}</code></pre>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Key</th><th>Type</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>type</td><td>Str</td><td>Must match the machine's <code>recipe_type</code>.</td></tr>
+          <tr><td>inputs</td><td>Array</td><td>List of input requirements. Each: <code>item</code> (material/CE key), <code>amount</code>. Can also be <code>tag</code>.</td></tr>
+          <tr><td>outputs</td><td>Array</td><td>List of outputs. Each: <code>item</code>, <code>amount</code>, <code>chance</code> (0.0–1.0).</td></tr>
+          <tr><td>fluid_inputs</td><td>Array</td><td>Fluid requirements: <code>fluid</code> (fluid type key), <code>amount</code> (mB).</td></tr>
+          <tr><td>fluid_outputs</td><td>Array</td><td>Fluid outputs.</td></tr>
+          <tr><td>gas_inputs / gas_outputs</td><td>Array</td><td>Gas requirements/outputs.</td></tr>
+          <tr><td>xp_output</td><td>Float</td><td>XP to award on completion.</td></tr>
+          <tr><td>time</td><td>Int</td><td>Processing ticks.</td></tr>
+          <tr><td>rpm</td><td>Int</td><td>Minimum RPM required (0 = no requirement).</td></tr>
+          <tr><td>su</td><td>Int</td><td>Stress units this recipe demands from the network.</td></tr>
+          <tr><td>conditions</td><td>Array</td><td>Optional conditions. Currently supports <code>block_below</code>.</td></tr>
+        </tbody>
+      </table></div>
+
+      <h2 id="fuel-format">Fuel Format</h2>
+      <p>Fuels live in <code>plugins/CraftEnginePolyfills/fuels/*.json</code>.</p>
+      <pre data-lang="json"><code>{
+  "machine": "crusher",
+  "item": "minecraft:coal",
+  "burn_time": 800
+}</code></pre>
+    </div>
+  </main>
+</div>
+<script src="assets/main.js"></script>
+</body>
+</html>

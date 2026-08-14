@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Upgrade System — CraftEngine Polyfills</title>
+  <link rel="stylesheet" href="assets/style.css" />
+</head>
+<body>
+<header class="topbar">
+  <button class="hamburger" id="hamburger" aria-label="Menu">&#9776;</button>
+  <a href="../index.html" class="logo">⚙️ CraftEngine Polyfills <span class="badge">1.21.11</span></a>
+  <div class="spacer"></div>
+  <div class="search-wrap">
+    <span class="search-icon">&#128269;</span>
+    <input id="search" type="search" placeholder="Search docs…" autocomplete="off" />
+    <div id="search-results"></div>
+  </div>
+  <a href="https://github.com/Arubik/craft-engine-polyfills" class="gh-link">&#128279; GitHub</a>
+</header>
+<div class="layout">
+  <nav class="sidebar">
+    <div class="nav-section">
+      <div class="nav-section-header">&#128196; Getting Started <span class="caret">&#9660;</span></div>
+      <ul class="nav-items"><li><a href="getting-started.html">Introduction</a></li></ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header">&#9881; Machines <span class="caret">&#9660;</span></div>
+      <ul class="nav-items">
+        <li><a href="machines.html">JSON Config Reference</a></li>
+        <li><a href="machines-api.html">Java API</a></li>
+        <li><a href="upgrades.html">Upgrade System</a></li>
+        <li><a href="bars.html">Bars &amp; Gauges</a></li>
+      </ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header">&#128221; PolyFormula <span class="caret">&#9660;</span></div>
+      <ul class="nav-items">
+        <li><a href="polyformula.html">Language Reference</a></li>
+        <li><a href="renderers.html">Renderer System</a></li>
+      </ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header">&#128260; Contraptions <span class="caret">&#9660;</span></div>
+      <ul class="nav-items"><li><a href="contraptions.html">Contraption System</a></li></ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header">&#127795; Fluids &amp; Pipes <span class="caret">&#9660;</span></div>
+      <ul class="nav-items"><li><a href="pipes-fluids.html">Pipes, Fluids &amp; Gas</a></li></ul>
+    </div>
+  </nav>
+  <main class="content">
+    <div class="content-inner">
+      <div class="breadcrumbs"><a href="../index.html">Home</a><span>/</span><a href="machines.html">Machines</a><span>/</span>Upgrades</div>
+
+      <div class="page-header">
+        <h1>Upgrade System &amp; MachineAttributes</h1>
+        <p class="subtitle">Mojang-style attribute modifiers — ADD, MULTIPLY_BASE, MULTIPLY_TOTAL — with per-machine upgrade slot grids.</p>
+      </div>
+
+      <h2 id="overview">Overview</h2>
+      <p>Upgrades work like Minecraft's attribute system: each installed upgrade item contributes one or more <strong>modifiers</strong> on named <strong>attributes</strong>. The machine collects all modifiers from installed upgrade items each tick and computes final attribute values using exactly Mojang's folding math.</p>
+
+      <h2 id="attributes">Standard Attributes</h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Attribute Key</th><th>Base</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>polyfill:overclock_limit</td><td>0.0</td><td>Additional overclock headroom (fraction). Adds to the machine's base_overclock.</td></tr>
+          <tr><td>polyfill:fuel_efficiency</td><td>0.0</td><td>Reduces fuel/gas/energy consumption (fraction). 0.1 = 10% less fuel consumed.</td></tr>
+          <tr><td>polyfill:generation</td><td>0.0</td><td>Output bonus (fraction). 0.05 = 5% extra output items produced.</td></tr>
+          <tr><td>polyfill:extra_slots</td><td>0.0</td><td>Unlocks additional upgrade slots. Integer-rounded at application time.</td></tr>
+          <tr><td>polyfill:pressure</td><td>0.0</td><td>Flat pressure bonus added to pump's stamped fluid pressure (lifts fluid higher).</td></tr>
+        </tbody>
+      </table></div>
+
+      <h2 id="modifier-math">Modifier Math</h2>
+      <p>Three operations are supported, applied in order:</p>
+      <pre data-lang="text"><code>1. x = base + Σ ADD_VALUE
+2. x = x × (1 + Σ ADD_MULTIPLIED_BASE)
+3. for each ADD_MULTIPLIED_TOTAL m:  x = x × (1 + m)</code></pre>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Operation</th><th>JSON name aliases</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>ADD_VALUE</td><td><code>"add"</code>, <code>"add_value"</code>, <code>"addition"</code></td><td>Flat additive. All modifiers of this type are summed before multipliers apply.</td></tr>
+          <tr><td>ADD_MULTIPLIED_BASE</td><td><code>"multiply_base"</code>, <code>"add_multiplied_base"</code></td><td>Multiplies the base+flat total. Modifiers of this type are summed into one factor: (1 + Σ).</td></tr>
+          <tr><td>ADD_MULTIPLIED_TOTAL</td><td><code>"multiply_total"</code>, <code>"multiply"</code></td><td>Each modifier is applied independently: x = x × (1 + m). Stacks multiplicatively.</td></tr>
+        </tbody>
+      </table></div>
+
+      <h2 id="defining-upgrades">Defining Upgrades in Machine JSON</h2>
+      <pre data-lang="json"><code>"slots": {
+  "upgrade": {
+    "count": 9,
+    "base_unlocked": 3,
+    "definitions": {
+      "cml:upgrade_iron":    [
+        { "attribute": "polyfill:generation", "operation": "add", "value": 0.05 }
+      ],
+      "cml:upgrade_gold":    [
+        { "attribute": "polyfill:generation",      "operation": "add", "value": 0.10 },
+        { "attribute": "polyfill:fuel_efficiency", "operation": "add", "value": 0.10 }
+      ],
+      "cml:upgrade_diamond": [
+        { "attribute": "polyfill:generation",      "operation": "add",  "value": 0.18 },
+        { "attribute": "polyfill:overclock_limit", "operation": "add",  "value": 0.5  },
+        { "attribute": "polyfill:fuel_efficiency", "operation": "add",  "value": 0.15 }
+      ],
+      "cml:upgrade_scrapped": [
+        { "attribute": "polyfill:overclock_limit", "operation": "add", "value": 1.0   },
+        { "attribute": "polyfill:fuel_efficiency", "operation": "add", "value": -0.40 }
+      ]
+    }
+  }
+}</code></pre>
+
+      <p>The key in <code>definitions</code> is the CE item ID of the upgrade item. Multiple upgrades of the same type stack — two iron upgrades contribute +0.05 twice.</p>
+
+      <div class="callout note"><strong>Note</strong>The scrapped upgrade example shows how a single upgrade item can trade one attribute for another: +1.0 overclock_limit at the cost of −0.40 fuel_efficiency. The negative flat modifier is perfectly valid.</div>
+
+      <h2 id="upgrade-slots">Upgrade Slot Modes</h2>
+      <p>Two slot conventions exist:</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Mode</th><th>Config</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>Reserved (separate page)</td><td><code>"count": N, "base_unlocked": K</code></td><td>Reserves container indices 0..N−1. These never appear on the main page. A second UI page shows only the upgrade grid.</td></tr>
+          <tr><td>Inline (main page)</td><td><code>"slots": [3,4,5]</code></td><td>Upgrade items sit in named menu slots on the main page. No separate upgrade page. Simpler for small machines.</td></tr>
+        </tbody>
+      </table></div>
+
+      <h2 id="extra-slots">Extra Slots Upgrade</h2>
+      <p>The <code>polyfill:extra_slots</code> attribute unlocks additional upgrade slots up to <code>count</code>. Initially only <code>base_unlocked</code> slots are usable; inserting slot-expander upgrade items reveals more.</p>
+      <pre data-lang="json"><code>"cml:iron_cast":    [{ "attribute": "polyfill:extra_slots", "operation": "add", "value": 2 }],
+"cml:gold_cast":    [{ "attribute": "polyfill:extra_slots", "operation": "add", "value": 3 }],
+"cml:diamond_cast": [{ "attribute": "polyfill:extra_slots", "operation": "add", "value": 4 }]</code></pre>
+
+      <h2 id="overclock">Overclock System</h2>
+      <p>The overclock slider lets players trade RPM (and therefore SU) for speed. The slider range is <code>0..base_overclock + Σ overclock_limit</code>. At overclock N:</p>
+      <ul>
+        <li>Machine speed = <code>N × recipe_time</code> ticks (i.e. higher overclock = faster).</li>
+        <li>SU demand = <code>recipe_su × (1 + N)^su_exponent</code>.</li>
+      </ul>
+      <div class="callout warn"><strong>Warning</strong>High su_exponent (1.5+) makes overclocking geometrically expensive. A machine set to overclock 3 with su_exponent 1.5 demands roughly 8× its base SU.</div>
+
+      <h2 id="api">MachineAttributes Java API</h2>
+      <div class="class-block">
+        <div class="class-sig"><span class="kw">public final class</span> <span class="cls">MachineAttributes</span>
+          <span class="ext">// package: dev.arubik.craftengine.machine.attribute</span>
+        </div>
+      </div>
+      <div class="api-block">
+        <div class="api-header">
+          <div class="api-sig"><span class="kw">public static</span> Map&lt;Key, Double&gt; <span class="mth">compute</span>(List&lt;<span class="cls">Mod</span>&gt; modifiers)</div>
+        </div>
+        <div class="api-body">
+          <p>Fold a list of modifiers into final attribute values using Mojang's math. Returns a map of every registered attribute key to its final computed value.</p>
+        </div>
+      </div>
+      <div class="api-block">
+        <div class="api-header">
+          <div class="api-sig"><span class="kw">public static void</span> <span class="mth">register</span>(Key attribute, double base)</div>
+        </div>
+        <div class="api-body"><p>Register a new attribute with a given base value. Use to add custom attributes for plugin extensions.</p></div>
+      </div>
+      <div class="api-block">
+        <div class="api-header">
+          <div class="api-sig"><span class="kw">public record</span> <span class="cls">Mod</span>(Key attribute, Operation operation, double amount)</div>
+        </div>
+        <div class="api-body"><p>One modifier: bump <code>attribute</code> by <code>amount</code> via <code>operation</code>.</p></div>
+      </div>
+
+      <h3>Standard Attribute Constants</h3>
+      <pre data-lang="java"><code>MachineAttributes.OVERCLOCK_LIMIT  // polyfill:overclock_limit
+MachineAttributes.FUEL_EFFICIENCY  // polyfill:fuel_efficiency
+MachineAttributes.GENERATION       // polyfill:generation
+MachineAttributes.EXTRA_SLOTS      // polyfill:extra_slots
+MachineAttributes.PRESSURE         // polyfill:pressure</code></pre>
+
+      <h2 id="polyscript-upgrades">Upgrades in PolyFormula</h2>
+      <p>The <code>Upgrades</code> PolyClass exposes upgrade state to renderer expressions and scripts:</p>
+      <pre data-lang="text"><code>Upgrades.count("cml:upgrade_diamond")    // how many diamond upgrades installed
+Upgrades.inventory                        // Array of all items in upgrade grid
+Upgrades.slots                            // number of unlocked slots</code></pre>
+      <pre data-lang="pf"><code># In a .pf script: emit extra sparks when diamond upgrades installed
+has_diamond = Upgrades.count("cml:upgrade_diamond") > 0
+
+# Calculate total upgrade bonus
+upgrade_bonus = 0
+for item in Upgrades.inventory {
+    upgrade_bonus = upgrade_bonus + item_count(item)
+}</code></pre>
+    </div>
+  </main>
+</div>
+<script src="assets/main.js"></script>
+</body>
+</html>

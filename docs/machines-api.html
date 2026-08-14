@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Machine Java API — CraftEngine Polyfills</title>
+  <link rel="stylesheet" href="assets/style.css" />
+</head>
+<body>
+<header class="topbar">
+  <button class="hamburger" id="hamburger" aria-label="Menu">&#9776;</button>
+  <a href="../index.html" class="logo">⚙️ CraftEngine Polyfills <span class="badge">1.21.11</span></a>
+  <div class="spacer"></div>
+  <div class="search-wrap">
+    <span class="search-icon">&#128269;</span>
+    <input id="search" type="search" placeholder="Search docs…" autocomplete="off" />
+    <div id="search-results"></div>
+  </div>
+  <a href="https://github.com/Arubik/craft-engine-polyfills" class="gh-link">&#128279; GitHub</a>
+</header>
+<div class="layout">
+  <nav class="sidebar">
+    <div class="nav-section">
+      <div class="nav-section-header">&#128196; Getting Started <span class="caret">&#9660;</span></div>
+      <ul class="nav-items"><li><a href="getting-started.html">Introduction</a></li></ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header">&#9881; Machines <span class="caret">&#9660;</span></div>
+      <ul class="nav-items">
+        <li><a href="machines.html">JSON Config Reference</a></li>
+        <li><a href="machines-api.html">Java API</a></li>
+        <li><a href="upgrades.html">Upgrade System</a></li>
+        <li><a href="bars.html">Bars &amp; Gauges</a></li>
+      </ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header">&#128221; PolyFormula <span class="caret">&#9660;</span></div>
+      <ul class="nav-items">
+        <li><a href="polyformula.html">Language Reference</a></li>
+        <li><a href="renderers.html">Renderer System</a></li>
+      </ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header">&#128260; Contraptions <span class="caret">&#9660;</span></div>
+      <ul class="nav-items"><li><a href="contraptions.html">Contraption System</a></li></ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header">&#127795; Fluids &amp; Pipes <span class="caret">&#9660;</span></div>
+      <ul class="nav-items"><li><a href="pipes-fluids.html">Pipes, Fluids &amp; Gas</a></li></ul>
+    </div>
+  </nav>
+  <main class="content">
+    <div class="content-inner">
+      <div class="breadcrumbs"><a href="../index.html">Home</a><span>/</span><a href="machines.html">Machines</a><span>/</span>Java API</div>
+
+      <div class="page-header">
+        <h1>Machine Java API</h1>
+        <p class="subtitle">Full class and method signatures for DataMachineBlockEntity, MachineDefinition, RendererManager, and supporting types.</p>
+      </div>
+
+      <!-- MachineDefinition -->
+      <h2 id="machine-definition">MachineDefinition</h2>
+      <div class="class-block">
+        <div class="class-sig">
+          <span class="kw">public final class</span> <span class="cls">MachineDefinition</span>
+          <span class="ext">// package: dev.arubik.craftengine.machine</span>
+        </div>
+        <p>A machine described entirely by data rather than Java. The class holds a snapshot of one JSON file. Immutable after construction; rebuilt on reload.</p>
+        <h4>Static Registry</h4>
+        <div class="api-block">
+          <div class="api-header">
+            <div class="api-sig"><span class="kw">public static final</span> <span class="typ">Registry&lt;MachineDefinition&gt;</span> <span class="mth">REGISTRY</span></div>
+          </div>
+          <div class="api-body"><p>Registry of all loaded machines. Rebuilt on <code>/cep reload</code>.</p></div>
+        </div>
+        <div class="api-block">
+          <div class="api-header">
+            <div class="api-sig"><span class="kw">public static</span> <span class="cls">MachineDefinition</span> <span class="mth">byName</span>(<span class="typ">String</span> name)</div>
+          </div>
+          <div class="api-body">
+            <p>Look up a machine by name. Accepts bare names (<code>"crusher"</code>) defaulting to the <code>polyfills</code> namespace, or fully qualified keys (<code>"polyfills:crusher"</code>).</p>
+            <div class="tag"><strong>Returns</strong> the matching definition, or <code>null</code> if not found.</div>
+          </div>
+        </div>
+      </div>
+
+      <h3 id="definition-methods">Accessor Methods</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Method</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>id()</td><td>Key</td><td>Namespaced machine identifier.</td></tr>
+          <tr><td>recipeType()</td><td>String</td><td>Recipe namespace (may differ from id).</td></tr>
+          <tr><td>title()</td><td>String</td><td>Menu window title.</td></tr>
+          <tr><td>menuSize()</td><td>int</td><td>Chest inventory size.</td></tr>
+          <tr><td>inputSlots()</td><td>int[]</td><td>Input slot indices (defensive copy).</td></tr>
+          <tr><td>outputSlots()</td><td>int[]</td><td>Output slot indices.</td></tr>
+          <tr><td>fuelSlots()</td><td>int[]</td><td>Fuel slot indices.</td></tr>
+          <tr><td>upgrades()</td><td>UpgradeSpec</td><td>Upgrade grid configuration.</td></tr>
+          <tr><td>info()</td><td>InfoSpec</td><td>Readout icon spec.</td></tr>
+          <tr><td>infoSlot()</td><td>int</td><td>Slot for readout icon (−1 = none).</td></tr>
+          <tr><td>fluidTanks()</td><td>List&lt;TankSpec&gt;</td><td>Fluid tank declarations.</td></tr>
+          <tr><td>gasTanks()</td><td>List&lt;TankSpec&gt;</td><td>Gas tank declarations.</td></tr>
+          <tr><td>fuelRequired()</td><td>boolean</td><td>Whether fuel items are mandatory.</td></tr>
+          <tr><td>io()</td><td>IOConfiguration</td><td>Directional IO rules, or null.</td></tr>
+          <tr><td>buttons()</td><td>List&lt;ButtonSpec&gt;</td><td>Action buttons on the main page.</td></tr>
+          <tr><td>power()</td><td>PowerSpec</td><td>Rotational power configuration.</td></tr>
+          <tr><td>bars()</td><td>List&lt;BarRef&gt;</td><td>Gauge bar references.</td></tr>
+          <tr><td>paging()</td><td>PagingSpec</td><td>Multi-page storage config.</td></tr>
+          <tr><td>variables()</td><td>Map&lt;String,VariableSpec&gt;</td><td>Named PolyFormula variable declarations.</td></tr>
+          <tr><td>renderers()</td><td>List&lt;RendererSpec&gt;</td><td>Visual renderer specs.</td></tr>
+          <tr><td>upgradeDefs()</td><td>Map&lt;Key,List&lt;Mod&gt;&gt;</td><td>Upgrade item definitions.</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3 id="definition-records">Inner Records</h3>
+
+      <div class="api-block">
+        <div class="api-header">
+          <div class="api-sig"><span class="kw">public record</span> <span class="cls">PowerSpec</span>(
+  boolean consumesStress,
+  double  suExponent,
+  int     stressGraceTicks,
+  float   generatesRpm,
+  int     generatesSu,
+  float   baseOverclock
+)</div>
+        </div>
+        <div class="api-body">
+          <p>Rotational power configuration. Use <code>PowerSpec.none()</code> for machines with no rotational involvement.</p>
+          <ul>
+            <li><code>consumesStress</code> — whether the machine needs a rotational supply at all.</li>
+            <li><code>suExponent</code> — SU scales as (1+overclock)^suExponent. 1.25 = typical, &gt;1 means overclocking costs disproportionately more.</li>
+            <li><code>stressGraceTicks</code> — ticks the machine keeps running after supply dips (prevents flicker on momentary wobble).</li>
+            <li><code>generatesRpm / generatesSu</code> — for generator machines.</li>
+            <li><code>baseOverclock</code> — max overclock before upgrades.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="api-block">
+        <div class="api-header">
+          <div class="api-sig"><span class="kw">public record</span> <span class="cls">TankSpec</span>(String name, int capacity, Key filter)</div>
+        </div>
+        <div class="api-body">
+          <p>A fluid or gas tank. <code>filter</code> is null for an unfiltered tank.</p>
+        </div>
+      </div>
+
+      <div class="api-block">
+        <div class="api-header">
+          <div class="api-sig"><span class="kw">public record</span> <span class="cls">UpgradeSpec</span>(int count, int baseUnlocked, int[] explicitSlots)</div>
+        </div>
+        <div class="api-body">
+          <p>Upgrade grid. <code>isInline()</code> returns true when <code>explicitSlots</code> is non-null (inline mode). <code>slots()</code> returns the actual container indices. <code>size()</code> returns the total slot count regardless of mode.</p>
+        </div>
+      </div>
+
+      <div class="api-block">
+        <div class="api-header">
+          <div class="api-sig"><span class="kw">public record</span> <span class="cls">BarRef</span>(Key bar, int[] slots, String source)</div>
+        </div>
+        <div class="api-body">
+          <p>A gauge bar reference. <code>source</code> selects what the bar reads: <code>"progress"</code>, <code>"fuel"</code>, <code>"rpm"</code>, or <code>"fluid:&lt;name&gt;"</code> / <code>"gas:&lt;name&gt;"</code>.</p>
+        </div>
+      </div>
+
+      <div class="api-block">
+        <div class="api-header">
+          <div class="api-sig"><span class="kw">public record</span> <span class="cls">InfoSpec</span>(int slot, String type, String source)</div>
+        </div>
+        <div class="api-body">
+          <p>Readout icon configuration. <code>type</code> is <code>"recipe"</code> or <code>"tank"</code>. <code>isTank()</code> helper returns true for tank type.</p>
+        </div>
+      </div>
+
+      <div class="api-block">
+        <div class="api-header">
+          <div class="api-sig"><span class="kw">public record</span> <span class="cls">PagingSpec</span>(int pages, int slots, int prevSlot, int nextSlot, int indicator)</div>
+        </div>
+        <div class="api-body">
+          <p><code>isPaged()</code> returns true when <code>pages &gt; 1</code>.</p>
+        </div>
+      </div>
+
+      <div class="api-block">
+        <div class="api-header">
+          <div class="api-sig"><span class="kw">public record</span> <span class="cls">ButtonSpec</span>(int slot, String icon, String action, String name, List&lt;String&gt; lore, String lockedIcon, String lockedWhen)</div>
+        </div>
+        <div class="api-body">
+          <p>A UI action button. <code>action</code> values: <code>"open_page:N"</code>, <code>"deplete_fluid"</code>, <code>"deplete_gas"</code>.</p>
+        </div>
+      </div>
+
+      <!-- DataMachineBlockEntity -->
+      <h2 id="data-machine-block-entity">DataMachineBlockEntity</h2>
+      <div class="class-block">
+        <div class="class-sig">
+          <span class="kw">public class</span> <span class="cls">DataMachineBlockEntity</span>
+          <span class="kw">extends</span> <span class="cls">AbstractMachineBlockEntity</span>
+          <span class="kw">implements</span> <span class="cls">RpmConsumer</span>, <span class="cls">ModelRendersDriven</span>
+          <span class="ext">// package: dev.arubik.craftengine.machine.block.entity</span>
+        </div>
+        <p>The single block entity class that powers every data-defined machine. Created by <code>DataMachineBehavior</code> from a <code>MachineDefinition</code>.</p>
+      </div>
+
+      <div class="api-block">
+        <div class="api-header">
+          <div class="api-sig"><span class="kw">public</span> <span class="cls">DataMachineBlockEntity</span>(
+  BlockEntity blockEntity,
+  <span class="cls">MachineDefinition</span> definition
+)</div>
+        </div>
+        <div class="api-body">
+          <p>Constructs the block entity, initializing fluid tanks, gas tanks, IO config, and the <code>RendererManager</code> from the given definition.</p>
+        </div>
+      </div>
+
+      <div class="api-block">
+        <div class="api-header">
+          <div class="api-sig"><span class="kw">public</span> <span class="cls">MachineDefinition</span> <span class="mth">definition</span>()</div>
+        </div>
+        <div class="api-body"><p>The definition this block entity was created from.</p></div>
+      </div>
+
+      <div class="api-block">
+        <div class="api-header">
+          <div class="api-sig"><span class="kw">public</span> <span class="cls">RendererManager</span> <span class="mth">rendererManager</span>()</div>
+        </div>
+        <div class="api-body"><p>The live <code>RendererManager</code>, or null if this machine has no renderers.</p></div>
+      </div>
+
+      <h3>Inherited from AbstractMachineBlockEntity</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Method</th><th>Returns</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>getFluidTank(name)</td><td>FluidTank</td><td>Named fluid tank, or null.</td></tr>
+          <tr><td>getGasTank(name)</td><td>GasTank</td><td>Named gas tank, or null.</td></tr>
+          <tr><td>fluidTanks()</td><td>List&lt;FluidTank&gt;</td><td>All fluid tanks.</td></tr>
+          <tr><td>gasTanks()</td><td>List&lt;GasTank&gt;</td><td>All gas tanks.</td></tr>
+          <tr><td>isProcessing()</td><td>boolean</td><td>True when a recipe is actively running.</td></tr>
+          <tr><td>getProgress()</td><td>int</td><td>Current recipe progress ticks.</td></tr>
+          <tr><td>getMaxProgress()</td><td>int</td><td>Duration of the current recipe.</td></tr>
+          <tr><td>getOverclock()</td><td>float</td><td>Current overclock multiplier.</td></tr>
+          <tr><td>getUpgradeAttributes()</td><td>Map&lt;Key,Double&gt;</td><td>Computed attribute values from installed upgrades.</td></tr>
+          <tr><td>getInventory()</td><td>Container</td><td>NMS container backing the menu.</td></tr>
+          <tr><td>setIOConfiguration(io)</td><td>void</td><td>Override the IO configuration at runtime.</td></tr>
+        </tbody>
+      </table></div>
+
+      <!-- RendererSpec -->
+      <h2 id="renderer-spec">RendererSpec</h2>
+      <div class="class-block">
+        <div class="class-sig">
+          <span class="kw">public sealed interface</span> <span class="cls">RendererSpec</span>
+          <span class="ext">// package: dev.arubik.craftengine.machine.render</span>
+        </div>
+        <p>Sealed interface with one record variant per renderer type. See <a href="renderers.html">Renderer System</a> for full documentation.</p>
+      </div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Variant Record</th><th>JSON type</th></tr></thead>
+        <tbody>
+          <tr><td>BetterModelSpec</td><td><code>"bettermodel"</code></td></tr>
+          <tr><td>ModelEngineSpec</td><td><code>"modelengine"</code></td></tr>
+          <tr><td>ItemDisplaySpec</td><td><code>"item_display"</code></td></tr>
+          <tr><td>TextDisplaySpec</td><td><code>"text_display"</code></td></tr>
+          <tr><td>BlockDisplaySpec</td><td><code>"block_display"</code></td></tr>
+          <tr><td>ParticleSpec</td><td><code>"particle"</code></td></tr>
+          <tr><td>SoundSpec</td><td><code>"sound"</code></td></tr>
+          <tr><td>FluidTankSpec</td><td><code>"fluid_tank"</code></td></tr>
+          <tr><td>ArmorStandSpec</td><td><code>"armor_stand"</code></td></tr>
+          <tr><td>PositionedSpec</td><td>(wrapper)</td></tr>
+        </tbody>
+      </table></div>
+
+      <!-- RendererManager -->
+      <h2 id="renderer-manager">RendererManager</h2>
+      <div class="class-block">
+        <div class="class-sig">
+          <span class="kw">public class</span> <span class="cls">RendererManager</span>
+          <span class="ext">// package: dev.arubik.craftengine.machine.render</span>
+        </div>
+        <p>Manages all display entities for one machine block entity. Evaluates renderer specs each tick.</p>
+      </div>
+      <div class="api-block">
+        <div class="api-header">
+          <div class="api-sig"><span class="kw">public</span> <span class="cls">RendererManager</span>(
+  List&lt;<span class="cls">RendererSpec</span>&gt; specs,
+  Map&lt;String, <span class="cls">VariableSpec</span>&gt; variables
+)</div>
+        </div>
+        <div class="api-body"><p>Creates a manager from a list of renderer specs and variable declarations.</p></div>
+      </div>
+      <div class="api-block">
+        <div class="api-header">
+          <div class="api-sig"><span class="kw">public void</span> <span class="mth">tick</span>(<span class="cls">MachineRenderContext</span> context)</div>
+        </div>
+        <div class="api-body"><p>Evaluate all specs against the context and update spawned display entities. Called each tick by the block entity.</p></div>
+      </div>
+      <div class="api-block">
+        <div class="api-header">
+          <div class="api-sig"><span class="kw">public void</span> <span class="mth">destroy</span>()</div>
+        </div>
+        <div class="api-body"><p>Remove all spawned display entities from the world (called on block break or chunk unload).</p></div>
+      </div>
+
+      <!-- PolyFormula API -->
+      <h2 id="polyformula-api">PolyFormula</h2>
+      <div class="class-block">
+        <div class="class-sig">
+          <span class="kw">public final class</span> <span class="cls">PolyFormula</span>
+          <span class="ext">// package: dev.arubik.craftengine.machine.render.formula</span>
+        </div>
+        <p>Typed expression engine. Compile once, evaluate many times.</p>
+      </div>
+      <div class="api-block">
+        <div class="api-header">
+          <div class="api-sig"><span class="kw">public static</span> <span class="cls">PolyFormula</span> <span class="mth">compile</span>(<span class="typ">String</span> expr)</div>
+        </div>
+        <div class="api-body">
+          <p>Compile an expression string into an evaluable formula.</p>
+          <div class="tag"><strong>Throws</strong> <code>IllegalArgumentException</code> on parse error.</div>
+        </div>
+      </div>
+      <div class="api-block">
+        <div class="api-header">
+          <div class="api-sig"><span class="kw">public</span> <span class="cls">PolyValue</span>    <span class="mth">evaluate</span>(<span class="cls">PolyContext</span> ctx)<br/><span class="kw">public</span> boolean           <span class="mth">evaluateBool</span>(<span class="cls">PolyContext</span> ctx)<br/><span class="kw">public</span> double             <span class="mth">evaluateNum</span>(<span class="cls">PolyContext</span> ctx)<br/><span class="kw">public</span> String             <span class="mth">evaluateStr</span>(<span class="cls">PolyContext</span> ctx)<br/><span class="kw">public</span> ItemStack          <span class="mth">evaluateItem</span>(<span class="cls">PolyContext</span> ctx)</div>
+        </div>
+        <div class="api-body"><p>Evaluate against a context. The typed overloads coerce the result to the target type. <code>evaluateItem</code> returns null for non-Item values.</p></div>
+      </div>
+
+      <!-- PolyContext -->
+      <h2 id="polycontext-api">PolyContext</h2>
+      <div class="class-block">
+        <div class="class-sig">
+          <span class="kw">public class</span> <span class="cls">PolyContext</span>
+        </div>
+        <p>Evaluation context passed to every formula. Contains named variables and PolyClass instances.</p>
+      </div>
+      <div class="api-block">
+        <div class="api-header">
+          <div class="api-sig"><span class="kw">public static</span> Builder <span class="mth">builder</span>()</div>
+        </div>
+        <div class="api-body">
+          <pre data-lang="java"><code>PolyContext ctx = PolyContext.builder()
+    .val("rpm",        PolyValue.of(machineRpm))
+    .val("processing", PolyValue.of(isProcessing))
+    .cls("Inventory",  new InventoryClass(inv))
+    .cls("Machine",    new MachineClass(x, y, z, facing, yaw, world))
+    .build();</code></pre>
+        </div>
+      </div>
+      <div class="api-block">
+        <div class="api-header">
+          <div class="api-sig"><span class="kw">public</span> <span class="cls">PolyValue</span> <span class="mth">get</span>(<span class="typ">String</span> name)<br/>
+<span class="kw">public</span> <span class="cls">PolyClass</span> <span class="mth">getClass</span>(<span class="typ">String</span> name)</div>
+        </div>
+        <div class="api-body"><p>Look up a named value or PolyClass. Returns <code>PolyValue.NULL</code> / <code>null</code> if not found.</p></div>
+      </div>
+    </div>
+  </main>
+</div>
+<script src="assets/main.js"></script>
+</body>
+</html>

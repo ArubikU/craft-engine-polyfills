@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Renderer System — CraftEngine Polyfills</title>
+  <link rel="stylesheet" href="assets/style.css" />
+</head>
+<body>
+<header class="topbar">
+  <button class="hamburger" id="hamburger" aria-label="Menu">&#9776;</button>
+  <a href="../index.html" class="logo">⚙️ CraftEngine Polyfills <span class="badge">1.21.11</span></a>
+  <div class="spacer"></div>
+  <div class="search-wrap">
+    <span class="search-icon">&#128269;</span>
+    <input id="search" type="search" placeholder="Search docs…" autocomplete="off" />
+    <div id="search-results"></div>
+  </div>
+  <a href="https://github.com/Arubik/craft-engine-polyfills" class="gh-link">&#128279; GitHub</a>
+</header>
+<div class="layout">
+  <nav class="sidebar">
+    <div class="nav-section">
+      <div class="nav-section-header">&#128196; Getting Started <span class="caret">&#9660;</span></div>
+      <ul class="nav-items"><li><a href="getting-started.html">Introduction</a></li></ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header">&#9881; Machines <span class="caret">&#9660;</span></div>
+      <ul class="nav-items">
+        <li><a href="machines.html">JSON Config Reference</a></li>
+        <li><a href="machines-api.html">Java API</a></li>
+        <li><a href="upgrades.html">Upgrade System</a></li>
+        <li><a href="bars.html">Bars &amp; Gauges</a></li>
+      </ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header">&#128221; PolyFormula <span class="caret">&#9660;</span></div>
+      <ul class="nav-items">
+        <li><a href="polyformula.html">Language Reference</a></li>
+        <li><a href="renderers.html">Renderer System</a></li>
+      </ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header">&#128260; Contraptions <span class="caret">&#9660;</span></div>
+      <ul class="nav-items"><li><a href="contraptions.html">Contraption System</a></li></ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header">&#127795; Fluids &amp; Pipes <span class="caret">&#9660;</span></div>
+      <ul class="nav-items"><li><a href="pipes-fluids.html">Pipes, Fluids &amp; Gas</a></li></ul>
+    </div>
+  </nav>
+  <main class="content">
+    <div class="content-inner">
+      <div class="breadcrumbs"><a href="../index.html">Home</a><span>/</span>Renderer System</div>
+
+      <div class="page-header">
+        <h1>Renderer System</h1>
+        <p class="subtitle">Formula-driven visual layer for machines — BetterModel, displays, particles, sounds, and more.</p>
+      </div>
+
+      <h2 id="overview">Overview</h2>
+      <p>Every machine definition can declare a <code>"renderers"</code> array. Each entry is a <strong>RendererSpec</strong> — a sealed record that describes one visual element. The <code>RendererManager</code> evaluates them each tick using the machine's live <code>PolyContext</code>.</p>
+      <p>All numeric fields accept PolyFormula expressions, variable references (<code>"$name"</code>), or bare literals. All renderer specs share three common fields:</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Common Field</th><th>Type</th><th>Default</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>when</td><td>Str</td><td><code>"always"</code></td><td>PolyFormula condition. Renderer is active while this evaluates to truthy.</td></tr>
+          <tr><td>update_when</td><td>Str</td><td><code>"always"</code></td><td><code>"always"</code> | <code>"inventory"</code> | <code>"state"</code> | <code>"processing"</code> | <code>"never"</code>. Controls re-evaluation frequency.</td></tr>
+          <tr><td>run</td><td>Str</td><td>null</td><td>Name of a <code>.pf</code> script to evaluate before this renderer. Variables defined in the script are injected into the context.</td></tr>
+        </tbody>
+      </table></div>
+
+      <h2 id="position-resolution">Position Resolution</h2>
+      <p>All position-bearing specs use a <code>"location"</code> field that accepts several formats:</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Format</th><th>Example</th><th>Behavior</th></tr></thead>
+        <tbody>
+          <tr><td>Array[3] of numbers</td><td><code>[0.5, 1.2, 0.5]</code></td><td>Relative offset added to machine block centre (x+0.5, y, z+0.5).</td></tr>
+          <tr><td>Object with x/y/z keys</td><td><code>{"x": 0.5, "y": "rpm * 0.01", "z": 0}</code></td><td>Per-axis expressions, evaluated each tick. Relative offset.</td></tr>
+          <tr><td>String expression</td><td><code>"Machine.location"</code></td><td>Evaluates to <code>Obj(LocationClass)</code> — treated as absolute world coordinates.</td></tr>
+          <tr><td>null / omitted</td><td>—</td><td>Renders at machine block centre.</td></tr>
+        </tbody>
+      </table></div>
+      <p>The <code>"positions"</code> (or <code>"locations"</code>) key accepts an expression returning an Array of location values, firing the renderer once per resolved position.</p>
+
+      <h2 id="bettermodel">BetterModel Renderer</h2>
+      <pre data-lang="json"><code>{
+  "type": "bettermodel",
+  "model_id": "crusher",
+  "animation": "on",
+  "speed": "max(0.05, overclock)",
+  "when": "processing && rpm > 0",
+  "run": "crusher"
+}</code></pre>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Field</th><th>Type</th><th>Default</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>type</td><td>Str</td><td>—</td><td>Must be <code>"bettermodel"</code>.</td></tr>
+          <tr><td>model_id</td><td>Str</td><td>Required</td><td>BetterModel blueprint ID (registered in BetterModel's resource system).</td></tr>
+          <tr><td>animation</td><td>Str</td><td>null</td><td>Animation name to loop while active. Null = idle pose only.</td></tr>
+          <tr><td>speed</td><td>Expr</td><td><code>"1.0"</code></td><td>Animation playback speed multiplier expression. 1.0 = normal speed.</td></tr>
+          <tr><td>when</td><td>Expr</td><td><code>"always"</code></td><td>Condition to activate this renderer.</td></tr>
+          <tr><td>run</td><td>Str</td><td>null</td><td>.pf script reference (script base-name without extension).</td></tr>
+        </tbody>
+      </table></div>
+      <div class="callout note"><strong>Note</strong>BetterModel must be installed. The renderer gracefully no-ops if BetterModel is absent.</div>
+
+      <h2 id="modelengine">ModelEngine Renderer</h2>
+      <pre data-lang="json"><code>{
+  "type": "modelengine",
+  "model_id": "my_machine",
+  "animation": "working",
+  "speed": "$speed_mult",
+  "when": "$running"
+}</code></pre>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Field</th><th>Type</th><th>Default</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>type</td><td>Str</td><td>—</td><td>Must be <code>"modelengine"</code>.</td></tr>
+          <tr><td>model_id</td><td>Str</td><td>Required</td><td>ModelEngine R4 blueprint ID.</td></tr>
+          <tr><td>animation</td><td>Str</td><td>null</td><td>Animation name to loop.</td></tr>
+          <tr><td>speed</td><td>Expr</td><td><code>"1.0"</code></td><td>Playback speed expression.</td></tr>
+          <tr><td>when</td><td>Expr</td><td><code>"always"</code></td><td>Condition.</td></tr>
+        </tbody>
+      </table></div>
+
+      <h2 id="item-display">Item Display Renderer</h2>
+      <pre data-lang="json"><code>{
+  "type": "item_display",
+  "item": "slot(9)",
+  "location": [0.5, 1.5, 0.5],
+  "scale": "1.0",
+  "rot_y": "tick() % 360",
+  "billboard": "center",
+  "when": "is_not_empty(slot(9))"
+}</code></pre>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Field</th><th>Type</th><th>Default</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>type</td><td>Str</td><td>—</td><td>Must be <code>"item_display"</code>.</td></tr>
+          <tr><td>item</td><td>Expr</td><td>Required</td><td>Item expression: <code>"slot(9)"</code>, <code>"CraftEngineItem('ns:id')"</code>, or material name.</td></tr>
+          <tr><td>location</td><td>Position</td><td>machine centre</td><td>See Position Resolution above.</td></tr>
+          <tr><td>scale</td><td>Expr</td><td><code>"1.0"</code></td><td>Uniform display scale.</td></tr>
+          <tr><td>rot_x / rot_y / rot_z</td><td>Expr</td><td><code>"0"</code></td><td>Pitch / yaw / roll in degrees.</td></tr>
+          <tr><td>billboard</td><td>Str</td><td><code>"none"</code></td><td><code>"none"</code> | <code>"vertical"</code> | <code>"horizontal"</code> | <code>"center"</code></td></tr>
+          <tr><td>when</td><td>Expr</td><td><code>"always"</code></td><td>Condition.</td></tr>
+        </tbody>
+      </table></div>
+
+      <h2 id="text-display">Text Display Renderer</h2>
+      <pre data-lang="json"><code>{
+  "type": "text_display",
+  "text": "format('RPM: %d', floor(rpm))",
+  "location": [0.5, 2.0, 0.5],
+  "scale": "0.1",
+  "billboard": "center",
+  "shadow": true,
+  "background": "0",
+  "alignment": "center",
+  "when": "player_in_range(4)"
+}</code></pre>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Field</th><th>Type</th><th>Default</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>type</td><td>Str</td><td>—</td><td>Must be <code>"text_display"</code>.</td></tr>
+          <tr><td>text</td><td>Expr</td><td>Required</td><td>PolyFormula expression evaluated to displayed string. Supports MiniMessage formatting.</td></tr>
+          <tr><td>location</td><td>Position</td><td>machine centre</td><td>Position expression.</td></tr>
+          <tr><td>scale</td><td>Expr</td><td><code>"0.1"</code></td><td>Uniform scale. 0.1 = typical HUD size.</td></tr>
+          <tr><td>rot_x / rot_y / rot_z</td><td>Expr</td><td><code>"0"</code></td><td>Rotation in degrees.</td></tr>
+          <tr><td>billboard</td><td>Str</td><td><code>"center"</code></td><td>Billboard mode.</td></tr>
+          <tr><td>line_width</td><td>Int</td><td><code>200</code></td><td>Max line width in pixels.</td></tr>
+          <tr><td>background</td><td>Expr</td><td><code>"0"</code></td><td>ARGB background color integer. <code>"0"</code> = transparent. Use <code>rgb(r,g,b)</code> or <code>rgba(r,g,b,a)</code>.</td></tr>
+          <tr><td>shadow</td><td>Bool</td><td>false</td><td>Drop shadow on text.</td></tr>
+          <tr><td>see_through</td><td>Bool</td><td>false</td><td>Render through walls.</td></tr>
+          <tr><td>alignment</td><td>Str</td><td><code>"center"</code></td><td><code>"left"</code> | <code>"center"</code> | <code>"right"</code>.</td></tr>
+          <tr><td>opacity</td><td>Int</td><td>255</td><td>Text opacity 0–255.</td></tr>
+          <tr><td>when</td><td>Expr</td><td><code>"always"</code></td><td>Condition.</td></tr>
+        </tbody>
+      </table></div>
+
+      <h2 id="block-display">Block Display Renderer</h2>
+      <pre data-lang="json"><code>{
+  "type": "block_display",
+  "block": "minecraft:glowstone",
+  "location": [0.5, 1.0, 0.5],
+  "scale": "0.5",
+  "rot_y": "tick() % 360",
+  "when": "processing"
+}</code></pre>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Field</th><th>Type</th><th>Default</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>type</td><td>Str</td><td>—</td><td>Must be <code>"block_display"</code>.</td></tr>
+          <tr><td>block</td><td>Expr</td><td>Required</td><td>Block state expression — namespaced material key or formula.</td></tr>
+          <tr><td>location</td><td>Position</td><td>machine centre</td><td>Position expression.</td></tr>
+          <tr><td>scale</td><td>Expr</td><td><code>"1.0"</code></td><td>Uniform scale.</td></tr>
+          <tr><td>rot_x / rot_y / rot_z</td><td>Expr</td><td><code>"0"</code></td><td>Rotation in degrees.</td></tr>
+          <tr><td>when</td><td>Expr</td><td><code>"always"</code></td><td>Condition.</td></tr>
+        </tbody>
+      </table></div>
+
+      <h2 id="particle">Particle Renderer</h2>
+      <pre data-lang="json"><code>{
+  "type": "particle",
+  "particle": "FLAME",
+  "count": "clamp(floor(rpm / 20), 1, 8)",
+  "location": [0.5, 1.2, 0.5],
+  "spread_x": "0.15",
+  "spread_y": "0.05",
+  "spread_z": "0.15",
+  "speed": "0.05",
+  "interval": 3,
+  "when": "processing && rpm > 0"
+}</code></pre>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Field</th><th>Type</th><th>Default</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>type</td><td>Str</td><td>—</td><td>Must be <code>"particle"</code>.</td></tr>
+          <tr><td>particle</td><td>Str</td><td>Required</td><td>Bukkit Particle enum name (case-insensitive). E.g. <code>"FLAME"</code>, <code>"SMOKE_NORMAL"</code>, <code>"CRIT"</code>.</td></tr>
+          <tr><td>count</td><td>Expr</td><td><code>"1"</code></td><td>Particles per emission. Expression evaluated each interval.</td></tr>
+          <tr><td>location</td><td>Position</td><td>machine centre</td><td>Emission position.</td></tr>
+          <tr><td>spread_x / spread_y / spread_z</td><td>Expr</td><td><code>"0.0"</code></td><td>Random offset radius on each axis.</td></tr>
+          <tr><td>speed</td><td>Expr</td><td><code>"0.05"</code></td><td>Particle speed.</td></tr>
+          <tr><td>dir_x / dir_y / dir_z</td><td>Expr</td><td><code>"0"</code></td><td>Directional velocity override.</td></tr>
+          <tr><td>shape</td><td>Str</td><td><code>"POINT"</code></td><td>Emitter shape: <code>POINT</code> | <code>SPHERE</code> | <code>RING</code> | <code>BOX</code> | <code>LINE</code>.</td></tr>
+          <tr><td>direction_mode</td><td>Str</td><td><code>"NONE"</code></td><td>Direction: <code>NONE</code> | <code>OUTWARD</code> | <code>INWARD</code> | <code>UP</code> | <code>DOWN</code>.</td></tr>
+          <tr><td>interval</td><td>Int</td><td><code>1</code></td><td>Ticks between emissions.</td></tr>
+          <tr><td>when</td><td>Expr</td><td><code>"always"</code></td><td>Condition.</td></tr>
+        </tbody>
+      </table></div>
+
+      <h2 id="sound">Sound Renderer</h2>
+      <pre data-lang="json"><code>{
+  "type": "sound",
+  "sound": "minecraft:block.anvil.use",
+  "volume": "0.8",
+  "pitch": "lerp(0.8, 1.2, overclock / 3.0)",
+  "interval": 20,
+  "when": "processing"
+}</code></pre>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Field</th><th>Type</th><th>Default</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>type</td><td>Str</td><td>—</td><td>Must be <code>"sound"</code>.</td></tr>
+          <tr><td>sound</td><td>Str</td><td>Required</td><td>Sound resource location.</td></tr>
+          <tr><td>volume</td><td>Expr</td><td><code>"1.0"</code></td><td>Volume expression (0.0–1.0+).</td></tr>
+          <tr><td>pitch</td><td>Expr</td><td><code>"1.0"</code></td><td>Pitch expression (0.5–2.0).</td></tr>
+          <tr><td>interval</td><td>Int</td><td><code>20</code></td><td>Ticks between plays. 0 = play once on activate.</td></tr>
+          <tr><td>when</td><td>Expr</td><td><code>"always"</code></td><td>Condition.</td></tr>
+        </tbody>
+      </table></div>
+
+      <h2 id="fluid-tank-display">Fluid Tank Level Renderer</h2>
+      <pre data-lang="json"><code>{
+  "type": "fluid_tank",
+  "tank": "water_input",
+  "location": [0.5, 0.5, 0.5],
+  "max_height": 0.875
+}</code></pre>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Field</th><th>Type</th><th>Default</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>type</td><td>Str</td><td>—</td><td>Must be <code>"fluid_tank"</code>.</td></tr>
+          <tr><td>tank</td><td>Str</td><td><code>""</code></td><td>Named fluid tank. Empty = first available tank.</td></tr>
+          <tr><td>is_gas</td><td>Bool</td><td>false</td><td>True to read a gas tank instead of a fluid tank.</td></tr>
+          <tr><td>location</td><td>Position</td><td>machine centre</td><td>Position expression.</td></tr>
+          <tr><td>max_height</td><td>Float</td><td><code>0.875</code></td><td>Y scale when the tank is full.</td></tr>
+          <tr><td>when</td><td>Expr</td><td><code>"always"</code></td><td>Condition.</td></tr>
+        </tbody>
+      </table></div>
+
+      <h2 id="armor-stand">Armor Stand Renderer</h2>
+      <pre data-lang="json"><code>{
+  "type": "armor_stand",
+  "head": "CraftEngineItem('cml:my_hat')",
+  "location": [0.5, 0.0, 0.5],
+  "rot_y": "tick() * 2",
+  "invisible": true,
+  "marker": true,
+  "when": "processing"
+}</code></pre>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Field</th><th>Type</th><th>Default</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>type</td><td>Str</td><td>—</td><td>Must be <code>"armor_stand"</code>.</td></tr>
+          <tr><td>head / body</td><td>Expr</td><td>null</td><td>Item expressions for head (helmet) and body (chestplate) slots.</td></tr>
+          <tr><td>location</td><td>Position</td><td>machine centre</td><td>Position expression.</td></tr>
+          <tr><td>rot_x / rot_y / rot_z</td><td>Expr</td><td><code>"0"</code></td><td>Rotation in degrees.</td></tr>
+          <tr><td>small</td><td>Bool</td><td>false</td><td>Use small armor stand.</td></tr>
+          <tr><td>invisible</td><td>Bool</td><td>false</td><td>Hide the armor stand body.</td></tr>
+          <tr><td>marker</td><td>Bool</td><td>false</td><td>No hitbox (marker stand).</td></tr>
+          <tr><td>when</td><td>Expr</td><td><code>"always"</code></td><td>Condition.</td></tr>
+        </tbody>
+      </table></div>
+
+      <h2 id="positioned-spec">Multi-Position (PositionedSpec Wrapper)</h2>
+      <p>Any renderer spec can be wrapped with a <code>"positions"</code> field to fire it once per resolved position:</p>
+      <pre data-lang="json"><code>{
+  "type": "particle",
+  "particle": "FLAME",
+  "count": "1",
+  "positions": "World.entities(Machine.x, Machine.y, Machine.z, 4).map_prop('location')",
+  "when": "processing"
+}</code></pre>
+      <p>The <code>"positions"</code> value is a PolyFormula expression that must evaluate to an Array of location values (Obj(LocationClass) or Array[3] of relative numbers). The renderer fires once per element.</p>
+
+      <h2 id="variables-decl">Declaring Variables</h2>
+      <p>Variables in the machine JSON <code>"variables"</code> block are evaluated once per tick before renderers run and their results are injected into all renderer contexts:</p>
+      <pre data-lang="json"><code>"variables": {
+  "running":    "processing && rpm > 0",
+  "speed_mult": "max(0.05, overclock)",
+  "smoke_count": "running ? clamp(floor(rpm / 10), 1, 6) : 0"
+}</code></pre>
+      <p>In renderer specs, reference them as <code>"$running"</code> (with dollar sign) or as bare <code>"running"</code> in expressions.</p>
+
+      <h2 id="renderer-manager">RendererManager</h2>
+      <p>The <code>RendererManager</code> class manages all renderer instances for one machine block entity. It is created in <code>DataMachineBlockEntity</code> when the definition has renderers, and ticked each game tick to update all active display entities.</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Method</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>tick(context)</td><td>Evaluate all renderer specs against the context and update display entities.</td></tr>
+          <tr><td>destroy()</td><td>Remove all spawned display entities from the world.</td></tr>
+          <tr><td>snapshot()</td><td>Capture evaluated item display states for contraption rendering.</td></tr>
+        </tbody>
+      </table></div>
+
+      <h2 id="full-example">Full Example: Crusher Machine Renderers</h2>
+      <pre data-lang="json"><code>"renderers": [
+  {
+    "type": "bettermodel",
+    "model_id": "crusher",
+    "animation": "on",
+    "speed": "speed_mult",
+    "when": "running",
+    "run": "crusher"
+  },
+  {
+    "type": "particle",
+    "particle": "SMOKE_NORMAL",
+    "count": "smoke_count",
+    "location": [0.5, 1.2, 0.5],
+    "spread_x": "0.15",
+    "spread_y": "0.05",
+    "spread_z": "0.15",
+    "interval": 3,
+    "when": "running",
+    "run": "crusher"
+  },
+  {
+    "type": "particle",
+    "particle": "CRIT",
+    "count": "1",
+    "location": { "x": 0.5, "y": "1.0 + pulse_y", "z": 0.5 },
+    "interval": 4,
+    "when": "running && overclock > 1.5",
+    "run": "crusher"
+  }
+]</code></pre>
+    </div>
+  </main>
+</div>
+<script src="assets/main.js"></script>
+</body>
+</html>
