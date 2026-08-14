@@ -236,7 +236,13 @@ body {
 }
 .breadcrumbs a { color: var(--accent); text-decoration: none; }
 .breadcrumbs a:hover { text-decoration: underline; }
-.breadcrumbs .sep { color: var(--border); margin: 0 0.2rem; }
+/* Separator: works with both <span class="sep"> and plain <span>/</span> */
+.breadcrumbs .sep,
+.breadcrumbs > span:not(:last-child) {
+  color: var(--border);
+  margin: 0 0.25rem;
+  font-weight: 400;
+}
 
 /* nav icon sizing */
 .nav-section-header i, .nav-section-header svg {
@@ -308,7 +314,7 @@ pre code {
   padding: 0;
 }
 
-/* copy button */
+/* copy button — floats top-right inside <pre> */
 .copy-btn {
   position: absolute;
   top: 0.5rem;
@@ -319,8 +325,12 @@ pre code {
   color: var(--text-muted);
   cursor: pointer;
   font-size: 0.75rem;
+  font-family: var(--font-ui);
+  white-space: nowrap;
   padding: 0.25rem 0.5rem;
   transition: color 0.15s, background 0.15s;
+  z-index: 5;
+  line-height: 1.2;
 }
 .copy-btn:hover { color: var(--text); background: var(--bg-3); }
 .copy-btn.copied { color: var(--green); }
