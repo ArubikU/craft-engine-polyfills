@@ -70,58 +70,10 @@ header_template() {
   <a href="${css_path%docs/assets/style.css}index.html" class="logo"><i data-lucide="code-2"></i> CraftEngine Polyfills</a>
   <div class="spacer"></div>
   <a href="${css_path%docs/assets/style.css}api/index.html" style="color:var(--accent)">API</a>
-  <a href="https://github.com/Arubik/craft-engine-polyfills" class="gh-link"><i data-lucide="github"></i></a>
+  <a href="https://github.com/ArubikU/craft-engine-polyfills" class="gh-link"><i data-lucide="github"></i></a>
 </div>
 <div class="layout">
-<nav class="sidebar">
-  <div class="nav-section">
-    <div class="nav-section-header"><i data-lucide="package"></i> formula</div>
-    <ul class="nav-items">
-      <li><a href="${css_path%docs/assets/style.css}api/dev/arubik/craftengine/machine/render/formula/PolyFormula.html">PolyFormula</a></li>
-      <li><a href="${css_path%docs/assets/style.css}api/dev/arubik/craftengine/machine/render/formula/PolyValue.html">PolyValue</a></li>
-      <li><a href="${css_path%docs/assets/style.css}api/dev/arubik/craftengine/machine/render/formula/PolyContext.html">PolyContext</a></li>
-      <li><a href="${css_path%docs/assets/style.css}api/dev/arubik/craftengine/machine/render/formula/PolyScript.html">PolyScript</a></li>
-    </ul>
-  </div>
-  <div class="nav-section">
-    <div class="nav-section-header"><i data-lucide="package"></i> render</div>
-    <ul class="nav-items">
-      <li><a href="${css_path%docs/assets/style.css}api/dev/arubik/craftengine/machine/render/RendererSpec.html">RendererSpec</a></li>
-      <li><a href="${css_path%docs/assets/style.css}api/dev/arubik/craftengine/machine/render/RendererManager.html">RendererManager</a></li>
-    </ul>
-  </div>
-  <div class="nav-section">
-    <div class="nav-section-header"><i data-lucide="package"></i> machine</div>
-    <ul class="nav-items">
-      <li><a href="${css_path%docs/assets/style.css}api/dev/arubik/craftengine/machine/MachineDefinition.html">MachineDefinition</a></li>
-    </ul>
-  </div>
-  <div class="nav-section">
-    <div class="nav-section-header"><i data-lucide="package"></i> contraption</div>
-    <ul class="nav-items">
-      <li><a href="${css_path%docs/assets/style.css}api/dev/arubik/craftengine/contraption/core/ContraptionEntity.html">ContraptionEntity</a></li>
-      <li><a href="${css_path%docs/assets/style.css}api/dev/arubik/craftengine/contraption/core/ContraptionState.html">ContraptionState</a></li>
-      <li><a href="${css_path%docs/assets/style.css}api/dev/arubik/craftengine/contraption/api/ContraptionType.html">ContraptionType</a></li>
-      <li><a href="${css_path%docs/assets/style.css}api/dev/arubik/craftengine/contraption/api/PowerSource.html">PowerSource</a></li>
-      <li><a href="${css_path%docs/assets/style.css}api/dev/arubik/craftengine/contraption/api/PowerConsumer.html">PowerConsumer</a></li>
-    </ul>
-  </div>
-  <div class="nav-section">
-    <div class="nav-section-header"><i data-lucide="package"></i> fluid / gas</div>
-    <ul class="nav-items">
-      <li><a href="${css_path%docs/assets/style.css}api/dev/arubik/craftengine/fluid/FluidTank.html">FluidTank</a></li>
-      <li><a href="${css_path%docs/assets/style.css}api/dev/arubik/craftengine/gas/GasTank.html">GasTank</a></li>
-    </ul>
-  </div>
-  <div class="nav-section">
-    <div class="nav-section-header"><i data-lucide="arrow-left"></i> Navigation</div>
-    <ul class="nav-items">
-      <li><a href="${css_path%docs/assets/style.css}api/index.html">API Index</a></li>
-      <li><a href="${css_path%docs/assets/style.css}docs/getting-started.html">Docs</a></li>
-      <li><a href="${css_path%docs/assets/style.css}index.html">Home</a></li>
-    </ul>
-  </div>
-</nav>
+$(build_sidebar "${css_path%docs/assets/style.css}")
 <main class="content api-content" style="padding-top:2rem">
   <div class="breadcrumbs">
     <a href="${css_path%docs/assets/style.css}api/index.html">API</a><span class="sep">/</span>
@@ -146,6 +98,68 @@ FOOTER
 
 echo "=== Generating API docs from branch: $BRANCH ==="
 
+# ---- Build sidebar HTML (auto-generated from PACKAGES) ----
+build_sidebar() {
+  local root_prefix="$1"  # relative path to root (e.g. "../../../../../../")
+  echo '<nav class="sidebar">'
+  for entry in "${PACKAGES[@]}"; do
+    IFS=':' read -r pkg classes <<< "$entry"
+    local short_pkg="${pkg##*/}"  # last segment as display name
+    echo "  <div class=\"nav-section\">"
+    echo "    <div class=\"nav-section-header\"><i data-lucide=\"package\"></i> ${short_pkg}</div>"
+    echo "    <ul class=\"nav-items\">"
+    for c in $classes; do
+      echo "      <li><a href=\"${root_prefix}api/dev/arubik/craftengine/$pkg/$c.html\">$c</a></li>"
+    done
+    echo "    </ul>"
+    echo "  </div>"
+  done
+  echo "  <div class=\"nav-section\">"
+  echo "    <div class=\"nav-section-header\"><i data-lucide=\"arrow-left\"></i> Nav</div>"
+  echo "    <ul class=\"nav-items\">"
+  echo "      <li><a href=\"${root_prefix}api/index.html\">API Index</a></li>"
+  echo "      <li><a href=\"${root_prefix}docs/getting-started.html\">Docs</a></li>"
+  echo "      <li><a href=\"${root_prefix}index.html\">Home</a></li>"
+  echo "    </ul>"
+  echo "  </div>"
+  echo '</nav>'
+}
+
+# ---- Generate api/index.html ----
+echo "  GEN: api/index.html"
+{
+  cat <<'IDX_HEAD'
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>API Reference — CraftEngine Polyfills</title>
+<link rel="stylesheet" href="../docs/assets/style.css">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+</head><body>
+<div class="topbar" role="banner">
+  <a href="../index.html" class="logo"><i data-lucide="code-2"></i> CraftEngine Polyfills</a>
+  <div class="spacer"></div>
+  <a href="../docs/getting-started.html" style="color:var(--text-muted);font-size:0.9rem">Docs</a>
+  <a href="index.html" style="color:var(--accent);font-weight:700;font-size:0.9rem">API</a>
+  <a href="https://github.com/ArubikU/craft-engine-polyfills" class="gh-link"><i data-lucide="github"></i></a>
+</div>
+<div class="layout">
+IDX_HEAD
+  build_sidebar "../"
+  echo '<main class="content"><h1>API Reference</h1><p class="lead">All documented classes grouped by package.</p>'
+  for entry in "${PACKAGES[@]}"; do
+    IFS=':' read -r pkg classes <<< "$entry"
+    echo "<h2>dev.arubik.craftengine.${pkg//\//.}</h2>"
+    echo '<table class="ref-table"><thead><tr><th>Class</th><th>Path</th></tr></thead><tbody>'
+    for c in $classes; do
+      echo "<tr><td><a href=\"dev/arubik/craftengine/$pkg/$c.html\"><code>$c</code></a></td><td style=\"color:var(--text-muted);font-size:0.8rem\">$pkg</td></tr>"
+    done
+    echo '</tbody></table>'
+  done
+  echo '</main></div><script>if(window.lucide) lucide.createIcons();</script></body></html>'
+} > "$API_DIR/index.html"
+
+# ---- Generate per-class pages ----
 for entry in "${PACKAGES[@]}"; do
   IFS=':' read -r pkg classes <<< "$entry"
 

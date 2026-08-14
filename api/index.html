@@ -1,193 +1,299 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
+<html lang="en"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>API Reference — CraftEngine Polyfills</title>
 <link rel="stylesheet" href="../docs/assets/style.css">
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-</head>
-<body>
+</head><body>
 <div class="topbar" role="banner">
   <a href="../index.html" class="logo"><i data-lucide="code-2"></i> CraftEngine Polyfills</a>
   <div class="spacer"></div>
   <a href="../docs/getting-started.html" style="color:var(--text-muted);font-size:0.9rem">Docs</a>
   <a href="index.html" style="color:var(--accent);font-weight:700;font-size:0.9rem">API</a>
-  <a href="https://github.com/Arubik/craft-engine-polyfills" class="gh-link"><i data-lucide="github"></i></a>
+  <a href="https://github.com/ArubikU/craft-engine-polyfills" class="gh-link"><i data-lucide="github"></i></a>
 </div>
 <div class="layout">
 <nav class="sidebar">
   <div class="nav-section">
-    <div class="nav-section-header"><i data-lucide="package"></i> formula (20)</div>
+    <div class="nav-section-header"><i data-lucide="package"></i> machine</div>
     <ul class="nav-items">
-      <li><a href="dev/arubik/craftengine/machine/render/formula/PolyFormula.html">PolyFormula</a></li>
-      <li><a href="dev/arubik/craftengine/machine/render/formula/PolyValue.html">PolyValue</a></li>
-      <li><a href="dev/arubik/craftengine/machine/render/formula/PolyContext.html">PolyContext</a></li>
-      <li><a href="dev/arubik/craftengine/machine/render/formula/PolyClass.html">PolyClass</a></li>
-      <li><a href="dev/arubik/craftengine/machine/render/formula/PolyScript.html">PolyScript</a></li>
-      <li><a href="dev/arubik/craftengine/machine/render/formula/PolyScriptRegistry.html">PolyScriptRegistry</a></li>
-      <li><a href="dev/arubik/craftengine/machine/render/formula/BlockClass.html">BlockClass</a></li>
-      <li><a href="dev/arubik/craftengine/machine/render/formula/WorldClass.html">WorldClass</a></li>
-      <li><a href="dev/arubik/craftengine/machine/render/formula/PlayerClass.html">PlayerClass</a></li>
-      <li><a href="dev/arubik/craftengine/machine/render/formula/EntityClass.html">EntityClass</a></li>
-      <li><a href="dev/arubik/craftengine/machine/render/formula/MachineClass.html">MachineClass</a></li>
-      <li><a href="dev/arubik/craftengine/machine/render/formula/MultiBlockClass.html">MultiBlockClass</a></li>
-      <li><a href="dev/arubik/craftengine/machine/render/formula/ContraptionClass.html">ContraptionClass</a></li>
-      <li><a href="dev/arubik/craftengine/machine/render/formula/InventoryClass.html">InventoryClass</a></li>
-      <li><a href="dev/arubik/craftengine/machine/render/formula/ItemClass.html">ItemClass</a></li>
-      <li><a href="dev/arubik/craftengine/machine/render/formula/LocationClass.html">LocationClass</a></li>
-      <li><a href="dev/arubik/craftengine/machine/render/formula/WorkbenchClass.html">WorkbenchClass</a></li>
-      <li><a href="dev/arubik/craftengine/machine/render/formula/UpgradesClass.html">UpgradesClass</a></li>
-      <li><a href="dev/arubik/craftengine/machine/render/formula/FluidTanksClass.html">FluidTanksClass</a></li>
-      <li><a href="dev/arubik/craftengine/machine/render/formula/GasTanksClass.html">GasTanksClass</a></li>
+      <li><a href="../api/dev/arubik/craftengine/machine/MachineDefinition.html">MachineDefinition</a></li>
+      <li><a href="../api/dev/arubik/craftengine/machine/MachineDefinitionLoader.html">MachineDefinitionLoader</a></li>
     </ul>
   </div>
   <div class="nav-section">
-    <div class="nav-section-header"><i data-lucide="package"></i> render (7)</div>
+    <div class="nav-section-header"><i data-lucide="package"></i> render</div>
     <ul class="nav-items">
-      <li><a href="dev/arubik/craftengine/machine/render/RendererSpec.html">RendererSpec</a></li>
-      <li><a href="dev/arubik/craftengine/machine/render/RendererManager.html">RendererManager</a></li>
-      <li><a href="dev/arubik/craftengine/machine/render/ModelRendersDriven.html">ModelRendersDriven</a></li>
-      <li><a href="dev/arubik/craftengine/machine/render/BetterModelMachineRenderer.html">BetterModelMachineRenderer</a></li>
-      <li><a href="dev/arubik/craftengine/machine/render/ModelEngineMachineRenderer.html">ModelEngineMachineRenderer</a></li>
-      <li><a href="dev/arubik/craftengine/machine/render/ParticleUtils.html">ParticleUtils</a></li>
-      <li><a href="dev/arubik/craftengine/machine/render/SpeedFormula.html">SpeedFormula</a></li>
+      <li><a href="../api/dev/arubik/craftengine/machine/render/RendererSpec.html">RendererSpec</a></li>
+      <li><a href="../api/dev/arubik/craftengine/machine/render/RendererManager.html">RendererManager</a></li>
+      <li><a href="../api/dev/arubik/craftengine/machine/render/ModelRendersDriven.html">ModelRendersDriven</a></li>
+      <li><a href="../api/dev/arubik/craftengine/machine/render/BetterModelMachineRenderer.html">BetterModelMachineRenderer</a></li>
+      <li><a href="../api/dev/arubik/craftengine/machine/render/ModelEngineMachineRenderer.html">ModelEngineMachineRenderer</a></li>
+      <li><a href="../api/dev/arubik/craftengine/machine/render/ParticleUtils.html">ParticleUtils</a></li>
+      <li><a href="../api/dev/arubik/craftengine/machine/render/SpeedFormula.html">SpeedFormula</a></li>
     </ul>
   </div>
   <div class="nav-section">
-    <div class="nav-section-header"><i data-lucide="package"></i> machine (5)</div>
+    <div class="nav-section-header"><i data-lucide="package"></i> formula</div>
     <ul class="nav-items">
-      <li><a href="dev/arubik/craftengine/machine/MachineDefinition.html">MachineDefinition</a></li>
-      <li><a href="dev/arubik/craftengine/machine/MachineDefinitionLoader.html">MachineDefinitionLoader</a></li>
-      <li><a href="dev/arubik/craftengine/machine/attribute/MachineAttributes.html">MachineAttributes</a></li>
-      <li><a href="dev/arubik/craftengine/machine/block/entity/DataMachineBlockEntity.html">DataMachineBlockEntity</a></li>
-      <li><a href="dev/arubik/craftengine/machine/block/entity/DataMultiBlockMachineBlockEntity.html">DataMultiBlockMachineBlockEntity</a></li>
+      <li><a href="../api/dev/arubik/craftengine/machine/render/formula/PolyFormula.html">PolyFormula</a></li>
+      <li><a href="../api/dev/arubik/craftengine/machine/render/formula/PolyValue.html">PolyValue</a></li>
+      <li><a href="../api/dev/arubik/craftengine/machine/render/formula/PolyContext.html">PolyContext</a></li>
+      <li><a href="../api/dev/arubik/craftengine/machine/render/formula/PolyClass.html">PolyClass</a></li>
+      <li><a href="../api/dev/arubik/craftengine/machine/render/formula/PolyScript.html">PolyScript</a></li>
+      <li><a href="../api/dev/arubik/craftengine/machine/render/formula/PolyScriptRegistry.html">PolyScriptRegistry</a></li>
+      <li><a href="../api/dev/arubik/craftengine/machine/render/formula/BlockClass.html">BlockClass</a></li>
+      <li><a href="../api/dev/arubik/craftengine/machine/render/formula/WorldClass.html">WorldClass</a></li>
+      <li><a href="../api/dev/arubik/craftengine/machine/render/formula/PlayerClass.html">PlayerClass</a></li>
+      <li><a href="../api/dev/arubik/craftengine/machine/render/formula/EntityClass.html">EntityClass</a></li>
+      <li><a href="../api/dev/arubik/craftengine/machine/render/formula/MachineClass.html">MachineClass</a></li>
+      <li><a href="../api/dev/arubik/craftengine/machine/render/formula/MultiBlockClass.html">MultiBlockClass</a></li>
+      <li><a href="../api/dev/arubik/craftengine/machine/render/formula/ContraptionClass.html">ContraptionClass</a></li>
+      <li><a href="../api/dev/arubik/craftengine/machine/render/formula/InventoryClass.html">InventoryClass</a></li>
+      <li><a href="../api/dev/arubik/craftengine/machine/render/formula/ItemClass.html">ItemClass</a></li>
+      <li><a href="../api/dev/arubik/craftengine/machine/render/formula/UpgradesClass.html">UpgradesClass</a></li>
+      <li><a href="../api/dev/arubik/craftengine/machine/render/formula/FluidTanksClass.html">FluidTanksClass</a></li>
+      <li><a href="../api/dev/arubik/craftengine/machine/render/formula/GasTanksClass.html">GasTanksClass</a></li>
+      <li><a href="../api/dev/arubik/craftengine/machine/render/formula/TankAccessClass.html">TankAccessClass</a></li>
+      <li><a href="../api/dev/arubik/craftengine/machine/render/formula/LocationClass.html">LocationClass</a></li>
+      <li><a href="../api/dev/arubik/craftengine/machine/render/formula/WorkbenchClass.html">WorkbenchClass</a></li>
     </ul>
   </div>
   <div class="nav-section">
-    <div class="nav-section-header"><i data-lucide="package"></i> contraption (12)</div>
+    <div class="nav-section-header"><i data-lucide="package"></i> variable</div>
     <ul class="nav-items">
-      <li><a href="dev/arubik/craftengine/contraption/core/ContraptionEntity.html">ContraptionEntity</a></li>
-      <li><a href="dev/arubik/craftengine/contraption/core/ContraptionState.html">ContraptionState</a></li>
-      <li><a href="dev/arubik/craftengine/contraption/core/ContraptionLevel.html">ContraptionLevel</a></li>
-      <li><a href="dev/arubik/craftengine/contraption/element/ContraptionElement.html">ContraptionElement</a></li>
-      <li><a href="dev/arubik/craftengine/contraption/element/ElementTypes.html">ElementTypes</a></li>
-      <li><a href="dev/arubik/craftengine/contraption/element/ContraptionMachineRendererElement.html">ContraptionMachineRendererElement</a></li>
-      <li><a href="dev/arubik/craftengine/contraption/config/ContraptionConfig.html">ContraptionConfig</a></li>
-      <li><a href="dev/arubik/craftengine/contraption/api/ContraptionType.html">ContraptionType</a></li>
-      <li><a href="dev/arubik/craftengine/contraption/api/ContraptionTypeRegistry.html">ContraptionTypeRegistry</a></li>
-      <li><a href="dev/arubik/craftengine/contraption/api/PowerSource.html">PowerSource</a></li>
-      <li><a href="dev/arubik/craftengine/contraption/api/PowerConsumer.html">PowerConsumer</a></li>
-      <li><a href="dev/arubik/craftengine/contraption/api/ContraptionHitboxProvider.html">ContraptionHitboxProvider</a></li>
+      <li><a href="../api/dev/arubik/craftengine/machine/render/variable/MachineRenderContext.html">MachineRenderContext</a></li>
+      <li><a href="../api/dev/arubik/craftengine/machine/render/variable/VariableSpec.html">VariableSpec</a></li>
     </ul>
   </div>
   <div class="nav-section">
-    <div class="nav-section-header"><i data-lucide="package"></i> other (8)</div>
+    <div class="nav-section-header"><i data-lucide="package"></i> attribute</div>
     <ul class="nav-items">
-      <li><a href="dev/arubik/craftengine/fluid/FluidTank.html">FluidTank</a></li>
-      <li><a href="dev/arubik/craftengine/gas/GasTank.html">GasTank</a></li>
-      <li><a href="dev/arubik/craftengine/crafting/WorkbenchDefinition.html">WorkbenchDefinition</a></li>
-      <li><a href="dev/arubik/craftengine/crafting/WorkbenchLoader.html">WorkbenchLoader</a></li>
-      <li><a href="dev/arubik/craftengine/multiblock/MultiBlockDefinition.html">MultiBlockDefinition</a></li>
-      <li><a href="dev/arubik/craftengine/multiblock/MultiBlockSchema.html">MultiBlockSchema</a></li>
-      <li><a href="dev/arubik/craftengine/contraption/ContraptionWorlds.html">ContraptionWorlds</a></li>
-      <li><a href="dev/arubik/craftengine/block/behavior/RendererBehavior.html">RendererBehavior</a></li>
+      <li><a href="../api/dev/arubik/craftengine/machine/attribute/MachineAttributes.html">MachineAttributes</a></li>
     </ul>
   </div>
   <div class="nav-section">
-    <div class="nav-section-header"><i data-lucide="arrow-left"></i> Navigation</div>
+    <div class="nav-section-header"><i data-lucide="package"></i> entity</div>
     <ul class="nav-items">
+      <li><a href="../api/dev/arubik/craftengine/machine/block/entity/DataMachineBlockEntity.html">DataMachineBlockEntity</a></li>
+      <li><a href="../api/dev/arubik/craftengine/machine/block/entity/DataMultiBlockMachineBlockEntity.html">DataMultiBlockMachineBlockEntity</a></li>
+    </ul>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-header"><i data-lucide="package"></i> core</div>
+    <ul class="nav-items">
+      <li><a href="../api/dev/arubik/craftengine/contraption/core/ContraptionEntity.html">ContraptionEntity</a></li>
+      <li><a href="../api/dev/arubik/craftengine/contraption/core/ContraptionState.html">ContraptionState</a></li>
+      <li><a href="../api/dev/arubik/craftengine/contraption/core/ContraptionLevel.html">ContraptionLevel</a></li>
+    </ul>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-header"><i data-lucide="package"></i> element</div>
+    <ul class="nav-items">
+      <li><a href="../api/dev/arubik/craftengine/contraption/element/ContraptionElement.html">ContraptionElement</a></li>
+      <li><a href="../api/dev/arubik/craftengine/contraption/element/ElementTypes.html">ElementTypes</a></li>
+      <li><a href="../api/dev/arubik/craftengine/contraption/element/ContraptionMachineRendererElement.html">ContraptionMachineRendererElement</a></li>
+    </ul>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-header"><i data-lucide="package"></i> config</div>
+    <ul class="nav-items">
+      <li><a href="../api/dev/arubik/craftengine/contraption/config/ContraptionConfig.html">ContraptionConfig</a></li>
+    </ul>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-header"><i data-lucide="package"></i> fluid</div>
+    <ul class="nav-items">
+      <li><a href="../api/dev/arubik/craftengine/fluid/FluidTank.html">FluidTank</a></li>
+    </ul>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-header"><i data-lucide="package"></i> gas</div>
+    <ul class="nav-items">
+      <li><a href="../api/dev/arubik/craftengine/gas/GasTank.html">GasTank</a></li>
+    </ul>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-header"><i data-lucide="package"></i> crafting</div>
+    <ul class="nav-items">
+      <li><a href="../api/dev/arubik/craftengine/crafting/WorkbenchDefinition.html">WorkbenchDefinition</a></li>
+      <li><a href="../api/dev/arubik/craftengine/crafting/WorkbenchLoader.html">WorkbenchLoader</a></li>
+    </ul>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-header"><i data-lucide="package"></i> multiblock</div>
+    <ul class="nav-items">
+      <li><a href="../api/dev/arubik/craftengine/multiblock/MultiBlockDefinition.html">MultiBlockDefinition</a></li>
+      <li><a href="../api/dev/arubik/craftengine/multiblock/MultiBlockSchema.html">MultiBlockSchema</a></li>
+    </ul>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-header"><i data-lucide="package"></i> behavior</div>
+    <ul class="nav-items">
+      <li><a href="../api/dev/arubik/craftengine/block/behavior/RendererBehavior.html">RendererBehavior</a></li>
+    </ul>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-header"><i data-lucide="package"></i> api</div>
+    <ul class="nav-items">
+      <li><a href="../api/dev/arubik/craftengine/contraption/api/ContraptionHitboxProvider.html">ContraptionHitboxProvider</a></li>
+      <li><a href="../api/dev/arubik/craftengine/contraption/api/ContraptionTickable.html">ContraptionTickable</a></li>
+      <li><a href="../api/dev/arubik/craftengine/contraption/api/ContraptionType.html">ContraptionType</a></li>
+      <li><a href="../api/dev/arubik/craftengine/contraption/api/ContraptionTypeRegistry.html">ContraptionTypeRegistry</a></li>
+      <li><a href="../api/dev/arubik/craftengine/contraption/api/PowerConsumer.html">PowerConsumer</a></li>
+      <li><a href="../api/dev/arubik/craftengine/contraption/api/PowerSource.html">PowerSource</a></li>
+    </ul>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-header"><i data-lucide="package"></i> contraption</div>
+    <ul class="nav-items">
+      <li><a href="../api/dev/arubik/craftengine/contraption/ContraptionWorlds.html">ContraptionWorlds</a></li>
+      <li><a href="../api/dev/arubik/craftengine/contraption/MovementBehavior.html">MovementBehavior</a></li>
+      <li><a href="../api/dev/arubik/craftengine/contraption/MovementContext.html">MovementContext</a></li>
+      <li><a href="../api/dev/arubik/craftengine/contraption/ContraptionInteractionListener.html">ContraptionInteractionListener</a></li>
+    </ul>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-header"><i data-lucide="package"></i> event</div>
+    <ul class="nav-items">
+      <li><a href="../api/dev/arubik/craftengine/contraption/event/ContraptionAssembleEvent.html">ContraptionAssembleEvent</a></li>
+      <li><a href="../api/dev/arubik/craftengine/contraption/event/ContraptionAssembledEvent.html">ContraptionAssembledEvent</a></li>
+      <li><a href="../api/dev/arubik/craftengine/contraption/event/ContraptionBlockBreakEvent.html">ContraptionBlockBreakEvent</a></li>
+      <li><a href="../api/dev/arubik/craftengine/contraption/event/ContraptionBlockPlaceEvent.html">ContraptionBlockPlaceEvent</a></li>
+      <li><a href="../api/dev/arubik/craftengine/contraption/event/ContraptionDisassembleEvent.html">ContraptionDisassembleEvent</a></li>
+      <li><a href="../api/dev/arubik/craftengine/contraption/event/ContraptionDisassembledEvent.html">ContraptionDisassembledEvent</a></li>
+      <li><a href="../api/dev/arubik/craftengine/contraption/event/ContraptionInteractEvent.html">ContraptionInteractEvent</a></li>
+      <li><a href="../api/dev/arubik/craftengine/contraption/event/ContraptionMoveEvent.html">ContraptionMoveEvent</a></li>
+      <li><a href="../api/dev/arubik/craftengine/contraption/event/ContraptionSpawnEvent.html">ContraptionSpawnEvent</a></li>
+    </ul>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-header"><i data-lucide="arrow-left"></i> Nav</div>
+    <ul class="nav-items">
+      <li><a href="../api/index.html">API Index</a></li>
       <li><a href="../docs/getting-started.html">Docs</a></li>
       <li><a href="../index.html">Home</a></li>
     </ul>
   </div>
 </nav>
-<main class="content">
-  <h1>API Reference</h1>
-  <p class="lead">59 documented classes across 10 packages.</p>
-
-  <h2>dev.arubik.craftengine.machine.render.formula <span style="color:var(--text-muted);font-size:0.8rem">(20 classes)</span></h2>
-  <p style="color:var(--text-muted);font-size:0.85rem">PolyFormula typed expression engine — value types, context builder, 20 PolyClasses for cross-integrated machine/world/player/entity access.</p>
-  <table class="ref-table"><thead><tr><th>Class</th><th>Kind</th><th>Description</th></tr></thead><tbody>
-    <tr><td><a href="dev/arubik/craftengine/machine/render/formula/PolyFormula.html"><code>PolyFormula</code></a></td><td>final class</td><td>Compile + evaluate expressions (80+ builtins)</td></tr>
-    <tr><td><a href="dev/arubik/craftengine/machine/render/formula/PolyValue.html"><code>PolyValue</code></a></td><td>sealed interface</td><td>Value union: Num, Bool, Item, Str, Array, Obj, Null</td></tr>
-    <tr><td><a href="dev/arubik/craftengine/machine/render/formula/PolyContext.html"><code>PolyContext</code></a></td><td>final class</td><td>Immutable scope — variables + PolyClasses</td></tr>
-    <tr><td><a href="dev/arubik/craftengine/machine/render/formula/PolyClass.html"><code>PolyClass</code></a></td><td>interface</td><td>Namespace object (get/call properties)</td></tr>
-    <tr><td><a href="dev/arubik/craftengine/machine/render/formula/PolyScript.html"><code>PolyScript</code></a></td><td>final class</td><td>.pf script loader (for/while/if)</td></tr>
-    <tr><td><a href="dev/arubik/craftengine/machine/render/formula/PolyScriptRegistry.html"><code>PolyScriptRegistry</code></a></td><td>final class</td><td>Global script file registry</td></tr>
-    <tr><td><a href="dev/arubik/craftengine/machine/render/formula/BlockClass.html"><code>BlockClass</code></a></td><td>final class</td><td>Block state + NBT access</td></tr>
-    <tr><td><a href="dev/arubik/craftengine/machine/render/formula/WorldClass.html"><code>WorldClass</code></a></td><td>final class</td><td>Time, weather, entities, biome, blocks</td></tr>
-    <tr><td><a href="dev/arubik/craftengine/machine/render/formula/PlayerClass.html"><code>PlayerClass</code></a></td><td>final class</td><td>Player health, inventory, permissions, equipment</td></tr>
-    <tr><td><a href="dev/arubik/craftengine/machine/render/formula/EntityClass.html"><code>EntityClass</code></a></td><td>final class</td><td>Entity type, position, health, velocity</td></tr>
-    <tr><td><a href="dev/arubik/craftengine/machine/render/formula/MachineClass.html"><code>MachineClass</code></a></td><td>final class</td><td>Machine position, facing, player_facing ray-trace</td></tr>
-    <tr><td><a href="dev/arubik/craftengine/machine/render/formula/MultiBlockClass.html"><code>MultiBlockClass</code></a></td><td>final class</td><td>Relative position, side(), is_master, formed</td></tr>
-    <tr><td><a href="dev/arubik/craftengine/machine/render/formula/ContraptionClass.html"><code>ContraptionClass</code></a></td><td>final class</td><td>Speed, yaw/pitch/roll, riders, anchor_entity</td></tr>
-    <tr><td><a href="dev/arubik/craftengine/machine/render/formula/InventoryClass.html"><code>InventoryClass</code></a></td><td>final class</td><td>slot(n), slots(a..b), count_of, has</td></tr>
-    <tr><td><a href="dev/arubik/craftengine/machine/render/formula/ItemClass.html"><code>ItemClass</code></a></td><td>final class</td><td>Item amount, name, lore, enchants, CE tags</td></tr>
-    <tr><td><a href="dev/arubik/craftengine/machine/render/formula/LocationClass.html"><code>LocationClass</code></a></td><td>final class</td><td>World position, biome, block(), distance()</td></tr>
-    <tr><td><a href="dev/arubik/craftengine/machine/render/formula/WorkbenchClass.html"><code>WorkbenchClass</code></a></td><td>final class</td><td>Grid dimensions, input/output/tool access</td></tr>
-    <tr><td><a href="dev/arubik/craftengine/machine/render/formula/UpgradesClass.html"><code>UpgradesClass</code></a></td><td>final class</td><td>count(type), total, slot(n)</td></tr>
-    <tr><td><a href="dev/arubik/craftengine/machine/render/formula/FluidTanksClass.html"><code>FluidTanksClass</code></a></td><td>final class</td><td>level, capacity, fraction per named tank</td></tr>
-    <tr><td><a href="dev/arubik/craftengine/machine/render/formula/GasTanksClass.html"><code>GasTanksClass</code></a></td><td>final class</td><td>Same as FluidTanks but for gas types</td></tr>
-  </tbody></table>
-
-  <h2>dev.arubik.craftengine.machine.render <span style="color:var(--text-muted);font-size:0.8rem">(7 classes)</span></h2>
-  <p style="color:var(--text-muted);font-size:0.85rem">Data-driven renderer system — spec records, runtime manager, BetterModel/ModelEngine bridges, particle utilities.</p>
-  <table class="ref-table"><thead><tr><th>Class</th><th>Kind</th><th>Description</th></tr></thead><tbody>
-    <tr><td><a href="dev/arubik/craftengine/machine/render/RendererSpec.html"><code>RendererSpec</code></a></td><td>sealed interface</td><td>9 renderer type records + PositionedSpec wrapper</td></tr>
-    <tr><td><a href="dev/arubik/craftengine/machine/render/RendererManager.html"><code>RendererManager</code></a></td><td>final class</td><td>NMS per-player tick driver</td></tr>
-    <tr><td><a href="dev/arubik/craftengine/machine/render/ModelRendersDriven.html"><code>ModelRendersDriven</code></a></td><td>interface</td><td>Block entity exposes RendererManager</td></tr>
-    <tr><td><a href="dev/arubik/craftengine/machine/render/BetterModelMachineRenderer.html"><code>BetterModelMachineRenderer</code></a></td><td>final class</td><td>DummyTracker lifecycle + animation</td></tr>
-    <tr><td><a href="dev/arubik/craftengine/machine/render/ModelEngineMachineRenderer.html"><code>ModelEngineMachineRenderer</code></a></td><td>final class</td><td>ME R4 reflection-based renderer</td></tr>
-    <tr><td><a href="dev/arubik/craftengine/machine/render/ParticleUtils.html"><code>ParticleUtils</code></a></td><td>final class</td><td>Shape/direction enums + sampling</td></tr>
-    <tr><td><a href="dev/arubik/craftengine/machine/render/SpeedFormula.html"><code>SpeedFormula</code></a></td><td>final class</td><td>@Deprecated — wraps PolyFormula</td></tr>
-  </tbody></table>
-
-  <h2>dev.arubik.craftengine.machine <span style="color:var(--text-muted);font-size:0.8rem">(5 classes)</span></h2>
-  <p style="color:var(--text-muted);font-size:0.85rem">Machine definitions, loaders, attributes, and block entity implementations.</p>
-  <table class="ref-table"><thead><tr><th>Class</th><th>Kind</th><th>Description</th></tr></thead><tbody>
-    <tr><td><a href="dev/arubik/craftengine/machine/MachineDefinition.html"><code>MachineDefinition</code></a></td><td>final class</td><td>Parsed machine JSON — slots, tanks, bars, upgrades, renderers</td></tr>
-    <tr><td><a href="dev/arubik/craftengine/machine/MachineDefinitionLoader.html"><code>MachineDefinitionLoader</code></a></td><td>final class</td><td>JSON parser — machines/*.json</td></tr>
-    <tr><td><a href="dev/arubik/craftengine/machine/attribute/MachineAttributes.html"><code>MachineAttributes</code></a></td><td>final class</td><td>Attribute keys + compute(mods) math</td></tr>
-    <tr><td><a href="dev/arubik/craftengine/machine/block/entity/DataMachineBlockEntity.html"><code>DataMachineBlockEntity</code></a></td><td>class</td><td>Single-block data machine BE</td></tr>
-    <tr><td><a href="dev/arubik/craftengine/machine/block/entity/DataMultiBlockMachineBlockEntity.html"><code>DataMultiBlockMachineBlockEntity</code></a></td><td>class</td><td>Multi-block data machine BE</td></tr>
-  </tbody></table>
-
-  <h2>dev.arubik.craftengine.contraption <span style="color:var(--text-muted);font-size:0.8rem">(12 classes)</span></h2>
-  <p style="color:var(--text-muted);font-size:0.85rem">Moving structure system — entity/state, elements, physics, config, API interfaces.</p>
-  <table class="ref-table"><thead><tr><th>Class</th><th>Kind</th><th>Description</th></tr></thead><tbody>
-    <tr><td><a href="dev/arubik/craftengine/contraption/core/ContraptionEntity.html"><code>ContraptionEntity</code></a></td><td>final class</td><td>Render facade — swarms, culling, teleport</td></tr>
-    <tr><td><a href="dev/arubik/craftengine/contraption/core/ContraptionState.html"><code>ContraptionState</code></a></td><td>final class</td><td>Block map, transform, riders, physics ID</td></tr>
-    <tr><td><a href="dev/arubik/craftengine/contraption/core/ContraptionLevel.html"><code>ContraptionLevel</code></a></td><td>interface</td><td>Hidden mini-dimension contract</td></tr>
-    <tr><td><a href="dev/arubik/craftengine/contraption/element/ContraptionElement.html"><code>ContraptionElement</code></a></td><td>interface</td><td>Per-block render element</td></tr>
-    <tr><td><a href="dev/arubik/craftengine/contraption/element/ElementTypes.html"><code>ElementTypes</code></a></td><td>final class</td><td>Type registry keys</td></tr>
-    <tr><td><a href="dev/arubik/craftengine/contraption/element/ContraptionMachineRendererElement.html"><code>ContraptionMachineRendererElement</code></a></td><td>final class</td><td>Renders data-driven specs in contraptions</td></tr>
-    <tr><td><a href="dev/arubik/craftengine/contraption/config/ContraptionConfig.html"><code>ContraptionConfig</code></a></td><td>final class</td><td>contraptions.yml config holder</td></tr>
-    <tr><td><a href="dev/arubik/craftengine/contraption/api/ContraptionType.html"><code>ContraptionType</code></a></td><td>interface</td><td>Type contract for custom contraptions</td></tr>
-    <tr><td><a href="dev/arubik/craftengine/contraption/api/ContraptionTypeRegistry.html"><code>ContraptionTypeRegistry</code></a></td><td>final class</td><td>Type registration</td></tr>
-    <tr><td><a href="dev/arubik/craftengine/contraption/api/PowerSource.html"><code>PowerSource</code></a></td><td>interface</td><td>Rotational power output</td></tr>
-    <tr><td><a href="dev/arubik/craftengine/contraption/api/PowerConsumer.html"><code>PowerConsumer</code></a></td><td>interface</td><td>Rotational power input</td></tr>
-    <tr><td><a href="dev/arubik/craftengine/contraption/api/ContraptionHitboxProvider.html"><code>ContraptionHitboxProvider</code></a></td><td>interface</td><td>Custom collision shapes</td></tr>
-  </tbody></table>
-
-  <h2>Other packages <span style="color:var(--text-muted);font-size:0.8rem">(8 classes)</span></h2>
-  <table class="ref-table"><thead><tr><th>Class</th><th>Package</th><th>Description</th></tr></thead><tbody>
-    <tr><td><a href="dev/arubik/craftengine/fluid/FluidTank.html"><code>FluidTank</code></a></td><td>fluid</td><td>Named fluid tank with capacity + filter</td></tr>
-    <tr><td><a href="dev/arubik/craftengine/gas/GasTank.html"><code>GasTank</code></a></td><td>gas</td><td>Named gas tank with capacity + filter</td></tr>
-    <tr><td><a href="dev/arubik/craftengine/crafting/WorkbenchDefinition.html"><code>WorkbenchDefinition</code></a></td><td>crafting</td><td>Workbench JSON definition</td></tr>
-    <tr><td><a href="dev/arubik/craftengine/crafting/WorkbenchLoader.html"><code>WorkbenchLoader</code></a></td><td>crafting</td><td>workbenches/*.json parser</td></tr>
-    <tr><td><a href="dev/arubik/craftengine/multiblock/MultiBlockDefinition.html"><code>MultiBlockDefinition</code></a></td><td>multiblock</td><td>Multiblock structure definition</td></tr>
-    <tr><td><a href="dev/arubik/craftengine/multiblock/MultiBlockSchema.html"><code>MultiBlockSchema</code></a></td><td>multiblock</td><td>Part positions + matchers</td></tr>
-    <tr><td><a href="dev/arubik/craftengine/contraption/ContraptionWorlds.html"><code>ContraptionWorlds</code></a></td><td>contraption</td><td>Level→entity resolver</td></tr>
-    <tr><td><a href="dev/arubik/craftengine/block/behavior/RendererBehavior.html"><code>RendererBehavior</code></a></td><td>block.behavior</td><td>polyfills:renderer block behavior</td></tr>
-  </tbody></table>
-
-  <h2>render.variable <span style="color:var(--text-muted);font-size:0.8rem">(2 classes)</span></h2>
-  <table class="ref-table"><thead><tr><th>Class</th><th>Kind</th><th>Description</th></tr></thead><tbody>
-    <tr><td><a href="dev/arubik/craftengine/machine/render/variable/MachineRenderContext.html"><code>MachineRenderContext</code></a></td><td>final class</td><td>Per-tick machine state snapshot for renderers</td></tr>
-    <tr><td><a href="dev/arubik/craftengine/machine/render/variable/VariableSpec.html"><code>VariableSpec</code></a></td><td>sealed interface</td><td>Variable types: Formula, BoolSource, NumExpr, ItemSlot, TankVar</td></tr>
-  </tbody></table>
-</main>
-</div>
-<script>if(window.lucide) lucide.createIcons();</script>
-</body>
-</html>
+<main class="content"><h1>API Reference</h1><p class="lead">All documented classes grouped by package.</p>
+<h2>dev.arubik.craftengine.machine</h2>
+<table class="ref-table"><thead><tr><th>Class</th><th>Path</th></tr></thead><tbody>
+<tr><td><a href="dev/arubik/craftengine/machine/MachineDefinition.html"><code>MachineDefinition</code></a></td><td style="color:var(--text-muted);font-size:0.8rem">machine</td></tr>
+<tr><td><a href="dev/arubik/craftengine/machine/MachineDefinitionLoader.html"><code>MachineDefinitionLoader</code></a></td><td style="color:var(--text-muted);font-size:0.8rem">machine</td></tr>
+</tbody></table>
+<h2>dev.arubik.craftengine.machine.render</h2>
+<table class="ref-table"><thead><tr><th>Class</th><th>Path</th></tr></thead><tbody>
+<tr><td><a href="dev/arubik/craftengine/machine/render/RendererSpec.html"><code>RendererSpec</code></a></td><td style="color:var(--text-muted);font-size:0.8rem">machine/render</td></tr>
+<tr><td><a href="dev/arubik/craftengine/machine/render/RendererManager.html"><code>RendererManager</code></a></td><td style="color:var(--text-muted);font-size:0.8rem">machine/render</td></tr>
+<tr><td><a href="dev/arubik/craftengine/machine/render/ModelRendersDriven.html"><code>ModelRendersDriven</code></a></td><td style="color:var(--text-muted);font-size:0.8rem">machine/render</td></tr>
+<tr><td><a href="dev/arubik/craftengine/machine/render/BetterModelMachineRenderer.html"><code>BetterModelMachineRenderer</code></a></td><td style="color:var(--text-muted);font-size:0.8rem">machine/render</td></tr>
+<tr><td><a href="dev/arubik/craftengine/machine/render/ModelEngineMachineRenderer.html"><code>ModelEngineMachineRenderer</code></a></td><td style="color:var(--text-muted);font-size:0.8rem">machine/render</td></tr>
+<tr><td><a href="dev/arubik/craftengine/machine/render/ParticleUtils.html"><code>ParticleUtils</code></a></td><td style="color:var(--text-muted);font-size:0.8rem">machine/render</td></tr>
+<tr><td><a href="dev/arubik/craftengine/machine/render/SpeedFormula.html"><code>SpeedFormula</code></a></td><td style="color:var(--text-muted);font-size:0.8rem">machine/render</td></tr>
+</tbody></table>
+<h2>dev.arubik.craftengine.machine.render.formula</h2>
+<table class="ref-table"><thead><tr><th>Class</th><th>Path</th></tr></thead><tbody>
+<tr><td><a href="dev/arubik/craftengine/machine/render/formula/PolyFormula.html"><code>PolyFormula</code></a></td><td style="color:var(--text-muted);font-size:0.8rem">machine/render/formula</td></tr>
+<tr><td><a href="dev/arubik/craftengine/machine/render/formula/PolyValue.html"><code>PolyValue</code></a></td><td style="color:var(--text-muted);font-size:0.8rem">machine/render/formula</td></tr>
+<tr><td><a href="dev/arubik/craftengine/machine/render/formula/PolyContext.html"><code>PolyContext</code></a></td><td style="color:var(--text-muted);font-size:0.8rem">machine/render/formula</td></tr>
+<tr><td><a href="dev/arubik/craftengine/machine/render/formula/PolyClass.html"><code>PolyClass</code></a></td><td style="color:var(--text-muted);font-size:0.8rem">machine/render/formula</td></tr>
+<tr><td><a href="dev/arubik/craftengine/machine/render/formula/PolyScript.html"><code>PolyScript</code></a></td><td style="color:var(--text-muted);font-size:0.8rem">machine/render/formula</td></tr>
+<tr><td><a href="dev/arubik/craftengine/machine/render/formula/PolyScriptRegistry.html"><code>PolyScriptRegistry</code></a></td><td style="color:var(--text-muted);font-size:0.8rem">machine/render/formula</td></tr>
+<tr><td><a href="dev/arubik/craftengine/machine/render/formula/BlockClass.html"><code>BlockClass</code></a></td><td style="color:var(--text-muted);font-size:0.8rem">machine/render/formula</td></tr>
+<tr><td><a href="dev/arubik/craftengine/machine/render/formula/WorldClass.html"><code>WorldClass</code></a></td><td style="color:var(--text-muted);font-size:0.8rem">machine/render/formula</td></tr>
+<tr><td><a href="dev/arubik/craftengine/machine/render/formula/PlayerClass.html"><code>PlayerClass</code></a></td><td style="color:var(--text-muted);font-size:0.8rem">machine/render/formula</td></tr>
+<tr><td><a href="dev/arubik/craftengine/machine/render/formula/EntityClass.html"><code>EntityClass</code></a></td><td style="color:var(--text-muted);font-size:0.8rem">machine/render/formula</td></tr>
+<tr><td><a href="dev/arubik/craftengine/machine/render/formula/MachineClass.html"><code>MachineClass</code></a></td><td style="color:var(--text-muted);font-size:0.8rem">machine/render/formula</td></tr>
+<tr><td><a href="dev/arubik/craftengine/machine/render/formula/MultiBlockClass.html"><code>MultiBlockClass</code></a></td><td style="color:var(--text-muted);font-size:0.8rem">machine/render/formula</td></tr>
+<tr><td><a href="dev/arubik/craftengine/machine/render/formula/ContraptionClass.html"><code>ContraptionClass</code></a></td><td style="color:var(--text-muted);font-size:0.8rem">machine/render/formula</td></tr>
+<tr><td><a href="dev/arubik/craftengine/machine/render/formula/InventoryClass.html"><code>InventoryClass</code></a></td><td style="color:var(--text-muted);font-size:0.8rem">machine/render/formula</td></tr>
+<tr><td><a href="dev/arubik/craftengine/machine/render/formula/ItemClass.html"><code>ItemClass</code></a></td><td style="color:var(--text-muted);font-size:0.8rem">machine/render/formula</td></tr>
+<tr><td><a href="dev/arubik/craftengine/machine/render/formula/UpgradesClass.html"><code>UpgradesClass</code></a></td><td style="color:var(--text-muted);font-size:0.8rem">machine/render/formula</td></tr>
+<tr><td><a href="dev/arubik/craftengine/machine/render/formula/FluidTanksClass.html"><code>FluidTanksClass</code></a></td><td style="color:var(--text-muted);font-size:0.8rem">machine/render/formula</td></tr>
+<tr><td><a href="dev/arubik/craftengine/machine/render/formula/GasTanksClass.html"><code>GasTanksClass</code></a></td><td style="color:var(--text-muted);font-size:0.8rem">machine/render/formula</td></tr>
+<tr><td><a href="dev/arubik/craftengine/machine/render/formula/TankAccessClass.html"><code>TankAccessClass</code></a></td><td style="color:var(--text-muted);font-size:0.8rem">machine/render/formula</td></tr>
+<tr><td><a href="dev/arubik/craftengine/machine/render/formula/LocationClass.html"><code>LocationClass</code></a></td><td style="color:var(--text-muted);font-size:0.8rem">machine/render/formula</td></tr>
+<tr><td><a href="dev/arubik/craftengine/machine/render/formula/WorkbenchClass.html"><code>WorkbenchClass</code></a></td><td style="color:var(--text-muted);font-size:0.8rem">machine/render/formula</td></tr>
+</tbody></table>
+<h2>dev.arubik.craftengine.machine.render.variable</h2>
+<table class="ref-table"><thead><tr><th>Class</th><th>Path</th></tr></thead><tbody>
+<tr><td><a href="dev/arubik/craftengine/machine/render/variable/MachineRenderContext.html"><code>MachineRenderContext</code></a></td><td style="color:var(--text-muted);font-size:0.8rem">machine/render/variable</td></tr>
+<tr><td><a href="dev/arubik/craftengine/machine/render/variable/VariableSpec.html"><code>VariableSpec</code></a></td><td style="color:var(--text-muted);font-size:0.8rem">machine/render/variable</td></tr>
+</tbody></table>
+<h2>dev.arubik.craftengine.machine.attribute</h2>
+<table class="ref-table"><thead><tr><th>Class</th><th>Path</th></tr></thead><tbody>
+<tr><td><a href="dev/arubik/craftengine/machine/attribute/MachineAttributes.html"><code>MachineAttributes</code></a></td><td style="color:var(--text-muted);font-size:0.8rem">machine/attribute</td></tr>
+</tbody></table>
+<h2>dev.arubik.craftengine.machine.block.entity</h2>
+<table class="ref-table"><thead><tr><th>Class</th><th>Path</th></tr></thead><tbody>
+<tr><td><a href="dev/arubik/craftengine/machine/block/entity/DataMachineBlockEntity.html"><code>DataMachineBlockEntity</code></a></td><td style="color:var(--text-muted);font-size:0.8rem">machine/block/entity</td></tr>
+<tr><td><a href="dev/arubik/craftengine/machine/block/entity/DataMultiBlockMachineBlockEntity.html"><code>DataMultiBlockMachineBlockEntity</code></a></td><td style="color:var(--text-muted);font-size:0.8rem">machine/block/entity</td></tr>
+</tbody></table>
+<h2>dev.arubik.craftengine.contraption.core</h2>
+<table class="ref-table"><thead><tr><th>Class</th><th>Path</th></tr></thead><tbody>
+<tr><td><a href="dev/arubik/craftengine/contraption/core/ContraptionEntity.html"><code>ContraptionEntity</code></a></td><td style="color:var(--text-muted);font-size:0.8rem">contraption/core</td></tr>
+<tr><td><a href="dev/arubik/craftengine/contraption/core/ContraptionState.html"><code>ContraptionState</code></a></td><td style="color:var(--text-muted);font-size:0.8rem">contraption/core</td></tr>
+<tr><td><a href="dev/arubik/craftengine/contraption/core/ContraptionLevel.html"><code>ContraptionLevel</code></a></td><td style="color:var(--text-muted);font-size:0.8rem">contraption/core</td></tr>
+</tbody></table>
+<h2>dev.arubik.craftengine.contraption.element</h2>
+<table class="ref-table"><thead><tr><th>Class</th><th>Path</th></tr></thead><tbody>
+<tr><td><a href="dev/arubik/craftengine/contraption/element/ContraptionElement.html"><code>ContraptionElement</code></a></td><td style="color:var(--text-muted);font-size:0.8rem">contraption/element</td></tr>
+<tr><td><a href="dev/arubik/craftengine/contraption/element/ElementTypes.html"><code>ElementTypes</code></a></td><td style="color:var(--text-muted);font-size:0.8rem">contraption/element</td></tr>
+<tr><td><a href="dev/arubik/craftengine/contraption/element/ContraptionMachineRendererElement.html"><code>ContraptionMachineRendererElement</code></a></td><td style="color:var(--text-muted);font-size:0.8rem">contraption/element</td></tr>
+</tbody></table>
+<h2>dev.arubik.craftengine.contraption.config</h2>
+<table class="ref-table"><thead><tr><th>Class</th><th>Path</th></tr></thead><tbody>
+<tr><td><a href="dev/arubik/craftengine/contraption/config/ContraptionConfig.html"><code>ContraptionConfig</code></a></td><td style="color:var(--text-muted);font-size:0.8rem">contraption/config</td></tr>
+</tbody></table>
+<h2>dev.arubik.craftengine.fluid</h2>
+<table class="ref-table"><thead><tr><th>Class</th><th>Path</th></tr></thead><tbody>
+<tr><td><a href="dev/arubik/craftengine/fluid/FluidTank.html"><code>FluidTank</code></a></td><td style="color:var(--text-muted);font-size:0.8rem">fluid</td></tr>
+</tbody></table>
+<h2>dev.arubik.craftengine.gas</h2>
+<table class="ref-table"><thead><tr><th>Class</th><th>Path</th></tr></thead><tbody>
+<tr><td><a href="dev/arubik/craftengine/gas/GasTank.html"><code>GasTank</code></a></td><td style="color:var(--text-muted);font-size:0.8rem">gas</td></tr>
+</tbody></table>
+<h2>dev.arubik.craftengine.crafting</h2>
+<table class="ref-table"><thead><tr><th>Class</th><th>Path</th></tr></thead><tbody>
+<tr><td><a href="dev/arubik/craftengine/crafting/WorkbenchDefinition.html"><code>WorkbenchDefinition</code></a></td><td style="color:var(--text-muted);font-size:0.8rem">crafting</td></tr>
+<tr><td><a href="dev/arubik/craftengine/crafting/WorkbenchLoader.html"><code>WorkbenchLoader</code></a></td><td style="color:var(--text-muted);font-size:0.8rem">crafting</td></tr>
+</tbody></table>
+<h2>dev.arubik.craftengine.multiblock</h2>
+<table class="ref-table"><thead><tr><th>Class</th><th>Path</th></tr></thead><tbody>
+<tr><td><a href="dev/arubik/craftengine/multiblock/MultiBlockDefinition.html"><code>MultiBlockDefinition</code></a></td><td style="color:var(--text-muted);font-size:0.8rem">multiblock</td></tr>
+<tr><td><a href="dev/arubik/craftengine/multiblock/MultiBlockSchema.html"><code>MultiBlockSchema</code></a></td><td style="color:var(--text-muted);font-size:0.8rem">multiblock</td></tr>
+</tbody></table>
+<h2>dev.arubik.craftengine.block.behavior</h2>
+<table class="ref-table"><thead><tr><th>Class</th><th>Path</th></tr></thead><tbody>
+<tr><td><a href="dev/arubik/craftengine/block/behavior/RendererBehavior.html"><code>RendererBehavior</code></a></td><td style="color:var(--text-muted);font-size:0.8rem">block/behavior</td></tr>
+</tbody></table>
+<h2>dev.arubik.craftengine.contraption.api</h2>
+<table class="ref-table"><thead><tr><th>Class</th><th>Path</th></tr></thead><tbody>
+<tr><td><a href="dev/arubik/craftengine/contraption/api/ContraptionHitboxProvider.html"><code>ContraptionHitboxProvider</code></a></td><td style="color:var(--text-muted);font-size:0.8rem">contraption/api</td></tr>
+<tr><td><a href="dev/arubik/craftengine/contraption/api/ContraptionTickable.html"><code>ContraptionTickable</code></a></td><td style="color:var(--text-muted);font-size:0.8rem">contraption/api</td></tr>
+<tr><td><a href="dev/arubik/craftengine/contraption/api/ContraptionType.html"><code>ContraptionType</code></a></td><td style="color:var(--text-muted);font-size:0.8rem">contraption/api</td></tr>
+<tr><td><a href="dev/arubik/craftengine/contraption/api/ContraptionTypeRegistry.html"><code>ContraptionTypeRegistry</code></a></td><td style="color:var(--text-muted);font-size:0.8rem">contraption/api</td></tr>
+<tr><td><a href="dev/arubik/craftengine/contraption/api/PowerConsumer.html"><code>PowerConsumer</code></a></td><td style="color:var(--text-muted);font-size:0.8rem">contraption/api</td></tr>
+<tr><td><a href="dev/arubik/craftengine/contraption/api/PowerSource.html"><code>PowerSource</code></a></td><td style="color:var(--text-muted);font-size:0.8rem">contraption/api</td></tr>
+</tbody></table>
+<h2>dev.arubik.craftengine.contraption</h2>
+<table class="ref-table"><thead><tr><th>Class</th><th>Path</th></tr></thead><tbody>
+<tr><td><a href="dev/arubik/craftengine/contraption/ContraptionWorlds.html"><code>ContraptionWorlds</code></a></td><td style="color:var(--text-muted);font-size:0.8rem">contraption</td></tr>
+<tr><td><a href="dev/arubik/craftengine/contraption/MovementBehavior.html"><code>MovementBehavior</code></a></td><td style="color:var(--text-muted);font-size:0.8rem">contraption</td></tr>
+<tr><td><a href="dev/arubik/craftengine/contraption/MovementContext.html"><code>MovementContext</code></a></td><td style="color:var(--text-muted);font-size:0.8rem">contraption</td></tr>
+<tr><td><a href="dev/arubik/craftengine/contraption/ContraptionInteractionListener.html"><code>ContraptionInteractionListener</code></a></td><td style="color:var(--text-muted);font-size:0.8rem">contraption</td></tr>
+</tbody></table>
+<h2>dev.arubik.craftengine.contraption.event</h2>
+<table class="ref-table"><thead><tr><th>Class</th><th>Path</th></tr></thead><tbody>
+<tr><td><a href="dev/arubik/craftengine/contraption/event/ContraptionAssembleEvent.html"><code>ContraptionAssembleEvent</code></a></td><td style="color:var(--text-muted);font-size:0.8rem">contraption/event</td></tr>
+<tr><td><a href="dev/arubik/craftengine/contraption/event/ContraptionAssembledEvent.html"><code>ContraptionAssembledEvent</code></a></td><td style="color:var(--text-muted);font-size:0.8rem">contraption/event</td></tr>
+<tr><td><a href="dev/arubik/craftengine/contraption/event/ContraptionBlockBreakEvent.html"><code>ContraptionBlockBreakEvent</code></a></td><td style="color:var(--text-muted);font-size:0.8rem">contraption/event</td></tr>
+<tr><td><a href="dev/arubik/craftengine/contraption/event/ContraptionBlockPlaceEvent.html"><code>ContraptionBlockPlaceEvent</code></a></td><td style="color:var(--text-muted);font-size:0.8rem">contraption/event</td></tr>
+<tr><td><a href="dev/arubik/craftengine/contraption/event/ContraptionDisassembleEvent.html"><code>ContraptionDisassembleEvent</code></a></td><td style="color:var(--text-muted);font-size:0.8rem">contraption/event</td></tr>
+<tr><td><a href="dev/arubik/craftengine/contraption/event/ContraptionDisassembledEvent.html"><code>ContraptionDisassembledEvent</code></a></td><td style="color:var(--text-muted);font-size:0.8rem">contraption/event</td></tr>
+<tr><td><a href="dev/arubik/craftengine/contraption/event/ContraptionInteractEvent.html"><code>ContraptionInteractEvent</code></a></td><td style="color:var(--text-muted);font-size:0.8rem">contraption/event</td></tr>
+<tr><td><a href="dev/arubik/craftengine/contraption/event/ContraptionMoveEvent.html"><code>ContraptionMoveEvent</code></a></td><td style="color:var(--text-muted);font-size:0.8rem">contraption/event</td></tr>
+<tr><td><a href="dev/arubik/craftengine/contraption/event/ContraptionSpawnEvent.html"><code>ContraptionSpawnEvent</code></a></td><td style="color:var(--text-muted);font-size:0.8rem">contraption/event</td></tr>
+</tbody></table>
+</main></div><script>if(window.lucide) lucide.createIcons();</script></body></html>
