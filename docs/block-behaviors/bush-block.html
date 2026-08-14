@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>polyfills:bush_block — Block Behaviors — CEP</title>
+  <link rel="stylesheet" href="../assets/style.css" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+</head>
+<body>
+<header class="topbar">
+  <button class="hamburger" id="hamburger" aria-label="Menu">&#9776;</button>
+  <a href="../../index.html" class="logo">
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent)"><path d="M12 20h9"/><path d="M16.376 3.622a1 1 0 0 1 3.002 3.002L7.368 18.635a2 2 0 0 1-.855.506l-2.872.838a.5.5 0 0 1-.62-.62l.838-2.872a2 2 0 0 1 .506-.854z"/></svg>
+    CraftEngine Polyfills <span class="badge">1.21.11</span>
+  </a>
+  <div class="spacer"></div>
+  <a href="https://github.com/Arubik/craft-engine-polyfills" class="gh-link">
+    <i data-lucide="github" width="16" height="16"></i> GitHub
+  </a>
+</header>
+<div class="layout">
+  <nav class="sidebar" id="sidebar">
+    <div class="nav-section">
+      <div class="nav-section-header"><i data-lucide="arrow-left" width="14" height="14"></i> Overview <span class="caret">&#9660;</span></div>
+      <ul class="nav-items"><li><a href="../block-behaviors.html">All Block Behaviors</a></li></ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header"><i data-lucide="cpu" width="14" height="14"></i> Machines <span class="caret">&#9660;</span></div>
+      <ul class="nav-items">
+        <li><a href="data-machine.html">data_machine</a></li>
+        <li><a href="data-multiblock.html">data_multiblock_machine</a></li>
+        <li><a href="gas-pump.html">gas_pump</a></li>
+        <li><a href="fan-block.html">fan_block</a></li>
+      </ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header"><i data-lucide="layers" width="14" height="14"></i> Renderer <span class="caret">&#9660;</span></div>
+      <ul class="nav-items"><li><a href="renderer.html">renderer</a></li></ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header"><i data-lucide="git-branch" width="14" height="14"></i> Pipes &amp; Fluids <span class="caret">&#9660;</span></div>
+      <ul class="nav-items"><li><a href="pipe-block.html">pipe_block</a></li></ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header"><i data-lucide="zap" width="14" height="14"></i> Physics <span class="caret">&#9660;</span></div>
+      <ul class="nav-items">
+        <li><a href="bubble-block.html">bubble_block</a></li>
+        <li><a href="spike-block.html">spike_block</a></li>
+        <li><a href="magnet-block.html">magnet_block</a></li>
+      </ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header"><i data-lucide="leaf" width="14" height="14"></i> Plants <span class="caret">&#9660;</span></div>
+      <ul class="nav-items">
+        <li><a href="bush-block.html" class="active">bush_block</a></li>
+        <li><a href="change-over-time-block.html">change_over_time_block</a></li>
+        <li><a href="spreading-block.html">spreading_block</a></li>
+      </ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header"><i data-lucide="database" width="14" height="14"></i> Logic &amp; Storage <span class="caret">&#9660;</span></div>
+      <ul class="nav-items">
+        <li><a href="redstone-operator.html">redstone_operator</a></li>
+        <li><a href="storage-block.html">storage_block</a></li>
+      </ul>
+    </div>
+  </nav>
+  <main class="content">
+    <div class="breadcrumbs">
+      <a href="../../index.html">Home</a><span class="sep">/</span>
+      <a href="../block-behaviors.html">Block Behaviors</a><span class="sep">/</span>
+      <span>polyfills:bush_block</span>
+    </div>
+
+    <h1><code class="behavior-id">polyfills:bush_block</code></h1>
+    <p class="lead">A multi-cell tall plant (like pointed dripstone or bamboo). Stacks vertically on itself, tracks growth stages via an <code>age</code> block property, and can only survive on configurable ground types.</p>
+
+    <div class="info-box">
+      <strong>Java class:</strong> <code>dev.arubik.craftengine.block.behavior.BushBlockBehavior</code><br>
+      <strong>Registered as:</strong> <code>BlockBehaviors.POLYFILL_BUSH_BLOCK</code><br>
+      <strong>Block entity:</strong> none<br>
+      <strong>Block property required:</strong> <code>age</code> (IntegerProperty)
+    </div>
+
+    <h2>Description</h2>
+    <p>On placement the tip segment's age property is set to its maximum or minimum value (controlled by <code>age-direction</code>). Age values decrease down the column so each segment below the tip carries a progressively lower age, letting packs use different models per stage.</p>
+    <p>The behavior implements <code>canSurvive</code>: if the block below is not in the allowed list (or is in the blacklist when <code>blacklist: true</code>), the block pops off. If the block below is the same custom block and <code>stackable: true</code>, the column grows.</p>
+
+    <h2>Configuration</h2>
+    <table class="ref-table">
+      <thead><tr><th>Key</th><th class="td-type">Type</th><th class="td-default">Default</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code>bottom-block-tags</code></td><td class="td-type">List&lt;Key&gt;</td><td class="td-default">[]</td><td>MC block tags the block may survive on (e.g. <code>minecraft:dirt</code>). Prefixed with <code>#</code> in tag syntax.</td></tr>
+        <tr><td><code>bottom-blocks</code></td><td class="td-type">List&lt;String&gt;</td><td class="td-default">[]</td><td>Explicit vanilla or CE block IDs (optionally with block-state suffix) the block may survive on.</td></tr>
+        <tr><td><code>blacklist</code></td><td class="td-type">bool</td><td class="td-default">false</td><td>When <code>true</code>, the tag/block lists act as a blacklist instead of an allowlist — the block survives on everything <em>except</em> the listed entries.</td></tr>
+        <tr><td><code>stackable</code></td><td class="td-type">bool</td><td class="td-default">false</td><td>Whether the block can be placed on top of another block of the same type (forming a tall column).</td></tr>
+        <tr><td><code>age-direction</code></td><td class="td-type">String</td><td class="td-default">up</td><td><code>up</code> sets the tip to maximum age and decrements downward; <code>down</code> sets the tip to minimum age and increments downward.</td></tr>
+        <tr><td><code>delay</code></td><td class="td-type">int (ticks)</td><td class="td-default">0</td><td>Scheduled tick delay used by the parent <code>AbstractCanSurviveBlockBehavior</code>.</td></tr>
+      </tbody>
+    </table>
+
+    <h2>Example</h2>
+    <pre data-lang="yaml"><code>blocks:
+  cml:crystal_spike:
+    settings:
+      template:
+        - default:hardness/stone
+    properties:
+      age:
+        type: integer
+        values: [0, 1, 2, 3]
+    states:
+      state: "minecraft:amethyst_block"
+      models:
+        - { when: "age=3", path: cml:block/crystal_spike_tip }
+        - { when: "age=2", path: cml:block/crystal_spike_mid_upper }
+        - { when: "age=1", path: cml:block/crystal_spike_mid_lower }
+        - { when: "age=0", path: cml:block/crystal_spike_base }
+    behavior:
+      type: polyfills:bush_block
+      stackable: true
+      age-direction: up
+      bottom-block-tags:
+        - minecraft:base_stone_overworld</code></pre>
+
+    <h2>Implementation Notes</h2>
+    <p>When the bottom-most segment of a column is removed (<code>affectNeighborsAfterRemoval</code>), the behavior walks upward and converts all consecutive same-type blocks back to water (if waterlogged) or removes them. The waterlogged state is preserved: if any segment in the column is waterlogged the replacement state inherits that flag.</p>
+  </main>
+</div>
+<script src="../assets/main.js"></script>
+<script>if (window.lucide) lucide.createIcons();</script>
+</body>
+</html>

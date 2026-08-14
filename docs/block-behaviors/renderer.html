@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>polyfills:renderer — Block Behaviors — CEP</title>
+  <link rel="stylesheet" href="../assets/style.css" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+</head>
+<body>
+<header class="topbar">
+  <button class="hamburger" id="hamburger" aria-label="Menu">&#9776;</button>
+  <a href="../../index.html" class="logo">
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent)"><path d="M12 20h9"/><path d="M16.376 3.622a1 1 0 0 1 3.002 3.002L7.368 18.635a2 2 0 0 1-.855.506l-2.872.838a.5.5 0 0 1-.62-.62l.838-2.872a2 2 0 0 1 .506-.854z"/></svg>
+    CraftEngine Polyfills <span class="badge">1.21.11</span>
+  </a>
+  <div class="spacer"></div>
+  <a href="https://github.com/Arubik/craft-engine-polyfills" class="gh-link">
+    <i data-lucide="github" width="16" height="16"></i> GitHub
+  </a>
+</header>
+<div class="layout">
+  <nav class="sidebar" id="sidebar">
+    <div class="nav-section">
+      <div class="nav-section-header"><i data-lucide="arrow-left" width="14" height="14"></i> Overview <span class="caret">&#9660;</span></div>
+      <ul class="nav-items"><li><a href="../block-behaviors.html">All Block Behaviors</a></li></ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header"><i data-lucide="cpu" width="14" height="14"></i> Machines <span class="caret">&#9660;</span></div>
+      <ul class="nav-items">
+        <li><a href="data-machine.html">data_machine</a></li>
+        <li><a href="data-multiblock.html">data_multiblock_machine</a></li>
+        <li><a href="gas-pump.html">gas_pump</a></li>
+        <li><a href="fan-block.html">fan_block</a></li>
+      </ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header"><i data-lucide="layers" width="14" height="14"></i> Renderer <span class="caret">&#9660;</span></div>
+      <ul class="nav-items">
+        <li><a href="renderer.html" class="active">renderer</a></li>
+      </ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header"><i data-lucide="git-branch" width="14" height="14"></i> Pipes &amp; Fluids <span class="caret">&#9660;</span></div>
+      <ul class="nav-items">
+        <li><a href="pipe-block.html">pipe_block</a></li>
+      </ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header"><i data-lucide="zap" width="14" height="14"></i> Physics <span class="caret">&#9660;</span></div>
+      <ul class="nav-items">
+        <li><a href="bubble-block.html">bubble_block</a></li>
+        <li><a href="spike-block.html">spike_block</a></li>
+        <li><a href="magnet-block.html">magnet_block</a></li>
+      </ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header"><i data-lucide="leaf" width="14" height="14"></i> Plants <span class="caret">&#9660;</span></div>
+      <ul class="nav-items">
+        <li><a href="bush-block.html">bush_block</a></li>
+        <li><a href="change-over-time-block.html">change_over_time_block</a></li>
+        <li><a href="spreading-block.html">spreading_block</a></li>
+      </ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header"><i data-lucide="database" width="14" height="14"></i> Logic &amp; Storage <span class="caret">&#9660;</span></div>
+      <ul class="nav-items">
+        <li><a href="redstone-operator.html">redstone_operator</a></li>
+        <li><a href="storage-block.html">storage_block</a></li>
+      </ul>
+    </div>
+  </nav>
+  <main class="content">
+    <div class="breadcrumbs">
+      <a href="../../index.html">Home</a><span class="sep">/</span>
+      <a href="../block-behaviors.html">Block Behaviors</a><span class="sep">/</span>
+      <span>polyfills:renderer</span>
+    </div>
+
+    <h1><code class="behavior-id">polyfills:renderer</code></h1>
+    <p class="lead">Attaches the PolyFormula renderer system (particles, text displays, item displays, BetterModel, ModelEngine) to any CE custom block — no full machine infrastructure required.</p>
+
+    <div class="info-box">
+      <strong>Java class:</strong> <code>dev.arubik.craftengine.block.behavior.RendererBehavior</code><br>
+      <strong>Registered as:</strong> <code>BlockBehaviors.POLYFILL_RENDERER</code><br>
+      <strong>Block entity:</strong> none — driven entirely by the block's random tick<br>
+      <strong>Related docs:</strong> <a href="../renderers.html">Renderer System</a> · <a href="../polyformula.html">PolyFormula Engine</a>
+    </div>
+
+    <h2>Description</h2>
+    <p>On every block tick the behavior reads the block's current redstone level (0–15), its <code>facing</code> property (if present), and any container inventory attached to the block entity (chest, barrel, hopper, dispenser). It then evaluates the configured <code>variables</code> using PolyFormula and drives each renderer spec: spawning particles, updating display entities, or controlling BetterModel/ModelEngine animations.</p>
+    <p>This is the lightweight path when you need visual effects on a plain custom block. For a full machine with a GUI, recipe processing, and upgrade slots, use <a href="data-machine.html"><code>polyfills:data_machine</code></a> instead — it uses the same renderer infrastructure internally.</p>
+
+    <div class="callout note">
+      <strong>Ticking required</strong>
+      The block must have <code>randomTick</code> or <code>tick</code> enabled in the CE block YAML for renderers to fire. Add <code>settings.tick: true</code> to your block definition.
+    </div>
+
+    <h2>Configuration</h2>
+    <table class="ref-table">
+      <thead><tr><th>Key</th><th class="td-type">Type</th><th class="td-default">Default</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code>variables</code></td><td class="td-type">Map&lt;String, String&gt;</td><td class="td-default">{}</td><td>Named PolyFormula expressions. Values are evaluated each tick and available to <code>when</code>, <code>update_when</code>, and inline fields in each renderer spec. Example: <code>powered: "redstone &gt; 0"</code>.</td></tr>
+        <tr><td><code>renderers</code></td><td class="td-type">List&lt;Map&gt;</td><td class="td-default">[]</td><td>Ordered list of renderer spec objects. See renderer types below.</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Renderer spec common fields</h3>
+    <table class="ref-table">
+      <thead><tr><th>Key</th><th class="td-type">Type</th><th class="td-default">Default</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code>type</code></td><td class="td-type">String</td><td class="td-default">particle</td><td>One of: <code>particle</code>, <code>text_display</code>, <code>item_display</code>, <code>bettermodel</code>, <code>modelengine</code>.</td></tr>
+        <tr><td><code>when</code></td><td class="td-type">PolyExpr</td><td class="td-default">always</td><td>Condition controlling whether this renderer is active. Evaluated as a boolean (empty string / "always" = always active).</td></tr>
+        <tr><td><code>update_when</code></td><td class="td-type">PolyExpr</td><td class="td-default">always</td><td>Condition controlling whether the renderer is updated this tick (useful to throttle expensive updates).</td></tr>
+        <tr><td><code>run</code></td><td class="td-type">PolyScript id</td><td class="td-default">null</td><td>Optional PolyScript to execute when the renderer fires.</td></tr>
+        <tr><td><code>location</code> / <code>offset_x/y/z</code></td><td class="td-type">PolyExpr / float</td><td class="td-default">0.5,0.5,0.5</td><td>Position offset from block origin. Can be a 3-element list expression or separate <code>offset_x</code>, <code>offset_y</code>, <code>offset_z</code> keys.</td></tr>
+      </tbody>
+    </table>
+
+    <h3>particle renderer</h3>
+    <table class="ref-table">
+      <thead><tr><th>Key</th><th class="td-type">Type</th><th class="td-default">Default</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code>particle</code></td><td class="td-type">String</td><td class="td-default">FLAME</td><td>Bukkit <code>Particle</code> enum name.</td></tr>
+        <tr><td><code>count</code></td><td class="td-type">PolyExpr</td><td class="td-default">1</td><td>Number of particles per tick.</td></tr>
+        <tr><td><code>spread_x/y/z</code></td><td class="td-type">PolyExpr</td><td class="td-default">0</td><td>Spread (randomness) per axis.</td></tr>
+        <tr><td><code>speed</code></td><td class="td-type">PolyExpr</td><td class="td-default">0.05</td><td>Particle speed.</td></tr>
+        <tr><td><code>shape</code></td><td class="td-type">String</td><td class="td-default">point</td><td>Emission shape hint.</td></tr>
+        <tr><td><code>interval</code></td><td class="td-type">int</td><td class="td-default">1</td><td>Emit every N ticks.</td></tr>
+      </tbody>
+    </table>
+
+    <h3>text_display renderer</h3>
+    <table class="ref-table">
+      <thead><tr><th>Key</th><th class="td-type">Type</th><th class="td-default">Default</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code>text</code></td><td class="td-type">PolyExpr</td><td class="td-default">""</td><td>Text content. Supports MiniMessage and PolyFormula string concatenation (<code>'Label: ' + value</code>).</td></tr>
+        <tr><td><code>scale</code></td><td class="td-type">PolyExpr</td><td class="td-default">0.1</td><td>Display entity scale factor.</td></tr>
+        <tr><td><code>rot_x/y/z</code></td><td class="td-type">PolyExpr</td><td class="td-default">0</td><td>Rotation per axis in degrees.</td></tr>
+        <tr><td><code>billboard</code></td><td class="td-type">String</td><td class="td-default">center</td><td>Billboard mode: <code>center</code>, <code>fixed</code>, <code>vertical</code>, <code>horizontal</code>.</td></tr>
+        <tr><td><code>line_width</code></td><td class="td-type">int</td><td class="td-default">200</td><td>Maximum line width in pixels before wrapping.</td></tr>
+        <tr><td><code>shadow</code></td><td class="td-type">bool</td><td class="td-default">false</td><td>Render text shadow.</td></tr>
+        <tr><td><code>see_through</code></td><td class="td-type">bool</td><td class="td-default">false</td><td>Visible through walls.</td></tr>
+        <tr><td><code>opacity</code></td><td class="td-type">int</td><td class="td-default">255</td><td>Alpha opacity 0–255.</td></tr>
+      </tbody>
+    </table>
+
+    <h3>item_display renderer</h3>
+    <table class="ref-table">
+      <thead><tr><th>Key</th><th class="td-type">Type</th><th class="td-default">Default</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code>item</code></td><td class="td-type">String</td><td class="td-default">minecraft:air</td><td>Item ID to display (vanilla or CE custom).</td></tr>
+        <tr><td><code>scale</code></td><td class="td-type">PolyExpr</td><td class="td-default">1.0</td><td>Display entity scale.</td></tr>
+        <tr><td><code>rot_x/y/z</code></td><td class="td-type">PolyExpr</td><td class="td-default">0</td><td>Rotation per axis.</td></tr>
+        <tr><td><code>billboard</code></td><td class="td-type">String</td><td class="td-default">none</td><td>Billboard mode.</td></tr>
+      </tbody>
+    </table>
+
+    <h3>bettermodel / modelengine renderer</h3>
+    <table class="ref-table">
+      <thead><tr><th>Key</th><th class="td-type">Type</th><th class="td-default">Default</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code>model_id</code></td><td class="td-type">String</td><td class="td-default">""</td><td>BetterModel / ModelEngine model identifier.</td></tr>
+        <tr><td><code>animation</code></td><td class="td-type">String</td><td class="td-default">null</td><td>Animation name to play (optional).</td></tr>
+        <tr><td><code>speed</code></td><td class="td-type">PolyExpr</td><td class="td-default">null</td><td>Animation playback speed multiplier (optional).</td></tr>
+      </tbody>
+    </table>
+
+    <h2>Example</h2>
+    <pre data-lang="yaml"><code>blocks:
+  cml:signal_lamp:
+    settings:
+      tick: true
+    states:
+      state: "minecraft:amethyst_block"
+    behavior:
+      type: polyfills:renderer
+      variables:
+        powered: "redstone > 0"
+      renderers:
+        - type: particle
+          particle: FLAME
+          offset_y: "0.9"
+          count: "redstone / 4"
+          when: powered
+          interval: 2
+        - type: text_display
+          text: "'Signal: ' + redstone"
+          offset_y: "1.5"
+          billboard: center
+          scale: "0.08"
+          when: powered
+          update_when: powered</code></pre>
+
+    <h2>Implementation Notes</h2>
+    <p>The behavior resolves the block's redstone level with <code>ServerLevel.getBestNeighborSignal()</code> each tick. If the block also has a block entity that implements <code>net.minecraft.world.Container</code>, its inventory is exposed to PolyFormula via the <code>inventory</code> context object.</p>
+    <p>The <code>RendererManager</code> instance is created lazily on first tick and reused across subsequent ticks. Changes to the behavior's config section at reload time recreate the behavior instance and thus the manager.</p>
+  </main>
+</div>
+<script src="../assets/main.js"></script>
+<script>if (window.lucide) lucide.createIcons();</script>
+</body>
+</html>

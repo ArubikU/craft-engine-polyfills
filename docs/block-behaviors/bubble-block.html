@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>polyfills:bubble_block — Block Behaviors — CEP</title>
+  <link rel="stylesheet" href="../assets/style.css" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+</head>
+<body>
+<header class="topbar">
+  <button class="hamburger" id="hamburger" aria-label="Menu">&#9776;</button>
+  <a href="../../index.html" class="logo">
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent)"><path d="M12 20h9"/><path d="M16.376 3.622a1 1 0 0 1 3.002 3.002L7.368 18.635a2 2 0 0 1-.855.506l-2.872.838a.5.5 0 0 1-.62-.62l.838-2.872a2 2 0 0 1 .506-.854z"/></svg>
+    CraftEngine Polyfills <span class="badge">1.21.11</span>
+  </a>
+  <div class="spacer"></div>
+  <a href="https://github.com/Arubik/craft-engine-polyfills" class="gh-link">
+    <i data-lucide="github" width="16" height="16"></i> GitHub
+  </a>
+</header>
+<div class="layout">
+  <nav class="sidebar" id="sidebar">
+    <div class="nav-section">
+      <div class="nav-section-header"><i data-lucide="arrow-left" width="14" height="14"></i> Overview <span class="caret">&#9660;</span></div>
+      <ul class="nav-items"><li><a href="../block-behaviors.html">All Block Behaviors</a></li></ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header"><i data-lucide="cpu" width="14" height="14"></i> Machines <span class="caret">&#9660;</span></div>
+      <ul class="nav-items">
+        <li><a href="data-machine.html">data_machine</a></li>
+        <li><a href="data-multiblock.html">data_multiblock_machine</a></li>
+        <li><a href="gas-pump.html">gas_pump</a></li>
+        <li><a href="fan-block.html">fan_block</a></li>
+      </ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header"><i data-lucide="layers" width="14" height="14"></i> Renderer <span class="caret">&#9660;</span></div>
+      <ul class="nav-items"><li><a href="renderer.html">renderer</a></li></ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header"><i data-lucide="git-branch" width="14" height="14"></i> Pipes &amp; Fluids <span class="caret">&#9660;</span></div>
+      <ul class="nav-items"><li><a href="pipe-block.html">pipe_block</a></li></ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header"><i data-lucide="zap" width="14" height="14"></i> Physics <span class="caret">&#9660;</span></div>
+      <ul class="nav-items">
+        <li><a href="bubble-block.html" class="active">bubble_block</a></li>
+        <li><a href="spike-block.html">spike_block</a></li>
+        <li><a href="magnet-block.html">magnet_block</a></li>
+      </ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header"><i data-lucide="leaf" width="14" height="14"></i> Plants <span class="caret">&#9660;</span></div>
+      <ul class="nav-items">
+        <li><a href="bush-block.html">bush_block</a></li>
+        <li><a href="change-over-time-block.html">change_over_time_block</a></li>
+        <li><a href="spreading-block.html">spreading_block</a></li>
+      </ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header"><i data-lucide="database" width="14" height="14"></i> Logic &amp; Storage <span class="caret">&#9660;</span></div>
+      <ul class="nav-items">
+        <li><a href="redstone-operator.html">redstone_operator</a></li>
+        <li><a href="storage-block.html">storage_block</a></li>
+      </ul>
+    </div>
+  </nav>
+  <main class="content">
+    <div class="breadcrumbs">
+      <a href="../../index.html">Home</a><span class="sep">/</span>
+      <a href="../block-behaviors.html">Block Behaviors</a><span class="sep">/</span>
+      <span>polyfills:bubble_block</span>
+    </div>
+
+    <h1><code class="behavior-id">polyfills:bubble_block</code></h1>
+    <p class="lead">Creates a column of vanilla <code>bubble_column</code> blocks above or below the custom block in water-filled cells, simulating a magma-block or soul-sand style vent.</p>
+
+    <div class="info-box">
+      <strong>Java class:</strong> <code>dev.arubik.craftengine.block.behavior.BubbleBlockBehavior</code><br>
+      <strong>Registered as:</strong> <code>BlockBehaviors.POLYFILL_BUBBLE_BLOCK</code><br>
+      <strong>Block entity:</strong> none
+    </div>
+
+    <h2>Description</h2>
+    <p>On placement the behavior schedules a recurring block tick every 6 ticks. On each tick it scans up to <code>limit</code> water cells in the configured direction and replaces each water cell with a vanilla <code>bubble_column</code> block — using <code>drag=true</code> (pulls down, like magma) or <code>drag=false</code> (pushes up, like soul sand), controlled by the <code>drag</code> setting.</p>
+    <p>When the source block is removed, all bubble-column blocks in the column are converted back to water.</p>
+
+    <h2>Configuration</h2>
+    <table class="ref-table">
+      <thead><tr><th>Key</th><th class="td-type">Type</th><th class="td-default">Default</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code>direction</code></td><td class="td-type">String</td><td class="td-default">up</td><td>Scan direction for placing bubble columns. <code>up</code> = scan upward from the source block; <code>down</code> = scan downward.</td></tr>
+        <tr><td><code>drag</code></td><td class="td-type">String</td><td class="td-default">up</td><td>Bubble column drag mode. <code>up</code> → <code>drag=false</code> (push-up soul-sand style); any other value → <code>drag=true</code> (pull-down magma style).</td></tr>
+        <tr><td><code>limit</code></td><td class="td-type">int</td><td class="td-default">100</td><td>Maximum number of water cells to convert into bubble columns.</td></tr>
+      </tbody>
+    </table>
+
+    <h2>Example</h2>
+    <pre data-lang="yaml"><code>blocks:
+  cml:vent_stone:
+    settings:
+      template:
+        - default:hardness/stone
+    states:
+      state: "minecraft:deepslate"
+      model:
+        path: cml:block/vent_stone
+    behavior:
+      type: polyfills:bubble_block
+      direction: up
+      drag: down     # drag=true (magma-style pull)
+      limit: 20</code></pre>
+
+    <h2>Implementation Notes</h2>
+    <p>The behavior uses <code>scheduleBlockTick</code> with a delay of 6 ticks rather than the standard random-tick system, so it fires consistently regardless of the server's random-tick speed setting. The scan walks through water-source blocks only — flowing water and non-water blocks are skipped.</p>
+  </main>
+</div>
+<script src="../assets/main.js"></script>
+<script>if (window.lucide) lucide.createIcons();</script>
+</body>
+</html>

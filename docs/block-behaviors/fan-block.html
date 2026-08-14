@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>polyfills:fan_block — Block Behaviors — CEP</title>
+  <link rel="stylesheet" href="../assets/style.css" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+</head>
+<body>
+<header class="topbar">
+  <button class="hamburger" id="hamburger" aria-label="Menu">&#9776;</button>
+  <a href="../../index.html" class="logo">
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent)"><path d="M12 20h9"/><path d="M16.376 3.622a1 1 0 0 1 3.002 3.002L7.368 18.635a2 2 0 0 1-.855.506l-2.872.838a.5.5 0 0 1-.62-.62l.838-2.872a2 2 0 0 1 .506-.854z"/></svg>
+    CraftEngine Polyfills <span class="badge">1.21.11</span>
+  </a>
+  <div class="spacer"></div>
+  <a href="https://github.com/Arubik/craft-engine-polyfills" class="gh-link">
+    <i data-lucide="github" width="16" height="16"></i> GitHub
+  </a>
+</header>
+<div class="layout">
+  <nav class="sidebar" id="sidebar">
+    <div class="nav-section">
+      <div class="nav-section-header"><i data-lucide="arrow-left" width="14" height="14"></i> Overview <span class="caret">&#9660;</span></div>
+      <ul class="nav-items"><li><a href="../block-behaviors.html">All Block Behaviors</a></li></ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header"><i data-lucide="cpu" width="14" height="14"></i> Machines <span class="caret">&#9660;</span></div>
+      <ul class="nav-items">
+        <li><a href="data-machine.html">data_machine</a></li>
+        <li><a href="data-multiblock.html">data_multiblock_machine</a></li>
+        <li><a href="gas-pump.html">gas_pump</a></li>
+        <li><a href="fan-block.html" class="active">fan_block</a></li>
+      </ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header"><i data-lucide="layers" width="14" height="14"></i> Renderer <span class="caret">&#9660;</span></div>
+      <ul class="nav-items"><li><a href="renderer.html">renderer</a></li></ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header"><i data-lucide="git-branch" width="14" height="14"></i> Pipes &amp; Fluids <span class="caret">&#9660;</span></div>
+      <ul class="nav-items"><li><a href="pipe-block.html">pipe_block</a></li></ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header"><i data-lucide="zap" width="14" height="14"></i> Physics <span class="caret">&#9660;</span></div>
+      <ul class="nav-items">
+        <li><a href="bubble-block.html">bubble_block</a></li>
+        <li><a href="spike-block.html">spike_block</a></li>
+        <li><a href="magnet-block.html">magnet_block</a></li>
+      </ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header"><i data-lucide="leaf" width="14" height="14"></i> Plants <span class="caret">&#9660;</span></div>
+      <ul class="nav-items">
+        <li><a href="bush-block.html">bush_block</a></li>
+        <li><a href="change-over-time-block.html">change_over_time_block</a></li>
+        <li><a href="spreading-block.html">spreading_block</a></li>
+      </ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header"><i data-lucide="database" width="14" height="14"></i> Logic &amp; Storage <span class="caret">&#9660;</span></div>
+      <ul class="nav-items">
+        <li><a href="redstone-operator.html">redstone_operator</a></li>
+        <li><a href="storage-block.html">storage_block</a></li>
+      </ul>
+    </div>
+  </nav>
+  <main class="content">
+    <div class="breadcrumbs">
+      <a href="../../index.html">Home</a><span class="sep">/</span>
+      <a href="../block-behaviors.html">Block Behaviors</a><span class="sep">/</span>
+      <span>polyfills:fan_block</span>
+    </div>
+
+    <h1><code class="behavior-id">polyfills:fan_block</code></h1>
+    <p class="lead">Gas-powered encased fan (Create-style). Consumes gas to propel entities in its output direction and to process items placed in its airstream via smelting, blasting, washing, or custom fan recipes.</p>
+
+    <div class="info-box">
+      <strong>Java class:</strong> <code>dev.arubik.craftengine.block.behavior.FanMachineBehavior</code><br>
+      <strong>Registered as:</strong> <code>BlockBehaviors.POLYFILL_FAN_BLOCK</code><br>
+      <strong>Block entity:</strong> <code>FanMachineBlockEntity</code><br>
+      <strong>Related docs:</strong> <a href="../machines.html">Machine JSON Reference</a> · <a href="../bars.html">Gauge Bars</a>
+    </div>
+
+    <h2>Description</h2>
+    <p>The fan draws gas from an adjacent gas pipe or tank each tick (<code>gas_per_tick</code> mB). While gas is available it emits an airflow beam in the block's facing direction. Items dropped or hoppered into the airstream region are processed according to their matching fan recipe — smelting, blasting, washing, or any custom <code>FanProcess</code>. Each recipe type can emit a different particle in the downstream region.</p>
+    <p>Entity propulsion applies a velocity impulse to all entities in the beam each tick. The push strength and range per gas type are configured via the <code>gases</code> map.</p>
+
+    <h2>Configuration</h2>
+    <table class="ref-table">
+      <thead><tr><th>Key</th><th class="td-type">Type</th><th class="td-default">Default</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code>gas_buffer</code></td><td class="td-type">int (mB)</td><td class="td-default">4000</td><td>Internal gas storage capacity.</td></tr>
+        <tr><td><code>gas_per_tick</code></td><td class="td-type">int (mB)</td><td class="td-default">50</td><td>Gas consumed per server tick while the fan is running.</td></tr>
+        <tr><td><code>processing_interval</code></td><td class="td-type">int (ticks)</td><td class="td-default">40</td><td>Ticks between item-processing attempts in the airstream.</td></tr>
+        <tr><td><code>tickDelay</code></td><td class="td-type">int (ticks)</td><td class="td-default">2</td><td>Minimum ticks between entity push pulses.</td></tr>
+        <tr><td><code>gases</code></td><td class="td-type">Map</td><td class="td-default">see below</td><td>Per-gas-type configuration block. Keys are gas type names (e.g. <code>steam</code>, <code>heavy_steam</code>); each entry is a map with <code>push_strength</code> (double), <code>push_limit</code> (int, max entities per pulse), and <code>particle</code> (Bukkit Particle name).</td></tr>
+        <tr><td><code>process_particles</code></td><td class="td-type">Map</td><td class="td-default">{}</td><td>Map of <code>FanProcess</code> enum name → Bukkit Particle name. Displayed downstream of the processing block (e.g. <code>smelting: FLAME</code>).</td></tr>
+        <tr><td><code>passableBlocks</code></td><td class="td-type">List&lt;Key&gt;</td><td class="td-default">[]</td><td>Additional CE custom blocks the airflow passes through (air, fire, water, and lava are always passable).</td></tr>
+        <tr><td><code>upgrades</code></td><td class="td-type">Map</td><td class="td-default">{}</td><td>Upgrade item → attribute modifier list.</td></tr>
+        <tr><td><code>bars</code></td><td class="td-type">Map</td><td class="td-default">{}</td><td>GUI gauge bars.</td></tr>
+        <tr><td><code>menu_size</code></td><td class="td-type">int</td><td class="td-default">54</td><td>GUI size.</td></tr>
+      </tbody>
+    </table>
+
+    <h2>Example</h2>
+    <pre data-lang="yaml"><code>blocks:
+  cml:steam_fan:
+    states:
+      state: "minecraft:iron_block"
+      model:
+        path: cml:block/steam_fan
+    behavior:
+      type: polyfills:fan_block
+      gas_buffer: 6000
+      gas_per_tick: 80
+      processing_interval: 30
+      gases:
+        steam:
+          push_strength: 0.12
+          push_limit: 6
+          particle: CLOUD
+        heavy_steam:
+          push_strength: 0.20
+          push_limit: 4
+          particle: SMOKE_NORMAL
+      process_particles:
+        smelting: FLAME
+        washing: SPLASH
+      bars:
+        gas_level:
+          slot: 13
+          type: polyfills:gas_bar</code></pre>
+
+    <h2>Fan process types</h2>
+    <p>The <code>FanProcess</code> enum values map to recipe categories:</p>
+    <ul>
+      <li><code>SMELTING</code> — applies furnace smelting recipes</li>
+      <li><code>BLASTING</code> — applies blast furnace recipes</li>
+      <li><code>SMOKING</code> — applies smoker recipes</li>
+      <li><code>WASHING</code> — applies CEP fan-wash recipes</li>
+      <li>Custom values registered via CEP recipe extensions</li>
+    </ul>
+  </main>
+</div>
+<script src="../assets/main.js"></script>
+<script>if (window.lucide) lucide.createIcons();</script>
+</body>
+</html>

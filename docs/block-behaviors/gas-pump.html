@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>polyfills:gas_pump — Block Behaviors — CEP</title>
+  <link rel="stylesheet" href="../assets/style.css" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+</head>
+<body>
+<header class="topbar">
+  <button class="hamburger" id="hamburger" aria-label="Menu">&#9776;</button>
+  <a href="../../index.html" class="logo">
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent)"><path d="M12 20h9"/><path d="M16.376 3.622a1 1 0 0 1 3.002 3.002L7.368 18.635a2 2 0 0 1-.855.506l-2.872.838a.5.5 0 0 1-.62-.62l.838-2.872a2 2 0 0 1 .506-.854z"/></svg>
+    CraftEngine Polyfills <span class="badge">1.21.11</span>
+  </a>
+  <div class="spacer"></div>
+  <a href="https://github.com/Arubik/craft-engine-polyfills" class="gh-link">
+    <i data-lucide="github" width="16" height="16"></i> GitHub
+  </a>
+</header>
+<div class="layout">
+  <nav class="sidebar" id="sidebar">
+    <div class="nav-section">
+      <div class="nav-section-header"><i data-lucide="arrow-left" width="14" height="14"></i> Overview <span class="caret">&#9660;</span></div>
+      <ul class="nav-items"><li><a href="../block-behaviors.html">All Block Behaviors</a></li></ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header"><i data-lucide="cpu" width="14" height="14"></i> Machines <span class="caret">&#9660;</span></div>
+      <ul class="nav-items">
+        <li><a href="data-machine.html">data_machine</a></li>
+        <li><a href="data-multiblock.html">data_multiblock_machine</a></li>
+        <li><a href="gas-pump.html" class="active">gas_pump</a></li>
+        <li><a href="fan-block.html">fan_block</a></li>
+      </ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header"><i data-lucide="layers" width="14" height="14"></i> Renderer <span class="caret">&#9660;</span></div>
+      <ul class="nav-items"><li><a href="renderer.html">renderer</a></li></ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header"><i data-lucide="git-branch" width="14" height="14"></i> Pipes &amp; Fluids <span class="caret">&#9660;</span></div>
+      <ul class="nav-items"><li><a href="pipe-block.html">pipe_block</a></li></ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header"><i data-lucide="zap" width="14" height="14"></i> Physics <span class="caret">&#9660;</span></div>
+      <ul class="nav-items">
+        <li><a href="bubble-block.html">bubble_block</a></li>
+        <li><a href="spike-block.html">spike_block</a></li>
+        <li><a href="magnet-block.html">magnet_block</a></li>
+      </ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header"><i data-lucide="leaf" width="14" height="14"></i> Plants <span class="caret">&#9660;</span></div>
+      <ul class="nav-items">
+        <li><a href="bush-block.html">bush_block</a></li>
+        <li><a href="change-over-time-block.html">change_over_time_block</a></li>
+        <li><a href="spreading-block.html">spreading_block</a></li>
+      </ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header"><i data-lucide="database" width="14" height="14"></i> Logic &amp; Storage <span class="caret">&#9660;</span></div>
+      <ul class="nav-items">
+        <li><a href="redstone-operator.html">redstone_operator</a></li>
+        <li><a href="storage-block.html">storage_block</a></li>
+      </ul>
+    </div>
+  </nav>
+  <main class="content">
+    <div class="breadcrumbs">
+      <a href="../../index.html">Home</a><span class="sep">/</span>
+      <a href="../block-behaviors.html">Block Behaviors</a><span class="sep">/</span>
+      <span>polyfills:gas_pump</span>
+    </div>
+
+    <h1><code class="behavior-id">polyfills:gas_pump</code></h1>
+    <p class="lead">Full-machine gas pump. Extracts gas (e.g. nitrogen) from <code>polyfills:gas_provider</code> source blocks below and pushes it into a connected steel-pipe gas network. Supports upgrades, a configurable GUI, and gauge bars.</p>
+
+    <div class="info-box">
+      <strong>Java class:</strong> <code>dev.arubik.craftengine.machine.block.behavior.GasPumpBehavior</code><br>
+      <strong>Factory key:</strong> <code>polyfills:gas_pump</code><br>
+      <strong>Block entity:</strong> <code>GasPumpBlockEntity</code><br>
+      <strong>Related docs:</strong> <a href="../pipes-fluids.html">Pipes &amp; Fluids</a> · <a href="../upgrades.html">Upgrade System</a> · <a href="../bars.html">Gauge Bars</a>
+    </div>
+
+    <h2>Description</h2>
+    <p>The pump scans downward for blocks carrying <code>polyfills:gas_provider</code> behavior each extraction tick, draws <code>mb_per_point × extraction_points</code> mB from the provider into an internal gas buffer, and then pushes the buffer contents out through its UP face into the gas pipe network above. The pressure value determines how far the gas is driven against a network back-pressure. All extraction and push rates are affected by installed upgrades.</p>
+
+    <div class="callout tip">
+      <strong>Gas network vs fluid network</strong>
+      Gas pumps connect to <code>polyfills:gas_pipe_block</code> segments, not to fluid pipes. The two networks are physically separate.
+    </div>
+
+    <h2>Configuration</h2>
+    <table class="ref-table">
+      <thead><tr><th>Key</th><th class="td-type">Type</th><th class="td-default">Default</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code>capacity</code></td><td class="td-type">int (mB)</td><td class="td-default">4000</td><td>Internal gas buffer capacity in milli-buckets.</td></tr>
+        <tr><td><code>mb_per_point</code></td><td class="td-type">int</td><td class="td-default">50</td><td>mB extracted from the provider per extraction point per tick cycle.</td></tr>
+        <tr><td><code>pressure</code></td><td class="td-type">int</td><td class="td-default">100</td><td>Pump pressure; higher values push against greater network resistance.</td></tr>
+        <tr><td><code>extract_tick_rate</code></td><td class="td-type">int</td><td class="td-default">20</td><td>Server ticks between extraction cycles.</td></tr>
+        <tr><td><code>upgrades</code></td><td class="td-type">Map</td><td class="td-default">{}</td><td>Upgrade item ID → list of attribute modifier objects. Attributes: <code>capacity</code>, <code>pressure</code>, <code>extract_tick_rate</code>, <code>mb_per_point</code>.</td></tr>
+        <tr><td><code>bars</code></td><td class="td-type">Map</td><td class="td-default">{}</td><td>GUI gauge bar definitions.</td></tr>
+        <tr><td><code>menu_size</code></td><td class="td-type">int</td><td class="td-default">54</td><td>GUI inventory size.</td></tr>
+        <tr><td><code>buttons</code></td><td class="td-type">List</td><td class="td-default">[]</td><td>GUI button definitions.</td></tr>
+        <tr><td><code>connectable_faces</code></td><td class="td-type">List&lt;String&gt;</td><td class="td-default">all faces</td><td>Faces that connect to the gas pipe network.</td></tr>
+      </tbody>
+    </table>
+
+    <h2>Example</h2>
+    <pre data-lang="yaml"><code>blocks:
+  cml:gas_pump:
+    settings:
+      template:
+        - default:hardness/iron
+    states:
+      state: "minecraft:iron_block"
+      model:
+        path: cml:block/gas_pump
+    behavior:
+      type: polyfills:gas_pump
+      capacity: 8000
+      mb_per_point: 75
+      pressure: 150
+      extract_tick_rate: 10
+      upgrades:
+        cml:pressure_upgrade:
+          - { attribute: pressure, operation: add, value: 50 }
+      bars:
+        gas_level:
+          slot: 13
+          type: polyfills:gas_bar</code></pre>
+
+    <h2>Dependencies</h2>
+    <ul>
+      <li>Requires at least one <code>polyfills:gas_provider</code> block positioned below the pump (the pump scans downward).</li>
+      <li>Requires at least one connected <code>polyfills:gas_pipe_block</code> segment on the pump's UP face to move extracted gas.</li>
+    </ul>
+  </main>
+</div>
+<script src="../assets/main.js"></script>
+<script>if (window.lucide) lucide.createIcons();</script>
+</body>
+</html>

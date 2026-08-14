@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>polyfills:change_over_time_block — Block Behaviors — CEP</title>
+  <link rel="stylesheet" href="../assets/style.css" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+</head>
+<body>
+<header class="topbar">
+  <button class="hamburger" id="hamburger" aria-label="Menu">&#9776;</button>
+  <a href="../../index.html" class="logo">
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent)"><path d="M12 20h9"/><path d="M16.376 3.622a1 1 0 0 1 3.002 3.002L7.368 18.635a2 2 0 0 1-.855.506l-2.872.838a.5.5 0 0 1-.62-.62l.838-2.872a2 2 0 0 1 .506-.854z"/></svg>
+    CraftEngine Polyfills <span class="badge">1.21.11</span>
+  </a>
+  <div class="spacer"></div>
+  <a href="https://github.com/Arubik/craft-engine-polyfills" class="gh-link">
+    <i data-lucide="github" width="16" height="16"></i> GitHub
+  </a>
+</header>
+<div class="layout">
+  <nav class="sidebar" id="sidebar">
+    <div class="nav-section">
+      <div class="nav-section-header"><i data-lucide="arrow-left" width="14" height="14"></i> Overview <span class="caret">&#9660;</span></div>
+      <ul class="nav-items"><li><a href="../block-behaviors.html">All Block Behaviors</a></li></ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header"><i data-lucide="cpu" width="14" height="14"></i> Machines <span class="caret">&#9660;</span></div>
+      <ul class="nav-items">
+        <li><a href="data-machine.html">data_machine</a></li>
+        <li><a href="data-multiblock.html">data_multiblock_machine</a></li>
+        <li><a href="gas-pump.html">gas_pump</a></li>
+        <li><a href="fan-block.html">fan_block</a></li>
+      </ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header"><i data-lucide="layers" width="14" height="14"></i> Renderer <span class="caret">&#9660;</span></div>
+      <ul class="nav-items"><li><a href="renderer.html">renderer</a></li></ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header"><i data-lucide="git-branch" width="14" height="14"></i> Pipes &amp; Fluids <span class="caret">&#9660;</span></div>
+      <ul class="nav-items"><li><a href="pipe-block.html">pipe_block</a></li></ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header"><i data-lucide="zap" width="14" height="14"></i> Physics <span class="caret">&#9660;</span></div>
+      <ul class="nav-items">
+        <li><a href="bubble-block.html">bubble_block</a></li>
+        <li><a href="spike-block.html">spike_block</a></li>
+        <li><a href="magnet-block.html">magnet_block</a></li>
+      </ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header"><i data-lucide="leaf" width="14" height="14"></i> Plants <span class="caret">&#9660;</span></div>
+      <ul class="nav-items">
+        <li><a href="bush-block.html">bush_block</a></li>
+        <li><a href="change-over-time-block.html" class="active">change_over_time_block</a></li>
+        <li><a href="spreading-block.html">spreading_block</a></li>
+      </ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header"><i data-lucide="database" width="14" height="14"></i> Logic &amp; Storage <span class="caret">&#9660;</span></div>
+      <ul class="nav-items">
+        <li><a href="redstone-operator.html">redstone_operator</a></li>
+        <li><a href="storage-block.html">storage_block</a></li>
+      </ul>
+    </div>
+  </nav>
+  <main class="content">
+    <div class="breadcrumbs">
+      <a href="../../index.html">Home</a><span class="sep">/</span>
+      <a href="../block-behaviors.html">Block Behaviors</a><span class="sep">/</span>
+      <span>polyfills:change_over_time_block</span>
+    </div>
+
+    <h1><code class="behavior-id">polyfills:change_over_time_block</code></h1>
+    <p class="lead">Transforms a custom block into a different block on random tick, with a configurable probability. Models drying, curing, oxidation, or any time-based block transition.</p>
+
+    <div class="info-box">
+      <strong>Java class:</strong> <code>dev.arubik.craftengine.block.behavior.ChangeOverTimeBlockBehavior</code><br>
+      <strong>Registered as:</strong> <code>BlockBehaviors.POLYFILL_CHANGE_OVER_TIME_BLOCK</code><br>
+      <strong>Block entity:</strong> none
+    </div>
+
+    <h2>Description</h2>
+    <p>Each random tick, the behavior generates a random float between 0 and 1. If the value is less than <code>delay</code> the block is replaced by <code>next-block</code>, preserving the current block's property values (e.g. <code>age</code>, <code>facing</code>) where the target block also has those properties. A <code>BlockFormEvent</code> is fired before the replacement, allowing other plugins to cancel the transition.</p>
+
+    <div class="callout note">
+      <strong>Probability tuning</strong>
+      The default <code>delay</code> of ≈ 0.0569 matches vanilla grass-spreading speed. At 3 random-ticks/second in a loaded chunk, <code>delay: 0.05</code> gives a median transition time of roughly 14 seconds. Set <code>delay: 1.0</code> for an instant transition on first tick.
+    </div>
+
+    <h2>Configuration</h2>
+    <table class="ref-table">
+      <thead><tr><th>Key</th><th class="td-type">Type</th><th class="td-default">Default</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code>next-block</code></td><td class="td-type">Key</td><td class="td-default"><em>required</em></td><td>Namespaced ID of the CE custom block to transform into. The block must be registered. Block property values are carried over where property names match.</td></tr>
+        <tr><td><code>delay</code></td><td class="td-type">float (0–1)</td><td class="td-default">0.05689</td><td>Probability of transformation per random tick. Higher values = faster transformation.</td></tr>
+      </tbody>
+    </table>
+
+    <h2>Example — oxidizing copper plate</h2>
+    <pre data-lang="yaml"><code>blocks:
+  cml:fresh_copper_plate:
+    states:
+      state: "minecraft:copper_block"
+    behavior:
+      type: polyfills:change_over_time_block
+      next-block: cml:oxidized_copper_plate
+      delay: 0.02     # slow oxidation
+
+  cml:oxidized_copper_plate:
+    states:
+      state: "minecraft:oxidized_copper"
+    # no behavior needed — final form</code></pre>
+
+    <h2>Example — multi-stage drying</h2>
+    <p>Chain the behavior across several blocks to produce a multi-stage transition (wet clay → damp clay → dry clay):</p>
+    <pre data-lang="yaml"><code>behavior:
+  type: polyfills:change_over_time_block
+  next-block: cml:damp_clay
+  delay: 0.04</code></pre>
+  </main>
+</div>
+<script src="../assets/main.js"></script>
+<script>if (window.lucide) lucide.createIcons();</script>
+</body>
+</html>
