@@ -11,5 +11,6 @@
   "viscosity": 8.0,
   "fill_sound": "minecraft:item.bucket.empty",
   "drain_sound": "minecraft:item.bucket.fill",
-  "translation_key": "polyfill.liquid.slime"
+  "translation_key": "polyfill.liquid.slime",
+  "contraption_item_pattern": "cml:fluidlvl_slime_{level}"
 }

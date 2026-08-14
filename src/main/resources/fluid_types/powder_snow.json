@@ -11,5 +11,6 @@
   "viscosity": 3.0,
   "fill_sound": "minecraft:item.bucket.empty_powder_snow",
   "drain_sound": "minecraft:item.bucket.fill_powder_snow",
-  "translation_key": "polyfill.liquid.powder_snow"
+  "translation_key": "polyfill.liquid.powder_snow",
+  "contraption_item_pattern": "cml:fluidlvl_powder_snow_{level}"
 }

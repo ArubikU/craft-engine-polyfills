@@ -11,5 +11,6 @@
   "viscosity": 0.5,
   "fill_sound": "minecraft:item.bucket.empty",
   "drain_sound": "minecraft:item.bucket.fill",
-  "translation_key": "polyfill.liquid.experience"
+  "translation_key": "polyfill.liquid.experience",
+  "contraption_item_pattern": "cml:fluidlvl_experience_{level}"
 }
