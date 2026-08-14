@@ -55,6 +55,7 @@ body {
   margin: 0;
 }
 
+/* Logo section aligns with the sidebar so the vertical divider lines up */
 .topbar .logo {
   display: flex;
   align-items: center;
@@ -63,6 +64,9 @@ body {
   font-size: 1rem;
   color: var(--text);
   text-decoration: none;
+  /* match sidebar width so logo column = sidebar column visually */
+  min-width: calc(var(--sidebar-w) - 1.5rem);
+  flex-shrink: 0;
 }
 
 .topbar .logo span.badge {
