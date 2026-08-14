@@ -1,0 +1,15 @@
+src/
+build/
+target/
+libs/
+testserver/
+tools/
+bin/
+.gradle/
+.migration/
+.claude/
+gradle/
+*.jar
+*.class
+*.md
+!index.html
