@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>polyfills:data_multiblock_machine — Block Behaviors — CEP</title>
+  <title>polyfills:data_multiblock_machine - Block Behaviors - CEP</title>
   <link rel="stylesheet" href="../assets/style.css" />
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 </head>
@@ -74,7 +74,7 @@
     </div>
 
     <h1><code class="behavior-id">polyfills:data_multiblock_machine</code></h1>
-    <p class="lead">A machine that is also a multiblock — described entirely by data. The machine lives inside the multiblock's assembled mode, not beside it.</p>
+    <p class="lead">A machine that is also a multiblock - described entirely by data. The machine lives inside the multiblock's assembled mode, not beside it.</p>
 
     <div class="info-box">
       <strong>Java class:</strong> <code>dev.arubik.craftengine.machine.block.behavior.DataMultiBlockBehavior</code><br>
@@ -84,7 +84,7 @@
     </div>
 
     <h2>Description</h2>
-    <p><a href="data-machine.html"><code>polyfills:data_machine</code></a> covers machines that are a single block. A machine that must be physically assembled — for example a refinery with a mixer tower on top — needs the multiblock half as well: a shape to match, a part block to convert when assembled, and per-cell I/O configuration.</p>
+    <p><a href="data-machine.html"><code>polyfills:data_machine</code></a> covers machines that are a single block. A machine that must be physically assembled - for example a refinery with a mixer tower on top - needs the multiblock half as well: a shape to match, a part block to convert when assembled, and per-cell I/O configuration.</p>
     <p>Rather than widening the single-block behavior and risking breakage for existing machines, this is a separate behavior that reads the same <code>MachineDefinition</code> plus a <code>MultiBlockDefinition</code>. The design is deliberate: a bare shape on its own does nothing, and one core block can assemble into different machines depending on the shell built around it.</p>
 
     <div class="callout note">

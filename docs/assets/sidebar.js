@@ -25,6 +25,7 @@
       { label: "polyfills:bubble_block", href: "block-behaviors/bubble-block.html" },
       { label: "polyfills:bush_block", href: "block-behaviors/bush-block.html" },
       { label: "polyfills:change_over_time", href: "block-behaviors/change-over-time-block.html" },
+      { label: "polyfills:data_motor", href: "block-behaviors/data-motor.html" },
     ]},
     { title: "Contraptions", icon: "box", items: [
       { label: "System Overview", href: "contraptions.html" },

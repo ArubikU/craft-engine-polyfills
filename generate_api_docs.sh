@@ -1,5 +1,5 @@
 #!/bin/bash
-# generate_api_docs.sh — Generates /api/ JavaDoc-style HTML pages from Java source
+# generate_api_docs.sh - Generates /api/ JavaDoc-style HTML pages from Java source
 # Reads src/main/java on the main branch, generates HTML to the current directory (gh-pages)
 #
 # Usage (on gh-pages branch):
@@ -50,7 +50,7 @@ header_template() {
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>${class} — CEP API</title>
+<title>${class} - CEP API</title>
 <link rel="stylesheet" href="${css_path}">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
@@ -132,7 +132,7 @@ echo "  GEN: api/index.html"
 <!DOCTYPE html>
 <html lang="en"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>API Reference — CraftEngine Polyfills</title>
+<title>API Reference - CraftEngine Polyfills</title>
 <link rel="stylesheet" href="../docs/assets/style.css">
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 </head><body>

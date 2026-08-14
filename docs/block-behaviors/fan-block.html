@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>polyfills:fan_block — Block Behaviors — CEP</title>
+  <title>polyfills:fan_block - Block Behaviors - CEP</title>
   <link rel="stylesheet" href="../assets/style.css" />
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 </head>
@@ -84,7 +84,7 @@
     </div>
 
     <h2>Description</h2>
-    <p>The fan draws gas from an adjacent gas pipe or tank each tick (<code>gas_per_tick</code> mB). While gas is available it emits an airflow beam in the block's facing direction. Items dropped or hoppered into the airstream region are processed according to their matching fan recipe — smelting, blasting, washing, or any custom <code>FanProcess</code>. Each recipe type can emit a different particle in the downstream region.</p>
+    <p>The fan draws gas from an adjacent gas pipe or tank each tick (<code>gas_per_tick</code> mB). While gas is available it emits an airflow beam in the block's facing direction. Items dropped or hoppered into the airstream region are processed according to their matching fan recipe - smelting, blasting, washing, or any custom <code>FanProcess</code>. Each recipe type can emit a different particle in the downstream region.</p>
     <p>Entity propulsion applies a velocity impulse to all entities in the beam each tick. The push strength and range per gas type are configured via the <code>gases</code> map.</p>
 
     <h2>Configuration</h2>
@@ -136,10 +136,10 @@
     <h2>Fan process types</h2>
     <p>The <code>FanProcess</code> enum values map to recipe categories:</p>
     <ul>
-      <li><code>SMELTING</code> — applies furnace smelting recipes</li>
-      <li><code>BLASTING</code> — applies blast furnace recipes</li>
-      <li><code>SMOKING</code> — applies smoker recipes</li>
-      <li><code>WASHING</code> — applies CEP fan-wash recipes</li>
+      <li><code>SMELTING</code> - applies furnace smelting recipes</li>
+      <li><code>BLASTING</code> - applies blast furnace recipes</li>
+      <li><code>SMOKING</code> - applies smoker recipes</li>
+      <li><code>WASHING</code> - applies CEP fan-wash recipes</li>
       <li>Custom values registered via CEP recipe extensions</li>
     </ul>
   </main>

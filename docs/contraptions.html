@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Contraption System — CraftEngine Polyfills</title>
+  <title>Contraption System - CraftEngine Polyfills</title>
   <link rel="stylesheet" href="assets/style.css" />
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 </head>
@@ -32,14 +32,14 @@
       </div>
 
       <h2 id="overview">What Is a Contraption?</h2>
-      <p>A <strong>contraption</strong> is a set of blocks captured from the world and moved as a rigid unit. The blocks live in an isolated <code>ContraptionLevel</code> (a custom NMS <code>Level</code> subclass) and are rendered to players as a collection of display entities — one per block. Physical interactions with the contraption happen through collision detection against the display entities' hitboxes.</p>
+      <p>A <strong>contraption</strong> is a set of blocks captured from the world and moved as a rigid unit. The blocks live in an isolated <code>ContraptionLevel</code> (a custom NMS <code>Level</code> subclass) and are rendered to players as a collection of display entities - one per block. Physical interactions with the contraption happen through collision detection against the display entities' hitboxes.</p>
 
       <h3>Lifecycle</h3>
       <ol>
-        <li><strong>Assembly</strong> — A bearing block (piston bearing, rotational bearing, minecart bearing, ghast harness) is powered. <code>ContraptionAssembler</code> BFS-flood-fills connected blocks into a block list.</li>
-        <li><strong>Capture</strong> — Captured blocks are removed from the world and stored in the contraption level. Display entities are spawned at the bearing position.</li>
-        <li><strong>Motion</strong> — Each tick, the physics solver (XPBD) advances the contraption's pose. Display entities receive teleport packets to match.</li>
-        <li><strong>Disassembly</strong> — The bearing is depowered or the contraption is killed. Blocks are placed back into the world.</li>
+        <li><strong>Assembly</strong> - A bearing block (piston bearing, rotational bearing, minecart bearing, ghast harness) is powered. <code>ContraptionAssembler</code> BFS-flood-fills connected blocks into a block list.</li>
+        <li><strong>Capture</strong> - Captured blocks are removed from the world and stored in the contraption level. Display entities are spawned at the bearing position.</li>
+        <li><strong>Motion</strong> - Each tick, the physics solver (XPBD) advances the contraption's pose. Display entities receive teleport packets to match.</li>
+        <li><strong>Disassembly</strong> - The bearing is depowered or the contraption is killed. Blocks are placed back into the world.</li>
       </ol>
 
       <h2 id="bearing-types">Bearing Types</h2>
@@ -112,7 +112,7 @@
           <tr><td>fluid_render.render_waterlogged</td><td>Bool</td><td>true</td><td>Render water inside waterlogged blocks.</td></tr>
           <tr><td>fluid_render.render_flowing</td><td>Bool</td><td>true</td><td>Render flowing water/lava blocks.</td></tr>
           <tr><td>fluid_render.render_source</td><td>Bool</td><td>true</td><td>Render source (still) water/lava blocks.</td></tr>
-          <tr><td>fluid_render.simulate_flow</td><td>Bool</td><td>false</td><td>Allow fluid to flow and spread within the contraption level. Usually causes lag or unexpected spread — enable intentionally only.</td></tr>
+          <tr><td>fluid_render.simulate_flow</td><td>Bool</td><td>false</td><td>Allow fluid to flow and spread within the contraption level. Usually causes lag or unexpected spread - enable intentionally only.</td></tr>
         </tbody>
       </table></div>
 
@@ -182,17 +182,17 @@
       <div class="table-wrap"><table>
         <thead><tr><th>Item</th><th>Description</th></tr></thead>
         <tbody>
-          <tr><td>Glue Wand</td><td>Right-click a block to mark it as "glued" — it joins contraptions assembled by adjacent bearings even if it would otherwise stop flood-fill.</td></tr>
+          <tr><td>Glue Wand</td><td>Right-click a block to mark it as "glued" - it joins contraptions assembled by adjacent bearings even if it would otherwise stop flood-fill.</td></tr>
           <tr><td>Hammer</td><td>Right-click a multiblock anchor to trigger multiblock assembly.</td></tr>
         </tbody>
       </table></div>
 
       <h2 id="perf">Performance Notes</h2>
       <ul>
-        <li>Enable <code>entity_culling</code> — this is the single biggest client-side optimization. Set <code>view_distance</code> to match your server's render distance.</li>
+        <li>Enable <code>entity_culling</code> - this is the single biggest client-side optimization. Set <code>view_distance</code> to match your server's render distance.</li>
         <li>Enable <code>frustum</code> culling for servers with many players viewing large contraptions simultaneously.</li>
         <li>Keep contraptions under ~500 blocks for stable physics ticks (16ms budget).</li>
-        <li>Avoid <code>simulate_flow: true</code> unless the contraption intentionally contains flowing fluid — it adds a fluid BFS each tick.</li>
+        <li>Avoid <code>simulate_flow: true</code> unless the contraption intentionally contains flowing fluid - it adds a fluid BFS each tick.</li>
       </ul>
     </div>
   </main>

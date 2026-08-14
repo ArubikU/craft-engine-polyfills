@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Getting Started — CraftEngine Polyfills</title>
+  <title>Getting Started - CraftEngine Polyfills</title>
   <link rel="stylesheet" href="assets/style.css" />
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 </head>
@@ -52,7 +52,7 @@
         <li>Start the server. Config files and default resource packs are extracted on first run.</li>
         <li>Reload with <code>/cep reload</code> after editing any JSON definition.</li>
       </ol>
-      <div class="callout tip"><strong>Tip</strong>All machine, multiblock, pipe, and fluid definitions are hot-reloadable — no server restart needed after a <code>/cep reload</code>.</div>
+      <div class="callout tip"><strong>Tip</strong>All machine, multiblock, pipe, and fluid definitions are hot-reloadable - no server restart needed after a <code>/cep reload</code>.</div>
 
       <h2 id="file-layout">File Layout</h2>
       <pre data-lang="text"><code>plugins/CraftEnginePolyfills/
@@ -93,13 +93,13 @@
           <tbody>
             <tr><td>Machines</td><td><code>machine/</code></td><td>Data-driven block entity machines with recipes, tanks, upgrades, and renderers. No per-machine Java class required.</td></tr>
             <tr><td>PolyFormula</td><td><code>machine/render/formula/</code></td><td>Typed expression engine used by renderer specs, variable declarations, and .pf scripts.</td></tr>
-            <tr><td>Renderers</td><td><code>machine/render/</code></td><td>Visual layer: BetterModel, ModelEngine, displays, particles, sounds — all driven by PolyFormula.</td></tr>
+            <tr><td>Renderers</td><td><code>machine/render/</code></td><td>Visual layer: BetterModel, ModelEngine, displays, particles, sounds - all driven by PolyFormula.</td></tr>
             <tr><td>Multiblocks</td><td><code>multiblock/</code></td><td>Multi-block structures assembled by hammer, with mode-based machine definitions and IO rules.</td></tr>
             <tr><td>Contraptions</td><td><code>contraption/</code></td><td>Moving structures captured into a sub-level with XPBD physics, bearings, and vehicle seats.</td></tr>
             <tr><td>Fluid Network</td><td><code>fluid/graph/</code></td><td>Graph-solved pressure network for pipes, tanks, valves, and pumps.</td></tr>
             <tr><td>Gas Network</td><td><code>fluid/graph/GasEngine</code></td><td>Same solver as fluids but for gaseous fluids (steam, nitrogen…).</td></tr>
             <tr><td>Blocks</td><td><code>block/</code></td><td>Custom block behaviors: fans, lights, redstone diodes, connectable pipes, storage, crops.</td></tr>
-            <tr><td>Chainery</td><td><code>chainery/</code></td><td>Physics-coupled chain block &amp; item — rope-like connections between blocks.</td></tr>
+            <tr><td>Chainery</td><td><code>chainery/</code></td><td>Physics-coupled chain block &amp; item - rope-like connections between blocks.</td></tr>
           </tbody>
         </table>
       </div>
@@ -129,12 +129,12 @@
 
       <h2 id="next-steps">Next Steps</h2>
       <ul>
-        <li><a href="machines.html">Full machine JSON reference</a> — every key documented with types and defaults.</li>
-        <li><a href="polyformula.html">PolyFormula reference</a> — all 80+ builtins, operators, and PolyClasses.</li>
-        <li><a href="renderers.html">Renderer system</a> — animate machines with BetterModel, displays, and particles.</li>
-        <li><a href="upgrades.html">Upgrade system</a> — attribute modifiers, upgrade slot grids, overclock.</li>
-        <li><a href="contraptions.html">Contraption system</a> — physics, bearings, and entity culling config.</li>
-        <li><a href="pipes-fluids.html">Pipe &amp; fluid reference</a> — define pipe types, fluid types, and network behavior.</li>
+        <li><a href="machines.html">Full machine JSON reference</a> - every key documented with types and defaults.</li>
+        <li><a href="polyformula.html">PolyFormula reference</a> - all 80+ builtins, operators, and PolyClasses.</li>
+        <li><a href="renderers.html">Renderer system</a> - animate machines with BetterModel, displays, and particles.</li>
+        <li><a href="upgrades.html">Upgrade system</a> - attribute modifiers, upgrade slot grids, overclock.</li>
+        <li><a href="contraptions.html">Contraption system</a> - physics, bearings, and entity culling config.</li>
+        <li><a href="pipes-fluids.html">Pipe &amp; fluid reference</a> - define pipe types, fluid types, and network behavior.</li>
       </ul>
     </div>
   </main>

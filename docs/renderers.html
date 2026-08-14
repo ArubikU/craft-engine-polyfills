@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Renderer System — CraftEngine Polyfills</title>
+  <title>Renderer System - CraftEngine Polyfills</title>
   <link rel="stylesheet" href="assets/style.css" />
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 </head>
@@ -28,11 +28,11 @@
 
       <div class="page-header">
         <h1>Renderer System</h1>
-        <p class="subtitle">Formula-driven visual layer for machines — BetterModel, displays, particles, sounds, and more.</p>
+        <p class="subtitle">Formula-driven visual layer for machines - BetterModel, displays, particles, sounds, and more.</p>
       </div>
 
       <h2 id="overview">Overview</h2>
-      <p>Every machine definition can declare a <code>"renderers"</code> array. Each entry is a <strong>RendererSpec</strong> — a sealed record that describes one visual element. The <code>RendererManager</code> evaluates them each tick using the machine's live <code>PolyContext</code>.</p>
+      <p>Every machine definition can declare a <code>"renderers"</code> array. Each entry is a <strong>RendererSpec</strong> - a sealed record that describes one visual element. The <code>RendererManager</code> evaluates them each tick using the machine's live <code>PolyContext</code>.</p>
       <p>All numeric fields accept PolyFormula expressions, variable references (<code>"$name"</code>), or bare literals. All renderer specs share three common fields:</p>
       <div class="table-wrap"><table>
         <thead><tr><th>Common Field</th><th>Type</th><th>Default</th><th>Description</th></tr></thead>
@@ -50,8 +50,8 @@
         <tbody>
           <tr><td>Array[3] of numbers</td><td><code>[0.5, 1.2, 0.5]</code></td><td>Relative offset added to machine block centre (x+0.5, y, z+0.5).</td></tr>
           <tr><td>Object with x/y/z keys</td><td><code>{"x": 0.5, "y": "rpm * 0.01", "z": 0}</code></td><td>Per-axis expressions, evaluated each tick. Relative offset.</td></tr>
-          <tr><td>String expression</td><td><code>"Machine.location"</code></td><td>Evaluates to <code>Obj(LocationClass)</code> — treated as absolute world coordinates.</td></tr>
-          <tr><td>null / omitted</td><td>—</td><td>Renders at machine block centre.</td></tr>
+          <tr><td>String expression</td><td><code>"Machine.location"</code></td><td>Evaluates to <code>Obj(LocationClass)</code> - treated as absolute world coordinates.</td></tr>
+          <tr><td>null / omitted</td><td>-</td><td>Renders at machine block centre.</td></tr>
         </tbody>
       </table></div>
       <p>The <code>"positions"</code> (or <code>"locations"</code>) key accepts an expression returning an Array of location values, firing the renderer once per resolved position.</p>
@@ -68,7 +68,7 @@
       <div class="table-wrap"><table>
         <thead><tr><th>Field</th><th>Type</th><th>Default</th><th>Description</th></tr></thead>
         <tbody>
-          <tr><td>type</td><td>Str</td><td>—</td><td>Must be <code>"bettermodel"</code>.</td></tr>
+          <tr><td>type</td><td>Str</td><td>-</td><td>Must be <code>"bettermodel"</code>.</td></tr>
           <tr><td>model_id</td><td>Str</td><td>Required</td><td>BetterModel blueprint ID (registered in BetterModel's resource system).</td></tr>
           <tr><td>animation</td><td>Str</td><td>null</td><td>Animation name to loop while active. Null = idle pose only.</td></tr>
           <tr><td>speed</td><td>Expr</td><td><code>"1.0"</code></td><td>Animation playback speed multiplier expression. 1.0 = normal speed.</td></tr>
@@ -89,7 +89,7 @@
       <div class="table-wrap"><table>
         <thead><tr><th>Field</th><th>Type</th><th>Default</th><th>Description</th></tr></thead>
         <tbody>
-          <tr><td>type</td><td>Str</td><td>—</td><td>Must be <code>"modelengine"</code>.</td></tr>
+          <tr><td>type</td><td>Str</td><td>-</td><td>Must be <code>"modelengine"</code>.</td></tr>
           <tr><td>model_id</td><td>Str</td><td>Required</td><td>ModelEngine R4 blueprint ID.</td></tr>
           <tr><td>animation</td><td>Str</td><td>null</td><td>Animation name to loop.</td></tr>
           <tr><td>speed</td><td>Expr</td><td><code>"1.0"</code></td><td>Playback speed expression.</td></tr>
@@ -110,7 +110,7 @@
       <div class="table-wrap"><table>
         <thead><tr><th>Field</th><th>Type</th><th>Default</th><th>Description</th></tr></thead>
         <tbody>
-          <tr><td>type</td><td>Str</td><td>—</td><td>Must be <code>"item_display"</code>.</td></tr>
+          <tr><td>type</td><td>Str</td><td>-</td><td>Must be <code>"item_display"</code>.</td></tr>
           <tr><td>item</td><td>Expr</td><td>Required</td><td>Item expression: <code>"slot(9)"</code>, <code>"CraftEngineItem('ns:id')"</code>, or material name.</td></tr>
           <tr><td>location</td><td>Position</td><td>machine centre</td><td>See Position Resolution above.</td></tr>
           <tr><td>scale</td><td>Expr</td><td><code>"1.0"</code></td><td>Uniform display scale.</td></tr>
@@ -135,7 +135,7 @@
       <div class="table-wrap"><table>
         <thead><tr><th>Field</th><th>Type</th><th>Default</th><th>Description</th></tr></thead>
         <tbody>
-          <tr><td>type</td><td>Str</td><td>—</td><td>Must be <code>"text_display"</code>.</td></tr>
+          <tr><td>type</td><td>Str</td><td>-</td><td>Must be <code>"text_display"</code>.</td></tr>
           <tr><td>text</td><td>Expr</td><td>Required</td><td>PolyFormula expression evaluated to displayed string. Supports MiniMessage formatting.</td></tr>
           <tr><td>location</td><td>Position</td><td>machine centre</td><td>Position expression.</td></tr>
           <tr><td>scale</td><td>Expr</td><td><code>"0.1"</code></td><td>Uniform scale. 0.1 = typical HUD size.</td></tr>
@@ -163,8 +163,8 @@
       <div class="table-wrap"><table>
         <thead><tr><th>Field</th><th>Type</th><th>Default</th><th>Description</th></tr></thead>
         <tbody>
-          <tr><td>type</td><td>Str</td><td>—</td><td>Must be <code>"block_display"</code>.</td></tr>
-          <tr><td>block</td><td>Expr</td><td>Required</td><td>Block state expression — namespaced material key or formula.</td></tr>
+          <tr><td>type</td><td>Str</td><td>-</td><td>Must be <code>"block_display"</code>.</td></tr>
+          <tr><td>block</td><td>Expr</td><td>Required</td><td>Block state expression - namespaced material key or formula.</td></tr>
           <tr><td>location</td><td>Position</td><td>machine centre</td><td>Position expression.</td></tr>
           <tr><td>scale</td><td>Expr</td><td><code>"1.0"</code></td><td>Uniform scale.</td></tr>
           <tr><td>rot_x / rot_y / rot_z</td><td>Expr</td><td><code>"0"</code></td><td>Rotation in degrees.</td></tr>
@@ -188,7 +188,7 @@
       <div class="table-wrap"><table>
         <thead><tr><th>Field</th><th>Type</th><th>Default</th><th>Description</th></tr></thead>
         <tbody>
-          <tr><td>type</td><td>Str</td><td>—</td><td>Must be <code>"particle"</code>.</td></tr>
+          <tr><td>type</td><td>Str</td><td>-</td><td>Must be <code>"particle"</code>.</td></tr>
           <tr><td>particle</td><td>Str</td><td>Required</td><td>Bukkit Particle enum name (case-insensitive). E.g. <code>"FLAME"</code>, <code>"SMOKE_NORMAL"</code>, <code>"CRIT"</code>.</td></tr>
           <tr><td>count</td><td>Expr</td><td><code>"1"</code></td><td>Particles per emission. Expression evaluated each interval.</td></tr>
           <tr><td>location</td><td>Position</td><td>machine centre</td><td>Emission position.</td></tr>
@@ -214,7 +214,7 @@
       <div class="table-wrap"><table>
         <thead><tr><th>Field</th><th>Type</th><th>Default</th><th>Description</th></tr></thead>
         <tbody>
-          <tr><td>type</td><td>Str</td><td>—</td><td>Must be <code>"sound"</code>.</td></tr>
+          <tr><td>type</td><td>Str</td><td>-</td><td>Must be <code>"sound"</code>.</td></tr>
           <tr><td>sound</td><td>Str</td><td>Required</td><td>Sound resource location.</td></tr>
           <tr><td>volume</td><td>Expr</td><td><code>"1.0"</code></td><td>Volume expression (0.0–1.0+).</td></tr>
           <tr><td>pitch</td><td>Expr</td><td><code>"1.0"</code></td><td>Pitch expression (0.5–2.0).</td></tr>
@@ -233,7 +233,7 @@
       <div class="table-wrap"><table>
         <thead><tr><th>Field</th><th>Type</th><th>Default</th><th>Description</th></tr></thead>
         <tbody>
-          <tr><td>type</td><td>Str</td><td>—</td><td>Must be <code>"fluid_tank"</code>.</td></tr>
+          <tr><td>type</td><td>Str</td><td>-</td><td>Must be <code>"fluid_tank"</code>.</td></tr>
           <tr><td>tank</td><td>Str</td><td><code>""</code></td><td>Named fluid tank. Empty = first available tank.</td></tr>
           <tr><td>is_gas</td><td>Bool</td><td>false</td><td>True to read a gas tank instead of a fluid tank.</td></tr>
           <tr><td>location</td><td>Position</td><td>machine centre</td><td>Position expression.</td></tr>
@@ -255,7 +255,7 @@
       <div class="table-wrap"><table>
         <thead><tr><th>Field</th><th>Type</th><th>Default</th><th>Description</th></tr></thead>
         <tbody>
-          <tr><td>type</td><td>Str</td><td>—</td><td>Must be <code>"armor_stand"</code>.</td></tr>
+          <tr><td>type</td><td>Str</td><td>-</td><td>Must be <code>"armor_stand"</code>.</td></tr>
           <tr><td>head / body</td><td>Expr</td><td>null</td><td>Item expressions for head (helmet) and body (chestplate) slots.</td></tr>
           <tr><td>location</td><td>Position</td><td>machine centre</td><td>Position expression.</td></tr>
           <tr><td>rot_x / rot_y / rot_z</td><td>Expr</td><td><code>"0"</code></td><td>Rotation in degrees.</td></tr>

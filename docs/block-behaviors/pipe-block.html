@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>polyfills:pipe_block — Block Behaviors — CEP</title>
+  <title>polyfills:pipe_block - Block Behaviors - CEP</title>
   <link rel="stylesheet" href="../assets/style.css" />
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 </head>
@@ -86,12 +86,12 @@
     </div>
 
     <h2>Description</h2>
-    <p>When placed, the pipe automatically connects (via <code>ConnectedBlockBehavior</code>) to all adjacent blocks that implement <code>FluidCarrier</code> — other pipes, pumps, valves, and tanks. Fluid is moved through the network each tick up to the pipe type's <code>transferPerTick</code> limit, with round-robin output direction selection to distribute flow evenly.</p>
+    <p>When placed, the pipe automatically connects (via <code>ConnectedBlockBehavior</code>) to all adjacent blocks that implement <code>FluidCarrier</code> - other pipes, pumps, valves, and tanks. Fluid is moved through the network each tick up to the pipe type's <code>transferPerTick</code> limit, with round-robin output direction selection to distribute flow evenly.</p>
     <p>Right-clicking a pipe with a wrench or similar CE tool shows its current fluid contents and connection state. Right-clicking with an empty bucket draws fluid out; right-clicking with a filled bucket pours fluid in, subject to the pipe's accepted fluid type.</p>
 
     <div class="callout note">
       <strong>Pipe types</strong>
-      Capacity, transfer rate, and accepted fluid type are defined in <code>pipe_types/*.json</code> data files, not in the block YAML. The COPPER tier is the built-in default. Registering new tiers requires a data file only — no Java.
+      Capacity, transfer rate, and accepted fluid type are defined in <code>pipe_types/*.json</code> data files, not in the block YAML. The COPPER tier is the built-in default. Registering new tiers requires a data file only - no Java.
     </div>
 
     <h2>Configuration</h2>
@@ -128,10 +128,10 @@
 
     <h2>Related behaviors</h2>
     <ul>
-      <li><code>polyfills:pump_block</code> — simple always-active fluid pump (no fuel) that feeds into pipe networks.</li>
-      <li><code>polyfills:valve_block</code> — opens/closes flow based on redstone signal.</li>
-      <li><code>polyfills:fluid_tank_block</code> — storage tank that connects to pipe networks.</li>
-      <li><code>polyfills:gas_pipe_block</code> — equivalent for gas networks.</li>
+      <li><code>polyfills:pump_block</code> - simple always-active fluid pump (no fuel) that feeds into pipe networks.</li>
+      <li><code>polyfills:valve_block</code> - opens/closes flow based on redstone signal.</li>
+      <li><code>polyfills:fluid_tank_block</code> - storage tank that connects to pipe networks.</li>
+      <li><code>polyfills:gas_pipe_block</code> - equivalent for gas networks.</li>
     </ul>
   </main>
 </div>

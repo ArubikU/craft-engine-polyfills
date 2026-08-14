@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>polyfills:data_motor — Block Behaviors — CEP</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+</head>
+<body>
+<div class="topbar" role="banner">
+  <a href="../../index.html" class="logo"><i data-lucide="code-2"></i> CraftEngine Polyfills</a>
+  <div class="spacer"></div>
+  <a href="../../api/index.html" style="color:var(--text-muted);font-size:0.9rem">API</a>
+  <a href="https://github.com/ArubikU/craft-engine-polyfills" class="gh-link"><i data-lucide="github"></i></a>
+</div>
+<div class="layout">
+  <nav class="sidebar"></nav>
+  <main class="content">
+    <div class="breadcrumbs">
+      <a href="../../index.html">Home</a><span class="sep">/</span>
+      <a href="../block-behaviors.html">Block Behaviors</a><span class="sep">/</span>
+      <span>polyfills:data_motor</span>
+    </div>
+    <h1><code>polyfills:data_motor</code></h1>
+    <p class="lead">Data-driven rotational motor block. Generates RPM and stress units (SU) from fuel or gas consumption. Configuration via <code>motors/*.json</code>.</p>
+
+    <div style="background:var(--bg-2);border:1px solid var(--border);border-radius:6px;padding:1rem;margin-bottom:2rem;font-size:0.85rem">
+      <strong>Java class:</strong> <code>dev.arubik.craftengine.rotation.DataMotorBehavior</code><br>
+      <strong>Block entity:</strong> <code>dev.arubik.craftengine.rotation.DataMotorBlockEntity</code><br>
+      <strong>Registered as:</strong> <code>BlockBehaviors.POLYFILL_DATA_MOTOR</code><br>
+      <strong>Motor definition:</strong> <code>src/main/resources/motors/gas_motor_mk1.json</code>
+    </div>
+
+    <h2>Description</h2>
+    <p>A motor consumes gas (steam, heavy_steam, nitrogen) from a connected steel pipe network and generates rotational power (RPM + SU). The generated values depend on the gas type consumed — heavier gas = more power.</p>
+    <p>Motors support:</p>
+    <ul>
+      <li>Multiple gas type inputs with different RPM/SU outputs per type</li>
+      <li>Overclock system (same as machines)</li>
+      <li>Upgrade slots (same attribute system as data_machine)</li>
+      <li>Data-driven renderers (BetterModel animation driven by RPM)</li>
+      <li>On/Off block states (activated property)</li>
+    </ul>
+
+    <h2>Block YAML Configuration</h2>
+    <pre><code class="language-yaml">behavior:
+  type: polyfills:data_motor
+  motor: polyfills:gas_motor_mk1   # references motors/*.json
+  upgrades:
+    cml:upgrade_iron:
+      - { attribute: polyfill:fuel_efficiency, operation: add, value: 0.1 }
+  bars:
+    fuel:
+      slots: [40]
+      # ... same bar format as data_machine</code></pre>
+
+    <h2>Motor JSON (motors/gas_motor_mk1.json)</h2>
+    <pre><code class="language-json">{
+  "id": "polyfills:gas_motor_mk1",
+  "gas_inputs": {
+    "steam":       { "rpm": 32,  "su": 64,   "mb_per_tick": 10 },
+    "heavy_steam": { "rpm": 64,  "su": 1024, "mb_per_tick": 20 }
+  },
+  "menu_size": 54,
+  "fuel_slots": [31],
+  "info_slot": 4,
+  "renderers": [],
+  "variables": {}
+}</code></pre>
+
+    <h2>Key Config Fields</h2>
+    <table class="ref-table">
+      <thead><tr><th>Key</th><th>Type</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code>motor</code></td><td>Key</td><td>ID referencing a motor JSON in <code>motors/</code></td></tr>
+        <tr><td><code>upgrades</code></td><td>Map</td><td>Same attribute upgrade system as data_machine</td></tr>
+        <tr><td><code>bars</code></td><td>Object</td><td>Fuel/gas bar definitions</td></tr>
+        <tr><td><code>buttons</code></td><td>List</td><td>UI buttons (upgrade page, overclock page)</td></tr>
+      </tbody>
+    </table>
+
+    <h2>PolyFormula Context</h2>
+    <p>When this motor has <code>renderers</code> defined, the following variables are available:</p>
+    <table class="ref-table">
+      <thead><tr><th>Variable</th><th>Type</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code>rpm</code></td><td>Num</td><td>Current generated RPM (0 when idle)</td></tr>
+        <tr><td><code>overclock</code></td><td>Num</td><td>Overclock multiplier (0.01–3)</td></tr>
+        <tr><td><code>has_fuel</code></td><td>Bool</td><td>Whether gas is available in connected pipes</td></tr>
+        <tr><td><code>processing</code></td><td>Bool</td><td>True while generating power</td></tr>
+        <tr><td><code>GasTanks.level("steam")</code></td><td>Num</td><td>Internal gas buffer level</td></tr>
+      </tbody>
+    </table>
+  </main>
+</div>
+<script src="../assets/sidebar.js"></script>
+<script src="../assets/main.js"></script>
+<script>if(window.lucide) lucide.createIcons();</script>
+</body>
+</html>

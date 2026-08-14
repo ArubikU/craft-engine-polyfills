@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>polyfills:renderer — Block Behaviors — CEP</title>
+  <title>polyfills:renderer - Block Behaviors - CEP</title>
   <link rel="stylesheet" href="../assets/style.css" />
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 </head>
@@ -78,18 +78,18 @@
     </div>
 
     <h1><code class="behavior-id">polyfills:renderer</code></h1>
-    <p class="lead">Attaches the PolyFormula renderer system (particles, text displays, item displays, BetterModel, ModelEngine) to any CE custom block — no full machine infrastructure required.</p>
+    <p class="lead">Attaches the PolyFormula renderer system (particles, text displays, item displays, BetterModel, ModelEngine) to any CE custom block - no full machine infrastructure required.</p>
 
     <div class="info-box">
       <strong>Java class:</strong> <code>dev.arubik.craftengine.block.behavior.RendererBehavior</code><br>
       <strong>Registered as:</strong> <code>BlockBehaviors.POLYFILL_RENDERER</code><br>
-      <strong>Block entity:</strong> none — driven entirely by the block's random tick<br>
+      <strong>Block entity:</strong> none - driven entirely by the block's random tick<br>
       <strong>Related docs:</strong> <a href="../renderers.html">Renderer System</a> · <a href="../polyformula.html">PolyFormula Engine</a>
     </div>
 
     <h2>Description</h2>
     <p>On every block tick the behavior reads the block's current redstone level (0–15), its <code>facing</code> property (if present), and any container inventory attached to the block entity (chest, barrel, hopper, dispenser). It then evaluates the configured <code>variables</code> using PolyFormula and drives each renderer spec: spawning particles, updating display entities, or controlling BetterModel/ModelEngine animations.</p>
-    <p>This is the lightweight path when you need visual effects on a plain custom block. For a full machine with a GUI, recipe processing, and upgrade slots, use <a href="data-machine.html"><code>polyfills:data_machine</code></a> instead — it uses the same renderer infrastructure internally.</p>
+    <p>This is the lightweight path when you need visual effects on a plain custom block. For a full machine with a GUI, recipe processing, and upgrade slots, use <a href="data-machine.html"><code>polyfills:data_machine</code></a> instead - it uses the same renderer infrastructure internally.</p>
 
     <div class="callout note">
       <strong>Ticking required</strong>

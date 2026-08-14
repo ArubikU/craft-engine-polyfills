@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Pipes, Fluids &amp; Gas — CraftEngine Polyfills</title>
+  <title>Pipes, Fluids &amp; Gas - CraftEngine Polyfills</title>
   <link rel="stylesheet" href="assets/style.css" />
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 </head>
@@ -36,7 +36,7 @@
       <ul>
         <li><strong>Nodes</strong> are tanks, machines with tanks, valves, and pumps.</li>
         <li><strong>Edges</strong> are pipe connections between adjacent nodes.</li>
-        <li>Each tick, the <code>FluidNetworkSolver</code> runs a pressure-based flow algorithm — fluid flows from high-pressure nodes to low-pressure nodes along edges, up to each edge's <code>transfer_per_tick</code> capacity.</li>
+        <li>Each tick, the <code>FluidNetworkSolver</code> runs a pressure-based flow algorithm - fluid flows from high-pressure nodes to low-pressure nodes along edges, up to each edge's <code>transfer_per_tick</code> capacity.</li>
       </ul>
       <p>Gas networks use the same graph structure and solver as fluid networks.</p>
 
@@ -77,11 +77,11 @@
           <tr><td>conductance</td><td>Float</td><td>1000.0</td><td>Flow conductance (inverse of resistance). Higher = fluid flows through more easily.</td></tr>
           <tr><td>tier</td><td>Int</td><td>1</td><td>Tier level; higher-tier pipes can only connect to same or compatible tiers.</td></tr>
           <tr><td>connects_to</td><td>Array&lt;Str&gt;</td><td><code>[]</code></td><td>CE block IDs of tanks, valves, and other endpoints this pipe can connect to.</td></tr>
-          <tr><td>preview_namespace / preview_prefix</td><td>Str</td><td>—</td><td>Block ID namespace and prefix for connection preview models (ghost blocks shown when placing).</td></tr>
-          <tr><td>mask_order</td><td>Array&lt;Str&gt;</td><td>—</td><td>Face order for the pipe connection bitmask. Controls which model variant is chosen.</td></tr>
+          <tr><td>preview_namespace / preview_prefix</td><td>Str</td><td>-</td><td>Block ID namespace and prefix for connection preview models (ghost blocks shown when placing).</td></tr>
+          <tr><td>mask_order</td><td>Array&lt;Str&gt;</td><td>-</td><td>Face order for the pipe connection bitmask. Controls which model variant is chosen.</td></tr>
           <tr><td>preview_offset</td><td>Array[3]</td><td>[0.5,0.5,0.5]</td><td>Centre offset for preview model rendering.</td></tr>
           <tr><td>preview_scale</td><td>Float</td><td>1.0</td><td>Scale of preview model.</td></tr>
-          <tr><td>replaceable_blocks</td><td>Array&lt;Str&gt;</td><td>—</td><td>Blocks that can be automatically replaced when placing pipes (air, water, tall grass etc).</td></tr>
+          <tr><td>replaceable_blocks</td><td>Array&lt;Str&gt;</td><td>-</td><td>Blocks that can be automatically replaced when placing pipes (air, water, tall grass etc).</td></tr>
         </tbody>
       </table></div>
 
@@ -113,15 +113,15 @@
           <tr><td>mb_per_full_block</td><td>Int</td><td>1000</td><td>mB collected when draining a full source block from the world.</td></tr>
           <tr><td>block_collect_delay</td><td>Int</td><td>4</td><td>Ticks between world-block collection attempts by a pump.</td></tr>
           <tr><td>carrier_io_delay</td><td>Int</td><td>2</td><td>Ticks between bucket/bottle transfer attempts at a carrier block.</td></tr>
-          <tr><td>render_family</td><td>Str</td><td>—</td><td>Texture family used for fluid rendering inside tanks and contraptions.</td></tr>
-          <tr><td>tank_variant</td><td>Str</td><td>—</td><td>Tank model variant key used in BetterModel or CE item tank rendering.</td></tr>
-          <tr><td>color</td><td>Str</td><td>—</td><td>Hex color for UI tinting (#RRGGBB).</td></tr>
+          <tr><td>render_family</td><td>Str</td><td>-</td><td>Texture family used for fluid rendering inside tanks and contraptions.</td></tr>
+          <tr><td>tank_variant</td><td>Str</td><td>-</td><td>Tank model variant key used in BetterModel or CE item tank rendering.</td></tr>
+          <tr><td>color</td><td>Str</td><td>-</td><td>Hex color for UI tinting (#RRGGBB).</td></tr>
           <tr><td>density</td><td>Float</td><td>1.0</td><td>Fluid density relative to water. Affects pressure in height calculations.</td></tr>
           <tr><td>viscosity</td><td>Float</td><td>1.0</td><td>Flow resistance multiplier (higher = flows slower through pipes).</td></tr>
-          <tr><td>fill_sound</td><td>Str</td><td>—</td><td>Sound played when filling a container with this fluid.</td></tr>
-          <tr><td>drain_sound</td><td>Str</td><td>—</td><td>Sound played when draining.</td></tr>
+          <tr><td>fill_sound</td><td>Str</td><td>-</td><td>Sound played when filling a container with this fluid.</td></tr>
+          <tr><td>drain_sound</td><td>Str</td><td>-</td><td>Sound played when draining.</td></tr>
           <tr><td>vanilla_fluid</td><td>Str</td><td>null</td><td>Minecraft fluid this maps to for world interaction (e.g. <code>"minecraft:water"</code>).</td></tr>
-          <tr><td>translation_key</td><td>Str</td><td>—</td><td>Lang key for the fluid's display name.</td></tr>
+          <tr><td>translation_key</td><td>Str</td><td>-</td><td>Lang key for the fluid's display name.</td></tr>
           <tr><td>contraption_item_pattern</td><td>Str</td><td>null</td><td>CE item ID pattern for fluid level indicators inside contraptions. <code>{level}</code> is replaced with 0–8.</td></tr>
         </tbody>
       </table></div>
@@ -151,7 +151,7 @@
       <div class="table-wrap"><table>
         <thead><tr><th>Key</th><th>Description</th></tr></thead>
         <tbody>
-          <tr><td>type</td><td><code>"fill"</code> — player adds fluid to the carrier. <code>"drain"</code> — player takes fluid from the carrier.</td></tr>
+          <tr><td>type</td><td><code>"fill"</code> - player adds fluid to the carrier. <code>"drain"</code> - player takes fluid from the carrier.</td></tr>
           <tr><td>fluid</td><td>Fluid type being transferred.</td></tr>
           <tr><td>item_in</td><td>Item the player must be holding.</td></tr>
           <tr><td>item_out</td><td>Item returned to the player after the interaction.</td></tr>

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>polyfills:bubble_block — Block Behaviors — CEP</title>
+  <title>polyfills:bubble_block - Block Behaviors - CEP</title>
   <link rel="stylesheet" href="../assets/style.css" />
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 </head>
@@ -83,7 +83,7 @@
     </div>
 
     <h2>Description</h2>
-    <p>On placement the behavior schedules a recurring block tick every 6 ticks. On each tick it scans up to <code>limit</code> water cells in the configured direction and replaces each water cell with a vanilla <code>bubble_column</code> block — using <code>drag=true</code> (pulls down, like magma) or <code>drag=false</code> (pushes up, like soul sand), controlled by the <code>drag</code> setting.</p>
+    <p>On placement the behavior schedules a recurring block tick every 6 ticks. On each tick it scans up to <code>limit</code> water cells in the configured direction and replaces each water cell with a vanilla <code>bubble_column</code> block - using <code>drag=true</code> (pulls down, like magma) or <code>drag=false</code> (pushes up, like soul sand), controlled by the <code>drag</code> setting.</p>
     <p>When the source block is removed, all bubble-column blocks in the column are converted back to water.</p>
 
     <h2>Configuration</h2>
@@ -113,7 +113,7 @@
       limit: 20</code></pre>
 
     <h2>Implementation Notes</h2>
-    <p>The behavior uses <code>scheduleBlockTick</code> with a delay of 6 ticks rather than the standard random-tick system, so it fires consistently regardless of the server's random-tick speed setting. The scan walks through water-source blocks only — flowing water and non-water blocks are skipped.</p>
+    <p>The behavior uses <code>scheduleBlockTick</code> with a delay of 6 ticks rather than the standard random-tick system, so it fires consistently regardless of the server's random-tick speed setting. The scan walks through water-source blocks only - flowing water and non-water blocks are skipped.</p>
   </main>
 </div>
 <script src="../assets/main.js"></script>

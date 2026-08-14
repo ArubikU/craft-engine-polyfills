@@ -1,5 +1,5 @@
 /* ============================================================
-   CraftEngine Polyfills — Documentation JS
+   CraftEngine Polyfills - Documentation JS
    ============================================================ */
 
 (function () {
