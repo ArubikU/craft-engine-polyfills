@@ -39,7 +39,8 @@ body {
 }
 
 /* ---- Top bar --------------------------------------------------------- */
-.topbar {
+/* Use div.topbar (not header.topbar) to avoid browser default header block margins */
+.topbar, div.topbar {
   position: fixed;
   top: 0; left: 0; right: 0;
   height: var(--topbar-h);
@@ -48,8 +49,10 @@ body {
   display: flex;
   align-items: center;
   padding: 0 1.5rem;
-  z-index: 100;
+  z-index: 200;
   gap: 1rem;
+  box-sizing: border-box;
+  margin: 0;
 }
 
 .topbar .logo {
@@ -203,7 +206,9 @@ body {
 .content {
   flex: 1;
   min-width: 0;
-  padding: 2.5rem 3rem 4rem;
+  padding: 2rem 3rem 4rem;
+  /* prevents content from being hidden under fixed sidebar on small screens */
+  overflow-x: auto;
 }
 
 .content-inner {
@@ -238,7 +243,7 @@ body {
 .search-icon i, .search-icon svg { width: 14px; height: 14px; }
 
 /* headings */
-h1 { font-size: 2rem; font-weight: 700; color: #f0f6fc; margin-bottom: 0.75rem; line-height: 1.25; }
+h1 { font-size: 2rem; font-weight: 700; color: #f0f6fc; margin-top: 1.5rem; margin-bottom: 0.75rem; line-height: 1.25; }
 h2 { font-size: 1.4rem; font-weight: 600; color: #f0f6fc; margin: 2.5rem 0 0.75rem; padding-bottom: 0.4rem; border-bottom: 1px solid var(--border); }
 h3 { font-size: 1.1rem; font-weight: 600; color: #e6edf3; margin: 1.8rem 0 0.5rem; }
 h4 { font-size: 0.95rem; font-weight: 600; color: var(--text); margin: 1.2rem 0 0.4rem; }
@@ -511,6 +516,81 @@ tbody td:first-child { font-family: var(--font-mono); font-size: 0.82rem; color:
 .record-tag { display: inline-block; font-size: 0.75rem; background: rgba(63,185,80,0.12); color: var(--green); border-radius: 4px; padding: 1px 6px; vertical-align: middle; margin-left: 6px; font-family: var(--font-sans); }
 .interface-tag { display: inline-block; font-size: 0.75rem; background: rgba(88,166,255,0.12); color: var(--accent); border-radius: 4px; padding: 1px 6px; vertical-align: middle; margin-left: 6px; font-family: var(--font-sans); }
 .enum-tag { display: inline-block; font-size: 0.75rem; background: rgba(255,123,114,0.12); color: #ff7b72; border-radius: 4px; padding: 1px 6px; vertical-align: middle; margin-left: 6px; font-family: var(--font-sans); }
+
+/* ---- Block Behavior detail pages ------------------------------------- */
+.info-box {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 8px 8px 0;
+  padding: 0.85rem 1.1rem;
+  margin-bottom: 1.5rem;
+  font-size: 0.88rem;
+  line-height: 2;
+}
+.info-box strong { color: var(--text-muted); margin-right: 0.4rem; }
+
+.behavior-id {
+  font-size: 1.05rem;
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--accent);
+  font-weight: 700;
+  font-family: var(--font-mono);
+}
+
+/* ref-table: alias for regular table with explicit class */
+.ref-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; margin-bottom: 1.5rem; }
+.ref-table thead tr { background: var(--bg-3); }
+.ref-table thead th { text-align: left; padding: 0.55rem 0.9rem; font-weight: 600; color: #e6edf3; border-bottom: 2px solid var(--border); white-space: nowrap; }
+.ref-table tbody tr { border-bottom: 1px solid var(--border); }
+.ref-table tbody tr:hover { background: rgba(255,255,255,0.02); }
+.ref-table tbody td { padding: 0.5rem 0.9rem; vertical-align: top; }
+.ref-table tbody td:first-child { font-family: var(--font-mono); font-size: 0.82rem; color: var(--accent); white-space: nowrap; }
+.ref-table .td-type { font-family: var(--font-mono); font-size: 0.82rem; color: var(--green); }
+.ref-table .td-default { font-family: var(--font-mono); font-size: 0.82rem; color: var(--orange); }
+
+/* behavior card grid (block-behaviors.html overview) */
+.beh-section-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin: 2rem 0 0.75rem;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.4rem;
+}
+
+.beh-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(255px, 1fr));
+  gap: 0.85rem;
+  margin-bottom: 1rem;
+}
+
+.beh-card {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.9rem 1rem;
+  text-decoration: none !important;
+  display: block;
+  transition: border-color 0.15s, background 0.15s;
+}
+.beh-card:hover { border-color: var(--accent); background: rgba(88,166,255,0.04); text-decoration: none; }
+.beh-card code {
+  display: block;
+  font-size: 0.81rem;
+  color: var(--accent);
+  margin-bottom: 0.3rem;
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: var(--font-mono);
+}
+.beh-card p { margin: 0; font-size: 0.83rem; color: var(--text-muted); line-height: 1.5; }
 .sealed-tag { display: inline-block; font-size: 0.75rem; background: rgba(255,166,87,0.12); color: var(--yellow); border-radius: 4px; padding: 1px 6px; vertical-align: middle; margin-left: 6px; font-family: var(--font-sans); }
 .api-index-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; margin: 1.5rem 0; }
 .pkg-card { background: var(--bg-2); border: 1px solid var(--border); border-radius: 8px; padding: 1.1rem 1.25rem; }
