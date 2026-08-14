@@ -5,29 +5,30 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Getting Started — CraftEngine Polyfills</title>
   <link rel="stylesheet" href="assets/style.css" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 </head>
 <body>
 <header class="topbar">
   <button class="hamburger" id="hamburger" aria-label="Menu">&#9776;</button>
-  <a href="../index.html" class="logo">⚙️ CraftEngine Polyfills <span class="badge">1.21.11</span></a>
+  <a href="../index.html" class="logo"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent)"><path d="M12 20h9"/><path d="M16.376 3.622a1 1 0 0 1 3.002 3.002L7.368 18.635a2 2 0 0 1-.855.506l-2.872.838a.5.5 0 0 1-.62-.62l.838-2.872a2 2 0 0 1 .506-.854z"/></svg> CraftEngine Polyfills <span class="badge">1.21.11</span></a>
   <div class="spacer"></div>
   <div class="search-wrap">
-    <span class="search-icon">&#128269;</span>
+    <span class="search-icon"><i data-lucide="search" width="14" height="14"></i></span>
     <input id="search" type="search" placeholder="Search docs…" autocomplete="off" />
     <div id="search-results"></div>
   </div>
-  <a href="https://github.com/Arubik/craft-engine-polyfills" class="gh-link">&#128279; GitHub</a>
+  <a href="https://github.com/Arubik/craft-engine-polyfills" class="gh-link"><i data-lucide="github" width="14" height="14"></i> GitHub</a>
 </header>
 <div class="layout">
   <nav class="sidebar">
     <div class="nav-section">
-      <div class="nav-section-header">&#128196; Getting Started <span class="caret">&#9660;</span></div>
+      <div class="nav-section-header"><i data-lucide="book-open" width="14" height="14"></i> Getting Started <span class="caret">&#9660;</span></div>
       <ul class="nav-items">
         <li><a href="getting-started.html">Introduction</a></li>
       </ul>
     </div>
     <div class="nav-section">
-      <div class="nav-section-header">&#9881; Machines <span class="caret">&#9660;</span></div>
+      <div class="nav-section-header"><i data-lucide="cpu" width="14" height="14"></i> Machines <span class="caret">&#9660;</span></div>
       <ul class="nav-items">
         <li><a href="machines.html">JSON Config Reference</a></li>
         <li><a href="machines-api.html">Java API</a></li>
@@ -173,5 +174,6 @@
   </main>
 </div>
 <script src="assets/main.js"></script>
+<script>if(window.lucide) lucide.createIcons();</script>
 </body>
 </html>

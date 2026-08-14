@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Block Behaviors — CraftEngine Polyfills</title>
+  <link rel="stylesheet" href="assets/style.css" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+</head>
+<body>
+<header class="topbar">
+  <button class="hamburger" id="hamburger" aria-label="Menu">&#9776;</button>
+  <a href="../index.html" class="logo">
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent)"><path d="M12 20h9"/><path d="M16.376 3.622a1 1 0 0 1 3.002 3.002L7.368 18.635a2 2 0 0 1-.855.506l-2.872.838a.5.5 0 0 1-.62-.62l.838-2.872a2 2 0 0 1 .506-.854z"/></svg>
+    CraftEngine Polyfills <span class="badge">1.21.11</span>
+  </a>
+  <div class="spacer"></div>
+  <div class="search-wrap">
+    <span class="search-icon"><i data-lucide="search" width="14" height="14"></i></span>
+    <input id="search" type="search" placeholder="Search docs…" autocomplete="off" />
+    <div id="search-results"></div>
+  </div>
+  <a href="https://github.com/Arubik/craft-engine-polyfills" class="gh-link">
+    <i data-lucide="github" width="16" height="16"></i> GitHub
+  </a>
+</header>
+<div class="layout">
+  <nav class="sidebar">
+    <div class="nav-section">
+      <div class="nav-section-header"><i data-lucide="book-open" width="14" height="14"></i> Getting Started <span class="caret">&#9660;</span></div>
+      <ul class="nav-items"><li><a href="getting-started.html">Introduction</a></li></ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header"><i data-lucide="cpu" width="14" height="14"></i> Machines <span class="caret">&#9660;</span></div>
+      <ul class="nav-items">
+        <li><a href="machines.html">JSON Config Reference</a></li>
+        <li><a href="upgrades.html">Upgrade System</a></li>
+        <li><a href="bars.html">Gauge Bars</a></li>
+      </ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header"><i data-lucide="layers" width="14" height="14"></i> Renderers <span class="caret">&#9660;</span></div>
+      <ul class="nav-items">
+        <li><a href="renderers.html">Renderer System</a></li>
+        <li><a href="polyformula.html">PolyFormula Engine</a></li>
+      </ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header"><i data-lucide="puzzle" width="14" height="14"></i> Blocks <span class="caret">&#9660;</span></div>
+      <ul class="nav-items">
+        <li><a href="block-behaviors.html" class="active">Block Behaviors</a></li>
+      </ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header"><i data-lucide="box" width="14" height="14"></i> Contraptions <span class="caret">&#9660;</span></div>
+      <ul class="nav-items"><li><a href="contraptions.html">Contraption System</a></li></ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header"><i data-lucide="git-branch" width="14" height="14"></i> Pipes &amp; Fluids <span class="caret">&#9660;</span></div>
+      <ul class="nav-items"><li><a href="pipes-fluids.html">Network Reference</a></li></ul>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-header"><i data-lucide="code" width="14" height="14"></i> API <span class="caret">&#9660;</span></div>
+      <ul class="nav-items"><li><a href="../api/index.html">Java API Reference</a></li></ul>
+    </div>
+  </nav>
+  <main class="content">
+    <div class="breadcrumbs">
+      <a href="../index.html">Home</a><span class="sep">/</span>
+      <span>Block Behaviors</span>
+    </div>
+    <h1>Block Behaviors</h1>
+    <p class="lead">CraftEngine Polyfills registers 28 custom block behaviors under the <code>polyfills:</code> namespace. Assign them via the <code>behavior.type</code> key in any CE block YAML.</p>
+
+    <h2>Machine Behaviors</h2>
+    <table class="ref-table">
+      <thead><tr><th>Behavior ID</th><th>Description</th><th>Key Config Fields</th></tr></thead>
+      <tbody>
+        <tr><td><code>polyfills:data_machine</code></td><td>Fully data-driven single-block machine. Reads recipe_type, slots, tanks, bars from <code>machines/*.json</code>.</td><td><code>machine</code> (id), <code>upgrades</code>, <code>bars</code>, <code>buttons</code></td></tr>
+        <tr><td><code>polyfills:machine_pump</code></td><td>Fuel-driven fluid pump. Extracts fluid from source blocks below and pushes into copper pipe network.</td><td><code>capacity</code>, <code>extract_per_tick</code>, <code>push_per_tick</code>, <code>pressure</code>, <code>extract_tick_rate</code></td></tr>
+        <tr><td><code>polyfills:gas_pump</code></td><td>Extracts gas (e.g. nitrogen) from gas-provider blocks below and pushes into steel pipe network. 6-directional.</td><td><code>capacity</code>, <code>mb_per_point</code>, <code>pressure</code>, <code>extract_tick_rate</code></td></tr>
+        <tr><td><code>polyfills:custom_crafter</code></td><td>Custom shapeless crafting block with configurable recipe and output slots.</td><td><code>recipe_id</code>, <code>input_slots</code>, <code>output_slot</code></td></tr>
+        <tr><td><code>polyfills:renderer</code></td><td>Attaches the PolyFormula renderer system to any CE block without requiring a full machine. Supports particles, displays, sounds, BetterModel.</td><td><code>variables</code>, <code>renderers</code> (same format as machine JSON)</td></tr>
+      </tbody>
+    </table>
+
+    <h2>Pipe &amp; Fluid Behaviors</h2>
+    <table class="ref-table">
+      <thead><tr><th>Behavior ID</th><th>Description</th><th>Key Config Fields</th></tr></thead>
+      <tbody>
+        <tr><td><code>polyfills:pipe_block</code></td><td>Fluid pipe segment. Auto-connects to adjacent pipe/pump/tank blocks. Uses <code>pipe_types/*.json</code> for fluid type and capacity.</td><td><code>pipe_type</code> (Key)</td></tr>
+        <tr><td><code>polyfills:gas_pipe_block</code></td><td>Gas pipe segment. Connects to gas pump, gas tank, gas valve. Uses steel pipe type for nitrogen/steam.</td><td><code>pipe_type</code> (Key)</td></tr>
+        <tr><td><code>polyfills:pump_block</code></td><td>Simple always-active fluid pump (no fuel). Lighter-weight alternative to machine_pump.</td><td><code>capacity</code>, <code>pressure</code>, <code>extract_tick_rate</code></td></tr>
+        <tr><td><code>polyfills:valve_block</code></td><td>Fluid valve — opens/closes fluid flow based on redstone signal.</td><td><code>open_on_power</code> (bool)</td></tr>
+        <tr><td><code>polyfills:gas_valve_block</code></td><td>Gas valve — same as fluid valve but for gas networks.</td><td><code>open_on_power</code></td></tr>
+        <tr><td><code>polyfills:fluid_tank_block</code></td><td>Multi-block-style fluid storage. Accepts fluid input from pipes, exposes fill gauge.</td><td><code>capacity</code>, <code>fluid_type</code> (optional filter Key)</td></tr>
+        <tr><td><code>polyfills:gas_tank_block</code></td><td>Gas storage tank. Compatible with nitrogen/steam/heavy_steam gas types.</td><td><code>capacity</code>, <code>gas_type</code> (optional filter Key)</td></tr>
+        <tr><td><code>polyfills:fluid_block_tank</code></td><td>Treats a world fluid block (water source, lava) as a tank connected to the pipe network.</td><td><code>fluid_type</code> (Key matching the world fluid)</td></tr>
+        <tr><td><code>polyfills:fluid_display</code></td><td>ITEM_DISPLAY-based fluid level indicator block. Renders a fluid fill model that scales with tank level.</td><td><code>tank_source</code>, <code>fluid_type</code></td></tr>
+        <tr><td><code>polyfills:gas_provider</code></td><td>Natural gas source block (e.g. nitrocalcite). Gas pumps extract from blocks with this behavior.</td><td><code>gas_type</code> (Key), <code>extraction_points</code> (float, default 1.0)</td></tr>
+      </tbody>
+    </table>
+
+    <h2>Physics &amp; Mechanics</h2>
+    <table class="ref-table">
+      <thead><tr><th>Behavior ID</th><th>Description</th><th>Key Config Fields</th></tr></thead>
+      <tbody>
+        <tr><td><code>polyfills:fan_block</code></td><td>Air fan — propels entities and particles in a configurable direction. Used for processing (blast cooling, smelting).</td><td><code>direction</code>, <code>force</code>, <code>range</code>, <code>requires_rpm</code></td></tr>
+        <tr><td><code>polyfills:spike_block</code></td><td>Deals damage to entities standing on or touching the block.</td><td><code>damage</code>, <code>damage_source</code></td></tr>
+        <tr><td><code>polyfills:magnet_block</code></td><td>Attracts or repels item entities within a radius. Direction configurable via redstone.</td><td><code>radius</code>, <code>force</code>, <code>attract</code> (bool)</td></tr>
+        <tr><td><code>polyfills:spreading_block</code></td><td>Block that spreads to adjacent blocks over time (like mycelium). Configurable speed and target block.</td><td><code>target_block</code>, <code>spread_rate</code>, <code>require_light</code></td></tr>
+        <tr><td><code>polyfills:tearing_block_spawn</code></td><td>Spawns entities or particles when a block is broken or placed.</td><td><code>spawn_entity</code>, <code>on_break</code>, <code>on_place</code></td></tr>
+        <tr><td><code>polyfills:tearing_crop_block</code></td><td>Crop that grows by tearing — stages defined by block state, harvested when at max age.</td><td><code>stages</code>, <code>grow_chance</code>, <code>output</code></td></tr>
+        <tr><td><code>polyfills:vertical_crop_block</code></td><td>Crop that grows upward (like sugarcane) with configurable max height and growth conditions.</td><td><code>max_height</code>, <code>grow_chance</code>, <code>requires_fluid_below</code></td></tr>
+        <tr><td><code>polyfills:bubble_block</code></td><td>Creates upward bubble column particle effect and applies slow-falling to entities above.</td><td><code>particle_rate</code>, <code>effect_radius</code></td></tr>
+      </tbody>
+    </table>
+
+    <h2>Storage &amp; Logic</h2>
+    <table class="ref-table">
+      <thead><tr><th>Behavior ID</th><th>Description</th><th>Key Config Fields</th></tr></thead>
+      <tbody>
+        <tr><td><code>polyfills:storage_block</code></td><td>Custom inventory block (like a barrel/chest variant) with configurable size and CE item support.</td><td><code>size</code>, <code>title</code>, <code>allow_hopper</code></td></tr>
+        <tr><td><code>polyfills:shulker_box_hitbox</code></td><td>Makes a CE custom block use a shulker-box-like hitbox for entity collision purposes in contraptions.</td><td><code>hitbox_size</code></td></tr>
+        <tr><td><code>polyfills:bush_block</code></td><td>Plant/bush block that can be harvested for items. Regrows over time.</td><td><code>output</code>, <code>regrow_ticks</code>, <code>require_sunlight</code></td></tr>
+        <tr><td><code>polyfills:change_over_time_block</code></td><td>Block that transforms into another block after a configurable number of ticks (e.g. drying, curing, oxidizing).</td><td><code>next_block</code>, <code>ticks</code>, <code>require_air_above</code></td></tr>
+        <tr><td><code>polyfills:redstone_controller</code></td><td>Emits configurable redstone signal level. Can be toggled by right-click or by adjacent blocks.</td><td><code>signal_strength</code>, <code>toggle_on_click</code></td></tr>
+        <tr><td><code>polyfills:redstone_operator</code></td><td>Performs boolean logic on redstone inputs (AND/OR/NOT/XOR). Up to 4 input faces configurable.</td><td><code>operation</code>, <code>input_faces</code>, <code>output_face</code></td></tr>
+        <tr><td><code>polyfills:chainery_block</code></td><td>Chain block entity — part of the Chainery conveyor system. Handles item routing and speed.</td><td>See Chainery docs</td></tr>
+      </tbody>
+    </table>
+
+    <h2>Usage Example</h2>
+    <p>Block YAML in <code>plugins/CraftEngine/resources/modern/configuration/block/polyfills/myblock.yml</code>:</p>
+    <pre><code class="language-yaml">blocks:
+  cml:my_gas_provider:
+    settings:
+      template:
+        - default:hardness/stone
+        - default:sound/stone
+    states:
+      state: "minecraft:calcite"
+      model:
+        path: cml:block/nitrocalcite
+    behavior:
+      type: polyfills:gas_provider
+      gas_type: polyfills:nitrogen
+      extraction_points: 1.5</code></pre>
+
+    <pre><code class="language-yaml">blocks:
+  cml:my_renderer_block:
+    states:
+      state: "minecraft:cactus[age=0]"
+      model:
+        path: cml:block/copper_pipe/null
+      entity-renderer:
+        item: cml:my_block_item
+        rotation: 0
+    behavior:
+      type: polyfills:renderer
+      variables:
+        powered: "redstone > 0"
+        pulse: "sin(tick() % 40 / 40.0 * TAU) * 0.2"
+      renderers:
+        - type: particle
+          particle: FLAME
+          count: "powered ? 3 : 0"
+          location: {"x": 0.5, "y": 1.2, "z": 0.5}
+          when: powered
+        - type: text_display
+          text: "'Signal: ' + redstone"
+          location: {"x": 0, "y": 2.0, "z": 0}
+          billboard: center
+          when: "player_in_range(5)"</code></pre>
+  </main>
+</div>
+<script src="assets/main.js"></script>
+<script>if(window.lucide) lucide.createIcons();</script>
+</body>
+</html>
