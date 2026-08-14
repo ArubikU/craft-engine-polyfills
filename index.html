@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CraftEngine Polyfills — Documentation</title>
+<style>
+  :root { --bg: #0d1117; --surface: #161b22; --border: #30363d; --accent: #58a6ff; --text: #c9d1d9; --muted: #8b949e; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; line-height: 1.6; }
+  header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 1rem 2rem; display: flex; align-items: center; gap: 1rem; }
+  header h1 { font-size: 1.25rem; color: var(--accent); }
+  header span { color: var(--muted); font-size: 0.9rem; }
+  .container { max-width: 1100px; margin: 0 auto; padding: 2rem; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; margin-top: 2rem; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1.25rem; transition: border-color .2s; }
+  .card:hover { border-color: var(--accent); }
+  .card h2 { font-size: 1rem; color: var(--accent); margin-bottom: .5rem; }
+  .card p { font-size: .875rem; color: var(--muted); }
+  .card ul { margin-top: .5rem; padding-left: 1.2rem; font-size: .8rem; color: var(--muted); }
+  .badge { display: inline-block; background: #1f6feb33; color: var(--accent); border: 1px solid #1f6feb66; border-radius: 4px; padding: 2px 8px; font-size: .75rem; margin-bottom: .5rem; }
+  h1.hero { font-size: 2rem; margin-bottom: .5rem; }
+  p.lead { color: var(--muted); font-size: 1.05rem; margin-bottom: 1rem; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .wip { background: #3d1f00; border: 1px solid #f0883e55; border-radius: 8px; padding: 1rem; margin-top: 1.5rem; color: #f0883e; font-size: .875rem; }
+</style>
+</head>
+<body>
+<header>
+  <h1>CraftEngine Polyfills</h1>
+  <span>Documentation — Work in Progress</span>
+</header>
+<div class="container">
+  <h1 class="hero">CraftEngine Polyfills</h1>
+  <p class="lead">Data-driven extension layer for CraftEngine — machines, contraptions, fluid rendering, and a powerful PolyFormula scripting engine.</p>
+  <div class="wip">⚠️ Documentation is being written. Pages will be added progressively.</div>
+
+  <div class="grid">
+    <div class="card">
+      <div class="badge">Core</div>
+      <h2>PolyFormula Engine</h2>
+      <p>Typed expression engine for renderer conditions, animations, and positions.</p>
+      <ul>
+        <li>PolyValue types: Num, Bool, Item, Str, Array, Obj</li>
+        <li>30+ built-in functions (sin, clamp, map, filter…)</li>
+        <li>% operator, ternary ?:, null-coalescing ??</li>
+        <li>.pf script files with for/while loops</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="badge">Rendering</div>
+      <h2>renderers System</h2>
+      <p>Data-driven visual effects for any machine, multiblock, motor, or CE block.</p>
+      <ul>
+        <li>BetterModel, ModelEngine, ItemDisplay, TextDisplay</li>
+        <li>Particle (shaped: disc, sphere, cylinder…)</li>
+        <li>Sound, ArmorStand, BlockDisplay</li>
+        <li>location field: relative offset or absolute world pos</li>
+        <li>positions array for multi-point rendering</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="badge">Context</div>
+      <h2>PolyClasses</h2>
+      <p>Rich cross-integrated value system available in every expression.</p>
+      <ul>
+        <li>Machine, MultiBlock, Contraption, World, Location</li>
+        <li>Player, Entity, Inventory, Block, Item</li>
+        <li>FluidTanks, GasTanks, Upgrades, Workbench</li>
+        <li>Full chaining: World.block(x,y,z).redstone</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="badge">Machines</div>
+      <h2>Data-Driven Machines</h2>
+      <p>Define machines entirely in JSON — no Java required.</p>
+      <ul>
+        <li>slots, tanks, bars, buttons, paging</li>
+        <li>upgrade.definitions in machine JSON</li>
+        <li>MachineAttributes: generation, overclock_limit, fuel_efficiency</li>
+        <li>MultiBlock machines with per-part rendering</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="badge">Contraptions</div>
+      <h2>Contraption System</h2>
+      <p>Moving structures with physics, fluid rendering, and machine elements.</p>
+      <ul>
+        <li>Entity culling (distance + frustum, configurable)</li>
+        <li>Vanilla fluid rendering with CE item patterns</li>
+        <li>ContraptionMachineRendererElement</li>
+        <li>Contraption PolyClass: speed, riders, anchor_entity</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="badge">Scripting</div>
+      <h2>.pf Script Files</h2>
+      <p>PolyScript files in <code>scripts/</code> folder, referenced by renderers via <code>"run": "name"</code>.</p>
+      <ul>
+        <li>Named variable assignments</li>
+        <li>if / else if / else blocks</li>
+        <li>for item in array: loops</li>
+        <li>while condition: loops (max 1000 iterations)</li>
+        <li>i++, i--, i += expr operators</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="badge">Behaviors</div>
+      <h2>polyfill:renderer Behavior</h2>
+      <p>Add the renderer system to any CE custom block without a machine.</p>
+      <ul>
+        <li>Full PolyFormula context (redstone, block state, container)</li>
+        <li>Same renderer types as machines</li>
+        <li>Particles, text, item displays, sounds</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="badge">Source</div>
+      <h2>Repository</h2>
+      <p>Source code and examples on GitHub.</p>
+      <ul>
+        <li><a href="https://github.com/Arubik/craft-engine-polyfills">github.com/Arubik/craft-engine-polyfills</a></li>
+        <li>Branch: migrate/craftengine-26</li>
+        <li>Examples: crusher.json, crusher.pf, workbench.json</li>
+      </ul>
+    </div>
+  </div>
+</div>
+</body>
+</html>
