@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>polyfills:fluid_tank_block — Block Behaviors — CEP</title>
+<link rel="stylesheet" href="../assets/style.css">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+</head>
+<body>
+<div class="topbar" role="banner">
+  <a href="../../index.html" class="logo"><i data-lucide="code-2"></i> CraftEngine Polyfills</a>
+  <div class="spacer"></div>
+  <a href="../../api/index.html" style="color:var(--text-muted);font-size:0.9rem">API</a>
+  <a href="https://github.com/ArubikU/craft-engine-polyfills" class="gh-link"><i data-lucide="github"></i></a>
+</div>
+<div class="layout">
+  <nav class="sidebar"></nav>
+  <main class="content">
+    <div class="breadcrumbs">
+      <a href="../../index.html">Home</a><span class="sep">/</span>
+      <a href="../block-behaviors.html">Block Behaviors</a><span class="sep">/</span>
+      <span>polyfills:fluid_tank_block</span>
+    </div>
+    <h1><code>polyfills:fluid_tank_block</code></h1>
+    <p class="lead">Multi-block-style fluid storage tank. Accepts fluid from connected pipes.</p>
+    <div style="background:var(--bg-2);border:1px solid var(--border);border-radius:6px;padding:1rem;margin-bottom:2rem;font-size:0.85rem">
+      <strong>Java class:</strong> <code>dev.arubik.craftengine.fluid/behavior.TankBlockBehavior</code>
+    </div>
+    <h2>Configuration</h2>
+    <pre><code class="language-yaml">behavior:
+  type: polyfills:fluid_tank_block
+  # Key fields: capacity (int), fluid_type (Key, optional filter)</code></pre>
+    <h2>Key Config Fields</h2>
+    <table class="ref-table">
+      <thead><tr><th>Key</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code>capacity (int)</code></td><td>See source</td></tr>
+        <tr><td><code>fluid_type (Key</code></td><td>See source</td></tr>
+        <tr><td><code>optional filter)</code></td><td>See source</td></tr>
+      </tbody>
+    </table>
+  </main>
+</div>
+<script src="../assets/sidebar.js"></script>
+<script src="../assets/main.js"></script>
+<script>if(window.lucide) lucide.createIcons();</script>
+</body>
+</html>
