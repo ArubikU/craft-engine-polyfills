@@ -31,7 +31,10 @@ public final class ElementTypes {
     public static final Key SKULL = Key.of("polyfills", "skull");
     public static final Key SIGN = Key.of("polyfills", "sign");
     public static final Key FLUID = Key.of("polyfills", "fluid");
+    public static final Key BETTER_MODEL = Key.of("polyfills", "better_model");
     public static final Key MARKER = ContraptionMarkerElement.TYPE;
+    public static final Key MODEL_ENGINE = Key.of("polyfills", "model_engine");
+    public static final Key MACHINE_RENDERER = Key.of("polyfills", "machine_renderer");
 
     private static final Map<Key, BiFunction<CompoundTag, ContraptionLevel, ContraptionElement>> DESERIALIZERS
             = new HashMap<>();

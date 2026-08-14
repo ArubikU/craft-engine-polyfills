@@ -14,8 +14,58 @@
     "info": 4,
     "upgrade": {
       "count": 9,
-      "base_unlocked": 3
+      "base_unlocked": 3,
+      "definitions": {
+        "cml:iron_cast":       [{ "attribute": "polyfill:extra_slots",     "operation": "add", "value": 2 }],
+        "cml:gold_cast":       [{ "attribute": "polyfill:extra_slots",     "operation": "add", "value": 3 }],
+        "cml:diamond_cast":    [{ "attribute": "polyfill:extra_slots",     "operation": "add", "value": 4 }],
+        "cml:upgrade_iron":    [{ "attribute": "polyfill:generation",      "operation": "add", "value": 0.05 }],
+        "cml:upgrade_gold":    [{ "attribute": "polyfill:generation",      "operation": "add", "value": 0.10 },
+                                { "attribute": "polyfill:fuel_efficiency", "operation": "add", "value": 0.10 }],
+        "cml:upgrade_diamond": [{ "attribute": "polyfill:generation",      "operation": "add", "value": 0.18 },
+                                { "attribute": "polyfill:overclock_limit", "operation": "add", "value": 0.5  },
+                                { "attribute": "polyfill:fuel_efficiency", "operation": "add", "value": 0.15 }],
+        "cml:upgrade_scrapped":[{ "attribute": "polyfill:overclock_limit", "operation": "add", "value": 1.0  },
+                                { "attribute": "polyfill:fuel_efficiency", "operation": "add", "value": -0.40 }],
+        "cml:upgrade_copper":  [{ "attribute": "polyfill:overclock_limit", "operation": "add", "value": 1.0  },
+                                { "attribute": "polyfill:fuel_efficiency", "operation": "add", "value": -0.40 }]
+      }
     }
+  },
+  "renderers": [
+    {
+      "type": "bettermodel",
+      "model_id": "crusher",
+      "animation": "on",
+      "speed": "speed_mult",
+      "when": "running",
+      "run": "crusher"
+    },
+    {
+      "type": "particle",
+      "particle": "SMOKE_NORMAL",
+      "count": "smoke_count",
+      "location": [0.5, 1.2, 0.5],
+      "spread_x": "0.15",
+      "spread_y": "0.05",
+      "spread_z": "0.15",
+      "interval": 3,
+      "when": "running",
+      "run": "crusher"
+    },
+    {
+      "type": "particle",
+      "particle": "CRIT",
+      "count": "1",
+      "location": { "x": 0.5, "y": "1.0 + pulse_y", "z": 0.5 },
+      "interval": 4,
+      "when": "running && overclock > 1.5",
+      "run": "crusher"
+    }
+  ],
+  "variables": {
+    "running": "processing && rpm > 0",
+    "speed_mult": "max(0.05, overclock)"
   },
   "buttons": [
     {

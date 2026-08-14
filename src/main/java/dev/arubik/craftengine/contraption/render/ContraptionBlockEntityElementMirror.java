@@ -209,13 +209,34 @@ public final class ContraptionBlockEntityElementMirror {
                 // best-effort
             }
 
-            // Path 3: BetterModel-driven visual owned directly by the block entity (e.g. the
-            // crusher's "on" animation model) — NOT part of CraftEngine's BlockEntityElement
-            // system at all, so paths 1/2 above never see it. See BetterModelCell javadoc.
+            // Path 3: Machine renderer visuals (ModelRendersDriven / BetterModelDriven) — NOT
+            // part of CraftEngine's BlockEntityElement system, so paths 1/2 above never see them.
+            // ModelRendersDriven (data-driven RendererManager) is checked first because it
+            // supersedes the old hand-written BetterModelDriven interface: a BE that implements
+            // ModelRendersDriven may expose BetterModel renderers AND ItemDisplaySpec entries via
+            // its RendererManager, so the manager is the authoritative source. Legacy
+            // BetterModelDriven is the fallback for hand-written BEs not yet migrated.
             try {
                 BlockEntity be = ceWorld.getBlockEntityAtIfLoaded(cePos, false);
-                if (be != null && be.controller instanceof dev.arubik.craftengine.machine.render.BetterModelDriven driven) {
-                    cells.add(new BetterModelCell(driven.betterModelRenderer(), local));
+                if (be != null) {
+                    if (be.controller instanceof dev.arubik.craftengine.machine.render.ModelRendersDriven mrd
+                            && mrd.rendererManager() != null) {
+                        dev.arubik.craftengine.machine.render.RendererManager mgr = mrd.rendererManager();
+                        java.util.List<dev.arubik.craftengine.machine.render.BetterModelMachineRenderer> bmList =
+                                mgr.betterModelRenderers();
+                        for (int i = 0; i < bmList.size(); i++) {
+                            dev.arubik.craftengine.machine.render.BetterModelMachineRenderer bmr = bmList.get(i);
+                            if (bmr != null) cells.add(new BetterModelCell(bmr, local));
+                        }
+                        java.util.List<dev.arubik.craftengine.machine.render.RendererSpec> specs = mgr.specs();
+                        for (int i = 0; i < specs.size(); i++) {
+                            if (specs.get(i) instanceof dev.arubik.craftengine.machine.render.RendererSpec.ItemDisplaySpec idSpec) {
+                                cells.add(new MachineItemDisplayCell(idSpec, mgr, i, local));
+                            }
+                        }
+                    } else if (be.controller instanceof dev.arubik.craftengine.machine.render.BetterModelDriven driven) {
+                        cells.add(new BetterModelCell(driven.betterModelRenderer(), local));
+                    }
                 }
             } catch (Throwable t) {
                 // best-effort — BetterModel absent, or renderer not shown yet
@@ -1056,6 +1077,235 @@ public final class ContraptionBlockEntityElementMirror {
         void despawnAll(List<Player> viewers) {
             closeTracker();
             shownTo.clear();
+        }
+    }
+
+    /**
+     * Mirrors a {@link dev.arubik.craftengine.machine.render.RendererSpec.ItemDisplaySpec} entry
+     * from a machine's {@link dev.arubik.craftengine.machine.render.RendererManager} into the
+     * bearing's real-world transform every tick.
+     *
+     * <p>Unlike the CraftEngine-driven {@link ItemDisplayCell} above (which wraps a static
+     * {@code ItemDisplayBlockEntityElement} baked at block-entity construction), this cell shows
+     * a <em>live</em> item whose identity is computed each tick by
+     * {@code RendererManager.tick()} (e.g. the item currently being processed by a machine).
+     * The entity is always spawned when the first viewer arrives; if the item slot is currently
+     * null (condition false), the display renders with no item stack (effectively invisible) and
+     * becomes visible as soon as the manager populates the slot.
+     *
+     * <p><b>Item-change detection.</b> {@link Cell#render}'s {@code metaChanged} gate only
+     * watches brightness, scale, and rotation — not the item reference. This class overrides
+     * {@link #render} to additionally push a metadata update whenever the item reference
+     * changes between ticks.
+     *
+     * <p><b>Rotation / scale / tilt.</b> The spec's authored {@code rotX/Y/Z} are baked into the
+     * {@code LeftRotation} metadata field; {@link #modelRotation} returns {@code null} (same
+     * reasoning as {@link ArmorStandCell} — the authored orientation is fixed in the spec and
+     * composing a tilt into it would require knowing BetterModel's own rotation semantics, which
+     * are out of scope here). Position and contraption-yaw follow the full live pose via
+     * {@code level.realWorldPositionOf}.
+     */
+    private static final class MachineItemDisplayCell extends Cell {
+        private final dev.arubik.craftengine.machine.render.RendererSpec.ItemDisplaySpec spec;
+        private final dev.arubik.craftengine.machine.render.RendererManager manager;
+        private final int specIndex;
+        private final int entityId;
+        private final UUID entityUuid;
+        private final Object despawnPacket;
+        /** Last item reference sent to clients — reference equality used for change detection. */
+        private org.bukkit.inventory.ItemStack lastSentItem;
+
+        MachineItemDisplayCell(dev.arubik.craftengine.machine.render.RendererSpec.ItemDisplaySpec spec,
+                               dev.arubik.craftengine.machine.render.RendererManager manager,
+                               int specIndex, net.minecraft.core.BlockPos local) {
+            super(local);
+            this.spec = spec;
+            this.manager = manager;
+            this.specIndex = specIndex;
+            this.entityId = net.minecraft.world.entity.Entity.nextEntityId();
+            this.entityUuid = UUID.randomUUID();
+            this.despawnPacket = MNms.INSTANCE.constructor$ClientboundRemoveEntitiesPacket(IntList.of(entityId));
+        }
+
+        @Override
+        Vector3f offset() {
+            String locExpr = spec.locationExpr();
+            if (locExpr != null && !locExpr.isEmpty()) {
+                try {
+                    dev.arubik.craftengine.machine.render.formula.PolyValue val =
+                        dev.arubik.craftengine.machine.render.formula.PolyFormula
+                            .compile(locExpr)
+                            .evaluate(dev.arubik.craftengine.machine.render.formula.PolyContext.builder().build());
+                    if (val instanceof dev.arubik.craftengine.machine.render.formula.PolyValue.Array a
+                            && a.elements().size() >= 3) {
+                        return new Vector3f(
+                            (float) a.elements().get(0).asNum() + 0.5f,
+                            (float) a.elements().get(1).asNum(),
+                            (float) a.elements().get(2).asNum() + 0.5f);
+                    }
+                } catch (Throwable ignored) {}
+            }
+            return new Vector3f(0.5f, 0f, 0.5f);
+        }
+
+        @Override
+        float baseYaw() {
+            // Check for rotY in locationExpr array element [4] (5-element) or [3] (4-element)
+            String locExpr = spec.locationExpr();
+            if (locExpr != null && !locExpr.isEmpty()) {
+                try {
+                    dev.arubik.craftengine.machine.render.formula.PolyValue val =
+                        dev.arubik.craftengine.machine.render.formula.PolyFormula
+                            .compile(locExpr)
+                            .evaluate(dev.arubik.craftengine.machine.render.formula.PolyContext.builder().build());
+                    if (val instanceof dev.arubik.craftengine.machine.render.formula.PolyValue.Array a) {
+                        // 4-element: [x,y,z,rotY]; 5-element: [x,y,z,rotX,rotY]
+                        if (a.elements().size() == 4) return (float) a.elements().get(3).asNum();
+                        if (a.elements().size() >= 5) return (float) a.elements().get(4).asNum();
+                    }
+                } catch (Throwable ignored) {}
+            }
+            return ef(spec.rotY(), 0f);
+        }
+
+        @Override
+        float basePitch() {
+            // Check for rotX in locationExpr array element [3] (5-element: [x,y,z,rotX,rotY])
+            String locExpr = spec.locationExpr();
+            if (locExpr != null && !locExpr.isEmpty()) {
+                try {
+                    dev.arubik.craftengine.machine.render.formula.PolyValue val =
+                        dev.arubik.craftengine.machine.render.formula.PolyFormula
+                            .compile(locExpr)
+                            .evaluate(dev.arubik.craftengine.machine.render.formula.PolyContext.builder().build());
+                    if (val instanceof dev.arubik.craftengine.machine.render.formula.PolyValue.Array a
+                            && a.elements().size() >= 5) {
+                        return (float) a.elements().get(3).asNum();
+                    }
+                } catch (Throwable ignored) {}
+            }
+            return ef(spec.rotX(), 0f);
+        }
+
+        /** Evaluate a spec field (String formula or literal) as float; falls back to {@code def}. */
+        private static float ef(String expr, float def) {
+            if (expr == null || expr.isEmpty()) return def;
+            try { return Float.parseFloat(expr.trim()); } catch (NumberFormatException ignored) {}
+            try {
+                return (float) dev.arubik.craftengine.machine.render.formula.PolyFormula
+                        .compile(expr).evaluateNum(
+                                dev.arubik.craftengine.machine.render.formula.PolyContext.builder().build());
+            } catch (Throwable ignored) { return def; }
+        }
+
+        /**
+         * No tilt composition — the authored {@code rotX/Y/Z} are baked into {@code LeftRotation}
+         * metadata directly; composing the contraption's live tilt into a spec-defined transform
+         * would require specifying an additional pose-space convention that the spec format does not
+         * carry. Position follows the full bearing pose via {@code level.realWorldPositionOf}.
+         */
+        @Override
+        Quaternionf modelRotation(ContraptionLevel level) {
+            return null;
+        }
+
+        @Override
+        void spawn(Player player, Vec3 realPos, float yawDegrees) {
+            Object add = MNms.INSTANCE.constructor$ClientboundAddEntityPacket(
+                    entityId, entityUuid, realPos.x, realPos.y, realPos.z,
+                    ef(spec.rotX(), 0f), yawDegrees, EntityType.ITEM_DISPLAY, 0, Vec3.ZERO, 0);
+            Object data = MNms.INSTANCE.constructor$ClientboundSetEntityDataPacket(entityId, buildMeta());
+            player.sendPackets(List.of(add, data), false);
+        }
+
+        @Override
+        void updatePosition(Player player, Vec3 realPos, float yawDegrees) {
+            player.sendPacket(MNms.INSTANCE.constructor$ClientboundEntityPositionSyncPacket(
+                    entityId, realPos.x, realPos.y, realPos.z, yawDegrees, ef(spec.rotX(), 0f), false), false);
+        }
+
+        @Override
+        void updateMetadata(Player player) {
+            player.sendPacket(MNms.INSTANCE.constructor$ClientboundSetEntityDataPacket(entityId, buildMeta()), false);
+        }
+
+        @Override
+        void despawn(Player player) {
+            player.sendPacket(despawnPacket, false);
+        }
+
+        /**
+         * Extends the standard render loop to push an extra metadata packet whenever the live
+         * item reference changes between ticks — a change not covered by {@link Cell#render}'s
+         * own {@code metaChanged} gate (which only watches brightness, scale, and rotation).
+         */
+        @Override
+        void render(List<Player> viewers, ContraptionLevel level, int blockLight, int skyLight, double scale) {
+            org.bukkit.inventory.ItemStack currentItem = manager.currentItems()[specIndex];
+            boolean itemChanged = currentItem != lastSentItem;
+            lastSentItem = currentItem;
+            // Delegate standard spawn / position / brightness+scale+rotation-metadata logic.
+            super.render(viewers, level, blockLight, skyLight, scale);
+            // If the item changed and some players already have the entity (not a fresh spawn this
+            // tick — they already received full metadata from spawn()), push a metadata update so
+            // the item change is visible immediately without waiting for the next light/scale tick.
+            // The double-send for players freshly spawned this tick is harmless (second packet is
+            // idempotent) and only occurs on the rare tick where item and brightness change together.
+            if (itemChanged && !shownTo.isEmpty()) {
+                List<Object> meta = buildMeta();
+                for (Player p : viewers) {
+                    UUID id = uuidOf(p);
+                    if (id != null && shownTo.contains(id)) {
+                        p.sendPacket(MNms.INSTANCE.constructor$ClientboundSetEntityDataPacket(entityId, meta), false);
+                    }
+                }
+            }
+        }
+
+        /**
+         * Builds the full entity metadata list for this cell: item stack (if available),
+         * authored scale and rotation, billboard mode, ambient brightness override, and
+         * interpolation window. Always reads the live item from the manager rather than a
+         * cached copy so spawn/updateMetadata/render all see the same current state.
+         */
+        private List<Object> buildMeta() {
+            org.bukkit.inventory.ItemStack item = manager.currentItems()[specIndex];
+            List<Object> values = new ArrayList<>();
+            if (item != null) {
+                Object nmsItem = org.bukkit.craftbukkit.inventory.CraftItemStack.asNMSCopy(item);
+                net.momirealms.craftengine.bukkit.entity.data.DisplayData.ItemDisplayData.ItemStack
+                        .addEntityData(nmsItem, values);
+            }
+            float s = ef(spec.scale(), 1f);
+            net.momirealms.craftengine.bukkit.entity.data.DisplayData.Scale
+                    .addEntityData(new Vector3f(s, s, s), values);
+            float rx = ef(spec.rotX(), 0f), ry = ef(spec.rotY(), 0f), rz = ef(spec.rotZ(), 0f);
+            if (rx != 0 || ry != 0 || rz != 0) {
+                Quaternionf q = new Quaternionf()
+                        .rotateY((float) Math.toRadians(ry))
+                        .rotateX((float) Math.toRadians(rx))
+                        .rotateZ((float) Math.toRadians(rz));
+                net.momirealms.craftengine.bukkit.entity.data.DisplayData.LeftRotation.addEntityData(q, values);
+            }
+            byte bb = billboardByte(spec.billboard());
+            if (bb != 0) {
+                net.momirealms.craftengine.bukkit.entity.data.DisplayData.BillboardConstraints
+                        .addEntityData(bb, values);
+            }
+            net.momirealms.craftengine.bukkit.entity.data.DisplayData.BrightnessOverride
+                    .addEntityData((blockLight() << 4) | (skyLight() << 20), values);
+            addInterpolationTuning(values);
+            return values;
+        }
+
+        private static byte billboardByte(String mode) {
+            if (mode == null) return 0;
+            return switch (mode) {
+                case "vertical"   -> (byte) 1;
+                case "horizontal" -> (byte) 2;
+                case "center"     -> (byte) 3;
+                default           -> (byte) 0; // "none" or unrecognised
+            };
         }
     }
 }

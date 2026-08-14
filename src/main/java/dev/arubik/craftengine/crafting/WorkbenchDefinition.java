@@ -44,9 +44,13 @@ public final class WorkbenchDefinition {
     private final Key multiblock;
     private final List<Integer> toolSlots;
     private final List<RenderSlot> renderSlots;
+    private final java.util.Map<String, dev.arubik.craftengine.machine.render.variable.VariableSpec> variables;
+    private final java.util.List<dev.arubik.craftengine.machine.render.RendererSpec> renderers;
 
     public WorkbenchDefinition(Key id, String title, int size, SlotLayout layout, Structure structure,
-            Key multiblock, List<Integer> toolSlots, List<RenderSlot> renderSlots) {
+            Key multiblock, List<Integer> toolSlots, List<RenderSlot> renderSlots,
+            java.util.Map<String, dev.arubik.craftengine.machine.render.variable.VariableSpec> variables,
+            java.util.List<dev.arubik.craftengine.machine.render.RendererSpec> renderers) {
         this.id = id;
         this.title = title;
         this.size = size;
@@ -55,6 +59,8 @@ public final class WorkbenchDefinition {
         this.multiblock = multiblock;
         this.toolSlots = List.copyOf(toolSlots);
         this.renderSlots = List.copyOf(renderSlots);
+        this.variables = variables == null ? java.util.Map.of() : java.util.Map.copyOf(variables);
+        this.renderers = renderers == null ? java.util.List.of() : java.util.List.copyOf(renderers);
     }
 
     public Key id() {
@@ -123,9 +129,36 @@ public final class WorkbenchDefinition {
     /**
      * Slots whose contents are drawn in the world by a {@code workbench_slot}
      * renderer.
+     *
+     * @deprecated Populated only when the JSON uses the legacy {@code slots.render}
+     *             format.  New definitions use {@link #renderers()} instead.
      */
+    @Deprecated
     public List<RenderSlot> renderSlots() {
         return renderSlots;
+    }
+
+    /**
+     * Named variables declared in the {@code "variables"} JSON block.
+     *
+     * <p>Each entry maps a variable name to its
+     * {@link dev.arubik.craftengine.machine.render.variable.VariableSpec}, which
+     * describes how the value is obtained at runtime. Renderer specs reference
+     * variables via {@code "$name"} tokens in their condition and item fields.
+     */
+    public java.util.Map<String, dev.arubik.craftengine.machine.render.variable.VariableSpec> variables() {
+        return variables;
+    }
+
+    /**
+     * Renderer entries declared in the {@code "renderers"} JSON array.
+     *
+     * <p>Each entry is a {@link dev.arubik.craftengine.machine.render.RendererSpec}
+     * variant describing how this workbench's items should be visually represented
+     * and under what condition.
+     */
+    public java.util.List<dev.arubik.craftengine.machine.render.RendererSpec> renderers() {
+        return renderers;
     }
 
     public static WorkbenchDefinition byName(String name) {

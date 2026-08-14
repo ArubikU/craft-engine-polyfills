@@ -29,9 +29,11 @@ import net.momirealms.craftengine.core.util.Key;
  * recipe behaviour but cannot share a superclass, so the shared half lives in
  * {@link DataMachineSupport} and both delegate to it.
  */
-public class DataMultiBlockMachineBlockEntity extends MultiBlockMachineBlockEntity {
+public class DataMultiBlockMachineBlockEntity extends MultiBlockMachineBlockEntity
+        implements dev.arubik.craftengine.machine.render.ModelRendersDriven {
 
     private final MachineDefinition definition;
+    private dev.arubik.craftengine.machine.render.RendererManager rendererManager;
     private MachineMenuConfig menuConfig = MachineMenuConfig.parse(key -> null);
     private List<MachineBar> bars = List.of();
     private java.util.Map<Key, List<dev.arubik.craftengine.machine.attribute.MachineAttributes.Mod>> upgradeDefs =
@@ -69,6 +71,97 @@ public class DataMultiBlockMachineBlockEntity extends MultiBlockMachineBlockEnti
         }
         if (definition.io() != null)
             setIOConfiguration(definition.io());
+        if (!definition.renderers().isEmpty()) {
+            this.rendererManager = new dev.arubik.craftengine.machine.render.RendererManager(
+                    definition.renderers(), definition.variables());
+        }
+    }
+
+    @Override
+    public dev.arubik.craftengine.machine.render.RendererManager rendererManager() {
+        return rendererManager;
+    }
+
+    @Override
+    public void tick(net.minecraft.world.level.Level level, net.minecraft.core.BlockPos pos,
+            net.momirealms.craftengine.core.block.ImmutableBlockState state) {
+        super.tick(level, pos, state);
+        if (rendererManager != null && level instanceof net.minecraft.server.level.ServerLevel sl) {
+            try {
+                // Snapshot fluid/gas tanks
+                java.util.Map<String, double[]> fluidTankData = new java.util.LinkedHashMap<>();
+                for (dev.arubik.craftengine.fluid.FluidTank tank : fluidTanks) {
+                    try {
+                        var stored = tank.getFluid(sl, pos);
+                        fluidTankData.put(tank.getName(), new double[]{ stored.getAmount(), tank.getCapacity() });
+                    } catch (Throwable ignored) {}
+                }
+                java.util.Map<String, double[]> gasTankData = new java.util.LinkedHashMap<>();
+                for (dev.arubik.craftengine.gas.GasTank tank : gasTanks) {
+                    try {
+                        var stored = tank.getGas(sl, pos);
+                        gasTankData.put(tank.getName(), new double[]{ stored.getAmount(), tank.getCapacity() });
+                    } catch (Throwable ignored) {}
+                }
+                // Snapshot upgrades
+                java.util.Map<String, Integer> upgradesByType = new java.util.LinkedHashMap<>();
+                if (!upgradeDefs.isEmpty()) {
+                    for (int upSlot : definition.upgrades().slots()) {
+                        net.minecraft.world.item.ItemStack nmsItem = getItem(upSlot);
+                        if (nmsItem.isEmpty()) continue;
+                        try {
+                            var ce = net.momirealms.craftengine.bukkit.api.CraftEngineItems.byItemStack(
+                                org.bukkit.craftbukkit.inventory.CraftItemStack.asBukkitCopy(nmsItem));
+                            String uid = ce != null
+                                ? ce.id().namespace() + ":" + ce.id().value()
+                                : net.minecraft.core.registries.BuiltInRegistries.ITEM
+                                    .getKey(nmsItem.getItem()).toString();
+                            upgradesByType.merge(uid, 1, Integer::sum);
+                        } catch (Throwable ignored) {}
+                    }
+                }
+                int redstonePower = 0;
+                try { redstonePower = sl.getBestNeighborSignal(pos); } catch (Throwable ignored) {}
+
+                dev.arubik.craftengine.machine.render.variable.MachineRenderContext ctx =
+                        new dev.arubik.craftengine.machine.render.variable.MachineRenderContext(
+                                0, 0, 0,
+                                progress, maxProgress, 0,
+                                isProcessing(), redstonePower > 0, false, burnTime > 0,
+                                null, upgradesByType, fluidTankData, gasTankData, redstonePower);
+
+                net.minecraft.core.Direction facing = getFacing(level);
+                String facingName = facing != null ? facing.getName().toLowerCase() : "north";
+                float yaw = facing == null ? 0f : switch (facing) {
+                    case SOUTH -> 0f; case WEST -> 90f; case NORTH -> 180f; case EAST -> 270f; default -> 0f;
+                };
+                // Augment with Machine position and facing for player_facing() etc.
+                // MultiBlock context: rel pos always 0,0,0 for master, part count from schema
+                int partCount = 0;
+                try { partCount = getSchema().getParts().size(); } catch (Throwable ignored) {}
+                dev.arubik.craftengine.machine.render.formula.PolyContext machineCtx =
+                    dev.arubik.craftengine.machine.render.formula.PolyContext.builder()
+                        .copyFrom(ctx.toPolyContext())
+                        .machinePos(pos.getX()+0.5, pos.getY()+0.5, pos.getZ()+0.5, facingName, yaw,
+                            ((org.bukkit.craftbukkit.CraftWorld) sl.getWorld()))
+                        .contraption(sl)
+                        .world(sl)
+                        .multiBlock(0, 0, 0, true, partCount, true)
+                        .build();
+                ctx = ctx.augmented(machineCtx);
+
+                rendererManager.tick(ctx, sl, pos.getX(), pos.getY(), pos.getZ(), yaw);
+            } catch (Throwable ignored) {}
+        }
+    }
+
+    @Override
+    public void unregister() {
+        super.unregister();
+        if (rendererManager != null) {
+            rendererManager.close();
+            rendererManager = null;
+        }
     }
 
     public MachineDefinition definition() {
@@ -86,6 +179,43 @@ public class DataMultiBlockMachineBlockEntity extends MultiBlockMachineBlockEnti
     public void setUpgradeDefs(
             java.util.Map<Key, List<dev.arubik.craftengine.machine.attribute.MachineAttributes.Mod>> defs) {
         this.upgradeDefs = defs == null ? java.util.Map.of() : defs;
+    }
+
+    private java.util.List<dev.arubik.craftengine.machine.attribute.MachineAttributes.Mod> modsOf(int slot) {
+        net.momirealms.craftengine.core.util.Key id = upgradeItemId(getItem(slot));
+        return id == null ? null : upgradeDefs.get(id);
+    }
+
+    private static double clamp(double v, double lo, double hi) {
+        return Math.max(lo, Math.min(hi, v));
+    }
+
+    @Override
+    protected void recomputeUpgrades() {
+        if (upgradeDefs.isEmpty()) {
+            super.recomputeUpgrades();
+            return;
+        }
+        int count = definition.upgrades().size();
+        int[] slots = definition.upgrades().slots();
+        java.util.List<dev.arubik.craftengine.machine.attribute.MachineAttributes.Mod> all = new java.util.ArrayList<>();
+        for (int i = 0; i < count; i++) {
+            var m = modsOf(slots[i]);
+            if (m != null) all.addAll(m);
+        }
+        int extra = (int) Math.round(dev.arubik.craftengine.machine.attribute.MachineAttributes.compute(all)
+                .getOrDefault(dev.arubik.craftengine.machine.attribute.MachineAttributes.EXTRA_SLOTS, 0.0));
+        int unlocked = Math.max(definition.upgrades().baseUnlocked(),
+                Math.min(count, definition.upgrades().baseUnlocked() + extra));
+        java.util.List<dev.arubik.craftengine.machine.attribute.MachineAttributes.Mod> active = new java.util.ArrayList<>();
+        for (int i = 0; i < unlocked; i++) {
+            var m = modsOf(slots[i]);
+            if (m != null) active.addAll(m);
+        }
+        var attrs = dev.arubik.craftengine.machine.attribute.MachineAttributes.compute(active);
+        double gen = clamp(attrs.getOrDefault(dev.arubik.craftengine.machine.attribute.MachineAttributes.GENERATION, 0.0), -0.95, 32.0);
+        double overLimit = clamp(attrs.getOrDefault(dev.arubik.craftengine.machine.attribute.MachineAttributes.OVERCLOCK_LIMIT, 0.0), 0.0, 32.0);
+        this.upgradeModifiers = new dev.arubik.craftengine.machine.upgrade.UpgradeModifiers(1.0, 1.0 - gen, 0.0);
     }
 
     // --------------------------------------------------------------- paging
@@ -267,6 +397,29 @@ public class DataMultiBlockMachineBlockEntity extends MultiBlockMachineBlockEnti
             layout.setDynamicProvider(infoSlot,
                     (machine, tick) -> dev.arubik.craftengine.machine.menu.RecipeInfoIcon.build(machine,
                             getMachineId(), machine.getUpgradeModifiers().speedMultiplier(), 0.0));
+        // Install definition buttons (upgrade page nav, overclock, etc.)
+        for (MachineDefinition.ButtonSpec spec : definition.buttons()) {
+            final MachineDefinition.ButtonSpec s = spec;
+            try {
+                net.momirealms.craftengine.core.util.Key iconKey = s.icon() != null
+                        ? net.momirealms.craftengine.core.util.Key.of(s.icon())
+                        : net.momirealms.craftengine.core.util.Key.of("cml", "gui_empty");
+                layout.addButton(s.slot(),
+                    (machine, tick) -> dev.arubik.craftengine.machine.menu.MenuText.iconItem(
+                            iconKey, org.bukkit.Material.PAPER,
+                            net.kyori.adventure.text.Component.text(s.name() == null ? "" : s.name())),
+                    (machine, player) -> {
+                        String action = s.action();
+                        if (action != null && action.startsWith("open_page:")) {
+                            try {
+                                int page = Integer.parseInt(action.substring(10));
+                                if (machine instanceof DataMultiBlockMachineBlockEntity mb)
+                                    mb.turnPage(page - mb.currentPage() - 1);
+                            } catch (Throwable ignored) {}
+                        }
+                    });
+            } catch (Throwable ignored) {}
+        }
         return layout;
     }
 

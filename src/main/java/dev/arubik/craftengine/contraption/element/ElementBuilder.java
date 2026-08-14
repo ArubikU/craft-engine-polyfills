@@ -40,6 +40,8 @@ public final class ElementBuilder {
         // Index all existing position-keyed elements (block + special subclasses)
         Map<BlockPos, ContraptionBlockElement> existingByPos = new HashMap<>();
         Map<BlockPos, ContraptionElement> existingSpecialByPos = new HashMap<>();
+        Map<BlockPos, dev.arubik.craftengine.contraption.element.special.ContraptionBetterModelElement> existingBMByPos = new HashMap<>();
+        Map<BlockPos, dev.arubik.craftengine.contraption.element.special.ContraptionModelEngineElement> existingMEByPos = new HashMap<>();
         for (ContraptionElement e : state.elements()) {
             if (e instanceof ContraptionBlockElement be) {
                 existingByPos.put(be.localPos(), be);
@@ -47,6 +49,10 @@ public final class ElementBuilder {
                 existingSpecialByPos.put(sk.localPos(), sk);
             } else if (e instanceof dev.arubik.craftengine.contraption.element.special.ContraptionSignElement sg) {
                 existingSpecialByPos.put(sg.localPos(), sg);
+            } else if (e instanceof dev.arubik.craftengine.contraption.element.special.ContraptionBetterModelElement bm) {
+                existingBMByPos.put(bm.localPos(), bm);
+            } else if (e instanceof dev.arubik.craftengine.contraption.element.special.ContraptionModelEngineElement me) {
+                existingMEByPos.put(me.localPos(), me);
             }
         }
 
@@ -144,16 +150,124 @@ public final class ElementBuilder {
 
             // Vanilla fluid overlay (water/lava/waterlogged blocks)
             net.minecraft.world.level.material.FluidState fs = blockState.getFluidState();
-            if (!fs.isEmpty()) {
+            if (!fs.isEmpty() && dev.arubik.craftengine.contraption.config.ContraptionConfig.get().fluidRenderEnabled()) {
                 boolean lava = fs.getType() == net.minecraft.world.level.material.Fluids.LAVA
                         || fs.getType() == net.minecraft.world.level.material.Fluids.FLOWING_LAVA;
+                boolean waterlogged = !lava
+                        && blockState.hasProperty(net.minecraft.world.level.block.state.properties.BlockStateProperties.WATERLOGGED)
+                        && blockState.getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.WATERLOGGED);
                 boolean enabled = lava
                         ? dev.arubik.craftengine.contraption.config.ContraptionConfig.get().renderLava()
                         : dev.arubik.craftengine.contraption.config.ContraptionConfig.get().renderWater();
                 if (enabled) {
                     elements.add(new dev.arubik.craftengine.contraption.element.special.ContraptionVanillaFluidElement(
-                            local, lava, fs.getAmount()));
+                            local, lava, waterlogged, fs));
                 }
+            }
+        }
+
+        // --- BetterModel elements pass ---
+        if (dev.arubik.craftengine.machine.render.BetterModelMachineRenderer.available()) {
+            for (BlockPos local : livePositions) {
+                BlockState bs = level.getBlockState(local);
+                if (bs == null || bs.isAir()) continue;
+                dev.arubik.craftengine.contraption.element.special.ContraptionBetterModelElement existingBM = existingBMByPos.get(local);
+                if (existingBM != null) {
+                    elements.add(existingBM);
+                    continue;
+                }
+                try {
+                    net.momirealms.craftengine.core.block.entity.BlockEntity ceBlockEntity =
+                        dev.arubik.craftengine.block.entity.BukkitBlockEntityTypes.getIfLoaded(level.serverLevel(), local);
+                    if (ceBlockEntity != null && ceBlockEntity.controller instanceof dev.arubik.craftengine.machine.render.BetterModelDriven driven) {
+                        elements.add(new dev.arubik.craftengine.contraption.element.special.ContraptionBetterModelElement(local, driven.betterModelRenderer()));
+                    }
+                } catch (Throwable ignored) {}
+            }
+            // Despawn BM elements for removed positions
+            for (java.util.Map.Entry<BlockPos, dev.arubik.craftengine.contraption.element.special.ContraptionBetterModelElement> entry : existingBMByPos.entrySet()) {
+                if (!livePositions.contains(entry.getKey())) {
+                    entry.getValue().despawn(viewers);
+                }
+            }
+        }
+
+        // --- ModelEngine elements pass ---
+        if (dev.arubik.craftengine.machine.render.ModelEngineMachineRenderer.available()) {
+            for (BlockPos local : livePositions) {
+                BlockState bs = level.getBlockState(local);
+                if (bs == null || bs.isAir()) continue;
+                dev.arubik.craftengine.contraption.element.special.ContraptionModelEngineElement existingME = existingMEByPos.get(local);
+                if (existingME != null) {
+                    elements.add(existingME);
+                    continue;
+                }
+                try {
+                    net.momirealms.craftengine.core.block.entity.BlockEntity ceBlockEntity =
+                        dev.arubik.craftengine.block.entity.BukkitBlockEntityTypes.getIfLoaded(level.serverLevel(), local);
+                    if (ceBlockEntity != null && ceBlockEntity.controller instanceof dev.arubik.craftengine.machine.render.ModelEngineDriven driven) {
+                        elements.add(new dev.arubik.craftengine.contraption.element.special.ContraptionModelEngineElement(local, driven.modelEngineRenderer()));
+                    }
+                } catch (Throwable ignored) {}
+            }
+            // Despawn ME elements for removed positions
+            for (java.util.Map.Entry<BlockPos, dev.arubik.craftengine.contraption.element.special.ContraptionModelEngineElement> entry : existingMEByPos.entrySet()) {
+                if (!livePositions.contains(entry.getKey())) {
+                    entry.getValue().despawn(viewers);
+                }
+            }
+        }
+
+        // --- ModelRendersDriven pass: BetterModel renderers + packet-only display/particle cells ---
+        // Index existing machine renderer elements so they can be reused across ticks.
+        Map<BlockPos, ContraptionMachineRendererElement> existingMachineRenderers = new HashMap<>();
+        for (ContraptionElement e : state.elements()) {
+            if (e instanceof ContraptionMachineRendererElement mre) {
+                existingMachineRenderers.put(mre.localPos(), mre);
+            }
+        }
+        for (BlockPos local : livePositions) {
+            BlockState bs = level.getBlockState(local);
+            if (bs == null || bs.isAir()) continue;
+            try {
+                net.momirealms.craftengine.core.block.entity.BlockEntity ceBlockEntity =
+                    dev.arubik.craftengine.block.entity.BukkitBlockEntityTypes.getIfLoaded(level.serverLevel(), local);
+                if (ceBlockEntity == null) continue;
+                if (!(ceBlockEntity.controller instanceof dev.arubik.craftengine.machine.render.ModelRendersDriven mrd)) continue;
+                dev.arubik.craftengine.machine.render.RendererManager mgr = mrd.rendererManager();
+                if (mgr == null) continue;
+
+                // BetterModel renderers from the RendererManager — create/reuse ContraptionBetterModelElement.
+                // Skip positions already handled by the BM pass above (existingBMByPos would have them).
+                if (dev.arubik.craftengine.machine.render.BetterModelMachineRenderer.available()) {
+                    java.util.List<dev.arubik.craftengine.machine.render.BetterModelMachineRenderer> bmList =
+                            mgr.betterModelRenderers();
+                    for (dev.arubik.craftengine.machine.render.BetterModelMachineRenderer bmr : bmList) {
+                        if (bmr == null) continue;
+                        // Only create a new BM element if this position wasn't already handled by
+                        // the existing BM pass (which handles BetterModelDriven, not ModelRendersDriven).
+                        if (!existingBMByPos.containsKey(local)) {
+                            elements.add(new dev.arubik.craftengine.contraption.element.special.ContraptionBetterModelElement(local, bmr));
+                        }
+                    }
+                }
+
+                // Non-BM specs (ItemDisplay, TextDisplay, FluidTank, Particle) — use the element.
+                boolean hasNonBmSpec = mgr.specs().stream().anyMatch(s ->
+                        s instanceof dev.arubik.craftengine.machine.render.RendererSpec.ItemDisplaySpec
+                                || s instanceof dev.arubik.craftengine.machine.render.RendererSpec.TextDisplaySpec
+                                || s instanceof dev.arubik.craftengine.machine.render.RendererSpec.FluidTankSpec
+                                || s instanceof dev.arubik.craftengine.machine.render.RendererSpec.ParticleSpec);
+                if (hasNonBmSpec) {
+                    ContraptionMachineRendererElement existing = existingMachineRenderers.get(local);
+                    elements.add(existing != null ? existing : new ContraptionMachineRendererElement(local));
+                }
+            } catch (Throwable ignored) {}
+        }
+        // Despawn machine renderer elements for positions no longer in the contraption.
+        for (java.util.Map.Entry<BlockPos, ContraptionMachineRendererElement> entry : existingMachineRenderers.entrySet()) {
+            if (!livePositions.contains(entry.getKey())) {
+                entry.getValue().despawn(viewers);
             }
         }
 

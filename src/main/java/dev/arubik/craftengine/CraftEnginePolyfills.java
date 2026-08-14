@@ -250,6 +250,8 @@ public final class CraftEnginePolyfills extends JavaPlugin {
         // before definitions before recipes) and freezes every registry afterwards, so
         // nothing can register content at runtime and have it silently vanish later.
         dev.arubik.craftengine.fluid.FluidTypeLoader.bootstrap();
+        // Resolve contraption fluid render patterns from fluid type JSONs
+        dev.arubik.craftengine.contraption.config.ContraptionConfig.resolveFluidPatterns(getDataFolder());
         dev.arubik.craftengine.gas.GasTypeLoader.bootstrap();
         dev.arubik.craftengine.pipe.PipeTypeLoader.bootstrap();
         dev.arubik.craftengine.pipe.PumpLoader.bootstrap();
@@ -273,6 +275,12 @@ public final class CraftEnginePolyfills extends JavaPlugin {
         // Machine definitions likewise: the data_machine behavior resolves its definition
         // when CraftEngine constructs the block, which is before the reload event.
         dev.arubik.craftengine.machine.MachineDefinitionLoader.load();
+        // PolyFormula scripts (.pf): save bundled examples on first run, then load all scripts
+        // from plugins/CraftEnginePolyfill/scripts/*.pf into the global registry so renderer
+        // specs that declare "run": "<name>" can look up their script at tick time.
+        for (String res : listBundledResources("scripts", ".pf"))
+            saveDefaultResource(res);
+        dev.arubik.craftengine.machine.render.formula.PolyScriptRegistry.loadAll(getDataFolder());
         dev.arubik.craftengine.data.Registries.addLoader("machine_recipes",
                 dev.arubik.craftengine.data.Registries.PHASE_RECIPES,
                 dev.arubik.craftengine.machine.recipe.loader.RecipeManager::loadRecipes);

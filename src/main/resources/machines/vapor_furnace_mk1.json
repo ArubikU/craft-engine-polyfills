@@ -19,7 +19,16 @@
     "info": 4,
     "upgrade": {
       "count": 9,
-      "base_unlocked": 3
+      "base_unlocked": 3,
+      "definitions": {
+        "cml:iron_cast":       [{ "attribute": "polyfill:extra_slots",     "operation": "add", "value": 2 }],
+        "cml:gold_cast":       [{ "attribute": "polyfill:extra_slots",     "operation": "add", "value": 3 }],
+        "cml:upgrade_iron":    [{ "attribute": "polyfill:generation",      "operation": "add", "value": 0.05 }],
+        "cml:upgrade_gold":    [{ "attribute": "polyfill:generation",      "operation": "add", "value": 0.10 },
+                                { "attribute": "polyfill:fuel_efficiency", "operation": "add", "value": 0.10 }],
+        "cml:upgrade_diamond": [{ "attribute": "polyfill:generation",      "operation": "add", "value": 0.15 },
+                                { "attribute": "polyfill:overclock_limit", "operation": "add", "value": 0.5  }]
+      }
     }
   },
   "buttons": [

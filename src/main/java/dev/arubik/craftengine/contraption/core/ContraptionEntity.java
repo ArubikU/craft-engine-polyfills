@@ -1,6 +1,10 @@
 package dev.arubik.craftengine.contraption.core;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -40,6 +44,8 @@ public final class ContraptionEntity {
     private double lastRenderX = Double.NaN, lastRenderY, lastRenderZ, lastRenderYaw, lastRenderPitch, lastRenderRoll;
     /** Last uniform SCALE rendered (roadmap item #9 — per-contraption {@code scale}); a change marks the swarm "moved" so every cell's position/size packet is resent. Starts at {@code 1.0} (un-scaled). */
     private double lastRenderScale = 1.0;
+    /** Players currently receiving element (visual display) packets — used to despawn when culling removes them. */
+    private final Set<UUID> elementViewerIds = ConcurrentHashMap.newKeySet();
 
     public ContraptionEntity(ContraptionState state) {
         this.state = state;
@@ -177,6 +183,7 @@ public final class ContraptionEntity {
         for (dev.arubik.craftengine.contraption.element.ContraptionElement e : state.elements()) {
             e.despawn(viewers);
         }
+        elementViewerIds.clear();
         renderSuspended = true;
         markMoved();
     }
@@ -323,9 +330,109 @@ public final class ContraptionEntity {
                                 double roll, double scale, boolean moved, ServerLevel realLevel) {
         List<dev.arubik.craftengine.contraption.element.ContraptionElement> elements = state.elements();
         if (elements.isEmpty()) return;
+
+        // --- Entity Culling ---
+        dev.arubik.craftengine.contraption.config.ContraptionConfig cfg =
+                dev.arubik.craftengine.contraption.config.ContraptionConfig.get();
+        List<Player> culledViewers;
+        if (cfg.entityCullingEnabled()) {
+            double maxDistSq = cfg.entityCullingDistance() * cfg.entityCullingDistance();
+            culledViewers = new ArrayList<>(viewers.size());
+            for (Player p : viewers) {
+                try {
+                    Object pp = p.platformPlayer();
+                    if (pp instanceof org.bukkit.entity.Player bp) {
+                        org.bukkit.Location loc = bp.getLocation();
+                        double dx = loc.getX() - bearing.x;
+                        double dy = loc.getY() - bearing.y;
+                        double dz = loc.getZ() - bearing.z;
+                        if (dx * dx + dy * dy + dz * dz <= maxDistSq) {
+                            culledViewers.add(p);
+                        }
+                    }
+                } catch (Throwable ignored) {
+                    culledViewers.add(p);
+                }
+            }
+            // Despawn elements for viewers who moved out of culling range
+            if (!elementViewerIds.isEmpty()) {
+                Set<UUID> newIds = new java.util.HashSet<>(culledViewers.size());
+                for (Player p : culledViewers) newIds.add(p.uuid());
+                List<Player> departed = new ArrayList<>();
+                for (Player p : viewers) {
+                    if (elementViewerIds.contains(p.uuid()) && !newIds.contains(p.uuid())) {
+                        departed.add(p);
+                    }
+                }
+                if (!departed.isEmpty()) {
+                    for (dev.arubik.craftengine.contraption.element.ContraptionElement el : elements) {
+                        el.despawn(departed);
+                    }
+                }
+            }
+            // --- Frustum culling (applied after distance filter) ---
+            if (cfg.entityCullingFrustumEnabled() && !culledViewers.isEmpty()) {
+                double halfFovCos = Math.cos(Math.toRadians(cfg.entityCullingFovDegrees() / 2.0));
+                double nearBypassSq = cfg.entityCullingNearBypass() * cfg.entityCullingNearBypass();
+                double expansion = cfg.entityCullingExpansion();
+                List<Player> frustumPassed = new ArrayList<>(culledViewers.size());
+                for (Player p : culledViewers) {
+                    try {
+                        Object pp = p.platformPlayer();
+                        if (!(pp instanceof org.bukkit.entity.Player bp)) { frustumPassed.add(p); continue; }
+                        org.bukkit.Location eye = bp.getEyeLocation();
+                        double dx = bearing.x - eye.getX();
+                        double dy = bearing.y - eye.getY();
+                        double dz = bearing.z - eye.getZ();
+                        double distSq = dx * dx + dy * dy + dz * dz;
+                        // Always show if within near_bypass distance
+                        if (distSq <= nearBypassSq) { frustumPassed.add(p); continue; }
+                        double dist = Math.sqrt(distSq);
+                        // Player look direction (Bukkit yaw convention: 0=south, 90=west, 180=north, 270=east)
+                        float eyeYaw = eye.getYaw();
+                        float eyePitch = eye.getPitch();
+                        double cosP = Math.cos(Math.toRadians(eyePitch));
+                        double lookX = -Math.sin(Math.toRadians(eyeYaw)) * cosP;
+                        double lookY = -Math.sin(Math.toRadians(eyePitch));
+                        double lookZ =  Math.cos(Math.toRadians(eyeYaw)) * cosP;
+                        // Dot product of look direction and direction to bearing
+                        double dot = (dx * lookX + dy * lookY + dz * lookZ) / dist;
+                        // Account for contraption bounding radius: expand FOV cone by atan(expansion/dist)
+                        double expandedHalfFovCos = halfFovCos;
+                        if (expansion > 0) {
+                            double expandAngle = Math.atan(expansion / dist);
+                            expandedHalfFovCos = Math.cos(Math.max(0, Math.toRadians(cfg.entityCullingFovDegrees() / 2.0) - expandAngle));
+                        }
+                        if (dot >= expandedHalfFovCos) frustumPassed.add(p);
+                    } catch (Throwable ignored) { frustumPassed.add(p); }
+                }
+                // Despawn for players who passed distance but failed frustum
+                if (frustumPassed.size() < culledViewers.size() && !elementViewerIds.isEmpty()) {
+                    List<Player> frustumDeparted = new ArrayList<>();
+                    Set<UUID> frustumPassedIds = new java.util.HashSet<>();
+                    for (Player p : frustumPassed) frustumPassedIds.add(p.uuid());
+                    for (Player p : culledViewers) {
+                        if (elementViewerIds.contains(p.uuid()) && !frustumPassedIds.contains(p.uuid())) {
+                            frustumDeparted.add(p);
+                        }
+                    }
+                    if (!frustumDeparted.isEmpty()) {
+                        for (dev.arubik.craftengine.contraption.element.ContraptionElement el : elements) {
+                            el.despawn(frustumDeparted);
+                        }
+                    }
+                }
+                culledViewers = frustumPassed;
+            }
+            elementViewerIds.clear();
+            for (Player p : culledViewers) elementViewerIds.add(p.uuid());
+        } else {
+            culledViewers = viewers;
+        }
+
         dev.arubik.craftengine.contraption.element.RenderContext ctx =
                 new dev.arubik.craftengine.contraption.element.RenderContext(
-                        viewers, bearing, yaw, pitch, roll, scale, moved, state.level(), realLevel, state.lightMap(), elements);
+                        culledViewers, bearing, yaw, pitch, roll, scale, moved, state.level(), realLevel, state.lightMap(), elements);
         for (dev.arubik.craftengine.contraption.element.ContraptionElement element : elements) {
             if (!element.isValid()) continue;
             element.tick(ctx);

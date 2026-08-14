@@ -125,3 +125,34 @@ testserver/
 logs/
 !libs/asp-api-4.2.0.jar
 !libs/asp-nms.jar
+
+# Decompiled / scratch / temp analysis folders
+bk_tmp/
+ce_tmp/
+nms_tmp/
+nms_tmp2/
+ceref/
+decompiled/
+tools/__pycache__/
+tools/*.pyc
+bin/
+target/
+
+# Scratch outputs
+probe_out.txt
+build_log.txt
+build_output.txt
+errors.log
+errors.txt
+context.md
+replay_pid*.log
+*.log
+
+# Markdown audit/migration notes (generated, not source)
+CONTRAPTION_API_COMPLETE.md
+CONTRAPTION_API_EXTRACTION.md
+CONTRAPTION_API_STATUS.md
+MIGRATION_AUDIT_SUMMARY.md
+MOTOR_MIGRATION_AUDIT.md
+MIGRATION-*.md
+migration-guide.md

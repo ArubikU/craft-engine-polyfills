@@ -73,8 +73,52 @@ public class DataMachineBehavior extends MachineBlockBehavior {
         DataMachineBlockEntity machine = new DataMachineBlockEntity(blockEntity, definition);
         machine.setMenuConfig(menuConfig);
         machine.setBars(bars);
-        machine.setUpgradeDefs(upgradeDefs);
+        // Prefer definitions from the machine JSON; fall back to block-behavior YAML
+        if (!definition.upgradeDefs().isEmpty()) {
+            machine.setUpgradeDefs(definition.upgradeDefs());
+        } else {
+            machine.setUpgradeDefs(upgradeDefs);
+        }
         return machine;
+    }
+
+    /**
+     * JSON-native variant of {@link #parseUpgrades}: parses a {@code "definitions"} block directly
+     * from a {@link com.google.gson.JsonObject}. Keys are CE item IDs; values are arrays of
+     * modifier objects with {@code attribute}, {@code operation}, and {@code value} fields.
+     *
+     * <p>Used by {@link dev.arubik.craftengine.machine.MachineDefinitionLoader} to embed upgrade
+     * definitions in the machine JSON rather than in block-behavior YAML.
+     */
+    public static java.util.Map<Key, List<dev.arubik.craftengine.machine.attribute.MachineAttributes.Mod>>
+            parseUpgradeDefsFromJson(com.google.gson.JsonObject obj) {
+        java.util.Map<Key, List<dev.arubik.craftengine.machine.attribute.MachineAttributes.Mod>> out =
+                new java.util.HashMap<>();
+        for (java.util.Map.Entry<String, com.google.gson.JsonElement> entry : obj.entrySet()) {
+            if (!entry.getValue().isJsonArray()) continue;
+            List<dev.arubik.craftengine.machine.attribute.MachineAttributes.Mod> mods =
+                    parseModsFromJsonArray(entry.getValue().getAsJsonArray());
+            if (!mods.isEmpty())
+                out.put(parseKey(entry.getKey()), mods);
+        }
+        return out;
+    }
+
+    private static List<dev.arubik.craftengine.machine.attribute.MachineAttributes.Mod>
+            parseModsFromJsonArray(com.google.gson.JsonArray arr) {
+        List<dev.arubik.craftengine.machine.attribute.MachineAttributes.Mod> out = new java.util.ArrayList<>();
+        for (com.google.gson.JsonElement el : arr) {
+            if (!el.isJsonObject()) continue;
+            com.google.gson.JsonObject m = el.getAsJsonObject();
+            if (!m.has("attribute")) continue;
+            String attribute = m.get("attribute").getAsString();
+            String operation = m.has("operation") ? m.get("operation").getAsString() : "add";
+            double value = m.has("value") ? m.get("value").getAsDouble() : 0.0;
+            var op = dev.arubik.craftengine.machine.attribute.MachineAttributes.parseOperation(operation);
+            out.add(new dev.arubik.craftengine.machine.attribute.MachineAttributes.Mod(
+                    parseKey(attribute), op, value));
+        }
+        return out;
     }
 
     /** Parses the block config's {@code upgrades:} section; shared with the multiblock variant. */

@@ -14,6 +14,7 @@ repositories {
     maven { url = uri("https://repo.codemc.io/repository/maven-snapshots/") }
     maven("https://maven.blamejared.com/")
     maven("https://maven.nucleoid.xyz/")
+    maven("https://mvn.lumine.io/repository/maven-public/")
 }
 
 dependencies {
@@ -31,6 +32,9 @@ dependencies {
     // compatible release (2.2.0). Its API (BetterModel.model/create, Tracker.animate,
     // AnimationModifier) is identical to the 3.x sketch used by CrusherModelRenderer.
     compileOnly("io.github.toxicity188:bettermodel-bukkit-api:2.2.0")
+    // ModelEngine R4 animated model support (compileOnly soft-dependency). All ME API calls
+    // are behind ModelEngineMachineRenderer.available() and try/catch so this is safe to omit.
+    compileOnly("com.ticxo.modelengine:ModelEngine:R4.0.7")
     // Advanced Slime Paper — compileOnly soft-dependency present only on the ASP fork. asp-api is the public
     // API; asp-nms is a stub of ASP's server classes (SlimeLevelInstance extends ServerLevel, SlimeBootstrap,
     // SlimeNMSBridgeImpl) so AspContraptionLevel can EXTEND SlimeLevelInstance and replicate its world-load
@@ -84,7 +88,7 @@ bukkit {
     author = "ArubikU"
     website = "https://github.com/ArubikU"
     depend = listOf("CraftEngine")
-    softDepend = listOf("BetterModel")
+    softDepend = listOf("BetterModel", "ModelEngine")
     foliaSupported = true
     commands {
         create("cepolyfill") {

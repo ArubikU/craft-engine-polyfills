@@ -12,5 +12,6 @@
   "fill_sound": "minecraft:item.bucket.empty_lava",
   "drain_sound": "minecraft:item.bucket.fill_lava",
   "vanilla_fluid": "minecraft:lava",
-  "translation_key": "polyfill.liquid.lava"
+  "translation_key": "polyfill.liquid.lava",
+  "contraption_item_pattern": "cml:fluidlvl_lava_{level}"
 }

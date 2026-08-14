@@ -8,6 +8,13 @@
     "input":  [0],
     "output": [1],
     "fuel":   [2],
-    "upgrade": { "slots": [3, 4, 5], "base_unlocked": 3 }
+    "upgrade": {
+      "slots": [3, 4, 5],
+      "base_unlocked": 3,
+      "definitions": {
+        "cml:upgrade_iron":    [{ "attribute": "polyfill:generation",      "operation": "add", "value": 0.05 }],
+        "cml:upgrade_gold":    [{ "attribute": "polyfill:fuel_efficiency", "operation": "add", "value": 0.15 }]
+      }
+    }
   }
 }

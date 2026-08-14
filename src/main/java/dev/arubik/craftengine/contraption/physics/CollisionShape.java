@@ -70,6 +70,8 @@ public final class CollisionShape {
 
     private static VoxelShape collisionShapeOf(BlockState state) {
         return SHAPE_CACHE.computeIfAbsent(state, s -> {
+            // Fluid blocks (water/lava) have no physical collision.
+            if (s.getBlock() instanceof net.minecraft.world.level.block.LiquidBlock) return Shapes.empty();
             try {
                 return s.getCollisionShape(EmptyBlockGetter.INSTANCE, BlockPos.ZERO);
             } catch (Exception e) {
@@ -148,6 +150,7 @@ public final class CollisionShape {
             for (BlockPos local : level.localPositions()) {
                 BlockState state = level.getBlockState(local);
                 if (state.isAir()) continue;
+                if (state.getBlock() instanceof net.minecraft.world.level.block.LiquidBlock) continue;
                 try {
                     VoxelShape outline = state.getShape(EmptyBlockGetter.INSTANCE, local);
                     if (!outline.isEmpty()) {

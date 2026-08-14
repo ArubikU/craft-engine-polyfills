@@ -1,22 +1,61 @@
 # Contraption system configuration
 
+# Entity culling — limits which players receive display entity packets.
+# Reduces client-side lag from loading many non-essential display entities.
+entity_culling:
+  # Master toggle. Disable to send all element packets to every player in the world (legacy behaviour).
+  enabled: true
+
+  # Maximum distance (blocks) from the contraption's bearing at which display entities
+  # are sent to a player. Players beyond this distance receive despawn packets until
+  # they re-enter range.
+  view_distance: 64.0
+
+  # Frustum culling — additionally hides elements outside the player's field of view.
+  # Disabled by default. Enable to further reduce packet load on servers with many contraptions.
+  frustum:
+    # Enable directional frustum culling.
+    enabled: false
+
+    # Total field-of-view cone in degrees. 120° catches most peripheral vision.
+    # Increase if players report contraptions disappearing while looking at them.
+    fov: 120.0
+
+    # Distance (blocks) within which frustum culling is bypassed — always show.
+    near_bypass: 16.0
+
+    # Expand the target sphere by this many blocks when computing the frustum check.
+    # Compensates for large contraptions whose parts extend beyond the bearing center.
+    expansion: 8.0
+
 item_frame:
-  # CE item ID to use as the frame model (ITEM_DISPLAY mode).
-  # Leave empty to use vanilla EntityType.ITEM_FRAME for the frame.
-  # Example: model: "cml:item_frame"
+  # CE item ID for the item frame model. Empty = vanilla ITEM_FRAME entity.
   model: ""
 
+# Vanilla fluid rendering inside contraptions.
 fluid_render:
-  # CE fluid type ID to use for rendering vanilla water blocks inside contraptions.
-  # FluidRendererElement will use cml:fluidlvl_<water_fluid_type>_<level> items.
-  # Leave empty to skip water rendering.
-  # Example: water_fluid_type: "water"
-  water_fluid_type: ""
+  # Master toggle for all fluid rendering inside contraptions.
+  enabled: true
 
-  # CE fluid type ID to use for rendering vanilla lava blocks inside contraptions.
-  # Leave empty to skip lava rendering.
-  # Example: lava_fluid_type: "lava"
-  lava_fluid_type: ""
+  # Fluid type ID for vanilla water. Empty = disabled.
+  water: "polyfills:water"
 
-  # Lava damage applied to entities inside a contraption's lava cells (per second).
+  # Fluid type ID for vanilla lava. Empty = disabled.
+  lava: "polyfills:lava"
+
+  # Fire damage per second applied to entities inside captured lava cells.
   lava_damage: 4.0
+
+  # Render water inside waterlogged blocks (e.g. waterlogged stairs, slabs).
+  render_waterlogged: true
+
+  # Render flowing water/lava blocks (non-source, including falling).
+  render_flowing: true
+
+  # Render source (still) water/lava blocks inside contraptions.
+  render_source: true
+
+  # Allow fluid to flow and spread within captured contraption levels.
+  # Disabled by default — flowing water inside a contraption usually causes
+  # unexpected spread or lag. Enable only if you intentionally capture flowing fluids.
+  simulate_flow: false

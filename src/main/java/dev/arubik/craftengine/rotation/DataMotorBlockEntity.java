@@ -50,7 +50,8 @@ import net.momirealms.craftengine.core.util.Key;
  *       {@code generation}.</li>
  * </ul>
  */
-public class DataMotorBlockEntity extends AbstractMachineBlockEntity implements RpmProvider {
+public class DataMotorBlockEntity extends AbstractMachineBlockEntity
+        implements RpmProvider, dev.arubik.craftengine.machine.render.ModelRendersDriven {
 
     public record GasSpec(float rpm, float su, int gasPerTick) {
     }
@@ -69,6 +70,7 @@ public class DataMotorBlockEntity extends AbstractMachineBlockEntity implements 
      * no definition is present.
      */
     private final MotorDefinition definition;
+    private dev.arubik.craftengine.machine.render.RendererManager rendererManager;
 
     private MotorDefinition motorDefinition() {
         return definition;
@@ -139,6 +141,17 @@ public class DataMotorBlockEntity extends AbstractMachineBlockEntity implements 
         GasSpec any = this.gases.values().iterator().next();
         this.targetRpm = any.rpm();
         this.targetSu = any.su();
+
+        dev.arubik.craftengine.machine.MachineDefinition machineDef = machineDefinition();
+        if (machineDef != null && !machineDef.renderers().isEmpty()) {
+            this.rendererManager = new dev.arubik.craftengine.machine.render.RendererManager(
+                    machineDef.renderers(), machineDef.variables());
+        }
+    }
+
+    @Override
+    public dev.arubik.craftengine.machine.render.RendererManager rendererManager() {
+        return rendererManager;
     }
 
     private static Map<GasType, GasSpec> defaultGases() {
@@ -486,6 +499,28 @@ public class DataMotorBlockEntity extends AbstractMachineBlockEntity implements 
         maybeUpdateActivated(level, pos, state, currentRpm > 0f);
         this.stressLoad = 0f;
         transferToHead(level);
+
+        if (rendererManager != null) {
+            try {
+                boolean gasPresent = lastConsumed > 0 || lastDemand > 0;
+                dev.arubik.craftengine.machine.render.variable.MachineRenderContext ctx =
+                        new dev.arubik.craftengine.machine.render.variable.MachineRenderContext(
+                                currentRpm, currentOverclock(), 0,
+                                0, 0, 0,
+                                currentRpm > 0, currentRpm > 0, currentOverclock() > 0f,
+                                gasPresent,
+                                null);
+                Direction facing = getFacing(level);
+                float yaw = facing == null ? 0f : switch (facing) {
+                    case SOUTH -> 0f;
+                    case WEST  -> 90f;
+                    case NORTH -> 180f;
+                    case EAST  -> 270f;
+                    default    -> 0f;
+                };
+                rendererManager.tick(ctx, (net.minecraft.server.level.ServerLevel) level, pos.getX(), pos.getY(), pos.getZ(), yaw);
+            } catch (Throwable ignored) {}
+        }
 
         // Reactive barriers: when the unlocked count changes (extra_slots added/removed)
         // while the upgrade page is open, flush placed items to the BE then rebuild the
@@ -845,5 +880,14 @@ public class DataMotorBlockEntity extends AbstractMachineBlockEntity implements 
         this.targetRpm = getOrDefault(KEY_RPM_T, targetRpm);
         this.targetSu = getOrDefault(KEY_SU_T, targetSu);
         this.currentRpm = getOrDefault(KEY_RPM, 0f);
+    }
+
+    @Override
+    public void unregister() {
+        super.unregister();
+        if (rendererManager != null) {
+            rendererManager.close();
+            rendererManager = null;
+        }
     }
 }

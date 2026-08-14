@@ -12,5 +12,6 @@
   "fill_sound": "minecraft:item.bucket.empty",
   "drain_sound": "minecraft:item.bucket.fill",
   "vanilla_fluid": "minecraft:water",
-  "translation_key": "polyfill.liquid.water"
+  "translation_key": "polyfill.liquid.water",
+  "contraption_item_pattern": "cml:fluidlvl_water_{level}"
 }

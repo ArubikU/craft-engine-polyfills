@@ -549,6 +549,13 @@ public final class ContraptionCapture {
                     // best-effort — never abort the capture over a BetterModel hiccup
                 }
             }
+            if (ce instanceof dev.arubik.craftengine.machine.render.ModelEngineDriven med) {
+                try {
+                    med.modelEngineRenderer().close();
+                } catch (Throwable ignored) {
+                    // best-effort — never abort the capture over a ModelEngine hiccup
+                }
+            }
             // Leftover-emitter fix (2026-07-02 "al convertir un fan en contraption el particle emisor
             // original no se borra"): a machine block-entity (the copper fan) emits its particle stream
             // purely from its own tick loop, and — exactly like the BetterModel tracker leak documented

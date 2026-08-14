@@ -1,0 +1,32 @@
+# crusher.pf — renderer script for the crusher machine
+# Variables here are available to all renderers that declare "run": "crusher"
+# All machine vars in scope: rpm, overclock, progress, max_progress, processing, etc.
+# PolyFormula supported: sin/cos/clamp/lerp, ?, %, Inventory.slot(n), etc.
+
+# --- Derived state ---
+# speed_mult: overclock is 0.01–3, maps directly to BetterModel animation speed (1x = normal)
+speed_mult  = max(0.05, overclock)
+running     = processing && rpm > 0
+
+# --- Particle intensity scales with rpm ---
+smoke_count = running ? clamp(floor(rpm / 10), 1, 6) : 0
+
+# --- Vertical pulse: one full sine wave per progress cycle ---
+# Guards against division-by-zero when max_progress is 0
+pulse_y = max_progress > 0 ? sin(progress / max_progress * TAU) * 0.1 : 0
+
+# --- Overclock glow threshold ---
+glow        = overclock > 1.5
+turbo       = overclock > 2.5
+
+# --- Flash on tick boundary: true every 10 ticks ---
+flash       = (tick() % 10) < 2
+
+# --- Upgrade counts available as Upgrades.count("type") ---
+# Example: emit extra sparks when diamond upgrades installed
+has_diamond = Upgrades.count("cml:upgrade_diamond") > 0
+
+# --- Dynamic effect intensity via for loop (accumulate upgrade bonus) ---
+upgrade_bonus = 0
+for item in Upgrades.inventory:
+    upgrade_bonus = upgrade_bonus + item_count(item)

@@ -38,6 +38,8 @@ public class BlockBehaviors {
 
         public static final Key POLYFILL_CHAINERY_BLOCK = Key.of("polyfills:chainery_block");
 
+        public static final Key POLYFILL_RENDERER = Key.of("polyfills:renderer");
+
         public static final Key POLYFILL_FLUID_DISPLAY = Key.of("polyfills:fluid_display");
 
         public static void register() {
@@ -96,6 +98,10 @@ public class BlockBehaviors {
                 // Chainery — endpoint block for a rendered chain span (see chainery.ChaineryBlockBehavior)
                 RegistryUtils.registerBlockBehavior(POLYFILL_CHAINERY_BLOCK,
                                 dev.arubik.craftengine.chainery.ChaineryBlockBehavior.FACTORY);
+
+                // Renderer — data-driven renderers (particles, displays, models) on any CE block
+                RegistryUtils.registerBlockBehavior(POLYFILL_RENDERER,
+                                dev.arubik.craftengine.block.behavior.RendererBehavior.FACTORY);
 
                 // Machine Examples
 

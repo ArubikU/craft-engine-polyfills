@@ -38,9 +38,11 @@ import net.kyori.adventure.text.Component;
  * their own classes.
  */
 public class DataMachineBlockEntity extends AbstractMachineBlockEntity
-        implements dev.arubik.craftengine.rotation.RpmConsumer {
+        implements dev.arubik.craftengine.rotation.RpmConsumer,
+                   dev.arubik.craftengine.machine.render.ModelRendersDriven {
 
     private final MachineDefinition definition;
+    private dev.arubik.craftengine.machine.render.RendererManager rendererManager;
 
     // ---- rotational power (only live when the definition declares consumes_stress) ----
 
@@ -68,6 +70,15 @@ public class DataMachineBlockEntity extends AbstractMachineBlockEntity
         }
         if (definition.io() != null)
             setIOConfiguration(definition.io());
+        if (!definition.renderers().isEmpty()) {
+            this.rendererManager = new dev.arubik.craftengine.machine.render.RendererManager(
+                    definition.renderers(), definition.variables());
+        }
+    }
+
+    @Override
+    public dev.arubik.craftengine.machine.render.RendererManager rendererManager() {
+        return rendererManager;
     }
 
     public MachineDefinition definition() {
@@ -236,6 +247,84 @@ public class DataMachineBlockEntity extends AbstractMachineBlockEntity
         super.tick(level, pos, state);
         if (definition.power().consumesStress() && !level.isClientSide())
             reportStressLoad();
+        if (rendererManager != null) {
+            try {
+                // Snapshot fluid and gas tank levels for the render context
+                java.util.Map<String, double[]> fluidTankData = new java.util.LinkedHashMap<>();
+                for (MachineDefinition.TankSpec spec : definition.fluidTanks()) {
+                    var tank = fluidTank(spec.name());
+                    if (tank != null) {
+                        var stored = tank.getFluid(getNMSLevel(), getMachinePos());
+                        fluidTankData.put(spec.name(), new double[]{ stored.getAmount(), tank.getCapacity() });
+                    }
+                }
+                java.util.Map<String, double[]> gasTankData = new java.util.LinkedHashMap<>();
+                for (MachineDefinition.TankSpec spec : definition.gasTanks()) {
+                    var tank = gasTank(spec.name());
+                    if (tank != null) {
+                        var stored = tank.getGas(getNMSLevel(), getMachinePos());
+                        gasTankData.put(spec.name(), new double[]{ stored.getAmount(), tank.getCapacity() });
+                    }
+                }
+                // Snapshot installed upgrade counts by CE item key so Upgrades.count() works in formulas
+                java.util.Map<String, Integer> upgradesByType = new java.util.LinkedHashMap<>();
+                if (!upgradeDefs.isEmpty()) {
+                    for (int upSlot : definition.upgrades().slots()) {
+                        net.minecraft.world.item.ItemStack nmsItem = getItem(upSlot);
+                        net.momirealms.craftengine.core.util.Key uid = upgradeItemId(nmsItem);
+                        if (uid != null)
+                            upgradesByType.merge(uid.namespace() + ":" + uid.value(), 1, Integer::sum);
+                    }
+                }
+                // Read redstone power level at machine position
+                int redstonePower = 0;
+                try {
+                    redstonePower = level.getBestNeighborSignal(pos);
+                } catch (Throwable ignored) {}
+
+                dev.arubik.craftengine.machine.render.variable.MachineRenderContext ctx =
+                        new dev.arubik.craftengine.machine.render.variable.MachineRenderContext(
+                                inputRpm, overclock, curFuelEff,
+                                progress, maxProgress, curGeneration,
+                                isProcessing(), inputRpm > 0, isOverclocked(), burnTime > 0,
+                                null, upgradesByType, fluidTankData, gasTankData, redstonePower);
+                net.minecraft.core.Direction facing = getFacing(level);
+                float yaw = facing == null ? 0f : switch (facing) {
+                    case SOUTH -> 0f;
+                    case WEST  -> 90f;
+                    case NORTH -> 180f;
+                    case EAST  -> 270f;
+                    default    -> 0f;
+                };
+                // Augment the context with machine position, facing, and extra machine-state vars
+                // so that player_facing("north"), Machine.x/y/z, burn_time, overclock_limit etc.
+                // are available in renderer "when" and "speed" expressions.
+                String facingName = facing != null ? facing.getName().toLowerCase() : "north";
+                dev.arubik.craftengine.machine.render.formula.PolyContext machinePolyCtx =
+                        dev.arubik.craftengine.machine.render.formula.PolyContext.builder()
+                                .copyFrom(ctx.toPolyContext())
+                                .machinePos(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5,
+                                        facingName, yaw, level.getWorld())
+                                .redstone(redstonePower)
+                                .contraption(level) // auto-detects if in a contraption
+                                .num("burn_time",       burnTime)
+                                .num("max_burn_time",   maxBurnTime)
+                                .num("overclock_limit", curOverclockLimit)
+                                .num("generation",      curGeneration)
+                                .build();
+                ctx = ctx.augmented(machinePolyCtx);
+                rendererManager.tick(ctx, (net.minecraft.server.level.ServerLevel) level, pos.getX(), pos.getY(), pos.getZ(), yaw);
+            } catch (Throwable ignored) {}
+        }
+    }
+
+    @Override
+    public void unregister() {
+        super.unregister();
+        if (rendererManager != null) {
+            rendererManager.close();
+            rendererManager = null;
+        }
     }
 
     /**
@@ -729,7 +818,7 @@ public class DataMachineBlockEntity extends AbstractMachineBlockEntity
         return layout;
     }
 
-    private static MachineMenuConfig.Button toButton(MachineDefinition.ButtonSpec spec) {
+    static MachineMenuConfig.Button toButton(MachineDefinition.ButtonSpec spec) {
         return new MachineMenuConfig.Button(spec.slot(), spec.icon(),
                 MachineMenuConfig.Action.parse(spec.action()), spec.name(), spec.lore(),
                 spec.lockedIcon(), MachineMenuConfig.LockedWhen.parse(spec.lockedWhen()));

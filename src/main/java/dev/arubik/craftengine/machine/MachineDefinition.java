@@ -1,6 +1,7 @@
 package dev.arubik.craftengine.machine;
 
 import java.util.List;
+import java.util.Map;
 
 import dev.arubik.craftengine.data.Registries;
 import dev.arubik.craftengine.data.Registry;
@@ -215,11 +216,17 @@ public final class MachineDefinition {
     private final List<ButtonSpec> buttons;
     private final PowerSpec power;
     private final List<BarRef> bars;
+    private final Map<String, dev.arubik.craftengine.machine.render.variable.VariableSpec> variables;
+    private final List<dev.arubik.craftengine.machine.render.RendererSpec> renderers;
+    private final Map<Key, List<dev.arubik.craftengine.machine.attribute.MachineAttributes.Mod>> upgradeDefs;
 
     public MachineDefinition(Key id, String recipeType, String title, int menuSize, int[] inputSlots,
             int[] outputSlots, int[] fuelSlots, UpgradeSpec upgrades, int infoSlot, List<TankSpec> fluidTanks,
             List<TankSpec> gasTanks, boolean fuelRequired, IOConfiguration io, List<ButtonSpec> buttons,
-            PowerSpec power, List<BarRef> bars, InfoSpec info, PagingSpec paging) {
+            PowerSpec power, List<BarRef> bars, InfoSpec info, PagingSpec paging,
+            Map<String, dev.arubik.craftengine.machine.render.variable.VariableSpec> variables,
+            List<dev.arubik.craftengine.machine.render.RendererSpec> renderers,
+            Map<Key, List<dev.arubik.craftengine.machine.attribute.MachineAttributes.Mod>> upgradeDefs) {
         this.id = id;
         this.recipeType = recipeType;
         this.title = title;
@@ -238,6 +245,9 @@ public final class MachineDefinition {
         this.bars = bars == null ? List.of() : List.copyOf(bars);
         this.info = info == null ? InfoSpec.none() : info;
         this.paging = paging == null ? PagingSpec.none() : paging;
+        this.variables = variables == null ? Map.of() : Map.copyOf(variables);
+        this.renderers = renderers == null ? List.of() : List.copyOf(renderers);
+        this.upgradeDefs = upgradeDefs == null ? Map.of() : Map.copyOf(upgradeDefs);
     }
 
     public Key id() {
@@ -325,6 +335,40 @@ public final class MachineDefinition {
     /** Gauges this machine shows, resolved against {@code bars/*.json}. */
     public List<BarRef> bars() {
         return bars;
+    }
+
+    /**
+     * Named variables declared in the {@code "variables"} JSON block.
+     *
+     * <p>Each entry maps a variable name (e.g. {@code "running"}) to its
+     * {@link dev.arubik.craftengine.machine.render.variable.VariableSpec}, which
+     * describes how the value is obtained at runtime. Renderer specs reference
+     * variables via {@code "$name"} tokens in their condition and speed fields.
+     */
+    public Map<String, dev.arubik.craftengine.machine.render.variable.VariableSpec> variables() {
+        return variables;
+    }
+
+    /**
+     * Renderer entries declared in the {@code "renderers"} JSON array.
+     *
+     * <p>Each entry is a {@link dev.arubik.craftengine.machine.render.RendererSpec}
+     * variant describing how the machine's block entity should be visually
+     * represented and under what condition.
+     */
+    public List<dev.arubik.craftengine.machine.render.RendererSpec> renderers() {
+        return renderers;
+    }
+
+    /**
+     * Upgrade item definitions migrated from the block-behavior YAML {@code upgrades:} block.
+     *
+     * <p>Maps CE item key → list of attribute modifiers. Empty when the machine has no
+     * upgrade definitions embedded in its JSON (the definitions may still live in the block
+     * config's YAML as a fallback, via {@link dev.arubik.craftengine.machine.block.behavior.DataMachineBehavior}).
+     */
+    public Map<Key, List<dev.arubik.craftengine.machine.attribute.MachineAttributes.Mod>> upgradeDefs() {
+        return upgradeDefs;
     }
 
     public static MachineDefinition byName(String name) {

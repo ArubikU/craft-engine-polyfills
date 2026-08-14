@@ -112,7 +112,8 @@ public class MachineMenu implements InventoryHolder {
     public void syncFromMachine() {
         for (int i = 0; i < inventory.getSize(); i++) {
             MenuSlotType type = layout.getSlotType(i);
-            boolean io = type == MenuSlotType.INPUT || type == MenuSlotType.OUTPUT || type == MenuSlotType.FUEL;
+            boolean io = type == MenuSlotType.INPUT || type == MenuSlotType.OUTPUT
+                    || type == MenuSlotType.FUEL || type == MenuSlotType.UPGRADE;
             if (!io)
                 continue;
             if (suppressInputPull && (type == MenuSlotType.INPUT || type == MenuSlotType.FUEL))
@@ -129,7 +130,8 @@ public class MachineMenu implements InventoryHolder {
         if (slot < 0 || slot >= inventory.getSize())
             return;
         MenuSlotType type = layout.getSlotType(slot);
-        if (type == MenuSlotType.INPUT || type == MenuSlotType.OUTPUT || type == MenuSlotType.FUEL) {
+        if (type == MenuSlotType.INPUT || type == MenuSlotType.OUTPUT
+                || type == MenuSlotType.FUEL || type == MenuSlotType.UPGRADE) {
             org.bukkit.inventory.ItemStack bukkit = inventory.getItem(slot);
             if (bukkit == null || bukkit.getType() == org.bukkit.Material.AIR || isGhost(bukkit)) {
                 machine.setItem(layout.getMachineSlot(slot), net.minecraft.world.item.ItemStack.EMPTY); // ghost = empty

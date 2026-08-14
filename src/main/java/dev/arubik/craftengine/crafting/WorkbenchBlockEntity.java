@@ -22,8 +22,13 @@ import org.joml.Vector3f;
  * transient (returned to the player on close). Also renders the blueprint flat on the RIGHT half's
  * tabletop square and the matched recipe output(s) flat on the LEFT half's square, via fake
  * item-display entities.
+ *
+ * <p>When the workbench definition carries a {@code renderers} block the block entity also
+ * implements {@link dev.arubik.craftengine.machine.render.ModelRendersDriven} and drives
+ * rendering through a {@link dev.arubik.craftengine.machine.render.RendererManager}.</p>
  */
-public class WorkbenchBlockEntity extends PersistentBlockEntity {
+public class WorkbenchBlockEntity extends PersistentBlockEntity
+        implements dev.arubik.craftengine.machine.render.ModelRendersDriven {
 
     /** Recipe output preview pushed by the open menu (transient — not persisted). */
     private final java.util.List<org.bukkit.inventory.ItemStack> outputs = new java.util.ArrayList<>(2);
@@ -37,6 +42,19 @@ public class WorkbenchBlockEntity extends PersistentBlockEntity {
     private final java.util.Map<Integer, ConveyorItemDisplay> slotDisplays = new java.util.HashMap<>();
     private final java.util.Map<Integer, Integer> slotHashes = new java.util.HashMap<>();
 
+    // ---- RendererSpec path (new system) ----
+    /** Non-null when the workbench definition declares a {@code renderers} block. */
+    private dev.arubik.craftengine.machine.render.RendererManager rendererManager;
+    /** Parallel array of item-display entities, one per renderer spec. */
+    private ConveyorItemDisplay[] specDisplays;
+    private int[] specDisplayHashes;
+    /**
+     * A snapshot inventory populated each tick before handing it to the render context.
+     * Slot layout mirrors the real workbench container: slot 9 = blueprint (tool),
+     * slots 15 / 24 = recipe preview outputs.
+     */
+    private org.bukkit.inventory.Inventory renderInventory;
+
     private WorkbenchBehavior cfgBehavior; // render config, injected by createMasterController
 
     public WorkbenchBlockEntity(BlockEntity blockEntity) {
@@ -45,6 +63,25 @@ public class WorkbenchBlockEntity extends PersistentBlockEntity {
 
     public void setConfig(WorkbenchBehavior b) {
         this.cfgBehavior = b;
+        WorkbenchDefinition def = b != null ? b.definition() : null;
+        if (def != null && !def.renderers().isEmpty()) {
+            rendererManager = new dev.arubik.craftengine.machine.render.RendererManager(
+                    def.renderers(), def.variables());
+            int n = def.renderers().size();
+            specDisplays = new ConveyorItemDisplay[n];
+            specDisplayHashes = new int[n];
+            // Create a Bukkit inventory sized to the workbench container; used as the
+            // render context's item-slot source.  Size must be a multiple of 9.
+            int invSize = ((def.size() + 8) / 9) * 9;
+            renderInventory = org.bukkit.Bukkit.createInventory(null, invSize);
+        }
+    }
+
+    // ---- ModelRendersDriven ----
+
+    @Override
+    public dev.arubik.craftengine.machine.render.RendererManager rendererManager() {
+        return rendererManager;
     }
 
     // ---- shared menu: ONE inventory per block for all viewers (prevents blueprint duplication) ----
@@ -167,10 +204,17 @@ public class WorkbenchBlockEntity extends PersistentBlockEntity {
         Direction facing = facing();
         WorkbenchBehavior cfg = cfgBehavior != null ? cfgBehavior : getBlockBehavior(WorkbenchBehavior.class);
 
+        WorkbenchDefinition definition = cfg != null ? cfg.definition() : null;
+
+        // NEW: RendererSpec path — takes priority when the definition declares renderers.
+        if (rendererManager != null && !rendererManager.isEmpty()) {
+            renderSpecDriven(world, masterPos, facing, definition);
+            return;
+        }
+
         // A station bound to a workbenches/*.json definition draws the slots that file
         // declares. Everything else keeps the legacy three fixed displays, so packs that
         // never adopted a definition are unaffected.
-        WorkbenchDefinition definition = cfg != null ? cfg.definition() : null;
         if (definition != null && !definition.renderSlots().isEmpty()) {
             renderDeclaredSlots(world, masterPos, facing, cfg, definition);
             return;
@@ -249,6 +293,101 @@ public class WorkbenchBlockEntity extends PersistentBlockEntity {
             despawn(world, masterPos, out1Display);
             out1Display = null;
             lastOut1Hash = 0;
+        }
+    }
+
+    /**
+     * Renders all {@link dev.arubik.craftengine.machine.render.RendererSpec} entries
+     * belonging to this workbench's definition.
+     *
+     * <p>Before ticking the manager the method populates a snapshot inventory with the
+     * live blueprint (tool slot) and the recipe preview outputs so that
+     * {@code item_slot} variables can read them via the render context.</p>
+     */
+    private void renderSpecDriven(CEWorld world, BlockPos masterPos, Direction facing,
+            WorkbenchDefinition definition) {
+        // ---- populate the render inventory snapshot --------------------------------
+        org.bukkit.inventory.ItemStack bp = getBlueprint();
+        renderInventory.clear();
+        if (definition != null) {
+            for (int toolSlot : definition.toolSlots()) {
+                renderInventory.setItem(toolSlot, bp);
+            }
+            java.util.List<org.bukkit.inventory.ItemStack> recipeOuts = blueprintRecipeOutputs(bp);
+            java.util.List<Integer> outSlots = definition.layout().outputSlots();
+            for (int i = 0; i < outSlots.size(); i++) {
+                renderInventory.setItem(outSlots.get(i),
+                        i < recipeOuts.size() ? recipeOuts.get(i) : null);
+            }
+        }
+
+        // ---- build context and tick the manager -----------------------------------
+        net.minecraft.server.level.ServerLevel nmsLevel =
+                ((org.bukkit.craftbukkit.CraftWorld) world.world().platformWorld()).getHandle();
+        dev.arubik.craftengine.machine.render.variable.MachineRenderContext ctx =
+                new dev.arubik.craftengine.machine.render.variable.MachineRenderContext(
+                        0, 0, 0, 0, 0, 0, false, false, false, false, renderInventory);
+        // Augment context with a Workbench class so expressions like input(0), output(0) work.
+        if (definition != null) {
+            dev.arubik.craftengine.machine.render.formula.PolyContext augPoly =
+                    dev.arubik.craftengine.machine.render.formula.PolyContext.builder()
+                            .copyFrom(ctx.toPolyContext())
+                            .workbench(definition, renderInventory)
+                            .build();
+            ctx = ctx.augmented(augPoly);
+        }
+        rendererManager.tick(ctx, nmsLevel, masterPos.x(), masterPos.y(), masterPos.z(), 0f);
+
+        // ---- render each ItemDisplaySpec using ConveyorItemDisplay ----------------
+        java.util.List<dev.arubik.craftengine.machine.render.RendererSpec> specs = rendererManager.specs();
+        org.bukkit.inventory.ItemStack[] items = rendererManager.currentItems();
+        java.util.List<net.momirealms.craftengine.core.entity.player.Player> viewers =
+                world.world().getTrackedBy(new ChunkPos(masterPos));
+
+        for (int i = 0; i < specs.size(); i++) {
+            if (!(specs.get(i) instanceof dev.arubik.craftengine.machine.render.RendererSpec.ItemDisplaySpec id))
+                continue;
+            org.bukkit.inventory.ItemStack item = items[i];
+            if (item != null && !item.getType().isAir()) {
+                if (specDisplays[i] == null)
+                    specDisplays[i] = new ConveyorItemDisplay();
+
+                // Determine which cell to use as the position base.
+                // A tool-slot variable (e.g. slot 9) renders on the RIGHT half of a
+                // horizontal-double workbench; output/input variables render on the master.
+                boolean onRight = false;
+                if (definition != null && id.itemExpr().startsWith("$")) {
+                    String varName = id.itemExpr().substring(1);
+                    dev.arubik.craftengine.machine.render.variable.VariableSpec vs =
+                            definition.variables().get(varName);
+                    if (vs instanceof dev.arubik.craftengine.machine.render.variable.VariableSpec.ItemSlot is) {
+                        onRight = definition.isToolSlot(is.slot())
+                                && definition.structure() == WorkbenchDefinition.Structure.HORIZONTAL_DOUBLE;
+                    }
+                }
+                BlockPos cell = onRight
+                        ? HorizontalDoubleGeometry.rightCell(masterPos, facing)
+                        : masterPos;
+
+                float[] locOff = resolveRelativeOffset(id.locationExpr());
+                Vector3f o = localOffset(locOff[0], locOff[1], locOff[2], facing);
+                float[] rot = { ef(id.rotX(), 0f), ef(id.rotY(), 0f), ef(id.rotZ(), 0f) };
+                specDisplays[i].setScale(ef(id.scale(), 1f));
+                specDisplays[i].setRotation(flatRotation(facing, rot));
+                int h = item.hashCode();
+                specDisplays[i].setNmsItem(org.bukkit.craftbukkit.inventory.CraftItemStack.asNMSCopy(item));
+                specDisplays[i].render(viewers,
+                        cell.x() + o.x, cell.y() + o.y, cell.z() + o.z,
+                        h != specDisplayHashes[i]);
+                specDisplays[i].consumeRotationDirty();
+                specDisplayHashes[i] = h;
+            } else {
+                if (specDisplays[i] != null) {
+                    despawn(world, masterPos, specDisplays[i]);
+                    specDisplays[i] = null;
+                    specDisplayHashes[i] = 0;
+                }
+            }
         }
     }
 
@@ -358,6 +497,41 @@ public class WorkbenchBlockEntity extends PersistentBlockEntity {
         return id == null ? null : cfg.renders.get(id.toString());
     }
 
+    /**
+     * Extract relative [x, y, z] offsets from a {@code locationExpr} string using a basic
+     * (no machine variables) PolyContext.  Returns {@code [0, 0, 0]} when the expression
+     * is null, blank, or evaluates to something other than a 3-element array.
+     */
+    private static float[] resolveRelativeOffset(String locationExpr) {
+        if (locationExpr == null || locationExpr.isEmpty()) return new float[]{0f, 0f, 0f};
+        try {
+            dev.arubik.craftengine.machine.render.formula.PolyValue val =
+                dev.arubik.craftengine.machine.render.formula.PolyFormula
+                    .compile(locationExpr)
+                    .evaluate(dev.arubik.craftengine.machine.render.formula.PolyContext.builder().build());
+            if (val instanceof dev.arubik.craftengine.machine.render.formula.PolyValue.Array a
+                    && a.elements().size() >= 3) {
+                return new float[]{
+                    (float) a.elements().get(0).asNum(),
+                    (float) a.elements().get(1).asNum(),
+                    (float) a.elements().get(2).asNum()
+                };
+            }
+        } catch (Throwable ignored) {}
+        return new float[]{0f, 0f, 0f};
+    }
+
+    /** Evaluate a RendererSpec String field (formula or literal) as float. */
+    private static float ef(String expr, float def) {
+        if (expr == null || expr.isEmpty()) return def;
+        try { return Float.parseFloat(expr.trim()); } catch (NumberFormatException ignored) {}
+        try {
+            return (float) dev.arubik.craftengine.machine.render.formula.PolyFormula
+                    .compile(expr).evaluateNum(
+                            dev.arubik.craftengine.machine.render.formula.PolyContext.builder().build());
+        } catch (Throwable ignored) { return def; }
+    }
+
     private static float[] addPos(float[] base, WorkbenchBehavior.RenderOverride ov) {
         return ov == null ? base
                 : new float[] { base[0] + ov.pos[0], base[1] + ov.pos[1], base[2] + ov.pos[2] };
@@ -399,9 +573,18 @@ public class WorkbenchBlockEntity extends PersistentBlockEntity {
                 despawn(world, pos, bpDisplay);
                 despawn(world, pos, out0Display);
                 despawn(world, pos, out1Display);
+                // RendererSpec path
+                if (specDisplays != null) {
+                    for (ConveyorItemDisplay d : specDisplays)
+                        despawn(world, pos, d);
+                }
             }
         } catch (Throwable ignored) {
         }
         bpDisplay = out0Display = out1Display = null;
+        if (specDisplays != null)
+            java.util.Arrays.fill(specDisplays, null);
+        if (rendererManager != null)
+            rendererManager.close();
     }
 }

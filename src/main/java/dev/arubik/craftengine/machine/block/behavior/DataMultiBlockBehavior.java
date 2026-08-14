@@ -122,7 +122,13 @@ public class DataMultiBlockBehavior extends MultiBlockBehavior {
                 new DataMultiBlockMachineBlockEntity(blockEntity, schema, activeDefinition());
         machine.setMenuConfig(menuConfig);
         machine.setBars(bars);
-        machine.setUpgradeDefs(upgradeDefs);
+        // Prefer machine-JSON definitions; fall back to YAML block-config upgradeDefs
+        var def = activeDefinition();
+        if (def != null && !def.upgradeDefs().isEmpty()) {
+            machine.setUpgradeDefs(def.upgradeDefs());
+        } else {
+            machine.setUpgradeDefs(upgradeDefs);
+        }
         return machine;
     }
 

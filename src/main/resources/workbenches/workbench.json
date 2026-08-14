@@ -6,12 +6,46 @@
   "slots": {
     "input":  [11, 12, 13, 20, 21, 22],
     "output": [15, 24],
-    "tool":   [9],
-    "render": [
-      { "slot": 9,  "position": [4, 13.5, 4], "scale": 0.5 },
-      { "slot": 15, "position": [4, 13.5, 4], "scale": 0.375 },
-      { "slot": 24, "position": [7, 14.5, 4], "rotation": [0, 0, 22], "scale": 0.375 }
-    ]
+    "tool":   [9]
   },
-  "structure": { "type": "horizontal_double" }
+  "structure": { "type": "horizontal_double" },
+  "variables": {
+    "tool_item": "slot(9)",
+    "has_tool": "!is_empty(slot(9))"
+  },
+  "renderers": [
+    {
+      "type": "item_display",
+      "item": "slot(9)",
+      "location": [4, 13.5, 4],
+      "scale": "0.5",
+      "update_when": "inventory"
+    },
+    {
+      "type": "item_display",
+      "item": "slot(15)",
+      "location": [4, 13.5, 4],
+      "scale": "0.375",
+      "update_when": "inventory"
+    },
+    {
+      "type": "item_display",
+      "item": "slot(24)",
+      "location": [7, 14.5, 4],
+      "rot_z": "22",
+      "scale": "0.375",
+      "update_when": "inventory"
+    },
+    {
+      "type": "text_display",
+      "text": "slot(9).name",
+      "location": [0, 1.7, 0],
+      "scale": "0.09",
+      "billboard": "center",
+      "background": "0",
+      "shadow": true,
+      "when": "has_tool && player_facing('up', '1..2-1..2')",
+      "update_when": "inventory"
+    }
+  ]
 }

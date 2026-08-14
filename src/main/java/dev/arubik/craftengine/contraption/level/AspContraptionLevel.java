@@ -580,6 +580,14 @@ public final class AspContraptionLevel extends SlimeLevelInstance implements Con
     }
 
     @Override
+    public void scheduleTick(net.minecraft.core.BlockPos pos, net.minecraft.world.level.material.Fluid fluid,
+            int delay, net.minecraft.world.ticks.TickPriority priority) {
+        if (dev.arubik.craftengine.contraption.config.ContraptionConfig.get().simulateFluidFlow()) {
+            super.scheduleTick(pos, fluid, delay, priority);
+        }
+    }
+
+    @Override
     public void save(net.minecraft.util.ProgressListener progress, boolean flush, boolean skipSave, boolean close) {
     }
 
