@@ -1,4 +1,4 @@
-// sidebar.js — Auto-builds the docs sidebar on every page from a single definition.
+// sidebar.js - Auto-builds the docs sidebar on every page from a single definition.
 // Include via <script src="assets/sidebar.js"></script> or "../assets/sidebar.js" etc.
 (function() {
   const sections = [
@@ -14,8 +14,17 @@
       { label: "PolyFormula", href: "polyformula.html" },
       { label: "Renderers", href: "renderers.html" },
     ]},
-    { title: "Blocks", icon: "puzzle", items: [
-      { label: "Block Behaviors", href: "block-behaviors.html" },
+    { title: "Block Behaviors", icon: "puzzle", items: [
+      { label: "Overview", href: "block-behaviors.html" },
+      { label: "polyfills:renderer", href: "block-behaviors/renderer.html" },
+      { label: "polyfills:data_machine", href: "block-behaviors/data-machine.html" },
+      { label: "polyfills:data_multiblock", href: "block-behaviors/data-multiblock.html" },
+      { label: "polyfills:gas_pump", href: "block-behaviors/gas-pump.html" },
+      { label: "polyfills:pipe_block", href: "block-behaviors/pipe-block.html" },
+      { label: "polyfills:fan_block", href: "block-behaviors/fan-block.html" },
+      { label: "polyfills:bubble_block", href: "block-behaviors/bubble-block.html" },
+      { label: "polyfills:bush_block", href: "block-behaviors/bush-block.html" },
+      { label: "polyfills:change_over_time", href: "block-behaviors/change-over-time-block.html" },
     ]},
     { title: "Contraptions", icon: "box", items: [
       { label: "System Overview", href: "contraptions.html" },
