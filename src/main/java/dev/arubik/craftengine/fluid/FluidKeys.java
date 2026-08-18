@@ -66,8 +66,6 @@ public final class FluidKeys {
                     bais.close();
                 }
                 catch (Throwable throwable) {
-                    Throwable throwable3;
-                    throwable3.addSuppressed(throwable);
                 }
             }
         }

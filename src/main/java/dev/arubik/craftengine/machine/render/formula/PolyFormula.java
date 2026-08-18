@@ -1,6 +1,7 @@
 package dev.arubik.craftengine.machine.render.formula;
 
 import org.bukkit.Material;
+import org.bukkit.craftbukkit.inventory.CraftItemStack;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.ArrayList;
@@ -565,7 +566,7 @@ public final class PolyFormula {
                 if (args.size() < 2) yield PolyValue.of(false);
                 if (!(args.get(0) instanceof PolyValue.Item i) || i.stack() == null)
                     yield PolyValue.of(false);
-                yield new ItemClass(i.stack()).call("is_tagged", java.util.List.of(args.get(1)));
+                yield new ItemClass(CraftItemStack.asNMSCopy(i.stack())).call("is_tagged", java.util.List.of(args.get(1)));
             }
 
             // coalesce(a, b, ...) → first non-null
@@ -646,7 +647,7 @@ public final class PolyFormula {
     static PolyValue memberGet(PolyValue obj, String prop, PolyContext ctx) {
         return switch (obj) {
             case PolyValue.Obj o    -> o.inner() != null ? o.inner().get(prop) : PolyValue.NULL;
-            case PolyValue.Item i   -> new ItemClass(i.stack()).get(prop);
+            case PolyValue.Item i   -> new ItemClass(CraftItemStack.asNMSCopy(i.stack())).get(prop);
             case PolyValue.Array a  -> switch (prop) {
                 case "size", "length", "count" -> PolyValue.of(a.elements().size());
                 case "is_empty" -> PolyValue.of(a.elements().isEmpty());
@@ -688,7 +689,7 @@ public final class PolyFormula {
     static PolyValue memberCall(PolyValue obj, String method, List<PolyValue> args, PolyContext ctx) {
         return switch (obj) {
             case PolyValue.Obj o    -> o.inner() != null ? o.inner().call(method, args) : PolyValue.NULL;
-            case PolyValue.Item i   -> new ItemClass(i.stack()).call(method, args);
+            case PolyValue.Item i   -> new ItemClass(CraftItemStack.asNMSCopy(i.stack())).call(method, args);
             case PolyValue.Num n -> switch (method) {
                 case "int"          -> PolyValue.of((long) n.value());
                 case "abs"          -> PolyValue.of(Math.abs(n.value()));

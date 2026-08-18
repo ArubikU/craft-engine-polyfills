@@ -170,7 +170,7 @@ public final class WorkbenchLoader {
                         r.string("model_id"),
                         r.string("animation", null),
                         r.string("speed", null),
-                        whenExpr, updateWhen, scriptRef);
+                        whenExpr, updateWhen, scriptRef, r.rangedInt("linger_ticks", 0, 0, 6000));
                 case "modelengine" -> new dev.arubik.craftengine.machine.render.RendererSpec.ModelEngineSpec(
                         r.string("model_id"),
                         r.string("animation", null),
@@ -188,7 +188,7 @@ public final class WorkbenchLoader {
                             r.string("item"),
                             parseLocationExpr(r),
                             scw, rxw, ryw, rzw,
-                            r.string("billboard", "none"), whenExpr, updateWhen, scriptRef);
+                            r.string("billboard", "none"), whenExpr, updateWhen, r.bool("global", false), scriptRef);
                 }
                 case "particle" -> {
                     int interval = r.rangedInt("interval", 1, 1, 200);
@@ -226,7 +226,7 @@ public final class WorkbenchLoader {
                             r.bool("see_through", false),
                             r.string("alignment", "center"),
                             r.rangedInt("opacity", 255, 0, 255),
-                            whenExpr, updateWhen, scriptRef);
+                            whenExpr, updateWhen, r.bool("global", false), scriptRef);
                 }
                 case "sound" -> new dev.arubik.craftengine.machine.render.RendererSpec.SoundSpec(
                         r.string("sound", "minecraft:block.note_block.pling"),
@@ -275,7 +275,7 @@ public final class WorkbenchLoader {
                         legacyLoc,
                         String.valueOf(rs.scale()),
                         String.valueOf(rs.rotation()[0]), String.valueOf(rs.rotation()[1]), String.valueOf(rs.rotation()[2]),
-                        "none", "always", "inventory", null));
+                        "none", "always", "inventory", false, null));
             }
         }
 

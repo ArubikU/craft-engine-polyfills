@@ -487,7 +487,7 @@ public final class RendererManager {
                         continue;
                     }
                     try {
-                        String text3 = PolyFormula.compile(td.textExpr() != null && !td.textExpr().isEmpty() ? td.textExpr() : "\"\"").evaluateStr(evalCtx.toPolyContext());
+                        text2 = PolyFormula.compile(td.textExpr() != null && !td.textExpr().isEmpty() ? td.textExpr() : "\"\"").evaluateStr(evalCtx.toPolyContext());
                     }
                     catch (Throwable ignored) {
                         text2 = td.textExpr() != null ? td.textExpr() : "";

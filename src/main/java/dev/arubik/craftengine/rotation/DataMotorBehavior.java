@@ -76,7 +76,7 @@ extends MachineBlockBehavior {
             Object gObj = arguments.get("gases");
             if (gObj instanceof Map) {
                 Map gMap = (Map)gObj;
-                for (Map.Entry e : gMap.entrySet()) {
+                for (Object raw : gMap.entrySet()) { Map.Entry<?, ?> e = (Map.Entry<?, ?>) raw;
                     Object v;
                     GasType gt = Factory.parseGas(String.valueOf(e.getKey()));
                     if (gt == null || !((v = e.getValue()) instanceof Map)) continue;
@@ -92,7 +92,7 @@ extends MachineBlockBehavior {
             Object uObj = arguments.get("upgrades");
             if (uObj instanceof Map) {
                 Map uMap = (Map)uObj;
-                for (Map.Entry e : uMap.entrySet()) {
+                for (Object raw2 : uMap.entrySet()) { Map.Entry<?, ?> e = (Map.Entry<?, ?>) raw2;
                     List<MachineAttributes.Mod> mods = Factory.parseMods(e.getValue());
                     if (mods.isEmpty()) continue;
                     upgrades.put(Factory.key(String.valueOf(e.getKey())), mods);

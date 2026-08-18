@@ -111,12 +111,16 @@ implements EntityBlock {
             if (f == null) {
                 return InteractionResult.PASS;
             }
-            net.momirealms.craftengine.core.entity.player.Player player = context.getPlayer();
-            if (!(player instanceof BukkitServerPlayer) || !((player = (p = (BukkitServerPlayer)player).platformPlayer()) instanceof Player)) {
+            net.momirealms.craftengine.core.entity.player.Player cePlayer = context.getPlayer();
+            if (!(cePlayer instanceof BukkitServerPlayer)) {
                 return InteractionResult.PASS;
             }
-            net.momirealms.craftengine.core.entity.player.Player player2 = player;
-            PlayerInventory inv = player2.getInventory();
+            p = (BukkitServerPlayer) cePlayer;
+            Player bukkitPlayer = (Player) p.platformPlayer();
+            if (bukkitPlayer == null) {
+                return InteractionResult.PASS;
+            }
+            PlayerInventory inv = bukkitPlayer.getInventory();
             ItemStack hand = inv.getItemInMainHand();
             boolean bl = handEmpty = hand == null || hand.getType().isAir();
             if (!handEmpty) {
@@ -127,7 +131,7 @@ implements EntityBlock {
                 return InteractionResult.PASS;
             }
             for (ItemStack left : inv.addItem(new ItemStack[]{out}).values()) {
-                player2.getWorld().dropItem(player2.getLocation(), left);
+                bukkitPlayer.getWorld().dropItem(bukkitPlayer.getLocation(), left);
             }
             return InteractionResult.SUCCESS_AND_CANCEL;
         }

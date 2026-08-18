@@ -168,7 +168,7 @@ implements EntityBlock {
             if (slot == null || slot.getType().isAir()) {
                 return InteractionResult.PASS;
             }
-            HashMap overflow = inv.addItem(new ItemStack[]{slot});
+            HashMap<Integer, ItemStack> overflow = inv.addItem(slot);
             for (ItemStack left : overflow.values()) {
                 player.getWorld().dropItem(player.getLocation(), left);
             }

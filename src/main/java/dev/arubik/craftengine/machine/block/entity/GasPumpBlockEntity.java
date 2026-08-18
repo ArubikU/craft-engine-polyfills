@@ -423,7 +423,7 @@ extends AbstractMachineBlockEntity {
             PersistentBlockEntity be = PersistentBlockEntity.getIfLoaded(level, above);
             TypedKey wellFlag = TypedKey.of("polyfills", "flag_well_active", NbtType.INTEGER);
             int active = be != null ? be.getOrDefault(wellFlag, 0) : 0;
-            if (active != true) continue;
+            if (active != 1) continue;
             return 5;
         }
         return 1;
@@ -530,7 +530,7 @@ extends AbstractMachineBlockEntity {
         if (this.page != 1 || this.active == null || this.shownUnlocked == this.curUnlocked) {
             return;
         }
-        ArrayList viewers = new ArrayList(this.active.getInventory().getViewers());
+        ArrayList<HumanEntity> viewers = new ArrayList<>(this.active.getInventory().getViewers());
         this.shownUnlocked = this.curUnlocked;
         for (HumanEntity h : viewers) {
             if (!(h instanceof org.bukkit.entity.Player)) continue;
@@ -547,9 +547,7 @@ extends AbstractMachineBlockEntity {
         for (int s : this.fuelSlots) {
             l.addSlot(s, MenuSlotType.FUEL);
         }
-        Object object = this.menuConfig.buttons.iterator();
-        while (object.hasNext()) {
-            MachineMenuConfig.Button b = (MachineMenuConfig.Button)object.next();
+        for (MachineMenuConfig.Button b : this.menuConfig.buttons) {
             this.installButton(l, b);
         }
         MachineBars.install(l, this.bars);

@@ -167,8 +167,8 @@ public final class ContraptionBlockEntityElementMirror {
                 BlockEntityRenderer renderer;
                 BlockEntity be2 = ceWorld.getBlockEntityAtIfLoaded(cePos, false);
                 if (be2 != null && (renderer = be2.renderer()) != null) {
-                    for (ConstantBlockEntityElement constantBlockEntityElement : renderer.elements()) {
-                        cell = ContraptionBlockEntityElementMirror.wrap((BlockEntityElement)constantBlockEntityElement, local);
+                    for (BlockEntityElement constantBlockEntityElement : renderer.elements()) {
+                        cell = ContraptionBlockEntityElementMirror.wrap(constantBlockEntityElement, local);
                         if (cell == null) continue;
                         cells.add(cell);
                     }

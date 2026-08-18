@@ -68,7 +68,7 @@ public final class ContraptionBlockSeats {
 
     private static ImmutableBlockState customStateAt(ContraptionLevel level, BlockPos local) {
         Optional custom = BlockStateUtils.getOptionalCustomBlockState(level.getBlockState(local));
-        return custom.orElse(null);
+        return (ImmutableBlockState) custom.orElse(null);
     }
 
     static float facingYawDegrees(SeatBlockBehavior seat, ImmutableBlockState state) {

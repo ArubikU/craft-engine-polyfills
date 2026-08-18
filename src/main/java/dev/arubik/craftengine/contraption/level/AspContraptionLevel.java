@@ -773,9 +773,9 @@ ContraptionLevel {
                 EntityBlock eb;
                 BlockEntityTicker ticker;
                 BlockState bs;
-                be2 = this.getBlockEntity(local);
-                if (be2 == null || BlockStateUtils.getOptionalCustomBlockState((bs = this.getBlockState(local))).isPresent() || !((tickable = bs.getBlock()) instanceof EntityBlock) || (ticker = (eb = (EntityBlock)tickable).getTicker((Level)this, bs, be2.getType())) == null) continue;
-                ticker.tick((Level)this, local, bs, (BlockEntity)be2);
+                net.minecraft.world.level.block.entity.BlockEntity nmsBe = this.getBlockEntity(local);
+                if (nmsBe == null || BlockStateUtils.getOptionalCustomBlockState((bs = this.getBlockState(local))).isPresent() || !((bs.getBlock()) instanceof EntityBlock) || (ticker = ((eb = (EntityBlock)bs.getBlock())).getTicker((Level)this, bs, nmsBe.getType())) == null) continue;
+                ticker.tick((Level)this, local, bs, nmsBe);
             }
             catch (Throwable throwable) {}
         }

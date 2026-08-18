@@ -530,7 +530,8 @@ ConveyorReceiver {
             Item nearest = null;
             double best = Double.MAX_VALUE;
             ContraptionBoundary boundary = ContraptionBoundary.of((Level)serverLevel).orElse(null);
-            List items = boundary != null ? boundary.getLocalEntities(ItemEntity.class, aabb, e -> !e.isRemoved()) : serverLevel.getEntitiesOfClass(ItemEntity.class, aabb, e -> !e.isRemoved());
+            @SuppressWarnings("unchecked")
+            List<ItemEntity> items = boundary != null ? boundary.getLocalEntities(ItemEntity.class, aabb, e -> !e.isRemoved()) : serverLevel.getEntitiesOfClass(ItemEntity.class, aabb, e -> !e.isRemoved());
             for (ItemEntity nms : items) {
                 double d;
                 Item item = (Item)nms.getBukkitEntity();

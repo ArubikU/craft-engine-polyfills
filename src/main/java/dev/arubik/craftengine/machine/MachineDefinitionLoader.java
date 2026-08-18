@@ -58,7 +58,6 @@ public final class MachineDefinitionLoader {
     }
 
     public static MachineDefinition parse(JsonView view, Key id) {
-        Object barSlots;
         int menuSize = view.rangedInt("menu_size", 54, 9, 54);
         if (menuSize % 9 != 0) {
             throw view.error("menu_size must be a multiple of 9, found " + menuSize);
@@ -115,12 +114,12 @@ public final class MachineDefinitionLoader {
         ArrayList<MachineDefinition.BarRef> bars = new ArrayList<MachineDefinition.BarRef>();
         for (JsonView b : view.objectList("bars")) {
             List<Integer> slotList = b.intList("slots");
-            barSlots = new int[slotList.size()];
-            for (int i = 0; i < ((int[])barSlots).length; ++i) {
-                barSlots[i] = MachineDefinitionLoader.requireInMenu(view, slotList.get(i), menuSize, "bars.slots");
+            int[] barSlotsArr = new int[slotList.size()];
+            for (int i = 0; i < barSlotsArr.length; ++i) {
+                barSlotsArr[i] = MachineDefinitionLoader.requireInMenu(view, slotList.get(i), menuSize, "bars.slots");
             }
             Key barId = b.key("id", "polyfills");
-            bars.add(new MachineDefinition.BarRef(barId, (int[])barSlots, b.string("source", barId.value())));
+            bars.add(new MachineDefinition.BarRef(barId, barSlotsArr, b.string("source", barId.value())));
         }
         MachineDefinition.PagingSpec paging = MachineDefinition.PagingSpec.none();
         if (view.has("paging")) {
@@ -130,10 +129,10 @@ public final class MachineDefinitionLoader {
         LinkedHashMap<String, VariableSpec> variables = new LinkedHashMap<String, VariableSpec>();
         if (view.has("variables")) {
             JsonObject varObj = view.raw().get("variables").getAsJsonObject();
-            barSlots = varObj.entrySet().iterator();
-            while (barSlots.hasNext()) {
+            var varIter = varObj.entrySet().iterator();
+            while (varIter.hasNext()) {
                 Record spec;
-                Map.Entry entry = (Map.Entry)barSlots.next();
+                Map.Entry<String, JsonElement> entry = varIter.next();
                 String varName = (String)entry.getKey();
                 JsonElement rawVal = (JsonElement)entry.getValue();
                 if (rawVal.isJsonPrimitive() && rawVal.getAsJsonPrimitive().isString()) {
@@ -159,11 +158,11 @@ public final class MachineDefinitionLoader {
             }
         }
         ArrayList<RendererSpec> renderers = new ArrayList<RendererSpec>();
-        barSlots = view.objectList("renderers").iterator();
-        while (barSlots.hasNext()) {
+        var rendererIter = view.objectList("renderers").iterator();
+        while (rendererIter.hasNext()) {
             String posExpr;
             Record spec;
-            JsonView r = (JsonView)barSlots.next();
+            JsonView r = rendererIter.next();
             String rType = r.string("type", "bettermodel");
             String whenExpr = r.raw().has("when") ? MachineDefinitionLoader.parseWhen(r.raw().get("when")) : "always";
             String updateWhen = r.string("update_when", "always");
@@ -203,7 +202,7 @@ public final class MachineDefinitionLoader {
                 case "block_display" -> new RendererSpec.BlockDisplaySpec(r.string("block", "minecraft:stone"), MachineDefinitionLoader.parseLocationExpr(r), MachineDefinitionLoader.readExprPrimitive(r, "scale", "1.0"), MachineDefinitionLoader.readExprPrimitive(r, "rot_x"), MachineDefinitionLoader.readExprPrimitive(r, "rot_y"), MachineDefinitionLoader.readExprPrimitive(r, "rot_z"), whenExpr, updateWhen, scriptRef);
                 default -> null;
             })) == null) continue;
-            String string = r.raw().has("positions") ? r.string("positions") : (posExpr = r.raw().has("locations") ? r.string("locations") : null);
+            posExpr = r.raw().has("positions") ? r.string("positions") : (r.raw().has("locations") ? r.string("locations") : null);
             if (posExpr != null) {
                 spec = new RendererSpec.PositionedSpec((RendererSpec)(spec), posExpr, null);
             }

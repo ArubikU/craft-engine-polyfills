@@ -169,7 +169,7 @@ public final class RecipeInfoIcon {
                 GasOutput go = (GasOutput)o;
                 GasStack gs = (GasStack)go.getOutput();
                 mb = gs.getAmount();
-                TextComponent tn = gs.getType() == null ? net.kyori.adventure.text.Component.text((String)"?") : net.kyori.adventure.text.Component.translatable((String)gs.getType().translationKey());
+                net.kyori.adventure.text.Component tn = gs.getType() == null ? net.kyori.adventure.text.Component.text((String)"?") : net.kyori.adventure.text.Component.translatable((String)gs.getType().translationKey());
                 lore.add(MenuText.noI(((TextComponent)net.kyori.adventure.text.Component.text((String)"\u2192 ", (TextColor)NamedTextColor.WHITE).append(tn.colorIfAbsent((TextColor)NamedTextColor.WHITE))).append((net.kyori.adventure.text.Component)net.kyori.adventure.text.Component.text((String)(" " + mb + "mB"), (TextColor)NamedTextColor.WHITE))));
                 double mbPerTick = effTicks > 0.0 ? (double)mb / effTicks : 0.0;
                 lore.add(MenuText.noI((net.kyori.adventure.text.Component)net.kyori.adventure.text.Component.text((String)String.format("   %.1f mB/tick", mbPerTick), (TextColor)NamedTextColor.YELLOW)));
@@ -179,7 +179,7 @@ public final class RecipeInfoIcon {
             FluidOutput fo = (FluidOutput)o;
             FluidStack fs = (FluidStack)fo.getOutput();
             mb = fs.getAmount();
-            TextComponent tn = fs.getType() == null ? net.kyori.adventure.text.Component.text((String)"?") : net.kyori.adventure.text.Component.translatable((String)fs.getType().translationKey());
+            net.kyori.adventure.text.Component tn = fs.getType() == null ? net.kyori.adventure.text.Component.text((String)"?") : net.kyori.adventure.text.Component.translatable((String)fs.getType().translationKey());
             lore.add(MenuText.noI(((TextComponent)net.kyori.adventure.text.Component.text((String)"\u2192 ", (TextColor)NamedTextColor.WHITE).append(tn.colorIfAbsent((TextColor)NamedTextColor.WHITE))).append((net.kyori.adventure.text.Component)net.kyori.adventure.text.Component.text((String)(" " + mb + "mB"), (TextColor)NamedTextColor.WHITE))));
             double mbPerTick = effTicks > 0.0 ? (double)mb / effTicks : 0.0;
             lore.add(MenuText.noI((net.kyori.adventure.text.Component)net.kyori.adventure.text.Component.text((String)String.format("   %.1f mB/tick", mbPerTick), (TextColor)NamedTextColor.YELLOW)));

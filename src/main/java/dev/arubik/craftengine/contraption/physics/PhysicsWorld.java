@@ -168,7 +168,7 @@ public final class PhysicsWorld {
     private static void runPhysics() {
         while (RUNNING) {
             Map<ResourceKey<Level>, List<Entry>> active;
-            Iterator<List<Entry>> c;
+            Runnable c;
             long t0 = System.nanoTime();
             LOCK.lock();
             try {
@@ -197,10 +197,10 @@ public final class PhysicsWorld {
             }
             LOCK.lock();
             try {
-                c = active.values().iterator();
-                while (c.hasNext()) {
+                Iterator<List<Entry>> iter = active.values().iterator();
+                while (iter.hasNext()) {
                     List<Entry> group;
-                    group = c.next();
+                    group = iter.next();
                     for (Entry e : group) {
                         RigidBody b = e.physBody.body;
                         Vector3d ip = e.physBody.impactPoint();
@@ -547,10 +547,11 @@ public final class PhysicsWorld {
             return;
         }
         ENTRIES.keySet().removeIf(id -> ContraptionManager.get(id) == null);
-        for (Map.Entry entry : byWorld.entrySet()) {
+        for (Map.Entry<?, ?> entry : byWorld.entrySet()) {
             ServerLevel level = (ServerLevel)levels.get(entry.getKey());
-            ArrayList<PhysBody> bodies = new ArrayList<PhysBody>(((List)entry.getValue()).size());
-            for (Entry entry2 : (List)entry.getValue()) {
+            @SuppressWarnings("unchecked") List<Entry> entryList = (List<Entry>)entry.getValue();
+            ArrayList<PhysBody> bodies = new ArrayList<PhysBody>(entryList.size());
+            for (Entry entry2 : entryList) {
                 PhysBody body = entry2.physBody;
                 if (!body.kinematic && !body.isAsleep()) {
                     PhysicsWorld.rebakeIfNeeded(body, level);
@@ -558,7 +559,7 @@ public final class PhysicsWorld {
                 bodies.add(body);
             }
             PhysicsWorld.solveInParallel(bodies);
-            for (Entry entry2 : (List)entry.getValue()) {
+            for (Entry entry2 : entryList) {
                 Integer dampTicks;
                 PhysicsWorld.writeBack(entry2, (ContraptionState)states.get(entry2));
                 ContraptionState relState = (ContraptionState)states.get(entry2);
@@ -628,9 +629,10 @@ public final class PhysicsWorld {
             byWorld.computeIfAbsent(state.worldId(), w -> new ArrayList()).add(entry);
         }
         ENTRIES.keySet().removeIf(id -> ContraptionManager.get(id) == null);
-        for (Map.Entry entry : byWorld.entrySet()) {
+        for (Map.Entry<?, ?> entry : byWorld.entrySet()) {
             level = (ServerLevel)levels.get(entry.getKey());
-            for (Entry entry2 : (List)entry.getValue()) {
+            @SuppressWarnings("unchecked") List<Entry> entryList2 = (List<Entry>)entry.getValue();
+            for (Entry entry2 : entryList2) {
                 PhysBody body = entry2.physBody;
                 if (body.kinematic || body.isAsleep()) continue;
                 PhysicsWorld.rebakeMain(entry2, level);
@@ -643,9 +645,10 @@ public final class PhysicsWorld {
         finally {
             LOCK.unlock();
         }
-        for (Map.Entry entry : byWorld.entrySet()) {
+        for (Map.Entry<?, ?> entry : byWorld.entrySet()) {
             level = (ServerLevel)levels.get(entry.getKey());
-            for (Entry entry2 : (List)entry.getValue()) {
+            @SuppressWarnings("unchecked") List<Entry> entryList3 = (List<Entry>)entry.getValue();
+            for (Entry entry2 : entryList3) {
                 BodyTransform pub = entry2.published;
                 if (pub == null) continue;
                 ContraptionState state = (ContraptionState)states.get(entry2);
@@ -701,7 +704,7 @@ public final class PhysicsWorld {
             Vector3d comShift = comDelta;
             PhysicsWorld.enqueue(() -> {
                 boolean settled;
-                boolean bl = settled = body.isAsleep() || body.body.linearVelocity.length() < 0.001 && body.body.angularVelocity.length() < 0.001;
+                boolean blSettled = settled = body.isAsleep() || body.body.linearVelocity.length() < 0.001 && body.body.angularVelocity.length() < 0.001;
                 if (comShift != null && comShift.lengthSquared() > 1.0E-12) {
                     Vector3d worldShift = new Vector3d((Vector3dc)comShift).mul(scaleNow).rotate((Quaterniondc)body.body.orientation);
                     body.body.position.add((Vector3dc)worldShift);
@@ -810,11 +813,11 @@ public final class PhysicsWorld {
             }
             return;
         }
-        ArrayList pending = new ArrayList(islands.size());
-        for (List<PhysBody> list : islands) {
+        ArrayList<Future<?>> pending = new ArrayList<>(islands.size());
+        for (List<PhysBody> island : islands) {
             pending.add(WORKERS.submit(() -> XpbdSolver.step(island, 1.0)));
         }
-        for (Future future : pending) {
+        for (Future<?> future : pending) {
             try {
                 future.get();
             }
@@ -839,11 +842,11 @@ public final class PhysicsWorld {
                 PhysicsWorld.union(parent, i, j);
             }
         }
-        LinkedHashMap<Integer, List> grouped = new LinkedHashMap<Integer, List>();
+        LinkedHashMap<Integer, List<PhysBody>> grouped = new LinkedHashMap<>();
         for (int i2 = 0; i2 < n; ++i2) {
-            grouped.computeIfAbsent(PhysicsWorld.find(parent, i2), k -> new ArrayList()).add(bodies.get(i2));
+            grouped.computeIfAbsent(PhysicsWorld.find(parent, i2), k -> new ArrayList<>()).add(bodies.get(i2));
         }
-        return new ArrayList<List<PhysBody>>(grouped.values());
+        return new ArrayList<>(grouped.values());
     }
 
     private static int find(int[] parent, int i) {

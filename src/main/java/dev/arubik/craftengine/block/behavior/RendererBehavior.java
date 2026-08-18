@@ -155,19 +155,19 @@ public class RendererBehavior extends BukkitBlockBehavior {
                                 str(r, "background", "0"),
                                 boolV(r, "shadow", false), boolV(r, "see_through", false),
                                 str(r, "alignment", "center"), intV(r, "opacity", 255),
-                                when, updateWhen, run);
+                                when, updateWhen, boolV(r, "global", false), run);
                         case "item_display" -> new RendererSpec.ItemDisplaySpec(
                                 str(r, "item", "minecraft:air"),
                                 locExpr,
                                 str(r, "scale", "1.0"),
                                 str(r, "rot_x", "0"), str(r, "rot_y", "0"), str(r, "rot_z", "0"),
                                 str(r, "billboard", "none"),
-                                when, updateWhen, run);
+                                when, updateWhen, boolV(r, "global", false), run);
                         case "bettermodel" -> new RendererSpec.BetterModelSpec(
                                 str(r, "model_id", ""),
                                 str(r, "animation", null),
                                 str(r, "speed", null),
-                                when, updateWhen, run);
+                                when, updateWhen, run, intV(r, "linger_ticks", 0));
                         case "modelengine" -> new RendererSpec.ModelEngineSpec(
                                 str(r, "model_id", ""),
                                 str(r, "animation", null),

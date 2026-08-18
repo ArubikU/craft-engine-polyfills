@@ -531,7 +531,7 @@ ModelRendersDriven {
         if (this.active != null && this.page == 1 && a.unlocked != this.lastRenderedUnlocked) {
             this.lastRenderedUnlocked = a.unlocked;
             this.active.syncToMachine();
-            for (HumanEntity h : new ArrayList(this.active.getInventory().getViewers())) {
+            for (HumanEntity h : new ArrayList<HumanEntity>(this.active.getInventory().getViewers())) {
                 if (!(h instanceof org.bukkit.entity.Player)) continue;
                 org.bukkit.entity.Player p = (org.bukkit.entity.Player)h;
                 this.openPage(p, 1);

@@ -137,7 +137,8 @@ public class FluidCollector {
                 level.setBlock(pos, Blocks.AIR.defaultBlockState(), 3);
                 return new FluidStack(FluidType.POWDER_SNOW, full, 0);
             }
-            List orbs = level.getEntitiesOfClass(ExperienceOrb.class, new AABB(pos));
+            @SuppressWarnings("unchecked")
+            List<ExperienceOrb> orbs = level.getEntitiesOfClass(ExperienceOrb.class, new AABB(pos));
             if (!orbs.isEmpty()) {
                 if (preferred != null && preferred != FluidType.EMPTY && preferred != FluidType.EXPERIENCE) {
                     return new FluidStack(FluidType.EMPTY, 0, 0);
@@ -191,7 +192,8 @@ public class FluidCollector {
             if (cs.is(Blocks.POWDER_SNOW)) {
                 return FluidType.POWDER_SNOW;
             }
-            List orbs = level.getEntitiesOfClass(ExperienceOrb.class, new AABB(pos));
+            @SuppressWarnings("unchecked")
+            List<ExperienceOrb> orbs = level.getEntitiesOfClass(ExperienceOrb.class, new AABB(pos));
             if (!orbs.isEmpty()) {
                 return FluidType.EXPERIENCE;
             }

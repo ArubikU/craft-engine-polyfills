@@ -895,7 +895,7 @@ extends AbstractMachineBlockEntity {
         if (this.page != 1 || this.active == null || this.shownUnlocked == this.curUnlocked) {
             return;
         }
-        ArrayList viewers = new ArrayList(this.active.getInventory().getViewers());
+        ArrayList<HumanEntity> viewers = new ArrayList<>(this.active.getInventory().getViewers());
         this.shownUnlocked = this.curUnlocked;
         for (HumanEntity h : viewers) {
             if (!(h instanceof org.bukkit.entity.Player)) continue;

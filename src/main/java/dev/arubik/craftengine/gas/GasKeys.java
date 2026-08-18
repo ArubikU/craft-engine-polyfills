@@ -65,8 +65,6 @@ public final class GasKeys {
                     bais.close();
                 }
                 catch (Throwable throwable) {
-                    Throwable throwable3;
-                    throwable3.addSuppressed(throwable);
                 }
             }
         }

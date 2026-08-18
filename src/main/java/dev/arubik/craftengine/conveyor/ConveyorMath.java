@@ -41,9 +41,8 @@ public final class ConveyorMath {
     }
 
     public static Quaternionf itemRotation(int facingStepX, int facingStepZ, int slopeStepY) {
-        float pitch;
         float yaw = (float)Math.atan2(-facingStepX, facingStepZ);
-        float f = slopeStepY > 0 ? (float)Math.toRadians(45.0) : (pitch = slopeStepY < 0 ? (float)Math.toRadians(-45.0) : 0.0f);
+        float pitch = slopeStepY > 0 ? (float)Math.toRadians(45.0) : ( slopeStepY < 0 ? (float)Math.toRadians(-45.0) : 0.0f);
         if (facingStepX < 0 || facingStepZ < 0) {
             pitch = -pitch;
         }

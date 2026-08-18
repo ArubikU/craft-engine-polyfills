@@ -340,15 +340,15 @@ public class WorkbenchBlockEntity extends PersistentBlockEntity
 
         // ---- render each ItemDisplaySpec using ConveyorItemDisplay ----------------
         java.util.List<dev.arubik.craftengine.machine.render.RendererSpec> specs = rendererManager.specs();
-        org.bukkit.inventory.ItemStack[] items = rendererManager.currentItems();
+        net.minecraft.world.item.ItemStack[] nmsItems = rendererManager.currentItems();
         java.util.List<net.momirealms.craftengine.core.entity.player.Player> viewers =
                 world.world().getTrackedBy(new ChunkPos(masterPos));
 
         for (int i = 0; i < specs.size(); i++) {
             if (!(specs.get(i) instanceof dev.arubik.craftengine.machine.render.RendererSpec.ItemDisplaySpec id))
                 continue;
-            org.bukkit.inventory.ItemStack item = items[i];
-            if (item != null && !item.getType().isAir()) {
+            net.minecraft.world.item.ItemStack nmsItem = nmsItems[i];
+            if (nmsItem != null && !nmsItem.isEmpty()) {
                 if (specDisplays[i] == null)
                     specDisplays[i] = new ConveyorItemDisplay();
 
@@ -374,8 +374,8 @@ public class WorkbenchBlockEntity extends PersistentBlockEntity
                 float[] rot = { ef(id.rotX(), 0f), ef(id.rotY(), 0f), ef(id.rotZ(), 0f) };
                 specDisplays[i].setScale(ef(id.scale(), 1f));
                 specDisplays[i].setRotation(flatRotation(facing, rot));
-                int h = item.hashCode();
-                specDisplays[i].setNmsItem(org.bukkit.craftbukkit.inventory.CraftItemStack.asNMSCopy(item));
+                int h = nmsItem.hashCode();
+                specDisplays[i].setNmsItem(nmsItem);
                 specDisplays[i].render(viewers,
                         cell.x() + o.x, cell.y() + o.y, cell.z() + o.z,
                         h != specDisplayHashes[i]);

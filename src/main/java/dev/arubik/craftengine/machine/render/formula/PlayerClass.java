@@ -3,7 +3,7 @@ package dev.arubik.craftengine.machine.render.formula;
 import net.minecraft.server.level.ServerPlayer;
 import java.util.List;
 
-public final class PlayerClass implements PolyClass {
+public final class PlayerClass extends PolyValue.Obj {
     private final ServerPlayer player;
 
     public PlayerClass(ServerPlayer player) {

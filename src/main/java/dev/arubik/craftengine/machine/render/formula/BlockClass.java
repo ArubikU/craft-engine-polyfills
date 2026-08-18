@@ -32,10 +32,10 @@ import java.util.Map;
  *   has_property("name")     — bool: block state has this property
  *   property("name")         — value of block state property as string/number
  */
-public final class BlockClass implements PolyClass {
+public final class BlockClass extends PolyValue.Obj {
 
-    private final ServerLevel level;
-    private final BlockPos pos;
+    final ServerLevel level;
+    final BlockPos pos;
     private BlockState cachedState;
     private CompoundTag cachedNbt;
     private boolean nbtResolved;

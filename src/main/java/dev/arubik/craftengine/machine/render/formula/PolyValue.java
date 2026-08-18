@@ -19,7 +19,14 @@ public sealed interface PolyValue {
     record Array(java.util.List<PolyValue> elements) implements PolyValue {}
     record Str(String value) implements PolyValue {}
     /** Wraps a PolyClass instance so member access (.property / .method()) chains work. */
-    record Obj(PolyClass inner) implements PolyValue {}
+    non-sealed class Obj implements PolyValue, PolyClass {
+        private final PolyClass inner;
+        public Obj(PolyClass inner) { this.inner = inner; }
+        public Obj() { this.inner = null; }
+        public PolyClass inner() { return inner != null ? inner : this; }
+        @Override public PolyValue get(String name) { return inner != null ? inner.get(name) : PolyValue.NULL; }
+        @Override public PolyValue call(String name, java.util.List<PolyValue> args) { return inner != null ? inner.call(name, args) : PolyValue.NULL; }
+    }
     record Null() implements PolyValue {}
 
     // ---- Coercions ---------------------------------------------------------

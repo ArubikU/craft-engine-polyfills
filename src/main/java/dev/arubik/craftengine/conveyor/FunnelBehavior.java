@@ -114,9 +114,12 @@ implements EntityBlock {
                 Object nms = ns.customBlockState().minecraftState();
                 MNms.INSTANCE.method$LevelWriter$setBlock(level, bp, nms, 2);
             }
-            if ((player = context.getPlayer()) instanceof BukkitServerPlayer && (player = (p = (BukkitServerPlayer)player).platformPlayer()) instanceof Player) {
-                net.momirealms.craftengine.core.entity.player.Player player2 = player;
-                player2.sendMessage("\u00a7eFunnel mode: \u00a7f" + next.toUpperCase());
+            if ((player = context.getPlayer()) instanceof BukkitServerPlayer) {
+                p = (BukkitServerPlayer) player;
+                Player bukkitPlayer = (Player) p.platformPlayer();
+                if (bukkitPlayer != null) {
+                    bukkitPlayer.sendMessage(net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().deserialize("\u00a7eFunnel mode: \u00a7f" + next.toUpperCase()));
+                }
             }
             return InteractionResult.SUCCESS_AND_CANCEL;
         }

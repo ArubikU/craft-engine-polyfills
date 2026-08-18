@@ -626,7 +626,7 @@ extends AbstractMachineBlockEntity {
         if (this.page != 1 || this.active == null || this.shownUnlocked == this.curUnlocked) {
             return;
         }
-        ArrayList viewers = new ArrayList(this.active.getInventory().getViewers());
+        ArrayList<HumanEntity> viewers = new ArrayList<>(this.active.getInventory().getViewers());
         this.shownUnlocked = this.curUnlocked;
         for (HumanEntity h : viewers) {
             if (!(h instanceof org.bukkit.entity.Player)) continue;
@@ -643,9 +643,9 @@ extends AbstractMachineBlockEntity {
         for (int s : this.fuelSlots) {
             l.addSlot(s, MenuSlotType.FUEL);
         }
-        Object object = this.menuConfig.buttons.iterator();
-        while (object.hasNext()) {
-            MachineMenuConfig.Button b = (MachineMenuConfig.Button)object.next();
+        var buttonIter = this.menuConfig.buttons.iterator();
+        while (buttonIter.hasNext()) {
+            MachineMenuConfig.Button b = buttonIter.next();
             this.installButton(l, b);
         }
         MachineBars.install(l, this.bars);

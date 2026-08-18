@@ -351,9 +351,9 @@ ContraptionLevel {
             this.localPositions.add(local.immutable());
             this.growFootprint(local);
         }
-        Iterator<Map.Entry<Object, Object>> iterator = touchedChunks.iterator();
+        Iterator<Long> iterator = touchedChunks.iterator();
         while (iterator.hasNext()) {
-            long chunkKey = (Long)(iterator.next());
+            long chunkKey = iterator.next();
             this.activateCeChunk(new BlockPos(ChunkPos.getX((long)chunkKey) << 4, 0, ChunkPos.getZ((long)chunkKey) << 4));
         }
     }
@@ -845,19 +845,19 @@ ContraptionLevel {
                 }
                 BlockEntityController blockEntityController = be2.controller;
                 if (!(blockEntityController instanceof ContraptionTickable)) continue;
-                tickable = (ContraptionTickable)blockEntityController;
-                tickable.tick((Level)this, local, ce);
+                ContraptionTickable ct = (ContraptionTickable)blockEntityController;
+                ct.tick((Level)this, local, ce);
             }
-            catch (Throwable be2) {}
+            catch (Throwable throwable) {}
         }
         for (BlockPos local : new HashSet<BlockPos>(this.localPositions)) {
             try {
                 EntityBlock eb;
                 BlockEntityTicker ticker;
                 BlockState bs;
-                be2 = this.getBlockEntity(local);
-                if (be2 == null || BlockStateUtils.getOptionalCustomBlockState((bs = this.getBlockState(local))).isPresent() || !((tickable = bs.getBlock()) instanceof EntityBlock) || (ticker = (eb = (EntityBlock)tickable).getTicker((Level)this, bs, be2.getType())) == null) continue;
-                ticker.tick((Level)this, local, bs, (BlockEntity)be2);
+                net.minecraft.world.level.block.entity.BlockEntity nmsBe = this.getBlockEntity(local);
+                if (nmsBe == null || BlockStateUtils.getOptionalCustomBlockState((bs = this.getBlockState(local))).isPresent() || !((tickable = bs.getBlock()) instanceof EntityBlock) || (ticker = (eb = (EntityBlock)tickable).getTicker((Level)this, bs, nmsBe.getType())) == null) continue;
+                ticker.tick((Level)this, local, bs, nmsBe);
             }
             catch (Throwable throwable) {}
         }

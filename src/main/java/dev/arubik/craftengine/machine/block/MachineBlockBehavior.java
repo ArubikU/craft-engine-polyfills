@@ -150,10 +150,10 @@ WorldlyContainerHolder {
             if (be != null && (blockEntityController = be.controller) instanceof AbstractMachineBlockEntity) {
                 BukkitServerPlayer cePlayer;
                 AbstractMachineBlockEntity machine = (AbstractMachineBlockEntity)blockEntityController;
-                blockEntityController = context.getPlayer();
-                if (blockEntityController instanceof BukkitServerPlayer && (blockEntityController = (cePlayer = (BukkitServerPlayer)blockEntityController).platformPlayer()) instanceof Player) {
+                net.momirealms.craftengine.core.entity.player.Player cePlayerRaw = context.getPlayer();
+                if (cePlayerRaw instanceof BukkitServerPlayer && (cePlayer = (BukkitServerPlayer)cePlayerRaw).platformPlayer() instanceof Player) {
                     DataMachineBlockEntity dm;
-                    BlockEntityController bukkit = blockEntityController;
+                    Player bukkit = (Player) cePlayer.platformPlayer();
                     boolean canOpen = true;
                     if (machine instanceof DataMachineBlockEntity && (dm = (DataMachineBlockEntity)machine).definition() != null) {
                         canOpen = dm.definition().openUi();
@@ -164,7 +164,7 @@ WorldlyContainerHolder {
                         return InteractionResult.SUCCESS_AND_CANCEL;
                     }
                     if (canOpen) {
-                        machine.getMenu().open((Player)bukkit);
+                        machine.getMenu().open(bukkit);
                         return InteractionResult.SUCCESS_AND_CANCEL;
                     }
                 }
@@ -471,7 +471,7 @@ WorldlyContainerHolder {
                     faces = new ArrayList<net.minecraft.core.Direction>();
                     facesArg = arguments.getOrDefault("faces", "all");
                     if (!(facesArg instanceof String)) break block26;
-                    net.minecraft.core.Direction[] faceStr = (net.minecraft.core.Direction[])facesArg;
+                    String faceStr = (String) facesArg;
                     switch (faceStr.toLowerCase()) {
                         case "all": {
                             for (net.minecraft.core.Direction d : net.minecraft.core.Direction.values()) {
@@ -493,7 +493,7 @@ WorldlyContainerHolder {
                         }
                         default: {
                             try {
-                                faces.add(net.minecraft.core.Direction.valueOf((String)faceStr.toUpperCase()));
+                                faces.add(net.minecraft.core.Direction.valueOf(faceStr.toUpperCase()));
                                 break;
                             }
                             catch (Exception exception) {

@@ -95,7 +95,7 @@ implements InventoryHolder {
         ItemMeta m = s.getItemMeta();
         if (m != null) {
             m.displayName(MenuText.noI(MenuText.tr("polyfill.ui.fuel", NamedTextColor.GRAY)));
-            m.getPersistentDataContainer().set(GHOST_KEY, PersistentDataType.BYTE, 1);
+            m.getPersistentDataContainer().set(GHOST_KEY, PersistentDataType.BYTE, (byte) 1);
             s.setItemMeta(m);
         }
         return s;

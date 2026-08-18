@@ -105,7 +105,7 @@ implements Listener {
         if (CraftEngineItems.byItemStack((ItemStack)item) == null) {
             return item;
         }
-        ArrayList behaviors = new ArrayList();
+        ArrayList<ExtendedItemBehavior> behaviors = new ArrayList<>();
         CraftEngineItems.byItemStack((ItemStack)item).behavior().let(ExtendedItemBehavior.class, behaviors::add);
         for (ExtendedItemBehavior extBehavior : behaviors) {
             switch (actionType.ordinal()) {

@@ -11,11 +11,11 @@ package dev.arubik.craftengine.machine.render.variable;
 
 import dev.arubik.craftengine.machine.render.formula.FluidTanksClass;
 import dev.arubik.craftengine.machine.render.formula.GasTanksClass;
+import dev.arubik.craftengine.machine.render.formula.PolyClass;
 import dev.arubik.craftengine.machine.render.formula.PolyContext;
 import dev.arubik.craftengine.machine.render.formula.PolyFormula;
 import dev.arubik.craftengine.machine.render.formula.PolyValue;
 import dev.arubik.craftengine.machine.render.variable.VariableSpec;
-import java.lang.runtime.SwitchBootstraps;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -195,7 +195,7 @@ public final class MachineRenderContext {
         try {
             return Double.parseDouble(exprOrRef);
         }
-        catch (NumberFormatException spec3) {
+        catch (NumberFormatException nfe) {
             try {
                 return PolyFormula.compile(exprOrRef).evaluateNum(this.contextWithVars(varSpecs));
             }
@@ -229,7 +229,8 @@ public final class MachineRenderContext {
             if (spec instanceof VariableSpec.Formula) {
                 VariableSpec.Formula f = (VariableSpec.Formula)spec;
                 try {
-                    return PolyFormula.compile(f.expr()).evaluateItem(this.toPolyContext());
+                    org.bukkit.inventory.ItemStack bi = PolyFormula.compile(f.expr()).evaluateItem(this.toPolyContext());
+                    return bi != null ? CraftItemStack.asNMSCopy(bi) : null;
                 }
                 catch (Throwable throwable) {
                     // empty catch block
@@ -238,7 +239,8 @@ public final class MachineRenderContext {
             return null;
         }
         try {
-            return PolyFormula.compile(ref).evaluateItem(this.toPolyContext());
+            org.bukkit.inventory.ItemStack bi = PolyFormula.compile(ref).evaluateItem(this.toPolyContext());
+            return bi != null ? CraftItemStack.asNMSCopy(bi) : null;
         }
         catch (Throwable ignored) {
             return null;
@@ -282,80 +284,54 @@ public final class MachineRenderContext {
     }
 
     private boolean evalSpecBool(VariableSpec spec, Map<String, VariableSpec> varSpecs) {
-        VariableSpec variableSpec = spec;
-        Objects.requireNonNull(variableSpec);
-        VariableSpec variableSpec2 = variableSpec;
-        int n = 0;
-        return switch (SwitchBootstraps.typeSwitch("typeSwitch", new Object[]{VariableSpec.BoolSource.class, VariableSpec.BoolExpr.class, VariableSpec.NumExpr.class, VariableSpec.ItemSlot.class, VariableSpec.TankVar.class, VariableSpec.Formula.class}, variableSpec2, n)) {
-            default -> throw new MatchException(null, null);
-            case 0 -> {
-                boolean var5_11;
-                VariableSpec.BoolSource bs = (VariableSpec.BoolSource)variableSpec2;
-                boolean v1 = switch (bs.source()) {
-                    case "processing" -> this.processing;
-                    case "powered" -> this.powered;
-                    case "overclocked" -> this.overclocked;
-                    case "has_fuel" -> this.hasFuel;
-                    case "always" -> true;
-                    case "never" -> false;
-                    default -> false;
-                };
-                yield var5_11 = v1;
+        Objects.requireNonNull(spec);
+        if (spec instanceof VariableSpec.BoolSource bs) {
+            return switch (bs.source()) {
+                case "processing" -> this.processing;
+                case "powered" -> this.powered;
+                case "overclocked" -> this.overclocked;
+                case "has_fuel" -> this.hasFuel;
+                case "always" -> true;
+                case "never" -> false;
+                default -> false;
+            };
+        }
+        if (spec instanceof VariableSpec.BoolExpr be) {
+            try {
+                return PolyFormula.compile(be.expr()).evaluateBool(this.toPolyContext());
+            } catch (Throwable ignored) {
+                return false;
             }
-            case 1 -> {
-                VariableSpec.BoolExpr be = (VariableSpec.BoolExpr)variableSpec2;
-                try {
-                    boolean var5_12;
-                    yield var5_12 = PolyFormula.compile(be.expr()).evaluateBool(this.toPolyContext());
-                }
-                catch (Throwable ignored) {
-                    boolean var5_13;
-                    yield var5_13 = false;
-                }
+        }
+        if (spec instanceof VariableSpec.NumExpr ne) {
+            try {
+                return PolyFormula.compile(ne.expr()).evaluateNum(this.toPolyContext()) != 0.0;
+            } catch (Throwable ignored) {
+                return false;
             }
-            case 2 -> {
-                VariableSpec.NumExpr ne = (VariableSpec.NumExpr)variableSpec2;
-                try {
-                    boolean var5_14;
-                    yield var5_14 = PolyFormula.compile(ne.expr()).evaluateNum(this.toPolyContext()) != 0.0;
-                }
-                catch (Throwable ignored) {
-                    boolean var5_15;
-                    yield var5_15 = false;
-                }
+        }
+        if (spec instanceof VariableSpec.ItemSlot is) {
+            return this.container != null && this.container.getItem(is.slot()) != null;
+        }
+        if (spec instanceof VariableSpec.TankVar tv) {
+            return this.resolveTankValue(tv).asBool();
+        }
+        if (spec instanceof VariableSpec.Formula f) {
+            try {
+                return PolyFormula.compile(f.expr()).evaluateBool(this.toPolyContext());
+            } catch (Throwable ignored) {
+                return false;
             }
-            case 3 -> {
-                boolean var5_16;
-                VariableSpec.ItemSlot is = (VariableSpec.ItemSlot)variableSpec2;
-                yield var5_16 = this.container != null && this.container.getItem(is.slot()) != null;
-            }
-            case 4 -> {
-                boolean var5_17;
-                VariableSpec.TankVar tv = (VariableSpec.TankVar)variableSpec2;
-                yield var5_17 = this.resolveTankValue(tv).asBool();
-            }
-            case 5 -> {
-                VariableSpec.Formula f = (VariableSpec.Formula)variableSpec2;
-                try {
-                    boolean var5_18;
-                    yield var5_18 = PolyFormula.compile(f.expr()).evaluateBool(this.toPolyContext());
-                }
-                catch (Throwable ignored) {
-                    boolean var5_19;
-                    yield var5_19 = false;
-                }
-            }
-        };
+        }
+        return false;
     }
 
     private PolyValue resolveTankValue(VariableSpec.TankVar tv) {
-        PolyValue.Obj cls = this.toPolyContext().getClass(tv.isGas() ? "GasTanks" : "FluidTanks");
-        if (cls instanceof FluidTanksClass) {
-            FluidTanksClass ftc = (FluidTanksClass)cls;
+        PolyClass cls = this.toPolyContext().getClass(tv.isGas() ? "GasTanks" : "FluidTanks");
+        if (cls instanceof FluidTanksClass ftc) {
             return ftc.forTank(tv.tankName()).get(tv.property());
         }
-        if (cls instanceof GasTanksClass) {
-            GasTanksClass gtc = (GasTanksClass)cls;
+        if (cls instanceof GasTanksClass gtc) {
             return gtc.forTank(tv.tankName()).get(tv.property());
         }
         return PolyValue.NULL;

@@ -192,7 +192,7 @@ public final class ContraptionShulkerColliderSwarm {
             Iterator iterator = touched.iterator();
             while (iterator.hasNext()) {
                 int tier = (Integer)iterator.next();
-                Set<UUID> want = byTier.getOrDefault(tier, Set.of());
+                Set<UUID> want = (Set<UUID>) byTier.getOrDefault(tier, Set.of());
                 List<Slot> tierSlots = g.tierSlots.get(tier);
                 if (tierSlots == null) {
                     if (want.isEmpty()) continue;
@@ -472,7 +472,7 @@ public final class ContraptionShulkerColliderSwarm {
             BaseEntityData.SharedFlags.addEntityData(((byte)(SHOW_COLLIDERS ? 0 : 32)), values);
             ShulkerData.AttachFace.addEntityData(this.attachFace, values);
             ShulkerData.RawPeekAmount.addEntityData(((byte)this.peek), values);
-            ShulkerData.Color.addEntityData(16, values);
+            ShulkerData.Color.addEntityData((byte)16, values);
             return values;
         }
 
@@ -616,7 +616,7 @@ public final class ContraptionShulkerColliderSwarm {
         List<Slot> slotsFor(int budget, boolean offAxis) {
             List<ShulkerBoxFit.Cube> fitted = this.cubesFor(budget, offAxis);
             return this.tierSlots.computeIfAbsent(budget, b -> {
-                List cubes = fitted;
+                List<ShulkerBoxFit.Cube> cubes = fitted;
                 ArrayList<Slot> out = new ArrayList<Slot>(cubes.size());
                 for (ShulkerBoxFit.Cube c : cubes) {
                     out.add(new Slot(c, c.centerX(), c.y0(), c.centerZ(), (float)c.size(), Direction.DOWN, 0));

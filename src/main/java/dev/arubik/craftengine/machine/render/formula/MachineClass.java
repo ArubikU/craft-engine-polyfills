@@ -179,6 +179,7 @@ import org.bukkit.World;
 import org.bukkit.block.BlockFace;
 import org.bukkit.craftbukkit.CraftWorld;
 import org.bukkit.craftbukkit.entity.CraftPlayer;
+import org.bukkit.craftbukkit.inventory.CraftItemStack;
 import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
 
@@ -257,13 +258,13 @@ implements PolyClass {
             return PolyValue.NULL;
         }
         ServerLevel sl = ((CraftWorld)mc.world).getHandle();
-        return LocationClass.forLevel(sl, mc.x, mc.y, mc.z);
+        return new PolyValue.Obj(LocationClass.forLevel(sl, mc.x, mc.y, mc.z));
     }).property("world", mc -> {
         if (mc.world == null) {
             return PolyValue.NULL;
         }
         ServerLevel sl = ((CraftWorld)mc.world).getHandle();
-        return WorldClass.forLevel(sl);
+        return new PolyValue.Obj(WorldClass.forLevel(sl));
     }).property("owner_uuid", mc -> {
         PersistentBlockEntity patt0$temp = mc.blockEntity;
         if (patt0$temp instanceof AbstractMachineBlockEntity) {
@@ -452,11 +453,12 @@ implements PolyClass {
             if (state.isAir()) {
                 return new PolyValue.Array(List.of());
             }
-            List drops = Block.getDrops((BlockState)state, (ServerLevel)sl, (BlockPos)dropPos, null);
+            @SuppressWarnings("unchecked")
+            List<ItemStack> drops = Block.getDrops((BlockState)state, (ServerLevel)sl, (BlockPos)dropPos, null);
             sl.setBlock(dropPos, Blocks.AIR.defaultBlockState(), 3);
             ArrayList<PolyValue> result = new ArrayList<PolyValue>();
             for (ItemStack s : drops) {
-                result.add(new PolyValue.Item(s));
+                result.add(new PolyValue.Item(CraftItemStack.asBukkitCopy(s)));
             }
             return new PolyValue.Array(result);
         }
@@ -482,7 +484,8 @@ implements PolyClass {
             ServerLevel sl = mc.nmsLevel();
             BlockPos target = mc.nmsPos().offset(dx, dy, dz);
             BlockState state = sl.getBlockState(target);
-            String id = BuiltInRegistries.BLOCK.getKey((Object)state.getBlock()).toString();
+            @SuppressWarnings("unchecked")
+            String id = BuiltInRegistries.BLOCK.getKey(state.getBlock()).toString();
             return PolyValue.of(id);
         }
         catch (Throwable ignored) {
@@ -1170,7 +1173,7 @@ implements PolyClass {
             double dz = args.size() > 3 ? ((PolyValue)args.get(3)).asNum() : 0.0;
             ServerLevel sl = mc.nmsLevel();
             BlockPos pos = mc.nmsPos();
-            ItemEntity ie = new ItemEntity((Level)sl, (double)pos.getX() + 0.5 + dx, (double)pos.getY() + dy, (double)pos.getZ() + 0.5 + dz, it.stack().copy());
+            ItemEntity ie = new ItemEntity((Level)sl, (double)pos.getX() + 0.5 + dx, (double)pos.getY() + dy, (double)pos.getZ() + 0.5 + dz, CraftItemStack.asNMSCopy(it.stack()));
             ie.setDefaultPickUpDelay();
             sl.addFreshEntity((Entity)ie);
             return PolyValue.of(true);
@@ -1197,7 +1200,7 @@ implements PolyClass {
         double maxDist = args.isEmpty() ? 6.0 : ((PolyValue)args.get(0)).asNum();
         double margin = args.size() >= 2 ? ((PolyValue)args.get(1)).asNum() : 0.0;
         try {
-            List<Object> candidates;
+            List<ServerPlayer> candidates;
             ServerLevel rsl;
             ServerLevel sl = mc.nmsLevel();
             if (sl == null) {
@@ -1312,12 +1315,13 @@ implements PolyClass {
                 return new PolyValue.Array(List.of());
             }
             ItemStack fakeTool = new ItemStack((ItemLike)Items.DIAMOND_PICKAXE);
-            List drops = Block.getDrops((BlockState)state, (ServerLevel)realSl, (BlockPos)realPos, null, null, (ItemStack)fakeTool);
+            @SuppressWarnings("unchecked")
+            List<ItemStack> drops = Block.getDrops((BlockState)state, (ServerLevel)realSl, (BlockPos)realPos, null, null, (ItemStack)fakeTool);
             realSl.setBlock(realPos, Blocks.AIR.defaultBlockState(), 3);
             MachineClass.clearBreakAnimation(realSl, realPos);
             ArrayList<PolyValue> result = new ArrayList<PolyValue>();
             for (ItemStack s : drops) {
-                result.add(new PolyValue.Item(s));
+                result.add(new PolyValue.Item(CraftItemStack.asBukkitCopy(s)));
             }
             return new PolyValue.Array(result);
         }
@@ -1356,7 +1360,8 @@ implements PolyClass {
             }
             if (progress >= 100.0) {
                 ItemStack fakeTool = new ItemStack((ItemLike)Items.DIAMOND_PICKAXE);
-                List drops = Block.getDrops((BlockState)state, (ServerLevel)realSl, (BlockPos)realPos, null, null, (ItemStack)fakeTool);
+                @SuppressWarnings("unchecked")
+                List<ItemStack> drops = Block.getDrops((BlockState)state, (ServerLevel)realSl, (BlockPos)realPos, null, null, (ItemStack)fakeTool);
                 realSl.setBlock(realPos, Blocks.AIR.defaultBlockState(), 3);
                 realSl.levelEvent(2001, realPos, Block.getId((BlockState)state));
                 MachineClass.clearBreakAnimation(realSl, realPos);
@@ -1364,7 +1369,7 @@ implements PolyClass {
                 ArrayList<PolyValue> result = new ArrayList<PolyValue>();
                 for (ItemStack s : drops) {
                     if (s.isEmpty()) continue;
-                    result.add(new PolyValue.Item(s.copy()));
+                    result.add(new PolyValue.Item(CraftItemStack.asBukkitCopy(s)));
                 }
                 if (DataMachineBlockEntity.SCRIPT_DEBUG) {
                     System.out.println("[CEP tick_break] BROKE! drops=" + drops.size() + " result=" + result.size());
@@ -1434,7 +1439,7 @@ implements PolyClass {
                 return PolyValue.of(false);
             }
             PolyValue.Item itemVal = (PolyValue.Item)itemArg;
-            ItemStack nmsStack = itemVal.stack();
+            ItemStack nmsStack = CraftItemStack.asNMSCopy(itemVal.stack());
             if (nmsStack == null || nmsStack.isEmpty()) {
                 return PolyValue.of(false);
             }
@@ -1467,7 +1472,7 @@ implements PolyClass {
         PersistentWorldlyBlockEntity wbe = (PersistentWorldlyBlockEntity)patt1$temp;
         try {
             int slot;
-            ItemStack incoming = itemArg.stack();
+            ItemStack incoming = CraftItemStack.asNMSCopy(itemArg.stack());
             if (incoming == null || incoming.isEmpty()) {
                 return PolyValue.of(0.0);
             }
@@ -1505,7 +1510,7 @@ implements PolyClass {
             ServerLevel sl = mc.nmsLevel();
             BlockPos bp = mc.nmsPos();
             AABB aabb = new AABB((double)bp.getX() - radius, (double)bp.getY() - radius, (double)bp.getZ() - radius, (double)(bp.getX() + 1) + radius, (double)(bp.getY() + 1) + radius, (double)(bp.getZ() + 1) + radius);
-            List entities = sl.getEntitiesOfClass(LivingEntity.class, aabb);
+            List<LivingEntity> entities = sl.getEntitiesOfClass(LivingEntity.class, aabb);
             for (LivingEntity e : entities) {
                 e.hurt(sl.damageSources().generic(), amount);
             }
@@ -1524,7 +1529,7 @@ implements PolyClass {
             ServerLevel sl = mc.nmsLevel();
             BlockPos bp = mc.nmsPos();
             AABB aabb = new AABB((double)bp.getX() - radius, (double)bp.getY() - radius, (double)bp.getZ() - radius, (double)(bp.getX() + 1) + radius, (double)(bp.getY() + 1) + radius, (double)(bp.getZ() + 1) + radius);
-            List entities = sl.getEntitiesOfClass(LivingEntity.class, aabb);
+            List<LivingEntity> entities = sl.getEntitiesOfClass(LivingEntity.class, aabb);
             for (LivingEntity e : entities) {
                 e.hurt(sl.damageSources().onFire(), 1.0f);
                 e.setRemainingFireTicks(fireTicks);
@@ -1543,10 +1548,10 @@ implements PolyClass {
             ServerLevel sl = mc.nmsLevel();
             BlockPos bp = mc.nmsPos();
             AABB aabb = new AABB((double)bp.getX() - radius, (double)bp.getY() - radius, (double)bp.getZ() - radius, (double)(bp.getX() + 1) + radius, (double)(bp.getY() + 1) + radius, (double)(bp.getZ() + 1) + radius);
-            List entities = sl.getEntitiesOfClass(ItemEntity.class, aabb);
+            List<ItemEntity> entities = sl.getEntitiesOfClass(ItemEntity.class, aabb);
             ArrayList<PolyValue> result = new ArrayList<PolyValue>();
             for (ItemEntity e : entities) {
-                result.add(new PolyValue.Item(e.getItem().copy()));
+                result.add(new PolyValue.Item(CraftItemStack.asBukkitCopy(e.getItem().copy())));
                 e.discard();
             }
             return new PolyValue.Array(result);
@@ -1563,7 +1568,7 @@ implements PolyClass {
             ServerLevel sl = mc.nmsLevel();
             BlockPos bp = mc.nmsPos();
             AABB aabb = new AABB((double)bp.getX() - radius, (double)bp.getY() - radius, (double)bp.getZ() - radius, (double)(bp.getX() + 1) + radius, (double)(bp.getY() + 1) + radius, (double)(bp.getZ() + 1) + radius);
-            List entities = sl.getEntitiesOfClass(ItemEntity.class, aabb);
+            List<ItemEntity> entities = sl.getEntitiesOfClass(ItemEntity.class, aabb);
             for (ItemEntity e : entities) {
                 e.discard();
             }
@@ -1581,7 +1586,7 @@ implements PolyClass {
             ServerLevel sl = mc.nmsLevel();
             BlockPos bp = mc.nmsPos();
             AABB aabb = new AABB((double)bp.getX() - radius, (double)bp.getY() - radius, (double)bp.getZ() - radius, (double)(bp.getX() + 1) + radius, (double)(bp.getY() + 1) + radius, (double)(bp.getZ() + 1) + radius);
-            List orbs = sl.getEntitiesOfClass(ExperienceOrb.class, aabb);
+            List<ExperienceOrb> orbs = sl.getEntitiesOfClass(ExperienceOrb.class, aabb);
             int total = 0;
             for (ExperienceOrb orb : orbs) {
                 total += orb.getValue();
@@ -1605,7 +1610,7 @@ implements PolyClass {
             ServerLevel sl = mc.nmsLevel();
             BlockPos bp = mc.nmsPos();
             AABB aabb = new AABB((double)bp.getX() - radius, (double)bp.getY() - radius, (double)bp.getZ() - radius, (double)(bp.getX() + 1) + radius, (double)(bp.getY() + 1) + radius, (double)(bp.getZ() + 1) + radius);
-            List entities = sl.getEntitiesOfClass(Entity.class, aabb);
+            List<Entity> entities = sl.getEntitiesOfClass(Entity.class, aabb);
             for (Entity e : entities) {
                 e.push(dx * strength, dy * strength, dz * strength);
             }
@@ -1647,9 +1652,10 @@ implements PolyClass {
                 BlockState state = sl.getBlockState(scan);
                 Block patt0$temp = state.getBlock();
                 if (!(patt0$temp instanceof CropBlock) || !(crop = (CropBlock)patt0$temp).isMaxAge(state)) continue;
-                List drops = Block.getDrops((BlockState)state, (ServerLevel)sl, (BlockPos)scan, null);
+                @SuppressWarnings("unchecked")
+                List<ItemStack> drops = Block.getDrops((BlockState)state, (ServerLevel)sl, (BlockPos)scan, null);
                 for (ItemStack s : drops) {
-                    allDrops.add(new PolyValue.Item(s));
+                    allDrops.add(new PolyValue.Item(CraftItemStack.asBukkitCopy(s)));
                 }
                 sl.setBlock(scan.immutable(), crop.getStateForAge(0), 3);
             }
@@ -1667,7 +1673,7 @@ implements PolyClass {
             ServerLevel sl = mc.nmsLevel();
             BlockPos bp = mc.nmsPos();
             AABB aabb = new AABB((double)bp.getX() - radius, (double)bp.getY() - radius, (double)bp.getZ() - radius, (double)(bp.getX() + 1) + radius, (double)(bp.getY() + 1) + radius, (double)(bp.getZ() + 1) + radius);
-            List animals = sl.getEntitiesOfClass(Animal.class, aabb);
+            List<Animal> animals = sl.getEntitiesOfClass(Animal.class, aabb);
             int count = 0;
             for (Animal a : animals) {
                 if (a.getAge() < 0 || a.getInLoveTime() != 0) continue;
@@ -1688,7 +1694,7 @@ implements PolyClass {
             BlockPos rb = MachineClass.resolveReal(sl, bp, rl)[0];
             ServerLevel realSl = rl[0];
             AABB aabb = new AABB((double)rb.getX() - radius, (double)rb.getY() - radius, (double)rb.getZ() - radius, (double)(rb.getX() + 1) + radius, (double)(rb.getY() + 1) + radius, (double)(rb.getZ() + 1) + radius);
-            List entities = realSl.getEntities((Entity)null, aabb, e -> true);
+            List<Entity> entities = realSl.getEntities((Entity)null, aabb, e -> true);
             ArrayList<PolyValue> result = new ArrayList<PolyValue>();
             for (Entity e2 : entities) {
                 result.add(new EntityClass(e2));
@@ -1708,11 +1714,11 @@ implements PolyClass {
             ServerLevel sl = mc.nmsLevel();
             BlockPos bp = mc.nmsPos();
             AABB aabb = new AABB((double)bp.getX() - radius, (double)bp.getY() - radius, (double)bp.getZ() - radius, (double)(bp.getX() + 1) + radius, (double)(bp.getY() + 1) + radius, (double)(bp.getZ() + 1) + radius);
-            List animals = sl.getEntitiesOfClass(Animal.class, aabb);
+            List<Animal> animals = sl.getEntitiesOfClass(Animal.class, aabb);
             ArrayList<PolyValue> result = new ArrayList<PolyValue>();
             for (Animal a : animals) {
                 Identifier eid;
-                if (typeFilter != null && ((eid = BuiltInRegistries.ENTITY_TYPE.getKey((Object)a.getType())) == null || !eid.toString().equals(typeFilter))) continue;
+                if (typeFilter != null && ((eid = BuiltInRegistries.ENTITY_TYPE.getKey(a.getType())) == null || !eid.toString().equals(typeFilter))) continue;
                 result.add(new EntityClass((Entity)a));
             }
             return new PolyValue.Array(result);
@@ -1789,7 +1795,7 @@ implements PolyClass {
             for (int s = 0; s < inv.getContainerSize(); ++s) {
                 Identifier itemId;
                 ItemStack stack = inv.getItem(s);
-                if (stack.isEmpty() || (itemId = BuiltInRegistries.ITEM.getKey((Object)stack.getItem())) == null || !foods.contains(itemId.toString())) continue;
+                if (stack.isEmpty() || (itemId = BuiltInRegistries.ITEM.getKey(stack.getItem())) == null || !foods.contains(itemId.toString())) continue;
                 return PolyValue.of(s);
             }
             return PolyValue.of(-1.0);
@@ -1875,7 +1881,7 @@ implements PolyClass {
                 return PolyValue.NULL;
             }
             ItemStack stack = inv.getItem(slot);
-            return stack.isEmpty() ? PolyValue.NULL : new PolyValue.Item(stack);
+            return stack.isEmpty() ? PolyValue.NULL : new PolyValue.Item(CraftItemStack.asBukkitCopy(stack));
         }
         catch (Throwable ignored) {
             return PolyValue.NULL;
@@ -1898,7 +1904,7 @@ implements PolyClass {
         try {
             int si;
             PersistentWorldlyBlockEntity inv = (PersistentWorldlyBlockEntity)mc.blockEntity;
-            ItemStack toAdd = it.stack().copy();
+            ItemStack toAdd = CraftItemStack.asNMSCopy(it.stack());
             int original = toAdd.getCount();
             int size = inv.getContainerSize();
             for (si = 0; si < size && !toAdd.isEmpty(); ++si) {
@@ -1918,7 +1924,7 @@ implements PolyClass {
             }
             int placed = original - toAdd.getCount();
             if (DataMachineBlockEntity.SCRIPT_DEBUG) {
-                System.out.println("[CEP add_item] OK placed=" + placed + " item=" + String.valueOf(it.stack().getItem()));
+                System.out.println("[CEP add_item] OK placed=" + placed + " item=" + String.valueOf(toAdd.getItem()));
             }
             return PolyValue.of(placed);
         }
@@ -1953,7 +1959,7 @@ implements PolyClass {
                 int si;
                 PolyValue.Item it;
                 if (!(pv instanceof PolyValue.Item) || (it = (PolyValue.Item)pv).stack() == null || it.stack().isEmpty()) continue;
-                ItemStack toAdd = it.stack().copy();
+                ItemStack toAdd = CraftItemStack.asNMSCopy(it.stack());
                 int original = toAdd.getCount();
                 for (si = 0; si < size && !toAdd.isEmpty(); ++si) {
                     int space;
@@ -1994,7 +2000,7 @@ implements PolyClass {
             PolyValue val = (PolyValue)args.get(1);
             ItemStack nms = ItemStack.EMPTY;
             if (val instanceof PolyValue.Item && (i = (PolyValue.Item)val).stack() != null) {
-                nms = i.stack().copy();
+                nms = CraftItemStack.asNMSCopy(i.stack());
             }
             inv.setItem(slot, nms);
             return PolyValue.of(true);
@@ -2052,7 +2058,7 @@ implements PolyClass {
                 return PolyValue.of(1.0);
             }
             double dmg = 1.0;
-            ItemAttributeModifiers attrMods = (ItemAttributeModifiers)iv.stack().get(DataComponents.ATTRIBUTE_MODIFIERS);
+            ItemAttributeModifiers attrMods = (ItemAttributeModifiers)CraftItemStack.asNMSCopy(iv.stack()).get(DataComponents.ATTRIBUTE_MODIFIERS);
             if (attrMods != null) {
                 for (ItemAttributeModifiers.Entry entry : attrMods.modifiers()) {
                     if (entry.attribute().value() != Attributes.ATTACK_DAMAGE.value()) continue;
@@ -2118,7 +2124,7 @@ implements PolyClass {
             if (!(patt0$temp instanceof PolyValue.Item) || (iv = (PolyValue.Item)patt0$temp).stack() == null || iv.stack().isEmpty()) {
                 return PolyValue.NULL;
             }
-            CustomData customData = (CustomData)iv.stack().get(DataComponents.CUSTOM_DATA);
+            CustomData customData = (CustomData)CraftItemStack.asNMSCopy(iv.stack()).get(DataComponents.CUSTOM_DATA);
             if (customData == null) {
                 return PolyValue.NULL;
             }
@@ -2186,7 +2192,7 @@ implements PolyClass {
             if (item == null || item == Items.AIR) {
                 return PolyValue.NULL;
             }
-            return new PolyValue.Item(new ItemStack((ItemLike)item, count));
+            return new PolyValue.Item(CraftItemStack.asBukkitCopy(new ItemStack((ItemLike)item, count)));
         }
         catch (Throwable ignored) {
             return PolyValue.NULL;
@@ -2244,7 +2250,7 @@ implements PolyClass {
                         Identifier bid;
                         BlockPos pos;
                         BlockState state;
-                        if (dx == 0 && dy == 0 && dz == 0 || (double)(dx * dx + dy * dy + dz * dz) > radius * radius || (state = sl.getBlockState(pos = base.offset(dx, dy, dz))).isAir() || filter != null && ((bid = BuiltInRegistries.BLOCK.getKey((Object)state.getBlock())) == null || !bid.toString().equals(filter))) continue;
+                        if (dx == 0 && dy == 0 && dz == 0 || (double)(dx * dx + dy * dy + dz * dz) > radius * radius || (state = sl.getBlockState(pos = base.offset(dx, dy, dz))).isAir() || filter != null && ((bid = BuiltInRegistries.BLOCK.getKey(state.getBlock())) == null || !bid.toString().equals(filter))) continue;
                         positions.add(new PolyValue.Array(List.of(PolyValue.of(dx), PolyValue.of(dy), PolyValue.of(dz))));
                     }
                 }
@@ -2356,7 +2362,7 @@ implements PolyClass {
     private int[][] footprint;
     private PersistentBlockEntity blockEntity;
     private static final String[] OCTANT_NAMES = new String[]{"N", "NE", "E", "SE", "S", "SW", "W", "NW"};
-    private final PolyValue.Obj delegate;
+    private final PolyClass delegate;
 
     BlockPos resolveTargetPos(List<PolyValue> args) {
         if (args.isEmpty()) {
@@ -2454,7 +2460,7 @@ implements PolyClass {
             int dx = this.nmsPos().getX() - target.getX();
             int dy = this.nmsPos().getY() - target.getY();
             int dz = this.nmsPos().getZ() - target.getZ();
-            Direction direction = Math.abs(dx) >= Math.abs(dy) && Math.abs(dx) >= Math.abs(dz) ? (dx > 0 ? Direction.EAST : Direction.WEST) : (Math.abs(dy) >= Math.abs(dz) ? (dy > 0 ? Direction.UP : Direction.DOWN) : (fromDir = dz > 0 ? Direction.SOUTH : Direction.NORTH));
+            fromDir = Math.abs(dx) >= Math.abs(dy) && Math.abs(dx) >= Math.abs(dz) ? (dx > 0 ? Direction.EAST : Direction.WEST) : (Math.abs(dy) >= Math.abs(dz) ? (dy > 0 ? Direction.UP : Direction.DOWN) : (dz > 0 ? Direction.SOUTH : Direction.NORTH));
             if (c instanceof DataMachineBlockEntity && (dm = (DataMachineBlockEntity)c).definition() != null) {
                 boolean targetAcceptsAxisPerp;
                 Set<String> perpFilter;
@@ -2535,83 +2541,27 @@ implements PolyClass {
     }
 
     private static List<String> breedingFoodsFor(String animalType) {
-        List<String> builtIn;
         List<String> extra = PolyFunctionRegistry.getExtraAnimalFoods(animalType);
-        switch (animalType) {
-            case "minecraft:cow": 
-            case "minecraft:mooshroom": {
-                List<Object> list = List.of("minecraft:wheat");
-                break;
-            }
-            case "minecraft:sheep": {
-                List<Object> list = List.of("minecraft:wheat");
-                break;
-            }
-            case "minecraft:pig": {
-                List<Object> list = List.of("minecraft:carrot", "minecraft:potato", "minecraft:beetroot");
-                break;
-            }
-            case "minecraft:chicken": {
-                List<Object> list = List.of("minecraft:wheat_seeds", "minecraft:melon_seeds", "minecraft:pumpkin_seeds", "minecraft:beetroot_seeds");
-                break;
-            }
-            case "minecraft:wolf": {
-                List<Object> list = List.of("minecraft:beef", "minecraft:cooked_beef", "minecraft:porkchop", "minecraft:cooked_porkchop", "minecraft:chicken", "minecraft:cooked_chicken");
-                break;
-            }
-            case "minecraft:cat": {
-                List<Object> list = List.of("minecraft:cod", "minecraft:salmon");
-                break;
-            }
-            case "minecraft:rabbit": {
-                List<Object> list = List.of("minecraft:dandelion", "minecraft:carrot", "minecraft:golden_carrot");
-                break;
-            }
-            case "minecraft:horse": 
-            case "minecraft:donkey": {
-                List<Object> list = List.of("minecraft:golden_apple", "minecraft:golden_carrot");
-                break;
-            }
-            case "minecraft:llama": {
-                List<Object> list = List.of("minecraft:hay_block");
-                break;
-            }
-            case "minecraft:turtle": {
-                List<Object> list = List.of("minecraft:seagrass");
-                break;
-            }
-            case "minecraft:panda": {
-                List<Object> list = List.of("minecraft:bamboo");
-                break;
-            }
-            case "minecraft:fox": {
-                List<Object> list = List.of("minecraft:sweet_berries", "minecraft:glow_berries");
-                break;
-            }
-            case "minecraft:bee": {
-                List<Object> list = List.of("minecraft:dandelion", "minecraft:poppy", "minecraft:blue_orchid", "minecraft:allium", "minecraft:azure_bluet", "minecraft:red_tulip", "minecraft:orange_tulip", "minecraft:white_tulip", "minecraft:pink_tulip", "minecraft:oxeye_daisy", "minecraft:sunflower", "minecraft:lilac", "minecraft:rose_bush", "minecraft:peony", "minecraft:cornflower", "minecraft:lily_of_the_valley", "minecraft:wither_rose");
-                break;
-            }
-            case "minecraft:goat": {
-                List<Object> list = List.of("minecraft:wheat");
-                break;
-            }
-            case "minecraft:frog": {
-                List<Object> list = List.of("minecraft:slime_ball");
-                break;
-            }
-            case "minecraft:camel": {
-                List<Object> list = List.of("minecraft:cactus");
-                break;
-            }
-            case "minecraft:sniffer": {
-                List<Object> list = List.of("minecraft:torchflower_seeds");
-                break;
-            }
-            default: {
-                List<Object> list = builtIn = List.of();
-            }
-        }
+        List<String> builtIn = switch (animalType) {
+            case "minecraft:cow", "minecraft:mooshroom" -> List.of("minecraft:wheat");
+            case "minecraft:sheep" -> List.of("minecraft:wheat");
+            case "minecraft:pig" -> List.of("minecraft:carrot", "minecraft:potato", "minecraft:beetroot");
+            case "minecraft:chicken" -> List.of("minecraft:wheat_seeds", "minecraft:melon_seeds", "minecraft:pumpkin_seeds", "minecraft:beetroot_seeds");
+            case "minecraft:wolf" -> List.of("minecraft:beef", "minecraft:cooked_beef", "minecraft:porkchop", "minecraft:cooked_porkchop", "minecraft:chicken", "minecraft:cooked_chicken");
+            case "minecraft:cat" -> List.of("minecraft:cod", "minecraft:salmon");
+            case "minecraft:rabbit" -> List.of("minecraft:dandelion", "minecraft:carrot", "minecraft:golden_carrot");
+            case "minecraft:horse", "minecraft:donkey" -> List.of("minecraft:golden_apple", "minecraft:golden_carrot");
+            case "minecraft:llama" -> List.of("minecraft:hay_block");
+            case "minecraft:turtle" -> List.of("minecraft:seagrass");
+            case "minecraft:panda" -> List.of("minecraft:bamboo");
+            case "minecraft:fox" -> List.of("minecraft:sweet_berries", "minecraft:glow_berries");
+            case "minecraft:bee" -> List.of("minecraft:dandelion", "minecraft:poppy", "minecraft:blue_orchid", "minecraft:allium", "minecraft:azure_bluet", "minecraft:red_tulip", "minecraft:orange_tulip", "minecraft:white_tulip", "minecraft:pink_tulip", "minecraft:oxeye_daisy", "minecraft:sunflower", "minecraft:lilac", "minecraft:rose_bush", "minecraft:peony", "minecraft:cornflower", "minecraft:lily_of_the_valley", "minecraft:wither_rose");
+            case "minecraft:goat" -> List.of("minecraft:wheat");
+            case "minecraft:frog" -> List.of("minecraft:slime_ball");
+            case "minecraft:camel" -> List.of("minecraft:cactus");
+            case "minecraft:sniffer" -> List.of("minecraft:torchflower_seeds");
+            default -> List.of();
+        };
         if (extra.isEmpty()) {
             return builtIn;
         }
@@ -2999,7 +2949,7 @@ implements PolyClass {
             if (cs != null) {
                 return ((BlockDefinition)cs.owner().value()).id().toString();
             }
-            return BuiltInRegistries.BLOCK.getKey((Object)bs.getBlock()).toString();
+            return BuiltInRegistries.BLOCK.getKey(bs.getBlock()).toString();
         }
         catch (Throwable ignored) {
             return "";
@@ -3013,21 +2963,12 @@ implements PolyClass {
             net.momirealms.craftengine.core.block.property.Property axisProp;
             ImmutableBlockState cs = BlockStateUtils.getOptionalCustomBlockState((Object)level.getBlockState(selfPos)).orElse(null);
             if (cs != null && (axisProp = ((BlockDefinition)cs.owner().value()).getProperty("axis")) != null) {
-                Direction posDir;
-                String axis;
-                switch (axis = String.valueOf(cs.get(axisProp)).toLowerCase()) {
-                    case "x": {
-                        Direction direction = Direction.EAST;
-                        break;
-                    }
-                    case "y": {
-                        Direction direction = Direction.UP;
-                        break;
-                    }
-                    default: {
-                        Direction direction = posDir = Direction.SOUTH;
-                    }
-                }
+                String axis = String.valueOf(cs.get(axisProp)).toLowerCase();
+                Direction posDir = switch (axis) {
+                    case "x" -> Direction.EAST;
+                    case "y" -> Direction.UP;
+                    default -> Direction.SOUTH;
+                };
                 if (face == posDir) {
                     groups.add("axis_pos");
                 } else if (face == posDir.getOpposite()) {
@@ -3122,8 +3063,9 @@ implements PolyClass {
         Object[] vals = prop.getPossibleValues().toArray();
         for (int i = 0; i < vals.length; ++i) {
             if (!vals[i].equals(current)) continue;
-            Comparable next = (Comparable)vals[(i + 1) % vals.length];
-            return (BlockState)state.setValue(prop, next);
+            @SuppressWarnings({"unchecked", "rawtypes"})
+            BlockState result = (BlockState)state.setValue((Property) prop, (Comparable)vals[(i + 1) % vals.length]);
+            return result;
         }
         return null;
     }

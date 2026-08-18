@@ -87,7 +87,7 @@ public final class ShulkerBoxFit {
         for (i2 = 0; i2 < k; ++i2) {
             order[i2] = i2;
         }
-        Arrays.sort(order, Comparator.comparingDouble(i -> remainder[i]).reversed());
+        Arrays.sort(order, Comparator.<Integer>comparingDouble(i -> remainder[i]).reversed());
         for (i2 = 0; i2 < remaining - used; ++i2) {
             int n = order[i2 % k];
             out[n] = out[n] + 1;

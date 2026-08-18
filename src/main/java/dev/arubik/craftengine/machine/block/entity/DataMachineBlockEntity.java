@@ -378,8 +378,8 @@ ModelRendersDriven {
             this.addFluidTank(filter == null ? new FluidTank(spec.name(), spec.capacity()) : new FluidTank(spec.name(), spec.capacity(), filter));
         }
         for (MachineDefinition.TankSpec spec : definition.gasTanks()) {
-            filter = spec.filter() == null ? null : GasType.REGISTRY.get(spec.filter());
-            this.addGasTank(filter == null ? new GasTank(spec.name(), spec.capacity()) : new GasTank(spec.name(), spec.capacity(), (GasType)(filter)));
+            GasType gasFilter = spec.filter() == null ? null : GasType.REGISTRY.get(spec.filter());
+            this.addGasTank(gasFilter == null ? new GasTank(spec.name(), spec.capacity()) : new GasTank(spec.name(), spec.capacity(), gasFilter));
         }
         if (definition.io() != null) {
             this.setIOConfiguration(definition.io());
@@ -571,7 +571,7 @@ ModelRendersDriven {
         if (this.rendererManager != null) {
             try {
                 float f;
-                int n;
+                int n = 0;
                 LinkedHashMap<String, double[]> fluidTankData = new LinkedHashMap<String, double[]>();
                 for (MachineDefinition.TankSpec tankSpec : this.definition.fluidTanks()) {
                     FluidTank fluidTank = this.fluidTank(tankSpec.name());
@@ -987,24 +987,25 @@ ModelRendersDriven {
                                     BlockState theirBs;
                                     ImmutableBlockState theirCe;
                                     BlockEntityController blockEntityController;
+                                    RpmProvider diagRpm;
                                     int sb = nArray2[i2];
                                     BlockPos diag = this.getMachinePos().relative(sa > 0 ? da : da.getOpposite()).relative(sb > 0 ? db : db.getOpposite());
                                     BlockEntity diagBe = BukkitBlockEntityTypes.getIfLoaded(level, diag);
-                                    if (diagBe == null || !((blockEntityController = diagBe.controller) instanceof RpmProvider) || !((p2 = (RpmProvider)blockEntityController) instanceof DataMachineBlockEntity)) continue;
-                                    DataMachineBlockEntity dm3 = (DataMachineBlockEntity)p2;
+                                    if (diagBe == null || !((blockEntityController = diagBe.controller) instanceof RpmProvider) || !((diagRpm = (RpmProvider)blockEntityController) instanceof DataMachineBlockEntity)) continue;
+                                    DataMachineBlockEntity dm3 = (DataMachineBlockEntity)diagRpm;
                                     if (dm3.definition == null || (theirCe = (ImmutableBlockState)BlockStateUtils.getOptionalCustomBlockState((theirBs = level.getBlockState(diag))).orElse(null)) == null || (theirAxisProp = ((BlockDefinition)theirCe.owner().value()).getProperty("axis")) == null) continue;
                                     String theirAxis = String.valueOf(theirCe.get(theirAxisProp)).toLowerCase();
                                     int pd = dm3.sourceDistance;
-                                    if (pd >= this.sourceDistance || (pot2 = p2.potentialRpm()) <= 0.0f || dm3.definition.rpmLargeCog() || !theirAxis.equals(myAxis)) continue;
+                                    if (pd >= this.sourceDistance || (pot2 = diagRpm.potentialRpm()) <= 0.0f || dm3.definition.rpmLargeCog() || !theirAxis.equals(myAxis)) continue;
                                     float providerRatio = dm3.definition.rpmRatio();
-                                    float raw2 = -p2.getRpm() * providerRatio;
+                                    float raw2 = -diagRpm.getRpm() * providerRatio;
                                     if (pd >= bestSourceDist && (pd != bestSourceDist || !(pot2 > bestPotential))) continue;
                                     bestSourceDist = pd;
                                     bestPotential = pot2;
                                     delivered = raw2;
-                                    this.activeMotor = p2;
+                                    this.activeMotor = diagRpm;
                                     this.activeMotors.clear();
-                                    this.activeMotors.add((RpmProvider)p2);
+                                    this.activeMotors.add(diagRpm);
                                 }
                             }
                         }
@@ -1029,10 +1030,8 @@ ModelRendersDriven {
                         for (int sa : new int[]{1, -1}) {
                             for (int sp : new int[]{1, -1}) {
                                 float lraw;
-                                int fromAxisDiff;
                                 float lPot;
                                 int ld;
-                                Direction.Axis theirCA;
                                 String tAx;
                                 Property tAP;
                                 BlockState tBs;
@@ -1043,10 +1042,10 @@ ModelRendersDriven {
                                 if (lbe == null || !((p2 = lbe.controller) instanceof RpmProvider) || !((lp2 = (RpmProvider)p2) instanceof DataMachineBlockEntity)) continue;
                                 DataMachineBlockEntity ldm = (DataMachineBlockEntity)lp2;
                                 if (ldm.definition == null || !ldm.definition.rpmLargeCog() || (tCe = (ImmutableBlockState)BlockStateUtils.getOptionalCustomBlockState((tBs = level.getBlockState(lp))).orElse(null)) == null || (tAP = ((BlockDefinition)tCe.owner().value()).getProperty("axis")) == null || (tAx = String.valueOf(tCe.get(tAP)).toLowerCase()).equals(myAx2)) continue;
-                                Direction.Axis axis = tAx.equals("x") ? Direction.Axis.X : (theirCA = tAx.equals("y") ? Direction.Axis.Y : Direction.Axis.Z);
+                                Direction.Axis theirCA = tAx.equals("x") ? Direction.Axis.X : (tAx.equals("y") ? Direction.Axis.Y : Direction.Axis.Z);
                                 if (theirCA != perpD.getAxis() || (ld = ldm.sourceDistance) >= this.sourceDistance || (lPot = lp2.potentialRpm()) <= 0.0f) continue;
                                 BlockPos ldiff = lp.subtract((Vec3i)this.getMachinePos());
-                                int n = myCA2 == Direction.Axis.X ? ldiff.getX() : (fromAxisDiff = myCA2 == Direction.Axis.Y ? ldiff.getY() : ldiff.getZ());
+                                int fromAxisDiff = myCA2 == Direction.Axis.X ? ldiff.getX() : (myCA2 == Direction.Axis.Y ? ldiff.getY() : ldiff.getZ());
                                 int toAxisDiff = theirCA == Direction.Axis.X ? ldiff.getX() : (theirCA == Direction.Axis.Y ? ldiff.getY() : ldiff.getZ());
                                 float f = lraw = fromAxisDiff > 0 ^ toAxisDiff > 0 ? -lp2.getRpm() : lp2.getRpm();
                                 if (ld < bestSourceDist || ld == bestSourceDist && lPot > bestPotential) {
@@ -1104,6 +1103,8 @@ ModelRendersDriven {
         long capacity = 0L;
         Component contents = MenuText.textOrTranslatable(gas ? "polyfill.gas.empty" : "polyfill.liquid.empty", NamedTextColor.WHITE);
         Material material = Material.BUCKET;
+        Object tank;
+        Object stored;
         if (gas) {
             tank = this.gasTank(tankName);
             if (tank != null) {
@@ -1378,7 +1379,7 @@ ModelRendersDriven {
     public PolyContext buildEvalContext() {
         try {
             float f;
-            int n;
+            int n = 0;
             Level level = this.getNMSLevel();
             BlockPos pos = this.getMachinePos();
             if (level == null || pos == null) {
@@ -1521,24 +1522,17 @@ ModelRendersDriven {
             layout.addSlot((int)slot, MenuSlotType.FUEL);
         }
         if (this.definition.upgrades().isInline()) {
-            object = this.definition.upgrades().slots();
-            int n = ((int[])object).length;
-            for (int i = 0; i < n; ++i) {
-                Object slot;
-                slot = object[i];
-                layout.addSlot((int)slot, MenuSlotType.UPGRADE);
+            int[] upgradeSlots = this.definition.upgrades().slots();
+            for (int i = 0; i < upgradeSlots.length; ++i) {
+                layout.addSlot(upgradeSlots[i], MenuSlotType.UPGRADE);
             }
         }
         if (!this.definition.buttons().isEmpty()) {
-            object = this.definition.buttons().iterator();
-            while (object.hasNext()) {
-                MachineDefinition.ButtonSpec spec = (MachineDefinition.ButtonSpec)object.next();
+            for (MachineDefinition.ButtonSpec spec : this.definition.buttons()) {
                 this.installButton(layout, DataMachineBlockEntity.toButton(spec));
             }
         } else {
-            object = this.menuConfig.buttons.iterator();
-            while (object.hasNext()) {
-                MachineMenuConfig.Button button = (MachineMenuConfig.Button)object.next();
+            for (MachineMenuConfig.Button button : this.menuConfig.buttons) {
                 this.installButton(layout, button);
             }
         }
@@ -1615,9 +1609,9 @@ ModelRendersDriven {
         }
         if (machine instanceof DataMachineBlockEntity) {
             DataMachineBlockEntity dm = (DataMachineBlockEntity)machine;
-            v0 = dm.curOverclockLimit;
+            ocLimit = dm.curOverclockLimit;
         } else {
-            v0 = ocLimit = 0.0;
+            ocLimit = 0.0;
         }
         if (machine instanceof DataMachineBlockEntity) {
             DataMachineBlockEntity dm2 = (DataMachineBlockEntity)machine;

@@ -289,7 +289,7 @@ ConveyorDisplayReceiver {
             // empty catch block
         }
         BlockBehavior beh = customState.behavior();
-        ConnectableBlockBehavior connectableBlockBehavior = beh instanceof ConnectableBlockBehavior ? (c = (ConnectableBlockBehavior)beh) : (cbb = beh != null ? (ConnectableBlockBehavior)(beh.getFirst(ConnectableBlockBehavior.class)) : null);
+        cbb = beh instanceof ConnectableBlockBehavior ? (ConnectableBlockBehavior) beh : (beh != null ? (ConnectableBlockBehavior)(beh.getFirst(ConnectableBlockBehavior.class)) : null);
         if (cbb != null && (d = cbb.toDirection(state)) != null) {
             return d;
         }
@@ -1475,11 +1475,11 @@ ConveyorDisplayReceiver {
             BlockEntity be;
             net.minecraft.core.Direction local = this.toLocalItemDir(d);
             if (!this.ioConfiguration.providesOutput(IOConfiguration.IOType.FUNNEL, local) || this.funnelTransits.containsKey(d) || (be = BukkitBlockEntityTypes.getIfLoaded(level, this.getMachinePos().relative(d))) == null || !((object = be.controller) instanceof ConveyorReceiver) || (recv = (ConveyorReceiver)object) instanceof AbstractMachineBlockEntity || recv.isFull()) continue;
-            object = this.getOutputSlots();
-            int n = ((BlockEntityController)object).length;
+            int[] outputSlots = this.getOutputSlots();
+            int n = outputSlots.length;
             for (int i = 0; i < n; ++i) {
-                BlockEntityController s = object[i];
-                net.minecraft.world.item.ItemStack cur = this.getItem((int)s);
+                int s = outputSlots[i];
+                net.minecraft.world.item.ItemStack cur = this.getItem(s);
                 if (cur == null || cur.isEmpty()) continue;
                 ItemStack one = CraftItemStack.asBukkitCopy((net.minecraft.world.item.ItemStack)cur).clone();
                 one.setAmount(1);
@@ -1629,7 +1629,7 @@ ConveyorDisplayReceiver {
         }
         MachineMode currentMode = (MachineMode)(state.get(machineModeProp));
         if (currentMode != (newMode = this.burnTime > 0 ? (this.isOverclocked() ? MachineMode.OVERCLOCKING : MachineMode.WORKING) : MachineMode.IDLE)) {
-            ImmutableBlockState newState = state.with(machineModeProp, (Comparable)(newMode));
+            ImmutableBlockState newState = state.with(machineModeProp, newMode);
             level.setBlock(pos, (BlockState)newState.customBlockState().minecraftState(), 11);
         }
     }
