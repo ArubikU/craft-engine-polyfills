@@ -1,171 +1,333 @@
+/*
+ * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  net.kyori.adventure.text.Component
+ *  net.kyori.adventure.text.format.NamedTextColor
+ *  net.minecraft.core.BlockPos
+ *  net.minecraft.core.Direction
+ *  net.minecraft.core.registries.BuiltInRegistries
+ *  net.minecraft.server.level.ServerLevel
+ *  net.minecraft.world.entity.player.Player
+ *  net.minecraft.world.item.ItemStack
+ *  net.minecraft.world.level.Level
+ *  net.momirealms.craftengine.bukkit.api.CraftEngineItems
+ *  net.momirealms.craftengine.bukkit.item.BukkitItemDefinition
+ *  net.momirealms.craftengine.core.block.ImmutableBlockState
+ *  net.momirealms.craftengine.core.block.entity.BlockEntity
+ *  net.momirealms.craftengine.core.util.Key
+ *  org.bukkit.Material
+ *  org.bukkit.World
+ *  org.bukkit.craftbukkit.inventory.CraftItemStack
+ *  org.bukkit.entity.Player
+ *  org.bukkit.event.inventory.ClickType
+ *  org.bukkit.event.inventory.InventoryType
+ *  org.bukkit.inventory.ItemStack
+ */
 package dev.arubik.craftengine.machine.block.entity;
 
-import java.util.List;
-
+import dev.arubik.craftengine.fluid.FluidStack;
 import dev.arubik.craftengine.fluid.FluidTank;
 import dev.arubik.craftengine.fluid.FluidType;
+import dev.arubik.craftengine.gas.GasStack;
 import dev.arubik.craftengine.gas.GasTank;
 import dev.arubik.craftengine.gas.GasType;
 import dev.arubik.craftengine.machine.MachineDefinition;
+import dev.arubik.craftengine.machine.attribute.MachineAttributes;
+import dev.arubik.craftengine.machine.block.entity.DataMachineSupport;
+import dev.arubik.craftengine.machine.menu.GuiTitles;
+import dev.arubik.craftengine.machine.menu.MachineMenu;
 import dev.arubik.craftengine.machine.menu.MachineMenuConfig;
+import dev.arubik.craftengine.machine.menu.MenuText;
+import dev.arubik.craftengine.machine.menu.OverclockMenu;
+import dev.arubik.craftengine.machine.menu.RecipeInfoIcon;
 import dev.arubik.craftengine.machine.menu.bar.MachineBar;
 import dev.arubik.craftengine.machine.menu.bar.MachineBars;
 import dev.arubik.craftengine.machine.menu.layout.MachineLayout;
 import dev.arubik.craftengine.machine.menu.layout.MenuSlotType;
 import dev.arubik.craftengine.machine.recipe.AbstractProcessingRecipe;
+import dev.arubik.craftengine.machine.recipe.MachineFuelRecipe;
 import dev.arubik.craftengine.machine.recipe.RecipeOutput;
+import dev.arubik.craftengine.machine.recipe.loader.RecipeManager;
+import dev.arubik.craftengine.machine.render.ModelRendersDriven;
+import dev.arubik.craftengine.machine.render.RendererManager;
+import dev.arubik.craftengine.machine.render.formula.PolyContext;
+import dev.arubik.craftengine.machine.render.formula.PolyScript;
+import dev.arubik.craftengine.machine.render.formula.PolyScriptRegistry;
+import dev.arubik.craftengine.machine.render.variable.MachineRenderContext;
+import dev.arubik.craftengine.machine.upgrade.UpgradeModifiers;
 import dev.arubik.craftengine.multiblock.MultiBlockMachineBlockEntity;
 import dev.arubik.craftengine.multiblock.MultiBlockSchema;
+import dev.arubik.craftengine.util.CustomDataType;
+import dev.arubik.craftengine.util.NbtType;
+import dev.arubik.craftengine.util.TypedKey;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
+import net.momirealms.craftengine.bukkit.api.CraftEngineItems;
+import net.momirealms.craftengine.bukkit.item.BukkitItemDefinition;
+import net.momirealms.craftengine.core.block.ImmutableBlockState;
 import net.momirealms.craftengine.core.block.entity.BlockEntity;
 import net.momirealms.craftengine.core.util.Key;
+import org.bukkit.Material;
+import org.bukkit.World;
+import org.bukkit.craftbukkit.inventory.CraftItemStack;
+import org.bukkit.event.inventory.ClickType;
+import org.bukkit.event.inventory.InventoryType;
+import org.bukkit.inventory.ItemStack;
 
-/**
- * The block entity behind every data-defined machine that must be assembled.
- *
- * <p>
- * The single-block {@link DataMachineBlockEntity} and this one need the same
- * recipe behaviour but cannot share a superclass, so the shared half lives in
- * {@link DataMachineSupport} and both delegate to it.
- */
-public class DataMultiBlockMachineBlockEntity extends MultiBlockMachineBlockEntity
-        implements dev.arubik.craftengine.machine.render.ModelRendersDriven {
-
+public class DataMultiBlockMachineBlockEntity
+extends MultiBlockMachineBlockEntity
+implements ModelRendersDriven {
     private final MachineDefinition definition;
-    private dev.arubik.craftengine.machine.render.RendererManager rendererManager;
+    private RendererManager rendererManager;
     private MachineMenuConfig menuConfig = MachineMenuConfig.parse(key -> null);
     private List<MachineBar> bars = List.of();
-    private java.util.Map<Key, List<dev.arubik.craftengine.machine.attribute.MachineAttributes.Mod>> upgradeDefs =
-            java.util.Map.of();
-
-    // ---- paged storage: the menu shows one page, the rest lives in persistence ----
-
+    private Map<Key, List<MachineAttributes.Mod>> upgradeDefs = Map.of();
+    private int machinePageIndex = 0;
+    private MachineMenu activeMenu;
+    private int curUnlocked = -1;
+    private float overclock = 0.0f;
+    private double curOverclockLimit = 0.0;
     private final net.minecraft.world.item.ItemStack[][] pages;
     private int currentPage = 0;
     private boolean pagesLoaded = false;
+    private static final TypedKey<Integer> KEY_CURRENT_PAGE = TypedKey.of("craftengine", "paged_storage_current", NbtType.INTEGER);
+    private static final AbstractProcessingRecipe CONTINUOUS_FUEL_RECIPE = new AbstractProcessingRecipe(List.of(), List.of(), 1, true, false, List.of());
 
-    public DataMultiBlockMachineBlockEntity(BlockEntity blockEntity, MultiBlockSchema schema,
-            MachineDefinition definition) {
+    public DataMultiBlockMachineBlockEntity(BlockEntity blockEntity, MultiBlockSchema schema, MachineDefinition definition) {
         super(definition.menuSize(), blockEntity, schema);
         this.definition = definition;
-
-        var paging = definition.paging();
+        MachineDefinition.PagingSpec paging = definition.paging();
         if (paging.isPaged()) {
-            pages = new net.minecraft.world.item.ItemStack[paging.pages()][paging.slots()];
-            for (var page : pages)
-                java.util.Arrays.fill(page, net.minecraft.world.item.ItemStack.EMPTY);
+            this.pages = new net.minecraft.world.item.ItemStack[paging.pages()][paging.slots()];
+            for (net.minecraft.world.item.ItemStack[] page : this.pages) {
+                Arrays.fill(page, net.minecraft.world.item.ItemStack.EMPTY);
+            }
         } else {
-            pages = null;
+            this.pages = null;
         }
-
         for (MachineDefinition.TankSpec spec : definition.fluidTanks()) {
             FluidType filter = spec.filter() == null ? null : FluidType.REGISTRY.get(spec.filter());
-            addFluidTank(filter == null ? new FluidTank(spec.name(), spec.capacity())
-                    : new FluidTank(spec.name(), spec.capacity(), filter));
+            this.addFluidTank(filter == null ? new FluidTank(spec.name(), spec.capacity()) : new FluidTank(spec.name(), spec.capacity(), filter));
         }
         for (MachineDefinition.TankSpec spec : definition.gasTanks()) {
             GasType filter = spec.filter() == null ? null : GasType.REGISTRY.get(spec.filter());
-            addGasTank(filter == null ? new GasTank(spec.name(), spec.capacity())
-                    : new GasTank(spec.name(), spec.capacity(), filter));
+            this.addGasTank(filter == null ? new GasTank(spec.name(), spec.capacity()) : new GasTank(spec.name(), spec.capacity(), filter));
         }
-        if (definition.io() != null)
-            setIOConfiguration(definition.io());
+        if (definition.io() != null) {
+            this.setIOConfiguration(definition.io());
+        }
         if (!definition.renderers().isEmpty()) {
-            this.rendererManager = new dev.arubik.craftengine.machine.render.RendererManager(
-                    definition.renderers(), definition.variables());
+            this.rendererManager = new RendererManager(definition.renderers(), definition.variables());
         }
     }
 
     @Override
-    public dev.arubik.craftengine.machine.render.RendererManager rendererManager() {
-        return rendererManager;
+    public RendererManager rendererManager() {
+        return this.rendererManager;
     }
 
     @Override
-    public void tick(net.minecraft.world.level.Level level, net.minecraft.core.BlockPos pos,
-            net.momirealms.craftengine.core.block.ImmutableBlockState state) {
+    public void tick(Level level, BlockPos pos, ImmutableBlockState state) {
         super.tick(level, pos, state);
-        if (rendererManager != null && level instanceof net.minecraft.server.level.ServerLevel sl) {
+        if (this.rendererManager != null && level instanceof ServerLevel) {
+            ServerLevel sl = (ServerLevel)level;
             try {
-                // Snapshot fluid/gas tanks
-                java.util.Map<String, double[]> fluidTankData = new java.util.LinkedHashMap<>();
-                for (dev.arubik.craftengine.fluid.FluidTank tank : fluidTanks) {
+                float f;
+                LinkedHashMap<String, double[]> fluidTankData = new LinkedHashMap<String, double[]>();
+                for (Object tank : this.fluidTanks) {
                     try {
-                        var stored = tank.getFluid(sl, pos);
-                        fluidTankData.put(tank.getName(), new double[]{ stored.getAmount(), tank.getCapacity() });
-                    } catch (Throwable ignored) {}
+                        FluidStack stored = ((FluidTank)tank).getFluid((Level)sl, pos);
+                        fluidTankData.put(((FluidTank)tank).getName(), new double[]{stored.getAmount(), ((FluidTank)tank).getCapacity()});
+                    }
+                    catch (Throwable stored) {}
                 }
-                java.util.Map<String, double[]> gasTankData = new java.util.LinkedHashMap<>();
-                for (dev.arubik.craftengine.gas.GasTank tank : gasTanks) {
+                LinkedHashMap<String, double[]> gasTankData = new LinkedHashMap<String, double[]>();
+                for (Object tank : this.gasTanks) {
                     try {
-                        var stored = tank.getGas(sl, pos);
-                        gasTankData.put(tank.getName(), new double[]{ stored.getAmount(), tank.getCapacity() });
-                    } catch (Throwable ignored) {}
+                        GasStack stored = ((GasTank)tank).getGas((Level)sl, pos);
+                        gasTankData.put(((GasTank)tank).getName(), new double[]{stored.getAmount(), ((GasTank)tank).getCapacity()});
+                    }
+                    catch (Throwable stored) {}
                 }
-                // Snapshot upgrades
-                java.util.Map<String, Integer> upgradesByType = new java.util.LinkedHashMap<>();
-                if (!upgradeDefs.isEmpty()) {
-                    for (int upSlot : definition.upgrades().slots()) {
-                        net.minecraft.world.item.ItemStack nmsItem = getItem(upSlot);
+                LinkedHashMap<String, Integer> upgradesByType = new LinkedHashMap<String, Integer>();
+                if (!this.upgradeDefs.isEmpty()) {
+                    for (Object upSlot : this.definition.upgrades().slots()) {
+                        net.minecraft.world.item.ItemStack nmsItem = this.getItem((int)upSlot);
                         if (nmsItem.isEmpty()) continue;
                         try {
-                            var ce = net.momirealms.craftengine.bukkit.api.CraftEngineItems.byItemStack(
-                                org.bukkit.craftbukkit.inventory.CraftItemStack.asBukkitCopy(nmsItem));
-                            String uid = ce != null
-                                ? ce.id().namespace() + ":" + ce.id().value()
-                                : net.minecraft.core.registries.BuiltInRegistries.ITEM
-                                    .getKey(nmsItem.getItem()).toString();
+                            BukkitItemDefinition ce = CraftEngineItems.byItemStack((ItemStack)CraftItemStack.asBukkitCopy((net.minecraft.world.item.ItemStack)nmsItem));
+                            String uid = ce != null ? ce.id().namespace() + ":" + ce.id().value() : BuiltInRegistries.ITEM.getKey(nmsItem.getItem()).toString();
                             upgradesByType.merge(uid, 1, Integer::sum);
-                        } catch (Throwable ignored) {}
+                        }
+                        catch (Throwable throwable) {
+                            // empty catch block
+                        }
                     }
                 }
                 int redstonePower = 0;
-                try { redstonePower = sl.getBestNeighborSignal(pos); } catch (Throwable ignored) {}
+                try {
+                    redstonePower = sl.getBestNeighborSignal(pos);
+                }
+                catch (Throwable stored) {
+                    // empty catch block
+                }
+                MachineRenderContext ctx = new MachineRenderContext(0.0, 0.0, 0.0, this.progress, this.maxProgress, 0.0, this.isProcessing(), redstonePower > 0, false, this.burnTime > 0, null, upgradesByType, fluidTankData, gasTankData, redstonePower);
+                Direction facing = this.getFacing(level);
+                if (facing == null) {
+                    f = 0.0f;
+                } else {
+                    switch (facing) {
+                        case SOUTH: {
+                            f = 0.0f;
+                            break;
+                        }
+                        case WEST: {
+                            f = 90.0f;
+                            break;
+                        }
+                        case NORTH: {
+                            f = 180.0f;
+                            break;
+                        }
+                        case EAST: {
+                            f = 270.0f;
+                            break;
+                        }
+                        default: {
+                            f = 0.0f;
+                        }
+                    }
+                }
+                float yaw = f;
+                PolyContext machineCtx = this.buildEvalContext();
+                if (machineCtx != null) {
+                    ctx = ctx.augmented(machineCtx);
+                }
+                this.rendererManager.tick(ctx, sl, pos.getX(), pos.getY(), pos.getZ(), yaw);
+            }
+            catch (Throwable throwable) {
+                // empty catch block
+            }
+        }
+    }
 
-                dev.arubik.craftengine.machine.render.variable.MachineRenderContext ctx =
-                        new dev.arubik.craftengine.machine.render.variable.MachineRenderContext(
-                                0, 0, 0,
-                                progress, maxProgress, 0,
-                                isProcessing(), redstonePower > 0, false, burnTime > 0,
-                                null, upgradesByType, fluidTankData, gasTankData, redstonePower);
-
-                net.minecraft.core.Direction facing = getFacing(level);
-                String facingName = facing != null ? facing.getName().toLowerCase() : "north";
-                float yaw = facing == null ? 0f : switch (facing) {
-                    case SOUTH -> 0f; case WEST -> 90f; case NORTH -> 180f; case EAST -> 270f; default -> 0f;
-                };
-                // Augment with Machine position and facing for player_facing() etc.
-                // MultiBlock context: rel pos always 0,0,0 for master, part count from schema
-                int partCount = 0;
-                try { partCount = getSchema().getParts().size(); } catch (Throwable ignored) {}
-                dev.arubik.craftengine.machine.render.formula.PolyContext machineCtx =
-                    dev.arubik.craftengine.machine.render.formula.PolyContext.builder()
-                        .copyFrom(ctx.toPolyContext())
-                        .machinePos(pos.getX()+0.5, pos.getY()+0.5, pos.getZ()+0.5, facingName, yaw,
-                            ((org.bukkit.craftbukkit.CraftWorld) sl.getWorld()))
-                        .contraption(sl)
-                        .world(sl)
-                        .multiBlock(0, 0, 0, true, partCount, true)
-                        .build();
-                ctx = ctx.augmented(machineCtx);
-
-                rendererManager.tick(ctx, sl, pos.getX(), pos.getY(), pos.getZ(), yaw);
-            } catch (Throwable ignored) {}
+    @Override
+    public PolyContext buildEvalContext() {
+        try {
+            float f;
+            String facingName;
+            Level level = this.getNMSLevel();
+            BlockPos pos = this.getMachinePos();
+            if (!(level instanceof ServerLevel)) {
+                return null;
+            }
+            ServerLevel sl = (ServerLevel)level;
+            LinkedHashMap<String, double[]> fluidTankData = new LinkedHashMap<String, double[]>();
+            for (Object tank : this.fluidTanks) {
+                try {
+                    FluidStack stored = ((FluidTank)tank).getFluid((Level)sl, pos);
+                    fluidTankData.put(((FluidTank)tank).getName(), new double[]{stored.getAmount(), ((FluidTank)tank).getCapacity()});
+                }
+                catch (Throwable stored) {}
+            }
+            LinkedHashMap<String, double[]> gasTankData = new LinkedHashMap<String, double[]>();
+            for (Object tank : this.gasTanks) {
+                try {
+                    GasStack stored = ((GasTank)tank).getGas((Level)sl, pos);
+                    gasTankData.put(((GasTank)tank).getName(), new double[]{stored.getAmount(), ((GasTank)tank).getCapacity()});
+                }
+                catch (Throwable stored) {}
+            }
+            LinkedHashMap<String, Integer> upgradesByType = new LinkedHashMap<String, Integer>();
+            if (!this.upgradeDefs.isEmpty()) {
+                for (Object upSlot : this.definition.upgrades().slots()) {
+                    net.minecraft.world.item.ItemStack nmsItem = this.getItem((int)upSlot);
+                    if (nmsItem.isEmpty()) continue;
+                    try {
+                        BukkitItemDefinition ce = CraftEngineItems.byItemStack((ItemStack)CraftItemStack.asBukkitCopy((net.minecraft.world.item.ItemStack)nmsItem));
+                        String uid = ce != null ? ce.id().namespace() + ":" + ce.id().value() : BuiltInRegistries.ITEM.getKey(nmsItem.getItem()).toString();
+                        upgradesByType.merge(uid, 1, Integer::sum);
+                    }
+                    catch (Throwable ce) {
+                        // empty catch block
+                    }
+                }
+            }
+            int redstonePower = 0;
+            try {
+                redstonePower = sl.getBestNeighborSignal(pos);
+            }
+            catch (Throwable stored) {
+                // empty catch block
+            }
+            MachineRenderContext mrc = new MachineRenderContext(0.0, 0.0, 0.0, this.progress, this.maxProgress, 0.0, this.isProcessing(), redstonePower > 0, false, this.burnTime > 0, null, upgradesByType, fluidTankData, gasTankData, redstonePower);
+            Direction facing = this.getFacing(level);
+            String string = facingName = facing != null ? facing.getName().toLowerCase() : "north";
+            if (facing == null) {
+                f = 0.0f;
+            } else {
+                switch (facing) {
+                    case SOUTH: {
+                        f = 0.0f;
+                        break;
+                    }
+                    case WEST: {
+                        f = 90.0f;
+                        break;
+                    }
+                    case NORTH: {
+                        f = 180.0f;
+                        break;
+                    }
+                    case EAST: {
+                        f = 270.0f;
+                        break;
+                    }
+                    default: {
+                        f = 0.0f;
+                    }
+                }
+            }
+            float yaw = f;
+            int partCount = 0;
+            try {
+                partCount = this.getSchema().getParts().size();
+            }
+            catch (Throwable throwable) {
+                // empty catch block
+            }
+            return PolyContext.builder().copyFrom(mrc.toPolyContext()).machinePos((double)pos.getX() + 0.5, (double)pos.getY() + 0.5, (double)pos.getZ() + 0.5, facingName, yaw, (World)sl.getWorld(), this).contraption(sl).world(sl).multiBlock(0, 0, 0, true, partCount, true).build();
+        }
+        catch (Throwable ignored) {
+            return null;
         }
     }
 
     @Override
     public void unregister() {
         super.unregister();
-        if (rendererManager != null) {
-            rendererManager.close();
-            rendererManager = null;
+        if (this.rendererManager != null) {
+            this.rendererManager.close();
+            this.rendererManager = null;
         }
     }
 
     public MachineDefinition definition() {
-        return definition;
+        return this.definition;
     }
 
     public void setMenuConfig(MachineMenuConfig config) {
@@ -176,14 +338,13 @@ public class DataMultiBlockMachineBlockEntity extends MultiBlockMachineBlockEnti
         this.bars = bars != null ? bars : List.of();
     }
 
-    public void setUpgradeDefs(
-            java.util.Map<Key, List<dev.arubik.craftengine.machine.attribute.MachineAttributes.Mod>> defs) {
-        this.upgradeDefs = defs == null ? java.util.Map.of() : defs;
+    public void setUpgradeDefs(Map<Key, List<MachineAttributes.Mod>> defs) {
+        this.upgradeDefs = defs == null ? Map.of() : defs;
     }
 
-    private java.util.List<dev.arubik.craftengine.machine.attribute.MachineAttributes.Mod> modsOf(int slot) {
-        net.momirealms.craftengine.core.util.Key id = upgradeItemId(getItem(slot));
-        return id == null ? null : upgradeDefs.get(id);
+    private List<MachineAttributes.Mod> modsOf(int slot) {
+        Key id = this.upgradeItemId(this.getItem(slot));
+        return id == null ? null : this.upgradeDefs.get(id);
     }
 
     private static double clamp(double v, double lo, double hi) {
@@ -192,299 +353,451 @@ public class DataMultiBlockMachineBlockEntity extends MultiBlockMachineBlockEnti
 
     @Override
     protected void recomputeUpgrades() {
-        if (upgradeDefs.isEmpty()) {
+        if (this.upgradeDefs.isEmpty()) {
             super.recomputeUpgrades();
             return;
         }
-        int count = definition.upgrades().size();
-        int[] slots = definition.upgrades().slots();
-        java.util.List<dev.arubik.craftengine.machine.attribute.MachineAttributes.Mod> all = new java.util.ArrayList<>();
-        for (int i = 0; i < count; i++) {
-            var m = modsOf(slots[i]);
-            if (m != null) all.addAll(m);
+        int count = this.definition.upgrades().size();
+        int[] slots = this.definition.upgrades().slots();
+        ArrayList<MachineAttributes.Mod> all = new ArrayList<MachineAttributes.Mod>();
+        for (int i = 0; i < count; ++i) {
+            List<MachineAttributes.Mod> m = this.modsOf(slots[i]);
+            if (m == null) continue;
+            all.addAll(m);
         }
-        int extra = (int) Math.round(dev.arubik.craftengine.machine.attribute.MachineAttributes.compute(all)
-                .getOrDefault(dev.arubik.craftengine.machine.attribute.MachineAttributes.EXTRA_SLOTS, 0.0));
-        int unlocked = Math.max(definition.upgrades().baseUnlocked(),
-                Math.min(count, definition.upgrades().baseUnlocked() + extra));
-        java.util.List<dev.arubik.craftengine.machine.attribute.MachineAttributes.Mod> active = new java.util.ArrayList<>();
-        for (int i = 0; i < unlocked; i++) {
-            var m = modsOf(slots[i]);
-            if (m != null) active.addAll(m);
+        int extra = (int)Math.round(MachineAttributes.compute(all).getOrDefault(MachineAttributes.EXTRA_SLOTS, 0.0));
+        this.curUnlocked = Math.max(this.definition.upgrades().baseUnlocked(), Math.min(count, this.definition.upgrades().baseUnlocked() + extra));
+        ArrayList<MachineAttributes.Mod> active = new ArrayList<MachineAttributes.Mod>();
+        for (int i = 0; i < this.curUnlocked; ++i) {
+            List<MachineAttributes.Mod> m = this.modsOf(slots[i]);
+            if (m == null) continue;
+            active.addAll(m);
         }
-        var attrs = dev.arubik.craftengine.machine.attribute.MachineAttributes.compute(active);
-        double gen = clamp(attrs.getOrDefault(dev.arubik.craftengine.machine.attribute.MachineAttributes.GENERATION, 0.0), -0.95, 32.0);
-        double overLimit = clamp(attrs.getOrDefault(dev.arubik.craftengine.machine.attribute.MachineAttributes.OVERCLOCK_LIMIT, 0.0), 0.0, 32.0);
-        this.upgradeModifiers = new dev.arubik.craftengine.machine.upgrade.UpgradeModifiers(1.0, 1.0 - gen, 0.0);
+        Map<Key, Double> attrs = MachineAttributes.compute(active);
+        double gen = DataMultiBlockMachineBlockEntity.clamp(attrs.getOrDefault(MachineAttributes.GENERATION, 0.0), -0.95, 32.0);
+        this.curOverclockLimit = DataMultiBlockMachineBlockEntity.clamp(attrs.getOrDefault(MachineAttributes.OVERCLOCK_LIMIT, 0.0), 0.0, 32.0);
+        this.overclock = (float)DataMultiBlockMachineBlockEntity.clamp(this.overclock, -Math.min(this.curOverclockLimit, 0.99), this.curOverclockLimit);
+        this.upgradeModifiers = new UpgradeModifiers(1.0 + (double)this.overclock, 1.0 - gen, 0.0);
     }
 
-    // --------------------------------------------------------------- paging
-
-    private static dev.arubik.craftengine.util.TypedKey<net.minecraft.world.item.ItemStack[]> pageKey(int page) {
-        return dev.arubik.craftengine.util.TypedKey.of("craftengine", "paged_storage_" + page,
-                dev.arubik.craftengine.util.CustomDataType.ITEM_ARRAY_CODEC_TYPE);
+    private int unlockedSlots() {
+        if (this.curUnlocked < 0) {
+            this.curUnlocked = this.definition.upgrades().baseUnlocked();
+        }
+        return Math.min(this.definition.upgrades().size(), Math.max(0, this.curUnlocked));
     }
 
-    private static final dev.arubik.craftengine.util.TypedKey<Integer> KEY_CURRENT_PAGE =
-            dev.arubik.craftengine.util.TypedKey.of("craftengine", "paged_storage_current",
-                    dev.arubik.craftengine.util.NbtType.INTEGER);
+    private static TypedKey<net.minecraft.world.item.ItemStack[]> pageKey(int page) {
+        return TypedKey.of("craftengine", "paged_storage_" + page, CustomDataType.ITEM_ARRAY_CODEC_TYPE);
+    }
 
-    /**
-     * Loads the pages on first access.
-     *
-     * <p>
-     * Not in the constructor: CraftEngine builds a controller before its block entity
-     * has a world, and persistence needs one.
-     */
     private void ensurePagesLoaded() {
-        if (pages == null || pagesLoaded || blockEntity().world() == null)
+        if (this.pages == null || this.pagesLoaded || this.blockEntity().world() == null) {
             return;
-        for (int p = 0; p < pages.length; p++) {
-            var stored = get(pageKey(p));
-            if (stored != null)
-                for (int i = 0; i < pages[p].length && i < stored.length; i++)
-                    pages[p][i] = stored[i] == null ? net.minecraft.world.item.ItemStack.EMPTY : stored[i];
         }
-        Integer saved = get(KEY_CURRENT_PAGE);
-        currentPage = saved == null ? 0 : Math.max(0, Math.min(pages.length - 1, saved));
-        pagesLoaded = true;
-        showPage();
+        for (int p = 0; p < this.pages.length; ++p) {
+            net.minecraft.world.item.ItemStack[] stored = this.get(DataMultiBlockMachineBlockEntity.pageKey(p));
+            if (stored == null) continue;
+            for (int i = 0; i < this.pages[p].length && i < stored.length; ++i) {
+                this.pages[p][i] = stored[i] == null ? net.minecraft.world.item.ItemStack.EMPTY : stored[i];
+            }
+        }
+        Integer saved = this.get(KEY_CURRENT_PAGE);
+        this.currentPage = saved == null ? 0 : Math.max(0, Math.min(this.pages.length - 1, saved));
+        this.pagesLoaded = true;
+        this.showPage();
     }
 
-    /** Copies the visible container back into the page it belongs to. */
     private void stashPage() {
-        if (pages == null)
+        if (this.pages == null) {
             return;
-        for (int i = 0; i < pages[currentPage].length; i++)
-            pages[currentPage][i] = getItem(i);
+        }
+        for (int i = 0; i < this.pages[this.currentPage].length; ++i) {
+            this.pages[this.currentPage][i] = this.getItem(i);
+        }
     }
 
-    /** Copies the current page into the visible container. */
     private void showPage() {
-        if (pages == null)
+        if (this.pages == null) {
             return;
-        for (int i = 0; i < pages[currentPage].length; i++)
-            setItem(i, pages[currentPage][i]);
+        }
+        for (int i = 0; i < this.pages[this.currentPage].length; ++i) {
+            this.setItem(i, this.pages[this.currentPage][i]);
+        }
     }
 
     private void savePages() {
-        if (pages == null)
+        if (this.pages == null) {
             return;
-        for (int p = 0; p < pages.length; p++)
-            set(pageKey(p), pages[p]);
-        set(KEY_CURRENT_PAGE, currentPage);
-        setChanged();
+        }
+        for (int p = 0; p < this.pages.length; ++p) {
+            this.set(DataMultiBlockMachineBlockEntity.pageKey(p), this.pages[p]);
+        }
+        this.set(KEY_CURRENT_PAGE, this.currentPage);
+        this.setChanged();
     }
 
-    /** Moves by {@code delta} pages, clamped, persisting what was on screen. */
     public void turnPage(int delta) {
-        if (pages == null)
+        if (this.pages == null) {
             return;
-        int target = Math.max(0, Math.min(pages.length - 1, currentPage + delta));
-        if (target == currentPage)
+        }
+        int target = Math.max(0, Math.min(this.pages.length - 1, this.currentPage + delta));
+        if (target == this.currentPage) {
             return;
-        stashPage();
-        currentPage = target;
-        showPage();
-        savePages();
-        if (getMenu() != null)
-            getMenu().syncFromMachine();
+        }
+        this.stashPage();
+        this.currentPage = target;
+        this.showPage();
+        this.savePages();
+        if (this.getMenu() != null) {
+            this.getMenu().syncFromMachine();
+        }
     }
 
     public int currentPage() {
-        return currentPage;
+        return this.currentPage;
     }
 
     public int pageCount() {
-        return pages == null ? 1 : pages.length;
+        return this.pages == null ? 1 : this.pages.length;
     }
-
-    // ------------------------------------------------------------- recipes
 
     @Override
     protected String getMachineId() {
-        return definition.recipeType();
+        return this.definition.recipeType();
+    }
+
+    @Override
+    protected boolean requiresFuel() {
+        return this.definition.fuelRequired();
+    }
+
+    @Override
+    protected boolean hasFuel(Level level) {
+        for (int slot : this.definition.fuelSlots()) {
+            MachineFuelRecipe recipe;
+            net.minecraft.world.item.ItemStack stack = this.getItem(slot);
+            if (stack == null || stack.isEmpty() || (recipe = RecipeManager.getFuel(this.getMachineId(), stack)) == null || stack.getCount() < recipe.getInput().getAmount() || !this.canFitReplacement(level, recipe, slot)) continue;
+            return true;
+        }
+        return false;
+    }
+
+    @Override
+    protected void consumeFuel(Level level) {
+        for (int slot : this.definition.fuelSlots()) {
+            MachineFuelRecipe recipe;
+            net.minecraft.world.item.ItemStack stack = this.getItem(slot);
+            if (stack == null || stack.isEmpty() || (recipe = RecipeManager.getFuel(this.getMachineId(), stack)) == null || stack.getCount() < recipe.getInput().getAmount() || !this.canFitReplacement(level, recipe, slot)) continue;
+            int burn = (int)Math.round((double)recipe.getBurnTime() / this.upgradeModifiers.fuelMultiplier());
+            boolean consumedInPlace = this.placeReplacement(level, recipe, slot);
+            if (!consumedInPlace) {
+                this.removeItem(slot, recipe.getInput().getAmount());
+            }
+            this.burnTime = burn;
+            this.maxBurnTime = burn;
+            this.setChanged();
+            return;
+        }
     }
 
     @Override
     public int[] getInputSlots() {
-        return definition.inputSlots();
+        return this.definition.inputSlots();
     }
 
     @Override
     public int[] getOutputSlots() {
-        return definition.outputSlots();
+        return this.definition.outputSlots();
     }
 
     @Override
     public int[] getFuelSlots() {
-        return definition.fuelSlots();
+        return this.definition.fuelSlots();
     }
 
     @Override
     public int[] getUpgradeSlots() {
-        return definition.upgrades().slots();
+        return this.definition.upgrades().slots();
     }
 
     @Override
     protected AbstractProcessingRecipe getMatchingRecipe(Level level) {
-        return DataMachineSupport.matchingRecipe(this, definition, getMachineId());
+        if (this.definition.continuousFuel()) {
+            return CONTINUOUS_FUEL_RECIPE;
+        }
+        return DataMachineSupport.matchingRecipe(this, this.definition, this.getMachineId());
     }
 
     @Override
     protected boolean canFitOutput(Level level, RecipeOutput output) {
-        return DataMachineSupport.canFitOutput(this, definition, output);
+        return DataMachineSupport.canFitOutput(this, this.definition, output);
     }
 
     @Override
     protected void consumeInputs(Level level, AbstractProcessingRecipe recipe) {
-        DataMachineSupport.consumeInputs(this, definition, recipe);
+        DataMachineSupport.consumeInputs(this, this.definition, recipe);
     }
 
-    // ---------------------------------------------------------------- menu
+    @Override
+    public MachineMenu getMenu() {
+        if (this.activeMenu == null) {
+            this.activeMenu = new MachineMenu(this, this.getLayout());
+            this.activeMenu.syncFromMachine();
+            this.menu = this.activeMenu;
+        }
+        return this.activeMenu;
+    }
+
+    @Override
+    public void openMenu(Player player) {
+        this.openPage((org.bukkit.entity.Player)player.getBukkitEntity(), 0);
+    }
+
+    public void openPage(org.bukkit.entity.Player player, int pageIndex) {
+        this.machinePageIndex = pageIndex;
+        this.activeMenu = new MachineMenu(this, this.getLayout());
+        this.activeMenu.syncFromMachine();
+        this.menu = this.activeMenu;
+        this.activeMenu.open(player);
+    }
+
+    public void bumpOverclock(boolean up, ClickType click) {
+        float delta = OverclockMenu.step(click);
+        this.overclock += up ? delta : -delta;
+        this.overclock = (float)DataMultiBlockMachineBlockEntity.clamp(this.overclock, -Math.min(this.curOverclockLimit, 0.99), this.curOverclockLimit);
+        this.setChanged();
+    }
 
     @Override
     public MachineLayout getLayout() {
-        ensurePagesLoaded();
-        MachineLayout layout = new MachineLayout(org.bukkit.event.inventory.InventoryType.CHEST,
-                definition.menuSize(), definition.title());
-        Component title = dev.arubik.craftengine.machine.menu.GuiTitles.title(getMachineId(), "main");
-        if (title != null)
+        this.ensurePagesLoaded();
+        if (!this.definition.upgrades().isInline()) {
+            if (this.machinePageIndex == 1) {
+                return this.buildUpgradeLayout();
+            }
+            if (this.machinePageIndex == 2) {
+                return this.buildOverclockLayout();
+            }
+        }
+        return this.buildMainLayout();
+    }
+
+    private MachineLayout buildUpgradeLayout() {
+        int count = this.definition.upgrades().size();
+        int unlocked = this.unlockedSlots();
+        MachineLayout l = new MachineLayout(InventoryType.CHEST, 18, "Upgrades");
+        Component title = GuiTitles.title(this.getMachineId(), "upgrade");
+        if (title != null) {
+            l.setTitleComponent(title);
+        }
+        for (int i = 0; i < count; ++i) {
+            if (i < unlocked) {
+                l.addSlot(i, MenuSlotType.INPUT);
+                continue;
+            }
+            l.setDynamicProvider(i, (m, t) -> MenuText.lockedIcon(MenuText.tr("polyfill.ui.locked", NamedTextColor.RED), MenuText.tr("polyfill.ui.locked_desc", NamedTextColor.GRAY)));
+        }
+        l.addButton(17, (m, t) -> MenuText.backIcon(), (m, p) -> ((DataMultiBlockMachineBlockEntity)m).openPage((org.bukkit.entity.Player)p, 0));
+        return l;
+    }
+
+    private MachineLayout buildOverclockLayout() {
+        return OverclockMenu.build(this.getMachineId(), NamedTextColor.RED, () -> this.overclock, () -> (float)this.curOverclockLimit, this::bumpOverclock, p -> this.openPage((org.bukkit.entity.Player)p, 0));
+    }
+
+    private MachineLayout buildMainLayout() {
+        int infoSlot;
+        MachineLayout layout = new MachineLayout(InventoryType.CHEST, this.definition.menuSize(), this.definition.title());
+        Component title = GuiTitles.title(this.getMachineId(), "main");
+        if (title != null) {
             layout.setTitleComponent(title);
-
-        for (int slot : definition.inputSlots())
+        }
+        for (int slot : this.definition.inputSlots()) {
             layout.addSlot(slot, MenuSlotType.INPUT);
-        for (int slot : definition.outputSlots())
+        }
+        for (int slot : this.definition.outputSlots()) {
             layout.addSlot(slot, MenuSlotType.OUTPUT);
-        for (int slot : definition.fuelSlots())
+        }
+        for (int slot : this.definition.fuelSlots()) {
             layout.addSlot(slot, MenuSlotType.FUEL);
-        if (definition.upgrades().isInline())
-            for (int slot : definition.upgrades().slots())
+        }
+        if (this.definition.upgrades().isInline()) {
+            for (int slot : this.definition.upgrades().slots()) {
                 layout.addSlot(slot, MenuSlotType.UPGRADE);
-
-        MachineBars.install(layout, DataMachineSupport.resolveBars(definition, bars));
-
-        // Paged storage: the page's slots are ordinary input slots, plus the navigation.
-        var paging = definition.paging();
+            }
+        }
+        MachineBars.install(layout, DataMachineSupport.resolveBars(this.definition, this.bars));
+        MachineDefinition.PagingSpec paging = this.definition.paging();
         if (paging.isPaged()) {
-            for (int i = 0; i < paging.slots(); i++)
+            for (int i = 0; i < paging.slots(); ++i) {
                 layout.addSlot(i, MenuSlotType.INPUT);
-            if (paging.prevSlot() >= 0)
-                layout.addButton(paging.prevSlot(),
-                        (m, t) -> dev.arubik.craftengine.machine.menu.MenuText.iconItem(
-                                Key.of("cml", "gui_empty"), org.bukkit.Material.ARROW,
-                                Component.text("§aPrevious Page")),
-                        (m, p) -> ((DataMultiBlockMachineBlockEntity) m).turnPage(-1));
-            if (paging.nextSlot() >= 0)
-                layout.addButton(paging.nextSlot(),
-                        (m, t) -> dev.arubik.craftengine.machine.menu.MenuText.iconItem(
-                                Key.of("cml", "gui_empty"), org.bukkit.Material.ARROW,
-                                Component.text("§aNext Page")),
-                        (m, p) -> ((DataMultiBlockMachineBlockEntity) m).turnPage(1));
-            if (paging.indicator() >= 0)
+            }
+            if (paging.prevSlot() >= 0) {
+                layout.addButton(paging.prevSlot(), (m, t) -> MenuText.iconItem(Key.of((String)"cml", (String)"gui_empty"), Material.ARROW, (Component)Component.text((String)"\u00a7aPrevious Page"), new Component[0]), (m, p) -> ((DataMultiBlockMachineBlockEntity)m).turnPage(-1));
+            }
+            if (paging.nextSlot() >= 0) {
+                layout.addButton(paging.nextSlot(), (m, t) -> MenuText.iconItem(Key.of((String)"cml", (String)"gui_empty"), Material.ARROW, (Component)Component.text((String)"\u00a7aNext Page"), new Component[0]), (m, p) -> ((DataMultiBlockMachineBlockEntity)m).turnPage(1));
+            }
+            if (paging.indicator() >= 0) {
                 layout.setDynamicProvider(paging.indicator(), (m, t) -> {
-                    var self = (DataMultiBlockMachineBlockEntity) m;
-                    var paper = new org.bukkit.inventory.ItemStack(org.bukkit.Material.PAPER);
-                    paper.editMeta(meta -> meta.displayName(
-                            dev.arubik.craftengine.machine.menu.MenuText.noI(Component.text(
-                                    "§ePage " + (self.currentPage() + 1) + "/" + self.pageCount()))));
+                    DataMultiBlockMachineBlockEntity self = (DataMultiBlockMachineBlockEntity)m;
+                    ItemStack paper = new ItemStack(Material.PAPER);
+                    paper.editMeta(meta -> meta.displayName(MenuText.noI((Component)Component.text((String)("\u00a7ePage " + (self.currentPage() + 1) + "/" + self.pageCount())))));
                     return paper;
                 });
+            }
         }
-
-        int infoSlot = definition.infoSlot() >= 0 ? definition.infoSlot() : menuConfig.infoSlot;
-        if (infoSlot >= 0)
-            layout.setDynamicProvider(infoSlot,
-                    (machine, tick) -> dev.arubik.craftengine.machine.menu.RecipeInfoIcon.build(machine,
-                            getMachineId(), machine.getUpgradeModifiers().speedMultiplier(), 0.0));
-        // Install definition buttons (upgrade page nav, overclock, etc.)
-        for (MachineDefinition.ButtonSpec spec : definition.buttons()) {
-            final MachineDefinition.ButtonSpec s = spec;
+        int n = infoSlot = this.definition.infoSlot() >= 0 ? this.definition.infoSlot() : this.menuConfig.infoSlot;
+        if (infoSlot >= 0) {
+            layout.setDynamicProvider(infoSlot, (machine, tick) -> RecipeInfoIcon.build(machine, this.getMachineId(), machine.getUpgradeModifiers().speedMultiplier(), 0.0));
+        }
+        Iterator<MachineDefinition.ButtonSpec> iterator = this.definition.buttons().iterator();
+        while (iterator.hasNext()) {
+            MachineDefinition.ButtonSpec spec;
+            MachineDefinition.ButtonSpec s = spec = iterator.next();
             try {
-                net.momirealms.craftengine.core.util.Key iconKey = s.icon() != null
-                        ? net.momirealms.craftengine.core.util.Key.of(s.icon())
-                        : net.momirealms.craftengine.core.util.Key.of("cml", "gui_empty");
-                layout.addButton(s.slot(),
-                    (machine, tick) -> dev.arubik.craftengine.machine.menu.MenuText.iconItem(
-                            iconKey, org.bukkit.Material.PAPER,
-                            net.kyori.adventure.text.Component.text(s.name() == null ? "" : s.name())),
-                    (machine, player) -> {
-                        String action = s.action();
-                        if (action != null && action.startsWith("open_page:")) {
-                            try {
-                                int page = Integer.parseInt(action.substring(10));
-                                if (machine instanceof DataMultiBlockMachineBlockEntity mb)
-                                    mb.turnPage(page - mb.currentPage() - 1);
-                            } catch (Throwable ignored) {}
+                Key iconKey = DataMultiBlockMachineBlockEntity.parseKey(s.icon());
+                Key lockedKey = DataMultiBlockMachineBlockEntity.parseKey(s.lockedIcon());
+                MachineMenuConfig.LockedWhen lw = MachineMenuConfig.LockedWhen.parse(s.lockedWhen());
+                layout.addButton(s.slot(), (machine, tick) -> {
+                    double d;
+                    PolyContext evalCtx2 = machine.buildEvalContext();
+                    if (machine instanceof DataMultiBlockMachineBlockEntity) {
+                        DataMultiBlockMachineBlockEntity mb2 = (DataMultiBlockMachineBlockEntity)machine;
+                        d = mb2.curOverclockLimit;
+                    } else {
+                        d = 0.0;
+                    }
+                    double ocLimit2 = d;
+                    boolean locked = lw.isLocked(evalCtx2, ocLimit2);
+                    Key key = locked ? lockedKey : iconKey;
+                    return MenuText.iconItem(key, Material.PAPER, (Component)Component.text((String)(s.name() == null ? "" : s.name())), new Component[0]);
+                }, (machine, player) -> {
+                    String scriptName;
+                    PolyScript script;
+                    if (!(machine instanceof DataMultiBlockMachineBlockEntity)) {
+                        return;
+                    }
+                    DataMultiBlockMachineBlockEntity self = (DataMultiBlockMachineBlockEntity)machine;
+                    PolyContext evalCtx = self.buildEvalContext();
+                    if (lw.isLocked(evalCtx, self.curOverclockLimit)) {
+                        return;
+                    }
+                    String action = s.action();
+                    if (action != null && action.startsWith("open_page:")) {
+                        try {
+                            int pageIndex = Integer.parseInt(action.substring(10));
+                            self.openPage((org.bukkit.entity.Player)player, pageIndex);
                         }
-                    });
-            } catch (Throwable ignored) {}
+                        catch (Throwable pageIndex) {}
+                    } else if (action != null && (action.startsWith("script:") || action.startsWith("run:")) && (script = PolyScriptRegistry.get(scriptName = action.startsWith("script:") ? action.substring(7) : action.substring(4))) != null && evalCtx != null) {
+                        script.evaluate(evalCtx);
+                    }
+                });
+            }
+            catch (Throwable throwable) {}
         }
         return layout;
     }
 
-    /** Which tank a gauge reads, from the definition's {@code source}. */
+    private static Key parseKey(String spec) {
+        if (spec == null) {
+            return Key.of((String)"cml", (String)"gui_empty");
+        }
+        int i = spec.indexOf(58);
+        return i < 0 ? Key.of((String)"cml", (String)spec) : Key.of((String)spec.substring(0, i), (String)spec.substring(i + 1));
+    }
+
     private String barSource(String barId) {
-        for (MachineDefinition.BarRef ref : definition.bars())
-            if (ref.bar().value().equals(barId))
-                return ref.source();
+        for (MachineDefinition.BarRef ref : this.definition.bars()) {
+            if (!ref.bar().value().equals(barId)) continue;
+            return ref.source();
+        }
         return barId;
     }
 
     @Override
     public double[] barStat(String id) {
-        String source = barSource(id);
+        String source = this.barSource(id);
         if (source.startsWith("fluid")) {
-            var tank = tankByName(source, true);
-            return tank == null ? new double[] { 0, 0 }
-                    : new double[] { ((FluidTank) tank).getFluid(getNMSLevel(), getMachinePos()).getAmount(),
-                            ((FluidTank) tank).getCapacity() };
+            double[] dArray;
+            Object tank = this.tankByName(source, true);
+            if (tank == null) {
+                double[] dArray2 = new double[2];
+                dArray2[0] = 0.0;
+                dArray = dArray2;
+                dArray2[1] = 0.0;
+            } else {
+                double[] dArray3 = new double[2];
+                dArray3[0] = ((FluidTank)tank).getFluid(this.getNMSLevel(), this.getMachinePos()).getAmount();
+                dArray = dArray3;
+                dArray3[1] = ((FluidTank)tank).getCapacity();
+            }
+            return dArray;
         }
         if (source.startsWith("gas")) {
-            var tank = tankByName(source, false);
-            return tank == null ? new double[] { 0, 0 }
-                    : new double[] { ((GasTank) tank).getGas(getNMSLevel(), getMachinePos()).getAmount(),
-                            ((GasTank) tank).getCapacity() };
+            double[] dArray;
+            Object tank = this.tankByName(source, false);
+            if (tank == null) {
+                double[] dArray4 = new double[2];
+                dArray4[0] = 0.0;
+                dArray = dArray4;
+                dArray4[1] = 0.0;
+            } else {
+                double[] dArray5 = new double[2];
+                dArray5[0] = ((GasTank)tank).getGas(this.getNMSLevel(), this.getMachinePos()).getAmount();
+                dArray = dArray5;
+                dArray5[1] = ((GasTank)tank).getCapacity();
+            }
+            return dArray;
         }
-        if (source.equals("fuel"))
-            return new double[] { burnTime, Math.max(1, maxBurnTime) };
-        if (source.equals("progress"))
-            return new double[] { getProgress(), Math.max(1, getMaxProgress()) };
+        if (source.equals("fuel")) {
+            return new double[]{this.burnTime, Math.max(1, this.maxBurnTime)};
+        }
+        if (source.equals("progress")) {
+            return new double[]{this.getProgress(), Math.max(1, this.getMaxProgress())};
+        }
         return super.barStat(id);
     }
 
     @Override
     public String barSubtype(String id) {
-        String source = barSource(id);
+        String source = this.barSource(id);
         if (source.startsWith("fluid")) {
-            var tank = (FluidTank) tankByName(source, true);
-            if (tank == null)
+            FluidTank tank = (FluidTank)this.tankByName(source, true);
+            if (tank == null) {
                 return "";
-            var stored = tank.getFluid(getNMSLevel(), getMachinePos());
-            return stored.isEmpty() ? "" : stored.getType().name().toLowerCase(java.util.Locale.ROOT);
+            }
+            FluidStack stored = tank.getFluid(this.getNMSLevel(), this.getMachinePos());
+            return stored.isEmpty() ? "" : stored.getType().name().toLowerCase(Locale.ROOT);
         }
         if (source.startsWith("gas")) {
-            var tank = (GasTank) tankByName(source, false);
-            if (tank == null)
+            GasTank tank = (GasTank)this.tankByName(source, false);
+            if (tank == null) {
                 return "";
-            var stored = tank.getGas(getNMSLevel(), getMachinePos());
-            return stored.isEmpty() ? "" : stored.getType().name().toLowerCase(java.util.Locale.ROOT);
+            }
+            GasStack stored = tank.getGas(this.getNMSLevel(), this.getMachinePos());
+            return stored.isEmpty() ? "" : stored.getType().name().toLowerCase(Locale.ROOT);
         }
         return super.barSubtype(id);
     }
 
-    /** The tank a {@code fluid:<name>} / {@code gas:<name>} source names, or the first one. */
     private Object tankByName(String source, boolean fluid) {
-        String name = source.contains(":") ? source.substring(source.indexOf(':') + 1) : "";
+        String name;
+        String string = name = source.contains(":") ? source.substring(source.indexOf(58) + 1) : "";
         if (fluid) {
-            for (var t : fluidTanks)
-                if (t.getName().equalsIgnoreCase(name))
-                    return t;
-            return fluidTanks.isEmpty() ? null : fluidTanks.get(0);
-        }
-        for (var t : gasTanks)
-            if (t.getName().equalsIgnoreCase(name))
+            for (FluidTank t : this.fluidTanks) {
+                if (!t.getName().equalsIgnoreCase(name)) continue;
                 return t;
-        return gasTanks.isEmpty() ? null : gasTanks.get(0);
+            }
+            return this.fluidTanks.isEmpty() ? null : this.fluidTanks.get(0);
+        }
+        for (GasTank t : this.gasTanks) {
+            if (!t.getName().equalsIgnoreCase(name)) continue;
+            return t;
+        }
+        return this.gasTanks.isEmpty() ? null : this.gasTanks.get(0);
     }
 }
+

@@ -1,7 +1,35 @@
+/*
+ * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  net.minecraft.core.BlockPos
+ *  net.minecraft.server.level.ServerLevel
+ *  net.minecraft.world.level.Level
+ *  net.minecraft.world.level.block.state.BlockState
+ *  net.momirealms.craftengine.core.block.BlockDefinition
+ *  net.momirealms.craftengine.core.block.behavior.BlockBehavior
+ *  net.momirealms.craftengine.core.block.behavior.BlockBehaviorFactory
+ *  net.momirealms.craftengine.core.block.behavior.EntityBlock
+ *  net.momirealms.craftengine.core.block.entity.BlockEntity
+ *  net.momirealms.craftengine.core.block.entity.BlockEntityController
+ *  net.momirealms.craftengine.core.plugin.config.ConfigSection
+ *  net.momirealms.craftengine.core.util.Direction
+ *  net.momirealms.craftengine.core.util.Key
+ *  net.momirealms.craftengine.core.world.BlockPos
+ *  net.momirealms.craftengine.core.world.CEWorld
+ *  org.bukkit.World
+ */
 package dev.arubik.craftengine.conveyor;
 
+import dev.arubik.craftengine.conveyor.AbstractRouterBlockEntity;
+import dev.arubik.craftengine.conveyor.SplitterBlockEntity;
+import dev.arubik.craftengine.util.CeWorlds;
+import dev.arubik.craftengine.util.NmsBlockBehavior;
+import dev.arubik.craftengine.util.Utils;
+import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
-import net.momirealms.craftengine.bukkit.world.BukkitWorld;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
 import net.momirealms.craftengine.core.block.BlockDefinition;
 import net.momirealms.craftengine.core.block.behavior.BlockBehavior;
 import net.momirealms.craftengine.core.block.behavior.BlockBehaviorFactory;
@@ -11,19 +39,14 @@ import net.momirealms.craftengine.core.block.entity.BlockEntityController;
 import net.momirealms.craftengine.core.plugin.config.ConfigSection;
 import net.momirealms.craftengine.core.util.Direction;
 import net.momirealms.craftengine.core.util.Key;
-import net.momirealms.craftengine.core.world.BlockPos;
 import net.momirealms.craftengine.core.world.CEWorld;
+import org.bukkit.World;
 
-/**
- * Block behavior backing a {@link SplitterBlockEntity} ({@code polyfills:conveyor_splitter}).
- * Directional (4-direction {@code facing} = the centre output side; the two perpendicular
- * sides are the other outputs; the back is the single input).
- */
-public class SplitterBehavior extends dev.arubik.craftengine.util.NmsBlockBehavior implements EntityBlock {
-
-    public static final Key FACTORY_KEY = Key.of("polyfills:conveyor_splitter");
+public class SplitterBehavior
+extends NmsBlockBehavior
+implements EntityBlock {
+    public static final Key FACTORY_KEY = Key.of((String)"polyfills:conveyor_splitter");
     public static final Factory FACTORY = new Factory();
-
     private final Direction defaultFacing;
     private final int slots;
     private int controllerId;
@@ -31,49 +54,53 @@ public class SplitterBehavior extends dev.arubik.craftengine.util.NmsBlockBehavi
     public SplitterBehavior(BlockDefinition block, Direction defaultFacing, int slots) {
         super(block);
         this.defaultFacing = defaultFacing == null ? Direction.NORTH : defaultFacing;
-        this.slots = slots > 0 ? slots : SplitterBlockEntity.DEFAULT_SLOTS;
+        this.slots = slots > 0 ? slots : 6;
     }
 
-    @Override
     public void initControllerId(int id) {
         this.controllerId = id;
     }
 
-    @Override
     public BlockEntityController createBlockEntityController(BlockEntity blockEntity) {
-        return new SplitterBlockEntity(blockEntity, defaultFacing, slots);
+        return new SplitterBlockEntity(blockEntity, this.defaultFacing, this.slots);
     }
 
     @Override
-    public void affectNeighborsAfterRemoval(Object thisBlock, net.minecraft.world.level.Level level,
-            net.minecraft.core.BlockPos nmsPos, net.minecraft.world.level.block.state.BlockState oldState,
-            Boolean movedByPiston) {
+    public void affectNeighborsAfterRemoval(Object thisBlock, Level level, BlockPos nmsPos, BlockState oldState, Boolean movedByPiston) {
         try {
-            CEWorld world = dev.arubik.craftengine.util.CeWorlds.of(((ServerLevel) level).getWorld()).storageWorld();
-            if (world == null)
+            BlockEntityController blockEntityController;
+            CEWorld world = CeWorlds.of((World)((ServerLevel)level).getWorld()).storageWorld();
+            if (world == null) {
                 return;
-            BlockPos pos = new BlockPos(nmsPos.getX(), nmsPos.getY(), nmsPos.getZ());
+            }
+            net.momirealms.craftengine.core.world.BlockPos pos = new net.momirealms.craftengine.core.world.BlockPos(nmsPos.getX(), nmsPos.getY(), nmsPos.getZ());
             BlockEntity be = world.getBlockEntityAtIfLoaded(pos);
-            if (be != null && be.controller instanceof AbstractRouterBlockEntity r)
+            if (be != null && (blockEntityController = be.controller) instanceof AbstractRouterBlockEntity) {
+                AbstractRouterBlockEntity r = (AbstractRouterBlockEntity)blockEntityController;
                 r.dropAndDespawn();
-        } catch (Throwable ignored) {
+            }
+        }
+        catch (Throwable throwable) {
+            // empty catch block
         }
     }
 
-    public static class Factory implements BlockBehaviorFactory<BlockBehavior> {
-        @Override
+    public static class Factory
+    implements BlockBehaviorFactory<BlockBehavior> {
         public BlockBehavior create(BlockDefinition block, ConfigSection arguments) {
             Direction facing = Direction.NORTH;
             Object f = arguments.get("facing");
             if (f != null) {
                 try {
-                    facing = Direction.valueOf(f.toString().toUpperCase());
-                } catch (IllegalArgumentException ignored) {
+                    facing = Direction.valueOf((String)f.toString().toUpperCase());
+                }
+                catch (IllegalArgumentException illegalArgumentException) {
+                    // empty catch block
                 }
             }
-            int slots = dev.arubik.craftengine.util.Utils.getAsInt(
-                    arguments.getOrDefault("slots", SplitterBlockEntity.DEFAULT_SLOTS), "slots");
+            int slots = Utils.getAsInt(arguments.getOrDefault("slots", 6), "slots");
             return new SplitterBehavior(block, facing, slots);
         }
     }
 }
+

@@ -1,447 +1,420 @@
+/*
+ * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  net.minecraft.world.item.ItemStack
+ *  org.bukkit.craftbukkit.inventory.CraftItemStack
+ *  org.bukkit.inventory.Inventory
+ *  org.bukkit.inventory.ItemStack
+ */
 package dev.arubik.craftengine.machine.render.variable;
 
 import dev.arubik.craftengine.machine.render.formula.FluidTanksClass;
 import dev.arubik.craftengine.machine.render.formula.GasTanksClass;
-import dev.arubik.craftengine.machine.render.formula.PolyClass;
 import dev.arubik.craftengine.machine.render.formula.PolyContext;
 import dev.arubik.craftengine.machine.render.formula.PolyFormula;
 import dev.arubik.craftengine.machine.render.formula.PolyValue;
+import dev.arubik.craftengine.machine.render.variable.VariableSpec;
+import java.lang.runtime.SwitchBootstraps;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
+import org.bukkit.craftbukkit.inventory.CraftItemStack;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 
-import java.util.HashMap;
-import java.util.Map;
-
-/**
- * Per-tick evaluated snapshot of a machine's state, passed to the RendererManager.
- *
- * <p>The name {@code MachineRenderContext} is intentional — it avoids collision with
- * the contraption package's {@code RenderContext} type.</p>
- *
- * <p>Callers construct this once per tick from the machine's live fields and hand it
- * to {@code RendererManager.tick(context, varSpecs)}. The context is immutable after
- * construction; all evaluation helpers are pure given the same {@code varSpecs} map.</p>
- *
- * <p>Expression evaluation is now backed by {@link PolyFormula} via
- * {@link #toPolyContext()}.  All eval methods catch parse/runtime errors and return
- * safe defaults rather than throwing.</p>
- */
 public final class MachineRenderContext {
-
-    // Numeric built-in sources
     private final double rpm;
     private final double overclock;
     private final double efficiency;
     private final double progress;
     private final double maxProgress;
     private final double tier;
-
-    // Boolean built-in sources
     private final boolean processing;
     private final boolean powered;
     private final boolean overclocked;
     private final boolean hasFuel;
-
-    // Container for item-slot variables (may be null when the machine has no inventory)
     private final Inventory container;
-
-    // Upgrade counts by type (may be null / empty)
     private final Map<String, Integer> upgradesByType;
-
-    // Redstone power level at the machine's position (0-15)
     private final int redstonePower;
-
-    // Tank data maps: tank name → [level, capacity].  Empty when the machine has no tanks.
     private final Map<String, double[]> fluidTankData;
     private final Map<String, double[]> gasTankData;
-
-    // Lazily built PolyContext; rebuilt if null (context is immutable so we build once)
     private PolyContext polyContextCache;
 
-    /** Minimal constructor — no upgrades, no tank data. */
-    public MachineRenderContext(
-            double rpm,
-            double overclock,
-            double efficiency,
-            double progress,
-            double maxProgress,
-            double tier,
-            boolean processing,
-            boolean powered,
-            boolean overclocked,
-            boolean hasFuel,
-            Inventory container) {
-        this(rpm, overclock, efficiency, progress, maxProgress, tier,
-                processing, powered, overclocked, hasFuel, container,
-                null, Map.of(), Map.of());
+    public MachineRenderContext(double rpm, double overclock, double efficiency, double progress, double maxProgress, double tier, boolean processing, boolean powered, boolean overclocked, boolean hasFuel, Inventory container) {
+        this(rpm, overclock, efficiency, progress, maxProgress, tier, processing, powered, overclocked, hasFuel, container, null, Map.of(), Map.of());
     }
 
-    /** Constructor with upgrade map but no tank data. */
-    public MachineRenderContext(
-            double rpm,
-            double overclock,
-            double efficiency,
-            double progress,
-            double maxProgress,
-            double tier,
-            boolean processing,
-            boolean powered,
-            boolean overclocked,
-            boolean hasFuel,
-            Inventory container,
-            Map<String, Integer> upgradesByType) {
-        this(rpm, overclock, efficiency, progress, maxProgress, tier,
-                processing, powered, overclocked, hasFuel, container,
-                upgradesByType, Map.of(), Map.of());
+    public MachineRenderContext(double rpm, double overclock, double efficiency, double progress, double maxProgress, double tier, boolean processing, boolean powered, boolean overclocked, boolean hasFuel, Inventory container, Map<String, Integer> upgradesByType) {
+        this(rpm, overclock, efficiency, progress, maxProgress, tier, processing, powered, overclocked, hasFuel, container, upgradesByType, Map.of(), Map.of());
     }
 
-    /**
-     * Constructor with fluid and gas tank data but no upgrade map.
-     *
-     * <p>The tank maps are keyed by tank name and each value is a two-element
-     * array {@code [level, capacity]}.  Pass {@link Map#of()} for machines that
-     * have no tanks of a given kind.</p>
-     */
-    public MachineRenderContext(
-            double rpm,
-            double overclock,
-            double efficiency,
-            double progress,
-            double maxProgress,
-            double tier,
-            boolean processing,
-            boolean powered,
-            boolean overclocked,
-            boolean hasFuel,
-            Inventory container,
-            Map<String, double[]> fluidTankData,
-            Map<String, double[]> gasTankData) {
-        this(rpm, overclock, efficiency, progress, maxProgress, tier,
-                processing, powered, overclocked, hasFuel, container,
-                null, fluidTankData, gasTankData);
+    public MachineRenderContext(double rpm, double overclock, double efficiency, double progress, double maxProgress, double tier, boolean processing, boolean powered, boolean overclocked, boolean hasFuel, Inventory container, Map<String, double[]> fluidTankData, Map<String, double[]> gasTankData) {
+        this(rpm, overclock, efficiency, progress, maxProgress, tier, processing, powered, overclocked, hasFuel, container, null, fluidTankData, gasTankData);
     }
 
-    /**
-     * Full constructor — upgrades and tank data. Redstone defaults to 0.
-     */
-    public MachineRenderContext(
-            double rpm,
-            double overclock,
-            double efficiency,
-            double progress,
-            double maxProgress,
-            double tier,
-            boolean processing,
-            boolean powered,
-            boolean overclocked,
-            boolean hasFuel,
-            Inventory container,
-            Map<String, Integer> upgradesByType,
-            Map<String, double[]> fluidTankData,
-            Map<String, double[]> gasTankData) {
-        this(rpm, overclock, efficiency, progress, maxProgress, tier,
-                processing, powered, overclocked, hasFuel, container,
-                upgradesByType, fluidTankData, gasTankData, 0);
+    public MachineRenderContext(double rpm, double overclock, double efficiency, double progress, double maxProgress, double tier, boolean processing, boolean powered, boolean overclocked, boolean hasFuel, Inventory container, Map<String, Integer> upgradesByType, Map<String, double[]> fluidTankData, Map<String, double[]> gasTankData) {
+        this(rpm, overclock, efficiency, progress, maxProgress, tier, processing, powered, overclocked, hasFuel, container, upgradesByType, fluidTankData, gasTankData, 0);
     }
 
-    /**
-     * Full constructor — upgrades, tank data, and redstone power.
-     *
-     * @param redstonePower redstone signal strength at the machine's position (0-15)
-     */
-    public MachineRenderContext(
-            double rpm,
-            double overclock,
-            double efficiency,
-            double progress,
-            double maxProgress,
-            double tier,
-            boolean processing,
-            boolean powered,
-            boolean overclocked,
-            boolean hasFuel,
-            Inventory container,
-            Map<String, Integer> upgradesByType,
-            Map<String, double[]> fluidTankData,
-            Map<String, double[]> gasTankData,
-            int redstonePower) {
-        this.rpm          = rpm;
-        this.overclock    = overclock;
-        this.efficiency   = efficiency;
-        this.progress     = progress;
-        this.maxProgress  = maxProgress;
-        this.tier         = tier;
-        this.processing   = processing;
-        this.powered      = powered;
-        this.overclocked  = overclocked;
-        this.hasFuel      = hasFuel;
-        this.container    = container;
-        this.upgradesByType  = upgradesByType;
-        this.fluidTankData   = fluidTankData  != null ? fluidTankData  : Map.of();
-        this.gasTankData     = gasTankData    != null ? gasTankData    : Map.of();
-        this.redstonePower   = redstonePower;
+    public MachineRenderContext(double rpm, double overclock, double efficiency, double progress, double maxProgress, double tier, boolean processing, boolean powered, boolean overclocked, boolean hasFuel, Inventory container, Map<String, Integer> upgradesByType, Map<String, double[]> fluidTankData, Map<String, double[]> gasTankData, int redstonePower) {
+        this.rpm = rpm;
+        this.overclock = overclock;
+        this.efficiency = efficiency;
+        this.progress = progress;
+        this.maxProgress = maxProgress;
+        this.tier = tier;
+        this.processing = processing;
+        this.powered = powered;
+        this.overclocked = overclocked;
+        this.hasFuel = hasFuel;
+        this.container = container;
+        this.upgradesByType = upgradesByType;
+        this.fluidTankData = fluidTankData != null ? fluidTankData : Map.of();
+        this.gasTankData = gasTankData != null ? gasTankData : Map.of();
+        this.redstonePower = redstonePower;
     }
 
-    // ---- PolyContext bridge -------------------------------------------------
-
-    /**
-     * Build (and cache) the full {@link PolyContext} for this machine snapshot.
-     *
-     * <p>The context exposes all numeric/boolean machine variables, an
-     * {@code Inventory} class when a container is present, and an {@code Upgrades}
-     * class when upgrade counts have been supplied.</p>
-     */
     public PolyContext toPolyContext() {
-        if (polyContextCache == null) {
-            PolyContext base = PolyContext.forMachine(
-                    rpm, overclock, efficiency, progress, maxProgress, tier,
-                    processing, powered, overclocked, hasFuel,
-                    container, upgradesByType, fluidTankData, gasTankData);
-            if (redstonePower != 0) {
-                // Augment with redstone variables
-                polyContextCache = PolyContext.builder()
-                        .copyFrom(base)
-                        .redstone(redstonePower)
-                        .build();
-            } else {
-                polyContextCache = base;
-            }
+        if (this.polyContextCache == null) {
+            PolyContext base = PolyContext.forMachine(this.rpm, this.overclock, this.efficiency, this.progress, this.maxProgress, this.tier, this.processing, this.powered, this.overclocked, this.hasFuel, this.container, this.upgradesByType, this.fluidTankData, this.gasTankData);
+            this.polyContextCache = this.redstonePower != 0 ? PolyContext.builder().copyFrom(base).redstone(this.redstonePower).build() : base;
         }
-        return polyContextCache;
+        return this.polyContextCache;
     }
 
-    /**
-     * Return a copy of this context backed by the supplied (pre-augmented)
-     * {@link PolyContext}.  All {@code eval*} methods on the returned instance
-     * will use {@code poly} rather than lazily building their own context.
-     *
-     * <p>Used by {@link dev.arubik.craftengine.machine.render.RendererManager}
-     * to apply a {@link dev.arubik.craftengine.machine.render.formula.PolyScript}
-     * before evaluating renderer expressions.</p>
-     */
     public MachineRenderContext augmented(PolyContext poly) {
-        MachineRenderContext copy = new MachineRenderContext(
-                rpm, overclock, efficiency, progress, maxProgress, tier,
-                processing, powered, overclocked, hasFuel,
-                container, upgradesByType, fluidTankData, gasTankData, redstonePower);
+        MachineRenderContext copy = new MachineRenderContext(this.rpm, this.overclock, this.efficiency, this.progress, this.maxProgress, this.tier, this.processing, this.powered, this.overclocked, this.hasFuel, this.container, this.upgradesByType, this.fluidTankData, this.gasTankData, this.redstonePower);
         copy.polyContextCache = poly;
         return copy;
     }
 
-    // ---- Variable map (legacy, kept for SpeedFormula call sites) -----------
-
-    /**
-     * Build the numeric variable map consumed by
-     * {@link dev.arubik.craftengine.machine.render.SpeedFormula#evaluate(Map)}.
-     * Booleans are included as {@code 1.0} / {@code 0.0}.
-     *
-     * @deprecated Prefer {@link #toPolyContext()} and {@link PolyFormula}.
-     */
     @Deprecated
     public Map<String, Double> numericVars() {
-        Map<String, Double> m = new HashMap<>(16);
-        m.put("rpm",          rpm);
-        m.put("overclock",    overclock);
-        m.put("efficiency",   efficiency);
-        m.put("progress",     progress);
-        m.put("max_progress", maxProgress);
-        m.put("tier",         tier);
-        m.put("generation",   tier);  // alias: curGeneration is passed as tier
-        m.put("processing",   processing   ? 1.0 : 0.0);
-        m.put("powered",      powered      ? 1.0 : 0.0);
-        m.put("overclocked",  overclocked  ? 1.0 : 0.0);
-        m.put("has_fuel",     hasFuel      ? 1.0 : 0.0);
+        HashMap<String, Double> m = new HashMap<String, Double>(16);
+        m.put("rpm", this.rpm);
+        m.put("overclock", this.overclock);
+        m.put("efficiency", this.efficiency);
+        m.put("progress", this.progress);
+        m.put("max_progress", this.maxProgress);
+        m.put("tier", this.tier);
+        m.put("generation", this.tier);
+        m.put("processing", this.processing ? 1.0 : 0.0);
+        m.put("powered", this.powered ? 1.0 : 0.0);
+        m.put("overclocked", this.overclocked ? 1.0 : 0.0);
+        m.put("has_fuel", this.hasFuel ? 1.0 : 0.0);
         return m;
     }
 
-    // ---- Evaluation helpers ------------------------------------------------
-
-    /**
-     * Evaluate a condition expression or {@code "$varname"} reference as a boolean.
-     *
-     * <ul>
-     *   <li>{@code "always"} / {@code "true"}  → {@code true}</li>
-     *   <li>{@code "never"}  / {@code "false"} → {@code false}</li>
-     *   <li>{@code "$name"}  → looks up the named spec in {@code varSpecs} and evaluates it</li>
-     *   <li>anything else    → compiled as a {@link PolyFormula} expression</li>
-     * </ul>
-     *
-     * Never throws; parse or evaluation errors return {@code false}.
-     */
     public boolean evalBool(String exprOrRef, Map<String, VariableSpec> varSpecs) {
-        if (exprOrRef == null) return false;
+        if (exprOrRef == null) {
+            return false;
+        }
         switch (exprOrRef) {
-            case "always", "true"  -> { return true; }
-            case "never",  "false" -> { return false; }
+            case "always": 
+            case "true": {
+                return true;
+            }
+            case "never": 
+            case "false": {
+                return false;
+            }
         }
         if (exprOrRef.startsWith("$")) {
+            VariableSpec spec;
             String name = exprOrRef.substring(1);
-            VariableSpec spec = varSpecs != null ? varSpecs.get(name) : null;
-            if (spec == null) return false;
-            return evalSpecBool(spec, varSpecs);
+            VariableSpec variableSpec = spec = varSpecs != null ? varSpecs.get(name) : null;
+            if (spec == null) {
+                return false;
+            }
+            return this.evalSpecBool(spec, varSpecs);
         }
-        // Inline PolyFormula expression
+        if (varSpecs != null && varSpecs.containsKey(exprOrRef)) {
+            VariableSpec vs = varSpecs.get(exprOrRef);
+            if (vs instanceof VariableSpec.Formula) {
+                VariableSpec.Formula f = (VariableSpec.Formula)vs;
+                try {
+                    return PolyFormula.compile(f.expr()).evaluateBool(this.contextWithVars(varSpecs));
+                }
+                catch (Throwable ig) {
+                    return false;
+                }
+            }
+            return this.evalSpecBool(vs, varSpecs);
+        }
         try {
-            return PolyFormula.compile(exprOrRef).evaluateBool(toPolyContext());
-        } catch (Throwable ignored) {
+            return PolyFormula.compile(exprOrRef).evaluateBool(this.contextWithVars(varSpecs));
+        }
+        catch (Throwable ignored) {
             return false;
         }
     }
 
-    /**
-     * Evaluate a numeric expression or {@code "$varname"} reference.
-     *
-     * <ul>
-     *   <li>{@code null}    → {@code 1.0}</li>
-     *   <li>{@code "$name"} → looks up a {@link VariableSpec.NumExpr} spec and evaluates it;
-     *       non-numeric specs fall back to {@code 1.0}</li>
-     *   <li>bare number literal → parsed directly</li>
-     *   <li>anything else   → compiled as a {@link PolyFormula} expression</li>
-     * </ul>
-     *
-     * Never throws; parse or evaluation errors return {@code 1.0}.
-     */
     public double evalNum(String exprOrRef, Map<String, VariableSpec> varSpecs) {
-        if (exprOrRef == null) return 1.0;
+        VariableSpec spec3;
+        if (exprOrRef == null) {
+            return 1.0;
+        }
         if (exprOrRef.startsWith("$")) {
+            VariableSpec spec2;
             String name = exprOrRef.substring(1);
-            VariableSpec spec = varSpecs != null ? varSpecs.get(name) : null;
-            if (spec instanceof VariableSpec.NumExpr ne) {
+            VariableSpec variableSpec = spec2 = varSpecs != null ? varSpecs.get(name) : null;
+            if (spec2 instanceof VariableSpec.NumExpr) {
+                VariableSpec.NumExpr ne = (VariableSpec.NumExpr)spec2;
                 try {
-                    return PolyFormula.compile(ne.expr()).evaluateNum(toPolyContext());
-                } catch (Throwable ignored) {
+                    return PolyFormula.compile(ne.expr()).evaluateNum(this.toPolyContext());
+                }
+                catch (Throwable ignored) {
                     return 1.0;
                 }
             }
-            if (spec instanceof VariableSpec.TankVar tv) {
-                return resolveTankValue(tv).asNum();
+            if (spec2 instanceof VariableSpec.TankVar) {
+                VariableSpec.TankVar tv = (VariableSpec.TankVar)spec2;
+                return this.resolveTankValue(tv).asNum();
             }
-            if (spec instanceof VariableSpec.Formula f) {
+            if (spec2 instanceof VariableSpec.Formula) {
+                VariableSpec.Formula f = (VariableSpec.Formula)spec2;
                 try {
-                    return PolyFormula.compile(f.expr()).evaluateNum(toPolyContext());
-                } catch (Throwable ignored) {
+                    return PolyFormula.compile(f.expr()).evaluateNum(this.toPolyContext());
+                }
+                catch (Throwable ignored) {
                     return 1.0;
                 }
             }
             return 1.0;
         }
-        // Fast path: bare literal
+        if (varSpecs != null && varSpecs.containsKey(exprOrRef) && (spec3 = varSpecs.get(exprOrRef)) instanceof VariableSpec.Formula) {
+            VariableSpec.Formula f = (VariableSpec.Formula)spec3;
+            try {
+                return PolyFormula.compile(f.expr()).evaluateNum(this.contextWithVars(varSpecs));
+            }
+            catch (Throwable throwable) {
+                // empty catch block
+            }
+        }
         try {
             return Double.parseDouble(exprOrRef);
-        } catch (NumberFormatException ignored) { /* fall through */ }
-        // Inline PolyFormula expression
-        try {
-            return PolyFormula.compile(exprOrRef).evaluateNum(toPolyContext());
-        } catch (Throwable ignored) {
-            return 1.0;
+        }
+        catch (NumberFormatException spec3) {
+            try {
+                return PolyFormula.compile(exprOrRef).evaluateNum(this.contextWithVars(varSpecs));
+            }
+            catch (Throwable ignored) {
+                return 1.0;
+            }
         }
     }
 
-    /**
-     * Resolve an expression to a live {@link ItemStack}.
-     *
-     * <p>Accepts either:
-     * <ul>
-     *   <li>{@code "$varname"} — looks up an {@link VariableSpec.ItemSlot} spec and
-     *       returns {@code container.getItem(slot)}</li>
-     *   <li>A full {@link PolyFormula} expression that evaluates to a
-     *       {@link dev.arubik.craftengine.machine.render.formula.PolyValue.Item} —
-     *       e.g. {@code "slot(9)"} or {@code "CraftEngineItem('polyfills:copper_ingot')"}</li>
-     * </ul>
-     *
-     * Returns {@code null} when the result is absent or cannot be resolved.
-     * Never throws.
-     */
-    public ItemStack evalItem(String ref, Map<String, VariableSpec> varSpecs) {
-        if (ref == null) return null;
+    public net.minecraft.world.item.ItemStack evalItem(String ref, Map<String, VariableSpec> varSpecs) {
+        if (ref == null) {
+            return null;
+        }
         if (ref.startsWith("$")) {
+            VariableSpec spec;
             String name = ref.substring(1);
-            VariableSpec spec = varSpecs != null ? varSpecs.get(name) : null;
-            if (spec instanceof VariableSpec.ItemSlot is) {
+            VariableSpec variableSpec = spec = varSpecs != null ? varSpecs.get(name) : null;
+            if (spec instanceof VariableSpec.ItemSlot) {
+                VariableSpec.ItemSlot is = (VariableSpec.ItemSlot)spec;
                 try {
-                    return container != null ? container.getItem(is.slot()) : null;
-                } catch (Throwable ignored) { /* fall through */ }
+                    if (this.container == null) {
+                        return null;
+                    }
+                    ItemStack bukkit = this.container.getItem(is.slot());
+                    return bukkit != null ? CraftItemStack.asNMSCopy((ItemStack)bukkit) : null;
+                }
+                catch (Throwable throwable) {
+                    // empty catch block
+                }
             }
-            if (spec instanceof VariableSpec.Formula f) {
+            if (spec instanceof VariableSpec.Formula) {
+                VariableSpec.Formula f = (VariableSpec.Formula)spec;
                 try {
-                    return PolyFormula.compile(f.expr()).evaluateItem(toPolyContext());
-                } catch (Throwable ignored) { /* fall through */ }
+                    return PolyFormula.compile(f.expr()).evaluateItem(this.toPolyContext());
+                }
+                catch (Throwable throwable) {
+                    // empty catch block
+                }
             }
             return null;
         }
-        // Inline PolyFormula expression (e.g. slot(9), CraftEngineItem("id"))
         try {
-            return PolyFormula.compile(ref).evaluateItem(toPolyContext());
-        } catch (Throwable ignored) {
+            return PolyFormula.compile(ref).evaluateItem(this.toPolyContext());
+        }
+        catch (Throwable ignored) {
             return null;
         }
     }
 
-    // ---- Internal spec evaluator -------------------------------------------
+    private PolyContext contextWithVars(Map<String, VariableSpec> varSpecs) {
+        if (varSpecs == null || varSpecs.isEmpty()) {
+            return this.toPolyContext();
+        }
+        PolyContext.Builder builder1 = PolyContext.builder().copyFrom(this.toPolyContext());
+        for (Map.Entry<String, VariableSpec> e : varSpecs.entrySet()) {
+            try {
+                VariableSpec variableSpec = e.getValue();
+                if (!(variableSpec instanceof VariableSpec.Formula)) continue;
+                VariableSpec.Formula f = (VariableSpec.Formula)variableSpec;
+                try {
+                    builder1.val(e.getKey(), PolyFormula.compile(f.expr()).evaluate(this.toPolyContext()));
+                }
+                catch (Throwable throwable) {
+                }
+            }
+            catch (Throwable throwable) {}
+        }
+        PolyContext pass1 = builder1.build();
+        PolyContext.Builder builder2 = PolyContext.builder().copyFrom(pass1);
+        for (Map.Entry<String, VariableSpec> e : varSpecs.entrySet()) {
+            try {
+                VariableSpec variableSpec = e.getValue();
+                if (!(variableSpec instanceof VariableSpec.Formula)) continue;
+                VariableSpec.Formula f = (VariableSpec.Formula)variableSpec;
+                try {
+                    builder2.val(e.getKey(), PolyFormula.compile(f.expr()).evaluate(pass1));
+                }
+                catch (Throwable throwable) {
+                }
+            }
+            catch (Throwable throwable) {}
+        }
+        return builder2.build();
+    }
 
     private boolean evalSpecBool(VariableSpec spec, Map<String, VariableSpec> varSpecs) {
-        return switch (spec) {
-            case VariableSpec.BoolSource bs -> switch (bs.source()) {
-                case "processing"  -> processing;
-                case "powered"     -> powered;
-                case "overclocked" -> overclocked;
-                case "has_fuel"    -> hasFuel;
-                case "always"      -> true;
-                case "never"       -> false;
-                default            -> false;
-            };
-            case VariableSpec.BoolExpr be -> {
+        VariableSpec variableSpec = spec;
+        Objects.requireNonNull(variableSpec);
+        VariableSpec variableSpec2 = variableSpec;
+        int n = 0;
+        return switch (SwitchBootstraps.typeSwitch("typeSwitch", new Object[]{VariableSpec.BoolSource.class, VariableSpec.BoolExpr.class, VariableSpec.NumExpr.class, VariableSpec.ItemSlot.class, VariableSpec.TankVar.class, VariableSpec.Formula.class}, variableSpec2, n)) {
+            default -> throw new MatchException(null, null);
+            case 0 -> {
+                boolean var5_11;
+                VariableSpec.BoolSource bs = (VariableSpec.BoolSource)variableSpec2;
+                boolean v1 = switch (bs.source()) {
+                    case "processing" -> this.processing;
+                    case "powered" -> this.powered;
+                    case "overclocked" -> this.overclocked;
+                    case "has_fuel" -> this.hasFuel;
+                    case "always" -> true;
+                    case "never" -> false;
+                    default -> false;
+                };
+                yield var5_11 = v1;
+            }
+            case 1 -> {
+                VariableSpec.BoolExpr be = (VariableSpec.BoolExpr)variableSpec2;
                 try {
-                    yield PolyFormula.compile(be.expr()).evaluateBool(toPolyContext());
-                } catch (Throwable ignored) {
-                    yield false;
+                    boolean var5_12;
+                    yield var5_12 = PolyFormula.compile(be.expr()).evaluateBool(this.toPolyContext());
+                }
+                catch (Throwable ignored) {
+                    boolean var5_13;
+                    yield var5_13 = false;
                 }
             }
-            case VariableSpec.NumExpr ne -> {
+            case 2 -> {
+                VariableSpec.NumExpr ne = (VariableSpec.NumExpr)variableSpec2;
                 try {
-                    yield PolyFormula.compile(ne.expr()).evaluateNum(toPolyContext()) != 0.0;
-                } catch (Throwable ignored) {
-                    yield false;
+                    boolean var5_14;
+                    yield var5_14 = PolyFormula.compile(ne.expr()).evaluateNum(this.toPolyContext()) != 0.0;
+                }
+                catch (Throwable ignored) {
+                    boolean var5_15;
+                    yield var5_15 = false;
                 }
             }
-            case VariableSpec.ItemSlot is ->
-                container != null && container.getItem(is.slot()) != null;
-            case VariableSpec.TankVar tv ->
-                resolveTankValue(tv).asBool();
-            case VariableSpec.Formula f -> {
+            case 3 -> {
+                boolean var5_16;
+                VariableSpec.ItemSlot is = (VariableSpec.ItemSlot)variableSpec2;
+                yield var5_16 = this.container != null && this.container.getItem(is.slot()) != null;
+            }
+            case 4 -> {
+                boolean var5_17;
+                VariableSpec.TankVar tv = (VariableSpec.TankVar)variableSpec2;
+                yield var5_17 = this.resolveTankValue(tv).asBool();
+            }
+            case 5 -> {
+                VariableSpec.Formula f = (VariableSpec.Formula)variableSpec2;
                 try {
-                    yield PolyFormula.compile(f.expr()).evaluateBool(toPolyContext());
-                } catch (Throwable ignored) {
-                    yield false;
+                    boolean var5_18;
+                    yield var5_18 = PolyFormula.compile(f.expr()).evaluateBool(this.toPolyContext());
+                }
+                catch (Throwable ignored) {
+                    boolean var5_19;
+                    yield var5_19 = false;
                 }
             }
         };
     }
 
-    /** Resolve a {@link VariableSpec.TankVar} to a {@link PolyValue} using the cached context. */
     private PolyValue resolveTankValue(VariableSpec.TankVar tv) {
-        PolyClass cls = toPolyContext().getClass(tv.isGas() ? "GasTanks" : "FluidTanks");
-        if (cls instanceof FluidTanksClass ftc)
+        PolyValue.Obj cls = this.toPolyContext().getClass(tv.isGas() ? "GasTanks" : "FluidTanks");
+        if (cls instanceof FluidTanksClass) {
+            FluidTanksClass ftc = (FluidTanksClass)cls;
             return ftc.forTank(tv.tankName()).get(tv.property());
-        if (cls instanceof GasTanksClass gtc)
+        }
+        if (cls instanceof GasTanksClass) {
+            GasTanksClass gtc = (GasTanksClass)cls;
             return gtc.forTank(tv.tankName()).get(tv.property());
+        }
         return PolyValue.NULL;
     }
 
-    // ---- Getters -----------------------------------------------------------
+    public double rpm() {
+        return this.rpm;
+    }
 
-    public double rpm()          { return rpm; }
-    public double overclock()    { return overclock; }
-    public double efficiency()   { return efficiency; }
-    public double progress()     { return progress; }
-    public double maxProgress()  { return maxProgress; }
-    public double tier()         { return tier; }
-    public boolean processing()  { return processing; }
-    public boolean powered()     { return powered; }
-    public boolean overclocked() { return overclocked; }
-    public boolean hasFuel()     { return hasFuel; }
-    public Inventory container() { return container; }
-    public Map<String, Integer> upgradesByType() { return upgradesByType; }
-    public Map<String, double[]> fluidTankData() { return fluidTankData; }
-    public Map<String, double[]> gasTankData()   { return gasTankData; }
+    public double overclock() {
+        return this.overclock;
+    }
+
+    public double efficiency() {
+        return this.efficiency;
+    }
+
+    public double progress() {
+        return this.progress;
+    }
+
+    public double maxProgress() {
+        return this.maxProgress;
+    }
+
+    public double tier() {
+        return this.tier;
+    }
+
+    public boolean processing() {
+        return this.processing;
+    }
+
+    public boolean powered() {
+        return this.powered;
+    }
+
+    public boolean overclocked() {
+        return this.overclocked;
+    }
+
+    public boolean hasFuel() {
+        return this.hasFuel;
+    }
+
+    public Inventory container() {
+        return this.container;
+    }
+
+    public Map<String, Integer> upgradesByType() {
+        return this.upgradesByType;
+    }
+
+    public Map<String, double[]> fluidTankData() {
+        return this.fluidTankData;
+    }
+
+    public Map<String, double[]> gasTankData() {
+        return this.gasTankData;
+    }
 }
+

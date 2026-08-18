@@ -1,29 +1,46 @@
+/*
+ * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  net.minecraft.world.item.ItemStack
+ *  net.momirealms.craftengine.core.world.BlockPos
+ *  net.momirealms.craftengine.core.world.CEWorld
+ *  org.bukkit.Location
+ *  org.bukkit.World
+ *  org.bukkit.craftbukkit.inventory.CraftItemStack
+ *  org.bukkit.inventory.ItemStack
+ */
 package dev.arubik.craftengine.conveyor;
 
+import dev.arubik.craftengine.conveyor.AbstractRouterBlockEntity;
+import net.minecraft.world.item.ItemStack;
 import net.momirealms.craftengine.core.world.BlockPos;
 import net.momirealms.craftengine.core.world.CEWorld;
+import org.bukkit.Location;
+import org.bukkit.World;
+import org.bukkit.craftbukkit.inventory.CraftItemStack;
 
-/** Shared teardown helper: drop a router's buffered items + wipe its persisted slots. */
 final class RouterDrops {
-
     private RouterDrops() {
     }
 
     static void dropBuffer(CEWorld world, BlockPos pos, AbstractRouterBlockEntity r) {
         try {
-            org.bukkit.World bw = (org.bukkit.World) world.world().platformWorld();
-            for (int i = 0; i < r.getContainerSize(); i++) {
-                net.minecraft.world.item.ItemStack s = r.getItem(i);
-                if (s == null || s.isEmpty())
-                    continue;
-                org.bukkit.inventory.ItemStack bukkit =
-                        org.bukkit.craftbukkit.inventory.CraftItemStack.asBukkitCopy(s);
-                if (bw != null && bukkit != null && !bukkit.getType().isAir())
-                    bw.dropItem(new org.bukkit.Location(bw, pos.x() + 0.5, pos.y() + 0.5, pos.z() + 0.5), bukkit);
-                r.setItem(i, net.minecraft.world.item.ItemStack.EMPTY);
+            World bw = (World)world.world().platformWorld();
+            for (int i = 0; i < r.getContainerSize(); ++i) {
+                ItemStack s = r.getItem(i);
+                if (s == null || s.isEmpty()) continue;
+                org.bukkit.inventory.ItemStack bukkit = CraftItemStack.asBukkitCopy((ItemStack)s);
+                if (bw != null && bukkit != null && !bukkit.getType().isAir()) {
+                    bw.dropItem(new Location(bw, (double)pos.x() + 0.5, (double)pos.y() + 0.5, (double)pos.z() + 0.5), bukkit);
+                }
+                r.setItem(i, ItemStack.EMPTY);
             }
             r.clear();
-        } catch (Throwable ignored) {
+        }
+        catch (Throwable throwable) {
+            // empty catch block
         }
     }
 }
+

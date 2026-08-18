@@ -1,99 +1,94 @@
+/*
+ * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  net.minecraft.core.BlockPos
+ *  net.minecraft.core.registries.Registries
+ *  net.minecraft.nbt.CompoundTag
+ *  net.minecraft.nbt.ListTag
+ *  net.minecraft.nbt.NbtAccounter
+ *  net.minecraft.nbt.NbtIo
+ *  net.minecraft.nbt.Tag
+ *  net.minecraft.resources.Identifier
+ *  net.minecraft.resources.ResourceKey
+ *  net.minecraft.world.level.Level
+ *  org.bukkit.Bukkit
+ *  org.bukkit.World
+ *  org.bukkit.craftbukkit.CraftWorld
+ */
 package dev.arubik.craftengine.contraption.glue;
 
+import dev.arubik.craftengine.contraption.glue.GlueGraph;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
+import java.nio.file.attribute.FileAttribute;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-
-import org.bukkit.Bukkit;
-import org.bukkit.craftbukkit.CraftWorld;
-
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.NbtAccounter;
 import net.minecraft.nbt.NbtIo;
+import net.minecraft.nbt.Tag;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
-
 import net.minecraft.world.level.Level;
+import org.bukkit.Bukkit;
+import org.bukkit.World;
+import org.bukkit.craftbukkit.CraftWorld;
 
-/**
- * Per-world {@link GlueGraph} registry (CONTRAPTIONS.md §1 "Structure detection" — explicit
- * glue, not flood-fill). One graph per dimension, keyed by ResourceKey<Level> so restarts /
- * multiple worlds never cross-contaminate each other's structures.
- *
- * <p>Migration note (2026-08-10): Changed from UUID to ResourceKey<Level> for type-safe dimension
- * identification. Old files with UUID are automatically migrated on load.
- */
 public final class GlueRegistry {
+    private static final Map<ResourceKey<Level>, GlueGraph> GRAPHS = new HashMap<ResourceKey<Level>, GlueGraph>();
 
     private GlueRegistry() {
     }
-
-    private static final Map<ResourceKey<Level>, GlueGraph> GRAPHS = new HashMap<>();
 
     public static GlueGraph graphFor(ResourceKey<Level> worldId) {
         return GRAPHS.computeIfAbsent(worldId, id -> new GlueGraph());
     }
 
-    /** The full connected structure (glue-component) containing {@code pos}, or a singleton set if unglued. */
     public static Set<BlockPos> structureAt(ResourceKey<Level> worldId, BlockPos pos) {
         GlueGraph graph = GRAPHS.get(worldId);
         if (graph == null || !graph.hasNode(pos)) {
             return Set.of(pos);
         }
         for (Set<BlockPos> component : graph.connectedComponents()) {
-            if (component.contains(pos)) {
-                return component;
-            }
+            if (!component.contains(pos)) continue;
+            return component;
         }
         return Set.of(pos);
     }
 
-    /** Removes a world's glue graph entirely (e.g. on world unload), for test/administrative use. */
     public static void clear(ResourceKey<Level> worldId) {
         GRAPHS.remove(worldId);
     }
 
-    /**
-     * Persists every world's glue graph to {@code file} (2026-07-03 session — "has que las glue
-     * persista al apagar o reiniciar el sv"). The in-memory {@link #GRAPHS} is otherwise lost on
-     * restart, so glued-but-unassembled structures in the real world would forget their glue and
-     * only capture as singletons after a reboot. Stored as one gzip'd NBT compound: a list of
-     * per-world entries, each holding two parallel LongArray columns of packed {@link BlockPos}
-     * edge endpoints (undirected, deduped a&lt;b). Assembled contraptions carry their OWN glue in
-     * their structure NBT (see {@code ContraptionCapture#captureGlueEdges}); this covers the loose
-     * world graph. Called on {@code onDisable}; the mirror {@link #loadAll} runs on {@code onEnable}.
-     */
     public static void saveAll(Path file) throws IOException {
         CompoundTag root = new CompoundTag();
         ListTag worlds = new ListTag();
         for (Map.Entry<ResourceKey<Level>, GlueGraph> entry : GRAPHS.entrySet()) {
             GlueGraph graph = entry.getValue();
-            List<long[]> edges = new ArrayList<>();
+            ArrayList<long[]> edges = new ArrayList<long[]>();
             for (BlockPos node : graph.nodes()) {
                 long na = node.asLong();
                 for (BlockPos neighbor : graph.neighbors(node)) {
                     long nb = neighbor.asLong();
-                    if (na < nb) { // dedup the undirected edge (emit once)
-                        edges.add(new long[] {na, nb});
-                    }
+                    if (na >= nb) continue;
+                    edges.add(new long[]{na, nb});
                 }
             }
-            if (edges.isEmpty()) {
-                continue;
-            }
+            if (edges.isEmpty()) continue;
             long[] a = new long[edges.size()];
             long[] b = new long[edges.size()];
-            for (int i = 0; i < edges.size(); i++) {
-                a[i] = edges.get(i)[0];
-                b[i] = edges.get(i)[1];
+            for (int i = 0; i < edges.size(); ++i) {
+                a[i] = ((long[])edges.get(i))[0];
+                b[i] = ((long[])edges.get(i))[1];
             }
             CompoundTag w = new CompoundTag();
             w.putString("world", entry.getKey().identifier().getNamespace() + ":" + entry.getKey().identifier().getPath());
@@ -101,58 +96,48 @@ public final class GlueRegistry {
             w.putLongArray("b", b);
             worlds.add(w);
         }
-        root.put("worlds", worlds);
-        Files.createDirectories(file.getParent());
-        NbtIo.writeCompressed(root, file);
+        root.put("worlds", (Tag)worlds);
+        Files.createDirectories(file.getParent(), new FileAttribute[0]);
+        NbtIo.writeCompressed((CompoundTag)root, (Path)file);
     }
 
-    /**
-     * Mirror of {@link #saveAll} — repopulates {@link #GRAPHS} from {@code file}.
-     * No-op if the file is absent. Automatically migrates old UUID format to ResourceKey.
-     */
     public static void loadAll(Path file) throws IOException {
-        if (!Files.exists(file)) {
+        if (!Files.exists(file, new LinkOption[0])) {
             return;
         }
-        CompoundTag root = NbtIo.readCompressed(file, NbtAccounter.unlimitedHeap());
+        CompoundTag root = NbtIo.readCompressed((Path)file, (NbtAccounter)NbtAccounter.unlimitedHeap());
         ListTag worlds = root.getListOrEmpty("worlds");
-        for (int i = 0; i < worlds.size(); i++) {
+        for (int i = 0; i < worlds.size(); ++i) {
+            ResourceKey worldKey;
             CompoundTag w = worlds.getCompoundOrEmpty(i);
             String worldStr = w.getString("world").orElse("");
-            ResourceKey<Level> worldKey;
-
-            // Migration: try parsing as Identifier first, fall back to UUID (old format)
             if (worldStr.contains(":")) {
-                // New format: "minecraft:overworld"
                 try {
-                    Identifier loc = Identifier.parse(worldStr);
-                    worldKey = ResourceKey.create(net.minecraft.core.registries.Registries.DIMENSION, loc);
-                } catch (Exception e) {
-                    continue;
+                    Identifier loc = Identifier.parse((String)worldStr);
+                    worldKey = ResourceKey.create((ResourceKey)Registries.DIMENSION, (Identifier)loc);
                 }
-            } else {
-                // Old format: UUID string - convert via Bukkit World lookup
-                try {
-                    UUID worldUuid = UUID.fromString(worldStr);
-                    org.bukkit.World bukkitWorld = Bukkit.getWorld(worldUuid);
-                    if (bukkitWorld == null) {
-                        continue; // world not found, skip this entry
-                    }
-                    worldKey = ((CraftWorld) bukkitWorld).getHandle().dimension();
-                } catch (IllegalArgumentException bad) {
+                catch (Exception e) {
                     continue;
                 }
             }
-
+            try {
+                UUID worldUuid = UUID.fromString(worldStr);
+                World bukkitWorld = Bukkit.getWorld((UUID)worldUuid);
+                if (bukkitWorld == null) continue;
+                worldKey = ((CraftWorld)bukkitWorld).getHandle().dimension();
+            }
+            catch (IllegalArgumentException bad) {
+                continue;
+            }
             long[] a = w.getLongArray("a").orElse(new long[0]);
             long[] b = w.getLongArray("b").orElse(new long[0]);
-            GlueGraph graph = graphFor(worldKey);
+            GlueGraph graph = GlueRegistry.graphFor((ResourceKey<Level>)worldKey);
             int n = Math.min(a.length, b.length);
-            for (int j = 0; j < n; j++) {
-                if (a[j] != b[j]) {
-                    graph.glue(BlockPos.of(a[j]), BlockPos.of(b[j]));
-                }
+            for (int j = 0; j < n; ++j) {
+                if (a[j] == b[j]) continue;
+                graph.glue(BlockPos.of((long)a[j]), BlockPos.of((long)b[j]));
             }
         }
     }
 }
+

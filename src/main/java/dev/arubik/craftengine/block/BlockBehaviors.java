@@ -170,12 +170,6 @@ public class BlockBehaviors {
                 // contraption auto-attach path (MovementBehaviorRegistry) right here so both
                 // registrations stay next to each other for discoverability — see
                 // MinerBlockBehavior#buildMovementBehavior's javadoc for what gets built.
-                RegistryUtils.registerBlockBehavior(
-                                dev.arubik.craftengine.contraption.behavior.MinerBlockBehavior.FACTORY_KEY,
-                                dev.arubik.craftengine.contraption.behavior.MinerBlockBehavior.FACTORY);
-                dev.arubik.craftengine.contraption.behavior.MovementBehaviorRegistry.register(
-                                dev.arubik.craftengine.contraption.behavior.MinerBlockBehavior.FACTORY_KEY,
-                                dev.arubik.craftengine.contraption.behavior.MinerBlockBehavior::buildMovementBehavior);
 
                 // Contraption mover/propulsion block (roadmap item #4): a real CraftEngine block
                 // behavior mirroring MinerBlockBehavior's shape. Auto-attached into a captured

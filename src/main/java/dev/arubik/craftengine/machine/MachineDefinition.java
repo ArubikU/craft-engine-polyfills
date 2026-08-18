@@ -1,203 +1,24 @@
+/*
+ * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  net.momirealms.craftengine.core.util.Key
+ */
 package dev.arubik.craftengine.machine;
-
-import java.util.List;
-import java.util.Map;
 
 import dev.arubik.craftengine.data.Registries;
 import dev.arubik.craftengine.data.Registry;
+import dev.arubik.craftengine.machine.attribute.MachineAttributes;
+import dev.arubik.craftengine.machine.render.RendererSpec;
+import dev.arubik.craftengine.machine.render.variable.VariableSpec;
 import dev.arubik.craftengine.multiblock.IOConfiguration;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import net.momirealms.craftengine.core.util.Key;
 
-/**
- * A machine described by data instead of by a Java class.
- *
- * <p>
- * Every machine in this plugin used to be a hand-written
- * {@code BlockBehavior} + {@code BlockEntity} pair, with its recipe namespace,
- * tank sizes, slot indices and upgrade-grid geometry baked in as constants. That
- * is fine for a machine with bespoke logic (a pump scanning the world for a
- * vein, a fan classifying processes) but it is pure overhead for the common
- * shape — take items in, optionally burn fuel, run a recipe, put items out.
- * Those are now a single JSON file plus the block config.
- *
- * <p>
- * A definition only describes the <em>declarative</em> half. Machines whose core
- * loop is genuinely custom keep their Java class and simply do not have a
- * definition.
- */
 public final class MachineDefinition {
-
-    /** Every data-defined machine. Rebuilt on reload. */
     public static final Registry<MachineDefinition> REGISTRY = Registries.create("machine");
-
-    /**
-     * A button on the machine's main page.
-     *
-     * <p>
-     * Declared here rather than only in the pack YAML so that a machine's whole UI —
-     * including where the upgrades and overclock buttons sit — travels with the
-     * machine definition.
-     *
-     * @param slot       menu slot the button occupies
-     * @param icon       item id for the icon
-     * @param action     {@code open_page:N}, {@code deplete_fluid} or {@code deplete_gas}
-     * @param name       display name; a lang key or a literal
-     * @param lore       tooltip lines; lang keys or literals
-     * @param lockedIcon icon shown while the button is locked
-     * @param lockedWhen condition that locks it, e.g. {@code no_overclock}
-     */
-    public record ButtonSpec(int slot, String icon, String action, String name, List<String> lore,
-            String lockedIcon, String lockedWhen) {
-    }
-
-    /**
-     * How a machine relates to rotational power.
-     *
-     * <p>
-     * A recipe already carries the {@code rpm} and {@code su} it demands, but nothing
-     * said how the <em>machine</em> converts that demand — the exponent and the grace
-     * window were constants inside one block entity, so every stress consumer had to
-     * agree by hand.
-     *
-     * @param consumesStress   whether the machine needs a rotational supply at all;
-     *                         false for a purely fuel-burning machine
-     * @param suExponent       SU scales as {@code (1+overclock)^suExponent}. Above 1.0
-     *                         pushing speed costs disproportionately more stress, which
-     *                         is what keeps overclocking a trade rather than free
-     * @param stressGraceTicks ticks a machine keeps running after its supply dips,
-     *                         so a momentary network wobble does not stall a craft
-     * @param generatesRpm     rpm this machine supplies to the network, 0 if it is not
-     *                         a generator
-     * @param generatesSu      SU capacity it adds to the network
-     * @param baseOverclock    overclock headroom a generator has before any upgrade.
-     *                         Distinct from {@code suExponent}: this is how far the
-     *                         slider may go, that is how much stress each step costs
-     */
-    public record PowerSpec(boolean consumesStress, double suExponent, int stressGraceTicks,
-            float generatesRpm, int generatesSu, float baseOverclock) {
-
-        /** A machine that neither consumes nor produces rotational power. */
-        public static PowerSpec none() {
-            return new PowerSpec(false, 1.25, 20, 0f, 0, 2.0f);
-        }
-    }
-
-    /**
-     * A gauge this machine shows: which {@code bars/*.json} definition, and where.
-     *
-     * @param bar    the definition id
-     * @param slots  menu slots it occupies
-     * @param source what the gauge reads: {@code progress}, {@code fuel}, or
-     *               {@code fluid:<tank>} / {@code gas:<tank>} naming one of this
-     *               machine's tanks. A machine with two tanks needs this to say which
-     *               gauge shows which; it defaults to the bar's own id, which covers
-     *               the single-tank case
-     */
-    public record BarRef(Key bar, int[] slots, String source) {
-    }
-
-    /**
-     * The readout icon: what the machine is doing right now.
-     *
-     * <p>
-     * Two kinds exist and both were hand-written per machine — a recipe readout
-     * (what is being made, how fast) and a tank status (what is stored, how much).
-     * A machine picks one.
-     *
-     * @param slot   menu slot, or -1 for none
-     * @param type   {@code recipe} or {@code tank}
-     * @param source for {@code tank}: {@code fluid:<name>} or {@code gas:<name>}
-     */
-    public record InfoSpec(int slot, String type, String source) {
-
-        public static InfoSpec none() {
-            return new InfoSpec(-1, "recipe", "");
-        }
-
-        public boolean isTank() {
-            return "tank".equalsIgnoreCase(type);
-        }
-    }
-
-    /**
-     * Paged storage: a container that holds more than one screen of items.
-     *
-     * <p>
-     * The menu shows one page at a time and the rest lives in persistence, so the
-     * declared {@code menu_size} is a page, not the whole inventory. A machine
-     * without this has a single page and behaves exactly as before.
-     *
-     * @param pages     how many pages, 1 meaning ordinary storage
-     * @param slots     storage slots per page
-     * @param prevSlot  menu slot of the previous-page button, or -1
-     * @param nextSlot  menu slot of the next-page button, or -1
-     * @param indicator menu slot showing "page n/m", or -1
-     */
-    public record PagingSpec(int pages, int slots, int prevSlot, int nextSlot, int indicator) {
-
-        public static PagingSpec none() {
-            return new PagingSpec(1, 0, -1, -1, -1);
-        }
-
-        public boolean isPaged() {
-            return pages > 1;
-        }
-    }
-
-    /** A tank the machine owns. */
-    public record TankSpec(String name, int capacity, Key filter) {
-    }
-
-    /**
-     * The machine's upgrade grid.
-     *
-     * <p>
-     * Upgrade slots are <b>not</b> menu slots. They occupy reserved container
-     * indices {@code 0 .. count-1}, which the main page never displays — they are
-     * shown on their own page instead. A definition therefore states how many there
-     * are, not where they sit, and the loader rejects any main-page slot that would
-     * collide with the reserved range.
-     *
-     * @param count        how many upgrade slots exist, i.e. indices 0..count-1
-     * @param baseUnlocked how many are usable before any EXTRA_SLOTS upgrade
-     */
-    public record UpgradeSpec(int count, int baseUnlocked, int[] explicitSlots) {
-
-        public UpgradeSpec(int count, int baseUnlocked) {
-            this(count, baseUnlocked, null);
-        }
-
-        /**
-         * Whether the upgrade slots sit on the main page rather than a reserved,
-         * separately-paged block.
-         *
-         * <p>
-         * Both conventions exist in this codebase and both are legitimate: a small
-         * machine (the furnace: size 9, upgrades at 3-5) shows them inline, while a
-         * large one (the crusher: 9 upgrades) reserves indices 0..8 and gives them
-         * their own screen. A definition picks one by declaring either {@code slots}
-         * or {@code count}.
-         */
-        public boolean isInline() {
-            return explicitSlots != null;
-        }
-
-        /** The container indices holding upgrade modules. */
-        public int[] slots() {
-            if (explicitSlots != null)
-                return explicitSlots.clone();
-            int[] out = new int[count];
-            for (int i = 0; i < count; i++)
-                out[i] = i;
-            return out;
-        }
-
-        /** How many upgrade slots there are, under either convention. */
-        public int size() {
-            return explicitSlots != null ? explicitSlots.length : count;
-        }
-    }
-
     private final Key id;
     private final String recipeType;
     private final String title;
@@ -212,28 +33,39 @@ public final class MachineDefinition {
     private final List<TankSpec> fluidTanks;
     private final List<TankSpec> gasTanks;
     private final boolean fuelRequired;
+    private boolean continuousFuel;
     private final IOConfiguration io;
     private final List<ButtonSpec> buttons;
     private final PowerSpec power;
     private final List<BarRef> bars;
-    private final Map<String, dev.arubik.craftengine.machine.render.variable.VariableSpec> variables;
-    private final List<dev.arubik.craftengine.machine.render.RendererSpec> renderers;
-    private final Map<Key, List<dev.arubik.craftengine.machine.attribute.MachineAttributes.Mod>> upgradeDefs;
+    private final Map<String, VariableSpec> variables;
+    private final List<RendererSpec> renderers;
+    private final Map<Key, List<MachineAttributes.Mod>> upgradeDefs;
+    private final String actionScript;
+    private final int actionInterval;
+    private boolean openUi = true;
+    private boolean noProcessing = false;
+    private Set<String> rpmInputFacesRaw = Set.of();
+    private Map<String, Set<String>> rpmInputBlockFilter = Map.of();
+    private Map<String, Set<String>> rpmOutputBlockFilter = Map.of();
+    private Set<String> rpmOutputFacesRaw = Set.of();
+    private boolean rpmOutputDeclared = false;
+    private float rpmRatio = 1.0f;
+    private boolean isSail = false;
+    private float sailRpmBonus = 1.0f;
+    private boolean rpmLargeCog = false;
+    private Set<String> rpmOutputInvertedRaw = Set.of();
+    private String interactScript = null;
+    private String attackScript = null;
 
-    public MachineDefinition(Key id, String recipeType, String title, int menuSize, int[] inputSlots,
-            int[] outputSlots, int[] fuelSlots, UpgradeSpec upgrades, int infoSlot, List<TankSpec> fluidTanks,
-            List<TankSpec> gasTanks, boolean fuelRequired, IOConfiguration io, List<ButtonSpec> buttons,
-            PowerSpec power, List<BarRef> bars, InfoSpec info, PagingSpec paging,
-            Map<String, dev.arubik.craftengine.machine.render.variable.VariableSpec> variables,
-            List<dev.arubik.craftengine.machine.render.RendererSpec> renderers,
-            Map<Key, List<dev.arubik.craftengine.machine.attribute.MachineAttributes.Mod>> upgradeDefs) {
+    public MachineDefinition(Key id, String recipeType, String title, int menuSize, int[] inputSlots, int[] outputSlots, int[] fuelSlots, UpgradeSpec upgrades, int infoSlot, List<TankSpec> fluidTanks, List<TankSpec> gasTanks, boolean fuelRequired, IOConfiguration io, List<ButtonSpec> buttons, PowerSpec power, List<BarRef> bars, InfoSpec info, PagingSpec paging, Map<String, VariableSpec> variables, List<RendererSpec> renderers, Map<Key, List<MachineAttributes.Mod>> upgradeDefs, String actionScript, int actionInterval) {
         this.id = id;
         this.recipeType = recipeType;
         this.title = title;
         this.menuSize = menuSize;
-        this.inputSlots = inputSlots.clone();
-        this.outputSlots = outputSlots.clone();
-        this.fuelSlots = fuelSlots.clone();
+        this.inputSlots = (int[])inputSlots.clone();
+        this.outputSlots = (int[])outputSlots.clone();
+        this.fuelSlots = (int[])fuelSlots.clone();
         this.upgrades = upgrades;
         this.infoSlot = infoSlot;
         this.fluidTanks = List.copyOf(fluidTanks);
@@ -248,138 +80,293 @@ public final class MachineDefinition {
         this.variables = variables == null ? Map.of() : Map.copyOf(variables);
         this.renderers = renderers == null ? List.of() : List.copyOf(renderers);
         this.upgradeDefs = upgradeDefs == null ? Map.of() : Map.copyOf(upgradeDefs);
+        this.actionScript = actionScript;
+        this.actionInterval = actionInterval <= 0 ? 20 : actionInterval;
     }
 
     public Key id() {
-        return id;
+        return this.id;
     }
 
-    /**
-     * The key recipes are filed under in {@code recipes/*.json}.
-     *
-     * <p>
-     * Separate from {@link #id()} so a data machine can adopt the recipe namespace
-     * of a machine that used to be Java — replacing a class does not invalidate its
-     * recipes.
-     */
     public String recipeType() {
-        return recipeType;
+        return this.recipeType;
     }
 
     public String title() {
-        return title;
+        return this.title;
     }
 
     public int menuSize() {
-        return menuSize;
+        return this.menuSize;
     }
 
     public int[] inputSlots() {
-        return inputSlots.clone();
+        return (int[])this.inputSlots.clone();
     }
 
     public int[] outputSlots() {
-        return outputSlots.clone();
+        return (int[])this.outputSlots.clone();
     }
 
     public int[] fuelSlots() {
-        return fuelSlots.clone();
+        return (int[])this.fuelSlots.clone();
     }
 
     public UpgradeSpec upgrades() {
-        return upgrades;
+        return this.upgrades;
     }
 
-    /** Paged storage, if this machine has more than one page. */
     public PagingSpec paging() {
-        return paging;
+        return this.paging;
     }
 
-    /** What the readout icon shows and where. */
     public InfoSpec info() {
-        return info;
+        return this.info;
     }
 
-    /** Slot showing the readout, or -1 for none. */
     public int infoSlot() {
-        return infoSlot;
+        return this.infoSlot;
     }
 
     public List<TankSpec> fluidTanks() {
-        return fluidTanks;
+        return this.fluidTanks;
     }
 
     public List<TankSpec> gasTanks() {
-        return gasTanks;
+        return this.gasTanks;
     }
 
     public boolean fuelRequired() {
-        return fuelRequired;
+        return this.fuelRequired;
     }
 
-    /** Which faces accept or emit what, or {@code null} to leave every face open. */
+    public boolean continuousFuel() {
+        return this.continuousFuel;
+    }
+
+    public MachineDefinition withContinuousFuel(boolean v) {
+        this.continuousFuel = v;
+        return this;
+    }
+
     public IOConfiguration io() {
-        return io;
+        return this.io;
     }
 
-    /** Buttons on the main page, including the upgrades and overclock entry points. */
     public List<ButtonSpec> buttons() {
-        return buttons;
+        return this.buttons;
     }
 
-    /** How this machine consumes or produces rotational power. */
     public PowerSpec power() {
-        return power;
+        return this.power;
     }
 
-    /** Gauges this machine shows, resolved against {@code bars/*.json}. */
     public List<BarRef> bars() {
-        return bars;
+        return this.bars;
     }
 
-    /**
-     * Named variables declared in the {@code "variables"} JSON block.
-     *
-     * <p>Each entry maps a variable name (e.g. {@code "running"}) to its
-     * {@link dev.arubik.craftengine.machine.render.variable.VariableSpec}, which
-     * describes how the value is obtained at runtime. Renderer specs reference
-     * variables via {@code "$name"} tokens in their condition and speed fields.
-     */
-    public Map<String, dev.arubik.craftengine.machine.render.variable.VariableSpec> variables() {
-        return variables;
+    public Map<String, VariableSpec> variables() {
+        return this.variables;
     }
 
-    /**
-     * Renderer entries declared in the {@code "renderers"} JSON array.
-     *
-     * <p>Each entry is a {@link dev.arubik.craftengine.machine.render.RendererSpec}
-     * variant describing how the machine's block entity should be visually
-     * represented and under what condition.
-     */
-    public List<dev.arubik.craftengine.machine.render.RendererSpec> renderers() {
-        return renderers;
+    public List<RendererSpec> renderers() {
+        return this.renderers;
     }
 
-    /**
-     * Upgrade item definitions migrated from the block-behavior YAML {@code upgrades:} block.
-     *
-     * <p>Maps CE item key → list of attribute modifiers. Empty when the machine has no
-     * upgrade definitions embedded in its JSON (the definitions may still live in the block
-     * config's YAML as a fallback, via {@link dev.arubik.craftengine.machine.block.behavior.DataMachineBehavior}).
-     */
-    public Map<Key, List<dev.arubik.craftengine.machine.attribute.MachineAttributes.Mod>> upgradeDefs() {
-        return upgradeDefs;
+    public Map<Key, List<MachineAttributes.Mod>> upgradeDefs() {
+        return this.upgradeDefs;
+    }
+
+    public String actionScript() {
+        return this.actionScript;
+    }
+
+    public int actionInterval() {
+        return this.actionInterval;
+    }
+
+    public boolean openUi() {
+        return this.openUi;
+    }
+
+    public void setOpenUi(boolean openUi) {
+        this.openUi = openUi;
+    }
+
+    public boolean noProcessing() {
+        return this.noProcessing;
+    }
+
+    public void setNoProcessing(boolean noProcessing) {
+        this.noProcessing = noProcessing;
+    }
+
+    public Set<String> rpmInputFacesRaw() {
+        return this.rpmInputFacesRaw;
+    }
+
+    public void setRpmInputFacesRaw(Set<String> f) {
+        this.rpmInputFacesRaw = Set.copyOf(f);
+    }
+
+    public Map<String, Set<String>> rpmInputBlockFilter() {
+        return this.rpmInputBlockFilter;
+    }
+
+    public void setRpmInputBlockFilter(Map<String, Set<String>> m) {
+        this.rpmInputBlockFilter = Map.copyOf(m);
+    }
+
+    public Map<String, Set<String>> rpmOutputBlockFilter() {
+        return this.rpmOutputBlockFilter;
+    }
+
+    public void setRpmOutputBlockFilter(Map<String, Set<String>> m) {
+        this.rpmOutputBlockFilter = Map.copyOf(m);
+    }
+
+    public Set<String> rpmOutputFacesRaw() {
+        return this.rpmOutputFacesRaw;
+    }
+
+    public void setRpmOutputFacesRaw(Set<String> f) {
+        this.rpmOutputFacesRaw = Set.copyOf(f);
+    }
+
+    public boolean rpmOutputDeclared() {
+        return this.rpmOutputDeclared;
+    }
+
+    public void setRpmOutputDeclared(boolean v) {
+        this.rpmOutputDeclared = v;
+    }
+
+    public float rpmRatio() {
+        return this.rpmRatio;
+    }
+
+    public void setRpmRatio(float r) {
+        this.rpmRatio = r;
+    }
+
+    public boolean isSail() {
+        return this.isSail;
+    }
+
+    public void setSail(boolean v) {
+        this.isSail = v;
+    }
+
+    public float sailRpmBonus() {
+        return this.sailRpmBonus;
+    }
+
+    public void setSailRpmBonus(float v) {
+        this.sailRpmBonus = v;
+    }
+
+    public boolean rpmLargeCog() {
+        return this.rpmLargeCog;
+    }
+
+    public void setRpmLargeCog(boolean v) {
+        this.rpmLargeCog = v;
+    }
+
+    public Set<String> rpmOutputInvertedRaw() {
+        return this.rpmOutputInvertedRaw;
+    }
+
+    public void setRpmOutputInvertedRaw(Set<String> f) {
+        this.rpmOutputInvertedRaw = Set.copyOf(f);
+    }
+
+    public String interactScript() {
+        return this.interactScript;
+    }
+
+    public void setInteractScript(String s) {
+        this.interactScript = s;
+    }
+
+    public String attackScript() {
+        return this.attackScript;
+    }
+
+    public void setAttackScript(String s) {
+        this.attackScript = s;
     }
 
     public static MachineDefinition byName(String name) {
-        if (name == null || name.isBlank())
+        if (name == null || name.isBlank()) {
             return null;
+        }
         String trimmed = name.trim();
-        return REGISTRY.get(trimmed.indexOf(':') >= 0 ? Key.of(trimmed) : Key.of("polyfills", trimmed));
+        return REGISTRY.get(trimmed.indexOf(58) >= 0 ? Key.of((String)trimmed) : Key.of((String)"polyfills", (String)trimmed));
     }
 
-    @Override
     public String toString() {
-        return id + "(recipes=" + recipeType + ")";
+        return String.valueOf(this.id) + "(recipes=" + this.recipeType + ")";
+    }
+
+    public record UpgradeSpec(int count, int baseUnlocked, int[] explicitSlots) {
+        public UpgradeSpec(int count, int baseUnlocked) {
+            this(count, baseUnlocked, null);
+        }
+
+        public boolean isInline() {
+            return this.explicitSlots != null;
+        }
+
+        public int[] slots() {
+            if (this.explicitSlots != null) {
+                return (int[])this.explicitSlots.clone();
+            }
+            int[] out = new int[this.count];
+            for (int i = 0; i < this.count; ++i) {
+                out[i] = i;
+            }
+            return out;
+        }
+
+        public int size() {
+            return this.explicitSlots != null ? this.explicitSlots.length : this.count;
+        }
+    }
+
+    public record PowerSpec(boolean consumesStress, double suExponent, int stressGraceTicks, float generatesRpm, int generatesSu, float baseOverclock) {
+        public static PowerSpec none() {
+            return new PowerSpec(false, 1.25, 20, 0.0f, 0, 2.0f);
+        }
+    }
+
+    public record InfoSpec(int slot, String type, String source) {
+        public static InfoSpec none() {
+            return new InfoSpec(-1, "recipe", "");
+        }
+
+        public boolean isTank() {
+            return "tank".equalsIgnoreCase(this.type);
+        }
+    }
+
+    public record PagingSpec(int pages, int slots, int prevSlot, int nextSlot, int indicator) {
+        public static PagingSpec none() {
+            return new PagingSpec(1, 0, -1, -1, -1);
+        }
+
+        public boolean isPaged() {
+            return this.pages > 1;
+        }
+    }
+
+    public record TankSpec(String name, int capacity, Key filter) {
+    }
+
+    public record BarRef(Key bar, int[] slots, String source) {
+    }
+
+    public record ButtonSpec(int slot, String icon, String action, String name, List<String> lore, String lockedIcon, String lockedWhen) {
     }
 }
+

@@ -1,11 +1,21 @@
+/*
+ * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  net.minecraft.world.item.ItemStack
+ *  net.momirealms.craftengine.bukkit.api.CraftEngineItems
+ *  net.momirealms.craftengine.bukkit.item.BukkitItemDefinition
+ *  org.bukkit.inventory.ItemStack
+ */
 package dev.arubik.craftengine.machine.recipe;
 
+import dev.arubik.craftengine.machine.recipe.RecipeInput;
 import net.minecraft.world.item.ItemStack;
 import net.momirealms.craftengine.bukkit.api.CraftEngineItems;
-import net.momirealms.craftengine.core.util.Key;
+import net.momirealms.craftengine.bukkit.item.BukkitItemDefinition;
 
-public class CraftEngineItemInput implements RecipeInput {
-
+public class CraftEngineItemInput
+implements RecipeInput {
     private final String itemId;
     private final int amount;
 
@@ -16,28 +26,31 @@ public class CraftEngineItemInput implements RecipeInput {
 
     @Override
     public boolean matches(ItemStack stack) {
-        if (stack == null || stack.isEmpty())
+        if (stack == null || stack.isEmpty()) {
             return false;
-        if (stack.getCount() < amount)
+        }
+        if (stack.getCount() < this.amount) {
             return false;
-
-        var ceItem = CraftEngineItems.byItemStack(stack.asBukkitMirror());
-        if (ceItem == null)
+        }
+        BukkitItemDefinition ceItem = CraftEngineItems.byItemStack((org.bukkit.inventory.ItemStack)stack.asBukkitMirror());
+        if (ceItem == null) {
             return false;
-
-        return ceItem.id().toString().equals(itemId);
+        }
+        return ceItem.id().toString().equals(this.itemId);
     }
 
     public String getItemId() {
-        return itemId;
+        return this.itemId;
     }
 
+    @Override
     public int getAmount() {
-        return amount;
+        return this.amount;
     }
 
     @Override
     public boolean isEmpty() {
-        return amount <= 0;
+        return this.amount <= 0;
     }
 }
+

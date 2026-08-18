@@ -1,36 +1,49 @@
+/*
+ * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  net.minecraft.core.BlockPos
+ *  net.minecraft.server.level.ServerLevel
+ *  net.minecraft.server.level.ServerPlayer
+ *  net.minecraft.world.InteractionHand
+ *  net.minecraft.world.entity.Entity
+ *  net.minecraft.world.entity.EntityType
+ *  net.minecraft.world.entity.decoration.ArmorStand
+ *  net.minecraft.world.level.Level
+ *  net.minecraft.world.phys.AABB
+ *  net.minecraft.world.phys.Vec3
+ *  net.momirealms.craftengine.core.entity.player.Player
+ *  net.momirealms.craftengine.core.util.Key
+ */
 package dev.arubik.craftengine.contraption.element;
 
 import dev.arubik.craftengine.contraption.assembly.ContraptionMath;
 import dev.arubik.craftengine.contraption.core.ContraptionState;
+import dev.arubik.craftengine.contraption.element.ContraptionElement;
+import dev.arubik.craftengine.contraption.element.ElementTypes;
+import dev.arubik.craftengine.contraption.element.RenderContext;
+import java.util.List;
+import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.decoration.ArmorStand;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.momirealms.craftengine.core.entity.player.Player;
 import net.momirealms.craftengine.core.util.Key;
 
-import java.util.List;
-import java.util.UUID;
-
-/**
- * Seat element: an invisible ArmorStand mount that carries a rider with the contraption.
- * Pure NMS — spawns a real ArmorStand in the real world (riders need real entities for
- * vanilla passenger mechanics). Repositions mount every tick to track bearing transform.
- */
-public final class ContraptionSeatElement implements ContraptionElement {
-
+public final class ContraptionSeatElement
+implements ContraptionElement {
     private final Vec3 localOffset;
     private final float yawOffsetDegrees;
     private final SeatSource source;
-
-    // Live state
     private UUID occupantId;
     private ArmorStand mount;
-
     private static final double SEAT_HEIGHT = 0.6;
 
     public ContraptionSeatElement(Vec3 localOffset, float yawOffsetDegrees, SeatSource source) {
@@ -46,135 +59,131 @@ public final class ContraptionSeatElement implements ContraptionElement {
 
     @Override
     public Vec3 localOffset() {
-        return localOffset;
+        return this.localOffset;
     }
 
     @Override
     public boolean isValid() {
-        return source != null;
+        return this.source != null;
     }
 
     @Override
     public int[] entityIds() {
-        if (mount != null) {
-            return new int[]{mount.getId()};
+        if (this.mount != null) {
+            return new int[]{this.mount.getId()};
         }
         return new int[0];
     }
 
-    /** 0.8×0.8×0.8 cube at local seat offset — standard click detection area for a seat. */
     @Override
     public List<AABB> interactionBounds() {
-        double x = localOffset.x, y = localOffset.y, z = localOffset.z;
+        double x = this.localOffset.x;
+        double y = this.localOffset.y;
+        double z = this.localOffset.z;
         return List.of(new AABB(x - 0.4, y - 0.4, z - 0.4, x + 0.4, y + 0.4, z + 0.4));
     }
 
     @Override
     public boolean onInteract(ServerPlayer player, ContraptionState state, Vec3 hitPos, InteractionHand hand, boolean rightClick) {
-        if (!rightClick) return false;
         ServerLevel level;
-        try {
-            level = (ServerLevel) player.level();
-        } catch (ClassCastException ignored) {
+        if (!rightClick) {
             return false;
         }
-        // Dismount if already seated here
-        if (player.getUUID().equals(occupantId)) {
-            ejectRider();
+        try {
+            level = player.level();
+        }
+        catch (ClassCastException ignored) {
+            return false;
+        }
+        if (player.getUUID().equals(this.occupantId)) {
+            this.ejectRider();
             return true;
         }
-        // Mount at world position
         Vec3 bearing = new Vec3(state.x(), state.y(), state.z());
-        Vec3 worldPos = ContraptionMath.renderPosition(localOffset, bearing,
-                state.yawRadians(), state.pitchRadians(), state.rollRadians(), state.scale());
-        return mount(player, level, worldPos);
+        Vec3 worldPos = ContraptionMath.renderPosition(this.localOffset, bearing, state.yawRadians(), state.pitchRadians(), state.rollRadians(), state.scale());
+        return this.mount(player, level, worldPos);
     }
 
     public boolean isOccupied() {
-        return occupantId != null;
+        return this.occupantId != null;
     }
 
     public UUID occupantId() {
-        return occupantId;
+        return this.occupantId;
     }
 
     @Override
     public void tick(RenderContext ctx) {
-        if (mount == null || occupantId == null) return;
-
-        if (!mount.isAlive()) {
-            mount = null;
-            occupantId = null;
+        if (this.mount == null || this.occupantId == null) {
             return;
         }
-
-        Vec3 worldPos = ContraptionMath.renderPosition(localOffset, ctx.bearing(),
-                ctx.yawRadians(), ctx.pitchRadians(), ctx.rollRadians(), ctx.scale());
-        float worldYaw = (float) ctx.yawDegrees() + yawOffsetDegrees;
-        float worldPitch = (float) ctx.pitchDegrees();
-
-        mount.setPos(worldPos.x, worldPos.y - SEAT_HEIGHT, worldPos.z);
-        mount.setYRot(worldYaw);
-        mount.setXRot(worldPitch);
+        if (!this.mount.isAlive()) {
+            this.mount = null;
+            this.occupantId = null;
+            return;
+        }
+        Vec3 worldPos = ContraptionMath.renderPosition(this.localOffset, ctx.bearing(), ctx.yawRadians(), ctx.pitchRadians(), ctx.rollRadians(), ctx.scale());
+        float worldYaw = (float)ctx.yawDegrees() + this.yawOffsetDegrees;
+        float worldPitch = (float)ctx.pitchDegrees();
+        this.mount.setPos(worldPos.x, worldPos.y - 0.6, worldPos.z);
+        this.mount.setYRot(worldYaw);
+        this.mount.setXRot(worldPitch);
     }
 
     @Override
     public void render(RenderContext ctx) {
-        // Seats are invisible — mount entity is real, not packet-only.
     }
 
     @Override
     public void despawn(List<Player> viewers) {
-        ejectRider();
+        this.ejectRider();
     }
 
     @Override
     public void disassemble(ServerLevel level, BlockPos bearingPos, int quarterTurns) {
-        ejectRider();
+        this.ejectRider();
     }
 
-    // ---- seat operations ----
-
     public boolean mount(ServerPlayer player, ServerLevel level, Vec3 worldPos) {
-        if (isOccupied()) return false;
-
-        ArmorStand stand = new ArmorStand(EntityType.ARMOR_STAND, level);
-        stand.setPos(worldPos.x, worldPos.y - SEAT_HEIGHT, worldPos.z);
-        stand.setYRot(yawOffsetDegrees);
+        if (this.isOccupied()) {
+            return false;
+        }
+        ArmorStand stand = new ArmorStand(EntityType.ARMOR_STAND, (Level)level);
+        stand.setPos(worldPos.x, worldPos.y - 0.6, worldPos.z);
+        stand.setYRot(this.yawOffsetDegrees);
         stand.setInvisible(true);
         stand.setNoGravity(true);
         stand.setSilent(true);
         stand.setInvulnerable(true);
         stand.setSmall(true);
-
-        if (!level.addFreshEntity(stand)) {
+        if (!level.addFreshEntity((Entity)stand)) {
             return false;
         }
-
-        player.startRiding(stand, true, true);
-
+        player.startRiding((Entity)stand, true, true);
         this.mount = stand;
         this.occupantId = player.getUUID();
         return true;
     }
 
     public void ejectRider() {
-        if (mount != null) {
-            mount.ejectPassengers();
-            mount.discard();
-            mount = null;
+        if (this.mount != null) {
+            this.mount.ejectPassengers();
+            this.mount.discard();
+            this.mount = null;
         }
-        occupantId = null;
+        this.occupantId = null;
     }
 
-    // ---- seat source ----
-
-    public sealed interface SeatSource permits BlockSeatSource, FurnitureSeatSource {
+    public static sealed interface SeatSource
+    permits BlockSeatSource, FurnitureSeatSource {
     }
 
-    public record BlockSeatSource(BlockPos localBlockPos) implements SeatSource {
+    public record FurnitureSeatSource(UUID furnitureElementId, int seatIndex) implements SeatSource
+    {
     }
 
-    public record FurnitureSeatSource(UUID furnitureElementId, int seatIndex) implements SeatSource {
+    public record BlockSeatSource(BlockPos localBlockPos) implements SeatSource
+    {
     }
 }
+

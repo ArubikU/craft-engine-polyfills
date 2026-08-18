@@ -1,169 +1,316 @@
+/*
+ * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  net.minecraft.core.BlockPos
+ *  net.minecraft.core.Direction
+ *  net.minecraft.server.level.ServerLevel
+ *  net.minecraft.server.level.ServerPlayer
+ *  net.minecraft.world.Container
+ *  net.minecraft.world.level.BlockGetter
+ *  net.minecraft.world.level.Level
+ *  net.minecraft.world.level.block.state.BlockState
+ *  net.momirealms.craftengine.bukkit.plugin.user.BukkitServerPlayer
+ *  net.momirealms.craftengine.bukkit.util.BlockStateUtils
+ *  net.momirealms.craftengine.bukkit.util.LocationUtils
+ *  net.momirealms.craftengine.bukkit.world.BukkitWorld
+ *  net.momirealms.craftengine.core.block.BlockDefinition
+ *  net.momirealms.craftengine.core.block.ImmutableBlockState
+ *  net.momirealms.craftengine.core.block.behavior.BlockBehavior
+ *  net.momirealms.craftengine.core.block.behavior.BlockBehaviorFactory
+ *  net.momirealms.craftengine.core.block.behavior.EntityBlock
+ *  net.momirealms.craftengine.core.block.behavior.WorldlyContainerHolder
+ *  net.momirealms.craftengine.core.block.entity.BlockEntity
+ *  net.momirealms.craftengine.core.block.entity.BlockEntityController
+ *  net.momirealms.craftengine.core.block.property.EnumProperty
+ *  net.momirealms.craftengine.core.block.property.IntegerProperty
+ *  net.momirealms.craftengine.core.block.property.Property
+ *  net.momirealms.craftengine.core.entity.player.InteractionResult
+ *  net.momirealms.craftengine.core.plugin.config.ConfigSection
+ *  net.momirealms.craftengine.core.util.Direction
+ *  net.momirealms.craftengine.core.util.Key
+ *  net.momirealms.craftengine.core.world.BlockPos
+ *  net.momirealms.craftengine.core.world.context.UseOnContext
+ *  org.bukkit.craftbukkit.CraftWorld
+ *  org.bukkit.craftbukkit.entity.CraftPlayer
+ *  org.bukkit.entity.Player
+ */
 package dev.arubik.craftengine.machine.block;
-
-import java.util.ArrayList;
-import java.util.function.Consumer;
-
-import org.jetbrains.annotations.Nullable;
 
 import dev.arubik.craftengine.block.behavior.ConnectableBlockBehavior;
 import dev.arubik.craftengine.block.entity.BukkitBlockEntityTypes;
+import dev.arubik.craftengine.block.entity.PersistentBlockEntity;
 import dev.arubik.craftengine.fluid.FluidStack;
 import dev.arubik.craftengine.fluid.behavior.FluidCarrier;
-import dev.arubik.craftengine.util.TransferAccessMode;
-import dev.arubik.craftengine.util.Utils;
+import dev.arubik.craftengine.gas.GasCarrier;
+import dev.arubik.craftengine.gas.GasStack;
 import dev.arubik.craftengine.machine.block.entity.AbstractMachineBlockEntity;
+import dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity;
 import dev.arubik.craftengine.multiblock.IOConfiguration;
+import dev.arubik.craftengine.multiblock.MachineMode;
+import dev.arubik.craftengine.multiblock.MultiBlockPartBlockEntity;
+import dev.arubik.craftengine.property.Properties;
+import dev.arubik.craftengine.util.NbtType;
+import dev.arubik.craftengine.util.TransferAccessMode;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Consumer;
 import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.Container;
+import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
+import net.momirealms.craftengine.bukkit.plugin.user.BukkitServerPlayer;
+import net.momirealms.craftengine.bukkit.util.BlockStateUtils;
+import net.momirealms.craftengine.bukkit.util.LocationUtils;
+import net.momirealms.craftengine.bukkit.world.BukkitWorld;
 import net.momirealms.craftengine.core.block.BlockDefinition;
+import net.momirealms.craftengine.core.block.ImmutableBlockState;
 import net.momirealms.craftengine.core.block.behavior.BlockBehavior;
 import net.momirealms.craftengine.core.block.behavior.BlockBehaviorFactory;
 import net.momirealms.craftengine.core.block.behavior.EntityBlock;
-import net.momirealms.craftengine.core.block.entity.BlockEntityController;
-import net.momirealms.craftengine.core.block.ImmutableBlockState;
+import net.momirealms.craftengine.core.block.behavior.WorldlyContainerHolder;
 import net.momirealms.craftengine.core.block.entity.BlockEntity;
-import dev.arubik.craftengine.gas.GasCarrier;
-import dev.arubik.craftengine.gas.GasStack;
-import net.minecraft.core.Direction;
+import net.momirealms.craftengine.core.block.entity.BlockEntityController;
 import net.momirealms.craftengine.core.block.property.EnumProperty;
+import net.momirealms.craftengine.core.block.property.IntegerProperty;
+import net.momirealms.craftengine.core.block.property.Property;
+import net.momirealms.craftengine.core.entity.player.InteractionResult;
 import net.momirealms.craftengine.core.plugin.config.ConfigSection;
-import java.util.List;
+import net.momirealms.craftengine.core.util.Direction;
+import net.momirealms.craftengine.core.util.Key;
+import net.momirealms.craftengine.core.world.context.UseOnContext;
+import org.bukkit.craftbukkit.CraftWorld;
+import org.bukkit.craftbukkit.entity.CraftPlayer;
+import org.bukkit.entity.Player;
 
-public class MachineBlockBehavior extends ConnectableBlockBehavior
-        implements FluidCarrier, GasCarrier, EntityBlock,
-        net.momirealms.craftengine.core.block.behavior.WorldlyContainerHolder {
-
+public class MachineBlockBehavior
+extends ConnectableBlockBehavior
+implements FluidCarrier,
+GasCarrier,
+EntityBlock,
+WorldlyContainerHolder {
     public static final Factory FACTORY = new Factory();
+    public final Property<MachineMode> MACHINE_MODE;
+    protected int controllerId;
 
-    /**
-     * Hopper/funnel bridge: expose the machine block entity (already an NMS
-     * {@link net.minecraft.world.WorldlyContainer}) to vanilla {@code getContainerAt}, so
-     * funnels/hoppers/comparators see the machine — face-filtering is handled by the BE's
-     * {@code getSlotsForFace}/{@code canPlace/TakeItemThroughFace}. args[1]=Level, args[2]=BlockPos.
-     */
-    @Override
     public Object getContainer(Object thisBlock, Object[] args) {
         try {
-            net.minecraft.world.level.Level level = (net.minecraft.world.level.Level) args[1];
-            BlockPos pos = (BlockPos) args[2];
-            net.momirealms.craftengine.core.block.entity.BlockEntity be =
-                    dev.arubik.craftengine.block.entity.BukkitBlockEntityTypes.getIfLoaded(level, pos);
-            if (dev.arubik.craftengine.machine.block.entity.AbstractMachineBlockEntity.DEBUG_IO)
-                System.out.println("[MachineIO] getContainer @" + pos.toShortString() + " be="
-                        + (be == null ? "null" : be.controller == null ? "no-controller"
-                                : be.controller.getClass().getSimpleName()));
-            if (be != null && be.controller instanceof net.minecraft.world.Container c)
+            BlockEntityController blockEntityController;
+            Level level = (Level)args[1];
+            BlockPos pos = (BlockPos)args[2];
+            BlockEntity be = BukkitBlockEntityTypes.getIfLoaded(level, pos);
+            if (AbstractMachineBlockEntity.DEBUG_IO) {
+                System.out.println("[MachineIO] getContainer @" + pos.toShortString() + " be=" + (be == null ? "null" : (be.controller == null ? "no-controller" : be.controller.getClass().getSimpleName())));
+            }
+            if (be != null && (blockEntityController = be.controller) instanceof Container) {
+                Container c = (Container)blockEntityController;
                 return c;
-        } catch (Throwable ignored) {
+            }
+        }
+        catch (Throwable throwable) {
+            // empty catch block
         }
         return null;
     }
 
-    // Optional MACHINE_MODE property (if block has it)
-    public final net.momirealms.craftengine.core.block.property.Property<dev.arubik.craftengine.multiblock.MachineMode> MACHINE_MODE;
-
     public MachineBlockBehavior(BlockDefinition block) {
-        super(block, new ArrayList<>(), null, null, new IOConfiguration.Open());
-        this.MACHINE_MODE = null; // Default for this constructor
+        super(block, new ArrayList<net.minecraft.core.Direction>(), null, null, new IOConfiguration.Open());
+        this.MACHINE_MODE = null;
     }
 
-    public MachineBlockBehavior(BlockDefinition customBlock, List<Direction> connectableFaces,
-            EnumProperty<net.momirealms.craftengine.core.util.Direction> horizontalDirectionProperty,
-            EnumProperty<net.momirealms.craftengine.core.util.Direction> verticalDirectionProperty,
-            IOConfiguration ioConfig) {
+    public MachineBlockBehavior(BlockDefinition customBlock, List<net.minecraft.core.Direction> connectableFaces, EnumProperty<Direction> horizontalDirectionProperty, EnumProperty<Direction> verticalDirectionProperty, IOConfiguration ioConfig) {
         super(customBlock, connectableFaces, horizontalDirectionProperty, verticalDirectionProperty, ioConfig);
-
-        // Try to get MACHINE_MODE property from block if it exists
-        net.momirealms.craftengine.core.block.property.Property<dev.arubik.craftengine.multiblock.MachineMode> machineModeProp = null;
+        Property machineModeProp = null;
         try {
-            machineModeProp = (net.momirealms.craftengine.core.block.property.Property<dev.arubik.craftengine.multiblock.MachineMode>) customBlock
-                    .getProperty(dev.arubik.craftengine.property.Properties.MACHINE_MODE.value());
-        } catch (ClassCastException | NullPointerException ignored) {
-            // Property not found or wrong type, keep as null
+            machineModeProp = customBlock.getProperty(Properties.MACHINE_MODE.value());
+        }
+        catch (ClassCastException | NullPointerException runtimeException) {
+            // empty catch block
         }
         this.MACHINE_MODE = machineModeProp;
     }
 
-    // --- EntityBlock (controller composition model) ---
-    protected int controllerId;
-
-    @Override
     public void initControllerId(int id) {
         this.controllerId = id;
     }
 
-    /**
-     * Base machine behavior backs an abstract entity, so it creates no controller.
-     * Concrete machine behaviors override this.
-     */
-    @Override
     public BlockEntityController createBlockEntityController(BlockEntity blockEntity) {
         return null;
     }
 
-    // Right-click opens the machine's menu (the base machine had no use hook, so
-    // sample machines like the upgradeable furnace did nothing on interact).
-    @Override
-    public net.momirealms.craftengine.core.entity.player.InteractionResult useWithoutItem(
-            net.momirealms.craftengine.core.world.context.UseOnContext context, ImmutableBlockState state) {
+    public InteractionResult useWithoutItem(UseOnContext context, ImmutableBlockState state) {
         try {
-            net.minecraft.server.level.ServerLevel level = ((org.bukkit.craftbukkit.CraftWorld) ((net.momirealms.craftengine.bukkit.world.BukkitWorld) context
-                    .getLevel()).platformWorld()).getHandle();
-            BlockPos pos = (BlockPos) net.momirealms.craftengine.bukkit.util.LocationUtils
-                    .toBlockPos(context.getClickedPos());
-            BlockEntity be = BukkitBlockEntityTypes.getIfLoaded(level, pos);
-            if (be != null && be.controller instanceof AbstractMachineBlockEntity machine
-                    && context.getPlayer() instanceof net.momirealms.craftengine.bukkit.plugin.user.BukkitServerPlayer cePlayer
-                    && cePlayer.platformPlayer() instanceof org.bukkit.entity.Player bukkit) {
-                machine.getMenu().open(bukkit);
-                return net.momirealms.craftengine.core.entity.player.InteractionResult.SUCCESS_AND_CANCEL;
+            BlockEntityController blockEntityController;
+            ServerLevel level = ((CraftWorld)((BukkitWorld)context.getLevel()).platformWorld()).getHandle();
+            BlockPos pos = (BlockPos)LocationUtils.toBlockPos((net.momirealms.craftengine.core.world.BlockPos)context.getClickedPos());
+            BlockEntity be = BukkitBlockEntityTypes.getIfLoaded((Level)level, pos);
+            if (be != null && (blockEntityController = be.controller) instanceof AbstractMachineBlockEntity) {
+                BukkitServerPlayer cePlayer;
+                AbstractMachineBlockEntity machine = (AbstractMachineBlockEntity)blockEntityController;
+                blockEntityController = context.getPlayer();
+                if (blockEntityController instanceof BukkitServerPlayer && (blockEntityController = (cePlayer = (BukkitServerPlayer)blockEntityController).platformPlayer()) instanceof Player) {
+                    DataMachineBlockEntity dm;
+                    BlockEntityController bukkit = blockEntityController;
+                    boolean canOpen = true;
+                    if (machine instanceof DataMachineBlockEntity && (dm = (DataMachineBlockEntity)machine).definition() != null) {
+                        canOpen = dm.definition().openUi();
+                    }
+                    if (machine instanceof DataMachineBlockEntity && (dm = (DataMachineBlockEntity)machine).definition() != null && dm.definition().interactScript() != null) {
+                        ServerPlayer nmsPlayer = ((CraftPlayer)bukkit).getHandle();
+                        dm.runInteractScript(dm.definition().interactScript(), nmsPlayer);
+                        return InteractionResult.SUCCESS_AND_CANCEL;
+                    }
+                    if (canOpen) {
+                        machine.getMenu().open((Player)bukkit);
+                        return InteractionResult.SUCCESS_AND_CANCEL;
+                    }
+                }
             }
-        } catch (Throwable ignored) {
         }
-        return net.momirealms.craftengine.core.entity.player.InteractionResult.PASS;
+        catch (Throwable throwable) {
+            // empty catch block
+        }
+        return InteractionResult.PASS;
+    }
+
+    public int getSignal(Object thisBlock, Object[] args) {
+        if (args == null || args.length < 3) {
+            return 0;
+        }
+        int val = MachineBlockBehavior.readPowerLevel((BlockState)args[0], (BlockGetter)args[1], (BlockPos)args[2]);
+        if (val > 0 && DataMachineBlockEntity.SCRIPT_DEBUG) {
+            System.out.println("[CEP getSignal] val=" + val + " pos=" + String.valueOf(args[2]));
+        }
+        return val;
+    }
+
+    public int getDirectSignal(Object thisBlock, Object[] args) {
+        if (args == null || args.length < 3) {
+            return 0;
+        }
+        return MachineBlockBehavior.readPowerLevel((BlockState)args[0], (BlockGetter)args[1], (BlockPos)args[2]);
+    }
+
+    public boolean isSignalSource(Object thisBlock, Object[] args) {
+        return true;
+    }
+
+    public int getAnalogOutputSignal(Object thisBlock, Object[] args) {
+        if (args == null || args.length < 3) {
+            return 0;
+        }
+        return MachineBlockBehavior.readPowerLevel((BlockState)args[0], (BlockGetter)args[1], (BlockPos)args[2]);
+    }
+
+    public boolean hasAnalogOutputSignal(Object thisBlock, Object[] args) {
+        return true;
+    }
+
+    private static int readPowerLevel(BlockState state, BlockGetter world, BlockPos pos) {
+        try {
+            MultiBlockPartBlockEntity part;
+            BlockPos corePos;
+            BlockEntityController blockEntityController;
+            Level level;
+            BlockEntity be;
+            if (world instanceof Level && (be = BukkitBlockEntityTypes.getIfLoaded(level = (Level)world, pos)) != null && (blockEntityController = be.controller) instanceof MultiBlockPartBlockEntity && (corePos = (part = (MultiBlockPartBlockEntity)blockEntityController).getCorePos()) != null && !corePos.equals(pos)) {
+                state = level.getBlockState(corePos);
+            }
+        }
+        catch (Throwable level) {
+            // empty catch block
+        }
+        int ceVal = MachineBlockBehavior.readFromCEState(state);
+        if (ceVal > 0) {
+            return ceVal;
+        }
+        return MachineBlockBehavior.readPowerFromBE(world, pos);
+    }
+
+    private static int readFromCEState(BlockState state) {
+        try {
+            ImmutableBlockState cs = BlockStateUtils.getOptionalCustomBlockState(state).orElse(null);
+            if (cs == null) {
+                return 0;
+            }
+            Property prop = ((BlockDefinition)cs.owner().value()).getProperty("power_level");
+            if (prop instanceof IntegerProperty) {
+                IntegerProperty ip = (IntegerProperty)prop;
+                Integer val = (Integer)cs.get((Property)ip);
+                return val != null ? Math.max(0, Math.min(15, val)) : 0;
+            }
+        }
+        catch (Throwable throwable) {
+            // empty catch block
+        }
+        return 0;
+    }
+
+    private static int readPowerFromBE(BlockGetter world, BlockPos pos) {
+        if (!(world instanceof Level)) {
+            return 0;
+        }
+        Level level = (Level)world;
+        try {
+            BlockEntityController blockEntityController;
+            BlockEntity be = BukkitBlockEntityTypes.getIfLoaded(level, pos);
+            if (be != null && (blockEntityController = be.controller) instanceof PersistentBlockEntity) {
+                PersistentBlockEntity pbe = (PersistentBlockEntity)blockEntityController;
+                Integer v = (Integer)pbe.get(Key.of((String)"polyfills", (String)"_redstone_power"), NbtType.INTEGER);
+                return v != null ? Math.max(0, Math.min(15, v)) : 0;
+            }
+        }
+        catch (Throwable throwable) {
+            // empty catch block
+        }
+        return 0;
     }
 
     @Override
     public IOConfiguration getIOConfiguration(Level level, BlockPos pos) {
-        // Called with a null level at config-parse time (no world yet) to fetch the
-        // default config — don't touch the world then.
+        AbstractMachineBlockEntity machine;
+        IOConfiguration config;
+        BlockEntityController blockEntityController;
         if (level == null) {
-            return defaultIOConfig;
+            return this.defaultIOConfig;
         }
         BlockEntity be = BukkitBlockEntityTypes.getIfLoaded(level, pos);
-        if (be != null && be.controller instanceof AbstractMachineBlockEntity machine) {
-            IOConfiguration config = machine.getIOConfiguration();
-            if (config != null)
-                return config;
+        if (be != null && (blockEntityController = be.controller) instanceof AbstractMachineBlockEntity && (config = (machine = (AbstractMachineBlockEntity)blockEntityController).getIOConfiguration()) != null) {
+            return config;
         }
-        return defaultIOConfig;
+        return this.defaultIOConfig;
     }
 
     @Override
     public int insertFluid(Level level, BlockPos pos, FluidStack stack, net.minecraft.core.Direction side) {
-        return insertFluid(level, pos, stack, side, -1);
+        return this.insertFluid(level, pos, stack, side, -1);
     }
 
     @Override
     public int insertFluid(Level level, BlockPos pos, FluidStack stack, net.minecraft.core.Direction side, int slot) {
+        BlockEntityController blockEntityController;
         BlockEntity be = BukkitBlockEntityTypes.getIfLoaded(level, pos);
-        if (be != null && be.controller instanceof AbstractMachineBlockEntity machine) {
+        if (be != null && (blockEntityController = be.controller) instanceof AbstractMachineBlockEntity) {
+            AbstractMachineBlockEntity machine = (AbstractMachineBlockEntity)blockEntityController;
             return machine.insertFluid(level, stack, side, slot);
         }
         return 0;
     }
 
     @Override
-    public int extractFluid(Level level, BlockPos pos, int max, Consumer<FluidStack> drained,
-            net.minecraft.core.Direction side) {
-        return extractFluid(level, pos, max, drained, side, -1);
+    public int extractFluid(Level level, BlockPos pos, int max, Consumer<FluidStack> drained, net.minecraft.core.Direction side) {
+        return this.extractFluid(level, pos, max, drained, side, -1);
     }
 
     @Override
-    public int extractFluid(Level level, BlockPos pos, int max, Consumer<FluidStack> drained,
-            net.minecraft.core.Direction side, int slot) {
+    public int extractFluid(Level level, BlockPos pos, int max, Consumer<FluidStack> drained, net.minecraft.core.Direction side, int slot) {
+        BlockEntityController blockEntityController;
         BlockEntity be = BukkitBlockEntityTypes.getIfLoaded(level, pos);
-        if (be != null && be.controller instanceof AbstractMachineBlockEntity machine) {
+        if (be != null && (blockEntityController = be.controller) instanceof AbstractMachineBlockEntity) {
+            AbstractMachineBlockEntity machine = (AbstractMachineBlockEntity)blockEntityController;
             return machine.extractFluid(level, max, drained, side, slot);
         }
         return 0;
@@ -171,67 +318,79 @@ public class MachineBlockBehavior extends ConnectableBlockBehavior
 
     @Override
     public FluidStack getStored(Level level, BlockPos pos) {
+        BlockEntityController blockEntityController;
         BlockEntity be = BukkitBlockEntityTypes.getIfLoaded(level, pos);
-        if (be != null && be.controller instanceof AbstractMachineBlockEntity machine)
+        if (be != null && (blockEntityController = be.controller) instanceof AbstractMachineBlockEntity) {
+            AbstractMachineBlockEntity machine = (AbstractMachineBlockEntity)blockEntityController;
             return machine.getStoredFluidForCarrier();
+        }
         return FluidStack.EMPTY;
     }
 
     @Override
     public long getCapacity(Level level, BlockPos pos) {
+        BlockEntityController blockEntityController;
         BlockEntity be = BukkitBlockEntityTypes.getIfLoaded(level, pos);
-        if (be != null && be.controller instanceof AbstractMachineBlockEntity machine)
+        if (be != null && (blockEntityController = be.controller) instanceof AbstractMachineBlockEntity) {
+            AbstractMachineBlockEntity machine = (AbstractMachineBlockEntity)blockEntityController;
             return machine.getFluidCapacityForCarrier();
+        }
         return 0L;
     }
 
     @Override
     public void setStoredRaw(Level level, BlockPos pos, FluidStack stack) {
+        BlockEntityController blockEntityController;
         BlockEntity be = BukkitBlockEntityTypes.getIfLoaded(level, pos);
-        if (be != null && be.controller instanceof AbstractMachineBlockEntity machine)
+        if (be != null && (blockEntityController = be.controller) instanceof AbstractMachineBlockEntity) {
+            AbstractMachineBlockEntity machine = (AbstractMachineBlockEntity)blockEntityController;
             machine.setStoredFluidRaw(level, stack);
+        }
     }
 
     @Override
-    public dev.arubik.craftengine.util.TransferAccessMode getAccessMode() {
-        return dev.arubik.craftengine.util.TransferAccessMode.ANYONE_CAN_TAKE;
+    public TransferAccessMode getAccessMode() {
+        return TransferAccessMode.ANYONE_CAN_TAKE;
     }
-
-    // ========== Gas Carrier Implementation ==========
 
     @Override
     public GasStack getStoredGas(Level level, BlockPos pos) {
+        BlockEntityController blockEntityController;
         BlockEntity be = BukkitBlockEntityTypes.getIfLoaded(level, pos);
-        if (be != null && be.controller instanceof AbstractMachineBlockEntity machine)
+        if (be != null && (blockEntityController = be.controller) instanceof AbstractMachineBlockEntity) {
+            AbstractMachineBlockEntity machine = (AbstractMachineBlockEntity)blockEntityController;
             return machine.getStoredGasForCarrier();
+        }
         return GasStack.EMPTY;
     }
 
     @Override
     public int insertGas(Level level, BlockPos pos, GasStack stack, net.minecraft.core.Direction side) {
-        return insertGas(level, pos, stack, side, -1);
+        return this.insertGas(level, pos, stack, side, -1);
     }
 
     @Override
     public int insertGas(Level level, BlockPos pos, GasStack stack, net.minecraft.core.Direction side, int slot) {
+        BlockEntityController blockEntityController;
         BlockEntity be = BukkitBlockEntityTypes.getIfLoaded(level, pos);
-        if (be != null && be.controller instanceof AbstractMachineBlockEntity machine) {
+        if (be != null && (blockEntityController = be.controller) instanceof AbstractMachineBlockEntity) {
+            AbstractMachineBlockEntity machine = (AbstractMachineBlockEntity)blockEntityController;
             return machine.insertGas(level, stack, side, slot);
         }
         return 0;
     }
 
     @Override
-    public int extractGas(Level level, BlockPos pos, int max, Consumer<GasStack> drained,
-            net.minecraft.core.Direction side) {
-        return extractGas(level, pos, max, drained, side, -1);
+    public int extractGas(Level level, BlockPos pos, int max, Consumer<GasStack> drained, net.minecraft.core.Direction side) {
+        return this.extractGas(level, pos, max, drained, side, -1);
     }
 
     @Override
-    public int extractGas(Level level, BlockPos pos, int max, Consumer<GasStack> drained,
-            net.minecraft.core.Direction side, int slot) {
+    public int extractGas(Level level, BlockPos pos, int max, Consumer<GasStack> drained, net.minecraft.core.Direction side, int slot) {
+        BlockEntityController blockEntityController;
         BlockEntity be = BukkitBlockEntityTypes.getIfLoaded(level, pos);
-        if (be != null && be.controller instanceof AbstractMachineBlockEntity machine) {
+        if (be != null && (blockEntityController = be.controller) instanceof AbstractMachineBlockEntity) {
+            AbstractMachineBlockEntity machine = (AbstractMachineBlockEntity)blockEntityController;
             return machine.extractGas(level, max, drained, side, slot);
         }
         return 0;
@@ -239,102 +398,153 @@ public class MachineBlockBehavior extends ConnectableBlockBehavior
 
     @Override
     public long getGasCapacity(Level level, BlockPos pos) {
+        BlockEntityController blockEntityController;
         BlockEntity be = BukkitBlockEntityTypes.getIfLoaded(level, pos);
-        if (be != null && be.controller instanceof AbstractMachineBlockEntity machine)
+        if (be != null && (blockEntityController = be.controller) instanceof AbstractMachineBlockEntity) {
+            AbstractMachineBlockEntity machine = (AbstractMachineBlockEntity)blockEntityController;
             return machine.getGasCapacityForCarrier();
+        }
         return GasCarrier.super.getGasCapacity(level, pos);
     }
 
     @Override
     public void setStoredGasRaw(Level level, BlockPos pos, GasStack stack) {
+        BlockEntityController blockEntityController;
         BlockEntity be = BukkitBlockEntityTypes.getIfLoaded(level, pos);
-        if (be != null && be.controller instanceof AbstractMachineBlockEntity machine)
+        if (be != null && (blockEntityController = be.controller) instanceof AbstractMachineBlockEntity) {
+            AbstractMachineBlockEntity machine = (AbstractMachineBlockEntity)blockEntityController;
             machine.setStoredGasRaw(level, stack);
+        }
     }
 
-    public static class Factory implements BlockBehaviorFactory<BlockBehavior> {
-        @Override
+    public void affectNeighborsAfterRemoval(Object thisBlock, Object[] args) {
+        super.affectNeighborsAfterRemoval(thisBlock, args);
+        try {
+            BlockEntityController blockEntityController;
+            Level level = (Level)args[1];
+            BlockPos nmsPos = (BlockPos)args[2];
+            BlockEntity be = BukkitBlockEntityTypes.getIfLoaded(level, nmsPos);
+            if (be != null && (blockEntityController = be.controller) instanceof DataMachineBlockEntity) {
+                DataMachineBlockEntity dm = (DataMachineBlockEntity)blockEntityController;
+                if (level instanceof ServerLevel) {
+                    ServerLevel sl = (ServerLevel)level;
+                    dm.despawnSpecDisplays(sl);
+                }
+                dm.dropAllContents(level, nmsPos);
+            } else if (be != null && (blockEntityController = be.controller) instanceof AbstractMachineBlockEntity) {
+                AbstractMachineBlockEntity m = (AbstractMachineBlockEntity)blockEntityController;
+                m.dropAllContents(level, nmsPos);
+            }
+        }
+        catch (Throwable throwable) {
+            // empty catch block
+        }
+    }
+
+    public void neighborChanged(Object thisBlock, Object[] args) {
+        super.neighborChanged(thisBlock, args);
+        try {
+            BlockEntityController blockEntityController;
+            Level level = (Level)args[1];
+            BlockPos pos = (BlockPos)args[2];
+            if (level.isClientSide()) {
+                return;
+            }
+            BlockEntity be = BukkitBlockEntityTypes.getIfLoaded(level, pos);
+            if (be != null && (blockEntityController = be.controller) instanceof DataMachineBlockEntity) {
+                DataMachineBlockEntity dm = (DataMachineBlockEntity)blockEntityController;
+                dm.invalidateRpm(level);
+            }
+        }
+        catch (Throwable throwable) {
+            // empty catch block
+        }
+    }
+
+    public static class Factory
+    implements BlockBehaviorFactory<BlockBehavior> {
         public BlockBehavior create(BlockDefinition block, ConfigSection arguments) {
-            java.util.List<net.minecraft.core.Direction> faces = new java.util.ArrayList<>();
-            Object facesArg = arguments.getOrDefault("faces", "all");
-            if (facesArg instanceof String faceStr) {
-                switch (faceStr.toLowerCase()) {
-                    case "all" -> {
-                        for (net.minecraft.core.Direction d : net.minecraft.core.Direction.values())
-                            faces.add(d);
-                    }
-                    case "horizontal" -> {
-                        faces.add(net.minecraft.core.Direction.NORTH);
-                        faces.add(net.minecraft.core.Direction.SOUTH);
-                        faces.add(net.minecraft.core.Direction.EAST);
-                        faces.add(net.minecraft.core.Direction.WEST);
-                    }
-                    case "vertical" -> {
-                        faces.add(net.minecraft.core.Direction.UP);
-                        faces.add(net.minecraft.core.Direction.DOWN);
-                    }
-                    default -> {
-                        try {
-                            faces.add(net.minecraft.core.Direction.valueOf(faceStr.toUpperCase()));
-                        } catch (Exception ignored) {
+            ArrayList<net.minecraft.core.Direction> faces;
+            block27: {
+                Object facesArg;
+                block26: {
+                    faces = new ArrayList<net.minecraft.core.Direction>();
+                    facesArg = arguments.getOrDefault("faces", "all");
+                    if (!(facesArg instanceof String)) break block26;
+                    net.minecraft.core.Direction[] faceStr = (net.minecraft.core.Direction[])facesArg;
+                    switch (faceStr.toLowerCase()) {
+                        case "all": {
+                            for (net.minecraft.core.Direction d : net.minecraft.core.Direction.values()) {
+                                faces.add(d);
+                            }
+                            break block27;
+                        }
+                        case "horizontal": {
+                            faces.add(net.minecraft.core.Direction.NORTH);
+                            faces.add(net.minecraft.core.Direction.SOUTH);
+                            faces.add(net.minecraft.core.Direction.EAST);
+                            faces.add(net.minecraft.core.Direction.WEST);
+                            break;
+                        }
+                        case "vertical": {
+                            faces.add(net.minecraft.core.Direction.UP);
+                            faces.add(net.minecraft.core.Direction.DOWN);
+                            break;
+                        }
+                        default: {
+                            try {
+                                faces.add(net.minecraft.core.Direction.valueOf((String)faceStr.toUpperCase()));
+                                break;
+                            }
+                            catch (Exception exception) {
+                                // empty catch block
+                            }
                         }
                     }
+                    break block27;
                 }
-            } else if (facesArg instanceof java.util.List<?> faceList) {
-                for (Object face : faceList) {
-                    try {
-                        faces.add(net.minecraft.core.Direction.valueOf(face.toString().toUpperCase()));
-                    } catch (Exception ignored) {
+                if (facesArg instanceof List) {
+                    List faceList = (List)facesArg;
+                    for (Object face : faceList) {
+                        try {
+                            faces.add(net.minecraft.core.Direction.valueOf((String)face.toString().toUpperCase()));
+                        }
+                        catch (Exception exception) {}
                     }
                 }
             }
             if (faces.isEmpty()) {
-                for (net.minecraft.core.Direction d : net.minecraft.core.Direction.values())
+                for (net.minecraft.core.Direction d : net.minecraft.core.Direction.values()) {
                     faces.add(d);
+                }
             }
-
-            String hPropName = (String) arguments.get("horizontal-direction-property");
-            String vPropName = (String) arguments.get("vertical-direction-property");
-            net.momirealms.craftengine.core.block.property.EnumProperty<net.momirealms.craftengine.core.util.Direction> hProp = null;
-            net.momirealms.craftengine.core.block.property.EnumProperty<net.momirealms.craftengine.core.util.Direction> vProp = null;
-
+            String hPropName = (String)arguments.get("horizontal-direction-property");
+            String vPropName = (String)arguments.get("vertical-direction-property");
+            EnumProperty hProp = null;
+            EnumProperty vProp = null;
             if (hPropName != null) {
                 try {
-                    hProp = (net.momirealms.craftengine.core.block.property.EnumProperty<net.momirealms.craftengine.core.util.Direction>) block
-                            .getProperty(hPropName);
-                } catch (Exception ignored) {
+                    hProp = (EnumProperty)block.getProperty(hPropName);
+                }
+                catch (Exception exception) {
+                    // empty catch block
                 }
             }
             if (vPropName != null) {
                 try {
-                    vProp = (net.momirealms.craftengine.core.block.property.EnumProperty<net.momirealms.craftengine.core.util.Direction>) block
-                            .getProperty(vPropName);
-                } catch (Exception ignored) {
+                    vProp = (EnumProperty)block.getProperty(vPropName);
+                }
+                catch (Exception exception) {
+                    // empty catch block
                 }
             }
-
             IOConfiguration ioConfig = new IOConfiguration.Open();
-            String ioType = (String) arguments.get("io");
-            if ("closed".equalsIgnoreCase(ioType))
+            String ioType = (String)arguments.get("io");
+            if ("closed".equalsIgnoreCase(ioType)) {
                 ioConfig = new IOConfiguration.Closed();
-
-            return new MachineBlockBehavior(block, faces, hProp, vProp, ioConfig);
-        }
-    }
-
-    @Override
-    public void affectNeighborsAfterRemoval(Object thisBlock, Object[] args) {
-        super.affectNeighborsAfterRemoval(thisBlock, args);
-        // Drop the machine's stored items when the block is broken. args[1]=Level, args[2]=BlockPos.
-        try {
-            Level level = (Level) args[1];
-            BlockPos nmsPos = (BlockPos) args[2];
-            net.momirealms.craftengine.core.block.entity.BlockEntity be =
-                    dev.arubik.craftengine.block.entity.BukkitBlockEntityTypes.getIfLoaded(level, nmsPos);
-            if (be != null && be.controller instanceof AbstractMachineBlockEntity m) {
-                m.dropAllContents(level, nmsPos);
             }
-        } catch (Throwable ignored) {
+            return new MachineBlockBehavior(block, faces, (EnumProperty<Direction>)hProp, (EnumProperty<Direction>)vProp, ioConfig);
         }
     }
 }
+

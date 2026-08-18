@@ -1,39 +1,44 @@
+/*
+ * Decompiled with CFR 0.152.
+ */
 package dev.arubik.craftengine.machine.recipe;
 
 import dev.arubik.craftengine.fluid.FluidStack;
+import dev.arubik.craftengine.machine.recipe.RecipeInput;
 
-public class FluidInput implements RecipeInput {
+public class FluidInput
+implements RecipeInput {
     private final FluidStack required;
     private final boolean exactNbt;
 
     public FluidInput(FluidStack required, boolean exactNbt) {
         this.required = required;
         this.exactNbt = exactNbt;
-    } // No default constructor with only FluidStack to avoid ambiguity if expanded
-      // later, kept simple.
+    }
 
     @Override
     public boolean matches(FluidStack stack) {
-        if (stack == null || stack.isEmpty())
+        if (stack == null || stack.isEmpty()) {
             return false;
-        if (stack.getAmount() < required.getAmount())
+        }
+        if (stack.getAmount() < this.required.getAmount()) {
             return false;
-
-        return required.isFluidEqual(stack); // Assumes isFluidEqual checks Type + NBT (usually)
-        // If isFluidEqual only checks type, we might need specific logic.
-        // Assuming standard FluidStack behavior: matches Type and Tag/NBT.
+        }
+        return this.required.isFluidEqual(stack);
     }
 
     public FluidStack getFluid() {
-        return required;
+        return this.required;
     }
 
+    @Override
     public int getAmount() {
-        return required.getAmount();
+        return this.required.getAmount();
     }
 
     @Override
     public boolean isEmpty() {
-        return required.isEmpty();
+        return this.required.isEmpty();
     }
 }
+

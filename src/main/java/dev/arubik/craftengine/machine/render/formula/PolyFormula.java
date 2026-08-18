@@ -462,8 +462,8 @@ public final class PolyFormula {
                 if (args.isEmpty()) yield PolyValue.of("");
                 String fmt = args.get(0).asStr();
                 Object[] fmtArgs = args.subList(1, args.size()).stream()
-                    .map(a -> a instanceof PolyValue.Num n ? (Object) n.value()
-                            : a instanceof PolyValue.Bool b ? (Object) b.value()
+                    .map(a -> a instanceof PolyValue.Num n ?  n.value()
+                            : a instanceof PolyValue.Bool b ?  b.value()
                             : a.asStr())
                     .toArray();
                 try { yield PolyValue.of(String.format(fmt, fmtArgs)); }

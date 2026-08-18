@@ -1,8 +1,23 @@
+/*
+ * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  net.minecraft.core.BlockPos
+ *  net.momirealms.craftengine.core.util.Key
+ *  org.bukkit.Location
+ *  org.bukkit.World
+ *  org.bukkit.entity.Player
+ *  org.bukkit.event.Cancellable
+ *  org.bukkit.event.Event
+ *  org.bukkit.event.HandlerList
+ *  org.jetbrains.annotations.Nullable
+ */
 package dev.arubik.craftengine.contraption.event;
 
 import java.util.Collections;
 import java.util.Set;
-
+import net.minecraft.core.BlockPos;
+import net.momirealms.craftengine.core.util.Key;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
@@ -11,26 +26,10 @@ import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 import org.jetbrains.annotations.Nullable;
 
-import net.minecraft.core.BlockPos;
-import net.momirealms.craftengine.core.util.Key;
-
-/**
- * Fired on the main thread just BEFORE a contraption assembles — after the block set to be
- * captured has been resolved (glue scan + multiblock expansion), but before any real block is
- * read or removed from the world (see {@code ContraptionAssembler#assemble}/
- * {@code #assemblePiston} and {@code MinecartBearing#assemble} for the exact call sites).
- *
- * <p>{@linkplain Cancellable Cancelling} this event aborts the assembly entirely: no blocks are
- * captured, no {@code ContraptionEntity} is created, and the triggering assemble method returns
- * {@code null} exactly as it would for an empty structure. When no listener cancels, behavior is
- * identical to before this event existed.
- *
- * <p>The counterpart {@link ContraptionAssembledEvent} fires afterward, only on success.
- */
-public class ContraptionAssembleEvent extends Event implements Cancellable {
-
+public class ContraptionAssembleEvent
+extends Event
+implements Cancellable {
     private static final HandlerList HANDLERS = new HandlerList();
-
     private final World world;
     private final BlockPos bearing;
     private final Key type;
@@ -38,16 +37,7 @@ public class ContraptionAssembleEvent extends Event implements Cancellable {
     private final Player cause;
     private boolean cancelled;
 
-    /**
-     * @param world             the real Bukkit world the bearing lives in
-     * @param bearing           the bearing block's world position (local-space origin of the contraption)
-     * @param type              which contraption type is assembling
-     * @param capturedPositions the block positions about to be captured — wrapped unmodifiable, never null
-     * @param cause             the player who triggered the assembly, or {@code null} if unknown
-     *                          (e.g. a redstone-driven piston or a persistence rehydrate)
-     */
-    public ContraptionAssembleEvent(World world, BlockPos bearing, Key type,
-            Set<BlockPos> capturedPositions, @Nullable Player cause) {
+    public ContraptionAssembleEvent(World world, BlockPos bearing, Key type, Set<BlockPos> capturedPositions, @Nullable Player cause) {
         this.world = world;
         this.bearing = bearing;
         this.type = type;
@@ -55,48 +45,39 @@ public class ContraptionAssembleEvent extends Event implements Cancellable {
         this.cause = cause;
     }
 
-    /** The real Bukkit world the bearing lives in. */
     public World getWorld() {
-        return world;
+        return this.world;
     }
 
-    /** The bearing block's world position (NMS {@link BlockPos}), the contraption's local-space origin. */
     public BlockPos getBearingBlockPos() {
-        return bearing;
+        return this.bearing;
     }
 
-    /** Bukkit-friendly view of {@link #getBearingBlockPos()} in {@link #getWorld()}. */
     public Location getBearingLocation() {
-        return new Location(world, bearing.getX(), bearing.getY(), bearing.getZ());
+        return new Location(this.world, (double)this.bearing.getX(), (double)this.bearing.getY(), (double)this.bearing.getZ());
     }
 
-    /** Which contraption type is assembling. */
     public Key getType() {
-        return type;
+        return this.type;
     }
 
-    /** The (unmodifiable) set of block positions about to be captured out of the real world. */
     public Set<BlockPos> getCapturedPositions() {
-        return capturedPositions;
+        return this.capturedPositions;
     }
 
-    /** The player who triggered the assembly, or {@code null} if it was not player-initiated. */
     @Nullable
     public Player getCause() {
-        return cause;
+        return this.cause;
     }
 
-    @Override
     public boolean isCancelled() {
-        return cancelled;
+        return this.cancelled;
     }
 
-    @Override
     public void setCancelled(boolean cancel) {
         this.cancelled = cancel;
     }
 
-    @Override
     public HandlerList getHandlers() {
         return HANDLERS;
     }
@@ -105,3 +86,4 @@ public class ContraptionAssembleEvent extends Event implements Cancellable {
         return HANDLERS;
     }
 }
+

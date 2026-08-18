@@ -1,7 +1,19 @@
+/*
+ * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  net.minecraft.core.BlockPos
+ *  net.minecraft.world.level.Level
+ */
 package dev.arubik.craftengine.fluid;
 
-import dev.arubik.craftengine.util.CustomDataType;
+import dev.arubik.craftengine.block.entity.PersistentBlockEntity;
+import dev.arubik.craftengine.fluid.FluidCarrierImpl;
+import dev.arubik.craftengine.fluid.FluidKeys;
+import dev.arubik.craftengine.fluid.FluidStack;
+import dev.arubik.craftengine.fluid.FluidType;
 import dev.arubik.craftengine.util.TypedKey;
+import java.util.function.Consumer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 
@@ -9,7 +21,6 @@ public class FluidTank {
     private final String name;
     private final int capacity;
     private final TypedKey<FluidStack> key;
-
     private final FluidType filter;
 
     public FluidTank(String name, int capacity) {
@@ -40,55 +51,52 @@ public class FluidTank {
         this.filter = filter;
     }
 
-    // We need to match the NbtType used in FluidKeys.
-    // If FluidKeys uses a custom DataType, we must reuse it.
-
     public TypedKey<FluidStack> getKey() {
-        return key;
+        return this.key;
     }
 
-    /** The tank's name, which a menu button targets to empty just this one. */
     public String getName() {
-        return name;
+        return this.name;
     }
 
     public int getCapacity() {
-        return capacity;
+        return this.capacity;
     }
 
     public boolean isFiltered() {
-        return filter != null;
+        return this.filter != null;
     }
 
     public FluidType getFilter() {
-        return filter;
+        return this.filter;
     }
 
     public boolean allows(FluidType fluid) {
-        return filter == null || filter == fluid;
+        return this.filter == null || this.filter == fluid;
     }
 
     public boolean allows(FluidStack fluid) {
-        return allows(fluid.getType());
+        return this.allows(fluid.getType());
     }
 
     public FluidStack getFluid(Level level, BlockPos pos) {
-        dev.arubik.craftengine.block.entity.PersistentBlockEntity be = dev.arubik.craftengine.block.entity.PersistentBlockEntity
-                .getIfLoaded(level, pos);
-        return be != null ? be.getOrDefault(key, FluidStack.EMPTY) : FluidStack.EMPTY;
+        PersistentBlockEntity be = PersistentBlockEntity.getIfLoaded(level, pos);
+        return be != null ? be.getOrDefault(this.key, FluidStack.EMPTY) : FluidStack.EMPTY;
     }
 
     public int insert(Level level, BlockPos pos, FluidStack stack) {
-        if (!allows(stack))
+        if (!this.allows(stack)) {
             return 0;
-        return FluidCarrierImpl.insertFluid(level, pos, stack, capacity, 0, key);
+        }
+        return FluidCarrierImpl.insertFluid(level, pos, stack, this.capacity, 0, this.key);
     }
 
-    public int extract(Level level, BlockPos pos, int amount, java.util.function.Consumer<FluidStack> drained) {
-        return FluidCarrierImpl.extractFluid(level, pos, amount, drained, key);
+    public int extract(Level level, BlockPos pos, int amount, Consumer<FluidStack> drained) {
+        return FluidCarrierImpl.extractFluid(level, pos, amount, drained, this.key);
     }
 
     public void deplete(Level level, BlockPos pos) {
-        FluidCarrierImpl.extractFluid(level, pos, Integer.MAX_VALUE, null, key);
+        FluidCarrierImpl.extractFluid(level, pos, Integer.MAX_VALUE, null, this.key);
     }
 }
+

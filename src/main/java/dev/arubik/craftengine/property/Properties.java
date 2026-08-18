@@ -1,41 +1,44 @@
+/*
+ * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  net.minecraft.world.level.block.state.properties.RedstoneSide
+ *  net.momirealms.craftengine.core.block.property.EnumProperty
+ *  net.momirealms.craftengine.core.block.property.Properties
+ *  net.momirealms.craftengine.core.block.property.PropertyFactory
+ *  net.momirealms.craftengine.core.util.Key
+ */
 package dev.arubik.craftengine.property;
 
+import dev.arubik.craftengine.multiblock.MachineMode;
+import dev.arubik.craftengine.multiblock.MultiBlockRole;
+import dev.arubik.craftengine.multiblock.impl.MachineType;
+import dev.arubik.craftengine.property.ConnectedFace;
+import dev.arubik.craftengine.property.TankFacing;
+import dev.arubik.craftengine.property.TankShape;
 import net.minecraft.world.level.block.state.properties.RedstoneSide;
 import net.momirealms.craftengine.core.block.property.EnumProperty;
+import net.momirealms.craftengine.core.block.property.PropertyFactory;
 import net.momirealms.craftengine.core.util.Key;
 
 public class Properties {
+    public static final Key REDSTONE_SIDE = Key.of((String)"polyfills:redstone_side");
+    public static final Key CONNECTED_FACE = Key.of((String)"polyfills:connected_face");
+    public static final Key FLUID_TYPE = Key.of((String)"polyfills:fluid_type");
+    public static final Key MULTIBLOCK_ROLE = Key.of((String)"polyfills:multiblock_role");
+    public static final Key MACHINE_MODE = Key.of((String)"polyfills:machine_mode");
+    public static final Key MACHINE_TYPE = Key.of((String)"polyfills:machine_type");
+    public static final Key TANK_SHAPE = Key.of((String)"polyfills:tank_shape");
+    public static final Key TANK_FACING = Key.of((String)"polyfills:tank_facing");
 
-        public static final Key REDSTONE_SIDE = Key.of("polyfills:redstone_side");
-        public static final Key CONNECTED_FACE = Key.of("polyfills:connected_face");
-        public static final Key FLUID_TYPE = Key.of("polyfills:fluid_type");
-        public static final Key MULTIBLOCK_ROLE = Key.of("polyfills:multiblock_role");
-        public static final Key MACHINE_MODE = Key.of("polyfills:machine_mode");
-        public static final Key MACHINE_TYPE = Key.of("polyfills:machine_type");
-        public static final Key TANK_SHAPE = Key.of("polyfills:tank_shape");
-        public static final Key TANK_FACING = Key.of("polyfills:tank_facing");
-
-        // floor wall ceiling
-        public static void register() {
-                net.momirealms.craftengine.core.block.property.Properties.register(REDSTONE_SIDE,
-                                EnumProperty.factory(RedstoneSide.class));
-                net.momirealms.craftengine.core.block.property.Properties.register(CONNECTED_FACE,
-                                EnumProperty.factory(ConnectedFace.class));
-                // NOTE: polyfills:fluid_type is deliberately NOT registered any more. Tanks now
-                // declare their fluid appearance with CraftEngine's built-in `string` property,
-                // whose value set lives in the block config:
-                //   fluidtype: { type: string, default: empty, values: [empty, water, ...] }
-                // A custom enum property would have forced the set of liquids closed in Java,
-                // which is exactly what the data-driven FluidType registry exists to avoid.
-                net.momirealms.craftengine.core.block.property.Properties.register(MULTIBLOCK_ROLE,
-                                EnumProperty.factory(dev.arubik.craftengine.multiblock.MultiBlockRole.class));
-                net.momirealms.craftengine.core.block.property.Properties.register(MACHINE_MODE,
-                                EnumProperty.factory(dev.arubik.craftengine.multiblock.MachineMode.class));
-                net.momirealms.craftengine.core.block.property.Properties.register(MACHINE_TYPE,
-                                EnumProperty.factory(dev.arubik.craftengine.multiblock.impl.MachineType.class));
-                net.momirealms.craftengine.core.block.property.Properties.register(TANK_SHAPE,
-                                EnumProperty.factory(TankShape.class));
-                net.momirealms.craftengine.core.block.property.Properties.register(TANK_FACING,
-                                EnumProperty.factory(TankFacing.class));
-        }
+    public static void register() {
+        net.momirealms.craftengine.core.block.property.Properties.register((Key)REDSTONE_SIDE, (PropertyFactory)EnumProperty.factory(RedstoneSide.class));
+        net.momirealms.craftengine.core.block.property.Properties.register((Key)CONNECTED_FACE, (PropertyFactory)EnumProperty.factory(ConnectedFace.class));
+        net.momirealms.craftengine.core.block.property.Properties.register((Key)MULTIBLOCK_ROLE, (PropertyFactory)EnumProperty.factory(MultiBlockRole.class));
+        net.momirealms.craftengine.core.block.property.Properties.register((Key)MACHINE_MODE, (PropertyFactory)EnumProperty.factory(MachineMode.class));
+        net.momirealms.craftengine.core.block.property.Properties.register((Key)MACHINE_TYPE, (PropertyFactory)EnumProperty.factory(MachineType.class));
+        net.momirealms.craftengine.core.block.property.Properties.register((Key)TANK_SHAPE, (PropertyFactory)EnumProperty.factory(TankShape.class));
+        net.momirealms.craftengine.core.block.property.Properties.register((Key)TANK_FACING, (PropertyFactory)EnumProperty.factory(TankFacing.class));
+    }
 }
+

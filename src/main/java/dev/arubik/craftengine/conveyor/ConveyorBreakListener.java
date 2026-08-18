@@ -1,56 +1,71 @@
+/*
+ * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  net.momirealms.craftengine.core.block.entity.BlockEntity
+ *  net.momirealms.craftengine.core.block.entity.BlockEntityController
+ *  net.momirealms.craftengine.core.world.BlockPos
+ *  net.momirealms.craftengine.core.world.CEWorld
+ *  org.bukkit.block.Block
+ *  org.bukkit.event.EventHandler
+ *  org.bukkit.event.EventPriority
+ *  org.bukkit.event.Listener
+ *  org.bukkit.event.block.BlockBreakEvent
+ */
 package dev.arubik.craftengine.conveyor;
 
+import dev.arubik.craftengine.conveyor.AbstractRouterBlockEntity;
+import dev.arubik.craftengine.conveyor.ConveyorBehavior;
+import dev.arubik.craftengine.conveyor.ConveyorBlockEntity;
+import dev.arubik.craftengine.conveyor.FunnelBlockEntity;
+import dev.arubik.craftengine.util.CeWorlds;
+import net.momirealms.craftengine.core.block.entity.BlockEntity;
+import net.momirealms.craftengine.core.block.entity.BlockEntityController;
+import net.momirealms.craftengine.core.world.BlockPos;
+import net.momirealms.craftengine.core.world.CEWorld;
 import org.bukkit.block.Block;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 
-import net.momirealms.craftengine.bukkit.world.BukkitWorld;
-import net.momirealms.craftengine.core.world.BlockPos;
-import net.momirealms.craftengine.core.world.CEWorld;
-
-/**
- * Runs the conveyor break/teardown logic from a Bukkit {@link BlockBreakEvent}.
- *
- * <p>CraftEngine's {@code affectNeighborsAfterRemoval} behavior callback proved
- * unreliable for player breaks (especially in creative), so the belt teardown
- * (drop carried items, move/destroy segments) is driven here instead. The
- * behavior callback still runs for non-player removals (pistons); a small
- * handled-set prevents double processing when both paths fire for one break.</p>
- */
-public final class ConveyorBreakListener implements Listener {
-
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+public final class ConveyorBreakListener
+implements Listener {
+    @EventHandler(priority=EventPriority.MONITOR, ignoreCancelled=true)
     public void onBreak(BlockBreakEvent event) {
-        Block block = event.getBlock();
+        ConveyorBlockEntity seg;
         CEWorld world;
+        Block block = event.getBlock();
         try {
-            world = dev.arubik.craftengine.util.CeWorlds.of(block.getWorld()).storageWorld();
-        } catch (Throwable t) {
+            world = CeWorlds.of(block.getWorld()).storageWorld();
+        }
+        catch (Throwable t) {
             return;
         }
-        if (world == null)
+        if (world == null) {
             return;
+        }
         BlockPos pos = new BlockPos(block.getX(), block.getY(), block.getZ());
-        // Funnel / router (splitter/merger) also hold an in-transit render display whose
-        // affectNeighborsAfterRemoval is unreliable on creative player breaks -> despawn here.
-        net.momirealms.craftengine.core.block.entity.BlockEntity be = world.getBlockEntityAtIfLoaded(pos);
+        BlockEntity be = world.getBlockEntityAtIfLoaded(pos);
         if (be != null) {
-            if (be.controller instanceof FunnelBlockEntity f) {
+            BlockEntityController blockEntityController = be.controller;
+            if (blockEntityController instanceof FunnelBlockEntity) {
+                FunnelBlockEntity f = (FunnelBlockEntity)blockEntityController;
                 f.dropTransit();
                 return;
             }
-            if (be.controller instanceof AbstractRouterBlockEntity r) {
+            blockEntityController = be.controller;
+            if (blockEntityController instanceof AbstractRouterBlockEntity) {
+                AbstractRouterBlockEntity r = (AbstractRouterBlockEntity)blockEntityController;
                 r.dropAndDespawn();
                 return;
             }
         }
-        ConveyorBlockEntity seg = ConveyorBlockEntity.conveyorAt(world, pos);
-        if (seg == null)
+        if ((seg = ConveyorBlockEntity.conveyorAt(world, pos)) == null) {
             return;
-        // Tell the behavior callback we already handled this position (no double run).
+        }
         ConveyorBehavior.markListenerHandled(block.getX(), block.getY(), block.getZ());
         seg.onBroken(world, pos, seg.facing());
     }
 }
+

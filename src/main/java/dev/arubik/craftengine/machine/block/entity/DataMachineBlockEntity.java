@@ -1,10 +1,67 @@
+/*
+ * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  net.kyori.adventure.text.Component
+ *  net.kyori.adventure.text.format.NamedTextColor
+ *  net.kyori.adventure.text.format.TextColor
+ *  net.minecraft.core.BlockPos
+ *  net.minecraft.core.Direction
+ *  net.minecraft.core.Direction$Axis
+ *  net.minecraft.core.Direction$AxisDirection
+ *  net.minecraft.core.Vec3i
+ *  net.minecraft.server.level.ServerLevel
+ *  net.minecraft.server.level.ServerPlayer
+ *  net.minecraft.world.Container
+ *  net.minecraft.world.entity.player.Player
+ *  net.minecraft.world.item.ItemStack
+ *  net.minecraft.world.level.Level
+ *  net.minecraft.world.level.block.state.BlockState
+ *  net.momirealms.craftengine.bukkit.util.BlockStateUtils
+ *  net.momirealms.craftengine.core.block.BlockDefinition
+ *  net.momirealms.craftengine.core.block.ImmutableBlockState
+ *  net.momirealms.craftengine.core.block.entity.BlockEntity
+ *  net.momirealms.craftengine.core.block.entity.BlockEntityController
+ *  net.momirealms.craftengine.core.block.property.Property
+ *  net.momirealms.craftengine.core.entity.player.Player
+ *  net.momirealms.craftengine.core.util.Key
+ *  net.momirealms.craftengine.core.world.BlockPos
+ *  net.momirealms.craftengine.core.world.CEWorld
+ *  net.momirealms.craftengine.core.world.ChunkPos
+ *  org.bukkit.Material
+ *  org.bukkit.World
+ *  org.bukkit.craftbukkit.inventory.CraftInventory
+ *  org.bukkit.entity.Player
+ *  org.bukkit.event.inventory.ClickType
+ *  org.bukkit.event.inventory.InventoryType
+ *  org.bukkit.inventory.Inventory
+ *  org.bukkit.inventory.ItemStack
+ *  org.bukkit.inventory.meta.ItemMeta
+ *  org.joml.Quaternionf
+ */
 package dev.arubik.craftengine.machine.block.entity;
 
+import dev.arubik.craftengine.block.entity.BukkitBlockEntityTypes;
+import dev.arubik.craftengine.conveyor.ConveyorItemDisplay;
+import dev.arubik.craftengine.fluid.FluidStack;
 import dev.arubik.craftengine.fluid.FluidTank;
 import dev.arubik.craftengine.fluid.FluidType;
+import dev.arubik.craftengine.gas.GasStack;
 import dev.arubik.craftengine.gas.GasTank;
 import dev.arubik.craftengine.gas.GasType;
 import dev.arubik.craftengine.machine.MachineDefinition;
+import dev.arubik.craftengine.machine.attribute.MachineAttributes;
+import dev.arubik.craftengine.machine.block.entity.AbstractMachineBlockEntity;
+import dev.arubik.craftengine.machine.menu.GuiTitles;
+import dev.arubik.craftengine.machine.menu.MachineMenu;
+import dev.arubik.craftengine.machine.menu.MachineMenuConfig;
+import dev.arubik.craftengine.machine.menu.MenuText;
+import dev.arubik.craftengine.machine.menu.OverclockMenu;
+import dev.arubik.craftengine.machine.menu.RecipeInfoIcon;
+import dev.arubik.craftengine.machine.menu.UpgradeMenu;
+import dev.arubik.craftengine.machine.menu.bar.BarDefinition;
+import dev.arubik.craftengine.machine.menu.bar.MachineBar;
+import dev.arubik.craftengine.machine.menu.bar.MachineBars;
 import dev.arubik.craftengine.machine.menu.layout.MachineLayout;
 import dev.arubik.craftengine.machine.menu.layout.MenuSlotType;
 import dev.arubik.craftengine.machine.recipe.AbstractProcessingRecipe;
@@ -15,141 +72,404 @@ import dev.arubik.craftengine.machine.recipe.RecipeInput;
 import dev.arubik.craftengine.machine.recipe.RecipeOutput;
 import dev.arubik.craftengine.machine.recipe.TagInput;
 import dev.arubik.craftengine.machine.recipe.loader.RecipeManager;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.Level;
-
+import dev.arubik.craftengine.machine.render.ModelRendersDriven;
+import dev.arubik.craftengine.machine.render.RendererManager;
+import dev.arubik.craftengine.machine.render.RendererSpec;
+import dev.arubik.craftengine.machine.render.formula.InventoryClass;
+import dev.arubik.craftengine.machine.render.formula.PolyContext;
+import dev.arubik.craftengine.machine.render.formula.PolyScript;
+import dev.arubik.craftengine.machine.render.formula.PolyScriptRegistry;
+import dev.arubik.craftengine.machine.render.variable.MachineRenderContext;
+import dev.arubik.craftengine.machine.upgrade.UpgradeModifiers;
+import dev.arubik.craftengine.network.NetworkClass;
+import dev.arubik.craftengine.rotation.RpmConsumer;
+import dev.arubik.craftengine.rotation.RpmProvider;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
-
-import dev.arubik.craftengine.machine.menu.MachineMenu;
-import dev.arubik.craftengine.machine.menu.MachineMenuConfig;
-import dev.arubik.craftengine.machine.menu.bar.MachineBar;
-import dev.arubik.craftengine.machine.menu.bar.MachineBars;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+import java.util.WeakHashMap;
+import java.util.stream.Collectors;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextColor;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.core.Vec3i;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.Container;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
+import net.momirealms.craftengine.bukkit.util.BlockStateUtils;
+import net.momirealms.craftengine.core.block.BlockDefinition;
+import net.momirealms.craftengine.core.block.ImmutableBlockState;
+import net.momirealms.craftengine.core.block.entity.BlockEntity;
+import net.momirealms.craftengine.core.block.entity.BlockEntityController;
+import net.momirealms.craftengine.core.block.property.Property;
+import net.momirealms.craftengine.core.entity.player.Player;
+import net.momirealms.craftengine.core.util.Key;
+import net.momirealms.craftengine.core.world.CEWorld;
+import net.momirealms.craftengine.core.world.ChunkPos;
+import org.bukkit.Material;
+import org.bukkit.World;
+import org.bukkit.craftbukkit.inventory.CraftInventory;
+import org.bukkit.event.inventory.ClickType;
+import org.bukkit.event.inventory.InventoryType;
+import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
+import org.joml.Quaternionf;
 
-/**
- * The one block entity behind every data-defined machine.
- *
- * <p>
- * Implements the five abstract hooks of {@link AbstractMachineBlockEntity} by
- * reading a {@link MachineDefinition} rather than by hardcoding them, which is
- * what previously forced a class per machine. The logic here is the same
- * item-in/recipe/item-out loop the existing Java machines already share; the
- * bespoke ones (pumps scanning for a vein, the fan's process families) keep
- * their own classes.
- */
-public class DataMachineBlockEntity extends AbstractMachineBlockEntity
-        implements dev.arubik.craftengine.rotation.RpmConsumer,
-                   dev.arubik.craftengine.machine.render.ModelRendersDriven {
-
+public class DataMachineBlockEntity
+extends AbstractMachineBlockEntity
+implements RpmConsumer,
+RpmProvider,
+ModelRendersDriven {
     private final MachineDefinition definition;
-    private dev.arubik.craftengine.machine.render.RendererManager rendererManager;
-
-    // ---- rotational power (only live when the definition declares consumes_stress) ----
-
-    /** Delivered rpm from the strongest adjacent motor; 0 when unpowered or overstressed. */
-    private float inputRpm = 0f;
-    private dev.arubik.craftengine.rotation.RpmProvider activeMotor;
-    /** SU the current recipe demands, reported to the motor so it can overstress. */
+    private RendererManager rendererManager;
+    private ConveyorItemDisplay[] specDisplays;
+    private int[] specDisplayHashes;
+    private ServerLevel lastKnownLevel;
+    public static volatile boolean SPEC_DISPLAY_DEBUG = false;
+    public static volatile boolean SCRIPT_DEBUG = false;
+    private static final Set<DataMachineBlockEntity> INSTANCES = Collections.newSetFromMap(new WeakHashMap());
+    private float inputRpm = 0.0f;
+    private final List<RpmProvider> activeMotors = new ArrayList<RpmProvider>();
+    private RpmProvider activeMotor;
     private int lastSuLoad = 0;
     private int stressGrace = 0;
+    private int sourceDistance = Integer.MAX_VALUE;
+    private float rpmSourceOutput = 0.0f;
+    private boolean rpmSourceActive = false;
+    private MachineMenuConfig menuConfig = MachineMenuConfig.parse(key -> null);
+    private List<MachineBar> bars = List.of();
+    private boolean invalidating = false;
+    private int actionTickCounter = 0;
+    private int page = 0;
+    private float overclock = 0.0f;
+    private MachineMenu active;
+    private int curUnlocked = -1;
+    private double curOverclockLimit = 0.0;
+    private double curFuelEff = 0.0;
+    private double curGeneration = 0.0;
+    private Map<Key, List<MachineAttributes.Mod>> upgradeDefs = Map.of();
+    private double genBuffer = 0.0;
 
-    public DataMachineBlockEntity(net.momirealms.craftengine.core.block.entity.BlockEntity blockEntity,
-            MachineDefinition definition) {
-        super(blockEntity, definition.menuSize());
-        this.definition = definition;
+    public static int reloadAll() {
+        int n = 0;
+        for (DataMachineBlockEntity be : new ArrayList<DataMachineBlockEntity>(INSTANCES)) {
+            if (be.rendererManager != null) {
+                try {
+                    be.rendererManager.close();
+                }
+                catch (Throwable throwable) {
+                    // empty catch block
+                }
+            }
+            be.rendererManager = null;
+            be.despawnSpecDisplays();
+            ++n;
+        }
+        return n;
+    }
 
-        for (MachineDefinition.TankSpec spec : definition.fluidTanks()) {
-            FluidType filter = spec.filter() == null ? null : FluidType.REGISTRY.get(spec.filter());
-            addFluidTank(filter == null ? new FluidTank(spec.name(), spec.capacity())
-                    : new FluidTank(spec.name(), spec.capacity(), filter));
-        }
-        for (MachineDefinition.TankSpec spec : definition.gasTanks()) {
-            GasType filter = spec.filter() == null ? null : GasType.REGISTRY.get(spec.filter());
-            addGasTank(filter == null ? new GasTank(spec.name(), spec.capacity())
-                    : new GasTank(spec.name(), spec.capacity(), filter));
-        }
-        if (definition.io() != null)
-            setIOConfiguration(definition.io());
-        if (!definition.renderers().isEmpty()) {
-            this.rendererManager = new dev.arubik.craftengine.machine.render.RendererManager(
-                    definition.renderers(), definition.variables());
+    public int sourceDistance() {
+        return this.sourceDistance;
+    }
+
+    public List<RpmProvider> getActiveMotors() {
+        return Collections.unmodifiableList(this.activeMotors);
+    }
+
+    public void setRpmSourceOutput(float rpm) {
+        this.rpmSourceOutput = rpm;
+        boolean bl = this.rpmSourceActive = rpm != 0.0f;
+        if (this.rpmSourceActive) {
+            this.sourceDistance = 0;
+            this.inputRpm = rpm;
         }
     }
 
     @Override
-    public dev.arubik.craftengine.machine.render.RendererManager rendererManager() {
-        return rendererManager;
+    public float getRpm() {
+        return this.rpmSourceActive ? this.rpmSourceOutput : this.inputRpm;
+    }
+
+    @Override
+    public boolean isRpmSource() {
+        return this.rpmSourceActive;
+    }
+
+    @Override
+    public float potentialRpm() {
+        if (this.rpmSourceActive) {
+            return Math.abs(this.rpmSourceOutput);
+        }
+        return this.sourceDistance < Integer.MAX_VALUE ? Math.abs(this.inputRpm) : 0.0f;
+    }
+
+    public boolean isValidOutputFace(Direction face, Level level) {
+        if (this.definition == null || !this.definition.noProcessing()) {
+            return true;
+        }
+        Set<String> same = this.definition.rpmOutputFacesRaw();
+        Set<String> inv = this.definition.rpmOutputInvertedRaw();
+        if (same.isEmpty() && inv.isEmpty() && !this.definition.rpmOutputDeclared()) {
+            return true;
+        }
+        Direction facing = this.getFacing(level);
+        return this.rpmFacesContainWithAxis(same, face, facing, level) || this.rpmFacesContainWithAxis(inv, face, facing, level);
+    }
+
+    public static boolean rpmFacesContainWithAxisStatic(Set<String> raw, Direction d, Direction facing, ServerLevel level, BlockPos pos) {
+        boolean hasAxisNames;
+        boolean bl = hasAxisNames = raw.contains("axis_pos") || raw.contains("axis_neg") || raw.contains("axis_perp");
+        if (!hasAxisNames) {
+            return DataMachineBlockEntity.rpmFacesContain(raw, d, facing);
+        }
+        try {
+            Property axisProp;
+            ImmutableBlockState cs = BlockStateUtils.getOptionalCustomBlockState(level.getBlockState(pos)).orElse(null);
+            if (cs != null && (axisProp = ((BlockDefinition)cs.owner().value()).getProperty("axis")) != null) {
+                String axis;
+                Direction posDir = switch (axis = String.valueOf(cs.get(axisProp)).toLowerCase()) {
+                    case "x" -> Direction.EAST;
+                    case "y" -> Direction.UP;
+                    default -> Direction.SOUTH;
+                };
+                Direction.Axis cogAxis = posDir.getAxis();
+                Iterator<String> iterator = raw.iterator();
+                while (iterator.hasNext()) {
+                    boolean match;
+                    String s;
+                    if (!(match = (switch (s = iterator.next()) {
+                        case "axis_pos" -> {
+                            if (d == posDir) {
+                                yield true;
+                            }
+                            yield false;
+                        }
+                        case "axis_neg" -> {
+                            if (d == posDir.getOpposite()) {
+                                yield true;
+                            }
+                            yield false;
+                        }
+                        case "axis_perp" -> {
+                            if (d.getAxis() != cogAxis) {
+                                yield true;
+                            }
+                            yield false;
+                        }
+                        default -> false;
+                    }))) continue;
+                    return true;
+                }
+                HashSet<String> nonAxis = new HashSet<String>(raw);
+                nonAxis.remove("axis_pos");
+                nonAxis.remove("axis_neg");
+                nonAxis.remove("axis_perp");
+                if (!nonAxis.isEmpty()) {
+                    return DataMachineBlockEntity.rpmFacesContain(nonAxis, d, facing);
+                }
+                return false;
+            }
+        }
+        catch (Throwable throwable) {
+            // empty catch block
+        }
+        return DataMachineBlockEntity.rpmFacesContain(raw, d, facing);
+    }
+
+    public Direction getFacingPublic(Level level) {
+        return this.getFacing(level);
+    }
+
+    boolean rpmFacesContainWithAxis(Set<String> raw, Direction d, Direction facing, Level level) {
+        boolean hasAxisNames;
+        boolean bl = hasAxisNames = raw.contains("axis_pos") || raw.contains("axis_neg") || raw.contains("axis_perp");
+        if (!hasAxisNames) {
+            return DataMachineBlockEntity.rpmFacesContain(raw, d, facing);
+        }
+        try {
+            Property axisProp;
+            BlockState bs = level.getBlockState(this.getMachinePos());
+            ImmutableBlockState cs = BlockStateUtils.getOptionalCustomBlockState(bs).orElse(null);
+            if (cs != null && (axisProp = ((BlockDefinition)cs.owner().value()).getProperty("axis")) != null) {
+                String axis;
+                Direction posDir = switch (axis = String.valueOf(cs.get(axisProp)).toLowerCase()) {
+                    case "x" -> Direction.EAST;
+                    case "y" -> Direction.UP;
+                    default -> Direction.SOUTH;
+                };
+                Direction.Axis cogAxis = posDir.getAxis();
+                Iterator<String> iterator = raw.iterator();
+                while (iterator.hasNext()) {
+                    boolean match;
+                    String s;
+                    if (!(match = (switch (s = iterator.next()) {
+                        case "axis_pos" -> {
+                            if (d == posDir) {
+                                yield true;
+                            }
+                            yield false;
+                        }
+                        case "axis_neg" -> {
+                            if (d == posDir.getOpposite()) {
+                                yield true;
+                            }
+                            yield false;
+                        }
+                        case "axis_perp" -> {
+                            if (d.getAxis() != cogAxis) {
+                                yield true;
+                            }
+                            yield false;
+                        }
+                        default -> false;
+                    }))) continue;
+                    return true;
+                }
+                HashSet<String> nonAxis = new HashSet<String>(raw);
+                nonAxis.remove("axis_pos");
+                nonAxis.remove("axis_neg");
+                nonAxis.remove("axis_perp");
+                if (!nonAxis.isEmpty()) {
+                    return DataMachineBlockEntity.rpmFacesContain(nonAxis, d, facing);
+                }
+                return false;
+            }
+        }
+        catch (Throwable throwable) {
+            // empty catch block
+        }
+        return DataMachineBlockEntity.rpmFacesContain(raw, d, facing);
+    }
+
+    @Override
+    public float getPower() {
+        return this.inputRpm;
+    }
+
+    @Override
+    public void reportStressLoad(float su) {
+        for (RpmProvider m : this.activeMotors) {
+            m.reportStressLoad(su);
+        }
+        if (this.activeMotors.isEmpty() && this.activeMotor != null) {
+            this.activeMotor.reportStressLoad(su);
+        }
+    }
+
+    public DataMachineBlockEntity(BlockEntity blockEntity, MachineDefinition definition) {
+        super(blockEntity, definition.menuSize());
+        FluidType filter;
+        this.definition = definition;
+        for (MachineDefinition.TankSpec spec : definition.fluidTanks()) {
+            filter = spec.filter() == null ? null : FluidType.REGISTRY.get(spec.filter());
+            this.addFluidTank(filter == null ? new FluidTank(spec.name(), spec.capacity()) : new FluidTank(spec.name(), spec.capacity(), filter));
+        }
+        for (MachineDefinition.TankSpec spec : definition.gasTanks()) {
+            filter = spec.filter() == null ? null : GasType.REGISTRY.get(spec.filter());
+            this.addGasTank(filter == null ? new GasTank(spec.name(), spec.capacity()) : new GasTank(spec.name(), spec.capacity(), (GasType)(filter)));
+        }
+        if (definition.io() != null) {
+            this.setIOConfiguration(definition.io());
+        }
+        if (!definition.renderers().isEmpty()) {
+            this.rendererManager = new RendererManager(definition.renderers(), definition.variables());
+            int n = definition.renderers().size();
+            this.specDisplays = new ConveyorItemDisplay[n];
+            this.specDisplayHashes = new int[n];
+        }
+        INSTANCES.add(this);
+    }
+
+    private void ensureRenderer() {
+        if (this.rendererManager == null) {
+            MachineDefinition eff;
+            MachineDefinition fresh = MachineDefinition.REGISTRY.get(this.definition.id());
+            MachineDefinition machineDefinition = eff = fresh != null ? fresh : this.definition;
+            if (!eff.renderers().isEmpty()) {
+                this.rendererManager = new RendererManager(eff.renderers(), eff.variables());
+                int n = eff.renderers().size();
+                this.specDisplays = new ConveyorItemDisplay[n];
+                this.specDisplayHashes = new int[n];
+            }
+        }
+    }
+
+    @Override
+    public RendererManager rendererManager() {
+        return this.rendererManager;
     }
 
     public MachineDefinition definition() {
-        return definition;
+        return this.definition;
     }
 
     @Override
     protected String getMachineId() {
-        return definition.recipeType();
+        return this.definition.recipeType();
     }
 
     @Override
     public int[] getInputSlots() {
-        return definition.inputSlots();
+        return this.definition.inputSlots();
     }
 
     @Override
     public int[] getOutputSlots() {
-        return definition.outputSlots();
+        return this.definition.outputSlots();
     }
 
     @Override
     public int[] getFuelSlots() {
-        return definition.fuelSlots();
+        return this.definition.fuelSlots();
     }
 
     @Override
     public int[] getUpgradeSlots() {
-        return definition.upgrades().slots();
+        return this.definition.upgrades().slots();
     }
-
-    // ------------------------------------------------------------- recipes
 
     @Override
     protected AbstractProcessingRecipe getMatchingRecipe(Level level) {
-        for (AbstractProcessingRecipe recipe : RecipeManager.getRecipes(getMachineId()))
-            if (matchingInputSlot(recipe) >= 0)
-                return recipe;
+        for (AbstractProcessingRecipe recipe : RecipeManager.getRecipes(this.getMachineId())) {
+            if (this.matchingInputSlot(recipe) < 0) continue;
+            return recipe;
+        }
         return null;
     }
 
-    /**
-     * The input slot holding the item this recipe wants, or -1.
-     *
-     * <p>
-     * Recipes with no item input (a pure fluid or gas conversion) match on slot 0
-     * of the input list so the caller still gets a non-negative answer.
-     */
     protected int matchingInputSlot(AbstractProcessingRecipe recipe) {
         boolean wantsItem = false;
-        for (RecipeInput input : recipe.getInputs())
-            if (isItemInput(input))
-                wantsItem = true;
-        if (!wantsItem)
-            return definition.inputSlots().length > 0 ? definition.inputSlots()[0] : 0;
-
-        for (int slot : definition.inputSlots()) {
-            ItemStack stack = getItem(slot);
-            if (stack == null || stack.isEmpty())
-                continue;
+        for (RecipeInput input : recipe.getInputs()) {
+            if (!DataMachineBlockEntity.isItemInput(input)) continue;
+            wantsItem = true;
+        }
+        if (!wantsItem) {
+            return this.definition.inputSlots().length > 0 ? this.definition.inputSlots()[0] : 0;
+        }
+        for (Object slot : this.definition.inputSlots()) {
+            net.minecraft.world.item.ItemStack stack = this.getItem((int)slot);
+            if (stack == null || stack.isEmpty()) continue;
             boolean all = true;
             for (RecipeInput input : recipe.getInputs()) {
-                if (!isItemInput(input))
-                    continue;
-                if (!input.matches(stack) || stack.getCount() < input.getAmount()) {
-                    all = false;
-                    break;
-                }
+                if (!DataMachineBlockEntity.isItemInput(input) || input.matches(stack) && stack.getCount() >= input.getAmount()) continue;
+                all = false;
+                break;
             }
-            if (all)
-                return slot;
+            if (!all) continue;
+            return (int)slot;
         }
         return -1;
     }
@@ -160,44 +480,33 @@ public class DataMachineBlockEntity extends AbstractMachineBlockEntity
 
     @Override
     protected boolean canFitOutput(Level level, RecipeOutput output) {
-        if (!(output instanceof ItemOutput itemOutput))
-            return true; // fluid/gas/xp outputs check their own tanks when dispensed
-        ItemStack produced = (ItemStack) itemOutput.getOutput();
-        for (int slot : definition.outputSlots()) {
-            ItemStack current = getItem(slot);
-            if (current == null || current.isEmpty())
+        if (!(output instanceof ItemOutput)) {
+            return true;
+        }
+        ItemOutput itemOutput = (ItemOutput)output;
+        net.minecraft.world.item.ItemStack produced = (net.minecraft.world.item.ItemStack)itemOutput.getOutput();
+        for (int slot : this.definition.outputSlots()) {
+            net.minecraft.world.item.ItemStack current = this.getItem(slot);
+            if (current == null || current.isEmpty()) {
                 return true;
-            if (ItemStack.isSameItem(current, produced)
-                    && current.getCount() + produced.getCount() <= current.getMaxStackSize())
-                return true;
+            }
+            if (!net.minecraft.world.item.ItemStack.isSameItem((net.minecraft.world.item.ItemStack)current, (net.minecraft.world.item.ItemStack)produced) || current.getCount() + produced.getCount() > current.getMaxStackSize()) continue;
+            return true;
         }
         return false;
     }
 
     @Override
     protected void consumeInputs(Level level, AbstractProcessingRecipe recipe) {
-        int slot = matchingInputSlot(recipe);
-        if (slot < 0)
+        int slot = this.matchingInputSlot(recipe);
+        if (slot < 0) {
             return;
-        for (RecipeInput input : recipe.getInputs())
-            if (isItemInput(input))
-                removeItem(slot, input.getAmount());
+        }
+        for (RecipeInput input : recipe.getInputs()) {
+            if (!DataMachineBlockEntity.isItemInput(input)) continue;
+            this.removeItem(slot, input.getAmount());
+        }
     }
-
-    // ---------------------------------------------------------------- menu
-
-    /**
-     * Menu visuals, supplied by the block config rather than the machine JSON.
-     *
-     * <p>
-     * Buttons, bars/gauges and the GUI image were already config-driven through
-     * {@link MachineMenuConfig} / {@link MachineBars} / {@code GuiTitles}, so a data
-     * machine reuses that machinery instead of growing a second, parallel way to
-     * describe the same things. The JSON definition owns what the machine *is*
-     * (recipes, tanks, slot roles, IO); the block config owns what it *looks like*.
-     */
-    private MachineMenuConfig menuConfig = MachineMenuConfig.parse(key -> null);
-    private List<MachineBar> bars = List.of();
 
     public void setMenuConfig(MachineMenuConfig config) {
         this.menuConfig = config != null ? config : MachineMenuConfig.parse(key -> null);
@@ -214,650 +523,1199 @@ public class DataMachineBlockEntity extends AbstractMachineBlockEntity
 
     @Override
     public float getInputRpm() {
-        return inputRpm;
+        return this.inputRpm;
     }
 
-    /**
-     * Whether the machine can currently run: a matched recipe it has the rpm for, or —
-     * with no recipe loaded — any rpm at all, so the gauge lights up when a motor is
-     * attached.
-     */
     private boolean hasPower() {
-        if (!definition.power().consumesStress())
+        if (!this.definition.power().consumesStress()) {
             return true;
-        AbstractProcessingRecipe recipe = getMatchingRecipe(getNMSLevel());
-        return recipe == null ? inputRpm > 0f : canProcess(getNMSLevel(), recipe);
+        }
+        AbstractProcessingRecipe recipe = this.getMatchingRecipe(this.getNMSLevel());
+        return recipe == null ? this.inputRpm > 0.0f : this.canProcess(this.getNMSLevel(), recipe);
     }
 
-    /** A stress consumer additionally needs the rpm its recipe demands. */
     @Override
     protected boolean canProcess(Level level, AbstractProcessingRecipe recipe) {
-        if (!super.canProcess(level, recipe))
+        if (!super.canProcess(level, recipe)) {
             return false;
-        if (!definition.power().consumesStress())
+        }
+        if (!this.definition.power().consumesStress()) {
             return true;
-        return recipe.getMinRpm() <= 0 || inputRpm >= effectiveRpm(recipe);
+        }
+        return recipe.getMinRpm() <= 0 || this.inputRpm >= (float)this.effectiveRpm(recipe);
     }
 
     @Override
-    public void tick(Level level, net.minecraft.core.BlockPos pos,
-            net.momirealms.craftengine.core.block.ImmutableBlockState state) {
-        if (definition.power().consumesStress() && !level.isClientSide())
-            pullRotationalPower(level);
-        super.tick(level, pos, state);
-        if (definition.power().consumesStress() && !level.isClientSide())
-            reportStressLoad();
-        if (rendererManager != null) {
+    public void tick(Level level, BlockPos pos, ImmutableBlockState state) {
+        boolean needsRpm;
+        this.ensureRenderer();
+        if (!level.isClientSide() && level instanceof ServerLevel) {
+            ServerLevel sl;
+            this.lastKnownLevel = sl = (ServerLevel)level;
+        }
+        boolean bl = needsRpm = this.definition.power().consumesStress() || this.definition.noProcessing();
+        if (needsRpm && !level.isClientSide()) {
+            this.pullRotationalPower(level);
+        }
+        if (!this.definition.noProcessing()) {
+            super.tick(level, pos, state);
+            if (this.definition.power().consumesStress() && !level.isClientSide()) {
+                this.reportStressLoad();
+            }
+            if (!level.isClientSide()) {
+                this.maybeUpdateActivated(level, pos, state, this.isProcessing());
+            }
+        } else if (!level.isClientSide()) {
+            this.setChanged();
+        }
+        if (this.rendererManager != null) {
             try {
-                // Snapshot fluid and gas tank levels for the render context
-                java.util.Map<String, double[]> fluidTankData = new java.util.LinkedHashMap<>();
-                for (MachineDefinition.TankSpec spec : definition.fluidTanks()) {
-                    var tank = fluidTank(spec.name());
-                    if (tank != null) {
-                        var stored = tank.getFluid(getNMSLevel(), getMachinePos());
-                        fluidTankData.put(spec.name(), new double[]{ stored.getAmount(), tank.getCapacity() });
+                float f;
+                int n;
+                LinkedHashMap<String, double[]> fluidTankData = new LinkedHashMap<String, double[]>();
+                for (MachineDefinition.TankSpec tankSpec : this.definition.fluidTanks()) {
+                    FluidTank fluidTank = this.fluidTank(tankSpec.name());
+                    if (fluidTank == null) continue;
+                    FluidStack stored = fluidTank.getFluid(this.getNMSLevel(), this.getMachinePos());
+                    fluidTankData.put(tankSpec.name(), new double[]{stored.getAmount(), fluidTank.getCapacity()});
+                }
+                LinkedHashMap<String, double[]> gasTankData = new LinkedHashMap<String, double[]>();
+                for (MachineDefinition.TankSpec tankSpec : this.definition.gasTanks()) {
+                    GasTank tank = this.gasTank(tankSpec.name());
+                    if (tank == null) continue;
+                    GasStack stored = tank.getGas(this.getNMSLevel(), this.getMachinePos());
+                    gasTankData.put(tankSpec.name(), new double[]{stored.getAmount(), tank.getCapacity()});
+                }
+                LinkedHashMap<String, Integer> linkedHashMap = new LinkedHashMap<String, Integer>();
+                if (!this.upgradeDefs.isEmpty()) {
+                    for (int upSlot : this.definition.upgrades().slots()) {
+                        net.minecraft.world.item.ItemStack nmsItem = this.getItem(upSlot);
+                        Key uid = this.upgradeItemId(nmsItem);
+                        if (uid == null) continue;
+                        linkedHashMap.merge(uid.namespace() + ":" + uid.value(), 1, Integer::sum);
                     }
                 }
-                java.util.Map<String, double[]> gasTankData = new java.util.LinkedHashMap<>();
-                for (MachineDefinition.TankSpec spec : definition.gasTanks()) {
-                    var tank = gasTank(spec.name());
-                    if (tank != null) {
-                        var stored = tank.getGas(getNMSLevel(), getMachinePos());
-                        gasTankData.put(spec.name(), new double[]{ stored.getAmount(), tank.getCapacity() });
-                    }
-                }
-                // Snapshot installed upgrade counts by CE item key so Upgrades.count() works in formulas
-                java.util.Map<String, Integer> upgradesByType = new java.util.LinkedHashMap<>();
-                if (!upgradeDefs.isEmpty()) {
-                    for (int upSlot : definition.upgrades().slots()) {
-                        net.minecraft.world.item.ItemStack nmsItem = getItem(upSlot);
-                        net.momirealms.craftengine.core.util.Key uid = upgradeItemId(nmsItem);
-                        if (uid != null)
-                            upgradesByType.merge(uid.namespace() + ":" + uid.value(), 1, Integer::sum);
-                    }
-                }
-                // Read redstone power level at machine position
-                int redstonePower = 0;
+                boolean bl2 = false;
                 try {
-                    redstonePower = level.getBestNeighborSignal(pos);
-                } catch (Throwable ignored) {}
+                    n = level.getBestNeighborSignal(pos);
+                }
+                catch (Throwable tank) {
+                    // empty catch block
+                }
+                MachineRenderContext ctx = new MachineRenderContext(this.inputRpm, this.overclock, this.curFuelEff, this.progress, this.maxProgress, this.curGeneration, this.isProcessing(), this.inputRpm > 0.0f, this.isOverclocked(), this.burnTime > 0, null, linkedHashMap, fluidTankData, gasTankData, n);
+                Direction facing = this.getFacing(level);
+                if (facing == null) {
+                    f = 0.0f;
+                } else {
+                    switch (facing) {
+                        case SOUTH: {
+                            f = 0.0f;
+                            break;
+                        }
+                        case WEST: {
+                            f = 90.0f;
+                            break;
+                        }
+                        case NORTH: {
+                            f = 180.0f;
+                            break;
+                        }
+                        case EAST: {
+                            f = 270.0f;
+                            break;
+                        }
+                        default: {
+                            f = 0.0f;
+                        }
+                    }
+                }
+                float yaw = f;
+                PolyContext machinePolyCtx = this.buildEvalContext();
+                if (machinePolyCtx != null) {
+                    ctx = ctx.augmented(machinePolyCtx);
+                }
+                this.rendererManager.tick(ctx, (ServerLevel)level, pos.getX(), pos.getY(), pos.getZ(), yaw);
+                this.tickSpecDisplays((ServerLevel)level, pos);
+            }
+            catch (Throwable throwable) {
+                // empty catch block
+            }
+        }
+        if (this.definition != null && this.definition.actionScript() != null && ++this.actionTickCounter >= this.definition.actionInterval()) {
+            this.actionTickCounter = 0;
+            this.runActionScript(this.definition.actionScript());
+        }
+    }
 
-                dev.arubik.craftengine.machine.render.variable.MachineRenderContext ctx =
-                        new dev.arubik.craftengine.machine.render.variable.MachineRenderContext(
-                                inputRpm, overclock, curFuelEff,
-                                progress, maxProgress, curGeneration,
-                                isProcessing(), inputRpm > 0, isOverclocked(), burnTime > 0,
-                                null, upgradesByType, fluidTankData, gasTankData, redstonePower);
-                net.minecraft.core.Direction facing = getFacing(level);
-                float yaw = facing == null ? 0f : switch (facing) {
-                    case SOUTH -> 0f;
-                    case WEST  -> 90f;
-                    case NORTH -> 180f;
-                    case EAST  -> 270f;
-                    default    -> 0f;
-                };
-                // Augment the context with machine position, facing, and extra machine-state vars
-                // so that player_facing("north"), Machine.x/y/z, burn_time, overclock_limit etc.
-                // are available in renderer "when" and "speed" expressions.
-                String facingName = facing != null ? facing.getName().toLowerCase() : "north";
-                dev.arubik.craftengine.machine.render.formula.PolyContext machinePolyCtx =
-                        dev.arubik.craftengine.machine.render.formula.PolyContext.builder()
-                                .copyFrom(ctx.toPolyContext())
-                                .machinePos(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5,
-                                        facingName, yaw, level.getWorld())
-                                .redstone(redstonePower)
-                                .contraption(level) // auto-detects if in a contraption
-                                .num("burn_time",       burnTime)
-                                .num("max_burn_time",   maxBurnTime)
-                                .num("overclock_limit", curOverclockLimit)
-                                .num("generation",      curGeneration)
-                                .build();
-                ctx = ctx.augmented(machinePolyCtx);
-                rendererManager.tick(ctx, (net.minecraft.server.level.ServerLevel) level, pos.getX(), pos.getY(), pos.getZ(), yaw);
-            } catch (Throwable ignored) {}
+    @Override
+    public void onRemove() {
+        super.onRemove();
+        this.despawnSpecDisplays();
+        if (this.rendererManager != null) {
+            this.rendererManager.close();
+            this.rendererManager = null;
         }
     }
 
     @Override
     public void unregister() {
+        if (this.inputRpm != 0.0f || this.sourceDistance < Integer.MAX_VALUE) {
+            this.inputRpm = 0.0f;
+            this.sourceDistance = Integer.MAX_VALUE;
+            this.activeMotor = null;
+            this.activeMotors.clear();
+            try {
+                Level level = this.getNMSLevel();
+                BlockPos pos = this.getMachinePos();
+                if (level != null && pos != null) {
+                    for (Direction d : Direction.values()) {
+                        try {
+                            BlockEntityController blockEntityController;
+                            BlockEntity adjBe = BukkitBlockEntityTypes.getIfLoaded(level, pos.relative(d));
+                            if (adjBe == null || !((blockEntityController = adjBe.controller) instanceof DataMachineBlockEntity)) continue;
+                            DataMachineBlockEntity adj = (DataMachineBlockEntity)blockEntityController;
+                            adj.invalidateRpm(level);
+                        }
+                        catch (Throwable throwable) {
+                            // empty catch block
+                        }
+                    }
+                }
+            }
+            catch (Throwable throwable) {
+                // empty catch block
+            }
+        }
         super.unregister();
-        if (rendererManager != null) {
-            rendererManager.close();
-            rendererManager = null;
+        this.despawnSpecDisplays();
+        if (this.rendererManager != null) {
+            this.rendererManager.close();
+            this.rendererManager = null;
         }
     }
 
-    /**
-     * Picks the strongest adjacent motor and takes its delivered rpm.
-     *
-     * <p>
-     * Selection is by <em>potential</em> rpm rather than live rpm so a motor stalled at
-     * zero precisely because of this machine's load is still found — selecting by live
-     * rpm would drop the load, let it recover, and flicker.
-     */
-    private void pullRotationalPower(Level level) {
-        this.activeMotor = null;
-        float bestPotential = 0f;
-        float delivered = 0f;
-        var cePos = new net.momirealms.craftengine.core.world.BlockPos(getMachinePos().getX(),
-                getMachinePos().getY(), getMachinePos().getZ());
-        for (net.minecraft.core.Direction d : net.minecraft.core.Direction.values()) {
-            var be = dev.arubik.craftengine.block.entity.BukkitBlockEntityTypes
-                    .getIfLoaded(level, getMachinePos().relative(d));
-            if (be != null && be.controller instanceof dev.arubik.craftengine.rotation.RpmProvider p
-                    && p.isRpmSource() && p.potentialRpm() > bestPotential) {
-                if (!p.rpmReaches(cePos))
-                    continue;
-                bestPotential = p.potentialRpm();
-                delivered = p.getRpm();
-                this.activeMotor = p;
+    public void despawnSpecDisplays(ServerLevel level) {
+        if (this.specDisplays == null) {
+            return;
+        }
+        try {
+            for (ConveyorItemDisplay d : this.specDisplays) {
+                if (d == null) continue;
+                d.despawnAll(level);
             }
         }
-        this.inputRpm = delivered;
+        catch (Throwable throwable) {
+            // empty catch block
+        }
+        this.specDisplays = null;
+        this.specDisplayHashes = null;
     }
 
-    /**
-     * Reports the recipe's SU demand to the motor, held for a grace window.
-     *
-     * <p>
-     * Without the grace the load would drop the instant the machine stalls, the motor
-     * would un-overstress, and an underpowered motor would briefly run it anyway.
-     */
-    private void reportStressLoad() {
-        AbstractProcessingRecipe recipe = getMatchingRecipe(getNMSLevel());
-        int demand = recipe != null ? effectiveSu(recipe) : 0;
-        if (demand > 0) {
-            lastSuLoad = demand;
-            stressGrace = definition.power().stressGraceTicks();
-        }
-        if (stressGrace > 0 && lastSuLoad > 0 && activeMotor != null) {
-            activeMotor.reportStressLoad(lastSuLoad);
-            stressGrace--;
-        }
-    }
-
-    /**
-     * The readout icon: the current recipe, or the current tank contents.
-     *
-     * <p>
-     * Both kinds existed as hand-written methods on individual machines; which one a
-     * machine shows is now its {@code info.type}.
-     */
-    private org.bukkit.inventory.ItemStack infoIcon() {
-        MachineDefinition.InfoSpec spec = definition.info();
-        if (!spec.isTank())
-            return dev.arubik.craftengine.machine.menu.RecipeInfoIcon.build(this, getMachineId(),
-                    getUpgradeModifiers().speedMultiplier(), curGeneration);
-
-        String source = spec.source();
-        boolean gas = source.startsWith("gas");
-        String tankName = source.contains(":") ? source.substring(source.indexOf(':') + 1) : "";
-        long amount = 0, capacity = 0;
-        net.kyori.adventure.text.Component contents =
-                dev.arubik.craftengine.machine.menu.MenuText.textOrTranslatable(
-                        gas ? "polyfill.gas.empty" : "polyfill.liquid.empty",
-                        net.kyori.adventure.text.format.NamedTextColor.WHITE);
-        org.bukkit.Material material = org.bukkit.Material.BUCKET;
-
-        if (gas) {
-            var tank = gasTank(tankName);
-            if (tank != null) {
-                var stored = tank.getGas(getNMSLevel(), getMachinePos());
-                amount = stored.getAmount();
-                capacity = tank.getCapacity();
-                if (!stored.isEmpty())
-                        contents = dev.arubik.craftengine.machine.menu.MenuText.textOrTranslatable(
-                            stored.getType().translationKey(),
-                            net.kyori.adventure.text.format.NamedTextColor.WHITE);
+    private void despawnSpecDisplays() {
+        ServerLevel nmsLevel = this.lastKnownLevel;
+        if (nmsLevel == null) {
+            try {
+                nmsLevel = (ServerLevel)this.getNMSLevel();
             }
+            catch (Throwable throwable) {
+                // empty catch block
+            }
+        }
+        if (nmsLevel != null) {
+            this.despawnSpecDisplays(nmsLevel);
         } else {
-            var tank = fluidTank(tankName);
-            if (tank != null) {
-                var stored = tank.getFluid(getNMSLevel(), getMachinePos());
-                amount = stored.getAmount();
-                capacity = tank.getCapacity();
-                if (!stored.isEmpty()) {
-                        contents = dev.arubik.craftengine.machine.menu.MenuText.textOrTranslatable(
-                            stored.getType().translationKey(),
-                            net.kyori.adventure.text.format.NamedTextColor.WHITE);
-                    if (stored.getType() == dev.arubik.craftengine.fluid.FluidType.LAVA)
-                        material = org.bukkit.Material.LAVA_BUCKET;
-                    else if (stored.getType() == dev.arubik.craftengine.fluid.FluidType.WATER)
-                        material = org.bukkit.Material.WATER_BUCKET;
+            this.specDisplays = null;
+            this.specDisplayHashes = null;
+        }
+    }
+
+    private void tickSpecDisplays(ServerLevel nmsLevel, BlockPos pos) {
+        block11: {
+            if (this.rendererManager == null || this.specDisplays == null) {
+                return;
+            }
+            try {
+                CEWorld ceWorld = this.blockEntity().world();
+                if (ceWorld == null) {
+                    if (SPEC_DISPLAY_DEBUG) {
+                        System.out.println("[CEP specDisplay] ceWorld null at " + String.valueOf(pos));
+                    }
+                    return;
+                }
+                net.momirealms.craftengine.core.world.BlockPos cePos = new net.momirealms.craftengine.core.world.BlockPos(pos.getX(), pos.getY(), pos.getZ());
+                List<Player> viewers = ceWorld.world().getTrackedBy(new ChunkPos(cePos));
+                List<RendererSpec> specs = this.rendererManager.specs();
+                net.minecraft.world.item.ItemStack[] items = this.rendererManager.currentItems();
+                if (SPEC_DISPLAY_DEBUG) {
+                    System.out.println("[CEP specDisplay] pos=" + String.valueOf(pos) + " viewers=" + viewers.size() + " specs=" + specs.size());
+                }
+                for (int i = 0; i < specs.size(); ++i) {
+                    RendererSpec rendererSpec = specs.get(i);
+                    if (!(rendererSpec instanceof RendererSpec.ItemDisplaySpec)) continue;
+                    RendererSpec.ItemDisplaySpec idSpec = (RendererSpec.ItemDisplaySpec)rendererSpec;
+                    RendererManager.EvalResult er = this.rendererManager.evalResult(i);
+                    net.minecraft.world.item.ItemStack item = items[i];
+                    if (SPEC_DISPLAY_DEBUG) {
+                        System.out.println("[CEP specDisplay]  spec[" + i + "] active=" + String.valueOf(er != null ? Boolean.valueOf(er.active) : "null") + " item=" + String.valueOf(item != null ? item.getItem() : "null") + " itemDisplay=" + String.valueOf(er != null ? er.itemDisplay : "null"));
+                    }
+                    if (er != null && er.active && item != null && !item.isEmpty() && er.itemDisplay != null) {
+                        if (this.specDisplays[i] == null) {
+                            this.specDisplays[i] = new ConveyorItemDisplay();
+                        }
+                        RendererSpec.EvaluatedItemDisplay eid = er.itemDisplay;
+                        double wx = (double)pos.getX() + 0.5 + eid.offsetX();
+                        double wy = (double)pos.getY() + eid.offsetY();
+                        double wz = (double)pos.getZ() + 0.5 + eid.offsetZ();
+                        Quaternionf q = new Quaternionf().rotateY((float)Math.toRadians(eid.rotY())).rotateX((float)Math.toRadians(eid.rotX())).rotateZ((float)Math.toRadians(eid.rotZ()));
+                        boolean lightChanged = this.specDisplays[i].setLightFromLevel(nmsLevel, wx, wy, wz);
+                        this.specDisplays[i].setScale(eid.scale());
+                        this.specDisplays[i].setRotation(q);
+                        boolean rotDirty = this.specDisplays[i].consumeRotationDirty();
+                        int h = item.hashCode();
+                        this.specDisplays[i].setNmsItem(item);
+                        List<Player> effectiveViewers = viewers;
+                        if (er.qualifyingPlayers != null) {
+                            effectiveViewers = viewers.stream().filter(v -> {
+                                org.bukkit.entity.Player bukkit;
+                                Object pp = v.platformPlayer();
+                                return pp instanceof org.bukkit.entity.Player && er.qualifyingPlayers.contains((bukkit = (org.bukkit.entity.Player)pp).getUniqueId());
+                            }).collect(Collectors.toList());
+                        }
+                        this.specDisplays[i].render(effectiveViewers, wx, wy, wz, lightChanged || h != this.specDisplayHashes[i] || rotDirty);
+                        this.specDisplayHashes[i] = h;
+                        continue;
+                    }
+                    if (this.specDisplays[i] == null) continue;
+                    this.specDisplays[i].despawnAll(nmsLevel);
+                    this.specDisplays[i] = null;
+                    this.specDisplayHashes[i] = 0;
+                }
+            }
+            catch (Throwable e) {
+                if (!SPEC_DISPLAY_DEBUG) break block11;
+                System.out.println("[CEP specDisplay] EXCEPTION: " + String.valueOf(e));
+                e.printStackTrace();
+            }
+        }
+    }
+
+    /*
+     * WARNING - Removed try catching itself - possible behaviour change.
+     */
+    public void invalidateRpm(Level level) {
+        if (this.invalidating) {
+            return;
+        }
+        if (this.definition == null) {
+            return;
+        }
+        if (!this.definition.power().consumesStress() && !this.definition.noProcessing()) {
+            return;
+        }
+        this.invalidating = true;
+        try {
+            BlockPos pos;
+            float before = this.inputRpm;
+            this.pullRotationalPower(level);
+            if (before != this.inputRpm && (pos = this.getMachinePos()) != null) {
+                for (Direction d : Direction.values()) {
+                    try {
+                        BlockEntityController blockEntityController;
+                        BlockEntity adjBe = BukkitBlockEntityTypes.getIfLoaded(level, pos.relative(d));
+                        if (adjBe == null || !((blockEntityController = adjBe.controller) instanceof DataMachineBlockEntity)) continue;
+                        DataMachineBlockEntity adj = (DataMachineBlockEntity)blockEntityController;
+                        adj.invalidateRpm(level);
+                    }
+                    catch (Throwable throwable) {
+                        // empty catch block
+                    }
+                }
+                BlockState bs = level.getBlockState(pos);
+                level.updateNeighborsAt(pos, bs.getBlock());
+            }
+        }
+        finally {
+            this.invalidating = false;
+        }
+    }
+
+    private void pullRotationalPower(Level level) {
+        Object p2;
+        boolean hasAxisPerp;
+        boolean hasRpmInput;
+        this.activeMotor = null;
+        this.activeMotors.clear();
+        float bestPotential = 0.0f;
+        float delivered = 0.0f;
+        net.momirealms.craftengine.core.world.BlockPos cePos = new net.momirealms.craftengine.core.world.BlockPos(this.getMachinePos().getX(), this.getMachinePos().getY(), this.getMachinePos().getZ());
+        EnumSet<Direction> autoFaces = null;
+        try {
+            BlockState bs = level.getBlockState(this.getMachinePos());
+            ImmutableBlockState cs = BlockStateUtils.getOptionalCustomBlockState(bs).orElse(null);
+            if (cs != null) {
+                Property shaftProp = ((BlockDefinition)cs.owner().value()).getProperty("axis");
+                Property gearProp = ((BlockDefinition)cs.owner().value()).getProperty("gear_axis");
+                if (shaftProp != null) {
+                    String v;
+                    autoFaces = switch (v = String.valueOf(cs.get(shaftProp)).toLowerCase()) {
+                        case "x" -> EnumSet.of(Direction.EAST, Direction.WEST);
+                        case "y" -> EnumSet.of(Direction.UP, Direction.DOWN);
+                        default -> EnumSet.of(Direction.NORTH, Direction.SOUTH);
+                    };
                 }
             }
         }
+        catch (Throwable bs) {
+            // empty catch block
+        }
+        EnumSet<Direction> autoFacesFinal = autoFaces;
+        boolean bl = hasRpmInput = autoFacesFinal != null || this.definition != null && !this.definition.rpmInputFacesRaw().isEmpty();
+        if (!hasRpmInput) {
+            this.inputRpm = 0.0f;
+            this.sourceDistance = Integer.MAX_VALUE;
+            return;
+        }
+        int bestSourceDist = Integer.MAX_VALUE;
+        for (Direction d : Direction.values()) {
+            float pot;
+            int providerDist;
+            BlockEntityController blockEntityController;
+            if (this.definition == null || this.definition.rpmInputFacesRaw().isEmpty() ? autoFacesFinal != null && !autoFacesFinal.contains(d) : !this.rpmFacesContainWithAxis(this.definition.rpmInputFacesRaw(), d, this.getFacing(level), level)) continue;
+            BlockEntity be = BukkitBlockEntityTypes.getIfLoaded(level, this.getMachinePos().relative(d));
+            if (be == null || !((blockEntityController = be.controller) instanceof RpmProvider)) continue;
+            RpmProvider p = (RpmProvider)blockEntityController;
+            if (p instanceof DataMachineBlockEntity) {
+                Set<String> perpFilter;
+                DataMachineBlockEntity dm = (DataMachineBlockEntity)p;
+                providerDist = dm.sourceDistance;
+                if (providerDist >= this.sourceDistance || !dm.isValidOutputFace(d.getOpposite(), level)) continue;
+                if (!dm.definition.rpmOutputBlockFilter().isEmpty() && (perpFilter = dm.definition.rpmOutputBlockFilter().get("axis_perp")) != null) {
+                    boolean weAreAllowed;
+                    boolean bl2 = weAreAllowed = this.definition != null && this.definition.rpmInputFacesRaw().contains("axis_perp");
+                    if (!weAreAllowed) {
+                        continue;
+                    }
+                }
+            } else {
+                providerDist = 0;
+            }
+            if (this.definition != null && !this.definition.rpmInputFacesRaw().isEmpty()) {
+                Direction myFacing = this.getFacing(level);
+                if (!this.rpmFacesContainWithAxis(this.definition.rpmInputFacesRaw(), d, myFacing, level)) {
+                    continue;
+                }
+            } else if (p instanceof DataMachineBlockEntity) {
+                DataMachineBlockEntity dm2 = (DataMachineBlockEntity)p;
+                if (dm2.definition != null) {
+                    boolean providerOutputsAxisPerp;
+                    boolean bl3 = providerOutputsAxisPerp = dm2.definition.rpmOutputInvertedRaw().contains("axis_perp") || dm2.definition.rpmOutputFacesRaw().contains("axis_perp");
+                    if (providerOutputsAxisPerp) {
+                        boolean weAcceptAxisPerp;
+                        boolean bl4 = weAcceptAxisPerp = this.definition != null && this.definition.rpmInputFacesRaw().contains("axis_perp");
+                        if (!weAcceptAxisPerp) continue;
+                    }
+                }
+            }
+            if ((pot = p.potentialRpm()) <= 0.0f || !p.rpmReaches(cePos)) continue;
+            float raw = p.getRpm();
+            if (p instanceof DataMachineBlockEntity) {
+                Set<String> inv2;
+                DataMachineBlockEntity dm2 = (DataMachineBlockEntity)p;
+                Set<String> set = inv2 = dm2.definition != null ? dm2.definition.rpmOutputInvertedRaw() : Set.of();
+                if (!inv2.isEmpty() && DataMachineBlockEntity.rpmFacesContain(inv2, d.getOpposite(), dm2.getFacing(level))) {
+                    raw = -raw;
+                }
+            }
+            if (delivered != 0.0f && raw != 0.0f && Math.signum(delivered) != Math.signum(raw) && !p.isRpmSource() && this.activeMotor != null && !this.activeMotor.isRpmSource()) {
+                try {
+                    if (bestPotential < pot) {
+                        level.destroyBlock(this.getMachinePos(), true);
+                        return;
+                    }
+                    level.destroyBlock(this.getMachinePos().relative(d), true);
+                    continue;
+                }
+                catch (Throwable dm2) {
+                    // empty catch block
+                }
+            }
+            if (providerDist < bestSourceDist || providerDist == bestSourceDist && pot > bestPotential) {
+                bestSourceDist = providerDist;
+                bestPotential = pot;
+                delivered = raw;
+                this.activeMotor = p;
+                this.activeMotors.clear();
+                this.activeMotors.add(p);
+                continue;
+            }
+            if (providerDist != bestSourceDist || pot != bestPotential || raw == 0.0f || Math.signum(raw) != Math.signum(delivered)) continue;
+            this.activeMotors.add(p);
+        }
+        boolean bl5 = hasAxisPerp = this.definition != null && this.definition.rpmInputFacesRaw().contains("axis_perp");
+        if (hasAxisPerp && autoFacesFinal != null) {
+            try {
+                Property myAxisProp;
+                BlockState myBs = level.getBlockState(this.getMachinePos());
+                ImmutableBlockState myCe = BlockStateUtils.getOptionalCustomBlockState(myBs).orElse(null);
+                if (myCe != null && (myAxisProp = ((BlockDefinition)myCe.owner().value()).getProperty("axis")) != null) {
+                    String myAxis;
+                    Direction.Axis cogAxis = switch (myAxis = String.valueOf(myCe.get(myAxisProp)).toLowerCase()) {
+                        case "x" -> Direction.Axis.X;
+                        case "y" -> Direction.Axis.Y;
+                        default -> Direction.Axis.Z;
+                    };
+                    Direction.Axis[] axes = Direction.Axis.values();
+                    ArrayList<Direction> perpDirs = new ArrayList<Direction>();
+                    for (Direction pd : Direction.values()) {
+                        if (pd.getAxis() == cogAxis) continue;
+                        perpDirs.add(pd);
+                    }
+                    for (int i = 0; i < perpDirs.size(); ++i) {
+                        for (int j = i + 1; j < perpDirs.size(); ++j) {
+                            Direction da = (Direction)perpDirs.get(i);
+                            Direction db = (Direction)perpDirs.get(j);
+                            if (da.getAxis() == db.getAxis()) continue;
+                            int[] nArray = new int[]{1, -1};
+                            int n = nArray.length;
+                            for (int k = 0; k < n; ++k) {
+                                int sa = nArray[k];
+                                int[] nArray2 = new int[]{1, -1};
+                                int n2 = nArray2.length;
+                                for (int i2 = 0; i2 < n2; ++i2) {
+                                    float pot2;
+                                    Property theirAxisProp;
+                                    BlockState theirBs;
+                                    ImmutableBlockState theirCe;
+                                    BlockEntityController blockEntityController;
+                                    int sb = nArray2[i2];
+                                    BlockPos diag = this.getMachinePos().relative(sa > 0 ? da : da.getOpposite()).relative(sb > 0 ? db : db.getOpposite());
+                                    BlockEntity diagBe = BukkitBlockEntityTypes.getIfLoaded(level, diag);
+                                    if (diagBe == null || !((blockEntityController = diagBe.controller) instanceof RpmProvider) || !((p2 = (RpmProvider)blockEntityController) instanceof DataMachineBlockEntity)) continue;
+                                    DataMachineBlockEntity dm3 = (DataMachineBlockEntity)p2;
+                                    if (dm3.definition == null || (theirCe = (ImmutableBlockState)BlockStateUtils.getOptionalCustomBlockState((theirBs = level.getBlockState(diag))).orElse(null)) == null || (theirAxisProp = ((BlockDefinition)theirCe.owner().value()).getProperty("axis")) == null) continue;
+                                    String theirAxis = String.valueOf(theirCe.get(theirAxisProp)).toLowerCase();
+                                    int pd = dm3.sourceDistance;
+                                    if (pd >= this.sourceDistance || (pot2 = p2.potentialRpm()) <= 0.0f || dm3.definition.rpmLargeCog() || !theirAxis.equals(myAxis)) continue;
+                                    float providerRatio = dm3.definition.rpmRatio();
+                                    float raw2 = -p2.getRpm() * providerRatio;
+                                    if (pd >= bestSourceDist && (pd != bestSourceDist || !(pot2 > bestPotential))) continue;
+                                    bestSourceDist = pd;
+                                    bestPotential = pot2;
+                                    delivered = raw2;
+                                    this.activeMotor = p2;
+                                    this.activeMotors.clear();
+                                    this.activeMotors.add((RpmProvider)p2);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Throwable myBs) {
+                // empty catch block
+            }
+        }
+        if (this.definition != null && this.definition.rpmLargeCog() && autoFacesFinal != null) {
+            try {
+                Property myAP2;
+                BlockState myBs2 = level.getBlockState(this.getMachinePos());
+                ImmutableBlockState myCe2 = BlockStateUtils.getOptionalCustomBlockState(myBs2).orElse(null);
+                if (myCe2 != null && (myAP2 = ((BlockDefinition)myCe2.owner().value()).getProperty("axis")) != null) {
+                    String myAx2 = String.valueOf(myCe2.get(myAP2)).toLowerCase();
+                    Direction.Axis myCA2 = myAx2.equals("x") ? Direction.Axis.X : (myAx2.equals("y") ? Direction.Axis.Y : Direction.Axis.Z);
+                    Direction myAxisPos = Direction.get((Direction.AxisDirection)Direction.AxisDirection.POSITIVE, (Direction.Axis)myCA2);
+                    for (Direction perpD : Direction.values()) {
+                        if (perpD.getAxis() == myCA2) continue;
+                        for (int sa : new int[]{1, -1}) {
+                            for (int sp : new int[]{1, -1}) {
+                                float lraw;
+                                int fromAxisDiff;
+                                float lPot;
+                                int ld;
+                                Direction.Axis theirCA;
+                                String tAx;
+                                Property tAP;
+                                BlockState tBs;
+                                ImmutableBlockState tCe;
+                                RpmProvider lp2;
+                                BlockPos lp = this.getMachinePos().relative(sa > 0 ? myAxisPos : myAxisPos.getOpposite()).relative(sp > 0 ? perpD : perpD.getOpposite());
+                                BlockEntity lbe = BukkitBlockEntityTypes.getIfLoaded(level, lp);
+                                if (lbe == null || !((p2 = lbe.controller) instanceof RpmProvider) || !((lp2 = (RpmProvider)p2) instanceof DataMachineBlockEntity)) continue;
+                                DataMachineBlockEntity ldm = (DataMachineBlockEntity)lp2;
+                                if (ldm.definition == null || !ldm.definition.rpmLargeCog() || (tCe = (ImmutableBlockState)BlockStateUtils.getOptionalCustomBlockState((tBs = level.getBlockState(lp))).orElse(null)) == null || (tAP = ((BlockDefinition)tCe.owner().value()).getProperty("axis")) == null || (tAx = String.valueOf(tCe.get(tAP)).toLowerCase()).equals(myAx2)) continue;
+                                Direction.Axis axis = tAx.equals("x") ? Direction.Axis.X : (theirCA = tAx.equals("y") ? Direction.Axis.Y : Direction.Axis.Z);
+                                if (theirCA != perpD.getAxis() || (ld = ldm.sourceDistance) >= this.sourceDistance || (lPot = lp2.potentialRpm()) <= 0.0f) continue;
+                                BlockPos ldiff = lp.subtract((Vec3i)this.getMachinePos());
+                                int n = myCA2 == Direction.Axis.X ? ldiff.getX() : (fromAxisDiff = myCA2 == Direction.Axis.Y ? ldiff.getY() : ldiff.getZ());
+                                int toAxisDiff = theirCA == Direction.Axis.X ? ldiff.getX() : (theirCA == Direction.Axis.Y ? ldiff.getY() : ldiff.getZ());
+                                float f = lraw = fromAxisDiff > 0 ^ toAxisDiff > 0 ? -lp2.getRpm() : lp2.getRpm();
+                                if (ld < bestSourceDist || ld == bestSourceDist && lPot > bestPotential) {
+                                    bestSourceDist = ld;
+                                    bestPotential = lPot;
+                                    delivered = lraw;
+                                    this.activeMotor = lp2;
+                                    this.activeMotors.clear();
+                                    this.activeMotors.add(lp2);
+                                    continue;
+                                }
+                                if (ld != bestSourceDist || lPot != bestPotential) continue;
+                                this.activeMotors.add(lp2);
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Throwable throwable) {
+                // empty catch block
+            }
+        }
+        this.inputRpm = delivered;
+        this.sourceDistance = bestSourceDist < Integer.MAX_VALUE ? bestSourceDist + 1 : Integer.MAX_VALUE;
+    }
 
-        var stack = new org.bukkit.inventory.ItemStack(material);
-        var meta = stack.getItemMeta();
+    private void reportStressLoad() {
+        int demand;
+        AbstractProcessingRecipe recipe = this.getMatchingRecipe(this.getNMSLevel());
+        int n = demand = recipe != null ? this.effectiveSu(recipe) : 0;
+        if (demand > 0) {
+            this.lastSuLoad = demand;
+            this.stressGrace = this.definition.power().stressGraceTicks();
+        }
+        if (this.stressGrace > 0 && this.lastSuLoad > 0) {
+            for (RpmProvider m : this.activeMotors) {
+                m.reportStressLoad(this.lastSuLoad);
+            }
+            if (this.activeMotors.isEmpty() && this.activeMotor != null) {
+                this.activeMotor.reportStressLoad(this.lastSuLoad);
+            }
+            --this.stressGrace;
+        }
+    }
+
+    private ItemStack infoIcon() {
+        MachineDefinition.InfoSpec spec = this.definition.info();
+        if (!spec.isTank()) {
+            return RecipeInfoIcon.build(this, this.getMachineId(), this.getUpgradeModifiers().speedMultiplier(), this.curGeneration);
+        }
+        String source = spec.source();
+        boolean gas = source.startsWith("gas");
+        String tankName = source.contains(":") ? source.substring(source.indexOf(58) + 1) : "";
+        long amount = 0L;
+        long capacity = 0L;
+        Component contents = MenuText.textOrTranslatable(gas ? "polyfill.gas.empty" : "polyfill.liquid.empty", NamedTextColor.WHITE);
+        Material material = Material.BUCKET;
+        if (gas) {
+            tank = this.gasTank(tankName);
+            if (tank != null) {
+                stored = ((GasTank)tank).getGas(this.getNMSLevel(), this.getMachinePos());
+                amount = ((GasStack)stored).getAmount();
+                capacity = ((GasTank)tank).getCapacity();
+                if (!((GasStack)stored).isEmpty()) {
+                    contents = MenuText.textOrTranslatable(((GasStack)stored).getType().translationKey(), NamedTextColor.WHITE);
+                }
+            }
+        } else {
+            tank = this.fluidTank(tankName);
+            if (tank != null) {
+                stored = ((FluidTank)tank).getFluid(this.getNMSLevel(), this.getMachinePos());
+                amount = ((FluidStack)stored).getAmount();
+                capacity = ((FluidTank)tank).getCapacity();
+                if (!((FluidStack)stored).isEmpty()) {
+                    contents = MenuText.textOrTranslatable(((FluidStack)stored).getType().translationKey(), NamedTextColor.WHITE);
+                    if (((FluidStack)stored).getType() == FluidType.LAVA) {
+                        material = Material.LAVA_BUCKET;
+                    } else if (((FluidStack)stored).getType() == FluidType.WATER) {
+                        material = Material.WATER_BUCKET;
+                    }
+                }
+            }
+        }
+        ItemStack stack = new ItemStack(material);
+        ItemMeta meta = stack.getItemMeta();
         if (meta != null) {
-            var gray = net.kyori.adventure.text.format.NamedTextColor.GRAY;
-            var aqua = net.kyori.adventure.text.format.NamedTextColor.AQUA;
-            meta.displayName(dev.arubik.craftengine.machine.menu.MenuText.noI(
-                    dev.arubik.craftengine.machine.menu.MenuText
-                            .tr(gas ? "polyfill.ui.gas" : "polyfill.ui.fluid", aqua)
-                            .append(net.kyori.adventure.text.Component.text(": ", gray))
-                            .append(contents)));
-            meta.lore(java.util.List.of(dev.arubik.craftengine.machine.menu.MenuText.noI(
-                    net.kyori.adventure.text.Component.text(amount + " / " + capacity + " mB", gray))));
+            NamedTextColor gray = NamedTextColor.GRAY;
+            NamedTextColor aqua = NamedTextColor.AQUA;
+            meta.displayName(MenuText.noI(MenuText.tr(gas ? "polyfill.ui.gas" : "polyfill.ui.fluid", aqua).append((Component)Component.text((String)": ", (TextColor)gray)).append(contents)));
+            meta.lore(List.of(MenuText.noI((Component)Component.text((String)(amount + " / " + capacity + " mB"), (TextColor)gray))));
             stack.setItemMeta(meta);
         }
         return stack;
     }
 
-    /** Bar id -> what it reads, from the definition's `source`. */
     private String barSource(String barId) {
-        for (MachineDefinition.BarRef ref : definition.bars())
-            if (ref.bar().value().equals(barId))
-                return ref.source();
+        for (MachineDefinition.BarRef ref : this.definition.bars()) {
+            if (!ref.bar().value().equals(barId)) continue;
+            return ref.source();
+        }
         return barId;
     }
 
-    /** The named tank, or the first one, or null. */
-    private dev.arubik.craftengine.fluid.FluidTank fluidTank(String name) {
-        for (var t : fluidTanks)
-            if (t.getName().equalsIgnoreCase(name))
-                return t;
-        return fluidTanks.isEmpty() ? null : fluidTanks.get(0);
+    private FluidTank fluidTank(String name) {
+        for (FluidTank t : this.fluidTanks) {
+            if (!t.getName().equalsIgnoreCase(name)) continue;
+            return t;
+        }
+        return this.fluidTanks.isEmpty() ? null : (FluidTank)this.fluidTanks.get(0);
     }
 
-    private dev.arubik.craftengine.gas.GasTank gasTank(String name) {
-        for (var t : gasTanks)
-            if (t.getName().equalsIgnoreCase(name))
-                return t;
-        return gasTanks.isEmpty() ? null : gasTanks.get(0);
+    private GasTank gasTank(String name) {
+        for (GasTank t : this.gasTanks) {
+            if (!t.getName().equalsIgnoreCase(name)) continue;
+            return t;
+        }
+        return this.gasTanks.isEmpty() ? null : (GasTank)this.gasTanks.get(0);
     }
 
-    /**
-     * Current value/max for a gauge, resolved through the definition's `source`.
-     *
-     * <p>
-     * Without this a machine with two tanks had no way to say which gauge showed
-     * which — the base class only knew {@code progress}.
-     */
     @Override
     public double[] barStat(String id) {
-        String source = barSource(id);
+        String source = this.barSource(id);
         if (source.startsWith("fluid:") || source.equals("fluid")) {
-            var tank = fluidTank(source.startsWith("fluid:") ? source.substring(6) : "");
-            if (tank == null)
-                return new double[] { 0, 0 };
-            return new double[] { tank.getFluid(getNMSLevel(), getMachinePos()).getAmount(), tank.getCapacity() };
+            FluidTank tank = this.fluidTank(source.startsWith("fluid:") ? source.substring(6) : "");
+            if (tank == null) {
+                return new double[]{0.0, 0.0};
+            }
+            return new double[]{tank.getFluid(this.getNMSLevel(), this.getMachinePos()).getAmount(), tank.getCapacity()};
         }
         if (source.startsWith("gas:") || source.equals("gas")) {
-            var tank = gasTank(source.startsWith("gas:") ? source.substring(4) : "");
-            if (tank == null)
-                return new double[] { 0, 0 };
-            return new double[] { tank.getGas(getNMSLevel(), getMachinePos()).getAmount(), tank.getCapacity() };
+            GasTank tank = this.gasTank(source.startsWith("gas:") ? source.substring(4) : "");
+            if (tank == null) {
+                return new double[]{0.0, 0.0};
+            }
+            return new double[]{tank.getGas(this.getNMSLevel(), this.getMachinePos()).getAmount(), tank.getCapacity()};
         }
-        if (source.equals("fuel"))
-            return new double[] { burnTime, Math.max(1, maxBurnTime) };
-        if (source.equals("progress"))
-            return new double[] { getProgress(), Math.max(1, getMaxProgress()) };
-        // A power gauge is a lamp, not a fill: on while the machine is actually running
-        // or at least powered and ready. The numbers behind it ride in the placeholders.
-        if (source.equals("rpm") || source.equals("power"))
-            return new double[] { (isProcessing() || hasPower()) ? 100 : 0, 100 };
+        if (source.equals("fuel")) {
+            return new double[]{this.burnTime, Math.max(1, this.maxBurnTime)};
+        }
+        if (source.equals("progress")) {
+            return new double[]{this.getProgress(), Math.max(1, this.getMaxProgress())};
+        }
+        if (source.equals("rpm") || source.equals("power")) {
+            return new double[]{this.isProcessing() || this.hasPower() ? 100.0 : 0.0, 100.0};
+        }
         return super.barStat(id);
     }
 
-    /**
-     * Values a gauge's name/lore can interpolate.
-     *
-     * <p>
-     * A power gauge shows what the current recipe demands versus what is arriving —
-     * without this the rpm bar could light up but never say why it was short.
-     */
     @Override
-    public java.util.Map<String, String> barPlaceholders(String id) {
-        String source = barSource(id);
+    public Map<String, String> barPlaceholders(String id) {
+        String source = this.barSource(id);
         if (source.equals("rpm") || source.equals("power")) {
-            AbstractProcessingRecipe recipe = getMatchingRecipe(getNMSLevel());
-            java.util.Map<String, String> out = new java.util.HashMap<>();
-            out.put("rpm", String.valueOf((int) getInputRpm()));
-            out.put("req", String.valueOf(recipe != null ? effectiveRpm(recipe) : 0));
-            out.put("su", String.valueOf(recipe != null ? effectiveSu(recipe) : 0));
+            AbstractProcessingRecipe recipe = this.getMatchingRecipe(this.getNMSLevel());
+            HashMap<String, String> out = new HashMap<String, String>();
+            out.put("rpm", String.valueOf((int)this.getInputRpm()));
+            out.put("req", String.valueOf(recipe != null ? this.effectiveRpm(recipe) : 0));
+            out.put("su", String.valueOf(recipe != null ? this.effectiveSu(recipe) : 0));
             return out;
         }
         return super.barPlaceholders(id);
     }
 
-    /** The stored type, so a gauge can pick its per-liquid/per-gas art. */
     @Override
     public String barSubtype(String id) {
-        String source = barSource(id);
+        String source = this.barSource(id);
         if (source.startsWith("fluid:") || source.equals("fluid")) {
-            var tank = fluidTank(source.startsWith("fluid:") ? source.substring(6) : "");
-            if (tank == null)
+            FluidTank tank = this.fluidTank(source.startsWith("fluid:") ? source.substring(6) : "");
+            if (tank == null) {
                 return "";
-            var stored = tank.getFluid(getNMSLevel(), getMachinePos());
-            return stored.isEmpty() ? "" : stored.getType().name().toLowerCase(java.util.Locale.ROOT);
+            }
+            FluidStack stored = tank.getFluid(this.getNMSLevel(), this.getMachinePos());
+            return stored.isEmpty() ? "" : stored.getType().name().toLowerCase(Locale.ROOT);
         }
         if (source.startsWith("gas:") || source.equals("gas")) {
-            var tank = gasTank(source.startsWith("gas:") ? source.substring(4) : "");
-            if (tank == null)
+            GasTank tank = this.gasTank(source.startsWith("gas:") ? source.substring(4) : "");
+            if (tank == null) {
                 return "";
-            var stored = tank.getGas(getNMSLevel(), getMachinePos());
-            return stored.isEmpty() ? "" : stored.getType().name().toLowerCase(java.util.Locale.ROOT);
+            }
+            GasStack stored = tank.getGas(this.getNMSLevel(), this.getMachinePos());
+            return stored.isEmpty() ? "" : stored.getType().name().toLowerCase(Locale.ROOT);
         }
         return super.barSubtype(id);
     }
 
-    /** Which page the open menu is showing: 0 main, 1 upgrades, 2 overclock. */
-    private int page = 0;
-    private float overclock = 0f;
-    private MachineMenu active;
-
-    /** Unlocked upgrade slots, recomputed from EXTRA_SLOTS like the Java machines do. */
-    private int curUnlocked = -1;
-    private double curOverclockLimit = 0.0;
-    private double curFuelEff = 0.0;
-    private double curGeneration = 0.0;
-
-    /**
-     * item id -> attribute modifiers, from the machine definition's {@code upgrades}.
-     *
-     * <p>
-     * The modern attribute system the newer machines use, as opposed to the legacy
-     * global {@code UpgradeRegistry}. Empty means this machine has no attribute
-     * upgrades and the inherited legacy path applies.
-     */
-    private java.util.Map<net.momirealms.craftengine.core.util.Key,
-            java.util.List<dev.arubik.craftengine.machine.attribute.MachineAttributes.Mod>> upgradeDefs =
-                    java.util.Map.of();
-
-    public void setUpgradeDefs(java.util.Map<net.momirealms.craftengine.core.util.Key,
-            java.util.List<dev.arubik.craftengine.machine.attribute.MachineAttributes.Mod>> defs) {
-        this.upgradeDefs = defs == null ? java.util.Map.of() : defs;
+    public void setUpgradeDefs(Map<Key, List<MachineAttributes.Mod>> defs) {
+        this.upgradeDefs = defs == null ? Map.of() : defs;
     }
 
-    private java.util.List<dev.arubik.craftengine.machine.attribute.MachineAttributes.Mod> modsOf(int slot) {
-        net.momirealms.craftengine.core.util.Key id = upgradeItemId(getItem(slot));
-        return id == null ? null : upgradeDefs.get(id);
+    private List<MachineAttributes.Mod> modsOf(int slot) {
+        Key id = this.upgradeItemId(this.getItem(slot));
+        return id == null ? null : this.upgradeDefs.get(id);
     }
 
     private static double clamp(double v, double lo, double hi) {
         return Math.max(lo, Math.min(hi, v));
     }
 
-    /**
-     * Folds attribute upgrades, mirroring what the Java machines do: a first pass
-     * over every installed module decides how many slots are unlocked, a second pass
-     * over only the unlocked ones decides the effects.
-     */
     @Override
     protected void recomputeUpgrades() {
-        if (upgradeDefs.isEmpty()) {
-            super.recomputeUpgrades(); // legacy UpgradeRegistry path
+        if (this.upgradeDefs.isEmpty()) {
+            super.recomputeUpgrades();
             return;
         }
-        int count = definition.upgrades().size();
-        java.util.List<dev.arubik.craftengine.machine.attribute.MachineAttributes.Mod> all = new java.util.ArrayList<>();
-        int[] slots = definition.upgrades().slots();
-        for (int i = 0; i < count; i++) {
-            var m = modsOf(slots[i]);
-            if (m != null)
-                all.addAll(m);
+        int count = this.definition.upgrades().size();
+        ArrayList<MachineAttributes.Mod> all = new ArrayList<MachineAttributes.Mod>();
+        int[] slots = this.definition.upgrades().slots();
+        for (int i = 0; i < count; ++i) {
+            List<MachineAttributes.Mod> m = this.modsOf(slots[i]);
+            if (m == null) continue;
+            all.addAll(m);
         }
-        int extra = (int) Math.round(dev.arubik.craftengine.machine.attribute.MachineAttributes.compute(all)
-                .getOrDefault(dev.arubik.craftengine.machine.attribute.MachineAttributes.EXTRA_SLOTS, 0.0));
-        this.curUnlocked = Math.max(definition.upgrades().baseUnlocked(),
-                Math.min(count, definition.upgrades().baseUnlocked() + extra));
-
-        java.util.List<dev.arubik.craftengine.machine.attribute.MachineAttributes.Mod> active = new java.util.ArrayList<>();
-        for (int i = 0; i < curUnlocked; i++) {
-            var m = modsOf(slots[i]);
-            if (m != null)
-                active.addAll(m);
+        int extra = (int)Math.round(MachineAttributes.compute(all).getOrDefault(MachineAttributes.EXTRA_SLOTS, 0.0));
+        this.curUnlocked = Math.max(this.definition.upgrades().baseUnlocked(), Math.min(count, this.definition.upgrades().baseUnlocked() + extra));
+        ArrayList<MachineAttributes.Mod> active = new ArrayList<MachineAttributes.Mod>();
+        for (int i = 0; i < this.curUnlocked; ++i) {
+            List<MachineAttributes.Mod> m = this.modsOf(slots[i]);
+            if (m == null) continue;
+            active.addAll(m);
         }
-        var attrs = dev.arubik.craftengine.machine.attribute.MachineAttributes.compute(active);
-        this.curGeneration = clamp(attrs.getOrDefault(
-                dev.arubik.craftengine.machine.attribute.MachineAttributes.GENERATION, 0.0), -0.95, 32.0);
-        this.curOverclockLimit = clamp(attrs.getOrDefault(
-                dev.arubik.craftengine.machine.attribute.MachineAttributes.OVERCLOCK_LIMIT, 0.0), 0.0, 32.0);
-        this.curFuelEff = clamp(attrs.getOrDefault(
-                dev.arubik.craftengine.machine.attribute.MachineAttributes.FUEL_EFFICIENCY, 0.0), -32.0, 0.95);
-
-        this.overclock = (float) clamp(this.overclock, -Math.min(this.curOverclockLimit, 0.99),
-                this.curOverclockLimit);
-        // Speed is (1 + overclock) alone; GENERATION is an output bonus, not a speed one.
-        this.upgradeModifiers = new dev.arubik.craftengine.machine.upgrade.UpgradeModifiers(
-                1.0 + overclock, 1.0, 0.0);
+        Map<Key, Double> attrs = MachineAttributes.compute(active);
+        this.curGeneration = DataMachineBlockEntity.clamp(attrs.getOrDefault(MachineAttributes.GENERATION, 0.0), -0.95, 32.0);
+        this.curOverclockLimit = DataMachineBlockEntity.clamp(attrs.getOrDefault(MachineAttributes.OVERCLOCK_LIMIT, 0.0), 0.0, 32.0);
+        this.curFuelEff = DataMachineBlockEntity.clamp(attrs.getOrDefault(MachineAttributes.FUEL_EFFICIENCY, 0.0), -32.0, 0.95);
+        this.overclock = (float)DataMachineBlockEntity.clamp(this.overclock, -Math.min(this.curOverclockLimit, 0.99), this.curOverclockLimit);
+        this.upgradeModifiers = new UpgradeModifiers(1.0 + (double)this.overclock, 1.0, 0.0);
     }
 
     private int unlockedSlots() {
-        if (curUnlocked < 0)
-            curUnlocked = definition.upgrades().baseUnlocked();
-        return Math.min(definition.upgrades().size(), Math.max(0, curUnlocked));
+        if (this.curUnlocked < 0) {
+            this.curUnlocked = this.definition.upgrades().baseUnlocked();
+        }
+        return Math.min(this.definition.upgrades().size(), Math.max(0, this.curUnlocked));
     }
 
     @Override
     public MachineMenu getMenu() {
-        if (active == null) {
-            active = new MachineMenu(this, getLayout());
-            active.syncFromMachine();
+        if (this.active == null) {
+            this.active = new MachineMenu(this, this.getLayout());
+            this.active.syncFromMachine();
+            this.menu = this.active;
         }
-        return active;
-    }
-
-    @Override
-    public void openMenu(net.minecraft.world.entity.player.Player player) {
-        openPage((org.bukkit.entity.Player) player.getBukkitEntity(), 0);
+        return this.active;
     }
 
     public void openPage(org.bukkit.entity.Player player, int newPage) {
         this.page = newPage;
-        this.active = new MachineMenu(this, getLayout());
+        this.active = new MachineMenu(this, this.getLayout());
         this.active.syncFromMachine();
+        this.menu = this.active;
         this.active.open(player);
     }
 
     @Override
+    public void openMenu(net.minecraft.world.entity.player.Player player) {
+        this.openPage((org.bukkit.entity.Player)player.getBukkitEntity(), 0);
+    }
+
+    @Override
     public MachineLayout getLayout() {
-        // An inline upgrade grid has no separate page — the slots live on the main one.
-        if (definition.upgrades().isInline())
-            return buildMainLayout();
-        return switch (page) {
-            case 1 -> buildUpgradeLayout();
-            case 2 -> buildOverclockLayout();
-            default -> buildMainLayout();
+        if (this.definition.upgrades().isInline()) {
+            return this.buildMainLayout();
+        }
+        return switch (this.page) {
+            case 1 -> this.buildUpgradeLayout();
+            case 2 -> this.buildOverclockLayout();
+            default -> this.buildMainLayout();
         };
     }
 
-    /**
-     * The upgrade page: the reserved container indices 0..count-1 on their own
-     * screen, with the still-locked ones shown as a lock icon.
-     */
     private MachineLayout buildUpgradeLayout() {
-        int count = definition.upgrades().size();
-        int unlocked = unlockedSlots();
-        MachineLayout l = new MachineLayout(org.bukkit.event.inventory.InventoryType.CHEST, 18, "Upgrades");
-        Component title = dev.arubik.craftengine.machine.menu.GuiTitles.title(getMachineId(), "upgrade");
-        if (title != null)
-            l.setTitleComponent(title);
-        for (int i = 0; i < count; i++) {
-            if (i < unlocked) {
-                l.addSlot(i, MenuSlotType.INPUT);
-            } else {
-                l.setDynamicProvider(i, (m, t) -> dev.arubik.craftengine.machine.menu.MenuText.lockedIcon(
-                        dev.arubik.craftengine.machine.menu.MenuText.tr("polyfill.ui.locked",
-                                net.kyori.adventure.text.format.NamedTextColor.RED),
-                        dev.arubik.craftengine.machine.menu.MenuText.tr("polyfill.ui.locked_desc",
-                                net.kyori.adventure.text.format.NamedTextColor.GRAY)));
-            }
-        }
-        l.addButton(17, (m, t) -> dev.arubik.craftengine.machine.menu.MenuText.backIcon(),
-                (m, p) -> ((DataMachineBlockEntity) m).openPage(p, 0));
-        return l;
+        return UpgradeMenu.build(this.getMachineId(), this.definition.upgrades().size(), this::unlockedSlots, (m, p) -> ((DataMachineBlockEntity)m).openPage((org.bukkit.entity.Player)p, 0), null);
     }
 
-    /** The overclock page, built by the shared {@code OverclockMenu} component. */
     private MachineLayout buildOverclockLayout() {
-        return dev.arubik.craftengine.machine.menu.OverclockMenu.build(
-                getMachineId(), net.kyori.adventure.text.format.NamedTextColor.RED,
-                () -> this.overclock,
-                () -> (float) this.curOverclockLimit,
-                this::bumpOverclock,
-                p -> openPage(p, 0));
+        return OverclockMenu.build(this.getMachineId(), NamedTextColor.RED, () -> this.overclock, () -> (float)this.curOverclockLimit, this::bumpOverclock, p -> this.openPage((org.bukkit.entity.Player)p, 0));
     }
-
-    /**
-     * Carried fraction of the GENERATION attribute.
-     *
-     * <p>
-     * Generation is a deterministic output bonus, not a speed one: each craft adds
-     * {@code curGeneration} here and every whole 1.0 accumulated yields one extra
-     * full output set, with the remainder carried. +35% generation therefore gives a
-     * bonus set roughly every third craft rather than a 35% chance each time.
-     */
-    private double genBuffer = 0.0;
 
     @Override
     protected void process(Level level, AbstractProcessingRecipe recipe) {
-        consumeInputs(level, recipe);
+        this.consumeInputs(level, recipe);
         int extra = 0;
-        if (curGeneration > 0.0) {
-            genBuffer += curGeneration;
-            while (genBuffer >= 1.0) {
-                genBuffer -= 1.0;
-                extra++;
+        if (this.curGeneration > 0.0) {
+            this.genBuffer += this.curGeneration;
+            while (this.genBuffer >= 1.0) {
+                this.genBuffer -= 1.0;
+                ++extra;
             }
         }
-        for (int set = 0; set < 1 + extra; set++)
-            for (RecipeOutput output : recipe.getOutputs())
+        for (int set = 0; set < 1 + extra; ++set) {
+            for (RecipeOutput output : recipe.getOutputs()) {
                 output.dispense(level, this);
-        if (extra > 0)
-            setChanged();
+            }
+        }
+        if (extra > 0) {
+            this.setChanged();
+        }
     }
 
-    /** rpm the matched recipe demands after fuel efficiency and overclock. */
     @Override
     public int effectiveRpm(AbstractProcessingRecipe recipe) {
-        if (recipe == null)
+        if (recipe == null) {
             return 0;
-        return Math.round((float) (recipe.getMinRpm() * (1.0 + overclock) * (1.0 - curFuelEff)));
+        }
+        return Math.round((float)((double)recipe.getMinRpm() * (1.0 + (double)this.overclock) * (1.0 - this.curFuelEff)));
     }
 
-    /**
-     * SU drawn after overclock. The cost rises slightly super-linearly —
-     * {@code (1+oc)^1.25} — so pushing speed past +100% costs disproportionately more
-     * stress without being punishing. Generation and efficiency do not change SU.
-     */
     @Override
     public int effectiveSu(AbstractProcessingRecipe recipe) {
-        if (recipe == null)
+        if (recipe == null) {
             return 0;
-        double factor = Math.pow(Math.max(0.0, 1.0 + overclock), definition.power().suExponent());
-        return (int) Math.round(recipe.getSuCost() * factor);
+        }
+        double factor = Math.pow(Math.max(0.0, 1.0 + (double)this.overclock), this.definition.power().suExponent());
+        return (int)Math.round((double)recipe.getSuCost() * factor);
     }
 
-    /**
-     * Also true while the player has the overclock slider above zero, not only during
-     * a fuel-driven overclock burst.
-     */
     @Override
     public boolean isOverclocked() {
-        return super.isOverclocked() || overclock > 0f;
+        return super.isOverclocked() || this.overclock > 0.0f;
     }
 
-    public void bumpOverclock(boolean up, org.bukkit.event.inventory.ClickType click) {
-        float delta = dev.arubik.craftengine.machine.menu.OverclockMenu.step(click);
+    public void bumpOverclock(boolean up, ClickType click) {
+        float delta = OverclockMenu.step(click);
         this.overclock += up ? delta : -delta;
-        this.overclock = (float) clamp(this.overclock, -Math.min(this.curOverclockLimit, 0.99),
-                this.curOverclockLimit);
-        setChanged();
+        this.overclock = (float)DataMachineBlockEntity.clamp(this.overclock, -Math.min(this.curOverclockLimit, 0.99), this.curOverclockLimit);
+        this.setChanged();
+    }
+
+    @Override
+    public PolyContext buildEvalContext() {
+        try {
+            float f;
+            int n;
+            Level level = this.getNMSLevel();
+            BlockPos pos = this.getMachinePos();
+            if (level == null || pos == null) {
+                return null;
+            }
+            LinkedHashMap<String, double[]> fluidTankData = new LinkedHashMap<String, double[]>();
+            for (MachineDefinition.TankSpec tankSpec : this.definition.fluidTanks()) {
+                FluidTank fluidTank = this.fluidTank(tankSpec.name());
+                if (fluidTank == null) continue;
+                FluidStack stored = fluidTank.getFluid(level, pos);
+                fluidTankData.put(tankSpec.name(), new double[]{stored.getAmount(), fluidTank.getCapacity()});
+            }
+            LinkedHashMap<String, double[]> gasTankData = new LinkedHashMap<String, double[]>();
+            for (MachineDefinition.TankSpec tankSpec : this.definition.gasTanks()) {
+                GasTank tank = this.gasTank(tankSpec.name());
+                if (tank == null) continue;
+                GasStack stored = tank.getGas(level, pos);
+                gasTankData.put(tankSpec.name(), new double[]{stored.getAmount(), tank.getCapacity()});
+            }
+            LinkedHashMap<String, Integer> linkedHashMap = new LinkedHashMap<String, Integer>();
+            if (!this.upgradeDefs.isEmpty()) {
+                for (int upSlot : this.definition.upgrades().slots()) {
+                    net.minecraft.world.item.ItemStack nmsItem = this.getItem(upSlot);
+                    Key uid = this.upgradeItemId(nmsItem);
+                    if (uid == null) continue;
+                    linkedHashMap.merge(uid.namespace() + ":" + uid.value(), 1, Integer::sum);
+                }
+            }
+            boolean bl = false;
+            try {
+                n = level.getBestNeighborSignal(pos);
+            }
+            catch (Throwable tank) {
+                // empty catch block
+            }
+            MachineRenderContext mrc = new MachineRenderContext(this.inputRpm, this.overclock, this.curFuelEff, this.progress, this.maxProgress, this.curGeneration, this.isProcessing(), this.inputRpm > 0.0f, this.isOverclocked(), this.burnTime > 0, null, linkedHashMap, fluidTankData, gasTankData, n);
+            Direction facing = this.getFacing(level);
+            if (facing == null) {
+                f = 0.0f;
+            } else {
+                switch (facing) {
+                    case SOUTH: {
+                        f = 0.0f;
+                        break;
+                    }
+                    case WEST: {
+                        f = 90.0f;
+                        break;
+                    }
+                    case NORTH: {
+                        f = 180.0f;
+                        break;
+                    }
+                    case EAST: {
+                        f = 270.0f;
+                        break;
+                    }
+                    default: {
+                        f = 0.0f;
+                    }
+                }
+            }
+            float yaw = f;
+            String facingName = facing != null ? facing.getName().toLowerCase() : "north";
+            return PolyContext.builder().copyFrom(mrc.toPolyContext()).machinePos((double)pos.getX() + 0.5, (double)pos.getY() + 0.5, (double)pos.getZ() + 0.5, facingName, yaw, (World)level.getWorld(), this).redstone(n).contraption(level).num("burn_time", this.burnTime).num("max_burn_time", this.maxBurnTime).num("overclock_limit", this.curOverclockLimit).num("generation", this.curGeneration).cls("Inventory", new InventoryClass((Inventory)new CraftInventory((Container)this))).cls("Network", new NetworkClass((ServerLevel)level, pos.getX(), pos.getY(), pos.getZ())).build();
+        }
+        catch (Throwable ignored) {
+            return null;
+        }
+    }
+
+    private void runActionScript(String scriptName) {
+        block9: {
+            PolyScript script = PolyScriptRegistry.get(scriptName);
+            if (script == null) {
+                if (SCRIPT_DEBUG) {
+                    System.out.println("[CEP script] " + scriptName + " NOT FOUND in registry");
+                }
+                return;
+            }
+            try {
+                PolyContext ctx = this.buildEvalContext();
+                if (ctx == null) {
+                    if (SCRIPT_DEBUG) {
+                        System.out.println("[CEP script] " + scriptName + " ctx=null");
+                    }
+                    return;
+                }
+                if (SCRIPT_DEBUG) {
+                    System.out.println("[CEP script] RUN " + scriptName);
+                }
+                script.evaluate(ctx);
+                if (SCRIPT_DEBUG) {
+                    System.out.println("[CEP script] OK " + scriptName);
+                }
+            }
+            catch (Throwable t) {
+                if (SCRIPT_DEBUG) {
+                    System.out.println("[CEP script] " + scriptName + " EXCEPTION: " + t.getMessage());
+                }
+                if (!SCRIPT_DEBUG) break block9;
+                t.printStackTrace();
+            }
+        }
+    }
+
+    public void runInteractScript(String scriptName, ServerPlayer player) {
+        PolyScript script = PolyScriptRegistry.get(scriptName);
+        if (script == null) {
+            return;
+        }
+        try {
+            PolyContext base = this.buildEvalContext();
+            if (base == null) {
+                return;
+            }
+            PolyContext ctx = PolyContext.builder().copyFrom(base).player(player).build();
+            script.evaluate(ctx);
+        }
+        catch (Throwable throwable) {
+            // empty catch block
+        }
     }
 
     private MachineLayout buildMainLayout() {
-        MachineLayout layout = new MachineLayout(org.bukkit.event.inventory.InventoryType.CHEST,
-                definition.menuSize(), definition.title());
-        Component title = dev.arubik.craftengine.machine.menu.GuiTitles.title(getMachineId(), "main");
-        if (title != null)
+        int infoSlot;
+        Object object;
+        MachineLayout layout = new MachineLayout(InventoryType.CHEST, this.definition.menuSize(), this.definition.title());
+        Component title = GuiTitles.title(this.getMachineId(), "main");
+        if (title != null) {
             layout.setTitleComponent(title);
-
-        for (int slot : definition.inputSlots())
-            layout.addSlot(slot, MenuSlotType.INPUT);
-        for (int slot : definition.outputSlots())
-            layout.addSlot(slot, MenuSlotType.OUTPUT);
-        for (int slot : definition.fuelSlots())
-            layout.addSlot(slot, MenuSlotType.FUEL);
-        // Reserved upgrade slots are shown on their own page, not here; inline ones
-        // belong on the main screen.
-        if (definition.upgrades().isInline())
-            for (int slot : definition.upgrades().slots())
-                layout.addSlot(slot, MenuSlotType.UPGRADE);
-
-        // Buttons come from the machine definition when it declares any (so the
-        // upgrades / overclock entry points travel with the machine), otherwise from
-        // the block config, which is how the pre-existing machines declare them.
-        if (!definition.buttons().isEmpty())
-            for (MachineDefinition.ButtonSpec spec : definition.buttons())
-                installButton(layout, toButton(spec));
-        else
-            for (MachineMenuConfig.Button button : menuConfig.buttons)
-                installButton(layout, button);
-        // Bars declared by the machine definition win; the block config remains the
-        // fallback so a pack that has not adopted bars/*.json still renders.
-        List<MachineBar> effectiveBars = bars;
-        if (!definition.bars().isEmpty()) {
-            List<MachineBar> resolved = new java.util.ArrayList<>();
-            for (MachineDefinition.BarRef ref : definition.bars()) {
-                var def = dev.arubik.craftengine.machine.menu.bar.BarDefinition.REGISTRY.get(ref.bar());
-                if (def != null)
-                    resolved.add(def.toBar(ref.slots()));
+        }
+        for (Object slot : this.definition.inputSlots()) {
+            layout.addSlot((int)slot, MenuSlotType.INPUT);
+        }
+        for (Object slot : this.definition.outputSlots()) {
+            layout.addSlot((int)slot, MenuSlotType.OUTPUT);
+        }
+        for (Object slot : this.definition.fuelSlots()) {
+            layout.addSlot((int)slot, MenuSlotType.FUEL);
+        }
+        if (this.definition.upgrades().isInline()) {
+            object = this.definition.upgrades().slots();
+            int n = ((int[])object).length;
+            for (int i = 0; i < n; ++i) {
+                Object slot;
+                slot = object[i];
+                layout.addSlot((int)slot, MenuSlotType.UPGRADE);
             }
-            if (!resolved.isEmpty())
+        }
+        if (!this.definition.buttons().isEmpty()) {
+            object = this.definition.buttons().iterator();
+            while (object.hasNext()) {
+                MachineDefinition.ButtonSpec spec = (MachineDefinition.ButtonSpec)object.next();
+                this.installButton(layout, DataMachineBlockEntity.toButton(spec));
+            }
+        } else {
+            object = this.menuConfig.buttons.iterator();
+            while (object.hasNext()) {
+                MachineMenuConfig.Button button = (MachineMenuConfig.Button)object.next();
+                this.installButton(layout, button);
+            }
+        }
+        List<MachineBar> effectiveBars = this.bars;
+        if (!this.definition.bars().isEmpty()) {
+            ArrayList<MachineBar> resolved = new ArrayList<MachineBar>();
+            for (MachineDefinition.BarRef ref : this.definition.bars()) {
+                BarDefinition def = BarDefinition.REGISTRY.get(ref.bar());
+                if (def == null) continue;
+                resolved.add(def.toBar(ref.slots()));
+            }
+            if (!resolved.isEmpty()) {
                 effectiveBars = resolved;
+            }
         }
         MachineBars.install(layout, effectiveBars);
-
-        // Recipe readout icon, same shared component the Java machines use.
-        int infoSlot = definition.infoSlot() >= 0 ? definition.infoSlot() : menuConfig.infoSlot;
-        if (infoSlot >= 0)
-            layout.setDynamicProvider(infoSlot, (machine, tick) -> infoIcon());
+        int n = infoSlot = this.definition.infoSlot() >= 0 ? this.definition.infoSlot() : this.menuConfig.infoSlot;
+        if (infoSlot >= 0) {
+            layout.setDynamicProvider(infoSlot, (machine, tick) -> this.infoIcon());
+        }
         return layout;
     }
 
     static MachineMenuConfig.Button toButton(MachineDefinition.ButtonSpec spec) {
-        return new MachineMenuConfig.Button(spec.slot(), spec.icon(),
-                MachineMenuConfig.Action.parse(spec.action()), spec.name(), spec.lore(),
-                spec.lockedIcon(), MachineMenuConfig.LockedWhen.parse(spec.lockedWhen()));
+        return new MachineMenuConfig.Button(spec.slot(), spec.icon(), MachineMenuConfig.Action.parse(spec.action()), spec.name(), spec.lore(), spec.lockedIcon(), MachineMenuConfig.LockedWhen.parse(spec.lockedWhen()));
     }
 
     private void installButton(MachineLayout layout, MachineMenuConfig.Button button) {
-        layout.addButton(button.slot,
-                (machine, tick) -> dev.arubik.craftengine.machine.menu.MenuText.iconItem(
-                        parseKey(button.icon), org.bukkit.Material.PAPER,
-                        net.kyori.adventure.text.Component.text(button.name == null ? "" : button.name)),
-                (machine, player) -> {
-                    switch (button.action.kind) {
-                        case DEPLETE_FLUID -> {
-                            for (var t : machine.fluidTanks)
-                                if (button.action.targets(t.getName()))
-                                    t.extract(machine.getNMSLevel(), machine.getMachinePos(),
-                                            t.getCapacity(), null);
-                        }
-                        case DEPLETE_GAS -> {
-                            for (var t : machine.gasTanks)
-                                if (button.action.targets(t.getName()))
-                                    t.extract(machine.getNMSLevel(), machine.getMachinePos(),
-                                            t.getCapacity(), null);
-                        }
-                        case OPEN_PAGE -> {
-                            if (machine instanceof DataMachineBlockEntity self)
-                                self.openPage(player, button.action.page);
-                        }
-                        case NONE -> {
-                        }
+        layout.addButton(button.slot, (machine, tick) -> {
+            boolean locked = DataMachineBlockEntity.isLocked(machine, button.lockedWhen);
+            Key icon = locked && button.lockedIcon != null ? DataMachineBlockEntity.parseKey(button.lockedIcon) : DataMachineBlockEntity.parseKey(button.icon);
+            return MenuText.iconItem(icon, Material.PAPER, (Component)Component.text((String)(button.name == null ? "" : button.name)), new Component[0]);
+        }, (machine, player) -> {
+            if (DataMachineBlockEntity.isLocked(machine, button.lockedWhen)) {
+                return;
+            }
+            switch (button.action.kind) {
+                case DEPLETE_FLUID: {
+                    for (FluidTank t : machine.fluidTanks) {
+                        if (!button.action.targets(t.getName())) continue;
+                        t.extract(machine.getNMSLevel(), machine.getMachinePos(), t.getCapacity(), null);
                     }
-                });
+                    break;
+                }
+                case DEPLETE_GAS: {
+                    for (GasTank t : machine.gasTanks) {
+                        if (!button.action.targets(t.getName())) continue;
+                        t.extract(machine.getNMSLevel(), machine.getMachinePos(), t.getCapacity(), null);
+                    }
+                    break;
+                }
+                case OPEN_PAGE: {
+                    if (!(machine instanceof DataMachineBlockEntity)) break;
+                    DataMachineBlockEntity self = (DataMachineBlockEntity)machine;
+                    self.openPage((org.bukkit.entity.Player)player, button.action.page);
+                    break;
+                }
+                case SCRIPT: {
+                    PolyContext ctx;
+                    PolyScript script = PolyScriptRegistry.get(button.action.target);
+                    if (script == null || (ctx = machine.buildEvalContext()) == null) break;
+                    script.evaluate(ctx);
+                    break;
+                }
+            }
+        });
     }
 
-    private static net.momirealms.craftengine.core.util.Key parseKey(String spec) {
-        if (spec == null)
-            return net.momirealms.craftengine.core.util.Key.of("cml", "gui_empty");
-        int i = spec.indexOf(':');
-        return i < 0 ? net.momirealms.craftengine.core.util.Key.of("cml", spec)
-                : net.momirealms.craftengine.core.util.Key.of(spec.substring(0, i), spec.substring(i + 1));
+    private static boolean isLocked(AbstractMachineBlockEntity machine, MachineMenuConfig.LockedWhen lw) {
+        PolyContext polyContext;
+        double ocLimit;
+        if (lw == null) {
+            return false;
+        }
+        if (machine instanceof DataMachineBlockEntity) {
+            DataMachineBlockEntity dm = (DataMachineBlockEntity)machine;
+            v0 = dm.curOverclockLimit;
+        } else {
+            v0 = ocLimit = 0.0;
+        }
+        if (machine instanceof DataMachineBlockEntity) {
+            DataMachineBlockEntity dm2 = (DataMachineBlockEntity)machine;
+            polyContext = dm2.buildEvalContext();
+        } else {
+            polyContext = null;
+        }
+        PolyContext ctx = polyContext;
+        return lw.isLocked(ctx, ocLimit);
+    }
+
+    public static Direction rpmFacesContainDir(String s, Direction facing) {
+        if (facing == null) {
+            facing = Direction.NORTH;
+        }
+        return switch (s.toLowerCase()) {
+            case "front" -> facing;
+            case "back" -> facing.getOpposite();
+            case "right" -> facing.getClockWise();
+            case "left" -> facing.getCounterClockWise();
+            case "up" -> Direction.UP;
+            case "down" -> Direction.DOWN;
+            default -> Direction.byName((String)s.toLowerCase());
+        };
+    }
+
+    private static boolean rpmFacesContain(Set<String> raw, Direction d, Direction facing) {
+        if (facing == null) {
+            facing = Direction.NORTH;
+        }
+        Iterator<String> iterator = raw.iterator();
+        while (iterator.hasNext()) {
+            boolean match;
+            String s;
+            if (!(match = (switch (s = iterator.next()) {
+                case "front" -> {
+                    if (d == facing) {
+                        yield true;
+                    }
+                    yield false;
+                }
+                case "back" -> {
+                    if (d == facing.getOpposite()) {
+                        yield true;
+                    }
+                    yield false;
+                }
+                case "right" -> {
+                    if (d == facing.getClockWise()) {
+                        yield true;
+                    }
+                    yield false;
+                }
+                case "left" -> {
+                    if (d == facing.getCounterClockWise()) {
+                        yield true;
+                    }
+                    yield false;
+                }
+                case "up" -> {
+                    if (d == Direction.UP) {
+                        yield true;
+                    }
+                    yield false;
+                }
+                case "down" -> {
+                    if (d == Direction.DOWN) {
+                        yield true;
+                    }
+                    yield false;
+                }
+                case "horizontal" -> {
+                    if (d.getAxis() != Direction.Axis.Y) {
+                        yield true;
+                    }
+                    yield false;
+                }
+                case "vertical" -> {
+                    if (d.getAxis() == Direction.Axis.Y) {
+                        yield true;
+                    }
+                    yield false;
+                }
+                case "axis_perp" -> true;
+                case "all" -> true;
+                default -> d.getName().equals(s);
+            }))) continue;
+            return true;
+        }
+        return false;
+    }
+
+    private static Key parseKey(String spec) {
+        if (spec == null) {
+            return Key.of((String)"cml", (String)"gui_empty");
+        }
+        int i = spec.indexOf(58);
+        return i < 0 ? Key.of((String)"cml", (String)spec) : Key.of((String)spec.substring(0, i), (String)spec.substring(i + 1));
     }
 }
+

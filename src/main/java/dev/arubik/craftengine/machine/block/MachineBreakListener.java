@@ -1,49 +1,109 @@
+/*
+ * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  net.minecraft.core.BlockPos
+ *  net.minecraft.server.level.ServerPlayer
+ *  net.minecraft.world.level.Level
+ *  net.momirealms.craftengine.core.block.entity.BlockEntity
+ *  net.momirealms.craftengine.core.block.entity.BlockEntityController
+ *  net.momirealms.craftengine.core.world.BlockPos
+ *  net.momirealms.craftengine.core.world.CEWorld
+ *  org.bukkit.block.Block
+ *  org.bukkit.craftbukkit.entity.CraftPlayer
+ *  org.bukkit.event.EventHandler
+ *  org.bukkit.event.EventPriority
+ *  org.bukkit.event.Listener
+ *  org.bukkit.event.block.Action
+ *  org.bukkit.event.block.BlockBreakEvent
+ *  org.bukkit.event.player.PlayerInteractEvent
+ */
 package dev.arubik.craftengine.machine.block;
 
+import dev.arubik.craftengine.machine.block.entity.AbstractMachineBlockEntity;
+import dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity;
+import dev.arubik.craftengine.util.CeWorlds;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.Level;
+import net.momirealms.craftengine.core.block.entity.BlockEntity;
+import net.momirealms.craftengine.core.block.entity.BlockEntityController;
+import net.momirealms.craftengine.core.world.BlockPos;
+import net.momirealms.craftengine.core.world.CEWorld;
 import org.bukkit.block.Block;
+import org.bukkit.craftbukkit.entity.CraftPlayer;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
 
-import dev.arubik.craftengine.machine.block.entity.AbstractMachineBlockEntity;
-import net.minecraft.core.BlockPos;
-import net.minecraft.world.level.Level;
-import net.momirealms.craftengine.bukkit.world.BukkitWorld;
-import net.momirealms.craftengine.core.block.entity.BlockEntity;
-import net.momirealms.craftengine.core.world.CEWorld;
-
-/**
- * Drops a machine's stored items (input / output / fuel / upgrades + any in-flight funnel
- * transit) when the block is broken. Driven from a Bukkit {@link BlockBreakEvent} because
- * the behavior's {@code affectNeighborsAfterRemoval} callback fires AFTER the block (and its
- * block entity) is already gone — so it sees a null BE and drops nothing. At MONITOR (the break
- * will proceed) the block is still present, so the BE is still loaded and its contents readable.
- */
-public final class MachineBreakListener implements Listener {
-
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-    public void onBreak(BlockBreakEvent event) {
-        Block block = event.getBlock();
+public final class MachineBreakListener
+implements Listener {
+    @EventHandler(priority=EventPriority.LOW, ignoreCancelled=true)
+    public void onPlayerInteract(PlayerInteractEvent event) {
+        BlockEntityController blockEntityController;
         CEWorld world;
-        try {
-            world = dev.arubik.craftengine.util.CeWorlds.of(block.getWorld()).storageWorld();
-        } catch (Throwable t) {
+        if (event.getAction() != Action.LEFT_CLICK_BLOCK) {
             return;
         }
-        if (world == null)
+        Block block = event.getClickedBlock();
+        if (block == null) {
             return;
-        net.momirealms.craftengine.core.world.BlockPos cePos =
-                new net.momirealms.craftengine.core.world.BlockPos(block.getX(), block.getY(), block.getZ());
-        BlockEntity be = world.getBlockEntityAtIfLoaded(cePos);
-        if (be == null || !(be.controller instanceof AbstractMachineBlockEntity m))
-            return;
+        }
         try {
-            Level level = (Level) world.world().minecraftWorld();
-            if (level == null)
+            world = CeWorlds.of(block.getWorld()).storageWorld();
+        }
+        catch (Throwable t) {
+            return;
+        }
+        if (world == null) {
+            return;
+        }
+        BlockPos cePos = new BlockPos(block.getX(), block.getY(), block.getZ());
+        BlockEntity be = world.getBlockEntityAtIfLoaded(cePos);
+        if (be == null || !((blockEntityController = be.controller) instanceof DataMachineBlockEntity)) {
+            return;
+        }
+        DataMachineBlockEntity dm = (DataMachineBlockEntity)blockEntityController;
+        if (dm.definition() == null || dm.definition().attackScript() == null) {
+            return;
+        }
+        event.setCancelled(true);
+        ServerPlayer nmsPlayer = ((CraftPlayer)event.getPlayer()).getHandle();
+        dm.runInteractScript(dm.definition().attackScript(), nmsPlayer);
+    }
+
+    @EventHandler(priority=EventPriority.MONITOR, ignoreCancelled=true)
+    public void onBreak(BlockBreakEvent event) {
+        BlockEntityController blockEntityController;
+        CEWorld world;
+        Block block = event.getBlock();
+        try {
+            world = CeWorlds.of(block.getWorld()).storageWorld();
+        }
+        catch (Throwable t) {
+            return;
+        }
+        if (world == null) {
+            return;
+        }
+        BlockPos cePos = new BlockPos(block.getX(), block.getY(), block.getZ());
+        BlockEntity be = world.getBlockEntityAtIfLoaded(cePos);
+        if (be == null || !((blockEntityController = be.controller) instanceof AbstractMachineBlockEntity)) {
+            return;
+        }
+        AbstractMachineBlockEntity m = (AbstractMachineBlockEntity)blockEntityController;
+        try {
+            Level level = (Level)world.world().minecraftWorld();
+            if (level == null) {
                 return;
-            m.dropAllContents(level, new BlockPos(block.getX(), block.getY(), block.getZ()));
-        } catch (Throwable ignored) {
+            }
+            m.dropAllContents(level, new net.minecraft.core.BlockPos(block.getX(), block.getY(), block.getZ()));
+        }
+        catch (Throwable throwable) {
+            // empty catch block
         }
     }
 }
+

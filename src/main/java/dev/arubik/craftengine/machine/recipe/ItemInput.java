@@ -1,8 +1,16 @@
+/*
+ * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  net.minecraft.world.item.ItemStack
+ */
 package dev.arubik.craftengine.machine.recipe;
 
+import dev.arubik.craftengine.machine.recipe.RecipeInput;
 import net.minecraft.world.item.ItemStack;
 
-public class ItemInput implements RecipeInput {
+public class ItemInput
+implements RecipeInput {
     private final ItemStack required;
     private final boolean exactNbt;
 
@@ -17,30 +25,33 @@ public class ItemInput implements RecipeInput {
 
     @Override
     public boolean matches(ItemStack stack) {
-        if (stack == null || stack.isEmpty())
+        if (stack == null || stack.isEmpty()) {
             return false;
-        if (stack.getCount() < required.getCount())
+        }
+        if (stack.getCount() < this.required.getCount()) {
             return false;
-
-        if (!stack.is(required.getItem()))
+        }
+        if (!stack.is(this.required.getItem())) {
             return false;
-
-        if (exactNbt) {
-            return ItemStack.isSameItemSameComponents(required, stack);
+        }
+        if (this.exactNbt) {
+            return ItemStack.isSameItemSameComponents((ItemStack)this.required, (ItemStack)stack);
         }
         return true;
     }
 
     public ItemStack getStack() {
-        return required;
+        return this.required;
     }
 
+    @Override
     public int getAmount() {
-        return required.getCount();
+        return this.required.getCount();
     }
 
     @Override
     public boolean isEmpty() {
-        return required.isEmpty();
+        return this.required.isEmpty();
     }
 }
+

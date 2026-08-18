@@ -1,200 +1,237 @@
+/*
+ * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  it.unimi.dsi.fastutil.ints.IntList
+ *  net.minecraft.core.BlockPos
+ *  net.minecraft.core.Direction
+ *  net.minecraft.network.protocol.Packet
+ *  net.minecraft.server.level.ServerLevel
+ *  net.minecraft.server.level.ServerPlayer
+ *  net.minecraft.world.entity.Entity
+ *  net.minecraft.world.entity.EntityType
+ *  net.minecraft.world.level.LightLayer
+ *  net.minecraft.world.phys.Vec3
+ *  net.momirealms.craftengine.bukkit.entity.data.DisplayData
+ *  net.momirealms.craftengine.bukkit.entity.data.DisplayData$ItemDisplayData
+ *  net.momirealms.craftengine.core.entity.player.Player
+ *  org.bukkit.entity.Player
+ *  org.joml.Quaternionf
+ *  org.joml.Quaternionfc
+ *  org.joml.Vector3f
+ *  org.joml.Vector3fc
+ */
 package dev.arubik.craftengine.conveyor;
 
+import dev.arubik.craftengine.util.MNms;
 import it.unimi.dsi.fastutil.ints.IntList;
-import net.momirealms.craftengine.bukkit.entity.data.DisplayData;
-import net.momirealms.craftengine.core.entity.player.Player;
-import net.momirealms.craftengine.core.world.BlockPos;
-import org.joml.Vector3f;
-
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.level.LightLayer;
+import net.minecraft.world.phys.Vec3;
+import net.momirealms.craftengine.bukkit.entity.data.DisplayData;
+import org.bukkit.entity.Player;
+import org.joml.Quaternionf;
+import org.joml.Quaternionfc;
+import org.joml.Vector3f;
+import org.joml.Vector3fc;
 
-/**
- * A server-side fake {@code minecraft:item_display} entity used to visualise the
- * single in-transit item riding a conveyor belt. Driven imperatively by
- * {@link ConveyorBlockEntity}: the controller decides which players track the
- * belt's chunk and calls {@link #spawn}, {@link #updatePosition} and
- * {@link #despawn} each tick.
- *
- * <p>Modelled on {@code machine/render/element/ShulkerBoxHitboxElement} but it
- * is NOT a {@code ConstantBlockEntityElement}: the position changes every tick,
- * which the constant-element pipeline does not support, so we broadcast packets
- * directly to tracked players.</p>
- */
 public final class ConveyorItemDisplay {
-
     private final int entityId;
     private final UUID uuid = UUID.randomUUID();
+    private int packedLight = 0xF000F0;
     private final Object despawnPacket;
-
-    /** absolute world position currently displayed */
-    private double curX, curY, curZ;
+    private double curX;
+    private double curY;
+    private double curZ;
     private Object nmsItemStack;
-
-    /** Players who have already been sent the spawn (add) packet for this entity. */
-    private final java.util.Set<UUID> shownTo = java.util.concurrent.ConcurrentHashMap.newKeySet();
+    private final Set<UUID> shownTo = ConcurrentHashMap.newKeySet();
+    private Quaternionf rotation = new Quaternionf();
+    private boolean rotationDirty = false;
+    private Vector3f scale = new Vector3f(0.5f, 0.5f, 0.5f);
+    private static final AtomicInteger ENTITY_COUNTER;
 
     public ConveyorItemDisplay() {
-        this.entityId = nextEntityId();
-        this.despawnPacket = dev.arubik.craftengine.util.MNms.INSTANCE
-                .constructor$ClientboundRemoveEntitiesPacket(IntList.of(entityId));
+        this.entityId = ConveyorItemDisplay.nextEntityId();
+        this.despawnPacket = MNms.INSTANCE.constructor$ClientboundRemoveEntitiesPacket(IntList.of((int)this.entityId));
     }
 
     public int entityId() {
-        return entityId;
+        return this.entityId;
     }
 
-    /** Orientation of the carried item: yaw from belt facing + pitch from slope. */
-    private org.joml.Quaternionf rotation = new org.joml.Quaternionf();
-
-    /** Set the NMS item stack to render (net.minecraft.world.item.ItemStack). */
     public void setNmsItem(Object nmsItemStack) {
         this.nmsItemStack = nmsItemStack;
     }
 
-    /** True when the rotation changed since the last metadata push (needs re-send). */
-    private boolean rotationDirty = false;
-
-    /** Set the display rotation (oriented along the belt + tilted on ramps). */
-    public void setRotation(org.joml.Quaternionf rotation) {
-        org.joml.Quaternionf next = rotation != null ? rotation : new org.joml.Quaternionf();
-        if (!next.equals(this.rotation, 1e-4f))
+    public void setRotation(Quaternionf rotation) {
+        Quaternionf next;
+        Quaternionf quaternionf = next = rotation != null ? rotation : new Quaternionf();
+        if (!next.equals((Quaternionfc)this.rotation, 1.0E-4f)) {
             this.rotationDirty = true;
+        }
         this.rotation = next;
     }
 
-    /** Display scale (block units). Default 0.5 = half a block (belt item). */
-    private org.joml.Vector3f scale = new org.joml.Vector3f(0.5f, 0.5f, 0.5f);
-
     public void setScale(float s) {
-        setScale(s, s, s);
+        this.setScale(s, s, s);
     }
 
     public void setScale(float x, float y, float z) {
-        org.joml.Vector3f next = new org.joml.Vector3f(x, y, z);
-        if (!next.equals(this.scale, 1e-4f))
-            this.rotationDirty = true; // metadata needs a re-push
+        Vector3f next = new Vector3f(x, y, z);
+        if (!next.equals((Vector3fc)this.scale, 1.0E-4f)) {
+            this.rotationDirty = true;
+        }
         this.scale = next;
     }
 
-    /** Consume the rotation-changed flag (so callers re-send metadata only when needed). */
     public boolean consumeRotationDirty() {
-        boolean d = rotationDirty;
-        rotationDirty = false;
+        boolean d = this.rotationDirty;
+        this.rotationDirty = false;
         return d;
     }
 
-    /** Build the entity metadata list (item + scale + orientation + interpolation). */
     private List<Object> metadata() {
-        List<Object> values = new ArrayList<>();
-        if (nmsItemStack != null) {
-            DisplayData.ItemDisplayData.ItemStack.addEntityData(nmsItemStack, values);
+        ArrayList<Object> values = new ArrayList<Object>();
+        if (this.nmsItemStack != null) {
+            DisplayData.ItemDisplayData.ItemStack.addEntityData(this.nmsItemStack, values);
         }
-        // Render the item at the configured scale (default half a block, for the belt).
-        DisplayData.Scale.addEntityData(scale, values);
-        // Force full block+sky light so the item never renders pitch-black in shade.
-        // Brightness override packs (blockLight << 4) | (skyLight << 20); 15/15 = full.
-        DisplayData.BrightnessOverride.addEntityData((15 << 4) | (15 << 20), values);
-        // Orient along the belt (yaw) + tilt on ramps (pitch).
-        DisplayData.LeftRotation.addEntityData(rotation, values);
-        // Smoothly interpolate the position + rotation we issue each tick.
+        DisplayData.Scale.addEntityData(this.scale, values);
+        DisplayData.BrightnessOverride.addEntityData(this.packedLight, values);
+        DisplayData.LeftRotation.addEntityData(this.rotation, values);
         DisplayData.PosRotInterpolationDuration.addEntityData(1, values);
         DisplayData.TransformationInterpolationDuration.addEntityData(2, values);
         return values;
     }
 
-    /**
-     * Spawn the display for one player at the given absolute world position.
-     */
-    public void spawn(Player player, double x, double y, double z) {
+    public void spawn(net.momirealms.craftengine.core.entity.player.Player player, double x, double y, double z) {
         this.curX = x;
         this.curY = y;
         this.curZ = z;
-        Object addPacket = dev.arubik.craftengine.util.MNms.INSTANCE.constructor$ClientboundAddEntityPacket(
-                entityId, uuid, x, y, z, 0f, 0f,
-                net.minecraft.world.entity.EntityType.ITEM_DISPLAY, 0,
-                net.minecraft.world.phys.Vec3.ZERO, 0);
-        Object dataPacket = dev.arubik.craftengine.util.MNms.INSTANCE
-                .constructor$ClientboundSetEntityDataPacket(entityId, metadata());
+        Object addPacket = MNms.INSTANCE.constructor$ClientboundAddEntityPacket(this.entityId, this.uuid, x, y, z, 0.0f, 0.0f, EntityType.ITEM_DISPLAY, 0, Vec3.ZERO, 0.0);
+        Object dataPacket = MNms.INSTANCE.constructor$ClientboundSetEntityDataPacket(this.entityId, this.metadata());
         player.sendPackets(List.of(addPacket, dataPacket), false);
     }
 
-    /** Push the latest item metadata to a player (call when the carried item changes). */
-    public void updateMetadata(Player player) {
-        player.sendPacket(dev.arubik.craftengine.util.MNms.INSTANCE
-                .constructor$ClientboundSetEntityDataPacket(entityId, metadata()), false);
+    public void updateMetadata(net.momirealms.craftengine.core.entity.player.Player player) {
+        player.sendPacket(MNms.INSTANCE.constructor$ClientboundSetEntityDataPacket(this.entityId, this.metadata()), false);
     }
 
-    /** Move the display to an absolute world position for one player. */
-    public void updatePosition(Player player, double x, double y, double z) {
+    public boolean setLightFromLevel(ServerLevel level, double wx, double wy, double wz) {
+        int packed;
+        BlockPos pos = BlockPos.containing((double)wx, (double)wy, (double)wz);
+        int bl = level.getBrightness(LightLayer.BLOCK, pos);
+        int sl = level.getBrightness(LightLayer.SKY, pos);
+        if (bl == 0 && sl == 0) {
+            int sumBl = 0;
+            int sumSl = 0;
+            for (Direction dir : Direction.values()) {
+                BlockPos n = pos.relative(dir);
+                sumBl += level.getBrightness(LightLayer.BLOCK, n);
+                sumSl += level.getBrightness(LightLayer.SKY, n);
+            }
+            bl = sumBl / 6;
+            sl = sumSl / 6;
+        }
+        if ((packed = bl << 4 | sl << 20) == this.packedLight) {
+            return false;
+        }
+        this.packedLight = packed;
+        return true;
+    }
+
+    public void updatePosition(net.momirealms.craftengine.core.entity.player.Player player, double x, double y, double z) {
         this.curX = x;
         this.curY = y;
         this.curZ = z;
-        player.sendPacket(dev.arubik.craftengine.util.MNms.INSTANCE
-                .constructor$ClientboundEntityPositionSyncPacket(entityId, x, y, z, 0f, 0f, false), false);
+        player.sendPacket(MNms.INSTANCE.constructor$ClientboundEntityPositionSyncPacket(this.entityId, x, y, z, 0.0f, 0.0f, false), false);
     }
 
-    /** Remove the display for one player. */
-    public void despawn(Player player) {
-        player.sendPacket(despawnPacket, false);
+    public void despawn(net.momirealms.craftengine.core.entity.player.Player player) {
+        player.sendPacket(this.despawnPacket, false);
     }
 
-    /**
-     * Per-viewer render: spawns the entity for any tracked player who hasn't seen it
-     * yet (so EVERY player — not just whoever was online at first spawn — sees the
-     * item), moves it for those who already have, and re-pushes metadata when
-     * {@code forceMeta} (item/rotation changed). Players who left the chunk are dropped
-     * from the seen-set so they re-spawn on return.
-     */
-    public void render(List<Player> viewers, double x, double y, double z, boolean forceMeta) {
-        java.util.Set<UUID> current = new java.util.HashSet<>();
-        for (Player p : viewers) {
-            UUID id = uuidOf(p);
-            if (id == null)
-                continue;
-            current.add(id);
-            if (shownTo.add(id)) {
-                spawn(p, x, y, z); // sends add + data (current item + rotation)
-            } else {
-                updatePosition(p, x, y, z);
-                if (forceMeta)
-                    updateMetadata(p);
+    public void despawnAll(ServerLevel level) {
+        if (this.shownTo.isEmpty()) {
+            return;
+        }
+        try {
+            for (UUID id : this.shownTo) {
+                ServerPlayer sp = level.getServer().getPlayerList().getPlayer(id);
+                if (sp == null) continue;
+                sp.connection.send((Packet)this.despawnPacket);
             }
         }
-        shownTo.retainAll(current);
+        catch (Throwable throwable) {
+            // empty catch block
+        }
+        this.shownTo.clear();
+    }
+
+    public void render(List<net.momirealms.craftengine.core.entity.player.Player> viewers, double x, double y, double z, boolean forceMeta) {
+        HashSet<UUID> current = new HashSet<UUID>();
+        for (net.momirealms.craftengine.core.entity.player.Player p : viewers) {
+            UUID id = ConveyorItemDisplay.uuidOf(p);
+            if (id == null) continue;
+            current.add(id);
+            if (this.shownTo.add(id)) {
+                this.spawn(p, x, y, z);
+                continue;
+            }
+            this.updatePosition(p, x, y, z);
+            if (!forceMeta) continue;
+            this.updateMetadata(p);
+        }
+        this.shownTo.retainAll(current);
         this.curX = x;
         this.curY = y;
         this.curZ = z;
     }
 
-    /** Forget who has seen this entity (call after despawning for everyone). */
     public void clearShown() {
-        shownTo.clear();
+        this.shownTo.clear();
     }
 
-    private static UUID uuidOf(Player player) {
+    private static UUID uuidOf(net.momirealms.craftengine.core.entity.player.Player player) {
+        UUID uUID;
         Object pp = player.platformPlayer();
-        return pp instanceof org.bukkit.entity.Player b ? b.getUniqueId() : null;
-    }
-
-    // ---- fresh server-unique fake entity id (Entity.ENTITY_COUNTER is private) ----
-    private static final AtomicInteger ENTITY_COUNTER;
-    static {
-        AtomicInteger counter;
-        try {
-            Field f = net.minecraft.world.entity.Entity.class.getDeclaredField("ENTITY_COUNTER");
-            f.setAccessible(true);
-            counter = (AtomicInteger) f.get(null);
-        } catch (ReflectiveOperationException e) {
-            throw new ExceptionInInitializerError(e);
+        if (pp instanceof Player) {
+            Player b = (Player)pp;
+            uUID = b.getUniqueId();
+        } else {
+            uUID = null;
         }
-        ENTITY_COUNTER = counter;
+        return uUID;
     }
 
     private static int nextEntityId() {
         return ENTITY_COUNTER.incrementAndGet();
     }
+
+    static {
+        AtomicInteger counter;
+        try {
+            Field f = Entity.class.getDeclaredField("ENTITY_COUNTER");
+            f.setAccessible(true);
+            counter = (AtomicInteger)f.get(null);
+        }
+        catch (ReflectiveOperationException e) {
+            throw new ExceptionInInitializerError(e);
+        }
+        ENTITY_COUNTER = counter;
+    }
 }
+

@@ -1,52 +1,30 @@
+/*
+ * Decompiled with CFR 0.152.
+ */
 package dev.arubik.craftengine.machine.menu;
 
+import dev.arubik.craftengine.machine.render.formula.PolyContext;
+import dev.arubik.craftengine.machine.render.formula.PolyFormula;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.function.Function;
 
-/**
- * Fully config-driven description of a machine's MAIN menu, parsed from the behavior yml so that
- * NOTHING about the layout (slot numbers, buttons, the title image) is hardcoded in Java.
- *
- * <p>Parsed by the behavior Factory and stored on the behavior, then handed to the block entity
- * (mirrors how {@code bars:} and {@code upgrades:} already flow). The block entity uses these
- * slot arrays to build its {@link dev.arubik.craftengine.multiblock.IOConfiguration} item-slot
- * roles and its recipe loop, and renders the {@link #buttons} generically in its main layout.</p>
- *
- * <pre>
- * behavior:
- *   menu_size: 54                 # inventory size (must stay a multiple of 9)
- *   gui_image: cml:copper_furnace_gui   # image id used as the menu title (optional)
- *   input_slots:  [11, 12]
- *   output_slots: [14, 15]
- *   fuel_slots:   [31]            # or `fuel_slot: 31`
- *   buttons:
- *     - { slot: 33, icon: "cml:upgrade_button",   action: "open_page:1", name: "polyfill.ui.upgrades", lore: ["polyfill.ui.upgrades_desc"] }
- *     - { slot: 29, icon: "cml:overclock_button", action: "open_page:2", name: "polyfill.ui.overclock",
- *         locked_icon: "cml:locked_icon", locked_when: "no_overclock" }
- *     - { slot: 36, icon: "cml:empty_button", action: "deplete_fluid", name: "polyfill.ui.deplete", lore: ["polyfill.ui.fluid"] }
- *     - { slot: 44, icon: "cml:empty_button", action: "deplete_gas",   name: "polyfill.ui.deplete", lore: ["polyfill.ui.gas"]  }
- * </pre>
- */
 public final class MachineMenuConfig {
-
     public final int menuSize;
-    public final String guiImage;        // image id (e.g. "cml:copper_furnace_gui"); nullable
+    public final String guiImage;
     public final int[] inputSlots;
     public final int[] outputSlots;
     public final int[] fuelSlots;
     public final List<Button> buttons;
-    /** Slot that renders the reusable recipe-info icon ({@link dev.arubik.craftengine.machine.menu.RecipeInfoIcon}); -1 = none. */
     public final int infoSlot;
 
-    public MachineMenuConfig(int menuSize, String guiImage, int[] inputSlots, int[] outputSlots,
-            int[] fuelSlots, List<Button> buttons) {
+    public MachineMenuConfig(int menuSize, String guiImage, int[] inputSlots, int[] outputSlots, int[] fuelSlots, List<Button> buttons) {
         this(menuSize, guiImage, inputSlots, outputSlots, fuelSlots, buttons, -1);
     }
 
-    public MachineMenuConfig(int menuSize, String guiImage, int[] inputSlots, int[] outputSlots,
-            int[] fuelSlots, List<Button> buttons, int infoSlot) {
+    public MachineMenuConfig(int menuSize, String guiImage, int[] inputSlots, int[] outputSlots, int[] fuelSlots, List<Button> buttons, int infoSlot) {
         this.menuSize = menuSize;
         this.guiImage = guiImage;
         this.inputSlots = inputSlots;
@@ -56,42 +34,71 @@ public final class MachineMenuConfig {
         this.infoSlot = infoSlot;
     }
 
-    /** A single config-declared button: an icon, a name/lore and an {@link Action}. */
-    public static final class Button {
-        public final int slot;
-        public final String icon;        // cml item id or vanilla material
-        public final Action action;
-        public final String name;        // lang key or literal; nullable
-        public final List<String> lore;  // lang keys or literals; possibly empty
-        public final String lockedIcon;  // icon shown while locked; nullable
-        public final LockedWhen lockedWhen; // condition that locks the button; null = never locked
-
-        public Button(int slot, String icon, Action action, String name, List<String> lore,
-                String lockedIcon, LockedWhen lockedWhen) {
-            this.slot = slot;
-            this.icon = icon;
-            this.action = action;
-            this.name = name;
-            this.lore = lore;
-            this.lockedIcon = lockedIcon;
-            this.lockedWhen = lockedWhen;
-        }
+    public static MachineMenuConfig parse(Function<String, Object> args) {
+        int menuSize = MachineMenuConfig.intOr(args.apply("menu_size"), 54);
+        String guiImage = args.apply("gui_image") == null ? null : String.valueOf(args.apply("gui_image"));
+        int[] inputs = MachineMenuConfig.slots(args.apply("input_slots"));
+        int[] outputs = MachineMenuConfig.slots(args.apply("output_slots"));
+        int[] fuels = args.apply("fuel_slots") != null ? MachineMenuConfig.slots(args.apply("fuel_slots")) : (args.apply("fuel_slot") != null ? new int[]{MachineMenuConfig.intOr(args.apply("fuel_slot"), 0)} : new int[]{});
+        List<Button> buttons = MachineMenuConfig.buttons(args.apply("buttons"));
+        int infoSlot = MachineMenuConfig.intOr(args.apply("info_slot"), -1);
+        return new MachineMenuConfig(menuSize, guiImage, inputs, outputs, fuels, buttons, infoSlot);
     }
 
-    /** Button action: open a submenu page, or empty a tank. */
-    public static final class Action {
-        public enum Kind { OPEN_PAGE, DEPLETE_FLUID, DEPLETE_GAS, NONE }
+    private static List<Button> buttons(Object o) {
+        ArrayList<Button> out = new ArrayList<Button>();
+        if (!(o instanceof List)) {
+            return out;
+        }
+        List list = (List)o;
+        for (Object e : list) {
+            Map m;
+            int slot;
+            if (!(e instanceof Map) || (slot = MachineMenuConfig.intOr((m = (Map)e).get("slot"), -1)) < 0) continue;
+            String icon = m.get("icon") == null ? null : String.valueOf(m.get("icon"));
+            Action action = Action.parse(m.get("action") == null ? null : String.valueOf(m.get("action")));
+            String name = m.get("name") == null ? null : String.valueOf(m.get("name"));
+            ArrayList<String> lore = new ArrayList<String>();
+            Object object = m.get("lore");
+            if (object instanceof List) {
+                List ll = (List)object;
+                for (Object l : ll) {
+                    lore.add(String.valueOf(l));
+                }
+            }
+            String lockedIcon = m.get("locked_icon") == null ? null : String.valueOf(m.get("locked_icon"));
+            LockedWhen lockedWhen = LockedWhen.parse(m.get("locked_when") == null ? null : String.valueOf(m.get("locked_when")));
+            out.add(new Button(slot, icon, action, name, lore, lockedIcon, lockedWhen));
+        }
+        return out;
+    }
 
+    private static int[] slots(Object o) {
+        if (!(o instanceof List)) {
+            return new int[0];
+        }
+        List list = (List)o;
+        int[] s = new int[list.size()];
+        for (int i = 0; i < list.size(); ++i) {
+            s[i] = ((Number)list.get(i)).intValue();
+        }
+        return s;
+    }
+
+    private static int intOr(Object o, int def) {
+        int n;
+        if (o instanceof Number) {
+            Number n2 = (Number)o;
+            n = n2.intValue();
+        } else {
+            n = def;
+        }
+        return n;
+    }
+
+    public static final class Action {
         public final Kind kind;
-        public final int page; // for OPEN_PAGE
-        /**
-         * For DEPLETE_FLUID / DEPLETE_GAS: which tank to empty.
-         *
-         * <p>
-         * {@code "all"} (the default, and what a bare {@code deplete_fluid} means)
-         * empties every tank; anything else names a single tank, which is what a
-         * machine with more than one needs.
-         */
+        public final int page;
         public final String target;
 
         private Action(Kind kind, int page) {
@@ -104,106 +111,122 @@ public final class MachineMenuConfig {
             this.target = target == null || target.isBlank() ? "all" : target.trim();
         }
 
-        /** Whether this action applies to a tank of the given name. */
         public boolean targets(String tankName) {
-            return "all".equalsIgnoreCase(target) || target.equalsIgnoreCase(tankName);
+            return "all".equalsIgnoreCase(this.target) || this.target.equalsIgnoreCase(tankName);
         }
 
         private static String suffix(String t) {
-            int i = t.indexOf(':');
+            int i = t.indexOf(58);
             return i < 0 ? "all" : t.substring(i + 1);
         }
 
         public static Action parse(String s) {
-            if (s == null)
+            if (s == null) {
                 return new Action(Kind.NONE, 0);
-            String t = s.trim().toLowerCase(java.util.Locale.ROOT);
+            }
+            String t = s.trim().toLowerCase(Locale.ROOT);
             if (t.startsWith("open_page")) {
                 int page = 0;
-                int i = t.indexOf(':');
+                int i = t.indexOf(58);
                 if (i >= 0) {
                     try {
                         page = Integer.parseInt(t.substring(i + 1).trim());
-                    } catch (NumberFormatException ignored) {
+                    }
+                    catch (NumberFormatException numberFormatException) {
+                        // empty catch block
                     }
                 }
                 return new Action(Kind.OPEN_PAGE, page);
             }
-            // `deplete_fluid`, `deplete_fluid:all` and `deplete_fluid:<tank>` are all valid.
-            if (t.startsWith("deplete_fluid"))
-                return new Action(Kind.DEPLETE_FLUID, 0, suffix(t));
-            if (t.startsWith("deplete_gas"))
-                return new Action(Kind.DEPLETE_GAS, 0, suffix(t));
+            if (t.startsWith("deplete_fluid")) {
+                return new Action(Kind.DEPLETE_FLUID, 0, Action.suffix(t));
+            }
+            if (t.startsWith("deplete_gas")) {
+                return new Action(Kind.DEPLETE_GAS, 0, Action.suffix(t));
+            }
+            if (t.startsWith("script:")) {
+                return new Action(Kind.SCRIPT, 0, s.trim().substring(7));
+            }
+            if (t.startsWith("run:")) {
+                return new Action(Kind.SCRIPT, 0, s.trim().substring(4));
+            }
             return new Action(Kind.NONE, 0);
         }
+
+        public static enum Kind {
+            OPEN_PAGE,
+            DEPLETE_FLUID,
+            DEPLETE_GAS,
+            SCRIPT,
+            NONE;
+
+        }
     }
 
-    /** Condition that keeps a button locked (shows {@code lockedIcon} and swallows the click). */
-    public enum LockedWhen {
-        NEVER, NO_OVERCLOCK;
+    public static enum LockedWhen {
+        NEVER,
+        NO_OVERCLOCK;
+
+        public String expr;
 
         public static LockedWhen parse(String s) {
-            if (s == null)
+            if (s == null) {
                 return NEVER;
-            return "no_overclock".equalsIgnoreCase(s.trim()) ? NO_OVERCLOCK : NEVER;
+            }
+            if ("no_overclock".equalsIgnoreCase(s.trim())) {
+                return NO_OVERCLOCK;
+            }
+            if ("never".equalsIgnoreCase(s.trim())) {
+                return NEVER;
+            }
+            LockedWhen lw = NEVER;
+            lw.expr = null;
+            LockedWhen custom = NEVER;
+            try {
+                PolyFormula.compile(s.trim());
+            }
+            catch (Throwable throwable) {
+                // empty catch block
+            }
+            LockedWhen result = NO_OVERCLOCK;
+            result.expr = s.trim();
+            return result;
+        }
+
+        public boolean isLocked(PolyContext ctx, double curOverclockLimit) {
+            if (this == NEVER) {
+                return false;
+            }
+            if (this.expr != null) {
+                try {
+                    return PolyFormula.compile(this.expr).evaluateBool(ctx);
+                }
+                catch (Throwable ignored) {
+                    return false;
+                }
+            }
+            return curOverclockLimit <= 0.0;
         }
     }
 
-    // ---------------- parsing ----------------
+    public static final class Button {
+        public final int slot;
+        public final String icon;
+        public final Action action;
+        public final String name;
+        public final List<String> lore;
+        public final String lockedIcon;
+        public final LockedWhen lockedWhen;
 
-    /** Parse the menu config from the behavior arguments (a key->value getter, e.g. {@code ConfigSection::get}). */
-    public static MachineMenuConfig parse(Function<String, Object> args) {
-        int menuSize = intOr(args.apply("menu_size"), 54);
-        String guiImage = args.apply("gui_image") == null ? null : String.valueOf(args.apply("gui_image"));
-        int[] inputs = slots(args.apply("input_slots"));
-        int[] outputs = slots(args.apply("output_slots"));
-        int[] fuels;
-        if (args.apply("fuel_slots") != null)
-            fuels = slots(args.apply("fuel_slots"));
-        else if (args.apply("fuel_slot") != null)
-            fuels = new int[] { intOr(args.apply("fuel_slot"), 0) };
-        else
-            fuels = new int[0];
-        List<Button> buttons = buttons(args.apply("buttons"));
-        int infoSlot = intOr(args.apply("info_slot"), -1);
-        return new MachineMenuConfig(menuSize, guiImage, inputs, outputs, fuels, buttons, infoSlot);
-    }
-
-    private static List<Button> buttons(Object o) {
-        List<Button> out = new ArrayList<>();
-        if (!(o instanceof List<?> list))
-            return out;
-        for (Object e : list) {
-            if (!(e instanceof Map<?, ?> m))
-                continue;
-            int slot = intOr(m.get("slot"), -1);
-            if (slot < 0)
-                continue;
-            String icon = m.get("icon") == null ? null : String.valueOf(m.get("icon"));
-            Action action = Action.parse(m.get("action") == null ? null : String.valueOf(m.get("action")));
-            String name = m.get("name") == null ? null : String.valueOf(m.get("name"));
-            List<String> lore = new ArrayList<>();
-            if (m.get("lore") instanceof List<?> ll)
-                for (Object l : ll)
-                    lore.add(String.valueOf(l));
-            String lockedIcon = m.get("locked_icon") == null ? null : String.valueOf(m.get("locked_icon"));
-            LockedWhen lockedWhen = LockedWhen.parse(m.get("locked_when") == null ? null
-                    : String.valueOf(m.get("locked_when")));
-            out.add(new Button(slot, icon, action, name, lore, lockedIcon, lockedWhen));
+        public Button(int slot, String icon, Action action, String name, List<String> lore, String lockedIcon, LockedWhen lockedWhen) {
+            this.slot = slot;
+            this.icon = icon;
+            this.action = action;
+            this.name = name;
+            this.lore = lore;
+            this.lockedIcon = lockedIcon;
+            this.lockedWhen = lockedWhen;
         }
-        return out;
-    }
-
-    private static int[] slots(Object o) {
-        if (!(o instanceof List<?> list))
-            return new int[0];
-        int[] s = new int[list.size()];
-        for (int i = 0; i < list.size(); i++)
-            s[i] = ((Number) list.get(i)).intValue();
-        return s;
-    }
-
-    private static int intOr(Object o, int def) {
-        return (o instanceof Number n) ? n.intValue() : def;
     }
 }
+

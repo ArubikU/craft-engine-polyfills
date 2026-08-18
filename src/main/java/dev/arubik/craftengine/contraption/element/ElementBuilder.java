@@ -1,382 +1,446 @@
+/*
+ * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  net.minecraft.core.BlockPos
+ *  net.minecraft.core.Direction
+ *  net.minecraft.nbt.CompoundTag
+ *  net.minecraft.world.entity.Entity
+ *  net.minecraft.world.entity.decoration.ItemFrame
+ *  net.minecraft.world.level.Level
+ *  net.minecraft.world.level.block.AbstractBannerBlock
+ *  net.minecraft.world.level.block.AbstractSkullBlock
+ *  net.minecraft.world.level.block.BedBlock
+ *  net.minecraft.world.level.block.CampfireBlock
+ *  net.minecraft.world.level.block.CeilingHangingSignBlock
+ *  net.minecraft.world.level.block.JukeboxBlock
+ *  net.minecraft.world.level.block.SignBlock
+ *  net.minecraft.world.level.block.WallHangingSignBlock
+ *  net.minecraft.world.level.block.WallSignBlock
+ *  net.minecraft.world.level.block.state.BlockState
+ *  net.minecraft.world.level.block.state.properties.BedPart
+ *  net.minecraft.world.level.block.state.properties.BlockStateProperties
+ *  net.minecraft.world.level.block.state.properties.Property
+ *  net.minecraft.world.level.material.FluidState
+ *  net.minecraft.world.level.material.Fluids
+ *  net.momirealms.craftengine.core.block.entity.BlockEntity
+ *  net.momirealms.craftengine.core.block.entity.BlockEntityController
+ *  net.momirealms.craftengine.core.entity.player.Player
+ *  net.momirealms.craftengine.core.plugin.CraftEngine
+ *  net.momirealms.craftengine.core.world.BlockPos
+ *  net.momirealms.craftengine.core.world.CEWorld
+ *  net.momirealms.craftengine.core.world.chunk.CEChunk
+ *  org.bukkit.World
+ */
 package dev.arubik.craftengine.contraption.element;
 
+import dev.arubik.craftengine.block.entity.BukkitBlockEntityTypes;
+import dev.arubik.craftengine.contraption.config.ContraptionConfig;
 import dev.arubik.craftengine.contraption.core.ContraptionLevel;
 import dev.arubik.craftengine.contraption.core.ContraptionState;
+import dev.arubik.craftengine.contraption.element.ContraptionBlockElement;
+import dev.arubik.craftengine.contraption.element.ContraptionElement;
+import dev.arubik.craftengine.contraption.element.ContraptionEntityRendererElement;
+import dev.arubik.craftengine.contraption.element.ContraptionFurnitureElement;
+import dev.arubik.craftengine.contraption.element.ContraptionHitboxElement;
+import dev.arubik.craftengine.contraption.element.ContraptionInteractionOverlayElement;
+import dev.arubik.craftengine.contraption.element.ContraptionLiveEntityMirrorElement;
+import dev.arubik.craftengine.contraption.element.ContraptionMachineRendererElement;
+import dev.arubik.craftengine.contraption.element.ContraptionPistonShaftElement;
+import dev.arubik.craftengine.contraption.element.special.ContraptionBetterModelElement;
+import dev.arubik.craftengine.contraption.element.special.ContraptionCampfireElement;
+import dev.arubik.craftengine.contraption.element.special.ContraptionHangingSignElement;
+import dev.arubik.craftengine.contraption.element.special.ContraptionItemFrameElement;
+import dev.arubik.craftengine.contraption.element.special.ContraptionJukeboxElement;
+import dev.arubik.craftengine.contraption.element.special.ContraptionModelEngineElement;
+import dev.arubik.craftengine.contraption.element.special.ContraptionSignElement;
+import dev.arubik.craftengine.contraption.element.special.ContraptionSkullElement;
+import dev.arubik.craftengine.contraption.element.special.ContraptionStandingSignElement;
+import dev.arubik.craftengine.contraption.element.special.ContraptionVanillaFluidElement;
+import dev.arubik.craftengine.contraption.element.special.ContraptionWallSignElement;
 import dev.arubik.craftengine.contraption.furniture.ContraptionFurniture;
+import dev.arubik.craftengine.machine.render.BetterModelDriven;
+import dev.arubik.craftengine.machine.render.BetterModelMachineRenderer;
+import dev.arubik.craftengine.machine.render.ModelEngineDriven;
+import dev.arubik.craftengine.machine.render.ModelEngineMachineRenderer;
+import dev.arubik.craftengine.machine.render.ModelRendersDriven;
+import dev.arubik.craftengine.machine.render.RendererManager;
+import dev.arubik.craftengine.machine.render.RendererSpec;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.decoration.ItemFrame;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.AbstractBannerBlock;
+import net.minecraft.world.level.block.AbstractSkullBlock;
 import net.minecraft.world.level.block.BedBlock;
+import net.minecraft.world.level.block.CampfireBlock;
+import net.minecraft.world.level.block.CeilingHangingSignBlock;
+import net.minecraft.world.level.block.JukeboxBlock;
+import net.minecraft.world.level.block.SignBlock;
+import net.minecraft.world.level.block.WallHangingSignBlock;
+import net.minecraft.world.level.block.WallSignBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BedPart;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.block.state.properties.Property;
+import net.minecraft.world.level.material.FluidState;
+import net.minecraft.world.level.material.Fluids;
+import net.momirealms.craftengine.core.block.entity.BlockEntity;
+import net.momirealms.craftengine.core.block.entity.BlockEntityController;
+import net.momirealms.craftengine.core.entity.player.Player;
 import net.momirealms.craftengine.core.plugin.CraftEngine;
 import net.momirealms.craftengine.core.world.CEWorld;
-
-import java.util.*;
+import net.momirealms.craftengine.core.world.chunk.CEChunk;
+import org.bukkit.World;
 
 public final class ElementBuilder {
-
-    private ElementBuilder() {}
-
-    public static void rebuild(ContraptionState state) {
-        rebuild(state, List.of());
+    private ElementBuilder() {
     }
 
-    /**
-     * Diff-based rebuild: reuses existing block elements whose localPos is unchanged,
-     * despawns elements for positions no longer present, creates elements for new positions.
-     * Called every tick — must not create new entity instances for unchanged cells.
-     */
-    public static void rebuild(ContraptionState state, java.util.List<net.momirealms.craftengine.core.entity.player.Player> viewers) {
+    public static void rebuild(ContraptionState state) {
+        ElementBuilder.rebuild(state, List.of());
+    }
+
+    public static void rebuild(ContraptionState state, List<Player> viewers) {
+        BlockState bs;
         ContraptionLevel level = state.level();
         if (level == null) {
-            // Despawn all existing block elements
             for (ContraptionElement e : state.elements()) {
-                if (isRebuildable(e)) e.despawn(viewers);
+                if (!ElementBuilder.isRebuildable(e)) continue;
+                e.despawn(viewers);
             }
             state.setElements(List.of());
             return;
         }
-
-        // Index all existing position-keyed elements (block + special subclasses)
-        Map<BlockPos, ContraptionBlockElement> existingByPos = new HashMap<>();
-        Map<BlockPos, ContraptionElement> existingSpecialByPos = new HashMap<>();
-        Map<BlockPos, dev.arubik.craftengine.contraption.element.special.ContraptionBetterModelElement> existingBMByPos = new HashMap<>();
-        Map<BlockPos, dev.arubik.craftengine.contraption.element.special.ContraptionModelEngineElement> existingMEByPos = new HashMap<>();
+        HashMap<BlockPos, ContraptionBlockElement> existingByPos = new HashMap<BlockPos, ContraptionBlockElement>();
+        HashMap<BlockPos, ContraptionElement> existingSpecialByPos = new HashMap<BlockPos, ContraptionElement>();
+        HashMap<BlockPos, ContraptionBetterModelElement> existingBMByPos = new HashMap<BlockPos, ContraptionBetterModelElement>();
+        HashMap<BlockPos, ContraptionModelEngineElement> existingMEByPos = new HashMap<BlockPos, ContraptionModelEngineElement>();
+        HashMap<BlockPos, ContraptionEntityRendererElement> existingEntityRendererByPos = new HashMap<BlockPos, ContraptionEntityRendererElement>();
         for (ContraptionElement e : state.elements()) {
-            if (e instanceof ContraptionBlockElement be) {
+            if (e instanceof ContraptionBlockElement) {
+                ContraptionBlockElement be = (ContraptionBlockElement)e;
                 existingByPos.put(be.localPos(), be);
-            } else if (e instanceof dev.arubik.craftengine.contraption.element.special.ContraptionSkullElement sk) {
-                existingSpecialByPos.put(sk.localPos(), sk);
-            } else if (e instanceof dev.arubik.craftengine.contraption.element.special.ContraptionSignElement sg) {
-                existingSpecialByPos.put(sg.localPos(), sg);
-            } else if (e instanceof dev.arubik.craftengine.contraption.element.special.ContraptionBetterModelElement bm) {
-                existingBMByPos.put(bm.localPos(), bm);
-            } else if (e instanceof dev.arubik.craftengine.contraption.element.special.ContraptionModelEngineElement me) {
-                existingMEByPos.put(me.localPos(), me);
-            }
-        }
-
-        Set<BlockPos> livePositions = level.localPositions();
-        List<ContraptionElement> elements = new ArrayList<>();
-        Set<BlockPos> usedPositions = new HashSet<>();
-
-        for (BlockPos local : livePositions) {
-            BlockState blockState = level.getBlockState(local);
-            if (blockState == null || blockState.isAir()) continue;
-
-            // Reuse existing element if the block type hasn't changed
-            ContraptionBlockElement existing = existingByPos.get(local);
-            if (existing != null && existing.blockState() != null
-                    && existing.blockState().getBlock() == blockState.getBlock()) {
-                elements.add(existing);
-                usedPositions.add(local);
-                // If entity renderer is needed, also carry over or add it
-                if (existing.hasEntityRenderer) {
-                    // check if entity renderer element already exists for this pos
-                    boolean hasRenderer = false;
-                    for (ContraptionElement e : state.elements()) {
-                        if (e instanceof ContraptionEntityRendererElement er
-                                && er.localPos() != null && er.localPos().equals(local)) {
-                            elements.add(er);
-                            hasRenderer = true;
-                            break;
-                        }
-                    }
-                    if (!hasRenderer) elements.add(new ContraptionEntityRendererElement(local));
-                }
                 continue;
             }
-
-            // New or changed block — create fresh element
-            CompoundTag beTag = level.saveBlockEntity(local);
-
-            if (blockState.getBlock() instanceof net.minecraft.world.level.block.AbstractSkullBlock) {
-                var existingSkull = existingSpecialByPos.get(local);
-                if (existingSkull instanceof dev.arubik.craftengine.contraption.element.special.ContraptionSkullElement sk
-                        && sk.blockState().getBlock() == blockState.getBlock()) {
+            if (e instanceof ContraptionEntityRendererElement er && er.localPos() != null) {
+                existingEntityRendererByPos.put(er.localPos(), er);
+                continue;
+            }
+            if (e instanceof ContraptionSkullElement) {
+                ContraptionSkullElement contraptionSkullElement = (ContraptionSkullElement)e;
+                existingSpecialByPos.put(contraptionSkullElement.localPos(), contraptionSkullElement);
+                continue;
+            }
+            if (e instanceof ContraptionSignElement) {
+                ContraptionSignElement sg = (ContraptionSignElement)e;
+                existingSpecialByPos.put(sg.localPos(), sg);
+                continue;
+            }
+            if (e instanceof ContraptionBetterModelElement) {
+                ContraptionBetterModelElement bm = (ContraptionBetterModelElement)e;
+                existingBMByPos.put(bm.localPos(), bm);
+                continue;
+            }
+            if (!(e instanceof ContraptionModelEngineElement)) continue;
+            ContraptionModelEngineElement me = (ContraptionModelEngineElement)e;
+            existingMEByPos.put(me.localPos(), me);
+        }
+        Set<BlockPos> livePositions = level.localPositions();
+        ArrayList<ContraptionElement> elements = new ArrayList<ContraptionElement>();
+        HashSet<BlockPos> usedPositions = new HashSet<BlockPos>();
+        for (BlockPos blockPos : livePositions) {
+            FluidState fs;
+            BlockState blockState = level.getBlockState(blockPos);
+            if (blockState == null || blockState.isAir()) continue;
+            ContraptionBlockElement existing = (ContraptionBlockElement)existingByPos.get(blockPos);
+            if (existing != null && existing.blockState() != null && existing.blockState().getBlock() == blockState.getBlock()) {
+                elements.add(existing);
+                usedPositions.add(blockPos);
+                if (!existing.hasEntityRenderer) continue;
+                ContraptionEntityRendererElement er = (ContraptionEntityRendererElement)existingEntityRendererByPos.get(blockPos);
+                elements.add(er != null ? er : new ContraptionEntityRendererElement(blockPos));
+                continue;
+            }
+            CompoundTag beTag = level.saveBlockEntity(blockPos);
+            if (blockState.getBlock() instanceof AbstractSkullBlock) {
+                ContraptionSkullElement sk;
+                ContraptionElement existingSkull = (ContraptionElement)existingSpecialByPos.get(blockPos);
+                if (existingSkull instanceof ContraptionSkullElement && (sk = (ContraptionSkullElement)existingSkull).blockState().getBlock() == blockState.getBlock()) {
                     elements.add(sk);
                 } else {
-                    if (existingSkull != null) existingSkull.despawn(viewers);
-                    elements.add(new dev.arubik.craftengine.contraption.element.special.ContraptionSkullElement(local, blockState, beTag));
+                    if (existingSkull != null) {
+                        existingSkull.despawn(viewers);
+                    }
+                    elements.add(new ContraptionSkullElement(blockPos, blockState, beTag));
                 }
-                usedPositions.add(local); continue;
+                usedPositions.add(blockPos);
+                continue;
             }
-            if (blockState.getBlock() instanceof net.minecraft.world.level.block.JukeboxBlock) {
-                elements.add(new dev.arubik.craftengine.contraption.element.special.ContraptionJukeboxElement(local, blockState, beTag));
-                usedPositions.add(local); continue;
+            if (blockState.getBlock() instanceof JukeboxBlock) {
+                elements.add(new ContraptionJukeboxElement(blockPos, blockState, beTag));
+                usedPositions.add(blockPos);
+                continue;
             }
-            if (blockState.getBlock() instanceof net.minecraft.world.level.block.CampfireBlock) {
-                elements.add(new dev.arubik.craftengine.contraption.element.special.ContraptionCampfireElement(local, blockState));
-                usedPositions.add(local); continue;
+            if (blockState.getBlock() instanceof CampfireBlock) {
+                elements.add(new ContraptionCampfireElement(blockPos, blockState));
+                usedPositions.add(blockPos);
+                continue;
             }
-            if (blockState.getBlock() instanceof net.minecraft.world.level.block.SignBlock
-                    || blockState.getBlock() instanceof net.minecraft.world.level.block.WallSignBlock
-                    || blockState.getBlock() instanceof net.minecraft.world.level.block.CeilingHangingSignBlock
-                    || blockState.getBlock() instanceof net.minecraft.world.level.block.WallHangingSignBlock
-                    || blockState.getBlock() instanceof net.minecraft.world.level.block.AbstractBannerBlock) {
-                var existingSign = existingSpecialByPos.get(local);
-                if (existingSign instanceof dev.arubik.craftengine.contraption.element.special.ContraptionSignElement sg
-                        && sg.blockState().getBlock() == blockState.getBlock()) {
+            if (blockState.getBlock() instanceof SignBlock || blockState.getBlock() instanceof WallSignBlock || blockState.getBlock() instanceof CeilingHangingSignBlock || blockState.getBlock() instanceof WallHangingSignBlock || blockState.getBlock() instanceof AbstractBannerBlock) {
+                ContraptionSignElement sg;
+                ContraptionElement existingSign = (ContraptionElement)existingSpecialByPos.get(blockPos);
+                if (existingSign instanceof ContraptionSignElement && (sg = (ContraptionSignElement)existingSign).blockState().getBlock() == blockState.getBlock()) {
                     elements.add(sg);
                 } else {
-                    if (existingSign != null) existingSign.despawn(viewers);
-                    elements.add(buildSignElement(local, blockState, beTag));
+                    if (existingSign != null) {
+                        existingSign.despawn(viewers);
+                    }
+                    elements.add(ElementBuilder.buildSignElement(blockPos, blockState, beTag));
                 }
-                usedPositions.add(local); continue;
+                usedPositions.add(blockPos);
+                continue;
             }
-
-            if (blockState.getBlock() instanceof BedBlock
-                    && blockState.getValue(BedBlock.PART) == BedPart.FOOT) {
-                usedPositions.add(local); continue;
+            if (blockState.getBlock() instanceof BedBlock && blockState.getValue((Property)BedBlock.PART) == BedPart.FOOT) {
+                usedPositions.add(blockPos);
+                continue;
             }
-
-            boolean hasEntityRenderer = hasConstantEntityRenderer(level, local);
-            float modelYawOffset = 0f;
-
+            boolean hasEntityRenderer = ElementBuilder.hasConstantEntityRenderer(level, blockPos);
+            float modelYawOffset = 0.0f;
             if (!hasEntityRenderer && blockState.getBlock() instanceof BedBlock) {
-                modelYawOffset = blockState.getValue(BedBlock.FACING).toYRot();
-                BlockPos partner = local.relative(BedBlock.getConnectedDirection(blockState));
-                if (!livePositions.contains(partner)) { usedPositions.add(local); continue; }
+                boolean paired;
+                modelYawOffset = ((Direction)blockState.getValue((Property)BedBlock.FACING)).toYRot();
+                BlockPos partner = blockPos.relative(BedBlock.getConnectedDirection((BlockState)blockState));
+                if (!livePositions.contains(partner)) {
+                    usedPositions.add(blockPos);
+                    continue;
+                }
                 BlockState partnerState = level.getBlockState(partner);
-                boolean paired = partnerState.getBlock() == blockState.getBlock()
-                        && partnerState.getValue(BedBlock.PART) == BedPart.FOOT
-                        && partnerState.getValue(BedBlock.FACING) == blockState.getValue(BedBlock.FACING);
-                if (!paired) { usedPositions.add(local); continue; }
-            }
-
-            elements.add(new ContraptionBlockElement(local, blockState, beTag, hasEntityRenderer, modelYawOffset));
-            usedPositions.add(local);
-            if (hasEntityRenderer) elements.add(new ContraptionEntityRendererElement(local));
-
-            // Vanilla fluid overlay (water/lava/waterlogged blocks)
-            net.minecraft.world.level.material.FluidState fs = blockState.getFluidState();
-            if (!fs.isEmpty() && dev.arubik.craftengine.contraption.config.ContraptionConfig.get().fluidRenderEnabled()) {
-                boolean lava = fs.getType() == net.minecraft.world.level.material.Fluids.LAVA
-                        || fs.getType() == net.minecraft.world.level.material.Fluids.FLOWING_LAVA;
-                boolean waterlogged = !lava
-                        && blockState.hasProperty(net.minecraft.world.level.block.state.properties.BlockStateProperties.WATERLOGGED)
-                        && blockState.getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.WATERLOGGED);
-                boolean enabled = lava
-                        ? dev.arubik.craftengine.contraption.config.ContraptionConfig.get().renderLava()
-                        : dev.arubik.craftengine.contraption.config.ContraptionConfig.get().renderWater();
-                if (enabled) {
-                    elements.add(new dev.arubik.craftengine.contraption.element.special.ContraptionVanillaFluidElement(
-                            local, lava, waterlogged, fs));
+                boolean bl = paired = partnerState.getBlock() == blockState.getBlock() && partnerState.getValue((Property)BedBlock.PART) == BedPart.FOOT && partnerState.getValue((Property)BedBlock.FACING) == blockState.getValue((Property)BedBlock.FACING);
+                if (!paired) {
+                    usedPositions.add(blockPos);
+                    continue;
                 }
             }
+            elements.add(new ContraptionBlockElement(blockPos, blockState, beTag, hasEntityRenderer, modelYawOffset));
+            usedPositions.add(blockPos);
+            if (hasEntityRenderer) {
+                elements.add(new ContraptionEntityRendererElement(blockPos));
+            }
+            if ((fs = blockState.getFluidState()).isEmpty() || !ContraptionConfig.get().fluidRenderEnabled()) continue;
+            boolean lava = fs.getType() == Fluids.LAVA || fs.getType() == Fluids.FLOWING_LAVA;
+            boolean waterlogged = !lava && blockState.hasProperty((Property)BlockStateProperties.WATERLOGGED) && (Boolean)blockState.getValue((Property)BlockStateProperties.WATERLOGGED) != false;
+            boolean enabled = lava ? ContraptionConfig.get().renderLava() : ContraptionConfig.get().renderWater();
+            if (!enabled) continue;
+            elements.add(new ContraptionVanillaFluidElement(blockPos, lava, waterlogged, fs));
         }
-
-        // --- BetterModel elements pass ---
-        if (dev.arubik.craftengine.machine.render.BetterModelMachineRenderer.available()) {
-            for (BlockPos local : livePositions) {
-                BlockState bs = level.getBlockState(local);
+        if (BetterModelMachineRenderer.available()) {
+            for (BlockPos blockPos : livePositions) {
+                bs = level.getBlockState(blockPos);
                 if (bs == null || bs.isAir()) continue;
-                dev.arubik.craftengine.contraption.element.special.ContraptionBetterModelElement existingBM = existingBMByPos.get(local);
+                ContraptionBetterModelElement existingBM = (ContraptionBetterModelElement)existingBMByPos.get(blockPos);
                 if (existingBM != null) {
                     elements.add(existingBM);
                     continue;
                 }
                 try {
-                    net.momirealms.craftengine.core.block.entity.BlockEntity ceBlockEntity =
-                        dev.arubik.craftengine.block.entity.BukkitBlockEntityTypes.getIfLoaded(level.serverLevel(), local);
-                    if (ceBlockEntity != null && ceBlockEntity.controller instanceof dev.arubik.craftengine.machine.render.BetterModelDriven driven) {
-                        elements.add(new dev.arubik.craftengine.contraption.element.special.ContraptionBetterModelElement(local, driven.betterModelRenderer()));
-                    }
-                } catch (Throwable ignored) {}
-            }
-            // Despawn BM elements for removed positions
-            for (java.util.Map.Entry<BlockPos, dev.arubik.craftengine.contraption.element.special.ContraptionBetterModelElement> entry : existingBMByPos.entrySet()) {
-                if (!livePositions.contains(entry.getKey())) {
-                    entry.getValue().despawn(viewers);
+                    BlockEntityController modelYawOffset;
+                    BlockEntity ceBlockEntity2 = BukkitBlockEntityTypes.getIfLoaded((Level)level.serverLevel(), blockPos);
+                    if (ceBlockEntity2 == null || !((modelYawOffset = ceBlockEntity2.controller) instanceof BetterModelDriven)) continue;
+                    BetterModelDriven driven = (BetterModelDriven)modelYawOffset;
+                    elements.add(new ContraptionBetterModelElement(blockPos, driven.betterModelRenderer()));
                 }
+                catch (Throwable ceBlockEntity2) {}
+            }
+            for (Map.Entry entry : existingBMByPos.entrySet()) {
+                if (livePositions.contains(entry.getKey())) continue;
+                ((ContraptionBetterModelElement)entry.getValue()).despawn(viewers);
             }
         }
-
-        // --- ModelEngine elements pass ---
-        if (dev.arubik.craftengine.machine.render.ModelEngineMachineRenderer.available()) {
-            for (BlockPos local : livePositions) {
-                BlockState bs = level.getBlockState(local);
+        if (ModelEngineMachineRenderer.available()) {
+            for (BlockPos blockPos : livePositions) {
+                bs = level.getBlockState(blockPos);
                 if (bs == null || bs.isAir()) continue;
-                dev.arubik.craftengine.contraption.element.special.ContraptionModelEngineElement existingME = existingMEByPos.get(local);
+                ContraptionModelEngineElement existingME = (ContraptionModelEngineElement)existingMEByPos.get(blockPos);
                 if (existingME != null) {
                     elements.add(existingME);
                     continue;
                 }
                 try {
-                    net.momirealms.craftengine.core.block.entity.BlockEntity ceBlockEntity =
-                        dev.arubik.craftengine.block.entity.BukkitBlockEntityTypes.getIfLoaded(level.serverLevel(), local);
-                    if (ceBlockEntity != null && ceBlockEntity.controller instanceof dev.arubik.craftengine.machine.render.ModelEngineDriven driven) {
-                        elements.add(new dev.arubik.craftengine.contraption.element.special.ContraptionModelEngineElement(local, driven.modelEngineRenderer()));
-                    }
-                } catch (Throwable ignored) {}
-            }
-            // Despawn ME elements for removed positions
-            for (java.util.Map.Entry<BlockPos, dev.arubik.craftengine.contraption.element.special.ContraptionModelEngineElement> entry : existingMEByPos.entrySet()) {
-                if (!livePositions.contains(entry.getKey())) {
-                    entry.getValue().despawn(viewers);
+                    BlockEntityController modelYawOffset;
+                    BlockEntity ceBlockEntity3 = BukkitBlockEntityTypes.getIfLoaded((Level)level.serverLevel(), blockPos);
+                    if (ceBlockEntity3 == null || !((modelYawOffset = ceBlockEntity3.controller) instanceof ModelEngineDriven)) continue;
+                    ModelEngineDriven driven = (ModelEngineDriven)modelYawOffset;
+                    elements.add(new ContraptionModelEngineElement(blockPos, driven.modelEngineRenderer()));
                 }
+                catch (Throwable ceBlockEntity3) {}
+            }
+            for (Map.Entry entry : existingMEByPos.entrySet()) {
+                if (livePositions.contains(entry.getKey())) continue;
+                ((ContraptionModelEngineElement)entry.getValue()).despawn(viewers);
             }
         }
-
-        // --- ModelRendersDriven pass: BetterModel renderers + packet-only display/particle cells ---
-        // Index existing machine renderer elements so they can be reused across ticks.
-        Map<BlockPos, ContraptionMachineRendererElement> existingMachineRenderers = new HashMap<>();
+        HashMap<BlockPos, ContraptionMachineRendererElement> existingMachineRenderers = new HashMap<BlockPos, ContraptionMachineRendererElement>();
         for (ContraptionElement e : state.elements()) {
-            if (e instanceof ContraptionMachineRendererElement mre) {
-                existingMachineRenderers.put(mre.localPos(), mre);
-            }
+            if (!(e instanceof ContraptionMachineRendererElement)) continue;
+            ContraptionMachineRendererElement mre = (ContraptionMachineRendererElement)e;
+            existingMachineRenderers.put(mre.localPos(), mre);
         }
         for (BlockPos local : livePositions) {
-            BlockState bs = level.getBlockState(local);
-            if (bs == null || bs.isAir()) continue;
+            BlockState bs2 = level.getBlockState(local);
+            if (bs2 == null || bs2.isAir()) continue;
             try {
-                net.momirealms.craftengine.core.block.entity.BlockEntity ceBlockEntity =
-                    dev.arubik.craftengine.block.entity.BukkitBlockEntityTypes.getIfLoaded(level.serverLevel(), local);
-                if (ceBlockEntity == null) continue;
-                if (!(ceBlockEntity.controller instanceof dev.arubik.craftengine.machine.render.ModelRendersDriven mrd)) continue;
-                dev.arubik.craftengine.machine.render.RendererManager mgr = mrd.rendererManager();
+                boolean hasNonBmSpec;
+                BlockEntityController modelYawOffset;
+                BlockEntity ceBlockEntity4 = BukkitBlockEntityTypes.getIfLoaded((Level)level.serverLevel(), local);
+                if (ceBlockEntity4 == null || !((modelYawOffset = ceBlockEntity4.controller) instanceof ModelRendersDriven)) continue;
+                ModelRendersDriven mrd = (ModelRendersDriven)modelYawOffset;
+                RendererManager mgr = mrd.rendererManager();
                 if (mgr == null) continue;
-
-                // BetterModel renderers from the RendererManager — create/reuse ContraptionBetterModelElement.
-                // Skip positions already handled by the BM pass above (existingBMByPos would have them).
-                if (dev.arubik.craftengine.machine.render.BetterModelMachineRenderer.available()) {
-                    java.util.List<dev.arubik.craftengine.machine.render.BetterModelMachineRenderer> bmList =
-                            mgr.betterModelRenderers();
-                    for (dev.arubik.craftengine.machine.render.BetterModelMachineRenderer bmr : bmList) {
-                        if (bmr == null) continue;
-                        // Only create a new BM element if this position wasn't already handled by
-                        // the existing BM pass (which handles BetterModelDriven, not ModelRendersDriven).
-                        if (!existingBMByPos.containsKey(local)) {
-                            elements.add(new dev.arubik.craftengine.contraption.element.special.ContraptionBetterModelElement(local, bmr));
-                        }
+                if (BetterModelMachineRenderer.available()) {
+                    List<BetterModelMachineRenderer> bmList = mgr.betterModelRenderers();
+                    for (BetterModelMachineRenderer bmr : bmList) {
+                        if (bmr == null || existingBMByPos.containsKey(local)) continue;
+                        elements.add(new ContraptionBetterModelElement(local, bmr));
                     }
                 }
-
-                // Non-BM specs (ItemDisplay, TextDisplay, FluidTank, Particle) — use the element.
-                boolean hasNonBmSpec = mgr.specs().stream().anyMatch(s ->
-                        s instanceof dev.arubik.craftengine.machine.render.RendererSpec.ItemDisplaySpec
-                                || s instanceof dev.arubik.craftengine.machine.render.RendererSpec.TextDisplaySpec
-                                || s instanceof dev.arubik.craftengine.machine.render.RendererSpec.FluidTankSpec
-                                || s instanceof dev.arubik.craftengine.machine.render.RendererSpec.ParticleSpec);
-                if (hasNonBmSpec) {
-                    ContraptionMachineRendererElement existing = existingMachineRenderers.get(local);
-                    elements.add(existing != null ? existing : new ContraptionMachineRendererElement(local));
-                }
-            } catch (Throwable ignored) {}
-        }
-        // Despawn machine renderer elements for positions no longer in the contraption.
-        for (java.util.Map.Entry<BlockPos, ContraptionMachineRendererElement> entry : existingMachineRenderers.entrySet()) {
-            if (!livePositions.contains(entry.getKey())) {
-                entry.getValue().despawn(viewers);
+                if (!(hasNonBmSpec = mgr.specs().stream().anyMatch(s -> s instanceof RendererSpec.ItemDisplaySpec || s instanceof RendererSpec.TextDisplaySpec || s instanceof RendererSpec.FluidTankSpec || s instanceof RendererSpec.ParticleSpec))) continue;
+                ContraptionMachineRendererElement existing = (ContraptionMachineRendererElement)existingMachineRenderers.get(local);
+                elements.add(existing != null ? existing : new ContraptionMachineRendererElement(local));
             }
+            catch (Throwable ceBlockEntity4) {}
         }
-
-        // Despawn elements for removed positions
-        for (Map.Entry<BlockPos, ContraptionBlockElement> entry : existingByPos.entrySet()) {
-            if (!usedPositions.contains(entry.getKey())) {
-                entry.getValue().despawn(viewers);
-            }
+        for (Map.Entry entry : existingMachineRenderers.entrySet()) {
+            if (livePositions.contains(entry.getKey())) continue;
+            ((ContraptionMachineRendererElement)entry.getValue()).despawn(viewers);
         }
-        for (Map.Entry<BlockPos, ContraptionElement> entry : existingSpecialByPos.entrySet()) {
-            if (!usedPositions.contains(entry.getKey())) {
-                entry.getValue().despawn(viewers);
-            }
+        for (Map.Entry entry : existingByPos.entrySet()) {
+            if (usedPositions.contains(entry.getKey())) continue;
+            ((ContraptionBlockElement)entry.getValue()).despawn(viewers);
         }
-
-        // Preserve singleton elements (hitbox, overlay, piston shaft, entity mirror, furniture)
-        // reuse existing instances so they keep their internal state
+        for (Map.Entry entry : existingSpecialByPos.entrySet()) {
+            if (usedPositions.contains(entry.getKey())) continue;
+            ((ContraptionElement)entry.getValue()).despawn(viewers);
+        }
+        for (Map.Entry entry : existingEntityRendererByPos.entrySet()) {
+            if (livePositions.contains(entry.getKey())) continue;
+            ((ContraptionEntityRendererElement)entry.getValue()).despawn(viewers);
+        }
         ContraptionHitboxElement hitbox = null;
         ContraptionInteractionOverlayElement overlay = null;
         ContraptionPistonShaftElement shaft = null;
         ContraptionLiveEntityMirrorElement mirror = null;
         for (ContraptionElement e : state.elements()) {
-            if (e instanceof ContraptionHitboxElement h && hitbox == null) hitbox = h;
-            else if (e instanceof ContraptionInteractionOverlayElement o && overlay == null) overlay = o;
-            else if (e instanceof ContraptionPistonShaftElement s && shaft == null) shaft = s;
-            else if (e instanceof ContraptionLiveEntityMirrorElement m && mirror == null) mirror = m;
-        }
-
-        // Furniture: reuse by definitionId+variantName key
-        Map<String, ContraptionFurnitureElement> existingFurniture = new HashMap<>();
-        for (ContraptionElement e : state.elements()) {
-            if (e instanceof ContraptionFurnitureElement fe) {
-                existingFurniture.put(fe.definitionId() + "/" + fe.variantName(), fe);
+            if (e instanceof ContraptionHitboxElement) {
+                ContraptionHitboxElement h = (ContraptionHitboxElement)e;
+                if (hitbox == null) {
+                    hitbox = h;
+                    continue;
+                }
             }
+            if (e instanceof ContraptionInteractionOverlayElement) {
+                ContraptionInteractionOverlayElement o = (ContraptionInteractionOverlayElement)e;
+                if (overlay == null) {
+                    overlay = o;
+                    continue;
+                }
+            }
+            if (e instanceof ContraptionPistonShaftElement) {
+                ContraptionPistonShaftElement s2 = (ContraptionPistonShaftElement)e;
+                if (shaft == null) {
+                    shaft = s2;
+                    continue;
+                }
+            }
+            if (!(e instanceof ContraptionLiveEntityMirrorElement)) continue;
+            ContraptionLiveEntityMirrorElement m = (ContraptionLiveEntityMirrorElement)e;
+            if (mirror != null) continue;
+            mirror = m;
+        }
+        HashMap<String, ContraptionFurnitureElement> existingFurniture = new HashMap<String, ContraptionFurnitureElement>();
+        for (ContraptionElement e : state.elements()) {
+            if (!(e instanceof ContraptionFurnitureElement)) continue;
+            ContraptionFurnitureElement fe = (ContraptionFurnitureElement)e;
+            existingFurniture.put(fe.definitionId() + "/" + fe.variantName(), fe);
         }
         for (ContraptionFurniture cf : state.furniture()) {
             String key = cf.definitionId() + "/" + cf.variantName();
             ContraptionFurnitureElement fe = existingFurniture.get(key);
             if (fe != null) {
                 elements.add(fe);
-            } else {
-                elements.add(new ContraptionFurnitureElement(
-                        cf.localOffset(), cf.yawOffsetDegrees(),
-                        cf.definitionId(), cf.variantName(), cf.liveFurniture()));
+                continue;
             }
+            elements.add(new ContraptionFurnitureElement(cf.localOffset(), cf.yawOffsetDegrees(), cf.definitionId(), cf.variantName(), cf.liveFurniture()));
         }
-
-        // Item frames: reuse by sourceEntityId
-        Map<java.util.UUID, dev.arubik.craftengine.contraption.element.special.ContraptionItemFrameElement> existingFrames = new HashMap<>();
+        HashMap<UUID, ContraptionItemFrameElement> existingFrames = new HashMap<UUID, ContraptionItemFrameElement>();
         for (ContraptionElement e : state.elements()) {
-            if (e instanceof dev.arubik.craftengine.contraption.element.special.ContraptionItemFrameElement ife) {
-                existingFrames.put(ife.sourceEntityId(), ife);
-            }
+            if (!(e instanceof ContraptionItemFrameElement)) continue;
+            ContraptionItemFrameElement ife = (ContraptionItemFrameElement)e;
+            existingFrames.put(ife.sourceEntityId(), ife);
         }
-        for (net.minecraft.world.entity.Entity entity : level.getAllEntities()) {
-            if (entity instanceof net.minecraft.world.entity.decoration.ItemFrame frame) {
-                var existing2 = existingFrames.get(frame.getUUID());
-                if (existing2 != null) {
-                    elements.add(existing2);
-                } else {
-                    elements.add(new dev.arubik.craftengine.contraption.element.special.ContraptionItemFrameElement(
-                            frame.getUUID(), frame.position(), frame.getDirection(),
-                            frame.getItem(), frame.getRotation()));
-                }
+        for (Entity entity : level.getAllEntities()) {
+            if (!(entity instanceof ItemFrame)) continue;
+            ItemFrame frame = (ItemFrame)entity;
+            ContraptionItemFrameElement existing2 = (ContraptionItemFrameElement)existingFrames.get(frame.getUUID());
+            if (existing2 != null) {
+                elements.add(existing2);
+                continue;
             }
+            elements.add(new ContraptionItemFrameElement(frame.getUUID(), frame.position(), frame.getDirection(), frame.getItem(), frame.getRotation()));
         }
-
-        // Singletons — reuse existing or create
-        if (mirror == null) { mirror = new ContraptionLiveEntityMirrorElement(); }
+        if (mirror == null) {
+            mirror = new ContraptionLiveEntityMirrorElement();
+        }
         mirror.setFurniture(state.furniture());
         elements.add(mirror);
-
+        //elements.add((ContraptionElement)(var12_32 != null ? var12_32 : new ContraptionHitboxElement()));
         elements.add(hitbox != null ? hitbox : new ContraptionHitboxElement());
         elements.add(overlay != null ? overlay : new ContraptionInteractionOverlayElement());
         elements.add(shaft != null ? shaft : new ContraptionPistonShaftElement());
-
         state.setElements(elements);
     }
 
-    /** Elements that should be despawned when removed from the list. */
     private static boolean isRebuildable(ContraptionElement e) {
-        return e instanceof ContraptionBlockElement
-                || e instanceof ContraptionFurnitureElement
-                || e instanceof dev.arubik.craftengine.contraption.element.special.ContraptionItemFrameElement;
+        return e instanceof ContraptionBlockElement || e instanceof ContraptionFurnitureElement || e instanceof ContraptionItemFrameElement;
     }
 
-    private static dev.arubik.craftengine.contraption.element.special.ContraptionSignElement
-            buildSignElement(net.minecraft.core.BlockPos local, net.minecraft.world.level.block.state.BlockState bs,
-                             net.minecraft.nbt.CompoundTag beTag) {
-        if (bs.getBlock() instanceof net.minecraft.world.level.block.WallSignBlock)
-            return new dev.arubik.craftengine.contraption.element.special.ContraptionWallSignElement(local, bs, beTag);
-        if (bs.getBlock() instanceof net.minecraft.world.level.block.WallHangingSignBlock)
-            return new dev.arubik.craftengine.contraption.element.special.ContraptionHangingSignElement(local, bs, beTag, false);
-        if (bs.getBlock() instanceof net.minecraft.world.level.block.CeilingHangingSignBlock)
-            return new dev.arubik.craftengine.contraption.element.special.ContraptionHangingSignElement(local, bs, beTag, true);
-        return new dev.arubik.craftengine.contraption.element.special.ContraptionStandingSignElement(local, bs, beTag);
+    private static ContraptionSignElement buildSignElement(BlockPos local, BlockState bs, CompoundTag beTag) {
+        if (bs.getBlock() instanceof WallSignBlock) {
+            return new ContraptionWallSignElement(local, bs, beTag);
+        }
+        if (bs.getBlock() instanceof WallHangingSignBlock) {
+            return new ContraptionHangingSignElement(local, bs, beTag, false);
+        }
+        if (bs.getBlock() instanceof CeilingHangingSignBlock) {
+            return new ContraptionHangingSignElement(local, bs, beTag, true);
+        }
+        return new ContraptionStandingSignElement(local, bs, beTag);
     }
 
     static boolean hasConstantEntityRenderer(ContraptionLevel level, BlockPos local) {
         try {
-            org.bukkit.World w = level.getWorld();
+            World w = level.getWorld();
             CEWorld ceWorld = CraftEngine.instance().worldManager().getWorld(w.getUID());
-            if (ceWorld == null) return false;
-            net.momirealms.craftengine.core.world.BlockPos cePos =
-                    new net.momirealms.craftengine.core.world.BlockPos(local.getX(), local.getY(), local.getZ());
-            net.momirealms.craftengine.core.world.chunk.CEChunk chunk = ceWorld.getChunkAtIfLoaded(cePos);
+            if (ceWorld == null) {
+                return false;
+            }
+            net.momirealms.craftengine.core.world.BlockPos cePos = new net.momirealms.craftengine.core.world.BlockPos(local.getX(), local.getY(), local.getZ());
+            CEChunk chunk = ceWorld.getChunkAtIfLoaded(cePos);
             return chunk != null && chunk.getConstantBlockEntityRenderer(cePos) != null;
-        } catch (Throwable ignored) {
+        }
+        catch (Throwable ignored) {
             return false;
         }
     }
 }
+

@@ -1,25 +1,53 @@
+/*
+ * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  net.kyori.adventure.text.Component
+ *  net.kyori.adventure.text.format.NamedTextColor
+ *  net.kyori.adventure.text.format.TextColor
+ *  net.minecraft.core.BlockPos
+ *  net.minecraft.core.Direction
+ *  net.minecraft.world.entity.player.Player
+ *  net.minecraft.world.item.ItemStack
+ *  net.minecraft.world.level.Level
+ *  net.momirealms.craftengine.bukkit.api.CraftEngineItems
+ *  net.momirealms.craftengine.bukkit.util.BlockStateUtils
+ *  net.momirealms.craftengine.core.block.BlockDefinition
+ *  net.momirealms.craftengine.core.block.ImmutableBlockState
+ *  net.momirealms.craftengine.core.block.behavior.BlockBehavior
+ *  net.momirealms.craftengine.core.block.entity.BlockEntity
+ *  net.momirealms.craftengine.core.util.Key
+ *  net.momirealms.craftengine.libraries.nbt.CompoundTag
+ *  org.bukkit.Material
+ *  org.bukkit.NamespacedKey
+ *  org.bukkit.craftbukkit.inventory.CraftItemStack
+ *  org.bukkit.entity.HumanEntity
+ *  org.bukkit.entity.Player
+ *  org.bukkit.event.inventory.ClickType
+ *  org.bukkit.event.inventory.InventoryType
+ *  org.bukkit.inventory.ItemStack
+ *  org.bukkit.inventory.meta.ItemMeta
+ */
 package dev.arubik.craftengine.machine.block.entity;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-
-import org.bukkit.Material;
-import org.bukkit.event.inventory.ClickType;
-import dev.arubik.craftengine.util.NbtType;
-
 import dev.arubik.craftengine.block.behavior.ConnectableBlockBehavior;
+import dev.arubik.craftengine.block.entity.PersistentBlockEntity;
+import dev.arubik.craftengine.fluid.graph.GasEngine;
 import dev.arubik.craftengine.gas.GasCarrier;
 import dev.arubik.craftengine.gas.GasKeys;
 import dev.arubik.craftengine.gas.GasStack;
 import dev.arubik.craftengine.gas.GasTank;
 import dev.arubik.craftengine.gas.GasTransferHelper;
 import dev.arubik.craftengine.gas.GasType;
+import dev.arubik.craftengine.gas.behavior.GasProviderBehavior;
+import dev.arubik.craftengine.machine.MachineDefinition;
 import dev.arubik.craftengine.machine.attribute.MachineAttributes;
-import dev.arubik.craftengine.machine.attribute.MachineAttributes.Mod;
+import dev.arubik.craftengine.machine.block.entity.AbstractMachineBlockEntity;
+import dev.arubik.craftengine.machine.menu.GuiTitles;
 import dev.arubik.craftengine.machine.menu.MachineMenu;
 import dev.arubik.craftengine.machine.menu.MachineMenuConfig;
 import dev.arubik.craftengine.machine.menu.MenuText;
+import dev.arubik.craftengine.machine.menu.OverclockMenu;
 import dev.arubik.craftengine.machine.menu.bar.MachineBar;
 import dev.arubik.craftengine.machine.menu.bar.MachineBars;
 import dev.arubik.craftengine.machine.menu.layout.MachineLayout;
@@ -28,474 +56,391 @@ import dev.arubik.craftengine.machine.recipe.AbstractProcessingRecipe;
 import dev.arubik.craftengine.machine.recipe.RecipeOutput;
 import dev.arubik.craftengine.multiblock.DirectionalIOHelper;
 import dev.arubik.craftengine.multiblock.IOConfiguration;
-import dev.arubik.craftengine.multiblock.IOConfiguration.IOType;
 import dev.arubik.craftengine.multiblock.RelativeDirection;
 import dev.arubik.craftengine.util.DirectionType;
+import dev.arubik.craftengine.util.NbtType;
 import dev.arubik.craftengine.util.TypedKey;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextColor;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
+import net.momirealms.craftengine.bukkit.api.CraftEngineItems;
 import net.momirealms.craftengine.bukkit.util.BlockStateUtils;
+import net.momirealms.craftengine.core.block.BlockDefinition;
 import net.momirealms.craftengine.core.block.ImmutableBlockState;
+import net.momirealms.craftengine.core.block.behavior.BlockBehavior;
 import net.momirealms.craftengine.core.block.entity.BlockEntity;
 import net.momirealms.craftengine.core.util.Key;
+import net.momirealms.craftengine.libraries.nbt.CompoundTag;
+import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
+import org.bukkit.craftbukkit.inventory.CraftItemStack;
+import org.bukkit.entity.HumanEntity;
+import org.bukkit.event.inventory.ClickType;
+import org.bukkit.event.inventory.InventoryType;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 
-/**
- * Gas pump (the {@code cml:gas_pump} block). Same machine pattern as the {@code cml:iron_pump}
- * (fuel-driven, attribute upgrades, player overclock, multi-page menu), but it pumps NITROGEN GAS
- * out of a "nitrogenated cal" VEIN instead of fluid out of a water/lava source.
- *
- * <p>The pump sits ON TOP of a nitrogenated-cal block (its IN face = LOCAL DOWN). On extract it
- * flood-fills the orthogonally-adjacent vein of cal blocks and sums their EXTRACTION POINTS
- * (full = 4, mid = 2, empty = 1). A single pump draws {@code min(8, veinPoints)} points worth of
- * nitrogen per operation — extra vein richness past 8 points is wasted on one pump. A vein allows
- * only ONE active pump by default; a Pressurizer Well raises that limit (see {@link #veinPumpLimit}).
- * The nitrogen is buffered in an internal {@link GasTank} and pushed out the LOCAL UP face into a
- * connected gas carrier.</p>
- */
-public class GasPumpBlockEntity extends AbstractMachineBlockEntity {
-
-    public static final int UPGRADE_SLOTS = 9; // container indices 0..8
+public class GasPumpBlockEntity
+extends AbstractMachineBlockEntity {
+    public static final int UPGRADE_SLOTS = 9;
     private static final int BASE_UNLOCKED = 3;
-
-    /** Hard cap on extraction points a single pump can draw, regardless of vein size. */
     public static final double MAX_POINTS_PER_PUMP = 8.0;
-    /** Safety cap on the vein flood-fill (blocks visited). */
     private static final int MAX_VEIN_BLOCKS = 512;
     private static final String GAS_PUMP_ID = "cml:gas_pump";
-
-    // ---- config knobs ----
-    private final int capacity;        // internal gas buffer size (mB)
-    private final int mbPerPoint;      // mB extracted PER extraction point PER operation
-    private final int basePressure;    // base pressure stamped on pushed gas
-    private final int baseExtractTickRate; // ticks between operations; overclock shortens it
+    private final int capacity;
+    private final int mbPerPoint;
+    private final int basePressure;
+    private final int baseExtractTickRate;
     private final int[] fuelSlots;
-
-    private final Map<Key, List<Mod>> upgradeDefs;
+    private final Map<Key, List<MachineAttributes.Mod>> upgradeDefs;
     private final List<MachineBar> bars;
     private final MachineMenuConfig menuConfig;
     private final int menuSize;
-
-    private static final org.bukkit.inventory.ItemStack FILLER = MenuText.emptyFiller();
-
-    private float overclock = 0f;
-    private double curOverclockLimit = 0;
-    private double curGeneration = 0;   // capacity headroom
-    private double curPressure = 0;      // flat extra pressure
-    private int curUnlocked = BASE_UNLOCKED;
-
-    // Last computed vein stats (for the menu readout + extraction).
-    private double lastVeinPoints = 0;
-    private double lastDrawPoints = 0;
+    private static final ItemStack FILLER = MenuText.emptyFiller();
+    private float overclock = 0.0f;
+    private double curOverclockLimit = 0.0;
+    private double curGeneration = 0.0;
+    private double curPressure = 0.0;
+    private int curUnlocked = 3;
+    private double lastVeinPoints = 0.0;
+    private double lastDrawPoints = 0.0;
     private GasType lastVeinGas = GasType.EMPTY;
     private boolean lastActiveOwner = true;
-
     private int page = 0;
     private MachineMenu active;
     private int shownUnlocked = -1;
-
-    private static final TypedKey<Float> KEY_OC = TypedKey.of("craftengine", "gas_pump_overclock",
-            NbtType.FLOAT);
+    private static final TypedKey<Float> KEY_OC = TypedKey.of("craftengine", "gas_pump_overclock", NbtType.FLOAT);
+    private int opCooldown = 0;
+    private int upgradeRecomputeCd = 0;
+    private static final String WELL_CORE_ID = "cml:pressurizer_well";
 
     public GasPumpBlockEntity(BlockEntity blockEntity) {
-        this(blockEntity, new java.util.HashMap<>(), new ArrayList<>(), defaultMenuConfig(),
-                4000, 10, 8, 20);
+        this(blockEntity, new HashMap<Key, List<MachineAttributes.Mod>>(), new ArrayList<MachineBar>(), GasPumpBlockEntity.defaultMenuConfig(), 4000, 10, 8, 20);
     }
 
     private static MachineMenuConfig defaultMenuConfig() {
-        return new MachineMenuConfig(9, null, new int[0], new int[0], new int[0], new ArrayList<>(), 4);
+        return new MachineMenuConfig(9, null, new int[0], new int[0], new int[0], new ArrayList<MachineMenuConfig.Button>(), 4);
     }
 
-    public GasPumpBlockEntity(BlockEntity blockEntity, Map<Key, List<Mod>> upgradeDefs,
-            List<MachineBar> bars, MachineMenuConfig menuConfig,
-            int capacity, int mbPerPoint, int pressure, int extractTickRate) {
+    public GasPumpBlockEntity(BlockEntity blockEntity, Map<Key, List<MachineAttributes.Mod>> upgradeDefs, List<MachineBar> bars, MachineMenuConfig menuConfig, int capacity, int mbPerPoint, int pressure, int extractTickRate) {
         super(blockEntity, menuConfig != null && menuConfig.menuSize > 0 ? menuConfig.menuSize : 27);
-        this.upgradeDefs = upgradeDefs == null ? new java.util.HashMap<>() : upgradeDefs;
-        this.bars = bars == null ? new ArrayList<>() : bars;
-        this.menuConfig = menuConfig != null ? menuConfig : defaultMenuConfig();
+        this.upgradeDefs = upgradeDefs == null ? new HashMap() : upgradeDefs;
+        this.bars = bars == null ? new ArrayList() : bars;
+        this.menuConfig = menuConfig != null ? menuConfig : GasPumpBlockEntity.defaultMenuConfig();
         this.menuSize = this.menuConfig.menuSize > 0 ? this.menuConfig.menuSize : 9;
         this.capacity = capacity;
         this.mbPerPoint = Math.max(1, mbPerPoint);
         this.basePressure = pressure;
         this.baseExtractTickRate = Math.max(1, extractTickRate);
-        this.fuelSlots = this.menuConfig.fuelSlots != null ? this.menuConfig.fuelSlots : new int[0];
-
-        setMaxStackSize(64);
-        // Accept ANY gas — the vein's gas_provider blocks decide which gas is pumped (data-driven).
-        addGasTank(new GasTank("internal", capacity));
-        setIOConfiguration(buildIO());
+        this.fuelSlots = this.menuConfig.fuelSlots != null ? this.menuConfig.fuelSlots : new int[]{};
+        this.setMaxStackSize(64);
+        this.addGasTank(new GasTank("internal", capacity));
+        this.setIOConfiguration(this.buildIO());
     }
 
-    /**
-     * Directional like the iron pump: gas OUTPUT on the LOCAL UP face (a pipe links only there); the cal
-     * vein is read off the LOCAL DOWN face. Resolved to world faces via the block's 6-dir facing.
-     */
     private IOConfiguration buildIO() {
         IOConfiguration.RelativeIO cfg = new IOConfiguration.RelativeIO();
-        cfg.addOutput(IOType.GAS, RelativeDirection.UP);
-        // Fuel via hopper/funnel from every face except the gas IN (DOWN vein) / OUT (UP): the 4 side faces
-        // accept ITEM -> routed to the fuel slots by getSlotsForFace/canPlaceItemThroughFace.
-        if (fuelSlots.length > 0) {
-            cfg.addInput(IOType.ITEM, RelativeDirection.FRONT);
-            cfg.addInput(IOType.ITEM, RelativeDirection.BACK);
-            cfg.addInput(IOType.ITEM, RelativeDirection.LEFT);
-            cfg.addInput(IOType.ITEM, RelativeDirection.RIGHT);
-            cfg.setSlots(IOType.ITEM, IOConfiguration.IORole.FUEL, fuelSlots);
+        cfg.addOutput(IOConfiguration.IOType.GAS, RelativeDirection.UP);
+        if (this.fuelSlots.length > 0) {
+            cfg.addInput(IOConfiguration.IOType.ITEM, RelativeDirection.FRONT);
+            cfg.addInput(IOConfiguration.IOType.ITEM, RelativeDirection.BACK);
+            cfg.addInput(IOConfiguration.IOType.ITEM, RelativeDirection.LEFT);
+            cfg.addInput(IOConfiguration.IOType.ITEM, RelativeDirection.RIGHT);
+            cfg.setSlots(IOConfiguration.IOType.ITEM, IOConfiguration.IORole.FUEL, this.fuelSlots);
         }
         return cfg;
     }
 
-    // ---------------- effective rates ----------------
-
     private int effInterval() {
-        double f = Math.max(0.05, 1.0 + overclock);
-        return Math.max(1, (int) Math.round(baseExtractTickRate / f));
+        double f = Math.max(0.05, 1.0 + (double)this.overclock);
+        return Math.max(1, (int)Math.round((double)this.baseExtractTickRate / f));
     }
 
     private int effCapacity() {
-        double g = clamp(curGeneration, 0.0, 2.0);
-        return (int) Math.round(capacity * (1.0 + g));
+        double g = GasPumpBlockEntity.clamp(this.curGeneration, 0.0, 2.0);
+        return (int)Math.round((double)this.capacity * (1.0 + g));
     }
 
     private int effPressure() {
-        return Math.max(0, (int) Math.round(basePressure + curPressure));
+        return Math.max(0, (int)Math.round((double)this.basePressure + this.curPressure));
     }
 
     private static double clamp(double v, double lo, double hi) {
         return Math.max(lo, Math.min(hi, v));
     }
 
-    // ---------------- upgrades ----------------
-
-    /**
-     * The pump's machine half, from {@code pumps/*.json}.
-     *
-     * <p>
-     * A pump's world scan stays in Java, but its upgrade grid is ordinary machine
-     * surface and now comes from data like every other machine's. Falls back to the
-     * historical 9/3 when no definition is present.
-     */
-    private dev.arubik.craftengine.machine.MachineDefinition machineDefinition() {
-        return dev.arubik.craftengine.machine.MachineDefinition.byName(getMachineId());
+    private MachineDefinition machineDefinition() {
+        return MachineDefinition.byName(this.getMachineId());
     }
 
     private int upgradeSlotCount() {
-        var d = machineDefinition();
-        return d != null && d.upgrades().size() > 0 ? d.upgrades().size() : UPGRADE_SLOTS;
+        MachineDefinition d = this.machineDefinition();
+        return d != null && d.upgrades().size() > 0 ? d.upgrades().size() : 9;
     }
 
     private int baseUnlockedCount() {
-        var d = machineDefinition();
-        return d != null && d.upgrades().size() > 0 ? d.upgrades().baseUnlocked() : BASE_UNLOCKED;
+        MachineDefinition d = this.machineDefinition();
+        return d != null && d.upgrades().size() > 0 ? d.upgrades().baseUnlocked() : 3;
     }
 
     @Override
     public int[] getUpgradeSlots() {
-        int count = upgradeSlotCount();
+        int count = this.upgradeSlotCount();
         int[] s = new int[count];
-        for (int i = 0; i < count; i++)
+        for (int i = 0; i < count; ++i) {
             s[i] = i;
+        }
         return s;
     }
 
     private Key itemId(int slot) {
-        net.minecraft.world.item.ItemStack nms = getItem(slot);
-        if (nms == null || nms.isEmpty())
+        net.minecraft.world.item.ItemStack nms = this.getItem(slot);
+        if (nms == null || nms.isEmpty()) {
             return null;
-        org.bukkit.inventory.ItemStack b = org.bukkit.craftbukkit.inventory.CraftItemStack.asBukkitCopy(nms);
-        Key custom = net.momirealms.craftengine.bukkit.api.CraftEngineItems.getCustomItemId(b);
-        if (custom != null)
+        }
+        ItemStack b = CraftItemStack.asBukkitCopy((net.minecraft.world.item.ItemStack)nms);
+        Key custom = CraftEngineItems.getCustomItemId((ItemStack)b);
+        if (custom != null) {
             return custom;
-        org.bukkit.NamespacedKey nk = b.getType().getKey();
-        return Key.of(nk.getNamespace(), nk.getKey());
+        }
+        NamespacedKey nk = b.getType().getKey();
+        return Key.of((String)nk.getNamespace(), (String)nk.getKey());
     }
 
-    private List<Mod> modsOf(int slot) {
-        Key id = itemId(slot);
-        return id == null ? null : upgradeDefs.get(id);
+    private List<MachineAttributes.Mod> modsOf(int slot) {
+        Key id = this.itemId(slot);
+        return id == null ? null : this.upgradeDefs.get(id);
     }
 
     @Override
     protected void recomputeUpgrades() {
-        List<Mod> all = new ArrayList<>();
-        for (int i = 0; i < upgradeSlotCount(); i++) {
-            List<Mod> m = modsOf(i);
-            if (m != null)
-                all.addAll(m);
+        ArrayList<MachineAttributes.Mod> all = new ArrayList<MachineAttributes.Mod>();
+        for (int i = 0; i < this.upgradeSlotCount(); ++i) {
+            List<MachineAttributes.Mod> m = this.modsOf(i);
+            if (m == null) continue;
+            all.addAll(m);
         }
-        int extra = (int) Math.round(MachineAttributes.compute(all)
-                .getOrDefault(MachineAttributes.EXTRA_SLOTS, 0.0));
-        int count = upgradeSlotCount();
-        int base = baseUnlockedCount();
+        int extra = (int)Math.round(MachineAttributes.compute(all).getOrDefault(MachineAttributes.EXTRA_SLOTS, 0.0));
+        int count = this.upgradeSlotCount();
+        int base = this.baseUnlockedCount();
         this.curUnlocked = Math.max(base, Math.min(count, base + extra));
-
-        List<Mod> active = new ArrayList<>();
-        for (int i = 0; i < curUnlocked; i++) {
-            List<Mod> m = modsOf(i);
-            if (m != null)
-                active.addAll(m);
+        ArrayList<MachineAttributes.Mod> active = new ArrayList<MachineAttributes.Mod>();
+        for (int i = 0; i < this.curUnlocked; ++i) {
+            List<MachineAttributes.Mod> m = this.modsOf(i);
+            if (m == null) continue;
+            active.addAll(m);
         }
-        var attrs = MachineAttributes.compute(active);
-        this.curOverclockLimit = clamp(attrs.getOrDefault(MachineAttributes.OVERCLOCK_LIMIT, 0.0), 0.0, 32.0);
-        this.curGeneration = clamp(attrs.getOrDefault(MachineAttributes.GENERATION, 0.0), 0.0, 2.0);
-        this.curPressure = clamp(attrs.getOrDefault(MachineAttributes.PRESSURE, 0.0), 0.0, 256.0);
-
-        this.overclock = (float) clamp(this.overclock, -Math.min(this.curOverclockLimit, 0.99),
-                this.curOverclockLimit);
+        Map<Key, Double> attrs = MachineAttributes.compute(active);
+        this.curOverclockLimit = GasPumpBlockEntity.clamp(attrs.getOrDefault(MachineAttributes.OVERCLOCK_LIMIT, 0.0), 0.0, 32.0);
+        this.curGeneration = GasPumpBlockEntity.clamp(attrs.getOrDefault(MachineAttributes.GENERATION, 0.0), 0.0, 2.0);
+        this.curPressure = GasPumpBlockEntity.clamp(attrs.getOrDefault(MachineAttributes.PRESSURE, 0.0), 0.0, 256.0);
+        this.overclock = (float)GasPumpBlockEntity.clamp(this.overclock, -Math.min(this.curOverclockLimit, 0.99), this.curOverclockLimit);
     }
-
-    // ---------------- pump core ----------------
 
     @Override
     protected boolean requiresFuel() {
         return true;
     }
 
-    private int opCooldown = 0;
-    private int upgradeRecomputeCd = 0;
-
     @Override
     public void tick(Level level, BlockPos pos, ImmutableBlockState state) {
-        if (active != null)
-            active.tick();
+        if (this.active != null) {
+            this.active.tick();
+        }
         super.tick(level, pos, state);
     }
 
     @Override
     protected void processTick(Level level) {
-        if (level.isClientSide())
+        int free;
+        GasStack out;
+        int inserted;
+        BlockPos up;
+        GasCarrier carrier;
+        GasStack stored;
+        if (level.isClientSide()) {
             return;
-
-        if (upgradeRecomputeCd-- <= 0) {
-            recomputeUpgrades();
-            upgradeRecomputeCd = 10;
         }
-        refreshUpgradePageIfNeeded();
-
-        if (requiresRedstone && !isRedstoneEnabled(level))
+        if (this.upgradeRecomputeCd-- <= 0) {
+            this.recomputeUpgrades();
+            this.upgradeRecomputeCd = 10;
+        }
+        this.refreshUpgradePageIfNeeded();
+        if (this.requiresRedstone && !this.isRedstoneEnabled(level)) {
             return;
-
-        BlockPos pos = getMachinePos();
-        // Register this gas network with the hydraulic engine (it expands via BFS to pipes/tanks). The
-        // vein intake below STILL runs under the engine (it fills this pump's tank from gas source blocks);
-        // only the manual OUT push is handed to the engine.
+        }
+        BlockPos pos = this.getMachinePos();
         try {
-            dev.arubik.craftengine.fluid.graph.GasEngine.registerSeed(pos);
-        } catch (Throwable ignored) {
+            GasEngine.registerSeed(pos);
         }
-        GasTank tank = gasTanks.get(0);
-        int cap = effCapacity();
-        int pressure = effPressure();
-
-        // World IN (vein) / OUT (pipe) faces from the 6-dir facing — directional like the iron pump.
-        Direction facing = getFacing(level);
-        ConnectableBlockBehavior cbb = getBlockBehavior(ConnectableBlockBehavior.class);
+        catch (Throwable throwable) {
+            // empty catch block
+        }
+        GasTank tank = (GasTank)this.gasTanks.get(0);
+        int cap = this.effCapacity();
+        int pressure = this.effPressure();
+        Direction facing = this.getFacing(level);
+        ConnectableBlockBehavior cbb = this.getBlockBehavior(ConnectableBlockBehavior.class);
         DirectionType type = cbb != null ? cbb.getDirectionType() : DirectionType.FULL;
-        Direction worldDown = type == DirectionType.FULL
-                ? DirectionalIOHelper.getVerticalWorldDirection(RelativeDirection.DOWN, facing)
-                : DirectionalIOHelper.getHorizontalWorldDirection(RelativeDirection.DOWN,
-                        DirectionalIOHelper.toHorizontalDirection(facing));
-        Direction worldUp = type == DirectionType.FULL
-                ? DirectionalIOHelper.getVerticalWorldDirection(RelativeDirection.UP, facing)
-                : DirectionalIOHelper.getHorizontalWorldDirection(RelativeDirection.UP,
-                        DirectionalIOHelper.toHorizontalDirection(facing));
-
-        int ioCd = getOrDefault(GasKeys.GAS_IO_COOLDOWN, 0);
-        if (ioCd > 0)
-            set(GasKeys.GAS_IO_COOLDOWN, ioCd - 1);
-
-        // PUSH EVERY TICK: the buffer drains into a connected gas carrier above. Under the engine this is
-        // the engine's job (it moves pump->pipe->tank), so the manual push is disabled when ENABLED.
-        GasStack stored = tank.getGas(level, pos);
-        if (stored == null)
-            stored = GasStack.EMPTY;
-        if (!dev.arubik.craftengine.fluid.graph.GasEngine.ENABLED && ioCd <= 0 && !stored.isEmpty()) {
-            BlockPos up = pos.relative(worldUp);
-            GasCarrier carrier = GasTransferHelper.getCarrier(level, up).orElse(null);
-            if (carrier != null) {
-                GasStack out = new GasStack(stored.getType(), stored.getAmount(),
-                        Math.max(0, stored.getPressure() - 1));
-                int inserted = carrier.insertGas(level, up, out, worldUp.getOpposite());
-                if (inserted > 0) {
-                    tank.extract(level, pos, inserted, null);
-                    set(GasKeys.GAS_IO_COOLDOWN, 2);
-                }
-            }
+        Direction worldDown = type == DirectionType.FULL ? DirectionalIOHelper.getVerticalWorldDirection(RelativeDirection.DOWN, facing) : DirectionalIOHelper.getHorizontalWorldDirection(RelativeDirection.DOWN, DirectionalIOHelper.toHorizontalDirection(facing));
+        Direction worldUp = type == DirectionType.FULL ? DirectionalIOHelper.getVerticalWorldDirection(RelativeDirection.UP, facing) : DirectionalIOHelper.getHorizontalWorldDirection(RelativeDirection.UP, DirectionalIOHelper.toHorizontalDirection(facing));
+        int ioCd = this.getOrDefault(GasKeys.GAS_IO_COOLDOWN, 0);
+        if (ioCd > 0) {
+            this.set(GasKeys.GAS_IO_COOLDOWN, ioCd - 1);
         }
-
-        // --- FUEL-DRIVEN EXTRACTION ---
-        stored = tank.getGas(level, pos);
-        if (stored == null)
+        if ((stored = tank.getGas(level, pos)) == null) {
             stored = GasStack.EMPTY;
+        }
+        if (!GasEngine.ENABLED && ioCd <= 0 && !stored.isEmpty() && (carrier = (GasCarrier)GasTransferHelper.getCarrier(level, up = pos.relative(worldUp)).orElse(null)) != null && (inserted = carrier.insertGas(level, up, out = new GasStack(stored.getType(), stored.getAmount(), Math.max(0, stored.getPressure() - 1)), worldUp.getOpposite())) > 0) {
+            tank.extract(level, pos, inserted, null);
+            this.set(GasKeys.GAS_IO_COOLDOWN, 2);
+        }
+        if ((stored = tank.getGas(level, pos)) == null) {
+            stored = GasStack.EMPTY;
+        }
         boolean tankFull = stored.getAmount() >= cap;
-
-        // Source vein: the cal block on the IN face, flood-filled.
         BlockPos inPos = pos.relative(worldDown);
-        VeinScan vein = scanVein(level, inPos);
+        VeinScan vein = this.scanVein(level, inPos);
         this.lastVeinPoints = vein.points;
         this.lastVeinGas = vein.gas;
-        boolean haveSource = vein.points > 0 && vein.gas != GasType.EMPTY;
-
-        // Vein ownership: only the first N pumps (N = veinPumpLimit) on the vein run.
-        this.lastActiveOwner = haveSource && isActivePump(level, vein, pos, worldUp);
-        this.lastDrawPoints = (haveSource && lastActiveOwner)
-                ? Math.min(MAX_POINTS_PER_PUMP, vein.points) : 0;
-
-        if (tankFull || !haveSource || !lastActiveOwner) {
-            isProcessing = false;
-            return; // paused: no fuel burn, no progress
+        boolean haveSource = vein.points > 0.0 && vein.gas != GasType.EMPTY;
+        this.lastActiveOwner = haveSource && this.isActivePump(level, vein, pos, worldUp);
+        double d = this.lastDrawPoints = haveSource && this.lastActiveOwner ? Math.min(8.0, vein.points) : 0.0;
+        if (tankFull || !haveSource || !this.lastActiveOwner) {
+            this.isProcessing = false;
+            return;
         }
-
-        if (burnTime > 0)
-            burnTime--;
-        if (burnTime <= 0) {
-            if (hasFuel(level)) {
-                consumeFuel(level);
-                setChanged();
+        if (this.burnTime > 0) {
+            --this.burnTime;
+        }
+        if (this.burnTime <= 0) {
+            if (this.hasFuel(level)) {
+                this.consumeFuel(level);
+                this.setChanged();
             } else {
-                isProcessing = false;
+                this.isProcessing = false;
                 return;
             }
         }
-        isProcessing = true;
-
-        if (opCooldown > 0) {
-            opCooldown--;
+        this.isProcessing = true;
+        if (this.opCooldown > 0) {
+            --this.opCooldown;
             return;
         }
-        opCooldown = effInterval();
-
-        // Stamp pressure on the existing buffer when it differs.
+        this.opCooldown = this.effInterval();
         if (!stored.isEmpty() && stored.getPressure() != pressure) {
-            writeBuffer(level, new GasStack(stored.getType(), stored.getAmount(), pressure));
+            this.writeBuffer(level, new GasStack(stored.getType(), stored.getAmount(), pressure));
             stored = tank.getGas(level, pos);
-            if (stored == null)
+            if (stored == null) {
                 stored = GasStack.EMPTY;
+            }
         }
-
-        int free = cap - stored.getAmount();
-        if (free <= 0)
+        if ((free = cap - stored.getAmount()) <= 0) {
             return;
-        // A buffer already holding a DIFFERENT gas blocks the new vein's gas (no mixing).
-        if (!stored.isEmpty() && stored.getType() != lastVeinGas)
+        }
+        if (!stored.isEmpty() && stored.getType() != this.lastVeinGas) {
             return;
-        int amount = Math.min(free, (int) Math.round(lastDrawPoints * mbPerPoint));
-        if (amount <= 0)
+        }
+        int amount = Math.min(free, (int)Math.round(this.lastDrawPoints * (double)this.mbPerPoint));
+        if (amount <= 0) {
             return;
-        tank.insert(level, pos, new GasStack(lastVeinGas, amount, pressure));
+        }
+        tank.insert(level, pos, new GasStack(this.lastVeinGas, amount, pressure));
     }
 
-    /** Overwrite the buffer contents (used to re-stamp pressure). */
     private void writeBuffer(Level level, GasStack s) {
-        BlockPos pos = getMachinePos();
-        dev.arubik.craftengine.block.entity.PersistentBlockEntity.executeAt(level, pos, be -> {
-            if (s == null || s.isEmpty())
-                be.remove(gasTanks.get(0).getKey());
-            else
-                be.set(gasTanks.get(0).getKey(), s);
+        BlockPos pos = this.getMachinePos();
+        PersistentBlockEntity.executeAt(level, pos, be -> {
+            if (s == null || s.isEmpty()) {
+                be.remove(((GasTank)this.gasTanks.get(0)).getKey());
+            } else {
+                be.set(((GasTank)this.gasTanks.get(0)).getKey(), s);
+            }
         });
     }
 
-    // ---------------- vein flood-fill ----------------
-
-    /** The {@link GasProviderBehavior} on the block at {@code pos}, or null if it isn't a gas vein node. */
-    public static dev.arubik.craftengine.gas.behavior.GasProviderBehavior providerAt(Level level, BlockPos pos) {
+    public static GasProviderBehavior providerAt(Level level, BlockPos pos) {
         ImmutableBlockState s = BlockStateUtils.getOptionalCustomBlockState(level.getBlockState(pos)).orElse(null);
-        if (s == null || s.behavior() == null)
+        if (s == null || s.behavior() == null) {
             return null;
-        var b = s.behavior();
-        if (b instanceof dev.arubik.craftengine.gas.behavior.GasProviderBehavior g)
+        }
+        BlockBehavior b = s.behavior();
+        if (b instanceof GasProviderBehavior) {
+            GasProviderBehavior g = (GasProviderBehavior)b;
             return g;
-        return b.getFirst(dev.arubik.craftengine.gas.behavior.GasProviderBehavior.class);
+        }
+        return (GasProviderBehavior)(b.getFirst(GasProviderBehavior.class));
     }
 
-    /** Custom-block id string at a position, or null when it isn't a CraftEngine block. */
     private static String customId(Level level, BlockPos pos) {
         ImmutableBlockState s = BlockStateUtils.getOptionalCustomBlockState(level.getBlockState(pos)).orElse(null);
-        return s == null ? null : s.owner().value().id().toString();
+        return s == null ? null : ((BlockDefinition)s.owner().value()).id().toString();
     }
 
-    private static final class VeinScan {
-        double points;
-        GasType gas = GasType.EMPTY;
-        final java.util.List<BlockPos> blocks = new ArrayList<>();
-    }
-
-    /**
-     * BFS the orthogonally-connected vein of {@code gas_provider} blocks SHARING THE SAME gas as the
-     * start block; sum their extraction points (data-driven — no hardcoded block ids).
-     */
     private VeinScan scanVein(Level level, BlockPos start) {
+        GasType gas;
         VeinScan scan = new VeinScan();
-        var startProv = providerAt(level, start);
-        if (startProv == null || startProv.extractionPoints() <= 0 || startProv.gasType() == GasType.EMPTY)
+        GasProviderBehavior startProv = GasPumpBlockEntity.providerAt(level, start);
+        if (startProv == null || startProv.extractionPoints() <= 0.0 || startProv.gasType() == GasType.EMPTY) {
             return scan;
-        GasType gas = startProv.gasType();
-        scan.gas = gas;
-        java.util.ArrayDeque<BlockPos> queue = new java.util.ArrayDeque<>();
-        java.util.HashSet<Long> seen = new java.util.HashSet<>();
+        }
+        scan.gas = gas = startProv.gasType();
+        ArrayDeque<BlockPos> queue = new ArrayDeque<BlockPos>();
+        HashSet<Long> seen = new HashSet<Long>();
         queue.add(start);
         seen.add(start.asLong());
-        while (!queue.isEmpty() && scan.blocks.size() < MAX_VEIN_BLOCKS) {
-            BlockPos p = queue.poll();
-            var prov = providerAt(level, p);
-            if (prov == null || prov.gasType() != gas || prov.extractionPoints() <= 0)
-                continue;
+        while (!queue.isEmpty() && scan.blocks.size() < 512) {
+            BlockPos p = (BlockPos)queue.poll();
+            GasProviderBehavior prov = GasPumpBlockEntity.providerAt(level, p);
+            if (prov == null || prov.gasType() != gas || prov.extractionPoints() <= 0.0) continue;
             scan.points += prov.extractionPoints();
             scan.blocks.add(p);
             for (Direction d : Direction.values()) {
+                GasProviderBehavior np;
                 BlockPos n = p.relative(d);
-                if (seen.add(n.asLong())) {
-                    var np = providerAt(level, n);
-                    if (np != null && np.gasType() == gas && np.extractionPoints() > 0)
-                        queue.add(n);
-                }
+                if (!seen.add(n.asLong()) || (np = GasPumpBlockEntity.providerAt(level, n)) == null || np.gasType() != gas || !(np.extractionPoints() > 0.0)) continue;
+                queue.add(n);
             }
         }
         return scan;
     }
 
-    private static final String WELL_CORE_ID = "cml:pressurizer_well";
-
-    /**
-     * Vein pump limit (how many pumps may run on one vein). Default 1. Raised to
-     * {@link GasKeys#WELL_PUMP_LIMIT} when an ACTIVE Pressurizer Well core sits directly on a cal block
-     * of this vein (the well anchors to the cal beneath its central-bottom core; that core writes the
-     * {@link GasKeys#WELL_ACTIVE} flag while it is formed + steam-fed).
-     */
     private int veinPumpLimit(Level level, VeinScan vein) {
         for (BlockPos calPos : vein.blocks) {
             BlockPos above = calPos.relative(Direction.UP);
-            if (WELL_CORE_ID.equals(customId(level, above))) {
-                dev.arubik.craftengine.block.entity.PersistentBlockEntity be =
-                        dev.arubik.craftengine.block.entity.PersistentBlockEntity.getIfLoaded(level, above);
-                int active = be != null ? be.getOrDefault(GasKeys.WELL_ACTIVE, 0) : 0;
-                if (active == 1)
-                    return GasKeys.WELL_PUMP_LIMIT;
-            }
+            if (!WELL_CORE_ID.equals(GasPumpBlockEntity.customId(level, above))) continue;
+            PersistentBlockEntity be = PersistentBlockEntity.getIfLoaded(level, above);
+            TypedKey wellFlag = TypedKey.of("polyfills", "flag_well_active", NbtType.INTEGER);
+            int active = be != null ? be.getOrDefault(wellFlag, 0) : 0;
+            if (active != true) continue;
+            return 5;
         }
         return 1;
     }
 
-    /**
-     * True when THIS pump is one of the {@code veinPumpLimit} active pumps on the vein. Every gas pump
-     * sitting on top of a vein block is a candidate; they are ranked by block position and only the
-     * lowest-ranked {@code limit} pumps run, so a vein deterministically runs exactly one pump (or up
-     * to the well-raised limit) with no shared registry.
-     */
     private boolean isActivePump(Level level, VeinScan vein, BlockPos selfPos, Direction up) {
-        int limit = veinPumpLimit(level, vein);
+        int limit = this.veinPumpLimit(level, vein);
         long selfKey = selfPos.asLong();
         int rank = 0;
         for (BlockPos calPos : vein.blocks) {
             BlockPos above = calPos.relative(up);
-            if (GAS_PUMP_ID.equals(customId(level, above))) {
-                if (above.asLong() < selfKey)
-                    rank++;
-                if (rank >= limit)
-                    return false;
+            if (!GAS_PUMP_ID.equals(GasPumpBlockEntity.customId(level, above))) continue;
+            if (above.asLong() < selfKey) {
+                ++rank;
             }
+            if (rank < limit) continue;
+            return false;
         }
         return rank < limit;
     }
@@ -519,26 +464,24 @@ public class GasPumpBlockEntity extends AbstractMachineBlockEntity {
         return "gas_pump";
     }
 
-    // ---------------- bars ----------------
-
     private GasStack storedGas() {
-        GasStack s = gasTanks.get(0).getGas(getNMSLevel(), getMachinePos());
+        GasStack s = ((GasTank)this.gasTanks.get(0)).getGas(this.getNMSLevel(), this.getMachinePos());
         return s == null ? GasStack.EMPTY : s;
     }
 
     @Override
     public double[] barStat(String id) {
         if ("gas".equals(id) || "buffer".equals(id) || "internal".equals(id)) {
-            GasStack s = storedGas();
-            return new double[] { s.isEmpty() ? 0 : s.getAmount(), Math.max(1, effCapacity()) };
+            GasStack s = this.storedGas();
+            return new double[]{s.isEmpty() ? 0.0 : (double)s.getAmount(), Math.max(1, this.effCapacity())};
         }
         if ("fuel".equals(id)) {
-            return new double[] { burnTime, Math.max(1, maxBurnTime) };
+            return new double[]{this.burnTime, Math.max(1, this.maxBurnTime)};
         }
         if ("progress".equals(id)) {
-            int total = effInterval();
-            int done = Math.max(0, total - opCooldown);
-            return new double[] { done, Math.max(1, total) };
+            int total = this.effInterval();
+            int done = Math.max(0, total - this.opCooldown);
+            return new double[]{done, Math.max(1, total)};
         }
         return super.barStat(id);
     }
@@ -546,216 +489,208 @@ public class GasPumpBlockEntity extends AbstractMachineBlockEntity {
     @Override
     public String barSubtype(String id) {
         if ("gas".equals(id) || "buffer".equals(id) || "internal".equals(id)) {
-            GasStack s = storedGas();
-            return s.isEmpty() ? "" : s.getType().name().toLowerCase(java.util.Locale.ROOT);
+            GasStack s = this.storedGas();
+            return s.isEmpty() ? "" : s.getType().name().toLowerCase(Locale.ROOT);
         }
         return super.barSubtype(id);
     }
 
-    // ---------------- menu ----------------
-
     @Override
     public MachineLayout getLayout() {
-        return switch (page) {
-            case 1 -> buildUpgradeLayout();
-            case 2 -> buildOverclockLayout();
-            default -> buildMainLayout();
+        return switch (this.page) {
+            case 1 -> this.buildUpgradeLayout();
+            case 2 -> this.buildOverclockLayout();
+            default -> this.buildMainLayout();
         };
     }
 
     @Override
     public MachineMenu getMenu() {
-        if (active == null) {
-            active = new MachineMenu(this, getLayout());
-            active.syncFromMachine();
+        if (this.active == null) {
+            this.active = new MachineMenu(this, this.getLayout());
+            this.active.syncFromMachine();
         }
-        return active;
+        return this.active;
     }
 
     @Override
-    public void openMenu(net.minecraft.world.entity.player.Player player) {
-        openPage((org.bukkit.entity.Player) player.getBukkitEntity(), 0);
+    public void openMenu(Player player) {
+        this.openPage((org.bukkit.entity.Player)player.getBukkitEntity(), 0);
     }
 
     public void openPage(org.bukkit.entity.Player player, int newPage) {
         this.page = newPage;
-        this.active = new MachineMenu(this, getLayout());
+        this.active = new MachineMenu(this, this.getLayout());
         this.active.syncFromMachine();
         this.active.open(player);
-        this.shownUnlocked = curUnlocked;
+        this.shownUnlocked = this.curUnlocked;
     }
 
     private void refreshUpgradePageIfNeeded() {
-        if (page != 1 || active == null || shownUnlocked == curUnlocked)
+        if (this.page != 1 || this.active == null || this.shownUnlocked == this.curUnlocked) {
             return;
-        java.util.List<org.bukkit.entity.HumanEntity> viewers =
-                new ArrayList<>(active.getInventory().getViewers());
-        shownUnlocked = curUnlocked;
-        for (org.bukkit.entity.HumanEntity h : viewers) {
-            if (h instanceof org.bukkit.entity.Player p)
-                openPage(p, 1);
+        }
+        ArrayList viewers = new ArrayList(this.active.getInventory().getViewers());
+        this.shownUnlocked = this.curUnlocked;
+        for (HumanEntity h : viewers) {
+            if (!(h instanceof org.bukkit.entity.Player)) continue;
+            org.bukkit.entity.Player p = (org.bukkit.entity.Player)h;
+            this.openPage(p, 1);
         }
     }
 
     private MachineLayout buildMainLayout() {
-        MachineLayout l = new MachineLayout(org.bukkit.event.inventory.InventoryType.CHEST, menuSize, "Gas Pump");
-        net.kyori.adventure.text.Component title =
-                dev.arubik.craftengine.machine.menu.GuiTitles.title(getMachineId(), "main");
-        l.setTitleComponent(title != null ? title
-                : MenuText.noI(MenuText.tr("polyfill.ui.gas_pump_title", NamedTextColor.AQUA)));
-
-        for (int s : fuelSlots)
+        int infoSlot;
+        MachineLayout l = new MachineLayout(InventoryType.CHEST, this.menuSize, "Gas Pump");
+        Component title = GuiTitles.title(this.getMachineId(), "main");
+        l.setTitleComponent(title != null ? title : MenuText.noI(MenuText.tr("polyfill.ui.gas_pump_title", NamedTextColor.AQUA)));
+        for (int s : this.fuelSlots) {
             l.addSlot(s, MenuSlotType.FUEL);
-
-        for (MachineMenuConfig.Button b : menuConfig.buttons)
-            installButton(l, b);
-
-        MachineBars.install(l, bars);
-
-        int infoSlot = menuConfig.infoSlot >= 0 ? menuConfig.infoSlot : -1;
-        if (infoSlot >= 0)
-            l.setDynamicProvider(infoSlot, (m, t) -> ((GasPumpBlockEntity) m).infoIcon());
-
-        fillRest(l);
+        }
+        Object object = this.menuConfig.buttons.iterator();
+        while (object.hasNext()) {
+            MachineMenuConfig.Button b = (MachineMenuConfig.Button)object.next();
+            this.installButton(l, b);
+        }
+        MachineBars.install(l, this.bars);
+        int n = infoSlot = this.menuConfig.infoSlot >= 0 ? this.menuConfig.infoSlot : -1;
+        if (infoSlot >= 0) {
+            l.setDynamicProvider(infoSlot, (m, t) -> ((GasPumpBlockEntity)m).infoIcon());
+        }
+        this.fillRest(l);
         return l;
     }
 
-    /** Trim trailing ".0" so whole point totals show as "2" not "2.0"; keep one decimal otherwise. */
     private static String fmtPoints(double v) {
-        if (v == Math.rint(v))
-            return String.valueOf((long) v);
-        return String.valueOf(Math.round(v * 100.0) / 100.0);
+        if (v == Math.rint(v)) {
+            return String.valueOf((long)v);
+        }
+        return String.valueOf((double)Math.round(v * 100.0) / 100.0);
     }
 
-    private org.bukkit.inventory.ItemStack infoIcon() {
-        GasStack stored = storedGas();
-        org.bukkit.inventory.ItemStack stack = new org.bukkit.inventory.ItemStack(Material.WHITE_STAINED_GLASS);
-        org.bukkit.inventory.meta.ItemMeta meta = stack.getItemMeta();
-        var GRAY = NamedTextColor.GRAY;
-        var WHITE = NamedTextColor.WHITE;
-        var AQUA = NamedTextColor.AQUA;
-        net.kyori.adventure.text.Component gasName = stored.isEmpty()
-                ? MenuText.tr("polyfill.gas.empty", WHITE)
-                : MenuText.tr(stored.getType().translationKey(), WHITE);
-        meta.displayName(MenuText.noI(MenuText.tr("polyfill.ui.gas", AQUA)
-                .append(net.kyori.adventure.text.Component.text(": ", GRAY)).append(gasName)));
-        meta.lore(java.util.List.of(
-                MenuText.noI(MenuText.kv("polyfill.ui.amount", GRAY,
-                        (stored.isEmpty() ? 0 : stored.getAmount()) + " / " + effCapacity() + " mB", WHITE)),
-                MenuText.noI(MenuText.kv("polyfill.attr.extraction_points", GRAY,
-                        fmtPoints(lastDrawPoints) + " / " + fmtPoints(lastVeinPoints), WHITE)),
-                MenuText.noI(MenuText.kv("polyfill.ui.pressure", GRAY,
-                        String.valueOf(stored.isEmpty() ? effPressure() : stored.getPressure()), WHITE))));
+    private ItemStack infoIcon() {
+        GasStack stored = this.storedGas();
+        ItemStack stack = new ItemStack(Material.WHITE_STAINED_GLASS);
+        ItemMeta meta = stack.getItemMeta();
+        NamedTextColor GRAY = NamedTextColor.GRAY;
+        NamedTextColor WHITE = NamedTextColor.WHITE;
+        NamedTextColor AQUA = NamedTextColor.AQUA;
+        Component gasName = stored.isEmpty() ? MenuText.tr("polyfill.gas.empty", WHITE) : MenuText.tr(stored.getType().translationKey(), WHITE);
+        meta.displayName(MenuText.noI(MenuText.tr("polyfill.ui.gas", AQUA).append((Component)Component.text((String)": ", (TextColor)GRAY)).append(gasName)));
+        meta.lore(List.of(MenuText.noI(MenuText.kv("polyfill.ui.amount", GRAY, (stored.isEmpty() ? 0 : stored.getAmount()) + " / " + this.effCapacity() + " mB", WHITE)), MenuText.noI(MenuText.kv("polyfill.attr.extraction_points", GRAY, GasPumpBlockEntity.fmtPoints(this.lastDrawPoints) + " / " + GasPumpBlockEntity.fmtPoints(this.lastVeinPoints), WHITE)), MenuText.noI(MenuText.kv("polyfill.ui.pressure", GRAY, String.valueOf(stored.isEmpty() ? this.effPressure() : stored.getPressure()), WHITE))));
         stack.setItemMeta(meta);
         return stack;
     }
 
     private void installButton(MachineLayout l, MachineMenuConfig.Button b) {
         l.addButton(b.slot, (m, t) -> {
-            GasPumpBlockEntity s = (GasPumpBlockEntity) m;
+            GasPumpBlockEntity s = (GasPumpBlockEntity)m;
             boolean locked = s.isButtonLocked(b);
             String iconSpec = locked && b.lockedIcon != null ? b.lockedIcon : b.icon;
-            return MenuText.iconItem(parseKey(iconSpec), Material.PAPER,
-                    label(b.name, NamedTextColor.AQUA), lore(b.lore));
+            return MenuText.iconItem(GasPumpBlockEntity.parseKey(iconSpec), Material.PAPER, GasPumpBlockEntity.label(b.name, NamedTextColor.AQUA), GasPumpBlockEntity.lore(b.lore));
         }, (m, p) -> {
-            GasPumpBlockEntity s = (GasPumpBlockEntity) m;
-            if (s.isButtonLocked(b))
+            GasPumpBlockEntity s = (GasPumpBlockEntity)m;
+            if (s.isButtonLocked(b)) {
                 return;
+            }
             switch (b.action.kind) {
-                case OPEN_PAGE -> s.openPage(p, b.action.page);
-                case DEPLETE_GAS -> {
-                    s.gasTanks.get(0).deplete(s.getNMSLevel(), s.getMachinePos());
-                    s.setChanged();
+                case OPEN_PAGE: {
+                    s.openPage((org.bukkit.entity.Player)p, b.action.page);
+                    break;
                 }
-                case DEPLETE_FLUID, NONE -> {
+                case DEPLETE_GAS: {
+                    ((GasTank)s.gasTanks.get(0)).deplete(s.getNMSLevel(), s.getMachinePos());
+                    s.setChanged();
+                    break;
                 }
             }
         });
     }
 
     private boolean isButtonLocked(MachineMenuConfig.Button b) {
-        return b.lockedWhen == MachineMenuConfig.LockedWhen.NO_OVERCLOCK && curOverclockLimit <= 0;
+        return b.lockedWhen == MachineMenuConfig.LockedWhen.NO_OVERCLOCK && this.curOverclockLimit <= 0.0;
     }
 
-    private static net.kyori.adventure.text.Component label(String s, NamedTextColor color) {
+    private static Component label(String s, NamedTextColor color) {
         return MenuText.textOrTranslatable(s, color);
     }
 
-    private static net.kyori.adventure.text.Component[] lore(List<String> lines) {
-        if (lines == null || lines.isEmpty())
-            return new net.kyori.adventure.text.Component[0];
-        net.kyori.adventure.text.Component[] out = new net.kyori.adventure.text.Component[lines.size()];
-        for (int i = 0; i < lines.size(); i++)
-            out[i] = label(lines.get(i), NamedTextColor.GRAY);
+    private static Component[] lore(List<String> lines) {
+        if (lines == null || lines.isEmpty()) {
+            return new Component[0];
+        }
+        Component[] out = new Component[lines.size()];
+        for (int i = 0; i < lines.size(); ++i) {
+            out[i] = GasPumpBlockEntity.label(lines.get(i), NamedTextColor.GRAY);
+        }
         return out;
     }
 
     private static Key parseKey(String spec) {
-        if (spec == null)
-            return Key.of("cml", "gui_empty");
-        int i = spec.indexOf(':');
-        return i < 0 ? Key.of("cml", spec) : Key.of(spec.substring(0, i), spec.substring(i + 1));
+        if (spec == null) {
+            return Key.of((String)"cml", (String)"gui_empty");
+        }
+        int i = spec.indexOf(58);
+        return i < 0 ? Key.of((String)"cml", (String)spec) : Key.of((String)spec.substring(0, i), (String)spec.substring(i + 1));
     }
 
     private MachineLayout buildUpgradeLayout() {
-        int unlocked = curUnlocked;
-        MachineLayout l = new MachineLayout(org.bukkit.event.inventory.InventoryType.CHEST, 18, "Upgrades");
-        net.kyori.adventure.text.Component title =
-                dev.arubik.craftengine.machine.menu.GuiTitles.title(getMachineId(), "upgrade");
-        l.setTitleComponent(title != null ? title
-                : MenuText.noI(MenuText.tr("polyfill.ui.upgrades", NamedTextColor.AQUA)));
-        for (int i = 0; i < upgradeSlotCount(); i++) {
+        int unlocked = this.curUnlocked;
+        MachineLayout l = new MachineLayout(InventoryType.CHEST, 18, "Upgrades");
+        Component title = GuiTitles.title(this.getMachineId(), "upgrade");
+        l.setTitleComponent(title != null ? title : MenuText.noI(MenuText.tr("polyfill.ui.upgrades", NamedTextColor.AQUA)));
+        for (int i = 0; i < this.upgradeSlotCount(); ++i) {
             if (i < unlocked) {
                 l.addSlot(i, MenuSlotType.INPUT);
-            } else {
-                l.setDynamicProvider(i, (m, t) -> MenuText.lockedIcon(
-                        MenuText.tr("polyfill.ui.locked", NamedTextColor.RED),
-                        MenuText.tr("polyfill.ui.locked_desc", NamedTextColor.GRAY)));
+                continue;
             }
+            l.setDynamicProvider(i, (m, t) -> MenuText.lockedIcon(MenuText.tr("polyfill.ui.locked", NamedTextColor.RED), MenuText.tr("polyfill.ui.locked_desc", NamedTextColor.GRAY)));
         }
-        l.addButton(17, (m, t) -> MenuText.backIcon(),
-                (m, p) -> ((GasPumpBlockEntity) m).openPage(p, 0));
-        fillRest(l);
+        l.addButton(17, (m, t) -> MenuText.backIcon(), (m, p) -> ((GasPumpBlockEntity)m).openPage((org.bukkit.entity.Player)p, 0));
+        this.fillRest(l);
         return l;
     }
 
     private MachineLayout buildOverclockLayout() {
-        MachineLayout l = dev.arubik.craftengine.machine.menu.OverclockMenu.build(
-                getMachineId(), NamedTextColor.AQUA,
-                () -> this.overclock, () -> this.curOverclockLimit,
-                (up, c) -> bumpOverclock(up, c),
-                p -> openPage(p, 0));
-        fillRest(l);
+        MachineLayout l = OverclockMenu.build(this.getMachineId(), NamedTextColor.AQUA, () -> this.overclock, () -> this.curOverclockLimit, (up, c) -> this.bumpOverclock((boolean)up, (ClickType)c), p -> this.openPage((org.bukkit.entity.Player)p, 0));
+        this.fillRest(l);
         return l;
     }
 
     public void bumpOverclock(boolean up, ClickType c) {
-        float delta = dev.arubik.craftengine.machine.menu.OverclockMenu.step(c);
+        float delta = OverclockMenu.step(c);
         this.overclock += up ? delta : -delta;
-        this.overclock = (float) clamp(this.overclock, -Math.min(this.curOverclockLimit, 0.99),
-                this.curOverclockLimit);
+        this.overclock = (float)GasPumpBlockEntity.clamp(this.overclock, -Math.min(this.curOverclockLimit, 0.99), this.curOverclockLimit);
         this.upgradeRecomputeCd = 0;
-        setChanged();
+        this.setChanged();
     }
 
     private void fillRest(MachineLayout l) {
-        for (int i = 0; i < l.getSize(); i++) {
-            if (l.getSlotType(i) == MenuSlotType.BACKGROUND)
-                l.setDynamicProvider(i, (m, t) -> FILLER);
+        for (int i = 0; i < l.getSize(); ++i) {
+            if (l.getSlotType(i) != MenuSlotType.BACKGROUND) continue;
+            l.setDynamicProvider(i, (m, t) -> FILLER);
         }
     }
 
-    // ---------------- persistence ----------------
-
     @Override
-    public void saveCustomData(net.momirealms.craftengine.libraries.nbt.CompoundTag tag) {
-        set(KEY_OC, overclock);
+    public void saveCustomData(CompoundTag tag) {
+        this.set(KEY_OC, Float.valueOf(this.overclock));
         super.saveCustomData(tag);
     }
 
     @Override
-    public void loadCustomData(net.momirealms.craftengine.libraries.nbt.CompoundTag tag) {
+    public void loadCustomData(CompoundTag tag) {
         super.loadCustomData(tag);
-        this.overclock = getOrDefault(KEY_OC, 0f);
+        this.overclock = this.getOrDefault(KEY_OC, Float.valueOf(0.0f)).floatValue();
+    }
+
+    private static final class VeinScan {
+        double points;
+        GasType gas = GasType.EMPTY;
+        final List<BlockPos> blocks = new ArrayList<BlockPos>();
+
+        private VeinScan() {
+        }
     }
 }
+

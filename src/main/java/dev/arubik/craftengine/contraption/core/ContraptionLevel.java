@@ -1,180 +1,175 @@
+/*
+ * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  net.minecraft.core.BlockPos
+ *  net.minecraft.core.Holder
+ *  net.minecraft.core.RegistryAccess
+ *  net.minecraft.core.particles.ParticleOptions
+ *  net.minecraft.nbt.CompoundTag
+ *  net.minecraft.server.level.ServerLevel
+ *  net.minecraft.sounds.SoundEvent
+ *  net.minecraft.sounds.SoundSource
+ *  net.minecraft.world.entity.Entity
+ *  net.minecraft.world.level.Level
+ *  net.minecraft.world.level.block.Block
+ *  net.minecraft.world.level.block.entity.BlockEntity
+ *  net.minecraft.world.level.block.state.BlockState
+ *  net.minecraft.world.phys.AABB
+ *  net.minecraft.world.phys.Vec3
+ *  net.momirealms.craftengine.core.entity.player.Player
+ *  org.bukkit.World
+ *  org.joml.Quaternionf
+ */
 package dev.arubik.craftengine.contraption.core;
-
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.function.Predicate;
-
-import org.joml.Quaternionf;
 
 import dev.arubik.craftengine.contraption.level.AspSupport;
 import dev.arubik.craftengine.contraption.level.BukkitContraptionLevel;
 import dev.arubik.craftengine.contraption.level.ContraptionBoundary;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.function.Predicate;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
+import net.minecraft.core.RegistryAccess;
+import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-
 import net.momirealms.craftengine.core.entity.player.Player;
+import org.bukkit.World;
+import org.joml.Quaternionf;
 
-/**
- * A contraption's hidden mini-dimension, as an interface so it can be backed either by a
- * {@link BukkitContraptionLevel} (a vanilla {@code ServerLevel} the plugin builds itself, temp-folder
- * backed, works on any Paper server) or an {@code AspContraptionLevel} (an Advanced Slime Paper in-memory
- * world — zero folder, zero region I/O — used only when the ASP fork is present).
- *
- * <p>The rest of the plugin talks to this interface for contraption behaviour (transform, local block set,
- * real-world projection) and never cares which backs it. {@link #serverLevel()} hands out the underlying
- * NMS level for the places that must pass it to vanilla/CraftEngine. The interface keeps the name the
- * concrete class used to have, so existing {@code ContraptionLevel}-typed references resolve unchanged.
- */
-public interface ContraptionLevel extends ContraptionBoundary {
-
-    /**
-     * Builds a contraption's hidden level at the given bearing transform — an in-memory ASP world when the
-     * ASP fork is present (zero folder, zero region I/O), otherwise a temp-folder-backed vanilla
-     * {@link BukkitContraptionLevel}. The single factory every capture/spawn/rehydrate path calls, so the
-     * choice is made once and nothing downstream cares which backs it.
-     */
-    static ContraptionLevel create(Level realLevel, double x, double y, double z, double yawRadians) {
+public interface ContraptionLevel
+extends ContraptionBoundary {
+    public static ContraptionLevel create(Level realLevel, double x, double y, double z, double yawRadians) {
         if (AspSupport.available()) {
             return AspSupport.create(realLevel, x, y, z, yawRadians);
         }
         return BukkitContraptionLevel.create(realLevel, x, y, z, yawRadians);
     }
 
-    /** The underlying NMS level — for code that must hand a real {@link ServerLevel} to vanilla/CraftEngine. */
-    ServerLevel serverLevel();
+    public ServerLevel serverLevel();
 
-    // ---- NMS convenience: the level's block/world accessors, so callers that read or write its contents
-    // do not have to spell out serverLevel() every time. BukkitContraptionLevel satisfies these by simply
-    // BEING a ServerLevel (inherited/overridden); an ASP-backed level delegates them to its serverLevel(). ----
-    BlockState getBlockState(BlockPos pos);
+    public BlockState getBlockState(BlockPos var1);
 
-    net.minecraft.world.level.block.entity.BlockEntity getBlockEntity(BlockPos pos);
+    public BlockEntity getBlockEntity(BlockPos var1);
 
-    boolean setBlock(BlockPos pos, BlockState state, int flags);
+    public boolean setBlock(BlockPos var1, BlockState var2, int var3);
 
-    org.bukkit.World getWorld();
+    public World getWorld();
 
-    net.minecraft.core.RegistryAccess registryAccess();
+    public RegistryAccess registryAccess();
 
-    Iterable<Entity> getAllEntities();
+    public Iterable<Entity> getAllEntities();
 
-    void updateNeighborsAt(BlockPos pos, net.minecraft.world.level.block.Block block);
+    public void updateNeighborsAt(BlockPos var1, Block var2);
 
-    void addParticle(net.minecraft.core.particles.ParticleOptions particle, double x, double y, double z,
-            double dx, double dy, double dz);
+    public void addParticle(ParticleOptions var1, double var2, double var4, double var6, double var8, double var10, double var12);
 
-    void playSeededSound(Entity source, double x, double y, double z,
-            net.minecraft.core.Holder<net.minecraft.sounds.SoundEvent> sound, net.minecraft.sounds.SoundSource category,
-            float volume, float pitch, long seed);
+    public void playSeededSound(Entity var1, double var2, double var4, double var6, Holder<SoundEvent> var8, SoundSource var9, float var10, float var11, long var12);
 
-    // ---- block contents ----
-    void putBlock(BlockPos local, BlockState state);
+    public void putBlock(BlockPos var1, BlockState var2);
 
-    void putBlock(BlockPos local, BlockState state, boolean quiet);
+    public void putBlock(BlockPos var1, BlockState var2, boolean var3);
 
-    void putBlocks(Map<BlockPos, BlockState> blocks, boolean quiet);
+    public void putBlocks(Map<BlockPos, BlockState> var1, boolean var2);
 
-    void markCellsDirty();
+    public void markCellsDirty();
 
-    void refreshLocalPositions();
+    public void refreshLocalPositions();
 
-    void ensureChunkReady(BlockPos local);
+    public void ensureChunkReady(BlockPos var1);
 
-    void putBlockEntity(BlockPos local, CompoundTag nbt);
+    public void putBlockEntity(BlockPos var1, CompoundTag var2);
 
-    CompoundTag saveBlockEntity(BlockPos local);
+    public CompoundTag saveBlockEntity(BlockPos var1);
 
-    void putCeControllerData(BlockPos local, byte[] bytes);
+    public void putCeControllerData(BlockPos var1, byte[] var2);
 
-    /**
-     * Drives EVERY captured CraftEngine block-entity's own ticker ONE game tick, then equalizes this level's
-     * gas/fluid networks (2026-07-18 — "debes tickear todas las CE block entity no solo las machines, y obvio
-     * los gases y liquidos"). CraftEngine never ticks the hidden contraption world, so without this a captured
-     * fan is frozen, a captured pipe never registers its transport seed, and a tank/pump never runs. Ticking
-     * through each block-entity's OWN CraftEngine ticker covers machines, tanks, pumps AND pipes uniformly, with
-     * this level as their world (so {@code level instanceof ContraptionLevel} stays true — particles/thrust);
-     * the {@code GasEngine}/{@code FluidEngine} pass right after moves gas/fluid through the pipes those ticks
-     * just seeded. Called once per game tick per contraption by the engine.
-     */
-    void tickBlockEntities();
+    public void tickBlockEntities();
 
-    byte[] getCeControllerData(BlockPos local);
+    public byte[] getCeControllerData(BlockPos var1);
 
-    Set<BlockPos> localPositions();
+    public Set<BlockPos> localPositions();
 
-    int blockCount();
+    public int blockCount();
 
-    // ---- glue / furniture side-data ----
-    List<long[]> glueEdgesLocal();
+    public List<long[]> glueEdgesLocal();
 
-    void setGlueEdgesLocal(List<long[]> edges);
+    public void setGlueEdgesLocal(List<long[]> var1);
 
-    List<FurnitureRecord> furnitureRecords();
+    public List<FurnitureRecord> furnitureRecords();
 
-    void addFurnitureRecord(FurnitureRecord record);
+    public void addFurnitureRecord(FurnitureRecord var1);
 
-    void setFurnitureRecords(List<FurnitureRecord> records);
+    public void setFurnitureRecords(List<FurnitureRecord> var1);
 
-    // ---- transform ----
-    void setTransform(double x, double y, double z, double yawRadians);
+    public void setTransform(double var1, double var3, double var5, double var7);
 
-    void setTransform(double x, double y, double z, double yawRadians, double pitchRadians);
+    public void setTransform(double var1, double var3, double var5, double var7, double var9);
 
-    void setTransform(double x, double y, double z, double yawRadians, double pitchRadians, double scale);
+    public void setTransform(double var1, double var3, double var5, double var7, double var9, double var11);
 
-    void setTransform(double x, double y, double z, double yawRadians, double pitchRadians, double rollRadians,
-            double scale);
+    public void setTransform(double var1, double var3, double var5, double var7, double var9, double var11, double var13);
 
-    void setScaleFactor(double scale);
+    public void setScaleFactor(double var1);
 
-    double realScaleFactor();
+    @Override
+    public double realScaleFactor();
 
-    void reanchor(Level newRealLevel, double x, double y, double z, double yawRadians);
+    public void reanchor(Level var1, double var2, double var4, double var6, double var8);
 
-    // ---- real-world projection ----
-    Vec3 realWorldPositionOf(BlockPos local);
+    @Override
+    public Vec3 realWorldPositionOf(BlockPos var1);
 
-    Vec3 realWorldPositionOf(Vec3 local);
+    @Override
+    public Vec3 realWorldPositionOf(Vec3 var1);
 
-    double realYawRadians();
+    @Override
+    public double realYawRadians();
 
-    double realPitchRadians();
+    public double realPitchRadians();
 
-    double realRollRadians();
+    public double realRollRadians();
 
-    Quaternionf realOrientationOf(Quaternionf local);
+    @Override
+    public Quaternionf realOrientationOf(Quaternionf var1);
 
-    List<Player> realViewers(BlockPos local);
+    @Override
+    public List<Player> realViewers(BlockPos var1);
 
-    List<Player> realViewers(Vec3 realPos);
+    @Override
+    public List<Player> realViewers(Vec3 var1);
 
-    Level realLevel();
+    @Override
+    public Level realLevel();
 
-    Vec3 rotateToRealWorld(Vec3 localDirection);
+    @Override
+    public Vec3 rotateToRealWorld(Vec3 var1);
 
-    void transferRemainingEntitiesToRealWorld();
+    public void transferRemainingEntitiesToRealWorld();
 
-    <T extends Entity> List<T> getLocalEntities(Class<T> type, AABB localBounds);
+    public <T extends Entity> List<T> getLocalEntities(Class<T> var1, AABB var2);
 
-    <T extends Entity> List<T> getLocalEntities(Class<T> type, AABB localBounds, Predicate<? super T> filter);
+    @Override
+    public <T extends Entity> List<T> getLocalEntities(Class<T> var1, AABB var2, Predicate<? super T> var3);
 
-    boolean isRealWorldEntity(Entity entity);
+    @Override
+    public boolean isRealWorldEntity(Entity var1);
 
-    // ---- lifecycle ----
-    void dispose();
+    public void dispose();
 
-    /**
-     * A captured CraftEngine furniture piece, stored so a contraption can restore its furniture on
-     * disassemble. Lives on the interface so {@code ContraptionLevel.FurnitureRecord} resolves for every
-     * caller regardless of which backing level produced it.
-     */
-    record FurnitureRecord(String definitionId, String variantName, double lx, double ly, double lz, float yaw) {
+    public record FurnitureRecord(String definitionId, String variantName, double lx, double ly, double lz, float yaw) {
     }
 }
+

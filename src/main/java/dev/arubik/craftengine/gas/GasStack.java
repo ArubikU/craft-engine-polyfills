@@ -1,14 +1,18 @@
+/*
+ * Decompiled with CFR 0.152.
+ */
 package dev.arubik.craftengine.gas;
+
+import dev.arubik.craftengine.gas.GasType;
 
 public class GasStack {
     private final GasType type;
     private int amount;
-    private int pressure; // fuerza disponible
-
+    private int pressure;
     public static final GasStack EMPTY = new GasStack(null, 0, 0);
 
     public boolean isFull(int maxAmount) {
-        return !type.isEmpty() && amount >= maxAmount;
+        return !this.type.isEmpty() && this.amount >= maxAmount;
     }
 
     public GasStack(GasType type, int amount, int pressure) {
@@ -22,11 +26,11 @@ public class GasStack {
     }
 
     public GasType getType() {
-        return type;
+        return this.type;
     }
 
     public int getAmount() {
-        return amount;
+        return this.amount;
     }
 
     public void setAmount(int amount) {
@@ -42,23 +46,25 @@ public class GasStack {
     }
 
     public boolean isEmpty() {
-        return type == null || amount <= 0;
+        return this.type == null || this.amount <= 0;
     }
 
     public GasStack copy() {
-        return new GasStack(type, amount);
+        return new GasStack(this.type, this.amount);
     }
 
     public boolean isGasEqual(GasStack other) {
-        if (this == other)
+        if (this == other) {
             return true;
-        if (other == null)
+        }
+        if (other == null) {
             return false;
+        }
         return this.type == other.type;
     }
 
     public int getPressure() {
-        return pressure;
+        return this.pressure;
     }
 
     public void setPressure(int pressure) {
@@ -69,3 +75,4 @@ public class GasStack {
         return new GasStack(steam, i);
     }
 }
+

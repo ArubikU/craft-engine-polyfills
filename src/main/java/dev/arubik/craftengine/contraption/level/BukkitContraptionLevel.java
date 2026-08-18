@@ -3,13 +3,6 @@
  * 
  * Could not load the following classes:
  *  com.mojang.serialization.Lifecycle
- *  dev.arubik.craftengine.CraftEnginePolyfills
- *  dev.arubik.craftengine.block.entity.BukkitBlockEntityTypes
- *  dev.arubik.craftengine.contraption.ContraptionMath
- *  dev.arubik.craftengine.contraption.ContraptionWorlds
- *  dev.arubik.craftengine.contraption.level.ContraptionBoundary
- *  dev.arubik.craftengine.machine.block.entity.AbstractMachineBlockEntity
- *  dev.arubik.craftengine.util.CeWorlds
  *  net.minecraft.core.BlockPos
  *  net.minecraft.core.Holder
  *  net.minecraft.core.Holder$Reference
@@ -43,7 +36,9 @@
  *  net.minecraft.world.level.WorldDataConfiguration
  *  net.minecraft.world.level.biome.Biome
  *  net.minecraft.world.level.biome.Biomes
+ *  net.minecraft.world.level.block.EntityBlock
  *  net.minecraft.world.level.block.entity.BlockEntity
+ *  net.minecraft.world.level.block.entity.BlockEntityTicker
  *  net.minecraft.world.level.block.state.BlockState
  *  net.minecraft.world.level.chunk.ChunkGenerator
  *  net.minecraft.world.level.chunk.LevelChunk
@@ -53,16 +48,22 @@
  *  net.minecraft.world.level.levelgen.FlatLevelSource
  *  net.minecraft.world.level.levelgen.WorldOptions
  *  net.minecraft.world.level.levelgen.flat.FlatLevelGeneratorSettings
+ *  net.minecraft.world.level.material.Fluid
  *  net.minecraft.world.level.storage.LevelStorageSource
  *  net.minecraft.world.level.storage.LevelStorageSource$LevelStorageAccess
  *  net.minecraft.world.level.storage.PrimaryLevelData
  *  net.minecraft.world.level.storage.PrimaryLevelData$SpecialWorldProperty
  *  net.minecraft.world.phys.AABB
  *  net.minecraft.world.phys.Vec3
+ *  net.minecraft.world.ticks.TickPriority
+ *  net.momirealms.craftengine.bukkit.util.BlockStateUtils
+ *  net.momirealms.craftengine.core.block.ImmutableBlockState
  *  net.momirealms.craftengine.core.block.entity.BlockEntity
  *  net.momirealms.craftengine.core.block.entity.BlockEntityController
+ *  net.momirealms.craftengine.core.block.entity.tick.BlockEntityTicker
  *  net.momirealms.craftengine.core.entity.player.Player
  *  net.momirealms.craftengine.core.plugin.CraftEngine
+ *  net.momirealms.craftengine.core.world.BlockPos
  *  net.momirealms.craftengine.core.world.CEWorld
  *  net.momirealms.craftengine.core.world.ChunkPos
  *  net.momirealms.craftengine.core.world.World
@@ -87,11 +88,14 @@ package dev.arubik.craftengine.contraption.level;
 import com.mojang.serialization.Lifecycle;
 import dev.arubik.craftengine.CraftEnginePolyfills;
 import dev.arubik.craftengine.block.entity.BukkitBlockEntityTypes;
-import dev.arubik.craftengine.contraption.assembly.ContraptionMath;
 import dev.arubik.craftengine.contraption.ContraptionWorlds;
-import dev.arubik.craftengine.contraption.level.ContraptionBoundary;
+import dev.arubik.craftengine.contraption.api.ContraptionTickable;
+import dev.arubik.craftengine.contraption.assembly.ContraptionMath;
+import dev.arubik.craftengine.contraption.config.ContraptionConfig;
 import dev.arubik.craftengine.contraption.core.ContraptionLevel;
-import dev.arubik.craftengine.contraption.core.ContraptionLevel.FurnitureRecord;
+import dev.arubik.craftengine.contraption.level.ContraptionBoundary;
+import dev.arubik.craftengine.fluid.graph.FluidEngine;
+import dev.arubik.craftengine.fluid.graph.GasEngine;
 import dev.arubik.craftengine.machine.block.entity.AbstractMachineBlockEntity;
 import dev.arubik.craftengine.util.CeWorlds;
 import java.io.IOException;
@@ -148,7 +152,9 @@ import net.minecraft.world.level.LevelSettings;
 import net.minecraft.world.level.WorldDataConfiguration;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.biome.Biomes;
+import net.minecraft.world.level.block.EntityBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.chunk.LevelChunk;
@@ -158,10 +164,14 @@ import net.minecraft.world.level.gamerules.GameRules;
 import net.minecraft.world.level.levelgen.FlatLevelSource;
 import net.minecraft.world.level.levelgen.WorldOptions;
 import net.minecraft.world.level.levelgen.flat.FlatLevelGeneratorSettings;
+import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.storage.LevelStorageSource;
 import net.minecraft.world.level.storage.PrimaryLevelData;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.ticks.TickPriority;
+import net.momirealms.craftengine.bukkit.util.BlockStateUtils;
+import net.momirealms.craftengine.core.block.ImmutableBlockState;
 import net.momirealms.craftengine.core.block.entity.BlockEntityController;
 import net.momirealms.craftengine.core.entity.player.Player;
 import net.momirealms.craftengine.core.plugin.CraftEngine;
@@ -180,60 +190,10 @@ import org.bukkit.util.Vector;
 import org.joml.Quaternionf;
 import org.joml.Quaternionfc;
 
-/**
- * A contraption's hidden mini-dimension, backed by a real vanilla {@link ServerLevel} the plugin builds
- * itself. Implements {@link ContraptionLevel}; the ASP-backed alternative is {@code AspContraptionLevel}.
- *
- * <h2>ServerLevel / Level load analysis — what this dimension strips, and what it cannot</h2>
- * A {@link ServerLevel} is built for a real, saved, populated multiplayer world. A contraption is a handful
- * of blocks that lives for seconds and persists only as NBT. So this class carries a vanilla level but pays
- * for as little of it as possible. Analysed against {@code net.minecraft.server.level.ServerLevel} /
- * {@code net.minecraft.world.level.Level} (the mapped server jar):
- *
- * <h3>Construction cost — stripped where reachable</h3>
- * <ul>
- * <li><b>The natural-terrain generator.</b> The {@code ServerLevel} ctor builds a {@code ServerChunkCache}
- *     and immediately calls {@code getGeneratorState()} on the level's generator. Handed the overworld
- *     generator (the vanilla default) that computes structure placement for every structure set — tens of ms
- *     for a dimension that never generates a single natural block. {@link #voidGenerator} passes a flat,
- *     structureless {@link net.minecraft.world.level.levelgen.FlatLevelSource} instead, so the state is
- *     trivial and every chunk is pure void — exactly right, since every cell is placed by hand.</li>
- * <li><b>The real world folder.</b> {@code createAccess} makes a {@code uid.dat}/{@code session.lock}
- *     directory on disk. It is created in OS temp ({@link #tmpSource}), deleted off-thread the moment the
- *     contraption disposes, and wiped wholesale on boot — never in the server's world directory, and
- *     nothing of value is ever written (see {@code noSave} below). It cannot be eliminated entirely: a
- *     {@code CraftWorld} needs a {@code File}-based folder and {@code session.lock} needs a real
- *     {@code FileChannel}, so the achievable minimum is "ephemeral, out of sight, deleted fast".</li>
- * </ul>
- *
- * <h3>Per-tick cost — the server ticks every registered level; here is what each does for THIS one</h3>
- * <ul>
- * <li>{@code tickChunk} — <b>overridden empty.</b> Vanilla runs random block ticks (crop growth, fire
- *     spread, fluid) for every ticking chunk; a contraption wants none, so the override skips them.
- *     Belt-and-suspenders with {@code RANDOM_TICK_SPEED = 0} in {@link #quietGameRules}.</li>
- * <li>{@code tickCustomSpawners} — <b>overridden empty.</b> No cats/phantoms/wandering-traders/sieges scan
- *     a hidden dimension. Backed by {@code SPAWN_MOBS = false}.</li>
- * <li>{@code advanceWeatherCycle} — private, cannot be individually overridden, but gated to a near-no-op by
- *     {@code ADVANCE_WEATHER = false}.</li>
- * <li>{@code tickTime} — <b>deliberately KEPT.</b> It calls {@code PrimaryLevelData.setGameTime} (verified in
- *     the mapped jar), and captured machines (crushers/pumps/timers) read {@code getGameTime()} for their
- *     cooldowns — freezing it would stall every machine. So this one stays; it is cheap anyway.</li>
- * <li>{@code save}/{@code saveIncrementally} — <b>overridden empty</b>, and {@code noSave = true}, so
- *     autosave and shutdown-save both skip this level: no region/level.dat is ever written. The only
- *     persistence is the structure NBT on the bearing.</li>
- * </ul>
- *
- * <h3>The irreducible floor</h3>
- * The {@code ServerLevel} ctor's {@code new ServerChunkCache(...)} (a {@code final} field, direct
- * {@code new} — no method to override) and its per-tick {@code ServerChunkCache.tick} are needed: the chunk
- * cache is what ticks the captured block-entities and processes their scheduled block/fluid ticks, which is
- * the whole point of using a real level rather than a plain block map. That cost is why the ASP path exists
- * — an in-memory slime world removes the storage/region half of it — but it cannot be overridden away while
- * a contraption IS a {@code ServerLevel}.
- */
 public final class BukkitContraptionLevel
 extends ServerLevel
-implements ContraptionBoundary, ContraptionLevel {
+implements ContraptionBoundary,
+ContraptionLevel {
     public static volatile boolean UNION_REAL_ENTITIES = true;
     private Level realLevel;
     private final Set<BlockPos> localPositions = new HashSet<BlockPos>();
@@ -248,7 +208,7 @@ implements ContraptionBoundary, ContraptionLevel {
     private final Set<Long> tickingChunks = new HashSet<Long>();
     private final Map<BlockPos, byte[]> ceControllerData = new HashMap<BlockPos, byte[]>();
     private final List<long[]> glueEdgesLocal = new ArrayList<long[]>();
-    private final List<FurnitureRecord> furnitureRecords = new ArrayList<FurnitureRecord>();
+    private final List<ContraptionLevel.FurnitureRecord> furnitureRecords = new ArrayList<ContraptionLevel.FurnitureRecord>();
     private double realX;
     private double realY;
     private double realZ;
@@ -352,6 +312,7 @@ implements ContraptionBoundary, ContraptionLevel {
         }
     }
 
+    @Override
     public void putBlock(BlockPos local, BlockState state) {
         this.putBlock(local, state, false);
     }
@@ -361,10 +322,12 @@ implements ContraptionBoundary, ContraptionLevel {
         return super.setBlock(pos, state, flags, recursionLeft);
     }
 
+    @Override
     public void markCellsDirty() {
         this.cellsDirty = true;
     }
 
+    @Override
     public void putBlock(BlockPos local, BlockState state, boolean quiet) {
         this.ensureChunkTicking(local);
         int flags = quiet ? 50 : 3;
@@ -374,6 +337,7 @@ implements ContraptionBoundary, ContraptionLevel {
         this.activateCeChunk(local);
     }
 
+    @Override
     public void putBlocks(Map<BlockPos, BlockState> blocks, boolean quiet) {
         int flags = quiet ? 50 : 3;
         HashSet<Long> touchedChunks = new HashSet<Long>();
@@ -387,8 +351,10 @@ implements ContraptionBoundary, ContraptionLevel {
             this.localPositions.add(local.immutable());
             this.growFootprint(local);
         }
-        for (long chunkKey : touchedChunks) {
-            this.activateCeChunk(new BlockPos(ChunkPos.getX(chunkKey) << 4, 0, ChunkPos.getZ(chunkKey) << 4));
+        Iterator<Map.Entry<Object, Object>> iterator = touchedChunks.iterator();
+        while (iterator.hasNext()) {
+            long chunkKey = (Long)(iterator.next());
+            this.activateCeChunk(new BlockPos(ChunkPos.getX((long)chunkKey) << 4, 0, ChunkPos.getZ((long)chunkKey) << 4));
         }
     }
 
@@ -408,6 +374,7 @@ implements ContraptionBoundary, ContraptionLevel {
         return local.getX() >= this.footprintMinX - 2 && local.getX() <= this.footprintMaxX + 2 && local.getY() >= this.footprintMinY - 2 && local.getY() <= this.footprintMaxY + 2 && local.getZ() >= this.footprintMinZ - 2 && local.getZ() <= this.footprintMaxZ + 2;
     }
 
+    @Override
     public void refreshLocalPositions() {
         if (!this.cellsDirty) {
             return;
@@ -463,11 +430,13 @@ implements ContraptionBoundary, ContraptionLevel {
         }
     }
 
+    @Override
     public void ensureChunkReady(BlockPos local) {
         this.ensureChunkTicking(local);
         this.activateCeChunk(local);
     }
 
+    @Override
     public void putBlockEntity(BlockPos local, CompoundTag nbt) {
         BlockEntity be = BlockEntity.loadStatic((BlockPos)local, (BlockState)this.getBlockState(local), (CompoundTag)nbt, (HolderLookup.Provider)this.registryAccess());
         if (be != null) {
@@ -476,29 +445,35 @@ implements ContraptionBoundary, ContraptionLevel {
         }
     }
 
+    @Override
     public CompoundTag saveBlockEntity(BlockPos local) {
         BlockEntity be = this.getBlockEntity(local);
         return be != null ? be.saveWithFullMetadata((HolderLookup.Provider)this.registryAccess()) : null;
     }
 
+    @Override
     public void putCeControllerData(BlockPos local, byte[] bytes) {
         if (bytes != null) {
             this.ceControllerData.put(local.immutable(), bytes);
         }
     }
 
+    @Override
     public byte[] getCeControllerData(BlockPos local) {
         return this.ceControllerData.get(local);
     }
 
+    @Override
     public Set<BlockPos> localPositions() {
         return Collections.unmodifiableSet(this.localPositions);
     }
 
+    @Override
     public List<long[]> glueEdgesLocal() {
         return Collections.unmodifiableList(this.glueEdgesLocal);
     }
 
+    @Override
     public void setGlueEdgesLocal(List<long[]> edges) {
         this.glueEdgesLocal.clear();
         if (edges != null) {
@@ -509,27 +484,32 @@ implements ContraptionBoundary, ContraptionLevel {
         }
     }
 
-    public List<FurnitureRecord> furnitureRecords() {
+    @Override
+    public List<ContraptionLevel.FurnitureRecord> furnitureRecords() {
         return Collections.unmodifiableList(this.furnitureRecords);
     }
 
-    public void addFurnitureRecord(FurnitureRecord record) {
+    @Override
+    public void addFurnitureRecord(ContraptionLevel.FurnitureRecord record) {
         if (record != null) {
             this.furnitureRecords.add(record);
         }
     }
 
-    public void setFurnitureRecords(List<FurnitureRecord> records) {
+    @Override
+    public void setFurnitureRecords(List<ContraptionLevel.FurnitureRecord> records) {
         this.furnitureRecords.clear();
         if (records != null) {
             this.furnitureRecords.addAll(records);
         }
     }
 
+    @Override
     public int blockCount() {
         return this.localPositions.size();
     }
 
+    @Override
     public void setTransform(double x, double y, double z, double yawRadians) {
         this.realX = x;
         this.realY = y;
@@ -537,6 +517,7 @@ implements ContraptionBoundary, ContraptionLevel {
         this.realYaw = yawRadians;
     }
 
+    @Override
     public void setTransform(double x, double y, double z, double yawRadians, double pitchRadians) {
         this.realX = x;
         this.realY = y;
@@ -545,6 +526,7 @@ implements ContraptionBoundary, ContraptionLevel {
         this.realPitch = pitchRadians;
     }
 
+    @Override
     public void setTransform(double x, double y, double z, double yawRadians, double pitchRadians, double scale) {
         this.realX = x;
         this.realY = y;
@@ -554,6 +536,7 @@ implements ContraptionBoundary, ContraptionLevel {
         this.realScale = scale;
     }
 
+    @Override
     public void setTransform(double x, double y, double z, double yawRadians, double pitchRadians, double rollRadians, double scale) {
         this.realX = x;
         this.realY = y;
@@ -564,14 +547,17 @@ implements ContraptionBoundary, ContraptionLevel {
         this.realScale = scale;
     }
 
+    @Override
     public void setScaleFactor(double scale) {
         this.realScale = scale;
     }
 
+    @Override
     public double realScaleFactor() {
         return this.realScale;
     }
 
+    @Override
     public void reanchor(Level newRealLevel, double x, double y, double z, double yawRadians) {
         if (newRealLevel != null) {
             this.realLevel = newRealLevel;
@@ -579,35 +565,43 @@ implements ContraptionBoundary, ContraptionLevel {
         this.setTransform(x, y, z, yawRadians);
     }
 
+    @Override
     public Vec3 realWorldPositionOf(BlockPos local) {
-        return ContraptionMath.renderPosition((BlockPos)local, (Vec3)new Vec3(this.realX, this.realY, this.realZ), (double)this.realYaw, (double)this.realPitch, (double)this.realRoll, (double)this.realScale);
+        return ContraptionMath.renderPosition(local, new Vec3(this.realX, this.realY, this.realZ), this.realYaw, this.realPitch, this.realRoll, this.realScale);
     }
 
+    @Override
     public Vec3 realWorldPositionOf(Vec3 local) {
-        return ContraptionMath.renderPosition((Vec3)local, (Vec3)new Vec3(this.realX, this.realY, this.realZ), (double)this.realYaw, (double)this.realPitch, (double)this.realRoll, (double)this.realScale);
+        return ContraptionMath.renderPosition(local, new Vec3(this.realX, this.realY, this.realZ), this.realYaw, this.realPitch, this.realRoll, this.realScale);
     }
 
+    @Override
     public double realYawRadians() {
         return this.realYaw;
     }
 
+    @Override
     public double realPitchRadians() {
         return this.realPitch;
     }
 
+    @Override
     public double realRollRadians() {
         return this.realRoll;
     }
 
+    @Override
     public Quaternionf realOrientationOf(Quaternionf local) {
         Quaternionf bearing = new Quaternionf().rotateY((float)(-this.realYaw)).rotateX((float)this.realPitch).rotateZ((float)this.realRoll);
         return local != null ? bearing.mul((Quaternionfc)local, new Quaternionf()) : bearing;
     }
 
+    @Override
     public List<Player> realViewers(BlockPos local) {
         return this.realViewers(this.realWorldPositionOf(local));
     }
 
+    @Override
     public List<Player> realViewers(Vec3 realPos) {
         try {
             CraftWorld bukkitWorld = ((ServerLevel)this.realLevel).getWorld();
@@ -620,10 +614,12 @@ implements ContraptionBoundary, ContraptionLevel {
         }
     }
 
+    @Override
     public Level realLevel() {
         return this.realLevel;
     }
 
+    @Override
     public void transferRemainingEntitiesToRealWorld() {
         if (!(this.realLevel instanceof ServerLevel)) {
             return;
@@ -644,11 +640,8 @@ implements ContraptionBoundary, ContraptionLevel {
         }
     }
 
+    @Override
     public Vec3 rotateToRealWorld(Vec3 localDirection) {
-        // Full orientation, not yaw-only (2026-07-18 — "el fan no sigue bien el pitch/yaw ... si el contraption
-        // está de cabeza el fan me jala en vez de empujarme"). This rotates a LOCAL direction (a fan's thrust
-        // axis, its particle-stream velocity) into the world, so it must apply the SAME yaw∘pitch∘roll the cells
-        // render with — with only yaw an upside-down contraption's thrust/airflow pointed the wrong way.
         return ContraptionMath.rotateYawPitchRoll(localDirection, this.realYaw, this.realPitch, this.realRoll);
     }
 
@@ -702,25 +695,28 @@ implements ContraptionBoundary, ContraptionLevel {
         return union;
     }
 
+    @Override
     public <T extends Entity> List<T> getLocalEntities(Class<T> clazz, AABB box, Predicate<? super T> predicate) {
         return super.getEntities(EntityTypeTest.forClass(clazz), box, predicate);
     }
 
+    @Override
     public <T extends Entity> List<T> getLocalEntities(Class<T> clazz, AABB box) {
         return this.getLocalEntities(clazz, box, e -> true);
     }
 
     public static <T extends Entity> List<T> unionEntities(Level level, Class<T> clazz, AABB box, Predicate<? super T> predicate) {
-        return ContraptionWorlds.unionEntities((Level)level, clazz, (AABB)box, predicate);
+        return ContraptionWorlds.unionEntities(level, clazz, box, predicate);
     }
 
+    @Override
     public boolean isRealWorldEntity(Entity entity) {
         return entity != null && entity.level() != this;
     }
 
     public static void pushEntity(Level level, Entity entity, Vector localPush) {
         Vector push = localPush;
-        ContraptionBoundary boundary = ContraptionBoundary.of((Level)level).orElse(null);
+        ContraptionBoundary boundary = ContraptionBoundary.of(level).orElse(null);
         if (boundary != null && boundary.isRealWorldEntity(entity)) {
             Vec3 rotated = boundary.rotateToRealWorld(new Vec3(localPush.getX(), localPush.getY(), localPush.getZ()));
             push = new Vector(rotated.x, rotated.y, rotated.z);
@@ -756,14 +752,13 @@ implements ContraptionBoundary, ContraptionLevel {
     public void tickCustomSpawners(boolean spawnEnemies) {
     }
 
-    @Override
-    public void scheduleTick(net.minecraft.core.BlockPos pos, net.minecraft.world.level.material.Fluid fluid,
-            int delay, net.minecraft.world.ticks.TickPriority priority) {
-        if (dev.arubik.craftengine.contraption.config.ContraptionConfig.get().simulateFluidFlow()) {
+    public void scheduleTick(BlockPos pos, Fluid fluid, int delay, TickPriority priority) {
+        if (ContraptionConfig.get().simulateFluidFlow()) {
             super.scheduleTick(pos, fluid, delay, priority);
         }
     }
 
+    @Override
     public void dispose() {
         this.unregisterCapturedMachines();
         this.unloadCeWorld();
@@ -822,8 +817,8 @@ implements ContraptionBoundary, ContraptionLevel {
         for (BlockPos local : new HashSet<BlockPos>(this.localPositions)) {
             try {
                 BlockEntityController blockEntityController;
-                net.momirealms.craftengine.core.block.entity.BlockEntity be = BukkitBlockEntityTypes.getIfLoaded((Level)this, (BlockPos)local);
-                if (be == null || !((blockEntityController = be.controller) instanceof dev.arubik.craftengine.contraption.api.ContraptionTickable)) continue;
+                net.momirealms.craftengine.core.block.entity.BlockEntity be = BukkitBlockEntityTypes.getIfLoaded((Level)this, local);
+                if (be == null || !((blockEntityController = be.controller) instanceof ContraptionTickable)) continue;
                 AbstractMachineBlockEntity machine = (AbstractMachineBlockEntity)blockEntityController;
                 machine.unregister();
             }
@@ -833,54 +828,51 @@ implements ContraptionBoundary, ContraptionLevel {
 
     @Override
     public void tickBlockEntities() {
+        Object tickable;
+        net.momirealms.craftengine.core.block.entity.BlockEntity be2;
         CEWorld ceWorld = CraftEngine.instance().worldManager().getWorld(this.getWorld().getUID());
         for (BlockPos local : new HashSet<BlockPos>(this.localPositions)) {
             try {
-                net.momirealms.craftengine.core.block.entity.BlockEntity be = BukkitBlockEntityTypes.getIfLoaded((Level)this, (BlockPos)local);
-                if (be == null || be.controller == null) continue;
-                net.minecraft.world.level.block.state.BlockState nms = this.getBlockState(local);
-                net.momirealms.craftengine.core.block.ImmutableBlockState ce =
-                        net.momirealms.craftengine.bukkit.util.BlockStateUtils.getOptionalCustomBlockState(nms).orElse(null);
-                if (ce == null) continue;
+                BlockState nms;
+                ImmutableBlockState ce;
+                be2 = BukkitBlockEntityTypes.getIfLoaded((Level)this, local);
+                if (be2 == null || be2.controller == null || (ce = (ImmutableBlockState)BlockStateUtils.getOptionalCustomBlockState((nms = this.getBlockState(local))).orElse(null)) == null) continue;
                 if (ceWorld != null) {
-                    // Every CE block entity via its own ticker — machines, tanks, pumps, pipes.
-                    @SuppressWarnings({ "rawtypes", "unchecked" })
-                    net.momirealms.craftengine.core.block.entity.tick.BlockEntityTicker ticker =
-                            be.controller.createBlockEntityTicker(ceWorld, ce);
-                    if (ticker != null) {
-                        ticker.tick(ceWorld, new net.momirealms.craftengine.core.world.BlockPos(local.getX(),
-                                local.getY(), local.getZ()), ce, be.controller);
-                    }
-                } else if (be.controller instanceof dev.arubik.craftengine.contraption.api.ContraptionTickable tickable) {
-                    tickable.tick((Level) this, local, ce);
+                    net.momirealms.craftengine.core.block.entity.tick.BlockEntityTicker ticker = be2.controller.createBlockEntityTicker(ceWorld, ce);
+                    if (ticker == null) continue;
+                    ticker.tick(ceWorld, new net.momirealms.craftengine.core.world.BlockPos(local.getX(), local.getY(), local.getZ()), ce, be2.controller);
+                    continue;
                 }
+                BlockEntityController blockEntityController = be2.controller;
+                if (!(blockEntityController instanceof ContraptionTickable)) continue;
+                tickable = (ContraptionTickable)blockEntityController;
+                tickable.tick((Level)this, local, ce);
+            }
+            catch (Throwable be2) {}
+        }
+        for (BlockPos local : new HashSet<BlockPos>(this.localPositions)) {
+            try {
+                EntityBlock eb;
+                BlockEntityTicker ticker;
+                BlockState bs;
+                be2 = this.getBlockEntity(local);
+                if (be2 == null || BlockStateUtils.getOptionalCustomBlockState((bs = this.getBlockState(local))).isPresent() || !((tickable = bs.getBlock()) instanceof EntityBlock) || (ticker = (eb = (EntityBlock)tickable).getTicker((Level)this, bs, be2.getType())) == null) continue;
+                ticker.tick((Level)this, local, bs, (BlockEntity)be2);
             }
             catch (Throwable throwable) {}
         }
-        // Also tick vanilla block entities (furnace, campfire, etc.) — CE loop only covers CE blocks
-        for (BlockPos local : new HashSet<BlockPos>(this.localPositions)) {
-            try {
-                net.minecraft.world.level.block.entity.BlockEntity be = this.getBlockEntity(local);
-                if (be == null) continue;
-                net.minecraft.world.level.block.state.BlockState bs = this.getBlockState(local);
-                // Skip CE-managed BEs (already ticked above)
-                if (net.momirealms.craftengine.bukkit.util.BlockStateUtils
-                        .getOptionalCustomBlockState(bs).isPresent()) continue;
-                // Use EntityBlock interface if the block implements it
-                if (bs.getBlock() instanceof net.minecraft.world.level.block.EntityBlock eb) {
-                    @SuppressWarnings({"unchecked", "rawtypes"})
-                    net.minecraft.world.level.block.entity.BlockEntityTicker ticker =
-                            eb.getTicker(this, bs, be.getType());
-                    if (ticker != null) ticker.tick(this, local, bs, be);
-                }
-            } catch (Throwable ignored) {}
+        try {
+            GasEngine.tickAll((Level)this);
+        }
+        catch (Throwable throwable) {
+            // empty catch block
         }
         try {
-            dev.arubik.craftengine.fluid.graph.GasEngine.tickAll((Level) this);
-        } catch (Throwable ignored) {}
-        try {
-            dev.arubik.craftengine.fluid.graph.FluidEngine.tickAll((Level) this);
-        } catch (Throwable ignored) {}
+            FluidEngine.tickAll((Level)this);
+        }
+        catch (Throwable throwable) {
+            // empty catch block
+        }
     }
 
     private void releaseChunkTickets() {
@@ -908,6 +900,7 @@ implements ContraptionBoundary, ContraptionLevel {
         return this.getUncachedNoiseBiome(x, y, z);
     }
 
+    @Override
     public void addParticle(ParticleOptions particle, double x, double y, double z, double dx, double dy, double dz) {
         Vec3 realPos = this.realWorldPositionOf(BlockPos.containing((double)x, (double)y, (double)z));
         this.realLevel.addParticle(particle, realPos.x, realPos.y, realPos.z, dx, dy, dz);
@@ -932,6 +925,7 @@ implements ContraptionBoundary, ContraptionLevel {
         return realServerLevel.sendParticlesSource(realServerLevel.players(), null, particle, overrideLimiter, force, realPos.x, realPos.y, realPos.z, count, rdx, rdy, rdz, speed);
     }
 
+    @Override
     public void playSeededSound(Entity source, double x, double y, double z, Holder<SoundEvent> sound, SoundSource category, float volume, float pitch, long seed) {
         Vec3 realPos = this.realWorldPositionOf(BlockPos.containing((double)x, (double)y, (double)z));
         this.realLevel.playSeededSound(null, realPos.x, realPos.y, realPos.z, sound, category, volume, pitch, seed);
@@ -948,6 +942,11 @@ implements ContraptionBoundary, ContraptionLevel {
     public void destroyBlockProgress(int breakerId, BlockPos pos, int progress) {
         BlockPos realPos = BlockPos.containing((Position)this.realWorldPositionOf(pos));
         this.realLevel.destroyBlockProgress(breakerId, realPos, progress);
+    }
+
+    @Override
+    public ServerLevel serverLevel() {
+        return this;
     }
 
     static {
@@ -987,9 +986,5 @@ implements ContraptionBoundary, ContraptionLevel {
             return false;
         }
     }
-
-    @Override
-    public ServerLevel serverLevel() {
-        return this;
-    }
 }
+

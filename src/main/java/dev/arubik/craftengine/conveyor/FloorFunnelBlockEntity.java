@@ -1,46 +1,60 @@
+/*
+ * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  net.minecraft.core.BlockPos
+ *  net.minecraft.core.Direction
+ *  net.minecraft.world.Container
+ *  net.minecraft.world.WorldlyContainer
+ *  net.minecraft.world.item.ItemStack
+ *  net.minecraft.world.level.Level
+ *  net.minecraft.world.level.block.entity.HopperBlockEntity
+ *  net.momirealms.craftengine.core.block.ImmutableBlockState
+ *  net.momirealms.craftengine.core.block.entity.BlockEntity
+ *  net.momirealms.craftengine.core.block.entity.BlockEntityController
+ *  net.momirealms.craftengine.core.block.entity.tick.BlockEntityTicker
+ *  net.momirealms.craftengine.core.util.Direction
+ *  net.momirealms.craftengine.core.world.BlockPos
+ *  net.momirealms.craftengine.core.world.CEWorld
+ *  org.bukkit.Location
+ *  org.bukkit.World
+ *  org.bukkit.craftbukkit.inventory.CraftItemStack
+ *  org.bukkit.entity.Entity
+ *  org.bukkit.entity.Item
+ *  org.bukkit.inventory.ItemStack
+ *  org.bukkit.util.Vector
+ */
 package dev.arubik.craftengine.conveyor;
 
-import org.bukkit.craftbukkit.inventory.CraftItemStack;
-
 import dev.arubik.craftengine.block.entity.PersistentBlockEntity;
+import dev.arubik.craftengine.conveyor.ConveyorReceiver;
+import dev.arubik.craftengine.util.TypedKeys;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.world.Container;
+import net.minecraft.world.WorldlyContainer;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.HopperBlockEntity;
 import net.momirealms.craftengine.core.block.ImmutableBlockState;
 import net.momirealms.craftengine.core.block.entity.BlockEntity;
 import net.momirealms.craftengine.core.block.entity.BlockEntityController;
 import net.momirealms.craftengine.core.block.entity.tick.BlockEntityTicker;
-import net.momirealms.craftengine.core.util.Direction;
-import net.momirealms.craftengine.core.world.BlockPos;
 import net.momirealms.craftengine.core.world.CEWorld;
+import org.bukkit.Location;
+import org.bukkit.World;
+import org.bukkit.craftbukkit.inventory.CraftItemStack;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.Item;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.util.Vector;
 
-/**
- * FLOOR FUNNEL controller ({@code polyfills:floor_funnel}). A receive-only, instant hopper.
- *
- * <p>Holds exactly ONE internal stack. It accepts a whole stack at once and will not take
- * any more items while it still holds one. Each tick it deposits the held stack straight
- * DOWN into a worldly container (respecting the container's DOWN face rules), semi-instantly:
- * if the container only has room for part of the stack it deposits that part and keeps the
- * rest until space frees. With no container below, the held stack is dropped into the world.
- * If a container below is full, the remainder is kept until the block is broken (drops it)
- * or a player right-clicks it with an empty hand (extracts it).</p>
- *
- * <p>Item intake: belts hand items over directly via {@link ConveyorReceiver} (no drop),
- * dropped items resting on top are vacuumed, and hoppers/droppers above push in through the
- * vanilla container bridge ({@link FloorFunnelBehavior} exposes none here — top intake is the
- * vacuum + belt hand-off). Persistence uses this block entity's own CE tag.</p>
- */
-public class FloorFunnelBlockEntity extends PersistentBlockEntity implements ConveyorReceiver {
-
-    // Horizontal reach. The funnel is a THIN floor plate, so items rest near the block's own
-    // surface (y ~ +0.0..+0.5), not a full block above — keep the vacuum box low and tall enough.
+public class FloorFunnelBlockEntity
+extends PersistentBlockEntity
+implements ConveyorReceiver {
     private static final double PICKUP_RADIUS = 0.65;
-    private static final double PICKUP_HEIGHT = 0.9; // vertical half-extent around the block top
-
-    private org.bukkit.inventory.ItemStack held; // the single held stack (or null)
-
-    // CEILING variant: also EXTRACT a stack from the worldly container directly ABOVE (through its
-    // DOWN face). The FLOOR variant leaves this false — it only takes belt hand-offs + vacuumed
-    // drops and never pulls from a chest above (so a chest on top isn't auto-drained by a floor plate).
+    private static final double PICKUP_HEIGHT = 0.9;
+    private ItemStack held;
     private final boolean pullAbove;
-
     private boolean loaded = false;
     private boolean dirty = false;
 
@@ -53,124 +67,115 @@ public class FloorFunnelBlockEntity extends PersistentBlockEntity implements Con
         this.pullAbove = pullAbove;
     }
 
-    // ---------------- ConveyorReceiver (belt hand-off) ----------------
-
     @Override
     public boolean isFull() {
-        // Cannot take a new item while it still holds a (non-empty) stack.
-        return held != null && !held.getType().isAir();
+        return this.held != null && !this.held.getType().isAir();
     }
 
     @Override
-    public boolean receiveConveyorItem(org.bukkit.inventory.ItemStack stack, Direction sourceFacing) {
-        return receiveConveyorItem(stack, sourceFacing, 0f);
+    public boolean receiveConveyorItem(ItemStack stack, net.momirealms.craftengine.core.util.Direction sourceFacing) {
+        return this.receiveConveyorItem(stack, sourceFacing, 0.0f);
     }
 
     @Override
-    public boolean receiveConveyorItem(org.bukkit.inventory.ItemStack stack, Direction sourceFacing, float jitter) {
-        ensureLoaded();
-        if (stack == null || stack.getType().isAir())
+    public boolean receiveConveyorItem(ItemStack stack, net.momirealms.craftengine.core.util.Direction sourceFacing, float jitter) {
+        this.ensureLoaded();
+        if (stack == null || stack.getType().isAir()) {
             return false;
-        if (isFull())
+        }
+        if (this.isFull()) {
             return false;
+        }
         this.held = stack.clone();
         this.dirty = true;
         return true;
     }
 
-    // ---------------- container below ----------------
-
-    /** The NMS container directly ABOVE us (vanilla + CraftEngine worldly containers). */
-    private net.minecraft.world.Container containerAbove() {
+    private Container containerAbove() {
         try {
-            net.minecraft.world.level.Level lvl = (net.minecraft.world.level.Level) blockEntity().world().world
-                    .minecraftWorld();
-            BlockPos p = blockEntity().pos();
-            net.minecraft.core.BlockPos np = new net.minecraft.core.BlockPos(p.x(), p.y() + 1, p.z());
-            return net.minecraft.world.level.block.entity.HopperBlockEntity.getContainerAt(lvl, np);
-        } catch (Throwable t) {
+            Level lvl = (Level)this.blockEntity().world().world.minecraftWorld();
+            net.momirealms.craftengine.core.world.BlockPos p = this.blockEntity().pos();
+            BlockPos np = new BlockPos(p.x(), p.y() + 1, p.z());
+            return HopperBlockEntity.getContainerAt((Level)lvl, (BlockPos)np);
+        }
+        catch (Throwable t) {
             return null;
         }
     }
 
-    /** Slots accessible from the DOWN face (worldly-aware), or all slots for a plain container. */
-    private static int[] downFaceSlots(net.minecraft.world.Container c) {
-        if (c instanceof net.minecraft.world.WorldlyContainer wc)
-            return wc.getSlotsForFace(net.minecraft.core.Direction.DOWN);
+    private static int[] downFaceSlots(Container c) {
+        if (c instanceof WorldlyContainer) {
+            WorldlyContainer wc = (WorldlyContainer)c;
+            return wc.getSlotsForFace(Direction.DOWN);
+        }
         int[] all = new int[c.getContainerSize()];
-        for (int i = 0; i < all.length; i++)
+        for (int i = 0; i < all.length; ++i) {
             all[i] = i;
+        }
         return all;
     }
 
-    /** Extract ONE whole stack from the container above (through its DOWN face) into the held slot. */
     private void pullFromContainerAbove() {
-        if (isFull())
+        if (this.isFull()) {
             return;
-        net.minecraft.world.Container c = containerAbove();
-        if (c == null)
+        }
+        Container c = this.containerAbove();
+        if (c == null) {
             return;
-        net.minecraft.core.Direction face = net.minecraft.core.Direction.DOWN;
-        for (int slot : downFaceSlots(c)) {
+        }
+        Direction face = Direction.DOWN;
+        for (int slot : FloorFunnelBlockEntity.downFaceSlots(c)) {
+            int take;
+            net.minecraft.world.item.ItemStack taken;
+            WorldlyContainer wc;
             net.minecraft.world.item.ItemStack s = c.getItem(slot);
-            if (s.isEmpty())
-                continue;
-            if (c instanceof net.minecraft.world.WorldlyContainer wc && !wc.canTakeItemThroughFace(slot, s, face))
-                continue;
-            int take = s.getCount();
-            net.minecraft.world.item.ItemStack taken = c.removeItem(slot, take);
-            if (taken.isEmpty())
-                continue;
-            this.held = CraftItemStack.asBukkitCopy(taken);
+            if (s.isEmpty() || c instanceof WorldlyContainer && !(wc = (WorldlyContainer)c).canTakeItemThroughFace(slot, s, face) || (taken = c.removeItem(slot, take = s.getCount())).isEmpty()) continue;
+            this.held = CraftItemStack.asBukkitCopy((net.minecraft.world.item.ItemStack)taken);
             c.setChanged();
             this.dirty = true;
             return;
         }
     }
 
-    /** The NMS container directly below us (vanilla + CraftEngine worldly containers). */
-    private net.minecraft.world.Container containerBelow() {
+    private Container containerBelow() {
         try {
-            net.minecraft.world.level.Level lvl = (net.minecraft.world.level.Level) blockEntity().world().world
-                    .minecraftWorld();
-            BlockPos p = blockEntity().pos();
-            net.minecraft.core.BlockPos np = new net.minecraft.core.BlockPos(p.x(), p.y() - 1, p.z());
-            return net.minecraft.world.level.block.entity.HopperBlockEntity.getContainerAt(lvl, np);
-        } catch (Throwable t) {
+            Level lvl = (Level)this.blockEntity().world().world.minecraftWorld();
+            net.momirealms.craftengine.core.world.BlockPos p = this.blockEntity().pos();
+            BlockPos np = new BlockPos(p.x(), p.y() - 1, p.z());
+            return HopperBlockEntity.getContainerAt((Level)lvl, (BlockPos)np);
+        }
+        catch (Throwable t) {
             return null;
         }
     }
 
-    /** Slots accessible from the UP face (worldly-aware), or all slots for a plain container. */
-    private static int[] upFaceSlots(net.minecraft.world.Container c) {
-        if (c instanceof net.minecraft.world.WorldlyContainer wc)
-            return wc.getSlotsForFace(net.minecraft.core.Direction.UP);
+    private static int[] upFaceSlots(Container c) {
+        if (c instanceof WorldlyContainer) {
+            WorldlyContainer wc = (WorldlyContainer)c;
+            return wc.getSlotsForFace(Direction.UP);
+        }
         int[] all = new int[c.getContainerSize()];
-        for (int i = 0; i < all.length; i++)
+        for (int i = 0; i < all.length; ++i) {
             all[i] = i;
+        }
         return all;
     }
 
-    /**
-     * Push as much of {@code held} as fits into the container below (face = UP). Mutates
-     * {@code held}'s amount down by however many were deposited. Returns true if anything moved.
-     */
     private boolean depositBelow() {
-        net.minecraft.world.Container c = containerBelow();
-        if (c == null)
+        Container c = this.containerBelow();
+        if (c == null) {
             return false;
-        net.minecraft.core.Direction face = net.minecraft.core.Direction.UP;
+        }
+        Direction face = Direction.UP;
         boolean moved = false;
-        int remaining = held.getAmount();
-        for (int slot : upFaceSlots(c)) {
-            if (remaining <= 0)
-                break;
-            net.minecraft.world.item.ItemStack one = CraftItemStack.asNMSCopy(held);
+        int remaining = this.held.getAmount();
+        for (int slot : FloorFunnelBlockEntity.upFaceSlots(c)) {
+            int room;
+            WorldlyContainer wc;
+            if (remaining <= 0) break;
+            net.minecraft.world.item.ItemStack one = CraftItemStack.asNMSCopy((ItemStack)this.held);
             one.setCount(1);
-            if (c instanceof net.minecraft.world.WorldlyContainer wc && !wc.canPlaceItemThroughFace(slot, one, face))
-                continue;
-            if (!c.canPlaceItem(slot, one))
-                continue;
+            if (c instanceof WorldlyContainer && !(wc = (WorldlyContainer)c).canPlaceItemThroughFace(slot, one, face) || !c.canPlaceItem(slot, one)) continue;
             net.minecraft.world.item.ItemStack cur = c.getItem(slot);
             int max = Math.min(one.getMaxStackSize(), c.getMaxStackSize());
             if (cur.isEmpty()) {
@@ -180,168 +185,151 @@ public class FloorFunnelBlockEntity extends PersistentBlockEntity implements Con
                 c.setItem(slot, ins);
                 remaining -= put;
                 moved = true;
-            } else if (net.minecraft.world.item.ItemStack.isSameItemSameComponents(cur, one)) {
-                int room = max - cur.getCount();
-                if (room <= 0)
-                    continue;
-                int put = Math.min(remaining, room);
-                cur.grow(put);
-                remaining -= put;
-                moved = true;
+                continue;
             }
+            if (!net.minecraft.world.item.ItemStack.isSameItemSameComponents((net.minecraft.world.item.ItemStack)cur, (net.minecraft.world.item.ItemStack)one) || (room = max - cur.getCount()) <= 0) continue;
+            int put = Math.min(remaining, room);
+            cur.grow(put);
+            remaining -= put;
+            moved = true;
         }
         if (moved) {
             c.setChanged();
-            held.setAmount(remaining);
-            if (remaining <= 0)
-                held = null;
+            this.held.setAmount(remaining);
+            if (remaining <= 0) {
+                this.held = null;
+            }
             this.dirty = true;
         }
         return moved;
     }
 
-    /** Drop the whole held stack into the world directly below the funnel. */
     private void dropBelow() {
         try {
-            if (held == null)
+            if (this.held == null) {
                 return;
-            org.bukkit.World bw = (org.bukkit.World) blockEntity().world().world.platformWorld();
-            BlockPos p = blockEntity().pos();
-            org.bukkit.entity.Item it = bw.dropItem(
-                    new org.bukkit.Location(bw, p.x() + 0.5, p.y() - 0.25, p.z() + 0.5), held);
-            it.setVelocity(new org.bukkit.util.Vector(0, -0.05, 0));
+            }
+            World bw = (World)this.blockEntity().world().world.platformWorld();
+            net.momirealms.craftengine.core.world.BlockPos p = this.blockEntity().pos();
+            Item it = bw.dropItem(new Location(bw, (double)p.x() + 0.5, (double)p.y() - 0.25, (double)p.z() + 0.5), this.held);
+            it.setVelocity(new Vector(0.0, -0.05, 0.0));
             it.setPickupDelay(10);
-            held = null;
+            this.held = null;
             this.dirty = true;
-        } catch (Throwable ignored) {
+        }
+        catch (Throwable throwable) {
+            // empty catch block
         }
     }
 
-    /** Vacuum a dropped item resting on top into the held slot (only while empty). */
     private void vacuumAbove() {
-        if (isFull())
+        if (this.isFull()) {
             return;
+        }
         try {
-            org.bukkit.World bw = (org.bukkit.World) blockEntity().world().world.platformWorld();
-            BlockPos p = blockEntity().pos();
-            org.bukkit.Location center = new org.bukkit.Location(bw, p.x() + 0.5, p.y() + 0.5, p.z() + 0.5);
-            for (org.bukkit.entity.Entity e : bw.getNearbyEntities(center, PICKUP_RADIUS, PICKUP_HEIGHT,
-                    PICKUP_RADIUS)) {
-                if (!(e instanceof org.bukkit.entity.Item it))
-                    continue;
-                if (it.isDead() || !it.isValid() || it.getPickupDelay() > 0)
-                    continue;
-                org.bukkit.inventory.ItemStack bukkit = it.getItemStack();
-                if (bukkit == null || bukkit.getType().isAir())
-                    continue;
+            World bw = (World)this.blockEntity().world().world.platformWorld();
+            net.momirealms.craftengine.core.world.BlockPos p = this.blockEntity().pos();
+            Location center = new Location(bw, (double)p.x() + 0.5, (double)p.y() + 0.5, (double)p.z() + 0.5);
+            for (Entity e : bw.getNearbyEntities(center, 0.65, 0.9, 0.65)) {
+                ItemStack bukkit;
+                Item it;
+                if (!(e instanceof Item) || (it = (Item)e).isDead() || !it.isValid() || it.getPickupDelay() > 0 || (bukkit = it.getItemStack()) == null || bukkit.getType().isAir()) continue;
                 this.held = bukkit.clone();
                 it.remove();
                 this.dirty = true;
                 return;
             }
-        } catch (Throwable ignored) {
+        }
+        catch (Throwable throwable) {
+            // empty catch block
         }
     }
 
-    // ---------------- ticking ----------------
-
-    @Override
-    @SuppressWarnings("unchecked")
-    public <C extends BlockEntityController> BlockEntityTicker<C> createBlockEntityTicker(
-            CEWorld world, ImmutableBlockState state) {
-        return BlockEntityController.createTickerHelper(
-                (BlockEntityTicker<FloorFunnelBlockEntity>) FloorFunnelBlockEntity::tick);
+    public <C extends BlockEntityController> BlockEntityTicker<C> createBlockEntityTicker(CEWorld world, ImmutableBlockState state) {
+        return BlockEntityController.createTickerHelper(FloorFunnelBlockEntity::tick);
     }
 
-    public static void tick(CEWorld world, BlockPos pos, ImmutableBlockState state, FloorFunnelBlockEntity self) {
+    public static void tick(CEWorld world, net.momirealms.craftengine.core.world.BlockPos pos, ImmutableBlockState state, FloorFunnelBlockEntity self) {
         self.serverTick(world);
     }
 
     private void serverTick(CEWorld world) {
-        ensureLoaded();
-
-        // Try to take a fresh stack only when empty: vacuum dropped items, and (CEILING only) also
-        // extract from a worldly container directly above.
-        if (held == null || held.getType().isAir()) {
-            held = null;
-            vacuumAbove();
-            if (pullAbove && (held == null || held.getType().isAir()))
-                pullFromContainerAbove();
-        }
-
-        if (held != null && !held.getType().isAir()) {
-            if (pullAbove) {
-                // CEILING: it only EXTRACTS (from above) and EJECTS below — it never inserts into a
-                // container. Always drop the held stack below (onto a belt / floor funnel / the world).
-                // Inserting into containers is the FLOOR funnel's job.
-                dropBelow();
-            } else if (!depositBelow()) {
-                // FLOOR: nothing moved this tick — either no container OR a full one.
-                if (containerBelow() == null)
-                    dropBelow(); // no container -> drop the whole stack below
-                // full container -> keep the remainder (until break / right-click)
+        this.ensureLoaded();
+        if (this.held == null || this.held.getType().isAir()) {
+            this.held = null;
+            this.vacuumAbove();
+            if (this.pullAbove && (this.held == null || this.held.getType().isAir())) {
+                this.pullFromContainerAbove();
             }
         }
-
-        if (dirty) {
-            dirty = false;
-            save();
+        if (this.held != null && !this.held.getType().isAir()) {
+            if (this.pullAbove) {
+                this.dropBelow();
+            } else if (!this.depositBelow() && this.containerBelow() == null) {
+                this.dropBelow();
+            }
+        }
+        if (this.dirty) {
+            this.dirty = false;
+            this.save();
         }
     }
 
-    // ---------------- player / break access ----------------
-
-    /** Take the held stack out (right-click empty hand). */
-    public org.bukkit.inventory.ItemStack takeHeld() {
-        ensureLoaded();
-        if (held == null || held.getType().isAir())
+    public ItemStack takeHeld() {
+        this.ensureLoaded();
+        if (this.held == null || this.held.getType().isAir()) {
             return null;
-        org.bukkit.inventory.ItemStack out = held;
-        held = null;
-        dirty = true;
-        save();
+        }
+        ItemStack out = this.held;
+        this.held = null;
+        this.dirty = true;
+        this.save();
         return out;
     }
 
-    /** Drop the held stack at the funnel on break. */
     public void dropHeld() {
         try {
-            ensureLoaded();
-            if (held != null && !held.getType().isAir()) {
-                org.bukkit.World bw = (org.bukkit.World) blockEntity().world().world.platformWorld();
-                BlockPos p = blockEntity().pos();
-                bw.dropItem(new org.bukkit.Location(bw, p.x() + 0.5, p.y() + 0.5, p.z() + 0.5), held);
-                held = null;
+            this.ensureLoaded();
+            if (this.held != null && !this.held.getType().isAir()) {
+                World bw = (World)this.blockEntity().world().world.platformWorld();
+                net.momirealms.craftengine.core.world.BlockPos p = this.blockEntity().pos();
+                bw.dropItem(new Location(bw, (double)p.x() + 0.5, (double)p.y() + 0.5, (double)p.z() + 0.5), this.held);
+                this.held = null;
             }
-        } catch (Throwable ignored) {
+        }
+        catch (Throwable throwable) {
+            // empty catch block
         }
     }
 
-    // ---------------- persistence (this block entity's own CE tag) ----------------
-
     private void ensureLoaded() {
-        if (!loaded) {
-            load();
-            loaded = true;
+        if (!this.loaded) {
+            this.load();
+            this.loaded = true;
         }
     }
 
     private void load() {
         try {
-            net.minecraft.world.item.ItemStack nms = getOptional(dev.arubik.craftengine.util.TypedKeys.NMS_ITEM)
-                    .orElse(null);
-            held = (nms != null && !nms.isEmpty()) ? CraftItemStack.asBukkitCopy(nms) : null;
-        } catch (Throwable ignored) {
+            net.minecraft.world.item.ItemStack nms = this.getOptional(TypedKeys.NMS_ITEM).orElse(null);
+            this.held = nms != null && !nms.isEmpty() ? CraftItemStack.asBukkitCopy((net.minecraft.world.item.ItemStack)nms) : null;
+        }
+        catch (Throwable throwable) {
+            // empty catch block
         }
     }
 
     private void save() {
         try {
-            if (held == null || held.getType().isAir())
-                clear();
-            else
-                set(dev.arubik.craftengine.util.TypedKeys.NMS_ITEM, CraftItemStack.asNMSCopy(held));
-        } catch (Throwable ignored) {
+            if (this.held == null || this.held.getType().isAir()) {
+                this.clear();
+            } else {
+                this.set(TypedKeys.NMS_ITEM, CraftItemStack.asNMSCopy((ItemStack)this.held));
+            }
+        }
+        catch (Throwable throwable) {
+            // empty catch block
         }
     }
 }
+

@@ -1,25 +1,22 @@
+/*
+ * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  org.bukkit.event.Cancellable
+ *  org.bukkit.event.Event
+ *  org.bukkit.event.HandlerList
+ */
 package dev.arubik.craftengine.contraption.event;
 
+import dev.arubik.craftengine.contraption.core.ContraptionEntity;
 import org.bukkit.event.Cancellable;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 
-import dev.arubik.craftengine.contraption.core.ContraptionEntity;
-
-/**
- * Fired on the main thread just BEFORE a contraption disassembles — before any teardown runs
- * (no swarm despawn, no block restore, no mini-dimension dispose has happened yet); see
- * {@code ContraptionAssembler#disassemble} and {@code MinecartBearing#disassemble}.
- *
- * <p>{@linkplain Cancellable Cancelling} this event aborts the disassembly: the contraption
- * stays live and assembled exactly as it was. When no listener cancels, behavior is identical
- * to before this event existed. The counterpart {@link ContraptionDisassembledEvent} fires
- * afterward, only when the disassembly actually goes through.
- */
-public class ContraptionDisassembleEvent extends Event implements Cancellable {
-
+public class ContraptionDisassembleEvent
+extends Event
+implements Cancellable {
     private static final HandlerList HANDLERS = new HandlerList();
-
     private final ContraptionEntity entity;
     private boolean cancelled;
 
@@ -27,22 +24,18 @@ public class ContraptionDisassembleEvent extends Event implements Cancellable {
         this.entity = entity;
     }
 
-    /** The contraption about to be disassembled (still fully live/registered when this fires). */
     public ContraptionEntity getEntity() {
-        return entity;
+        return this.entity;
     }
 
-    @Override
     public boolean isCancelled() {
-        return cancelled;
+        return this.cancelled;
     }
 
-    @Override
     public void setCancelled(boolean cancel) {
         this.cancelled = cancel;
     }
 
-    @Override
     public HandlerList getHandlers() {
         return HANDLERS;
     }
@@ -51,3 +44,4 @@ public class ContraptionDisassembleEvent extends Event implements Cancellable {
         return HANDLERS;
     }
 }
+

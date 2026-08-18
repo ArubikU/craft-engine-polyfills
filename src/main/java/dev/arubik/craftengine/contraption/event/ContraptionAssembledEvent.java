@@ -1,36 +1,29 @@
+/*
+ * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  org.bukkit.event.Event
+ *  org.bukkit.event.HandlerList
+ */
 package dev.arubik.craftengine.contraption.event;
 
+import dev.arubik.craftengine.contraption.core.ContraptionEntity;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 
-import dev.arubik.craftengine.contraption.core.ContraptionEntity;
-
-/**
- * Fired on the main thread just AFTER a contraption has successfully assembled — the real
- * blocks have been captured/removed, the {@link ContraptionEntity} has been created and
- * registered with {@code ContraptionManager}, and its default movement behavior is attached
- * (see {@code ContraptionAssembler#assemble}/{@code #assemblePiston} and
- * {@code MinecartBearing#assemble}).
- *
- * <p>Not cancellable — the contraption already exists by the time this fires. Pair with the
- * pre-assembly {@link ContraptionAssembleEvent} if you need to veto.
- */
-public class ContraptionAssembledEvent extends Event {
-
+public class ContraptionAssembledEvent
+extends Event {
     private static final HandlerList HANDLERS = new HandlerList();
-
     private final ContraptionEntity entity;
 
     public ContraptionAssembledEvent(ContraptionEntity entity) {
         this.entity = entity;
     }
 
-    /** The freshly-assembled, already-registered contraption. */
     public ContraptionEntity getEntity() {
-        return entity;
+        return this.entity;
     }
 
-    @Override
     public HandlerList getHandlers() {
         return HANDLERS;
     }
@@ -39,3 +32,4 @@ public class ContraptionAssembledEvent extends Event {
         return HANDLERS;
     }
 }
+

@@ -1,10 +1,16 @@
+/*
+ * Decompiled with CFR 0.152.
+ */
 package dev.arubik.craftengine.machine.recipe;
+
+import dev.arubik.craftengine.machine.recipe.RecipeInput;
+import dev.arubik.craftengine.machine.recipe.RecipeOutput;
 
 public class MachineFuelRecipe {
     private final RecipeInput input;
     private final int burnTime;
     private final RecipeOutput replacement;
-    private final int overclockedTime; // Ticks to grant overclocked mode (0 = none)
+    private final int overclockedTime;
 
     public MachineFuelRecipe(RecipeInput input, int burnTime, RecipeOutput replacement, int overclockedTime) {
         this.input = input;
@@ -22,18 +28,19 @@ public class MachineFuelRecipe {
     }
 
     public RecipeInput getInput() {
-        return input;
+        return this.input;
     }
 
     public int getBurnTime() {
-        return burnTime;
+        return this.burnTime;
     }
 
     public RecipeOutput getReplacement() {
-        return replacement;
+        return this.replacement;
     }
 
     public int getOverclockedTime() {
-        return overclockedTime;
+        return this.overclockedTime;
     }
 }
+

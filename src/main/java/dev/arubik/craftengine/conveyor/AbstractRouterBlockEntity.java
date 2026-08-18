@@ -1,85 +1,104 @@
+/*
+ * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  net.minecraft.world.item.ItemStack
+ *  net.momirealms.craftengine.core.block.ImmutableBlockState
+ *  net.momirealms.craftengine.core.block.entity.BlockEntity
+ *  net.momirealms.craftengine.core.block.entity.BlockEntityController
+ *  net.momirealms.craftengine.core.block.entity.tick.BlockEntityTicker
+ *  net.momirealms.craftengine.core.block.property.Property
+ *  net.momirealms.craftengine.core.entity.player.Player
+ *  net.momirealms.craftengine.core.util.Direction
+ *  net.momirealms.craftengine.core.world.BlockPos
+ *  net.momirealms.craftengine.core.world.CEWorld
+ *  net.momirealms.craftengine.core.world.ChunkPos
+ *  org.bukkit.Location
+ *  org.bukkit.World
+ *  org.bukkit.craftbukkit.inventory.CraftItemStack
+ *  org.bukkit.inventory.ItemStack
+ *  org.joml.Quaternionf
+ *  org.joml.Vector3f
+ */
 package dev.arubik.craftengine.conveyor;
 
-import org.bukkit.craftbukkit.inventory.CraftItemStack;
-
 import dev.arubik.craftengine.block.entity.PersistentWorldlyBlockEntity;
+import dev.arubik.craftengine.conveyor.ConveyorBlockEntity;
+import dev.arubik.craftengine.conveyor.ConveyorDisplayReceiver;
+import dev.arubik.craftengine.conveyor.ConveyorItemDisplay;
+import dev.arubik.craftengine.conveyor.ConveyorMath;
+import dev.arubik.craftengine.conveyor.ConveyorReceiver;
+import dev.arubik.craftengine.conveyor.ConveyorRouting;
+import dev.arubik.craftengine.rotation.RpmProvider;
+import dev.arubik.craftengine.util.MNms;
+import java.util.List;
 import net.momirealms.craftengine.core.block.ImmutableBlockState;
 import net.momirealms.craftengine.core.block.entity.BlockEntity;
 import net.momirealms.craftengine.core.block.entity.BlockEntityController;
+import net.momirealms.craftengine.core.block.entity.tick.BlockEntityTicker;
 import net.momirealms.craftengine.core.block.property.Property;
+import net.momirealms.craftengine.core.entity.player.Player;
 import net.momirealms.craftengine.core.util.Direction;
 import net.momirealms.craftengine.core.world.BlockPos;
 import net.momirealms.craftengine.core.world.CEWorld;
+import net.momirealms.craftengine.core.world.ChunkPos;
+import org.bukkit.Location;
+import org.bukkit.World;
+import org.bukkit.craftbukkit.inventory.CraftItemStack;
+import org.bukkit.inventory.ItemStack;
+import org.joml.Quaternionf;
+import org.joml.Vector3f;
 
-/**
- * Base for the conveyor-network "router" blocks (merger / splitter). Each holds a
- * tiny internal item buffer ({@code slots} stacks). Belts deliver into the buffer
- * via {@link ConveyorReceiver#receiveConveyorItem}; every tick {@link #route} tries
- * to push buffered stacks back onto downstream belts/receivers. Directionality (which
- * sides are inputs vs. outputs) is enforced per subclass.
- *
- * <p>Buffered items are invisible (no display entity) — these blocks are pass-through
- * routers, not transport surfaces.</p>
- */
-public abstract class AbstractRouterBlockEntity extends PersistentWorldlyBlockEntity
-        implements ConveyorDisplayReceiver, dev.arubik.craftengine.rotation.RpmProvider {
-
+public abstract class AbstractRouterBlockEntity
+extends PersistentWorldlyBlockEntity
+implements ConveyorDisplayReceiver,
+RpmProvider {
     public static final String PROP_FACING = "facing";
-    /** Boolean block-state property toggled on/off with relayed RPM (for animated vs idle models). */
     public static final String PROP_ACTIVATED = "activated";
     private Boolean lastActivated = null;
-
     protected Direction defaultFacing = Direction.NORTH;
     protected final int slots;
+    protected float relayedRpm = 0.0f;
+    protected float moveRpm = 0.0f;
+    protected RpmProvider relayMotor;
+    private final Direction[] entryDir;
+    private final Direction[] exitDir;
+    private final float[] progress;
+    private final float[] jitter;
+    private final ConveyorItemDisplay[] displays;
+    private final boolean[] spawned;
 
-    /** RPM relayed from the feeding belt line, and the real motor driving it (for stress forwarding). */
-    protected float relayedRpm = 0f; // RPM exposed to neighbours (0 when redstone-isolated)
-    protected float moveRpm = 0f;    // speed for THIS block's own item movement (base while redstoned)
-    protected dev.arubik.craftengine.rotation.RpmProvider relayMotor;
-
-    /** Belt sides that FEED this router (inputs). */
     protected abstract Direction[] inputSides();
 
-    /** Belt sides this router DRIVES (outputs) — they inherit the relayed RPM. */
     protected abstract Direction[] outputSides();
 
-    /** Read the strongest feeding belt's RPM + its motor so the router relays power to its outputs. */
     private void updateRpm(CEWorld world, BlockPos pos) {
-        float best = 0f;
-        float bestPot = 0f;
-        boolean beltFeeds = false; // a conveyor line feeds this router (vs a pure funnel/IO push)
-        dev.arubik.craftengine.rotation.RpmProvider motor = null;
-        for (Direction d : inputSides()) {
+        float best = 0.0f;
+        float bestPot = 0.0f;
+        boolean beltFeeds = false;
+        RpmProvider motor = null;
+        for (Direction d : this.inputSides()) {
+            BlockEntityController blockEntityController;
             BlockEntity be = world.getBlockEntityAtIfLoaded(pos.relative(d));
-            if (be != null && be.controller instanceof ConveyorBlockEntity belt) {
-                beltFeeds = true;
-                best = Math.max(best, belt.effectiveRpm()); // live speed (0 while the motor stalls)
-                // Keep the driving motor even when the belt is stalled (effectiveRpm 0): pick by
-                // POTENTIAL rpm so output belts can still report load and keep the motor latched.
-                dev.arubik.craftengine.rotation.RpmProvider m = belt.drivingMotor();
-                if (m != null) {
-                    float p = m.potentialRpm();
-                    if (motor == null || p > bestPot) {
-                        bestPot = p;
-                        motor = m;
-                    }
-                }
-            }
+            if (be == null || !((blockEntityController = be.controller) instanceof ConveyorBlockEntity)) continue;
+            ConveyorBlockEntity belt = (ConveyorBlockEntity)blockEntityController;
+            beltFeeds = true;
+            best = Math.max(best, belt.effectiveRpm());
+            RpmProvider m = belt.drivingMotor();
+            if (m == null) continue;
+            float p = m.potentialRpm();
+            if (motor != null && !(p > bestPot)) continue;
+            bestPot = p;
+            motor = m;
         }
-        // Redstone: a powered router STOPS TRANSMITTING RPM/SU (getRpm -> 0, no SU report) but keeps
-        // routing its own buffered items to the outputs at BASE speed (deliberately counter-intuitive).
-        if (redstonePowered(world, pos)) {
-            this.relayedRpm = 0f;   // don't drive output belts / don't expose RPM to neighbours
-            this.relayMotor = null; // don't report SU upstream
-            this.moveRpm = ConveyorBlockEntity.BASE_RPM; // still move items across the block
+        if (this.redstonePowered(world, pos)) {
+            this.relayedRpm = 0.0f;
+            this.relayMotor = null;
+            this.moveRpm = 64.0f;
             return;
         }
-        if (!beltFeeds && motor == null && best <= 0f && hasItems()) {
-            // A pure funnel/IO push (chest funnel, machine output) with NO feeding belt: carry items
-            // at BASE belt speed without distributing rotational power. Guarded by !beltFeeds so a
-            // motor-driven line that just LOST its motor (broken) goes to 0 instead of free-running:
-            // otherwise leftover items would keep the router (and its output belts) moving forever.
-            best = ConveyorBlockEntity.BASE_RPM;
+        if (!beltFeeds && motor == null && best <= 0.0f && this.hasItems()) {
+            best = 64.0f;
         }
         this.relayedRpm = best;
         this.relayMotor = motor;
@@ -88,62 +107,56 @@ public abstract class AbstractRouterBlockEntity extends PersistentWorldlyBlockEn
 
     private boolean redstonePowered(CEWorld world, BlockPos pos) {
         try {
-            org.bukkit.World bw = (org.bukkit.World) world.world.platformWorld();
+            World bw = (World)world.world.platformWorld();
             return bw != null && bw.getBlockAt(pos.x(), pos.y(), pos.z()).isBlockIndirectlyPowered();
-        } catch (Throwable t) {
+        }
+        catch (Throwable t) {
             return false;
         }
     }
 
-    // ---- RpmProvider: relay the feeding line's power to the output belts ----
     @Override
     public boolean isRpmSource() {
-        return false; // a router only relays power; it is not a motor
+        return false;
     }
 
     @Override
     public float getRpm() {
-        return relayedRpm;
+        return this.relayedRpm;
     }
+
+    @Override
     public float potentialRpm() {
-        // Output belts size their stress load from this; forward the real motor's potential so the
-        // load stays stable even while the network is stalled (keeps the motor latched off).
-        return relayMotor != null ? relayMotor.potentialRpm() : relayedRpm;
+        return this.relayMotor != null ? this.relayMotor.potentialRpm() : this.relayedRpm;
     }
 
     @Override
     public float stressCapacity() {
-        return relayMotor != null ? relayMotor.stressCapacity() : Float.MAX_VALUE;
+        return this.relayMotor != null ? this.relayMotor.stressCapacity() : Float.MAX_VALUE;
     }
 
     @Override
     public void reportStressLoad(float su) {
-        if (relayMotor != null)
-            relayMotor.reportStressLoad(su); // forward output-line stress to the real motor
+        if (this.relayMotor != null) {
+            this.relayMotor.reportStressLoad(su);
+        }
     }
 
     @Override
     public boolean rpmReaches(BlockPos consumerPos) {
-        for (Direction d : outputSides()) {
-            BlockPos o = blockEntity().pos().relative(d);
-            if (o.x() == consumerPos.x() && o.y() == consumerPos.y() && o.z() == consumerPos.z())
-                return true;
+        for (Direction d : this.outputSides()) {
+            BlockPos o = this.blockEntity().pos().relative(d);
+            if (o.x() != consumerPos.x() || o.y() != consumerPos.y() || o.z() != consumerPos.z()) continue;
+            return true;
         }
         return false;
     }
 
-    // Per-slot transit state (item rendered moving entry-edge -> centre -> exit-edge).
-    private final Direction[] entryDir;
-    private final Direction[] exitDir;
-    private final float[] progress;
-    private final float[] jitter; // carried item yaw, kept consistent across the hop
-    private final ConveyorItemDisplay[] displays;
-    private final boolean[] spawned;
-
     protected AbstractRouterBlockEntity(BlockEntity blockEntity, Direction defaultFacing, int slots) {
         super(blockEntity, Math.max(1, slots));
-        if (defaultFacing != null)
+        if (defaultFacing != null) {
             this.defaultFacing = defaultFacing;
+        }
         this.slots = Math.max(1, slots);
         this.entryDir = new Direction[this.slots];
         this.exitDir = new Direction[this.slots];
@@ -153,351 +166,342 @@ public abstract class AbstractRouterBlockEntity extends PersistentWorldlyBlockEn
         this.spawned = new boolean[this.slots];
     }
 
-    // ---------------- live facing read ----------------
-
-    @SuppressWarnings({ "unchecked", "rawtypes" })
     protected static String enumName(ImmutableBlockState state, String name) {
-        if (state == null)
+        if (state == null) {
             return null;
+        }
         Property p = state.getProperty(name);
-        if (p == null)
+        if (p == null) {
             return null;
-        Object v = state.get(p);
-        if (v == null)
+        }
+        Comparable v = state.get(p);
+        if (v == null) {
             return null;
+        }
         try {
-            return Property.formatValue(p, (Comparable<?>) v);
-        } catch (Throwable t) {
+            return Property.formatValue((Property)p, (Comparable)v);
+        }
+        catch (Throwable t) {
             return String.valueOf(v);
         }
     }
 
-    /** Output direction (the {@code facing} property), or the default. */
     public Direction facing() {
-        String n = enumName(blockEntity().blockState(), PROP_FACING);
+        String n = AbstractRouterBlockEntity.enumName(this.blockEntity().blockState(), PROP_FACING);
         if (n != null) {
             try {
-                return Direction.valueOf(n.toUpperCase());
-            } catch (IllegalArgumentException ignored) {
+                return Direction.valueOf((String)n.toUpperCase());
+            }
+            catch (IllegalArgumentException illegalArgumentException) {
+                // empty catch block
             }
         }
-        return defaultFacing;
+        return this.defaultFacing;
     }
 
-    // ---------------- buffer helpers ----------------
-
     protected boolean slotEmpty(int i) {
-        net.minecraft.world.item.ItemStack s = getItem(i);
+        net.minecraft.world.item.ItemStack s = this.getItem(i);
         return s == null || s.isEmpty();
     }
 
-    /** True when any buffer slot holds an item (something is being carried across the router). */
     protected boolean hasItems() {
-        for (int i = 0; i < slots; i++)
-            if (!slotEmpty(i))
-                return true;
+        for (int i = 0; i < this.slots; ++i) {
+            if (this.slotEmpty(i)) continue;
+            return true;
+        }
         return false;
     }
 
     protected int firstEmptySlot() {
-        for (int i = 0; i < slots; i++)
-            if (slotEmpty(i))
-                return i;
+        for (int i = 0; i < this.slots; ++i) {
+            if (!this.slotEmpty(i)) continue;
+            return i;
+        }
         return -1;
     }
 
-    protected org.bukkit.inventory.ItemStack bukkitSlot(int i) {
-        if (slotEmpty(i))
+    protected ItemStack bukkitSlot(int i) {
+        if (this.slotEmpty(i)) {
             return null;
-        return CraftItemStack.asBukkitCopy(getItem(i));
+        }
+        return CraftItemStack.asBukkitCopy((net.minecraft.world.item.ItemStack)this.getItem(i));
     }
 
     protected void clearSlot(int i) {
-        setItem(i, net.minecraft.world.item.ItemStack.EMPTY);
+        this.setItem(i, net.minecraft.world.item.ItemStack.EMPTY);
     }
 
-    // Container#setChanged is abstract here; the buffer is persisted via the parent's
-    // saveCustomData (KEY_INVENTORY) on chunk save, so this is a no-op.
-    @Override
     public void setChanged() {
     }
 
-    // ---------------- ConveyorReceiver ----------------
-
     @Override
     public boolean isFull() {
-        return firstEmptySlot() < 0;
+        return this.firstEmptySlot() < 0;
     }
 
     @Override
-    public boolean receiveConveyorItem(org.bukkit.inventory.ItemStack stack, Direction sourceFacing) {
-        return receiveConveyorItem(stack, sourceFacing, 0f);
+    public boolean receiveConveyorItem(ItemStack stack, Direction sourceFacing) {
+        return this.receiveConveyorItem(stack, sourceFacing, 0.0f);
     }
 
     @Override
-    public boolean receiveConveyorItem(org.bukkit.inventory.ItemStack stack, Direction sourceFacing, float carriedJitter) {
-        if (stack == null || stack.getType().isAir())
+    public boolean receiveConveyorItem(ItemStack stack, Direction sourceFacing, float carriedJitter) {
+        if (stack == null || stack.getType().isAir()) {
             return false;
-        if (!acceptsFrom(sourceFacing))
+        }
+        if (!this.acceptsFrom(sourceFacing)) {
             return false;
-        int i = firstEmptySlot();
-        if (i < 0)
+        }
+        int i = this.firstEmptySlot();
+        if (i < 0) {
             return false;
-        setItem(i, CraftItemStack.asNMSCopy(stack));
-        // Item entered from the side opposite the belt's travel direction.
-        entryDir[i] = (sourceFacing != null) ? sourceFacing.opposite() : facing().opposite();
-        exitDir[i] = null;
-        progress[i] = 0f;
-        jitter[i] = carriedJitter; // keep the item's rotation consistent
-        // Spawn the carried display NOW (not next tick) so there is no 1-tick gap on hand-off from a
-        // funnel/belt -> no flicker while the previous owner's display despawns.
+        }
+        this.setItem(i, CraftItemStack.asNMSCopy((ItemStack)stack));
+        this.entryDir[i] = sourceFacing != null ? sourceFacing.opposite() : this.facing().opposite();
+        this.exitDir[i] = null;
+        this.progress[i] = 0.0f;
+        this.jitter[i] = carriedJitter;
         try {
-            BlockPos p = blockEntity().pos();
-            renderSlot(blockEntity().world().world().getTrackedBy(
-                    new net.momirealms.craftengine.core.world.ChunkPos(p)), p, i);
-        } catch (Throwable ignored) {
+            BlockPos p = this.blockEntity().pos();
+            this.renderSlot(this.blockEntity().world().world().getTrackedBy(new ChunkPos(p)), p, i);
+        }
+        catch (Throwable throwable) {
+            // empty catch block
         }
         return true;
     }
 
     @Override
-    public boolean adoptConveyorItem(org.bukkit.inventory.ItemStack stack, float jitter,
-            ConveyorItemDisplay display, boolean spawned, Direction sourceFacing) {
-        if (stack == null || stack.getType().isAir())
+    public boolean adoptConveyorItem(ItemStack stack, float jitter, ConveyorItemDisplay display, boolean spawned, Direction sourceFacing) {
+        BlockPos p2;
+        if (stack == null || stack.getType().isAir()) {
             return false;
-        if (!acceptsFrom(sourceFacing))
+        }
+        if (!this.acceptsFrom(sourceFacing)) {
             return false;
-        int i = firstEmptySlot();
-        if (i < 0)
+        }
+        int i = this.firstEmptySlot();
+        if (i < 0) {
             return false;
-        setItem(i, CraftItemStack.asNMSCopy(stack));
-        entryDir[i] = (sourceFacing != null) ? sourceFacing.opposite() : facing().opposite();
-        exitDir[i] = null;
-        progress[i] = 0f;
+        }
+        this.setItem(i, CraftItemStack.asNMSCopy((ItemStack)stack));
+        this.entryDir[i] = sourceFacing != null ? sourceFacing.opposite() : this.facing().opposite();
+        this.exitDir[i] = null;
+        this.progress[i] = 0.0f;
         this.jitter[i] = jitter;
-        // Adopt the sender's live display (no respawn) -> seamless entry, no flicker.
-        if (displays[i] != null && displays[i] != display) {
+        if (this.displays[i] != null && this.displays[i] != display) {
             try {
-                BlockPos p = blockEntity().pos();
-                despawnSlot(blockEntity().world().world().getTrackedBy(
-                        new net.momirealms.craftengine.core.world.ChunkPos(p)), i);
-            } catch (Throwable ignored) {
+                p2 = this.blockEntity().pos();
+                this.despawnSlot(this.blockEntity().world().world().getTrackedBy(new ChunkPos(p2)), i);
+            }
+            catch (Throwable throwable) {
+                // empty catch block
             }
         }
-        displays[i] = display;
+        this.displays[i] = display;
         this.spawned[i] = spawned;
         try {
-            BlockPos p = blockEntity().pos();
-            renderSlot(blockEntity().world().world().getTrackedBy(
-                    new net.momirealms.craftengine.core.world.ChunkPos(p)), p, i);
-        } catch (Throwable ignored) {
+            p2 = this.blockEntity().pos();
+            this.renderSlot(this.blockEntity().world().world().getTrackedBy(new ChunkPos(p2)), p2, i);
+        }
+        catch (Throwable throwable) {
+            // empty catch block
         }
         return true;
     }
 
-    /**
-     * Whether an item arriving from a belt whose travel direction is
-     * {@code sourceFacing} is allowed in (enforces input-side directionality).
-     */
-    protected abstract boolean acceptsFrom(Direction sourceFacing);
+    protected abstract boolean acceptsFrom(Direction var1);
 
-    /** Choose an output side that currently has a non-full receiver (or null to hold). */
-    protected abstract Direction chooseExit(CEWorld world, BlockPos pos);
+    protected abstract Direction chooseExit(CEWorld var1, BlockPos var2);
 
-    /** Notify the subclass that a stack left via {@code dir} (splitter balances on this). */
     protected void onDispatched(Direction dir) {
     }
 
-    // ---------------- ticking ----------------
-
-    @Override
-    @SuppressWarnings("unchecked")
-    public <C extends BlockEntityController> net.momirealms.craftengine.core.block.entity.tick.BlockEntityTicker<C> createBlockEntityTicker(
-            CEWorld world, ImmutableBlockState state) {
-        return BlockEntityController.createTickerHelper(
-                (net.momirealms.craftengine.core.block.entity.tick.BlockEntityTicker<AbstractRouterBlockEntity>) AbstractRouterBlockEntity::tick);
+    public <C extends BlockEntityController> BlockEntityTicker<C> createBlockEntityTicker(CEWorld world, ImmutableBlockState state) {
+        return BlockEntityController.createTickerHelper(AbstractRouterBlockEntity::tick);
     }
 
     public static void tick(CEWorld world, BlockPos pos, ImmutableBlockState state, AbstractRouterBlockEntity self) {
-        self.updateRpm(world, pos); // relay power every tick (so output belts see it even when idle)
-        self.maybeUpdateActivated(world, pos, self.relayedRpm > 0f); // on/off model swap by RPM
+        self.updateRpm(world, pos);
+        self.maybeUpdateActivated(world, pos, self.relayedRpm > 0.0f);
         self.advanceAndRender(world, pos);
     }
 
-    /** Flip the {@code activated} block-state (animated vs idle model) when relayed RPM changes. */
     private void maybeUpdateActivated(CEWorld world, BlockPos pos, boolean active) {
-        if (lastActivated != null && lastActivated == active)
+        if (this.lastActivated != null && this.lastActivated == active) {
             return;
-        ImmutableBlockState cur = blockEntity().blockState();
+        }
+        ImmutableBlockState cur = this.blockEntity().blockState();
         if (cur == null || cur.getProperty(PROP_ACTIVATED) == null) {
-            lastActivated = active; // property not defined on this block; nothing to toggle
+            this.lastActivated = active;
             return;
         }
-        String now = enumName(cur, PROP_ACTIVATED);
+        String now = AbstractRouterBlockEntity.enumName(cur, PROP_ACTIVATED);
         if (String.valueOf(active).equalsIgnoreCase(now)) {
-            lastActivated = active;
+            this.lastActivated = active;
             return;
         }
-        ImmutableBlockState ns = withEnum(cur, PROP_ACTIVATED, String.valueOf(active));
-        if (ns == cur)
+        ImmutableBlockState ns = AbstractRouterBlockEntity.withEnum(cur, PROP_ACTIVATED, String.valueOf(active));
+        if (ns == cur) {
             return;
+        }
         try {
             Object level = world.world().minecraftWorld();
-            Object bp = dev.arubik.craftengine.util.MNms.INSTANCE.constructor$BlockPos(pos.x(), pos.y(), pos.z());
+            Object bp = MNms.INSTANCE.constructor$BlockPos(pos.x(), pos.y(), pos.z());
             Object nms = ns.customBlockState().minecraftState();
-            dev.arubik.craftengine.util.MNms.INSTANCE.method$LevelWriter$setBlock(level, bp, nms, 2);
-            lastActivated = active;
-        } catch (Throwable ignored) {
+            MNms.INSTANCE.method$LevelWriter$setBlock(level, bp, nms, 2);
+            this.lastActivated = active;
+        }
+        catch (Throwable throwable) {
+            // empty catch block
         }
     }
 
-    @SuppressWarnings({ "unchecked", "rawtypes" })
     private static ImmutableBlockState withEnum(ImmutableBlockState state, String prop, String valueName) {
-        net.momirealms.craftengine.core.block.property.Property p = state.getProperty(prop);
-        if (p == null)
+        Property p = state.getProperty(prop);
+        if (p == null) {
             return state;
+        }
         try {
-            Object value = p.valueByName(valueName.toLowerCase());
-            if (value == null)
+            Comparable value = p.valueByName(valueName.toLowerCase());
+            if (value == null) {
                 value = p.valueByName(valueName);
-            if (value == null)
+            }
+            if (value == null) {
                 return state;
-            return ImmutableBlockState.with(state, p, value);
-        } catch (Throwable t) {
+            }
+            return ImmutableBlockState.with((ImmutableBlockState)state, (Property)p, value);
+        }
+        catch (Throwable t) {
             return state;
         }
     }
 
-    /** Advance each transit (at the input belt's speed) and render the carried item across the block. */
     private void advanceAndRender(CEWorld world, BlockPos pos) {
-        float inc = ConveyorMath.progressPerTick(moveRpm, ConveyorBlockEntity.BASE_RPM,
-                ConveyorBlockEntity.BASE_TRAVEL_TICKS);
-        boolean powered = moveRpm > 0f;
-        java.util.List<net.momirealms.craftengine.core.entity.player.Player> viewers =
-                world.world().getTrackedBy(new net.momirealms.craftengine.core.world.ChunkPos(pos));
-        for (int i = 0; i < slots; i++) {
-            if (slotEmpty(i)) {
-                despawnSlot(viewers, i);
-                entryDir[i] = null;
-                exitDir[i] = null;
-                progress[i] = 0f;
+        float inc = ConveyorMath.progressPerTick(this.moveRpm, 64.0f, 16);
+        boolean powered = this.moveRpm > 0.0f;
+        List viewers = world.world().getTrackedBy(new ChunkPos(pos));
+        for (int i = 0; i < this.slots; ++i) {
+            if (this.slotEmpty(i)) {
+                this.despawnSlot(viewers, i);
+                this.entryDir[i] = null;
+                this.exitDir[i] = null;
+                this.progress[i] = 0.0f;
                 continue;
             }
-            if (entryDir[i] == null)
-                entryDir[i] = facing().opposite(); // reloaded from disk: assume the input side
+            if (this.entryDir[i] == null) {
+                this.entryDir[i] = this.facing().opposite();
+            }
             if (powered) {
-                if (exitDir[i] == null) {
-                    progress[i] = Math.min(0.5f, progress[i] + inc); // entry edge -> centre
-                    if (progress[i] >= 0.5f) {
-                        Direction ex = chooseExit(world, pos);
-                        if (ex != null)
-                            exitDir[i] = ex; // else hold at the centre until an output frees
+                if (this.exitDir[i] == null) {
+                    Direction ex;
+                    this.progress[i] = Math.min(0.5f, this.progress[i] + inc);
+                    if (this.progress[i] >= 0.5f && (ex = this.chooseExit(world, pos)) != null) {
+                        this.exitDir[i] = ex;
                     }
                 } else {
-                    progress[i] = Math.min(1f, progress[i] + inc); // centre -> exit edge
-                    if (progress[i] >= 1f && dispatch(world, pos, exitDir[i], i, viewers)) {
-                        onDispatched(exitDir[i]);
-                        clearSlot(i); // display already transferred or despawned by dispatch
-                        entryDir[i] = null;
-                        exitDir[i] = null;
-                        progress[i] = 0f;
-                        continue; // (else hold at 1: downstream full -> backpressure)
+                    this.progress[i] = Math.min(1.0f, this.progress[i] + inc);
+                    if (this.progress[i] >= 1.0f && this.dispatch(world, pos, this.exitDir[i], i, viewers)) {
+                        this.onDispatched(this.exitDir[i]);
+                        this.clearSlot(i);
+                        this.entryDir[i] = null;
+                        this.exitDir[i] = null;
+                        this.progress[i] = 0.0f;
+                        continue;
                     }
                 }
             }
-            renderSlot(viewers, pos, i);
+            this.renderSlot(viewers, pos, i);
         }
     }
 
-    /**
-     * Hand slot {@code i} out toward {@code dir}, TRANSFERRING the live display entity to the
-     * receiver so the item never flickers leaving the router (belt/funnel/machine/router all adopt).
-     * Returns false (stall) if the receiver is missing/full.
-     */
-    private boolean dispatch(CEWorld world, BlockPos pos, Direction dir, int i,
-            java.util.List<net.momirealms.craftengine.core.entity.player.Player> viewers) {
+    private boolean dispatch(CEWorld world, BlockPos pos, Direction dir, int i, List<Player> viewers) {
         ConveyorReceiver r = ConveyorRouting.receiverAt(world, pos, dir);
-        if (r == null || r.isFull())
+        if (r == null || r.isFull()) {
             return false;
-        org.bukkit.inventory.ItemStack item = bukkitSlot(i);
-        if (item == null)
+        }
+        ItemStack item = this.bukkitSlot(i);
+        if (item == null) {
             return true;
-        if (r instanceof ConveyorBlockEntity belt) {
-            if (belt.adoptFromFunnel(world, item, jitter[i], displays[i], spawned[i], dir.opposite())) {
-                displays[i] = null; // entity moved on (no despawn)
-                spawned[i] = false;
+        }
+        if (r instanceof ConveyorBlockEntity) {
+            ConveyorBlockEntity belt = (ConveyorBlockEntity)r;
+            if (belt.adoptFromFunnel(world, item, this.jitter[i], this.displays[i], this.spawned[i], dir.opposite())) {
+                this.displays[i] = null;
+                this.spawned[i] = false;
                 return true;
             }
             return false;
         }
-        if (r instanceof ConveyorDisplayReceiver dr) {
-            if (dr.adoptConveyorItem(item, jitter[i], displays[i], spawned[i], dir)) {
-                displays[i] = null;
-                spawned[i] = false;
+        if (r instanceof ConveyorDisplayReceiver) {
+            ConveyorDisplayReceiver dr = (ConveyorDisplayReceiver)r;
+            if (dr.adoptConveyorItem(item, this.jitter[i], this.displays[i], this.spawned[i], dir)) {
+                this.displays[i] = null;
+                this.spawned[i] = false;
                 return true;
             }
             return false;
         }
-        if (r.receiveConveyorItem(item, dir, jitter[i])) {
-            despawnSlot(viewers, i); // generic receiver -> no adoption, pop our display
+        if (r.receiveConveyorItem(item, dir, this.jitter[i])) {
+            this.despawnSlot(viewers, i);
             return true;
         }
         return false;
     }
 
-    private void renderSlot(java.util.List<net.momirealms.craftengine.core.entity.player.Player> viewers,
-            BlockPos pos, int i) {
-        if (displays[i] == null)
-            displays[i] = new ConveyorItemDisplay();
-        ConveyorItemDisplay d = displays[i];
-        d.setNmsItem(getItem(i));
-        org.joml.Vector3f center = new org.joml.Vector3f(0.5f, ConveyorMath.BELT_TOP_Y, 0.5f);
-        org.joml.Vector3f entryEdge = new org.joml.Vector3f(0.5f + entryDir[i].stepX() * 0.5f,
-                ConveyorMath.BELT_TOP_Y, 0.5f + entryDir[i].stepZ() * 0.5f);
-        org.joml.Vector3f rel;
+    private void renderSlot(List<Player> viewers, BlockPos pos, int i) {
         Direction move;
-        if (exitDir[i] == null) {
-            rel = ConveyorMath.interpolate(entryEdge, center, Math.min(1f, progress[i] * 2f));
-            move = entryDir[i].opposite();
+        Vector3f rel;
+        if (this.displays[i] == null) {
+            this.displays[i] = new ConveyorItemDisplay();
+        }
+        ConveyorItemDisplay d = this.displays[i];
+        d.setNmsItem(this.getItem(i));
+        Vector3f center = new Vector3f(0.5f, 0.28f, 0.5f);
+        Vector3f entryEdge = new Vector3f(0.5f + (float)this.entryDir[i].stepX() * 0.5f, 0.28f, 0.5f + (float)this.entryDir[i].stepZ() * 0.5f);
+        if (this.exitDir[i] == null) {
+            rel = ConveyorMath.interpolate(entryEdge, center, Math.min(1.0f, this.progress[i] * 2.0f));
+            move = this.entryDir[i].opposite();
         } else {
-            org.joml.Vector3f exitEdge = new org.joml.Vector3f(0.5f + exitDir[i].stepX() * 0.5f,
-                    ConveyorMath.BELT_TOP_Y, 0.5f + exitDir[i].stepZ() * 0.5f);
-            rel = ConveyorMath.interpolate(center, exitEdge, Math.max(0f, (progress[i] - 0.5f) * 2f));
-            move = exitDir[i];
+            Vector3f exitEdge = new Vector3f(0.5f + (float)this.exitDir[i].stepX() * 0.5f, 0.28f, 0.5f + (float)this.exitDir[i].stepZ() * 0.5f);
+            rel = ConveyorMath.interpolate(center, exitEdge, Math.max(0.0f, (this.progress[i] - 0.5f) * 2.0f));
+            move = this.exitDir[i];
         }
-        org.joml.Quaternionf rot = ConveyorMath.itemRotation(move.stepX(), move.stepZ(), 0);
-        rot.rotateY(jitter[i]); // carry the same yaw jitter as the belts -> consistent rotation
+        Quaternionf rot = ConveyorMath.itemRotation(move.stepX(), move.stepZ(), 0);
+        rot.rotateY(this.jitter[i]);
         d.setRotation(rot);
-        d.render(viewers, pos.x() + rel.x, pos.y() + rel.y, pos.z() + rel.z, !spawned[i]);
+        d.render(viewers, (float)pos.x() + rel.x, (float)pos.y() + rel.y, (float)pos.z() + rel.z, !this.spawned[i]);
         d.consumeRotationDirty();
-        spawned[i] = true;
+        this.spawned[i] = true;
     }
 
-    private void despawnSlot(java.util.List<net.momirealms.craftengine.core.entity.player.Player> viewers, int i) {
-        if (displays[i] != null && spawned[i]) {
-            for (net.momirealms.craftengine.core.entity.player.Player p : viewers)
-                displays[i].despawn(p);
-            displays[i].clearShown();
-            spawned[i] = false;
+    private void despawnSlot(List<Player> viewers, int i) {
+        if (this.displays[i] != null && this.spawned[i]) {
+            for (Player p : viewers) {
+                this.displays[i].despawn(p);
+            }
+            this.displays[i].clearShown();
+            this.spawned[i] = false;
         }
     }
 
-    /** Drop carried items + kill displays (call on break). */
     public void dropAndDespawn() {
         try {
-            CEWorld world = blockEntity().world();
-            BlockPos pos = blockEntity().pos();
-            java.util.List<net.momirealms.craftengine.core.entity.player.Player> viewers =
-                    world.world().getTrackedBy(new net.momirealms.craftengine.core.world.ChunkPos(pos));
-            org.bukkit.World bw = (org.bukkit.World) world.world.platformWorld();
-            for (int i = 0; i < slots; i++) {
-                if (!slotEmpty(i) && bw != null)
-                    bw.dropItem(new org.bukkit.Location(bw, pos.x() + 0.5, pos.y() + 0.5, pos.z() + 0.5),
-                            bukkitSlot(i));
-                despawnSlot(viewers, i);
-                clearSlot(i);
+            CEWorld world = this.blockEntity().world();
+            BlockPos pos = this.blockEntity().pos();
+            List viewers = world.world().getTrackedBy(new ChunkPos(pos));
+            World bw = (World)world.world.platformWorld();
+            for (int i = 0; i < this.slots; ++i) {
+                if (!this.slotEmpty(i) && bw != null) {
+                    bw.dropItem(new Location(bw, (double)pos.x() + 0.5, (double)pos.y() + 0.5, (double)pos.z() + 0.5), this.bukkitSlot(i));
+                }
+                this.despawnSlot(viewers, i);
+                this.clearSlot(i);
             }
-        } catch (Throwable ignored) {
+        }
+        catch (Throwable throwable) {
+            // empty catch block
         }
     }
 }
+

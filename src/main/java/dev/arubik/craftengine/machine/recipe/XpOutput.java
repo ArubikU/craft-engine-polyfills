@@ -1,34 +1,43 @@
+/*
+ * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  net.minecraft.world.level.Level
+ */
 package dev.arubik.craftengine.machine.recipe;
 
+import dev.arubik.craftengine.data.Amount;
 import dev.arubik.craftengine.machine.block.entity.AbstractMachineBlockEntity;
+import dev.arubik.craftengine.machine.recipe.RecipeOutput;
 import net.minecraft.world.level.Level;
 
-public class XpOutput implements RecipeOutput {
+public class XpOutput
+implements RecipeOutput {
     private final float amount;
-    /** Rolled per craft when the recipe gave a provider instead of a flat number. */
-    private final dev.arubik.craftengine.data.Amount count;
+    private final Amount count;
 
     public XpOutput(float amount) {
-        this(amount, dev.arubik.craftengine.data.Amount.of((int) amount));
+        this(amount, Amount.of((int)amount));
     }
 
-    public XpOutput(float amount, dev.arubik.craftengine.data.Amount count) {
+    public XpOutput(float amount, Amount count) {
         this.amount = amount;
         this.count = count;
     }
 
     @Override
     public void dispense(Level level, AbstractMachineBlockEntity machine) {
-        machine.addXp(count.roll());
+        machine.addXp(this.count.roll());
     }
 
     @Override
     public boolean isEmpty() {
-        return amount <= 0;
+        return this.amount <= 0.0f;
     }
 
     @Override
     public Object getOutput() {
-        return amount;
+        return Float.valueOf(this.amount);
     }
 }
+

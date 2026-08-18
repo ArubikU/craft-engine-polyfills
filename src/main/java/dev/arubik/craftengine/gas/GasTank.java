@@ -1,6 +1,19 @@
+/*
+ * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  net.minecraft.core.BlockPos
+ *  net.minecraft.world.level.Level
+ */
 package dev.arubik.craftengine.gas;
 
+import dev.arubik.craftengine.block.entity.PersistentBlockEntity;
+import dev.arubik.craftengine.gas.GasCarrierImpl;
+import dev.arubik.craftengine.gas.GasKeys;
+import dev.arubik.craftengine.gas.GasStack;
+import dev.arubik.craftengine.gas.GasType;
 import dev.arubik.craftengine.util.TypedKey;
+import java.util.function.Consumer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 
@@ -8,7 +21,6 @@ public class GasTank {
     private final String name;
     private final int capacity;
     private final TypedKey<GasStack> key;
-
     private final GasType filter;
 
     public GasTank(String name, int capacity) {
@@ -26,43 +38,43 @@ public class GasTank {
     }
 
     public boolean allows(GasType gas) {
-        return filter == null || filter == gas;
+        return this.filter == null || this.filter == gas;
     }
 
     public boolean allows(GasStack gas) {
-        return allows(gas.getType());
+        return this.allows(gas.getType());
     }
 
     public TypedKey<GasStack> getKey() {
-        return key;
+        return this.key;
     }
 
-    /** The tank's name, which a menu button targets to empty just this one. */
     public String getName() {
-        return name;
+        return this.name;
     }
 
     public int getCapacity() {
-        return capacity;
+        return this.capacity;
     }
 
     public GasStack getGas(Level level, BlockPos pos) {
-        dev.arubik.craftengine.block.entity.PersistentBlockEntity be = dev.arubik.craftengine.block.entity.PersistentBlockEntity
-                .getIfLoaded(level, pos);
-        return be != null ? be.getOrDefault(key, GasStack.EMPTY) : GasStack.EMPTY;
+        PersistentBlockEntity be = PersistentBlockEntity.getIfLoaded(level, pos);
+        return be != null ? be.getOrDefault(this.key, GasStack.EMPTY) : GasStack.EMPTY;
     }
 
     public int insert(Level level, BlockPos pos, GasStack stack) {
-        if (!allows(stack))
+        if (!this.allows(stack)) {
             return 0;
-        return GasCarrierImpl.insertGas(level, pos, stack, capacity, key);
+        }
+        return GasCarrierImpl.insertGas(level, pos, stack, this.capacity, this.key);
     }
 
-    public int extract(Level level, BlockPos pos, int amount, java.util.function.Consumer<GasStack> drained) {
-        return GasCarrierImpl.extractGas(level, pos, amount, drained, key);
+    public int extract(Level level, BlockPos pos, int amount, Consumer<GasStack> drained) {
+        return GasCarrierImpl.extractGas(level, pos, amount, drained, this.key);
     }
 
     public void deplete(Level level, BlockPos pos) {
-        GasCarrierImpl.extractGas(level, pos, Integer.MAX_VALUE, null, key);
+        GasCarrierImpl.extractGas(level, pos, Integer.MAX_VALUE, null, this.key);
     }
 }
+

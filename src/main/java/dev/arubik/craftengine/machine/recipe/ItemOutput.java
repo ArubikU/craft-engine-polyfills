@@ -1,24 +1,30 @@
+/*
+ * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  net.minecraft.world.item.ItemStack
+ *  net.minecraft.world.level.Level
+ */
 package dev.arubik.craftengine.machine.recipe;
 
+import dev.arubik.craftengine.data.Amount;
 import dev.arubik.craftengine.machine.block.entity.AbstractMachineBlockEntity;
+import dev.arubik.craftengine.machine.recipe.RecipeOutput;
+import java.util.concurrent.ThreadLocalRandom;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 
-public class ItemOutput implements RecipeOutput {
+public class ItemOutput
+implements RecipeOutput {
     private final ItemStack stack;
     private final float chance;
-    /**
-     * How many to produce, rolled per craft. A recipe that wants "2 to 4 nuggets"
-     * says so with a vanilla number provider instead of needing a separate chance
-     * output per possible count.
-     */
-    private final dev.arubik.craftengine.data.Amount count;
+    private final Amount count;
 
     public ItemOutput(ItemStack stack, float chance) {
-        this(stack, chance, dev.arubik.craftengine.data.Amount.of(stack.getCount()));
+        this(stack, chance, Amount.of(stack.getCount()));
     }
 
-    public ItemOutput(ItemStack stack, float chance, dev.arubik.craftengine.data.Amount count) {
+    public ItemOutput(ItemStack stack, float chance, Amount count) {
         this.stack = stack;
         this.chance = chance;
         this.count = count;
@@ -30,34 +36,35 @@ public class ItemOutput implements RecipeOutput {
 
     @Override
     public void dispense(Level level, AbstractMachineBlockEntity machine) {
-        // Respect the drop chance: a secondary output below 1.0 only sometimes drops.
-        if (chance < 1.0f && java.util.concurrent.ThreadLocalRandom.current().nextFloat() >= chance) {
+        if (this.chance < 1.0f && ThreadLocalRandom.current().nextFloat() >= this.chance) {
             return;
         }
-        int rolled = count.roll();
-        if (rolled <= 0)
+        int rolled = this.count.roll();
+        if (rolled <= 0) {
             return;
-        ItemStack out = stack.copy();
+        }
+        ItemStack out = this.stack.copy();
         out.setCount(rolled);
         machine.addOutput(out);
     }
 
     public ItemStack getItem() {
-        return stack;
+        return this.stack;
     }
 
     @Override
     public boolean isEmpty() {
-        return stack.isEmpty();
+        return this.stack.isEmpty();
     }
 
     @Override
     public Object getOutput() {
-        return stack;
+        return this.stack;
     }
 
     @Override
     public float getChance() {
-        return chance;
+        return this.chance;
     }
 }
+

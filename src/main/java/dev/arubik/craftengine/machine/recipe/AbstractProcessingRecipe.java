@@ -1,30 +1,38 @@
+/*
+ * Decompiled with CFR 0.152.
+ */
 package dev.arubik.craftengine.machine.recipe;
-
-import java.util.List;
 
 import dev.arubik.craftengine.fluid.FluidStack;
 import dev.arubik.craftengine.fluid.FluidType;
 import dev.arubik.craftengine.gas.GasStack;
 import dev.arubik.craftengine.gas.GasType;
+import dev.arubik.craftengine.machine.recipe.FluidInput;
+import dev.arubik.craftengine.machine.recipe.FluidOutput;
+import dev.arubik.craftengine.machine.recipe.GasInput;
+import dev.arubik.craftengine.machine.recipe.GasOutput;
+import dev.arubik.craftengine.machine.recipe.RecipeInput;
+import dev.arubik.craftengine.machine.recipe.RecipeOutput;
 import dev.arubik.craftengine.machine.recipe.condition.RecipeCondition;
+import java.util.ArrayList;
+import java.util.List;
 
 public class AbstractProcessingRecipe {
     protected final List<RecipeInput> inputs;
     protected final List<RecipeOutput> outputs;
     protected final int processTime;
     protected boolean fuelRequired = true;
-    protected boolean requireOverclocked = false; // Only works when machine is overclocked
+    protected boolean requireOverclocked = false;
     protected final List<RecipeCondition> conditions;
-    /** Optional mechanical requirements: minimum RPM to run, and SU load imposed while running. */
     protected int minRpm = 0;
     protected int suCost = 0;
 
     public int getMinRpm() {
-        return minRpm;
+        return this.minRpm;
     }
 
     public int getSuCost() {
-        return suCost;
+        return this.suCost;
     }
 
     public AbstractProcessingRecipe setMechanical(int minRpm, int suCost) {
@@ -38,11 +46,10 @@ public class AbstractProcessingRecipe {
         this.outputs = outputs;
         this.processTime = processTime;
         this.requireOverclocked = false;
-        this.conditions = new java.util.ArrayList<>();
+        this.conditions = new ArrayList<RecipeCondition>();
     }
 
-    public AbstractProcessingRecipe(List<RecipeInput> inputs2, List<RecipeOutput> outputs2, int processTime2,
-            boolean fuelRequired2, boolean requireOverclocked2, List<RecipeCondition> conditions2) {
+    public AbstractProcessingRecipe(List<RecipeInput> inputs2, List<RecipeOutput> outputs2, int processTime2, boolean fuelRequired2, boolean requireOverclocked2, List<RecipeCondition> conditions2) {
         this.inputs = inputs2;
         this.outputs = outputs2;
         this.processTime = processTime2;
@@ -52,15 +59,15 @@ public class AbstractProcessingRecipe {
     }
 
     public List<RecipeInput> getInputs() {
-        return inputs;
+        return this.inputs;
     }
 
     public List<RecipeOutput> getOutputs() {
-        return outputs;
+        return this.outputs;
     }
 
     public int getProcessTime() {
-        return processTime;
+        return this.processTime;
     }
 
     public AbstractProcessingRecipe addCondition(RecipeCondition condition) {
@@ -69,7 +76,7 @@ public class AbstractProcessingRecipe {
     }
 
     public List<RecipeCondition> getConditions() {
-        return conditions;
+        return this.conditions;
     }
 
     public AbstractProcessingRecipe setFuelRequired(boolean fuelRequired) {
@@ -78,7 +85,7 @@ public class AbstractProcessingRecipe {
     }
 
     public boolean isFuelRequired() {
-        return fuelRequired;
+        return this.fuelRequired;
     }
 
     public AbstractProcessingRecipe setRequireOverclocked(boolean requireOverclocked) {
@@ -87,16 +94,20 @@ public class AbstractProcessingRecipe {
     }
 
     public boolean isRequireOverclocked() {
-        return requireOverclocked;
+        return this.requireOverclocked;
+    }
+
+    public static AbstractProcessingRecipeBuilder builder() {
+        return new AbstractProcessingRecipeBuilder();
     }
 
     public static class AbstractProcessingRecipeBuilder {
-        protected final List<RecipeInput> inputs = new java.util.ArrayList<>();
-        protected final List<RecipeOutput> outputs = new java.util.ArrayList<>();
+        protected final List<RecipeInput> inputs = new ArrayList<RecipeInput>();
+        protected final List<RecipeOutput> outputs = new ArrayList<RecipeOutput>();
         protected int processTime;
         protected boolean fuelRequired = true;
         protected boolean requireOverclocked = false;
-        protected final List<RecipeCondition> conditions = new java.util.ArrayList<>();
+        protected final List<RecipeCondition> conditions = new ArrayList<RecipeCondition>();
 
         public AbstractProcessingRecipeBuilder addInput(RecipeInput input) {
             this.inputs.add(input);
@@ -118,14 +129,13 @@ public class AbstractProcessingRecipe {
             return this;
         }
 
-        // * HELPERS *
         public AbstractProcessingRecipeBuilder addFluidInput(FluidType fluidType, int amount) {
             this.inputs.add(new FluidInput(FluidStack.of(fluidType, amount), false));
             return this;
         }
 
         public AbstractProcessingRecipeBuilder addFluidOutput(FluidType fluidType, int amount) {
-            this.outputs.add(new FluidOutput(FluidStack.of(fluidType, amount), 1));
+            this.outputs.add(new FluidOutput(FluidStack.of(fluidType, amount), 1.0f));
             return this;
         }
 
@@ -135,7 +145,7 @@ public class AbstractProcessingRecipe {
         }
 
         public AbstractProcessingRecipeBuilder addGasOutput(GasType gasType, int amount) {
-            this.outputs.add(new GasOutput(GasStack.of(gasType, amount), 1));
+            this.outputs.add(new GasOutput(GasStack.of(gasType, amount), 1.0f));
             return this;
         }
 
@@ -160,12 +170,8 @@ public class AbstractProcessingRecipe {
         }
 
         public AbstractProcessingRecipe build() {
-            return new AbstractProcessingRecipe(inputs, outputs, processTime, fuelRequired, requireOverclocked,
-                    conditions);
+            return new AbstractProcessingRecipe(this.inputs, this.outputs, this.processTime, this.fuelRequired, this.requireOverclocked, this.conditions);
         }
     }
-
-    public static AbstractProcessingRecipeBuilder builder() {
-        return new AbstractProcessingRecipeBuilder();
-    }
 }
+

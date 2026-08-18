@@ -108,8 +108,8 @@ public final class BarLoader {
             return primitive.getAsBoolean();
         if (primitive.isNumber())
             return primitive.getAsDouble() == Math.rint(primitive.getAsDouble())
-                    ? (Object) primitive.getAsLong()
-                    : (Object) primitive.getAsDouble();
+                    ?  primitive.getAsLong()
+                    :  primitive.getAsDouble();
         return primitive.getAsString();
     }
 

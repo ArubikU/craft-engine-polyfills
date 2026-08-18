@@ -1,70 +1,92 @@
+/*
+ * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  net.minecraft.core.BlockPos
+ *  net.minecraft.server.level.ServerLevel
+ *  net.minecraft.world.level.Level
+ *  net.momirealms.craftengine.bukkit.api.CraftEngineBlocks
+ *  net.momirealms.craftengine.bukkit.api.CraftEngineItems
+ *  net.momirealms.craftengine.core.block.BlockDefinition
+ *  net.momirealms.craftengine.core.block.ImmutableBlockState
+ *  net.momirealms.craftengine.core.block.property.Property
+ *  net.momirealms.craftengine.core.util.Key
+ *  org.bukkit.GameMode
+ *  org.bukkit.Location
+ *  org.bukkit.Sound
+ *  org.bukkit.block.Block
+ *  org.bukkit.block.BlockFace
+ *  org.bukkit.craftbukkit.CraftWorld
+ *  org.bukkit.entity.Player
+ *  org.bukkit.event.EventHandler
+ *  org.bukkit.event.EventPriority
+ *  org.bukkit.event.Listener
+ *  org.bukkit.event.block.Action
+ *  org.bukkit.event.player.PlayerInteractEvent
+ *  org.bukkit.inventory.EquipmentSlot
+ *  org.bukkit.inventory.InventoryHolder
+ *  org.bukkit.inventory.ItemStack
+ */
 package dev.arubik.craftengine.conveyor;
 
+import dev.arubik.craftengine.block.entity.PersistentBlockEntity;
+import dev.arubik.craftengine.conveyor.ConveyorBlockEntity;
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.Level;
+import net.momirealms.craftengine.bukkit.api.CraftEngineBlocks;
+import net.momirealms.craftengine.bukkit.api.CraftEngineItems;
+import net.momirealms.craftengine.core.block.BlockDefinition;
+import net.momirealms.craftengine.core.block.ImmutableBlockState;
+import net.momirealms.craftengine.core.block.property.Property;
+import net.momirealms.craftengine.core.util.Key;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
+import org.bukkit.Sound;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
+import org.bukkit.craftbukkit.CraftWorld;
+import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
+import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
 
-import net.momirealms.craftengine.bukkit.api.CraftEngineBlocks;
-import net.momirealms.craftengine.bukkit.api.CraftEngineItems;
-import net.momirealms.craftengine.core.block.BlockDefinition;
-import net.momirealms.craftengine.core.block.ImmutableBlockState;
-import net.momirealms.craftengine.core.block.UpdateFlags;
-import net.momirealms.craftengine.core.block.property.Property;
-import net.momirealms.craftengine.core.util.Key;
+public class FunnelPlaceListener
+implements Listener {
+    private static final Key FUNNEL_ITEM = Key.of((String)"cml", (String)"funnel");
+    private static final Key FLOOR_BLOCK = Key.of((String)"cml", (String)"floor_funnel");
+    private static final Key CEILING_BLOCK = Key.of((String)"cml", (String)"ceiling_funnel");
+    private static final Key FUNNEL_BLOCK = Key.of((String)"cml", (String)"funnel");
 
-/**
- * Single-item, context-aware placement for the funnel family.
- *
- * <p>One held item ({@code cml:funnel}) places the right block by the face you click:</p>
- * <ul>
- *   <li>click a block's TOP face &rarr; {@code cml:floor_funnel} on top of it (feeds DOWN);</li>
- *   <li>click a block's BOTTOM face &rarr; {@code cml:ceiling_funnel} under it (extracts from above);</li>
- *   <li>click a side face &rarr; the directional {@code cml:funnel} facing the player.</li>
- * </ul>
- *
- * <p>The {@code cml:funnel} item carries NO {@code block_item} behavior, so this listener is the
- * sole placement path (no double placement). All three blocks drop {@code cml:funnel} on break
- * (loot config), so the player never juggles three different items.</p>
- */
-public class FunnelPlaceListener implements Listener {
-
-    private static final Key FUNNEL_ITEM = Key.of("cml", "funnel");
-    private static final Key FLOOR_BLOCK = Key.of("cml", "floor_funnel");
-    private static final Key CEILING_BLOCK = Key.of("cml", "ceiling_funnel");
-    private static final Key FUNNEL_BLOCK = Key.of("cml", "funnel");
-
-    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    @EventHandler(priority=EventPriority.HIGH, ignoreCancelled=true)
     public void onPlace(PlayerInteractEvent e) {
-        if (e.getAction() != Action.RIGHT_CLICK_BLOCK || e.getHand() != EquipmentSlot.HAND)
+        Key blockId;
+        if (e.getAction() != Action.RIGHT_CLICK_BLOCK || e.getHand() != EquipmentSlot.HAND) {
             return;
-        org.bukkit.entity.Player player = e.getPlayer();
+        }
+        Player player = e.getPlayer();
         ItemStack hand = player.getInventory().getItemInMainHand();
-        Key id = CraftEngineItems.getCustomItemId(hand);
-        if (id == null || !FUNNEL_ITEM.equals(id))
+        Key id = CraftEngineItems.getCustomItemId((ItemStack)hand);
+        if (id == null || !FUNNEL_ITEM.equals(id)) {
             return;
-
+        }
         Block clicked = e.getClickedBlock();
         BlockFace face = e.getBlockFace();
-        if (clicked == null || face == null)
+        if (clicked == null || face == null) {
             return;
-
-        // Let players OPEN a container they click (unless sneaking) instead of placing on it.
-        if (!player.isSneaking() && clicked.getState() instanceof org.bukkit.inventory.InventoryHolder)
+        }
+        if (!player.isSneaking() && clicked.getState() instanceof InventoryHolder) {
             return;
-
+        }
         Block target = clicked.getRelative(face);
-        if (!ConveyorBlockEntity.isReplaceable(target))
+        if (!ConveyorBlockEntity.isReplaceable(target)) {
             return;
-
-        Key blockId;
+        }
         BlockFace funnelFacing = null;
         if (face == BlockFace.UP) {
             blockId = FLOOR_BLOCK;
@@ -72,52 +94,56 @@ public class FunnelPlaceListener implements Listener {
             blockId = CEILING_BLOCK;
         } else {
             blockId = FUNNEL_BLOCK;
-            // Placed against a wall: face OUT of the wall (the clicked face's normal, toward the player),
-            // not into it — player.getFacing() pointed into the wall and rendered the funnel reversed.
             funnelFacing = face;
         }
-
-        BlockDefinition def = CraftEngineBlocks.byId(blockId);
-        if (def == null)
+        BlockDefinition def = CraftEngineBlocks.byId((Key)blockId);
+        if (def == null) {
             return;
+        }
         ImmutableBlockState state = def.defaultState();
-        if (funnelFacing != null)
-            state = withFacing(state, funnelFacing);
-
+        if (funnelFacing != null) {
+            state = FunnelPlaceListener.withFacing(state, funnelFacing);
+        }
         Location loc = target.getLocation();
-        boolean placed = CraftEngineBlocks.place(loc, state, UpdateFlags.UPDATE_ALL, false);
+        boolean placed = CraftEngineBlocks.place((Location)loc, (ImmutableBlockState)state, (int)3, (boolean)false);
         e.setCancelled(true);
-        if (!placed)
+        if (!placed) {
             return;
-        // Fresh block: clear any stale persisted item from a previous occupant.
+        }
         try {
-            net.minecraft.world.level.Level level = ((org.bukkit.craftbukkit.CraftWorld) target.getWorld()).getHandle();
-            net.minecraft.core.BlockPos nmsPos = new net.minecraft.core.BlockPos(target.getX(), target.getY(), target.getZ());
-            dev.arubik.craftengine.block.entity.PersistentBlockEntity.executeAt(level, nmsPos,
-                    dev.arubik.craftengine.block.entity.PersistentBlockEntity::clear);
-        } catch (Throwable ignored) {
+            ServerLevel level = ((CraftWorld)target.getWorld()).getHandle();
+            BlockPos nmsPos = new BlockPos(target.getX(), target.getY(), target.getZ());
+            PersistentBlockEntity.executeAt((Level)level, nmsPos, PersistentBlockEntity::clear);
+        }
+        catch (Throwable throwable) {
+            // empty catch block
         }
         if (player.getGameMode() != GameMode.CREATIVE) {
             hand.setAmount(hand.getAmount() - 1);
         }
         try {
-            loc.getWorld().playSound(loc, org.bukkit.Sound.BLOCK_COPPER_PLACE, 1f, 1f);
-        } catch (Throwable ignored) {
+            loc.getWorld().playSound(loc, Sound.BLOCK_COPPER_PLACE, 1.0f, 1.0f);
+        }
+        catch (Throwable throwable) {
+            // empty catch block
         }
     }
 
-    @SuppressWarnings({ "unchecked", "rawtypes" })
     private static ImmutableBlockState withFacing(ImmutableBlockState state, BlockFace face) {
         Property p = state.getProperty("facing");
-        if (p == null)
+        if (p == null) {
             return state;
+        }
         try {
-            Object value = p.valueByName(face.name().toLowerCase());
-            if (value == null)
+            Comparable value = p.valueByName(face.name().toLowerCase());
+            if (value == null) {
                 return state;
-            return ImmutableBlockState.with(state, p, value);
-        } catch (Throwable t) {
+            }
+            return ImmutableBlockState.with((ImmutableBlockState)state, (Property)p, value);
+        }
+        catch (Throwable t) {
             return state;
         }
     }
 }
+

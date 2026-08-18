@@ -1,9 +1,17 @@
+/*
+ * Decompiled with CFR 0.152.
+ */
 package dev.arubik.craftengine.fluid;
+
+import dev.arubik.craftengine.fluid.FluidType;
 
 public class FluidStack {
     private FluidType type;
-    private int amount; // en milibuckets
-    private int pressure; // fuerza disponible
+    private int amount;
+    private int pressure;
+    public static final FluidStack EMPTY = new FluidStack(FluidType.EMPTY, 0, 0);
+    public static final FluidStack WATER_1000MB = new FluidStack(FluidType.WATER, 1000, 0);
+    public static final FluidStack LAVA_1000MB = new FluidStack(FluidType.LAVA, 1000, 0);
 
     public FluidStack(FluidType type, int amount, int pressure) {
         this.type = type;
@@ -22,29 +30,30 @@ public class FluidStack {
     }
 
     public boolean isEmpty() {
-        return type.isEmpty() || amount <= 0;
+        return this.type.isEmpty() || this.amount <= 0;
     }
 
     public boolean isFull(int maxAmount) {
-        return !type.isEmpty() && amount >= maxAmount;
+        return !this.type.isEmpty() && this.amount >= maxAmount;
     }
 
     public boolean isFluidEqual(FluidStack other) {
-        if (other == null)
+        if (other == null) {
             return false;
+        }
         return this.type == other.type && this.amount == other.amount;
     }
 
     public int getAmount() {
-        return amount;
+        return this.amount;
     }
 
     public FluidType getType() {
-        return type;
+        return this.type;
     }
 
     public int getPressure() {
-        return pressure;
+        return this.pressure;
     }
 
     public void addAmount(int mb) {
@@ -56,43 +65,40 @@ public class FluidStack {
     }
 
     public FluidStack increasePressure(int boost) {
-        return new FluidStack(type, amount, pressure + boost);
+        return new FluidStack(this.type, this.amount, this.pressure + boost);
     }
 
     public FluidStack decreasePressure() {
-        return new FluidStack(type, amount, Math.max(0, pressure - 1));
+        return new FluidStack(this.type, this.amount, Math.max(0, this.pressure - 1));
     }
 
     public FluidStack copy() {
-        return new FluidStack(type, amount, pressure);
+        return new FluidStack(this.type, this.amount, this.pressure);
     }
 
-    @Override
     public int hashCode() {
-        int result = type != null ? type.hashCode() : 0;
-        result = 31 * result + amount;
-        result = 31 * result + pressure;
+        int result = this.type != null ? this.type.hashCode() : 0;
+        result = 31 * result + this.amount;
+        result = 31 * result + this.pressure;
         return result;
     }
 
-    @Override
     public boolean equals(Object obj) {
-        if (this == obj)
+        if (this == obj) {
             return true;
-        if (!(obj instanceof FluidStack))
+        }
+        if (!(obj instanceof FluidStack)) {
             return false;
-
-        FluidStack other = (FluidStack) obj;
+        }
+        FluidStack other = (FluidStack)obj;
         return this.type == other.type && this.amount == other.amount && this.pressure == other.pressure;
     }
 
     public boolean equalsIgnorePressure(FluidStack other) {
-        if (other == null)
+        if (other == null) {
             return false;
+        }
         return this.type == other.type && this.amount == other.amount;
     }
-
-    public final static FluidStack EMPTY = new FluidStack(FluidType.EMPTY, 0, 0);
-    public final static FluidStack WATER_1000MB = new FluidStack(FluidType.WATER, 1000, 0);
-    public final static FluidStack LAVA_1000MB = new FluidStack(FluidType.LAVA, 1000, 0);
 }
+

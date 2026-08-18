@@ -1,8 +1,13 @@
+/*
+ * Decompiled with CFR 0.152.
+ */
 package dev.arubik.craftengine.machine.recipe;
 
 import dev.arubik.craftengine.gas.GasStack;
+import dev.arubik.craftengine.machine.recipe.RecipeInput;
 
-public class GasInput implements RecipeInput {
+public class GasInput
+implements RecipeInput {
     private final GasStack required;
 
     public GasInput(GasStack required) {
@@ -10,23 +15,28 @@ public class GasInput implements RecipeInput {
     }
 
     public GasStack getGas() {
-        return required;
+        return this.required;
     }
 
+    @Override
     public int getAmount() {
-        return required.getAmount();
+        return this.required.getAmount();
     }
 
     @Override
     public boolean isEmpty() {
-        return required.isEmpty();
+        return this.required.isEmpty();
     }
 
+    @Override
     public boolean matches(GasStack stack) {
-        if (stack == null || stack.isEmpty())
+        if (stack == null || stack.isEmpty()) {
             return false;
-        if (stack.getAmount() < required.getAmount())
+        }
+        if (stack.getAmount() < this.required.getAmount()) {
             return false;
-        return required.isGasEqual(stack);
+        }
+        return this.required.isGasEqual(stack);
     }
 }
+

@@ -1,46 +1,64 @@
+/*
+ * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  net.minecraft.core.BlockPos
+ *  net.minecraft.nbt.CompoundTag
+ *  net.minecraft.server.level.ServerLevel
+ *  net.minecraft.server.level.ServerPlayer
+ *  net.minecraft.world.InteractionHand
+ *  net.minecraft.world.phys.AABB
+ *  net.minecraft.world.phys.Vec3
+ *  net.momirealms.craftengine.core.entity.player.Player
+ *  net.momirealms.craftengine.core.util.Key
+ */
 package dev.arubik.craftengine.contraption.element;
 
+import dev.arubik.craftengine.contraption.core.ContraptionState;
+import dev.arubik.craftengine.contraption.element.RenderContext;
+import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.momirealms.craftengine.core.entity.player.Player;
 import net.momirealms.craftengine.core.util.Key;
 
-import java.util.List;
-
 public interface ContraptionElement {
+    public Key type();
 
-    Key type();
-    Vec3 localOffset();
-    boolean isValid();
+    public Vec3 localOffset();
 
-    /** All packet entity IDs owned by this element — BLOCK_DISPLAY, ITEM, etc. */
-    int[] entityIds();
+    public boolean isValid();
 
-    /**
-     * Local-space AABBs used to create INTERACTION click-detection entities.
-     * The overlay element reads these, manages entity lifecycle and LOD, and dispatches onInteract.
-     * Return empty list for non-interactable elements (hitbox, entity mirror, etc.).
-     */
-    default List<AABB> interactionBounds() { return List.of(); }
+    public int[] entityIds();
 
-    /** Called by the interaction overlay when a player clicks one of this element's interaction entities. */
-    default boolean onInteract(net.minecraft.server.level.ServerPlayer player,
-                               dev.arubik.craftengine.contraption.core.ContraptionState state,
-                               Vec3 hitPos, InteractionHand hand, boolean rightClick) { return false; }
+    default public List<AABB> interactionBounds() {
+        return List.of();
+    }
 
-    // ---- lifecycle ----
+    default public boolean onInteract(ServerPlayer player, ContraptionState state, Vec3 hitPos, InteractionHand hand, boolean rightClick) {
+        return false;
+    }
 
-    default void tick(RenderContext ctx) {}
-    void render(RenderContext ctx);
-    void despawn(List<Player> viewers);
-    void disassemble(ServerLevel level, BlockPos bearingPos, int quarterTurns);
+    default public void tick(RenderContext ctx) {
+    }
 
-    // ---- persistence (opt-in) ----
+    public void render(RenderContext var1);
 
-    default boolean isPersistent() { return false; }
-    default CompoundTag toNbt() { return null; }
+    public void despawn(List<Player> var1);
+
+    public void disassemble(ServerLevel var1, BlockPos var2, int var3);
+
+    default public boolean isPersistent() {
+        return false;
+    }
+
+    default public CompoundTag toNbt() {
+        return null;
+    }
 }
+

@@ -1,22 +1,57 @@
+/*
+ * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  net.kyori.adventure.text.Component
+ *  net.kyori.adventure.text.format.NamedTextColor
+ *  net.minecraft.core.BlockPos
+ *  net.minecraft.core.Direction
+ *  net.minecraft.resources.ResourceKey
+ *  net.minecraft.server.level.ServerLevel
+ *  net.minecraft.world.entity.player.Player
+ *  net.minecraft.world.item.ItemStack
+ *  net.minecraft.world.level.Level
+ *  net.minecraft.world.phys.Vec3
+ *  net.momirealms.craftengine.bukkit.api.CraftEngineItems
+ *  net.momirealms.craftengine.core.block.ImmutableBlockState
+ *  net.momirealms.craftengine.core.block.entity.BlockEntity
+ *  net.momirealms.craftengine.core.block.entity.BlockEntityController
+ *  net.momirealms.craftengine.core.block.property.Property
+ *  net.momirealms.craftengine.core.util.Key
+ *  net.momirealms.craftengine.core.world.BlockPos
+ *  net.momirealms.craftengine.libraries.nbt.CompoundTag
+ *  org.bukkit.Bukkit
+ *  org.bukkit.Material
+ *  org.bukkit.NamespacedKey
+ *  org.bukkit.World
+ *  org.bukkit.craftbukkit.CraftWorld
+ *  org.bukkit.craftbukkit.inventory.CraftItemStack
+ *  org.bukkit.entity.HumanEntity
+ *  org.bukkit.entity.Player
+ *  org.bukkit.event.inventory.ClickType
+ *  org.bukkit.event.inventory.InventoryType
+ *  org.bukkit.inventory.ItemStack
+ *  org.bukkit.inventory.meta.ItemMeta
+ */
 package dev.arubik.craftengine.contraption.behavior;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-
-import org.bukkit.Material;
-import org.bukkit.event.inventory.ClickType;
-
 import dev.arubik.craftengine.block.entity.BukkitBlockEntityTypes;
+import dev.arubik.craftengine.contraption.MovementBehavior;
 import dev.arubik.craftengine.contraption.assembly.ContraptionAssembler;
+import dev.arubik.craftengine.contraption.behavior.BearingBlockBehavior;
+import dev.arubik.craftengine.contraption.behavior.PistonBearingBehavior;
 import dev.arubik.craftengine.contraption.core.ContraptionEntity;
 import dev.arubik.craftengine.contraption.core.ContraptionManager;
+import dev.arubik.craftengine.contraption.glue.GlueRegistry;
+import dev.arubik.craftengine.contraption.listener.BearingHammerListener;
+import dev.arubik.craftengine.contraption.type.LinearContraptionType;
 import dev.arubik.craftengine.machine.attribute.MachineAttributes;
-import dev.arubik.craftengine.machine.attribute.MachineAttributes.Mod;
 import dev.arubik.craftengine.machine.block.entity.AbstractMachineBlockEntity;
+import dev.arubik.craftengine.machine.menu.GuiTitles;
 import dev.arubik.craftengine.machine.menu.MachineMenu;
 import dev.arubik.craftengine.machine.menu.MachineMenuConfig;
 import dev.arubik.craftengine.machine.menu.MenuText;
+import dev.arubik.craftengine.machine.menu.OverclockMenu;
 import dev.arubik.craftengine.machine.menu.bar.MachineBar;
 import dev.arubik.craftengine.machine.menu.bar.MachineBars;
 import dev.arubik.craftengine.machine.menu.layout.MachineLayout;
@@ -28,158 +63,119 @@ import dev.arubik.craftengine.multiblock.IOConfiguration;
 import dev.arubik.craftengine.rotation.RpmProvider;
 import dev.arubik.craftengine.util.NbtType;
 import dev.arubik.craftengine.util.TypedKey;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.UUID;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.world.item.ItemStack;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.Vec3;
 import net.momirealms.craftengine.bukkit.api.CraftEngineItems;
+import net.momirealms.craftengine.core.block.ImmutableBlockState;
 import net.momirealms.craftengine.core.block.entity.BlockEntity;
+import net.momirealms.craftengine.core.block.entity.BlockEntityController;
+import net.momirealms.craftengine.core.block.property.Property;
 import net.momirealms.craftengine.core.util.Key;
+import net.momirealms.craftengine.libraries.nbt.CompoundTag;
+import org.bukkit.Bukkit;
+import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
+import org.bukkit.World;
+import org.bukkit.craftbukkit.CraftWorld;
+import org.bukkit.craftbukkit.inventory.CraftItemStack;
+import org.bukkit.entity.HumanEntity;
+import org.bukkit.event.inventory.ClickType;
+import org.bukkit.event.inventory.InventoryType;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 
-/**
- * Per-instance config controller for a LINEAR (6-directional piston) bearing block — the block
- * entity that backs {@code cml:linear_bearing}'s right-click config menu (2026-07-03 goal). Built
- * by copying the copper-fan / crusher machine pattern EXACTLY: it extends
- * {@link AbstractMachineBlockEntity} so it gets a config-driven {@link MachineMenu}, upgrade INPUT
- * slots, and NBT persistence for free; {@link BearingBlockBehavior} (an {@code EntityBlock}) creates
- * it and opens {@link #getMenu()} on {@code useWithoutItem}.
- *
- * <p>It stores the piston's per-instance tunables — {@link #distance}, {@link #speedBlocksPerSec},
- * {@link PistonBearingBehavior.Mode mode}, {@link #roundRobinDelayTicks dwell} — which the player
- * edits with the menu's control buttons, and which {@code ContraptionAssembler.attachDefaultBehavior}
- * reads (falling back to the block YAML defaults on {@link BearingBlockBehavior} when no block entity
- * exists) to build the {@link PistonBearingBehavior}.
- *
- * <p>rpm/su handling mirrors {@code CrusherBlockEntity}: every tick it scans the 6 neighbors for the
- * strongest adjacent {@link RpmProvider} to surface the bearing's LIVE rpm (what the piston will draw
- * from once assembled) and the SU it will demand, shown in the menu's rpm gauge. The SU figure uses
- * the SAME {@code suPerBlock * distanceMultiplier} scaling {@link PistonBearingBehavior} reports to the
- * real motor each tick, so the menu preview matches the running load.
- *
- * <p>Upgrades use the SAME {@code upgrades:} config form as the fan/crusher ({@link MachineAttributes}
- * item→{@link Mod} defs): GENERATION raises effective speed, FUEL_EFFICIENCY cuts the SU drawn,
- * OVERCLOCK_LIMIT unlocks the player overclock, EXTRA_SLOTS unlocks more upgrade slots. They are folded
- * into a single {@link UpgradeModifiers} ({@code speed = 1+generation+overclock}, {@code fuel = 1−eff})
- * exposed via {@link #upgradeModifiers()} — the exact object the assembler multiplies against.
- */
-public class PistonBearingBlockEntity extends AbstractMachineBlockEntity {
-
-    public static final int UPGRADE_SLOTS = 9; // container indices 0..8 (same as fan/crusher)
+public class PistonBearingBlockEntity
+extends AbstractMachineBlockEntity {
+    public static final int UPGRADE_SLOTS = 9;
     private static final int BASE_UNLOCKED = 3;
     private static final int DEFAULT_MENU_SIZE = 27;
-
-    // Per-instance config (seeded from the block YAML defaults, then player-tunable via the menu).
     private int distance;
     private double speedBlocksPerSec;
     private PistonBearingBehavior.Mode mode;
     private long roundRobinDelayTicks;
-
-    // Config knobs handed down from the behavior (defaults + su cost per captured block).
     private final int defaultDistance;
     private final double defaultSpeed;
     private final PistonBearingBehavior.Mode defaultMode;
     private final long defaultRoundRobinDelay;
     private final double suPerBlock;
-
-    private final Map<Key, List<Mod>> upgradeDefs;
+    private final Map<Key, List<MachineAttributes.Mod>> upgradeDefs;
     private final List<MachineBar> bars;
     private final MachineMenuConfig menuConfig;
     private final int menuSize;
-
-    private static final org.bukkit.inventory.ItemStack FILLER = MenuText.emptyFiller();
-
-    // Player-tunable overclock fraction in [-limit, +limit]; raises speed AND rpm/su demand.
-    private float overclock = 0f;
-
-    // Derived each tick from installed upgrades + overclock.
-    private double curGeneration = 0;
-    private double curOverclockLimit = 0;
-    private double curFuelEff = 0;
-    private int curUnlocked = BASE_UNLOCKED;
-
-    // Live rpm read from the strongest adjacent motor (0 = no motor -> fallback speed).
-    private float inputRpm = 0f;
-
-    private int page = 0; // 0 main, 1 upgrades, 2 overclock
+    private static final ItemStack FILLER = MenuText.emptyFiller();
+    private float overclock = 0.0f;
+    private double curGeneration = 0.0;
+    private double curOverclockLimit = 0.0;
+    private double curFuelEff = 0.0;
+    private int curUnlocked = 3;
+    private float inputRpm = 0.0f;
+    private int page = 0;
     private MachineMenu active;
     private int shownUnlocked = -1;
+    private static final TypedKey<Integer> KEY_DISTANCE = TypedKey.of("craftengine", "bearing_distance", NbtType.INTEGER);
+    private static final TypedKey<Float> KEY_SPEED = TypedKey.of("craftengine", "bearing_speed", NbtType.FLOAT);
+    private static final TypedKey<String> KEY_MODE = TypedKey.of("craftengine", "bearing_mode", NbtType.STRING);
+    private static final TypedKey<Long> KEY_DWELL = TypedKey.of("craftengine", "bearing_dwell", NbtType.LONG);
+    private static final TypedKey<Float> KEY_OC = TypedKey.of("craftengine", "bearing_overclock", NbtType.FLOAT);
+    private final boolean inert;
+    private UUID cachedWorldId;
+    private boolean prevRedstone = false;
+    private int attachedBlocks = 1;
+    private long homeDwellTimer = 0L;
 
-    private static final TypedKey<Integer> KEY_DISTANCE = TypedKey.of("craftengine", "bearing_distance",
-            NbtType.INTEGER);
-    private static final TypedKey<Float> KEY_SPEED = TypedKey.of("craftengine", "bearing_speed",
-            NbtType.FLOAT);
-    private static final TypedKey<String> KEY_MODE = TypedKey.of("craftengine", "bearing_mode",
-            NbtType.STRING);
-    private static final TypedKey<Long> KEY_DWELL = TypedKey.of("craftengine", "bearing_dwell",
-            NbtType.LONG);
-    private static final TypedKey<Float> KEY_OC = TypedKey.of("craftengine", "bearing_overclock",
-            NbtType.FLOAT);
-
-    public PistonBearingBlockEntity(BlockEntity blockEntity, Map<Key, List<Mod>> upgradeDefs,
-            List<MachineBar> bars, MachineMenuConfig menuConfig,
-            int defaultDistance, double defaultSpeed, PistonBearingBehavior.Mode defaultMode,
-            long defaultRoundRobinDelay, double suPerBlock) {
-        super(blockEntity, menuConfig != null && menuConfig.menuSize > 0 ? menuConfig.menuSize : DEFAULT_MENU_SIZE);
-        this.upgradeDefs = upgradeDefs == null ? new java.util.HashMap<>() : upgradeDefs;
-        this.bars = bars == null ? new ArrayList<>() : bars;
-        this.menuConfig = menuConfig != null ? menuConfig : defaultMenuConfig();
-        this.menuSize = this.menuConfig.menuSize > 0 ? this.menuConfig.menuSize : DEFAULT_MENU_SIZE;
+    public PistonBearingBlockEntity(BlockEntity blockEntity, Map<Key, List<MachineAttributes.Mod>> upgradeDefs, List<MachineBar> bars, MachineMenuConfig menuConfig, int defaultDistance, double defaultSpeed, PistonBearingBehavior.Mode defaultMode, long defaultRoundRobinDelay, double suPerBlock) {
+        super(blockEntity, menuConfig != null && menuConfig.menuSize > 0 ? menuConfig.menuSize : 27);
+        this.upgradeDefs = upgradeDefs == null ? new HashMap() : upgradeDefs;
+        this.bars = bars == null ? new ArrayList() : bars;
+        this.menuConfig = menuConfig != null ? menuConfig : PistonBearingBlockEntity.defaultMenuConfig();
+        this.menuSize = this.menuConfig.menuSize > 0 ? this.menuConfig.menuSize : 27;
         this.defaultDistance = Math.max(1, defaultDistance);
         this.defaultSpeed = defaultSpeed;
         this.defaultMode = defaultMode == null ? PistonBearingBehavior.Mode.LINEAR : defaultMode;
-        this.defaultRoundRobinDelay = Math.max(0, defaultRoundRobinDelay);
+        this.defaultRoundRobinDelay = Math.max(0L, defaultRoundRobinDelay);
         this.suPerBlock = suPerBlock;
-
-        // Seed the live config from the definition defaults (loadCustomData overrides on reload).
         this.distance = this.defaultDistance;
         this.speedBlocksPerSec = this.defaultSpeed;
         this.mode = this.defaultMode;
         this.roundRobinDelayTicks = this.defaultRoundRobinDelay;
-
-        // Upgrade module storage in container slots 0..8. No IO faces / recipes — a bearing is a pure
-        // config block, so no IOConfiguration item roles are declared (upgrade slots aren't hopper-piped).
-        setIOConfiguration(new IOConfiguration.Closed());
-        setMaxStackSize(64);
+        this.setIOConfiguration(new IOConfiguration.Closed());
+        this.setMaxStackSize(64);
         this.requiresRedstone = false;
-
-        // Decorative piston-pole pieces (part=1/2/3: body/head/shaft, placed as REAL blocks by the
-        // euler drop) must stay INERT — no redstone-driven assembly, no menu (2026-07-04 fix — this
-        // used to be enforced by BearingBlockBehavior#createBlockEntityController returning null for
-        // part!=0, which crashed CraftEngine's OWN chunk deserializer on a persisted world whose
-        // schema had since drifted ("Cannot invoke BlockEntityController.hasElement() because
-        // this.controller is null" — CraftEngine's BlockEntity constructor unconditionally assumes a
-        // non-null controller once NBT records one existed; returning null there is never safe). The
-        // controller is now ALWAYS created; this flag is the ONLY place part!=0 is special-cased.
         boolean inertPart = false;
         try {
-            net.momirealms.craftengine.core.block.ImmutableBlockState ce = blockEntity.blockState();
-            if (ce != null) {
-                @SuppressWarnings("rawtypes")
-                net.momirealms.craftengine.core.block.property.Property partProp = ce.getProperty("part");
-                if (partProp != null) {
-                    Object v = ce.get(partProp);
-                    if (v instanceof Integer pi && pi != 0) {
-                        inertPart = true;
-                    }
-                }
+            Integer pi;
+            Comparable v;
+            Property partProp;
+            ImmutableBlockState ce = blockEntity.blockState();
+            if (ce != null && (partProp = ce.getProperty("part")) != null && (v = ce.get(partProp)) instanceof Integer && (pi = (Integer)v) != 0) {
+                inertPart = true;
             }
-        } catch (Throwable ignored) {
+        }
+        catch (Throwable throwable) {
+            // empty catch block
         }
         this.inert = inertPart;
     }
 
-    /** True for a decorative body/head/shaft piece (part!=0) — see constructor javadoc. */
-    private final boolean inert;
-
     public boolean isInert() {
-        return inert;
+        return this.inert;
     }
 
     private static MachineMenuConfig defaultMenuConfig() {
-        return new MachineMenuConfig(DEFAULT_MENU_SIZE, null, new int[0], new int[0], new int[0],
-                new ArrayList<>(), -1);
+        return new MachineMenuConfig(27, null, new int[0], new int[0], new int[0], new ArrayList<MachineMenuConfig.Button>(), -1);
     }
 
     @Override
@@ -189,69 +185,60 @@ public class PistonBearingBlockEntity extends AbstractMachineBlockEntity {
 
     @Override
     protected boolean requiresFuel() {
-        return false; // mechanical/config block — no fuel
+        return false;
     }
 
-    // ---------------- per-instance config accessors (read by the assembler) ----------------
-
-    /** Configured piston travel distance in blocks (after any upgrades/overclock have NOT been applied). */
     public int distance() {
-        return Math.max(1, distance);
+        return Math.max(1, this.distance);
     }
 
-    /** Configured base traction speed (blocks/sec) BEFORE upgrade/overclock speed multiplier. */
     public double speedBlocksPerSec() {
-        return speedBlocksPerSec;
+        return this.speedBlocksPerSec;
     }
 
     public PistonBearingBehavior.Mode mode() {
-        return mode == null ? PistonBearingBehavior.Mode.LINEAR : mode;
+        return this.mode == null ? PistonBearingBehavior.Mode.LINEAR : this.mode;
     }
 
     public long roundRobinDelayTicks() {
-        return Math.max(0, roundRobinDelayTicks);
+        return Math.max(0L, this.roundRobinDelayTicks);
     }
 
     public double suPerBlock() {
-        return suPerBlock;
+        return this.suPerBlock;
     }
 
-    /**
-     * Aggregate upgrade + overclock effect the assembler multiplies against (same object the crusher
-     * exposes): {@code speedMultiplier = 1 + generation + overclock}, {@code fuelMultiplier = 1 − eff}.
-     * A LOWER fuelMultiplier means the piston draws LESS su per block (efficiency upgrades). yieldBonus
-     * is unused for a bearing.
-     */
     public UpgradeModifiers upgradeModifiers() {
-        recomputeUpgrades();
+        this.recomputeUpgrades();
         return this.upgradeModifiers;
     }
 
-    // ---------------- upgrades (attribute system, exactly like the crusher) ----------------
-
     @Override
     public int[] getUpgradeSlots() {
-        int[] s = new int[UPGRADE_SLOTS];
-        for (int i = 0; i < UPGRADE_SLOTS; i++)
+        int[] s = new int[9];
+        for (int i = 0; i < 9; ++i) {
             s[i] = i;
+        }
         return s;
     }
 
     private Key itemId(int slot) {
-        ItemStack nms = getItem(slot);
-        if (nms == null || nms.isEmpty())
+        net.minecraft.world.item.ItemStack nms = this.getItem(slot);
+        if (nms == null || nms.isEmpty()) {
             return null;
-        org.bukkit.inventory.ItemStack b = org.bukkit.craftbukkit.inventory.CraftItemStack.asBukkitCopy(nms);
-        Key custom = CraftEngineItems.getCustomItemId(b);
-        if (custom != null)
+        }
+        ItemStack b = CraftItemStack.asBukkitCopy((net.minecraft.world.item.ItemStack)nms);
+        Key custom = CraftEngineItems.getCustomItemId((ItemStack)b);
+        if (custom != null) {
             return custom;
-        org.bukkit.NamespacedKey nk = b.getType().getKey();
-        return Key.of(nk.getNamespace(), nk.getKey());
+        }
+        NamespacedKey nk = b.getType().getKey();
+        return Key.of((String)nk.getNamespace(), (String)nk.getKey());
     }
 
-    private List<Mod> modsOf(int slot) {
-        Key id = itemId(slot);
-        return id == null ? null : upgradeDefs.get(id);
+    private List<MachineAttributes.Mod> modsOf(int slot) {
+        Key id = this.itemId(slot);
+        return id == null ? null : this.upgradeDefs.get(id);
     }
 
     private static double clamp(double v, double lo, double hi) {
@@ -260,259 +247,193 @@ public class PistonBearingBlockEntity extends AbstractMachineBlockEntity {
 
     @Override
     protected void recomputeUpgrades() {
-        // Pass 1: unlocked-slot count from EXTRA_SLOTS across all installed upgrades.
-        List<Mod> all = new ArrayList<>();
-        for (int i = 0; i < UPGRADE_SLOTS; i++) {
-            List<Mod> m = modsOf(i);
-            if (m != null)
-                all.addAll(m);
+        ArrayList<MachineAttributes.Mod> all = new ArrayList<MachineAttributes.Mod>();
+        for (int i = 0; i < 9; ++i) {
+            List<MachineAttributes.Mod> m = this.modsOf(i);
+            if (m == null) continue;
+            all.addAll(m);
         }
-        int extra = (int) Math.round(MachineAttributes.compute(all)
-                .getOrDefault(MachineAttributes.EXTRA_SLOTS, 0.0));
-        this.curUnlocked = Math.max(BASE_UNLOCKED, Math.min(UPGRADE_SLOTS, BASE_UNLOCKED + extra));
-
-        // Pass 2: effect attributes only from upgrades in unlocked slots.
-        List<Mod> active = new ArrayList<>();
-        for (int i = 0; i < curUnlocked; i++) {
-            List<Mod> m = modsOf(i);
-            if (m != null)
-                active.addAll(m);
+        int extra = (int)Math.round(MachineAttributes.compute(all).getOrDefault(MachineAttributes.EXTRA_SLOTS, 0.0));
+        this.curUnlocked = Math.max(3, Math.min(9, 3 + extra));
+        ArrayList<MachineAttributes.Mod> active = new ArrayList<MachineAttributes.Mod>();
+        for (int i = 0; i < this.curUnlocked; ++i) {
+            List<MachineAttributes.Mod> m = this.modsOf(i);
+            if (m == null) continue;
+            active.addAll(m);
         }
-        var attrs = MachineAttributes.compute(active);
-        this.curGeneration = clamp(attrs.getOrDefault(MachineAttributes.GENERATION, 0.0), -0.95, 32.0);
-        this.curOverclockLimit = clamp(attrs.getOrDefault(MachineAttributes.OVERCLOCK_LIMIT, 0.0), 0.0, 32.0);
-        this.curFuelEff = clamp(attrs.getOrDefault(MachineAttributes.FUEL_EFFICIENCY, 0.0), -32.0, 0.95);
-        this.overclock = (float) clamp(this.overclock, -Math.min(this.curOverclockLimit, 0.99),
-                this.curOverclockLimit);
-
-        // speed = base speed factor (1 + generation + overclock); fuel = 1 − efficiency (su multiplier).
-        double speed = Math.max(0.05, 1.0 + curGeneration + overclock);
-        double fuel = clamp(1.0 - curFuelEff, 0.05, 4.0);
+        Map<Key, Double> attrs = MachineAttributes.compute(active);
+        this.curGeneration = PistonBearingBlockEntity.clamp(attrs.getOrDefault(MachineAttributes.GENERATION, 0.0), -0.95, 32.0);
+        this.curOverclockLimit = PistonBearingBlockEntity.clamp(attrs.getOrDefault(MachineAttributes.OVERCLOCK_LIMIT, 0.0), 0.0, 32.0);
+        this.curFuelEff = PistonBearingBlockEntity.clamp(attrs.getOrDefault(MachineAttributes.FUEL_EFFICIENCY, 0.0), -32.0, 0.95);
+        this.overclock = (float)PistonBearingBlockEntity.clamp(this.overclock, -Math.min(this.curOverclockLimit, 0.99), this.curOverclockLimit);
+        double speed = Math.max(0.05, 1.0 + this.curGeneration + (double)this.overclock);
+        double fuel = PistonBearingBlockEntity.clamp(1.0 - this.curFuelEff, 0.05, 4.0);
         this.upgradeModifiers = new UpgradeModifiers(speed, fuel, 0.0);
     }
 
-    // ---------------- rpm/su preview (mirrors the crusher's motor scan) ----------------
-
-    /**
-     * The SU this bearing WILL demand from the real motor per tick once assembled, previewed here for
-     * the menu: {@code suPerBlock * distanceMultiplier}, times the upgrade fuel multiplier. This is the
-     * per-captured-block figure {@link PistonBearingBehavior} multiplies by the live block count at run
-     * time — the menu shows the per-block rate since the structure isn't captured yet.
-     */
     public double previewSuPerBlock() {
-        double distanceMult = 1.0 + 0.10 * Math.max(0, distance() - 1);
-        return suPerBlock * distanceMult * this.upgradeModifiers.fuelMultiplier();
+        double distanceMult = 1.0 + 0.1 * (double)Math.max(0, this.distance() - 1);
+        return this.suPerBlock * distanceMult * this.upgradeModifiers.fuelMultiplier();
     }
 
-    /** Effective traction speed (blocks/sec) once upgrades/overclock are applied — menu preview. */
     public double previewSpeed() {
-        double base = inputRpm > 0f ? inputRpm / 60.0 : speedBlocksPerSec;
+        double base = this.inputRpm > 0.0f ? (double)this.inputRpm / 60.0 : this.speedBlocksPerSec;
         return base * this.upgradeModifiers.speedMultiplier();
     }
 
     @Override
     public double[] barStat(String id) {
-        if ("rpm".equals(id))
-            return new double[] { inputRpm > 0f ? 100 : 0, 100 };
+        if ("rpm".equals(id)) {
+            return new double[]{this.inputRpm > 0.0f ? 100.0 : 0.0, 100.0};
+        }
         return super.barStat(id);
     }
 
     @Override
-    public java.util.Map<String, String> barPlaceholders(String id) {
+    public Map<String, String> barPlaceholders(String id) {
         if ("rpm".equals(id)) {
-            java.util.Map<String, String> m = new java.util.HashMap<>();
-            m.put("rpm", String.valueOf((int) inputRpm));
-            // Required rpm to reach the configured traction speed (speed = rpm / 60 — see
-            // PistonBearingBehavior). Fills the %req% placeholder in the bar lore.
-            m.put("req", String.valueOf((int) Math.round(previewSpeed() * 60.0)));
-            // TOTAL su for the whole attached structure (per-block x attached block count) — what the
-            // bearing will actually draw, not just the per-block figure.
-            m.put("su", String.valueOf((int) Math.round(previewSuPerBlock() * attachedBlocks)));
-            m.put("blocks", String.valueOf(attachedBlocks));
-            m.put("speed", String.format(java.util.Locale.ROOT, "%.2f", previewSpeed()));
+            HashMap<String, String> m = new HashMap<String, String>();
+            m.put("rpm", String.valueOf((int)this.inputRpm));
+            m.put("req", String.valueOf((int)Math.round(this.previewSpeed() * 60.0)));
+            m.put("su", String.valueOf((int)Math.round(this.previewSuPerBlock() * (double)this.attachedBlocks)));
+            m.put("blocks", String.valueOf(this.attachedBlocks));
+            m.put("speed", String.format(Locale.ROOT, "%.2f", this.previewSpeed()));
             return m;
         }
         return super.barPlaceholders(id);
     }
 
-    // ---------------- tick: pull live rpm from the strongest adjacent motor ----------------
-
     @Override
-    public void tick(Level level, BlockPos pos, net.momirealms.craftengine.core.block.ImmutableBlockState state) {
-        if (inert) {
-            return; // decorative body/head/shaft piece — no redstone/rpm/menu logic at all
-        }
-        if (active != null)
-            active.tick();
-        if (!level.isClientSide()) {
-            this.inputRpm = 0f;
-            float bestPot = 0f;
-            net.momirealms.craftengine.core.world.BlockPos cePos =
-                    new net.momirealms.craftengine.core.world.BlockPos(getMachinePos().getX(),
-                            getMachinePos().getY(), getMachinePos().getZ());
-            for (Direction d : Direction.values()) {
-                BlockEntity be = BukkitBlockEntityTypes.getIfLoaded(level, getMachinePos().relative(d));
-                if (be != null && be.controller instanceof RpmProvider p && p.isRpmSource()
-                        && p.potentialRpm() > bestPot) {
-                    if (!p.rpmReaches(cePos))
-                        continue;
-                    bestPot = p.potentialRpm();
-                    this.inputRpm = p.getRpm();
-                }
-            }
-        }
-        if (!level.isClientSide() && level instanceof net.minecraft.server.level.ServerLevel sl) {
-            this.cachedWorldId = sl.getWorld().getUID(); // for pushToLiveContraption (menu edits)
-            redstoneDriver(sl); // no-hammer: redstone assembles/extends/retracts this bearing
-        }
-        super.tick(level, pos, state); // recomputeUpgrades (via processTick) + menu bookkeeping
-        if (!level.isClientSide())
-            refreshUpgradePageIfNeeded();
-    }
-
-    /** Cached world UID (set each tick) so a menu edit can locate this bearing's live contraption. */
-    private java.util.UUID cachedWorldId;
-    private boolean prevRedstone = false;
-    /** Blocks currently attached (assembled count, or the glued structure the bearing points at). */
-    private int attachedBlocks = 1;
-
-    /**
-     * No-hammer redstone control (2026-07-03 — "quita el hammer assembly al bearing... para eso
-     * existe la redstone"). Runs every server tick on the FULL bearing block. Grabs the glued
-     * structure the bearing points at and assembles it itself; redstone drives it: LINEAR/EULER/
-     * ROBIN_EULER pulse to extend, ROUND_ROBIN is on/off (powered = running, unpowered = return home).
-     * When a returned load is fully retracted it disassembles back into real blocks.
-     */
-    private void redstoneDriver(net.minecraft.server.level.ServerLevel sl) {
-        net.minecraft.core.BlockPos pos = getMachinePos();
-        boolean redstone;
-        try {
-            redstone = sl.hasNeighborSignal(pos);
-        } catch (Throwable t) {
+    public void tick(Level level, BlockPos pos, ImmutableBlockState state) {
+        if (this.inert) {
             return;
         }
-        boolean rising = redstone && !prevRedstone;
-        prevRedstone = redstone;
+        if (this.active != null) {
+            this.active.tick();
+        }
+        if (!level.isClientSide()) {
+            this.inputRpm = 0.0f;
+            float bestPot = 0.0f;
+            net.momirealms.craftengine.core.world.BlockPos cePos = new net.momirealms.craftengine.core.world.BlockPos(this.getMachinePos().getX(), this.getMachinePos().getY(), this.getMachinePos().getZ());
+            for (Direction d : Direction.values()) {
+                RpmProvider p;
+                BlockEntityController blockEntityController;
+                BlockEntity be = BukkitBlockEntityTypes.getIfLoaded(level, this.getMachinePos().relative(d));
+                if (be == null || !((blockEntityController = be.controller) instanceof RpmProvider) || !(p = (RpmProvider)blockEntityController).isRpmSource() || !(p.potentialRpm() > bestPot) || !p.rpmReaches(cePos)) continue;
+                bestPot = p.potentialRpm();
+                this.inputRpm = p.getRpm();
+            }
+        }
+        if (!level.isClientSide() && level instanceof ServerLevel) {
+            ServerLevel sl = (ServerLevel)level;
+            this.cachedWorldId = sl.getWorld().getUID();
+            this.redstoneDriver(sl);
+        }
+        super.tick(level, pos, state);
+        if (!level.isClientSide()) {
+            this.refreshUpgradePageIfNeeded();
+        }
+    }
 
-        org.bukkit.World world = sl.getWorld();
-        net.minecraft.resources.ResourceKey<net.minecraft.world.level.Level> worldId =
-            ((org.bukkit.craftbukkit.CraftWorld) world).getHandle().dimension();
-        java.util.UUID cid = dev.arubik.craftengine.contraption.listener.BearingHammerListener
-                .assembledContraptionAt(worldId, pos);
-        ContraptionEntity entity =
-                cid != null ? ContraptionManager.get(cid) : null;
-
-        // Cache how many blocks are/will be moved, for the menu's live total su/rpm preview
-        // (2026-07-03 — "el ui no muestra el rpm y su que usara ... de lo que esta pegado").
+    private void redstoneDriver(ServerLevel sl) {
+        ContraptionEntity entity;
+        boolean redstone;
+        BlockPos pos = this.getMachinePos();
+        try {
+            redstone = sl.hasNeighborSignal(pos);
+        }
+        catch (Throwable t) {
+            return;
+        }
+        boolean rising = redstone && !this.prevRedstone;
+        this.prevRedstone = redstone;
+        CraftWorld world = sl.getWorld();
+        ResourceKey worldId = world.getHandle().dimension();
+        UUID cid = BearingHammerListener.assembledContraptionAt((ResourceKey<Level>)worldId, pos);
+        ContraptionEntity contraptionEntity = entity = cid != null ? ContraptionManager.get(cid) : null;
         if (entity != null && entity.state().level() != null) {
             this.attachedBlocks = Math.max(1, entity.state().level().blockCount());
         } else {
-            net.minecraft.world.phys.Vec3 f = dev.arubik.craftengine.contraption.behavior.BearingBlockBehavior
-                    .facingVecAt(sl, pos);
-            net.minecraft.core.BlockPos front = pos.offset((int) Math.round(f.x), (int) Math.round(f.y),
-                    (int) Math.round(f.z));
-            this.attachedBlocks = Math.max(1, dev.arubik.craftengine.contraption.glue.GlueRegistry
-                    .structureAt(sl.dimension(), front).size());
+            Vec3 f = BearingBlockBehavior.facingVecAt((Level)sl, pos);
+            BlockPos front = pos.offset((int)Math.round(f.x), (int)Math.round(f.y), (int)Math.round(f.z));
+            this.attachedBlocks = Math.max(1, GlueRegistry.structureAt((ResourceKey<Level>)sl.dimension(), front).size());
         }
-
         if (entity == null) {
-            // At rest. If the load is EXTENDED-solid, LinearContraptionType owns re-grab → skip.
-            if (dev.arubik.craftengine.contraption.type.LinearContraptionType.isExtendedSolid(worldId, pos)) {
-                homeDwellTimer = 0;
+            boolean go;
+            if (LinearContraptionType.isExtendedSolid((ResourceKey<Level>)worldId, pos)) {
+                this.homeDwellTimer = 0L;
                 return;
             }
-            // HOME-solid: trigger the next EXTEND. LINEAR = redstone pulse; ROUND_ROBIN = powered
-            // auto-cycle after the dwell (2026-07-03 unify — solid at rest, move on trigger).
-            boolean go;
-            if (mode() == PistonBearingBehavior.Mode.ROUND_ROBIN) {
+            if (this.mode() == PistonBearingBehavior.Mode.ROUND_ROBIN) {
                 if (redstone) {
-                    go = (++homeDwellTimer >= Math.max(1, roundRobinDelayTicks));
+                    go = ++this.homeDwellTimer >= Math.max(1L, this.roundRobinDelayTicks);
                 } else {
-                    homeDwellTimer = 0;
+                    this.homeDwellTimer = 0L;
                     go = false;
                 }
             } else {
                 go = rising;
             }
             if (go) {
-                homeDwellTimer = 0;
-                ContraptionEntity e =
-                        ContraptionAssembler.assemblePiston(world, pos);
+                this.homeDwellTimer = 0L;
+                ContraptionEntity e = ContraptionAssembler.assemblePiston((World)world, pos);
                 if (e != null) {
-                    dev.arubik.craftengine.contraption.listener.BearingHammerListener.markAssembled(worldId, pos, e.state().id());
+                    BearingHammerListener.markAssembled((ResourceKey<Level>)worldId, pos, e.state().id());
                 }
             }
             return;
         }
-
-        // Moving contraption: when it finishes RETRACTING, turn the load into real blocks at home.
-        // (Reaching the extended end is handled by ContraptionEngine via wantsDisassembleAtEnd →
-        // LinearContraptionType, which drops it as real EXTENDED-solid blocks + shaft.)
-        homeDwellTimer = 0;
+        this.homeDwellTimer = 0L;
         PistonBearingBehavior piston = null;
-        for (dev.arubik.craftengine.contraption.MovementBehavior b : entity.state().behaviors()) {
-            if (b instanceof PistonBearingBehavior p) {
-                piston = p;
-                break;
-            }
+        for (MovementBehavior b : entity.state().behaviors()) {
+            PistonBearingBehavior p;
+            if (!(b instanceof PistonBearingBehavior)) continue;
+            piston = p = (PistonBearingBehavior)b;
+            break;
         }
         if (piston != null && piston.isFullyRetracted()) {
             try {
-                ContraptionAssembler.disassemble(world, entity);
-            } catch (Throwable ignored) {
+                ContraptionAssembler.disassemble((World)world, entity);
             }
-            dev.arubik.craftengine.contraption.listener.BearingHammerListener.forgetAssembled(cid);
+            catch (Throwable throwable) {
+                // empty catch block
+            }
+            BearingHammerListener.forgetAssembled(cid);
         }
     }
 
-    private long homeDwellTimer = 0;
-
-    /**
-     * Pushes the current config to a LIVE (assembled) piston contraption so menu edits take effect
-     * immediately, not only on the next assembly (2026-07-03 — "cambiar el modo mientras esta
-     * encendido"). No-op if this bearing isn't currently assembled.
-     */
     private void pushToLiveContraption() {
-        if (cachedWorldId == null) {
+        if (this.cachedWorldId == null) {
             return;
         }
-        net.minecraft.core.BlockPos pos = getMachinePos();
-        net.minecraft.resources.ResourceKey<net.minecraft.world.level.Level> worldId =
-                ((org.bukkit.craftbukkit.CraftWorld) org.bukkit.Bukkit.getWorld(cachedWorldId))
-                .getHandle().dimension();
-        java.util.UUID cid = dev.arubik.craftengine.contraption.listener.BearingHammerListener
-                .assembledContraptionAt(worldId, pos);
+        BlockPos pos = this.getMachinePos();
+        ResourceKey worldId = ((CraftWorld)Bukkit.getWorld((UUID)this.cachedWorldId)).getHandle().dimension();
+        UUID cid = BearingHammerListener.assembledContraptionAt((ResourceKey<Level>)worldId, pos);
         if (cid == null) {
             return;
         }
-        ContraptionEntity entity =
-                ContraptionManager.get(cid);
+        ContraptionEntity entity = ContraptionManager.get(cid);
         if (entity == null) {
             return;
         }
-        for (dev.arubik.craftengine.contraption.MovementBehavior b : entity.state().behaviors()) {
-            if (b instanceof PistonBearingBehavior piston) {
-                piston.setMode(mode());
-                piston.setMaxDistance(distance);
-                // Mirror the assembler: live speed = config speed x upgrade speedMultiplier.
-                piston.setBaseSpeedBlocksPerSec(speedBlocksPerSec * upgradeModifiers().speedMultiplier());
-                piston.setRoundRobinDelayTicks(roundRobinDelayTicks);
-                break;
-            }
+        for (MovementBehavior b : entity.state().behaviors()) {
+            if (!(b instanceof PistonBearingBehavior)) continue;
+            PistonBearingBehavior piston = (PistonBearingBehavior)b;
+            piston.setMode(this.mode());
+            piston.setMaxDistance(this.distance);
+            piston.setBaseSpeedBlocksPerSec(this.speedBlocksPerSec * this.upgradeModifiers().speedMultiplier());
+            piston.setRoundRobinDelayTicks(this.roundRobinDelayTicks);
+            break;
         }
     }
 
-    // The 6-neighbor motor scan above reuses the crusher's RpmProvider lookup contract; see RpmProvider.
-
     @Override
     protected void processTick(Level level) {
-        if (level.isClientSide())
+        if (level.isClientSide()) {
             return;
-        recomputeUpgrades();
-        // A bearing has no recipe loop — it is a pure config block. Nothing else to process.
+        }
+        this.recomputeUpgrades();
     }
-
-    // ---------------- unused slot-recipe abstracts ----------------
 
     @Override
     protected AbstractProcessingRecipe getMatchingRecipe(Level level) {
@@ -528,143 +449,118 @@ public class PistonBearingBlockEntity extends AbstractMachineBlockEntity {
     protected void consumeInputs(Level level, AbstractProcessingRecipe recipe) {
     }
 
-    // ---------------- multi-page menu ----------------
-
     @Override
     public MachineLayout getLayout() {
-        return switch (page) {
-            case 1 -> buildUpgradeLayout();
-            case 2 -> buildOverclockLayout();
-            default -> buildMainLayout();
+        return switch (this.page) {
+            case 1 -> this.buildUpgradeLayout();
+            case 2 -> this.buildOverclockLayout();
+            default -> this.buildMainLayout();
         };
     }
 
     @Override
     public MachineMenu getMenu() {
-        if (active == null) {
-            active = new MachineMenu(this, getLayout());
-            active.syncFromMachine();
+        if (this.active == null) {
+            this.active = new MachineMenu(this, this.getLayout());
+            this.active.syncFromMachine();
         }
-        return active;
+        return this.active;
     }
 
     @Override
-    public void openMenu(net.minecraft.world.entity.player.Player player) {
-        openPage((org.bukkit.entity.Player) player.getBukkitEntity(), 0);
+    public void openMenu(Player player) {
+        this.openPage((org.bukkit.entity.Player)player.getBukkitEntity(), 0);
     }
 
     public void openPage(org.bukkit.entity.Player player, int newPage) {
         this.page = newPage;
-        this.active = new MachineMenu(this, getLayout());
+        this.active = new MachineMenu(this, this.getLayout());
         this.active.syncFromMachine();
         this.active.open(player);
-        this.shownUnlocked = curUnlocked;
+        this.shownUnlocked = this.curUnlocked;
     }
 
     private void refreshUpgradePageIfNeeded() {
-        if (page != 1 || active == null || shownUnlocked == curUnlocked)
+        if (this.page != 1 || this.active == null || this.shownUnlocked == this.curUnlocked) {
             return;
-        java.util.List<org.bukkit.entity.HumanEntity> viewers =
-                new ArrayList<>(active.getInventory().getViewers());
-        shownUnlocked = curUnlocked;
-        for (org.bukkit.entity.HumanEntity h : viewers) {
-            if (h instanceof org.bukkit.entity.Player p)
-                openPage(p, 1);
+        }
+        ArrayList<HumanEntity> viewers = new ArrayList(this.active.getInventory().getViewers());
+        this.shownUnlocked = this.curUnlocked;
+        for (HumanEntity h : viewers) {
+            if (!(h instanceof org.bukkit.entity.Player)) continue;
+            org.bukkit.entity.Player p = (org.bukkit.entity.Player)h;
+            this.openPage(p, 1);
         }
     }
 
     private MachineLayout buildMainLayout() {
-        MachineLayout l = new MachineLayout(org.bukkit.event.inventory.InventoryType.CHEST, menuSize, "Linear Bearing");
-        Component title = dev.arubik.craftengine.machine.menu.GuiTitles.title(getMachineId(), "main");
-        l.setTitleComponent(title != null ? title
-                : MenuText.noI(MenuText.tr("polyfill.ui.bearing_title", NamedTextColor.AQUA)));
-
-        // Config-driven buttons (distance/speed/mode/dwell + upgrades/overclock pages). All slots yml-driven.
-        for (MachineMenuConfig.Button b : menuConfig.buttons)
-            installButton(l, b);
-
-        // Config-driven bars (rpm/su gauge). barStat("rpm") + barPlaceholders drive the live values.
-        MachineBars.install(l, bars);
-
-        // Reusable info icon (distance/speed/mode/su/rpm) at the configurable info slot (-1 = none).
-        int infoSlot = menuConfig.infoSlot >= 0 ? menuConfig.infoSlot : -1;
-        if (infoSlot >= 0)
-            l.setDynamicProvider(infoSlot, (m, t) -> ((PistonBearingBlockEntity) m).infoIcon());
-
-        fillRest(l);
+        int infoSlot;
+        MachineLayout l = new MachineLayout(InventoryType.CHEST, this.menuSize, "Linear Bearing");
+        Component title = GuiTitles.title(this.getMachineId(), "main");
+        l.setTitleComponent(title != null ? title : MenuText.noI(MenuText.tr("polyfill.ui.bearing_title", NamedTextColor.AQUA)));
+        for (MachineMenuConfig.Button b : this.menuConfig.buttons) {
+            this.installButton(l, b);
+        }
+        MachineBars.install(l, this.bars);
+        int n = infoSlot = this.menuConfig.infoSlot >= 0 ? this.menuConfig.infoSlot : -1;
+        if (infoSlot >= 0) {
+            l.setDynamicProvider(infoSlot, (m, t) -> ((PistonBearingBlockEntity)m).infoIcon());
+        }
+        this.fillRest(l);
         return l;
     }
 
-    /**
-     * Render + wire one config-declared button. Adds the bearing-specific control actions on top of the
-     * shared OPEN_PAGE (upgrades/overclock) handling: a button whose {@code name} is a bearing control
-     * keyword mutates the stored config. Left click increments, right click decrements (mode cycles).
-     */
     private void installButton(MachineLayout l, MachineMenuConfig.Button b) {
         BearingControl control = BearingControl.of(b);
         if (control != null) {
             l.addClickButton(b.slot, (m, t) -> {
-                PistonBearingBlockEntity s = (PistonBearingBlockEntity) m;
-                return MenuText.iconItem(parseKey(b.icon), Material.PAPER,
-                        label(b.name, NamedTextColor.AQUA), s.controlLore(control, b.lore));
-            }, (m, p, c) -> ((PistonBearingBlockEntity) m).mutate(control, c));
+                PistonBearingBlockEntity s = (PistonBearingBlockEntity)m;
+                return MenuText.iconItem(PistonBearingBlockEntity.parseKey(b.icon), Material.PAPER, PistonBearingBlockEntity.label(b.name, NamedTextColor.AQUA), s.controlLore(control, b.lore));
+            }, (m, p, c) -> ((PistonBearingBlockEntity)m).mutate(control, c));
             return;
         }
         l.addButton(b.slot, (m, t) -> {
-            PistonBearingBlockEntity s = (PistonBearingBlockEntity) m;
+            PistonBearingBlockEntity s = (PistonBearingBlockEntity)m;
             boolean locked = s.isButtonLocked(b);
             String iconSpec = locked && b.lockedIcon != null ? b.lockedIcon : b.icon;
-            return MenuText.iconItem(parseKey(iconSpec), Material.PAPER,
-                    label(b.name, NamedTextColor.AQUA), lore(b.lore));
+            return MenuText.iconItem(PistonBearingBlockEntity.parseKey(iconSpec), Material.PAPER, PistonBearingBlockEntity.label(b.name, NamedTextColor.AQUA), PistonBearingBlockEntity.lore(b.lore));
         }, (m, p) -> {
-            PistonBearingBlockEntity s = (PistonBearingBlockEntity) m;
-            if (s.isButtonLocked(b))
+            PistonBearingBlockEntity s = (PistonBearingBlockEntity)m;
+            if (s.isButtonLocked(b)) {
                 return;
+            }
             switch (b.action.kind) {
-                case OPEN_PAGE -> s.openPage(p, b.action.page);
-                case DEPLETE_FLUID, DEPLETE_GAS, NONE -> {
+                case OPEN_PAGE: {
+                    s.openPage((org.bukkit.entity.Player)p, b.action.page);
+                    break;
                 }
             }
         });
     }
 
-    /** Which bearing control (if any) a config button drives, keyed off its {@code name} lang key. */
-    private enum BearingControl {
-        DISTANCE, SPEED, MODE, DWELL;
-
-        static BearingControl of(MachineMenuConfig.Button b) {
-            if (b == null || b.name == null)
-                return null;
-            String n = b.name.toLowerCase(java.util.Locale.ROOT);
-            if (n.contains("distance"))
-                return DISTANCE;
-            if (n.contains("speed"))
-                return SPEED;
-            if (n.contains("mode"))
-                return MODE;
-            if (n.contains("dwell") || n.contains("round_robin") || n.contains("delay"))
-                return DWELL;
-            return null;
-        }
-    }
-
-    /** Apply a control button click: left = up/next, right = down/prev. Persists via setChanged(). */
     private void mutate(BearingControl control, ClickType c) {
-        boolean up = !(c == ClickType.RIGHT || c == ClickType.SHIFT_RIGHT);
-        switch (control) {
-            case DISTANCE -> distance = (int) clamp(distance + (up ? 1 : -1), 1, 64);
-            case SPEED -> {
-                double step = (c == ClickType.SHIFT_LEFT || c == ClickType.SHIFT_RIGHT) ? 1.0 : 0.25;
-                speedBlocksPerSec = clamp(speedBlocksPerSec + (up ? step : -step), 0.05, 32.0);
+        boolean up = c != ClickType.RIGHT && c != ClickType.SHIFT_RIGHT;
+        switch (control.ordinal()) {
+            case 0: {
+                this.distance = (int)PistonBearingBlockEntity.clamp(this.distance + (up ? 1 : -1), 1.0, 64.0);
+                break;
             }
-            case MODE -> mode = cycleMode(mode, up);
-            case DWELL -> {
-                long step = (c == ClickType.SHIFT_LEFT || c == ClickType.SHIFT_RIGHT) ? 100 : 20;
-                roundRobinDelayTicks = Math.max(0, roundRobinDelayTicks + (up ? step : -step));
+            case 1: {
+                double step = c == ClickType.SHIFT_LEFT || c == ClickType.SHIFT_RIGHT ? 1.0 : 0.25;
+                this.speedBlocksPerSec = PistonBearingBlockEntity.clamp(this.speedBlocksPerSec + (up ? step : -step), 0.05, 32.0);
+                break;
+            }
+            case 2: {
+                this.mode = PistonBearingBlockEntity.cycleMode(this.mode, up);
+                break;
+            }
+            case 3: {
+                long step = c == ClickType.SHIFT_LEFT || c == ClickType.SHIFT_RIGHT ? 100L : 20L;
+                this.roundRobinDelayTicks = Math.max(0L, this.roundRobinDelayTicks + (up ? step : -step));
             }
         }
-        setChanged();
-        pushToLiveContraption(); // apply the edit to a running contraption immediately
+        this.setChanged();
+        this.pushToLiveContraption();
     }
 
     private static PistonBearingBehavior.Mode cycleMode(PistonBearingBehavior.Mode m, boolean up) {
@@ -674,45 +570,39 @@ public class PistonBearingBlockEntity extends AbstractMachineBlockEntity {
         return vals[idx];
     }
 
-    /** Lore for a control button: the configured lore lines PLUS the current value line. */
     private Component[] controlLore(BearingControl control, List<String> configured) {
-        List<Component> out = new ArrayList<>();
-        if (configured != null)
-            for (String line : configured)
-                out.add(label(line, NamedTextColor.GRAY));
-        String value = switch (control) {
-            case DISTANCE -> distance() + " blocks";
-            case SPEED -> String.format(java.util.Locale.ROOT, "%.2f b/s", speedBlocksPerSec);
-            case MODE -> mode().name().toLowerCase(java.util.Locale.ROOT);
-            case DWELL -> roundRobinDelayTicks() + " ticks";
+        ArrayList<Component> out = new ArrayList<Component>();
+        if (configured != null) {
+            for (String line : configured) {
+                out.add(PistonBearingBlockEntity.label(line, NamedTextColor.GRAY));
+            }
+        }
+        String value = switch (control.ordinal()) {
+            default -> throw new MatchException(null, null);
+            case 0 -> this.distance() + " blocks";
+            case 1 -> String.format(Locale.ROOT, "%.2f b/s", this.speedBlocksPerSec);
+            case 2 -> this.mode().name().toLowerCase(Locale.ROOT);
+            case 3 -> this.roundRobinDelayTicks() + " ticks";
         };
         out.add(MenuText.kv("polyfill.ui.value", NamedTextColor.GRAY, value, NamedTextColor.WHITE));
         return out.toArray(new Component[0]);
     }
 
-    private org.bukkit.inventory.ItemStack infoIcon() {
-        recomputeUpgrades();
-        var GRAY = NamedTextColor.GRAY;
-        var WHITE = NamedTextColor.WHITE;
-        var AQUA = NamedTextColor.AQUA;
-        org.bukkit.inventory.ItemStack stack = new org.bukkit.inventory.ItemStack(Material.PISTON);
-        org.bukkit.inventory.meta.ItemMeta meta = stack.getItemMeta();
+    private ItemStack infoIcon() {
+        this.recomputeUpgrades();
+        NamedTextColor GRAY = NamedTextColor.GRAY;
+        NamedTextColor WHITE = NamedTextColor.WHITE;
+        NamedTextColor AQUA = NamedTextColor.AQUA;
+        ItemStack stack = new ItemStack(Material.PISTON);
+        ItemMeta meta = stack.getItemMeta();
         meta.displayName(MenuText.noI(MenuText.tr("polyfill.ui.bearing_title", AQUA)));
-        meta.lore(java.util.List.of(
-                MenuText.noI(MenuText.kv("polyfill.ui.distance", GRAY, distance() + "", WHITE)),
-                MenuText.noI(MenuText.kv("polyfill.ui.speed", GRAY,
-                        String.format(java.util.Locale.ROOT, "%.2f b/s", previewSpeed()), WHITE)),
-                MenuText.noI(MenuText.kv("polyfill.ui.mode", GRAY,
-                        mode().name().toLowerCase(java.util.Locale.ROOT), WHITE)),
-                MenuText.noI(MenuText.kv("polyfill.ui.rpm", GRAY, (int) inputRpm + "", WHITE)),
-                MenuText.noI(MenuText.kv("polyfill.ui.su", GRAY,
-                        (int) Math.round(previewSuPerBlock()) + " /block", WHITE))));
+        meta.lore(List.of(MenuText.noI(MenuText.kv("polyfill.ui.distance", GRAY, "" + this.distance(), WHITE)), MenuText.noI(MenuText.kv("polyfill.ui.speed", GRAY, String.format(Locale.ROOT, "%.2f b/s", this.previewSpeed()), WHITE)), MenuText.noI(MenuText.kv("polyfill.ui.mode", GRAY, this.mode().name().toLowerCase(Locale.ROOT), WHITE)), MenuText.noI(MenuText.kv("polyfill.ui.rpm", GRAY, "" + (int)this.inputRpm, WHITE)), MenuText.noI(MenuText.kv("polyfill.ui.su", GRAY, (int)Math.round(this.previewSuPerBlock()) + " /block", WHITE))));
         stack.setItemMeta(meta);
         return stack;
     }
 
     private boolean isButtonLocked(MachineMenuConfig.Button b) {
-        return b.lockedWhen == MachineMenuConfig.LockedWhen.NO_OVERCLOCK && curOverclockLimit <= 0;
+        return b.lockedWhen == MachineMenuConfig.LockedWhen.NO_OVERCLOCK && this.curOverclockLimit <= 0.0;
     }
 
     private static Component label(String s, NamedTextColor color) {
@@ -720,86 +610,107 @@ public class PistonBearingBlockEntity extends AbstractMachineBlockEntity {
     }
 
     private static Component[] lore(List<String> lines) {
-        if (lines == null || lines.isEmpty())
+        if (lines == null || lines.isEmpty()) {
             return new Component[0];
+        }
         Component[] out = new Component[lines.size()];
-        for (int i = 0; i < lines.size(); i++)
-            out[i] = label(lines.get(i), NamedTextColor.GRAY);
+        for (int i = 0; i < lines.size(); ++i) {
+            out[i] = PistonBearingBlockEntity.label(lines.get(i), NamedTextColor.GRAY);
+        }
         return out;
     }
 
     private static Key parseKey(String spec) {
-        if (spec == null)
-            return Key.of("cml", "gui_empty");
-        int i = spec.indexOf(':');
-        return i < 0 ? Key.of("cml", spec) : Key.of(spec.substring(0, i), spec.substring(i + 1));
+        if (spec == null) {
+            return Key.of((String)"cml", (String)"gui_empty");
+        }
+        int i = spec.indexOf(58);
+        return i < 0 ? Key.of((String)"cml", (String)spec) : Key.of((String)spec.substring(0, i), (String)spec.substring(i + 1));
     }
 
     private MachineLayout buildUpgradeLayout() {
-        int unlocked = curUnlocked;
-        MachineLayout l = new MachineLayout(org.bukkit.event.inventory.InventoryType.CHEST, 18, "Upgrades");
-        Component title = dev.arubik.craftengine.machine.menu.GuiTitles.title(getMachineId(), "upgrade");
-        l.setTitleComponent(title != null ? title
-                : MenuText.noI(MenuText.tr("polyfill.ui.upgrades", NamedTextColor.AQUA)));
-        for (int i = 0; i < UPGRADE_SLOTS; i++) {
+        int unlocked = this.curUnlocked;
+        MachineLayout l = new MachineLayout(InventoryType.CHEST, 18, "Upgrades");
+        Component title = GuiTitles.title(this.getMachineId(), "upgrade");
+        l.setTitleComponent(title != null ? title : MenuText.noI(MenuText.tr("polyfill.ui.upgrades", NamedTextColor.AQUA)));
+        for (int i = 0; i < 9; ++i) {
             if (i < unlocked) {
                 l.addSlot(i, MenuSlotType.INPUT);
-            } else {
-                l.setDynamicProvider(i, (m, t) -> MenuText.lockedIcon(
-                        MenuText.tr("polyfill.ui.locked", NamedTextColor.RED),
-                        MenuText.tr("polyfill.ui.locked_desc", NamedTextColor.GRAY)));
+                continue;
             }
+            l.setDynamicProvider(i, (m, t) -> MenuText.lockedIcon(MenuText.tr("polyfill.ui.locked", NamedTextColor.RED), MenuText.tr("polyfill.ui.locked_desc", NamedTextColor.GRAY)));
         }
-        l.addButton(17, (m, t) -> MenuText.backIcon(),
-                (m, p) -> ((PistonBearingBlockEntity) m).openPage(p, 0));
-        fillRest(l);
+        l.addButton(17, (m, t) -> MenuText.backIcon(), (m, p) -> ((PistonBearingBlockEntity)m).openPage((org.bukkit.entity.Player)p, 0));
+        this.fillRest(l);
         return l;
     }
 
     private MachineLayout buildOverclockLayout() {
-        MachineLayout l = dev.arubik.craftengine.machine.menu.OverclockMenu.build(
-                getMachineId(), NamedTextColor.AQUA,
-                () -> this.overclock, () -> this.curOverclockLimit,
-                (up, c) -> bumpOverclock(up, c),
-                p -> openPage(p, 0));
-        fillRest(l);
+        MachineLayout l = OverclockMenu.build(this.getMachineId(), NamedTextColor.AQUA, () -> this.overclock, () -> this.curOverclockLimit, (up, c) -> this.bumpOverclock((boolean)up, (ClickType)c), p -> this.openPage((org.bukkit.entity.Player)p, 0));
+        this.fillRest(l);
         return l;
     }
 
     public void bumpOverclock(boolean up, ClickType c) {
-        float delta = dev.arubik.craftengine.machine.menu.OverclockMenu.step(c);
+        float delta = OverclockMenu.step(c);
         this.overclock += up ? delta : -delta;
-        this.overclock = (float) clamp(this.overclock, -Math.min(this.curOverclockLimit, 0.99),
-                this.curOverclockLimit);
-        setChanged();
+        this.overclock = (float)PistonBearingBlockEntity.clamp(this.overclock, -Math.min(this.curOverclockLimit, 0.99), this.curOverclockLimit);
+        this.setChanged();
     }
 
     private void fillRest(MachineLayout l) {
-        for (int i = 0; i < l.getSize(); i++) {
-            if (l.getSlotType(i) == MenuSlotType.BACKGROUND)
-                l.setDynamicProvider(i, (m, t) -> FILLER);
+        for (int i = 0; i < l.getSize(); ++i) {
+            if (l.getSlotType(i) != MenuSlotType.BACKGROUND) continue;
+            l.setDynamicProvider(i, (m, t) -> FILLER);
         }
     }
 
-    // ---------------- persistence ----------------
-
     @Override
-    public void saveCustomData(net.momirealms.craftengine.libraries.nbt.CompoundTag tag) {
-        set(KEY_DISTANCE, distance);
-        set(KEY_SPEED, (float) speedBlocksPerSec);
-        set(KEY_MODE, mode().name());
-        set(KEY_DWELL, roundRobinDelayTicks);
-        set(KEY_OC, overclock);
-        super.saveCustomData(tag); // flushes upgrade-slot items via TypedKeys.NMS_ITEMS
+    public void saveCustomData(CompoundTag tag) {
+        this.set(KEY_DISTANCE, this.distance);
+        this.set(KEY_SPEED, Float.valueOf((float)this.speedBlocksPerSec));
+        this.set(KEY_MODE, this.mode().name());
+        this.set(KEY_DWELL, this.roundRobinDelayTicks);
+        this.set(KEY_OC, Float.valueOf(this.overclock));
+        super.saveCustomData(tag);
     }
 
     @Override
-    public void loadCustomData(net.momirealms.craftengine.libraries.nbt.CompoundTag tag) {
+    public void loadCustomData(CompoundTag tag) {
         super.loadCustomData(tag);
-        this.distance = getOrDefault(KEY_DISTANCE, defaultDistance);
-        this.speedBlocksPerSec = getOrDefault(KEY_SPEED, (float) defaultSpeed);
-        this.mode = PistonBearingBehavior.Mode.fromString(getOrDefault(KEY_MODE, defaultMode.name()));
-        this.roundRobinDelayTicks = getOrDefault(KEY_DWELL, defaultRoundRobinDelay);
-        this.overclock = getOrDefault(KEY_OC, 0f);
+        this.distance = this.getOrDefault(KEY_DISTANCE, this.defaultDistance);
+        this.speedBlocksPerSec = this.getOrDefault(KEY_SPEED, Float.valueOf((float)this.defaultSpeed)).floatValue();
+        this.mode = PistonBearingBehavior.Mode.fromString(this.getOrDefault(KEY_MODE, this.defaultMode.name()));
+        this.roundRobinDelayTicks = this.getOrDefault(KEY_DWELL, this.defaultRoundRobinDelay);
+        this.overclock = this.getOrDefault(KEY_OC, Float.valueOf(0.0f)).floatValue();
+    }
+
+    private static enum BearingControl {
+        DISTANCE,
+        SPEED,
+        MODE,
+        DWELL;
+
+
+        static BearingControl of(MachineMenuConfig.Button b) {
+            if (b == null || b.name == null) {
+                return null;
+            }
+            String n = b.name.toLowerCase(Locale.ROOT);
+            if (n.contains("distance")) {
+                return DISTANCE;
+            }
+            if (n.contains("speed")) {
+                return SPEED;
+            }
+            if (n.contains("mode")) {
+                return MODE;
+            }
+            if (n.contains("dwell") || n.contains("round_robin") || n.contains("delay")) {
+                return DWELL;
+            }
+            return null;
+        }
     }
 }
+

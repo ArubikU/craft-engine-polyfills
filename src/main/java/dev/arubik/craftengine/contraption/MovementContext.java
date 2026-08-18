@@ -1,13 +1,14 @@
+/*
+ * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  net.minecraft.server.level.ServerLevel
+ */
 package dev.arubik.craftengine.contraption;
 
 import dev.arubik.craftengine.contraption.core.ContraptionState;
 import net.minecraft.server.level.ServerLevel;
 
-/**
- * Per-tick context passed to every {@link MovementBehavior#tick}. {@code level} is null
- * when the contraption's world isn't currently loaded (e.g. under a pure-JVM unit test, or
- * a genuinely unloaded Bukkit world) — behaviors that touch the real world (e.g.
- * {@code MinerBehavior} via {@link ContraptionAccessor}) must no-op when it's null.
- */
 public record MovementContext(ContraptionState state, ServerLevel level) {
 }
+
