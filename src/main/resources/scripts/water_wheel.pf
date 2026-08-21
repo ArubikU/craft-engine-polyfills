@@ -1,0 +1,169 @@
+# water_wheel.pf — small and large water wheel, ported from Create's WaterWheelBlockEntity.
+#
+#   action_script: "water_wheel.pf:tick_small"   (1x1 wheel)
+#   action_script: "water_wheel.pf:tick_large"   (large wheel)
+#   status:        "water_wheel.pf:status"
+#   on_break:      "water_wheel.pf:on_break"
+#
+# Create's algorithm (determineAndApplyFlowScore + getGeneratedSpeed):
+#
+#   flowScore = 0
+#   for each offset around the wheel:
+#       flow = fluidFlowAt(offset) projected onto the wheel plane (axis component zeroed)
+#       if flow is zero -> skip
+#       normal        = normalize(offset)
+#       positiveMotion = rotate(normal, 90deg, axis)
+#       dot = normalize(flow) . positiveMotion
+#       if |dot| > 0.5 -> flowScore += sign(dot)
+#   speed = clamp(flowScore, -1, 1) * 8 / size
+#
+# Two things that surprise people, and that the previous implementation got wrong:
+#
+#  * flowScore only decides the DIRECTION. More water does not mean more speed — a wheel is
+#    +8 rpm, -8 rpm or nothing (large: +-4). The old version summed a weighted 32-per-face
+#    contribution and could reach 128 rpm.
+#  * STILL water contributes nothing. getFlow of a source block with no slope is the zero
+#    vector, so it is skipped. The old version awarded a full +32 for any source block, so a
+#    wheel dunked in a pond span at full speed.
+#
+# Offsets: the small wheel checks the 4 blocks orthogonally adjacent in the wheel plane
+# (Create's SMALL_OFFSETS). The large wheel checks Create's LARGE_OFFSETS ring at distance 2
+# AND the distance-1 ring — see _large_offsets for why the extra ring is needed here.
+
+SMALL_SPEED = 8.0
+LARGE_SPEED = 4.0
+
+# Stress capacity generated, in SU. Tunable; Create scales this with its config.
+SMALL_CAPACITY = 16.0
+LARGE_CAPACITY = 32.0
+
+def _off(dx, dy, dz) {
+    return make_map("dx", dx, "dy", dy, "dz", dz)
+}
+
+# ---- Offset tables ------------------------------------------------------
+
+def _small_offsets(axis) {
+    if axis == "y" { return [ _off(1,0,0), _off(-1,0,0), _off(0,0,1), _off(0,0,-1) ] }
+    if axis == "x" { return [ _off(0,1,0), _off(0,-1,0), _off(0,0,1), _off(0,0,-1) ] }
+    return [ _off(1,0,0), _off(-1,0,0), _off(0,1,0), _off(0,-1,0) ]
+}
+
+def _large_offsets(axis) {
+    # Create's LARGE_OFFSETS ring at distance 2, PLUS the distance-1 ring.
+    #
+    # Create's large wheel is a 3x3 multiblock, so its water only ever touches the structure
+    # at distance 2 from the centre block. Here the wheel is a single block whose model spans
+    # 3 blocks, so water poured beside it sits at distance 1 — scanning only the outer ring
+    # meant a player could flood the wheel and nothing happened. Both rings count.
+    if axis == "y" {
+        return [ _off(1,0,0), _off(-1,0,0), _off(0,0,1), _off(0,0,-1),
+                 _off(2,0,0), _off(2,0,1), _off(2,0,-1),
+                 _off(-2,0,0), _off(-2,0,1), _off(-2,0,-1),
+                 _off(0,0,2), _off(1,0,2), _off(-1,0,2),
+                 _off(0,0,-2), _off(1,0,-2), _off(-1,0,-2) ]
+    }
+    if axis == "x" {
+        return [ _off(0,1,0), _off(0,-1,0), _off(0,0,1), _off(0,0,-1),
+                 _off(0,2,0), _off(0,2,1), _off(0,2,-1),
+                 _off(0,-2,0), _off(0,-2,1), _off(0,-2,-1),
+                 _off(0,0,2), _off(0,1,2), _off(0,-1,2),
+                 _off(0,0,-2), _off(0,1,-2), _off(0,-1,-2) ]
+    }
+    return [ _off(1,0,0), _off(-1,0,0), _off(0,1,0), _off(0,-1,0),
+             _off(2,0,0), _off(2,1,0), _off(2,-1,0),
+             _off(-2,0,0), _off(-2,1,0), _off(-2,-1,0),
+             _off(0,2,0), _off(1,2,0), _off(-1,2,0),
+             _off(0,-2,0), _off(1,-2,0), _off(-1,-2,0) ]
+}
+
+# ---- Flow score ---------------------------------------------------------
+
+def _flow_score(axis, offsets) {
+    score = 0
+    for o in offsets {
+        dx = o.get("dx")
+        dy = o.get("dy")
+        dz = o.get("dz")
+        b = Machine.block_at(dx, dy, dz)
+        if !b.has_fluid { continue }
+
+        flow = b.fluid_flow
+        # Project onto the wheel plane: the component along the rotation axis cannot turn it.
+        fx = axis == "x" ? 0 : flow.x
+        fy = axis == "y" ? 0 : flow.y
+        fz = axis == "z" ? 0 : flow.z
+        flen = sqrt(fx * fx + fy * fy + fz * fz)
+        if flen <= 0 { continue }
+        fx = fx / flen
+        fy = fy / flen
+        fz = fz / flen
+
+        nlen = sqrt(dx * dx + dy * dy + dz * dz)
+        if nlen <= 0 { continue }
+        nx = dx / nlen
+        ny = dy / nlen
+        nz = dz / nlen
+
+        # positiveMotion = rotate(normal, 90deg, axis), matching Create's VecHelper.rotate:
+        #   X -> (x, -z, y)    Y -> (z, y, -x)    Z -> (-y, x, z)
+        if axis == "x" {
+            px = nx
+            py = -nz
+            pz = ny
+        } else if axis == "y" {
+            px = nz
+            py = ny
+            pz = -nx
+        } else {
+            px = -ny
+            py = nx
+            pz = nz
+        }
+
+        dot = fx * px + fy * py + fz * pz
+        # Only a flow clearly aligned with the wheel's tangent counts, and it counts as one
+        # whole step regardless of how strong it is.
+        if dot > 0.5 { score = score + 1 }
+        if dot < -0.5 { score = score - 1 }
+    }
+    return score
+}
+
+def _run(is_large) {
+    axis = Machine.axis
+    if axis == null { axis = "z" }
+
+    offsets = is_large ? _large_offsets(axis) : _small_offsets(axis)
+    score = _flow_score(axis, offsets)
+
+    speed = is_large ? LARGE_SPEED : SMALL_SPEED
+    capacity = is_large ? LARGE_CAPACITY : SMALL_CAPACITY
+
+    rpm_out = clamp(score, -1, 1) * speed
+
+    Machine.set_rpm_output(rpm_out)
+    if rpm_out == 0 {
+        Machine.report_su(0)
+    } else {
+        # Negative reports GENERATED capacity to the network.
+        Machine.report_su(-capacity)
+    }
+}
+
+# ---- Entry points -------------------------------------------------------
+
+def tick_small() { _run(false) }
+
+def tick_large() { _run(true) }
+
+# Activation drives the blockstate through the machine's `status` field, so it can never
+# drift out of sync the way the old set_state + NBT flag pair could.
+def status() {
+    return rpm != 0 ? "true" : "false"
+}
+
+def on_break() {
+    Machine.set_rpm_output(0)
+    Machine.report_su(0)
+}

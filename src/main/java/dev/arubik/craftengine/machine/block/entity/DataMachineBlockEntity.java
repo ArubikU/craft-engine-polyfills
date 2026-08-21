@@ -52,7 +52,6 @@ import dev.arubik.craftengine.gas.GasType;
 import dev.arubik.craftengine.machine.MachineDefinition;
 import dev.arubik.craftengine.machine.attribute.MachineAttributes;
 import dev.arubik.craftengine.machine.block.entity.AbstractMachineBlockEntity;
-import dev.arubik.craftengine.machine.menu.GuiTitles;
 import dev.arubik.craftengine.machine.menu.MachineMenu;
 import dev.arubik.craftengine.machine.menu.MachineMenuConfig;
 import dev.arubik.craftengine.machine.menu.MenuText;
@@ -75,13 +74,12 @@ import dev.arubik.craftengine.machine.recipe.loader.RecipeManager;
 import dev.arubik.craftengine.machine.render.ModelRendersDriven;
 import dev.arubik.craftengine.machine.render.RendererManager;
 import dev.arubik.craftengine.machine.render.RendererSpec;
-import dev.arubik.craftengine.machine.render.formula.InventoryClass;
-import dev.arubik.craftengine.machine.render.formula.PolyContext;
-import dev.arubik.craftengine.machine.render.formula.PolyScript;
-import dev.arubik.craftengine.machine.render.formula.PolyScriptRegistry;
+import dev.arubik.craftengine.script.ScriptContext;
+import dev.arubik.craftengine.script.ScriptProgram;
+import dev.arubik.craftengine.script.ScriptRegistry;
+import dev.arubik.craftengine.script.types.machine.MachineType;
 import dev.arubik.craftengine.machine.render.variable.MachineRenderContext;
 import dev.arubik.craftengine.machine.upgrade.UpgradeModifiers;
-import dev.arubik.craftengine.network.NetworkClass;
 import dev.arubik.craftengine.rotation.RpmConsumer;
 import dev.arubik.craftengine.rotation.RpmProvider;
 import java.util.ArrayList;
@@ -132,9 +130,12 @@ public class DataMachineBlockEntity
 extends AbstractMachineBlockEntity
 implements RpmConsumer,
 RpmProvider,
-ModelRendersDriven {
-    private final MachineDefinition definition;
+ModelRendersDriven,
+dev.arubik.craftengine.rotation.KineticMember {
+    /** Not final: a targeted reload re-points this at the freshly parsed definition. */
+    private MachineDefinition definition;
     private RendererManager rendererManager;
+    private dev.arubik.craftengine.machine.render.ScriptAnimation activeAnimation = null;
     private ConveyorItemDisplay[] specDisplays;
     private int[] specDisplayHashes;
     private ServerLevel lastKnownLevel;
@@ -145,6 +146,19 @@ ModelRendersDriven {
     private final List<RpmProvider> activeMotors = new ArrayList<RpmProvider>();
     private RpmProvider activeMotor;
     private int lastSuLoad = 0;
+    // ---- RpmNetwork fields --------------------------------------------------
+    private long rpmNetworkId    = 0L;
+    private float theoreticalSpeed = 0f;
+    private int rpmConflictTicks = 0;
+    /**
+     * Game tick at which the SOURCE behind our current rpm produced it; -1 when we have none.
+     * Carried unchanged along the whole chain, so a stopped source expires every block at once.
+     */
+    private long rpmSourceStamp = -1L;
+    /** World direction this block last took power from, for gearbox-style relative output. */
+    private Direction rpmInputFace = null;
+    /** Consecutive pulls that produced an identical result; drives the scan backoff. */
+    private int stablePulls = 0;
     private int stressGrace = 0;
     private int sourceDistance = Integer.MAX_VALUE;
     private float rpmSourceOutput = 0.0f;
@@ -153,7 +167,14 @@ ModelRendersDriven {
     private List<MachineBar> bars = List.of();
     private boolean invalidating = false;
     private int actionTickCounter = 0;
+    private long ticksAlive = 0L;
+    private static final dev.arubik.craftengine.util.TypedKey<Long> KEY_TICKS_ALIVE =
+        dev.arubik.craftengine.util.TypedKey.of("polyfills", "ticks_alive", dev.arubik.craftengine.util.NbtType.LONG);
+
+    public long ticksAlive() { return ticksAlive; }
     private int page = 0;
+    /** Browser-like page history for back navigation. */
+    private final java.util.ArrayDeque<Integer> pageHistory = new java.util.ArrayDeque<>(8);
     private float overclock = 0.0f;
     private MachineMenu active;
     private int curUnlocked = -1;
@@ -162,6 +183,34 @@ ModelRendersDriven {
     private double curGeneration = 0.0;
     private Map<Key, List<MachineAttributes.Mod>> upgradeDefs = Map.of();
     private double genBuffer = 0.0;
+
+    /**
+     * Re-points every live machine at its freshly parsed definition and drops its renderers, so
+     * a reload reaches blocks already placed in the world instead of only new placements.
+     *
+     * <p>Only definition-derived behaviour is refreshed: flags, io, renderers, script hooks and
+     * menu layout. Tanks and inventories were sized when the block entity was built and are left
+     * alone — resizing them under a running machine would strand or duplicate their contents.
+     *
+     * @return the number of machines re-pointed
+     */
+    public static int refreshDefinitions() {
+        int n = 0;
+        for (DataMachineBlockEntity be : new ArrayList<DataMachineBlockEntity>(INSTANCES)) {
+            if (be.definition == null) continue;
+            MachineDefinition fresh = MachineDefinition.REGISTRY.get(be.definition.id());
+            if (fresh == null || fresh == be.definition) continue;
+            be.definition = fresh;
+            try {
+                if (fresh.io() != null) be.setIOConfiguration(fresh.io());
+            } catch (Throwable ignored) {
+                // A machine whose io block was removed keeps the config it was built with.
+            }
+            n++;
+        }
+        reloadAll();   // renderers are rebuilt from the new definition on the next tick
+        return n;
+    }
 
     public static int reloadAll() {
         int n = 0;
@@ -189,13 +238,164 @@ ModelRendersDriven {
         return Collections.unmodifiableList(this.activeMotors);
     }
 
+    /** True when this machine declares an rpm INPUT face, i.e. it relays rather than originates. */
+    /** 0=X, 1=Y, 2=Z — the axis index RpmPropagation's gearbox rule expects. */
+    private static int axisIndex(Direction d) {
+        return switch (d.getAxis()) {
+            case X -> 0;
+            case Y -> 1;
+            case Z -> 2;
+        };
+    }
+
+    /** +1 for EAST/UP/SOUTH, -1 for WEST/DOWN/NORTH — Direction.getAxisDirection() as a sign. */
+    private static int axisSign(Direction d) {
+        return d.getAxisDirection() == Direction.AxisDirection.POSITIVE ? 1 : -1;
+    }
+
+    /**
+     * The RPM this machine actually delivers through {@code face}, sign included, or 0 when that
+     * face is not a declared rpm output.
+     *
+     * <p>This is the single place that answers "what comes out of this side?". It folds together
+     * the three things that decide it — whether {@code io.rpm} allows the face at all, the
+     * gearbox-style relative sign, and any static {@code output_inverted} list — so a script
+     * asking {@code Machine.rpm_out("front")} gets exactly what the neighbouring block would
+     * read when it pulls, rather than having to reconstruct the rule itself.
+     */
+    public float rpmThrough(Direction face) {
+        if (face == null || this.definition == null) return 0f;
+        Level level = this.getNMSLevel();
+        if (level == null) return 0f;
+        if (!this.definition.kinetics()) return 0f;
+        if (!this.isValidOutputFace(face, level)) return 0f;
+
+        float raw = this.getRpm();
+        if (raw == 0f) return 0f;
+
+        if (this.definition.rpmOutputRelative()) {
+            Direction in = this.rpmInputFace;
+            if (in == null) return 0f;   // an undriven gearbox has no direction to hand on
+            return raw * dev.arubik.craftengine.rotation.RpmPropagation.gearboxModifier(
+                    axisIndex(face), axisSign(face), axisIndex(in), axisSign(in));
+        }
+
+        Set<String> inverted = this.definition.rpmOutputInvertedRaw();
+        boolean flip = !inverted.isEmpty()
+                && rpmFacesContain(inverted, face, this.getFacing(level));
+        return dev.arubik.craftengine.rotation.RpmPropagation.applyInversion(raw, flip);
+    }
+
+    /** The face this block last took power from, or null when it is a source / unpowered. */
+    public Direction rpmInputFace() {
+        return this.rpmInputFace;
+    }
+
+    public boolean isRpmRelay() {
+        return this.definition != null && !this.definition.rpmInputFacesRaw().isEmpty();
+    }
+
     public void setRpmSourceOutput(float rpm) {
         this.rpmSourceOutput = rpm;
         boolean bl = this.rpmSourceActive = rpm != 0.0f;
         if (this.rpmSourceActive) {
-            this.sourceDistance = 0;
+            // Only a genuine source sits at distance 0. A relay — cogwheel, gearbox, shaft — just
+            // re-emits what it pulled and must KEEP its distance from the real source. Stamping 0
+            // here made every relay claim to be the origin, so relay_to's anti-loop guard
+            // (neighbour <= me) blocked the whole chain after the first hop.
+            if (!this.isRpmRelay()) {
+                this.sourceDistance = 0;
+                // Only a genuine origin mints a stamp. Relays carry along whatever they were
+                // given, so the whole chain shares one expiry instead of each hop having its own.
+                this.rpmSourceStamp = this.gameTime();
+            }
             this.inputRpm = rpm;
+        } else {
+            leaveNetwork();
+            this.theoreticalSpeed  = 0f;
+            this.rpmConflictTicks  = 0;
+            this.rpmSourceStamp    = -1L;
         }
+    }
+
+    /**
+     * Take an RPM value handed over by a neighbouring relay (see {@code Machine.relay_to}).
+     *
+     * <p>Distance is {@code fromDistance + 1} so each hop is strictly farther from the source than
+     * the block that drove it — which is exactly what the anti-loop guard in {@code relay_to}
+     * tests. Using {@link #setRpmSourceOutput} for this instead left every hop at the same
+     * distance and stalled chains of three or more cogwheels.
+     */
+    /** Game tick the source behind our rpm last produced it, or -1 if we have no source. */
+    public long rpmSourceStamp() {
+        return this.rpmSourceStamp;
+    }
+
+    /** Current game tick, or -1 when this block has no level yet. */
+    private long gameTime() {
+        Level l = this.getNMSLevel();
+        return l == null ? -1L : l.getGameTime();
+    }
+
+    public void acceptRelayedRpm(float rpm, int fromDistance) {
+        this.acceptRelayedRpm(rpm, fromDistance, this.gameTime());
+    }
+
+    /** @param sourceStamp the tick the ORIGINAL source produced this value, passed along unchanged */
+    public void acceptRelayedRpm(float rpm, int fromDistance, long sourceStamp) {
+        this.rpmSourceOutput = rpm;
+        this.rpmSourceActive = rpm != 0.0f;
+        this.inputRpm = rpm;
+        this.sourceDistance = dev.arubik.craftengine.rotation.RpmPropagation.distanceAfterPull(fromDistance);
+        // Cogs mesh ACROSS their axis while their rpm input faces run ALONG it, so a relayed cog
+        // cannot re-discover its driver with its own pull. Without this grace the next tick's
+        // fruitless pull zeroed the value straight back out, which is what made the model flicker
+        // and stopped chains of stacked cogs from ever forming.
+        this.rpmSourceStamp = rpm != 0.0f ? sourceStamp : -1L;
+        if (!this.rpmSourceActive) {
+            this.theoreticalSpeed = 0f;
+            this.rpmConflictTicks = 0;
+        }
+    }
+
+    // ---- RpmNetwork API -----------------------------------------------------
+
+    public long rpmNetworkId()           { return rpmNetworkId; }
+    public void setRpmNetworkId(long id) { this.rpmNetworkId = id; }
+    public float theoreticalSpeed()      { return theoreticalSpeed; }
+    public void setTheoreticalSpeed(float s) { this.theoreticalSpeed = s; }
+    public int  getRpmConflictTicks()    { return rpmConflictTicks; }
+    public void setRpmConflictTicks(int v) { this.rpmConflictTicks = v; }
+
+    /** Called by RpmNetwork when overstress state changes. */
+    public void onNetworkOverstressChanged(boolean overstressed) {
+        float actual = overstressed ? 0f : theoreticalSpeed;
+        this.inputRpm = actual;
+        if (this.rpmSourceActive) this.rpmSourceOutput = actual;
+    }
+
+    /** Report SU to this machine's network (negative = generate, positive = consume). */
+    public void reportSuToNetwork(float suValue) {
+        if (rpmNetworkId == 0L) return;
+        dev.arubik.craftengine.rotation.RpmNetwork net = dev.arubik.craftengine.rotation.RpmNetwork.get(rpmNetworkId);
+        if (net != null) net.updateMemberSu(this, suValue);
+    }
+
+    /** Join a network. Leaves current network first if different. */
+    public void joinNetwork(long networkId) {
+        if (this.rpmNetworkId == networkId) return;
+        leaveNetwork();
+        this.rpmNetworkId = networkId;
+        dev.arubik.craftengine.rotation.RpmNetwork net = dev.arubik.craftengine.rotation.RpmNetwork.get(networkId);
+        if (net != null) net.addMember(this, 0f);
+    }
+
+    /** Leave current network. No-op if not in one. */
+    public void leaveNetwork() {
+        if (rpmNetworkId == 0L) return;
+        dev.arubik.craftengine.rotation.RpmNetwork net = dev.arubik.craftengine.rotation.RpmNetwork.get(rpmNetworkId);
+        if (net != null) net.removeMember(this);
+        this.rpmNetworkId = 0L;
     }
 
     @Override
@@ -217,7 +417,10 @@ ModelRendersDriven {
     }
 
     public boolean isValidOutputFace(Direction face, Level level) {
-        if (this.definition == null || !this.definition.noProcessing()) {
+        // Only kinetic blocks restrict which faces may emit RPM. A machine that declares no rpm
+        // output faces falls through to the unrestricted return just below, so recipe machines
+        // that merely consume stress are unaffected.
+        if (this.definition == null || !this.definition.kinetics()) {
             return true;
         }
         Set<String> same = this.definition.rpmOutputFacesRaw();
@@ -227,6 +430,33 @@ ModelRendersDriven {
         }
         Direction facing = this.getFacing(level);
         return this.rpmFacesContainWithAxis(same, face, facing, level) || this.rpmFacesContainWithAxis(inv, face, facing, level);
+    }
+
+    /**
+     * Derive the functional rotation axis of a CE block from its block state.
+     * Supports: "axis" (x/y/z), "facing" / "horizontal_facing" (direction → axis of that direction).
+     * Returns null if the block has no rotation-related property.
+     */
+    @SuppressWarnings("unchecked")
+    private static Direction.Axis getBlockFunctionalAxis(net.momirealms.craftengine.core.block.ImmutableBlockState cs) {
+        net.momirealms.craftengine.core.block.BlockDefinition def = (net.momirealms.craftengine.core.block.BlockDefinition) cs.owner().value();
+        // Try "axis" property (x/y/z)
+        Property axisProp = def.getProperty("axis");
+        if (axisProp != null) {
+            String v = String.valueOf(cs.get(axisProp)).toLowerCase();
+            return switch (v) { case "x" -> Direction.Axis.X; case "y" -> Direction.Axis.Y; default -> Direction.Axis.Z; };
+        }
+        // Try "facing" / "horizontal_facing" / "6_direction" / "4_direction"
+        for (String propName : new String[]{"facing", "horizontal_facing", "6_direction", "4_direction"}) {
+            Property facingProp = def.getProperty(propName);
+            if (facingProp != null) {
+                try {
+                    Direction dir = Direction.byName(String.valueOf(cs.get(facingProp)).toLowerCase());
+                    if (dir != null) return dir.getAxis();
+                } catch (Throwable ignored) {}
+            }
+        }
+        return null;
     }
 
     public static boolean rpmFacesContainWithAxisStatic(Set<String> raw, Direction d, Direction facing, ServerLevel level, BlockPos pos) {
@@ -265,6 +495,18 @@ ModelRendersDriven {
                         }
                         case "axis_perp" -> {
                             if (d.getAxis() != cogAxis) {
+                                // Create mod rule: neighbor's functional axis parallel to d = shaft continuation, not gear mesh
+                                // Supports: axis (x/y/z), facing, horizontal_facing, 4_direction, 6_direction
+                                try {
+                                    BlockPos neighborPos2 = pos.relative(d);
+                                    ImmutableBlockState neighborCs2 = BlockStateUtils.getOptionalCustomBlockState(level.getBlockState(neighborPos2)).orElse(null);
+                                    if (neighborCs2 != null) {
+                                        Direction.Axis neighborFuncAxis = getBlockFunctionalAxis(neighborCs2);
+                                        if (neighborFuncAxis != null && neighborFuncAxis == d.getAxis()) {
+                                            yield false;
+                                        }
+                                    }
+                                } catch (Throwable ignored) {}
                                 yield true;
                             }
                             yield false;
@@ -330,6 +572,17 @@ ModelRendersDriven {
                         }
                         case "axis_perp" -> {
                             if (d.getAxis() != cogAxis) {
+                                // Create mod rule: neighbor's functional axis parallel to d = shaft continuation, not gear mesh
+                                try {
+                                    BlockPos neighborPosInst = this.getMachinePos().relative(d);
+                                    ImmutableBlockState neighborCsInst = BlockStateUtils.getOptionalCustomBlockState(level.getBlockState(neighborPosInst)).orElse(null);
+                                    if (neighborCsInst != null) {
+                                        Direction.Axis neighborFuncAxisInst = getBlockFunctionalAxis(neighborCsInst);
+                                        if (neighborFuncAxisInst != null && neighborFuncAxisInst == d.getAxis()) {
+                                            yield false;
+                                        }
+                                    }
+                                } catch (Throwable ignored) {}
                                 yield true;
                             }
                             yield false;
@@ -384,6 +637,10 @@ ModelRendersDriven {
         if (definition.io() != null) {
             this.setIOConfiguration(definition.io());
         }
+        if (!definition.energy().isEmpty()) {
+            this.configureEnergy(definition.energy().capacity(), definition.energy().maxInput(),
+                    definition.energy().maxOutput(), definition.energy().generationPerTick());
+        }
         if (!definition.renderers().isEmpty()) {
             this.rendererManager = new RendererManager(definition.renderers(), definition.variables());
             int n = definition.renderers().size();
@@ -410,6 +667,14 @@ ModelRendersDriven {
     @Override
     public RendererManager rendererManager() {
         return this.rendererManager;
+    }
+
+    public void setActiveAnimation(dev.arubik.craftengine.machine.render.ScriptAnimation anim) {
+        if (this.activeAnimation != null && this.lastKnownLevel != null) {
+            this.activeAnimation.clearEntities(this.lastKnownLevel);
+        }
+        this.activeAnimation = anim;
+        if (anim != null) anim.play();
     }
 
     public MachineDefinition definition() {
@@ -516,6 +781,34 @@ ModelRendersDriven {
         this.bars = bars != null ? bars : List.of();
     }
 
+    public List<MachineBar> getBars() { return bars; }
+
+    /** Public accessor for current processing recipe (null if not processing). */
+    public AbstractProcessingRecipe getCurrentRecipe() {
+        try { return this.getMatchingRecipe(this.getNMSLevel()); } catch (Throwable ignored) { return null; }
+    }
+
+    /** Public accessor to find first recipe matching current inventory. */
+    public AbstractProcessingRecipe findMatchingRecipe() {
+        return getCurrentRecipe();
+    }
+
+    /** Public wrapper for getMachineId() — needed by script types. */
+    public String getMachineIdPublic() { return this.getMachineId(); }
+
+    @Override
+    public void saveCustomData(net.momirealms.craftengine.libraries.nbt.CompoundTag tag) {
+        this.set(KEY_TICKS_ALIVE, this.ticksAlive);
+        super.saveCustomData(tag);
+    }
+
+    @Override
+    public void loadCustomData(net.momirealms.craftengine.libraries.nbt.CompoundTag tag) {
+        super.loadCustomData(tag);
+        Long saved = this.get(KEY_TICKS_ALIVE);
+        this.ticksAlive = saved != null ? saved : 0L;
+    }
+
     @Override
     public void setInputRpm(float rpm) {
         this.inputRpm = rpm;
@@ -553,22 +846,83 @@ ModelRendersDriven {
             ServerLevel sl;
             this.lastKnownLevel = sl = (ServerLevel)level;
         }
-        boolean bl = needsRpm = this.definition.power().consumesStress() || this.definition.noProcessing();
-        if (needsRpm && !level.isClientSide()) {
+        boolean bl = needsRpm = this.definition.kinetics();
+        if (!level.isClientSide()
+                && dev.arubik.craftengine.rotation.RpmPropagation.shouldPull(
+                        needsRpm, this.isRpmRelay(), this.rpmSourceActive)
+                && dev.arubik.craftengine.rotation.RpmPropagation.pullDueThisTick(
+                        this.stablePulls, this.ticksAlive,
+                        this.rpmSourceActive || this.sourceDistance < Integer.MAX_VALUE)) {
             this.pullRotationalPower(level);
         }
-        if (!this.definition.noProcessing()) {
+        if (this.definition.runsRecipes()) {
             super.tick(level, pos, state);
+            if (!level.isClientSide()) {
+                if (this.ticksAlive == 0 && this.definition.onPlaceScript() != null) {
+                    // First tick after placement — fire on_place hook
+                    try { runScriptRef(this.definition.onPlaceScript()); } catch (Throwable ignored) {}
+                }
+                this.ticksAlive++;
+                // Every 5 ticks: verify our source machine still exists; dissolve network if gone
+                if (this.ticksAlive % 5 == 0 && rpmNetworkId() != 0L
+                        && sourceDistance > 0 && activeMotor instanceof DataMachineBlockEntity src) {
+                    try {
+                        var srcBe = dev.arubik.craftengine.block.entity.BukkitBlockEntityTypes.getIfLoaded(level, src.getMachinePos());
+                        if (srcBe == null || srcBe.controller != src) {
+                            leaveNetwork();
+                            setRpmSourceOutput(0f);
+                            this.activeMotor = null;
+                        }
+                    } catch (Throwable ignored) {}
+                }
+            }
             if (this.definition.power().consumesStress() && !level.isClientSide()) {
                 this.reportStressLoad();
             }
             if (!level.isClientSide()) {
-                this.maybeUpdateActivated(level, pos, state, this.isProcessing());
+                // status field: null/"auto" → isProcessing(); "{file}.pf:{func}" → script bool
+                boolean active = this.isProcessing();
+                String statusRef = this.definition != null ? this.definition.statusScript() : null;
+                if (statusRef != null && statusRef.contains(".pf:")) {
+                    try {
+                        dev.arubik.craftengine.script.ScriptContext sctx = this.buildScriptContext();
+                        if (sctx != null) {
+                            String val = evalPfFuncStr(statusRef, sctx);
+                            active = !"false".equalsIgnoreCase(val) && !"0".equals(val) && !val.isEmpty();
+                        }
+                    } catch (Throwable ignored) {}
+                }
+                this.maybeUpdateActivated(level, pos, state, active);
             }
         } else if (!level.isClientSide()) {
+            // Machines with recipes off skip super.tick(), and super.tick() is the only place the
+            // open MachineMenu is ticked. Without this the GUI stays the snapshot taken when the
+            // page was opened: bars and script-driven layout icons never re-render, so gas gauges
+            // look frozen and deplete_gas / rpm / su buttons appear dead even though they ran.
+            // Kept in this branch only, so the recipe path does not tick the menu twice.
+            if (this.menu != null && this.definition.tickUi()) {
+                this.menu.tick();
+            }
+            this.ticksAlive++;
             this.setChanged();
+            // Recipe-less machines with IO config still need gas/fluid pull
+            if (this.definition.ioPull() && this.ioConfiguration != null && !this.gasTanks.isEmpty()) {
+                this.pullFromInputFaces(level);
+            }
+            // noProcessing machines still need status evaluation for blockstate updates
+            String statusRef = this.definition != null && this.definition.scripts() ? this.definition.statusScript() : null;
+            if (statusRef != null && statusRef.contains(".pf:")) {
+                try {
+                    dev.arubik.craftengine.script.ScriptContext sctx = this.buildScriptContext();
+                    if (sctx != null) {
+                        String val = evalPfFuncStr(statusRef, sctx);
+                        boolean active = !"false".equalsIgnoreCase(val) && !"0".equals(val) && !val.isEmpty();
+                        this.maybeUpdateActivated(level, pos, state, active);
+                    }
+                } catch (Throwable ignored) {}
+            }
         }
-        if (this.rendererManager != null) {
+        if (this.rendererManager != null && this.definition.tickRenderers()) {
             try {
                 float f;
                 int n = 0;
@@ -630,9 +984,9 @@ ModelRendersDriven {
                     }
                 }
                 float yaw = f;
-                PolyContext machinePolyCtx = this.buildEvalContext();
-                if (machinePolyCtx != null) {
-                    ctx = ctx.augmented(machinePolyCtx);
+                ScriptContext machineScriptCtx = this.buildScriptContext();
+                if (machineScriptCtx != null) {
+                    ctx = ctx.augmented(machineScriptCtx);
                 }
                 this.rendererManager.tick(ctx, (ServerLevel)level, pos.getX(), pos.getY(), pos.getZ(), yaw);
                 this.tickSpecDisplays((ServerLevel)level, pos);
@@ -641,14 +995,37 @@ ModelRendersDriven {
                 // empty catch block
             }
         }
-        if (this.definition != null && this.definition.actionScript() != null && ++this.actionTickCounter >= this.definition.actionInterval()) {
+        if (this.definition != null && this.definition.scripts() && this.definition.actionScript() != null && ++this.actionTickCounter >= this.definition.actionInterval()) {
             this.actionTickCounter = 0;
             this.runActionScript(this.definition.actionScript());
+        }
+        // Deliver this tick's RPM to neighbours that cannot pull for themselves. Machine-to-machine
+        // links resolve by pull (pullRotationalPower), but plain RpmConsumers — conveyors, bearings,
+        // movers — never declare an io.rpm.input face and so would never see a source. Driven purely
+        // by the declared io.rpm output faces, so set_rpm_output + io config is all a machine needs.
+        if (!level.isClientSide() && this.rpmSourceActive) {
+            this.pushRotationalPower(level);
+        }
+        // Tick script animation if one is active
+        if (this.activeAnimation != null && this.definition.animations() && level instanceof ServerLevel sl) {
+            try {
+                dev.arubik.craftengine.script.ScriptContext animCtx = buildScriptContext();
+                this.activeAnimation.tickOn(sl, pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, animCtx);
+                if (!this.activeAnimation.isPlaying()) this.activeAnimation = null;
+            } catch (Throwable ignored) {}
         }
     }
 
     @Override
     public void onRemove() {
+        // Fire on_break hook before teardown
+        if (this.definition != null && this.definition.onBreakScript() != null) {
+            try { runScriptRef(this.definition.onBreakScript()); } catch (Throwable ignored) {}
+        }
+        if (this.activeAnimation != null && this.lastKnownLevel != null) {
+            try { this.activeAnimation.clearEntities(this.lastKnownLevel); } catch (Throwable ignored) {}
+            this.activeAnimation = null;
+        }
         super.onRemove();
         this.despawnSpecDisplays();
         if (this.rendererManager != null) {
@@ -659,6 +1036,8 @@ ModelRendersDriven {
 
     @Override
     public void unregister() {
+        // Leave RpmNetwork first so the network dissolves and notifies remaining members
+        if (rpmNetworkId() != 0L) leaveNetwork();
         if (this.inputRpm != 0.0f || this.sourceDistance < Integer.MAX_VALUE) {
             this.inputRpm = 0.0f;
             this.sourceDistance = Integer.MAX_VALUE;
@@ -809,12 +1188,17 @@ ModelRendersDriven {
         if (this.definition == null) {
             return;
         }
-        if (!this.definition.power().consumesStress() && !this.definition.noProcessing()) {
+        if (!this.definition.kinetics()) {
+            return;
+        }
+        if (this.rpmSourceActive) {
             return;
         }
         this.invalidating = true;
         try {
             BlockPos pos;
+            // The world changed around us: drop back to scanning every tick immediately.
+            this.stablePulls = 0;
             float before = this.inputRpm;
             this.pullRotationalPower(level);
             if (before != this.inputRpm && (pos = this.getMachinePos()) != null) {
@@ -841,7 +1225,6 @@ ModelRendersDriven {
 
     private void pullRotationalPower(Level level) {
         Object p2;
-        boolean hasAxisPerp;
         boolean hasRpmInput;
         this.activeMotor = null;
         this.activeMotors.clear();
@@ -871,11 +1254,20 @@ ModelRendersDriven {
         EnumSet<Direction> autoFacesFinal = autoFaces;
         boolean bl = hasRpmInput = autoFacesFinal != null || this.definition != null && !this.definition.rpmInputFacesRaw().isEmpty();
         if (!hasRpmInput) {
-            this.inputRpm = 0.0f;
-            this.sourceDistance = Integer.MAX_VALUE;
+            // A source (set_rpm_output) declares no rpm INPUT face, so it lands here every tick.
+            // Resetting its sourceDistance to MAX_VALUE would make it invisible to neighbours
+            // that tick before its action script re-stamps distance 0 at the end of the tick —
+            // block-entity iteration order is arbitrary, so that raced. Leave a live source alone.
+            if (!this.rpmSourceActive) {
+                this.inputRpm = 0.0f;
+                this.sourceDistance = Integer.MAX_VALUE;
+            }
             return;
         }
         int bestSourceDist = Integer.MAX_VALUE;
+        Direction bestInputFace = null;
+        long bestStamp = -1L;
+        boolean sawConflict = false;
         for (Direction d : Direction.values()) {
             float pot;
             int providerDist;
@@ -887,8 +1279,10 @@ ModelRendersDriven {
             if (p instanceof DataMachineBlockEntity) {
                 Set<String> perpFilter;
                 DataMachineBlockEntity dm = (DataMachineBlockEntity)p;
-                providerDist = dm.sourceDistance;
-                if (providerDist >= this.sourceDistance || !dm.isValidOutputFace(d.getOpposite(), level)) continue;
+                providerDist = dev.arubik.craftengine.rotation.RpmPropagation.providerDistance(
+                        dm.isRpmSource(), dm.isRpmRelay(), dm.sourceDistance);
+                if (!dev.arubik.craftengine.rotation.RpmPropagation.canPullFrom(providerDist, this.sourceDistance)
+                        || !dm.isValidOutputFace(d.getOpposite(), level)) continue;
                 if (!dm.definition.rpmOutputBlockFilter().isEmpty() && (perpFilter = dm.definition.rpmOutputBlockFilter().get("axis_perp")) != null) {
                     boolean weAreAllowed;
                     boolean bl2 = weAreAllowed = this.definition != null && this.definition.rpmInputFacesRaw().contains("axis_perp");
@@ -921,27 +1315,53 @@ ModelRendersDriven {
             if (p instanceof DataMachineBlockEntity) {
                 Set<String> inv2;
                 DataMachineBlockEntity dm2 = (DataMachineBlockEntity)p;
-                Set<String> set = inv2 = dm2.definition != null ? dm2.definition.rpmOutputInvertedRaw() : Set.of();
-                if (!inv2.isEmpty() && DataMachineBlockEntity.rpmFacesContain(inv2, d.getOpposite(), dm2.getFacing(level))) {
-                    raw = -raw;
+                if (dm2.definition != null && dm2.definition.rpmOutputRelative()) {
+                    // Gearbox: the sign follows which face is actually driven, exactly as Create's
+                    // RotationPropagator.getAxisModifier does. See RpmPropagation#gearboxModifier.
+                    Direction providerIn = dm2.rpmInputFace();
+                    Direction outFace = d.getOpposite();
+                    if (providerIn != null) {
+                        raw *= dev.arubik.craftengine.rotation.RpmPropagation.gearboxModifier(
+                                axisIndex(outFace), axisSign(outFace),
+                                axisIndex(providerIn), axisSign(providerIn));
+                    }
+                } else {
+                    Set<String> set = inv2 = dm2.definition != null ? dm2.definition.rpmOutputInvertedRaw() : Set.of();
+                    if (!inv2.isEmpty() && DataMachineBlockEntity.rpmFacesContain(inv2, d.getOpposite(), dm2.getFacing(level))) {
+                        raw = dev.arubik.craftengine.rotation.RpmPropagation.applyInversion(raw, true);
+                    }
                 }
             }
-            if (delivered != 0.0f && raw != 0.0f && Math.signum(delivered) != Math.signum(raw) && !p.isRpmSource() && this.activeMotor != null && !this.activeMotor.isRpmSource()) {
-                try {
-                    if (bestPotential < pot) {
-                        level.destroyBlock(this.getMachinePos(), true);
-                        return;
+            // Two independent sources fighting over one shaft is a build error worth breaking.
+            // A TRANSIENT disagreement is not: changing a motor's speed reaches the blocks around
+            // it over several ticks, so mid-change one neighbour still holds the old value. Feeds
+            // that carry the same source stamp are exempt outright, and anything else has to hold
+            // for CONFLICT_TICKS_BEFORE_BREAK before it costs the player a block.
+            long candidateStamp = p instanceof DataMachineBlockEntity pdm ? pdm.rpmSourceStamp() : -1L;
+            if (dev.arubik.craftengine.rotation.RpmPropagation.isConflict(delivered, raw, bestStamp, candidateStamp)
+                    && !p.isRpmSource() && this.activeMotor != null && !this.activeMotor.isRpmSource()) {
+                sawConflict = true;
+                if (dev.arubik.craftengine.rotation.RpmPropagation.conflictShouldBreak(this.rpmConflictTicks + 1)) {
+                    try {
+                        if (bestPotential < pot) {
+                            level.destroyBlock(this.getMachinePos(), true);
+                            return;
+                        }
+                        level.destroyBlock(this.getMachinePos().relative(d), true);
+                        continue;
                     }
-                    level.destroyBlock(this.getMachinePos().relative(d), true);
-                    continue;
+                    catch (Throwable dm2) {
+                        // empty catch block
+                    }
                 }
-                catch (Throwable dm2) {
-                    // empty catch block
-                }
+                // Not long enough yet: ignore this feed for now and let the build settle.
+                continue;
             }
             if (providerDist < bestSourceDist || providerDist == bestSourceDist && pot > bestPotential) {
                 bestSourceDist = providerDist;
                 bestPotential = pot;
+                bestInputFace = d;
+                bestStamp = p instanceof DataMachineBlockEntity pd ? pd.rpmSourceStamp() : level.getGameTime();
                 delivered = raw;
                 this.activeMotor = p;
                 this.activeMotors.clear();
@@ -951,125 +1371,112 @@ ModelRendersDriven {
             if (providerDist != bestSourceDist || pot != bestPotential || raw == 0.0f || Math.signum(raw) != Math.signum(delivered)) continue;
             this.activeMotors.add(p);
         }
-        boolean bl5 = hasAxisPerp = this.definition != null && this.definition.rpmInputFacesRaw().contains("axis_perp");
-        if (hasAxisPerp && autoFacesFinal != null) {
-            try {
-                Property myAxisProp;
-                BlockState myBs = level.getBlockState(this.getMachinePos());
-                ImmutableBlockState myCe = BlockStateUtils.getOptionalCustomBlockState(myBs).orElse(null);
-                if (myCe != null && (myAxisProp = ((BlockDefinition)myCe.owner().value()).getProperty("axis")) != null) {
-                    String myAxis;
-                    Direction.Axis cogAxis = switch (myAxis = String.valueOf(myCe.get(myAxisProp)).toLowerCase()) {
-                        case "x" -> Direction.Axis.X;
-                        case "y" -> Direction.Axis.Y;
-                        default -> Direction.Axis.Z;
-                    };
-                    Direction.Axis[] axes = Direction.Axis.values();
-                    ArrayList<Direction> perpDirs = new ArrayList<Direction>();
-                    for (Direction pd : Direction.values()) {
-                        if (pd.getAxis() == cogAxis) continue;
-                        perpDirs.add(pd);
-                    }
-                    for (int i = 0; i < perpDirs.size(); ++i) {
-                        for (int j = i + 1; j < perpDirs.size(); ++j) {
-                            Direction da = (Direction)perpDirs.get(i);
-                            Direction db = (Direction)perpDirs.get(j);
-                            if (da.getAxis() == db.getAxis()) continue;
-                            int[] nArray = new int[]{1, -1};
-                            int n = nArray.length;
-                            for (int k = 0; k < n; ++k) {
-                                int sa = nArray[k];
-                                int[] nArray2 = new int[]{1, -1};
-                                int n2 = nArray2.length;
-                                for (int i2 = 0; i2 < n2; ++i2) {
-                                    float pot2;
-                                    Property theirAxisProp;
-                                    BlockState theirBs;
-                                    ImmutableBlockState theirCe;
-                                    BlockEntityController blockEntityController;
-                                    RpmProvider diagRpm;
-                                    int sb = nArray2[i2];
-                                    BlockPos diag = this.getMachinePos().relative(sa > 0 ? da : da.getOpposite()).relative(sb > 0 ? db : db.getOpposite());
-                                    BlockEntity diagBe = BukkitBlockEntityTypes.getIfLoaded(level, diag);
-                                    if (diagBe == null || !((blockEntityController = diagBe.controller) instanceof RpmProvider) || !((diagRpm = (RpmProvider)blockEntityController) instanceof DataMachineBlockEntity)) continue;
-                                    DataMachineBlockEntity dm3 = (DataMachineBlockEntity)diagRpm;
-                                    if (dm3.definition == null || (theirCe = (ImmutableBlockState)BlockStateUtils.getOptionalCustomBlockState((theirBs = level.getBlockState(diag))).orElse(null)) == null || (theirAxisProp = ((BlockDefinition)theirCe.owner().value()).getProperty("axis")) == null) continue;
-                                    String theirAxis = String.valueOf(theirCe.get(theirAxisProp)).toLowerCase();
-                                    int pd = dm3.sourceDistance;
-                                    if (pd >= this.sourceDistance || (pot2 = diagRpm.potentialRpm()) <= 0.0f || dm3.definition.rpmLargeCog() || !theirAxis.equals(myAxis)) continue;
-                                    float providerRatio = dm3.definition.rpmRatio();
-                                    float raw2 = -diagRpm.getRpm() * providerRatio;
-                                    if (pd >= bestSourceDist && (pd != bestSourceDist || !(pot2 > bestPotential))) continue;
-                                    bestSourceDist = pd;
-                                    bestPotential = pot2;
-                                    delivered = raw2;
-                                    this.activeMotor = diagRpm;
-                                    this.activeMotors.clear();
-                                    this.activeMotors.add(diagRpm);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            catch (Throwable myBs) {
-                // empty catch block
+        // NOTE: the diagonal cogwheel meshing that used to sit here (large<->small in-plane
+        // diagonals and large<->large cross-axis diagonals) has been removed. It was dead code:
+        // it required "axis_perp" in a machine's rpm input faces, which no machine JSON ever
+        // declared, so large cogs never meshed at all. Cog meshing is script-driven now, the way
+        // small<->small already worked — see cogwheel.pf and Machine.relay_to.
+        // Stability drives the scan backoff: a result identical to last time earns a longer
+        // interval, anything different drops straight back to scanning every tick.
+        if (delivered == this.inputRpm && bestInputFace == this.rpmInputFace
+                && dev.arubik.craftengine.rotation.RpmPropagation.distanceAfterPull(bestSourceDist)
+                        == this.sourceDistance) {
+            if (this.stablePulls < Integer.MAX_VALUE) this.stablePulls++;
+        } else {
+            this.stablePulls = 0;
+        }
+
+        // A conflict has to be seen on consecutive scans to count; one clean scan forgives it.
+        this.rpmConflictTicks = sawConflict ? this.rpmConflictTicks + 1 : 0;
+
+        boolean foundSource = bestSourceDist < Integer.MAX_VALUE;
+        boolean stillFresh = dev.arubik.craftengine.rotation.RpmPropagation.isFresh(
+                this.rpmSourceStamp, level.getGameTime());
+
+        if (foundSource) {
+            this.inputRpm = delivered;
+            this.rpmInputFace = bestInputFace;
+            // Carry the SOURCE's stamp, not our own tick: freshness must expire chain-wide at once.
+            this.rpmSourceStamp = bestStamp;
+            this.sourceDistance =
+                    dev.arubik.craftengine.rotation.RpmPropagation.distanceAfterPull(bestSourceDist);
+        } else if (this.isRpmRelay() && stillFresh) {
+            // Found nothing, but a neighbour handed us a value that has not expired yet. Cogwheels
+            // mesh ACROSS their axis while their rpm input faces run ALONG it, so a meshed cog can
+            // never rediscover its driver by pulling. Keep the whole reading — value, face AND
+            // distance: zeroing the distance here broke every chain past the first mesh, because
+            // the next hop then saw its driver as infinitely far away.
+        } else {
+            this.inputRpm = 0.0f;
+            this.rpmInputFace = null;
+            this.sourceDistance = Integer.MAX_VALUE;
+
+            // Nothing upstream and nothing fresh: this relay is DEAD.
+            //
+            // getRpm() returns rpmSourceOutput while rpmSourceActive is true, so a relay that kept
+            // that flag re-read its OWN last output and re-emitted it forever: cut the motor away
+            // from a pair of cogwheels and they carried on spinning off each other's stale value.
+            if (this.isRpmRelay() && this.rpmSourceActive) {
+                this.rpmSourceActive = false;
+                this.rpmSourceOutput = 0.0f;
+                this.theoreticalSpeed = 0.0f;
+                this.rpmConflictTicks = 0;
+                this.rpmSourceStamp = -1L;
+                this.leaveNetwork();
             }
         }
-        if (this.definition != null && this.definition.rpmLargeCog() && autoFacesFinal != null) {
-            try {
-                Property myAP2;
-                BlockState myBs2 = level.getBlockState(this.getMachinePos());
-                ImmutableBlockState myCe2 = BlockStateUtils.getOptionalCustomBlockState(myBs2).orElse(null);
-                if (myCe2 != null && (myAP2 = ((BlockDefinition)myCe2.owner().value()).getProperty("axis")) != null) {
-                    String myAx2 = String.valueOf(myCe2.get(myAP2)).toLowerCase();
-                    Direction.Axis myCA2 = myAx2.equals("x") ? Direction.Axis.X : (myAx2.equals("y") ? Direction.Axis.Y : Direction.Axis.Z);
-                    Direction myAxisPos = Direction.get((Direction.AxisDirection)Direction.AxisDirection.POSITIVE, (Direction.Axis)myCA2);
-                    for (Direction perpD : Direction.values()) {
-                        if (perpD.getAxis() == myCA2) continue;
-                        for (int sa : new int[]{1, -1}) {
-                            for (int sp : new int[]{1, -1}) {
-                                float lraw;
-                                float lPot;
-                                int ld;
-                                String tAx;
-                                Property tAP;
-                                BlockState tBs;
-                                ImmutableBlockState tCe;
-                                RpmProvider lp2;
-                                BlockPos lp = this.getMachinePos().relative(sa > 0 ? myAxisPos : myAxisPos.getOpposite()).relative(sp > 0 ? perpD : perpD.getOpposite());
-                                BlockEntity lbe = BukkitBlockEntityTypes.getIfLoaded(level, lp);
-                                if (lbe == null || !((p2 = lbe.controller) instanceof RpmProvider) || !((lp2 = (RpmProvider)p2) instanceof DataMachineBlockEntity)) continue;
-                                DataMachineBlockEntity ldm = (DataMachineBlockEntity)lp2;
-                                if (ldm.definition == null || !ldm.definition.rpmLargeCog() || (tCe = (ImmutableBlockState)BlockStateUtils.getOptionalCustomBlockState((tBs = level.getBlockState(lp))).orElse(null)) == null || (tAP = ((BlockDefinition)tCe.owner().value()).getProperty("axis")) == null || (tAx = String.valueOf(tCe.get(tAP)).toLowerCase()).equals(myAx2)) continue;
-                                Direction.Axis theirCA = tAx.equals("x") ? Direction.Axis.X : (tAx.equals("y") ? Direction.Axis.Y : Direction.Axis.Z);
-                                if (theirCA != perpD.getAxis() || (ld = ldm.sourceDistance) >= this.sourceDistance || (lPot = lp2.potentialRpm()) <= 0.0f) continue;
-                                BlockPos ldiff = lp.subtract((Vec3i)this.getMachinePos());
-                                int fromAxisDiff = myCA2 == Direction.Axis.X ? ldiff.getX() : (myCA2 == Direction.Axis.Y ? ldiff.getY() : ldiff.getZ());
-                                int toAxisDiff = theirCA == Direction.Axis.X ? ldiff.getX() : (theirCA == Direction.Axis.Y ? ldiff.getY() : ldiff.getZ());
-                                float f = lraw = fromAxisDiff > 0 ^ toAxisDiff > 0 ? -lp2.getRpm() : lp2.getRpm();
-                                if (ld < bestSourceDist || ld == bestSourceDist && lPot > bestPotential) {
-                                    bestSourceDist = ld;
-                                    bestPotential = lPot;
-                                    delivered = lraw;
-                                    this.activeMotor = lp2;
-                                    this.activeMotors.clear();
-                                    this.activeMotors.add(lp2);
-                                    continue;
-                                }
-                                if (ld != bestSourceDist || lPot != bestPotential) continue;
-                                this.activeMotors.add(lp2);
-                            }
-                        }
-                    }
-                }
+
+        this.syncNetworkWithSource();
+    }
+
+    /**
+     * Join whatever kinetic network the machine we are pulling from belongs to.
+     *
+     * <p>Without this a source's network only ever contained the source itself: joinNetwork was
+     * reached from set_rpm_output/relay_to but never from the pull path, so a consumer's
+     * report_su landed in its own empty network and is_overstressed was meaningless for the
+     * whole chain.
+     */
+    private void syncNetworkWithSource() {
+        if (this.rpmSourceActive) return;   // we are the source; our own network is authoritative
+        if (!(this.activeMotor instanceof dev.arubik.craftengine.rotation.KineticMember source)) {
+            if (this.rpmNetworkId != 0L && this.sourceDistance == Integer.MAX_VALUE) {
+                this.leaveNetwork();
             }
-            catch (Throwable throwable) {
-                // empty catch block
+            return;
+        }
+        long netId = source.rpmNetworkId();
+        if (netId == 0L) {
+            dev.arubik.craftengine.rotation.RpmNetwork created = dev.arubik.craftengine.rotation.RpmNetwork.create();
+            source.joinNetwork(created.id());
+            netId = created.id();
+        }
+        if (this.rpmNetworkId != netId) {
+            this.joinNetwork(netId);
+        }
+    }
+
+    /**
+     * Push {@link #rpmSourceOutput} out through every face allowed by {@code io.rpm}.
+     *
+     * <p>Restores the behaviour of the removed {@code DataMotorBlockEntity#transferToHead}, but
+     * face selection comes from the machine definition rather than being hardcoded to {@code facing},
+     * so {@code "output_same": ["front"]}, {@code ["back"]}, multiple faces and inverted faces all
+     * work. Other {@link DataMachineBlockEntity}s are skipped: they pull, and pushing to them too
+     * would fight {@code pullRotationalPower} over {@code inputRpm}.
+     */
+    private void pushRotationalPower(Level level) {
+        if (this.definition == null || !this.definition.kinetics()) return;
+        for (Direction d : Direction.values()) {
+            if (!this.isValidOutputFace(d, level)) continue;
+            BlockEntity be = BukkitBlockEntityTypes.getIfLoaded(level, this.getMachinePos().relative(d));
+            if (be == null) continue;
+            BlockEntityController c = be.controller;
+            if (c instanceof DataMachineBlockEntity) continue;
+            if (c instanceof RpmConsumer consumer) {
+                consumer.setInputRpm(this.rpmSourceOutput);
             }
         }
-        this.inputRpm = delivered;
-        this.sourceDistance = bestSourceDist < Integer.MAX_VALUE ? bestSourceDist + 1 : Integer.MAX_VALUE;
     }
 
     private void reportStressLoad() {
@@ -1091,57 +1498,7 @@ ModelRendersDriven {
         }
     }
 
-    private ItemStack infoIcon() {
-        MachineDefinition.InfoSpec spec = this.definition.info();
-        if (!spec.isTank()) {
-            return RecipeInfoIcon.build(this, this.getMachineId(), this.getUpgradeModifiers().speedMultiplier(), this.curGeneration);
-        }
-        String source = spec.source();
-        boolean gas = source.startsWith("gas");
-        String tankName = source.contains(":") ? source.substring(source.indexOf(58) + 1) : "";
-        long amount = 0L;
-        long capacity = 0L;
-        Component contents = MenuText.textOrTranslatable(gas ? "polyfill.gas.empty" : "polyfill.liquid.empty", NamedTextColor.WHITE);
-        Material material = Material.BUCKET;
-        Object tank;
-        Object stored;
-        if (gas) {
-            tank = this.gasTank(tankName);
-            if (tank != null) {
-                stored = ((GasTank)tank).getGas(this.getNMSLevel(), this.getMachinePos());
-                amount = ((GasStack)stored).getAmount();
-                capacity = ((GasTank)tank).getCapacity();
-                if (!((GasStack)stored).isEmpty()) {
-                    contents = MenuText.textOrTranslatable(((GasStack)stored).getType().translationKey(), NamedTextColor.WHITE);
-                }
-            }
-        } else {
-            tank = this.fluidTank(tankName);
-            if (tank != null) {
-                stored = ((FluidTank)tank).getFluid(this.getNMSLevel(), this.getMachinePos());
-                amount = ((FluidStack)stored).getAmount();
-                capacity = ((FluidTank)tank).getCapacity();
-                if (!((FluidStack)stored).isEmpty()) {
-                    contents = MenuText.textOrTranslatable(((FluidStack)stored).getType().translationKey(), NamedTextColor.WHITE);
-                    if (((FluidStack)stored).getType() == FluidType.LAVA) {
-                        material = Material.LAVA_BUCKET;
-                    } else if (((FluidStack)stored).getType() == FluidType.WATER) {
-                        material = Material.WATER_BUCKET;
-                    }
-                }
-            }
-        }
-        ItemStack stack = new ItemStack(material);
-        ItemMeta meta = stack.getItemMeta();
-        if (meta != null) {
-            NamedTextColor gray = NamedTextColor.GRAY;
-            NamedTextColor aqua = NamedTextColor.AQUA;
-            meta.displayName(MenuText.noI(MenuText.tr(gas ? "polyfill.ui.gas" : "polyfill.ui.fluid", aqua).append((Component)Component.text((String)": ", (TextColor)gray)).append(contents)));
-            meta.lore(List.of(MenuText.noI((Component)Component.text((String)(amount + " / " + capacity + " mB"), (TextColor)gray))));
-            stack.setItemMeta(meta);
-        }
-        return stack;
-    }
+    // infoIcon() removed — info display is now fully script-driven via layout items with recipe_info.pf/gas_info.pf
 
     private String barSource(String barId) {
         for (MachineDefinition.BarRef ref : this.definition.bars()) {
@@ -1187,11 +1544,54 @@ ModelRendersDriven {
         if (source.equals("fuel")) {
             return new double[]{this.burnTime, Math.max(1, this.maxBurnTime)};
         }
+        if (source.equals("energy")) {
+            return new double[]{this.energy, Math.max(1, this.energyCapacity)};
+        }
         if (source.equals("progress")) {
             return new double[]{this.getProgress(), Math.max(1, this.getMaxProgress())};
         }
         if (source.equals("rpm") || source.equals("power")) {
+            // For source motors (rpmSourceActive): show actual RPM / max (512).
+            // For consumers: on/off (has power or is processing).
+            if (this.rpmSourceActive) {
+                return new double[]{Math.abs(this.inputRpm), 512.0};
+            }
             return new double[]{this.isProcessing() || this.hasPower() ? 100.0 : 0.0, 100.0};
+        }
+        if (source.equals("overclock")) {
+            // Normalized 0..1 over range (-1 → limit+1), so bars can map to icon states
+            double limit = this.curOverclockLimit;
+            double range = Math.max(1.0, limit + 1.0);
+            return new double[]{this.overclock + 1.0, range};
+        }
+        // {file}.pf:{func} — execute function and use returned [value, max] or single value (0-1 fraction → *100)
+        if (source.contains(".pf:")) {
+            try {
+                int colon = source.indexOf(':');
+                String scriptFile = source.substring(0, colon);
+                String funcName = source.substring(colon + 1);
+                String lookupKey = scriptFile.endsWith(".pf") ? scriptFile.substring(0, scriptFile.length() - 3) : scriptFile;
+                dev.arubik.craftengine.script.ScriptProgram prog = dev.arubik.craftengine.script.ScriptRegistry.get(lookupKey);
+                if (prog != null) {
+                    dev.arubik.craftengine.script.ScriptContext baseCtx = this.buildScriptContext();
+                    if (baseCtx != null) {
+                        dev.arubik.craftengine.script.ScriptContext withDefs = prog.evaluate(baseCtx);
+                        dev.arubik.craftengine.script.ScriptValue fnVal = withDefs.getVar(funcName);
+                        if (fnVal instanceof dev.arubik.craftengine.script.ScriptValue.Obj fnObj
+                                && fnObj.typeName().equals(dev.arubik.craftengine.script.UserFunction.TYPE)) {
+                            dev.arubik.craftengine.script.UserFunction fn = (dev.arubik.craftengine.script.UserFunction) fnObj.instance();
+                            dev.arubik.craftengine.script.ScriptContext.Builder rb = dev.arubik.craftengine.script.ScriptContext.builder().copyFrom(withDefs);
+                            fn.executor().accept(withDefs, rb);
+                            dev.arubik.craftengine.script.ScriptValue result = rb.build().getVar("__return__");
+                            if (result instanceof dev.arubik.craftengine.script.ScriptValue.Array arr && arr.elements().size() >= 2) {
+                                return new double[]{arr.elements().get(0).asNum(), arr.elements().get(1).asNum()};
+                            }
+                            return new double[]{result.asNum() * 100.0, 100.0};
+                        }
+                    }
+                }
+            } catch (Throwable ignored) {}
+            return new double[]{0.0, 100.0};
         }
         return super.barStat(id);
     }
@@ -1200,11 +1600,20 @@ ModelRendersDriven {
     public Map<String, String> barPlaceholders(String id) {
         String source = this.barSource(id);
         if (source.equals("rpm") || source.equals("power")) {
-            AbstractProcessingRecipe recipe = this.getMatchingRecipe(this.getNMSLevel());
             HashMap<String, String> out = new HashMap<String, String>();
-            out.put("rpm", String.valueOf((int)this.getInputRpm()));
-            out.put("req", String.valueOf(recipe != null ? this.effectiveRpm(recipe) : 0));
-            out.put("su", String.valueOf(recipe != null ? this.effectiveSu(recipe) : 0));
+            if (this.rpmSourceActive) {
+                out.put("rpm", String.valueOf((int)Math.abs(this.rpmSourceOutput)));
+                out.put("req", String.valueOf((int)Math.abs(this.rpmSourceOutput)));
+                float suVal = 0f;
+                dev.arubik.craftengine.rotation.RpmNetwork net = dev.arubik.craftengine.rotation.RpmNetwork.get(this.rpmNetworkId);
+                if (net != null) suVal = Math.abs(net.totalCapacity());
+                out.put("su", String.valueOf((int)suVal));
+            } else {
+                AbstractProcessingRecipe recipe = this.getMatchingRecipe(this.getNMSLevel());
+                out.put("rpm", String.valueOf((int)this.getInputRpm()));
+                out.put("req", String.valueOf(recipe != null ? this.effectiveRpm(recipe) : 0));
+                out.put("su", String.valueOf(recipe != null ? this.effectiveSu(recipe) : 0));
+            }
             return out;
         }
         return super.barPlaceholders(id);
@@ -1293,12 +1702,30 @@ ModelRendersDriven {
     }
 
     public void openPage(org.bukkit.entity.Player player, int newPage) {
+        if (newPage != this.page) {
+            pageHistory.addLast(this.page); // push current to history
+            if (pageHistory.size() > 16) pageHistory.removeFirst(); // cap history
+        }
         this.page = newPage;
         this.active = new MachineMenu(this, this.getLayout());
         this.active.syncFromMachine();
         this.menu = this.active;
         this.active.open(player);
     }
+
+    /** Navigate back in page history (browser back button). */
+    public void openPrevPage(org.bukkit.entity.Player player) {
+        if (pageHistory.isEmpty()) return;
+        int prev = pageHistory.removeLast();
+        this.page = prev;
+        this.active = new MachineMenu(this, this.getLayout());
+        this.active.syncFromMachine();
+        this.menu = this.active;
+        this.active.open(player);
+    }
+
+    public int currentPage() { return page; }
+    public int pageCount() { return definition.pages().isEmpty() ? 3 : definition.pages().size(); }
 
     @Override
     public void openMenu(net.minecraft.world.entity.player.Player player) {
@@ -1307,6 +1734,12 @@ ModelRendersDriven {
 
     @Override
     public MachineLayout getLayout() {
+        List<dev.arubik.craftengine.machine.MachineDefinition.PageDef> pages = this.definition.pages();
+        if (!pages.isEmpty()) {
+            int idx = Math.max(0, Math.min(this.page, pages.size() - 1));
+            return this.buildPageLayout(pages.get(idx));
+        }
+        // Legacy system (backwards compat)
         if (this.definition.upgrades().isInline()) {
             return this.buildMainLayout();
         }
@@ -1317,8 +1750,356 @@ ModelRendersDriven {
         };
     }
 
+    private MachineLayout buildPageLayout(dev.arubik.craftengine.machine.MachineDefinition.PageDef page) {
+        if ("upgrades".equals(page.specialType())) {
+            Component upgTitle = page.title() != null ? buildTitleComponent(page.title(), page.guiImage(), page.guiImageShift()) : null;
+            return buildUpgradeLayoutWithTitle(upgTitle, page.specialItems());
+        }
+
+        org.bukkit.event.inventory.InventoryType invType = page.inventoryType();
+        boolean isChest = page.isChestType();
+        int size = page.resolvedSize();
+
+        String titleStr = page.title() != null ? page.title() : this.definition.title();
+        // Evaluate inline ${expr} in title
+        try {
+            dev.arubik.craftengine.script.ScriptContext ctx = this.buildScriptContext();
+            if (ctx != null) titleStr = dev.arubik.craftengine.machine.menu.MachineMenuConfig.Button.evaluateInlineScriptStatic(titleStr, ctx);
+        } catch (Throwable ignored) {}
+
+        MachineLayout layout = new MachineLayout(invType, isChest ? size : -1, titleStr);
+        // Build title Component: supports {Images.from(id)}, {Shift:n}, MiniMessage, ${expr}
+        if (titleStr != null) {
+            try {
+                layout.setTitleComponent(buildTitleComponent(titleStr, page.guiImage(), page.guiImageShift()));
+            } catch (Throwable ignored) {}
+        }
+
+        // Static layout items — fully script-driven name/lore/item. No hardcoded info slot.
+        for (dev.arubik.craftengine.machine.MachineDefinition.PageDef.StaticSlot s : page.layout()) {
+            final int slot = s.slot();
+            final String itemKey = s.item();
+            final String name = s.name();
+            final List<String> lore = s.lore();
+            if (s.locked()) layout.setLocked(slot, true);
+            layout.addButton(slot, (machine, tick) -> {
+                // Evaluate inline ${expr} in name/lore at render time
+                dev.arubik.craftengine.script.ScriptContext ctx = machine instanceof DataMachineBlockEntity dm2 ? dm2.buildScriptContext() : null;
+                // name supports: plain text, "${expr}", or "{file}.pf:{func}" returning a string
+                String evalName = name;
+                if (ctx != null && name != null) {
+                    evalName = name.contains(".pf:") ? evalPfFuncStr(name, ctx)
+                        : dev.arubik.craftengine.machine.menu.MachineMenuConfig.Button.evaluateInlineScriptStatic(name, ctx);
+                }
+
+                // item supports: namespaced key, "${expr}", or "{file}.pf:{func}" returning Item/string
+                org.bukkit.inventory.ItemStack item = null;
+                if (ctx != null && itemKey != null && itemKey.contains(".pf:")) {
+                    // Script function returns ScriptValue — Item → use stack, Str → use as key
+                    item = evalPfFuncItem(itemKey, ctx);
+                }
+                if (item == null) {
+                    org.bukkit.Material mat = org.bukkit.Material.GRAY_STAINED_GLASS_PANE;
+                    Component nameComp2 = evalName != null
+                        ? net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(evalName)
+                            .decoration(net.kyori.adventure.text.format.TextDecoration.ITALIC, false)
+                        : Component.empty();
+                    // Evaluate ${expr} anywhere in the key, not just if it starts with ${
+                    String resolvedKey = (ctx != null && itemKey != null && itemKey.contains("${"))
+                        ? dev.arubik.craftengine.machine.menu.MachineMenuConfig.Button.evaluateInlineScriptStatic(itemKey, ctx) : itemKey;
+                    item = dev.arubik.craftengine.machine.menu.MenuText.iconItem(
+                        resolvedKey != null ? parseKey(resolvedKey) : null, mat, nameComp2, new Component[0]);
+                } else if (evalName != null) {
+                    // Apply script-evaluated name to the item returned by script
+                    org.bukkit.inventory.meta.ItemMeta m2 = item.getItemMeta();
+                    if (m2 != null) {
+                        m2.displayName(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(evalName)
+                            .decoration(net.kyori.adventure.text.format.TextDecoration.ITALIC, false));
+                        item.setItemMeta(m2);
+                    }
+                }
+                if (item != null && !lore.isEmpty()) {
+                    // Evaluate lore (supports ${expr} and {file}.pf:{func} returning string array)
+                    List<String> evalLore = ctx != null
+                        ? new dev.arubik.craftengine.machine.menu.MachineMenuConfig.Button(slot, itemKey, null, name, lore, null, dev.arubik.craftengine.machine.menu.MachineMenuConfig.LockedWhen.NEVER).evaluateLoreRaw(ctx)
+                        : lore;
+                    org.bukkit.inventory.meta.ItemMeta meta = item.getItemMeta();
+                    if (meta != null) { meta.lore(mmLore(evalLore)); item.setItemMeta(meta); }
+                }
+                return item;
+            }, (machine, player) -> {
+                // Execute layout slot action on click (if defined)
+                String action = s.action();
+                if (action == null || action.isBlank()) return;
+                if (!(machine instanceof DataMachineBlockEntity dmBtn)) return;
+                dev.arubik.craftengine.machine.menu.MachineMenuConfig.Action parsed =
+                    dev.arubik.craftengine.machine.menu.MachineMenuConfig.Action.parse(action);
+                switch (parsed.kind) {
+                    case OPEN_PAGE -> dmBtn.openPage((org.bukkit.entity.Player) player, parsed.page);
+                    case SCRIPT -> {
+                        dev.arubik.craftengine.script.ScriptContext sCtx = dmBtn.buildScriptContext();
+                        if (sCtx == null) break;
+                        String target = parsed.target;
+                        if (target.contains(":")) {
+                            int col = target.indexOf(':'); String file = target.substring(0, col); String func = target.substring(col + 1);
+                            String key = file.endsWith(".pf") ? file.substring(0, file.length() - 3) : file;
+                            dev.arubik.craftengine.script.ScriptProgram prog = dev.arubik.craftengine.script.ScriptRegistry.get(key);
+                            if (prog != null) {
+                                dev.arubik.craftengine.script.ScriptContext withDefs = prog.evaluate(sCtx);
+                                dev.arubik.craftengine.script.ScriptValue fnVal = withDefs.getVar(func);
+                                if (fnVal instanceof dev.arubik.craftengine.script.ScriptValue.Obj fnObj && fnObj.typeName().equals(dev.arubik.craftengine.script.UserFunction.TYPE)) {
+                                    dev.arubik.craftengine.script.UserFunction fn = (dev.arubik.craftengine.script.UserFunction) fnObj.instance();
+                                    dev.arubik.craftengine.script.ScriptContext.Builder rb = dev.arubik.craftengine.script.ScriptContext.builder().copyFrom(withDefs);
+                                    fn.executor().accept(withDefs, rb);
+                                }
+                            }
+                        }
+                    }
+                    default -> {}
+                }
+            });
+        }
+
+        // Machine slots
+        for (int s : page.inputSlots())  layout.addSlot(s, dev.arubik.craftengine.machine.menu.layout.MenuSlotType.INPUT);
+        for (int s : page.outputSlots()) layout.addSlot(s, dev.arubik.craftengine.machine.menu.layout.MenuSlotType.OUTPUT);
+        for (int s : page.fuelSlots())   layout.addSlot(s, dev.arubik.craftengine.machine.menu.layout.MenuSlotType.FUEL);
+
+        // Inline upgrades
+        if (this.definition.upgrades().isInline()) {
+            for (int s : this.definition.upgrades().slots())
+                layout.addSlot(s, dev.arubik.craftengine.machine.menu.layout.MenuSlotType.UPGRADE);
+        }
+
+        // Buttons from page
+        for (dev.arubik.craftengine.machine.MachineDefinition.ButtonSpec spec : page.buttons())
+            this.installButton(layout, DataMachineBlockEntity.toButton(spec));
+
+        // Bars from page
+        if (!page.bars().isEmpty()) {
+            List<dev.arubik.craftengine.machine.menu.bar.MachineBar> resolved = new ArrayList<>();
+            for (dev.arubik.craftengine.machine.MachineDefinition.BarRef ref : page.bars()) {
+                dev.arubik.craftengine.machine.menu.bar.BarDefinition barDef = dev.arubik.craftengine.machine.menu.bar.BarDefinition.REGISTRY.get(ref.bar());
+                if (barDef != null) resolved.add(barDef.toBar(ref.slots()));
+            }
+            dev.arubik.craftengine.machine.menu.bar.MachineBars.install(layout, resolved);
+        }
+
+        // Info slot removed — define recipe info via layout slot + inline scripts or {file}.pf:{func} lore
+        return layout;
+    }
+
+    /**
+     * Build a title Component for a menu page.
+     * Title is evaluated as a ScriptFormula expression. Supports:
+     *   Images.from("id")          → CraftEngine background image with default shift -8
+     *   Images.from("id", shift)   → background image with custom pixel shift
+     *   Shift(Images.from("id"), n)→ same with explicit shift
+     *   "MiniMessage text"         → colour/formatting via MiniMessage
+     *   "${expr}"                  → inline script expression result
+     *
+     * gui_image + guiImageShift fields are the non-expression alternative.
+     */
+    /**
+     * Build a title Component for a menu page.
+     * Template syntax: literal text + {expr} blocks evaluated as ScriptFormula.
+     * Escape literal braces with \{ or \}.
+     *
+     * Examples:
+     *   "My Machine"                          → plain MiniMessage text
+     *   "{Images.from('cml:crusher_gui')}"    → image background component
+     *   "<gold>Crusher {Machine.x},{Machine.z}" → mixed text + script values
+     *   "Shift(Images.from('cml:gui'), -12)"  → already-a-formula (no braces) also supported
+     *   "\{literal braces\}"                  → escaped, won't be evaluated
+     */
+    private static Component buildTitleComponent(String title, String guiImage, int guiImageShift) {
+        if (title == null) return Component.empty();
+
+        // Parse template: split on {expr} blocks
+        // \{ → literal {, \} → literal }
+        java.util.List<Component> parts = new java.util.ArrayList<>();
+        StringBuilder textBuf = new StringBuilder();
+        int i = 0;
+        while (i < title.length()) {
+            char c = title.charAt(i);
+            // Escaped brace
+            if (c == '\\' && i + 1 < title.length() && (title.charAt(i + 1) == '{' || title.charAt(i + 1) == '}')) {
+                textBuf.append(title.charAt(i + 1));
+                i += 2;
+                continue;
+            }
+            // Start of {expr}
+            if (c == '{') {
+                // Flush text buffer
+                if (textBuf.length() > 0) {
+                    String txt = textBuf.toString();
+                    textBuf.setLength(0);
+                    try { parts.add(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(txt)); }
+                    catch (Throwable ignored) { parts.add(net.kyori.adventure.text.Component.text(txt)); }
+                }
+                // Find matching }
+                int depth = 1, j = i + 1;
+                while (j < title.length() && depth > 0) {
+                    if (title.charAt(j) == '{') depth++;
+                    else if (title.charAt(j) == '}') depth--;
+                    if (depth > 0) j++;
+                }
+                String expr = title.substring(i + 1, j);
+                i = j + 1;
+                // Evaluate expr as ScriptFormula
+                try {
+                    // Provide Images singleton so Images.from('id') resolves via PolyType
+                    dev.arubik.craftengine.script.ScriptContext evalCtx =
+                        dev.arubik.craftengine.script.ScriptContext.builder()
+                            .typed("Images", "images_singleton").build();
+                    dev.arubik.craftengine.script.ScriptValue result =
+                        dev.arubik.craftengine.script.ScriptFormula.compile(expr)
+                            .evaluate(evalCtx);
+                    Component comp = scriptValueToTitleComponent(result);
+                    if (comp != null) { parts.add(comp); continue; }
+                    // Not a component → use as string
+                    String s = result.asStr();
+                    try { parts.add(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(s)); }
+                    catch (Throwable ignored) { parts.add(net.kyori.adventure.text.Component.text(s)); }
+                } catch (Throwable ignored) {
+                    parts.add(net.kyori.adventure.text.Component.text("{" + expr + "}"));
+                }
+                continue;
+            }
+            textBuf.append(c);
+            i++;
+        }
+        // Flush remaining text
+        if (textBuf.length() > 0) {
+            String txt = textBuf.toString();
+            try { parts.add(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(txt)); }
+            catch (Throwable ignored) { parts.add(net.kyori.adventure.text.Component.text(txt)); }
+        }
+
+        // Combine all parts
+        if (parts.isEmpty()) {
+            // Fallback: gui_image field
+            if (guiImage != null && !guiImage.isBlank()) {
+                try {
+                    Component img = dev.arubik.craftengine.machine.menu.MenuText.imageTitle(guiImage, guiImageShift);
+                    if (img != null) return img;
+                } catch (Throwable ignored) {}
+            }
+            return Component.empty();
+        }
+        if (parts.size() == 1) return parts.get(0);
+        net.kyori.adventure.text.TextComponent.Builder builder = net.kyori.adventure.text.Component.text();
+        for (Component p : parts) builder.append(p);
+        return builder.build();
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Component scriptValueToTitleComponent(dev.arubik.craftengine.script.ScriptValue val) {
+        // _TitleImage type from Images.from() builtin
+        if (val instanceof dev.arubik.craftengine.script.ScriptValue.Obj obj
+                && "_TitleImage".equals(obj.typeName())
+                && obj.instance() instanceof String[] data && data.length >= 2) {
+            try {
+                int shift = Integer.parseInt(data[1]);
+                return dev.arubik.craftengine.machine.menu.MenuText.imageTitle(data[0], shift);
+            } catch (Throwable ignored) {}
+        }
+        // String result → MiniMessage
+        if (val instanceof dev.arubik.craftengine.script.ScriptValue.Str s && !s.value().isBlank()) {
+            try { return net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(s.value()); }
+            catch (Throwable ignored) {}
+        }
+        return null;
+    }
+
+    /** Call a {file}.pf:{func} and return its __return__ value as String. */
+    /** Convert a list of MiniMessage/legacy strings to Adventure Components for item lore.
+     *  Uses non-italic by default so lore doesn't render purple italic. */
+    static java.util.List<net.kyori.adventure.text.Component> mmLore(java.util.List<String> lines) {
+        if (lines == null) return java.util.List.of();
+        java.util.List<net.kyori.adventure.text.Component> result = new java.util.ArrayList<>(lines.size());
+        for (String line : lines) {
+            if (line == null) continue;
+            net.kyori.adventure.text.Component c;
+            try {
+                c = net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(line);
+            } catch (Throwable ignored) {
+                c = net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacyAmpersand().deserialize(line);
+            }
+            result.add(c.decoration(net.kyori.adventure.text.format.TextDecoration.ITALIC, false));
+        }
+        return result;
+    }
+
+    private static String evalPfFuncStr(String ref, dev.arubik.craftengine.script.ScriptContext ctx) {
+        try {
+            int colon = ref.indexOf(':');
+            String scriptFile = ref.substring(0, colon);
+            String funcName = ref.substring(colon + 1);
+            String key = scriptFile.endsWith(".pf") ? scriptFile.substring(0, scriptFile.length() - 3) : scriptFile;
+            dev.arubik.craftengine.script.ScriptProgram prog = dev.arubik.craftengine.script.ScriptRegistry.get(key);
+            if (prog == null) return "false";
+            dev.arubik.craftengine.script.ScriptContext withDefs = prog.evaluate(ctx);
+            dev.arubik.craftengine.script.ScriptValue fnVal = withDefs.getVar(funcName);
+            if (fnVal instanceof dev.arubik.craftengine.script.ScriptValue.Obj fnObj
+                    && fnObj.typeName().equals(dev.arubik.craftengine.script.UserFunction.TYPE)) {
+                dev.arubik.craftengine.script.UserFunction fn = (dev.arubik.craftengine.script.UserFunction) fnObj.instance();
+                dev.arubik.craftengine.script.ScriptContext.Builder rb = dev.arubik.craftengine.script.ScriptContext.builder().copyFrom(withDefs);
+                fn.executor().accept(withDefs, rb);
+                return rb.build().getVar("__return__").asStr();
+            }
+        } catch (Throwable ignored) {}
+        return "false";
+    }
+
+    /** Call a {file}.pf:{func} and return the ItemStack from __return__ (ScriptValue.Item → NMS→Bukkit, Str → key lookup). */
+    private static org.bukkit.inventory.ItemStack evalPfFuncItem(String ref, dev.arubik.craftengine.script.ScriptContext ctx) {
+        try {
+            int colon = ref.indexOf(':');
+            String scriptFile = ref.substring(0, colon);
+            String funcName = ref.substring(colon + 1);
+            String key = scriptFile.endsWith(".pf") ? scriptFile.substring(0, scriptFile.length() - 3) : scriptFile;
+            dev.arubik.craftengine.script.ScriptProgram prog = dev.arubik.craftengine.script.ScriptRegistry.get(key);
+            if (prog == null) return null;
+            dev.arubik.craftengine.script.ScriptContext withDefs = prog.evaluate(ctx);
+            dev.arubik.craftengine.script.ScriptValue fnVal = withDefs.getVar(funcName);
+            if (fnVal instanceof dev.arubik.craftengine.script.ScriptValue.Obj fnObj
+                    && fnObj.typeName().equals(dev.arubik.craftengine.script.UserFunction.TYPE)) {
+                dev.arubik.craftengine.script.UserFunction fn = (dev.arubik.craftengine.script.UserFunction) fnObj.instance();
+                dev.arubik.craftengine.script.ScriptContext.Builder rb = dev.arubik.craftengine.script.ScriptContext.builder().copyFrom(withDefs);
+                fn.executor().accept(withDefs, rb);
+                dev.arubik.craftengine.script.ScriptValue result = rb.build().getVar("__return__");
+                if (result instanceof dev.arubik.craftengine.script.ScriptValue.Item i) {
+                    // NMS ItemStack → Bukkit
+                    return org.bukkit.craftbukkit.inventory.CraftItemStack.asBukkitCopy(i.stack());
+                }
+                if (result instanceof dev.arubik.craftengine.script.ScriptValue.Str s) {
+                    // Try as namespaced key → CraftEngine item or Bukkit material
+                    try {
+                        var ceDef = net.momirealms.craftengine.bukkit.api.CraftEngineItems.byId(net.momirealms.craftengine.core.util.Key.of(s.value()));
+                        if (ceDef != null) return ceDef.buildBukkitItem();
+                    } catch (Throwable ignored) {}
+                    try {
+                        org.bukkit.Material mat = org.bukkit.Material.matchMaterial(s.value());
+                        if (mat != null) return new org.bukkit.inventory.ItemStack(mat);
+                    } catch (Throwable ignored) {}
+                }
+            }
+        } catch (Throwable ignored) {}
+        return null;
+    }
+
     private MachineLayout buildUpgradeLayout() {
-        return UpgradeMenu.build(this.getMachineId(), this.definition.upgrades().size(), this::unlockedSlots, (m, p) -> ((DataMachineBlockEntity)m).openPage((org.bukkit.entity.Player)p, 0), null);
+        return buildUpgradeLayoutWithTitle(null, null);
+    }
+    private MachineLayout buildUpgradeLayoutWithTitle(Component customTitle,
+            java.util.Map<String, dev.arubik.craftengine.machine.MachineDefinition.ItemSpec> items) {
+        MachineLayout l = dev.arubik.craftengine.machine.menu.UpgradeMenu.build(
+            this.getMachineId(), this.definition.upgrades().size(), this::unlockedSlots,
+            (m, p) -> ((DataMachineBlockEntity)m).openPage((org.bukkit.entity.Player)p, 0),
+            null, items);
+        if (customTitle != null) l.setTitleComponent(customTitle);
+        return l;
     }
 
     private MachineLayout buildOverclockLayout() {
@@ -1375,8 +2156,21 @@ ModelRendersDriven {
         this.setChanged();
     }
 
+    // --- Public accessors for MachineType script methods ---
+    public float getOverclock()              { return this.overclock; }
+    public double getOverclockLimit()        { return this.curOverclockLimit; }
+    public double getFuelEfficiency()        { return this.curFuelEff; }
+    public double getGeneration()            { return this.curGeneration; }
+    public void setOverclock(float v) {
+        this.overclock = (float) DataMachineBlockEntity.clamp(v, -Math.min(this.curOverclockLimit, 0.99), this.curOverclockLimit);
+        this.upgradeModifiers = new UpgradeModifiers(1.0 + this.overclock, 1.0, 0.0);
+        this.setChanged();
+    }
+    public void addOverclock(float delta) { setOverclock(this.overclock + delta); }
+    public static double clampPublic(double v, double min, double max) { return clamp(v, min, max); }
+
     @Override
-    public PolyContext buildEvalContext() {
+    public ScriptContext buildScriptContext() {
         try {
             float f;
             int n = 0;
@@ -1444,71 +2238,70 @@ ModelRendersDriven {
             }
             float yaw = f;
             String facingName = facing != null ? facing.getName().toLowerCase() : "north";
-            return PolyContext.builder().copyFrom(mrc.toPolyContext()).machinePos((double)pos.getX() + 0.5, (double)pos.getY() + 0.5, (double)pos.getZ() + 0.5, facingName, yaw, (World)level.getWorld(), this).redstone(n).contraption(level).num("burn_time", this.burnTime).num("max_burn_time", this.maxBurnTime).num("overclock_limit", this.curOverclockLimit).num("generation", this.curGeneration).cls("Inventory", new InventoryClass((Inventory)new CraftInventory((Container)this))).cls("Network", new NetworkClass((ServerLevel)level, pos.getX(), pos.getY(), pos.getZ())).build();
+            ScriptContext base = mrc.toScriptContext();
+            ScriptContext.Builder b = ScriptContext.builder().copyFrom(base)
+                .facing(facingName, yaw)
+                .redstone(n)
+                .num("burn_time", this.burnTime)
+                .num("max_burn_time", this.maxBurnTime)
+                .num("ticks_alive", this.ticksAlive)
+                .num("overclock_limit", this.curOverclockLimit)
+                .num("generation", this.curGeneration)
+                .num("rpm_ratio", this.definition != null ? this.definition.rpmRatio() : 1.0f)
+                .typed("Machine", new dev.arubik.craftengine.script.types.machine.MachineType.MachineRef((ServerLevel)level, pos, facingName, this))
+                .typed("Network", new dev.arubik.craftengine.script.types.machine.NetworkType.NetworkRef((ServerLevel)level, ((ServerLevel)level).getWorld().getUID(), pos.getX(), pos.getY(), pos.getZ()));
+            if (level instanceof dev.arubik.craftengine.contraption.core.ContraptionLevel cl)
+                b.typed("Contraption", cl);
+            // Global singletons available in all machine scripts
+            b.typed("ContraptionManager", dev.arubik.craftengine.script.types.world.ContraptionManagerType.INSTANCE);
+            if (level instanceof ServerLevel sl) b.world(sl);
+            return b.build();
         }
         catch (Throwable ignored) {
             return null;
         }
     }
 
-    private void runActionScript(String scriptName) {
-        block9: {
-            PolyScript script = PolyScriptRegistry.get(scriptName);
-            if (script == null) {
-                if (SCRIPT_DEBUG) {
-                    System.out.println("[CEP script] " + scriptName + " NOT FOUND in registry");
-                }
-                return;
-            }
-            try {
-                PolyContext ctx = this.buildEvalContext();
-                if (ctx == null) {
-                    if (SCRIPT_DEBUG) {
-                        System.out.println("[CEP script] " + scriptName + " ctx=null");
-                    }
-                    return;
-                }
-                if (SCRIPT_DEBUG) {
-                    System.out.println("[CEP script] RUN " + scriptName);
-                }
-                script.evaluate(ctx);
-                if (SCRIPT_DEBUG) {
-                    System.out.println("[CEP script] OK " + scriptName);
-                }
-            }
-            catch (Throwable t) {
-                if (SCRIPT_DEBUG) {
-                    System.out.println("[CEP script] " + scriptName + " EXCEPTION: " + t.getMessage());
-                }
-                if (!SCRIPT_DEBUG) break block9;
-                t.printStackTrace();
-            }
+    private void runActionScript(String scriptRef) {
+        dev.arubik.craftengine.script.ScriptCall call = dev.arubik.craftengine.script.ScriptCall.parse(scriptRef);
+        if (call == null) return;
+        try {
+            ScriptContext ctx = this.buildScriptContext();
+            if (ctx == null) return;
+            if (SCRIPT_DEBUG) System.out.println("[CEP script] RUN " + scriptRef);
+            call.execute(ctx);
+            if (SCRIPT_DEBUG) System.out.println("[CEP script] OK " + scriptRef);
+        } catch (Throwable t) {
+            if (SCRIPT_DEBUG) t.printStackTrace();
         }
     }
 
-    public void runInteractScript(String scriptName, ServerPlayer player) {
-        PolyScript script = PolyScriptRegistry.get(scriptName);
-        if (script == null) {
-            return;
-        }
+    public void runInteractScript(String scriptRef, ServerPlayer player) {
+        dev.arubik.craftengine.script.ScriptCall call = dev.arubik.craftengine.script.ScriptCall.parse(scriptRef);
+        if (call == null) return;
         try {
-            PolyContext base = this.buildEvalContext();
-            if (base == null) {
-                return;
-            }
-            PolyContext ctx = PolyContext.builder().copyFrom(base).player(player).build();
-            script.evaluate(ctx);
-        }
-        catch (Throwable throwable) {
-            // empty catch block
-        }
+            ScriptContext base = this.buildScriptContext();
+            if (base == null) return;
+            ScriptContext ctx = ScriptContext.builder().copyFrom(base).player(player).build();
+            call.execute(ctx);
+        } catch (Throwable ignored) {}
+    }
+
+    /** Run an arbitrary script ref (on_place, on_break, etc.) with the machine's context. */
+    public void runScriptRef(String scriptRef) {
+        dev.arubik.craftengine.script.ScriptCall call = dev.arubik.craftengine.script.ScriptCall.parse(scriptRef);
+        if (call == null) return;
+        try {
+            ScriptContext ctx = this.buildScriptContext();
+            if (ctx != null) call.execute(ctx);
+        } catch (Throwable ignored) {}
     }
 
     private MachineLayout buildMainLayout() {
         int infoSlot;
         Object object;
         MachineLayout layout = new MachineLayout(InventoryType.CHEST, this.definition.menuSize(), this.definition.title());
-        Component title = GuiTitles.title(this.getMachineId(), "main");
+        Component title = null;
         if (title != null) {
             layout.setTitleComponent(title);
         }
@@ -1549,10 +2342,7 @@ ModelRendersDriven {
             }
         }
         MachineBars.install(layout, effectiveBars);
-        int n = infoSlot = this.definition.infoSlot() >= 0 ? this.definition.infoSlot() : this.menuConfig.infoSlot;
-        if (infoSlot >= 0) {
-            layout.setDynamicProvider(infoSlot, (machine, tick) -> this.infoIcon());
-        }
+        // info_slot removed — use pages[].layout with item:"recipe_info.pf:item" etc.
         return layout;
     }
 
@@ -1561,14 +2351,28 @@ ModelRendersDriven {
     }
 
     private void installButton(MachineLayout layout, MachineMenuConfig.Button button) {
-        layout.addButton(button.slot, (machine, tick) -> {
+        layout.addClickButton(button.slot, (machine, tick) -> {
             boolean locked = DataMachineBlockEntity.isLocked(machine, button.lockedWhen);
             Key icon = locked && button.lockedIcon != null ? DataMachineBlockEntity.parseKey(button.lockedIcon) : DataMachineBlockEntity.parseKey(button.icon);
-            return MenuText.iconItem(icon, Material.PAPER, (Component)Component.text((String)(button.name == null ? "" : button.name)), new Component[0]);
-        }, (machine, player) -> {
-            if (DataMachineBlockEntity.isLocked(machine, button.lockedWhen)) {
-                return;
+            // Evaluate name/lore with inline ${expr} + MiniMessage
+            ScriptContext ctx = machine instanceof DataMachineBlockEntity dm ? dm.buildScriptContext() : null;
+            String rawName = button.evaluateNameRaw(ctx);
+            java.util.List<String> loreLines = button.evaluateLoreRaw(ctx);
+            // Use MiniMessage directly so <lang:key> translatable components are preserved.
+            Component nameComp = rawName == null || rawName.isBlank() ? Component.empty()
+                : net.kyori.adventure.text.minimessage.MiniMessage.miniMessage()
+                    .deserialize(rawName).decoration(net.kyori.adventure.text.format.TextDecoration.ITALIC, false);
+            org.bukkit.inventory.ItemStack item = MenuText.iconItem(icon, Material.PAPER, nameComp, new Component[0]);
+            if (item != null && loreLines != null && !loreLines.isEmpty()) {
+                org.bukkit.inventory.meta.ItemMeta meta = item.getItemMeta();
+                if (meta != null) {
+                    meta.lore(mmLore(loreLines));
+                    item.setItemMeta(meta);
+                }
             }
+            return item;
+        }, (machine, player, clickType) -> {
+            if (DataMachineBlockEntity.isLocked(machine, button.lockedWhen)) return;
             switch (button.action.kind) {
                 case DEPLETE_FLUID: {
                     for (FluidTank t : machine.fluidTanks) {
@@ -1585,16 +2389,95 @@ ModelRendersDriven {
                     break;
                 }
                 case OPEN_PAGE: {
-                    if (!(machine instanceof DataMachineBlockEntity)) break;
-                    DataMachineBlockEntity self = (DataMachineBlockEntity)machine;
-                    self.openPage((org.bukkit.entity.Player)player, button.action.page);
+                    if (machine instanceof DataMachineBlockEntity self)
+                        self.openPage((org.bukkit.entity.Player)player, button.action.page);
                     break;
                 }
                 case SCRIPT: {
-                    PolyContext ctx;
-                    PolyScript script = PolyScriptRegistry.get(button.action.target);
-                    if (script == null || (ctx = machine.buildEvalContext()) == null) break;
-                    script.evaluate(ctx);
+                    if (!(machine instanceof DataMachineBlockEntity dmBtn)) break;
+                    ScriptContext sCtx = dmBtn.buildScriptContext();
+                    if (sCtx == null) break;
+
+                    // Format: "gas_motor.pf:increase_rpm" stored as target="gas_motor.pf:increase_rpm"
+                    String actionTarget = button.action.target;
+                    String scriptFile, funcName;
+                    if (actionTarget.contains(":")) {
+                        int colon = actionTarget.indexOf(':');
+                        scriptFile = actionTarget.substring(0, colon);
+                        funcName = actionTarget.substring(colon + 1);
+                    } else {
+                        scriptFile = actionTarget;
+                        funcName = null;
+                    }
+
+                    // Remove ".pf" suffix for registry lookup
+                    String lookupKey = scriptFile.endsWith(".pf") ? scriptFile.substring(0, scriptFile.length() - 3) : scriptFile;
+                    ScriptProgram btnScript = ScriptRegistry.get(lookupKey);
+                    if (btnScript == null) break;
+
+                    // Inject args + click_type so scripts can branch on left/right/drop etc.
+                    dev.arubik.craftengine.script.ScriptContext.Builder b = dev.arubik.craftengine.script.ScriptContext.builder().copyFrom(sCtx);
+                    b.str("click_type", clickType != null ? clickType.name().toLowerCase(java.util.Locale.ROOT) : "left");
+                    b.val("is_right_click",  dev.arubik.craftengine.script.ScriptValue.of(clickType == org.bukkit.event.inventory.ClickType.RIGHT || clickType == org.bukkit.event.inventory.ClickType.SHIFT_RIGHT));
+                    b.val("is_shift_click",  dev.arubik.craftengine.script.ScriptValue.of(clickType == org.bukkit.event.inventory.ClickType.SHIFT_LEFT || clickType == org.bukkit.event.inventory.ClickType.SHIFT_RIGHT));
+                    b.val("is_drop_click",   dev.arubik.craftengine.script.ScriptValue.of(clickType == org.bukkit.event.inventory.ClickType.DROP || clickType == org.bukkit.event.inventory.ClickType.CONTROL_DROP));
+                    for (int ai = 0; ai < button.action.args.size(); ai++)
+                        b.str("arg" + ai, button.action.args.get(ai));
+
+                    if (funcName == null || funcName.isEmpty()) {
+                        // No function — execute whole script
+                        btnScript.evaluate(b.build());
+                    } else {
+                        // Execute script to register defs, then call the named function
+                        ScriptContext withDefs = btnScript.evaluate(b.build());
+                        dev.arubik.craftengine.script.ScriptValue fnVal = withDefs.getVar(funcName);
+                        if (fnVal instanceof dev.arubik.craftengine.script.ScriptValue.Obj fnObj
+                                && fnObj.typeName().equals(dev.arubik.craftengine.script.UserFunction.TYPE)) {
+                            dev.arubik.craftengine.script.UserFunction fn = (dev.arubik.craftengine.script.UserFunction) fnObj.instance();
+                            // Bind action args to function params by position (e.g. "8" → amount)
+                            java.util.List<dev.arubik.craftengine.script.ScriptValue> svArgs = new java.util.ArrayList<>(button.action.args.size());
+                            for (String a : button.action.args) svArgs.add(dev.arubik.craftengine.script.ScriptValue.of(a));
+                            fn.call(svArgs, withDefs);
+                        }
+                    }
+                    break;
+                }
+                case BUMP_OVERCLOCK: {
+                    if (!(machine instanceof DataMachineBlockEntity dmOc)) break;
+                    String deltaStr = button.action.target != null ? button.action.target.trim() : "0.01";
+                    try {
+                        float baseStep = Float.parseFloat(deltaStr);
+                        // Scale by click type: right=25x, drop=50x of the base step
+                        float scale = 1.0f;
+                        if (clickType != null) scale = switch (clickType) {
+                            case DROP, CONTROL_DROP -> 50.0f;
+                            case RIGHT, SHIFT_RIGHT -> 25.0f;
+                            default -> 1.0f;
+                        };
+                        dmOc.addOverclock(baseStep * scale);
+                    } catch (NumberFormatException ignored2) {}
+                    break;
+                }
+                case PF_FUNCTION: {
+                    // Call a named function defined in a .pf script loaded in the registry
+                    // Function name = button.action.target, args injected as arg0, arg1, ...
+                    if (!(machine instanceof DataMachineBlockEntity dmBtn)) break;
+                    ScriptContext sCtx = dmBtn.buildScriptContext();
+                    if (sCtx == null) break;
+                    // Inject args
+                    dev.arubik.craftengine.script.ScriptContext.Builder b = dev.arubik.craftengine.script.ScriptContext.builder().copyFrom(sCtx);
+                    for (int ai = 0; ai < button.action.args.size(); ai++)
+                        b.str("arg" + ai, button.action.args.get(ai));
+                    b.str("_fn", button.action.target);
+                    ScriptContext fnCtx = b.build();
+                    // Try to find the function variable and call it
+                    dev.arubik.craftengine.script.ScriptValue fnVal = fnCtx.getVar(button.action.target);
+                    if (fnVal instanceof dev.arubik.craftengine.script.ScriptValue.Obj fnObj
+                            && fnObj.typeName().equals(dev.arubik.craftengine.script.UserFunction.TYPE)) {
+                        dev.arubik.craftengine.script.UserFunction fn = (dev.arubik.craftengine.script.UserFunction) fnObj.instance();
+                        dev.arubik.craftengine.script.ScriptContext.Builder rb = dev.arubik.craftengine.script.ScriptContext.builder().copyFrom(fnCtx);
+                        fn.executor().accept(fnCtx, rb);
+                    }
                     break;
                 }
             }
@@ -1602,24 +2485,9 @@ ModelRendersDriven {
     }
 
     private static boolean isLocked(AbstractMachineBlockEntity machine, MachineMenuConfig.LockedWhen lw) {
-        PolyContext polyContext;
-        double ocLimit;
-        if (lw == null) {
-            return false;
-        }
-        if (machine instanceof DataMachineBlockEntity) {
-            DataMachineBlockEntity dm = (DataMachineBlockEntity)machine;
-            ocLimit = dm.curOverclockLimit;
-        } else {
-            ocLimit = 0.0;
-        }
-        if (machine instanceof DataMachineBlockEntity) {
-            DataMachineBlockEntity dm2 = (DataMachineBlockEntity)machine;
-            polyContext = dm2.buildEvalContext();
-        } else {
-            polyContext = null;
-        }
-        PolyContext ctx = polyContext;
+        if (lw == null) return false;
+        double ocLimit = machine instanceof DataMachineBlockEntity dm ? dm.curOverclockLimit : 0.0;
+        ScriptContext ctx = machine instanceof DataMachineBlockEntity dm2 ? dm2.buildScriptContext() : null;
         return lw.isLocked(ctx, ocLimit);
     }
 

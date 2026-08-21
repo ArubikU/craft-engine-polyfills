@@ -97,5 +97,30 @@ public sealed interface RendererSpec {
     public record BetterModelSpec(String modelId, String animation, String speedExpr, String whenExpr, String updateWhen, String scriptRef, int lingerTicks) implements RendererSpec
     {
     }
+
+    /**
+     * Programmatic renderer — calls a script function every tick to get display state.
+     * The function returns a Map with keys: item, pos (Vector), rot_x, rot_y, rot_z, scale, billboard.
+     * Multiple display entities: return an Array of such Maps.
+     *
+     * Example JSON:
+     *   { "type": "programmatic", "run": "crusher.pf:get_render_state", "when": "running" }
+     *
+     * Example script:
+     *   def get_render_state() {
+     *       t = ticks_alive * 0.05
+     *       return { "item": "minecraft:stone", "pos": vec(sin(t)*0.5, 0.5, cos(t)*0.5), "scale": "0.3" }
+     *   }
+     */
+    public record ProgrammaticSpec(
+        String scriptRef,    // e.g. "crusher.pf:get_render_state"
+        String whenExpr,
+        String updateWhen,
+        String scriptRef2    // alias — same value, used as scriptRef() return
+    ) implements RendererSpec {
+        @Override public String scriptRef() { return scriptRef; }
+        @Override public String whenExpr()   { return whenExpr;  }
+        @Override public String updateWhen() { return updateWhen; }
+    }
 }
 

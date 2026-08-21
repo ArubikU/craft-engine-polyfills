@@ -1,0 +1,25 @@
+{
+  "id": "polyfills:freezer",
+  "title": "Freezer",
+  "flags": {
+    "fuel": false
+  },
+  "action_script": "freezer",
+  "action_interval": 40,
+  "pages": [
+    {
+      "title": "Freezer",
+      "size": 9,
+      "layout": [
+        {
+          "slot": 4,
+          "item": "recipe_info.pf:item",
+          "name": "recipe_info.pf:name",
+          "lore": [
+            "recipe_info.pf:lore"
+          ]
+        }
+      ]
+    }
+  ]
+}

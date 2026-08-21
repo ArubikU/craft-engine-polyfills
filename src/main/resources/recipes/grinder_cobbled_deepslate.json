@@ -1,0 +1,12 @@
+{
+  "type": "crusher",
+  "time": 80,
+  "fuelRequired": false,
+  "rpm": 6,
+  "su": 4,
+  "inputs": [{ "type": "item", "id": "minecraft:cobbled_deepslate", "amount": 1 }],
+  "outputs": [
+    { "type": "item", "id": "minecraft:gravel", "amount": 1, "chance": 1.0 },
+    { "type": "item", "id": "minecraft:coal",   "amount": 1, "chance": 0.1 }
+  ]
+}

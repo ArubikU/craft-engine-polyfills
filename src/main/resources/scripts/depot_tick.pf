@@ -1,0 +1,19 @@
+# Depot tick — auto-collect item entities sitting on top of the depot surface.
+# Mirrors DepotBlockEntity.receiveConveyorItem: items from belts/drops land here
+# and get absorbed into inventory if there's space.
+
+entities = Machine.nearby_entities(0.7)
+
+for entity in entities {
+    if entity.type == "minecraft:item" {
+        # Only items sitting directly on the block surface (within 0.8 blocks vertically)
+        ey = entity.pos.y
+        by = Machine.y
+        if ey >= by - 0.2 && ey <= by + 1.2 {
+            added = Machine.add_item(entity.item)
+            if added > 0 {
+                entity.remove()
+            }
+        }
+    }
+}

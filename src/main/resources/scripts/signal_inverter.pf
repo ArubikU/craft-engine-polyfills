@@ -1,0 +1,2 @@
+# Signal Inverter — NOT gate: output 15 when input 0, output 0 when input > 0.
+Machine.emit_redstone(Machine.redstone > 0 ? 0 : 15)

@@ -1,0 +1,39 @@
+{
+  "id": "polyfills:fertilizer",
+  "title": "Fertilizer",
+  "flags": {
+    "recipes": false,
+    "fuel": false
+  },
+  "action_script": "fertilizer",
+  "action_interval": 20,
+  "pages": [
+    {
+      "title": "Fertilizer",
+      "size": 9,
+      "slots": {
+        "input": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8
+        ]
+      }
+    }
+  ],
+  "io": {
+    "input": {
+      "types": [
+        "item"
+      ],
+      "faces": [
+        "up"
+      ]
+    }
+  }
+}

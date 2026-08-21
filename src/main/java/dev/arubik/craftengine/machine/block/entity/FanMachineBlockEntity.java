@@ -76,7 +76,6 @@ import dev.arubik.craftengine.gas.GasType;
 import dev.arubik.craftengine.machine.attribute.MachineAttributes;
 import dev.arubik.craftengine.machine.block.entity.AbstractMachineBlockEntity;
 import dev.arubik.craftengine.machine.block.entity.FanGasConfig;
-import dev.arubik.craftengine.machine.menu.GuiTitles;
 import dev.arubik.craftengine.machine.menu.MachineMenu;
 import dev.arubik.craftengine.machine.menu.MachineMenuConfig;
 import dev.arubik.craftengine.machine.menu.MenuText;
@@ -907,7 +906,7 @@ extends AbstractMachineBlockEntity {
     private MachineLayout buildMainLayout() {
         int infoSlot;
         MachineLayout l = new MachineLayout(InventoryType.CHEST, this.menuSize, "Fan");
-        Component title = GuiTitles.title(this.getMachineId(), "main");
+        Component title = null;
         l.setTitleComponent(title != null ? title : MenuText.noI(MenuText.tr("polyfill.ui.fan_title", NamedTextColor.AQUA)));
         for (MachineMenuConfig.Button b : this.menuConfig.buttons) {
             this.installButton(l, b);
@@ -1021,7 +1020,7 @@ extends AbstractMachineBlockEntity {
     private MachineLayout buildUpgradeLayout() {
         int unlocked = this.curUnlocked;
         MachineLayout l = new MachineLayout(InventoryType.CHEST, 18, "Upgrades");
-        Component title = GuiTitles.title(this.getMachineId(), "upgrade");
+        Component title = null;
         l.setTitleComponent(title != null ? title : MenuText.noI(MenuText.tr("polyfill.ui.upgrades", NamedTextColor.AQUA)));
         for (int i = 0; i < 9; ++i) {
             if (i < unlocked) {

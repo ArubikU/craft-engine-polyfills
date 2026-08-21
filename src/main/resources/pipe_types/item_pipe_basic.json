@@ -1,0 +1,26 @@
+{
+  "id": "polyfills:item_pipe_basic",
+  "block": "polyfills:item_pipe",
+  "resource": "item",
+  "capacity": 1,
+  "transfer_per_tick": 4,
+  "conductance": 1000.0,
+  "tier": 1,
+  "connects_to": [],
+  "panel": "polyfills:item_pipe_panel",
+  "preview_namespace": "cml",
+  "preview_prefix": "pipe_preview_copper",
+  "mask_order": ["south", "west", "north", "east", "up", "down"],
+  "preview_offset": [0.5, 0.5, 0.5],
+  "preview_scale": 1.0,
+  "replaceable_blocks": [
+    "minecraft:air",
+    "minecraft:cave_air",
+    "minecraft:void_air",
+    "minecraft:water",
+    "minecraft:lava",
+    "minecraft:short_grass",
+    "minecraft:tall_grass",
+    "minecraft:snow"
+  ]
+}

@@ -1,0 +1,12 @@
+# Redstone Looper — oscillates output at a configurable interval.
+# Machine.set_flag("interval", N) where N = half-period in ticks (default 1 = 2-tick oscillation).
+
+interval = Machine.get_flag("interval")
+if interval <= 0 { interval = 1 }
+
+t = Machine.get_flag("_loop_t") + 1
+Machine.set_flag("_loop_t", t)
+
+full_cycle = interval * 2
+phase = t % full_cycle
+Machine.emit_redstone(phase < interval ? 15 : 0)

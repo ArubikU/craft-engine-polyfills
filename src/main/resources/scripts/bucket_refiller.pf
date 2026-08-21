@@ -1,0 +1,21 @@
+# Bucket Refiller — takes empty buckets from input slot, fills from front block.
+# Water/lava source → water/lava bucket. Consumes the source block.
+
+input = Machine.get_item_in_slot(3)
+if is_empty(input) { return }
+
+front = Machine.facing_block
+front_id = front.id
+
+if input.id == "minecraft:bucket" {
+    if front_id == "minecraft:water" {
+        front.world.set_block(front.pos.x, front.pos.y, front.pos.z, "minecraft:air")
+        Machine.remove_item_in_slot(3, 1)
+        Machine.add_item_to_slot(5, "minecraft:water_bucket", 1)
+    }
+    if front_id == "minecraft:lava" {
+        front.world.set_block(front.pos.x, front.pos.y, front.pos.z, "minecraft:air")
+        Machine.remove_item_in_slot(3, 1)
+        Machine.add_item_to_slot(5, "minecraft:lava_bucket", 1)
+    }
+}

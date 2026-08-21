@@ -1,0 +1,13 @@
+# Logic Gate — 6 modes: OR/AND/NAND/NOR/XOR/XNOR on left/right redstone inputs.
+mode = Machine.get_flag("mode")
+left = Machine.get_flag("left_power") > 0 ? 1 : 0
+right = Machine.get_flag("right_power") > 0 ? 1 : 0
+
+result = 0
+if mode == 0 { result = (left || right) ? 15 : 0 }
+if mode == 1 { result = (left && right) ? 15 : 0 }
+if mode == 2 { result = (left && right) ? 0 : 15 }
+if mode == 3 { result = (left || right) ? 0 : 15 }
+if mode == 4 { result = (left != right) ? 15 : 0 }
+if mode == 5 { result = (left == right) ? 15 : 0 }
+Machine.emit_redstone(result)

@@ -16,7 +16,6 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 import dev.arubik.craftengine.CraftEnginePolyfills;
-import dev.arubik.craftengine.contraption.type.SailRegistry;
 import dev.arubik.craftengine.data.DataFiles;
 import dev.arubik.craftengine.data.JsonView;
 import dev.arubik.craftengine.data.Registries;
@@ -95,6 +94,15 @@ public final class MachineDefinitionLoader {
                 upgrades = new MachineDefinition.UpgradeSpec(count, up.rangedInt("base_unlocked", count, 0, Math.max(1, count)));
             }
         }
+        // Also check top-level "upgrades" (plural) key used by paged machines
+        if (upgrades.count() == 0 && !upgrades.isInline() && view.raw().has("upgrades")
+                && view.raw().get("upgrades").isJsonObject()) {
+            JsonView up2 = JsonView.of(view.raw().get("upgrades").getAsJsonObject(), view.path() + " > upgrades");
+            if (up2.has("count")) {
+                int c2 = up2.rangedInt("count", 0, 0, menuSize);
+                upgrades = new MachineDefinition.UpgradeSpec(c2, up2.rangedInt("base_unlocked", c2, 0, Math.max(1, c2)));
+            }
+        }
         int reserved = upgrades.isInline() ? 0 : upgrades.count();
         MachineDefinitionLoader.rejectReserved(view, inputs, reserved, "input");
         MachineDefinitionLoader.rejectReserved(view, outputs, reserved, "output");
@@ -110,6 +118,15 @@ public final class MachineDefinitionLoader {
         if (view.has("power")) {
             JsonView p = view.object("power");
             power = new MachineDefinition.PowerSpec(p.bool("consumes_stress", false), p.rangedDouble("su_exponent", 1.25, 0.1, 8.0), p.rangedInt("stress_grace_ticks", 20, 0, 1200), (float)p.rangedDouble("generates_rpm", 0.0, 0.0, 100000.0), p.rangedInt("generates_su", 0, 0, 1000000), (float)p.rangedDouble("base_overclock", 2.0, 0.0, 64.0));
+        }
+        MachineDefinition.EnergySpec energy = MachineDefinition.EnergySpec.none();
+        if (view.has("energy")) {
+            JsonView e = view.object("energy");
+            int cap = e.rangedInt("capacity", 10000, 1, Integer.MAX_VALUE);
+            energy = new MachineDefinition.EnergySpec(cap,
+                    e.rangedInt("max_input", cap, 0, Integer.MAX_VALUE),
+                    e.rangedInt("max_output", cap, 0, Integer.MAX_VALUE),
+                    e.rangedInt("generation_per_tick", 0, 0, Integer.MAX_VALUE));
         }
         ArrayList<MachineDefinition.BarRef> bars = new ArrayList<MachineDefinition.BarRef>();
         for (JsonView b : view.objectList("bars")) {
@@ -237,25 +254,25 @@ public final class MachineDefinitionLoader {
         }
         String actionScript = view.has("action_script") ? view.string("action_script") : null;
         int actionInterval = view.has("action_interval") ? view.integer("action_interval", 20) : 20;
-        boolean openUi = view.bool("open_ui", true);
         String interactScript = view.has("on_right_click") ? view.string("on_right_click") : null;
         String attackScript = view.has("on_left_click") ? view.string("on_left_click") : null;
-        boolean noProcessing = view.bool("no_processing", false);
-        MachineDefinition def = new MachineDefinition(id, view.string("recipe_type", id.value()), view.string("title", id.value()), menuSize, inputs, outputs, fuels, upgrades, info, fluidTanks, gasTanks, view.bool("fuel_required", true), io, buttons, power, bars, infoSpec, paging, variables, renderers, upgradeDefs, actionScript, actionInterval).withContinuousFuel(view.bool("continuous_fuel", false));
-        def.setOpenUi(openUi);
+        MachineFlags flags = parseFlags(view, power);
+        MachineDefinition def = new MachineDefinition(id, view.string("recipe_type", id.value()), view.string("title", id.value()), menuSize, inputs, outputs, fuels, upgrades, info, fluidTanks, gasTanks, flags.fuel(), io, buttons, power, bars, infoSpec, paging, variables, renderers, upgradeDefs, actionScript, actionInterval);
+        def.setFlags(flags);
         def.setInteractScript(interactScript);
         def.setAttackScript(attackScript);
-        def.setNoProcessing(noProcessing);
+        if (view.has("status"))    def.setStatusScript(view.string("status", null));
+        if (view.has("on_place"))        def.setOnPlaceScript(view.string("on_place", null));
+        if (view.has("on_break"))        def.setOnBreakScript(view.string("on_break", null));
+        if (view.has("on_state_change")) def.setOnStateChangeScript(view.string("on_state_change", null));
+        if (view.has("on_pipe_transfer")) def.setOnTransferScript(view.string("on_pipe_transfer", null));
         if (view.has("rpm_ratio")) {
             def.setRpmRatio((float)view.decimal("rpm_ratio", 1.0));
         }
         if (view.bool("is_sail", false)) {
             def.setSail(true);
             def.setSailRpmBonus((float)view.decimal("sail_rpm_bonus", 1.0));
-            SailRegistry.registerSailBlockId(id.toString());
-        }
-        if (view.has("rpm_large_cog")) {
-            def.setRpmLargeCog(view.bool("rpm_large_cog", false));
+            // sail block ids used directly via block.id.contains("sail") in .pf scripts
         }
         JsonObject rpmIoObj = null;
         try {
@@ -289,6 +306,11 @@ public final class MachineDefinitionLoader {
                     def.setRpmOutputInvertedRaw(inv);
                     def.setRpmOutputDeclared(true);
                 }
+                if (rpmIoObj.has("output_relative") && rpmIoObj.get("output_relative").getAsBoolean()) {
+                    // Gearbox behaviour: the sign follows the driven face at runtime.
+                    def.setRpmOutputRelative(true);
+                    def.setRpmOutputDeclared(true);
+                }
                 if (rpmIoObj.has("input_block_filter") && !(filter = MachineDefinitionLoader.parseBlockFilter(rpmIoObj.get("input_block_filter"))).isEmpty()) {
                     def.setRpmInputBlockFilter(filter);
                 }
@@ -300,7 +322,121 @@ public final class MachineDefinitionLoader {
                 // empty catch block
             }
         }
+        // Parse pages[] — new configurable menu system
+        if (view.raw().has("pages") && view.raw().get("pages").isJsonArray()) {
+            List<MachineDefinition.PageDef> pages = new ArrayList<>();
+            for (JsonElement pageEl : view.raw().get("pages").getAsJsonArray()) {
+                if (!pageEl.isJsonObject()) continue;
+                pages.add(MachineDefinitionLoader.parsePage(pageEl.getAsJsonObject(), view));
+            }
+            def.setPages(pages);
+        }
         return def;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static MachineDefinition.PageDef parsePage(JsonObject obj, JsonView parent) {
+        JsonView p = JsonView.of(obj, parent.path() + " > pages[]");
+        String title = p.string("title", null);
+        String sizeOrType = p.has("size") ? String.valueOf(p.raw().get("size").isJsonPrimitive() ? p.raw().get("size").getAsString() : "54") : null;
+        if (sizeOrType == null && p.has("type")) sizeOrType = p.string("type", "54");
+        String specialType = p.string("special", null);
+
+        // Static layout items
+        List<MachineDefinition.PageDef.StaticSlot> layout = new ArrayList<>();
+        if (p.raw().has("layout") && p.raw().get("layout").isJsonArray()) {
+            for (JsonElement el : p.raw().get("layout").getAsJsonArray()) {
+                if (!el.isJsonObject()) continue;
+                JsonView sv = JsonView.of(el.getAsJsonObject(), p.path() + " > layout[]");
+                int slot = sv.integer("slot", -1);
+                if (slot < 0) continue;
+                String item = sv.string("item", null);
+                String name = sv.string("name", null);
+                List<String> lore = sv.has("lore") ? sv.stringList("lore") : List.of();
+                String action = sv.string("action", null);
+                boolean locked = sv.bool("locked", false);
+                layout.add(new MachineDefinition.PageDef.StaticSlot(slot, item, name, lore, action, locked));
+            }
+        }
+
+        // Slots
+        JsonView slots = p.has("slots") ? p.object("slots") : p;
+        int[] inputs  = MachineDefinitionLoader.toArraySafe(slots.intList("input"));
+        int[] outputs = MachineDefinitionLoader.toArraySafe(slots.intList("output"));
+        int[] fuels   = MachineDefinitionLoader.toArraySafe(slots.intList("fuel"));
+
+        // Buttons
+        List<MachineDefinition.ButtonSpec> buttons = new ArrayList<>();
+        for (JsonView b : p.objectList("buttons")) {
+            buttons.add(new MachineDefinition.ButtonSpec(b.integer("slot", 0), b.string("icon", "cml:gui_empty"),
+                b.string("action", "none"), b.string("name", null), b.stringList("lore"),
+                b.string("locked_icon", null), b.string("locked_when", "never")));
+        }
+
+        // Bars
+        List<MachineDefinition.BarRef> bars = new ArrayList<>();
+        for (JsonView b : p.objectList("bars")) {
+            List<Integer> slotList = b.intList("slots");
+            int[] barSlots = new int[slotList.size()];
+            for (int i = 0; i < barSlots.length; i++) barSlots[i] = slotList.get(i);
+            net.momirealms.craftengine.core.util.Key barId = b.key("id", "polyfills");
+            bars.add(new MachineDefinition.BarRef(barId, barSlots, b.string("source", barId.value())));
+        }
+
+        int infoSlot = p.has("info_slot") ? p.integer("info_slot", -1) : -1;
+        String guiImage = p.has("gui_image") ? p.string("gui_image", null) : null;
+        int guiImageShift = p.has("gui_image_shift") ? p.integer("gui_image_shift", -8) : -8;
+
+        // Parse special-page item overrides: "items": { "locked": {...}, "filler": {...}, ... }
+        java.util.Map<String, MachineDefinition.ItemSpec> specialItems = new java.util.LinkedHashMap<>();
+        if (p.has("items") && p.raw().get("items").isJsonObject()) {
+            for (java.util.Map.Entry<String, com.google.gson.JsonElement> e
+                    : p.raw().get("items").getAsJsonObject().entrySet()) {
+                MachineDefinition.ItemSpec spec = parseItemSpec(e.getValue(), p.path() + " > items." + e.getKey());
+                if (spec != null) specialItems.put(e.getKey(), spec);
+            }
+        }
+
+        return new MachineDefinition.PageDef(title, sizeOrType, List.copyOf(layout),
+            inputs, outputs, fuels, List.copyOf(buttons), List.copyOf(bars), infoSlot, specialType,
+            guiImage, guiImageShift, java.util.Map.copyOf(specialItems));
+    }
+
+    /** Parse an ItemSpec from a JsonElement. Supports short form ("icon_key") or object form. */
+    static MachineDefinition.ItemSpec parseItemSpec(com.google.gson.JsonElement el, String path) {
+        if (el == null || el.isJsonNull()) return null;
+        if (el.isJsonPrimitive()) {
+            return MachineDefinition.ItemSpec.ofIcon(el.getAsString());
+        }
+        if (!el.isJsonObject()) return null;
+        JsonView sv = JsonView.of(el.getAsJsonObject(), path);
+        String icon = sv.string("icon", null);
+        String name = sv.string("name", null);
+        List<String> lore = sv.has("lore") ? sv.stringList("lore") : List.of();
+        java.util.Map<String, Object> components = new java.util.LinkedHashMap<>();
+        if (sv.has("components") && sv.raw().get("components").isJsonObject()) {
+            for (java.util.Map.Entry<String, com.google.gson.JsonElement> ce
+                    : sv.raw().get("components").getAsJsonObject().entrySet()) {
+                com.google.gson.JsonElement cv = ce.getValue();
+                if (cv.isJsonPrimitive()) {
+                    com.google.gson.JsonPrimitive prim = cv.getAsJsonPrimitive();
+                    if (prim.isBoolean()) components.put(ce.getKey(), prim.getAsBoolean());
+                    else if (prim.isNumber()) components.put(ce.getKey(), prim.getAsNumber().doubleValue());
+                    else components.put(ce.getKey(), prim.getAsString());
+                } else if (cv.isJsonObject()) {
+                    // complex component — store as marker
+                    components.put(ce.getKey(), Boolean.TRUE);
+                }
+            }
+        }
+        return new MachineDefinition.ItemSpec(icon, name, lore, java.util.Map.copyOf(components));
+    }
+
+    private static int[] toArraySafe(List<Integer> list) {
+        if (list == null || list.isEmpty()) return new int[0];
+        int[] arr = new int[list.size()];
+        for (int i = 0; i < arr.length; i++) arr[i] = list.get(i);
+        return arr;
     }
 
     private static Map<String, Set<String>> parseBlockFilter(JsonElement el) {
@@ -361,6 +497,40 @@ public final class MachineDefinitionLoader {
             // empty if block
         }
         return set;
+    }
+
+    /**
+     * Builds the machine's {@link MachineFlags} from its {@code "flags"} block.
+     *
+     * <p>Every field has a default (see {@link MachineFlags#DEFAULT}), so a machine JSON only names
+     * what it changes:
+     * <pre>
+     *   "flags": { "recipes": false, "kinetics": true }
+     * </pre>
+     *
+     * <p>{@code kinetics} defaults to whether the machine consumes stress, which is the only part
+     * of the old behaviour that was ever derivable — the rest was spelled out by the now-removed
+     * {@code no_processing} / {@code fuel_required} / {@code open_ui} / {@code continuous_fuel}
+     * keys, which every shipped machine JSON has been migrated off.
+     */
+    private static MachineFlags parseFlags(JsonView view, MachineDefinition.PowerSpec power) {
+        MachineFlags defaults = MachineFlags.DEFAULT
+                .withKinetics(power != null && power.consumesStress());
+        if (!view.has("flags")) return defaults;
+
+        JsonView f = view.object("flags");
+        return new MachineFlags(
+                f.bool("recipes", defaults.recipes()),
+                f.bool("fuel", defaults.fuel()),
+                f.bool("continuous_fuel", defaults.continuousFuel()),
+                f.bool("ui", defaults.ui()),
+                f.bool("ui_tick", defaults.uiTick()),
+                f.bool("kinetics", defaults.kinetics()),
+                f.bool("io_pull", defaults.ioPull()),
+                f.bool("renderers", defaults.renderers()),
+                f.bool("scripts", defaults.scripts()),
+                f.bool("animations", defaults.animations()),
+                f.bool("redstone", defaults.redstone()));
     }
 
     private static List<MachineDefinition.TankSpec> parseTanks(JsonView view, String field) {

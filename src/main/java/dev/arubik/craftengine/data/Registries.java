@@ -121,6 +121,50 @@ public final class Registries {
         log(Level.INFO, summary(), null);
     }
 
+    /**
+     * Re-runs only the named loaders, overwriting their entries in place.
+     *
+     * <p>Unlike {@link #reload()} nothing is cleared first: entries are replaced by key as each
+     * loader re-registers them, so the registries this loader does not touch keep their contents.
+     * That makes a targeted reload safe to run while the server is live — the cost is that an
+     * entry deleted from disk lingers until a full reload or restart.
+     *
+     * <p>Registries are thawed for the duration and refrozen afterwards if they were frozen.
+     *
+     * @return the number of loaders that actually ran
+     */
+    public static synchronized int reloadLoaders(String... names) {
+        java.util.Set<String> wanted = java.util.Set.of(names);
+        List<Loader> ordered = LOADERS.stream()
+                .filter(l -> wanted.contains(l.name()))
+                .sorted(java.util.Comparator.comparingInt(Loader::phase))
+                .collect(java.util.stream.Collectors.toList());
+        if (ordered.isEmpty()) return 0;
+
+        boolean wasFrozen = frozen;
+        for (Registry<?> registry : ALL.values())
+            registry.thaw();
+        frozen = false;
+
+        int ran = 0;
+        for (Loader loader : ordered) {
+            try {
+                loader.action().run();
+                ran++;
+            } catch (Throwable t) {
+                log(Level.SEVERE, "Data loader '" + loader.name() + "' failed", t);
+            }
+        }
+
+        if (wasFrozen) freezeAll();
+        return ran;
+    }
+
+    /** Names of every registered loader, for command tab-completion and diagnostics. */
+    public static synchronized List<String> loaderNames() {
+        return LOADERS.stream().map(Loader::name).sorted().collect(java.util.stream.Collectors.toList());
+    }
+
     /** Seals every registry. Idempotent. */
     public static synchronized void freezeAll() {
         for (Registry<?> registry : ALL.values())

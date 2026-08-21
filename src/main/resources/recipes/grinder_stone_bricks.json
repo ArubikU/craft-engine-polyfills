@@ -1,0 +1,12 @@
+{
+  "type": "crusher",
+  "time": 50,
+  "fuelRequired": false,
+  "rpm": 4,
+  "su": 2,
+  "inputs": [{ "type": "item", "id": "minecraft:stone_bricks", "amount": 1 }],
+  "outputs": [
+    { "type": "item", "id": "minecraft:cracked_stone_bricks", "amount": 1, "chance": 1.0 },
+    { "type": "item", "id": "minecraft:gravel",               "amount": 1, "chance": 0.05 }
+  ]
+}

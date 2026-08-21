@@ -91,10 +91,11 @@ public final class ContraptionAssembler {
             return null;
         }
         structure = ContraptionAssembler.expandMultiblockMembers((Level)level, structure);
-        if (Key.of((String)"polyfills", (String)"linear").equals(type) || Key.of((String)"polyfills", (String)"windmill").equals(type)) {
-            structure = new HashSet<BlockPos>(structure);
-            structure.remove(bearing);
-        }
+        // NOTE: this used to also drop the anchor for the "polyfills:linear" and
+        // "polyfills:windmill" contraption types. Both were removed when MachineContraptionType
+        // replaced the per-machine types with one reusable behaviour, so the check could never
+        // match again and every bearing quietly started carrying itself. Callers that need the
+        // anchor left standing must use assembleFrom(pivot, seed), which always excludes it.
         if (ContraptionAssembler.fireAssembleCancelled(bukkitWorld, bearing, type, structure, null)) {
             return null;
         }
@@ -125,6 +126,67 @@ public final class ContraptionAssembler {
         ContraptionAssembler.attachDefaultBehavior((Level)level, bearing, state, type, rotationalRpm, suPerBlock);
         ContraptionEntity entity = ContraptionManager.register(new ContraptionEntity(state));
         BlockAnchoredContraptionStore.save(state, bearing, type, rotationalRpm, suPerBlock);
+        ContraptionAssembler.fireAssembled(entity);
+        return entity;
+    }
+
+    /**
+     * Assembles the structure grown from {@code seed}, pivoting on {@code pivot}, which is ALWAYS
+     * left behind in the world.
+     *
+     * <p>{@link #assemble} conflates the two: it grows the structure from the same block it uses as
+     * the anchor, and only drops that block for two hardcoded contraption types. A bearing is not
+     * part of what it carries — it is the thing the carried structure turns on — but
+     * {@code GlueRegistry.structureAt} is purely glue-based, so the moment a player glued their
+     * windmill to its bearing the bearing came along with it. The contraption then anchored to a
+     * block that no longer existed and never detached.
+     *
+     * @param pivot the bearing: excluded from the structure and used as the rotation anchor
+     * @param seed  a block of the structure to grow from, normally the one the bearing faces
+     */
+    public static ContraptionEntity assembleFrom(World bukkitWorld, BlockPos pivot, BlockPos seed,
+                                                 Key type, double rotationalRpm, double suPerBlock,
+                                                 UUID assembler) {
+        ServerLevel level = ((CraftWorld)bukkitWorld).getHandle();
+        Set<BlockPos> structure = new HashSet<BlockPos>(
+                GlueRegistry.structureAt((ResourceKey<Level>)level.dimension(), seed));
+        structure = new HashSet<BlockPos>(ContraptionAssembler.expandMultiblockMembers((Level)level, structure));
+        structure.remove(pivot);
+        if (structure.isEmpty()) {
+            return null;
+        }
+        if (ContraptionAssembler.fireAssembleCancelled(bukkitWorld, pivot, type, structure, null)) {
+            return null;
+        }
+        if (!ContraptionAssembler.mayCaptureAll(bukkitWorld, structure, assembler)) {
+            org.bukkit.entity.Player p = assembler == null ? null : Bukkit.getPlayer((UUID)assembler);
+            if (p != null) {
+                p.sendMessage("§cYou can't assemble here — part of this structure is protected.");
+            }
+            return null;
+        }
+        ContraptionCapture.Result captured = ContraptionCapture.capture((Level)level, structure, pivot);
+        ContraptionCapture.captureGlueEdges((ResourceKey<Level>)level.dimension(), captured.level(), pivot);
+        ContraptionFurnitureCapture.Result furnitureResult =
+                ContraptionFurnitureCapture.captureNear((Level)level, structure, pivot, captured.level());
+        ContraptionCapture.removeFromWorld((Level)level, structure);
+        ContraptionState state = new ContraptionState(UUID.randomUUID(),
+                (ResourceKey<Level>)level.dimension(), captured.level(),
+                pivot.getX(), pivot.getY(), pivot.getZ());
+        state.setOwner(assembler);
+        state.setFurniture(furnitureResult.furniture());
+        for (Map.Entry<UUID, Vec3> e : furnitureResult.seatedRiders().entrySet()) {
+            state.addSeatedRider(e.getKey(), e.getValue());
+            UUID mountId = furnitureResult.seatedRiderMounts().get(e.getKey());
+            if (mountId == null) continue;
+            state.setSeatedRiderMount(e.getKey(), mountId);
+        }
+        for (MovementBehavior autoBehavior : captured.autoBehaviors()) {
+            state.addBehavior(autoBehavior);
+        }
+        ContraptionAssembler.attachDefaultBehavior((Level)level, pivot, state, type, rotationalRpm, suPerBlock);
+        ContraptionEntity entity = ContraptionManager.register(new ContraptionEntity(state));
+        BlockAnchoredContraptionStore.save(state, pivot, type, rotationalRpm, suPerBlock);
         ContraptionAssembler.fireAssembled(entity);
         return entity;
     }

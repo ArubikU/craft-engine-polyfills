@@ -1,0 +1,5 @@
+# Cycle arithmetic gate mode 0-7 on right-click.
+mode = Machine.get_flag("mode")
+mode = (mode + 1) % 8
+Machine.set_flag("mode", mode)
+Machine.play_sound("minecraft:block.stone_button.click_on", 0.5, 1.0)

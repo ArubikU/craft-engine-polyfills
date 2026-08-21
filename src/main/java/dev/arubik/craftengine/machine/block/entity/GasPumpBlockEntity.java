@@ -43,7 +43,6 @@ import dev.arubik.craftengine.gas.behavior.GasProviderBehavior;
 import dev.arubik.craftengine.machine.MachineDefinition;
 import dev.arubik.craftengine.machine.attribute.MachineAttributes;
 import dev.arubik.craftengine.machine.block.entity.AbstractMachineBlockEntity;
-import dev.arubik.craftengine.machine.menu.GuiTitles;
 import dev.arubik.craftengine.machine.menu.MachineMenu;
 import dev.arubik.craftengine.machine.menu.MachineMenuConfig;
 import dev.arubik.craftengine.machine.menu.MenuText;
@@ -422,7 +421,7 @@ extends AbstractMachineBlockEntity {
             if (!WELL_CORE_ID.equals(GasPumpBlockEntity.customId(level, above))) continue;
             PersistentBlockEntity be = PersistentBlockEntity.getIfLoaded(level, above);
             TypedKey wellFlag = TypedKey.of("polyfills", "flag_well_active", NbtType.INTEGER);
-            int active = be != null ? be.getOrDefault(wellFlag, 0) : 0;
+            int active = be != null ? (int) be.getOrDefault(wellFlag, 0) : 0;
             if (active != 1) continue;
             return 5;
         }
@@ -542,7 +541,7 @@ extends AbstractMachineBlockEntity {
     private MachineLayout buildMainLayout() {
         int infoSlot;
         MachineLayout l = new MachineLayout(InventoryType.CHEST, this.menuSize, "Gas Pump");
-        Component title = GuiTitles.title(this.getMachineId(), "main");
+        Component title = null;
         l.setTitleComponent(title != null ? title : MenuText.noI(MenuText.tr("polyfill.ui.gas_pump_title", NamedTextColor.AQUA)));
         for (int s : this.fuelSlots) {
             l.addSlot(s, MenuSlotType.FUEL);
@@ -635,7 +634,7 @@ extends AbstractMachineBlockEntity {
     private MachineLayout buildUpgradeLayout() {
         int unlocked = this.curUnlocked;
         MachineLayout l = new MachineLayout(InventoryType.CHEST, 18, "Upgrades");
-        Component title = GuiTitles.title(this.getMachineId(), "upgrade");
+        Component title = null;
         l.setTitleComponent(title != null ? title : MenuText.noI(MenuText.tr("polyfill.ui.upgrades", NamedTextColor.AQUA)));
         for (int i = 0; i < this.upgradeSlotCount(); ++i) {
             if (i < unlocked) {

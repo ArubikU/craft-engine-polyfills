@@ -91,8 +91,15 @@ public final class GasEngine {
                 if (!isCarrier(level, np) || !connected(level, pos, np, dir))
                     continue;
                 int bi = idx(index, positions, np);
-                if (ai < bi && !closedValve(level, pos) && !closedValve(level, np))
-                    edgePairs.add(new int[] { ai, bi });
+                if (ai < bi && !closedValve(level, pos) && !closedValve(level, np)) {
+                    // Connectivity is not permission. Each carrier's declared gas IO decides which
+                    // way (if either) gas may cross this face; carriers that are plain conduits
+                    // default to open, so pipes/pumps/tanks behave exactly as before.
+                    boolean aToB = canOut(level, pos, dir) && canIn(level, np, dir.getOpposite());
+                    boolean bToA = canOut(level, np, dir.getOpposite()) && canIn(level, pos, dir);
+                    if (aToB || bToA)
+                        edgePairs.add(new int[] { ai, bi, (aToB && bToA) ? 0 : (aToB ? 1 : -1) });
+                }
                 if (visited.add(np.asLong()))
                     queue.add(np.immutable());
             }
@@ -132,7 +139,8 @@ public final class GasEngine {
         FluidNetworkSolver.BranchSpec[] branches = new FluidNetworkSolver.BranchSpec[edgePairs.size()];
         for (int e = 0; e < branches.length; e++) {
             int[] p = edgePairs.get(e);
-            branches[e] = new FluidNetworkSolver.BranchSpec(p[0], p[1], DEFAULT_CONDUCTANCE, 0.0, 0);
+            // p[2] is the allowed flow direction: 0 both ways, +1 a->b only, -1 b->a only.
+            branches[e] = new FluidNetworkSolver.BranchSpec(p[0], p[1], DEFAULT_CONDUCTANCE, 0.0, p[2]);
         }
 
         FluidNetworkSolver.Result r = FluidNetworkSolver.solve(nodes, branches, 1.0);
@@ -199,6 +207,18 @@ public final class GasEngine {
         positions.add(pos.immutable());
         index.put(pos.asLong(), i);
         return i;
+    }
+
+    /** May gas leave {@code pos} through {@code side}? Missing carrier = no. */
+    private static boolean canOut(Level level, BlockPos pos, Direction side) {
+        GasCarrier c = GasTransferHelper.getCarrier(level, pos).orElse(null);
+        return c != null && c.canGasOutput(level, pos, side);
+    }
+
+    /** May gas enter {@code pos} through {@code side}? Missing carrier = no. */
+    private static boolean canIn(Level level, BlockPos pos, Direction side) {
+        GasCarrier c = GasTransferHelper.getCarrier(level, pos).orElse(null);
+        return c != null && c.canGasInput(level, pos, side);
     }
 
     private static boolean isCarrier(Level level, BlockPos pos) {

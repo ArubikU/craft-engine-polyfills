@@ -9,11 +9,11 @@ package dev.arubik.craftengine.contraption.api;
 import dev.arubik.craftengine.contraption.api.ContraptionType;
 import dev.arubik.craftengine.contraption.type.GhastContraptionType;
 import dev.arubik.craftengine.contraption.type.LinearContraptionType;
+import dev.arubik.craftengine.contraption.type.MachineContraptionType;
 import dev.arubik.craftengine.contraption.type.MinecartContraptionType;
 import dev.arubik.craftengine.contraption.type.PhysContraptionType;
 import dev.arubik.craftengine.contraption.type.RotationalContraptionType;
 import dev.arubik.craftengine.contraption.type.VehicleContraptionType;
-import dev.arubik.craftengine.contraption.type.WindmillContraptionType;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -57,7 +57,7 @@ public final class ContraptionTypeRegistry {
         ContraptionTypeRegistry.register(Key.of((String)"polyfills", (String)"vehicle"), VehicleContraptionType.INSTANCE);
         ContraptionTypeRegistry.register(Key.of((String)"polyfills", (String)"minecart"), MinecartContraptionType.INSTANCE);
         ContraptionTypeRegistry.register(Key.of((String)"polyfills", (String)"ghast"), GhastContraptionType.INSTANCE);
-        ContraptionTypeRegistry.register(WindmillContraptionType.KEY, WindmillContraptionType.INSTANCE);
+        ContraptionTypeRegistry.register(Key.of((String)"polyfills", (String)"machine"), MachineContraptionType.INSTANCE);
     }
 }
 

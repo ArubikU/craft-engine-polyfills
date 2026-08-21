@@ -1,0 +1,32 @@
+{
+  "id": "polyfills:breeder",
+  "title": "Auto Breeder",
+  "flags": {
+    "fuel": false
+  },
+  "action_script": "breeder",
+  "action_interval": 100,
+  "pages": [
+    {
+      "title": "Auto Breeder",
+      "size": 9,
+      "slots": {
+        "input": [
+          0,
+          1,
+          2
+        ]
+      }
+    }
+  ],
+  "io": {
+    "input": {
+      "types": [
+        "item"
+      ],
+      "faces": [
+        "all"
+      ]
+    }
+  }
+}

@@ -1,0 +1,150 @@
+# cogwheel.pf — all cogwheel meshing, ported from Create's RotationPropagator.
+#
+# Usage in machine JSON:
+#   action_script: "cogwheel.pf:tick_large"   (large cog tick)
+#   action_script: "cogwheel.pf:tick_small"   (small cog tick)
+#   status:        "cogwheel.pf:status"
+#   on_break:      "cogwheel.pf:on_break"
+#
+# Three distinct meshes, each with its OWN geometry — this is the part that was missing:
+#
+#   small <-> small   orthogonally adjacent, perpendicular to the shared rotation axis,
+#                     same axis on both.                         ratio -1
+#                     (Create: connectedByGears branch)
+#
+#   large <-> small   DIAGONAL within the plane perpendicular to the shared axis, i.e. both
+#                     off-axis components are +-1 and the on-axis one is 0. Same axis on both.
+#                     large drives small at -2, small drives large at -0.5.
+#                     (Create: isLargeToSmallCog)
+#
+#   large <-> large   DIAGONAL across two DIFFERENT axes: the offset is non-zero along both
+#                     cogs' axes and zero along the third. ratio +-1, sign from the offsets.
+#                     (Create: isLargeToLargeGear)
+#
+# Only small<->small used to work, because the other two were attempted in Java behind an
+# "axis_perp" rpm-input face that no machine JSON ever declared — so that code never ran.
+
+# ---- Offset helpers -----------------------------------------------------
+
+def _off(dx, dy, dz) {
+    return make_map("dx", dx, "dy", dy, "dz", dz)
+}
+
+def _block(o) {
+    return Machine.block_at(o.get("dx"), o.get("dy"), o.get("dz"))
+}
+
+# Offset component along a named axis.
+def _comp(o, axis) {
+    if axis == "x" { return o.get("dx") }
+    if axis == "y" { return o.get("dy") }
+    return o.get("dz")
+}
+
+def _is_small(id) { return contains(id, "cogwheel_small") }
+def _is_large(id) { return contains(id, "cogwheel_large") }
+
+# 4 orthogonal neighbours perpendicular to our axis — small<->small.
+def _perp_offsets() {
+    a = Machine.axis
+    if a == "y" { return [ _off(1,0,0), _off(-1,0,0), _off(0,0,1), _off(0,0,-1) ] }
+    if a == "x" { return [ _off(0,1,0), _off(0,-1,0), _off(0,0,1), _off(0,0,-1) ] }
+    return [ _off(1,0,0), _off(-1,0,0), _off(0,1,0), _off(0,-1,0) ]
+}
+
+# 4 in-plane diagonals (on-axis component 0) — large<->small.
+def _plane_diag_offsets() {
+    a = Machine.axis
+    if a == "y" { return [ _off(1,0,1), _off(1,0,-1), _off(-1,0,1), _off(-1,0,-1) ] }
+    if a == "x" { return [ _off(0,1,1), _off(0,1,-1), _off(0,-1,1), _off(0,-1,-1) ] }
+    return [ _off(1,1,0), _off(1,-1,0), _off(-1,1,0), _off(-1,-1,0) ]
+}
+
+# 8 cross-axis diagonals (non-zero on our axis AND on one other, zero on the third)
+# — large<->large.
+def _cross_diag_offsets() {
+    a = Machine.axis
+    if a == "y" {
+        return [ _off(1,1,0), _off(1,-1,0), _off(-1,1,0), _off(-1,-1,0),
+                 _off(0,1,1), _off(0,1,-1), _off(0,-1,1), _off(0,-1,-1) ]
+    }
+    if a == "x" {
+        return [ _off(1,1,0), _off(1,-1,0), _off(-1,1,0), _off(-1,-1,0),
+                 _off(1,0,1), _off(1,0,-1), _off(-1,0,1), _off(-1,0,-1) ]
+    }
+    return [ _off(1,0,1), _off(1,0,-1), _off(-1,0,1), _off(-1,0,-1),
+             _off(0,1,1), _off(0,1,-1), _off(0,-1,1), _off(0,-1,-1) ]
+}
+
+# ---- Meshing ------------------------------------------------------------
+
+def _mesh(is_large) {
+    axis = Machine.axis
+    if axis == null { return }
+
+    Machine.set_rpm_output(rpm)
+    if rpm == 0 { return }
+
+    net = Machine.rpm_network
+
+    # small <-> small: orthogonal, same axis, 1:1 reversed.
+    if !is_large {
+        for o in _perp_offsets() {
+            nb = _block(o)
+            if nb.property("axis") != axis { continue }
+            if _is_small(nb.id) {
+                Machine.relay_to(nb, -rpm, net)
+            }
+        }
+    }
+
+    # large <-> small: in-plane diagonal, same axis.
+    for o in _plane_diag_offsets() {
+        nb = _block(o)
+        if nb.property("axis") != axis { continue }
+        nid = nb.id
+        if is_large {
+            if _is_small(nid) { Machine.relay_to(nb, -rpm * 2.0, net) }
+        } else {
+            if _is_large(nid) { Machine.relay_to(nb, -rpm * 0.5, net) }
+        }
+    }
+
+    # large <-> large: cross-axis diagonal, 1:1, sign from the two offset components.
+    # Create: sourceAxisDiff > 0 ^ targetAxisDiff > 0 ? -1 : 1
+    if is_large {
+        for o in _cross_diag_offsets() {
+            nb = _block(o)
+            their_axis = nb.property("axis")
+            if their_axis == null { continue }
+            if their_axis == axis { continue }
+            if !_is_large(nb.id) { continue }
+            mine = _comp(o, axis)
+            theirs = _comp(o, their_axis)
+            if mine == 0 { continue }
+            if theirs == 0 { continue }
+            sign = (mine > 0) != (theirs > 0) ? -1 : 1
+            Machine.relay_to(nb, rpm * sign, net)
+        }
+    }
+}
+
+# ---- Entry points -------------------------------------------------------
+
+def tick_large() {
+    _mesh(true)
+}
+
+def tick_small() {
+    _mesh(false)
+}
+
+# Activation is driven by the machine's `status` field, not a manual set_state + NBT flag.
+def status() {
+    return rpm != 0 ? "true" : "false"
+}
+
+def on_break() {
+    Machine.set_rpm_output(0)
+    Machine.report_su(0)
+}

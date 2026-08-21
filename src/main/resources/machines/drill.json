@@ -1,0 +1,128 @@
+{
+  "id": "polyfills:drill",
+  "title": "Drill",
+  "flags": {
+    "recipes": false,
+    "fuel": false,
+    "kinetics": true
+  },
+  "action_script": "drill",
+  "action_interval": 5,
+  "pages": [
+    {
+      "title": "Drill",
+      "size": 27,
+      "slots": {
+        "output": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19,
+          20,
+          21,
+          22,
+          23,
+          24,
+          25,
+          26
+        ]
+      }
+    }
+  ],
+  "io": {
+    "rpm": {
+      "input": [
+        "back"
+      ],
+      "output_same": []
+    },
+    "output": {
+      "types": [
+        "item"
+      ],
+      "faces": [
+        "all"
+      ]
+    }
+  },
+  "renderers": [
+    {
+      "type": "item_display",
+      "item": "CraftEngineItem(\"cml:drill_head_render\")",
+      "location": {
+        "x": 0,
+        "y": 0.5,
+        "z": 0
+      },
+      "rot_z": "-90",
+      "rot_x": "tick() * rpm * 0.3 *-1",
+      "rot_y": -90,
+      "scale": "1.0",
+      "when": "Machine.activated && facing == \"north\"",
+      "update_when": "always",
+      "global": true
+    },
+    {
+      "type": "item_display",
+      "item": "CraftEngineItem(\"cml:drill_head_render\")",
+      "location": {
+        "x": 0,
+        "y": 0.5,
+        "z": 0
+      },
+      "rot_z": "90",
+      "rot_x": "tick() * rpm * 0.3 *-1",
+      "rot_y": 90,
+      "scale": "1.0",
+      "when": "Machine.activated && facing == \"south\"",
+      "update_when": "always",
+      "global": true
+    },
+    {
+      "type": "item_display",
+      "item": "CraftEngineItem(\"cml:drill_head_render\")",
+      "location": {
+        "x": 0,
+        "y": 0.5,
+        "z": 0
+      },
+      "rot_z": "-90",
+      "rot_x": "tick() * rpm * 0.3 *-1",
+      "scale": "1.0",
+      "when": "Machine.activated && facing == \"east\"",
+      "update_when": "always",
+      "global": true
+    },
+    {
+      "type": "item_display",
+      "item": "CraftEngineItem(\"cml:drill_head_render\")",
+      "location": {
+        "x": 0,
+        "y": 0.5,
+        "z": 0
+      },
+      "rot_z": "90",
+      "rot_x": "tick() * rpm * 0.3 *-1",
+      "scale": "1.0",
+      "when": "Machine.activated && facing == \"west\"",
+      "update_when": "always",
+      "global": true
+    }
+  ]
+}

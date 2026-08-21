@@ -1,0 +1,9 @@
+{
+  "type": "crusher",
+  "time": 40,
+  "fuelRequired": false,
+  "rpm": 4,
+  "su": 2,
+  "inputs": [{ "type": "item", "id": "minecraft:netherrack", "amount": 4 }],
+  "outputs": [{ "type": "item", "id": "minecraft:nether_brick", "amount": 1, "chance": 1.0 }]
+}

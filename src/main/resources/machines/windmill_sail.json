@@ -1,0 +1,14 @@
+{
+  "id": "polyfills:windmill_sail",
+  "title": "Windmill Sail",
+  "menu_size": 9,
+  "flags": {
+    "recipes": false,
+    "fuel": false,
+    "ui": false,
+    "ui_tick": false
+  },
+  "action_interval": 999,
+  "is_sail": true,
+  "sail_rpm_bonus": 1.0
+}

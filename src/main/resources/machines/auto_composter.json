@@ -1,0 +1,67 @@
+{
+  "id": "polyfills:auto_composter",
+  "title": "Auto Composter",
+  "flags": {
+    "fuel": false
+  },
+  "action_script": "auto_composter",
+  "action_interval": 10,
+  "pages": [
+    {
+      "title": "Auto Composter",
+      "size": 27,
+      "slots": {
+        "input": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ],
+        "output": [
+          18,
+          19,
+          20,
+          21,
+          22,
+          23,
+          24,
+          25,
+          26
+        ]
+      }
+    }
+  ],
+  "io": {
+    "input": {
+      "types": [
+        "item"
+      ],
+      "faces": [
+        "up",
+        "horizontal"
+      ]
+    },
+    "output": {
+      "types": [
+        "item"
+      ],
+      "faces": [
+        "down"
+      ]
+    }
+  }
+}

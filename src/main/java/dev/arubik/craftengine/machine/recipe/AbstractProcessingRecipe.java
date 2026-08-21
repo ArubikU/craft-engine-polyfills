@@ -26,6 +26,19 @@ public class AbstractProcessingRecipe {
     protected final List<RecipeCondition> conditions;
     protected int minRpm = 0;
     protected int suCost = 0;
+    /** CraftEnergy drawn from the machine's own buffer EVERY TICK this recipe is actively
+     * processing (mirrors su/rpm's continuous-draw shape, not a one-off per-craft charge). 0 = no
+     * energy requirement at all — same optionality as {@link #fuelRequired}. */
+    protected int energyCost = 0;
+
+    public int getEnergyCost() {
+        return this.energyCost;
+    }
+
+    public AbstractProcessingRecipe setEnergyCost(int energyCost) {
+        this.energyCost = Math.max(0, energyCost);
+        return this;
+    }
 
     public int getMinRpm() {
         return this.minRpm;

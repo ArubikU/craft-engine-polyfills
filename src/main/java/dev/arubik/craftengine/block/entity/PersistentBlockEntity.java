@@ -206,48 +206,85 @@ public class PersistentBlockEntity extends BlockEntityController {
     }
 
     public <T> void set(TypedKey<T> key, T value) {
-        if (value == null) {
-            remove(key);
-            return;
-        }
+        if (value == null) { remove(key); return; }
+        String k = key.nbtKey();
         if (key.isCustom()) {
             @SuppressWarnings("unchecked")
-            CustomDataType<T, Object> customType = (CustomDataType<T, Object>) key.getCustomType();
-
-            Object primitive = customType.getSerializer().apply(value);
-            set(key.getKey(), customType.getBaseType(), primitive);
-
+            CustomDataType<T, Object> ct = (CustomDataType<T, Object>) key.getCustomType();
+            Object primitive = ct.getSerializer().apply(value);
+            setByString(k, ct.getBaseType(), primitive);
         } else {
-            set(key.getKey(), key.getType(), value);
+            setByString(k, key.getType(), value);
         }
     }
 
     public <T> T get(TypedKey<T> key) {
-
+        String k = key.nbtKey();
         if (key.isCustom()) {
             @SuppressWarnings("unchecked")
-            CustomDataType<T, Object> customType = (CustomDataType<T, Object>) key.getCustomType();
-            Object primitive = get(key.getKey(), customType.getBaseType());
-            return primitive != null ? customType.getDeserializer().apply(primitive) : null;
-        } else {
-            return get(key.getKey(), key.getType());
+            CustomDataType<T, Object> ct = (CustomDataType<T, Object>) key.getCustomType();
+            Object primitive = getByString(k, ct.getBaseType());
+            return primitive != null ? ct.getDeserializer().apply(primitive) : null;
         }
+        return getByString(k, key.getType());
     }
 
-    public <T> Optional<T> getOptional(TypedKey<T> key) {
-        return Optional.ofNullable(get(key));
-    }
+    public <T> Optional<T> getOptional(TypedKey<T> key) { return Optional.ofNullable(get(key)); }
 
-    public <T> boolean has(TypedKey<T> key) {
-        return has(key.getKey(), key.getType());
-    }
+    public <T> boolean has(TypedKey<T> key) { return container.containsKey(key.nbtKey()); }
 
     public <T> void remove(TypedKey<T> key) {
-        if (key == null)
-            return;
-        if (has(key)) {
-            remove(key.getKey());
+        if (key != null && has(key)) container.remove(key.nbtKey());
+    }
+
+    // ---- Identifier overloads (NMS, no Bukkit) ---
+    public <C> void set(net.minecraft.resources.Identifier id, NbtType type, C value) {
+        setByString(id.getPath(), type, value);
+    }
+    public <C> C get(net.minecraft.resources.Identifier id, NbtType type) {
+        return getByString(id.getPath(), type);
+    }
+    public void remove(net.minecraft.resources.Identifier id) {
+        container.remove(id.getPath());
+    }
+    public boolean has(net.minecraft.resources.Identifier id, NbtType type) {
+        return container.containsKey(id.getPath());
+    }
+
+    // ---- String-key helpers (used by TypedKey methods) ---
+    @SuppressWarnings("unchecked")
+    private <C> void setByString(String k, NbtType type, Object value) {
+        switch (type) {
+            case STRING       -> container.putString(k, (String) value);
+            case INTEGER      -> container.putInt(k, (Integer) value);
+            case DOUBLE       -> container.putDouble(k, (Double) value);
+            case BYTE         -> container.putByte(k, (Byte) value);
+            case BYTE_ARRAY   -> container.putByteArray(k, (byte[]) value);
+            case LONG         -> container.putLong(k, (Long) value);
+            case FLOAT        -> container.putFloat(k, (Float) value);
+            case SHORT        -> container.putShort(k, (Short) value);
+            case INTEGER_ARRAY-> container.putIntArray(k, (int[]) value);
+            case LONG_ARRAY   -> container.putLongArray(k, (long[]) value);
+            case BOOLEAN      -> container.putByte(k, (byte)((Boolean) value ? 1 : 0));
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    private <C> C getByString(String k, NbtType type) {
+        if (!container.containsKey(k)) return null;
+        return (C) switch (type) {
+            case STRING        -> container.getString(k);
+            case INTEGER       -> Integer.valueOf(container.getInt(k));
+            case DOUBLE        -> Double.valueOf(container.getDouble(k));
+            case BYTE          -> Byte.valueOf(container.getByte(k));
+            case BYTE_ARRAY    -> container.getByteArray(k);
+            case LONG          -> Long.valueOf(container.getLong(k));
+            case FLOAT         -> Float.valueOf(container.getFloat(k));
+            case SHORT         -> Short.valueOf(container.getShort(k));
+            case INTEGER_ARRAY -> container.getIntArray(k);
+            case LONG_ARRAY    -> container.getLongArray(k);
+            case BOOLEAN       -> Boolean.valueOf(container.getByte(k) != 0);
+        };
     }
 
     public <T> T getOrDefault(TypedKey<T> key, T defaultValue) {

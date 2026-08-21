@@ -1,0 +1,21 @@
+{
+  "id": "polyfills:item_filter",
+  "title": "Item Filter",
+  "flags": {
+    "recipes": false,
+    "fuel": false
+  },
+  "action_script": "item_filter",
+  "action_interval": 2,
+  "pages": [
+    {
+      "title": "Item Filter",
+      "size": 9,
+      "slots": {
+        "input": [
+          0
+        ]
+      }
+    }
+  ]
+}

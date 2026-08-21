@@ -1,0 +1,7 @@
+{
+  "type": "energy_generator",
+  "time": 20,
+  "fuelRequired": true,
+  "inputs": [],
+  "outputs": []
+}

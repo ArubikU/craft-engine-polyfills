@@ -1,0 +1,73 @@
+# Windmill Bearing — right-click interaction.
+#
+#   click while idle       assemble the structure attached to the bearing's FACE
+#   click while assembled  flip the rotation direction (Create's clockwise / counter-clockwise)
+#   sneak + click          disassemble, returning the blocks to the world
+#
+# The old version always assembled `Machine.block_at(0, 1, 0)` — the block straight above. A
+# bearing points somewhere, and in Create it assembles whatever is attached to the face it points
+# at, so a windmill built out to the north of a north-facing bearing was simply never found.
+
+MIN_SAILS = 8   # matches windmill.pf; Create refuses to run a windmill with less sail area
+
+def _seed_block() {
+    # The block the bearing faces. facing_dx/dy/dz already resolve the block's facing property.
+    return Machine.block_at(Machine.facing_dx, Machine.facing_dy, Machine.facing_dz)
+}
+
+assembled = Machine.get_flag("assembled")
+
+if Player.is_sneaking {
+    if assembled > 0 {
+        cid = Machine.get_str_flag("contraption_uuid")
+        contraption = ContraptionManager.get(cid)
+        if contraption != null {
+            contraption.kill()
+        }
+        Machine.set_flag("assembled", 0)
+        Machine.set_str_flag("contraption_uuid", "")
+        Machine.set_rpm_output(0)
+        Machine.report_su(0)
+        Player.send_message("<gray>Windmill disassembled.")
+    }
+} else if assembled > 0 {
+    # Already running: flip which way it turns, as Create's direction option does.
+    dir = Machine.get_flag("windmill_dir")
+    if dir == 0 { dir = 1 }
+    dir = dir > 0 ? -1 : 1
+    Machine.set_flag("windmill_dir", dir)
+    Player.send_message(dir > 0
+        ? "<gray>Windmill now turns <white>clockwise<gray>."
+        : "<gray>Windmill now turns <white>counter-clockwise<gray>.")
+} else {
+    seed = _seed_block()
+    if seed == null || seed.is_air {
+        Player.send_message("<red>Nothing attached to the bearing's face to assemble.")
+    } else {
+        # create_bearing, not create_at: the bearing is the PIVOT and must stay in the world.
+        # create_at would use the same block as both growth origin and anchor, and since the
+        # structure is found through the glue graph, a windmill glued to its bearing dragged the
+        # bearing in with it — leaving the contraption anchored to air.
+        # No type argument: polyfills:windmill no longer exists — MachineContraptionType replaced
+        # the per-machine types with one reusable behaviour — and create_bearing defaults to it.
+        contraption = ContraptionManager.create_bearing(seed, Machine.block_at(0, 0, 0))
+        if contraption == null {
+            Player.send_message("<red>Could not assemble that structure.")
+        } else {
+            sails = 0
+            for block in contraption.blocks() {
+                if contains(block.id, "sail") { sails = sails + 1 }
+            }
+            if sails < MIN_SAILS {
+                # Refuse rather than leave a windmill that silently never turns.
+                contraption.kill()
+                Player.send_message("<red>Not enough sails: <white>" + sails
+                    + "<red> of <white>" + MIN_SAILS + "<red> needed.")
+            } else {
+                Machine.set_str_flag("contraption_uuid", contraption.uuid)
+                Machine.set_flag("assembled", 1)
+                Player.send_message("<green>Windmill assembled <gray>(" + sails + " sails).")
+            }
+        }
+    }
+}

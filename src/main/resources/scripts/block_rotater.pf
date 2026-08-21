@@ -1,0 +1,12 @@
+# Block Rotater — cycles the facing property of the block in front by one step.
+# Uses cycle_block_prop which works on any blockstate property, including CE custom blocks.
+
+block = Machine.facing_block
+
+if !block.is_air {
+    if block.has_property("facing") {
+        block.cycle_prop("facing")
+    } else if block.has_property("horizontal_facing") {
+        block.cycle_prop("horizontal_facing")
+    }
+}

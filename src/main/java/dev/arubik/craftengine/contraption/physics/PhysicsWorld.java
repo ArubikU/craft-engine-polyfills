@@ -459,6 +459,47 @@ public final class PhysicsWorld {
         }
     }
 
+    /** Largest angular velocity the solver stays stable at, per axis, in radians per tick. */
+    public static final double MAX_ANGULAR_VELOCITY = 0.22;
+
+    /**
+     * Spins a contraption about an arbitrary axis, in radians per tick.
+     *
+     * <p>{@link #setYawRate} only ever touched the Y component, so a contraption could only be
+     * turned flat. A bearing rotates about the face it points at — a windmill on a wall has to
+     * turn like a wheel, about X or Z — which was not expressible at all.
+     */
+    public static void setAngularVelocity(UUID contraptionId, double omegaX, double omegaY, double omegaZ) {
+        Entry entry = ENTRIES.get(contraptionId);
+        if (entry == null || entry.physBody == null) {
+            return;
+        }
+        PhysBody body = entry.physBody;
+        double wx = clampOmega(omegaX);
+        double wy = clampOmega(omegaY);
+        double wz = clampOmega(omegaZ);
+        Runnable r = () -> {
+            if (body.kinematic || body.body.isStatic()) {
+                return;
+            }
+            body.body.angularVelocity.x = wx;
+            body.body.angularVelocity.y = wy;
+            body.body.angularVelocity.z = wz;
+            if (wx != 0.0 || wy != 0.0 || wz != 0.0) {
+                body.wakeUp();
+            }
+        };
+        if (ASYNC) {
+            PhysicsWorld.enqueue(r);
+        } else {
+            r.run();
+        }
+    }
+
+    private static double clampOmega(double w) {
+        return Math.max(-MAX_ANGULAR_VELOCITY, Math.min(MAX_ANGULAR_VELOCITY, w));
+    }
+
     private static void thrustCentralBody(PhysBody physBody, Vector3d impulse) {
         if (physBody.kinematic || physBody.shape.isEmpty() || physBody.body.isStatic()) {
             return;

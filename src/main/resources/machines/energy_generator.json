@@ -1,0 +1,40 @@
+{
+  "id": "polyfills:energy_generator",
+  "recipe_type": "energy_generator",
+  "title": "Energy Generator",
+  "slots": {
+    "fuel": [
+      0
+    ]
+  },
+  "energy": {
+    "capacity": 20000,
+    "max_input": 0,
+    "max_output": 2000,
+    "generation_per_tick": 200
+  },
+  "pages": [
+    {
+      "title": "Energy Generator",
+      "size": 9,
+      "slots": {
+        "fuel": [
+          0
+        ]
+      },
+      "bars": [
+        {
+          "id": "polyfills:energy",
+          "slots": [
+            4,
+            5,
+            6,
+            7,
+            8
+          ],
+          "source": "energy"
+        }
+      ]
+    }
+  ]
+}

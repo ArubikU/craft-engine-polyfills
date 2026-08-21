@@ -1,0 +1,9 @@
+{
+  "type": "crusher",
+  "time": 20,
+  "fuelRequired": false,
+  "rpm": 4,
+  "su": 2,
+  "inputs": [{ "type": "item", "id": "minecraft:packed_ice", "amount": 1 }],
+  "outputs": [{ "type": "item", "id": "minecraft:ice", "amount": 1, "chance": 1.0 }]
+}

@@ -3,13 +3,16 @@
  */
 package dev.arubik.craftengine.machine.menu;
 
-import dev.arubik.craftengine.machine.render.formula.PolyContext;
-import dev.arubik.craftengine.machine.render.formula.PolyFormula;
+import dev.arubik.craftengine.script.ScriptContext;
+import dev.arubik.craftengine.script.ScriptFormula;
+import dev.arubik.craftengine.script.ScriptValue;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 public final class MachineMenuConfig {
     public final int menuSize;
@@ -100,15 +103,22 @@ public final class MachineMenuConfig {
         public final Kind kind;
         public final int page;
         public final String target;
+        /** Optional arguments passed to script/function actions. */
+        public final List<String> args;
 
         private Action(Kind kind, int page) {
-            this(kind, page, "all");
+            this(kind, page, "all", List.of());
         }
 
         private Action(Kind kind, int page, String target) {
+            this(kind, page, target, List.of());
+        }
+
+        private Action(Kind kind, int page, String target, List<String> args) {
             this.kind = kind;
             this.page = page;
             this.target = target == null || target.isBlank() ? "all" : target.trim();
+            this.args = args != null ? List.copyOf(args) : List.of();
         }
 
         public boolean targets(String tankName) {
@@ -121,34 +131,39 @@ public final class MachineMenuConfig {
         }
 
         public static Action parse(String s) {
-            if (s == null) {
-                return new Action(Kind.NONE, 0);
-            }
+            if (s == null) return new Action(Kind.NONE, 0);
             String t = s.trim().toLowerCase(Locale.ROOT);
             if (t.startsWith("open_page")) {
                 int page = 0;
                 int i = t.indexOf(58);
                 if (i >= 0) {
-                    try {
-                        page = Integer.parseInt(t.substring(i + 1).trim());
-                    }
-                    catch (NumberFormatException numberFormatException) {
-                        // empty catch block
-                    }
+                    try { page = Integer.parseInt(t.substring(i + 1).trim()); }
+                    catch (NumberFormatException ignored) {}
                 }
                 return new Action(Kind.OPEN_PAGE, page);
             }
-            if (t.startsWith("deplete_fluid")) {
-                return new Action(Kind.DEPLETE_FLUID, 0, Action.suffix(t));
+            if (t.startsWith("deplete_fluid")) return new Action(Kind.DEPLETE_FLUID, 0, Action.suffix(t));
+            if (t.startsWith("deplete_gas"))   return new Action(Kind.DEPLETE_GAS, 0, Action.suffix(t));
+            // bump_overclock:delta[:click_step_override] — e.g. "bump_overclock:0.01" or "bump_overclock:-0.01"
+            if (t.startsWith("bump_overclock")) return new Action(Kind.BUMP_OVERCLOCK, 0, Action.suffix(t));
+            // {filename}.pf:{function_name}:{arg1}:{arg2}...
+            // e.g. "gas_motor.pf:increase_rpm:10"  or  "gas_motor.pf:increase_rpm"
+            if (t.contains(".pf:")) {
+                String raw = s.trim();
+                String[] parts = raw.split(":", -1);
+                // parts[0] = "filename.pf", parts[1] = funcname, parts[2..] = args
+                String scriptFile = parts[0]; // e.g. "gas_motor.pf"
+                String funcName = parts.length > 1 ? parts[1] : "";
+                List<String> args = parts.length > 2 ? Arrays.asList(parts).subList(2, parts.length) : List.of();
+                return new Action(Kind.SCRIPT, 0, scriptFile + ":" + funcName, args);
             }
-            if (t.startsWith("deplete_gas")) {
-                return new Action(Kind.DEPLETE_GAS, 0, Action.suffix(t));
-            }
-            if (t.startsWith("script:")) {
-                return new Action(Kind.SCRIPT, 0, s.trim().substring(7));
-            }
-            if (t.startsWith("run:")) {
-                return new Action(Kind.SCRIPT, 0, s.trim().substring(4));
+            // Legacy: pf:{function_name}:{arg1}:{arg2}... — DEPRECATED, use {filename}.pf:{func} instead
+            if (t.startsWith("pf:")) {
+                String raw = s.trim().substring(3);
+                String[] parts = raw.split(":", -1);
+                String fnName = parts[0];
+                List<String> args = parts.length > 1 ? Arrays.asList(parts).subList(1, parts.length) : List.of();
+                return new Action(Kind.PF_FUNCTION, 0, fnName, args);
             }
             return new Action(Kind.NONE, 0);
         }
@@ -158,8 +173,9 @@ public final class MachineMenuConfig {
             DEPLETE_FLUID,
             DEPLETE_GAS,
             SCRIPT,
+            PF_FUNCTION,
+            BUMP_OVERCLOCK,
             NONE;
-
         }
     }
 
@@ -183,7 +199,7 @@ public final class MachineMenuConfig {
             lw.expr = null;
             LockedWhen custom = NEVER;
             try {
-                PolyFormula.compile(s.trim());
+                ScriptFormula.compile(s.trim());
             }
             catch (Throwable throwable) {
                 // empty catch block
@@ -193,13 +209,13 @@ public final class MachineMenuConfig {
             return result;
         }
 
-        public boolean isLocked(PolyContext ctx, double curOverclockLimit) {
+        public boolean isLocked(ScriptContext ctx, double curOverclockLimit) {
             if (this == NEVER) {
                 return false;
             }
             if (this.expr != null) {
                 try {
-                    return PolyFormula.compile(this.expr).evaluateBool(ctx);
+                    return ScriptFormula.compile(this.expr).evaluateBool(ctx);
                 }
                 catch (Throwable ignored) {
                     return false;
@@ -226,6 +242,183 @@ public final class MachineMenuConfig {
             this.lore = lore;
             this.lockedIcon = lockedIcon;
             this.lockedWhen = lockedWhen;
+        }
+
+        /** Evaluate name with ${expr} inline scripts + MiniMessage parsing. */
+        public String evaluateName(ScriptContext ctx) {
+            return evaluateInline(name, ctx);
+        }
+
+        /**
+         * Evaluate name with ${expr} substitution ONLY — returns the raw MiniMessage string
+         * so callers can parse it with MiniMessage.miniMessage().deserialize() themselves,
+         * preserving TranslatableComponent (i18n) and other MiniMessage tags.
+         */
+        public String evaluateNameRaw(ScriptContext ctx) {
+            if (name == null) return null;
+            if (!name.contains("${")) return name; // no substitution needed
+            // Same ${expr} substitution as evaluateInline but WITHOUT the MiniMessage→legacy step
+            StringBuilder sb = new StringBuilder();
+            int i = 0;
+            while (i < name.length()) {
+                int start = name.indexOf("${", i);
+                if (start < 0) { sb.append(name, i, name.length()); break; }
+                sb.append(name, i, start);
+                int end = name.indexOf('}', start + 2);
+                if (end < 0) { sb.append(name, start, name.length()); break; }
+                String expr = name.substring(start + 2, end);
+                if (ctx != null) {
+                    try {
+                        sb.append(ScriptFormula.compile(expr).evaluate(ctx).asStr());
+                    } catch (Throwable ignored) { sb.append('?'); }
+                } else { sb.append('?'); }
+                i = end + 1;
+            }
+            return sb.toString();
+        }
+
+        /**
+         * Evaluate lore lines with ${expr} substitution ONLY — returns raw MiniMessage strings
+         * (no MiniMessage→legacy conversion). Callers should parse with MiniMessage.deserialize().
+         * Script functions (.pf:) return their strings as-is (they already use MiniMessage format).
+         */
+        public List<String> evaluateLoreRaw(ScriptContext ctx) {
+            if (lore == null || lore.isEmpty()) return lore;
+            List<String> result = new ArrayList<>();
+            for (String line : lore) {
+                if (line != null && line.contains(".pf:") && ctx != null) {
+                    try {
+                        String raw = line.trim();
+                        int colon = raw.indexOf(':');
+                        String scriptFile = raw.substring(0, colon);
+                        String funcName = raw.substring(colon + 1);
+                        String lookupKey = scriptFile.endsWith(".pf") ? scriptFile.substring(0, scriptFile.length() - 3) : scriptFile;
+                        dev.arubik.craftengine.script.ScriptProgram prog = dev.arubik.craftengine.script.ScriptRegistry.get(lookupKey);
+                        if (prog != null) {
+                            dev.arubik.craftengine.script.ScriptContext withDefs = prog.evaluate(ctx);
+                            dev.arubik.craftengine.script.ScriptValue fnVal = withDefs.getVar(funcName);
+                            if (fnVal instanceof dev.arubik.craftengine.script.ScriptValue.Obj fnObj
+                                    && fnObj.typeName().equals(dev.arubik.craftengine.script.UserFunction.TYPE)) {
+                                dev.arubik.craftengine.script.UserFunction fn = (dev.arubik.craftengine.script.UserFunction) fnObj.instance();
+                                dev.arubik.craftengine.script.ScriptContext.Builder rb = dev.arubik.craftengine.script.ScriptContext.builder().copyFrom(withDefs);
+                                fn.executor().accept(withDefs, rb);
+                                dev.arubik.craftengine.script.ScriptValue retVal = rb.build().getVar("__return__");
+                                if (retVal instanceof dev.arubik.craftengine.script.ScriptValue.Array arr) {
+                                    for (dev.arubik.craftengine.script.ScriptValue elem : arr.elements())
+                                        result.add(elem.asStr()); // raw string, no conversion
+                                    continue;
+                                }
+                                result.add(retVal.asStr());
+                                continue;
+                            }
+                        }
+                    } catch (Throwable ignored) {}
+                }
+                // ${expr} substitution only — NO MiniMessage→legacy conversion
+                if (line != null && line.contains("${")) {
+                    result.add(evaluateNameRaw(ctx) != null ? evaluateFieldRaw(line, ctx) : line);
+                } else {
+                    result.add(line);
+                }
+            }
+            return result;
+        }
+
+        private static String evaluateFieldRaw(String template, ScriptContext ctx) {
+            if (template == null || !template.contains("${")) return template;
+            StringBuilder sb = new StringBuilder();
+            int i = 0;
+            while (i < template.length()) {
+                int start = template.indexOf("${", i);
+                if (start < 0) { sb.append(template, i, template.length()); break; }
+                sb.append(template, i, start);
+                int end = template.indexOf('}', start + 2);
+                if (end < 0) { sb.append(template, start, template.length()); break; }
+                String expr = template.substring(start + 2, end);
+                if (ctx != null) {
+                    try { sb.append(ScriptFormula.compile(expr).evaluate(ctx).asStr()); }
+                    catch (Throwable ignored) { sb.append('?'); }
+                } else { sb.append('?'); }
+                i = end + 1;
+            }
+            return sb.toString();
+        }
+
+        /** Evaluate lore lines with ${expr} inline scripts + MiniMessage parsing.
+         *  A lore entry of "{file}.pf:{func}" calls that function which must return an Array of Str.
+         */
+        public List<String> evaluateLore(ScriptContext ctx) {
+            if (lore == null || lore.isEmpty()) return lore;
+            List<String> result = new ArrayList<>();
+            for (String line : lore) {
+                if (line != null && line.contains(".pf:") && ctx != null) {
+                    // Try to call as a script function returning array of strings
+                    try {
+                        String raw = line.trim();
+                        int colon = raw.indexOf(':');
+                        String scriptFile = raw.substring(0, colon);
+                        String funcName = raw.substring(colon + 1);
+                        String lookupKey = scriptFile.endsWith(".pf") ? scriptFile.substring(0, scriptFile.length() - 3) : scriptFile;
+                        dev.arubik.craftengine.script.ScriptProgram prog = dev.arubik.craftengine.script.ScriptRegistry.get(lookupKey);
+                        if (prog != null) {
+                            dev.arubik.craftengine.script.ScriptContext withDefs = prog.evaluate(ctx);
+                            dev.arubik.craftengine.script.ScriptValue fnVal = withDefs.getVar(funcName);
+                            if (fnVal instanceof dev.arubik.craftengine.script.ScriptValue.Obj fnObj
+                                    && fnObj.typeName().equals(dev.arubik.craftengine.script.UserFunction.TYPE)) {
+                                dev.arubik.craftengine.script.UserFunction fn = (dev.arubik.craftengine.script.UserFunction) fnObj.instance();
+                                dev.arubik.craftengine.script.ScriptContext.Builder rb = dev.arubik.craftengine.script.ScriptContext.builder().copyFrom(withDefs);
+                                fn.executor().accept(withDefs, rb);
+                                dev.arubik.craftengine.script.ScriptValue retVal = rb.build().getVar("__return__");
+                                if (retVal instanceof dev.arubik.craftengine.script.ScriptValue.Array arr) {
+                                    for (dev.arubik.craftengine.script.ScriptValue elem : arr.elements())
+                                        result.add(evaluateInline(elem.asStr(), ctx));
+                                    continue;
+                                }
+                                result.add(evaluateInline(retVal.asStr(), ctx));
+                                continue;
+                            }
+                        }
+                    } catch (Throwable ignored) {}
+                }
+                result.add(evaluateInline(line, ctx));
+            }
+            return result;
+        }
+
+        /** Public entry point for callers outside this class (e.g. buildPageLayout). */
+        public static String evaluateInlineScriptStatic(String template, ScriptContext ctx) {
+            return evaluateInline(template, ctx);
+        }
+
+        private static String evaluateInline(String template, ScriptContext ctx) {
+            if (template == null) return null;
+            // Replace ${expr} with evaluated script value
+            StringBuilder sb = new StringBuilder();
+            int i = 0;
+            while (i < template.length()) {
+                int start = template.indexOf("${", i);
+                if (start < 0) { sb.append(template, i, template.length()); break; }
+                sb.append(template, i, start);
+                int end = template.indexOf('}', start + 2);
+                if (end < 0) { sb.append(template, start, template.length()); break; }
+                String expr = template.substring(start + 2, end);
+                if (ctx != null) {
+                    try {
+                        ScriptValue val = ScriptFormula.compile(expr).evaluate(ctx);
+                        sb.append(val.asStr());
+                    } catch (Throwable ignored) { sb.append('?'); }
+                } else {
+                    sb.append('?');
+                }
+                i = end + 1;
+            }
+            // MiniMessage → legacy colour codes for Bukkit ItemMeta
+            try {
+                net.kyori.adventure.text.Component comp = net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(sb.toString());
+                return net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacyAmpersand().serialize(comp);
+            } catch (Throwable ignored) {
+                return sb.toString();
+            }
         }
     }
 }

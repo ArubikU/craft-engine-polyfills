@@ -1,0 +1,9 @@
+{
+  "type": "crusher",
+  "time": 80,
+  "fuelRequired": false,
+  "rpm": 6,
+  "su": 4,
+  "inputs": [{ "type": "item", "id": "minecraft:end_stone_bricks", "amount": 1 }],
+  "outputs": [{ "type": "item", "id": "minecraft:end_stone", "amount": 1, "chance": 1.0 }]
+}

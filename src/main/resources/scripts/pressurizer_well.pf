@@ -1,0 +1,6 @@
+# pressurizer_well.pf — runs every tick via the particle renderer.
+# Sets well_active flag (1 = active) so gas pumps allow 5 concurrent pumps on the vein.
+
+formed = MultiBlock.formed
+active = formed && has_fuel ? 1 : 0
+_flag  = Machine.set_flag("well_active", active)

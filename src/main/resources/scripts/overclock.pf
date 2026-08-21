@@ -1,0 +1,23 @@
+# Overclock control — click-type-aware bump functions.
+# Use in button actions: "overclock.pf:increase" / "overclock.pf:decrease"
+#
+# click_type variable is injected by the button system:
+#   left/shift_left  → small step (0.01 = 1%)
+#   right/shift_right → medium step (0.25 = 25%)
+#   drop/control_drop → large step (0.50 = 50%)
+
+def _step() {
+    if click_type == "drop" { return 0.50 }
+    if click_type == "control_drop" { return 0.50 }
+    if click_type == "right" { return 0.25 }
+    if click_type == "shift_right" { return 0.25 }
+    return 0.01
+}
+
+def increase() {
+    Machine.bump_overclock(_step())
+}
+
+def decrease() {
+    Machine.bump_overclock(-_step())
+}

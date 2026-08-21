@@ -137,7 +137,21 @@ public interface IOConfiguration {
         ENERGY, // Energy (default 1000 FE/tick)
         XP, // Experience points (default 100/tick)
         REDSTONE,
-        FUNNEL; // Conveyor-belt item IO: belt feeds input / machine ejects output onto a belt
+        FUNNEL, // Conveyor-belt item IO: belt feeds input / machine ejects output onto a belt
+        /**
+         * NOT a resource — whether a face should render/behave as physically CONNECTED at all
+         * (the pipe's 6 NORTH/EAST/../DOWN mask properties). Deliberately separate from
+         * ITEM/FLUID/GAS/ENERGY: a face can be visually joined to a neighbour while logically
+         * blocked for a resource (e.g. keep the run looking continuous but stop pulling from one
+         * chest), or vice versa in principle. {@link Open} answers true for every type including
+         * this one, so untouched pipes (fluid/gas today) keep exactly their current always-shows
+         * mask; a pipe whose controller carries a fresh {@link Simple} (e.g. the item pipe panel)
+         * starts with EVERY face — including this one — closed, matching the "nothing connects
+         * until you configure it" UX those panels want. See
+         * {@code ConnectedBlockBehavior#shouldConnect}, which ANDs this into the existing
+         * physical-adjacency check.
+         */
+        VISUAL_CONNECTION
     }
 
     /**
@@ -182,6 +196,18 @@ public interface IOConfiguration {
                     inputs.get(dir).add(type);
                 }
             }
+            return this;
+        }
+
+        /** Remove input type from a specific direction (e.g. a pipe panel toggling a face off). */
+        public Simple removeInput(IOType type, Direction dir) {
+            inputs.get(dir).remove(type);
+            return this;
+        }
+
+        /** Remove output type from a specific direction. */
+        public Simple removeOutput(IOType type, Direction dir) {
+            outputs.get(dir).remove(type);
             return this;
         }
 

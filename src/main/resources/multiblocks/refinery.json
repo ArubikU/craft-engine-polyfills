@@ -48,7 +48,9 @@
         "recipe_type": "refinery",
         "title": "Refinery",
         "menu_size": 54,
-        "fuel_required": false,
+        "flags": {
+          "fuel": false
+        },
         "slots": {
           "input": [
             21,

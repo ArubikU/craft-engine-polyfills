@@ -35,7 +35,6 @@ import dev.arubik.craftengine.gas.GasType;
 import dev.arubik.craftengine.machine.MachineDefinition;
 import dev.arubik.craftengine.machine.attribute.MachineAttributes;
 import dev.arubik.craftengine.machine.block.entity.DataMachineSupport;
-import dev.arubik.craftengine.machine.menu.GuiTitles;
 import dev.arubik.craftengine.machine.menu.MachineMenu;
 import dev.arubik.craftengine.machine.menu.MachineMenuConfig;
 import dev.arubik.craftengine.machine.menu.MenuText;
@@ -51,9 +50,16 @@ import dev.arubik.craftengine.machine.recipe.RecipeOutput;
 import dev.arubik.craftengine.machine.recipe.loader.RecipeManager;
 import dev.arubik.craftengine.machine.render.ModelRendersDriven;
 import dev.arubik.craftengine.machine.render.RendererManager;
-import dev.arubik.craftengine.machine.render.formula.PolyContext;
-import dev.arubik.craftengine.machine.render.formula.PolyScript;
-import dev.arubik.craftengine.machine.render.formula.PolyScriptRegistry;
+import dev.arubik.craftengine.script.ScriptContext;
+import dev.arubik.craftengine.script.ScriptProgram;
+import dev.arubik.craftengine.script.ScriptRegistry;
+import dev.arubik.craftengine.script.types.machine.MachineType;
+import dev.arubik.craftengine.script.types.primitive.VectorType;
+import dev.arubik.craftengine.script.types.resource.FluidTanksType;
+import dev.arubik.craftengine.script.types.machine.MultiBlockType;
+
+
+
 import dev.arubik.craftengine.machine.render.variable.MachineRenderContext;
 import dev.arubik.craftengine.machine.upgrade.UpgradeModifiers;
 import dev.arubik.craftengine.multiblock.MultiBlockMachineBlockEntity;
@@ -213,7 +219,7 @@ implements ModelRendersDriven {
                     }
                 }
                 float yaw = f;
-                PolyContext machineCtx = this.buildEvalContext();
+                ScriptContext machineCtx = this.buildScriptContext();
                 if (machineCtx != null) {
                     ctx = ctx.augmented(machineCtx);
                 }
@@ -226,7 +232,7 @@ implements ModelRendersDriven {
     }
 
     @Override
-    public PolyContext buildEvalContext() {
+    public ScriptContext buildScriptContext() {
         try {
             float f;
             String facingName;
@@ -310,7 +316,12 @@ implements ModelRendersDriven {
             catch (Throwable throwable) {
                 // empty catch block
             }
-            return PolyContext.builder().copyFrom(mrc.toPolyContext()).machinePos((double)pos.getX() + 0.5, (double)pos.getY() + 0.5, (double)pos.getZ() + 0.5, facingName, yaw, (World)sl.getWorld(), this).contraption(sl).world(sl).multiBlock(0, 0, 0, true, partCount, true).build();
+            return ScriptContext.builder().copyFrom(mrc.toScriptContext())
+                .facing(facingName, yaw)
+                .world(sl)
+                .typed("Machine", new MachineType.MachineRef(sl, pos, facingName, this))
+                .typed("MultiBlock", new MultiBlockType.MultiBlockRef(0, 0, 0, true, partCount, true, sl, pos, facingName))
+                .build();
         }
         catch (Throwable ignored) {
             return null;
@@ -572,22 +583,92 @@ implements ModelRendersDriven {
     @Override
     public MachineLayout getLayout() {
         this.ensurePagesLoaded();
+        // New pages[] system takes priority
+        java.util.List<dev.arubik.craftengine.machine.MachineDefinition.PageDef> pageDefs = this.definition.pages();
+        if (!pageDefs.isEmpty()) {
+            int idx = Math.max(0, Math.min(this.machinePageIndex, pageDefs.size() - 1));
+            return this.buildMultiBlockPageLayout(pageDefs.get(idx));
+        }
+        // Legacy hardcoded pages
         if (!this.definition.upgrades().isInline()) {
-            if (this.machinePageIndex == 1) {
-                return this.buildUpgradeLayout();
-            }
-            if (this.machinePageIndex == 2) {
-                return this.buildOverclockLayout();
-            }
+            if (this.machinePageIndex == 1) return this.buildUpgradeLayout();
+            if (this.machinePageIndex == 2) return this.buildOverclockLayout();
         }
         return this.buildMainLayout();
+    }
+
+    private MachineLayout buildMultiBlockPageLayout(dev.arubik.craftengine.machine.MachineDefinition.PageDef page) {
+        if ("upgrades".equals(page.specialType())) return this.buildUpgradeLayout();
+        if ("overclock".equals(page.specialType())) return this.buildOverclockLayout();
+        org.bukkit.event.inventory.InventoryType invType = page.inventoryType();
+        boolean isChest = page.isChestType();
+        String titleStr = page.title() != null ? page.title() : this.definition.title();
+        MachineLayout layout = new MachineLayout(invType, isChest ? page.resolvedSize() : -1, titleStr);
+        // Machine slots
+        for (int s : page.inputSlots())  layout.addSlot(s, MenuSlotType.INPUT);
+        for (int s : page.outputSlots()) layout.addSlot(s, dev.arubik.craftengine.machine.menu.layout.MenuSlotType.OUTPUT);
+        for (int s : page.fuelSlots())   layout.addSlot(s, dev.arubik.craftengine.machine.menu.layout.MenuSlotType.FUEL);
+        // Static layout items + actions
+        for (dev.arubik.craftengine.machine.MachineDefinition.PageDef.StaticSlot s : page.layout()) {
+            final int slot = s.slot();
+            final String itemKey = s.item();
+            final String nameStr = s.name();
+            final java.util.List<String> lore = s.lore();
+            final String action = s.action();
+            layout.addButton(slot, (machine, tick) -> {
+                Component nameComp = nameStr != null
+                    ? net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(nameStr)
+                        .decoration(net.kyori.adventure.text.format.TextDecoration.ITALIC, false)
+                    : Component.empty();
+                org.bukkit.inventory.ItemStack item = MenuText.iconItem(
+                    itemKey != null ? net.momirealms.craftengine.core.util.Key.of(itemKey) : null,
+                    org.bukkit.Material.GRAY_STAINED_GLASS_PANE, nameComp, new Component[0]);
+                if (item != null && !lore.isEmpty()) {
+                    org.bukkit.inventory.meta.ItemMeta meta = item.getItemMeta();
+                    if (meta != null) {
+                        meta.lore(DataMachineBlockEntity.mmLore(lore));
+                        item.setItemMeta(meta);
+                    }
+                }
+                return item;
+            }, (machine, player) -> {
+                if (action == null || action.isBlank()) return;
+                if (!(machine instanceof DataMultiBlockMachineBlockEntity dm)) return;
+                dev.arubik.craftengine.machine.menu.MachineMenuConfig.Action parsed =
+                    dev.arubik.craftengine.machine.menu.MachineMenuConfig.Action.parse(action);
+                switch (parsed.kind) {
+                    case OPEN_PAGE -> dm.openPage((org.bukkit.entity.Player) player, parsed.page);
+                    case SCRIPT -> {
+                        dev.arubik.craftengine.script.ScriptContext sCtx = dm.buildScriptContext();
+                        if (sCtx == null) break;
+                        String target = parsed.target;
+                        if (target.contains(":")) {
+                            int col = target.indexOf(':'); String file = target.substring(0, col); String func = target.substring(col + 1);
+                            String key = file.endsWith(".pf") ? file.substring(0, file.length() - 3) : file;
+                            dev.arubik.craftengine.script.ScriptProgram prog = dev.arubik.craftengine.script.ScriptRegistry.get(key);
+                            if (prog != null) {
+                                dev.arubik.craftengine.script.ScriptContext withDefs = prog.evaluate(sCtx);
+                                dev.arubik.craftengine.script.ScriptValue fnVal = withDefs.getVar(func);
+                                if (fnVal instanceof dev.arubik.craftengine.script.ScriptValue.Obj fnObj && fnObj.typeName().equals(dev.arubik.craftengine.script.UserFunction.TYPE)) {
+                                    dev.arubik.craftengine.script.UserFunction fn = (dev.arubik.craftengine.script.UserFunction) fnObj.instance();
+                                    dev.arubik.craftengine.script.ScriptContext.Builder rb = dev.arubik.craftengine.script.ScriptContext.builder().copyFrom(withDefs);
+                                    fn.executor().accept(withDefs, rb);
+                                }
+                            }
+                        }
+                    }
+                    default -> {}
+                }
+            });
+        }
+        return layout;
     }
 
     private MachineLayout buildUpgradeLayout() {
         int count = this.definition.upgrades().size();
         int unlocked = this.unlockedSlots();
         MachineLayout l = new MachineLayout(InventoryType.CHEST, 18, "Upgrades");
-        Component title = GuiTitles.title(this.getMachineId(), "upgrade");
+        Component title = null;
         if (title != null) {
             l.setTitleComponent(title);
         }
@@ -609,7 +690,7 @@ implements ModelRendersDriven {
     private MachineLayout buildMainLayout() {
         int infoSlot;
         MachineLayout layout = new MachineLayout(InventoryType.CHEST, this.definition.menuSize(), this.definition.title());
-        Component title = GuiTitles.title(this.getMachineId(), "main");
+        Component title = null;
         if (title != null) {
             layout.setTitleComponent(title);
         }
@@ -628,26 +709,8 @@ implements ModelRendersDriven {
             }
         }
         MachineBars.install(layout, DataMachineSupport.resolveBars(this.definition, this.bars));
-        MachineDefinition.PagingSpec paging = this.definition.paging();
-        if (paging.isPaged()) {
-            for (int i = 0; i < paging.slots(); ++i) {
-                layout.addSlot(i, MenuSlotType.INPUT);
-            }
-            if (paging.prevSlot() >= 0) {
-                layout.addButton(paging.prevSlot(), (m, t) -> MenuText.iconItem(Key.of((String)"cml", (String)"gui_empty"), Material.ARROW, (Component)Component.text((String)"\u00a7aPrevious Page"), new Component[0]), (m, p) -> ((DataMultiBlockMachineBlockEntity)m).turnPage(-1));
-            }
-            if (paging.nextSlot() >= 0) {
-                layout.addButton(paging.nextSlot(), (m, t) -> MenuText.iconItem(Key.of((String)"cml", (String)"gui_empty"), Material.ARROW, (Component)Component.text((String)"\u00a7aNext Page"), new Component[0]), (m, p) -> ((DataMultiBlockMachineBlockEntity)m).turnPage(1));
-            }
-            if (paging.indicator() >= 0) {
-                layout.setDynamicProvider(paging.indicator(), (m, t) -> {
-                    DataMultiBlockMachineBlockEntity self = (DataMultiBlockMachineBlockEntity)m;
-                    ItemStack paper = new ItemStack(Material.PAPER);
-                    paper.editMeta(meta -> meta.displayName(MenuText.noI((Component)Component.text((String)("\u00a7ePage " + (self.currentPage() + 1) + "/" + self.pageCount())))));
-                    return paper;
-                });
-            }
-        }
+        // Old PagingSpec hardcoded button system removed.
+        // Use pages[] in machine JSON with open_page:N buttons instead.
         int n = infoSlot = this.definition.infoSlot() >= 0 ? this.definition.infoSlot() : this.menuConfig.infoSlot;
         if (infoSlot >= 0) {
             layout.setDynamicProvider(infoSlot, (machine, tick) -> RecipeInfoIcon.build(machine, this.getMachineId(), machine.getUpgradeModifiers().speedMultiplier(), 0.0));
@@ -661,38 +724,23 @@ implements ModelRendersDriven {
                 Key lockedKey = DataMultiBlockMachineBlockEntity.parseKey(s.lockedIcon());
                 MachineMenuConfig.LockedWhen lw = MachineMenuConfig.LockedWhen.parse(s.lockedWhen());
                 layout.addButton(s.slot(), (machine, tick) -> {
-                    double d;
-                    PolyContext evalCtx2 = machine.buildEvalContext();
-                    if (machine instanceof DataMultiBlockMachineBlockEntity) {
-                        DataMultiBlockMachineBlockEntity mb2 = (DataMultiBlockMachineBlockEntity)machine;
-                        d = mb2.curOverclockLimit;
-                    } else {
-                        d = 0.0;
-                    }
-                    double ocLimit2 = d;
+                    ScriptContext evalCtx2 = machine.buildScriptContext();
+                    double ocLimit2 = machine instanceof DataMultiBlockMachineBlockEntity mb2 ? mb2.curOverclockLimit : 0.0;
                     boolean locked = lw.isLocked(evalCtx2, ocLimit2);
                     Key key = locked ? lockedKey : iconKey;
                     return MenuText.iconItem(key, Material.PAPER, (Component)Component.text((String)(s.name() == null ? "" : s.name())), new Component[0]);
                 }, (machine, player) -> {
-                    String scriptName;
-                    PolyScript script;
-                    if (!(machine instanceof DataMultiBlockMachineBlockEntity)) {
-                        return;
-                    }
+                    if (!(machine instanceof DataMultiBlockMachineBlockEntity)) return;
                     DataMultiBlockMachineBlockEntity self = (DataMultiBlockMachineBlockEntity)machine;
-                    PolyContext evalCtx = self.buildEvalContext();
-                    if (lw.isLocked(evalCtx, self.curOverclockLimit)) {
-                        return;
-                    }
+                    ScriptContext evalCtx = self.buildScriptContext();
+                    if (lw.isLocked(evalCtx, self.curOverclockLimit)) return;
                     String action = s.action();
                     if (action != null && action.startsWith("open_page:")) {
-                        try {
-                            int pageIndex = Integer.parseInt(action.substring(10));
-                            self.openPage((org.bukkit.entity.Player)player, pageIndex);
-                        }
-                        catch (Throwable pageIndex) {}
-                    } else if (action != null && (action.startsWith("script:") || action.startsWith("run:")) && (script = PolyScriptRegistry.get(scriptName = action.startsWith("script:") ? action.substring(7) : action.substring(4))) != null && evalCtx != null) {
-                        script.evaluate(evalCtx);
+                        try { self.openPage((org.bukkit.entity.Player)player, Integer.parseInt(action.substring(10))); } catch (Throwable ignored) {}
+                    } else if (action != null && (action.startsWith("script:") || action.startsWith("run:"))) {
+                        String sn = action.startsWith("script:") ? action.substring(7) : action.substring(4);
+                        ScriptProgram sc = ScriptRegistry.get(sn);
+                        if (sc != null && evalCtx != null) sc.evaluate(evalCtx);
                     }
                 });
             }

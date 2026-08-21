@@ -1,0 +1,14 @@
+# Right-click cycles pulser duration: 5, 10, 20, 40, 60, 100 ticks
+idx = Machine.get_flag("dur_idx")
+next_idx = (idx + 1) % 6
+Machine.set_flag("dur_idx", next_idx)
+
+# Map index to duration value
+dur = 5
+if next_idx == 1 { dur = 10 }
+if next_idx == 2 { dur = 20 }
+if next_idx == 3 { dur = 40 }
+if next_idx == 4 { dur = 60 }
+if next_idx == 5 { dur = 100 }
+Machine.set_flag("duration", dur)
+Machine.play_sound("minecraft:block.stone_button.click_on", 0.5, 1.0)

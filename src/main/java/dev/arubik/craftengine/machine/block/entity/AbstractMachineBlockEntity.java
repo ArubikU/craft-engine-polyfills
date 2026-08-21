@@ -62,7 +62,7 @@ import dev.arubik.craftengine.machine.recipe.MachineFuelRecipe;
 import dev.arubik.craftengine.machine.recipe.RecipeOutput;
 import dev.arubik.craftengine.machine.recipe.condition.RecipeCondition;
 import dev.arubik.craftengine.machine.recipe.loader.RecipeManager;
-import dev.arubik.craftengine.machine.render.formula.PolyContext;
+import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.machine.upgrade.UpgradeModifiers;
 import dev.arubik.craftengine.machine.upgrade.UpgradeRegistry;
 import dev.arubik.craftengine.multiblock.IOConfiguration;
@@ -128,6 +128,14 @@ ConveyorDisplayReceiver {
     private static final TypedKey<Float> KEY_XP = TypedKey.of("craftengine", "machine_xp", NbtType.FLOAT);
     protected final List<FluidTank> fluidTanks = new ArrayList<FluidTank>();
     protected final List<GasTank> gasTanks = new ArrayList<GasTank>();
+    /** CraftEnergy buffer — a single int, unlike fluid/gas there's no type/tank list, just an
+     *  amount capped by {@link #energyCapacity}. Zero capacity means this machine declared no
+     *  {@code MachineDefinition.EnergySpec}, and every energy method below is then a no-op. */
+    protected int energy = 0;
+    protected int energyCapacity = 0;
+    protected int energyMaxInput = 0;
+    protected int energyMaxOutput = 0;
+    protected int energyGenerationPerTick = 0;
     protected UpgradeModifiers upgradeModifiers = UpgradeModifiers.NONE;
     private static final TypedKey<Integer> KEY_PROGRESS = TypedKey.of("craftengine", "machine_progress", NbtType.INTEGER);
     private static final TypedKey<Integer> KEY_MAX_PROGRESS = TypedKey.of("craftengine", "machine_max_progress", NbtType.INTEGER);
@@ -195,9 +203,8 @@ ConveyorDisplayReceiver {
         }
     }
 
-    public List<GasTank> gasTankList() {
-        return this.gasTanks;
-    }
+    public List<GasTank> gasTankList() { return this.gasTanks; }
+    public List<FluidTank> fluidTankList() { return this.fluidTanks; }
 
     public FluidStack getFluidInSlot(int slot) {
         return this.get(this.fluidTanks.get(slot).getKey());
@@ -341,6 +348,9 @@ ConveyorDisplayReceiver {
                     if (!this.getIOConfiguration().acceptsInput(IOConfiguration.IOType.FLUID, localDir)) {
                         return 0;
                     }
+                    if (this.runOnTransferScript("fluid", stackPayload(stack.getType() == null ? null : stack.getType().id().toString(), stack.getAmount()), side, "input")) {
+                        return 0;
+                    }
                     int targetSlot = slot;
                     if (targetSlot == -1) {
                         targetSlot = this.getIOConfiguration().getTargetSlot(IOConfiguration.IOType.FLUID, localDir);
@@ -396,6 +406,12 @@ ConveyorDisplayReceiver {
             if (!this.getIOConfiguration().providesOutput(IOConfiguration.IOType.FLUID, localDir)) {
                 return 0;
             }
+            FluidStack aboutToLeave = this.getStoredFluidForCarrier();
+            if (this.runOnTransferScript("fluid",
+                    stackPayload(aboutToLeave.isEmpty() ? null : aboutToLeave.getType().id().toString(), max), side,
+                    "output")) {
+                return 0;
+            }
             boolean[] changed = new boolean[]{false};
             Consumer<FluidStack> hookDrained = s -> {
                 if (drained != null) {
@@ -448,6 +464,78 @@ ConveyorDisplayReceiver {
         return this.insertGas(level, stack, side, -1);
     }
 
+    /**
+     * Does this machine's declared IO allow gas to cross {@code worldSide}?
+     * {@code input=true} asks about gas coming IN through that face, {@code false} about gas
+     * going OUT. Used by the gas network solver, which writes tanks directly and so would
+     * otherwise bypass every rule enforced by {@link #insertGas} / {@link #extractGas}.
+     */
+    public boolean allowsGas(Level level, net.minecraft.core.Direction worldSide, boolean input) {
+        if (this.ioConfiguration == null || this.gasTanks.isEmpty()) {
+            return false;
+        }
+        net.minecraft.core.Direction localDir = worldSide;
+        try {
+            BlockState state = level.getBlockState(this.getMachinePos());
+            Optional customState = BlockStateUtils.getOptionalCustomBlockState(state);
+            if (customState.isPresent()) {
+                CompositeBlockBehavior composite;
+                ConnectableBlockBehavior cbb;
+                BlockBehavior behavior = ((ImmutableBlockState)customState.get()).behavior();
+                if (behavior instanceof ConnectableBlockBehavior connectable) {
+                    localDir = connectable.toLocalDirection(worldSide, state);
+                }
+                if (behavior instanceof CompositeBlockBehavior
+                        && (cbb = (ConnectableBlockBehavior)((composite = (CompositeBlockBehavior)behavior).getFirst(ConnectableBlockBehavior.class))) != null) {
+                    localDir = cbb.toLocalDirection(worldSide, state);
+                }
+            }
+        } catch (Throwable ignored) {
+            // Fall back to the world direction; a wrong rotation is better than a crash in the solver.
+        }
+        return input
+                ? this.getIOConfiguration().acceptsInput(IOConfiguration.IOType.GAS, localDir)
+                : this.getIOConfiguration().providesOutput(IOConfiguration.IOType.GAS, localDir);
+    }
+
+    /**
+     * This machine's IO config as a mutable, block-entity-owned copy.
+     *
+     * <p>A machine is built pointing at the {@code IOConfiguration} held by its shared
+     * {@link dev.arubik.craftengine.machine.MachineDefinition}. Editing that object directly would
+     * silently reconfigure EVERY machine of the same type, so the first mutation swaps in a private
+     * copy. Subsequent calls return that same copy.
+     *
+     * <p>The copy is rebuilt by probing every (type, face) pair through the public interface rather
+     * than reaching into {@code Simple}'s fields: 7 types x 6 faces is trivial, and it works for any
+     * implementation — {@code Open}, {@code Simple}, {@code WithTransferRate} alike.
+     */
+    public IOConfiguration.Simple mutableIO() {
+        IOConfiguration current = this.getIOConfiguration();
+        if (current instanceof IOConfiguration.Simple simple && this.ownsIOConfiguration) {
+            return simple;
+        }
+        IOConfiguration.Simple copy = new IOConfiguration.Simple();
+        if (current != null) {
+            for (IOConfiguration.IOType type : IOConfiguration.IOType.values()) {
+                for (net.minecraft.core.Direction dir : net.minecraft.core.Direction.values()) {
+                    try {
+                        if (current.acceptsInput(type, dir)) copy.addInput(type, dir);
+                        if (current.providesOutput(type, dir)) copy.addOutput(type, dir);
+                    } catch (Throwable ignored) {
+                        // An implementation that cannot answer for a pair simply grants nothing.
+                    }
+                }
+            }
+        }
+        this.setIOConfiguration(copy);
+        this.ownsIOConfiguration = true;
+        return copy;
+    }
+
+    /** True once {@link #mutableIO()} has given this machine its own config. */
+    private boolean ownsIOConfiguration = false;
+
     public int insertGas(Level level, GasStack stack, net.minecraft.core.Direction side, int slot) {
         if (this.ioConfiguration != null) {
             net.minecraft.core.Direction localDir = side;
@@ -470,6 +558,11 @@ ConveyorDisplayReceiver {
                 return 0;
             }
             if (stack == null || stack.isEmpty()) {
+                return 0;
+            }
+            if (this.runOnTransferScript("gas",
+                    stackPayload(stack.getType() == null ? null : stack.getType().id().toString(), stack.getAmount()),
+                    side, "input")) {
                 return 0;
             }
             int targetSlot = slot;
@@ -526,6 +619,12 @@ ConveyorDisplayReceiver {
             if (!this.getIOConfiguration().providesOutput(IOConfiguration.IOType.GAS, localDir)) {
                 return 0;
             }
+            GasStack aboutToLeaveGas = this.getStoredGasForCarrier();
+            if (this.runOnTransferScript("gas",
+                    stackPayload(aboutToLeaveGas.isEmpty() ? null : aboutToLeaveGas.getType().id().toString(), max),
+                    side, "output")) {
+                return 0;
+            }
             boolean[] changed = new boolean[]{false};
             Consumer<GasStack> hookDrained = s -> {
                 if (drained != null) {
@@ -559,6 +658,133 @@ ConveyorDisplayReceiver {
         return 0;
     }
 
+    /** Installs this machine's energy buffer from its {@code MachineDefinition.EnergySpec}. Called once
+     *  by the concrete subclass's constructor (mirrors how fluid/gas tanks are built from TankSpec). */
+    public void configureEnergy(int capacity, int maxInput, int maxOutput, int generationPerTick) {
+        this.energyCapacity = Math.max(0, capacity);
+        this.energyMaxInput = Math.max(0, maxInput);
+        this.energyMaxOutput = Math.max(0, maxOutput);
+        this.energyGenerationPerTick = Math.max(0, generationPerTick);
+    }
+
+    /**
+     * Does this machine's declared IO allow energy to cross {@code worldSide}? Same convention and
+     * purpose as {@link #allowsGas}: the energy network solver writes buffers directly, bypassing
+     * {@link #insertEnergy}/{@link #extractEnergy}, so it must ask this first.
+     */
+    public boolean allowsEnergy(Level level, net.minecraft.core.Direction worldSide, boolean input) {
+        if (this.ioConfiguration == null || this.energyCapacity <= 0) {
+            return false;
+        }
+        net.minecraft.core.Direction localDir = worldSide;
+        try {
+            BlockState state = level.getBlockState(this.getMachinePos());
+            Optional customState = BlockStateUtils.getOptionalCustomBlockState(state);
+            if (customState.isPresent()) {
+                CompositeBlockBehavior composite;
+                ConnectableBlockBehavior cbb;
+                BlockBehavior behavior = ((ImmutableBlockState) customState.get()).behavior();
+                if (behavior instanceof ConnectableBlockBehavior connectable) {
+                    localDir = connectable.toLocalDirection(worldSide, state);
+                }
+                if (behavior instanceof CompositeBlockBehavior
+                        && (cbb = (ConnectableBlockBehavior) ((composite = (CompositeBlockBehavior) behavior).getFirst(ConnectableBlockBehavior.class))) != null) {
+                    localDir = cbb.toLocalDirection(worldSide, state);
+                }
+            }
+        } catch (Throwable ignored) {
+            // Fall back to the world direction; a wrong rotation is better than a crash in the solver.
+        }
+        return input
+                ? this.getIOConfiguration().acceptsInput(IOConfiguration.IOType.ENERGY, localDir)
+                : this.getIOConfiguration().providesOutput(IOConfiguration.IOType.ENERGY, localDir);
+    }
+
+    public int insertEnergy(Level level, int amount, net.minecraft.core.Direction side) {
+        if (this.ioConfiguration == null || this.energyCapacity <= 0 || amount <= 0) {
+            return 0;
+        }
+        net.minecraft.core.Direction localDir = side;
+        BlockState state = level.getBlockState(this.getMachinePos());
+        Optional customState = BlockStateUtils.getOptionalCustomBlockState(state);
+        if (customState.isPresent()) {
+            CompositeBlockBehavior compositeBlockBehavior;
+            ConnectableBlockBehavior cbb;
+            BlockBehavior behavior = ((ImmutableBlockState) customState.get()).behavior();
+            if (behavior instanceof ConnectableBlockBehavior connectableBlockBehavior) {
+                localDir = connectableBlockBehavior.toLocalDirection(side, state);
+            }
+            if (behavior instanceof CompositeBlockBehavior && (cbb = (ConnectableBlockBehavior) ((compositeBlockBehavior = (CompositeBlockBehavior) behavior).getFirst(ConnectableBlockBehavior.class))) != null) {
+                localDir = cbb.toLocalDirection(side, state);
+            }
+        }
+        if (!this.getIOConfiguration().acceptsInput(IOConfiguration.IOType.ENERGY, localDir)) {
+            return 0;
+        }
+        if (this.runOnTransferScript("energy", dev.arubik.craftengine.script.ScriptValue.of(amount), side, "input")) {
+            return 0;
+        }
+        int capped = this.energyMaxInput > 0 ? Math.min(amount, this.energyMaxInput) : amount;
+        int space = this.energyCapacity - this.energy;
+        int move = Math.max(0, Math.min(capped, space));
+        if (move > 0) {
+            this.energy += move;
+            this.setChanged();
+        }
+        return move;
+    }
+
+    public int extractEnergy(Level level, int max, net.minecraft.core.Direction side) {
+        if (this.ioConfiguration == null || this.energyCapacity <= 0 || max <= 0) {
+            return 0;
+        }
+        net.minecraft.core.Direction localDir = side;
+        BlockState state = level.getBlockState(this.getMachinePos());
+        Optional customState = BlockStateUtils.getOptionalCustomBlockState(state);
+        if (customState.isPresent()) {
+            CompositeBlockBehavior compositeBlockBehavior;
+            ConnectableBlockBehavior cbb;
+            BlockBehavior behavior = ((ImmutableBlockState) customState.get()).behavior();
+            if (behavior instanceof ConnectableBlockBehavior connectableBlockBehavior) {
+                localDir = connectableBlockBehavior.toLocalDirection(side, state);
+            }
+            if (behavior instanceof CompositeBlockBehavior && (cbb = (ConnectableBlockBehavior) ((compositeBlockBehavior = (CompositeBlockBehavior) behavior).getFirst(ConnectableBlockBehavior.class))) != null) {
+                localDir = cbb.toLocalDirection(side, state);
+            }
+        }
+        if (!this.getIOConfiguration().providesOutput(IOConfiguration.IOType.ENERGY, localDir)) {
+            return 0;
+        }
+        if (this.runOnTransferScript("energy", dev.arubik.craftengine.script.ScriptValue.of(max), side, "output")) {
+            return 0;
+        }
+        int capped = this.energyMaxOutput > 0 ? Math.min(max, this.energyMaxOutput) : max;
+        int move = Math.max(0, Math.min(capped, this.energy));
+        if (move > 0) {
+            this.energy -= move;
+            this.setChanged();
+        }
+        return move;
+    }
+
+    public int getStoredEnergyForCarrier() {
+        return this.energy;
+    }
+
+    public long getEnergyCapacityForCarrier() {
+        return this.energyCapacity;
+    }
+
+    /** Engine apply path (bypasses the IO gating {@link #insertEnergy}/{@link #extractEnergy} enforce) —
+     *  same role as {@link #setStoredGasRaw}. Clamped to capacity; the network never overfills a buffer. */
+    public void setStoredEnergyRaw(Level level, int amount) {
+        if (this.energyCapacity <= 0) {
+            return;
+        }
+        this.energy = Math.max(0, Math.min(amount, this.energyCapacity));
+        this.setChanged();
+    }
+
     protected boolean requiresFuel() {
         return true;
     }
@@ -569,6 +795,14 @@ ConveyorDisplayReceiver {
         }
         if (level.isClientSide()) {
             return;
+        }
+        // Energy generation is gated on actively burning fuel, NOT on recipe progress — a generator
+        // has no recipe/output of its own, just fuel -> energy. Overflow beyond energyCapacity this
+        // tick is simply discarded (no cross-tick carry, no queue): a generator that can make 10k/t
+        // but only has room for 1k that tick banks 1k and the rest is lost, exactly like a real FE
+        // generator with a too-small internal buffer and nowhere on the network to push the rest.
+        if (this.energyGenerationPerTick > 0 && this.burnTime > 0 && this.energyCapacity > 0) {
+            this.energy = Math.min(this.energyCapacity, this.energy + this.energyGenerationPerTick);
         }
         this.recomputeUpgrades();
         if (this.requiresRedstone && !this.isRedstoneEnabled(level)) {
@@ -594,7 +828,23 @@ ConveyorDisplayReceiver {
                     return;
                 }
             }
+            // Energy-as-fuel: a recipe with energyCost > 0 needs that much drawn from the machine's
+            // OWN buffer every tick it advances — same shape as the burnTime gate above, just a
+            // continuous per-tick draw instead of a burn-time reservoir. No buffer (or an empty
+            // one) simply stalls progress exactly like an unfed furnace, rather than crashing or
+            // silently processing for free.
+            int energyCost = recipe.getEnergyCost();
+            if (energyCost > 0 && this.energy < energyCost) {
+                if (this.progress > 0) {
+                    this.progress = Math.max(0, this.progress - 2);
+                }
+                this.isProcessing = false;
+                return;
+            }
             if (!needsFuel || this.burnTime > 0) {
+                if (energyCost > 0) {
+                    this.energy -= energyCost;
+                }
                 this.isProcessing = true;
                 if (this.maxProgress == 0) {
                     this.maxProgress = recipe.getProcessTime();
@@ -860,6 +1110,7 @@ ConveyorDisplayReceiver {
         tag.putInt("max_burn_time", this.maxBurnTime);
         tag.putInt("overclocked_ticks", this.overclockedTicks);
         tag.putFloat("stored_xp", this.storedXp);
+        tag.putInt("energy", this.energy);
         if (this.ownerUuid != null) {
             this.set(KEY_OWNER_UUID, this.ownerUuid.toString());
         }
@@ -874,6 +1125,7 @@ ConveyorDisplayReceiver {
         this.maxBurnTime = tag.getInt("max_burn_time");
         this.overclockedTicks = tag.getInt("overclocked_ticks");
         this.storedXp = tag.getFloat("stored_xp");
+        this.energy = tag.getInt("energy");
         String ownerStr = this.getOrDefault(KEY_OWNER_UUID, null);
         if (ownerStr != null) {
             try {
@@ -1205,18 +1457,24 @@ ConveyorDisplayReceiver {
         if (!accepts) {
             return false;
         }
+        boolean allowed;
         if (target >= 0) {
-            return slot == target;
+            allowed = slot == target;
+        } else {
+            allowed = false;
+            for (int in : this.getInputSlots()) {
+                if (in == slot) { allowed = true; break; }
+            }
+            if (!allowed) {
+                for (int f : this.getFuelSlots()) {
+                    if (f == slot) { allowed = true; break; }
+                }
+            }
         }
-        for (int in : this.getInputSlots()) {
-            if (in != slot) continue;
-            return true;
+        if (!allowed) {
+            return false;
         }
-        for (int f : this.getFuelSlots()) {
-            if (f != slot) continue;
-            return true;
-        }
-        return false;
+        return !this.runOnTransferScript("item", dev.arubik.craftengine.script.ScriptValue.ofItem(stack), side, "input");
     }
 
     @Override
@@ -1228,11 +1486,71 @@ ConveyorDisplayReceiver {
         if (!this.ioConfiguration.providesOutput(IOConfiguration.IOType.ITEM, local)) {
             return false;
         }
+        boolean allowed = false;
         for (int out : this.getOutputSlots()) {
-            if (out != slot) continue;
-            return true;
+            if (out == slot) { allowed = true; break; }
         }
-        return false;
+        if (!allowed) {
+            return false;
+        }
+        return !this.runOnTransferScript("item", dev.arubik.craftengine.script.ScriptValue.ofItem(stack), side, "output");
+    }
+
+    private static final dev.arubik.craftengine.util.TypedKey<Integer> TRANSFER_CANCEL_FLAG =
+            dev.arubik.craftengine.util.TypedKey.of("polyfills", "flag__transfer_cancel", dev.arubik.craftengine.util.NbtType.INTEGER);
+
+    /**
+     * Runs {@code MachineDefinition#onTransferScript()} (the generic {@code on_pipe_transfer} hook —
+     * fires for ANY machine and ANY resource, not just item pipes) if this machine declares one, and
+     * reports whether the script vetoed the transfer. Called AFTER the existing IOConfiguration gate
+     * for the relevant resource already said "allowed" (from {@code canPlaceItemThroughFace}/{@code
+     * canTakeItemThroughFace} for items, and from the slotted {@code insertFluid}/{@code extractFluid}/
+     * {@code insertGas}/{@code extractGas}/{@code insertEnergy}/{@code extractEnergy} for the other
+     * three) — this is an additional observation/veto layer on top, never a replacement for those
+     * gates, so a machine with no hook declared behaves exactly as before this feature existed.
+     *
+     * @param type    "item" / "fluid" / "gas" / "energy" — bound as {@code type} in the script
+     * @param payload the resource-appropriate value bound as {@code payload}: an {@code Item} for
+     *                "item", a {@code Map{type, amount}} for "fluid"/"gas" (no dedicated FluidStack/
+     *                GasStack script type exists), or a plain number for "energy"
+     */
+    private boolean runOnTransferScript(String type, dev.arubik.craftengine.script.ScriptValue payload,
+            net.minecraft.core.Direction side, String mode) {
+        if (!(this instanceof dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity dm))
+            return false;
+        dev.arubik.craftengine.machine.MachineDefinition definition = dm.definition();
+        if (definition == null || definition.onTransferScript() == null)
+            return false;
+        try {
+            ScriptContext base = this.buildScriptContext();
+            if (base == null)
+                return false;
+            ScriptContext ctx = ScriptContext.builder().copyFrom(base)
+                    .typed("type", dev.arubik.craftengine.script.ScriptValue.of(type))
+                    .typed("payload", payload)
+                    .typed("direction", dev.arubik.craftengine.script.ScriptValue.of(side.getName()))
+                    .typed("mode", dev.arubik.craftengine.script.ScriptValue.of(mode))
+                    .build();
+            dev.arubik.craftengine.script.ScriptCall call = dev.arubik.craftengine.script.ScriptCall
+                    .parse(definition.onTransferScript());
+            if (call == null)
+                return false;
+            call.execute(ctx);
+            Integer cancelled = this.get(TRANSFER_CANCEL_FLAG);
+            return cancelled != null && cancelled != 0; // fail-open: a script that never sets it never vetoes
+        } catch (Throwable ignored) {
+            return false;
+        }
+    }
+
+    /** {@code {type, amount}} payload for a fluid/gas transfer — no dedicated FluidStack/GasStack
+     * script type exists, and a plain map is enough for a script to react to ({@code payload.type},
+     * {@code payload.amount}) without needing one. */
+    private static dev.arubik.craftengine.script.ScriptValue stackPayload(String typeId, int amount) {
+        java.util.LinkedHashMap<String, dev.arubik.craftengine.script.ScriptValue> map = new java.util.LinkedHashMap<>();
+        map.put("type", dev.arubik.craftengine.script.ScriptValue.of(typeId == null ? "" : typeId));
+        map.put("amount", dev.arubik.craftengine.script.ScriptValue.of(amount));
+        return dev.arubik.craftengine.script.types.primitive.MapType.wrap(map);
     }
 
     public void openMenu(Player player) {
@@ -1673,7 +1991,7 @@ ConveyorDisplayReceiver {
         return config != null && config.providesOutput(IOConfiguration.IOType.REDSTONE, dir);
     }
 
-    public PolyContext buildEvalContext() {
+    public ScriptContext buildScriptContext() {
         return null;
     }
 

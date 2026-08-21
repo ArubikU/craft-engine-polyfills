@@ -1,0 +1,11 @@
+{
+  "id": "polyfills:energy",
+  "model": "row",
+  "name": "lang:polyfill.ui.energy",
+  "generate": {
+    "empty_icon": "cml:gui_empty",
+    "lore": ["%value%/%max% CE", "%percent%%"],
+    "parts": [ { "levels": 16 } ],
+    "types": { "default": "cml:progress_%level%" }
+  }
+}

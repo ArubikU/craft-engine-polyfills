@@ -1,0 +1,25 @@
+{
+  "id": "polyfills:lava_spike",
+  "title": "Lava Spike",
+  "flags": {
+    "fuel": false
+  },
+  "action_script": "lava_spike",
+  "action_interval": 1,
+  "pages": [
+    {
+      "title": "Lava Spike",
+      "size": 9,
+      "layout": [
+        {
+          "slot": 4,
+          "item": "recipe_info.pf:item",
+          "name": "recipe_info.pf:name",
+          "lore": [
+            "recipe_info.pf:lore"
+          ]
+        }
+      ]
+    }
+  ]
+}

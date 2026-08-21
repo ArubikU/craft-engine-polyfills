@@ -1,0 +1,18 @@
+# Mob Generator — spawns mob from flag, consumes fuel from slot 0.
+mob_idx = Machine.get_flag("mob_index")
+if mob_idx <= 0 { mob_idx = 1 }
+mob_type = "minecraft:zombie"
+if mob_idx == 2 { mob_type = "minecraft:skeleton" }
+if mob_idx == 3 { mob_type = "minecraft:spider" }
+if mob_idx == 4 { mob_type = "minecraft:wither_skeleton" }
+if mob_idx == 5 { mob_type = "minecraft:creeper" }
+if mob_idx == 6 { mob_type = "minecraft:piglin" }
+if mob_idx == 7 { mob_type = "minecraft:enderman" }
+if mob_idx == 8 { mob_type = "minecraft:iron_golem" }
+if mob_idx == 9 { mob_type = "minecraft:slime" }
+
+fuel = Machine.get_item_in_slot(0)
+if !is_empty(fuel) {
+    World.spawn_entity(mob_type, Machine.x + 0.5, Machine.y + 1, Machine.z + 0.5)
+    Machine.remove_item_in_slot(0, 1)
+}

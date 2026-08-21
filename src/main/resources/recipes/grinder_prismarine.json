@@ -1,0 +1,12 @@
+{
+  "type": "crusher",
+  "time": 60,
+  "fuelRequired": false,
+  "rpm": 4,
+  "su": 2,
+  "inputs": [{ "type": "item", "id": "minecraft:prismarine", "amount": 1 }],
+  "outputs": [
+    { "type": "item", "id": "minecraft:prismarine_shard",   "amount": 2, "chance": 1.0 },
+    { "type": "item", "id": "minecraft:prismarine_crystals","amount": 1, "chance": 0.3 }
+  ]
+}

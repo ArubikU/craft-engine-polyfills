@@ -1,0 +1,9 @@
+{
+  "type": "crusher",
+  "time": 30,
+  "fuelRequired": false,
+  "rpm": 4,
+  "su": 2,
+  "inputs": [{ "type": "item", "id": "minecraft:glass", "amount": 1 }],
+  "outputs": [{ "type": "item", "id": "minecraft:sand", "amount": 1, "chance": 1.0 }]
+}

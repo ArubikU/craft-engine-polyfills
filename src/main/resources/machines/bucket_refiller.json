@@ -1,0 +1,26 @@
+{
+  "id": "polyfills:bucket_refiller",
+  "title": "Bucket Refiller",
+  "flags": {
+    "recipes": false,
+    "fuel": false,
+    "ui": false,
+    "ui_tick": false
+  },
+  "action_script": "bucket_refiller",
+  "action_interval": 5,
+  "pages": [
+    {
+      "title": "Bucket Refiller",
+      "size": 9,
+      "slots": {
+        "input": [
+          3
+        ],
+        "output": [
+          5
+        ]
+      }
+    }
+  ]
+}

@@ -56,13 +56,12 @@ import dev.arubik.craftengine.machine.render.BetterModelMachineRenderer;
 import dev.arubik.craftengine.machine.render.ModelEngineMachineRenderer;
 import dev.arubik.craftengine.machine.render.ParticleUtils;
 import dev.arubik.craftengine.machine.render.RendererSpec;
-import dev.arubik.craftengine.machine.render.formula.LocationClass;
-import dev.arubik.craftengine.machine.render.formula.PolyContext;
-import dev.arubik.craftengine.machine.render.formula.PolyFormula;
-import dev.arubik.craftengine.machine.render.formula.PolyScript;
-import dev.arubik.craftengine.machine.render.formula.PolyScriptRegistry;
-import dev.arubik.craftengine.machine.render.formula.PolyValue;
-import dev.arubik.craftengine.machine.render.formula.VariablesClass;
+import dev.arubik.craftengine.script.ScriptContext;
+import dev.arubik.craftengine.script.ScriptFormula;
+import dev.arubik.craftengine.script.ScriptProgram;
+import dev.arubik.craftengine.script.ScriptRegistry;
+import dev.arubik.craftengine.script.ScriptValue;
+import dev.arubik.craftengine.script.types.world.LocationType;
 import dev.arubik.craftengine.machine.render.variable.MachineRenderContext;
 import dev.arubik.craftengine.machine.render.variable.VariableSpec;
 import dev.arubik.craftengine.util.MNms;
@@ -208,18 +207,22 @@ public final class RendererManager {
         CraftWorld craftWorld = bukkitWorld = serverLevel != null ? serverLevel.getWorld() : null;
         if (serverLevel != null) {
             String facing = RendererManager.yawToFacing(yaw);
-            PolyContext augmented = footprint != null && footprint.length > 0 ? PolyContext.builder().copyFrom(ctx.toPolyContext()).machinePos(x + 0.5, y + 0.5, z + 0.5, facing, yaw, (World)bukkitWorld, footprint).build() : PolyContext.builder().copyFrom(ctx.toPolyContext()).machinePos(x + 0.5, y + 0.5, z + 0.5, facing, yaw, (World)bukkitWorld).build();
-            ctx = ctx.augmented(augmented);
+            ScriptContext.Builder augB = ScriptContext.builder().copyFrom(ctx.toScriptContext()).facing(facing, yaw);
+            ctx = ctx.augmented(augB.build());
         }
         if (this.varSpecs != null && !this.varSpecs.isEmpty()) {
-            VariablesClass variables = VariablesClass.build(this.varSpecs, ctx.toPolyContext(), ctx.container());
-            PolyContext varsCtx = PolyContext.builder().copyFrom(ctx.toPolyContext()).cls("Variables", variables).build();
-            ctx = ctx.augmented(varsCtx);
+            ScriptContext.Builder varsB = ScriptContext.builder().copyFrom(ctx.toScriptContext());
+            for (var entry : this.varSpecs.entrySet()) {
+                if (entry.getValue() instanceof dev.arubik.craftengine.machine.render.variable.VariableSpec.Formula f) {
+                    try { varsB.val(entry.getKey(), ScriptFormula.compile(f.expr()).evaluate(ctx.toScriptContext())); }
+                    catch (Throwable ignored) {}
+                }
+            }
+            ctx = ctx.augmented(varsB.build());
         }
         for (int i = 0; i < this.specs.size(); ++i) {
             String blockId;
             boolean active;
-            PolyScript script;
             RendererSpec rendererSpec;
             RendererSpec spec = this.specs.get(i);
             if (spec instanceof RendererSpec.PositionedSpec) {
@@ -231,8 +234,9 @@ public final class RendererManager {
             RendererSpec actualSpec = rendererSpec;
             MachineRenderContext evalCtx = ctx;
             String scriptRef = spec.scriptRef();
-            if (scriptRef != null && (script = PolyScriptRegistry.get(scriptRef)) != null) {
-                PolyContext augmented = script.evaluate(ctx.toPolyContext());
+            ScriptProgram script2 = scriptRef != null ? ScriptRegistry.get(scriptRef) : null;
+            if (script2 != null) {
+                ScriptContext augmented = script2.evaluate(ctx.toScriptContext());
                 evalCtx = ctx.augmented(augmented);
             }
             this.evalResults[i].active = active = evalCtx.evalBool(spec.whenExpr(), null);
@@ -444,10 +448,8 @@ public final class RendererManager {
                 }
                 String fluidTypeValue = ft.isGas() ? "steam" : "water";
                 try {
-                    PolyValue.Str s;
-                    String tankName = ft.tankName();
-                    PolyValue tankVal = evalCtx.toPolyContext().get(varKey + "_type");
-                    if (tankVal instanceof PolyValue.Str && !(s = (PolyValue.Str)tankVal).value().isEmpty()) {
+                    ScriptValue tankVal = evalCtx.toScriptContext().getVar(varKey + "_type");
+                    if (tankVal instanceof ScriptValue.Str s && !s.value().isEmpty()) {
                         fluidTypeValue = s.value();
                     }
                 }
@@ -487,7 +489,7 @@ public final class RendererManager {
                         continue;
                     }
                     try {
-                        text2 = PolyFormula.compile(td.textExpr() != null && !td.textExpr().isEmpty() ? td.textExpr() : "\"\"").evaluateStr(evalCtx.toPolyContext());
+                        text2 = ScriptFormula.compile(td.textExpr() != null && !td.textExpr().isEmpty() ? td.textExpr() : "\"\"").evaluateStr(evalCtx.toScriptContext());
                     }
                     catch (Throwable ignored) {
                         text2 = td.textExpr() != null ? td.textExpr() : "";
@@ -508,7 +510,7 @@ public final class RendererManager {
                     continue;
                 }
                 try {
-                    text = PolyFormula.compile(td.textExpr() != null && !td.textExpr().isEmpty() ? td.textExpr() : "\"\"").evaluateStr(evalCtx.toPolyContext());
+                    text = ScriptFormula.compile(td.textExpr() != null && !td.textExpr().isEmpty() ? td.textExpr() : "\"\"").evaluateStr(evalCtx.toScriptContext());
                 }
                 catch (Throwable ignored) {
                     text = td.textExpr() != null ? td.textExpr() : "";
@@ -569,7 +571,7 @@ public final class RendererManager {
             double[] wp6 = this.resolveSpecLocation(spec, evalCtx, x, y, z);
             float scaleVal = (float)evalCtx.evalNum(bd.scale() != null && !bd.scale().isEmpty() ? bd.scale() : "1.0", null);
             try {
-                blockId = PolyFormula.compile(bd.blockStateExpr()).evaluateStr(evalCtx.toPolyContext());
+                blockId = ScriptFormula.compile(bd.blockStateExpr()).evaluateStr(evalCtx.toScriptContext());
             }
             catch (Throwable ignored) {
                 blockId = bd.blockStateExpr();
@@ -630,25 +632,20 @@ public final class RendererManager {
         return i >= 0 && i < this.evalResults.length ? this.evalResults[i] : null;
     }
 
-    public static double[] resolveLocation(PolyValue val, double machX, double machY, double machZ) {
-        PolyValue.Array a;
+    public static double[] resolveLocation(ScriptValue val, double machX, double machY, double machZ) {
         double nan = Double.NaN;
-        if (val == null || val instanceof PolyValue.Null) {
-            return null;
-        }
-        if (val instanceof PolyValue.Obj obj && obj.inner() instanceof LocationClass lc) {
+        if (val == null || val instanceof ScriptValue.Null) return null;
+        if (val instanceof ScriptValue.Obj obj && obj.instance() instanceof LocationType.LocationRef lc) {
             return new double[]{lc.x(), lc.y(), lc.z(), nan, nan, nan};
         }
-        if (val instanceof PolyValue.Array && (a = (PolyValue.Array)val).elements().size() >= 3) {
-            double rx;
-            List<PolyValue> e = a.elements();
-            double d = rx = e.size() >= 5 ? e.get(3).asNum() : nan;
+        if (val instanceof ScriptValue.Array a && a.elements().size() >= 3) {
+            var e = a.elements();
+            double rx = e.size() >= 5 ? e.get(3).asNum() : nan;
             double ry = e.size() == 4 ? e.get(3).asNum() : (e.size() >= 5 ? e.get(4).asNum() : nan);
             double rz = e.size() >= 6 ? e.get(5).asNum() : nan;
             return new double[]{machX + 0.5 + e.get(0).asNum(), machY + e.get(1).asNum(), machZ + 0.5 + e.get(2).asNum(), rx, ry, rz};
         }
-        if (val instanceof PolyValue.Num) {
-            PolyValue.Num n = (PolyValue.Num)val;
+        if (val instanceof ScriptValue.Num n) {
             return new double[]{machX + 0.5, machY + n.value(), machZ + 0.5, nan, nan, nan};
         }
         return null;
@@ -677,7 +674,7 @@ public final class RendererManager {
                 }
             }
             try {
-                PolyValue val = PolyFormula.compile(locExpr).evaluate(evalCtx.toPolyContext());
+                ScriptValue val = ScriptFormula.compile(locExpr).evaluate(evalCtx.toScriptContext());
                 double[] pos = RendererManager.resolveLocation(val, machX, machY, machZ);
                 if (pos != null) {
                     return pos;
@@ -696,13 +693,12 @@ public final class RendererManager {
             return List.of();
         }
         try {
-            PolyValue val = PolyFormula.compile(posExpr).evaluate(evalCtx.toPolyContext());
-            if (!(val instanceof PolyValue.Array)) {
+            ScriptValue val = ScriptFormula.compile(posExpr).evaluate(evalCtx.toScriptContext());
+            if (!(val instanceof ScriptValue.Array arr)) {
                 return List.of();
             }
-            PolyValue.Array arr = (PolyValue.Array)val;
-            ArrayList<double[]> result = new ArrayList<double[]>(arr.elements().size());
-            for (PolyValue elem : arr.elements()) {
+            ArrayList<double[]> result = new ArrayList<>(arr.elements().size());
+            for (ScriptValue elem : arr.elements()) {
                 double[] pos = RendererManager.resolveLocation(elem, machX, machY, machZ);
                 if (pos == null) continue;
                 result.add(pos);
@@ -729,8 +725,11 @@ public final class RendererManager {
     private MachineRenderContext buildPlayerContext(MachineRenderContext base, ServerPlayer sp, double x, double y, double z, float yaw) {
         CraftPlayer bukkit = sp.getBukkitEntity();
         String facing = RendererManager.yawToFacing(yaw);
-        PolyContext playerPoly = this.currentFootprint != null ? PolyContext.builder().copyFrom(base.toPolyContext()).machinePosForPlayer(x + 0.5, y + 0.5, z + 0.5, facing, yaw, (Player)bukkit, this.currentFootprint).build() : PolyContext.builder().copyFrom(base.toPolyContext()).machinePosForPlayer(x + 0.5, y + 0.5, z + 0.5, facing, yaw, (Player)bukkit).build();
-        return base.augmented(playerPoly);
+        ScriptContext playerCtx = ScriptContext.builder().copyFrom(base.toScriptContext())
+            .player(sp)
+            .facing(facing, yaw)
+            .build();
+        return base.augmented(playerCtx);
     }
 
     private static String yawToFacing(float yaw) {

@@ -1,0 +1,5 @@
+# Cycle logic gate mode 0-5 on right-click.
+mode = Machine.get_flag("mode")
+mode = (mode + 1) % 6
+Machine.set_flag("mode", mode)
+Machine.play_sound("minecraft:block.stone_button.click_on", 0.5, 1.0)

@@ -1,0 +1,25 @@
+# Depot — GUI-less 9-slot storage block (1:1 emulation of DepotBlockEntity).
+# Empty hand (or sneak) → take last item back.
+# Item in hand → add_item: tries to merge/fill, only consumes what was actually placed.
+
+SIZE = 9
+held = Player.main_hand
+
+if Player.is_sneaking || is_empty(held) {
+    # Take: give player the last non-empty stack (reverse order)
+    for i in range(SIZE) {
+        ri = SIZE - 1 - i
+        slot_item = Machine.get_item_in_slot(ri)
+        if !is_empty(slot_item) {
+            Player.give_item(slot_item)
+            Machine.remove_item_in_slot(ri, item_count(slot_item))
+            break
+        }
+    }
+} else {
+    # Put: add_item handles merge + fill, returns amount actually placed
+    added = Machine.add_item(held)
+    if added > 0 {
+        Player.remove_item("main_hand", added)
+    }
+}

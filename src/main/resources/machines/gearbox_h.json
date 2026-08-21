@@ -1,0 +1,97 @@
+{
+  "id": "polyfills:gearbox_h",
+  "title": "Horizontal Gearbox",
+  "menu_size": 9,
+  "flags": {
+    "recipes": false,
+    "fuel": false,
+    "ui": false,
+    "ui_tick": false,
+    "kinetics": true
+  },
+  "action_script": "gearbox_h",
+  "status": "gearbox_h.pf:status",
+  "on_break": "gearbox_h.pf:on_break",
+  "action_interval": 1,
+  "io": {
+    "rpm": {
+      "input": [
+        "north",
+        "south",
+        "east",
+        "west"
+      ],
+      "output_same": [
+        "north",
+        "south",
+        "east",
+        "west"
+      ],
+      "output_relative": true
+    }
+  },
+  "renderers": [
+    {
+      "type": "item_display",
+      "item": "CraftEngineItem(\"cml:shaft_half_render\")",
+      "location": {
+        "x": 0,
+        "y": 0.5,
+        "z": 0
+      },
+      "rot_z": "-90",
+      "rot_x": "tick() * rpm * 0.3",
+      "rot_y": -90,
+      "scale": "1.0",
+      "when": "Machine.activated",
+      "update_when": "always",
+      "global": true
+    },
+    {
+      "type": "item_display",
+      "item": "CraftEngineItem(\"cml:shaft_half_render\")",
+      "location": {
+        "x": 0,
+        "y": 0.5,
+        "z": 0
+      },
+      "rot_z": "90",
+      "rot_x": "tick() * rpm * 0.3",
+      "rot_y": -90,
+      "scale": "1.0",
+      "when": "Machine.activated",
+      "update_when": "always",
+      "global": true
+    },
+    {
+      "type": "item_display",
+      "item": "CraftEngineItem(\"cml:shaft_half_render\")",
+      "location": {
+        "x": 0,
+        "y": 0.5,
+        "z": 0
+      },
+      "rot_z": "-90",
+      "rot_x": "tick() * rpm * 0.3 ",
+      "scale": "1.0",
+      "when": "Machine.activated",
+      "update_when": "always",
+      "global": true
+    },
+    {
+      "type": "item_display",
+      "item": "CraftEngineItem(\"cml:shaft_half_render\")",
+      "location": {
+        "x": 0,
+        "y": 0.5,
+        "z": 0
+      },
+      "rot_z": "90",
+      "rot_x": "tick() * rpm * 0.3 ",
+      "scale": "1.0",
+      "when": "Machine.activated",
+      "update_when": "always",
+      "global": true
+    }
+  ]
+}

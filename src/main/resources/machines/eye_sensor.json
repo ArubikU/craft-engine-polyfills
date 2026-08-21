@@ -1,0 +1,13 @@
+{
+  "id": "polyfills:eye_sensor",
+  "title": "Eye Sensor",
+  "menu_size": 9,
+  "flags": {
+    "recipes": false,
+    "fuel": false,
+    "ui": false,
+    "ui_tick": false
+  },
+  "action_script": "eye_sensor",
+  "action_interval": 2
+}

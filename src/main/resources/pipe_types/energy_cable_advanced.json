@@ -1,0 +1,25 @@
+{
+  "id": "polyfills:energy_cable_advanced",
+  "block": "polyfills:energy_cable_advanced",
+  "resource": "energy",
+  "capacity": 16000,
+  "transfer_per_tick": 1000,
+  "conductance": 4000.0,
+  "tier": 2,
+  "connects_to": [],
+  "preview_namespace": "cml",
+  "preview_prefix": "pipe_preview_steel",
+  "mask_order": ["south", "west", "north", "east", "up", "down"],
+  "preview_offset": [0.5, 0.5, 0.5],
+  "preview_scale": 1.0,
+  "replaceable_blocks": [
+    "minecraft:air",
+    "minecraft:cave_air",
+    "minecraft:void_air",
+    "minecraft:water",
+    "minecraft:lava",
+    "minecraft:short_grass",
+    "minecraft:tall_grass",
+    "minecraft:snow"
+  ]
+}

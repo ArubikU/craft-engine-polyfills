@@ -87,6 +87,31 @@ public class MachineLayout {
         return clickButtonActions.get(slot);
     }
 
+    /**
+     * Slots the player may not move items in or out of, whatever their {@link MenuSlotType}.
+     *
+     * <p>Locking is deliberately independent of the slot type: the point is to pin a decorative
+     * or placeholder item into a real INPUT/OUTPUT/FUEL/UPGRADE slot to block it — a filter slot
+     * a recipe has not unlocked yet, an upgrade bay above the machine's tier, and so on. Marking
+     * such a slot BACKGROUND instead would take it out of the machine's own IO bookkeeping.
+     */
+    private final java.util.Set<Integer> locked = new java.util.HashSet<>();
+
+    /** Pin this slot: its contents become immovable for the player. */
+    public MachineLayout setLocked(int slot, boolean lock) {
+        if (lock) locked.add(slot); else locked.remove(slot);
+        return this;
+    }
+
+    public boolean isLocked(int slot) {
+        return locked.contains(slot);
+    }
+
+    /** Every currently locked slot, ascending. */
+    public int[] getLockedSlots() {
+        return locked.stream().mapToInt(Integer::intValue).sorted().toArray();
+    }
+
     public MenuSlotType getSlotType(int slot) {
         return slotTypes.getOrDefault(slot, MenuSlotType.BACKGROUND);
     }

@@ -259,7 +259,48 @@ public class ConnectedBlockBehavior extends ConnectableBlockBehavior {
         return true;
     }
 
+    /**
+     * Per-instance IO override: if this block's controller is an {@link
+     * dev.arubik.craftengine.machine.block.entity.AbstractMachineBlockEntity} (e.g. a pipe segment
+     * whose panel is a data-driven machine — see {@code pipe.item.ItemPipeBehavior}), its LIVE
+     * {@code IOConfiguration} wins over the static {@link #defaultIOConfig}. A plain pipe (no such
+     * controller, e.g. today's fluid/gas pipes) falls through unchanged — zero behavior change for
+     * anything that hasn't opted in.
+     */
+    @Override
+    public dev.arubik.craftengine.multiblock.IOConfiguration getIOConfiguration(Level level, BlockPos pos) {
+        if (level != null && pos != null) {
+            try {
+                net.momirealms.craftengine.core.block.entity.BlockEntity be =
+                        dev.arubik.craftengine.block.entity.BukkitBlockEntityTypes.getIfLoaded(level, pos);
+                if (be != null
+                        && be.controller instanceof dev.arubik.craftengine.machine.block.entity.AbstractMachineBlockEntity machine) {
+                    dev.arubik.craftengine.multiblock.IOConfiguration live = machine.getIOConfiguration();
+                    if (live != null)
+                        return live;
+                }
+            } catch (Throwable ignored) {
+            }
+        }
+        return defaultIOConfig;
+    }
+
     public boolean shouldConnect(Direction direction, BlockPos pos, Level level) {
+        // Logical-vs-visual IO split (see IOConfiguration.IOType#VISUAL_CONNECTION): a controller
+        // that carries a live per-instance IOConfiguration (today, a DataMachineBlockEntity-backed
+        // pipe panel) can independently close a face's MASK here, on top of / instead of whatever
+        // resource IO it also gates in the engines. Blocks whose default IO is IOConfiguration.Open()
+        // (every fluid/gas pipe today) answer true for every type including this one, so this check
+        // is a no-op for them — identical mask behaviour to before this existed.
+        dev.arubik.craftengine.multiblock.IOConfiguration ownIo = getIOConfiguration(level, pos);
+        if (ownIo != null) {
+            Direction localSelf = toLocalDirection(direction, level.getBlockState(pos));
+            boolean visualOpen = ownIo.acceptsInput(dev.arubik.craftengine.multiblock.IOConfiguration.IOType.VISUAL_CONNECTION, localSelf)
+                    || ownIo.providesOutput(dev.arubik.craftengine.multiblock.IOConfiguration.IOType.VISUAL_CONNECTION, localSelf);
+            if (!visualOpen)
+                return false;
+        }
+
         // get block relative to the direction
         BlockPos relativePos = Utils.getRelativeBlockPos(direction, pos, level);
         BlockState relativeState = level.getBlockState(relativePos);
@@ -344,6 +385,53 @@ public class ConnectedBlockBehavior extends ConnectableBlockBehavior {
             return newState.customBlockState().minecraftState();
         } else {
             return state;
+        }
+    }
+
+    /**
+     * Re-derives this block's connected-face mask right now and applies it if it changed. {@code
+     * onPlace}/{@code updateShape} only fire on a real world event (place, neighbor change); a
+     * script mutating this face's {@code IOConfiguration} via {@code Machine.io_set} (including
+     * {@code IOType.VISUAL_CONNECTION}) touches no block at all, so without this the rendered mask
+     * would silently go stale until some unrelated neighbor update happened to refresh it.
+     */
+    public void recomputeMask(Level level, BlockPos pos) {
+        if (level == null || pos == null)
+            return;
+        BlockState state = level.getBlockState(pos);
+        Optional<ImmutableBlockState> customOpt = BlockStateUtils.getOptionalCustomBlockState(state);
+        if (customOpt.isEmpty())
+            return;
+        ImmutableBlockState customState = customOpt.get();
+        ImmutableBlockState newState = (ImmutableBlockState) vanillaMakeState(pos, level);
+        if (!newState.equals(customState)) {
+            dev.arubik.craftengine.util.MNms.INSTANCE.method$LevelWriter$setBlock(level, pos,
+                    newState.customBlockState().minecraftState(), UpdateFlags.UPDATE_ALL_IMMEDIATE);
+        }
+    }
+
+    /**
+     * {@link #recomputeMask} for this block AND its 6 immediate neighbours — a face's own mask can
+     * change without ITS block moving (the {@code io_set} case above), but a neighbouring pipe's
+     * mask toward THIS face may also need to flip (its {@code shouldConnect} reads this block's live
+     * IOConfiguration too). One hop is enough: {@code shouldConnect} only ever looks at the pair of
+     * blocks touching a face, never further down the line.
+     */
+    public void recomputeMaskAndNeighbors(Level level, BlockPos pos) {
+        if (level == null || pos == null)
+            return;
+        recomputeMask(level, pos);
+        for (Direction dir : Direction.values()) {
+            BlockPos neighborPos = pos.relative(dir);
+            ImmutableBlockState neighborState = BlockStateUtils
+                    .getOptionalCustomBlockState(level.getBlockState(neighborPos)).orElse(null);
+            if (neighborState == null || neighborState.isEmpty())
+                continue;
+            BlockBehavior beh = neighborState.behavior();
+            ConnectedBlockBehavior cbb = beh instanceof ConnectedBlockBehavior c ? c
+                    : (beh == null ? null : beh.getFirst(ConnectedBlockBehavior.class));
+            if (cbb != null)
+                cbb.recomputeMask(level, neighborPos);
         }
     }
 

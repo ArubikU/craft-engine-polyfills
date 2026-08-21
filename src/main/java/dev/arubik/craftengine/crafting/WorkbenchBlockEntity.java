@@ -329,12 +329,12 @@ public class WorkbenchBlockEntity extends PersistentBlockEntity
                         0, 0, 0, 0, 0, 0, false, false, false, false, renderInventory);
         // Augment context with a Workbench class so expressions like input(0), output(0) work.
         if (definition != null) {
-            dev.arubik.craftengine.machine.render.formula.PolyContext augPoly =
-                    dev.arubik.craftengine.machine.render.formula.PolyContext.builder()
-                            .copyFrom(ctx.toPolyContext())
-                            .workbench(definition, renderInventory)
+            // Workbench context injection
+            dev.arubik.craftengine.script.ScriptContext augCtx =
+                    dev.arubik.craftengine.script.ScriptContext.builder()
+                            .copyFrom(ctx.toScriptContext())
                             .build();
-            ctx = ctx.augmented(augPoly);
+            ctx = ctx.augmented(augCtx);
         }
         rendererManager.tick(ctx, nmsLevel, masterPos.x(), masterPos.y(), masterPos.z(), 0f);
 
@@ -505,11 +505,11 @@ public class WorkbenchBlockEntity extends PersistentBlockEntity
     private static float[] resolveRelativeOffset(String locationExpr) {
         if (locationExpr == null || locationExpr.isEmpty()) return new float[]{0f, 0f, 0f};
         try {
-            dev.arubik.craftengine.machine.render.formula.PolyValue val =
-                dev.arubik.craftengine.machine.render.formula.PolyFormula
+            dev.arubik.craftengine.script.ScriptValue val =
+                dev.arubik.craftengine.script.ScriptFormula
                     .compile(locationExpr)
-                    .evaluate(dev.arubik.craftengine.machine.render.formula.PolyContext.builder().build());
-            if (val instanceof dev.arubik.craftengine.machine.render.formula.PolyValue.Array a
+                    .evaluate(dev.arubik.craftengine.script.ScriptContext.builder().build());
+            if (val instanceof dev.arubik.craftengine.script.ScriptValue.Array a
                     && a.elements().size() >= 3) {
                 return new float[]{
                     (float) a.elements().get(0).asNum(),
@@ -526,9 +526,9 @@ public class WorkbenchBlockEntity extends PersistentBlockEntity
         if (expr == null || expr.isEmpty()) return def;
         try { return Float.parseFloat(expr.trim()); } catch (NumberFormatException ignored) {}
         try {
-            return (float) dev.arubik.craftengine.machine.render.formula.PolyFormula
+            return (float) dev.arubik.craftengine.script.ScriptFormula
                     .compile(expr).evaluateNum(
-                            dev.arubik.craftengine.machine.render.formula.PolyContext.builder().build());
+                            dev.arubik.craftengine.script.ScriptContext.builder().build());
         } catch (Throwable ignored) { return def; }
     }
 

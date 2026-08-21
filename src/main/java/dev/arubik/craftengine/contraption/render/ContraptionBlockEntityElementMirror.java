@@ -51,9 +51,9 @@ import dev.arubik.craftengine.machine.render.BetterModelMachineRenderer;
 import dev.arubik.craftengine.machine.render.ModelRendersDriven;
 import dev.arubik.craftengine.machine.render.RendererManager;
 import dev.arubik.craftengine.machine.render.RendererSpec;
-import dev.arubik.craftengine.machine.render.formula.PolyContext;
-import dev.arubik.craftengine.machine.render.formula.PolyFormula;
-import dev.arubik.craftengine.machine.render.formula.PolyValue;
+import dev.arubik.craftengine.script.ScriptContext;
+import dev.arubik.craftengine.script.ScriptValue;
+import dev.arubik.craftengine.script.ScriptFormula;
 import dev.arubik.craftengine.util.MNms;
 import it.unimi.dsi.fastutil.ints.IntList;
 import java.util.ArrayList;
@@ -589,9 +589,9 @@ public final class ContraptionBlockEntityElementMirror {
             String locExpr = this.spec.locationExpr();
             if (locExpr != null && !locExpr.isEmpty()) {
                 try {
-                    PolyValue.Array a;
-                    PolyValue val = PolyFormula.compile(locExpr).evaluate(PolyContext.builder().build());
-                    if (val instanceof PolyValue.Array && (a = (PolyValue.Array)val).elements().size() >= 3) {
+                    ScriptValue.Array a;
+                    ScriptValue val = ScriptFormula.compile(locExpr).evaluate(ScriptContext.builder().build());
+                    if (val instanceof ScriptValue.Array && (a = (ScriptValue.Array)val).elements().size() >= 3) {
                         return new Vector3f((float)a.elements().get(0).asNum() + 0.5f, (float)a.elements().get(1).asNum(), (float)a.elements().get(2).asNum() + 0.5f);
                     }
                 }
@@ -607,9 +607,9 @@ public final class ContraptionBlockEntityElementMirror {
             String locExpr = this.spec.locationExpr();
             if (locExpr != null && !locExpr.isEmpty()) {
                 try {
-                    PolyValue val = PolyFormula.compile(locExpr).evaluate(PolyContext.builder().build());
-                    if (val instanceof PolyValue.Array) {
-                        PolyValue.Array a = (PolyValue.Array)val;
+                    ScriptValue val = ScriptFormula.compile(locExpr).evaluate(ScriptContext.builder().build());
+                    if (val instanceof ScriptValue.Array) {
+                        ScriptValue.Array a = (ScriptValue.Array)val;
                         if (a.elements().size() == 4) {
                             return (float)a.elements().get(3).asNum();
                         }
@@ -630,9 +630,9 @@ public final class ContraptionBlockEntityElementMirror {
             String locExpr = this.spec.locationExpr();
             if (locExpr != null && !locExpr.isEmpty()) {
                 try {
-                    PolyValue.Array a;
-                    PolyValue val = PolyFormula.compile(locExpr).evaluate(PolyContext.builder().build());
-                    if (val instanceof PolyValue.Array && (a = (PolyValue.Array)val).elements().size() >= 5) {
+                    ScriptValue.Array a;
+                    ScriptValue val = ScriptFormula.compile(locExpr).evaluate(ScriptContext.builder().build());
+                    if (val instanceof ScriptValue.Array && (a = (ScriptValue.Array)val).elements().size() >= 5) {
                         return (float)a.elements().get(3).asNum();
                     }
                 }
@@ -652,7 +652,7 @@ public final class ContraptionBlockEntityElementMirror {
             }
             catch (NumberFormatException numberFormatException) {
                 try {
-                    return (float)PolyFormula.compile(expr).evaluateNum(PolyContext.builder().build());
+                    return (float)ScriptFormula.compile(expr).evaluateNum(ScriptContext.builder().build());
                 }
                 catch (Throwable ignored) {
                     return def;

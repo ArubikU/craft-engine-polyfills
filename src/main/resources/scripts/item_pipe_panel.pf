@@ -1,0 +1,143 @@
+# Item Pipe Panel — keeps this segment registered in the item-pipe network engine (cheap,
+# idempotent — a single map write) every tick, and implements the 6 face-mode buttons + 6
+# per-face redstone-required toggles. See machines/item_pipe_panel.json for the button wiring.
+
+Machine.pipe_register_network()
+
+def cycle_mode(dir) {
+    has_in = Machine.io_get("item", "input", dir)
+    has_out = Machine.io_get("item", "output", dir)
+    if has_in {
+        Machine.io_set("item", "input", dir, false)
+        Machine.io_set("item", "output", dir, true)
+    } else {
+        if has_out {
+            Machine.io_set("item", "output", dir, false)
+        } else {
+            Machine.io_set("item", "input", dir, true)
+        }
+    }
+}
+
+def toggle_redstone(dir) {
+    required = Machine.io_get("redstone", "input", dir)
+    if required {
+        Machine.io_set("redstone", "input", dir, false)
+    } else {
+        Machine.io_set("redstone", "input", dir, true)
+    }
+}
+
+def mode_north() { cycle_mode("north") }
+def mode_south() { cycle_mode("south") }
+def mode_east()  { cycle_mode("east") }
+def mode_west()  { cycle_mode("west") }
+def mode_up()    { cycle_mode("up") }
+def mode_down()  { cycle_mode("down") }
+
+def redstone_north() { toggle_redstone("north") }
+def redstone_south() { toggle_redstone("south") }
+def redstone_east()  { toggle_redstone("east") }
+def redstone_west()  { toggle_redstone("west") }
+def redstone_up()    { toggle_redstone("up") }
+def redstone_down()  { toggle_redstone("down") }
+
+# --- Item filter (page 1) ---
+#
+# Storage: ONE string flag per filter slot, "pipe_filter_<dir>_<slot 0..8>" (empty = no item in
+# that slot) — not a single joined CSV. This script engine has no string-split builtin, so a CSV
+# would be write-only (no way to parse it back into items to repopulate the editor); one flag per
+# slot needs no parsing at all, which is what makes repopulation on open possible below.
+#
+# NOTE on slot reuse: page 0's buttons occupy underlying inventory slots 0-8 (and 9-23) too, but
+# BUTTON-type slots never read/write the machine's real item array (see MachineMenu#syncFromMachine/
+# syncToMachine — only INPUT/OUTPUT/FUEL/UPGRADE slot types touch it), so there's no live collision
+# with page 1 declaring slots 0-8 as real INPUT slots. If page 0 ever grows a real item slot of its
+# own in 0-8, it WOULD collide with this filter storage — pick different indices if so.
+
+def dir_name(idx) {
+    if idx == 0 { return "north" }
+    if idx == 1 { return "south" }
+    if idx == 2 { return "east" }
+    if idx == 3 { return "west" }
+    if idx == 4 { return "up" }
+    return "down"
+}
+
+def open_filter(idx) {
+    Machine.set_flag("pipe_filter_dir_index", idx)
+    dir = dir_name(idx)
+    # Repopulate: each slot's saved id (if any) gets placed back so the editor shows the CURRENT
+    # filter, not a blank slate. Machine.add_item_to_slot resolves a CraftEngine custom id
+    # ("cml:xxx") OR a plain vanilla id, so this works for either kind of saved entry.
+    # (`is_empty()` only understands Item/Null — get_str_flag returns a plain Str, so compare
+    # against "" directly rather than routing a string through the item-shaped builtin.)
+    for slot in range(0, 9) {
+        id = Machine.get_str_flag("pipe_filter_" + dir + "_" + slot)
+        if id == "" {
+            Machine.remove_item_in_slot(slot, 64)
+        } else {
+            Machine.add_item_to_slot(slot, id)
+        }
+    }
+    Machine.page(1)
+}
+
+def filter_north() { open_filter(0) }
+def filter_south() { open_filter(1) }
+def filter_east()  { open_filter(2) }
+def filter_west()  { open_filter(3) }
+def filter_up()    { open_filter(4) }
+def filter_down()  { open_filter(5) }
+
+def toggle_filter_whitelist() {
+    dir = dir_name(Machine.get_flag("pipe_filter_dir_index"))
+    name = "pipe_whitelist_" + dir
+    cur = Machine.get_flag(name)
+    if cur == 0 { Machine.set_flag(name, 1) } else { Machine.set_flag(name, 0) }
+}
+
+# Whatever is sitting in the 9 slots RIGHT NOW becomes this face's filter, one flag per slot —
+# clicking an already-placed filter item just removes it from the slot first (ordinary INPUT-slot
+# behaviour), then Save re-reads the 9 slots and writes accordingly (an emptied slot saves "").
+def save_filter() {
+    dir = dir_name(Machine.get_flag("pipe_filter_dir_index"))
+    for slot in range(0, 9) {
+        item = Machine.get_item_in_slot(slot)
+        id = ""
+        if !is_empty(item) { id = item.id }
+        Machine.set_str_flag("pipe_filter_" + dir + "_" + slot, id)
+    }
+}
+
+# --- Item filter evaluation (on_pipe_transfer hook, see machines/item_pipe_panel.json) ---
+# This is the SAME generic hook every machine's own transfer gate calls (AbstractMachineBlockEntity
+# #runOnTransferScript) — here it's an item pipe segment's per-face filter, elsewhere it's a
+# destination machine vetoing what it accepts, but it's one mechanism. Called with `type` ("item"
+# for this pipe), `payload` (the candidate Item), `direction`, `mode` bound. Java only orchestrates
+# the call and reads back Machine.set_flag("_transfer_cancel", …) — 1 = block, 0/unset = allow.
+# Change what "passes" means by editing this function, never by touching ItemEngine.java.
+def filter_item() {
+    if type != "item" { return }
+    listed = false
+    any_filter = false
+    for slot in range(0, 9) {
+        id = Machine.get_str_flag("pipe_filter_" + direction + "_" + slot)
+        if id != "" {
+            any_filter = true
+            if id == payload.id { listed = true }
+        }
+    }
+    if !any_filter {
+        Machine.set_flag("_transfer_cancel", 0)
+        return
+    }
+    whitelist = Machine.get_flag("pipe_whitelist_" + direction)
+    passes = listed
+    if whitelist == 0 { passes = !listed }
+    if passes {
+        Machine.set_flag("_transfer_cancel", 0)
+    } else {
+        Machine.set_flag("_transfer_cancel", 1)
+    }
+}

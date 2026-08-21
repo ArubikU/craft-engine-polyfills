@@ -1,0 +1,13 @@
+# Shaft — passive RPM relay. The pull/push mechanism is handled by the Java tick.
+# The activated blockstate is driven by the machine's `status` field (maybeUpdateActivated),
+# not by a manual set_state + NBT flag: the flag latched independently of the real block
+# state, so once they drifted apart the shaft could never re-activate.
+
+def status() {
+    return rpm != 0 ? "true" : "false"
+}
+
+def on_break() {
+    Machine.set_rpm_output(0)
+    Machine.report_su(0)
+}

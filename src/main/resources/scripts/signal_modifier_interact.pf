@@ -1,0 +1,4 @@
+# Signal Modifier interact — cycle output level 0-15 on right-click.
+level = Machine.get_flag("level") + 1
+if level > 15 { level = 0 }
+Machine.set_flag("level", level)

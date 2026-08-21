@@ -453,11 +453,14 @@ public class TankBlockBehavior extends ConnectableBlockBehavior implements Entit
                 // `/craftengine reload all` re-registers the block with NEW property instances, so the
                 // cached levelProperty/fluidTypeProperty become stale and `state.with(staleProp,...)`
                 // throws "Property level not found in cml:copper_tank". Looking them up per-call fixes it.
-                IntegerProperty lvlProp = (IntegerProperty) cur.getProperty("level");
-                @SuppressWarnings("unchecked")
-                Property<String> ftProp = (Property<String>)  cur.getProperty("fluidtype");
-                if (lvlProp == null)
+                Property<?> levelProperty = cur.getProperty("level");
+                if (!(levelProperty instanceof IntegerProperty))
                     return;
+                IntegerProperty lvlProp = (IntegerProperty) levelProperty;
+
+                Property<?> fluidTypeProperty = cur.getProperty("fluidtype");
+                @SuppressWarnings("unchecked")
+                Property<String> ftProp = fluidTypeProperty == null ? null : (Property<String>) fluidTypeProperty;
                 int lev = (int) Math.ceil((stored.getAmount() / (double) MAX_CAPACITY) * lvlProp.max);
                 lev = Math.max(stored.isEmpty() ? 0 : 1, Math.min(lev, lvlProp.max));
 

@@ -1,0 +1,9 @@
+{
+  "type": "crusher",
+  "time": 30,
+  "fuelRequired": false,
+  "rpm": 4,
+  "su": 2,
+  "inputs": [{ "type": "item", "id": "minecraft:bone_block", "amount": 1 }],
+  "outputs": [{ "type": "item", "id": "minecraft:bone_meal", "amount": 9, "chance": 1.0 }]
+}

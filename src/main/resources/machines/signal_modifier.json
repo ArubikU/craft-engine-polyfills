@@ -1,0 +1,14 @@
+{
+  "id": "polyfills:signal_modifier",
+  "title": "Signal Modifier",
+  "menu_size": 9,
+  "flags": {
+    "recipes": false,
+    "fuel": false,
+    "ui": false,
+    "ui_tick": false
+  },
+  "action_script": "signal_modifier",
+  "action_interval": 1,
+  "on_right_click": "signal_modifier_interact"
+}

@@ -1,0 +1,5 @@
+{
+    "type": "pressurizer_well_pressurizer_well",
+    "burnTime": 16000,
+    "input": { "type": "item", "id": "minecraft:coal_block", "amount": 1 }
+}

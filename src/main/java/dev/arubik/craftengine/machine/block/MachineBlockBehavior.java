@@ -90,6 +90,7 @@ public class MachineBlockBehavior
 extends ConnectableBlockBehavior
 implements FluidCarrier,
 GasCarrier,
+dev.arubik.craftengine.energy.EnergyCarrier,
 EntityBlock,
 WorldlyContainerHolder {
     public static final Factory FACTORY = new Factory();
@@ -259,8 +260,7 @@ WorldlyContainerHolder {
             BlockEntity be = BukkitBlockEntityTypes.getIfLoaded(level, pos);
             if (be != null && (blockEntityController = be.controller) instanceof PersistentBlockEntity) {
                 PersistentBlockEntity pbe = (PersistentBlockEntity)blockEntityController;
-                Integer v = (Integer)pbe.get(Key.of((String)"polyfills", (String)"_redstone_power"), NbtType.INTEGER);
-                return v != null ? Math.max(0, Math.min(15, v)) : 0;
+                return dev.arubik.craftengine.machine.MachineRedstone.output(pbe);
             }
         }
         catch (Throwable throwable) {
@@ -407,6 +407,31 @@ WorldlyContainerHolder {
         return GasCarrier.super.getGasCapacity(level, pos);
     }
 
+    /**
+     * A machine only lets gas cross a face its {@code io} block declares. Without these the gas
+     * network solver treated every machine as an open conduit and equalized adjacent machines'
+     * tanks to 50/50 — see {@link AbstractMachineBlockEntity#allowsGas}.
+     */
+    @Override
+    public boolean canGasOutput(Level level, BlockPos pos, net.minecraft.core.Direction side) {
+        BlockEntityController c;
+        BlockEntity be = BukkitBlockEntityTypes.getIfLoaded(level, pos);
+        if (be != null && (c = be.controller) instanceof AbstractMachineBlockEntity machine) {
+            return machine.allowsGas(level, side, false);
+        }
+        return false;
+    }
+
+    @Override
+    public boolean canGasInput(Level level, BlockPos pos, net.minecraft.core.Direction side) {
+        BlockEntityController c;
+        BlockEntity be = BukkitBlockEntityTypes.getIfLoaded(level, pos);
+        if (be != null && (c = be.controller) instanceof AbstractMachineBlockEntity machine) {
+            return machine.allowsGas(level, side, true);
+        }
+        return false;
+    }
+
     @Override
     public void setStoredGasRaw(Level level, BlockPos pos, GasStack stack) {
         BlockEntityController blockEntityController;
@@ -414,6 +439,79 @@ WorldlyContainerHolder {
         if (be != null && (blockEntityController = be.controller) instanceof AbstractMachineBlockEntity) {
             AbstractMachineBlockEntity machine = (AbstractMachineBlockEntity)blockEntityController;
             machine.setStoredGasRaw(level, stack);
+        }
+    }
+
+    // ---- CraftEnergy delegation — same shape as the Fluid/Gas blocks above ----
+
+    @Override
+    public int getStoredEnergy(Level level, BlockPos pos) {
+        BlockEntityController c;
+        BlockEntity be = BukkitBlockEntityTypes.getIfLoaded(level, pos);
+        if (be != null && (c = be.controller) instanceof AbstractMachineBlockEntity machine) {
+            return machine.getStoredEnergyForCarrier();
+        }
+        return 0;
+    }
+
+    @Override
+    public int insertEnergy(Level level, BlockPos pos, int amount, net.minecraft.core.Direction side) {
+        BlockEntityController c;
+        BlockEntity be = BukkitBlockEntityTypes.getIfLoaded(level, pos);
+        if (be != null && (c = be.controller) instanceof AbstractMachineBlockEntity machine) {
+            return machine.insertEnergy(level, amount, side);
+        }
+        return 0;
+    }
+
+    @Override
+    public int extractEnergy(Level level, BlockPos pos, int max, net.minecraft.core.Direction side) {
+        BlockEntityController c;
+        BlockEntity be = BukkitBlockEntityTypes.getIfLoaded(level, pos);
+        if (be != null && (c = be.controller) instanceof AbstractMachineBlockEntity machine) {
+            return machine.extractEnergy(level, max, side);
+        }
+        return 0;
+    }
+
+    @Override
+    public long getEnergyCapacity(Level level, BlockPos pos) {
+        BlockEntityController c;
+        BlockEntity be = BukkitBlockEntityTypes.getIfLoaded(level, pos);
+        if (be != null && (c = be.controller) instanceof AbstractMachineBlockEntity machine) {
+            return machine.getEnergyCapacityForCarrier();
+        }
+        return dev.arubik.craftengine.energy.EnergyCarrier.super.getEnergyCapacity(level, pos);
+    }
+
+    /** A machine only lets energy cross a face its {@code io} block declares — see
+     *  {@link #canGasOutput}/{@link #canGasInput} above for why this matters to the network solver. */
+    @Override
+    public boolean canEnergyOutput(Level level, BlockPos pos, net.minecraft.core.Direction side) {
+        BlockEntityController c;
+        BlockEntity be = BukkitBlockEntityTypes.getIfLoaded(level, pos);
+        if (be != null && (c = be.controller) instanceof AbstractMachineBlockEntity machine) {
+            return machine.allowsEnergy(level, side, false);
+        }
+        return false;
+    }
+
+    @Override
+    public boolean canEnergyInput(Level level, BlockPos pos, net.minecraft.core.Direction side) {
+        BlockEntityController c;
+        BlockEntity be = BukkitBlockEntityTypes.getIfLoaded(level, pos);
+        if (be != null && (c = be.controller) instanceof AbstractMachineBlockEntity machine) {
+            return machine.allowsEnergy(level, side, true);
+        }
+        return false;
+    }
+
+    @Override
+    public void setStoredEnergyRaw(Level level, BlockPos pos, int amount) {
+        BlockEntityController c;
+        BlockEntity be = BukkitBlockEntityTypes.getIfLoaded(level, pos);
+        if (be != null && (c = be.controller) instanceof AbstractMachineBlockEntity machine) {
+            machine.setStoredEnergyRaw(level, amount);
         }
     }
 

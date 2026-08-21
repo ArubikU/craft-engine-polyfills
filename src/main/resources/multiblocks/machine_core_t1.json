@@ -1,64 +1,188 @@
 {
   "id": "polyfills:machine_core_t1",
   "keys": {
-    "C": { "blocks": "minecraft:copper_block" },
-    "I": { "blocks": "minecraft:iron_block" },
+    "C": {
+      "blocks": "minecraft:copper_block"
+    },
+    "I": {
+      "blocks": "minecraft:iron_block"
+    },
     ".": "any"
   },
   "modes": [
     {
       "name": "smelter",
-      "core": [1, 1, 1],
+      "core": [
+        1,
+        1,
+        1
+      ],
       "layers": [
-        ["III", "III", "III"],
-        ["III", "I.I", "III"],
-        ["III", "III", "III"]
+        [
+          "III",
+          "III",
+          "III"
+        ],
+        [
+          "III",
+          "I.I",
+          "III"
+        ],
+        [
+          "III",
+          "III",
+          "III"
+        ]
       ],
       "io": {
         "default": "closed",
         "rules": [
-          { "y_above": 0, "input":  { "types": ["item"], "faces": ["all_but_down"] } },
-          { "y": 0,       "input":  { "types": ["item"], "faces": ["horizontal"] } },
-          { "y_below": 0, "output": { "types": ["item"], "faces": ["down"] } }
+          {
+            "y_above": 0,
+            "input": {
+              "types": [
+                "item"
+              ],
+              "faces": [
+                "all_but_down"
+              ]
+            }
+          },
+          {
+            "y": 0,
+            "input": {
+              "types": [
+                "item"
+              ],
+              "faces": [
+                "horizontal"
+              ]
+            }
+          },
+          {
+            "y_below": 0,
+            "output": {
+              "types": [
+                "item"
+              ],
+              "faces": [
+                "down"
+              ]
+            }
+          }
         ]
       },
       "machine": {
         "recipe_type": "industrial_smelter",
         "title": "Industrial Smelter",
         "menu_size": 54,
-        "fuel_required": true,
         "slots": {
-          "input":  [0, 1, 2],
-          "fuel":   [3, 4],
-          "output": [5, 6, 7, 8],
-          "info":   { "slot": 13, "type": "tank", "source": "fluid:water_input" }
+          "input": [
+            0,
+            1,
+            2
+          ],
+          "fuel": [
+            3,
+            4
+          ],
+          "output": [
+            5,
+            6,
+            7,
+            8
+          ],
+          "info": {
+            "slot": 13,
+            "type": "tank",
+            "source": "fluid:water_input"
+          }
         },
-        "fluid_tanks": [ { "name": "water_input",  "capacity": 10000, "filter": "polyfills:water" } ],
-        "gas_tanks":   [ { "name": "steam_output", "capacity": 10000, "filter": "polyfills:steam" } ],
+        "fluid_tanks": [
+          {
+            "name": "water_input",
+            "capacity": 10000,
+            "filter": "polyfills:water"
+          }
+        ],
+        "gas_tanks": [
+          {
+            "name": "steam_output",
+            "capacity": 10000,
+            "filter": "polyfills:steam"
+          }
+        ],
         "bars": [
-          { "id": "polyfills:progress", "slots": [22], "source": "progress" },
-          { "id": "polyfills:fluid", "slots": [27, 18, 9, 0], "source": "fluid:water_input" },
-          { "id": "polyfills:gas",   "slots": [35, 26, 17, 8], "source": "gas:steam_output" }
+          {
+            "id": "polyfills:progress",
+            "slots": [
+              22
+            ],
+            "source": "progress"
+          },
+          {
+            "id": "polyfills:fluid",
+            "slots": [
+              27,
+              18,
+              9,
+              0
+            ],
+            "source": "fluid:water_input"
+          },
+          {
+            "id": "polyfills:gas",
+            "slots": [
+              35,
+              26,
+              17,
+              8
+            ],
+            "source": "gas:steam_output"
+          }
         ]
       }
     },
     {
       "name": "chest",
-      "core": [1, 1, 1],
-      "layers": [
-        ["CCC", "CCC", "CCC"],
-        ["CCC", "C.C", "CCC"],
-        ["CCC", "CCC", "CCC"]
+      "core": [
+        1,
+        1,
+        1
       ],
-      "io": { "default": "open" },
+      "layers": [
+        [
+          "CCC",
+          "CCC",
+          "CCC"
+        ],
+        [
+          "CCC",
+          "C.C",
+          "CCC"
+        ],
+        [
+          "CCC",
+          "CCC",
+          "CCC"
+        ]
+      ],
+      "io": {
+        "default": "open"
+      },
       "machine": {
         "recipe_type": "multipage_chest",
         "title": "Storage Core",
         "menu_size": 54,
-        "fuel_required": false,
+        "flags": {
+          "fuel": false
+        },
         "paging": {
-          "pages": 3, "slots": 45,
-          "prev_slot": 45, "next_slot": 53, "indicator_slot": 49
+          "pages": 3,
+          "slots": 45,
+          "prev_slot": 45,
+          "next_slot": 53,
+          "indicator_slot": 49
         }
       }
     }

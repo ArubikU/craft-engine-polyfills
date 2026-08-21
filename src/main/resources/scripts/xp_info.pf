@@ -1,0 +1,33 @@
+# XP Collector info icon — replaces the recipe_info.pf helper, which reported
+# "No matching recipe" forever because xp_collector has no recipes at all.
+#
+# NOTE: Machine.fluid_tanks is an ARRAY of maps (same shape as Machine.gas_tanks),
+# not a FluidTanks object — read it with .get(i) then .get("field"), as gas_info.pf does.
+# The FluidTanks type's level()/capacity() methods belong to a different accessor.
+
+def _tank() {
+    tanks = Machine.fluid_tanks
+    if tanks.length <= 0 { return null }
+    return tanks.get(0)
+}
+
+def item() {
+    return "minecraft:experience_bottle"
+}
+
+def name() {
+    return "<green>XP Collector"
+}
+
+def lore() {
+    tank = _tank()
+    if tank == null { return ["<gray>No XP tank"] }
+    level = tank.get("level")
+    cap   = tank.get("capacity")
+    pct   = cap > 0 ? floor(level / cap * 100) : 0
+    return [
+        "<gray>Absorbs nearby experience orbs.",
+        "<gray>Stored: <white>" + floor(level) + " <gray>/ <white>" + floor(cap) + " mB",
+        "<gray>Fill: <yellow>" + pct + "%"
+    ]
+}

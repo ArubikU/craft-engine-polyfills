@@ -1,0 +1,21 @@
+# Redstone Counter — counts rising edges of redstone input, fires pulse at max count.
+# Set Machine.get_flag("max_count") to configure threshold (default 10).
+
+cur_power = Machine.redstone > 0 ? 1 : 0
+prev_power = Machine.get_flag("prev_power")
+Machine.set_flag("prev_power", cur_power)
+
+# Detect rising edge
+if cur_power > 0 && prev_power == 0 {
+    max_count = Machine.get_flag("max_count")
+    if max_count <= 0 { max_count = 10 }
+    count = Machine.get_flag("count") + 1
+
+    if count >= max_count {
+        Machine.set_flag("count", 0)
+        Machine.emit_redstone(15)
+    } else {
+        Machine.set_flag("count", count)
+        Machine.emit_redstone(0)
+    }
+}

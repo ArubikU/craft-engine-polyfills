@@ -34,6 +34,72 @@ public class CepCommand implements CommandExecutor, TabCompleter {
     private final Map<ArgumentList, BiFunction<CommandSender, Object[], Boolean>> cases = new HashMap<>();
 
     public CepCommand() {
+        // ---- /cep reload <what> -------------------------------------------------
+        //
+        // Targeted, live reloads. Each one re-reads the relevant files from disk AND pushes the
+        // result onto every object already in the world, so a machine placed before the reload
+        // picks up the change too — reloading only the registry would leave existing blocks on
+        // their old definition, which is the trap the renderer cache used to fall into.
+
+        // /cep reload scripts — re-read every .pf and re-register the script types.
+        cases.put(new ArgumentList("reload^", "scripts^"), (sender, parsed) -> {
+            try {
+                CraftEnginePolyfills plugin = CraftEnginePolyfills.instance();
+                dev.arubik.craftengine.script.ScriptBootstrap.reload();
+                dev.arubik.craftengine.script.ScriptRegistry.loadAll(plugin.getDataFolder());
+                int n = dev.arubik.craftengine.script.ScriptRegistry.size();
+                // Scripts are resolved by name at call time, so live machines pick the new body
+                // up on their next action tick with nothing further to do.
+                reloadMsg(sender, "scripts", n + " script(s) reloaded");
+            } catch (Throwable t) {
+                reloadFail(sender, "scripts", t);
+            }
+            return true;
+        });
+
+        // /cep reload machines — re-read machines/*.json and re-point every placed machine.
+        cases.put(new ArgumentList("reload^", "machines^"), (sender, parsed) -> {
+            try {
+                int loaders = dev.arubik.craftengine.data.Registries.reloadLoaders(
+                        "machines", "bars", "upgrades", "multiblocks");
+                int machines = dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity
+                        .refreshDefinitions();
+                reloadMsg(sender, "machines",
+                        dev.arubik.craftengine.machine.MachineDefinition.REGISTRY.size()
+                                + " definition(s) from " + loaders + " loader(s), "
+                                + machines + " placed machine(s) re-pointed");
+            } catch (Throwable t) {
+                reloadFail(sender, "machines", t);
+            }
+            return true;
+        });
+
+        // /cep reload render — re-read the renderer specs and rebuild every live renderer.
+        cases.put(new ArgumentList("reload^", "render^"), (sender, parsed) -> {
+            try {
+                // Renderer specs are declared inside the machine JSONs, so the definitions have
+                // to be re-read before the managers can be rebuilt from them.
+                dev.arubik.craftengine.data.Registries.reloadLoaders("machines");
+                int refreshed = dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity
+                        .refreshDefinitions();
+                reloadMsg(sender, "render", refreshed + " machine(s) re-pointed; every live "
+                        + "renderer closed and rebuilt from the new specs on the next tick");
+            } catch (Throwable t) {
+                reloadFail(sender, "render", t);
+            }
+            return true;
+        });
+
+        // /cep reload — usage, and the list of loaders a targeted reload can name.
+        cases.put(new ArgumentList("reload^"), (sender, parsed) -> {
+            sender.sendMessage(MiniMessage.miniMessage().deserialize(
+                    "<gray>Usage: <white>/cep reload <aqua>render<gray>|<aqua>machines<gray>|<aqua>scripts"));
+            sender.sendMessage(MiniMessage.miniMessage().deserialize(
+                    "<dark_gray>loaders: <gray>"
+                            + String.join(", ", dev.arubik.craftengine.data.Registries.loaderNames())));
+            return true;
+        });
+
         // /cep data registries — what the data-driven load phase produced, and whether
         // it is sealed. Registration is only legal while these read "open".
         cases.put(new ArgumentList("data^", "registries^"), (sender, parsed) -> {
@@ -781,6 +847,20 @@ public class CepCommand implements CommandExecutor, TabCompleter {
                 + fmt(anchor.z) + "§b.");
     }
 
+
+    private static void reloadMsg(CommandSender sender, String what, String detail) {
+        sender.sendMessage(MiniMessage.miniMessage().deserialize(
+                "<green>\u2714 <white>reloaded <aqua>" + what + "<gray>: " + detail));
+        CraftEnginePolyfills.instance().getLogger()
+                .info("[reload] " + what + ": " + detail + " (by " + sender.getName() + ")");
+    }
+
+    private static void reloadFail(CommandSender sender, String what, Throwable t) {
+        sender.sendMessage(MiniMessage.miniMessage().deserialize(
+                "<red>\u2718 reload " + what + " failed: <white>" + t));
+        CraftEnginePolyfills.instance().getLogger()
+                .log(java.util.logging.Level.SEVERE, "[reload] " + what + " failed", t);
+    }
 
     @Override
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command,

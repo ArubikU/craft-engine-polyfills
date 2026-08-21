@@ -2,19 +2,45 @@
   "id": "polyfills:upgradeable_furnace",
   "recipe_type": "upgradeable_furnace",
   "title": "Upgradeable Furnace",
-  "menu_size": 9,
-  "fuel_required": true,
-  "slots": {
-    "input":  [0],
-    "output": [1],
-    "fuel":   [2],
-    "upgrade": {
-      "slots": [3, 4, 5],
-      "base_unlocked": 3,
-      "definitions": {
-        "cml:upgrade_iron":    [{ "attribute": "polyfill:generation",      "operation": "add", "value": 0.05 }],
-        "cml:upgrade_gold":    [{ "attribute": "polyfill:fuel_efficiency", "operation": "add", "value": 0.15 }]
+  "upgrades": {
+    "slots": [
+      3,
+      4,
+      5
+    ],
+    "base_unlocked": 3,
+    "definitions": {
+      "cml:upgrade_iron": [
+        {
+          "attribute": "polyfill:generation",
+          "operation": "add",
+          "value": 0.05
+        }
+      ],
+      "cml:upgrade_gold": [
+        {
+          "attribute": "polyfill:fuel_efficiency",
+          "operation": "add",
+          "value": 0.15
+        }
+      ]
+    }
+  },
+  "pages": [
+    {
+      "title": "Upgradeable Furnace",
+      "size": 9,
+      "slots": {
+        "input": [
+          0
+        ],
+        "output": [
+          1
+        ],
+        "fuel": [
+          2
+        ]
       }
     }
-  }
+  ]
 }

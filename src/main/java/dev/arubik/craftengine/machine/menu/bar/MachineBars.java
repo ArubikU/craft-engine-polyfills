@@ -279,7 +279,8 @@ public final class MachineBars {
         // CraftEngine item id (namespace:path) takes priority when it resolves; else a vanilla Material.
         try {
             if (spec.contains(":") && !spec.startsWith("minecraft:")) {
-                var def = CraftEngineItems.byId(Key.of(spec));
+                int ci = spec.indexOf(':');
+                var def = CraftEngineItems.byId(Key.of(spec.substring(0, ci), spec.substring(ci + 1)));
                 if (def != null)
                     return def.buildBukkitItem();
             }

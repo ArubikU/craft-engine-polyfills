@@ -145,6 +145,7 @@ public class RecipeManager {
         recipe.setRequireOverclocked(requireOverclocked);
         recipe.setMechanical(json.has("rpm") ? json.get("rpm").getAsInt() : 0,
                 json.has("su") ? json.get("su").getAsInt() : 0);
+        recipe.setEnergyCost(json.has("energyCost") ? json.get("energyCost").getAsInt() : 0);
         for (RecipeCondition c : conditions) {
             recipe.addCondition(c);
         }

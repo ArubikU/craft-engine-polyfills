@@ -1,0 +1,14 @@
+{
+  "id": "polyfills:redstone_logic_gate",
+  "title": "Logic Gate",
+  "menu_size": 9,
+  "flags": {
+    "recipes": false,
+    "fuel": false,
+    "ui": false,
+    "ui_tick": false
+  },
+  "on_right_click": "logic_gate_cycle",
+  "action_script": "logic_gate",
+  "action_interval": 1
+}

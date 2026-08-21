@@ -34,6 +34,27 @@ public interface GasCarrier {
 
     public TransferAccessMode getAccessMode();
 
+    /**
+     * May gas LEAVE this block through {@code side} (world direction pointing away from this block)?
+     *
+     * <p>Defaults to true: pipes, pumps, valves and tanks are unrestricted conduits. Machines
+     * override it to honour their declared {@code io.output} faces, so the network solver cannot
+     * equalize straight into or out of a machine's tank past its IO rules. Two adjacent machines
+     * that declare no gas output used to end up sharing their tanks 50/50 because the solver only
+     * ever asked "are these connected?", never "is this allowed?".
+     */
+    default public boolean canGasOutput(Level level, BlockPos pos, Direction side) {
+        return true;
+    }
+
+    /**
+     * May gas ENTER this block through {@code side} (world direction pointing away from this block,
+     * toward the source) — the same convention as {@link #insertGas}. Defaults to true.
+     */
+    default public boolean canGasInput(Level level, BlockPos pos, Direction side) {
+        return true;
+    }
+
     default public long getGasCapacity(Level level, BlockPos pos) {
         return 1000L;
     }

@@ -1,0 +1,20 @@
+# Item Magnet — two-zone collection using Vector math.
+#   dist_sq > 9  (>3 blocks):  push entity toward machine
+#   dist_sq ≤ 9  (≤3 blocks):  collect into inventory
+
+machine = Machine.pos
+entities = Machine.nearby_entities(8)
+
+for entity in entities {
+    if entity.type == "minecraft:item" {
+        dsq = entity.pos.distance_sq(machine)
+        if dsq <= 9 {
+            item = entity.item
+            entity.remove()
+            Machine.push_item_to_inventory(item)
+        } else {
+            direction = machine.sub(entity.pos).normalize().scale(0.2)
+            entity.push(direction)
+        }
+    }
+}

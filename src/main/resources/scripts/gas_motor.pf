@@ -1,0 +1,126 @@
+# Gas Motor — full logic matching the original DataMotorBlockEntity behavior.
+# Reads gas from "vapor" tank, calculates RPM/SU based on gas type,
+# applies overclock multiplier, reports SU to RpmNetwork.
+
+# ---- Function definitions FIRST (before any return) ----
+
+def increase_rpm(amount) {
+    cur = Machine.get_flag("target_rpm")
+    if cur <= 0 { cur = 32 }
+    new_val = min(cur + num(amount), 512)
+    Machine.set_flag("target_rpm", new_val)
+    cur_su = Machine.get_flag("target_su")
+    if cur_su <= 0 { cur_su = 64 }
+    Machine.set_flag("target_su", floor(cur_su * new_val / cur))
+}
+
+def decrease_rpm(amount) {
+    cur = Machine.get_flag("target_rpm")
+    if cur <= 0 { cur = 32 }
+    new_val = max(cur - num(amount), 0)
+    Machine.set_flag("target_rpm", new_val)
+    if new_val == 0 { Machine.set_flag("target_su", 0) }
+    else {
+        cur_su = Machine.get_flag("target_su")
+        if cur_su <= 0 { cur_su = 64 }
+        Machine.set_flag("target_su", floor(cur_su * new_val / cur))
+    }
+}
+
+def increase_su(amount) {
+    cur = Machine.get_flag("target_su")
+    if cur <= 0 { cur = 64 }
+    new_val = min(cur + num(amount), 1024)
+    Machine.set_flag("target_su", new_val)
+}
+
+def decrease_su(amount) {
+    cur = Machine.get_flag("target_su")
+    if cur <= 0 { cur = 64 }
+    new_val = max(cur - num(amount), 0)
+    Machine.set_flag("target_su", new_val)
+}
+
+def status() {
+    tanks = Machine.gas_tanks
+    if tanks.length <= 0 { return "false" }
+    tank = tanks.get(0)
+    if tank.get("is_empty") { return "false" }
+    t_rpm = Machine.get_flag("target_rpm")
+    if t_rpm <= 0 { return "false" }
+    return "true"
+}
+
+def on_break() {
+    Machine.set_rpm_output(0)
+    Machine.report_su(0)
+}
+
+# ---- Gas type specs (gas_id -> {base_rpm, base_su, per_tick}) ----
+GAS_SPECS = make_map(
+    "polyfills:steam",       make_map("rpm", 32, "su", 64,  "per_tick", 10),
+    "polyfills:heavy_steam", make_map("rpm", 64, "su", 128, "per_tick", 15)
+)
+
+# ---- Read player-set targets (default if never set) ----
+target_rpm = Machine.get_flag("target_rpm")
+target_su  = Machine.get_flag("target_su")
+
+# ---- Check gas tank ----
+gas_tanks = Machine.gas_tanks
+if gas_tanks.length <= 0 {
+    Machine.set_rpm_output(0)
+    Machine.report_su(0)
+    return
+}
+
+tank = gas_tanks.get(0)
+gas_level = tank.get("level")
+gas_id    = ""
+spec = null
+
+# Find spec for current gas type
+if !tank.get("is_empty") {
+    gas_id = tank.get("contents_key")
+    spec = GAS_SPECS.get(gas_id)
+}
+
+if spec == null || gas_level <= 0 {
+    Machine.set_rpm_output(0)
+    Machine.report_su(0)
+    return
+}
+
+# ---- Get base values from spec ----
+base_rpm      = spec.get("rpm")
+base_su       = spec.get("su")
+base_per_tick = spec.get("per_tick")
+
+# ---- Set defaults from spec if not yet configured ----
+if target_rpm <= 0 {
+    target_rpm = base_rpm
+    Machine.set_flag("target_rpm", target_rpm)
+}
+if target_su <= 0 {
+    target_su = base_su
+    Machine.set_flag("target_su", target_su)
+}
+
+# ---- Apply overclock ----
+oc_factor = 1.0 + Machine.overclock
+eff_rpm = target_rpm * oc_factor
+eff_su  = target_su * oc_factor
+
+# ---- Gas consumption = base_per_tick * (rpm_ratio) * oc * (1 - efficiency) ----
+rpm_ratio = target_rpm / base_rpm
+consume_per_tick = floor(base_per_tick * rpm_ratio * oc_factor * (1.0 - Machine.efficiency))
+consume_per_tick = max(1, consume_per_tick)
+
+if Machine.is_overstressed {
+    Machine.set_rpm_output(0)
+    Machine.report_su(-eff_su)
+} else {
+    Machine.set_rpm_output(eff_rpm)
+    Machine.report_su(-eff_su)
+    Machine.consume_gas("vapor", consume_per_tick)
+}

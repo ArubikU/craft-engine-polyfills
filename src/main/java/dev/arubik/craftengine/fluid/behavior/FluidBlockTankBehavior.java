@@ -517,28 +517,33 @@ public class FluidBlockTankBehavior extends ConnectableBlockBehavior
         ImmutableBlockState ns = cur;
         // bottom / top frame (Property<Boolean>, same pattern as the fan's powered state).
         net.momirealms.craftengine.core.block.property.Property<Boolean> bp =
-                (net.momirealms.craftengine.core.block.property.Property<Boolean>)  cur.getProperty("bottom");
+            (net.momirealms.craftengine.core.block.property.Property<Boolean>)
+                (net.momirealms.craftengine.core.block.property.Property) cur.getProperty("bottom");
         if (bp != null)
             ns = ns.with(bp, bottom);
         net.momirealms.craftengine.core.block.property.Property<Boolean> tp =
-                (net.momirealms.craftengine.core.block.property.Property<Boolean>)  cur.getProperty("top");
+            (net.momirealms.craftengine.core.block.property.Property<Boolean>)
+                (net.momirealms.craftengine.core.block.property.Property) cur.getProperty("top");
         if (tp != null)
             ns = ns.with(tp, top);
         // facing (custom EnumProperty<TankFacing>) — which sides are exterior; model culls interior faces.
-        EnumProperty<dev.arubik.craftengine.property.TankFacing> faceProp =
-                (EnumProperty<dev.arubik.craftengine.property.TankFacing>)  cur.getProperty("facing");
+        @SuppressWarnings("unchecked")
+        EnumProperty faceProp = (EnumProperty) cur.getProperty("facing");
         if (faceProp != null)
             ns = ns.with(faceProp, facing);
         // Fluid plane: level (0..max) + fluidtype — same convention as the personal tank's window fill.
-        IntegerProperty lvlProp = (IntegerProperty)  cur.getProperty("level");
+        IntegerProperty lvlProp = (IntegerProperty) (net.momirealms.craftengine.core.block.property.Property) cur
+                .getProperty("level");
         if (lvlProp != null) {
             int lev = type == FluidType.EMPTY ? 0
                     : Math.max(1, Math.min(lvlProp.max, (int) Math.round(memberFill * lvlProp.max)));
             ns = ns.with(lvlProp, lev);
         }
         // The blockstate carries the fixed pack appearance, not the open fluid registry.
+        @SuppressWarnings("unchecked")
         net.momirealms.craftengine.core.block.property.Property<String> ftProp =
-                (net.momirealms.craftengine.core.block.property.Property<String>)  cur.getProperty("fluidtype");
+                (net.momirealms.craftengine.core.block.property.Property<String>)
+                        (net.momirealms.craftengine.core.block.property.Property) cur.getProperty("fluidtype");
         if (ftProp != null)
             ns = ns.with(ftProp, type == null ? "empty"
                     : type.tankVariant());

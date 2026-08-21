@@ -106,10 +106,24 @@ public final class CraftEnginePolyfills extends JavaPlugin {
                     dev.arubik.craftengine.fluid.graph.GasEngine.tickAll(lvl);
                 } catch (Throwable ignored) {
                 }
+                try {
+                    dev.arubik.craftengine.fluid.graph.EnergyEngine.tickAll(lvl);
+                } catch (Throwable ignored) {
+                }
+                try {
+                    dev.arubik.craftengine.pipe.item.ItemEngine.tickAll(lvl);
+                } catch (Throwable ignored) {
+                }
             }
-        }, 1L, 3L); // every 3 ticks — fluid/gas equalize fine at ~7Hz, and the per-tick BFS rebuild is costly
+        }, 1L, 3L); // every 3 ticks — fluid/gas/energy equalize fine at ~7Hz, and the per-tick BFS rebuild is costly
         // Contraption master clock (CONTRAPTIONS.md §5 Phase 3): every registered contraption's
         // behaviors + stall gate + render, once per tick — mirrors the fluid driver above.
+        // Drain the kinetic networks' dirty set once per tick — Create's TorquePropagator model.
+        // Batching here is what keeps a burst of SU reports in one tick from walking the members
+        // of a large network over and over.
+        getServer().getScheduler().runTaskTimer(this,
+                dev.arubik.craftengine.rotation.RpmNetwork::flushAll, 1L, 1L);
+
         getServer().getScheduler().runTaskTimer(this, ContraptionEngine::tickAll, 1L,
                 1L);
         // CHAINERY: right-click an endpoint with chain items to extend its length (add slack).
@@ -222,8 +236,6 @@ public final class CraftEnginePolyfills extends JavaPlugin {
                 this);
         getServer().getPluginManager().registerEvents(new dev.arubik.craftengine.conveyor.ConveyorIoBreakListener(),
                 this);
-        getServer().getPluginManager().registerEvents(new dev.arubik.craftengine.rotation.DataMotorBreakListener(),
-                this);
         getServer().getPluginManager().registerEvents(new dev.arubik.craftengine.machine.block.MachineBreakListener(),
                 this);
         // upgrade_scrapped/upgrade_copper are loot-only: inject them into vanilla chest loot.
@@ -236,7 +248,6 @@ public final class CraftEnginePolyfills extends JavaPlugin {
         getCommand("cepolyfill").setTabCompleter(cepCommand);
         // Initial load of the central machine-menu title-image config (also refreshed on each
         // CraftEngineReloadEvent below). Images resolve lazily per-open, so loading the id map here is fine.
-        dev.arubik.craftengine.machine.menu.GuiTitles.reload();
         getLogger().info("CraftEngine Polyfills Enabled");
 
         // NOTE: don't load recipes here — onEnable runs BEFORE CraftEngine registers its
@@ -257,13 +268,17 @@ public final class CraftEnginePolyfills extends JavaPlugin {
         dev.arubik.craftengine.pipe.PumpLoader.bootstrap();
         dev.arubik.craftengine.pipe.PumpLoader.load();
         dev.arubik.craftengine.fluid.FluidInteractionLoader.bootstrap();
+        // Never bootstrapped: without it the "hammers" loader never ran, HammerItems stayed empty,
+        // HammerItems.isHammer() returned false for every item, and HammerAssembleListener bailed on
+        // its first line. No multiblock could be assembled with a hammer at all — the click fell
+        // through to the block's own use handler, which is why the logs only ever showed
+        // useWithoutItem and tryForm was never reached.
+        dev.arubik.craftengine.multiblock.HammerLoader.bootstrap();
         dev.arubik.craftengine.multiblock.MultiBlockLoader.bootstrap();
         dev.arubik.craftengine.crafting.WorkbenchLoader.bootstrap();
         dev.arubik.craftengine.machine.upgrade.UpgradeLoader.bootstrap();
         dev.arubik.craftengine.machine.menu.bar.BarLoader.bootstrap();
         dev.arubik.craftengine.machine.menu.bar.BarLoader.load();
-        dev.arubik.craftengine.rotation.MotorLoader.bootstrap();
-        dev.arubik.craftengine.rotation.MotorLoader.load();
         dev.arubik.craftengine.machine.MachineDefinitionLoader.bootstrap();
         // Same construction-order reason as pipes: a multiblock behavior copies its
         // schema and IO provider when CraftEngine builds it, before the reload event.
@@ -275,12 +290,19 @@ public final class CraftEnginePolyfills extends JavaPlugin {
         // Machine definitions likewise: the data_machine behavior resolves its definition
         // when CraftEngine constructs the block, which is before the reload event.
         dev.arubik.craftengine.machine.MachineDefinitionLoader.load();
+        // Workbenches for the same reason: WorkbenchBehavior.Factory resolves `workbench: <id>`
+        // against the registry while CraftEngine parses the block, and THROWS when it misses.
+        // Relying on the PHASE_DEFINITIONS pass alone meant the registry was still empty at that
+        // point, so every block naming a workbench failed to load with "Known: []" and only
+        // recovered on the later reload.
+        dev.arubik.craftengine.crafting.WorkbenchLoader.load();
         // PolyFormula scripts (.pf): save bundled examples on first run, then load all scripts
         // from plugins/CraftEnginePolyfill/scripts/*.pf into the global registry so renderer
         // specs that declare "run": "<name>" can look up their script at tick time.
         for (String res : listBundledResources("scripts", ".pf"))
             saveDefaultResource(res);
-        dev.arubik.craftengine.machine.render.formula.PolyScriptRegistry.loadAll(getDataFolder());
+        dev.arubik.craftengine.script.ScriptBootstrap.init();
+        dev.arubik.craftengine.script.ScriptRegistry.loadAll(getDataFolder());
         dev.arubik.craftengine.data.Registries.addLoader("machine_recipes",
                 dev.arubik.craftengine.data.Registries.PHASE_RECIPES,
                 dev.arubik.craftengine.machine.recipe.loader.RecipeManager::loadRecipes);
@@ -294,9 +316,10 @@ public final class CraftEnginePolyfills extends JavaPlugin {
                 // Reload AFTER CraftEngine has (re)loaded its items — including the first
                 // load — so custom-item recipe outputs resolve (onEnable runs too early).
                 dev.arubik.craftengine.data.Registries.reload();
+                dev.arubik.craftengine.script.ScriptBootstrap.reload();
+                dev.arubik.craftengine.script.ScriptRegistry.loadAll(getDataFolder());
                 // Reload the central machine-menu title-image config (so /craftengine reload all
                 // re-reads polyfills_gui.yml). The CraftEngineReloadEvent also fires the initial load.
-                dev.arubik.craftengine.machine.menu.GuiTitles.reload();
                 // Re-read the driver-seat list so editing vehicle-seats.yml + /craftengine reload takes effect.
                 dev.arubik.craftengine.contraption.VehicleDriverRegistry.load();
             }

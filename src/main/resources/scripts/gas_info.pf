@@ -1,0 +1,33 @@
+# Gas tank info helper — use in layout slots for machines with gas tanks:
+#   { "slot": 4, "item": "gas_info.pf:item", "name": "gas_info.pf:name", "lore": ["gas_info.pf:lore"] }
+# Shows the first gas tank's contents (level, capacity, type name).
+
+def _get_tank() {
+    tanks = Machine.gas_tanks
+    if tanks.length <= 0 { return null }
+    return tanks.get(0)
+}
+
+def item() {
+    return "minecraft:glass_bottle"
+}
+
+def name() {
+    tank = _get_tank()
+    if tank == null { return "<gray>No gas tank" }
+    gas_name = tank.get("contents_name")
+    if gas_name == "" { return "<gray>Gas Tank (empty)" }
+    return "<aqua>" + gas_name
+}
+
+def lore() {
+    tank = _get_tank()
+    if tank == null { return ["<gray>No gas tank"] }
+    level = tank.get("level")
+    cap = tank.get("capacity")
+    pct = cap > 0 ? floor(level / cap * 100) : 0
+    return [
+        "<gray>Level: <white>" + level + " / " + cap + " mB",
+        "<gray>Fill: <yellow>" + pct + "%"
+    ]
+}

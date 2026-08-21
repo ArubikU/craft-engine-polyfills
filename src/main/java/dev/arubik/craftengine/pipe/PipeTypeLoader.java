@@ -102,7 +102,8 @@ public final class PipeTypeLoader {
                 previewOffset,
                 view.floating("preview_scale", base.previewScale()),
                 view.has("replaceable_blocks") ? List.copyOf(view.stringList("replaceable_blocks"))
-                        : base.replaceableBlocks()));
+                        : base.replaceableBlocks(),
+                view.has("panel") ? view.key("panel", PipeType.NAMESPACE) : base.panel()));
     }
 
     private static String stripExtension(String fileName) {

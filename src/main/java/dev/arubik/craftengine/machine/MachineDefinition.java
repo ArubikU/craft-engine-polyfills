@@ -32,8 +32,9 @@ public final class MachineDefinition {
     private final PagingSpec paging;
     private final List<TankSpec> fluidTanks;
     private final List<TankSpec> gasTanks;
-    private final boolean fuelRequired;
-    private boolean continuousFuel;
+    /** One field per responsibility; see {@link MachineFlags}. Single source of truth for
+     *  fuel / recipes / ui / kinetics — the individual accessors below delegate to it. */
+    private MachineFlags flags = MachineFlags.DEFAULT;
     private final IOConfiguration io;
     private final List<ButtonSpec> buttons;
     private final PowerSpec power;
@@ -43,8 +44,6 @@ public final class MachineDefinition {
     private final Map<Key, List<MachineAttributes.Mod>> upgradeDefs;
     private final String actionScript;
     private final int actionInterval;
-    private boolean openUi = true;
-    private boolean noProcessing = false;
     private Set<String> rpmInputFacesRaw = Set.of();
     private Map<String, Set<String>> rpmInputBlockFilter = Map.of();
     private Map<String, Set<String>> rpmOutputBlockFilter = Map.of();
@@ -53,10 +52,26 @@ public final class MachineDefinition {
     private float rpmRatio = 1.0f;
     private boolean isSail = false;
     private float sailRpmBonus = 1.0f;
-    private boolean rpmLargeCog = false;
     private Set<String> rpmOutputInvertedRaw = Set.of();
+    /** Gearbox-style: derive the output sign from the driven face instead of a static face list. */
+    private boolean rpmOutputRelative = false;
     private String interactScript = null;
     private String attackScript = null;
+    /** "auto" = Java default (isProcessing||hasPower), "{file}.pf:{func}" = script-driven activated state. */
+    private String statusScript = null;
+    private String onPlaceScript = null;
+    private String onBreakScript = null;
+    private String onStateChangeScript = null;
+    private List<PageDef> pages = List.of();
+    /** CraftEnergy buffer (Forge-Energy-alike). Empty by default — no energy field on a machine
+     * that doesn't declare one. See {@code energy.EnergyCarrier}. */
+    private EnergySpec energy = EnergySpec.none();
+
+    public List<PageDef> pages() { return pages; }
+    public void setPages(List<PageDef> p) { this.pages = p != null ? List.copyOf(p) : List.of(); }
+
+    public EnergySpec energy() { return energy; }
+    public void setEnergy(EnergySpec e) { this.energy = e == null ? EnergySpec.none() : e; }
 
     public MachineDefinition(Key id, String recipeType, String title, int menuSize, int[] inputSlots, int[] outputSlots, int[] fuelSlots, UpgradeSpec upgrades, int infoSlot, List<TankSpec> fluidTanks, List<TankSpec> gasTanks, boolean fuelRequired, IOConfiguration io, List<ButtonSpec> buttons, PowerSpec power, List<BarRef> bars, InfoSpec info, PagingSpec paging, Map<String, VariableSpec> variables, List<RendererSpec> renderers, Map<Key, List<MachineAttributes.Mod>> upgradeDefs, String actionScript, int actionInterval) {
         this.id = id;
@@ -70,7 +85,7 @@ public final class MachineDefinition {
         this.infoSlot = infoSlot;
         this.fluidTanks = List.copyOf(fluidTanks);
         this.gasTanks = List.copyOf(gasTanks);
-        this.fuelRequired = fuelRequired;
+        this.flags = MachineFlags.DEFAULT.withFuel(fuelRequired);
         this.io = io;
         this.buttons = List.copyOf(buttons);
         this.power = power == null ? PowerSpec.none() : power;
@@ -136,16 +151,25 @@ public final class MachineDefinition {
         return this.gasTanks;
     }
 
+    /** All behavioural switches, one field per responsibility. */
+    public MachineFlags flags() {
+        return this.flags;
+    }
+
+    public void setFlags(MachineFlags flags) {
+        this.flags = flags != null ? flags : MachineFlags.DEFAULT;
+    }
+
     public boolean fuelRequired() {
-        return this.fuelRequired;
+        return this.flags.fuel();
     }
 
     public boolean continuousFuel() {
-        return this.continuousFuel;
+        return this.flags.continuousFuel();
     }
 
     public MachineDefinition withContinuousFuel(boolean v) {
-        this.continuousFuel = v;
+        this.flags = this.flags.withContinuousFuel(v);
         return this;
     }
 
@@ -186,19 +210,52 @@ public final class MachineDefinition {
     }
 
     public boolean openUi() {
-        return this.openUi;
+        return this.flags.ui();
     }
 
     public void setOpenUi(boolean openUi) {
-        this.openUi = openUi;
+        this.flags = this.flags.withUi(openUi);
     }
 
-    public boolean noProcessing() {
-        return this.noProcessing;
+    /** Refresh the open GUI each tick. Deliberately independent of {@link #runsRecipes()}. */
+    public boolean tickUi() {
+        return this.flags.uiTick();
     }
 
-    public void setNoProcessing(boolean noProcessing) {
-        this.noProcessing = noProcessing;
+    /** Run the recipe/processing pipeline. */
+    public boolean runsRecipes() {
+        return this.flags.recipes();
+    }
+
+    /** Participate in the RPM/stress network. */
+    public boolean kinetics() {
+        return this.flags.kinetics();
+    }
+
+    /** Auto-pull fluid/gas through the faces declared in {@code io.input}. */
+    public boolean ioPull() {
+        return this.flags.ioPull();
+    }
+
+    /** Drive display entities / model animation / spec displays. Distinct from {@link #renderers()},
+     *  which returns the renderer specs themselves. */
+    public boolean tickRenderers() {
+        return this.flags.renderers();
+    }
+
+    /** Run action, status and placement scripts. */
+    public boolean scripts() {
+        return this.flags.scripts();
+    }
+
+    /** Tick script-triggered animations. */
+    public boolean animations() {
+        return this.flags.animations();
+    }
+
+    /** May emit a redstone signal. */
+    public boolean redstone() {
+        return this.flags.redstone();
     }
 
     public Set<String> rpmInputFacesRaw() {
@@ -265,16 +322,23 @@ public final class MachineDefinition {
         this.sailRpmBonus = v;
     }
 
-    public boolean rpmLargeCog() {
-        return this.rpmLargeCog;
-    }
 
-    public void setRpmLargeCog(boolean v) {
-        this.rpmLargeCog = v;
-    }
 
     public Set<String> rpmOutputInvertedRaw() {
         return this.rpmOutputInvertedRaw;
+    }
+
+    /**
+     * When true the machine ignores {@code output_same}/{@code output_inverted} for sign purposes
+     * and instead continues straight through the driven axis while reversing across it — the
+     * physical behaviour of a gearbox, which a static face list cannot express.
+     */
+    public boolean rpmOutputRelative() {
+        return this.rpmOutputRelative;
+    }
+
+    public void setRpmOutputRelative(boolean v) {
+        this.rpmOutputRelative = v;
     }
 
     public void setRpmOutputInvertedRaw(Set<String> f) {
@@ -289,13 +353,43 @@ public final class MachineDefinition {
         this.interactScript = s;
     }
 
+    /**
+     * Fires for EVERY machine and EVERY resource (item/fluid/gas/energy — not just item pipes,
+     * despite the name, kept as the user asked for it) on every external transfer attempt: from
+     * {@code canPlaceItemThroughFace}/{@code canTakeItemThroughFace} for items (the single choke
+     * point hoppers, funnels, and the item pipe network already go through), and from the slotted
+     * insert/extract methods for fluid, gas, and energy. Called with {@code type} ("item"/"fluid"/
+     * "gas"/"energy"), {@code payload} (an {@code Item} for "item", a {@code Map{type, amount}} for
+     * "fluid"/"gas", or a plain number for "energy"), {@code direction}, and {@code mode} ("input"/
+     * "output") bound in its ScriptContext. A script vetoes the transfer with
+     * {@code Machine.set_flag("_transfer_cancel", 1)}; anything else (including never running) leaves
+     * the existing IOConfiguration decision untouched — this is an ADDITIONAL veto/observation layer,
+     * never a replacement for it. This is also the item pipe network's per-face identity filter (see
+     * {@code pipe.item.ItemEngine}) — one hook covers both uses.
+     */
+    private String onTransferScript = null;
+
+    public String onTransferScript() {
+        return this.onTransferScript;
+    }
+
+    public void setOnTransferScript(String s) {
+        this.onTransferScript = s;
+    }
+
     public String attackScript() {
         return this.attackScript;
     }
 
-    public void setAttackScript(String s) {
-        this.attackScript = s;
-    }
+    public void setAttackScript(String s) { this.attackScript = s; }
+    public String statusScript() { return this.statusScript; }
+    public void setStatusScript(String s) { this.statusScript = s; }
+    public String onPlaceScript() { return this.onPlaceScript; }
+    public void setOnPlaceScript(String s) { this.onPlaceScript = s; }
+    public String onBreakScript() { return this.onBreakScript; }
+    public void setOnBreakScript(String s) { this.onBreakScript = s; }
+    public String onStateChangeScript() { return this.onStateChangeScript; }
+    public void setOnStateChangeScript(String s) { this.onStateChangeScript = s; }
 
     public static MachineDefinition byName(String name) {
         if (name == null || name.isBlank()) {
@@ -363,10 +457,162 @@ public final class MachineDefinition {
     public record TankSpec(String name, int capacity, Key filter) {
     }
 
+    /**
+     * A machine's CraftEnergy buffer. Push is effectively infinite but limited by network
+     * capacity: {@code generationPerTick} energy is added to this buffer every processing tick,
+     * capped at {@code capacity} — whatever the buffer can't hold that tick is simply lost, same as
+     * a real Forge-Energy generator overflowing a too-small internal buffer. What the network can
+     * then actually move onward is separately capped by the cable tier's own capacity/conductance
+     * (see {@code fluid.graph.EnergyEngine}), so a big generator behind small cables still bottlenecks.
+     */
+    public record EnergySpec(int capacity, int maxInput, int maxOutput, int generationPerTick) {
+        public static EnergySpec none() {
+            return new EnergySpec(0, 0, 0, 0);
+        }
+
+        public boolean isEmpty() {
+            return capacity <= 0;
+        }
+    }
+
     public record BarRef(Key bar, int[] slots, String source) {
     }
 
     public record ButtonSpec(int slot, String icon, String action, String name, List<String> lore, String lockedIcon, String lockedWhen) {
+    }
+
+    /**
+     * A configurable page/menu in the machine UI.
+     * Each page has its own title, inventory type/size, static layout items, slots, buttons, bars.
+     */
+    public record PageDef(
+        String title,
+        String sizeOrType,
+        List<StaticSlot> layout,
+        int[] inputSlots,
+        int[] outputSlots,
+        int[] fuelSlots,
+        List<ButtonSpec> buttons,
+        List<BarRef> bars,
+        int infoSlot,
+        String specialType,
+        String guiImage,                        // optional: CraftEngine image id for background title overlay
+        int guiImageShift,                      // pixel shift for the image (default -8)
+        Map<String, ItemSpec> specialItems      // generic special-page item overrides (locked, filler, increase, decrease, ...)
+    ) {
+        // Compact constructors for backwards compat
+        public PageDef(String title, String sizeOrType, List<StaticSlot> layout, int[] inputSlots, int[] outputSlots, int[] fuelSlots, List<ButtonSpec> buttons, List<BarRef> bars, int infoSlot, String specialType) {
+            this(title, sizeOrType, layout, inputSlots, outputSlots, fuelSlots, buttons, bars, infoSlot, specialType, null, -8, Map.of());
+        }
+        public PageDef(String title, String sizeOrType, List<StaticSlot> layout, int[] inputSlots, int[] outputSlots, int[] fuelSlots, List<ButtonSpec> buttons, List<BarRef> bars, int infoSlot, String specialType, String guiImage, int guiImageShift) {
+            this(title, sizeOrType, layout, inputSlots, outputSlots, fuelSlots, buttons, bars, infoSlot, specialType, guiImage, guiImageShift, Map.of());
+        }
+        /** Look up a special item by name, returning null if not defined. */
+        public ItemSpec specialItem(String name) {
+            return specialItems == null ? null : specialItems.get(name);
+        }
+        /**
+         * @param locked pin this slot so the player cannot move its contents. Independent of the
+         *               slot's {@code MenuSlotType}, so a placeholder can block a real
+         *               input/output/fuel/upgrade slot that the machine still tracks.
+         */
+        public record StaticSlot(int slot, String item, String name, List<String> lore, String action,
+                                 boolean locked) {
+            public StaticSlot(int slot, String item, String name, List<String> lore, String action) {
+                this(slot, item, name, lore, action, false);
+            }
+
+            public StaticSlot(int slot, String item, String name, List<String> lore) {
+                this(slot, item, name, lore, null, false);
+            }
+        }
+
+        public org.bukkit.event.inventory.InventoryType inventoryType() {
+            if (sizeOrType == null) return org.bukkit.event.inventory.InventoryType.CHEST;
+            return switch (sizeOrType.toLowerCase().trim()) {
+                case "hopper"     -> org.bukkit.event.inventory.InventoryType.HOPPER;
+                case "dropper"    -> org.bukkit.event.inventory.InventoryType.DROPPER;
+                case "dispenser"  -> org.bukkit.event.inventory.InventoryType.DISPENSER;
+                case "crafting"   -> org.bukkit.event.inventory.InventoryType.CRAFTING;
+                case "furnace"    -> org.bukkit.event.inventory.InventoryType.FURNACE;
+                case "brewing"    -> org.bukkit.event.inventory.InventoryType.BREWING;
+                default           -> org.bukkit.event.inventory.InventoryType.CHEST;
+            };
+        }
+
+        public int resolvedSize() {
+            if (sizeOrType == null) return 54;
+            try { return Integer.parseInt(sizeOrType.trim()); } catch (NumberFormatException e) { return 54; }
+        }
+
+        public boolean isChestType() {
+            return inventoryType() == org.bukkit.event.inventory.InventoryType.CHEST;
+        }
+    }
+
+    /**
+     * Reusable item specification — used in special-page param maps, buttons, and layout slots.
+     * All fields are optional; null means "use the default".
+     *
+     * JSON (in machine pages[].items.key):
+     *   { "icon": "cml:plus_icon", "name": "<lang:key>", "lore": ["<gray>text"],
+     *     "components": { "minecraft:hide_tooltip": true, "minecraft:custom_model_data": 5 } }
+     * Short form (icon only):  "cml:plus_icon"
+     */
+    public record ItemSpec(
+        String icon,                    // CraftEngine item key, e.g. "cml:gui_empty"
+        String name,                    // MiniMessage string, supports <lang:key>
+        java.util.List<String> lore,    // MiniMessage lore lines
+        Map<String, Object> components  // Minecraft data components
+    ) {
+        public static final ItemSpec EMPTY = new ItemSpec(null, null, java.util.List.of(), Map.of());
+
+        public static ItemSpec ofIcon(String icon) {
+            return new ItemSpec(icon, null, java.util.List.of(), Map.of());
+        }
+
+        /** Build an ItemStack from this spec. Uses cml:gui_empty fallback. */
+        public org.bukkit.inventory.ItemStack build() {
+            return build(org.bukkit.Material.GRAY_STAINED_GLASS_PANE);
+        }
+
+        /** Build an ItemStack from this spec with the given fallback material. */
+        public org.bukkit.inventory.ItemStack build(org.bukkit.Material fallback) {
+            net.momirealms.craftengine.core.util.Key iconKey = (icon != null && !icon.isBlank())
+                ? net.momirealms.craftengine.core.util.Key.of(icon) : null;
+            net.kyori.adventure.text.Component nameComp = (name != null && !name.isBlank())
+                ? net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(name)
+                    .decoration(net.kyori.adventure.text.format.TextDecoration.ITALIC, false)
+                : net.kyori.adventure.text.Component.empty();
+
+            java.util.List<net.kyori.adventure.text.Component> loreComps = new java.util.ArrayList<>();
+            if (lore != null) {
+                for (String line : lore) {
+                    if (line == null) continue;
+                    try {
+                        loreComps.add(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage()
+                            .deserialize(line)
+                            .decoration(net.kyori.adventure.text.format.TextDecoration.ITALIC, false));
+                    } catch (Throwable ignored) {
+                        loreComps.add(net.kyori.adventure.text.Component.text(line));
+                    }
+                }
+            }
+            net.kyori.adventure.text.Component[] loreArr = loreComps.toArray(new net.kyori.adventure.text.Component[0]);
+            org.bukkit.inventory.ItemStack item = dev.arubik.craftengine.machine.menu.MenuText.iconItem(iconKey, fallback, nameComp, loreArr);
+            if (item == null || item.getType() == org.bukkit.Material.AIR)
+                item = new org.bukkit.inventory.ItemStack(fallback);
+
+            if (components != null && !components.isEmpty()) {
+                // Apply via NMS DataComponents (no Bukkit meta needed)
+                try {
+                    net.minecraft.world.item.ItemStack nmsItem = org.bukkit.craftbukkit.inventory.CraftItemStack.asNMSCopy(item);
+                    nmsItem = dev.arubik.craftengine.script.types.primitive.DataComponentTypes.applyJsonComponents(nmsItem, components);
+                    item = org.bukkit.craftbukkit.inventory.CraftItemStack.asBukkitCopy(nmsItem);
+                } catch (Throwable ignored) {}
+            }
+            return item;
+        }
     }
 }
 

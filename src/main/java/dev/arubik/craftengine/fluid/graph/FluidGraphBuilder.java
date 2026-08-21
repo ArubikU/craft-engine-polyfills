@@ -122,6 +122,11 @@ public final class FluidGraphBuilder {
                 if (!bothTanks && !typeIncompatible
                         && aIdx < bIdx && edgeKeys.add(((long) aIdx << 32) | (bIdx & 0xffffffffL))) {
                     int valve = valveCheck(level, pos, np);
+                    // Declared fluid IO is directional: a face that only declares `output` must not
+                    // let a neighbour push fluid back in. connected() only asks "in OR out", which
+                    // is enough to form the edge but not to orient it.
+                    int ioGate = ioDirection(level, pos, np, dir);
+                    valve = (valve == 0) ? ioGate : (ioGate == 0 || valve == ioGate ? valve : -2);
                     // Per-tier conductance (previously a single global constant, deferred as
                     // "Phase 3"): an edge is only as fast as its slower end, so a narrow pipe
                     // spliced into a wide run throttles that run exactly where it should.
@@ -272,6 +277,43 @@ public final class FluidGraphBuilder {
         // I/O-aware: each side must allow fluid in OR out on that local face. Pipes/tanks use Open IO
         // (always true); machines restrict to their configured fluid I/O faces.
         return ioAllowsFluid(level, a, ca, aToB) && ioAllowsFluid(level, b, cb, aToB.getOpposite());
+    }
+
+    /**
+     * Which way may fluid cross the {@code a -> b} face, given both sides' declared IO?
+     * {@code +1} a→b only, {@code -1} b→a only, {@code 0} both ways, {@code -2} neither (drop edge).
+     *
+     * <p>Pipes and tanks use the permissive {@code Open} config, so they answer "both" and keep
+     * their current behaviour; only machines with an explicit {@code io} block get constrained.
+     */
+    private static int ioDirection(Level level, BlockPos a, BlockPos b, Direction aToB) {
+        try {
+            ConnectableBlockBehavior ca = behaviorAt(level, a, ConnectableBlockBehavior.class);
+            ConnectableBlockBehavior cb = behaviorAt(level, b, ConnectableBlockBehavior.class);
+            if (ca == null || cb == null) return 0;
+            boolean aToBOk = fluidOut(level, a, ca, aToB) && fluidIn(level, b, cb, aToB.getOpposite());
+            boolean bToAOk = fluidOut(level, b, cb, aToB.getOpposite()) && fluidIn(level, a, ca, aToB);
+            if (aToBOk && bToAOk) return 0;
+            if (aToBOk) return 1;
+            if (bToAOk) return -1;
+            return -2;
+        } catch (Throwable t) {
+            return 0; // be permissive on error, as ioAllowsFluid already is
+        }
+    }
+
+    private static boolean fluidOut(Level level, BlockPos pos, ConnectableBlockBehavior beh, Direction worldDir) {
+        dev.arubik.craftengine.multiblock.IOConfiguration io = beh.getIOConfiguration(level, pos);
+        net.minecraft.world.level.block.state.BlockState st = level.getBlockState(pos);
+        return io.providesOutput(dev.arubik.craftengine.multiblock.IOConfiguration.IOType.FLUID,
+                beh.toLocalDirection(worldDir, st));
+    }
+
+    private static boolean fluidIn(Level level, BlockPos pos, ConnectableBlockBehavior beh, Direction worldDir) {
+        dev.arubik.craftengine.multiblock.IOConfiguration io = beh.getIOConfiguration(level, pos);
+        net.minecraft.world.level.block.state.BlockState st = level.getBlockState(pos);
+        return io.acceptsInput(dev.arubik.craftengine.multiblock.IOConfiguration.IOType.FLUID,
+                beh.toLocalDirection(worldDir, st));
     }
 
     private static boolean ioAllowsFluid(Level level, BlockPos pos, ConnectableBlockBehavior beh, Direction worldDir) {

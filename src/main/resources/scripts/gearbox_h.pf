@@ -1,0 +1,11 @@
+# Horizontal gearbox — relays rpm via Java pullRotationalPower, toggles activated state for rendering.
+
+def on_break() {
+    Machine.set_rpm_output(0)
+    Machine.report_su(0)
+}
+
+# Activation is driven by the machine's `status` field (see the machine JSON).
+def status() {
+    return rpm != 0 ? "true" : "false"
+}

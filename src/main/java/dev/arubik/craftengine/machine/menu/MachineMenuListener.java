@@ -51,6 +51,12 @@ implements Listener {
         MachineLayout layout = menu.getLayout();
         int slot = event.getRawSlot();
         if (slot < event.getInventory().getSize() && slot >= 0) {
+            // A locked slot is immovable regardless of its type — that is the whole point of
+            // locking, since the slot usually IS a real input/output the machine still tracks.
+            if (layout.isLocked(slot)) {
+                event.setCancelled(true);
+                return;
+            }
             MenuSlotType type = layout.getSlotType(slot);
             boolean isHotbarSwap = event.getAction() == InventoryAction.HOTBAR_SWAP;
             switch (type) {
@@ -117,6 +123,8 @@ implements Listener {
             if (moving == null || moving.getType().isAir()) return;
             AbstractMachineBlockEntity m = menu.getMachine();
             int[] targets = layout.getSlotsOfType(m.isFuelItem(moving) ? MenuSlotType.FUEL : MenuSlotType.INPUT);
+            // Shift-clicking must not sneak items into a slot the player cannot click directly.
+            targets = java.util.Arrays.stream(targets).filter(t -> !layout.isLocked(t)).toArray();
             ItemStack leftover = MachineMenuListener.mergeInto(event.getInventory(), targets, moving.clone());
             event.setCurrentItem(leftover);
             this.scheduleSync(menu);
@@ -135,7 +143,7 @@ implements Listener {
                 int slot = (Integer)iterator.next();
                 if (slot >= event.getInventory().getSize()) continue;
                 MenuSlotType type = layout.getSlotType(slot);
-                if (type == MenuSlotType.DYNAMIC || type == MenuSlotType.BACKGROUND || type == MenuSlotType.OUTPUT || type == MenuSlotType.BUTTON) {
+                if (layout.isLocked(slot) || type == MenuSlotType.DYNAMIC || type == MenuSlotType.BACKGROUND || type == MenuSlotType.OUTPUT || type == MenuSlotType.BUTTON) {
                     event.setCancelled(true);
                     return;
                 }

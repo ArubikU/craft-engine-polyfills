@@ -37,7 +37,11 @@ public final class PipeType {
     /** What a pipe carries. Decides which carrier interface and engine drives it. */
     public enum Resource {
         FLUID,
-        GAS
+        GAS,
+        /** Discrete item transport (Mekanism-logistics-alike). See {@code pipe.item.ItemPipeBehavior}. */
+        ITEM,
+        /** CraftEnergy (Forge-Energy-alike). See {@code energy.behavior.EnergyCableBehavior}. */
+        ENERGY
     }
 
     /**
@@ -74,7 +78,8 @@ public final class PipeType {
             List<String> maskOrder,
             float[] previewOffset,
             float previewScale,
-            List<String> replaceableBlocks) {
+            List<String> replaceableBlocks,
+            Key panel) {
 
         /** Blocks a route may be built through. Vanilla-ish "soft" blocks by default. */
         public static final List<String> DEFAULT_REPLACEABLE = List.of("minecraft:air", "minecraft:cave_air",
@@ -107,7 +112,7 @@ public final class PipeType {
         Key id = Key.of(NAMESPACE, path);
         PipeType type = new PipeType(id, new PipeProperties(blockId, resource, capacity, transferPerTick, conductance,
                 tier, Set.copyOf(connectsTo), "cml", previewPrefix, PipeProperties.DEFAULT_MASK_ORDER,
-                new float[] { 0.5f, 0.5f, 0.5f }, 1.0f, PipeProperties.DEFAULT_REPLACEABLE));
+                new float[] { 0.5f, 0.5f, 0.5f }, 1.0f, PipeProperties.DEFAULT_REPLACEABLE, null));
         return REGISTRY.register(id, type);
     }
 
@@ -123,7 +128,7 @@ public final class PipeType {
             return null;
         PipeType created = new PipeType(id, new PipeProperties(id, Resource.FLUID, 1000, 100, 1000.0, 1,
                 Set.of(), "cml", "pipe_preview_" + id.value(), PipeProperties.DEFAULT_MASK_ORDER,
-                new float[] { 0.5f, 0.5f, 0.5f }, 1.0f, PipeProperties.DEFAULT_REPLACEABLE));
+                new float[] { 0.5f, 0.5f, 0.5f }, 1.0f, PipeProperties.DEFAULT_REPLACEABLE, null));
         return REGISTRY.register(id, created);
     }
 
@@ -223,6 +228,17 @@ public final class PipeType {
     /** Block ids a route may be carved through. */
     public List<String> replaceableBlocks() {
         return properties.replaceableBlocks();
+    }
+
+    /**
+     * The {@code MachineDefinition} id this pipe's segments use as their block-entity controller's
+     * config panel (pages/scripts/live per-instance IOConfiguration — see {@code ItemPipeBehavior}),
+     * or {@code null} for a plain conduit (today's fluid/gas pipes, which use a bare
+     * {@code PersistentBlockEntity} and the always-open static {@code IOConfiguration.Open()}).
+     * Any pipe resource may opt into a panel this way — nothing here is item-specific.
+     */
+    public Key panel() {
+        return properties.panel();
     }
 
     @Override

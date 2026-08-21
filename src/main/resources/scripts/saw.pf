@@ -1,0 +1,9 @@
+# Saw — breaks logs/leaves in front, chain-break connected logs (up to 30).
+fb = Machine.facing_block
+if fb.is_air { Machine.set_flag("_saw_chain", 0) }
+id = fb.id
+is_log = id == "minecraft:oak_log" || id == "minecraft:spruce_log" || id == "minecraft:birch_log" || id == "minecraft:jungle_log" || id == "minecraft:acacia_log" || id == "minecraft:dark_oak_log" || id == "minecraft:cherry_log" || id == "minecraft:mangrove_log" || id == "minecraft:crimson_stem" || id == "minecraft:warped_stem"
+is_leaf = id == "minecraft:oak_leaves" || id == "minecraft:spruce_leaves" || id == "minecraft:birch_leaves" || id == "minecraft:jungle_leaves" || id == "minecraft:acacia_leaves" || id == "minecraft:dark_oak_leaves" || id == "minecraft:cherry_leaves" || id == "minecraft:azalea_leaves" || id == "minecraft:flowering_azalea_leaves" || id == "minecraft:mangrove_leaves"
+if is_log || is_leaf {
+    Machine.tick_break(fb, 5)
+}

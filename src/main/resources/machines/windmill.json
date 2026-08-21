@@ -1,0 +1,89 @@
+{
+  "id": "polyfills:windmill",
+  "title": "Windmill Bearing",
+  "menu_size": 9,
+  "flags": {
+    "recipes": false,
+    "fuel": false,
+    "ui": false,
+    "ui_tick": false,
+    "kinetics": true
+  },
+  "action_script": "windmill",
+  "status": "windmill.pf:status",
+  "on_break": "windmill.pf:on_break",
+  "action_interval": 4,
+  "on_right_click": "windmill_interact",
+  "io": {
+    "rpm": {
+      "output_same": [
+        "front"
+      ],
+      "input": []
+    }
+  },
+  "renderers": [
+    {
+      "type": "item_display",
+      "item": "CraftEngineItem(\"cml:windmill_sail_render\")",
+      "location": {
+        "x": 0,
+        "y": 0.5,
+        "z": -1.5
+      },
+      "rot_z": "90",
+      "rot_x": "tick() * rpm * 0.3",
+      "rot_y": -90,
+      "scale": "1.5",
+      "when": "Machine.activated && facing == \"north\"",
+      "update_when": "always",
+      "global": true
+    },
+    {
+      "type": "item_display",
+      "item": "CraftEngineItem(\"cml:windmill_sail_render\")",
+      "location": {
+        "x": 0,
+        "y": 0.5,
+        "z": 1.5
+      },
+      "rot_z": "90",
+      "rot_x": "tick() * rpm * 0.3",
+      "rot_y": 90,
+      "scale": "1.5",
+      "when": "Machine.activated && facing == \"south\"",
+      "update_when": "always",
+      "global": true
+    },
+    {
+      "type": "item_display",
+      "item": "CraftEngineItem(\"cml:windmill_sail_render\")",
+      "location": {
+        "x": 1.5,
+        "y": 0.5,
+        "z": 0
+      },
+      "rot_z": "-90",
+      "rot_x": "tick() * rpm * 0.3",
+      "scale": "1.5",
+      "when": "Machine.activated && facing == \"east\"",
+      "update_when": "always",
+      "global": true
+    },
+    {
+      "type": "item_display",
+      "item": "CraftEngineItem(\"cml:windmill_sail_render\")",
+      "location": {
+        "x": -1.5,
+        "y": 0.5,
+        "z": 0
+      },
+      "rot_z": "90",
+      "rot_x": "tick() * rpm * 0.3",
+      "scale": "1.5",
+      "when": "Machine.activated && facing == \"west\"",
+      "update_when": "always",
+      "global": true
+    }
+  ]
+}

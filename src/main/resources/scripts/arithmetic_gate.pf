@@ -1,0 +1,19 @@
+# Arithmetic Gate — 8 modes: ADD/SUB/MUL/DIV/MIN/MAX/MOD/POW on left/right redstone inputs.
+# Mode stored in flag "mode" (0-7). Left/right read from adjacent blocks.
+mode = Machine.get_flag("mode")
+left = Machine.get_flag("left_power")
+right = Machine.get_flag("right_power")
+
+result = 0
+if mode == 0 { result = left + right }
+if mode == 1 { result = left - right }
+if mode == 2 { result = left * right }
+if mode == 3 { result = right != 0 ? floor(left / right) : 0 }
+if mode == 4 { result = left < right ? left : right }
+if mode == 5 { result = left > right ? left : right }
+if mode == 6 { result = right != 0 ? left % right : 0 }
+if mode == 7 { result = floor(left ^ right) }
+
+if result < 0 { result = 0 }
+if result > 15 { result = 15 }
+Machine.emit_redstone(result)

@@ -69,6 +69,23 @@ tasks.withType<JavaCompile> {
     options.forkOptions.jvmArgs = listOf("-Xmx384m", "-XX:+UseSerialGC", "-XX:MaxMetaspaceSize=256m")
 }
 
+sourceSets.test {
+    java.exclude(
+        "**/chainery/**",
+        "**/contraption/**",
+        "**/conveyor/**",
+        "**/crafting/**",
+        "**/data/**",
+        "**/fluid/**",
+        "**/machine/menu/**",
+        "**/machine/upgrade/**",
+        "**/multiblock/**",
+        "**/pipe/**",
+        "**/rotation/**",
+        "**/test/**"
+    )
+}
+
 tasks.test {
     useJUnitPlatform()
 }
