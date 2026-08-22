@@ -1,0 +1,13 @@
+# backpack_storage (polyfills:backpack_storage) — the machine a placed backpack becomes.
+#
+# on_break fires with a BreakEvent bound as `event`, pre-filled with this machine's own contents
+# as the DEFAULT drops (see dev.arubik.craftengine.script.event.BreakEvent) — replacing that
+# default with one reconstructed backpack item (via Machine.to_item, a generic "become that item"
+# primitive, not backpack-specific) means the backpack drops itself back instead of spilling its
+# contents loose, for every removal cause (player break, explosion, piston, ...) with no player
+# needed.
+
+def on_break():
+    item = Machine.to_item("polyfills:backpack")
+    event.set_drops(item)
+end

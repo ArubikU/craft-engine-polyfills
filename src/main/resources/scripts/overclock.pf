@@ -6,18 +6,29 @@
 #   right/shift_right → medium step (0.25 = 25%)
 #   drop/control_drop → large step (0.50 = 50%)
 
-def _step() {
-    if click_type == "drop" { return 0.50 }
-    if click_type == "control_drop" { return 0.50 }
-    if click_type == "right" { return 0.25 }
-    if click_type == "shift_right" { return 0.25 }
+def _step():
+    if click_type == "drop":
+        return 0.50
+    end
+    if click_type == "control_drop":
+        return 0.50
+    end
+    if click_type == "right":
+        return 0.25
+    end
+    if click_type == "shift_right":
+        return 0.25
+    end
     return 0.01
-}
+end
 
-def increase() {
+def increase():
     Machine.bump_overclock(_step())
-}
+end
 
-def decrease() {
+def decrease():
     Machine.bump_overclock(-_step())
-}
+end
+
+
+

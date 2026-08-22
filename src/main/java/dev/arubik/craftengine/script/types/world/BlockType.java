@@ -43,7 +43,37 @@ public final class BlockType {
             .property("vanilla_id", obj -> ScriptValue.of(
                     BuiltInRegistries.BLOCK.getKey(ref(obj).state().getBlock()).toString()))
             .property("is_custom", obj -> ScriptValue.of(customBlockId(ref(obj).state()) != null))
+            /** Whether super glue attaches this block to anything — see the Glue singleton. */
+            .property("is_glued", obj -> {
+                try {
+                    BlockRef r = ref(obj);
+                    return ScriptValue.of(dev.arubik.craftengine.contraption.glue.GlueRegistry
+                            .graphFor(r.level().dimension()).hasNode(r.pos()));
+                } catch (Throwable ignored) { return ScriptValue.of(false); }
+            })
+            /** Every block glued to this one — what a bearing anchored here would carry. */
+            .method("glue_structure", (obj, args) -> {
+                java.util.List<ScriptValue> out = new java.util.ArrayList<>();
+                try {
+                    BlockRef r = ref(obj);
+                    for (net.minecraft.core.BlockPos p : dev.arubik.craftengine.contraption.glue.GlueRegistry
+                            .structureAt(r.level().dimension(), r.pos())) {
+                        out.add(wrap(r.level(), p));
+                    }
+                } catch (Throwable ignored) {}
+                return new ScriptValue.Array(out);
+            })
             .property("is_air", obj -> ScriptValue.of(ref(obj).state().isAir()))
+            // Whether this block is a storage endpoint (vanilla container OR a custom block
+            // exposing WorldlyContainerHolder) as opposed to another pipe segment or plain air —
+            // lets a pipe's own panel script tell "this face touches a chest" from "this face
+            // touches another pipe" (see item_pipe_panel.pf's cycle_mode: pipe-to-pipe should only
+            // ever be Disabled/Both, the Input/Output split only means something toward a container).
+            .property("is_container", obj -> {
+                BlockRef r = ref(obj);
+                return ScriptValue.of(dev.arubik.craftengine.pipe.item.ItemTransferHelper
+                        .getContainer(r.level(), r.pos()).isPresent());
+            })
             .property("hardness", obj -> {
                 BlockRef r = ref(obj);
                 return ScriptValue.of(r.state().getDestroySpeed(r.level(), r.pos()));

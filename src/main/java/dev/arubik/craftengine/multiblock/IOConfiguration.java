@@ -291,7 +291,12 @@ public interface IOConfiguration {
     class Open implements IOConfiguration {
         @Override
         public boolean acceptsInput(IOType type, Object facing) {
-            return true;
+            // REDSTONE is inverted from every other type: "true" means "a signal IS required to
+            // operate" (a gate), not "permitted". A blanket permissive default must NOT also mean
+            // "redstone required everywhere" — that silently blocks every resource transfer (item
+            // pipes, energy, gas...) on a default-Open pipe/machine until a signal happens to be
+            // present nearby, for a type nobody configured at all.
+            return type != IOType.REDSTONE;
         }
 
         @Override

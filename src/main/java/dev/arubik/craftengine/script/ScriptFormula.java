@@ -449,6 +449,51 @@ public final class ScriptFormula {
                 yield ScriptValue.of(false);
             }
 
+            // split(str, delim) -> Array<Str>, join(array, delim) -> Str. The generic pair every
+            // *_flag store (Machine/Entity/World/Server) needed and lacked: those are flat
+            // string->string maps, so anything shaped like a LIST (linked positions, a frequency's
+            // members, ...) has to be encoded into one string by the script itself — this is the
+            // encode/decode half of that, previously a documented gap ("no string-split builtin").
+            case "split" -> {
+                if (args.size() < 2) yield new ScriptValue.Array(java.util.List.of());
+                String s = args.get(0).asStr();
+                String delim = args.get(1).asStr();
+                if (s.isEmpty() || delim.isEmpty()) yield new ScriptValue.Array(java.util.List.of());
+                String[] parts = s.split(java.util.regex.Pattern.quote(delim), -1);
+                java.util.List<ScriptValue> out = new java.util.ArrayList<>(parts.length);
+                for (String p : parts) out.add(ScriptValue.of(p));
+                yield new ScriptValue.Array(out);
+            }
+            case "join" -> {
+                if (args.isEmpty() || !(args.get(0) instanceof ScriptValue.Array a)) yield ScriptValue.of("");
+                String delim = args.size() >= 2 ? args.get(1).asStr() : ",";
+                StringBuilder sb = new StringBuilder();
+                for (int i = 0; i < a.elements().size(); i++) {
+                    if (i > 0) sb.append(delim);
+                    sb.append(a.elements().get(i).asStr());
+                }
+                yield ScriptValue.of(sb.toString());
+            }
+
+            // world(name) -> World, resolving a dimension key string (e.g. "minecraft:the_nether",
+            // matching World.name's own format) back to a live World object — the counterpart any
+            // cross-dimension feature needs once it has stored a world name as plain text (see
+            // Server.*_flag) and wants to act on it later (build a Location, teleport into it, ...).
+            case "world" -> {
+                if (args.isEmpty()) yield ScriptValue.NULL;
+                try {
+                    String dimName = args.get(0).asStr();
+                    net.minecraft.resources.Identifier id = net.minecraft.resources.Identifier.parse(dimName);
+                    net.minecraft.resources.ResourceKey<net.minecraft.world.level.Level> key =
+                            net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.DIMENSION, id);
+                    net.minecraft.server.level.ServerLevel level =
+                            net.minecraft.server.MinecraftServer.getServer().getLevel(key);
+                    yield level != null ? dev.arubik.craftengine.script.types.world.WorldType.wrap(level) : ScriptValue.NULL;
+                } catch (Throwable ignored) {
+                    yield ScriptValue.NULL;
+                }
+            }
+
             case "tick" -> {
                 try { yield ScriptValue.of(net.minecraft.server.MinecraftServer.getServer().getTickCount()); }
                 catch (Throwable ignored) {}

@@ -216,6 +216,19 @@ public final class MachineType {
                 if (!(ref(obj).blockEntity() instanceof dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity dm)) return ScriptValue.of(0.0);
                 return ScriptValue.of(dm.pageCount());
             })
+            // Multi-cell structure (an auto-placing shape declared on the BLOCK's own "cells"
+            // config, see MultiCellGeometry#parseCells — NOT a MachineDefinition concept, so this
+            // just reflects whatever the block behavior actually set on this core). A script always
+            // runs against the CORE (parts forward interaction/scripts to it), so there's no
+            // separate "am I a part" accessor needed here.
+            .property("is_multi_cell", obj -> {
+                if (!(ref(obj).blockEntity() instanceof dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity dm)) return ScriptValue.of(false);
+                return ScriptValue.of(dm.cellCount() > 0);
+            })
+            .property("cell_count", obj -> {
+                if (!(ref(obj).blockEntity() instanceof dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity dm)) return ScriptValue.of(0.0);
+                return ScriptValue.of(dm.cellCount());
+            })
             // ticks_alive: how many server ticks this block has been loaded (persisted via NBT)
             .property("ticks_alive", obj -> {
                 PersistentBlockEntity be = ref(obj).blockEntity();
@@ -302,6 +315,124 @@ public final class MachineType {
                 ItemStack stack = worldly.getItem(slot);
                 return stack.isEmpty() ? ScriptValue.NULL : ScriptValue.ofItem(stack);
             })
+            // Generic "this machine becomes that item" primitive — builds a fresh instance of the
+            // named ItemDefinition (items/*.json), pre-filled with THIS machine's own container
+            // contents, each page's items read from the SAME absolute container offset that page
+            // occupies (see dev.arubik.craftengine.item.ItemStateData#buildFromContainer) so page 2's
+            // items land back on page 2 instead of being compacted onto page 1 whenever page 1
+            // wasn't completely full. ALSO copies fluid/gas tank amounts by name, and energy, into
+            // any tank the target ItemDefinition declares with a matching kind (a machine's TypedKey
+            // flags — Machine.set_flag/set_str_flag — are NOT copied: there is no equivalent generic
+            // flag store on items yet, and flag names aren't enumerable from a MachineDefinition the
+            // way tanks are, so there's nothing structured to copy automatically — a script that
+            // needs specific flag data on the item must carry it over itself). Used by e.g. a
+            // placeable-container item's on_break script to hand itself back with contents intact —
+            // see scripts/backpack_storage.pf — but generic over any machine/item pair, not
+            // backpack-specific.
+            // to_item(item_id[, include_storage[, include_flags[, include_typed]]]) — the 3 optional
+            // trailing bools mirror place_block's fill_storage/fill_flags/fill_typed on the OTHER
+            // direction (item→machine), all defaulting to true so a bare to_item("id") keeps its old
+            // full-copy behavior; pass false to leave that part of the built item untouched (e.g. a
+            // "peek" item with no live storage, or a variant that shouldn't leak a locked flag).
+            .method("to_item", (obj, args) -> {
+                if (args.isEmpty()) return ScriptValue.NULL;
+                dev.arubik.craftengine.item.ItemDefinition itemDef =
+                        dev.arubik.craftengine.item.ItemDefinition.byId(
+                                net.momirealms.craftengine.core.util.Key.of(args.get(0).asStr()));
+                if (itemDef == null) return ScriptValue.NULL;
+                boolean includeStorage = args.size() < 2 || args.get(1).asBool();
+                boolean includeFlags = args.size() < 3 || args.get(2).asBool();
+                boolean includeTyped = args.size() < 4 || args.get(3).asBool();
+                MachineRef m = ref(obj);
+                PersistentBlockEntity be = m.blockEntity();
+                if (!(be instanceof PersistentWorldlyBlockEntity worldly)) return ScriptValue.NULL;
+                ItemStack built = includeStorage
+                        ? dev.arubik.craftengine.item.ItemStateData.buildFromContainer(
+                                itemDef, worldly::getItem, worldly.getContainerSize())
+                        : dev.arubik.craftengine.item.ItemStateData.buildFromContainer(itemDef, i -> ItemStack.EMPTY, 0);
+                if (be instanceof AbstractMachineBlockEntity machine) {
+                    if (includeStorage) {
+                        for (dev.arubik.craftengine.item.ItemDefinition.TankSpec spec : itemDef.tanks()) {
+                            try {
+                                if (spec.isFluid()) {
+                                    for (dev.arubik.craftengine.fluid.FluidTank t : machine.fluidTankList()) {
+                                        if (!t.getName().equals(spec.name())) continue;
+                                        int amount = t.getFluid(m.level(), m.pos()).getAmount();
+                                        built = dev.arubik.craftengine.item.ItemStateData.setTankAmount(
+                                                built, spec.name(), amount, spec.capacity());
+                                    }
+                                } else if (spec.isGas()) {
+                                    for (dev.arubik.craftengine.gas.GasTank t : machine.gasTankList()) {
+                                        if (!t.getName().equals(spec.name())) continue;
+                                        int amount = t.getGas(m.level(), m.pos()).getAmount();
+                                        built = dev.arubik.craftengine.item.ItemStateData.setTankAmount(
+                                                built, spec.name(), amount, spec.capacity());
+                                    }
+                                } else if (spec.isEnergy()) {
+                                    built = dev.arubik.craftengine.item.ItemStateData.setTankAmount(
+                                            built, spec.name(), machine.getStoredEnergyForCarrier(), spec.capacity());
+                                }
+                            } catch (Throwable ignored) {}
+                        }
+                    }
+                    // Bridge explicitly-declared flags (see ItemDefinition#bridgeFlags/#bridgeStrFlags)
+                    // using the EXACT same TypedKey convention Machine.get_flag/set_flag use, so a
+                    // flag set via script on the machine round-trips through the item and back.
+                    if (includeFlags) {
+                        for (String name : itemDef.bridgeFlags()) {
+                            try {
+                                Integer v = machine.get(dev.arubik.craftengine.util.TypedKey.of(
+                                        "polyfills", "flag_" + name, dev.arubik.craftengine.util.NbtType.INTEGER));
+                                if (v != null) built = dev.arubik.craftengine.item.ItemStateData.setFlag(built, name, v);
+                            } catch (Throwable ignored) {}
+                        }
+                        for (String name : itemDef.bridgeStrFlags()) {
+                            try {
+                                String v = machine.get(dev.arubik.craftengine.util.TypedKey.of(
+                                        "polyfills", "sflag_" + name, dev.arubik.craftengine.util.NbtType.STRING));
+                                if (v != null) built = dev.arubik.craftengine.item.ItemStateData.setStrFlag(built, name, v);
+                            } catch (Throwable ignored) {}
+                        }
+                    }
+                    // Bridge explicitly-declared TypedKey entries (see ItemDefinition#bridgeTyped) —
+                    // same "tkey_"+name convention Item.get_typed/with_typed and Machine.get_typed/
+                    // set_typed both already use, so nothing new to invent on either side.
+                    if (includeTyped) {
+                        for (dev.arubik.craftengine.item.ItemDefinition.TypedBridgeSpec spec : itemDef.bridgeTyped()) {
+                            try {
+                                dev.arubik.craftengine.script.TypedKeyBridge.Codec codec =
+                                        dev.arubik.craftengine.script.TypedKeyBridge.resolve(spec.type());
+                                if (codec == null) continue;
+                                Object v = machine.get(dev.arubik.craftengine.util.TypedKey.of(
+                                        "polyfills", "tkey_" + spec.name(), codec.storage()));
+                                if (v != null) built = dev.arubik.craftengine.script.types.primitive.ItemType
+                                        .writeTypedRaw(built, spec.name(), codec.storage(), v);
+                            } catch (Throwable ignored) {}
+                        }
+                    }
+                }
+                return ScriptValue.ofItem(built);
+            })
+            // Spawns a real dropped-item entity at this machine's position — the twin of to_item,
+            // used to replace a machine's break-drop with a single reconstructed item instead of
+            // its raw contents (see MachineBreakListener, which skips the default drop-everything
+            // behavior whenever a machine declares on_break, leaving the script fully responsible).
+            // Works for every removal cause (player break, explosion, ...) since it only needs a
+            // position, not a player.
+            .method("drop_item", (obj, args) -> {
+                if (args.isEmpty()) return ScriptValue.of(false);
+                ItemStack toDrop;
+                ScriptValue arg = args.get(0);
+                if (arg instanceof ScriptValue.Item i) toDrop = i.stack().copy();
+                else if (arg instanceof ScriptValue.Obj o && o.instance() instanceof ItemStack is) toDrop = is.copy();
+                else return ScriptValue.of(false);
+                if (toDrop.isEmpty()) return ScriptValue.of(false);
+                MachineRef m = ref(obj);
+                ItemEntity spawned = new ItemEntity(m.level(), m.pos().getX() + 0.5,
+                        m.pos().getY() + 0.5, m.pos().getZ() + 0.5, toDrop);
+                m.level().addFreshEntity(spawned);
+                return ScriptValue.of(true);
+            })
             .method("remove_item_in_slot", (obj, args) -> {
                 if (args.size() < 2) return ScriptValue.of(false);
                 MachineRef m = ref(obj);
@@ -344,6 +475,24 @@ public final class MachineType {
                     }
                 }
                 return ScriptValue.of(toInsert.isEmpty());
+            })
+            // open_menu(Player) — opens this machine's normal menu. A machine whose interact_script
+            // fully replaces on-right-click handling (see MachineBlockBehavior#useWithoutItem — once
+            // an interact_script is declared, the menu no longer opens on its own) calls this itself
+            // for the branch where it still wants the ordinary UI, e.g. a storage_block whose
+            // interact_script also handles a shift-right-click "pick myself back up as an item"
+            // gesture (see Machine.pickup_as_item) needs an explicit way to fall through to its menu.
+            .method("open_menu", (obj, args) -> {
+                if (args.isEmpty() || !(args.get(0) instanceof ScriptValue.Obj po)
+                        || !(po.instance() instanceof net.minecraft.world.entity.player.Player p))
+                    return ScriptValue.of(false);
+                MachineRef m = ref(obj);
+                if (!(m.blockEntity() instanceof AbstractMachineBlockEntity amb)) return ScriptValue.of(false);
+                if (!(p.getBukkitEntity() instanceof org.bukkit.entity.Player bukkitPlayer)) return ScriptValue.of(false);
+                try {
+                    amb.getMenu().open(bukkitPlayer);
+                    return ScriptValue.of(true);
+                } catch (Throwable ignored) { return ScriptValue.of(false); }
             })
             .method("add_items", (obj, args) -> {
                 // add_items(array) — push all items in array to inventory
@@ -405,11 +554,11 @@ public final class MachineType {
                 // io_get(type, mode, dir) -> bool. mode is "input" or "output".
                 if (args.size() < 3) return ScriptValue.of(false);
                 MachineRef m = ref(obj);
-                if (!(m.blockEntity() instanceof AbstractMachineBlockEntity machine)) return ScriptValue.of(false);
                 dev.arubik.craftengine.multiblock.IOConfiguration.IOType type = parseIoType(args.get(0).asStr());
                 Direction dir = Direction.byName(args.get(2).asStr());
-                dev.arubik.craftengine.multiblock.IOConfiguration cfg = machine.getIOConfiguration();
-                if (type == null || dir == null || cfg == null) return ScriptValue.of(false);
+                if (type == null || dir == null) return ScriptValue.of(false);
+                dev.arubik.craftengine.multiblock.IOConfiguration cfg = resolveLiveIOConfig(m);
+                if (cfg == null) return ScriptValue.of(false);
                 boolean input = "input".equalsIgnoreCase(args.get(1).asStr());
                 return ScriptValue.of(input ? cfg.acceptsInput(type, dir) : cfg.providesOutput(type, dir));
             })
@@ -629,12 +778,118 @@ public final class MachineType {
                 return ScriptValue.of(true);
             })
 
+            // --- Methods: FULL item flags (identity + every data component: enchantments, custom
+            // name, durability, ...) — NOT just an id string. A string id (get_str_flag) is enough
+            // for "any oak log", but not for "specifically THIS enchanted diamond sword"; storing
+            // the whole stack (minus count, which nothing here should care about) is what makes
+            // that possible. Same "sflag_"-style per-name storage as get/set_str_flag, just holding
+            // a base64-encoded serialized ItemStack instead of plain text — a generic primitive any
+            // future feature (not only item_pipe_panel's filter) can reuse the same way. */
+            .method("get_item_flag", (obj, args) -> {
+                if (args.isEmpty()) return ScriptValue.NULL;
+                MachineRef m = ref(obj);
+                String name = args.get(0).asStr();
+                PersistentBlockEntity be = m.blockEntity();
+                if (be == null) return ScriptValue.NULL;
+                TypedKey<String> key = TypedKey.of("polyfills", "iflag_" + name, NbtType.STRING);
+                String encoded = be.get(key);
+                if (encoded == null || encoded.isEmpty()) return ScriptValue.NULL;
+                try {
+                    byte[] bytes = java.util.Base64.getDecoder().decode(encoded);
+                    org.bukkit.inventory.ItemStack bukkit = org.bukkit.inventory.ItemStack.deserializeBytes(bytes);
+                    if (bukkit == null || bukkit.getType().isAir()) return ScriptValue.NULL;
+                    net.minecraft.world.item.ItemStack nms =
+                            org.bukkit.craftbukkit.inventory.CraftItemStack.asNMSCopy(bukkit);
+                    return ScriptValue.ofItem(nms);
+                } catch (Throwable ignored) {
+                    return ScriptValue.NULL;
+                }
+            })
+            .method("set_item_flag", (obj, args) -> {
+                if (args.size() < 2) return ScriptValue.of(false);
+                MachineRef m = ref(obj);
+                String name = args.get(0).asStr();
+                PersistentBlockEntity be = m.blockEntity();
+                if (be == null) return ScriptValue.of(false);
+                TypedKey<String> key = TypedKey.of("polyfills", "iflag_" + name, NbtType.STRING);
+                if (!(args.get(1) instanceof ScriptValue.Item itemVal) || itemVal.stack().isEmpty()) {
+                    be.set(key, "");
+                    return ScriptValue.of(true);
+                }
+                try {
+                    org.bukkit.inventory.ItemStack bukkit =
+                            org.bukkit.craftbukkit.inventory.CraftItemStack.asBukkitCopy(itemVal.stack());
+                    byte[] bytes = bukkit.serializeAsBytes();
+                    be.set(key, java.util.Base64.getEncoder().encodeToString(bytes));
+                    return ScriptValue.of(true);
+                } catch (Throwable ignored) {
+                    return ScriptValue.of(false);
+                }
+            })
+            .method("clear_item_flag", (obj, args) -> {
+                if (args.isEmpty()) return ScriptValue.of(false);
+                MachineRef m = ref(obj);
+                PersistentBlockEntity be = m.blockEntity();
+                if (be == null) return ScriptValue.of(false);
+                TypedKey<String> key = TypedKey.of("polyfills", "iflag_" + args.get(0).asStr(), NbtType.STRING);
+                be.set(key, "");
+                return ScriptValue.of(true);
+            })
+
+            // --- Generic TypedKey storage — the standardized primitive get_flag/get_str_flag/
+            // get_item_flag each hardcode one shape for; get_typed(key, type) picks any registered
+            // type by name ("int"/"double"/"bool"/"byte_array"/"item"/"vector"/a custom-registered
+            // one/...) so scripts share ONE convention instead of every feature growing its own ad
+            // hoc get_X_flag pair. See TypedKeyBridge — including how to add a brand-new type name.
+            .method("get_typed", (obj, args) -> {
+                if (args.size() < 2) return ScriptValue.NULL;
+                dev.arubik.craftengine.script.TypedKeyBridge.Codec codec = dev.arubik.craftengine.script.TypedKeyBridge.resolve(args.get(1).asStr());
+                if (codec == null) return ScriptValue.NULL;
+                PersistentBlockEntity be = ref(obj).blockEntity();
+                if (be == null) return codec.fromStorage(null);
+                TypedKey<Object> key = TypedKey.of("polyfills", "tkey_" + args.get(0).asStr(), codec.storage());
+                return codec.fromStorage(be.get(key));
+            })
+            .method("set_typed", (obj, args) -> {
+                if (args.size() < 3) return ScriptValue.of(false);
+                dev.arubik.craftengine.script.TypedKeyBridge.Codec codec = dev.arubik.craftengine.script.TypedKeyBridge.resolve(args.get(1).asStr());
+                if (codec == null) return ScriptValue.of(false);
+                PersistentBlockEntity be = ref(obj).blockEntity();
+                if (be == null) return ScriptValue.of(false);
+                TypedKey<Object> key = TypedKey.of("polyfills", "tkey_" + args.get(0).asStr(), codec.storage());
+                try {
+                    be.set(key, codec.toStorage(args.get(2)));
+                    return ScriptValue.of(true);
+                } catch (Throwable ignored) { return ScriptValue.of(false); }
+            })
+            .method("has_typed", (obj, args) -> {
+                if (args.size() < 2) return ScriptValue.of(false);
+                dev.arubik.craftengine.script.TypedKeyBridge.Codec codec = dev.arubik.craftengine.script.TypedKeyBridge.resolve(args.get(1).asStr());
+                if (codec == null) return ScriptValue.of(false);
+                PersistentBlockEntity be = ref(obj).blockEntity();
+                if (be == null) return ScriptValue.of(false);
+                TypedKey<Object> key = TypedKey.of("polyfills", "tkey_" + args.get(0).asStr(), codec.storage());
+                return ScriptValue.of(be.has(key));
+            })
+
             // --- Methods: block_at(dx,dy,dz) ---
             .method("block_at", (obj, args) -> {
                 if (args.size() < 3) return ScriptValue.NULL;
                 MachineRef m = ref(obj);
                 int dx = (int) args.get(0).asNum(), dy = (int) args.get(1).asNum(), dz = (int) args.get(2).asNum();
                 return BlockType.wrap(m.level(), m.pos().offset(dx, dy, dz));
+            })
+            // neighbor_block(dir) — the block adjacent to THIS machine in a named world direction
+            // ("north"/"south"/"east"/"west"/"up"/"down"), same direction-name convention io_get/
+            // io_set already use. Lets a pipe panel script ask "what's actually sitting on this
+            // face" (see Block.is_container) instead of assuming every face is the same kind of
+            // neighbour.
+            .method("neighbor_block", (obj, args) -> {
+                if (args.isEmpty()) return ScriptValue.NULL;
+                MachineRef m = ref(obj);
+                Direction dir = Direction.byName(args.get(0).asStr());
+                if (dir == null) return ScriptValue.NULL;
+                return BlockType.wrap(m.level(), m.pos().relative(dir));
             })
 
             // --- Methods: Inventory add shortcuts ---
@@ -1035,6 +1290,87 @@ public final class MachineType {
                 } catch (Throwable ignored) {}
                 return ScriptValue.of(false);
             })
+            // --- Properties/methods: live energy tuning ---
+            // The JSON "energy" block is just a starting point; a script (e.g. a windmill scaling
+            // its output with wind/height, or a reactor throttling under overload) needs to change
+            // capacity/rate live. Reads/writes the SAME fields insertEnergy/extractEnergy/processTick
+            // already use — no shadow state to fall out of sync.
+            .property("energy_stored", obj -> {
+                MachineRef m = ref(obj);
+                if (!(m.blockEntity() instanceof AbstractMachineBlockEntity machine)) return ScriptValue.of(0);
+                return ScriptValue.of(machine.getStoredEnergyForCarrier());
+            })
+            // consume_energy(amount) — an internal cost for a script-driven ACTION (a teleport, an
+            // ability, ...), not a transfer to/from a neighbour, so it deliberately bypasses the
+            // IOConfiguration gating insertEnergy/extractEnergy enforce (setStoredEnergyRaw, the
+            // same "engine apply" path the network solvers use). Returns false — and takes
+            // nothing — if the buffer doesn't have enough; never partially consumes.
+            .method("consume_energy", (obj, args) -> {
+                if (args.isEmpty()) return ScriptValue.of(false);
+                MachineRef m = ref(obj);
+                if (!(m.blockEntity() instanceof AbstractMachineBlockEntity machine)) return ScriptValue.of(false);
+                int amount = (int) args.get(0).asNum();
+                if (amount <= 0 || machine.getStoredEnergyForCarrier() < amount) return ScriptValue.of(false);
+                machine.setStoredEnergyRaw(m.level(), machine.getStoredEnergyForCarrier() - amount);
+                return ScriptValue.of(true);
+            })
+            .property("energy_capacity", obj -> {
+                MachineRef m = ref(obj);
+                if (!(m.blockEntity() instanceof AbstractMachineBlockEntity machine)) return ScriptValue.of(0);
+                return ScriptValue.of(machine.energyCapacity());
+            })
+            .property("energy_max_input", obj -> {
+                MachineRef m = ref(obj);
+                if (!(m.blockEntity() instanceof AbstractMachineBlockEntity machine)) return ScriptValue.of(0);
+                return ScriptValue.of(machine.energyMaxInput());
+            })
+            .property("energy_max_output", obj -> {
+                MachineRef m = ref(obj);
+                if (!(m.blockEntity() instanceof AbstractMachineBlockEntity machine)) return ScriptValue.of(0);
+                return ScriptValue.of(machine.energyMaxOutput());
+            })
+            .property("energy_per_tick", obj -> {
+                MachineRef m = ref(obj);
+                if (!(m.blockEntity() instanceof AbstractMachineBlockEntity machine)) return ScriptValue.of(0);
+                return ScriptValue.of(machine.energyPerTick());
+            })
+            // Measured, not configured: max_input/max_output/per_tick are CAPS this machine
+            // declares — real_input/real_output are what the network ACTUALLY moved through this
+            // node on its last EnergyEngine step (see EnergyEngine#lastDelta). Pull the generator
+            // feeding this cell off the network and real_input drops to 0 next tick even though
+            // max_input/capacity haven't changed at all.
+            .property("energy_real_input", obj -> {
+                MachineRef m = ref(obj);
+                int delta = dev.arubik.craftengine.fluid.graph.EnergyEngine.lastDelta(m.pos());
+                return ScriptValue.of(Math.max(0, delta));
+            })
+            .property("energy_real_output", obj -> {
+                MachineRef m = ref(obj);
+                int delta = dev.arubik.craftengine.fluid.graph.EnergyEngine.lastDelta(m.pos());
+                return ScriptValue.of(Math.max(0, -delta));
+            })
+            .method("set_energy_per_tick", (obj, args) -> {
+                if (args.isEmpty()) return ScriptValue.of(false);
+                MachineRef m = ref(obj);
+                if (!(m.blockEntity() instanceof AbstractMachineBlockEntity machine)) return ScriptValue.of(false);
+                machine.setEnergyPerTick((int) args.get(0).asNum());
+                return ScriptValue.of(true);
+            })
+            .method("set_energy_max_input", (obj, args) -> {
+                if (args.isEmpty()) return ScriptValue.of(false);
+                MachineRef m = ref(obj);
+                if (!(m.blockEntity() instanceof AbstractMachineBlockEntity machine)) return ScriptValue.of(false);
+                machine.setEnergyMaxInput((int) args.get(0).asNum());
+                return ScriptValue.of(true);
+            })
+            .method("set_energy_max_output", (obj, args) -> {
+                if (args.isEmpty()) return ScriptValue.of(false);
+                MachineRef m = ref(obj);
+                if (!(m.blockEntity() instanceof AbstractMachineBlockEntity machine)) return ScriptValue.of(false);
+                machine.setEnergyMaxOutput((int) args.get(0).asNum());
+                return ScriptValue.of(true);
+            })
+
             // --- Methods: fill_fluid ---
             .method("fill_fluid", (obj, args) -> {
                 if (args.size() < 2) return ScriptValue.of(false);
@@ -1156,6 +1492,33 @@ public final class MachineType {
                 if (player == null) return ScriptValue.of(false);
                 Direction playerDir = Direction.orderedByNearest(player)[0];
                 return ScriptValue.of(playerDir.getName().equalsIgnoreCase(face));
+            })
+            // close() — closes the nearest viewer's open inventory (same @p-style nearest-player
+            // heuristic as player_in_range/player_facing, since a script method has no direct
+            // handle on "whoever has this machine's GUI open"). Meant for scripts like
+            // teleporter.pf's do_teleport() to close the GUI before moving the player elsewhere.
+            .method("close", (obj, args) -> {
+                MachineRef m = ref(obj);
+                Vec3 center = Vec3.atCenterOf(m.pos());
+                var player = m.level().getNearestPlayer(center.x, center.y, center.z, 8, false);
+                if (player != null) player.closeContainer();
+                return ScriptValue.of(player != null);
+            })
+            // update() — forces the currently-open menu (if any) to immediately re-evaluate,
+            // instead of waiting up to 2 ticks for the normal periodic refresh: this re-runs the
+            // page's "buttons"/"layout" generator script too (so a destination/button appearing,
+            // disappearing, or moving shows up right away, not just already-installed slots'
+            // name/lore), and re-syncs input/output/storage — repainted onto the SAME open
+            // inventory in place, so nothing flickers for the viewer. For a script that just
+            // changed something a button/generator reads (a flag, a str_flag, the registry data a
+            // generator scans) and wants it visible on the SAME click that changed it — a no-op if
+            // nobody has this machine's menu open right now.
+            .method("update", (obj, args) -> {
+                PersistentBlockEntity be = ref(obj).blockEntity();
+                if (be instanceof dev.arubik.craftengine.machine.block.entity.AbstractMachineBlockEntity m) {
+                    return ScriptValue.of(m.rebuildAndReopenMenu());
+                }
+                return ScriptValue.of(false);
             });
     }
 
@@ -1227,9 +1590,35 @@ public final class MachineType {
         return machine.mutableIO();
     }
 
-    /** Re-derives the connected-face mask (self + neighbours) for whatever block sits at {@code m}'s
-     * position, if it's a {@code ConnectedBlockBehavior} (a pipe). No-op on anything else (a plain
-     * machine has no mask to recompute) — see {@code ConnectedBlockBehavior#recomputeMaskAndNeighbors}. */
+    /** The face permission actually in effect RIGHT NOW — the entity's own owned config once one
+     * exists, else the block's static {@code defaultIOConfig} (what every other reader —
+     * {@code carrierConnectsHere}, the energy/item network engines' faceMode — already falls back
+     * to). {@code io_get} reading ONLY the entity's (possibly still-null) field used to report
+     * "Disabled" on a face that was actually open by default until the player's first click. */
+    private static dev.arubik.craftengine.multiblock.IOConfiguration resolveLiveIOConfig(MachineRef m) {
+        if (m.blockEntity() instanceof AbstractMachineBlockEntity machine) {
+            dev.arubik.craftengine.multiblock.IOConfiguration cfg = machine.getIOConfiguration();
+            if (cfg != null) return cfg;
+        }
+        try {
+            net.minecraft.world.level.block.state.BlockState state = m.level().getBlockState(m.pos());
+            var custom = net.momirealms.craftengine.bukkit.util.BlockStateUtils.getOptionalCustomBlockState(state);
+            if (custom.isEmpty()) return null;
+            net.momirealms.craftengine.core.block.behavior.BlockBehavior beh = custom.get().behavior();
+            if (beh instanceof dev.arubik.craftengine.block.behavior.ConnectableBlockBehavior cbb)
+                return cbb.getIOConfiguration(m.level(), m.pos());
+        } catch (Throwable ignored) {
+        }
+        return null;
+    }
+
+    /** Re-derives the connected-face mask for whatever block sits at {@code m}'s position (if it's
+     * itself a {@code ConnectedBlockBehavior}, e.g. an item pipe's own per-face IO), AND for every
+     * adjacent pipe/cable — a plain machine (energy_cell, energy_generator, ...) has no mask of its
+     * own, but {@code io_set} changing ITS IOConfiguration is exactly what a neighbouring cable's
+     * {@code carrierConnectsHere} reads to decide whether it connects to THIS block. Without this,
+     * toggling a machine's side to Disabled left the adjacent cable's connected-face render stale
+     * until some unrelated block update happened to recompute it. */
     private static void recomputeMaskIfConnected(MachineRef m) {
         try {
             net.minecraft.world.level.block.state.BlockState state = m.level().getBlockState(m.pos());
@@ -1241,8 +1630,24 @@ public final class MachineType {
                     beh instanceof dev.arubik.craftengine.block.behavior.ConnectedBlockBehavior c ? c
                             : (beh == null ? null
                                     : beh.getFirst(dev.arubik.craftengine.block.behavior.ConnectedBlockBehavior.class));
-            if (cbb != null)
+            if (cbb != null) {
                 cbb.recomputeMaskAndNeighbors(m.level(), m.pos());
+                return;
+            }
+            for (net.minecraft.core.Direction dir : net.minecraft.core.Direction.values()) {
+                net.minecraft.core.BlockPos neighborPos = m.pos().relative(dir);
+                var neighborCustom = net.momirealms.craftengine.bukkit.util.BlockStateUtils
+                        .getOptionalCustomBlockState(m.level().getBlockState(neighborPos));
+                if (neighborCustom.isEmpty())
+                    continue;
+                net.momirealms.craftengine.core.block.behavior.BlockBehavior neighborBeh = neighborCustom.get().behavior();
+                dev.arubik.craftengine.block.behavior.ConnectedBlockBehavior neighborCbb =
+                        neighborBeh instanceof dev.arubik.craftengine.block.behavior.ConnectedBlockBehavior nc ? nc
+                                : (neighborBeh == null ? null
+                                        : neighborBeh.getFirst(dev.arubik.craftengine.block.behavior.ConnectedBlockBehavior.class));
+                if (neighborCbb != null)
+                    neighborCbb.recomputeMaskAndNeighbors(m.level(), neighborPos);
+            }
         } catch (Throwable ignored) {
         }
     }

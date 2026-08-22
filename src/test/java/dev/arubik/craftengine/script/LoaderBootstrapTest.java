@@ -96,4 +96,34 @@ class LoaderBootstrapTest {
         assertTrue(Files.readString(PLUGIN).contains("HammerLoader.bootstrap()"),
                 "no hammer is recognised without this, so no multiblock can ever be assembled");
     }
+
+    @Test
+    @DisplayName("every startSystem() is actually started from the plugin")
+    void everySystemIsStarted() throws IOException {
+        // The same trap as an unbootstrapped loader, and just as silent: GlueItemBehavior declared
+        // startSystem(plugin) — scheduling its preview loop and registering its listener — and
+        // nothing ever called it, so the glue overlay could not appear however correct its
+        // renderer was. A class that guards itself with a `systemStarted` flag is opting into
+        // exactly this failure mode if nobody starts it.
+        String plugin = Files.readString(PLUGIN);
+        List<String> missing = new ArrayList<>();
+        try (Stream<Path> files = Files.walk(MAIN)) {
+            for (Path p : files.filter(f -> f.toString().endsWith(".java")).toList()) {
+                if (p.equals(PLUGIN)) continue;
+                String src = Files.readString(p);
+                if (!src.contains("public static void startSystem(")) continue;
+                String name = className(p);
+                if (!plugin.contains(name + ".startSystem(")) missing.add(name);
+            }
+        }
+        assertTrue(missing.isEmpty(),
+                "these declare startSystem() but are never started, so they do nothing: " + missing);
+    }
+
+    @Test
+    @DisplayName("the glue preview specifically is started")
+    void gluePreviewIsStarted() throws IOException {
+        assertTrue(Files.readString(PLUGIN).contains("GlueItemBehavior.startSystem("),
+                "without this there is no way to see what super glue has attached");
+    }
 }

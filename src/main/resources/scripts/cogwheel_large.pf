@@ -6,35 +6,42 @@
 Machine.set_rpm_output(rpm)
 
 axis = Machine.axis
-if axis == null { return }
+if axis == null:
+    return
+end
 
 net = Machine.rpm_network
 
-if axis == "y" {
+if axis == "y":
     perp = [ Machine.block_at(1,0,0), Machine.block_at(-1,0,0), Machine.block_at(0,0,1), Machine.block_at(0,0,-1) ]
-} else if axis == "x" {
+else if axis == "x":
     perp = [ Machine.block_at(0,1,0), Machine.block_at(0,-1,0), Machine.block_at(0,0,1), Machine.block_at(0,0,-1) ]
-} else {
+else:
     perp = [ Machine.block_at(1,0,0), Machine.block_at(-1,0,0), Machine.block_at(0,1,0), Machine.block_at(0,-1,0) ]
-}
+end
 
-for neighbor in perp {
-    if neighbor.property("axis") != axis { continue }
+for neighbor in perp:
+    if neighbor.property("axis") != axis:
+        continue
+    end
     nid = neighbor.id
-    if contains(nid, "cogwheel_small") && !contains(nid, "large") {
+    if contains(nid, "cogwheel_small") && !contains(nid, "large"):
         Machine.relay_to(neighbor, -rpm * 2.0, net)
-    }
+    end
     # large->large: invalid, skip
-}
+end
 
 is_now = rpm != 0 ? 1 : 0
 was = Machine.get_flag("_cog_act")
-if is_now != was {
+if is_now != was:
     Machine.set_state("activated", is_now > 0 ? "true" : "false")
     Machine.set_flag("_cog_act", is_now)
-}
+end
 
-def on_break() {
+def on_break():
     Machine.set_rpm_output(0)
     Machine.report_su(0)
-}
+end
+
+
+

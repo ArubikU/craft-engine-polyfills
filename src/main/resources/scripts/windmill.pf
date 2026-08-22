@@ -5,9 +5,11 @@
 #
 # Two things the previous version got wrong:
 #
-#  * It read the sails through `contraption.contraption_world.blocks()`. ContraptionWorld has no
-#    blocks() — that lives on Contraption itself — so the call returned null, the loop never ran,
-#    the sail count stayed 0 and the windmill produced NO rpm at all, ever.
+#  * `contraption.blocks()` was defined on the WRONG PolyType (ContraptionWorld, not Contraption —
+#    two distinct registered types; Machine.contraption wraps as the latter), so the call always
+#    resolved to no method at all and returned NULL. len(NULL) happens to answer 0, same as an
+#    empty array, which is why this looked like "no sails" instead of an outright script error.
+#    Fixed in ContraptionType.java by adding blocks()/get_block()/entities() to Contraption too.
 #  * It used `sail_count * 8` unclamped. Create divides BY 8 and caps at 16, so eight sails give
 #    1 rpm, not 64.
 
@@ -19,66 +21,74 @@ MIN_SAILS = 8          # below this a windmill will not run at all
 # scaling it with the wheel's speed keeps a bigger windmill genuinely more useful.
 CAPACITY_PER_RPM = 8.0
 
-def _sail_count(contraption) {
+def _sail_count(contraption):
     n = 0
-    for block in contraption.blocks() {
-        if contains(block.id, "sail") { n = n + 1 }
-    }
+    for block in contraption.blocks():
+        if contains(block.id, "sail"):
+            n = n + 1
+        end
+    end
     return n
-}
+end
 
-def _stop() {
+def _stop():
     Machine.set_rpm_output(0)
     Machine.report_su(0)
-}
+end
 
 # The world axis the bearing turns about: the axis it FACES. A bearing on the ground faces up
 # and turns flat (Y); one on a wall faces a horizontal direction and turns like a wheel (X or Z).
-def _spin_axis() {
-    if Machine.facing_dy != 0 { return "y" }
-    if Machine.facing_dx != 0 { return "x" }
+def _spin_axis():
+    if Machine.facing_dy != 0:
+        return "y"
+    end
+    if Machine.facing_dx != 0:
+        return "x"
+    end
     return "z"
-}
+end
 
-def status() {
+def status():
     return rpm != 0 ? "true" : "false"
-}
+end
 
-def on_break() {
+def on_break():
     Machine.set_rpm_output(0)
     Machine.report_su(0)
-}
+end
 
 # ---- tick ---------------------------------------------------------------
 
-if Machine.get_flag("assembled") <= 0 {
+if Machine.get_flag("assembled") <= 0:
     _stop()
     return
-}
+end
 
 contraption = Machine.contraption
 
-if contraption == null {
+if contraption == null:
     # The contraption is gone (broken, unloaded past recovery): forget it and stop.
     Machine.set_flag("assembled", 0)
     Machine.set_str_flag("contraption_uuid", "")
     _stop()
     return
-}
+end
 
 sails = _sail_count(contraption)
 
-if sails < MIN_SAILS {
+if sails < MIN_SAILS:
     # Create refuses to spin a windmill that does not have enough sail area.
     contraption.set_spin(_spin_axis(), 0)
     _stop()
     return
-}
+end
 
 # Direction: +1 clockwise, -1 counter-clockwise. Create exposes this as a scroll option;
 # here it is a flag the interact script toggles.
 dir = Machine.get_flag("windmill_dir")
-if dir == 0 { dir = 1 }
+if dir == 0:
+    dir = 1
+end
 
 speed = clamp(floor(sails / SAILS_PER_RPM), 1, MAX_RPM)
 rpm_out = speed * dir
@@ -90,3 +100,6 @@ Machine.set_rpm_output(rpm_out)
 
 su = speed * CAPACITY_PER_RPM
 Machine.report_su(-su)   # negative = generates capacity for the network
+
+
+

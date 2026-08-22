@@ -111,6 +111,10 @@ public final class ContraptionManagerType {
                 } catch (Throwable e) { return ScriptValue.NULL; }
             })
             // --- Removal ---
+            // kill(id) — hard force-remove: despawns displays, drops the manager/physics entries,
+            // disposes the contraption level. Does NOT put its blocks back anywhere — for a
+            // structure you genuinely want gone (an exploit cleanup, an admin command), not the
+            // normal "player disassembles their machine" case, which wants disassemble() below.
             .method("kill", (obj, args) -> {
                 if (args.isEmpty()) return ScriptValue.of(false);
                 try {
@@ -126,7 +130,35 @@ public final class ContraptionManagerType {
                 } catch (Throwable ignored) {}
                 return ScriptValue.of(false);
             })
-            .method("kill_all", (obj, args) -> ScriptValue.of(ContraptionKill.killAll()));
+            .method("kill_all", (obj, args) -> ScriptValue.of(ContraptionKill.killAll()))
+            // disassemble(id) — the REAL "return this structure to the world" operation Create-style
+            // bearings use (same primitive the hammer-disassemble listener calls): restores every
+            // block (rotation-snapped to the nearest quarter turn), glue edges, and furniture back
+            // into the real world at their resting positions, THEN despawns/disposes the
+            // contraption. `kill()` alone (what windmill_interact.pf used to call) only does the
+            // despawn/dispose half — the blocks were never coming back, which is why disassembling
+            // looked like nothing happened.
+            .method("disassemble", (obj, args) -> {
+                if (args.isEmpty()) return ScriptValue.of(false);
+                try {
+                    ScriptValue cv = args.get(0);
+                    ContraptionEntity entity = null;
+                    ServerLevel level = null;
+                    if (cv instanceof ScriptValue.Obj co && co.instance() instanceof dev.arubik.craftengine.contraption.core.ContraptionLevel cl) {
+                        entity = ContraptionWorlds.entityOf(cl).orElse(null);
+                        if (entity != null && cl.realLevel() instanceof ServerLevel rl) level = rl;
+                    } else if (cv instanceof ScriptValue.Str s) {
+                        UUID id = UUID.fromString(s.value());
+                        entity = ContraptionManager.get(id);
+                        if (entity != null && entity.state().level() != null
+                                && entity.state().level().realLevel() instanceof ServerLevel rl) level = rl;
+                    }
+                    if (entity == null || level == null) return ScriptValue.of(false);
+                    ContraptionAssembler.disassemble(level.getWorld(), entity);
+                    return ScriptValue.of(true);
+                } catch (Throwable ignored) {}
+                return ScriptValue.of(false);
+            });
     }
 
     public static ScriptValue wrap() {

@@ -3,10 +3,13 @@
 
 block = Machine.facing_block
 
-if !block.is_air {
-    if block.has_property("facing") {
+if !block.is_air:
+    if block.has_property("facing"):
         block.cycle_prop("facing")
-    } else if block.has_property("horizontal_facing") {
+    else if block.has_property("horizontal_facing"):
         block.cycle_prop("horizontal_facing")
-    }
-}
+    end
+end
+
+
+

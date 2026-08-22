@@ -4,31 +4,42 @@
 # Set scan_range via Machine.set_flag("scan_range", N). Item filter from the input slot (optional).
 
 scan_range = Machine.get_flag("scan_range")
-if scan_range <= 0 { scan_range = 8 }
+if scan_range <= 0:
+    scan_range = 8
+end
 
 # Compare against the BLOCK the filter item places, not the item id: a CraftEngine item like
 # cml:crate_acacia is backed by a plain vanilla material, so item.id never matched a block id.
 # item.block_id reads the item's block_item behavior and falls back to its own id.
 filter_id = null
 filter_item = Machine.get_item_in_slot(4)   # block_sensor.json declares slots.input = [4]
-if !is_empty(filter_item) { filter_id = filter_item.block_id }
+if !is_empty(filter_item):
+    filter_id = filter_item.block_id
+end
 
 matched = 0
-for i in range(scan_range) {
+for i in range(scan_range):
     n = i + 1
     # Scan direction is the INVERSE of facing_dx/dy/dz: the sensor's model faces the viewer,
     # so its CE `facing` property points back at the player, not at what it is meant to detect.
     b = Machine.block_at(-Machine.facing_dx * n, -Machine.facing_dy * n, -Machine.facing_dz * n)
-    if !b.is_air {
-        if filter_id != null {
-            if b.id == filter_id { matched = matched + 1 }
-        } else {
+    if !b.is_air:
+        if filter_id != null:
+            if b.id == filter_id:
+                matched = matched + 1
+            end
+        else:
             matched = matched + 1
-        }
-    }
-}
+        end
+    end
+end
 
 # Any detection must read as powered, so clamp the low end to 1 instead of flooring to 0.
 power = 0
-if matched > 0 { power = clamp(floor(matched / scan_range * 15), 1, 15) }
+if matched > 0:
+    power = clamp(floor(matched / scan_range * 15), 1, 15)
+end
 Machine.redstone.set(power)
+
+
+

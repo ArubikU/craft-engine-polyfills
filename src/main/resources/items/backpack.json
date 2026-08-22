@@ -1,0 +1,45 @@
+{
+  "id": "polyfills:backpack",
+  "title": "Backpack",
+  "open_on_right_click": true,
+  "open_on_shift_right_click": false,
+  "place_block": {
+    "block": "polyfills:storage_block",
+    "fill_storage": true,
+    "fill_flags": true,
+    "fill_typed": true
+  },
+  "pages": [
+    {
+      "title": "<gold>Backpack <gray>(1/2)",
+      "size": 27,
+      "slots": {
+        "storage": [0,1,2,3,4,5,6,7,8, 9,10,11,12,13,14,15,16,17],
+        "storage_filter": {
+          "deny": ["polyfills:backpack", "polyfills:jetpack"],
+          "script": "backpack.pf:can_store"
+        }
+      },
+      "buttons": [
+        { "slot": 26, "icon": "internal:next_page_0", "action": "next_page", "name": "<yellow>Next Page ->" }
+      ]
+    },
+    {
+      "title": "<gold>Backpack <gray>(2/2)",
+      "size": 27,
+      "slots": {
+        "storage": [0,1,2,3,4,5,6,7,8, 9,10,11,12,13,14,15,16,17],
+        "storage_filter": {
+          "deny": ["polyfills:backpack", "polyfills:jetpack"],
+          "script": "backpack.pf:can_store"
+        }
+      },
+      "buttons": [
+        { "slot": 18, "icon": "cml:prev_icon", "action": "prev_page", "name": "<yellow><- Previous Page" }
+      ]
+    }
+  ],
+  "scripts": {
+    "on_place_block": "backpack.pf:on_place_block"
+  }
+}

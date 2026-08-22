@@ -37,6 +37,10 @@ public class BlockBehaviors {
         public static final Key POLYFILL_ENERGY_CABLE_BLOCK = Key.of("polyfills:energy_cable_block");
         public static final Key POLYFILL_ITEM_PIPE_BLOCK = Key.of("polyfills:item_pipe_block");
 
+        /** Generalized "place one block, the rest auto-places" multi-cell behavior — see
+         * {@code dev.arubik.craftengine.multiblock.MultiCellBlockBehavior}. Additive: does not
+         * replace {@code polyfills:workbench}'s fixed 2-cell {@code HorizontalDoubleBlockBehavior}. */
+
         public static final Key POLYFILL_SHULKER_BOX_HITBOX = Key.of("polyfills:shulker_box_hitbox");
 
         public static final Key POLYFILL_CHAINERY_BLOCK = Key.of("polyfills:chainery_block");
@@ -98,19 +102,25 @@ public class BlockBehaviors {
                                 dev.arubik.craftengine.gas.behavior.CreativeGasTankBehavior.FACTORY_KEY,
                                 dev.arubik.craftengine.gas.behavior.CreativeGasTankBehavior.FACTORY);
 
-                // CraftEnergy (Forge-Energy-alike) — cable network + demo source/battery blocks.
+                // CraftEnergy (Forge-Energy-alike) — cable network. The battery/storage endpoint is
+                // a machine (polyfills:energy_cell, machines/energy_cell.json), not a bespoke Java
+                // behavior — MachineBlockBehavior already implements EnergyCarrier, so a plain
+                // polyfills:data_machine block IS a valid network node with zero extra Java.
                 RegistryUtils.registerBlockBehavior(POLYFILL_ENERGY_CABLE_BLOCK,
                                 dev.arubik.craftengine.energy.behavior.EnergyCableBehavior.FACTORY);
-                RegistryUtils.registerBlockBehavior(
-                                dev.arubik.craftengine.energy.behavior.CreativeEnergyCellBehavior.FACTORY_KEY,
-                                dev.arubik.craftengine.energy.behavior.CreativeEnergyCellBehavior.FACTORY);
-                RegistryUtils.registerBlockBehavior(
-                                dev.arubik.craftengine.energy.behavior.EnergyCellBehavior.FACTORY_KEY,
-                                dev.arubik.craftengine.energy.behavior.EnergyCellBehavior.FACTORY);
 
                 // Item pipe (v1 — plain conduit, no per-side filter UI yet; see pipe.item.ItemPipeBehavior).
-                //RegistryUtils.registerBlockBehavior(POLYFILL_ITEM_PIPE_BLOCK,
-                //                dev.arubik.craftengine.pipe.item.ItemPipeBehavior.FACTORY);
+                RegistryUtils.registerBlockBehavior(POLYFILL_ITEM_PIPE_BLOCK,
+                                dev.arubik.craftengine.pipe.item.ItemPipeBehavior.FACTORY);
+
+                // Auto-placing multi-cell structures (arbitrary shape, e.g. the 4-tall energy windmill):
+                // a SEPARATE behavior from polyfills:data_machine (not folded into the class every
+                // ordinary single-block machine already uses) so that shared class can't regress from
+                // this. The shape is declared as "cells" on the BLOCK's own config (see
+                // MultiCellGeometry#parseCells + CelledDataMachineBehavior), never the machine JSON.
+                RegistryUtils.registerBlockBehavior(
+                                dev.arubik.craftengine.machine.block.behavior.CelledDataMachineBehavior.FACTORY_KEY,
+                                dev.arubik.craftengine.machine.block.behavior.CelledDataMachineBehavior.FACTORY);
 
                 // Chainery — endpoint block for a rendered chain span (see chainery.ChaineryBlockBehavior)
                 RegistryUtils.registerBlockBehavior(POLYFILL_CHAINERY_BLOCK,

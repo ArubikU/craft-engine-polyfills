@@ -2,26 +2,29 @@
 # Uses block.has_property("age") and block.property("age") — works for vanilla AND CE custom crops.
 
 CROP_MAX_AGE = make_map(
-    "minecraft:wheat",        7,
-    "minecraft:carrots",      7,
-    "minecraft:potatoes",     7,
-    "minecraft:beetroots",    3,
-    "minecraft:nether_wart",  3,
-    "minecraft:cocoa",        2
+"minecraft:wheat",        7,
+"minecraft:carrots",      7,
+"minecraft:potatoes",     7,
+"minecraft:beetroots",    3,
+"minecraft:nether_wart",  3,
+"minecraft:cocoa",        2
 )
 
 blocks = Machine.blocks_in_range(3)
 
-for block in blocks {
-    if block.has_property("age") {
+for block in blocks:
+    if block.has_property("age"):
         max_age = CROP_MAX_AGE.switch(block.id, -1)
-        if max_age >= 0 {
-            if block.property("age") >= max_age {
+        if max_age >= 0:
+            if block.property("age") >= max_age:
                 drops = Machine.break_block(block)
-                for drop in drops {
+                for drop in drops:
                     Machine.push_item_to_inventory(drop)
-                }
-            }
-        }
-    }
-}
+                end
+            end
+        end
+    end
+end
+
+
+

@@ -179,49 +179,48 @@ public final class MachineMenuConfig {
         }
     }
 
-    public static enum LockedWhen {
-        NEVER,
-        NO_OVERCLOCK;
+    /**
+     * NOTE: this used to be a bare {@code enum} with a mutable {@code expr} field — for a CUSTOM
+     * expression, {@code parse} always returned the SAME {@code NO_OVERCLOCK} singleton with its
+     * {@code expr} field overwritten, so every button (and every machine, JVM-wide — enum
+     * constants are process-global singletons) using a custom {@code locked_when} expression
+     * shared and stomped on ONE field: only the last one parsed anywhere ever actually applied.
+     * Dormant until now because every existing machine only ever used the literal
+     * {@code "no_overclock"}. Now a proper per-instance value: {@link #NEVER}/{@link #NO_OVERCLOCK}
+     * stay fixed shared singletons (existing {@code == LockedWhen.NO_OVERCLOCK} reference checks
+     * elsewhere keep working unchanged), and a custom expression gets its OWN fresh instance.
+     */
+    public static final class LockedWhen {
+        public enum Kind { NEVER, NO_OVERCLOCK, CUSTOM }
 
-        public String expr;
+        public static final LockedWhen NEVER = new LockedWhen(Kind.NEVER, null);
+        public static final LockedWhen NO_OVERCLOCK = new LockedWhen(Kind.NO_OVERCLOCK, null);
+
+        public final Kind kind;
+        public final String expr;
+
+        private LockedWhen(Kind kind, String expr) {
+            this.kind = kind;
+            this.expr = expr;
+        }
 
         public static LockedWhen parse(String s) {
-            if (s == null) {
-                return NEVER;
-            }
-            if ("no_overclock".equalsIgnoreCase(s.trim())) {
-                return NO_OVERCLOCK;
-            }
-            if ("never".equalsIgnoreCase(s.trim())) {
-                return NEVER;
-            }
-            LockedWhen lw = NEVER;
-            lw.expr = null;
-            LockedWhen custom = NEVER;
-            try {
-                ScriptFormula.compile(s.trim());
-            }
-            catch (Throwable throwable) {
-                // empty catch block
-            }
-            LockedWhen result = NO_OVERCLOCK;
-            result.expr = s.trim();
-            return result;
+            if (s == null) return NEVER;
+            String t = s.trim();
+            if (t.isEmpty() || t.equalsIgnoreCase("never")) return NEVER;
+            if (t.equalsIgnoreCase("no_overclock")) return NO_OVERCLOCK;
+            return new LockedWhen(Kind.CUSTOM, t);
         }
 
         public boolean isLocked(ScriptContext ctx, double curOverclockLimit) {
-            if (this == NEVER) {
-                return false;
-            }
-            if (this.expr != null) {
-                try {
-                    return ScriptFormula.compile(this.expr).evaluateBool(ctx);
+            return switch (kind) {
+                case NEVER -> false;
+                case NO_OVERCLOCK -> curOverclockLimit <= 0.0;
+                case CUSTOM -> {
+                    try { yield ScriptFormula.compile(expr).evaluateBool(ctx); }
+                    catch (Throwable ignored) { yield false; }
                 }
-                catch (Throwable ignored) {
-                    return false;
-                }
-            }
-            return curOverclockLimit <= 0.0;
+            };
         }
     }
 
@@ -255,26 +254,7 @@ public final class MachineMenuConfig {
          * preserving TranslatableComponent (i18n) and other MiniMessage tags.
          */
         public String evaluateNameRaw(ScriptContext ctx) {
-            if (name == null) return null;
-            if (!name.contains("${")) return name; // no substitution needed
-            // Same ${expr} substitution as evaluateInline but WITHOUT the MiniMessage→legacy step
-            StringBuilder sb = new StringBuilder();
-            int i = 0;
-            while (i < name.length()) {
-                int start = name.indexOf("${", i);
-                if (start < 0) { sb.append(name, i, name.length()); break; }
-                sb.append(name, i, start);
-                int end = name.indexOf('}', start + 2);
-                if (end < 0) { sb.append(name, start, name.length()); break; }
-                String expr = name.substring(start + 2, end);
-                if (ctx != null) {
-                    try {
-                        sb.append(ScriptFormula.compile(expr).evaluate(ctx).asStr());
-                    } catch (Throwable ignored) { sb.append('?'); }
-                } else { sb.append('?'); }
-                i = end + 1;
-            }
-            return sb.toString();
+            return dev.arubik.craftengine.script.TextTemplate.evaluateRaw(name, ctx);
         }
 
         /**
@@ -283,65 +263,7 @@ public final class MachineMenuConfig {
          * Script functions (.pf:) return their strings as-is (they already use MiniMessage format).
          */
         public List<String> evaluateLoreRaw(ScriptContext ctx) {
-            if (lore == null || lore.isEmpty()) return lore;
-            List<String> result = new ArrayList<>();
-            for (String line : lore) {
-                if (line != null && line.contains(".pf:") && ctx != null) {
-                    try {
-                        String raw = line.trim();
-                        int colon = raw.indexOf(':');
-                        String scriptFile = raw.substring(0, colon);
-                        String funcName = raw.substring(colon + 1);
-                        String lookupKey = scriptFile.endsWith(".pf") ? scriptFile.substring(0, scriptFile.length() - 3) : scriptFile;
-                        dev.arubik.craftengine.script.ScriptProgram prog = dev.arubik.craftengine.script.ScriptRegistry.get(lookupKey);
-                        if (prog != null) {
-                            dev.arubik.craftengine.script.ScriptContext withDefs = prog.evaluate(ctx);
-                            dev.arubik.craftengine.script.ScriptValue fnVal = withDefs.getVar(funcName);
-                            if (fnVal instanceof dev.arubik.craftengine.script.ScriptValue.Obj fnObj
-                                    && fnObj.typeName().equals(dev.arubik.craftengine.script.UserFunction.TYPE)) {
-                                dev.arubik.craftengine.script.UserFunction fn = (dev.arubik.craftengine.script.UserFunction) fnObj.instance();
-                                dev.arubik.craftengine.script.ScriptContext.Builder rb = dev.arubik.craftengine.script.ScriptContext.builder().copyFrom(withDefs);
-                                fn.executor().accept(withDefs, rb);
-                                dev.arubik.craftengine.script.ScriptValue retVal = rb.build().getVar("__return__");
-                                if (retVal instanceof dev.arubik.craftengine.script.ScriptValue.Array arr) {
-                                    for (dev.arubik.craftengine.script.ScriptValue elem : arr.elements())
-                                        result.add(elem.asStr()); // raw string, no conversion
-                                    continue;
-                                }
-                                result.add(retVal.asStr());
-                                continue;
-                            }
-                        }
-                    } catch (Throwable ignored) {}
-                }
-                // ${expr} substitution only — NO MiniMessage→legacy conversion
-                if (line != null && line.contains("${")) {
-                    result.add(evaluateNameRaw(ctx) != null ? evaluateFieldRaw(line, ctx) : line);
-                } else {
-                    result.add(line);
-                }
-            }
-            return result;
-        }
-
-        private static String evaluateFieldRaw(String template, ScriptContext ctx) {
-            if (template == null || !template.contains("${")) return template;
-            StringBuilder sb = new StringBuilder();
-            int i = 0;
-            while (i < template.length()) {
-                int start = template.indexOf("${", i);
-                if (start < 0) { sb.append(template, i, template.length()); break; }
-                sb.append(template, i, start);
-                int end = template.indexOf('}', start + 2);
-                if (end < 0) { sb.append(template, start, template.length()); break; }
-                String expr = template.substring(start + 2, end);
-                if (ctx != null) {
-                    try { sb.append(ScriptFormula.compile(expr).evaluate(ctx).asStr()); }
-                    catch (Throwable ignored) { sb.append('?'); }
-                } else { sb.append('?'); }
-                i = end + 1;
-            }
-            return sb.toString();
+            return dev.arubik.craftengine.script.TextTemplate.evaluateLoreRaw(lore, ctx);
         }
 
         /** Evaluate lore lines with ${expr} inline scripts + MiniMessage parsing.
@@ -388,6 +310,35 @@ public final class MachineMenuConfig {
         /** Public entry point for callers outside this class (e.g. buildPageLayout). */
         public static String evaluateInlineScriptStatic(String template, ScriptContext ctx) {
             return evaluateInline(template, ctx);
+        }
+
+        /**
+         * Same {@code ${expr}} substitution as {@link #evaluateInlineScriptStatic}, but WITHOUT
+         * the MiniMessage→legacy-ampersand step — for callers that immediately re-parse the result
+         * with {@code MiniMessage.deserialize(...)} themselves (running it through legacy first
+         * would hand MiniMessage a string like "&eFoo", which isn't MiniMessage syntax and comes
+         * out as literal "&e" instead of a color, and drops anything legacy can't represent —
+         * translatable components, hover events, etc).
+         */
+        public static String evaluateInlineRawStatic(String template, ScriptContext ctx) {
+            if (template == null) return null;
+            if (!template.contains("${")) return template;
+            StringBuilder sb = new StringBuilder();
+            int i = 0;
+            while (i < template.length()) {
+                int start = template.indexOf("${", i);
+                if (start < 0) { sb.append(template, i, template.length()); break; }
+                sb.append(template, i, start);
+                int end = template.indexOf('}', start + 2);
+                if (end < 0) { sb.append(template, start, template.length()); break; }
+                String expr = template.substring(start + 2, end);
+                if (ctx != null) {
+                    try { sb.append(ScriptFormula.compile(expr).evaluate(ctx).asStr()); }
+                    catch (Throwable ignored) { sb.append('?'); }
+                } else { sb.append('?'); }
+                i = end + 1;
+            }
+            return sb.toString();
         }
 
         private static String evaluateInline(String template, ScriptContext ctx) {

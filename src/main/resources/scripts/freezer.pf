@@ -1,22 +1,25 @@
 # Freezer — converts water blocks to ice, applies freeze effect to nearby entities.
 
 WATER_TO_ICE = make_map(
-    "minecraft:water", "minecraft:ice"
+"minecraft:water", "minecraft:ice"
 )
 
 # Convert water blocks in range to ice via World.set_block
 blocks = Machine.blocks_in_range(4)
-for block in blocks {
+for block in blocks:
     ice_id = WATER_TO_ICE.switch(block.id, null)
-    if ice_id != null {
+    if ice_id != null:
         block.world.set_block(block.pos.x, block.pos.y, block.pos.z, ice_id)
-    }
-}
+    end
+end
 
 # Freeze nearby living entities via entity.freeze()
 entities = Machine.nearby_entities(4)
-for entity in entities {
-    if entity.is_alive && instanceof(entity, "LivingEntity") {
+for entity in entities:
+    if entity.is_alive && instanceof(entity, "LivingEntity"):
         entity.freeze(120)
-    }
-}
+    end
+end
+
+
+

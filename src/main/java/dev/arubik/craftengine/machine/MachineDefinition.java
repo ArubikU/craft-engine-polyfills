@@ -61,6 +61,10 @@ public final class MachineDefinition {
     private String statusScript = null;
     private String onPlaceScript = null;
     private String onBreakScript = null;
+    /** Fires when a player physically triggers a vanilla pressure plate / lever / button adjacent
+     * to this machine — the exact player is available (Bukkit gives it directly, unlike a command
+     * block's @p nearest-player guess), bound the same way on_interact binds Player. */
+    private String redstoneActuatorScript = null;
     private String onStateChangeScript = null;
     private List<PageDef> pages = List.of();
     /** CraftEnergy buffer (Forge-Energy-alike). Empty by default — no energy field on a machine
@@ -72,6 +76,13 @@ public final class MachineDefinition {
 
     public EnergySpec energy() { return energy; }
     public void setEnergy(EnergySpec e) { this.energy = e == null ? EnergySpec.none() : e; }
+
+    // NOTE: auto-placing multi-cell structure ("cells") is deliberately NOT a MachineDefinition
+    // concept — it's a property of the BLOCK BEHAVIOR (parsed from the block's own YAML `behavior:`
+    // args, see DataMachineBehavior.Factory and MultiCellGeometry#parseCells), so a non-machine
+    // block behavior can use the exact same auto-placement without any MachineDefinition involved.
+    // A machine that happens to sit on a multi-cell block finds out via Machine.is_multi_cell /
+    // Machine.cell_count (see MachineType), not by reading anything on this class.
 
     public MachineDefinition(Key id, String recipeType, String title, int menuSize, int[] inputSlots, int[] outputSlots, int[] fuelSlots, UpgradeSpec upgrades, int infoSlot, List<TankSpec> fluidTanks, List<TankSpec> gasTanks, boolean fuelRequired, IOConfiguration io, List<ButtonSpec> buttons, PowerSpec power, List<BarRef> bars, InfoSpec info, PagingSpec paging, Map<String, VariableSpec> variables, List<RendererSpec> renderers, Map<Key, List<MachineAttributes.Mod>> upgradeDefs, String actionScript, int actionInterval) {
         this.id = id;
@@ -388,6 +399,8 @@ public final class MachineDefinition {
     public void setOnPlaceScript(String s) { this.onPlaceScript = s; }
     public String onBreakScript() { return this.onBreakScript; }
     public void setOnBreakScript(String s) { this.onBreakScript = s; }
+    public String redstoneActuatorScript() { return this.redstoneActuatorScript; }
+    public void setRedstoneActuatorScript(String s) { this.redstoneActuatorScript = s; }
     public String onStateChangeScript() { return this.onStateChangeScript; }
     public void setOnStateChangeScript(String s) { this.onStateChangeScript = s; }
 
@@ -459,13 +472,13 @@ public final class MachineDefinition {
 
     /**
      * A machine's CraftEnergy buffer. Push is effectively infinite but limited by network
-     * capacity: {@code generationPerTick} energy is added to this buffer every processing tick,
+     * capacity: {@code perTick} energy is added to this buffer every processing tick,
      * capped at {@code capacity} — whatever the buffer can't hold that tick is simply lost, same as
      * a real Forge-Energy generator overflowing a too-small internal buffer. What the network can
      * then actually move onward is separately capped by the cable tier's own capacity/conductance
      * (see {@code fluid.graph.EnergyEngine}), so a big generator behind small cables still bottlenecks.
      */
-    public record EnergySpec(int capacity, int maxInput, int maxOutput, int generationPerTick) {
+    public record EnergySpec(int capacity, int maxInput, int maxOutput, int perTick) {
         public static EnergySpec none() {
             return new EnergySpec(0, 0, 0, 0);
         }
@@ -498,14 +511,70 @@ public final class MachineDefinition {
         String specialType,
         String guiImage,                        // optional: CraftEngine image id for background title overlay
         int guiImageShift,                      // pixel shift for the image (default -8)
-        Map<String, ItemSpec> specialItems      // generic special-page item overrides (locked, filler, increase, decrease, ...)
+        Map<String, ItemSpec> specialItems,     // generic special-page item overrides (locked, filler, increase, decrease, ...)
+        List<GhostSlotSpec> ghostSlots,         // script-backed identity-marker slots (item filters, ...) — see MenuSlotType#GHOST
+        int[] storageSlots,                     // free, unrestricted slots — see MenuSlotType#STORAGE
+        StorageFilterSpec storageFilter,        // what a STORAGE slot on this page will accept
+        // "buttons": "file.pf:func" / "layout": "file.pf:func" — instead of a static array, calls
+        // this zero-arg function fresh EVERY menu open (see DataMachineBlockEntity#buildPageLayout)
+        // with Machine bound, expecting an Array of Map (make_map(...)) button/layout descriptors —
+        // for content whose SLOT COUNT itself varies (e.g. specialized_teleporter's destination
+        // list), not just per-slot content, which the static array + a "locked_when" condition per
+        // slot already covers without this. Null means "use the static buttons()/layout() list" —
+        // the two are not mutually exclusive elsewhere but SHOULD be additive, so both still run.
+        String buttonsGenerator,
+        String layoutGenerator
     ) {
         // Compact constructors for backwards compat
         public PageDef(String title, String sizeOrType, List<StaticSlot> layout, int[] inputSlots, int[] outputSlots, int[] fuelSlots, List<ButtonSpec> buttons, List<BarRef> bars, int infoSlot, String specialType) {
-            this(title, sizeOrType, layout, inputSlots, outputSlots, fuelSlots, buttons, bars, infoSlot, specialType, null, -8, Map.of());
+            this(title, sizeOrType, layout, inputSlots, outputSlots, fuelSlots, buttons, bars, infoSlot, specialType, null, -8, Map.of(), List.of(), new int[0], StorageFilterSpec.none());
         }
         public PageDef(String title, String sizeOrType, List<StaticSlot> layout, int[] inputSlots, int[] outputSlots, int[] fuelSlots, List<ButtonSpec> buttons, List<BarRef> bars, int infoSlot, String specialType, String guiImage, int guiImageShift) {
-            this(title, sizeOrType, layout, inputSlots, outputSlots, fuelSlots, buttons, bars, infoSlot, specialType, guiImage, guiImageShift, Map.of());
+            this(title, sizeOrType, layout, inputSlots, outputSlots, fuelSlots, buttons, bars, infoSlot, specialType, guiImage, guiImageShift, Map.of(), List.of(), new int[0], StorageFilterSpec.none());
+        }
+        public PageDef(String title, String sizeOrType, List<StaticSlot> layout, int[] inputSlots, int[] outputSlots, int[] fuelSlots, List<ButtonSpec> buttons, List<BarRef> bars, int infoSlot, String specialType, String guiImage, int guiImageShift, Map<String, ItemSpec> specialItems) {
+            this(title, sizeOrType, layout, inputSlots, outputSlots, fuelSlots, buttons, bars, infoSlot, specialType, guiImage, guiImageShift, specialItems, List.of(), new int[0], StorageFilterSpec.none());
+        }
+        public PageDef(String title, String sizeOrType, List<StaticSlot> layout, int[] inputSlots, int[] outputSlots, int[] fuelSlots, List<ButtonSpec> buttons, List<BarRef> bars, int infoSlot, String specialType, String guiImage, int guiImageShift, Map<String, ItemSpec> specialItems, List<GhostSlotSpec> ghostSlots) {
+            this(title, sizeOrType, layout, inputSlots, outputSlots, fuelSlots, buttons, bars, infoSlot, specialType, guiImage, guiImageShift, specialItems, ghostSlots, new int[0], StorageFilterSpec.none());
+        }
+        public PageDef(String title, String sizeOrType, List<StaticSlot> layout, int[] inputSlots, int[] outputSlots, int[] fuelSlots, List<ButtonSpec> buttons, List<BarRef> bars, int infoSlot, String specialType, String guiImage, int guiImageShift, Map<String, ItemSpec> specialItems, List<GhostSlotSpec> ghostSlots, int[] storageSlots) {
+            this(title, sizeOrType, layout, inputSlots, outputSlots, fuelSlots, buttons, bars, infoSlot, specialType, guiImage, guiImageShift, specialItems, ghostSlots, storageSlots, StorageFilterSpec.none());
+        }
+        public PageDef(String title, String sizeOrType, List<StaticSlot> layout, int[] inputSlots, int[] outputSlots, int[] fuelSlots, List<ButtonSpec> buttons, List<BarRef> bars, int infoSlot, String specialType, String guiImage, int guiImageShift, Map<String, ItemSpec> specialItems, List<GhostSlotSpec> ghostSlots, int[] storageSlots, StorageFilterSpec storageFilter) {
+            this(title, sizeOrType, layout, inputSlots, outputSlots, fuelSlots, buttons, bars, infoSlot, specialType, guiImage, guiImageShift, specialItems, ghostSlots, storageSlots, storageFilter, null, null);
+        }
+
+        /**
+         * What a {@link MenuSlotType#STORAGE} slot on this page will accept. Both an id list and a
+         * script may be given at once — the id lists are checked first (fast path, no script
+         * engine involved), then the script (if any) gets the final say. Everything empty/null
+         * (the default) means "accept anything," same as a plain chest.
+         *
+         * <p>{@code script} is a {@code "file.pf:function"} ref called with an {@code item} var
+         * bound to the candidate stack (see {@code dev.arubik.craftengine.machine.menu.layout.StorageFilters});
+         * its RETURN VALUE (not a mutated context var) is the verdict — {@code return false} denies.
+         */
+        public record StorageFilterSpec(List<String> allow, List<String> deny, String script, int maxAmount) {
+            public static StorageFilterSpec none() { return new StorageFilterSpec(List.of(), List.of(), null, 0); }
+            /** Whether identity-filtering (allow/deny/script) is configured at all — {@link #maxAmount}
+             *  is a separate, independent concern and does NOT affect this. */
+            public boolean isEmpty() { return allow.isEmpty() && deny.isEmpty() && (script == null || script.isBlank()); }
+            /** {@code maxAmount <= 0} means "use the item's own max stack size" (a plain chest slot). */
+            public boolean hasMaxAmount() { return maxAmount > 0; }
+        }
+
+        /**
+         * One group of {@link MenuSlotType#GHOST} slots sharing a get/set script pair — {@code get}
+         * is called per slot per render tick (bound var {@code slot}, must return the item id
+         * string to display, or "" for empty) and {@code set} is called on click (bound vars
+         * {@code slot} and {@code clicked_id} — the cursor item's id, or "" if the player clicked
+         * with an empty hand). Neither script call ever touches a real ItemStack: the slot's
+         * displayed item is purely a rendered stand-in, so there's nothing for a client disconnect
+         * mid-edit to leave in an exploitable state, and no separate "Save" step is required at all
+         * — every click already IS the save.
+         */
+        public record GhostSlotSpec(int[] slots, String getRef, String setRef, String emptyIcon) {
         }
         /** Look up a special item by name, returning null if not defined. */
         public ItemSpec specialItem(String name) {

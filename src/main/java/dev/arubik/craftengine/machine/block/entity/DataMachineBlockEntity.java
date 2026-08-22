@@ -639,7 +639,7 @@ dev.arubik.craftengine.rotation.KineticMember {
         }
         if (!definition.energy().isEmpty()) {
             this.configureEnergy(definition.energy().capacity(), definition.energy().maxInput(),
-                    definition.energy().maxOutput(), definition.energy().generationPerTick());
+                    definition.energy().maxOutput(), definition.energy().perTick());
         }
         if (!definition.renderers().isEmpty()) {
             this.rendererManager = new RendererManager(definition.renderers(), definition.variables());
@@ -781,6 +781,19 @@ dev.arubik.craftengine.rotation.KineticMember {
         this.bars = bars != null ? bars : List.of();
     }
 
+    /** How many secondary cells this machine's own multi-cell structure has (0 = ordinary single
+     * block) — set by {@code DataMachineBehavior} from the block's OWN "cells" config, never from
+     * this machine's JSON. Exposed to scripts via {@code Machine.is_multi_cell}/{@code cell_count}. */
+    private int cellCount = 0;
+
+    public void setCellCount(int cellCount) {
+        this.cellCount = Math.max(0, cellCount);
+    }
+
+    public int cellCount() {
+        return cellCount;
+    }
+
     public List<MachineBar> getBars() { return bars; }
 
     /** Public accessor for current processing recipe (null if not processing). */
@@ -825,6 +838,16 @@ dev.arubik.craftengine.rotation.KineticMember {
         }
         AbstractProcessingRecipe recipe = this.getMatchingRecipe(this.getNMSLevel());
         return recipe == null ? this.inputRpm > 0.0f : this.canProcess(this.getNMSLevel(), recipe);
+    }
+
+    // AbstractMachineBlockEntity#requiresFuel() defaults to true (a plain furnace-style machine
+    // burns something). A machine whose JSON declares "flags": {"fuel": false} — the windmill,
+    // solar panel — has no fuel slot and burnTime never leaves 0, so applyEnergyPerTick's
+    // requiresFuel() gate (generating = burnTime > 0) would silently and permanently block energy
+    // generation for exactly those "always-on" generators, without this override.
+    @Override
+    protected boolean requiresFuel() {
+        return this.definition == null || this.definition.fuelRequired();
     }
 
     @Override
@@ -880,8 +903,9 @@ dev.arubik.craftengine.rotation.KineticMember {
                 this.reportStressLoad();
             }
             if (!level.isClientSide()) {
-                // status field: null/"auto" → isProcessing(); "{file}.pf:{func}" → script bool
-                boolean active = this.isProcessing();
+                // status field: null/"auto" → isProcessing() (or, for a recipe-less energy
+                // generator/drain, energyActiveDefault()); "{file}.pf:{func}" → script bool
+                boolean active = this.isProcessing() || this.energyActiveDefault();
                 String statusRef = this.definition != null ? this.definition.statusScript() : null;
                 if (statusRef != null && statusRef.contains(".pf:")) {
                     try {
@@ -905,8 +929,21 @@ dev.arubik.craftengine.rotation.KineticMember {
             }
             this.ticksAlive++;
             this.setChanged();
-            // Recipe-less machines with IO config still need gas/fluid pull
-            if (this.definition.ioPull() && this.ioConfiguration != null && !this.gasTanks.isEmpty()) {
+            // Recipe-less generators (the windmill/solar panel) never take the processTick() path
+            // above — without this, energyActiveDefault() would show them as "active" while the
+            // buffer silently never actually grew.
+            this.applyEnergyPerTick();
+            // Recipe-less machines still need gas/fluid/ENERGY pull — this used to only fire for
+            // machines with a gas tank (written back when gas was the only resource a recipe-less
+            // machine could receive this way), silently skipping it for every recipe-less energy
+            // machine (energy_cell, energy_generator, solar_panel, windmill, ...) even after
+            // AbstractMachineBlockEntity grew pullEnergyInto — the whole "solar panel stacked
+            // directly on an energy cell" fix was dead code without this. Also no longer requires
+            // this.ioConfiguration != null — pullFromInputFaces itself now falls back to the
+            // block's default IO config, so a machine that never had its side panel touched still
+            // pulls via whatever's open by default, exactly like every other IO reader already does.
+            if (this.definition.ioPull()
+                    && (!this.gasTanks.isEmpty() || !this.fluidTanks.isEmpty() || this.getEnergyCapacityForCarrier() > 0)) {
                 this.pullFromInputFaces(level);
             }
             // noProcessing machines still need status evaluation for blockstate updates
@@ -920,6 +957,11 @@ dev.arubik.craftengine.rotation.KineticMember {
                         this.maybeUpdateActivated(level, pos, state, active);
                     }
                 } catch (Throwable ignored) {}
+            } else {
+                // No script override: a recipe-less machine (a generator/passive-drain like the
+                // energy windmill) still needs SOME "auto" default — energyActiveDefault() is that
+                // default here, the same way isProcessing() is the default in the recipe branch above.
+                this.maybeUpdateActivated(level, pos, state, this.energyActiveDefault());
             }
         }
         if (this.rendererManager != null && this.definition.tickRenderers()) {
@@ -1018,9 +1060,42 @@ dev.arubik.craftengine.rotation.KineticMember {
 
     @Override
     public void onRemove() {
-        // Fire on_break hook before teardown
+        // Fire on_break hook before teardown, with a cancellable/adjustable BreakEvent pre-filled
+        // with this machine's own container contents as the DEFAULT drops — a script that declares
+        // on_break for an unrelated reason (a sound effect, a stat counter, ...) doesn't have to
+        // also re-specify drops just to keep today's behavior; only a script that actually calls
+        // event.set_drops(...) changes what lands on the ground, and event.cancel() suppresses
+        // dropping anything at all. Replaces the old unconditional dropAllContents call — see
+        // MachineBreakListener, which skips that call whenever on_break is declared, leaving this
+        // event-driven path as the single source of truth for what a broken machine drops.
         if (this.definition != null && this.definition.onBreakScript() != null) {
-            try { runScriptRef(this.definition.onBreakScript()); } catch (Throwable ignored) {}
+            try {
+                List<net.minecraft.world.item.ItemStack> defaultDrops = new java.util.ArrayList<>();
+                for (int i = 0; i < this.getContainerSize(); i++) {
+                    net.minecraft.world.item.ItemStack it = this.getItem(i);
+                    if (it != null && !it.isEmpty()) defaultDrops.add(it.copy());
+                }
+                dev.arubik.craftengine.script.event.BreakEvent breakEvent =
+                        new dev.arubik.craftengine.script.event.BreakEvent(defaultDrops);
+                ScriptContext base = this.buildScriptContext();
+                if (base != null) {
+                    dev.arubik.craftengine.script.ScriptCall call =
+                            dev.arubik.craftengine.script.ScriptCall.parse(this.definition.onBreakScript());
+                    if (call != null) {
+                        ScriptContext ctx = ScriptContext.builder().copyFrom(base).event(breakEvent).build();
+                        call.execute(ctx);
+                    }
+                }
+                if (!breakEvent.isCancelled() && this.lastKnownLevel != null) {
+                    net.minecraft.core.BlockPos pos = this.getMachinePos();
+                    for (net.minecraft.world.item.ItemStack drop : breakEvent.drops()) {
+                        if (drop == null || drop.isEmpty()) continue;
+                        net.minecraft.world.entity.item.ItemEntity spawned = new net.minecraft.world.entity.item.ItemEntity(
+                                this.lastKnownLevel, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, drop);
+                        this.lastKnownLevel.addFreshEntity(spawned);
+                    }
+                }
+            } catch (Throwable ignored) {}
         }
         if (this.activeAnimation != null && this.lastKnownLevel != null) {
             try { this.activeAnimation.clearEntities(this.lastKnownLevel); } catch (Throwable ignored) {}
@@ -1737,7 +1812,7 @@ dev.arubik.craftengine.rotation.KineticMember {
         List<dev.arubik.craftengine.machine.MachineDefinition.PageDef> pages = this.definition.pages();
         if (!pages.isEmpty()) {
             int idx = Math.max(0, Math.min(this.page, pages.size() - 1));
-            return this.buildPageLayout(pages.get(idx));
+            return this.buildPageLayout(pages.get(idx), idx);
         }
         // Legacy system (backwards compat)
         if (this.definition.upgrades().isInline()) {
@@ -1750,7 +1825,19 @@ dev.arubik.craftengine.rotation.KineticMember {
         };
     }
 
-    private MachineLayout buildPageLayout(dev.arubik.craftengine.machine.MachineDefinition.PageDef page) {
+    /** Cumulative {@link dev.arubik.craftengine.machine.MachineDefinition.PageDef#storageSlots()}
+     *  count across every page BEFORE {@code pageIndex} — the underlying machine {@link net.minecraft.world.Container}
+     *  is ONE physical inventory shared by every page (unlike an item's per-page NBT storage), so
+     *  without this offset two pages that both declare e.g. {@code "storage": [0..17]} would silently
+     *  alias the SAME 18 container slots instead of getting independent storage. */
+    private int storageBaseOffset(int pageIndex) {
+        // Shared with the item side (ItemStateData#buildFromContainer/writeToContainer) so a
+        // placeable-container item and the machine it becomes can never disagree about which
+        // container slots belong to which page.
+        return dev.arubik.craftengine.item.ItemStateData.pageStorageOffset(this.definition.pages(), pageIndex);
+    }
+
+    private MachineLayout buildPageLayout(dev.arubik.craftengine.machine.MachineDefinition.PageDef page, int pageIndex) {
         if ("upgrades".equals(page.specialType())) {
             Component upgTitle = page.title() != null ? buildTitleComponent(page.title(), page.guiImage(), page.guiImageShift()) : null;
             return buildUpgradeLayoutWithTitle(upgTitle, page.specialItems());
@@ -1764,7 +1851,7 @@ dev.arubik.craftengine.rotation.KineticMember {
         // Evaluate inline ${expr} in title
         try {
             dev.arubik.craftengine.script.ScriptContext ctx = this.buildScriptContext();
-            if (ctx != null) titleStr = dev.arubik.craftengine.machine.menu.MachineMenuConfig.Button.evaluateInlineScriptStatic(titleStr, ctx);
+            if (ctx != null) titleStr = dev.arubik.craftengine.machine.menu.MachineMenuConfig.Button.evaluateInlineRawStatic(titleStr, ctx);
         } catch (Throwable ignored) {}
 
         MachineLayout layout = new MachineLayout(invType, isChest ? size : -1, titleStr);
@@ -1777,6 +1864,116 @@ dev.arubik.craftengine.rotation.KineticMember {
 
         // Static layout items — fully script-driven name/lore/item. No hardcoded info slot.
         for (dev.arubik.craftengine.machine.MachineDefinition.PageDef.StaticSlot s : page.layout()) {
+            this.installStaticSlot(layout, s);
+        }
+        // "layout": "file.pf:func" — generated on the fly at menu-open time instead of (or
+        // alongside) the static array above; see PageDef#layoutGenerator.
+        if (page.layoutGenerator() != null) {
+            dev.arubik.craftengine.script.ScriptContext genCtx = this.buildScriptContext();
+            if (genCtx != null) {
+                for (dev.arubik.craftengine.machine.MachineDefinition.PageDef.StaticSlot s
+                        : dev.arubik.craftengine.machine.menu.GeneratedPageContent.layout(page.layoutGenerator(), genCtx)) {
+                    this.installStaticSlot(layout, s);
+                }
+            }
+        }
+
+        // Machine slots
+        for (int s : page.inputSlots())  layout.addSlot(s, dev.arubik.craftengine.machine.menu.layout.MenuSlotType.INPUT);
+        for (int s : page.outputSlots()) layout.addSlot(s, dev.arubik.craftengine.machine.menu.layout.MenuSlotType.OUTPUT);
+        for (int s : page.fuelSlots())   layout.addSlot(s, dev.arubik.craftengine.machine.menu.layout.MenuSlotType.FUEL);
+        int storageBase = storageBaseOffset(pageIndex);
+        int[] pageStorageSlots = page.storageSlots();
+        for (int i = 0; i < pageStorageSlots.length; i++) {
+            layout.addSlot(pageStorageSlots[i], dev.arubik.craftengine.machine.menu.layout.MenuSlotType.STORAGE, storageBase + i);
+        }
+        layout.setStorageFilter(page.storageFilter());
+
+        // Inline upgrades
+        if (this.definition.upgrades().isInline()) {
+            for (int s : this.definition.upgrades().slots())
+                layout.addSlot(s, dev.arubik.craftengine.machine.menu.layout.MenuSlotType.UPGRADE);
+        }
+
+        // Buttons from page
+        for (dev.arubik.craftengine.machine.MachineDefinition.ButtonSpec spec : page.buttons())
+            this.installButton(layout, DataMachineBlockEntity.toButton(spec));
+
+        // "buttons": "file.pf:func" — generated fresh every time the page is built, which is every
+        // menu OPEN (buildPageLayout runs once per open, not per tick — per-slot content still
+        // refreshes continuously afterward via each installed button's own icon lambda, same as any
+        // static button already does).
+        if (page.buttonsGenerator() != null) {
+            dev.arubik.craftengine.script.ScriptContext genCtx = this.buildScriptContext();
+            if (genCtx != null) {
+                for (dev.arubik.craftengine.machine.MachineDefinition.ButtonSpec spec
+                        : dev.arubik.craftengine.machine.menu.GeneratedPageContent.buttons(page.buttonsGenerator(), genCtx)) {
+                    this.installButton(layout, DataMachineBlockEntity.toButton(spec));
+                }
+            }
+        }
+
+        // Bars from page
+        if (!page.bars().isEmpty()) {
+            List<dev.arubik.craftengine.machine.menu.bar.MachineBar> resolved = new ArrayList<>();
+            for (dev.arubik.craftengine.machine.MachineDefinition.BarRef ref : page.bars()) {
+                dev.arubik.craftengine.machine.menu.bar.BarDefinition barDef = dev.arubik.craftengine.machine.menu.bar.BarDefinition.REGISTRY.get(ref.bar());
+                if (barDef != null) resolved.add(barDef.toBar(ref.slots()));
+            }
+            dev.arubik.craftengine.machine.menu.bar.MachineBars.install(layout, resolved);
+        }
+
+        // Ghost slots from page — script-backed identity markers (item filters, ...). Every click
+        // immediately calls the spec's `set` script (no separate Save step, no real ItemStack ever
+        // moves — see MenuSlotType#GHOST / MachineDefinition.PageDef.GhostSlotSpec).
+        for (dev.arubik.craftengine.machine.MachineDefinition.PageDef.GhostSlotSpec spec : page.ghostSlots()) {
+            for (int slot : spec.slots()) {
+                final int ghostSlot = slot;
+                layout.addGhostSlot(ghostSlot,
+                    (machine, tick) -> {
+                        dev.arubik.craftengine.script.ScriptContext ctx = machine instanceof DataMachineBlockEntity dm3
+                            ? dm3.buildScriptContext() : null;
+                        if (ctx == null) return org.bukkit.inventory.ItemStack.empty();
+                        dev.arubik.craftengine.script.ScriptContext slotCtx = dev.arubik.craftengine.script.ScriptContext
+                            .builder().copyFrom(ctx).val("slot", dev.arubik.craftengine.script.ScriptValue.of(ghostSlot)).build();
+                        // evalPfFuncItem accepts EITHER a full Item return (exact display — every
+                        // enchant/component intact, see Machine.get_item_flag) OR a plain Str id
+                        // (a generic representative icon) — the `get` script picks its own fidelity.
+                        org.bukkit.inventory.ItemStack resolved = evalPfFuncItem(spec.getRef(), slotCtx);
+                        return resolved != null ? resolved
+                            : MenuText.iconItem(parseKey(spec.emptyIcon()), Material.AIR, Component.empty(), new Component[0]);
+                    },
+                    (machine, player, cursor, click) -> {
+                        if (!(machine instanceof DataMachineBlockEntity dm4)) return;
+                        dev.arubik.craftengine.script.ScriptContext base = dm4.buildScriptContext();
+                        if (base == null) return;
+                        boolean cursorEmpty = cursor == null || cursor.getType().isAir();
+                        String clickTypeName = click != null ? click.name().toLowerCase(java.util.Locale.ROOT) : "left";
+                        String clickedIdStr = cursorEmpty ? "" : itemStackId(cursor);
+                        // Both a plain id string AND the FULL clicked item (every component intact)
+                        // are bound — a `set` script that only needs "which item type" can use
+                        // clicked_id; one that needs to preserve enchantments/custom data (via
+                        // Machine.set_item_flag) uses clicked_item instead. Never touches/consumes
+                        // the actual cursor stack either way — see MenuSlotType#GHOST.
+                        dev.arubik.craftengine.script.ScriptContext.Builder setBuilder = dev.arubik.craftengine.script.ScriptContext
+                            .builder().copyFrom(base)
+                            .val("slot", dev.arubik.craftengine.script.ScriptValue.of(ghostSlot))
+                            .str("clicked_id", clickedIdStr)
+                            .str("click_type", clickTypeName)
+                            .event(new dev.arubik.craftengine.script.event.GhostSlotEvent(ghostSlot, clickedIdStr, clickTypeName));
+                        setBuilder.val("clicked_item", cursorEmpty ? dev.arubik.craftengine.script.ScriptValue.NULL
+                            : dev.arubik.craftengine.script.ScriptValue.ofItem(
+                                org.bukkit.craftbukkit.inventory.CraftItemStack.asNMSCopy(cursor)));
+                        evalPfFuncStr(spec.setRef(), setBuilder.build());
+                    });
+            }
+        }
+
+        // Info slot removed — define recipe info via layout slot + inline scripts or {file}.pf:{func} lore
+        return layout;
+    }
+
+    private void installStaticSlot(MachineLayout layout, dev.arubik.craftengine.machine.MachineDefinition.PageDef.StaticSlot s) {
             final int slot = s.slot();
             final String itemKey = s.item();
             final String name = s.name();
@@ -1789,7 +1986,7 @@ dev.arubik.craftengine.rotation.KineticMember {
                 String evalName = name;
                 if (ctx != null && name != null) {
                     evalName = name.contains(".pf:") ? evalPfFuncStr(name, ctx)
-                        : dev.arubik.craftengine.machine.menu.MachineMenuConfig.Button.evaluateInlineScriptStatic(name, ctx);
+                        : dev.arubik.craftengine.machine.menu.MachineMenuConfig.Button.evaluateInlineRawStatic(name, ctx);
                 }
 
                 // item supports: namespaced key, "${expr}", or "{file}.pf:{func}" returning Item/string
@@ -1858,35 +2055,17 @@ dev.arubik.craftengine.rotation.KineticMember {
                     default -> {}
                 }
             });
+    }
+
+    /** The id a GHOST slot's `set` hook should record for a held item — a CraftEngine custom id if
+     * the stack carries one, else its vanilla key. */
+    private static String itemStackId(org.bukkit.inventory.ItemStack stack) {
+        try {
+            var ceId = net.momirealms.craftengine.bukkit.api.CraftEngineItems.getCustomItemId(stack);
+            if (ceId != null) return ceId.toString();
+        } catch (Throwable ignored) {
         }
-
-        // Machine slots
-        for (int s : page.inputSlots())  layout.addSlot(s, dev.arubik.craftengine.machine.menu.layout.MenuSlotType.INPUT);
-        for (int s : page.outputSlots()) layout.addSlot(s, dev.arubik.craftengine.machine.menu.layout.MenuSlotType.OUTPUT);
-        for (int s : page.fuelSlots())   layout.addSlot(s, dev.arubik.craftengine.machine.menu.layout.MenuSlotType.FUEL);
-
-        // Inline upgrades
-        if (this.definition.upgrades().isInline()) {
-            for (int s : this.definition.upgrades().slots())
-                layout.addSlot(s, dev.arubik.craftengine.machine.menu.layout.MenuSlotType.UPGRADE);
-        }
-
-        // Buttons from page
-        for (dev.arubik.craftengine.machine.MachineDefinition.ButtonSpec spec : page.buttons())
-            this.installButton(layout, DataMachineBlockEntity.toButton(spec));
-
-        // Bars from page
-        if (!page.bars().isEmpty()) {
-            List<dev.arubik.craftengine.machine.menu.bar.MachineBar> resolved = new ArrayList<>();
-            for (dev.arubik.craftengine.machine.MachineDefinition.BarRef ref : page.bars()) {
-                dev.arubik.craftengine.machine.menu.bar.BarDefinition barDef = dev.arubik.craftengine.machine.menu.bar.BarDefinition.REGISTRY.get(ref.bar());
-                if (barDef != null) resolved.add(barDef.toBar(ref.slots()));
-            }
-            dev.arubik.craftengine.machine.menu.bar.MachineBars.install(layout, resolved);
-        }
-
-        // Info slot removed — define recipe info via layout slot + inline scripts or {file}.pf:{func} lore
-        return layout;
+        return stack.getType().getKey().toString();
     }
 
     /**
@@ -2254,6 +2433,10 @@ dev.arubik.craftengine.rotation.KineticMember {
                 b.typed("Contraption", cl);
             // Global singletons available in all machine scripts
             b.typed("ContraptionManager", dev.arubik.craftengine.script.types.world.ContraptionManagerType.INSTANCE);
+            b.typed("Server", dev.arubik.craftengine.script.types.world.ServerType.INSTANCE);
+            b.typed("ChainManager", dev.arubik.craftengine.script.types.chainery.ChainManagerType.INSTANCE);
+            b.typed("TypedKey", dev.arubik.craftengine.script.types.util.TypedKeyManagerType.INSTANCE);
+            b.typed("Glue", dev.arubik.craftengine.script.types.world.GlueType.INSTANCE);
             if (level instanceof ServerLevel sl) b.world(sl);
             return b.build();
         }
@@ -2277,12 +2460,22 @@ dev.arubik.craftengine.rotation.KineticMember {
     }
 
     public void runInteractScript(String scriptRef, ServerPlayer player) {
+        runInteractScript(scriptRef, player, "on_right_click");
+    }
+
+    /** Like {@link #runInteractScript(String, ServerPlayer)} but binds an {@code event}
+     *  ({@link dev.arubik.craftengine.script.event.InteractEvent}) tagged with {@code hookName} —
+     *  used by both {@code on_right_click} (interactScript) and {@code on_left_click}
+     *  (attackScript), which share this one method. */
+    public void runInteractScript(String scriptRef, ServerPlayer player, String hookName) {
         dev.arubik.craftengine.script.ScriptCall call = dev.arubik.craftengine.script.ScriptCall.parse(scriptRef);
         if (call == null) return;
         try {
             ScriptContext base = this.buildScriptContext();
             if (base == null) return;
-            ScriptContext ctx = ScriptContext.builder().copyFrom(base).player(player).build();
+            ScriptContext ctx = ScriptContext.builder().copyFrom(base).player(player)
+                    .event(new dev.arubik.craftengine.script.event.InteractEvent(hookName, null))
+                    .build();
             call.execute(ctx);
         } catch (Throwable ignored) {}
     }
@@ -2296,6 +2489,7 @@ dev.arubik.craftengine.rotation.KineticMember {
             if (ctx != null) call.execute(ctx);
         } catch (Throwable ignored) {}
     }
+
 
     private MachineLayout buildMainLayout() {
         int infoSlot;
@@ -2417,10 +2611,14 @@ dev.arubik.craftengine.rotation.KineticMember {
 
                     // Inject args + click_type so scripts can branch on left/right/drop etc.
                     dev.arubik.craftengine.script.ScriptContext.Builder b = dev.arubik.craftengine.script.ScriptContext.builder().copyFrom(sCtx);
+                    if (player != null)
+                        b.player(((org.bukkit.craftbukkit.entity.CraftPlayer) player).getHandle());
                     b.str("click_type", clickType != null ? clickType.name().toLowerCase(java.util.Locale.ROOT) : "left");
                     b.val("is_right_click",  dev.arubik.craftengine.script.ScriptValue.of(clickType == org.bukkit.event.inventory.ClickType.RIGHT || clickType == org.bukkit.event.inventory.ClickType.SHIFT_RIGHT));
                     b.val("is_shift_click",  dev.arubik.craftengine.script.ScriptValue.of(clickType == org.bukkit.event.inventory.ClickType.SHIFT_LEFT || clickType == org.bukkit.event.inventory.ClickType.SHIFT_RIGHT));
                     b.val("is_drop_click",   dev.arubik.craftengine.script.ScriptValue.of(clickType == org.bukkit.event.inventory.ClickType.DROP || clickType == org.bukkit.event.inventory.ClickType.CONTROL_DROP));
+                    b.event(new dev.arubik.craftengine.script.event.ButtonEvent(button.slot,
+                            clickType != null ? clickType.name().toLowerCase(java.util.Locale.ROOT) : "left"));
                     for (int ai = 0; ai < button.action.args.size(); ai++)
                         b.str("arg" + ai, button.action.args.get(ai));
 
@@ -2466,6 +2664,8 @@ dev.arubik.craftengine.rotation.KineticMember {
                     if (sCtx == null) break;
                     // Inject args
                     dev.arubik.craftengine.script.ScriptContext.Builder b = dev.arubik.craftengine.script.ScriptContext.builder().copyFrom(sCtx);
+                    if (player != null)
+                        b.player(((org.bukkit.craftbukkit.entity.CraftPlayer) player).getHandle());
                     for (int ai = 0; ai < button.action.args.size(); ai++)
                         b.str("arg" + ai, button.action.args.get(ai));
                     b.str("_fn", button.action.target);

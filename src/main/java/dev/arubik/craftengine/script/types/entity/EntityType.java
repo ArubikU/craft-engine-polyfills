@@ -87,9 +87,107 @@ public final class EntityType {
                 entity(obj).setPos(args.get(0).asNum(), args.get(1).asNum(), args.get(2).asNum());
                 return ScriptValue.of(true);
             })
+            // teleport_to(Location) — unlike teleport(x,y,z) above (setPos, SAME level only), this
+            // goes through Bukkit's real Entity#teleport(Location), which properly moves an entity
+            // ACROSS dimensions/worlds. Needed for anything building a cross-dimension link (a
+            // teleporter network, ...) — setPos silently does nothing useful if the target Location
+            // is in a different world.
+            .method("teleport_to", (obj, args) -> {
+                if (args.isEmpty() || !(args.get(0) instanceof ScriptValue.Obj o)
+                        || !(o.instance() instanceof dev.arubik.craftengine.script.types.world.LocationType.LocationRef loc)
+                        || loc.level() == null)
+                    return ScriptValue.of(false);
+                try {
+                    org.bukkit.World world = loc.level().getWorld();
+                    if (world == null) return ScriptValue.of(false);
+                    org.bukkit.Location bukkitLoc = new org.bukkit.Location(world, loc.x(), loc.y(), loc.z());
+                    return ScriptValue.of(entity(obj).getBukkitEntity().teleport(bukkitLoc));
+                } catch (Throwable ignored) {
+                    return ScriptValue.of(false);
+                }
+            })
+            // Fall-distance control — the Bukkit-mirror side is stable across NMS internals, unlike
+            // the raw `fallDistance` field's visibility/type, which has moved around between
+            // versions. Used by e.g. a jetpack's thrust logic to keep the ensuing landing damage-free.
+            .property("fall_distance", obj -> {
+                try { return ScriptValue.of(entity(obj).getBukkitEntity().getFallDistance()); }
+                catch (Throwable ignored) { return ScriptValue.of(0.0); }
+            })
+            .method("reset_fall_distance", (obj, args) -> {
+                try { entity(obj).getBukkitEntity().setFallDistance(0f); return ScriptValue.of(true); }
+                catch (Throwable ignored) { return ScriptValue.of(false); }
+            })
+            // Generic potion-effect application — usable by any script (a jetpack softening its
+            // own landing with slow-falling, a trap item poisoning whoever picks it up, etc).
+            // add_potion_effect(name, duration_ticks, amplifier?)
+            .method("add_potion_effect", (obj, args) -> {
+                if (args.size() < 2 || !(entity(obj) instanceof LivingEntity living)) return ScriptValue.of(false);
+                try {
+                    var holder = mobEffectHolder(args.get(0).asStr());
+                    if (holder == null) return ScriptValue.of(false);
+                    int duration = (int) args.get(1).asNum();
+                    int amplifier = args.size() >= 3 ? (int) args.get(2).asNum() : 0;
+                    living.addEffect(new net.minecraft.world.effect.MobEffectInstance(holder, duration, amplifier));
+                    return ScriptValue.of(true);
+                } catch (Throwable ignored) { return ScriptValue.of(false); }
+            })
+            .method("remove_potion_effect", (obj, args) -> {
+                if (args.isEmpty() || !(entity(obj) instanceof LivingEntity living)) return ScriptValue.of(false);
+                try {
+                    var holder = mobEffectHolder(args.get(0).asStr());
+                    if (holder == null) return ScriptValue.of(false);
+                    living.removeEffect(holder);
+                    return ScriptValue.of(true);
+                } catch (Throwable ignored) { return ScriptValue.of(false); }
+            })
+            .method("has_potion_effect", (obj, args) -> {
+                if (args.isEmpty() || !(entity(obj) instanceof LivingEntity living)) return ScriptValue.of(false);
+                try {
+                    var holder = mobEffectHolder(args.get(0).asStr());
+                    return holder == null ? ScriptValue.of(false) : ScriptValue.of(living.hasEffect(holder));
+                } catch (Throwable ignored) { return ScriptValue.of(false); }
+            })
             .method("kill", (obj, args) -> { entity(obj).kill(null); return ScriptValue.of(true); })
             .method("remove", (obj, args) -> {
                 entity(obj).discard();
+                return ScriptValue.of(true);
+            })
+            // --- Persistent per-entity flags (int/string) — the Entity/Player-side counterpart
+            // of Machine.get_flag/set_flag/get_str_flag/set_str_flag, same naming convention, same
+            // "0"/"" absent-default semantics. Backed by Bukkit's PersistentDataContainer: modern
+            // (1.20.5+) NMS Entity no longer exposes its raw custom-data CompoundTag for live
+            // mutation the way it used to (it's a private CustomData component now, no public
+            // getter) — PDC is the actually-supported, version-stable way to attach arbitrary
+            // per-entity data today, unlike Server-scope state (see ServerFlags), which has no
+            // Bukkit-native equivalent at all and genuinely needs its own file.
+            .method("get_flag", (obj, args) -> {
+                if (args.isEmpty()) return ScriptValue.of(0);
+                org.bukkit.persistence.PersistentDataContainer pdc = entityPdc(obj);
+                if (pdc == null) return ScriptValue.of(0);
+                Integer v = pdc.get(flagKey(args.get(0).asStr()), org.bukkit.persistence.PersistentDataType.INTEGER);
+                return ScriptValue.of(v != null ? v : 0);
+            })
+            .method("set_flag", (obj, args) -> {
+                if (args.size() < 2) return ScriptValue.of(false);
+                org.bukkit.persistence.PersistentDataContainer pdc = entityPdc(obj);
+                if (pdc == null) return ScriptValue.of(false);
+                pdc.set(flagKey(args.get(0).asStr()), org.bukkit.persistence.PersistentDataType.INTEGER,
+                        (int) args.get(1).asNum());
+                return ScriptValue.of(true);
+            })
+            .method("get_str_flag", (obj, args) -> {
+                if (args.isEmpty()) return ScriptValue.of("");
+                org.bukkit.persistence.PersistentDataContainer pdc = entityPdc(obj);
+                if (pdc == null) return ScriptValue.of("");
+                String v = pdc.get(flagKey(args.get(0).asStr()), org.bukkit.persistence.PersistentDataType.STRING);
+                return ScriptValue.of(v != null ? v : "");
+            })
+            .method("set_str_flag", (obj, args) -> {
+                if (args.size() < 2) return ScriptValue.of(false);
+                org.bukkit.persistence.PersistentDataContainer pdc = entityPdc(obj);
+                if (pdc == null) return ScriptValue.of(false);
+                pdc.set(flagKey(args.get(0).asStr()), org.bukkit.persistence.PersistentDataType.STRING,
+                        args.get(1).asStr());
                 return ScriptValue.of(true);
             });
 
@@ -246,10 +344,34 @@ public final class EntityType {
         return new ScriptValue.Array(list);
     }
 
+    /** The Bukkit PersistentDataContainer backing get_flag/set_flag/get_str_flag/set_str_flag —
+     * null only if the entity has already been discarded/has no Bukkit mirror. */
+    private static org.bukkit.persistence.PersistentDataContainer entityPdc(Object obj) {
+        try {
+            org.bukkit.entity.Entity bukkit = entity(obj).getBukkitEntity();
+            return bukkit != null ? bukkit.getPersistentDataContainer() : null;
+        } catch (Throwable ignored) {
+            return null;
+        }
+    }
+
+    private static org.bukkit.NamespacedKey flagKey(String name) {
+        return new org.bukkit.NamespacedKey(dev.arubik.craftengine.CraftEnginePolyfills.instance(), "flag_" + name);
+    }
+
     private static Entity        entity(Object obj)     { return (Entity) obj; }
     private static LivingEntity  living(Object obj)     { return (LivingEntity) obj; }
     private static Mob           mob(Object obj)        { return (Mob) obj; }
     private static Animal        animal(Object obj)     { return (Animal) obj; }
     private static ItemEntity    itemEntity(Object obj) { return (ItemEntity) obj; }
     private static ExperienceOrb expOrb(Object obj)     { return (ExperienceOrb) obj; }
+
+    /** Resolves a bare or namespaced potion-effect id ("slow_falling" / "minecraft:slow_falling")
+     *  to its registry {@link net.minecraft.core.Holder}, or null if unknown. */
+    private static net.minecraft.core.Holder<net.minecraft.world.effect.MobEffect> mobEffectHolder(String name) {
+        net.minecraft.resources.Identifier id = net.minecraft.resources.Identifier.parse(
+                name.contains(":") ? name : "minecraft:" + name);
+        var mobEffect = BuiltInRegistries.MOB_EFFECT.getValue(id);
+        return mobEffect == null ? null : BuiltInRegistries.MOB_EFFECT.wrapAsHolder(mobEffect);
+    }
 }

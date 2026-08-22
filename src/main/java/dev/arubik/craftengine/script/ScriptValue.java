@@ -79,6 +79,12 @@ public sealed interface ScriptValue {
 
     default ScriptValue getProperty(String prop) {
         if (this instanceof Obj o && o.instance() != null) {
+            // A raw PolyClass instance (e.g. FormConditionClass, bound via .typed(...) under a name
+            // that ISN'T its own registered PolyType — "World" here is already taken by WorldType)
+            // owns its own dispatch and was never meant to go through the registry at all.
+            if (o.instance() instanceof PolyClass pc) {
+                try { return pc.get(prop); } catch (Throwable ignored) { return NULL; }
+            }
             PolyType type = PolyTypeRegistry.get(o.typeName());
             if (type != null) {
                 PolyType.PropertyHandler h = type.resolveProperty(prop);
@@ -110,6 +116,14 @@ public sealed interface ScriptValue {
 
     default ScriptValue callMethod(String method, List<ScriptValue> args) {
         if (this instanceof Obj o && o.instance() != null) {
+            // See getProperty's PolyClass branch above — same reasoning, same dead-code bug: this
+            // fell through to a PolyTypeRegistry lookup for "World" (the UNRELATED WorldType, which
+            // has no is_gas_provider/block_id), so every FormConditionClass-bound World.*(...) call
+            // in a multiblock's can_form silently returned NULL — a can_form condition that always
+            // reported "not met" no matter what the world actually looked like.
+            if (o.instance() instanceof PolyClass pc) {
+                try { return pc.call(method, args); } catch (Throwable ignored) { return NULL; }
+            }
             PolyType type = PolyTypeRegistry.get(o.typeName());
             if (type != null) {
                 PolyType.MethodHandler h = type.resolveMethod(method);

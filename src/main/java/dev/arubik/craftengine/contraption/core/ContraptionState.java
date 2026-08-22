@@ -73,6 +73,20 @@ public final class ContraptionState {
     private final ContraptionLightMap lightMap = new ContraptionLightMap();
     private final List<ContraptionElement> elements = new ArrayList<ContraptionElement>();
     private final Int2ObjectOpenHashMap<ContraptionElement> entityIdIndex = new Int2ObjectOpenHashMap();
+    /** Server tick of the last {@code Contraption.set_spin()} call against this state — lets that
+     *  script method scale its per-call increment by how many real ticks actually elapsed instead
+     *  of always assuming exactly one, which under-rotates whenever the calling script runs less
+     *  often than every tick (e.g. a machine's {@code action_interval}). {@code Long.MIN_VALUE}
+     *  means "never called yet". */
+    private long lastSetSpinTick = Long.MIN_VALUE;
+
+    public long lastSetSpinTick() {
+        return this.lastSetSpinTick;
+    }
+
+    public void setLastSetSpinTick(long tick) {
+        this.lastSetSpinTick = tick;
+    }
 
     public ContraptionState(UUID id, ResourceKey<Level> worldId, ContraptionLevel level, double x, double y, double z) {
         this.id = id;

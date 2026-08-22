@@ -90,6 +90,13 @@ public final class ScriptContext {
             return this;
         }
 
+        /** Binds the {@code event} variable (lowercase — read like {@code item}/{@code slot}, not a
+         *  global class like {@code Player.*}) for an {@code on_*} hook's cancel/adjust object. */
+        public Builder event(dev.arubik.craftengine.script.event.ScriptEvent e) {
+            if (e != null) vars.put("event", dev.arubik.craftengine.script.types.event.EventType.wrap(e));
+            return this;
+        }
+
         public Builder world(ServerLevel level) {
             if (level != null) classes.put("World", WorldType.wrap(level));
             return this;
@@ -97,6 +104,25 @@ public final class ScriptContext {
 
         public Builder block(ServerLevel level, BlockPos pos) {
             if (level != null && pos != null) classes.put("Block", BlockType.wrap(level, pos));
+            return this;
+        }
+
+        /**
+         * Binds a "Machine" class instance for whatever data-driven machine block entity sits at
+         * {@code pos} (a no-op if none is loaded there) — for a script that needs to reach into a
+         * block it just placed/found rather than the machine it's already running on, e.g. an
+         * item behavior's {@code on_place_block} handing item-carried flags/inventory onto the
+         * freshly placed block via {@code Machine.set_str_flag}/{@code push_item_to_inventory}.
+         */
+        public Builder machineAt(ServerLevel level, BlockPos pos) {
+            if (level == null || pos == null) return this;
+            try {
+                var be = dev.arubik.craftengine.block.entity.BukkitBlockEntityTypes.getIfLoaded(level, pos);
+                if (be != null && be.controller instanceof dev.arubik.craftengine.block.entity.PersistentBlockEntity pbe) {
+                    classes.put("Machine", dev.arubik.craftengine.script.types.machine.MachineType.wrap(level, pos, "north", pbe));
+                }
+            } catch (Throwable ignored) {
+            }
             return this;
         }
 

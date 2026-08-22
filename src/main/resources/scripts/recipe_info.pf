@@ -2,51 +2,70 @@
 #   { "slot": 4, "item": "recipe_info.pf:item", "name": "recipe_info.pf:name", "lore": ["recipe_info.pf:lore"] }
 # Returns item/name/lore based on current working_recipe or matching_recipe.
 
-def item() {
+def item():
     recipe = Machine.working_recipe
-    if recipe == null { recipe = Machine.matching_recipe }
-    if recipe == null { return "minecraft:barrier" }
-    if recipe.outputs.length > 0 {
+    if recipe == null:
+        recipe = Machine.matching_recipe
+    end
+    if recipe == null:
+        return "minecraft:barrier"
+    end
+    if recipe.outputs.length > 0:
         first_item = first(recipe.outputs)
-        if !is_empty(first_item) { return first_item }
-    }
+        if !is_empty(first_item):
+            return first_item
+        end
+    end
     return "minecraft:book"
-}
+end
 
-def name() {
+def name():
     recipe = Machine.working_recipe
-    if recipe == null { recipe = Machine.matching_recipe }
-    if recipe == null { return "<gray>No recipe" }
-    if recipe.outputs.length > 0 {
+    if recipe == null:
+        recipe = Machine.matching_recipe
+    end
+    if recipe == null:
+        return "<gray>No recipe"
+    end
+    if recipe.outputs.length > 0:
         first_item = first(recipe.outputs)
-        if !is_empty(first_item) { return "<white>" + item_id(first_item) }
-    }
+        if !is_empty(first_item):
+            return "<white>" + item_id(first_item)
+        end
+    end
     return "<gray>" + recipe.id
-}
+end
 
-def lore() {
+def lore():
     recipe = Machine.working_recipe
-    if recipe == null { recipe = Machine.matching_recipe }
-    if recipe == null { return ["<gray>No matching recipe"] }
+    if recipe == null:
+        recipe = Machine.matching_recipe
+    end
+    if recipe == null:
+        return ["<gray>No matching recipe"]
+    end
     lines = []
     # Inputs
-    for item in recipe.inputs {
-        if !is_empty(item) {
+    for item in recipe.inputs:
+        if !is_empty(item):
             lines = push(lines, "<gray>In: <white>" + item_id(item) + " x" + item.count)
-        }
-    }
+        end
+    end
     # Outputs
-    for item in recipe.outputs {
-        if !is_empty(item) {
+    for item in recipe.outputs:
+        if !is_empty(item):
             lines = push(lines, "<gray>Out: <white>" + item_id(item) + " x" + item.count)
-        }
-    }
+        end
+    end
     # Stats
-    if recipe.processing_time > 0 {
+    if recipe.processing_time > 0:
         lines = push(lines, "<gray>Time: <yellow>" + recipe.processing_time + " ticks")
-    }
-    if recipe.su_cost > 0 {
+    end
+    if recipe.su_cost > 0:
         lines = push(lines, "<gray>SU: <aqua>" + recipe.su_cost)
-    }
+    end
     return lines
-}
+end
+
+
+

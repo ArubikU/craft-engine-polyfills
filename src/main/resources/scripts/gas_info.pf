@@ -2,32 +2,43 @@
 #   { "slot": 4, "item": "gas_info.pf:item", "name": "gas_info.pf:name", "lore": ["gas_info.pf:lore"] }
 # Shows the first gas tank's contents (level, capacity, type name).
 
-def _get_tank() {
+def _get_tank():
     tanks = Machine.gas_tanks
-    if tanks.length <= 0 { return null }
+    if tanks.length <= 0:
+        return null
+    end
     return tanks.get(0)
-}
+end
 
-def item() {
+def item():
     return "minecraft:glass_bottle"
-}
+end
 
-def name() {
+def name():
     tank = _get_tank()
-    if tank == null { return "<gray>No gas tank" }
+    if tank == null:
+        return "<gray>No gas tank"
+    end
     gas_name = tank.get("contents_name")
-    if gas_name == "" { return "<gray>Gas Tank (empty)" }
+    if gas_name == "":
+        return "<gray>Gas Tank (empty)"
+    end
     return "<aqua>" + gas_name
-}
+end
 
-def lore() {
+def lore():
     tank = _get_tank()
-    if tank == null { return ["<gray>No gas tank"] }
+    if tank == null:
+        return ["<gray>No gas tank"]
+    end
     level = tank.get("level")
     cap = tank.get("capacity")
     pct = cap > 0 ? floor(level / cap * 100) : 0
     return [
-        "<gray>Level: <white>" + level + " / " + cap + " mB",
-        "<gray>Fill: <yellow>" + pct + "%"
+    "<gray>Level: <white>" + level + " / " + cap + " mB",
+    "<gray>Fill: <yellow>" + pct + "%"
     ]
-}
+end
+
+
+

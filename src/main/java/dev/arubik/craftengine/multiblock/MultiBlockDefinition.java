@@ -50,8 +50,24 @@ public final class MultiBlockDefinition {
      *                it, and each of those needs its own menu
      * @param partBlockId the block a matched cell becomes while this mode is formed
      */
+    /**
+     * @param canForm optional script expression that must be truthy for the structure to assemble,
+     *                evaluated with {@code World} bound to a {@link FormConditionClass} at the core.
+     *                Null means no extra condition.
+     */
     public record Mode(String name, MultiBlockSchema schema, IOSpec io,
-            dev.arubik.craftengine.machine.MachineDefinition machine, String partBlockId) {
+            dev.arubik.craftengine.machine.MachineDefinition machine, String partBlockId,
+            String canForm, String onFormScript, String onDisassembleScript) {
+
+        public Mode(String name, MultiBlockSchema schema, IOSpec io,
+                dev.arubik.craftengine.machine.MachineDefinition machine, String partBlockId) {
+            this(name, schema, io, machine, partBlockId, null, null, null);
+        }
+
+        public Mode(String name, MultiBlockSchema schema, IOSpec io,
+                dev.arubik.craftengine.machine.MachineDefinition machine, String partBlockId, String canForm) {
+            this(name, schema, io, machine, partBlockId, canForm, null, null);
+        }
     }
 
     private final Key id;
@@ -138,6 +154,72 @@ public final class MultiBlockDefinition {
 
         public List<Rule> rules() {
             return rules;
+        }
+
+        /**
+         * Parses the same {@code {default, rules: [...]}} shape {@code MultiBlockLoader} already
+         * reads for assembled multiblocks — shared so a {@code CelledMachineDefinition}'s {@code
+         * cell_io} block (auto-placing multi-cell machines) uses the identical rule language instead
+         * of a second one, keyed by cell offset instead of assembled-shell position either way.
+         */
+        public static IOSpec parse(dev.arubik.craftengine.data.JsonView view) {
+            boolean defaultOpen = !"closed".equalsIgnoreCase(view.string("default", "open"));
+            List<Rule> rules = new ArrayList<>();
+            for (dev.arubik.craftengine.data.JsonView ruleView : view.objectList("rules")) {
+                BlockPos at = null;
+                if (ruleView.has("at")) {
+                    List<Integer> cell = ruleView.intList("at");
+                    if (cell.size() != 3)
+                        throw ruleView.error("'at' must be [x, y, z]");
+                    at = new BlockPos(cell.get(0), cell.get(1), cell.get(2));
+                }
+                rules.add(new Rule(
+                        at,
+                        ruleView.has("y") ? ruleView.integer("y") : null,
+                        ruleView.has("y_above") ? ruleView.integer("y_above") : null,
+                        ruleView.has("y_below") ? ruleView.integer("y_below") : null,
+                        parseGrants(ruleView, "input"),
+                        parseGrants(ruleView, "output"),
+                        ruleView.bool("closed", false)));
+            }
+            return new IOSpec(rules, defaultOpen);
+        }
+
+        /** Accepts a single grant object or an array of them. */
+        private static List<Grant> parseGrants(dev.arubik.craftengine.data.JsonView view, String field) {
+            if (!view.has(field))
+                return List.of();
+            var raw = view.raw().get(field);
+            List<dev.arubik.craftengine.data.JsonView> entries = new ArrayList<>();
+            if (raw.isJsonArray())
+                entries.addAll(view.objectList(field));
+            else
+                entries.add(view.object(field));
+
+            List<Grant> grants = new ArrayList<>();
+            for (dev.arubik.craftengine.data.JsonView entry : entries) {
+                List<IOConfiguration.IOType> types = new ArrayList<>();
+                for (String typeName : entry.stringList("types")) {
+                    IOConfiguration.IOType type = null;
+                    for (IOConfiguration.IOType candidate : IOConfiguration.IOType.values())
+                        if (candidate.name().equalsIgnoreCase(typeName))
+                            type = candidate;
+                    if (type == null)
+                        throw entry.error("unknown io type '" + typeName + "'");
+                    types.add(type);
+                }
+                List<net.minecraft.core.Direction> faces = new ArrayList<>();
+                for (String faceName : entry.stringList("faces")) {
+                    List<net.minecraft.core.Direction> group = faceGroup(faceName);
+                    if (group == null)
+                        throw entry.error("unknown face or face group '" + faceName + "'");
+                    faces.addAll(group);
+                }
+                if (faces.isEmpty())
+                    faces.addAll(List.of(net.minecraft.core.Direction.values()));
+                grants.add(new Grant(types, faces));
+            }
+            return grants;
         }
 
         @Override

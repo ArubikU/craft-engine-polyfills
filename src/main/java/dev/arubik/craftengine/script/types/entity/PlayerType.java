@@ -31,6 +31,26 @@ public final class PlayerType {
             })
             .property("is_flying", obj -> ScriptValue.of(player(obj).getAbilities().flying))
             .property("is_creative", obj -> ScriptValue.of(player(obj).getAbilities().instabuild))
+            .property("allow_flight", obj -> ScriptValue.of(player(obj).getAbilities().mayfly))
+            // Generic vanilla-flight-ability toggles — not jetpack-specific. A script gates when
+            // to grant/revoke these (fuel checks, equip state, etc.); this class never hardcodes
+            // what any particular item does with them.
+            .method("set_allow_flight", (obj, args) -> {
+                if (args.isEmpty()) return ScriptValue.of(false);
+                boolean value = args.get(0).asBool();
+                Player p = player(obj);
+                p.getAbilities().mayfly = value;
+                if (!value) p.getAbilities().flying = false;
+                syncAbilities(p);
+                return ScriptValue.of(true);
+            })
+            .method("set_flying", (obj, args) -> {
+                if (args.isEmpty()) return ScriptValue.of(false);
+                Player p = player(obj);
+                p.getAbilities().flying = args.get(0).asBool() && p.getAbilities().mayfly;
+                syncAbilities(p);
+                return ScriptValue.of(true);
+            })
             .property("main_hand", obj -> ScriptValue.ofItem(player(obj).getMainHandItem()))
             .property("off_hand", obj -> ScriptValue.ofItem(player(obj).getOffhandItem()))
             .method("send_message", (obj, args) -> {
@@ -103,5 +123,9 @@ public final class PlayerType {
 
     private static Player player(Object obj) {
         return (Player) obj;
+    }
+
+    private static void syncAbilities(Player p) {
+        if (p instanceof ServerPlayer sp) sp.onUpdateAbilities();
     }
 }

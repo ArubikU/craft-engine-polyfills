@@ -101,6 +101,9 @@ public class DataMultiBlockBehavior extends MultiBlockBehavior {
         for (MultiBlockDefinition.Mode mode : modes) {
             this.schema = mode.schema();
             this.activeMode = mode;
+            // Each mode carries its own can_form, so the condition has to follow the mode being
+            // tried, not be fixed once at construction.
+            setCanFormExpression(mode.canForm());
             if (mode.io() != null)
                 withIOProvider(mode.io());
             if (super.tryFormMachine(level, pos, state))
@@ -156,6 +159,7 @@ public class DataMultiBlockBehavior extends MultiBlockBehavior {
                     DataMachineBehavior.parseUpgrades(arguments.get("upgrades")), multiblock.modes());
             if (mode.io() != null)
                 behavior.withIOProvider(mode.io());
+            behavior.setCanFormExpression(mode.canForm());
             return behavior;
         }
     }

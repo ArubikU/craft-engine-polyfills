@@ -57,9 +57,14 @@ public class HammerAssembleListener implements Listener {
             }
         }
 
+        // Only report a failure for the multiblock the clicked block actually belongs to —
+        // every other schema "failing" here is just noise.
+        MultiBlockBehavior owner = null;
         for (MultiBlockBehavior beh : MultiBlockBehavior.registry()) {
             if (!beh.acceptsHammer(hammer))
                 continue;
+            if (beh.ownsBlockAt(level, pos))
+                owner = beh;
             try {
                 if (beh.tryAssemble(level, pos)) {
                     e.setCancelled(true);
@@ -68,7 +73,22 @@ public class HammerAssembleListener implements Listener {
                     damageHammer(e.getPlayer(), beh.structureBlockCount());
                     return;
                 }
-            } catch (Throwable ignored) {
+            } catch (Throwable t) {
+                // This used to be swallowed outright, so a bug in the matcher looked exactly like
+                // a badly built structure: nothing happened and nothing was logged.
+                dev.arubik.craftengine.CraftEnginePolyfills.instance().getLogger()
+                        .warning("[MultiBlock] assembly threw for " + beh.block().id() + ": " + t);
+                e.getPlayer().sendMessage("\u00a7cAssembly failed: \u00a77" + t);
+                e.setCancelled(true);
+                return;
+            }
+        }
+
+        if (owner != null) {
+            String why = owner.describeFormFailure(level, pos);
+            if (why != null) {
+                e.getPlayer().sendMessage("\u00a7e" + owner.block().id() + " \u00a77did not assemble: \u00a7f" + why);
+                e.setCancelled(true);
             }
         }
     }

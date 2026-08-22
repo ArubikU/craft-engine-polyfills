@@ -2,18 +2,23 @@
 # Uses block.apply_bone_meal() which simulates growBonemeal on the block.
 
 level_flag = Machine.get_flag("level")
-if level_flag <= 0 { level_flag = 1 }
+if level_flag <= 0:
+    level_flag = 1
+end
 radius = level_flag + 2  # level 1→3, level 2→4, level 3→5
 
-if !is_empty(Machine.get_item_in_slot(0)) {
+if !is_empty(Machine.get_item_in_slot(0)):
     blocks = Machine.blocks_in_range(radius)
-    for block in blocks {
-        if block.has_property("age") || block.has_property("growth") {
+    for block in blocks:
+        if block.has_property("age") || block.has_property("growth"):
             ok = block.apply_bone_meal()
-            if ok {
+            if ok:
                 Machine.remove_item_in_slot(0, 1)
                 break
-            }
-        }
-    }
-}
+            end
+        end
+    end
+end
+
+
+

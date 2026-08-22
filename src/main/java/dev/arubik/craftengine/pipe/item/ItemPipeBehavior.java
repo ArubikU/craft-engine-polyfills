@@ -70,7 +70,18 @@ public class ItemPipeBehavior extends ConnectedBlockBehavior implements EntityBl
         if (super.shouldConnect(direction, pos, level))
             return true;
         BlockPos neighborPos = pos.relative(direction);
-        return ItemTransferHelper.getContainer(level, neighborPos).isPresent();
+        if (!ItemTransferHelper.getContainer(level, neighborPos).isPresent())
+            return false;
+        // A container neighbour only counts as visually/functionally connected if THIS face's own
+        // item-transfer mode actually allows something to cross it — without this, a face the
+        // player set to Disabled toward a chest always showed (and behaved) connected anyway,
+        // since "there's simply a container over there" ignored the panel's mode entirely.
+        dev.arubik.craftengine.multiblock.IOConfiguration cfg = getIOConfiguration(level, pos);
+        if (cfg == null)
+            return false;
+        Direction local = toLocalDirection(direction, level.getBlockState(pos));
+        return cfg.acceptsInput(dev.arubik.craftengine.multiblock.IOConfiguration.IOType.ITEM, local)
+                || cfg.providesOutput(dev.arubik.craftengine.multiblock.IOConfiguration.IOType.ITEM, local);
     }
 
     private int controllerId;

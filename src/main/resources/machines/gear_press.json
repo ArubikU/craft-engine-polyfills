@@ -1,0 +1,140 @@
+{
+  "id": "polyfills:gear_press",
+  "recipe_type": "gear_press",
+  "title": "Gear Press",
+  "menu_size": 36,
+  "flags": {
+    "fuel": false
+  },
+  "slots": {
+    "input": [10],
+    "output": [16]
+  },
+  "energy": {
+    "capacity": 4000,
+    "max_input": 400,
+    "max_output": 0
+  },
+  "upgrades": {
+    "slots": [20, 21, 22],
+    "base_unlocked": 2,
+    "definitions": {
+      "cml:upgrade_iron": [
+        { "attribute": "polyfill:generation", "operation": "add", "value": 0.05 }
+      ],
+      "cml:upgrade_gold": [
+        { "attribute": "polyfill:generation", "operation": "add", "value": 0.08 },
+        { "attribute": "polyfill:overclock_limit", "operation": "add", "value": 0.1 }
+      ],
+      "cml:upgrade_diamond": [
+        { "attribute": "polyfill:generation", "operation": "add", "value": 0.12 },
+        { "attribute": "polyfill:overclock_limit", "operation": "add", "value": 0.2 }
+      ]
+    }
+  },
+  "pages": [
+    {
+      "title": "Gear Press",
+      "size": 36,
+      "slots": {
+        "input": [10],
+        "output": [16]
+      },
+      "layout": [
+        {
+          "slot": 4,
+          "item": "recipe_info.pf:item",
+          "name": "recipe_info.pf:name",
+          "lore": [
+            "recipe_info.pf:lore"
+          ]
+        },
+        { "slot": 0,  "item": "cml:gui_empty", "components": { "minecraft:tooltip_display": true } },
+        { "slot": 1,  "item": "cml:gui_empty", "components": { "minecraft:tooltip_display": true } },
+        { "slot": 2,  "item": "cml:gui_empty", "components": { "minecraft:tooltip_display": true } },
+        { "slot": 3,  "item": "cml:gui_empty", "components": { "minecraft:tooltip_display": true } },
+        { "slot": 5,  "item": "cml:gui_empty", "components": { "minecraft:tooltip_display": true } },
+        { "slot": 6,  "item": "cml:gui_empty", "components": { "minecraft:tooltip_display": true } },
+        { "slot": 7,  "item": "cml:gui_empty", "components": { "minecraft:tooltip_display": true } },
+        { "slot": 9,  "item": "cml:gui_empty", "components": { "minecraft:tooltip_display": true } },
+        { "slot": 11, "item": "cml:gui_empty", "components": { "minecraft:tooltip_display": true } },
+        { "slot": 12, "item": "cml:gui_empty", "components": { "minecraft:tooltip_display": true } },
+        { "slot": 14, "item": "cml:gui_empty", "components": { "minecraft:tooltip_display": true } },
+        { "slot": 15, "item": "cml:gui_empty", "components": { "minecraft:tooltip_display": true } },
+        { "slot": 18, "item": "cml:gui_empty", "components": { "minecraft:tooltip_display": true } },
+        { "slot": 19, "item": "cml:gui_empty", "components": { "minecraft:tooltip_display": true } },
+        { "slot": 23, "item": "cml:gui_empty", "components": { "minecraft:tooltip_display": true } },
+        { "slot": 24, "item": "cml:gui_empty", "components": { "minecraft:tooltip_display": true } },
+        { "slot": 25, "item": "cml:gui_empty", "components": { "minecraft:tooltip_display": true } },
+        { "slot": 27, "item": "cml:gui_empty", "components": { "minecraft:tooltip_display": true } },
+        { "slot": 28, "item": "cml:gui_empty", "components": { "minecraft:tooltip_display": true } },
+        { "slot": 29, "item": "cml:gui_empty", "components": { "minecraft:tooltip_display": true } },
+        { "slot": 30, "item": "cml:gui_empty", "components": { "minecraft:tooltip_display": true } },
+        { "slot": 32, "item": "cml:gui_empty", "components": { "minecraft:tooltip_display": true } },
+        { "slot": 33, "item": "cml:gui_empty", "components": { "minecraft:tooltip_display": true } },
+        { "slot": 34, "item": "cml:gui_empty", "components": { "minecraft:tooltip_display": true } }
+      ],
+      "bars": [
+        { "id": "polyfills:progress", "slots": [13], "source": "progress" },
+        { "id": "polyfills:energy", "slots": [35, 26, 17, 8], "source": "energy" }
+      ],
+      "buttons": [
+        {
+          "slot": 31,
+          "icon": "cml:overclock_button",
+          "action": "open_page:1",
+          "name": "<lang:polyfill.ui.overclock>",
+          "locked_icon": "cml:locked_icon",
+          "locked_when": "no_overclock"
+        }
+      ]
+    },
+    {
+      "title": "{Images.from('cml:overclock_gui')}",
+      "size": 27,
+      "layout": [
+        {
+          "slot": 13,
+          "item": "cml:clock_${Machine.meter_state}",
+          "name": "<lang:polyfill.ui.overclock>",
+          "lore": [
+            "<lang:polyfill.ui.overclock> <yellow>${floor(Machine.overclock * 100)}%",
+            "<gray>Max: <white>+${floor(Machine.overclock_limit * 100)}%",
+            "<gray>Speed: <white>x${round((1 + Machine.overclock) * 100) / 100}"
+          ]
+        },
+        { "slot": 3,  "item": "cml:gui_empty", "components": { "minecraft:tooltip_display": true } },
+        { "slot": 4,  "item": "cml:gui_empty", "components": { "minecraft:tooltip_display": true } },
+        { "slot": 5,  "item": "cml:gui_empty", "components": { "minecraft:tooltip_display": true } },
+        { "slot": 12, "item": "cml:gui_empty", "components": { "minecraft:tooltip_display": true } },
+        { "slot": 14, "item": "cml:gui_empty", "components": { "minecraft:tooltip_display": true } }
+      ],
+      "buttons": [
+        {
+          "slot": 10,
+          "icon": "cml:minus_icon",
+          "action": "overclock.pf:decrease",
+          "name": "<lang:polyfill.ui.oc_minus>",
+          "lore": [
+            "<lang:polyfill.ui.oc_hint_minus>"
+          ]
+        },
+        {
+          "slot": 16,
+          "icon": "cml:plus_icon",
+          "action": "overclock.pf:increase",
+          "name": "<lang:polyfill.ui.oc_plus>",
+          "lore": [
+            "<lang:polyfill.ui.oc_hint>"
+          ]
+        },
+        {
+          "slot": 22,
+          "icon": "cml:return_icon",
+          "action": "open_page:0",
+          "name": "<lang:polyfill.ui.back>"
+        }
+      ]
+    }
+  ]
+}

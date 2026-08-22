@@ -1,3 +1,6 @@
-if Machine.redstone > 0 {
+if Machine.redstone > 0:
     Machine.play_sound("minecraft:block.bell.use", 2.0, 1.0)
-}
+end
+
+
+

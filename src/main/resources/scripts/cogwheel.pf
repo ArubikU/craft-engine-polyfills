@@ -26,125 +26,166 @@
 
 # ---- Offset helpers -----------------------------------------------------
 
-def _off(dx, dy, dz) {
+def _off(dx, dy, dz):
     return make_map("dx", dx, "dy", dy, "dz", dz)
-}
+end
 
-def _block(o) {
+def _block(o):
     return Machine.block_at(o.get("dx"), o.get("dy"), o.get("dz"))
-}
+end
 
 # Offset component along a named axis.
-def _comp(o, axis) {
-    if axis == "x" { return o.get("dx") }
-    if axis == "y" { return o.get("dy") }
+def _comp(o, axis):
+    if axis == "x":
+        return o.get("dx")
+    end
+    if axis == "y":
+        return o.get("dy")
+    end
     return o.get("dz")
-}
+end
 
-def _is_small(id) { return contains(id, "cogwheel_small") }
-def _is_large(id) { return contains(id, "cogwheel_large") }
+def _is_small(id):
+    return contains(id, "cogwheel_small")
+end
+def _is_large(id):
+    return contains(id, "cogwheel_large")
+end
 
 # 4 orthogonal neighbours perpendicular to our axis — small<->small.
-def _perp_offsets() {
+def _perp_offsets():
     a = Machine.axis
-    if a == "y" { return [ _off(1,0,0), _off(-1,0,0), _off(0,0,1), _off(0,0,-1) ] }
-    if a == "x" { return [ _off(0,1,0), _off(0,-1,0), _off(0,0,1), _off(0,0,-1) ] }
+    if a == "y":
+        return [ _off(1,0,0), _off(-1,0,0), _off(0,0,1), _off(0,0,-1) ]
+    end
+    if a == "x":
+        return [ _off(0,1,0), _off(0,-1,0), _off(0,0,1), _off(0,0,-1) ]
+    end
     return [ _off(1,0,0), _off(-1,0,0), _off(0,1,0), _off(0,-1,0) ]
-}
+end
 
 # 4 in-plane diagonals (on-axis component 0) — large<->small.
-def _plane_diag_offsets() {
+def _plane_diag_offsets():
     a = Machine.axis
-    if a == "y" { return [ _off(1,0,1), _off(1,0,-1), _off(-1,0,1), _off(-1,0,-1) ] }
-    if a == "x" { return [ _off(0,1,1), _off(0,1,-1), _off(0,-1,1), _off(0,-1,-1) ] }
+    if a == "y":
+        return [ _off(1,0,1), _off(1,0,-1), _off(-1,0,1), _off(-1,0,-1) ]
+    end
+    if a == "x":
+        return [ _off(0,1,1), _off(0,1,-1), _off(0,-1,1), _off(0,-1,-1) ]
+    end
     return [ _off(1,1,0), _off(1,-1,0), _off(-1,1,0), _off(-1,-1,0) ]
-}
+end
 
 # 8 cross-axis diagonals (non-zero on our axis AND on one other, zero on the third)
 # — large<->large.
-def _cross_diag_offsets() {
+def _cross_diag_offsets():
     a = Machine.axis
-    if a == "y" {
+    if a == "y":
         return [ _off(1,1,0), _off(1,-1,0), _off(-1,1,0), _off(-1,-1,0),
-                 _off(0,1,1), _off(0,1,-1), _off(0,-1,1), _off(0,-1,-1) ]
-    }
-    if a == "x" {
+        _off(0,1,1), _off(0,1,-1), _off(0,-1,1), _off(0,-1,-1) ]
+    end
+    if a == "x":
         return [ _off(1,1,0), _off(1,-1,0), _off(-1,1,0), _off(-1,-1,0),
-                 _off(1,0,1), _off(1,0,-1), _off(-1,0,1), _off(-1,0,-1) ]
-    }
+        _off(1,0,1), _off(1,0,-1), _off(-1,0,1), _off(-1,0,-1) ]
+    end
     return [ _off(1,0,1), _off(1,0,-1), _off(-1,0,1), _off(-1,0,-1),
-             _off(0,1,1), _off(0,1,-1), _off(0,-1,1), _off(0,-1,-1) ]
-}
+    _off(0,1,1), _off(0,1,-1), _off(0,-1,1), _off(0,-1,-1) ]
+end
 
 # ---- Meshing ------------------------------------------------------------
 
-def _mesh(is_large) {
+def _mesh(is_large):
     axis = Machine.axis
-    if axis == null { return }
+    if axis == null:
+        return
+    end
 
     Machine.set_rpm_output(rpm)
-    if rpm == 0 { return }
+    if rpm == 0:
+        return
+    end
 
     net = Machine.rpm_network
 
     # small <-> small: orthogonal, same axis, 1:1 reversed.
-    if !is_large {
-        for o in _perp_offsets() {
+    if !is_large:
+        for o in _perp_offsets():
             nb = _block(o)
-            if nb.property("axis") != axis { continue }
-            if _is_small(nb.id) {
+            if nb.property("axis") != axis:
+                continue
+            end
+            if _is_small(nb.id):
                 Machine.relay_to(nb, -rpm, net)
-            }
-        }
-    }
+            end
+        end
+    end
 
     # large <-> small: in-plane diagonal, same axis.
-    for o in _plane_diag_offsets() {
+    for o in _plane_diag_offsets():
         nb = _block(o)
-        if nb.property("axis") != axis { continue }
+        if nb.property("axis") != axis:
+            continue
+        end
         nid = nb.id
-        if is_large {
-            if _is_small(nid) { Machine.relay_to(nb, -rpm * 2.0, net) }
-        } else {
-            if _is_large(nid) { Machine.relay_to(nb, -rpm * 0.5, net) }
-        }
-    }
+        if is_large:
+            if _is_small(nid):
+                Machine.relay_to(nb, -rpm * 2.0, net)
+            end
+        else:
+            if _is_large(nid):
+                Machine.relay_to(nb, -rpm * 0.5, net)
+            end
+        end
+    end
 
     # large <-> large: cross-axis diagonal, 1:1, sign from the two offset components.
     # Create: sourceAxisDiff > 0 ^ targetAxisDiff > 0 ? -1 : 1
-    if is_large {
-        for o in _cross_diag_offsets() {
+    if is_large:
+        for o in _cross_diag_offsets():
             nb = _block(o)
             their_axis = nb.property("axis")
-            if their_axis == null { continue }
-            if their_axis == axis { continue }
-            if !_is_large(nb.id) { continue }
+            if their_axis == null:
+                continue
+            end
+            if their_axis == axis:
+                continue
+            end
+            if !_is_large(nb.id):
+                continue
+            end
             mine = _comp(o, axis)
             theirs = _comp(o, their_axis)
-            if mine == 0 { continue }
-            if theirs == 0 { continue }
+            if mine == 0:
+                continue
+            end
+            if theirs == 0:
+                continue
+            end
             sign = (mine > 0) != (theirs > 0) ? -1 : 1
             Machine.relay_to(nb, rpm * sign, net)
-        }
-    }
-}
+        end
+    end
+end
 
 # ---- Entry points -------------------------------------------------------
 
-def tick_large() {
+def tick_large():
     _mesh(true)
-}
+end
 
-def tick_small() {
+def tick_small():
     _mesh(false)
-}
+end
 
 # Activation is driven by the machine's `status` field, not a manual set_state + NBT flag.
-def status() {
+def status():
     return rpm != 0 ? "true" : "false"
-}
+end
 
-def on_break() {
+def on_break():
     Machine.set_rpm_output(0)
     Machine.report_su(0)
-}
+end
+
+
+

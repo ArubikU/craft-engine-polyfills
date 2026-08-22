@@ -1,0 +1,8 @@
+{
+  "type": "gear_press",
+  "time": 50,
+  "fuelRequired": false,
+  "energyCost": 20,
+  "inputs": [ { "type": "item", "id": "minecraft:copper_ingot", "amount": 4 } ],
+  "outputs": [ { "type": "custom_item", "id": "cml:copper_gear", "amount": 1, "chance": 1.0 } ]
+}

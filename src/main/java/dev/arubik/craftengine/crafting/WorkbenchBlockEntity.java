@@ -2,7 +2,7 @@ package dev.arubik.craftengine.crafting;
 
 import dev.arubik.craftengine.block.entity.PersistentBlockEntity;
 import dev.arubik.craftengine.conveyor.ConveyorItemDisplay;
-import dev.arubik.craftengine.multiblock.HorizontalDoubleGeometry;
+import dev.arubik.craftengine.multiblock.MultiCellGeometry;
 import net.momirealms.craftengine.core.block.ImmutableBlockState;
 import net.momirealms.craftengine.core.block.entity.BlockEntity;
 import net.momirealms.craftengine.core.block.entity.BlockEntityController;
@@ -29,6 +29,16 @@ import org.joml.Vector3f;
  */
 public class WorkbenchBlockEntity extends PersistentBlockEntity
         implements dev.arubik.craftengine.machine.render.ModelRendersDriven {
+
+    /** The workbench's single secondary cell, one step toward facing.clockWise() — replaces the
+     * deleted HorizontalDoubleGeometry.rightCell with the equivalent single-offset MultiCellGeometry
+     * call (see WorkbenchBehavior's constructor for the equivalence note). */
+    private static final java.util.List<MultiCellGeometry.Offset> RIGHT_CELL =
+            java.util.List.of(new MultiCellGeometry.Offset(1, 0, 0));
+
+    private static BlockPos rightCell(BlockPos masterPos, Direction facing) {
+        return MultiCellGeometry.cellPos(masterPos, facing, RIGHT_CELL, 1);
+    }
 
     /** Recipe output preview pushed by the open menu (transient — not persisted). */
     private final java.util.List<org.bukkit.inventory.ItemStack> outputs = new java.util.ArrayList<>(2);
@@ -235,7 +245,7 @@ public class WorkbenchBlockEntity extends PersistentBlockEntity
         if (bp != null && !bp.getType().isAir()) {
             WorkbenchBehavior.RenderOverride ov = override(cfg, bp);
             float[] pos = addPos(bpPos, ov);
-            BlockPos right = HorizontalDoubleGeometry.rightCell(masterPos, facing);
+            BlockPos right = rightCell(masterPos, facing);
             Vector3f o = localOffset(pos[0], pos[1], pos[2], facing);
             if (bpDisplay == null)
                 bpDisplay = new ConveyorItemDisplay();
@@ -366,7 +376,7 @@ public class WorkbenchBlockEntity extends PersistentBlockEntity
                     }
                 }
                 BlockPos cell = onRight
-                        ? HorizontalDoubleGeometry.rightCell(masterPos, facing)
+                        ? rightCell(masterPos, facing)
                         : masterPos;
 
                 float[] locOff = resolveRelativeOffset(id.locationExpr());
@@ -413,7 +423,7 @@ public class WorkbenchBlockEntity extends PersistentBlockEntity
 
             WorkbenchBehavior.RenderOverride ov = override(cfg, item);
             float[] pos = addPos(entry.position(), ov);
-            BlockPos cell = entry.onRightHalf() ? HorizontalDoubleGeometry.rightCell(masterPos, facing) : masterPos;
+            BlockPos cell = entry.onRightHalf() ? rightCell(masterPos, facing) : masterPos;
             Vector3f o = localOffset(pos[0], pos[1], pos[2], facing);
 
             ConveyorItemDisplay display = slotDisplays.computeIfAbsent(entry.slot(),

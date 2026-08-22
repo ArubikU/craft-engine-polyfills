@@ -1,0 +1,13 @@
+{
+  "id": "polyfills:jetpack",
+  "title": "Jetpack",
+  "tick_interval": 4,
+  "tanks": [
+    { "name": "gas", "kind": "gas", "capacity": 8000 }
+  ],
+  "scripts": {
+    "on_equip": "jetpack.pf:on_equip",
+    "on_unequip": "jetpack.pf:on_unequip",
+    "on_equipped_tick": "jetpack.pf:on_equipped_tick"
+  }
+}

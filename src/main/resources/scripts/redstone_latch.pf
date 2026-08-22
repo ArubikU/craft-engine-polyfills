@@ -6,9 +6,12 @@ prev_power = Machine.get_flag("prev_power")
 Machine.set_flag("prev_power", cur_power)
 
 # Rising edge: toggle latch
-if cur_power > 0 && prev_power == 0 {
+if cur_power > 0 && prev_power == 0:
     latched = Machine.get_flag("latched")
     new_state = latched > 0 ? 0 : 1
     Machine.set_flag("latched", new_state)
     Machine.emit_redstone(new_state > 0 ? 15 : 0)
-}
+end
+
+
+

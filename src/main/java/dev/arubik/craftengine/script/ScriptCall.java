@@ -60,4 +60,24 @@ public record ScriptCall(String scriptName, String funcName, List<String> args) 
         }
         return withDefs;
     }
+
+    /**
+     * Like {@link #execute}, but returns the called function's own return value instead of the
+     * post-execution context — for predicate-style scripts (e.g. a storage-slot filter) that
+     * report a result rather than mutate state. {@code ScriptValue.NULL} if the ref names no
+     * function (a plain script file) or the function isn't found.
+     */
+    public ScriptValue evaluate(ScriptContext ctx) {
+        ScriptProgram prog = ScriptRegistry.get(scriptName);
+        if (prog == null || funcName == null || funcName.isBlank()) return ScriptValue.NULL;
+        ScriptContext withDefs = prog.evaluate(ctx);
+        ScriptValue fnVal = withDefs.getVar(funcName);
+        if (fnVal instanceof ScriptValue.Obj fnObj && fnObj.typeName().equals(UserFunction.TYPE)) {
+            UserFunction fn = (UserFunction) fnObj.instance();
+            java.util.List<ScriptValue> svArgs = new java.util.ArrayList<>(args.size());
+            for (String a : args) svArgs.add(ScriptValue.of(a));
+            return fn.call(svArgs, withDefs);
+        }
+        return ScriptValue.NULL;
+    }
 }

@@ -159,6 +159,15 @@ public final class ItemType {
                 String myId = BuiltInRegistries.ITEM.getKey(stack(obj).getItem()).toString();
                 return ScriptValue.of(myId.equals(id) || myId.equals("minecraft:" + id));
             })
+            // Full identity comparison (type + every data component — enchantments, custom name,
+            // durability, everything), ignoring stack COUNT — the same rule vanilla stacking uses.
+            // `matches(id)` above only ever compared the base item type; a filter that wants to
+            // require a SPECIFIC enchanted book (not just "any book") needs this instead.
+            .method("same_as", (obj, args) -> {
+                if (args.isEmpty() || !(args.get(0) instanceof ScriptValue.Item other))
+                    return ScriptValue.of(false);
+                return ScriptValue.of(ItemStack.isSameItemSameComponents(stack(obj), other.stack()));
+            })
             .method("with_count", (obj, args) -> {
                 if (args.isEmpty()) return ScriptValue.ofItem(stack(obj));
                 ItemStack copy = stack(obj).copy();
@@ -231,7 +240,251 @@ public final class ItemType {
                     new net.minecraft.world.item.component.TooltipDisplay(hide, new java.util.LinkedHashSet<>())); }
                 catch (Throwable ignored) {}
                 return ScriptValue.ofItem(copy);
+            })
+
+            // item.with_name("<red>Foo") → item copy with a MiniMessage-parsed custom name.
+            // Equivalent to with_component("custom_name", text) but named for the common case
+            // (e.g. an on_render/on_shot script picking a name ad hoc) instead of needing to know
+            // the raw component id. Falls back to a literal (unparsed) Component on bad MiniMessage
+            // syntax rather than dropping the name entirely.
+            .method("with_name", (obj, args) -> {
+                if (args.isEmpty()) return ScriptValue.ofItem(stack(obj));
+                ItemStack copy = stack(obj).copy();
+                String text = args.get(0).asStr();
+                try {
+                    copy.set(DataComponents.CUSTOM_NAME, toDisplayComponent(text));
+                } catch (Throwable ignored) {}
+                return ScriptValue.ofItem(copy);
+            })
+
+            // item.with_lore(line, line, ...) or item.with_lore([line, line, ...]) → item copy
+            // with that MiniMessage-parsed lore, replacing whatever lore (if any) it already had.
+            // Both call shapes work, same flexibility as event.set_drops — no array-literal syntax
+            // required for the common single-or-few-lines case.
+            .method("with_lore", (obj, args) -> {
+                ItemStack copy = stack(obj).copy();
+                List<net.minecraft.network.chat.Component> lines = new ArrayList<>();
+                for (ScriptValue v : args) {
+                    if (v instanceof ScriptValue.Array arr) {
+                        for (ScriptValue e : arr.elements()) lines.add(toDisplayComponent(e.asStr()));
+                    } else {
+                        lines.add(toDisplayComponent(v.asStr()));
+                    }
+                }
+                try { copy.set(DataComponents.LORE, new net.minecraft.world.item.component.ItemLore(lines)); }
+                catch (Throwable ignored) {}
+                return ScriptValue.ofItem(copy);
+            })
+
+            // ---- Generic TypedKey storage (see dev.arubik.craftengine.script.TypedKeyBridge) ----
+            // Standardized get/set-by-NbtType over this item's own CUSTOM_DATA, the item-side
+            // counterpart of Machine.get_typed/set_typed — one key/type convention instead of a
+            // bespoke get_X_flag pair per feature. Items are values here, so with_typed returns a
+            // NEW copy (same idiom as with_component) rather than mutating in place.
+            .method("get_typed", (obj, args) -> {
+                if (args.size() < 2) return ScriptValue.NULL;
+                dev.arubik.craftengine.script.TypedKeyBridge.Codec codec = dev.arubik.craftengine.script.TypedKeyBridge.resolve(args.get(1).asStr());
+                if (codec == null) return ScriptValue.NULL;
+                try {
+                    var cd = stack(obj).get(DataComponents.CUSTOM_DATA);
+                    if (cd == null) return codec.fromStorage(null);
+                    return codec.fromStorage(readRaw(cd.copyTag(), "tkey_" + args.get(0).asStr(), codec.storage()));
+                } catch (Throwable ignored) { return codec.fromStorage(null); }
+            })
+            .method("has_typed", (obj, args) -> {
+                if (args.isEmpty()) return ScriptValue.of(false);
+                try {
+                    var cd = stack(obj).get(DataComponents.CUSTOM_DATA);
+                    return ScriptValue.of(cd != null && cd.copyTag().contains("tkey_" + args.get(0).asStr()));
+                } catch (Throwable ignored) { return ScriptValue.of(false); }
+            })
+            .method("with_typed", (obj, args) -> {
+                if (args.size() < 3) return ScriptValue.ofItem(stack(obj));
+                dev.arubik.craftengine.script.TypedKeyBridge.Codec codec = dev.arubik.craftengine.script.TypedKeyBridge.resolve(args.get(1).asStr());
+                if (codec == null) return ScriptValue.ofItem(stack(obj));
+                try {
+                    ItemStack copy = stack(obj).copy();
+                    var cd = copy.getOrDefault(DataComponents.CUSTOM_DATA, net.minecraft.world.item.component.CustomData.EMPTY);
+                    CompoundTag tag = cd.copyTag();
+                    writeRaw(tag, "tkey_" + args.get(0).asStr(), codec.storage(), codec.toStorage(args.get(2)));
+                    copy.set(DataComponents.CUSTOM_DATA, net.minecraft.world.item.component.CustomData.of(tag));
+                    return ScriptValue.ofItem(copy);
+                } catch (Throwable ignored) { return ScriptValue.ofItem(stack(obj)); }
+            })
+
+            // ---- Item behavior motor API (dev.arubik.craftengine.item.ItemDefinition) ----
+
+            // item.transmutate("polyfills:new_id") → a fresh instance of that CraftEngine custom
+            // item, carrying over count and this item's custom NBT (tanks, container, any other
+            // custom_data) — the actual identity swap, everything else (enchantments, damage,
+            // display name, ...) is intentionally NOT preserved since the target item's own
+            // definition supplies its own defaults for those.
+            .method("transmutate", (obj, args) -> {
+                if (args.isEmpty()) return ScriptValue.ofItem(stack(obj));
+                try {
+                    ItemStack self = stack(obj);
+                    net.momirealms.craftengine.core.util.Key targetId =
+                            net.momirealms.craftengine.core.util.Key.of(args.get(0).asStr());
+                    var def = net.momirealms.craftengine.bukkit.api.CraftEngineItems.byId(targetId);
+                    if (def == null) return ScriptValue.ofItem(self);
+                    org.bukkit.inventory.ItemStack bukkit = def.buildBukkitItem();
+                    ItemStack result = org.bukkit.craftbukkit.inventory.CraftItemStack.asNMSCopy(bukkit);
+                    result.setCount(self.getCount());
+                    var customData = self.get(DataComponents.CUSTOM_DATA);
+                    if (customData != null) result.set(DataComponents.CUSTOM_DATA, customData);
+                    return ScriptValue.ofItem(result);
+                } catch (Throwable ignored) { return ScriptValue.ofItem(stack(obj)); }
+            })
+
+            // item.tank("name") → current amount stored in that named tank buffer
+            .method("tank", (obj, args) -> {
+                if (args.isEmpty()) return ScriptValue.of(0);
+                return ScriptValue.of(dev.arubik.craftengine.item.ItemStateData.tankAmount(stack(obj), args.get(0).asStr()));
+            })
+
+            // Generic per-item flag store — the item-side counterpart of Machine.get_flag/set_flag
+            // (and the string variant), mirroring their naming exactly. Mainly the bridge primitive
+            // for ItemDefinition#bridgeFlags/#bridgeStrFlags when converting to/from a machine, but
+            // usable by any script for its own per-item state.
+            .method("get_flag", (obj, args) -> {
+                if (args.isEmpty()) return ScriptValue.of(0);
+                return ScriptValue.of(dev.arubik.craftengine.item.ItemStateData.getFlag(stack(obj), args.get(0).asStr()));
+            })
+            .method("set_flag", (obj, args) -> {
+                if (args.size() < 2) return ScriptValue.ofItem(stack(obj));
+                return ScriptValue.ofItem(dev.arubik.craftengine.item.ItemStateData.setFlag(
+                        stack(obj), args.get(0).asStr(), (int) args.get(1).asNum()));
+            })
+            .method("get_str_flag", (obj, args) -> {
+                if (args.isEmpty()) return ScriptValue.of("");
+                return ScriptValue.of(dev.arubik.craftengine.item.ItemStateData.getStrFlag(stack(obj), args.get(0).asStr()));
+            })
+            .method("set_str_flag", (obj, args) -> {
+                if (args.size() < 2) return ScriptValue.ofItem(stack(obj));
+                return ScriptValue.ofItem(dev.arubik.craftengine.item.ItemStateData.setStrFlag(
+                        stack(obj), args.get(0).asStr(), args.get(1).asStr()));
+            })
+
+            // item.tank_capacity("name") → capacity declared on this item's ItemDefinition, or 0
+            .method("tank_capacity", (obj, args) -> {
+                if (args.isEmpty()) return ScriptValue.of(0);
+                var def = dev.arubik.craftengine.item.ItemDefinition.byId(ceKey(stack(obj)));
+                if (def == null) return ScriptValue.of(0);
+                var tank = def.tank(args.get(0).asStr());
+                return ScriptValue.of(tank != null ? tank.capacity() : 0);
+            })
+
+            // item.set_tank("name", amount) → item copy with that tank buffer set (clamped to
+            // capacity when the item's own ItemDefinition declares one, uncapped otherwise)
+            .method("set_tank", (obj, args) -> {
+                if (args.size() < 2) return ScriptValue.ofItem(stack(obj));
+                ItemStack self = stack(obj);
+                String name = args.get(0).asStr();
+                int amount = (int) args.get(1).asNum();
+                var def = dev.arubik.craftengine.item.ItemDefinition.byId(ceKey(self));
+                var tank = def != null ? def.tank(name) : null;
+                int capacity = tank != null ? tank.capacity() : Integer.MAX_VALUE;
+                return ScriptValue.ofItem(dev.arubik.craftengine.item.ItemStateData.setTankAmount(self, name, amount, capacity));
+            })
+
+            // item.add_tank("name", delta) → set_tank(name, tank(name) + delta), clamped as above
+            .method("add_tank", (obj, args) -> {
+                if (args.size() < 2) return ScriptValue.ofItem(stack(obj));
+                ItemStack self = stack(obj);
+                String name = args.get(0).asStr();
+                int delta = (int) args.get(1).asNum();
+                var def = dev.arubik.craftengine.item.ItemDefinition.byId(ceKey(self));
+                var tank = def != null ? def.tank(name) : null;
+                int capacity = tank != null ? tank.capacity() : Integer.MAX_VALUE;
+                int current = dev.arubik.craftengine.item.ItemStateData.tankAmount(self, name);
+                return ScriptValue.ofItem(dev.arubik.craftengine.item.ItemStateData.setTankAmount(self, name, current + delta, capacity));
+            })
+
+            // item.has_definition() → true if this is a polyfills:data_item-backed item with an
+            // items/*.json ItemDefinition (as opposed to a plain vanilla item or some other CE
+            // item behavior). Lets a script introspect an arbitrary item (e.g. one read out of a
+            // slot via Player.get_inventory_slot) before assuming it has tanks/scripts/pages.
+            .method("has_definition", (obj, args) -> {
+                try {
+                    return ScriptValue.of(dev.arubik.craftengine.item.ItemDefinition.byId(ceKey(stack(obj))) != null);
+                } catch (Throwable ignored) { return ScriptValue.of(false); }
+            })
+
+            // item.has_script("on_equipped_tick") → true if this item's ItemDefinition declares a
+            // script ref for that event.
+            .method("has_script", (obj, args) -> {
+                if (args.isEmpty()) return ScriptValue.of(false);
+                try {
+                    var def = dev.arubik.craftengine.item.ItemDefinition.byId(ceKey(stack(obj)));
+                    return ScriptValue.of(def != null && def.script(args.get(0).asStr()) != null);
+                } catch (Throwable ignored) { return ScriptValue.of(false); }
+            })
+
+            // item.get_script("on_equipped_tick") → the "file.pf:function" ref, or "" if this item
+            // has no definition or doesn't declare that event.
+            .method("get_script", (obj, args) -> {
+                if (args.isEmpty()) return ScriptValue.of("");
+                try {
+                    var def = dev.arubik.craftengine.item.ItemDefinition.byId(ceKey(stack(obj)));
+                    if (def == null) return ScriptValue.of("");
+                    String ref = def.script(args.get(0).asStr());
+                    return ScriptValue.of(ref != null ? ref : "");
+                } catch (Throwable ignored) { return ScriptValue.of(""); }
+            })
+
+            // item.update() → re-renders this item's display name/lore from its ItemDefinition's
+            // "name"/"lore" templates (MiniMessage, "${expr}" inline scripts, or a bare
+            // "script.pf:func" call — see TextTemplate), a no-op if it declares neither. Scripts call
+            // this after changing state that a template reads (e.g. item.set_flag/set_tank) to make
+            // the change visible — there is no automatic re-render, since a plain data component
+            // write has no hook of its own to piggyback on.
+            .method("update", (obj, args) -> {
+                ItemStack self = stack(obj);
+                try {
+                    var def = dev.arubik.craftengine.item.ItemDefinition.byId(ceKey(self));
+                    if (def == null || (def.nameTemplate() == null && def.loreTemplate().isEmpty())) {
+                        return ScriptValue.ofItem(self);
+                    }
+                    ItemStack result = self.copy();
+                    dev.arubik.craftengine.script.ScriptContext ctx =
+                            dev.arubik.craftengine.script.ScriptContext.builder().item("item", self).build();
+                    if (def.nameTemplate() != null) {
+                        String raw = dev.arubik.craftengine.script.TextTemplate.evaluateRaw(def.nameTemplate(), ctx);
+                        if (raw != null) {
+                            net.kyori.adventure.text.Component adv =
+                                    net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(raw);
+                            result.set(DataComponents.CUSTOM_NAME,
+                                    (net.minecraft.network.chat.Component) io.papermc.paper.adventure.PaperAdventure.asVanilla(adv));
+                        }
+                    }
+                    if (!def.loreTemplate().isEmpty()) {
+                        java.util.List<String> rawLines = dev.arubik.craftengine.script.TextTemplate.evaluateLoreRaw(def.loreTemplate(), ctx);
+                        java.util.List<net.minecraft.network.chat.Component> lines = new ArrayList<>();
+                        for (String line : rawLines) {
+                            net.kyori.adventure.text.Component adv =
+                                    net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(line != null ? line : "");
+                            lines.add((net.minecraft.network.chat.Component) io.papermc.paper.adventure.PaperAdventure.asVanilla(adv));
+                        }
+                        result.set(DataComponents.LORE, new net.minecraft.world.item.component.ItemLore(lines));
+                    }
+                    return ScriptValue.ofItem(result);
+                } catch (Throwable ignored) { return ScriptValue.ofItem(self); }
             });
+    }
+
+    /** MiniMessage text → NMS Component with italics defaulted off (the convention every menu
+     *  icon/name/lore in this codebase already uses — otherwise a plain-text name/lore line
+     *  renders italic, vanilla's default for a custom name). Falls back to a literal Component on
+     *  bad MiniMessage syntax rather than dropping the text. */
+    private static net.minecraft.network.chat.Component toDisplayComponent(String text) {
+        try {
+            net.kyori.adventure.text.Component adv = net.kyori.adventure.text.minimessage.MiniMessage.miniMessage()
+                    .deserialize(text == null ? "" : text)
+                    .decoration(net.kyori.adventure.text.format.TextDecoration.ITALIC, false);
+            return (net.minecraft.network.chat.Component) io.papermc.paper.adventure.PaperAdventure.asVanilla(adv);
+        } catch (Throwable ignored) {
+            return net.minecraft.network.chat.Component.literal(text == null ? "" : text);
+        }
     }
 
     /** Convert a ScriptValue to a JSON-compatible primitive for two-arg with_component. */
@@ -248,6 +501,76 @@ public final class ItemType {
     }
 
     private static ItemStack stack(Object obj) { return (ItemStack) obj; }
+
+    /** Reads one {@link dev.arubik.craftengine.util.NbtType}-primitive value out of an item's raw
+     *  NMS custom-data tag (or null if absent) — the item-side counterpart of PersistentBlockEntity's
+     *  own typed getters, which operate on CraftEngine's own (different) CompoundTag class instead
+     *  of NMS's. Returns the RAW Java primitive; {@link dev.arubik.craftengine.script.TypedKeyBridge.Codec#fromStorage}
+     *  turns that into a script value (so a custom codec like "item"/"vector" can decode it too). */
+    private static Object readRaw(CompoundTag tag, String key, dev.arubik.craftengine.util.NbtType type) {
+        return switch (type) {
+            case BYTE -> tag.getByte(key).orElse(null);
+            case SHORT -> tag.getShortOr(key, (short) 0);
+            case INTEGER -> tag.getIntOr(key, 0);
+            case LONG -> tag.getLong(key).orElse(null);
+            case FLOAT -> tag.getFloatOr(key, 0f);
+            case DOUBLE -> tag.getDoubleOr(key, 0.0);
+            case STRING -> tag.getStringOr(key, null);
+            case BOOLEAN -> tag.getBooleanOr(key, false);
+            case BYTE_ARRAY -> tag.getByteArray(key).orElse(null);
+            case INTEGER_ARRAY -> tag.getIntArray(key).orElse(null);
+            case LONG_ARRAY -> tag.getLongArray(key).orElse(null);
+        };
+    }
+
+    /** Writes one raw primitive into an item's raw NMS custom-data tag (mutates {@code tag} in
+     *  place — caller re-sets the CUSTOM_DATA component from it, keeping items' copy-on-write
+     *  convention). {@code v} is whatever {@link dev.arubik.craftengine.script.TypedKeyBridge.Codec#toStorage} produced. */
+    private static void writeRaw(CompoundTag tag, String key, dev.arubik.craftengine.util.NbtType type, Object v) {
+        switch (type) {
+            case BYTE -> tag.putByte(key, (Byte) v);
+            case SHORT -> tag.putShort(key, (Short) v);
+            case INTEGER -> tag.putInt(key, (Integer) v);
+            case LONG -> tag.putLong(key, (Long) v);
+            case FLOAT -> tag.putFloat(key, (Float) v);
+            case DOUBLE -> tag.putDouble(key, (Double) v);
+            case STRING -> tag.putString(key, (String) v);
+            case BOOLEAN -> tag.putBoolean(key, (Boolean) v);
+            case BYTE_ARRAY -> tag.putByteArray(key, (byte[]) v);
+            case INTEGER_ARRAY -> tag.putIntArray(key, (int[]) v);
+            case LONG_ARRAY -> tag.putLongArray(key, (long[]) v);
+        }
+    }
+
+    /** Public, non-script-value entry point onto the SAME {@code "tkey_"+name} store {@code
+     *  get_typed}/{@code with_typed} use — for Java-side bridging (see {@code ItemDefinition
+     *  #bridgeTyped}, {@code DataItemBehavior#fillMachineContainer}, {@code MachineType.to_item})
+     *  that needs the raw stored primitive without a ScriptValue round trip. Null if absent. */
+    public static Object readTypedRaw(ItemStack stack, String name, dev.arubik.craftengine.util.NbtType type) {
+        try {
+            var cd = stack.get(DataComponents.CUSTOM_DATA);
+            if (cd == null) return null;
+            return readRaw(cd.copyTag(), "tkey_" + name, type);
+        } catch (Throwable ignored) { return null; }
+    }
+
+    /** Write counterpart of {@link #readTypedRaw} — returns a NEW copy (items are copy-on-write). */
+    public static ItemStack writeTypedRaw(ItemStack stack, String name, dev.arubik.craftengine.util.NbtType type, Object value) {
+        try {
+            ItemStack copy = stack.copy();
+            var cd = copy.getOrDefault(DataComponents.CUSTOM_DATA, net.minecraft.world.item.component.CustomData.EMPTY);
+            CompoundTag tag = cd.copyTag();
+            writeRaw(tag, "tkey_" + name, type, value);
+            copy.set(DataComponents.CUSTOM_DATA, net.minecraft.world.item.component.CustomData.of(tag));
+            return copy;
+        } catch (Throwable ignored) { return stack; }
+    }
+
+    /** This item's CraftEngine custom-item key, for looking up its {@code ItemDefinition}. */
+    private static net.momirealms.craftengine.core.util.Key ceKey(ItemStack nms) {
+        String id = customItemId(nms);
+        return id != null ? net.momirealms.craftengine.core.util.Key.of(id) : null;
+    }
 
     /** CE custom item id, or null for a plain vanilla item. */
     public static String customItemId(ItemStack nms) {

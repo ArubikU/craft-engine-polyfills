@@ -74,6 +74,23 @@ public class CepCommand implements CommandExecutor, TabCompleter {
             return true;
         });
 
+        // /cep reload items — re-read items/*.json. DataItemBehavior resolves its ItemDefinition
+        // by id fresh on every dispatch rather than caching it, so there is no "re-point every
+        // live instance" step to do here the way machines need — the new definition is already
+        // live for every item everywhere (inventories, machines, dropped) the moment the registry
+        // is repopulated.
+        cases.put(new ArgumentList("reload^", "items^"), (sender, parsed) -> {
+            try {
+                int loaders = dev.arubik.craftengine.data.Registries.reloadLoaders("items");
+                reloadMsg(sender, "items",
+                        dev.arubik.craftengine.item.ItemDefinition.REGISTRY.size()
+                                + " definition(s) from " + loaders + " loader(s)");
+            } catch (Throwable t) {
+                reloadFail(sender, "items", t);
+            }
+            return true;
+        });
+
         // /cep reload render — re-read the renderer specs and rebuild every live renderer.
         cases.put(new ArgumentList("reload^", "render^"), (sender, parsed) -> {
             try {
@@ -93,7 +110,7 @@ public class CepCommand implements CommandExecutor, TabCompleter {
         // /cep reload — usage, and the list of loaders a targeted reload can name.
         cases.put(new ArgumentList("reload^"), (sender, parsed) -> {
             sender.sendMessage(MiniMessage.miniMessage().deserialize(
-                    "<gray>Usage: <white>/cep reload <aqua>render<gray>|<aqua>machines<gray>|<aqua>scripts"));
+                    "<gray>Usage: <white>/cep reload <aqua>render<gray>|<aqua>machines<gray>|<aqua>items<gray>|<aqua>scripts"));
             sender.sendMessage(MiniMessage.miniMessage().deserialize(
                     "<dark_gray>loaders: <gray>"
                             + String.join(", ", dev.arubik.craftengine.data.Registries.loaderNames())));

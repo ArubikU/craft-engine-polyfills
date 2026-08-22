@@ -4,23 +4,26 @@
 
 block = Machine.facing_block
 
-if block.is_air {
+if block.is_air:
     placed = false
-    for i in range(27) {
-        if !placed {
+    for i in range(27):
+        if !placed:
             item = Machine.get_item_in_slot(i)
-            if !is_empty(item) {
+            if !is_empty(item):
                 ok = Machine.place_block_at(Machine.facing_dx, Machine.facing_dy, Machine.facing_dz, item)
-                if ok {
+                if ok:
                     Machine.remove_item_in_slot(i, 1)
                     placed = true
-                }
-            }
-        }
-    }
-} else {
+                end
+            end
+        end
+    end
+else:
     drops = Machine.break_block(block)
-    for drop in drops {
+    for drop in drops:
         Machine.push_item_to_inventory(drop)
-    }
-}
+    end
+end
+
+
+

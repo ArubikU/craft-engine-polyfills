@@ -55,10 +55,15 @@ public final class ContraptionMath {
     }
 
     public static Vec3 renderPosition(Vec3 localOffset, Vec3 bearingWorldPos, double yawRadians, double pitchRadians, double rollRadians, double scale) {
-        Vec3 centered = new Vec3(localOffset.x - 0.5, localOffset.y, localOffset.z - 0.5);
+        // x/z are centered on the pivot block's middle (-0.5, then +0.5 back after rotating) so a
+        // pure yaw spin (about Y) turns the structure around the pivot block's CENTER. y was never
+        // given the same treatment, so pitch/roll (which mix Y into X or Z) rotated about the
+        // pivot's BOTTOM FACE/edge instead of its center — visible as the whole contraption
+        // swinging around one corner for any bearing not spinning about the vertical axis.
+        Vec3 centered = new Vec3(localOffset.x - 0.5, localOffset.y - 0.5, localOffset.z - 0.5);
         Vec3 rotated = ContraptionMath.rotateYawPitchRoll(centered, yawRadians, pitchRadians, rollRadians);
         double worldX = bearingWorldPos.x + 0.5 + scale * rotated.x;
-        double worldY = bearingWorldPos.y + scale * rotated.y;
+        double worldY = bearingWorldPos.y + 0.5 + scale * rotated.y;
         double worldZ = bearingWorldPos.z + 0.5 + scale * rotated.z;
         return new Vec3(worldX, worldY, worldZ);
     }
@@ -77,7 +82,10 @@ public final class ContraptionMath {
 
     public static Vec3 realToLocal(Vec3 realPos, Vec3 bearingWorldPos, double yawRadians, double pitchRadians, double rollRadians, double scale) {
         double invScale = scale != 0.0 ? 1.0 / scale : 1.0;
-        Vec3 centered = new Vec3((realPos.x - bearingWorldPos.x - 0.5) * invScale, (realPos.y - bearingWorldPos.y) * invScale, (realPos.z - bearingWorldPos.z - 0.5) * invScale);
+        // Inverse of renderPosition's centering above — y must be un-centered the same way x/z are,
+        // or round-tripping (hit detection, entity placement inside the contraption, etc.) would
+        // disagree with the now-corrected forward transform.
+        Vec3 centered = new Vec3((realPos.x - bearingWorldPos.x - 0.5) * invScale, (realPos.y - bearingWorldPos.y - 0.5) * invScale, (realPos.z - bearingWorldPos.z - 0.5) * invScale);
         Vec3 unrotated = ContraptionMath.rotateYaw(centered, -yawRadians);
         if (pitchRadians != 0.0) {
             unrotated = ContraptionMath.rotatePitch(unrotated, -pitchRadians);
@@ -85,7 +93,7 @@ public final class ContraptionMath {
         if (rollRadians != 0.0) {
             unrotated = ContraptionMath.rotateRoll(unrotated, -rollRadians);
         }
-        return new Vec3(unrotated.x + 0.5, unrotated.y, unrotated.z + 0.5);
+        return new Vec3(unrotated.x + 0.5, unrotated.y + 0.5, unrotated.z + 0.5);
     }
 
     public static Vec3 rotateYaw(Vec3 localVector, double yawRadians) {

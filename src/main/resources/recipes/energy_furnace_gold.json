@@ -1,0 +1,8 @@
+{
+  "type": "energy_furnace",
+  "time": 100,
+  "fuelRequired": false,
+  "energyCost": 40,
+  "inputs": [ { "type": "item", "id": "minecraft:raw_gold", "amount": 1 } ],
+  "outputs": [ { "type": "item", "id": "minecraft:gold_ingot", "amount": 1, "chance": 1.0 } ]
+}

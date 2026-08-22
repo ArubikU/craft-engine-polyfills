@@ -1,11 +1,16 @@
 {
   "id": "polyfills:energy",
-  "model": "row",
+  "model": "column",
   "name": "lang:polyfill.ui.energy",
   "generate": {
     "empty_icon": "cml:gui_empty",
     "lore": ["%value%/%max% CE", "%percent%%"],
-    "parts": [ { "levels": 16 } ],
-    "types": { "default": "cml:progress_%level%" }
+    "parts": [
+      { "suffix": "bottom", "levels": 16 },
+      { "suffix": "midbot", "levels": 18 },
+      { "suffix": "midtop", "levels": 18 },
+      { "suffix": "top",    "levels": 16 }
+    ],
+    "types": { "default": "cml:energy_%suffix%_%level%" }
   }
 }

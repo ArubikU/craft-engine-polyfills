@@ -1,0 +1,8 @@
+{
+  "type": "gear_press",
+  "time": 70,
+  "fuelRequired": false,
+  "energyCost": 30,
+  "inputs": [ { "type": "item", "id": "minecraft:gold_ingot", "amount": 4 } ],
+  "outputs": [ { "type": "custom_item", "id": "cml:gold_gear", "amount": 1, "chance": 1.0 } ]
+}

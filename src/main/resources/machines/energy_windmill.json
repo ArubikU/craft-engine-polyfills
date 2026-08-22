@@ -1,0 +1,282 @@
+{
+  "id": "polyfills:energy_windmill",
+  "title": "Energy Windmill",
+  "flags": {
+    "recipes": false,
+    "fuel": false
+  },
+  "energy": {
+    "capacity": 16000,
+    "max_input": 0,
+    "max_output": 800,
+    "per_tick": 80
+  },
+  "action_script": "energy_windmill",
+  "action_interval": 20,
+  "cell_io": {
+    "default": "closed",
+    "rules": [
+      {
+        "y": 0,
+        "output": {
+          "types": [
+            "energy"
+          ],
+          "faces": [
+            "down"
+          ]
+        }
+      }
+    ]
+  },
+  "pages": [
+    {
+      "title": "{Images.from('cml:energy_windmill_gui')}",
+      "size": 54,
+      "layout": [
+        {
+          "slot": 4,
+          "item": "cml:energy_charge_icon",
+          "name": "<yellow>${Machine.energy_stored}/${Machine.energy_capacity} CE",
+          "lore": [
+            "<green>Out: +${Machine.energy_real_output}/t"
+          ]
+        }
+      ],
+      "bars": [
+        {
+          "id": "polyfills:energy",
+          "slots": [
+            35,
+            26,
+            17,
+            8
+          ],
+          "source": "energy"
+        }
+      ]
+    }
+  ],
+  "renderers": [
+    {
+      "type": "item_display",
+      "item": "CraftEngineItem(\"cml:energy_windmill_rotor_hub_render\")",
+      "location": {
+        "x": 0,
+        "y": 3.5,
+        "z": -0.2
+      },
+      "rot_y": 180,
+      "when": "facing == \"south\"",
+      "update_when": "always",
+      "global": true
+    },
+    {
+      "type": "item_display",
+      "item": "CraftEngineItem(\"cml:energy_windmill_rotor_blade_render\")",
+      "location": {
+        "x": 0,
+        "y": 3.5,
+        "z": -0.2
+      },
+      "rot_y": 180,
+      "rot_z": "tick() * 4",
+      "when": "Machine.activated && facing == \"south\"",
+      "update_when": "always",
+      "global": true
+    },
+    {
+      "type": "item_display",
+      "item": "CraftEngineItem(\"cml:energy_windmill_rotor_blade_render\")",
+      "location": {
+        "x": 0,
+        "y": 3.5,
+        "z": -0.2
+      },
+      "rot_y": 180,
+      "rot_z": "tick() * 4 + 120",
+      "when": "Machine.activated && facing == \"south\"",
+      "update_when": "always",
+      "global": true
+    },
+    {
+      "type": "item_display",
+      "item": "CraftEngineItem(\"cml:energy_windmill_rotor_blade_render\")",
+      "location": {
+        "x": 0,
+        "y": 3.5,
+        "z": -0.2
+      },
+      "rot_y": 180,
+      "rot_z": "tick() * 4 + 240",
+      "when": "Machine.activated && facing == \"south\"",
+      "update_when": "always",
+      "global": true
+    },
+    {
+      "type": "item_display",
+      "item": "CraftEngineItem(\"cml:energy_windmill_rotor_hub_render\")",
+      "location": {
+        "x": 0,
+        "y": 3.5,
+        "z": 0.2
+      },
+      "rot_y": 0,
+      "when": "facing == \"north\"",
+      "update_when": "always",
+      "global": true
+    },
+    {
+      "type": "item_display",
+      "item": "CraftEngineItem(\"cml:energy_windmill_rotor_blade_render\")",
+      "location": {
+        "x": 0,
+        "y": 3.5,
+        "z": 0.2
+      },
+      "rot_y": 0,
+      "rot_z": "tick() * 4",
+      "when": "Machine.activated && facing == \"north\"",
+      "update_when": "always",
+      "global": true
+    },
+    {
+      "type": "item_display",
+      "item": "CraftEngineItem(\"cml:energy_windmill_rotor_blade_render\")",
+      "location": {
+        "x": 0,
+        "y": 3.5,
+        "z": 0.2
+      },
+      "rot_y": 0,
+      "rot_z": "tick() * 4 + 120",
+      "when": "Machine.activated && facing == \"north\"",
+      "update_when": "always",
+      "global": true
+    },
+    {
+      "type": "item_display",
+      "item": "CraftEngineItem(\"cml:energy_windmill_rotor_blade_render\")",
+      "location": {
+        "x": 0,
+        "y": 3.5,
+        "z": 0.2
+      },
+      "rot_y": 0,
+      "rot_z": "tick() * 4 + 240",
+      "when": "Machine.activated && facing == \"north\"",
+      "update_when": "always",
+      "global": true
+    },
+    {
+      "type": "item_display",
+      "item": "CraftEngineItem(\"cml:energy_windmill_rotor_hub_render\")",
+      "location": {
+        "x": 0.2,
+        "y": 3.5,
+        "z": 0
+      },
+      "rot_y": 270,
+      "when": "facing == \"west\"",
+      "update_when": "always",
+      "global": true
+    },
+    {
+      "type": "item_display",
+      "item": "CraftEngineItem(\"cml:energy_windmill_rotor_blade_render\")",
+      "location": {
+        "x": 0.2,
+        "y": 3.5,
+        "z": 0
+      },
+      "rot_y": 270,
+      "rot_z": "tick() * 4",
+      "when": "Machine.activated && facing == \"west\"",
+      "update_when": "always",
+      "global": true
+    },
+    {
+      "type": "item_display",
+      "item": "CraftEngineItem(\"cml:energy_windmill_rotor_blade_render\")",
+      "location": {
+        "x": 0.2,
+        "y": 3.5,
+        "z": 0
+      },
+      "rot_y": 270,
+      "rot_z": "tick() * 4 + 120",
+      "when": "Machine.activated && facing == \"west\"",
+      "update_when": "always",
+      "global": true
+    },
+    {
+      "type": "item_display",
+      "item": "CraftEngineItem(\"cml:energy_windmill_rotor_blade_render\")",
+      "location": {
+        "x": 0.2,
+        "y": 3.5,
+        "z": 0
+      },
+      "rot_y": 270,
+      "rot_z": "tick() * 4 + 240",
+      "when": "Machine.activated && facing == \"west\"",
+      "update_when": "always",
+      "global": true
+    },
+    {
+      "type": "item_display",
+      "item": "CraftEngineItem(\"cml:energy_windmill_rotor_hub_render\")",
+      "location": {
+        "x": -0.2,
+        "y": 3.5,
+        "z": 0
+      },
+      "rot_y": 90,
+      "when": "facing == \"east\"",
+      "update_when": "always",
+      "global": true
+    },
+    {
+      "type": "item_display",
+      "item": "CraftEngineItem(\"cml:energy_windmill_rotor_blade_render\")",
+      "location": {
+        "x": -0.2,
+        "y": 3.5,
+        "z": 0
+      },
+      "rot_y": 90,
+      "rot_z": "tick() * 4",
+      "when": "Machine.activated && facing == \"east\"",
+      "update_when": "always",
+      "global": true
+    },
+    {
+      "type": "item_display",
+      "item": "CraftEngineItem(\"cml:energy_windmill_rotor_blade_render\")",
+      "location": {
+        "x": -0.2,
+        "y": 3.5,
+        "z": 0
+      },
+      "rot_y": 90,
+      "rot_z": "tick() * 4 + 120",
+      "when": "Machine.activated && facing == \"east\"",
+      "update_when": "always",
+      "global": true
+    },
+    {
+      "type": "item_display",
+      "item": "CraftEngineItem(\"cml:energy_windmill_rotor_blade_render\")",
+      "location": {
+        "x": -0.2,
+        "y": 3.5,
+        "z": 0
+      },
+      "rot_y": 90,
+      "rot_z": "tick() * 4 + 240",
+      "when": "Machine.activated && facing == \"east\"",
+      "update_when": "always",
+      "global": true
+    }
+  ]
+}

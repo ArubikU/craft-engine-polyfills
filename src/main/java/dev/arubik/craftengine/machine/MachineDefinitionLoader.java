@@ -53,7 +53,21 @@ public final class MachineDefinitionLoader {
 
     private static void apply(JsonView view, String fileName) {
         Key id = view.has("id") ? view.key("id", "polyfills") : Key.of((String)"polyfills", (String)MachineDefinitionLoader.stripExtension(fileName).replace('/', '_'));
-        MachineDefinition.REGISTRY.register(id, MachineDefinitionLoader.parse(view, id));
+        MachineDefinition definition = MachineDefinitionLoader.parse(view, id);
+        MachineDefinition.REGISTRY.register(id, definition);
+        // A "celled" machine (one running on an auto-placing multi-cell structure — see
+        // MultiCellGeometry) is still an ordinary MachineDefinition above; this ADDITIONALLY
+        // registers a CelledMachineDefinition under the same id, purely to carry per-cell I/O
+        // rules (which cell offset accepts/provides what, on which faces) reusing the assembled
+        // multiblock system's IOSpec rule language rather than a second one. Absent "cell_io", no
+        // CelledMachineDefinition is registered at all — DataMachineBehavior falls back to plain
+        // redirect-every-face-to-core for that machine, exactly as before this existed.
+        if (view.has("cell_io")) {
+            dev.arubik.craftengine.multiblock.MultiBlockDefinition.IOSpec io =
+                    dev.arubik.craftengine.multiblock.MultiBlockDefinition.IOSpec.parse(view.object("cell_io"));
+            dev.arubik.craftengine.machine.CelledMachineDefinition.REGISTRY.register(id,
+                    new dev.arubik.craftengine.machine.CelledMachineDefinition(id, definition, io));
+        }
     }
 
     public static MachineDefinition parse(JsonView view, Key id) {
@@ -126,7 +140,9 @@ public final class MachineDefinitionLoader {
             energy = new MachineDefinition.EnergySpec(cap,
                     e.rangedInt("max_input", cap, 0, Integer.MAX_VALUE),
                     e.rangedInt("max_output", cap, 0, Integer.MAX_VALUE),
-                    e.rangedInt("generation_per_tick", 0, 0, Integer.MAX_VALUE));
+                    // Signed: positive generates, negative is a passive drain — see
+                    // AbstractMachineBlockEntity#processTick.
+                    e.rangedInt("per_tick", 0, Integer.MIN_VALUE, Integer.MAX_VALUE));
         }
         ArrayList<MachineDefinition.BarRef> bars = new ArrayList<MachineDefinition.BarRef>();
         for (JsonView b : view.objectList("bars")) {
@@ -259,11 +275,16 @@ public final class MachineDefinitionLoader {
         MachineFlags flags = parseFlags(view, power);
         MachineDefinition def = new MachineDefinition(id, view.string("recipe_type", id.value()), view.string("title", id.value()), menuSize, inputs, outputs, fuels, upgrades, info, fluidTanks, gasTanks, flags.fuel(), io, buttons, power, bars, infoSpec, paging, variables, renderers, upgradeDefs, actionScript, actionInterval);
         def.setFlags(flags);
+        // BUGFIX: this was being parsed above into a local var but never attached to the
+        // definition — every machine's definition.energy() silently read back as "none"
+        // regardless of what the JSON declared.
+        def.setEnergy(energy);
         def.setInteractScript(interactScript);
         def.setAttackScript(attackScript);
         if (view.has("status"))    def.setStatusScript(view.string("status", null));
         if (view.has("on_place"))        def.setOnPlaceScript(view.string("on_place", null));
         if (view.has("on_break"))        def.setOnBreakScript(view.string("on_break", null));
+        if (view.has("on_redstone_actuator")) def.setRedstoneActuatorScript(view.string("on_redstone_actuator", null));
         if (view.has("on_state_change")) def.setOnStateChangeScript(view.string("on_state_change", null));
         if (view.has("on_pipe_transfer")) def.setOnTransferScript(view.string("on_pipe_transfer", null));
         if (view.has("rpm_ratio")) {
@@ -334,28 +355,39 @@ public final class MachineDefinitionLoader {
         return def;
     }
 
+    /** Shared JSON parser for one {@code pages[]} entry — reused verbatim by
+     *  {@code ItemDefinitionLoader} so item-behavior pages follow the exact same schema as
+     *  machine pages (buttons/bars/paging/ghost slots/static layout), not a second dialect. */
     @SuppressWarnings("unchecked")
-    private static MachineDefinition.PageDef parsePage(JsonObject obj, JsonView parent) {
+    public static MachineDefinition.PageDef parsePage(JsonObject obj, JsonView parent) {
         JsonView p = JsonView.of(obj, parent.path() + " > pages[]");
         String title = p.string("title", null);
         String sizeOrType = p.has("size") ? String.valueOf(p.raw().get("size").isJsonPrimitive() ? p.raw().get("size").getAsString() : "54") : null;
         if (sizeOrType == null && p.has("type")) sizeOrType = p.string("type", "54");
         String specialType = p.string("special", null);
 
-        // Static layout items
+        // Static layout items — or "layout": "file.pf:func" to generate the whole list at menu-open
+        // time instead (see PageDef#layoutGenerator / DataMachineBlockEntity#buildPageLayout) —
+        // for a page whose SLOT COUNT itself is data-driven, not just per-slot content.
         List<MachineDefinition.PageDef.StaticSlot> layout = new ArrayList<>();
-        if (p.raw().has("layout") && p.raw().get("layout").isJsonArray()) {
-            for (JsonElement el : p.raw().get("layout").getAsJsonArray()) {
-                if (!el.isJsonObject()) continue;
-                JsonView sv = JsonView.of(el.getAsJsonObject(), p.path() + " > layout[]");
-                int slot = sv.integer("slot", -1);
-                if (slot < 0) continue;
-                String item = sv.string("item", null);
-                String name = sv.string("name", null);
-                List<String> lore = sv.has("lore") ? sv.stringList("lore") : List.of();
-                String action = sv.string("action", null);
-                boolean locked = sv.bool("locked", false);
-                layout.add(new MachineDefinition.PageDef.StaticSlot(slot, item, name, lore, action, locked));
+        String layoutGenerator = null;
+        if (p.raw().has("layout")) {
+            JsonElement layoutEl = p.raw().get("layout");
+            if (layoutEl.isJsonPrimitive()) {
+                layoutGenerator = layoutEl.getAsString();
+            } else if (layoutEl.isJsonArray()) {
+                for (JsonElement el : layoutEl.getAsJsonArray()) {
+                    if (!el.isJsonObject()) continue;
+                    JsonView sv = JsonView.of(el.getAsJsonObject(), p.path() + " > layout[]");
+                    int slot = sv.integer("slot", -1);
+                    if (slot < 0) continue;
+                    String item = sv.string("item", null);
+                    String name = sv.string("name", null);
+                    List<String> lore = sv.has("lore") ? sv.stringList("lore") : List.of();
+                    String action = sv.string("action", null);
+                    boolean locked = sv.bool("locked", false);
+                    layout.add(new MachineDefinition.PageDef.StaticSlot(slot, item, name, lore, action, locked));
+                }
             }
         }
 
@@ -364,13 +396,32 @@ public final class MachineDefinitionLoader {
         int[] inputs  = MachineDefinitionLoader.toArraySafe(slots.intList("input"));
         int[] outputs = MachineDefinitionLoader.toArraySafe(slots.intList("output"));
         int[] fuels   = MachineDefinitionLoader.toArraySafe(slots.intList("fuel"));
+        // Free, unrestricted slots (place/take/stack freely) — no machine declares these, but an
+        // item-behavior page (backpack storage) is nothing BUT free storage. See MenuSlotType#STORAGE.
+        int[] storage = MachineDefinitionLoader.toArraySafe(slots.intList("storage"));
+        MachineDefinition.PageDef.StorageFilterSpec storageFilter = MachineDefinition.PageDef.StorageFilterSpec.none();
+        if (slots.has("storage_filter")) {
+            JsonView sf = slots.object("storage_filter");
+            storageFilter = new MachineDefinition.PageDef.StorageFilterSpec(
+                    sf.stringList("allow"), sf.stringList("deny"), sf.string("script", null),
+                    sf.rangedInt("max_amount", 0, 0, Integer.MAX_VALUE));
+        }
 
-        // Buttons
+        // Buttons — or "buttons": "file.pf:func" to generate the whole list at menu-open time
+        // instead (see PageDef#buttonsGenerator). Same rationale as the layout generator above.
         List<MachineDefinition.ButtonSpec> buttons = new ArrayList<>();
-        for (JsonView b : p.objectList("buttons")) {
-            buttons.add(new MachineDefinition.ButtonSpec(b.integer("slot", 0), b.string("icon", "cml:gui_empty"),
-                b.string("action", "none"), b.string("name", null), b.stringList("lore"),
-                b.string("locked_icon", null), b.string("locked_when", "never")));
+        String buttonsGenerator = null;
+        if (p.raw().has("buttons")) {
+            JsonElement buttonsEl = p.raw().get("buttons");
+            if (buttonsEl.isJsonPrimitive()) {
+                buttonsGenerator = buttonsEl.getAsString();
+            } else if (buttonsEl.isJsonArray()) {
+                for (JsonView b : p.objectList("buttons")) {
+                    buttons.add(new MachineDefinition.ButtonSpec(b.integer("slot", 0), b.string("icon", "cml:gui_empty"),
+                        b.string("action", "none"), b.string("name", null), b.stringList("lore"),
+                        b.string("locked_icon", null), b.string("locked_when", "never")));
+                }
+            }
         }
 
         // Bars
@@ -381,6 +432,23 @@ public final class MachineDefinitionLoader {
             for (int i = 0; i < barSlots.length; i++) barSlots[i] = slotList.get(i);
             net.momirealms.craftengine.core.util.Key barId = b.key("id", "polyfills");
             bars.add(new MachineDefinition.BarRef(barId, barSlots, b.string("source", barId.value())));
+        }
+
+        // Ghost slots — script-backed identity-marker slots (item filters, ...), see
+        // MachineDefinition.PageDef.GhostSlotSpec for the get/set contract.
+        List<MachineDefinition.PageDef.GhostSlotSpec> ghostSlots = new ArrayList<>();
+        if (p.raw().has("ghost_slots") && p.raw().get("ghost_slots").isJsonArray()) {
+            for (JsonView g : p.objectList("ghost_slots")) {
+                List<Integer> slotList = g.intList("slots");
+                if (slotList.isEmpty()) continue;
+                int[] gs = new int[slotList.size()];
+                for (int i = 0; i < gs.length; i++) gs[i] = slotList.get(i);
+                String getRef = g.string("get", null);
+                String setRef = g.string("set", null);
+                if (getRef == null || setRef == null) continue;
+                ghostSlots.add(new MachineDefinition.PageDef.GhostSlotSpec(gs, getRef, setRef,
+                    g.string("empty_icon", "cml:gui_empty")));
+            }
         }
 
         int infoSlot = p.has("info_slot") ? p.integer("info_slot", -1) : -1;
@@ -399,11 +467,12 @@ public final class MachineDefinitionLoader {
 
         return new MachineDefinition.PageDef(title, sizeOrType, List.copyOf(layout),
             inputs, outputs, fuels, List.copyOf(buttons), List.copyOf(bars), infoSlot, specialType,
-            guiImage, guiImageShift, java.util.Map.copyOf(specialItems));
+            guiImage, guiImageShift, java.util.Map.copyOf(specialItems), List.copyOf(ghostSlots), storage,
+            storageFilter, buttonsGenerator, layoutGenerator);
     }
 
     /** Parse an ItemSpec from a JsonElement. Supports short form ("icon_key") or object form. */
-    static MachineDefinition.ItemSpec parseItemSpec(com.google.gson.JsonElement el, String path) {
+    public static MachineDefinition.ItemSpec parseItemSpec(com.google.gson.JsonElement el, String path) {
         if (el == null || el.isJsonNull()) return null;
         if (el.isJsonPrimitive()) {
             return MachineDefinition.ItemSpec.ofIcon(el.getAsString());

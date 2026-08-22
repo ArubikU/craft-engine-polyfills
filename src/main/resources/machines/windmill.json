@@ -12,12 +12,12 @@
   "action_script": "windmill",
   "status": "windmill.pf:status",
   "on_break": "windmill.pf:on_break",
-  "action_interval": 4,
+  "action_interval": 1,
   "on_right_click": "windmill_interact",
   "io": {
     "rpm": {
       "output_same": [
-        "front"
+        "back"
       ],
       "input": []
     }
@@ -25,63 +25,67 @@
   "renderers": [
     {
       "type": "item_display",
-      "item": "CraftEngineItem(\"cml:windmill_sail_render\")",
-      "location": {
-        "x": 0,
-        "y": 0.5,
-        "z": -1.5
-      },
+      "item": "CraftEngineItem(\"cml:windmill_bearing_head_render\")",
+      "location": { "x": 0, "y": 0, "z": 0 },
+      "rot_y": "Machine.get_flag(\"assembled\") > 0 ? tick() * rpm * 0.3 : 0",
+      "scale": "1.0",
+      "when": "Machine.facing == \"up\"",
+      "update_when": "always",
+      "global": true
+    },
+    {
+      "type": "item_display",
+      "item": "CraftEngineItem(\"cml:windmill_bearing_head_render\")",
+      "location": { "x": 0, "y": 0, "z": 0 },
+      "rot_y": "Machine.get_flag(\"assembled\") > 0 ? tick() * rpm * 0.3 : 0",
+      "scale": "1.0",
+      "when": "Machine.facing == \"down\"",
+      "update_when": "always",
+      "global": true
+    },
+    {
+      "type": "item_display",
+      "item": "CraftEngineItem(\"cml:windmill_bearing_head_render\")",
+      "location": { "x": 0.75, "y": 0.5, "z": 0 },
       "rot_z": "90",
-      "rot_x": "tick() * rpm * 0.3",
+      "rot_x": "Machine.get_flag(\"assembled\") > 0 ? tick() * rpm * 0.3 : 0",
+      "scale": "1.0",
+      "when": "Machine.facing == \"east\"",
+      "update_when": "always",
+      "global": true
+    },
+    {
+      "type": "item_display",
+      "item": "CraftEngineItem(\"cml:windmill_bearing_head_render\")",
+      "location": { "x": 0, "y": 0.5, "z": 0 },
+      "rot_z": "90",
+      "rot_x": "Machine.get_flag(\"assembled\") > 0 ? tick() * rpm * 0.3 : 0",
+      "scale": "1.0",
+      "when": "Machine.facing == \"west\"",
+      "update_when": "always",
+      "global": true
+    },
+    {
+      "type": "item_display",
+      "item": "CraftEngineItem(\"cml:windmill_bearing_head_render\")",
+      "location": { "x": 0, "y": 0.5, "z": 0 },
+      "rot_z": "90",
+      "rot_x": "Machine.get_flag(\"assembled\") > 0 ? tick() * rpm * 0.3 : 0",
       "rot_y": -90,
-      "scale": "1.5",
-      "when": "Machine.activated && facing == \"north\"",
+      "scale": "1.0",
+      "when": "Machine.facing == \"north\"",
       "update_when": "always",
       "global": true
     },
     {
       "type": "item_display",
-      "item": "CraftEngineItem(\"cml:windmill_sail_render\")",
-      "location": {
-        "x": 0,
-        "y": 0.5,
-        "z": 1.5
-      },
+      "item": "CraftEngineItem(\"cml:windmill_bearing_head_render\")",
+      "location": { "x": 0, "y": 0.5, "z": 0.75 },
       "rot_z": "90",
-      "rot_x": "tick() * rpm * 0.3",
-      "rot_y": 90,
-      "scale": "1.5",
-      "when": "Machine.activated && facing == \"south\"",
-      "update_when": "always",
-      "global": true
-    },
-    {
-      "type": "item_display",
-      "item": "CraftEngineItem(\"cml:windmill_sail_render\")",
-      "location": {
-        "x": 1.5,
-        "y": 0.5,
-        "z": 0
-      },
-      "rot_z": "-90",
-      "rot_x": "tick() * rpm * 0.3",
-      "scale": "1.5",
-      "when": "Machine.activated && facing == \"east\"",
-      "update_when": "always",
-      "global": true
-    },
-    {
-      "type": "item_display",
-      "item": "CraftEngineItem(\"cml:windmill_sail_render\")",
-      "location": {
-        "x": -1.5,
-        "y": 0.5,
-        "z": 0
-      },
-      "rot_z": "90",
-      "rot_x": "tick() * rpm * 0.3",
-      "scale": "1.5",
-      "when": "Machine.activated && facing == \"west\"",
+      "rot_x": "Machine.get_flag(\"assembled\") > 0 ? tick() * rpm * 0.3 : 0",
+      "rot_y": -90,
+      "scale": "1.0",
+      "when": "Machine.facing == \"south\"",
       "update_when": "always",
       "global": true
     }

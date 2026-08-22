@@ -6,15 +6,18 @@
 mode = Machine.get_flag("_wr_mode")
 ch   = Machine.get_flag("_wr_ch")
 
-if mode == 0 {
+if mode == 0:
     # Transmitter: register on channel and broadcast current redstone input
     Network.register(ch)
     power = Machine.redstone
     Network.broadcast(ch, power)
     Machine.emit_redstone(0)   # transmitter doesn't emit locally
-} else {
+else:
     # Receiver: listen to channel and emit the value
     power = Network.listen(ch)
     Machine.emit_redstone(floor(clamp(power, 0, 15)))
     Network.unregister()
-}
+end
+
+
+

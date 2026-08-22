@@ -70,12 +70,21 @@ public class DataMachineBehavior extends MachineBlockBehavior {
 
     @Override
     public BlockEntityController createBlockEntityController(BlockEntity blockEntity) {
-        DataMachineBlockEntity machine = new DataMachineBlockEntity(blockEntity, definition);
+        // `definition` is captured ONCE, when CraftEngine parses this block's config (i.e. at
+        // Factory.create() below) — it is never touched by `/cep reload machines`/`render`, which
+        // only replace the entries in MachineDefinition.REGISTRY and re-point ALREADY-PLACED
+        // DataMachineBlockEntity instances (see DataMachineBlockEntity#refreshDefinitions). A block
+        // placed for the first time after such a reload (but before a full /craftengine reload
+        // reconstructs this behavior) would otherwise be built from that stale reference — same
+        // fresh-lookup-with-fallback pattern DataMachineBlockEntity#ensureRenderer already uses.
+        MachineDefinition fresh = MachineDefinition.REGISTRY.get(definition.id());
+        MachineDefinition eff = fresh != null ? fresh : definition;
+        DataMachineBlockEntity machine = new DataMachineBlockEntity(blockEntity, eff);
         machine.setMenuConfig(menuConfig);
         machine.setBars(bars);
         // Prefer definitions from the machine JSON; fall back to block-behavior YAML
-        if (!definition.upgradeDefs().isEmpty()) {
-            machine.setUpgradeDefs(definition.upgradeDefs());
+        if (!eff.upgradeDefs().isEmpty()) {
+            machine.setUpgradeDefs(eff.upgradeDefs());
         } else {
             machine.setUpgradeDefs(upgradeDefs);
         }

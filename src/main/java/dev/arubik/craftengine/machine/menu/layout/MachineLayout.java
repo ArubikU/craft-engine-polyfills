@@ -16,6 +16,18 @@ public class MachineLayout {
     private final Map<Integer, java.util.function.BiConsumer<dev.arubik.craftengine.machine.block.entity.AbstractMachineBlockEntity, org.bukkit.entity.Player>> buttonActions = new HashMap<>();
     private DynamicTitleProvider titleProvider;
     private net.kyori.adventure.text.Component titleComponent;
+    private dev.arubik.craftengine.machine.MachineDefinition.PageDef.StorageFilterSpec storageFilter =
+            dev.arubik.craftengine.machine.MachineDefinition.PageDef.StorageFilterSpec.none();
+
+    /** What a {@link MenuSlotType#STORAGE} slot on this layout will accept — see {@link StorageFilters}. */
+    public void setStorageFilter(dev.arubik.craftengine.machine.MachineDefinition.PageDef.StorageFilterSpec filter) {
+        this.storageFilter = filter == null
+                ? dev.arubik.craftengine.machine.MachineDefinition.PageDef.StorageFilterSpec.none() : filter;
+    }
+
+    public dev.arubik.craftengine.machine.MachineDefinition.PageDef.StorageFilterSpec getStorageFilter() {
+        return storageFilter;
+    }
 
     /** A translatable/Adventure title (client-i18n); when set it overrides the String title. */
     public void setTitleComponent(net.kyori.adventure.text.Component title) {
@@ -85,6 +97,31 @@ public class MachineLayout {
 
     public ClickButtonAction getClickButtonAction(int slot) {
         return clickButtonActions.get(slot);
+    }
+
+    /** A GHOST slot's click callback — receives whatever ItemStack is on the player's CURSOR at
+     * click time (may be empty/air) and the click type, never the slot's own displayed item (there
+     * is no real item in the slot to receive — see {@link MenuSlotType#GHOST}). Left-click with an
+     * item in hand is the natural "set" gesture; right-click is the natural "clear" gesture
+     * regardless of what's in hand — left-clicking with an EMPTY hand is deliberately left for the
+     * script to treat as a no-op if it wants (browsing an already-set slot shouldn't wipe it out). */
+    public interface GhostSlotAction {
+        void accept(dev.arubik.craftengine.machine.block.entity.AbstractMachineBlockEntity machine,
+                org.bukkit.entity.Player player, org.bukkit.inventory.ItemStack cursor,
+                org.bukkit.event.inventory.ClickType click);
+    }
+
+    private final Map<Integer, GhostSlotAction> ghostSlotActions = new HashMap<>();
+
+    public MachineLayout addGhostSlot(int slot, DynamicItemProvider iconProvider, GhostSlotAction action) {
+        slotTypes.put(slot, MenuSlotType.GHOST);
+        dynamicProviders.put(slot, iconProvider);
+        ghostSlotActions.put(slot, action);
+        return this;
+    }
+
+    public GhostSlotAction getGhostSlotAction(int slot) {
+        return ghostSlotActions.get(slot);
     }
 
     /**

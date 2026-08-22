@@ -71,7 +71,7 @@ implements Listener {
         }
         event.setCancelled(true);
         ServerPlayer nmsPlayer = ((CraftPlayer)event.getPlayer()).getHandle();
-        dm.runInteractScript(dm.definition().attackScript(), nmsPlayer);
+        dm.runInteractScript(dm.definition().attackScript(), nmsPlayer, "on_left_click");
     }
 
     @EventHandler(priority=EventPriority.MONITOR, ignoreCancelled=true)
@@ -94,6 +94,16 @@ implements Listener {
             return;
         }
         AbstractMachineBlockEntity m = (AbstractMachineBlockEntity)blockEntityController;
+        // Declaring on_break hands the machine's container to the script's own judgment (e.g. a
+        // placeable-container item like the backpack dropping itself back as one reconstructed
+        // item via Machine.to_item/Machine.drop_item instead of spilling its contents loose) —
+        // skip the default drop-everything-on-the-ground behavior entirely; on_break itself fires
+        // from DataMachineBlockEntity#onRemove (below, after this event resolves), which has no
+        // player of its own but doesn't need one — dropping a replacement item just needs a
+        // position, which the script gets from Machine.pos.
+        if (m instanceof DataMachineBlockEntity dm && dm.definition() != null && dm.definition().onBreakScript() != null) {
+            return;
+        }
         try {
             Level level = (Level)world.world().minecraftWorld();
             if (level == null) {

@@ -1,0 +1,84 @@
+# Jetpack (polyfills:jetpack) — item behavior example.
+#
+# HOVER mode, ported from Mekanism's real IJetpackItem.handleJetpackMotion (mekanism/Mekanism,
+# src/main/java/mekanism/common/item/interfaces/IJetpackItem.java): while airborne, gently rise
+# toward a target ascent speed on a fresh jump, hold near-zero vertical speed (float) once neither
+# ascending nor descending, and fall toward a capped descent speed while sneaking.
+#
+# Mekanism reads a continuously-synced "ascend key held" signal via its own client-server channel
+# (Forge lets a mod add that); Bukkit's vanilla protocol has no equivalent — the server is never
+# told "jump is currently held," only ground/velocity transitions. So `ascending` here is proxied
+# by the engine's `jumped` flag (true for a short window right after a real jump/liftoff — see
+# ItemTickEngine), and `descending` is real, continuously-synced sneaking (Player.is_sneaking).
+# Net effect: jump to launch and rise, let go to settle into a stable hover, sneak to descend,
+# land and jump again to re-launch — the same three-state feel (ascend/hover/descend) Mekanism's
+# HOVER mode has, just re-triggered per landing instead of per keypress since that's the ceiling
+# of what a vanilla client actually reports.
+#
+# Everything here is script logic — ItemTickEngine only dispatches on_equipped_tick generically
+# every `tick_interval` ticks with item/Player/World/jumped bound; it hardcodes nothing about
+# flight itself.
+
+THRUST = 0.15               # Mekanism's default jetpack thrust coefficient
+CONSUMPTION_PER_CALL = 24   # gas burned per active call (~5 calls/sec at tick_interval=4 ->
+# ~66s of continuous flight from 8000 gas)
+
+def on_equip():
+    fuel = Item.tank("gas")
+    cap = Item.tank_capacity("gas")
+    Player.send_message("<aqua>Jetpack equipped <gray>(" + fuel + "/" + cap + " gas) — jump to rise, sneak to descend, let go to hover.")
+end
+
+def on_unequip():
+    Player.send_message("<gray>Jetpack unequipped.")
+end
+
+def on_equipped_tick():
+    airborne = !Player.is_on_ground
+    descending = Player.is_sneaking
+    ascending = jumped
+
+    # Mekanism's getPlayerJetpackMode: active whenever airborne at all, OR standing on the
+    # ground actively trying to ascend (a fresh jump) without also sneaking.
+    active = airborne || (ascending && !descending)
+    if !active:
+        return
+    end
+
+    fuel = Item.tank("gas")
+    if fuel <= 0:
+        return
+    end
+
+    v = Player.velocity
+    if ascending == descending:
+        # Neither (idle hover) or both (jump+sneak cancel out) — relax vertical speed toward 0.
+        if v.y > 0:
+            Player.set_velocity(v.x, max(v.y - THRUST, 0), v.z)
+        else if v.y < 0 && airborne:
+            Player.set_velocity(v.x, min(v.y + THRUST, 0), v.z)
+        end
+    else if ascending:
+        Player.set_velocity(v.x, min(v.y + THRUST, 2 * THRUST), v.z)
+    else if airborne:
+        Player.set_velocity(v.x, max(v.y - THRUST, -2 * THRUST), v.z)
+    end
+
+    Entity.reset_fall_distance()
+
+    new_fuel = max(fuel - CONSUMPTION_PER_CALL, 0)
+    Item.set_tank("gas", new_fuel)
+
+    pos = Player.pos
+    World.spawn_particle("cloud", pos.x, pos.y - 0.3, pos.z, 2, 0.1, 0.02, 0.1, 0.01)
+    World.spawn_particle("flame", pos.x, pos.y - 0.3, pos.z, 1, 0.08, 0.02, 0.08, 0.005)
+    World.play_sound(pos.x, pos.y, pos.z, "minecraft:entity.firework_rocket.launch", 0.1, 1.8)
+
+    if new_fuel <= 0:
+        Entity.add_potion_effect("slow_falling", 60, 0)
+        Player.send_message("<red>Jetpack out of gas.")
+    end
+end
+
+
+

@@ -1,6 +1,7 @@
 package dev.arubik.craftengine.script.types.world;
 
 import dev.arubik.craftengine.contraption.ContraptionWorlds;
+import dev.arubik.craftengine.contraption.behavior.MassModel;
 import dev.arubik.craftengine.contraption.core.ContraptionLevel;
 import dev.arubik.craftengine.contraption.physics.PhysicsWorld;
 import dev.arubik.craftengine.script.types.entity.EntityType;
@@ -18,6 +19,14 @@ public final class ContraptionType {
         PolyTypeRegistry.define("Contraption")
             .property("is_contraption", obj -> ScriptValue.of(obj != null))
             .property("block_count",    obj -> ScriptValue.of(cl(obj).blockCount()))
+            // Total mass of every block in the structure (WeightBlockBehavior.weightOf per block,
+            // same figure the physics solver uses for inertia) — for a script that wants to scale
+            // stress/su cost with how much the contraption is actually made of, e.g. a rotational
+            // bearing motor charging su by weight instead of by a fixed rate.
+            .property("weight", obj -> {
+                try { return ScriptValue.of(MassModel.of(cl(obj)).totalMass()); }
+                catch (Throwable ignored) { return ScriptValue.of(0.0); }
+            })
             .property("yaw",   obj -> ScriptValue.of(Math.toDegrees(cl(obj).realYawRadians())))
             .property("pitch", obj -> ScriptValue.of(Math.toDegrees(cl(obj).realPitchRadians())))
             .property("roll",  obj -> ScriptValue.of(Math.toDegrees(cl(obj).realRollRadians())))
@@ -108,22 +117,6 @@ public final class ContraptionType {
                 return ScriptValue.NULL;
             })
             .property("contraption_world", obj -> ScriptValue.ofObj("ContraptionWorld", cl(obj)))
-            .method("disassemble", (obj, args) -> {
-                // TODO: Call ContraptionKill or equivalent when API is stable
-                try {
-                    var entity = ContraptionWorlds.entityOf(cl(obj)).orElse(null);
-                    if (entity != null) {
-                        dev.arubik.craftengine.contraption.ContraptionKill.kill(entity);
-                        return ScriptValue.of(true);
-                    }
-                } catch (Throwable ignored) {}
-                return ScriptValue.of(false);
-            })
-            .method("get_block", (obj, args) -> {
-                if (args.size() < 3) return ScriptValue.NULL;
-                int x = (int) args.get(0).asNum(), y = (int) args.get(1).asNum(), z = (int) args.get(2).asNum();
-                return BlockType.wrap((net.minecraft.server.level.ServerLevel)(Object)cl(obj), new BlockPos(x, y, z));
-            })
             // --- Motion control ---
             .method("teleport", (obj, args) -> {
                 if (args.size() < 3) return ScriptValue.of(false);
@@ -264,29 +257,45 @@ public final class ContraptionType {
             })
             // set_spin(axis, rpm) — turn the contraption about a world axis at a given RPM.
             //
-            // This is the one that actually MOVES it. set_rpm below only records a number on the
-            // contraption's state; set_yaw_rate only ever drove the Y axis, so a bearing mounted on
-            // a wall — a windmill, which has to turn like a wheel about X or Z — could not be
-            // rotated at all.
+            // Drives the contraption's OWN rotation state directly (state.setYawRadians/
+            // setPitchRadians/setRollRadians), the exact mechanism RotationalBearingBehavior/
+            // WindmillBearingBehavior already use for a script/behavior-driven bearing with no
+            // physics body — NOT PhysicsWorld.setAngularVelocity, which only affects a REAL
+            // physics-vehicle entry (linear/vehicle/phys bearing types via attachDefaultBehavior)
+            // and silently no-ops (entry.physBody == null) for anything else, including
+            // "machine_contraption" (create_bearing's default type), which is why a script-driven
+            // bearing calling this used to visibly do nothing at all.
             .method("set_spin", (obj, args) -> {
                 if (args.size() < 2) return ScriptValue.of(false);
                 try {
                     var entity = ContraptionWorlds.entityOf(cl(obj)).orElse(null);
                     if (entity == null) return ScriptValue.of(false);
+                    var state = entity.state();
+                    // Scale by how many REAL ticks actually elapsed since the last call, not a
+                    // flat "one tick" per call — a script gated by action_interval (windmill.pf,
+                    // rotational_bearing.pf: every 4 ticks) only calls this once every N ticks, and
+                    // without this the contraption under-rotates by a factor of N versus the exact
+                    // same RPM applied every tick (as RotationalBearingBehavior/set_rpm_output's own
+                    // "1 RPM = 0.3 deg/tick" convention assumes — see windmill.pf/gearbox renderers'
+                    // matching "tick() * rpm * 0.3" formula, which IS per-real-tick).
+                    long now = net.minecraft.server.MinecraftServer.getServer().getTickCount();
+                    long last = state.lastSetSpinTick();
+                    long elapsedTicks = last == Long.MIN_VALUE ? 1L : Math.max(1L, Math.min(now - last, 100L));
+                    state.setLastSetSpinTick(now);
                     // 1 RPM = one turn per 60s = 2*PI rad / 1200 ticks.
-                    double omega = args.get(1).asNum() * (2.0 * Math.PI / 1200.0);
-                    double x = 0, y = 0, z = 0;
+                    double radiansPerTick = args.get(1).asNum() * (2.0 * Math.PI / 1200.0) * elapsedTicks;
                     switch (args.get(0).asStr().trim().toLowerCase(java.util.Locale.ROOT)) {
-                        case "x" -> x = omega;
-                        case "z" -> z = omega;
-                        default -> y = omega;
+                        case "x" -> state.setPitchRadians(state.pitchRadians() + radiansPerTick);
+                        case "z" -> state.setRollRadians(state.rollRadians() + radiansPerTick);
+                        default -> state.setYawRadians(state.yawRadians() + radiansPerTick);
                     }
-                    PhysicsWorld.setAngularVelocity(entity.state().id(), x, y, z);
                     return ScriptValue.of(true);
                 } catch (Throwable ignored) {}
                 return ScriptValue.of(false);
             })
-            // set_angular_velocity(x, y, z) — the same thing in radians per tick.
+            // set_angular_velocity(x, y, z) — drives a REAL physics body (radians per tick about
+            // each world axis simultaneously) — for an actual physics-vehicle contraption, unlike
+            // set_spin above which is for a script/behavior-driven bearing with no physics body.
             .method("set_angular_velocity", (obj, args) -> {
                 if (args.size() < 3) return ScriptValue.of(false);
                 try {
@@ -328,10 +337,26 @@ public final class ContraptionType {
             // report_su(su) — no-op on contraption; SU is reported by the bearing machine script
             // Exists so windmill.pf can call contraption.report_su(su) without errors
             .method("report_su", (obj, args) -> ScriptValue.of(true))
+            // Hard force-remove — despawns/disposes but does NOT restore blocks. See
+            // ContraptionManagerType#disassemble's javadoc for when to use which.
             .method("kill", (obj, args) -> {
                 try {
                     var entity = ContraptionWorlds.entityOf(cl(obj)).orElse(null);
                     if (entity != null) { dev.arubik.craftengine.contraption.ContraptionKill.kill(entity); return ScriptValue.of(true); }
+                } catch (Throwable ignored) {}
+                return ScriptValue.of(false);
+            })
+            // The real "return this structure to the world" operation — same primitive the
+            // hammer-disassemble listener uses (BearingHammerListener). Restores every block
+            // (rotation-snapped), glue edges, and furniture to their resting positions, then
+            // despawns/disposes the contraption.
+            .method("disassemble", (obj, args) -> {
+                try {
+                    var entity = ContraptionWorlds.entityOf(cl(obj)).orElse(null);
+                    if (entity == null) return ScriptValue.of(false);
+                    if (!(cl(obj).realLevel() instanceof net.minecraft.server.level.ServerLevel rl)) return ScriptValue.of(false);
+                    dev.arubik.craftengine.contraption.assembly.ContraptionAssembler.disassemble(rl.getWorld(), entity);
+                    return ScriptValue.of(true);
                 } catch (Throwable ignored) {}
                 return ScriptValue.of(false);
             })
@@ -351,6 +376,47 @@ public final class ContraptionType {
                     }
                 } catch (Throwable ignored) {}
                 return ScriptValue.NULL;
+            })
+            // get_block(lx,ly,lz) → BlockType at local contraption coords.
+            .method("get_block", (obj, args) -> {
+                if (args.size() < 3) return ScriptValue.NULL;
+                int x = (int) args.get(0).asNum(), y = (int) args.get(1).asNum(), z = (int) args.get(2).asNum();
+                BlockPos bp = new BlockPos(x, y, z);
+                try { cl(obj).ensureChunkReady(bp); } catch (Throwable ignored) {}
+                return BlockType.wrap(cl(obj).serverLevel(), bp);
+            })
+            // blocks() → Array of BlockType for all local positions with a real (non-air) block.
+            // This is what windmill.pf (and anything counting/inspecting a contraption's own
+            // contents) actually calls — it lives HERE on Contraption, not on ContraptionWorld
+            // below (a distinct PolyType, reached via contraption.contraption_world instead). It
+            // used to only exist on ContraptionWorld, so `contraption.blocks()` resolved to no
+            // method at all and silently returned NULL — indistinguishable from a real empty
+            // result once passed through len(), which answers 0 for NULL same as for []. Also
+            // forces each position's virtual chunk ready before reading it (see ensureChunkReady's
+            // other callers, ContraptionInteractionListener/ContraptionFurnitureCapture) since
+            // nothing else keeps them loaded for a periodic action_script to query later.
+            .method("blocks", (obj, args) -> {
+                try {
+                    java.util.Set<BlockPos> positions = cl(obj).localPositions();
+                    net.minecraft.server.level.ServerLevel fakeLevel = cl(obj).serverLevel();
+                    java.util.List<ScriptValue> list = new java.util.ArrayList<>(positions.size());
+                    for (BlockPos bp : positions) {
+                        try { cl(obj).ensureChunkReady(bp); } catch (Throwable ignored) {}
+                        if (!cl(obj).getBlockState(bp).isAir())
+                            list.add(BlockType.wrap(fakeLevel, bp));
+                    }
+                    return new ScriptValue.Array(list);
+                } catch (Throwable ignored) { return new ScriptValue.Array(java.util.List.of()); }
+            })
+            // entities() → Array of EntityType for entities inside the contraption's own level.
+            .method("entities", (obj, args) -> {
+                try {
+                    net.minecraft.server.level.ServerLevel fakeLevel = cl(obj).serverLevel();
+                    net.minecraft.world.phys.AABB huge = new net.minecraft.world.phys.AABB(-30000000, -512, -30000000, 30000000, 512, 30000000);
+                    java.util.List<net.minecraft.world.entity.Entity> ents =
+                        fakeLevel.getEntitiesOfClass(net.minecraft.world.entity.Entity.class, huge, e -> true);
+                    return EntityType.wrapList(ents);
+                } catch (Throwable ignored) { return new ScriptValue.Array(java.util.List.of()); }
             });
 
         // ContraptionWorld extends World — full contraption-level API
@@ -387,16 +453,25 @@ public final class ContraptionType {
             .method("get_block", (obj, args) -> {
                 if (args.size() < 3) return ScriptValue.NULL;
                 int x = (int)args.get(0).asNum(), y = (int)args.get(1).asNum(), z = (int)args.get(2).asNum();
-                return BlockType.wrap((net.minecraft.server.level.ServerLevel)(Object)cl(obj), new BlockPos(x, y, z));
+                BlockPos bp = new BlockPos(x, y, z);
+                try { cl(obj).ensureChunkReady(bp); } catch (Throwable ignored) {}
+                return BlockType.wrap(cl(obj).serverLevel(), bp);
             })
-            // blocks() → Array of BlockType for all local positions
+            // blocks() → Array of BlockType for all local positions. Used to read the contraption's
+            // own contents (e.g. windmill.pf counting sails) — was silently always empty a few
+            // ticks after assembly: nothing outside a player interacting with a contraption block
+            // (ContraptionInteractionListener) or furniture capture ever called ensureChunkReady on
+            // its virtual chunks, so by the time a periodic action_script queried them they'd gone
+            // unloaded and getBlockState quietly answered air for every position. Force each
+            // position's chunk ready before reading it, same as those other two callers already do.
             .method("blocks", (obj, args) -> {
                 try {
                     java.util.Set<BlockPos> positions = cl(obj).localPositions();
-                    net.minecraft.server.level.ServerLevel fakeLevel = (net.minecraft.server.level.ServerLevel)(Object)cl(obj);
+                    net.minecraft.server.level.ServerLevel fakeLevel = cl(obj).serverLevel();
                     java.util.List<ScriptValue> list = new java.util.ArrayList<>(positions.size());
                     for (BlockPos bp : positions) {
-                        if (!fakeLevel.getBlockState(bp).isAir())
+                        try { cl(obj).ensureChunkReady(bp); } catch (Throwable ignored) {}
+                        if (!cl(obj).getBlockState(bp).isAir())
                             list.add(BlockType.wrap(fakeLevel, bp));
                     }
                     return new ScriptValue.Array(list);
@@ -405,7 +480,7 @@ public final class ContraptionType {
             // entities() → Array of EntityType for entities inside contraption
             .method("entities", (obj, args) -> {
                 try {
-                    net.minecraft.server.level.ServerLevel fakeLevel = (net.minecraft.server.level.ServerLevel)(Object)cl(obj);
+                    net.minecraft.server.level.ServerLevel fakeLevel = cl(obj).serverLevel();
                     net.minecraft.world.phys.AABB huge = new net.minecraft.world.phys.AABB(-30000000, -512, -30000000, 30000000, 512, 30000000);
                     java.util.List<net.minecraft.world.entity.Entity> ents =
                         fakeLevel.getEntitiesOfClass(net.minecraft.world.entity.Entity.class, huge, e -> true);

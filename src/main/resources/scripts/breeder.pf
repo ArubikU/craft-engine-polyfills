@@ -3,41 +3,44 @@
 # BREEDING_FOODS map: entity type → food item id that triggers breeding.
 
 BREEDING_FOODS = make_map(
-    "minecraft:cow",           "minecraft:wheat",
-    "minecraft:sheep",         "minecraft:wheat",
-    "minecraft:goat",          "minecraft:wheat",
-    "minecraft:horse",         "minecraft:golden_apple",
-    "minecraft:donkey",        "minecraft:golden_apple",
-    "minecraft:pig",           "minecraft:carrot",
-    "minecraft:rabbit",        "minecraft:dandelion",
-    "minecraft:chicken",       "minecraft:wheat_seeds",
-    "minecraft:turtle",        "minecraft:seagrass",
-    "minecraft:panda",         "minecraft:bamboo",
-    "minecraft:fox",           "minecraft:sweet_berries",
-    "minecraft:bee",           "minecraft:poppy",
-    "minecraft:strider",       "minecraft:warped_fungus",
-    "minecraft:hoglin",        "minecraft:crimson_fungus",
-    "minecraft:axolotl",       "minecraft:tropical_fish_bucket",
-    "minecraft:camel",         "minecraft:cactus",
-    "minecraft:sniffer",       "minecraft:torchflower_seeds"
+"minecraft:cow",           "minecraft:wheat",
+"minecraft:sheep",         "minecraft:wheat",
+"minecraft:goat",          "minecraft:wheat",
+"minecraft:horse",         "minecraft:golden_apple",
+"minecraft:donkey",        "minecraft:golden_apple",
+"minecraft:pig",           "minecraft:carrot",
+"minecraft:rabbit",        "minecraft:dandelion",
+"minecraft:chicken",       "minecraft:wheat_seeds",
+"minecraft:turtle",        "minecraft:seagrass",
+"minecraft:panda",         "minecraft:bamboo",
+"minecraft:fox",           "minecraft:sweet_berries",
+"minecraft:bee",           "minecraft:poppy",
+"minecraft:strider",       "minecraft:warped_fungus",
+"minecraft:hoglin",        "minecraft:crimson_fungus",
+"minecraft:axolotl",       "minecraft:tropical_fish_bucket",
+"minecraft:camel",         "minecraft:cactus",
+"minecraft:sniffer",       "minecraft:torchflower_seeds"
 )
 
 animals = Machine.nearby_entities(5)
 
-for animal in animals {
-    if animal.is_alive && animal.is_animal && animal.age >= 0 && animal.in_love_time == 0 {
+for animal in animals:
+    if animal.is_alive && animal.is_animal && animal.age >= 0 && animal.in_love_time == 0:
         food_id = BREEDING_FOODS.switch(animal.type, null)
-        if food_id != null {
+        if food_id != null:
             fed = false
-            for i in range(9) {
-                if !fed {
+            for i in range(9):
+                if !fed:
                     item = Machine.get_item_in_slot(i)
-                    if !is_empty(item) && item.id == food_id {
+                    if !is_empty(item) && item.id == food_id:
                         Machine.use_item_on_entity(animal, i)
                         fed = true
-                    }
-                }
-            }
-        }
-    }
-}
+                    end
+                end
+            end
+        end
+    end
+end
+
+
+

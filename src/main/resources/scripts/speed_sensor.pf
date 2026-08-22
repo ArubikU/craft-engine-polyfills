@@ -19,14 +19,20 @@
 #    whatever jitter remains.
 
 scan_range = Machine.get_flag("scan_range")
-if scan_range <= 0 { scan_range = 3 }
+if scan_range <= 0:
+    scan_range = 3
+end
 
 full_speed = Machine.get_flag("full_speed")
-if full_speed <= 0 { full_speed = 50 }
+if full_speed <= 0:
+    full_speed = 50
+end
 full = full_speed / 100.0
 
 deadzone = Machine.get_flag("deadzone")
-if deadzone <= 0 { deadzone = 10 }
+if deadzone <= 0:
+    deadzone = 10
+end
 dead = deadzone / 100.0
 
 living_only = Machine.get_flag("living_only")
@@ -35,18 +41,25 @@ count_y     = Machine.get_flag("count_y")
 entities = Machine.nearby_entities(scan_range)
 max_speed = 0
 
-for entity in entities {
-    if living_only > 0 && !entity.is_living { continue }
+for entity in entities:
+    if living_only > 0 && !entity.is_living:
+        continue
+    end
     vx = entity.velocity_x
     vy = count_y > 0 ? entity.velocity_y : 0
     vz = entity.velocity_z
     speed = sqrt(vx * vx + vy * vy + vz * vz)
-    if speed > max_speed { max_speed = speed }
-}
+    if speed > max_speed:
+        max_speed = speed
+    end
+end
 
 power = 0
-if max_speed > dead {
+if max_speed > dead:
     # Rescale so the deadzone edge is 1, not a jump straight to mid-range.
     power = clamp(round((max_speed - dead) / max(full - dead, 0.01) * 15), 1, 15)
-}
+end
 Machine.redstone.set(power)
+
+
+

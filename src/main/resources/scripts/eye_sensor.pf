@@ -1,6 +1,9 @@
 # Eye Sensor — outputs 15 while any player is looking at this block.
-if Machine.is_player_looking_at(16) {
+if Machine.is_player_looking_at(16):
     Machine.redstone.set(15)
-} else {
+else:
     Machine.redstone.off()
-}
+end
+
+
+

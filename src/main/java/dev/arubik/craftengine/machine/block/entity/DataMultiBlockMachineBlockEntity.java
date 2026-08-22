@@ -608,8 +608,29 @@ implements ModelRendersDriven {
         for (int s : page.inputSlots())  layout.addSlot(s, MenuSlotType.INPUT);
         for (int s : page.outputSlots()) layout.addSlot(s, dev.arubik.craftengine.machine.menu.layout.MenuSlotType.OUTPUT);
         for (int s : page.fuelSlots())   layout.addSlot(s, dev.arubik.craftengine.machine.menu.layout.MenuSlotType.FUEL);
+        for (int s : page.storageSlots()) layout.addSlot(s, dev.arubik.craftengine.machine.menu.layout.MenuSlotType.STORAGE);
+        layout.setStorageFilter(page.storageFilter());
         // Static layout items + actions
         for (dev.arubik.craftengine.machine.MachineDefinition.PageDef.StaticSlot s : page.layout()) {
+            this.installMultiBlockStaticSlot(layout, s);
+        }
+        // "layout": "file.pf:func" — generated on the fly at menu-open time instead of (or
+        // alongside) the static array above; see PageDef#layoutGenerator. Multiblock pages have no
+        // separate buttons()/buttonsGenerator() concept — layout() IS the button list here (each
+        // entry carries its own "action"), so only the layout generator applies.
+        if (page.layoutGenerator() != null) {
+            dev.arubik.craftengine.script.ScriptContext genCtx = this.buildScriptContext();
+            if (genCtx != null) {
+                for (dev.arubik.craftengine.machine.MachineDefinition.PageDef.StaticSlot s
+                        : dev.arubik.craftengine.machine.menu.GeneratedPageContent.layout(page.layoutGenerator(), genCtx)) {
+                    this.installMultiBlockStaticSlot(layout, s);
+                }
+            }
+        }
+        return layout;
+    }
+
+    private void installMultiBlockStaticSlot(MachineLayout layout, dev.arubik.craftengine.machine.MachineDefinition.PageDef.StaticSlot s) {
             final int slot = s.slot();
             final String itemKey = s.item();
             final String nameStr = s.name();
@@ -660,8 +681,6 @@ implements ModelRendersDriven {
                     default -> {}
                 }
             });
-        }
-        return layout;
     }
 
     private MachineLayout buildUpgradeLayout() {

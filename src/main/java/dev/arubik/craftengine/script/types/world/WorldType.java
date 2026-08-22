@@ -26,6 +26,13 @@ public final class WorldType {
             .property("is_thundering",obj -> ScriptValue.of(level(obj).isThundering()))
             .property("name",         obj -> ScriptValue.of(level(obj).dimension().identifier().toString()))
             .property("seed",         obj -> ScriptValue.of((double) level(obj).getSeed()))
+            // location(x, y, z) -> Location IN THIS world — the missing link for anything that
+            // resolved a target World via world(name) (see ScriptFormula) and now needs an actual
+            // Location to hand to Entity.teleport_to (cross-dimension teleport).
+            .method("location", (obj, args) -> {
+                if (args.size() < 3) return ScriptValue.NULL;
+                return LocationType.wrap(level(obj), args.get(0).asNum(), args.get(1).asNum(), args.get(2).asNum());
+            })
             .method("get_block", (obj, args) -> {
                 if (args.size() < 3) return ScriptValue.NULL;
                 int x = (int) args.get(0).asNum(), y = (int) args.get(1).asNum(), z = (int) args.get(2).asNum();
@@ -91,7 +98,53 @@ public final class WorldType {
                         SoundSource.BLOCKS, vol, pitch, 0L);
                     return ScriptValue.of(true);
                 } catch (Throwable ignored) { return ScriptValue.of(false); }
+            })
+            // spawn_particle(name, x, y, z, count?, offset_x?, offset_y?, offset_z?, speed?) — vanilla
+            // particle ids only (FLAME, CLOUD, SMOKE, ...); a CraftEngine custom particle isn't a
+            // vanilla ParticleType and isn't resolvable here.
+            .method("spawn_particle", (obj, args) -> {
+                if (args.size() < 4) return ScriptValue.of(false);
+                try {
+                    String name = args.get(0).asStr();
+                    double x = args.get(1).asNum(), y = args.get(2).asNum(), z = args.get(3).asNum();
+                    int count = args.size() >= 5 ? (int) args.get(4).asNum() : 1;
+                    double ox = args.size() >= 6 ? args.get(5).asNum() : 0.0;
+                    double oy = args.size() >= 7 ? args.get(6).asNum() : 0.0;
+                    double oz = args.size() >= 8 ? args.get(7).asNum() : 0.0;
+                    double speed = args.size() >= 9 ? args.get(8).asNum() : 0.0;
+                    Identifier id = Identifier.tryParse(name.contains(":") ? name : "minecraft:" + name);
+                    if (id == null) return ScriptValue.of(false);
+                    var particleType = BuiltInRegistries.PARTICLE_TYPE.getValue(id);
+                    if (!(particleType instanceof net.minecraft.core.particles.SimpleParticleType simple))
+                        return ScriptValue.of(false);
+                    level(obj).sendParticles(simple, x, y, z, count, ox, oy, oz, speed);
+                    return ScriptValue.of(true);
+                } catch (Throwable ignored) { return ScriptValue.of(false); }
+            })
+            // --- Persistent per-WORLD flags (int/string) — same "0"/"" absent-default convention
+            // as Machine/Entity's get_flag family. Backed by the SAME generic global store as
+            // Server.*_flag (see ServerFlags) with the dimension id folded into the key, rather
+            // than Bukkit's per-World PersistentDataContainer — this addon's persistence stays on
+            // one NMS/CraftEngine-native path throughout instead of splitting across a second,
+            // Bukkit-specific mechanism just for this one scope.
+            .method("get_flag", (obj, args) ->
+                ScriptValue.of(args.isEmpty() ? 0 : dev.arubik.craftengine.util.ServerFlags.getInt(worldFlagKey(obj, args.get(0).asStr()))))
+            .method("set_flag", (obj, args) -> {
+                if (args.size() < 2) return ScriptValue.of(false);
+                dev.arubik.craftengine.util.ServerFlags.setInt(worldFlagKey(obj, args.get(0).asStr()), (int) args.get(1).asNum());
+                return ScriptValue.of(true);
+            })
+            .method("get_str_flag", (obj, args) ->
+                ScriptValue.of(args.isEmpty() ? "" : dev.arubik.craftengine.util.ServerFlags.getStr(worldFlagKey(obj, args.get(0).asStr()))))
+            .method("set_str_flag", (obj, args) -> {
+                if (args.size() < 2) return ScriptValue.of(false);
+                dev.arubik.craftengine.util.ServerFlags.setStr(worldFlagKey(obj, args.get(0).asStr()), args.get(1).asStr());
+                return ScriptValue.of(true);
             });
+    }
+
+    private static String worldFlagKey(Object obj, String name) {
+        return level(obj).dimension().identifier() + "|" + name;
     }
 
     public static ScriptValue wrap(ServerLevel level) {

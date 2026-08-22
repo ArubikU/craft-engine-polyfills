@@ -174,7 +174,7 @@ public final class MultiBlockLoader {
             y++;
         }
 
-        MultiBlockDefinition.IOSpec io = view.has("io") ? parseIO(view.object("io")) : null;
+        MultiBlockDefinition.IOSpec io = view.has("io") ? MultiBlockDefinition.IOSpec.parse(view.object("io")) : null;
         String name = view.string("name", "default");
         // A mode may carry the machine the assembled structure becomes. Its id is the
         // multiblock's id plus the mode name, so two modes of one core do not collide.
@@ -186,67 +186,10 @@ public final class MultiBlockLoader {
             dev.arubik.craftengine.machine.MachineDefinition.REGISTRY.register(machineId, machine);
         }
         return new MultiBlockDefinition.Mode(name, schema, io, machine,
-                view.string("part_block_id", "craftengine:multiblock_part"));
-    }
-
-    private static MultiBlockDefinition.IOSpec parseIO(JsonView view) {
-        boolean defaultOpen = !"closed".equalsIgnoreCase(view.string("default", "open"));
-        List<MultiBlockDefinition.IOSpec.Rule> rules = new ArrayList<>();
-        for (JsonView ruleView : view.objectList("rules")) {
-            BlockPos at = null;
-            if (ruleView.has("at")) {
-                List<Integer> cell = ruleView.intList("at");
-                if (cell.size() != 3)
-                    throw ruleView.error("'at' must be [x, y, z]");
-                at = new BlockPos(cell.get(0), cell.get(1), cell.get(2));
-            }
-            rules.add(new MultiBlockDefinition.IOSpec.Rule(
-                    at,
-                    ruleView.has("y") ? ruleView.integer("y") : null,
-                    ruleView.has("y_above") ? ruleView.integer("y_above") : null,
-                    ruleView.has("y_below") ? ruleView.integer("y_below") : null,
-                    parseGrants(ruleView, "input"),
-                    parseGrants(ruleView, "output"),
-                    ruleView.bool("closed", false)));
-        }
-        return new MultiBlockDefinition.IOSpec(rules, defaultOpen);
-    }
-
-    /** Accepts a single grant object or an array of them. */
-    private static List<MultiBlockDefinition.IOSpec.Grant> parseGrants(JsonView view, String field) {
-        if (!view.has(field))
-            return List.of();
-        var raw = view.raw().get(field);
-        List<JsonView> entries = new ArrayList<>();
-        if (raw.isJsonArray())
-            entries.addAll(view.objectList(field));
-        else
-            entries.add(view.object(field));
-
-        List<MultiBlockDefinition.IOSpec.Grant> grants = new ArrayList<>();
-        for (JsonView entry : entries) {
-            List<IOConfiguration.IOType> types = new ArrayList<>();
-            for (String typeName : entry.stringList("types")) {
-                IOConfiguration.IOType type = null;
-                for (IOConfiguration.IOType candidate : IOConfiguration.IOType.values())
-                    if (candidate.name().equalsIgnoreCase(typeName))
-                        type = candidate;
-                if (type == null)
-                    throw entry.error("unknown io type '" + typeName + "'");
-                types.add(type);
-            }
-            List<net.minecraft.core.Direction> faces = new ArrayList<>();
-            for (String faceName : entry.stringList("faces")) {
-                List<net.minecraft.core.Direction> group = MultiBlockDefinition.IOSpec.faceGroup(faceName);
-                if (group == null)
-                    throw entry.error("unknown face or face group '" + faceName + "'");
-                faces.addAll(group);
-            }
-            if (faces.isEmpty())
-                faces.addAll(List.of(net.minecraft.core.Direction.values()));
-            grants.add(new MultiBlockDefinition.IOSpec.Grant(types, faces));
-        }
-        return grants;
+                view.string("part_block_id", "craftengine:multiblock_part"),
+                view.string("can_form", null),
+                view.string("on_form", null),
+                view.string("on_disassemble", null));
     }
 
     private static boolean isAny(String value) {

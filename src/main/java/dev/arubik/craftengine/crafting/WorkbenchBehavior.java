@@ -1,8 +1,11 @@
 package dev.arubik.craftengine.crafting;
 
+import java.util.List;
+
 import org.bukkit.entity.Player;
 
-import dev.arubik.craftengine.multiblock.HorizontalDoubleBlockBehavior;
+import dev.arubik.craftengine.multiblock.MultiCellBlockBehavior;
+import dev.arubik.craftengine.multiblock.MultiCellGeometry;
 import net.momirealms.craftengine.bukkit.plugin.user.BukkitServerPlayer;
 import net.momirealms.craftengine.core.block.BlockDefinition;
 import net.momirealms.craftengine.core.block.ImmutableBlockState;
@@ -30,10 +33,14 @@ import net.momirealms.craftengine.core.world.context.UseOnContext;
  * placed workbench always has its recipes).
  *
  * <p>Required block-config properties: a {@code 4-direction} {@code facing} and a
- * string {@code half} with values {@code left}/{@code right}. If absent, the
- * behavior degrades to a single-block crafting station (still opens its menu).
+ * string {@code half} with values {@code "0"}/{@code "1"} (cell index — {@code 0} =
+ * the placed master, {@code 1} = the auto-placed second cell one step toward {@code
+ * facing.clockWise()}; same convention the deleted HorizontalDoubleBlockBehavior used
+ * with left/right, now expressed as the generic {@link MultiCellBlockBehavior}'s single-
+ * offset case). If absent, the behavior degrades to a single-block crafting station
+ * (still opens its menu).
  */
-public class WorkbenchBehavior extends HorizontalDoubleBlockBehavior {
+public class WorkbenchBehavior extends MultiCellBlockBehavior {
 
     public static final Key FACTORY_KEY = Key.of("polyfills:workbench");
 
@@ -80,7 +87,10 @@ public class WorkbenchBehavior extends HorizontalDoubleBlockBehavior {
 
     public WorkbenchBehavior(BlockDefinition block, String title, StationRecipeRegistry registry,
             String facingProperty, String halfProperty) {
-        super(block, facingProperty, halfProperty);
+        // Single secondary cell one step toward facing.clockWise() — MultiCellGeometry's x=+1
+        // rotates identically to the old HorizontalDoubleGeometry.rightDirection() convention
+        // (verified: NORTH -> +x -> EAST; EAST -> +x -> SOUTH; same as facing.clockWise() both times).
+        super(block, facingProperty, halfProperty, List.of(new MultiCellGeometry.Offset(1, 0, 0)));
         this.title = title != null ? title : "Engineer's Workbench";
         this.registry = registry != null ? registry : StationRecipeRegistry.global();
     }
@@ -151,7 +161,7 @@ public class WorkbenchBehavior extends HorizontalDoubleBlockBehavior {
         public BlockBehavior create(BlockDefinition block, ConfigSection arguments) {
             String title = (String) arguments.getOrDefault("title", "Engineer's Workbench");
             String facingProp = (String) arguments.getOrDefault("facing_property", DEFAULT_FACING_PROPERTY);
-            String halfProp = (String) arguments.getOrDefault("half_property", DEFAULT_HALF_PROPERTY);
+            String halfProp = (String) arguments.getOrDefault("half_property", "half");
             WorkbenchBehavior b = new WorkbenchBehavior(block, title, StationRecipeRegistry.global(), facingProp, halfProp);
             // `workbench: <id>` binds this block to a workbenches/*.json definition. Without
             // it the behavior keeps its legacy config-only shape, so existing packs are

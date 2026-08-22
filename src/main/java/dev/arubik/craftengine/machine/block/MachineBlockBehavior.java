@@ -278,8 +278,28 @@ WorldlyContainerHolder {
             return this.defaultIOConfig;
         }
         BlockEntity be = BukkitBlockEntityTypes.getIfLoaded(level, pos);
-        if (be != null && (blockEntityController = be.controller) instanceof AbstractMachineBlockEntity && (config = (machine = (AbstractMachineBlockEntity)blockEntityController).getIOConfiguration()) != null) {
+        if (be == null) {
+            return this.defaultIOConfig;
+        }
+        blockEntityController = be.controller;
+        if (blockEntityController instanceof AbstractMachineBlockEntity && (config = (machine = (AbstractMachineBlockEntity)blockEntityController).getIOConfiguration()) != null) {
             return config;
+        }
+        // A celled-multiblock PART (e.g. the energy windmill's 3 mast cells) never gets a real
+        // AbstractMachineBlockEntity — it's a MultiBlockPartBlockEntity. Its OWN per-cell config
+        // (set from the machine's "cell_io" at placement, see CelledDataMachineBehavior#onPlace)
+        // is the actual per-face/per-resource-type answer for THIS cell; falling back to the
+        // block's blanket defaultIOConfig here is what let a cable visually connect to (and, via
+        // carrierConnectsHere, treat as fair game on) ANY face of ANY mast cell instead of only
+        // the cell(s) cell_io actually grants. Absent cell_io entirely (no CelledMachineDefinition
+        // registered for this machine), the part's ioConfig stays null and this still falls
+        // through to defaultIOConfig — unchanged, permissive behavior for machines that never
+        // opted into per-cell rules.
+        if (blockEntityController instanceof dev.arubik.craftengine.multiblock.MultiBlockPartBlockEntity part) {
+            IOConfiguration partConfig = part.getIOConfiguration();
+            if (partConfig != null) {
+                return partConfig;
+            }
         }
         return this.defaultIOConfig;
     }

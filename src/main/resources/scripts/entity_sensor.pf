@@ -3,7 +3,9 @@
 # Set via Machine.set_flag("scan_range", N) and Machine.set_flag("mode", 0-2).
 
 scan_range = Machine.get_flag("scan_range")
-if scan_range <= 0 { scan_range = 5 }
+if scan_range <= 0:
+    scan_range = 5
+end
 
 mode = Machine.get_flag("mode")  # 0=normal, 1=density, 2=proximity
 
@@ -12,27 +14,34 @@ count = 0
 min_dist_sq = 9999
 
 machine = Machine.pos
-for entity in entities {
-    if entity.is_living && entity.is_alive {
+for entity in entities:
+    if entity.is_living && entity.is_alive:
         count = count + 1
         dsq = entity.pos.distance_sq(machine)
-        if dsq < min_dist_sq { min_dist_sq = dsq }
-    }
-}
+        if dsq < min_dist_sq:
+            min_dist_sq = dsq
+        end
+    end
+end
 
 power = 0
-if mode == 0 {
+if mode == 0:
     power = count > 0 ? 15 : 0
-} else if mode == 1 {
+else if mode == 1:
     threshold = Machine.get_flag("threshold")
-    if threshold <= 0 { threshold = 5 }
+    if threshold <= 0:
+        threshold = 5
+    end
     power = clamp(floor(count / threshold * 15), 0, 15)
-} else {
+else:
     # proximity: closer = stronger
-    if count > 0 {
+    if count > 0:
         min_dist = sqrt(min_dist_sq)
         power = clamp(floor((1 - min_dist / scan_range) * 15), 0, 15)
-    }
-}
+    end
+end
 
 Machine.emit_redstone(power)
+
+
+

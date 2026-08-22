@@ -403,6 +403,52 @@ extends ExtendedItemBehavior {
             PENDING.remove(id);
             INDICATORS.remove(id);
         }
+
+        /**
+         * Sneak + left-click with glue in hand detaches that block from its structure.
+         *
+         * <p>Gluing was one-way: the only way to undo it was to break the block, which is exactly
+         * what a player does NOT want when they just meant to re-shape a contraption. The event is
+         * cancelled so the block survives — the glue comes off, the wall stays up.
+         *
+         * <p>Runs at HIGHEST with ignoreCancelled=false so it still fires where protection plugins
+         * would deny the break: removing glue is not breaking anything.
+         */
+        @EventHandler(priority = org.bukkit.event.EventPriority.HIGHEST)
+        public void onUnglue(PlayerInteractEvent event) {
+            if (event.getAction() != Action.LEFT_CLICK_BLOCK || event.getHand() != EquipmentSlot.HAND) {
+                return;
+            }
+            org.bukkit.entity.Player player = event.getPlayer();
+            if (!player.isSneaking() || !GlueItemBehavior.holdsGlueItem(player)) {
+                return;
+            }
+            Block clicked = event.getClickedBlock();
+            if (clicked == null) {
+                return;
+            }
+            // Cancel regardless of whether anything was glued here: with glue in hand and sneaking,
+            // the player is asking to edit glue, never to start mining.
+            event.setCancelled(true);
+
+            ResourceKey worldId = ((CraftWorld) clicked.getWorld()).getHandle().dimension();
+            BlockPos pos = new BlockPos(clicked.getX(), clicked.getY(), clicked.getZ());
+            GlueGraph graph = GlueRegistry.graphFor((ResourceKey<Level>) worldId);
+            if (!graph.hasNode(pos)) {
+                player.sendActionBar((Component) Component.text((String) "Nothing glued here.",
+                        (TextColor) NamedTextColor.GRAY));
+                return;
+            }
+
+            int detached = graph.neighbors(pos).size();
+            graph.removeNode(pos);
+            // Drop this player's cached indicators so the overlay redraws without the stale block.
+            GlueItemBehavior.clearIndicators(player);
+            clicked.getWorld().playSound(clicked.getLocation(), Sound.BLOCK_SLIME_BLOCK_BREAK, 0.7f, 0.8f);
+            player.sendActionBar((Component) Component.text(
+                    (String) ("Unglued \u2014 " + detached + " connection(s) removed."),
+                    (TextColor) NamedTextColor.YELLOW));
+        }
     }
 
     /** What an indicator is telling the player. */

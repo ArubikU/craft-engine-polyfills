@@ -6,6 +6,9 @@ import dev.arubik.craftengine.script.types.world.ContraptionManagerType;
 import dev.arubik.craftengine.script.types.entity.*;
 import dev.arubik.craftengine.script.types.machine.*;
 import dev.arubik.craftengine.script.types.resource.*;
+import dev.arubik.craftengine.script.types.chainery.*;
+import dev.arubik.craftengine.script.types.util.*;
+import dev.arubik.craftengine.script.types.event.EventType;
 
 /**
  * Initializes the PolyFill scripting system. Call once at plugin enable.
@@ -23,6 +26,9 @@ public final class ScriptBootstrap {
 
         PolyTypeRegistry.clear();
 
+        // ---- Event hierarchy (base "Event" first, subtypes extend it) -----------
+        EventType.register();
+
         // ---- Primitive / value types (no parent) --------------------------------
         VectorType.register();
         ItemType.register();
@@ -36,6 +42,7 @@ public final class ScriptBootstrap {
         LocationType.register();
         ContraptionType.register();   // also registers ContraptionWorld (extends World)
         ContraptionManagerType.register();
+        GlueType.register();       // Glue: read the super-glue graph
 
         // ---- Entity hierarchy (parents before children) ------------------------
         EntityType.register();
@@ -54,6 +61,14 @@ public final class ScriptBootstrap {
         BarsType.register();
         RecipeType.register();
         AnimationType.register();
+        ServerType.register();     // Server.*_flag — global, server-wide key/value store
+        ChainType.register();          // Chain — a single placed chainery span
+        ChainManagerType.register();   // ChainManager — create/break/query chains directly
+
+        // TypedKey bridge built-ins ("item", "vector", "compound") — after Item/Vector/Map are
+        // registered above, since these codecs read/write those PolyType instances.
+        TypedKeyBridge.registerBuiltinCustomTypes();
+        TypedKeyManagerType.register();    // TypedKey.define(...) — script-defined custom types
 
         // ---- Inventory / resource types -----------------------------------------
         InventoryType.register();

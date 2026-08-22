@@ -205,6 +205,11 @@ implements Listener {
                     result = extBehavior.onDeath(nmsItem, event, nmsHolder, slot).asBukkitCopy();
                     break;
                 }
+                case 16: {
+                    net.minecraft.world.item.ItemStack returned = extBehavior.onShot(nmsItem, event, nmsHolder, slot);
+                    result = returned != null ? returned.asBukkitMirror() : result;
+                    break;
+                }
             }
         }
         return result;
@@ -431,6 +436,55 @@ implements Listener {
         ItemListener.callBehavior(new Object[]{event, ItemActionType.DROP, player, event.getItemDrop().getItemStack(), player.getInventory().getHeldItemSlot(), event.getItemDrop()});
     }
 
+    /** Bow AND crossbow shots both fire this event (a crossbow's own load/fire split happens
+     *  earlier — this only fires once the projectile actually launches), so one handler covers
+     *  both without needing to special-case crossbow separately. {@code event.getBow()} is
+     *  whichever hand item the game itself decided fired the shot. */
+    @EventHandler
+    public void onShootBow(org.bukkit.event.entity.EntityShootBowEvent event) {
+        if (!(event.getEntity() instanceof LivingEntity shooter)) return;
+        ItemStack bow = event.getBow();
+        if (bow == null || bow.getType().isAir()) return;
+        int slot = shooter instanceof Player p ? p.getInventory().getHeldItemSlot() : -1;
+        ItemListener.callBehavior(new Object[]{event, ItemActionType.SHOT, shooter, bow, slot});
+    }
+
+    /** Every OTHER kind of thrown item (ender pearl, snowball, egg, splash/lingering potion, a
+     *  trident thrown by hand — NOT one fired from a crossbow, which already fires
+     *  {@link org.bukkit.event.entity.EntityShootBowEvent} and would otherwise double-dispatch).
+     *  There is no generic "which item did this" API for an arbitrary projectile, so this uses the
+     *  same heuristic {@code onEntityAttack}'s PROJECTILE case already relies on: the shooter's
+     *  current main-hand item. */
+    @EventHandler
+    public void onProjectileLaunch(org.bukkit.event.entity.ProjectileLaunchEvent event) {
+        if (event.getEntity() instanceof org.bukkit.entity.AbstractArrow) return;
+        if (!(event.getEntity().getShooter() instanceof LivingEntity shooter)) return;
+        ItemStack item = shooter.getEquipment() != null ? shooter.getEquipment().getItemInMainHand() : null;
+        if (item == null || item.getType().isAir()) return;
+        int slot = shooter instanceof Player p ? p.getInventory().getHeldItemSlot() : -1;
+        ItemListener.callBehavior(new Object[]{event, ItemActionType.SHOT, shooter, item, slot});
+    }
+
+    /** Equip/unequip on any equipment slot change (armor, main/off hand) — a jetpack put on or
+     *  taken off a chestplate slot, etc. Fires alongside {@link #onItemHeld}'s SLOT_CHANGE for
+     *  the hand slots, which is fine: EQUIP/UNEQUIP and SLOT_CHANGE are semantically different
+     *  hooks a {@code DataItemBehavior} may bind independently. */
+    @EventHandler
+    public void onEquipmentChanged(io.papermc.paper.event.entity.EntityEquipmentChangedEvent event) {
+        if (!(event.getEntity() instanceof Player player)) return;
+        int slot = -1;
+        for (var entry : event.getEquipmentChanges().entrySet()) {
+            org.bukkit.inventory.ItemStack oldItem = entry.getValue().oldItem();
+            org.bukkit.inventory.ItemStack newItem = entry.getValue().newItem();
+            if (oldItem != null && !oldItem.getType().isAir()) {
+                ItemListener.callBehavior(new Object[]{event, ItemActionType.UNEQUIP, player, oldItem, slot});
+            }
+            if (newItem != null && !newItem.getType().isAir()) {
+                ItemListener.callBehavior(new Object[]{event, ItemActionType.EQUIP, player, newItem, slot});
+            }
+        }
+    }
+
     public static void register(Plugin plugin) {
         plugin.getServer().getPluginManager().registerEvents((Listener)new ItemListener(), plugin);
         PacketEvents.getAPI().getEventManager().registerListener((PacketListener)new ItemPacketHandler(), PacketListenerPriority.LOWEST);
@@ -452,7 +506,8 @@ implements Listener {
         UNEQUIP,
         DAMAGE_TAKEN,
         SLOT_CHANGE,
-        DEATH;
+        DEATH,
+        SHOT;
 
     }
 

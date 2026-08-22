@@ -217,7 +217,10 @@ public final class MachineBars {
         }
     }
 
-    private static ItemStack renderSegment(MachineBar bar, int segIndex, int n, double value, double max, String subType,
+    /** Renders one bar segment's icon for the given fill — public so non-machine hosts (e.g. an
+     *  item-behavior menu, see {@code dev.arubik.craftengine.item.menu.ItemMenu}) can drive the
+     *  same bar art off their own value/max source instead of {@code AbstractMachineBlockEntity#barStat}. */
+    public static ItemStack renderSegment(MachineBar bar, int segIndex, int n, double value, double max, String subType,
             java.util.Map<String, String> ph) {
         double overall = max > 0 ? Math.max(0, Math.min(1.0, value / max)) : 0;
         // Any non-zero contents read as at least 1% global, so 1 mB still lights the FIRST slot's lowest

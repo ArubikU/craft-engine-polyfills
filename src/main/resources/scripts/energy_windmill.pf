@@ -1,0 +1,22 @@
+# Energy Windmill — generation scales with wind (storms spin the sails harder).
+#
+# per_tick is NOT a fixed JSON constant at runtime: Machine.set_energy_per_tick
+# lets any machine re-tune its own rate every tick based on whatever it wants (weather here;
+# could just as easily be RPM, height, upgrade count, redstone level, anything a script can read).
+# The JSON "energy.per_tick" value is only the STARTING rate before this first runs.
+
+BASE = 80
+STORM_BONUS = 120
+
+if World.is_thundering:
+    Machine.set_energy_per_tick(BASE + STORM_BONUS)
+else:
+    if World.is_raining:
+        Machine.set_energy_per_tick(BASE + STORM_BONUS / 2)
+    else:
+        Machine.set_energy_per_tick(BASE)
+    end
+end
+
+
+

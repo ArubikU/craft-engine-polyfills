@@ -45,7 +45,7 @@ import org.bukkit.persistence.PersistentDataType;
 public class MachineMenu
 implements InventoryHolder {
     private final AbstractMachineBlockEntity machine;
-    private final MachineLayout layout;
+    private MachineLayout layout;
     private final Inventory inventory;
     private int tickCount = 0;
     private volatile boolean suppressInputPull = false;
@@ -90,6 +90,45 @@ implements InventoryHolder {
         this.suppressInputPull = true;
     }
 
+    /** Forces an immediate refresh (button/layout/ghost icons + input/output/storage sync),
+     *  bypassing the normal every-2-ticks cadence {@link #tick()} runs this on. For a script that
+     *  just changed something a button/layout's name or lore reads (a flag, a str_flag, ...) and
+     *  wants that visible on THIS frame instead of up to 2 ticks later — see {@code Machine.update()}. */
+    public void refreshNow() {
+        this.updateDynamicSlots();
+        this.syncFromMachine();
+    }
+
+    /** Swaps in a freshly-built {@link MachineLayout} (re-run {@code getLayout()} on the machine, so
+     *  any {@code "buttons"}/{@code "layout"} generator script re-evaluates and can add/remove/move
+     *  slots — {@link #refreshNow} can't do that since it only re-queries each ALREADY-installed
+     *  slot's own provider) and repaints every slot from it, all on THIS SAME open {@link #inventory}
+     *  — no close/reopen, so nothing flickers for the viewer. Assumes the new layout has the same
+     *  size/type as the one this menu was built with (true for every current generator: it only
+     *  varies which button occupies which of a fixed set of slots). Used by {@code Machine.update()}. */
+    public void rebuildLayout(MachineLayout newLayout) {
+        MachineLayout old = this.layout;
+        this.layout = newLayout;
+        for (int i = 0; i < this.inventory.getSize(); ++i) {
+            boolean wasSpecial = MachineMenu.isSpecialSlot(old.getSlotType(i));
+            MenuSlotType newType = newLayout.getSlotType(i);
+            boolean isSpecial = MachineMenu.isSpecialSlot(newType);
+            if (isSpecial) {
+                DynamicItemProvider provider = newLayout.getProvider(i);
+                this.inventory.setItem(i, provider != null ? provider.provide(this.machine, this.tickCount) : null);
+            } else if (wasSpecial) {
+                // Old layout had a generated button/dynamic/ghost icon here; the fresh generator
+                // run no longer places one, so clear it instead of leaving the stale icon behind.
+                this.inventory.setItem(i, null);
+            }
+        }
+        this.syncFromMachine();
+    }
+
+    private static boolean isSpecialSlot(MenuSlotType type) {
+        return type == MenuSlotType.DYNAMIC || type == MenuSlotType.BUTTON || type == MenuSlotType.GHOST;
+    }
+
     private static ItemStack fuelGhost() {
         ItemStack s = new ItemStack(Material.COAL);
         ItemMeta m = s.getItemMeta();
@@ -113,7 +152,7 @@ implements InventoryHolder {
         for (int i = 0; i < this.inventory.getSize(); ++i) {
             boolean io;
             MenuSlotType type = this.layout.getSlotType(i);
-            boolean bl = io = type == MenuSlotType.INPUT || type == MenuSlotType.OUTPUT || type == MenuSlotType.FUEL || type == MenuSlotType.UPGRADE;
+            boolean bl = io = type == MenuSlotType.INPUT || type == MenuSlotType.OUTPUT || type == MenuSlotType.FUEL || type == MenuSlotType.UPGRADE || type == MenuSlotType.STORAGE;
             if (!io || this.suppressInputPull && (type == MenuSlotType.INPUT || type == MenuSlotType.FUEL)) continue;
             net.minecraft.world.item.ItemStack nms = this.machine.getItem(this.layout.getMachineSlot(i));
             this.inventory.setItem(i, BridgeUtils.toBukkit(nms));
@@ -125,7 +164,7 @@ implements InventoryHolder {
             return;
         }
         MenuSlotType type = this.layout.getSlotType(slot);
-        if (type == MenuSlotType.INPUT || type == MenuSlotType.OUTPUT || type == MenuSlotType.FUEL || type == MenuSlotType.UPGRADE) {
+        if (type == MenuSlotType.INPUT || type == MenuSlotType.OUTPUT || type == MenuSlotType.FUEL || type == MenuSlotType.UPGRADE || type == MenuSlotType.STORAGE) {
             ItemStack bukkit = this.inventory.getItem(slot);
             if (bukkit == null || bukkit.getType() == Material.AIR || MachineMenu.isGhost(bukkit)) {
                 this.machine.setItem(this.layout.getMachineSlot(slot), net.minecraft.world.item.ItemStack.EMPTY);
@@ -148,7 +187,7 @@ implements InventoryHolder {
         for (int i = 0; i < this.inventory.getSize(); ++i) {
             DynamicItemProvider provider;
             MenuSlotType type = this.layout.getSlotType(i);
-            if (type != MenuSlotType.DYNAMIC && type != MenuSlotType.BUTTON || (provider = this.layout.getProvider(i)) == null) continue;
+            if (!MachineMenu.isSpecialSlot(type) || (provider = this.layout.getProvider(i)) == null) continue;
             ItemStack next = provider.provide(this.machine, this.tickCount);
             if (Objects.equals(this.inventory.getItem(i), next)) continue;
             this.inventory.setItem(i, next);

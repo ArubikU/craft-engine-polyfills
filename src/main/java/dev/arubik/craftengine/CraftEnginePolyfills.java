@@ -34,6 +34,8 @@ public final class CraftEnginePolyfills extends JavaPlugin {
     public void onEnable() {
         PacketEvents.getAPI().init();
         ItemListener.register(this);
+        dev.arubik.craftengine.item.menu.ItemMenuListener.register(this);
+        dev.arubik.craftengine.item.ItemTickEngine.register(this);
         // The vanilla block tables the physics reads: how much a block IS (mass) and how a fluid pushes
         // it (floatability). Both are owner-editable overrides layered over a built-in family table —
         // see BlockPropertyTable for the lookup order. Loaded before anything can capture a contraption.
@@ -53,6 +55,12 @@ public final class CraftEnginePolyfills extends JavaPlugin {
             dev.arubik.craftengine.contraption.glue.GlueRegistry.loadAll(getDataFolder().toPath().resolve("glue.dat"));
         } catch (Throwable t) {
             getLogger().warning("[Contraption] failed to load persisted glue graph: " + t);
+        }
+        // Restore Server.*_flag global state — see ServerFlags.
+        try {
+            dev.arubik.craftengine.util.ServerFlags.loadAll(getDataFolder().toPath().resolve("server_flags.dat"));
+        } catch (Throwable t) {
+            getLogger().warning("[Server] failed to load persisted server flags: " + t);
         }
         // CHAINERY: restore placed chains (décor + contraption tethers) persisted at last shutdown, and
         // sweep any orphaned link display-entities a crash may have left behind before we re-render.
@@ -230,6 +238,11 @@ public final class CraftEnginePolyfills extends JavaPlugin {
         pipeWand.start(this); // live aim-tracking preview task (MAGIC mode)
         getServer().getPluginManager().registerEvents(new dev.arubik.craftengine.conveyor.FunnelPlaceListener(),
                 this);
+        // Never started: without this the passive-preview tick loop is never scheduled and its
+        // listener never registers, so the slime overlay that shows what is glued — and what the
+        // next click would select — could not appear at all, no matter what the renderer did.
+        dev.arubik.craftengine.contraption.glue.GlueItemBehavior.startSystem(this);
+
         getServer().getPluginManager().registerEvents(new dev.arubik.craftengine.multiblock.HammerAssembleListener(),
                 this);
         getServer().getPluginManager().registerEvents(new dev.arubik.craftengine.conveyor.ConveyorBreakListener(),
@@ -237,6 +250,8 @@ public final class CraftEnginePolyfills extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new dev.arubik.craftengine.conveyor.ConveyorIoBreakListener(),
                 this);
         getServer().getPluginManager().registerEvents(new dev.arubik.craftengine.machine.block.MachineBreakListener(),
+                this);
+        getServer().getPluginManager().registerEvents(new dev.arubik.craftengine.machine.block.RedstoneActuatorListener(),
                 this);
         // upgrade_scrapped/upgrade_copper are loot-only: inject them into vanilla chest loot.
         getServer().getPluginManager().registerEvents(new dev.arubik.craftengine.loot.UpgradeLootListener(),
@@ -280,6 +295,7 @@ public final class CraftEnginePolyfills extends JavaPlugin {
         dev.arubik.craftengine.machine.menu.bar.BarLoader.bootstrap();
         dev.arubik.craftengine.machine.menu.bar.BarLoader.load();
         dev.arubik.craftengine.machine.MachineDefinitionLoader.bootstrap();
+        dev.arubik.craftengine.item.ItemDefinitionLoader.bootstrap();
         // Same construction-order reason as pipes: a multiblock behavior copies its
         // schema and IO provider when CraftEngine builds it, before the reload event.
         dev.arubik.craftengine.multiblock.MultiBlockLoader.load();
@@ -290,6 +306,9 @@ public final class CraftEnginePolyfills extends JavaPlugin {
         // Machine definitions likewise: the data_machine behavior resolves its definition
         // when CraftEngine constructs the block, which is before the reload event.
         dev.arubik.craftengine.machine.MachineDefinitionLoader.load();
+        // Items likewise: DataItemBehavior.Factory resolves its ItemDefinition when
+        // CraftEngine constructs the item, which is before the reload event.
+        dev.arubik.craftengine.item.ItemDefinitionLoader.load();
         // Workbenches for the same reason: WorkbenchBehavior.Factory resolves `workbench: <id>`
         // against the registry while CraftEngine parses the block, and THROWS when it misses.
         // Relying on the PHASE_DEFINITIONS pass alone meant the registry was still empty at that
@@ -425,6 +444,11 @@ public final class CraftEnginePolyfills extends JavaPlugin {
             dev.arubik.craftengine.contraption.glue.GlueRegistry.saveAll(getDataFolder().toPath().resolve("glue.dat"));
         } catch (Throwable t) {
             getLogger().warning("[Contraption] failed to save glue graph on shutdown: " + t);
+        }
+        try {
+            dev.arubik.craftengine.util.ServerFlags.saveAll(getDataFolder().toPath().resolve("server_flags.dat"));
+        } catch (Throwable t) {
+            getLogger().warning("[Server] failed to save server flags on shutdown: " + t);
         }
         // Euler/robin_euler extended-solid bearings — persist so their redstone/timer trigger survives.
         try {

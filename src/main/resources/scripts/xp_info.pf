@@ -5,29 +5,36 @@
 # not a FluidTanks object — read it with .get(i) then .get("field"), as gas_info.pf does.
 # The FluidTanks type's level()/capacity() methods belong to a different accessor.
 
-def _tank() {
+def _tank():
     tanks = Machine.fluid_tanks
-    if tanks.length <= 0 { return null }
+    if tanks.length <= 0:
+        return null
+    end
     return tanks.get(0)
-}
+end
 
-def item() {
+def item():
     return "minecraft:experience_bottle"
-}
+end
 
-def name() {
+def name():
     return "<green>XP Collector"
-}
+end
 
-def lore() {
+def lore():
     tank = _tank()
-    if tank == null { return ["<gray>No XP tank"] }
+    if tank == null:
+        return ["<gray>No XP tank"]
+    end
     level = tank.get("level")
     cap   = tank.get("capacity")
     pct   = cap > 0 ? floor(level / cap * 100) : 0
     return [
-        "<gray>Absorbs nearby experience orbs.",
-        "<gray>Stored: <white>" + floor(level) + " <gray>/ <white>" + floor(cap) + " mB",
-        "<gray>Fill: <yellow>" + pct + "%"
+    "<gray>Absorbs nearby experience orbs.",
+    "<gray>Stored: <white>" + floor(level) + " <gray>/ <white>" + floor(cap) + " mB",
+    "<gray>Fill: <yellow>" + pct + "%"
     ]
-}
+end
+
+
+

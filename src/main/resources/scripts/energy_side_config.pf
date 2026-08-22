@@ -1,0 +1,51 @@
+# Energy side config — mirrors Nova's "Open Side Config" button (see Charger.kt/
+# FurnaceGenerator.kt: `OpenSideConfigItem(sideConfigGui)`), reusing the SAME io_get/io_set
+# primitives the item pipe panel's face buttons already use, just for IOType "energy" instead
+# of "item". Shared by energy_cell.json and energy_generator.json — both have a real per-face
+# energy connection worth configuring; energy_solar_panel/energy_windmill don't get this button,
+# matching Nova's own SolarPanel.kt/WindTurbine.kt menus, which have no side-config item either
+# (they're a fixed extract-only source with no per-face choice to expose).
+
+
+# Disabled -> Input -> Output -> Both -> Disabled
+def cycle_energy(dir):
+    has_in = Machine.io_get("energy", "input", dir)
+    has_out = Machine.io_get("energy", "output", dir)
+    if !has_in && !has_out:
+        Machine.io_set("energy", "input", dir, true)
+    else:
+        if has_in && !has_out:
+            Machine.io_set("energy", "input", dir, false)
+            Machine.io_set("energy", "output", dir, true)
+        else:
+            if !has_in && has_out:
+                Machine.io_set("energy", "input", dir, true)
+            else:
+                Machine.io_set("energy", "input", dir, false)
+                Machine.io_set("energy", "output", dir, false)
+            end
+        end
+    end
+end
+
+def energy_north():
+    cycle_energy("north")
+end
+def energy_south():
+    cycle_energy("south")
+end
+def energy_east():
+    cycle_energy("east")
+end
+def energy_west():
+    cycle_energy("west")
+end
+def energy_up()  :
+    cycle_energy("up")
+end
+def energy_down():
+    cycle_energy("down")
+end
+
+
+

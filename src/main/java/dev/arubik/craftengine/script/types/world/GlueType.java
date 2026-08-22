@@ -1,0 +1,103 @@
+package dev.arubik.craftengine.script.types.world;
+
+import dev.arubik.craftengine.contraption.glue.GlueRegistry;
+import dev.arubik.craftengine.script.PolyTypeRegistry;
+import dev.arubik.craftengine.script.ScriptValue;
+import net.minecraft.core.BlockPos;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.Level;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
+
+/**
+ * "Glue" singleton — reads the super-glue graph from scripts, as {@code Glue}.
+ *
+ * <p>Glue decides what a bearing carries: {@code ContraptionAssembler} grows a structure by walking
+ * this graph. Until now a script had no way to look at it, so the only way to find out what a
+ * bearing WOULD pick up was to assemble it and see. That is exactly what the windmill did — it
+ * assembled, counted the sails it got, and killed the contraption when there were too few, which
+ * removes the blocks from the world before the check ever runs. Being able to ask first is what
+ * makes a non-destructive precondition possible.
+ *
+ * <pre>
+ *   if !Glue.is_glued(block) { ... }                  # nothing attached to it
+ *   for b in Glue.structure(block) { ... }            # every block glued to it, transitively
+ *   count = Glue.size(block)
+ * </pre>
+ */
+public final class GlueType {
+
+    /** Singleton sentinel instance — see {@code ContraptionManagerType.INSTANCE} for the same
+     *  pattern. Every method below reads its real target from an explicit block argument, not
+     *  from this object, so any non-null instance works; it exists only so {@code Glue.*(...)}
+     *  has something to resolve {@code Glue} to. */
+    public static final Object INSTANCE = new Object();
+
+    private GlueType() {}
+
+    /** The block a script argument refers to, or null. */
+    private static BlockType.BlockRef blockRef(ScriptValue v) {
+        return v instanceof ScriptValue.Obj o && o.instance() instanceof BlockType.BlockRef r ? r : null;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Set<BlockPos> structure(BlockType.BlockRef r) {
+        ServerLevel level = r.level();
+        return GlueRegistry.structureAt((ResourceKey<Level>) level.dimension(), r.pos());
+    }
+
+    private static boolean glued(BlockType.BlockRef r) {
+        ServerLevel level = r.level();
+        @SuppressWarnings("unchecked")
+        ResourceKey<Level> id = (ResourceKey<Level>) level.dimension();
+        return GlueRegistry.graphFor(id).hasNode(r.pos());
+    }
+
+    public static void register() {
+        PolyTypeRegistry.define("Glue")
+            /** Is anything glued to this block? A lone block is not a structure. */
+            .method("is_glued", (obj, args) -> {
+                BlockType.BlockRef r = args.isEmpty() ? null : blockRef(args.get(0));
+                return ScriptValue.of(r != null && glued(r));
+            })
+            /**
+             * Every block glued to this one, transitively — the exact set a bearing would carry.
+             * An unglued block yields just itself, matching GlueRegistry.structureAt.
+             */
+            .method("structure", (obj, args) -> {
+                BlockType.BlockRef r = args.isEmpty() ? null : blockRef(args.get(0));
+                List<ScriptValue> out = new ArrayList<>();
+                if (r == null) return new ScriptValue.Array(out);
+                for (BlockPos p : structure(r)) out.add(BlockType.wrap(r.level(), p));
+                return new ScriptValue.Array(out);
+            })
+            /** How many blocks that structure holds. Cheaper than materialising it. */
+            .method("size", (obj, args) -> {
+                BlockType.BlockRef r = args.isEmpty() ? null : blockRef(args.get(0));
+                return ScriptValue.of(r == null ? 0 : structure(r).size());
+            })
+            /**
+             * How many blocks in the structure have an id containing {@code needle} — the count a
+             * bearing needs before deciding whether assembling is worth it.
+             */
+            .method("count", (obj, args) -> {
+                if (args.size() < 2) return ScriptValue.of(0);
+                BlockType.BlockRef r = blockRef(args.get(0));
+                if (r == null) return ScriptValue.of(0);
+                String needle = args.get(1).asStr();
+                int n = 0;
+                for (BlockPos p : structure(r)) {
+                    String id = BlockType.customBlockId(r.level().getBlockState(p));
+                    if (id == null) {
+                        id = net.minecraft.core.registries.BuiltInRegistries.BLOCK
+                                .getKey(r.level().getBlockState(p).getBlock()).toString();
+                    }
+                    if (id.contains(needle)) n++;
+                }
+                return ScriptValue.of(n);
+            });
+    }
+}

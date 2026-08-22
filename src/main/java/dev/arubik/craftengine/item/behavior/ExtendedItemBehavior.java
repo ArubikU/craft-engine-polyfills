@@ -22,5 +22,9 @@ public class ExtendedItemBehavior extends ItemBehavior {
     public ItemStack onUnequip(ItemStack stack, Object... args) { return stack; }
     public ItemStack onDamageTaken(ItemStack stack, Object... args) { return stack; }
     public ItemStack onSlotChange(ItemStack stack, Object... args) { return stack; }
-    
+    /** Fired when this item launches a projectile — a bow/crossbow shot (args: event, holder,
+     *  slot) or a thrown item (ender pearl, snowball, egg, potion, hand-thrown trident; same arg
+     *  shape) — see {@code ItemListener#onShootBow}/{@code #onProjectileLaunch}. */
+    public ItemStack onShot(ItemStack stack, Object... args) { return stack; }
+
 }

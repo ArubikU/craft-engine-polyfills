@@ -225,6 +225,11 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
                     base.defaultIOConfig);
             if (mode != null && mode.io() != null)
                 behavior.withIOProvider(mode.io());
+            if (mode != null) {
+                behavior.setCanFormExpression(mode.canForm());
+                behavior.setOnFormScript(mode.onFormScript());
+                behavior.setOnDisassembleScript(mode.onDisassembleScript());
+            }
             return behavior;
         }
     }
@@ -371,7 +376,61 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
      * the core). Called by {@link #findFormCore} and both form paths. Default: always allowed.
      */
     protected boolean canFormAt(Level level, BlockPos corePos) {
-        return true;
+        return evaluateCanForm(level, corePos, this.canFormExpression);
+    }
+
+    /**
+     * An optional {@code can_form} expression a mode may declare, or null.
+     *
+     * <p>This used to be parsed nowhere and read nowhere: {@code canFormAt} was a stub returning
+     * true with no overrides, so a condition written in a multiblock JSON silently did nothing and
+     * the structure formed regardless.
+     */
+    protected String canFormExpression = null;
+
+    public void setCanFormExpression(String expression) {
+        this.canFormExpression = expression == null || expression.isBlank() ? null : expression;
+    }
+
+    /** {@code on_form}/{@code on_disassemble} (JSON, {@code multiblocks/*.json} mode fields) — run
+     *  from {@link #onForm}/{@link #onDisassemble} with a {@link dev.arubik.craftengine.script.event.FormEvent}
+     *  bound as {@code event}. By the time either fires the structural change has already happened
+     *  (block states/entities already swapped), so {@code event.cancel()} is informational only —
+     *  there is nothing left to veto — but it's still bound for a consistent event shape. */
+    protected String onFormScript = null;
+    protected String onDisassembleScript = null;
+
+    public void setOnFormScript(String script) {
+        this.onFormScript = script == null || script.isBlank() ? null : script;
+    }
+
+    public void setOnDisassembleScript(String script) {
+        this.onDisassembleScript = script == null || script.isBlank() ? null : script;
+    }
+
+    /**
+     * Evaluates a {@code can_form} expression at a candidate core.
+     *
+     * <p>{@code World} is bound to a {@link FormConditionClass} anchored at the core, so an
+     * expression reads offsets relative to it — {@code World.is_gas_provider(0, -1, 0)} asks about
+     * the block directly beneath. A malformed expression refuses to form rather than forming
+     * anyway: a condition that cannot be checked is not a condition that passed.
+     */
+    protected static boolean evaluateCanForm(Level level, BlockPos corePos, String expression) {
+        if (expression == null || expression.isBlank()) {
+            return true;
+        }
+        try {
+            dev.arubik.craftengine.script.ScriptContext ctx =
+                    dev.arubik.craftengine.script.ScriptContext.builder()
+                            .typed("World", new FormConditionClass(level, corePos))
+                            .build();
+            return dev.arubik.craftengine.script.ScriptFormula.compile(expression).evaluateBool(ctx);
+        } catch (Throwable t) {
+            dev.arubik.craftengine.CraftEnginePolyfills.instance().getLogger().warning(
+                    "[MultiBlock] can_form expression failed to evaluate (" + expression + "): " + t);
+            return false;
+        }
     }
 
     /** Rotation encoded by a block's facing property (vertical first, then horizontal); NORTH default. */
@@ -390,6 +449,11 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
             }
         }
         return Direction.NORTH;
+    }
+
+    /** Public form of {@link #isOwnBlockAt}, so callers can tell whose structure a block belongs to. */
+    public boolean ownsBlockAt(Level level, BlockPos pos) {
+        return isOwnBlockAt(level, pos);
     }
 
     /** True when the block at {@code pos} is THIS multiblock's own block (the valid core block). */
@@ -448,6 +512,75 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
             }
         }
         return null;
+    }
+
+    /**
+     * Why no core matched at {@code clicked}, in words a player can act on.
+     *
+     * <p>Assembly failing is otherwise completely silent: the listener swallows exceptions, and a
+     * pattern that does not match produces no log line at all. This walks the same candidates
+     * {@link #findFormCore} does, keeps the one that matched the most cells, and reports the first
+     * cell that did not — which is almost always the block the player actually got wrong.
+     *
+     * @return a description, or null when a core WOULD match (i.e. the failure is elsewhere)
+     */
+    public String describeFormFailure(Level level, BlockPos clicked) {
+        if (schema == null) {
+            return "this block has no structure schema";
+        }
+        ImmutableBlockState clickedState = customStateAt(level, clicked);
+        int[] facingIdxs = (horizontalDirectionProperty != null)
+                ? new int[] { 0, 1, 2, 3 }
+                : new int[] { facingIndex(facingOf(clickedState)) };
+        BlockPos coreOffset = schema.getCoreOffset();
+        int[] coreOff = { coreOffset.getX(), coreOffset.getY(), coreOffset.getZ() };
+        int[] clk = { clicked.getX(), clicked.getY(), clicked.getZ() };
+        java.util.List<int[]> cells = new java.util.ArrayList<>();
+        cells.add(coreOff);
+        for (BlockPos q : schema.getParts().keySet())
+            cells.add(new int[] { q.getX(), q.getY(), q.getZ() });
+
+        int bestMatched = -1;
+        String bestReason = null;
+        int total = schema.getParts().size() + 1;
+
+        for (int fi : facingIdxs) {
+            Direction facing = facingFromIndex(fi);
+            for (int[] c : MultiBlockGeometry.candidateCores(cells, coreOff, clk, fi)) {
+                BlockPos corePos = new BlockPos(c[0], c[1], c[2]);
+                int matched = 0;
+                String reason = null;
+                if (!isOwnBlockAt(level, corePos)) {
+                    reason = "core at " + corePos.toShortString() + " is not " + block().id();
+                } else {
+                    matched = 1;
+                    for (Map.Entry<BlockPos, MultiBlockSchema.PartMatcher> e : schema.getParts().entrySet()) {
+                        BlockPos partPos = corePos.offset(rotate(e.getKey().subtract(coreOffset), facing));
+                        if (partPos.equals(corePos)) { matched++; continue; }
+                        if (e.getValue().test(level, partPos)) { matched++; continue; }
+                        if (reason == null) {
+                            reason = "cell " + e.getKey().toShortString() + " expects a structure block at "
+                                    + partPos.toShortString() + " but found "
+                                    + level.getBlockState(partPos).getBlock().getDescriptionId();
+                        }
+                    }
+                    if (reason == null && !canFormAt(level, corePos)) {
+                        reason = "shape is complete at core " + corePos.toShortString()
+                                + " but its can_form condition is not met"
+                                + (canFormExpression == null ? "" : " (" + canFormExpression + ")");
+                    }
+                    if (reason == null && !coreFacingMatches(level, corePos, facing)) {
+                        reason = "core at " + corePos.toShortString() + " faces the wrong way for this shape";
+                    }
+                    if (reason == null) return null;   // this one would actually form
+                }
+                if (matched > bestMatched) {
+                    bestMatched = matched;
+                    bestReason = reason + " [" + matched + "/" + total + " blocks matched]";
+                }
+            }
+        }
+        return bestReason == null ? "no candidate position lines up with this structure" : bestReason;
     }
 
     /** For directional multiblocks, the core block's own facing must equal the tried rotation. */
@@ -984,7 +1117,25 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
      * Hook called when multiblock is formed
      */
     protected void onForm(Level level, BlockPos pos, MultiBlockPartBlockEntity core) {
+        runFormScript(level, pos, onFormScript, false);
         // Override in subclasses if needed
+    }
+
+    /** Runs {@code ref} (on_form/on_disassemble) with a {@link dev.arubik.craftengine.script.event.FormEvent}
+     *  bound as {@code event}, plus {@code World}/{@code Block} for the multiblock's core position. */
+    private static void runFormScript(Level level, BlockPos pos, String ref, boolean disassembling) {
+        if (ref == null || !(level instanceof net.minecraft.server.level.ServerLevel serverLevel)) return;
+        try {
+            dev.arubik.craftengine.script.ScriptCall call = dev.arubik.craftengine.script.ScriptCall.parse(ref);
+            if (call == null) return;
+            dev.arubik.craftengine.script.ScriptContext ctx = dev.arubik.craftengine.script.ScriptContext.builder()
+                    .world(serverLevel)
+                    .block(serverLevel, pos)
+                    .event(new dev.arubik.craftengine.script.event.FormEvent(disassembling))
+                    .build();
+            call.execute(ctx);
+        } catch (Throwable ignored) {
+        }
     }
 
     // ========== Disassembly Logic ==========
@@ -1118,6 +1269,7 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
      * Hook called when multiblock is disassembled
      */
     protected void onDisassemble(Level level, BlockPos pos, BlockEntityController core) {
+        runFormScript(level, pos, onDisassembleScript, true);
         // Override in subclasses if needed
     }
 

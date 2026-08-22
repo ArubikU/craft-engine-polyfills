@@ -21,8 +21,8 @@
 package dev.arubik.craftengine.contraption.behavior;
 
 import dev.arubik.craftengine.contraption.api.MultiblockMember;
-import dev.arubik.craftengine.multiblock.HorizontalDoubleBlockBehavior;
-import dev.arubik.craftengine.multiblock.HorizontalDoubleGeometry;
+import dev.arubik.craftengine.multiblock.MultiCellBlockBehavior;
+import dev.arubik.craftengine.multiblock.MultiCellGeometry;
 import dev.arubik.craftengine.multiblock.MultiBlockBehavior;
 import dev.arubik.craftengine.multiblock.MultiBlockMachineBlockEntity;
 import dev.arubik.craftengine.multiblock.MultiBlockPartBlockEntity;
@@ -112,22 +112,29 @@ public final class MultiblockMembershipRegistry {
         return members.size() <= 1 ? null : members;
     }
 
-    private static Set<BlockPos> horizontalDoubleMembers(Level level, BlockPos pos) {
+    /** Covers workbenches and any other {@link MultiCellBlockBehavior}-backed structure (e.g. the
+     * 4-tall energy windmill's DataMachineBehavior-integrated cells are a SEPARATE code path — see
+     * {@code DataMachineBehavior} — this one is for the standalone-behavior flavor only). */
+    private static Set<BlockPos> multiCellMembers(Level level, BlockPos pos) {
         ImmutableBlockState ce = MultiblockMembershipRegistry.customStateAt(level, pos);
         if (ce == null) {
             return null;
         }
-        HorizontalDoubleBlockBehavior beh = (HorizontalDoubleBlockBehavior)(ce.behavior().getFirst(HorizontalDoubleBlockBehavior.class));
-        if (beh == null || !beh.isDoubleBlockPublic(ce)) {
+        MultiCellBlockBehavior beh = (MultiCellBlockBehavior) (ce.behavior().getFirst(MultiCellBlockBehavior.class));
+        if (beh == null || !beh.isMultiCellBlockPublic(ce)) {
             return null;
         }
         net.momirealms.craftengine.core.util.Direction facing = beh.facingOfPublic(ce);
-        HorizontalDoubleGeometry.Half half = beh.halfOfPublic(ce);
-        net.momirealms.craftengine.core.world.BlockPos cePos = new net.momirealms.craftengine.core.world.BlockPos(pos.getX(), pos.getY(), pos.getZ());
-        net.momirealms.craftengine.core.world.BlockPos partnerCe = HorizontalDoubleGeometry.partnerPos(cePos, facing, half);
+        int myIndex = beh.cellIndexOfPublic(ce);
+        net.momirealms.craftengine.core.world.BlockPos cePos =
+                new net.momirealms.craftengine.core.world.BlockPos(pos.getX(), pos.getY(), pos.getZ());
+        net.momirealms.craftengine.core.world.BlockPos masterCe =
+                MultiCellGeometry.masterPos(cePos, facing, beh.cellsPublic(), myIndex);
         HashSet<BlockPos> members = new HashSet<BlockPos>();
-        members.add(pos);
-        members.add(new BlockPos(partnerCe.x(), partnerCe.y(), partnerCe.z()));
+        for (net.momirealms.craftengine.core.world.BlockPos cell :
+                MultiCellGeometry.allCellPositions(masterCe, facing, beh.cellsPublic())) {
+            members.add(new BlockPos(cell.x(), cell.y(), cell.z()));
+        }
         return members;
     }
 
@@ -159,7 +166,7 @@ public final class MultiblockMembershipRegistry {
     static {
         PROVIDERS.add(MultiblockMembershipRegistry::fluidTankMembers);
         PROVIDERS.add(MultiblockMembershipRegistry::multiBlockMachineMembers);
-        PROVIDERS.add(MultiblockMembershipRegistry::horizontalDoubleMembers);
+        PROVIDERS.add(MultiblockMembershipRegistry::multiCellMembers);
         PROVIDERS.add(MultiblockMembershipRegistry::vanillaDoorMembers);
         PROVIDERS.add(MultiblockMembershipRegistry::vanillaBedMembers);
     }

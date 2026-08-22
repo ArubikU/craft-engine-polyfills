@@ -3,7 +3,6 @@ package dev.arubik.craftengine.machine.render.variable;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
 import dev.arubik.craftengine.script.ScriptValue;
-import dev.arubik.craftengine.script.types.resource.FluidTanksType;
 import net.minecraft.world.item.ItemStack;
 import org.bukkit.craftbukkit.inventory.CraftItemStack;
 import org.bukkit.inventory.Inventory;
@@ -80,12 +79,18 @@ public final class MachineRenderContext {
             ScriptContext.Builder b = ScriptContext.builder()
                 .machine(rpm, overclock, efficiency, progress, maxProgress, tier,
                          processing, powered, overclocked, hasFuel);
+            // NOTE: bound via typed()/classInstances, not val()/vars — the bare-function shortcuts
+            // that read these (ScriptFormula's "slot"/"slots"/"FluidTank"/"GasTank" cases) look
+            // them up via ctx.getClassInstance(...) specifically, the same convention Machine/
+            // Player/World/Server use. Binding them as plain vars left slot(n) (and FluidTank(...)/
+            // GasTank(...)) always resolving to NULL — e.g. depot's item_display renderers
+            // ("item": "slot(0)") never showing the items actually sitting in the block.
             if (!fluidTankData.isEmpty())
-                b.val("FluidTanks", FluidTanksType.wrap("FluidTanks", fluidTankData));
+                b.typed("FluidTanks", fluidTankData);
             if (!gasTankData.isEmpty())
-                b.val("GasTanks", FluidTanksType.wrap("GasTanks", gasTankData));
+                b.typed("GasTanks", gasTankData);
             if (container != null)
-                b.val("Inventory", ScriptValue.ofObj("Inventory", toNmsSlots(container)));
+                b.typed("Inventory", toNmsSlots(container));
             if (upgradesByType != null && !upgradesByType.isEmpty()) {
                 upgradesByType.forEach((k, v) -> b.num("upgrade_" + k, v != null ? v : 0));
                 b.num("upgrade_count", upgradesByType.values().stream().mapToInt(i -> i != null ? i : 0).sum());

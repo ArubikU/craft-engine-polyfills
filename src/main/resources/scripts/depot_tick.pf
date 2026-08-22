@@ -4,16 +4,19 @@
 
 entities = Machine.nearby_entities(0.7)
 
-for entity in entities {
-    if entity.type == "minecraft:item" {
+for entity in entities:
+    if entity.type == "minecraft:item":
         # Only items sitting directly on the block surface (within 0.8 blocks vertically)
         ey = entity.pos.y
         by = Machine.y
-        if ey >= by - 0.2 && ey <= by + 1.2 {
+        if ey >= by - 0.2 && ey <= by + 1.2:
             added = Machine.add_item(entity.item)
-            if added > 0 {
+            if added > 0:
                 entity.remove()
-            }
-        }
-    }
-}
+            end
+        end
+    end
+end
+
+
+

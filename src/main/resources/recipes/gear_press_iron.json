@@ -1,0 +1,8 @@
+{
+  "type": "gear_press",
+  "time": 60,
+  "fuelRequired": false,
+  "energyCost": 25,
+  "inputs": [ { "type": "item", "id": "minecraft:iron_ingot", "amount": 4 } ],
+  "outputs": [ { "type": "custom_item", "id": "cml:iron_gear", "amount": 1, "chance": 1.0 } ]
+}

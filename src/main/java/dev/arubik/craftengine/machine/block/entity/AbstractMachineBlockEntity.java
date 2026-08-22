@@ -135,7 +135,7 @@ ConveyorDisplayReceiver {
     protected int energyCapacity = 0;
     protected int energyMaxInput = 0;
     protected int energyMaxOutput = 0;
-    protected int energyGenerationPerTick = 0;
+    protected int energyPerTick = 0;
     protected UpgradeModifiers upgradeModifiers = UpgradeModifiers.NONE;
     private static final TypedKey<Integer> KEY_PROGRESS = TypedKey.of("craftengine", "machine_progress", NbtType.INTEGER);
     private static final TypedKey<Integer> KEY_MAX_PROGRESS = TypedKey.of("craftengine", "machine_max_progress", NbtType.INTEGER);
@@ -286,13 +286,26 @@ ConveyorDisplayReceiver {
             return null;
         }
         try {
-            String v;
-            Property facingProp = ((BlockDefinition)customState.owner().value()).getProperty("facing");
-            if (facingProp != null && (d = net.minecraft.core.Direction.byName((String)(v = String.valueOf(customState.get(facingProp)).toLowerCase()))) != null) {
-                return d;
+            BlockDefinition def = (BlockDefinition) customState.owner().value();
+            // Some block configs expose their orientation under "facing", others under
+            // "horizontal_facing" / "6_direction" / "4_direction" (see the equivalent lookup in
+            // DataMachineBlockEntity.getBlockFunctionalAxis). Checking only "facing" here made
+            // every bearing whose config uses one of the other names silently report NORTH no
+            // matter which way it was actually placed, which sent the windmill bearing's
+            // "seed" lookup (facing_dx/dy/dz) at the wrong neighbor whenever the bearing itself
+            // wasn't glued into the structure.
+            for (String propName : new String[]{"facing", "horizontal_facing", "6_direction", "4_direction"}) {
+                Property facingProp = def.getProperty(propName);
+                if (facingProp == null) {
+                    continue;
+                }
+                d = net.minecraft.core.Direction.byName(String.valueOf(customState.get(facingProp)).toLowerCase());
+                if (d != null) {
+                    return d;
+                }
             }
         }
-        catch (Throwable facingProp) {
+        catch (Throwable ignored) {
             // empty catch block
         }
         BlockBehavior beh = customState.behavior();
@@ -515,6 +528,16 @@ ConveyorDisplayReceiver {
         if (current instanceof IOConfiguration.Simple simple && this.ownsIOConfiguration) {
             return simple;
         }
+        // No per-entity config yet (definition declared no "io" block — e.g. item_pipe_panel):
+        // the BLOCK's own defaultIOConfig (typically Open — see ConnectableBlockBehavior's
+        // no-arg constructor) is what every read (Machine.io_get, carrierConnectsHere, the
+        // network engines' faceMode) actually falls back to and treats as this face's live
+        // permission RIGHT NOW. Seeding the private copy from null instead of that default would
+        // silently CLOSE every other face the moment the player touches just one of them — the
+        // copy has to start from what's really in effect, not from "nothing granted".
+        if (current == null) {
+            current = this.resolveBehaviorDefaultIOConfig();
+        }
         IOConfiguration.Simple copy = new IOConfiguration.Simple();
         if (current != null) {
             for (IOConfiguration.IOType type : IOConfiguration.IOType.values()) {
@@ -531,6 +554,22 @@ ConveyorDisplayReceiver {
         this.setIOConfiguration(copy);
         this.ownsIOConfiguration = true;
         return copy;
+    }
+
+    /** The block's own static {@code defaultIOConfig} (see {@code ConnectableBlockBehavior}) —
+     * what {@link #getIOConfiguration()} being {@code null} actually resolves to everywhere else. */
+    private IOConfiguration resolveBehaviorDefaultIOConfig() {
+        try {
+            Level level = this.getNMSLevel();
+            BlockState state = level.getBlockState(this.getMachinePos());
+            Optional<ImmutableBlockState> custom = BlockStateUtils.getOptionalCustomBlockState(state);
+            if (custom.isEmpty()) return null;
+            net.momirealms.craftengine.core.block.behavior.BlockBehavior behavior = custom.get().behavior();
+            if (behavior instanceof MachineBlockBehavior mbb) return mbb.defaultIOConfig;
+            if (behavior instanceof ConnectableBlockBehavior cbb) return cbb.defaultIOConfig;
+        } catch (Throwable ignored) {
+        }
+        return null;
     }
 
     /** True once {@link #mutableIO()} has given this machine its own config. */
@@ -660,11 +699,47 @@ ConveyorDisplayReceiver {
 
     /** Installs this machine's energy buffer from its {@code MachineDefinition.EnergySpec}. Called once
      *  by the concrete subclass's constructor (mirrors how fluid/gas tanks are built from TankSpec). */
-    public void configureEnergy(int capacity, int maxInput, int maxOutput, int generationPerTick) {
+    public void configureEnergy(int capacity, int maxInput, int maxOutput, int perTick) {
         this.energyCapacity = Math.max(0, capacity);
         this.energyMaxInput = Math.max(0, maxInput);
         this.energyMaxOutput = Math.max(0, maxOutput);
-        this.energyGenerationPerTick = Math.max(0, generationPerTick);
+        // Signed — see processTick's application. A machine that only ever consumes (a passive
+        // drain, no generator) declares a negative per_tick; most machines declare 0
+        // (or omit "energy" entirely) and never touch this branch at all.
+        this.energyPerTick = perTick;
+    }
+
+    // ---- runtime overrides (Machine.set_energy_per_tick/etc.) — the JSON-declared EnergySpec is
+    // just this machine's STARTING point; a script (e.g. a windmill scaling output with wind/height)
+    // needs to be able to change it live without re-declaring the whole buffer. ----
+
+    public int energyCapacity() { return energyCapacity; }
+    public int energyMaxInput() { return energyMaxInput; }
+    public int energyMaxOutput() { return energyMaxOutput; }
+    /** Signed: positive feeds the buffer (generation), negative draws from it (consumption) — the
+     * same sign convention as kinetic {@code report_su}'s network accounting, just mirrored (there
+     * positive is the consumer; here positive is the producer, which matches how players already
+     * read "per_tick" in every energy machine shipped this session). */
+    public int energyPerTick() { return energyPerTick; }
+
+    public void setEnergyMaxInput(int maxInput) { this.energyMaxInput = Math.max(0, maxInput); }
+    public void setEnergyMaxOutput(int maxOutput) { this.energyMaxOutput = Math.max(0, maxOutput); }
+    public void setEnergyPerTick(int perTick) {
+        this.energyPerTick = perTick;
+    }
+
+    /**
+     * Default "is this machine active" for {@code status: auto} when there's no recipe of its own
+     * to drive {@link #isProcessing()} (a generator/passive-drain declares {@code energy.per_tick}
+     * but {@code flags.recipes: false}, e.g. the energy windmill). A generator ({@code per_tick >
+     * 0}) is active whenever it's configured to generate at all — production doesn't depend on the
+     * buffer already holding charge. A drain ({@code per_tick < 0}) is only active while the
+     * buffer actually has something to draw from — otherwise the tick's subtraction is a no-op
+     * (clamped at 0) and showing it as "active" would be a visual lie.
+     */
+    protected boolean energyActiveDefault() {
+        if (energyPerTick == 0 || energyCapacity <= 0) return false;
+        return energyPerTick > 0 || energy > 0;
     }
 
     /**
@@ -789,6 +864,32 @@ ConveyorDisplayReceiver {
         return true;
     }
 
+    /**
+     * Applies this tick's {@code energy.per_tick} to the buffer. Gated on actively burning fuel for
+     * a FUEL generator, NOT on recipe progress — a generator has no recipe/output of its own, just
+     * fuel -> energy. A machine that declares {@code per_tick} but {@code requiresFuel()==false}
+     * (e.g. an always-on windmill/solar panel — no fuel slot, nothing to burn) generates
+     * unconditionally instead; {@code burnTime} is permanently 0 for those, so gating on it here
+     * would silently generate nothing forever. Overflow beyond {@code energyCapacity} this tick is
+     * simply discarded (no cross-tick carry, no queue): a generator that can make 10k/t but only has
+     * room for 1k that tick banks 1k and the rest is lost, exactly like a real FE generator with a
+     * too-small internal buffer and nowhere to push it. Signed, like kinetic SU/RPM reporting:
+     * positive = feed the buffer (generation), negative = draw from it (a passive drain). Either
+     * direction clamps at the buffer's own edge instead of carrying a deficit/overflow onward.
+     *
+     * <p>Called from BOTH {@link #processTick} (recipe-driven machines) AND {@code
+     * DataMachineBlockEntity#tick}'s recipe-LESS branch — {@code flags.recipes: false} (the
+     * windmill/solar panel's case) skips {@code processTick} entirely, so without this being called
+     * from that other path too, a recipe-less generator would show as "active" (via {@link
+     * #energyActiveDefault}) yet never actually accumulate anything.
+     */
+    public void applyEnergyPerTick() {
+        boolean generating = this.requiresFuel() ? this.burnTime > 0 : true;
+        if (this.energyPerTick != 0 && generating && this.energyCapacity > 0) {
+            this.energy = Math.max(0, Math.min(this.energyCapacity, this.energy + this.energyPerTick));
+        }
+    }
+
     protected void processTick(Level level) {
         if (this.requiresFuel() && this.burnTime > 0) {
             --this.burnTime;
@@ -796,14 +897,7 @@ ConveyorDisplayReceiver {
         if (level.isClientSide()) {
             return;
         }
-        // Energy generation is gated on actively burning fuel, NOT on recipe progress — a generator
-        // has no recipe/output of its own, just fuel -> energy. Overflow beyond energyCapacity this
-        // tick is simply discarded (no cross-tick carry, no queue): a generator that can make 10k/t
-        // but only has room for 1k that tick banks 1k and the rest is lost, exactly like a real FE
-        // generator with a too-small internal buffer and nowhere on the network to push the rest.
-        if (this.energyGenerationPerTick > 0 && this.burnTime > 0 && this.energyCapacity > 0) {
-            this.energy = Math.min(this.energyCapacity, this.energy + this.energyGenerationPerTick);
-        }
+        this.applyEnergyPerTick();
         this.recomputeUpgrades();
         if (this.requiresRedstone && !this.isRedstoneEnabled(level)) {
             if (this.progress > 0) {
@@ -1153,6 +1247,30 @@ ConveyorDisplayReceiver {
             this.menu.syncFromMachine();
         }
         return this.menu;
+    }
+
+    /** {@link #getMenu()} without the lazy-create — null when nobody has ever opened this
+     *  machine's menu (or a subclass overriding {@code openMenu} hasn't populated {@link #menu}
+     *  yet), for a caller that only wants to act on an ALREADY-open menu (see {@code Machine.update()}). */
+    public MachineMenu getOpenMenuOrNull() {
+        return this.menu;
+    }
+
+    /** Re-runs {@link #getLayout()} (so a page's {@code "buttons"}/{@code "layout"} generator script
+     *  re-evaluates and can add/remove/move slots — see {@code MachineMenu#rebuildLayout}, which
+     *  {@code MachineMenu#refreshNow} can't do since a generator only runs inside
+     *  {@code buildPageLayout()} at menu-construction time) and repaints the currently-open menu's
+     *  SAME inventory in place — no close/reopen, so nothing flickers for the viewer. {@link
+     *  #getLayout()} reads a subclass's own current-page state (e.g. {@code
+     *  DataMachineBlockEntity#page}), so this stays on whatever page is open. No-op if nobody has
+     *  this machine's menu open right now. Used by {@code Machine.update()}. */
+    public boolean rebuildAndReopenMenu() {
+        MachineMenu open = this.menu;
+        if (open == null || open.getInventory().getViewers().isEmpty()) {
+            return false;
+        }
+        open.rebuildLayout(this.getLayout());
+        return true;
     }
 
     public boolean isValidInput(int slot, net.minecraft.world.item.ItemStack stack) {
@@ -1525,17 +1643,23 @@ ConveyorDisplayReceiver {
             ScriptContext base = this.buildScriptContext();
             if (base == null)
                 return false;
+            dev.arubik.craftengine.script.event.TransferEvent transferEvent =
+                    new dev.arubik.craftengine.script.event.TransferEvent(type, payload, side.getName(), mode);
             ScriptContext ctx = ScriptContext.builder().copyFrom(base)
                     .typed("type", dev.arubik.craftengine.script.ScriptValue.of(type))
                     .typed("payload", payload)
                     .typed("direction", dev.arubik.craftengine.script.ScriptValue.of(side.getName()))
                     .typed("mode", dev.arubik.craftengine.script.ScriptValue.of(mode))
+                    .event(transferEvent)
                     .build();
             dev.arubik.craftengine.script.ScriptCall call = dev.arubik.craftengine.script.ScriptCall
                     .parse(definition.onTransferScript());
             if (call == null)
                 return false;
             call.execute(ctx);
+            // event.cancel() is the new, preferred veto — the old Machine.set_flag("_transfer_cancel", 1)
+            // NBT-flag convention is deprecated but still checked, so existing scripts keep working.
+            if (transferEvent.isCancelled()) return true;
             Integer cancelled = this.get(TRANSFER_CANCEL_FLAG);
             return cancelled != null && cancelled != 0; // fail-open: a script that never sets it never vetoes
         } catch (Throwable ignored) {
@@ -1575,7 +1699,15 @@ ConveyorDisplayReceiver {
     }
 
     protected void pullFromInputFaces(Level level) {
-        if (this.ioConfiguration == null) {
+        // A machine whose panel the player never touched (no "io" json block either, e.g.
+        // energy_cell) has this.ioConfiguration == null forever — but every OTHER reader
+        // (Machine.io_get, carrierConnectsHere, canEnergyOutput/Input) already falls back to the
+        // block's static defaultIOConfig (normally Open) instead of treating "no owned config" as
+        // "closed". Bailing out here instead of doing the same fallback meant this pull simply
+        // never ran until the player happened to open a side-config GUI and click a face at least
+        // once — see resolveBehaviorDefaultIOConfig / mutableIO's identical reasoning.
+        IOConfiguration cfg = this.ioConfiguration != null ? this.ioConfiguration : this.resolveBehaviorDefaultIOConfig();
+        if (cfg == null) {
             return;
         }
         BlockPos pos = this.getMachinePos();
@@ -1583,12 +1715,71 @@ ConveyorDisplayReceiver {
             net.minecraft.core.Direction local = this.toLocalItemDir(world);
             BlockPos src = pos.relative(world);
             net.minecraft.core.Direction sideFromSrc = world.getOpposite();
-            if (this.ioConfiguration.acceptsInput(IOConfiguration.IOType.FLUID, local)) {
-                this.pullFluidInto(level, src, sideFromSrc, this.ioConfiguration.getTargetSlot(IOConfiguration.IOType.FLUID, local));
+            if (cfg.acceptsInput(IOConfiguration.IOType.FLUID, local)) {
+                this.pullFluidInto(level, src, sideFromSrc, cfg.getTargetSlot(IOConfiguration.IOType.FLUID, local));
             }
-            if (!this.ioConfiguration.acceptsInput(IOConfiguration.IOType.GAS, local)) continue;
-            this.pullGasInto(level, src, sideFromSrc, this.ioConfiguration.getTargetSlot(IOConfiguration.IOType.GAS, local));
+            if (cfg.acceptsInput(IOConfiguration.IOType.GAS, local)) {
+                this.pullGasInto(level, src, sideFromSrc, cfg.getTargetSlot(IOConfiguration.IOType.GAS, local));
+            }
+            if (cfg.acceptsInput(IOConfiguration.IOType.ENERGY, local)) {
+                this.pullEnergyInto(level, src, sideFromSrc, world);
+            }
         }
+    }
+
+    /**
+     * Direct machine-to-neighbour energy pull, mirroring {@link #pullFluidInto}/{@link
+     * #pullGasInto} exactly — needed because, unlike fluid/gas, ENERGY has no equivalent here at
+     * all otherwise. A cable's {@link dev.arubik.craftengine.energy.behavior.EnergyCableBehavior}
+     * registers itself into {@link dev.arubik.craftengine.fluid.graph.EnergyEngine}'s seed set every
+     * tick, but a plain machine never does — so two machines placed directly against each other
+     * with NO cable anywhere nearby (e.g. a solar panel stacked straight on an energy cell) never
+     * had ANY code path move energy between them: no cable meant no seed, meant EnergyEngine.step
+     * never even ran for that pair, no matter how the per-face IO was configured. This closes that
+     * gap the same way hopper-style direct adjacency already works for fluid/gas.
+     */
+    protected void pullEnergyInto(Level level, BlockPos src, net.minecraft.core.Direction sideFromSrc,
+            net.minecraft.core.Direction worldSideOnThis) {
+        if (this.energyCapacity <= 0) {
+            return;
+        }
+        try {
+            int space = this.energyCapacity - this.energy;
+            if (space <= 0) {
+                return;
+            }
+            dev.arubik.craftengine.energy.EnergyCarrier ec = AbstractMachineBlockEntity.energyCarrierAt(level, src);
+            if (ec == null) {
+                return;
+            }
+            int cap = this.energyMaxInput > 0 ? Math.min(space, this.energyMaxInput) : space;
+            // extractEnergy's "side" is the face energy leaves THROUGH on the SOURCE (src), i.e.
+            // pointing away from src back toward us — sideFromSrc. insertEnergy's "side" is the
+            // face energy enters THROUGH on US (this machine) — the direction toward src, i.e.
+            // worldSideOnThis — mirrors EnergyTransferHelper#transfer's own from/to convention.
+            int extracted = ec.extractEnergy(level, src, cap, sideFromSrc);
+            if (extracted > 0) {
+                int accepted = this.insertEnergy(level, extracted, worldSideOnThis);
+                int unused = extracted - accepted;
+                if (unused > 0) {
+                    // Give back whatever this side's own IO/cap rules didn't actually take.
+                    ec.insertEnergy(level, src, unused, sideFromSrc);
+                }
+            }
+        } catch (Throwable ignored) {
+        }
+    }
+
+    protected static dev.arubik.craftengine.energy.EnergyCarrier energyCarrierAt(Level level, BlockPos pos) {
+        ImmutableBlockState cs = BlockStateUtils.getOptionalCustomBlockState(level.getBlockState(pos)).orElse(null);
+        if (cs == null) {
+            return null;
+        }
+        BlockBehavior b = cs.behavior();
+        if (b instanceof dev.arubik.craftengine.energy.EnergyCarrier ec) {
+            return ec;
+        }
+        return b == null ? null : b.getFirst(dev.arubik.craftengine.energy.EnergyCarrier.class);
     }
 
     protected void pullFluidInto(Level level, BlockPos src, net.minecraft.core.Direction sideFromSrc, int tankIdx) {

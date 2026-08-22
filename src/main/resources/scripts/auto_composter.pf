@@ -3,65 +3,68 @@
 # Input slots: 0-17  |  Output slots: 18-26
 
 COMPOST_VALUES = make_map(
-    "minecraft:wheat",          1,
-    "minecraft:wheat_seeds",    1,
-    "minecraft:beetroot_seeds", 1,
-    "minecraft:melon_seeds",    1,
-    "minecraft:pumpkin_seeds",  1,
-    "minecraft:carrot",         2,
-    "minecraft:potato",         2,
-    "minecraft:beetroot",       2,
-    "minecraft:apple",          2,
-    "minecraft:cactus",         1,
-    "minecraft:vine",           1,
-    "minecraft:seagrass",       1,
-    "minecraft:tall_seagrass",  1,
-    "minecraft:kelp",           1,
-    "minecraft:dried_kelp",     1,
-    "minecraft:lily_pad",       1,
-    "minecraft:dandelion",      1,
-    "minecraft:grass",          1,
-    "minecraft:tall_grass",     1,
-    "minecraft:fern",           1,
-    "minecraft:large_fern",     1,
-    "minecraft:dead_bush",      1,
-    "minecraft:mushroom_stew",  3,
-    "minecraft:red_mushroom",   2,
-    "minecraft:brown_mushroom", 2,
-    "minecraft:bread",          3,
-    "minecraft:cookie",         2,
-    "minecraft:pumpkin",        4,
-    "minecraft:melon",          4,
-    "minecraft:melon_slice",    2,
-    "minecraft:hay_block",      5,
-    "minecraft:nether_wart",    2,
-    "minecraft:cocoa_beans",    2,
-    "minecraft:sweet_berries",  2,
-    "minecraft:glow_berries",   2
+"minecraft:wheat",          1,
+"minecraft:wheat_seeds",    1,
+"minecraft:beetroot_seeds", 1,
+"minecraft:melon_seeds",    1,
+"minecraft:pumpkin_seeds",  1,
+"minecraft:carrot",         2,
+"minecraft:potato",         2,
+"minecraft:beetroot",       2,
+"minecraft:apple",          2,
+"minecraft:cactus",         1,
+"minecraft:vine",           1,
+"minecraft:seagrass",       1,
+"minecraft:tall_seagrass",  1,
+"minecraft:kelp",           1,
+"minecraft:dried_kelp",     1,
+"minecraft:lily_pad",       1,
+"minecraft:dandelion",      1,
+"minecraft:grass",          1,
+"minecraft:tall_grass",     1,
+"minecraft:fern",           1,
+"minecraft:large_fern",     1,
+"minecraft:dead_bush",      1,
+"minecraft:mushroom_stew",  3,
+"minecraft:red_mushroom",   2,
+"minecraft:brown_mushroom", 2,
+"minecraft:bread",          3,
+"minecraft:cookie",         2,
+"minecraft:pumpkin",        4,
+"minecraft:melon",          4,
+"minecraft:melon_slice",    2,
+"minecraft:hay_block",      5,
+"minecraft:nether_wart",    2,
+"minecraft:cocoa_beans",    2,
+"minecraft:sweet_berries",  2,
+"minecraft:glow_berries",   2
 )
 
 level = Machine.get_flag("compost_level")
 found = false
 
-for i in range(18) {
-    if !found {
+for i in range(18):
+    if !found:
         item = Machine.get_item_in_slot(i)
-        if !is_empty(item) {
+        if !is_empty(item):
             compost_value = COMPOST_VALUES.switch(item.id, 0)
-            if compost_value > 0 {
+            if compost_value > 0:
                 Machine.remove_item_in_slot(i, 1)
                 level = level + compost_value
                 found = true
-            }
-        }
-    }
-}
+            end
+        end
+    end
+end
 
-if found {
-    if level >= 8 {
+if found:
+    if level >= 8:
         bonemeal = create_item("minecraft:bone_meal", 1)
         Machine.push_item_to_inventory(bonemeal)
         level = 0
-    }
+    end
     Machine.set_flag("compost_level", level)
-}
+end
+
+
+

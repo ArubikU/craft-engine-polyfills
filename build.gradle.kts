@@ -74,15 +74,11 @@ sourceSets.test {
         "**/chainery/**",
         "**/contraption/**",
         "**/conveyor/**",
-        "**/crafting/**",
         "**/data/**",
         "**/fluid/**",
         "**/machine/menu/**",
         "**/machine/upgrade/**",
-        "**/multiblock/**",
-        "**/pipe/**",
-        "**/rotation/**",
-        "**/test/**"
+        "**/rotation/**"
     )
 }
 

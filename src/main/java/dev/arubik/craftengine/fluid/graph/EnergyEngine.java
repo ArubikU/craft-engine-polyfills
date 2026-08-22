@@ -152,12 +152,29 @@ public final class EnergyEngine {
         }
         for (int i = 0; i < n; i++) {
             EnergyCarrier c = carriers[i];
+            long key = positions.get(i).asLong();
+            // Net change at THIS node from this one step — an ephemeral (non-persisted) reading so
+            // a player can right-click a cell/cable and see "how much is actually flowing through
+            // the network right now", not just the buffer's static total. Recorded even for a node
+            // whose amount didn't change (delta 0 IS the answer while nothing's moving).
+            LAST_DELTA.put(key, amt[i] - old[i]);
             if (c == null || amt[i] == old[i])
                 continue;
             c.setStoredEnergyRaw(level, positions.get(i), Math.max(0, amt[i]));
         }
         return moved;
     }
+
+    /** Per-node net change (mB-equivalent CE units) from that node's most recent {@link #step}
+     * — how much a player watching a cell/cable would see it gain (+) or lose (-) THIS network
+     * tick. 0 if the node hasn't been part of a step yet, or genuinely wasn't moving anything. */
+    public static int lastDelta(BlockPos pos) {
+        if (pos == null) return 0;
+        Integer d = LAST_DELTA.get(pos.asLong());
+        return d != null ? d : 0;
+    }
+
+    private static final Map<Long, Integer> LAST_DELTA = new java.util.concurrent.ConcurrentHashMap<>();
 
     // ---------------- helpers ----------------
 

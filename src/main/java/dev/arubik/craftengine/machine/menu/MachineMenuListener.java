@@ -80,8 +80,37 @@ implements Listener {
                     action.accept(menu.getMachine(), player);
                     return;
                 }
+                case GHOST: {
+                    // Always cancelled — the displayed item is a rendered stand-in (see
+                    // MenuSlotType#GHOST), never a real, extractable stack. The player's cursor is
+                    // only READ (for its id), never touched: no item is created, consumed, or moved,
+                    // so there is nothing here for a disconnect/relog to leave in an exploitable
+                    // half-done state — unlike the old real-INPUT-slot filter editor this replaced.
+                    event.setCancelled(true);
+                    HumanEntity ghostClicker = event.getWhoClicked();
+                    if (!(ghostClicker instanceof Player)) return;
+                    MachineLayout.GhostSlotAction ghostAction = layout.getGhostSlotAction(slot);
+                    if (ghostAction == null) return;
+                    ghostAction.accept(menu.getMachine(), (Player) ghostClicker, event.getCursor(), event.getClick());
+                    return;
+                }
                 case OUTPUT: {
                     if (this.isPlaceAction(event.getAction())) {
+                        event.setCancelled(true);
+                        return;
+                    }
+                    this.scheduleSync(menu);
+                    return;
+                }
+                case STORAGE: {
+                    // Free slot — place/take like a plain chest, gated only by the page's
+                    // storage_filter (if any). See dev.arubik.craftengine.machine.menu.layout.StorageFilters.
+                    if (this.isPlaceAction(event.getAction()) && event.getCursor() != null
+                            && !event.getCursor().getType().isAir()
+                            && !dev.arubik.craftengine.machine.menu.layout.StorageFilters.allows(
+                                    layout.getStorageFilter(), event.getCursor(),
+                                    dev.arubik.craftengine.machine.menu.layout.StorageFilters.playerContext(
+                                            event.getWhoClicked() instanceof Player pl ? pl : null))) {
                         event.setCancelled(true);
                         return;
                     }
@@ -122,9 +151,22 @@ implements Listener {
             ItemStack moving = event.getCurrentItem();
             if (moving == null || moving.getType().isAir()) return;
             AbstractMachineBlockEntity m = menu.getMachine();
-            int[] targets = layout.getSlotsOfType(m.isFuelItem(moving) ? MenuSlotType.FUEL : MenuSlotType.INPUT);
-            // Shift-clicking must not sneak items into a slot the player cannot click directly.
+            boolean fuel = m.isFuelItem(moving);
+            int[] storageSlots = layout.getSlotsOfType(MenuSlotType.STORAGE);
+            // A page with free STORAGE slots prefers them for a shift-clicked non-fuel item over
+            // whatever INPUT slots it also declares — STORAGE has no recipe role to protect.
+            int[] targets = fuel ? layout.getSlotsOfType(MenuSlotType.FUEL)
+                    : storageSlots.length > 0 ? storageSlots : layout.getSlotsOfType(MenuSlotType.INPUT);
+            // Shift-clicking must not sneak items into a slot the player cannot click directly,
+            // or past a STORAGE page's filter (if any).
             targets = java.util.Arrays.stream(targets).filter(t -> !layout.isLocked(t)).toArray();
+            if (!fuel && storageSlots.length > 0
+                    && !dev.arubik.craftengine.machine.menu.layout.StorageFilters.allows(
+                            layout.getStorageFilter(), moving,
+                            dev.arubik.craftengine.machine.menu.layout.StorageFilters.playerContext(
+                                    event.getWhoClicked() instanceof Player pl ? pl : null))) {
+                return;
+            }
             ItemStack leftover = MachineMenuListener.mergeInto(event.getInventory(), targets, moving.clone());
             event.setCurrentItem(leftover);
             this.scheduleSync(menu);
@@ -143,7 +185,14 @@ implements Listener {
                 int slot = (Integer)iterator.next();
                 if (slot >= event.getInventory().getSize()) continue;
                 MenuSlotType type = layout.getSlotType(slot);
-                if (layout.isLocked(slot) || type == MenuSlotType.DYNAMIC || type == MenuSlotType.BACKGROUND || type == MenuSlotType.OUTPUT || type == MenuSlotType.BUTTON) {
+                if (layout.isLocked(slot) || type == MenuSlotType.DYNAMIC || type == MenuSlotType.BACKGROUND || type == MenuSlotType.OUTPUT || type == MenuSlotType.BUTTON || type == MenuSlotType.GHOST) {
+                    event.setCancelled(true);
+                    return;
+                }
+                if (type == MenuSlotType.STORAGE && !dev.arubik.craftengine.machine.menu.layout.StorageFilters.allows(
+                        layout.getStorageFilter(), event.getOldCursor(),
+                        dev.arubik.craftengine.machine.menu.layout.StorageFilters.playerContext(
+                                event.getWhoClicked() instanceof Player pl ? pl : null))) {
                     event.setCancelled(true);
                     return;
                 }

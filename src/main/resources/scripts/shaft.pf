@@ -3,11 +3,14 @@
 # not by a manual set_state + NBT flag: the flag latched independently of the real block
 # state, so once they drifted apart the shaft could never re-activate.
 
-def status() {
+def status():
     return rpm != 0 ? "true" : "false"
-}
+end
 
-def on_break() {
+def on_break():
     Machine.set_rpm_output(0)
     Machine.report_su(0)
-}
+end
+
+
+
