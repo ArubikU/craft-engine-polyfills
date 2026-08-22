@@ -12,7 +12,7 @@
   "action_script": "rotational_bearing",
   "status": "rotational_bearing.pf:status",
   "on_break": "rotational_bearing.pf:on_break",
-  "action_interval": 1,
+  "action_interval": 4,
   "on_right_click": "rotational_bearing_interact",
   "io": {
     "rpm": {
@@ -26,7 +26,7 @@
     {
       "type": "item_display",
       "item": "CraftEngineItem(\"cml:rotational_bearing_head_render\")",
-      "location": { "x": 0, "y": 0, "z": 0 },
+      "location": { "x": 0, "y": 0.5, "z": 0 },
       "rot_y": "Machine.get_flag(\"assembled\") > 0 ? tick() * rpm * 0.3 : 0",
       "scale": "1.0",
       "when": "Machine.facing == \"up\"",
@@ -35,9 +35,38 @@
     },
     {
       "type": "item_display",
+      "item": "CraftEngineItem(\"cml:shaft_half_render\")",
+      "location": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "rot_x": "180",
+      "rot_y": "tick() * rpm * 0.3",
+      "scale": "1.0",
+      "when": "Machine.facing == \"up\"",
+      "update_when": "always",
+      "global": true
+    },
+    {
+      "type": "item_display",
       "item": "CraftEngineItem(\"cml:rotational_bearing_head_render\")",
-      "location": { "x": 0, "y": 0, "z": 0 },
+      "location": { "x": 0, "y": -0.25, "z": 0 },
       "rot_y": "Machine.get_flag(\"assembled\") > 0 ? tick() * rpm * 0.3 : 0",
+      "scale": "1.0",
+      "when": "Machine.facing == \"down\"",
+      "update_when": "always",
+      "global": true
+    },
+    {
+      "type": "item_display",
+      "item": "CraftEngineItem(\"cml:shaft_half_render\")",
+      "location": {
+        "x": 0,
+        "y": 1,
+        "z": 0
+      },
+      "rot_y": "tick() * rpm * 0.3",
       "scale": "1.0",
       "when": "Machine.facing == \"down\"",
       "update_when": "always",
@@ -56,10 +85,40 @@
     },
     {
       "type": "item_display",
+      "item": "CraftEngineItem(\"cml:shaft_half_render\")",
+      "location": {
+        "x": 0,
+        "y": 0.5,
+        "z": 0
+      },
+      "rot_z": "-90",
+      "rot_x": "tick() * rpm * 0.3",
+      "scale": "1.0",
+      "when": "Machine.facing == \"east\"",
+      "update_when": "always",
+      "global": true
+    },
+    {
+      "type": "item_display",
       "item": "CraftEngineItem(\"cml:rotational_bearing_head_render\")",
       "location": { "x": 0, "y": 0.5, "z": 0 },
       "rot_z": "90",
       "rot_x": "Machine.get_flag(\"assembled\") > 0 ? tick() * rpm * 0.3 : 0",
+      "scale": "1.0",
+      "when": "Machine.facing == \"west\"",
+      "update_when": "always",
+      "global": true
+    },
+    {
+      "type": "item_display",
+      "item": "CraftEngineItem(\"cml:shaft_half_render\")",
+      "location": {
+        "x": 0,
+        "y": 0.5,
+        "z": 0
+      },
+      "rot_z": "90",
+      "rot_x": "tick() * rpm * 0.3",
       "scale": "1.0",
       "when": "Machine.facing == \"west\"",
       "update_when": "always",
@@ -79,10 +138,42 @@
     },
     {
       "type": "item_display",
+      "item": "CraftEngineItem(\"cml:shaft_half_render\")",
+      "location": {
+        "x": 0,
+        "y": 0.5,
+        "z": 0
+      },
+      "rot_z": "90",
+      "rot_x": "tick() * rpm * 0.3",
+      "rot_y": -90,
+      "scale": "1.0",
+      "when": "Machine.facing == \"north\"",
+      "update_when": "always",
+      "global": true
+    },
+    {
+      "type": "item_display",
       "item": "CraftEngineItem(\"cml:rotational_bearing_head_render\")",
       "location": { "x": 0, "y": 0.5, "z": 0.75 },
       "rot_z": "90",
       "rot_x": "Machine.get_flag(\"assembled\") > 0 ? tick() * rpm * 0.3 : 0",
+      "rot_y": -90,
+      "scale": "1.0",
+      "when": "Machine.facing == \"south\"",
+      "update_when": "always",
+      "global": true
+    },
+    {
+      "type": "item_display",
+      "item": "CraftEngineItem(\"cml:shaft_half_render\")",
+      "location": {
+        "x": 0,
+        "y": 0.5,
+        "z": 0
+      },
+      "rot_z": "-90",
+      "rot_x": "tick() * rpm * 0.3",
       "rot_y": -90,
       "scale": "1.0",
       "when": "Machine.facing == \"south\"",

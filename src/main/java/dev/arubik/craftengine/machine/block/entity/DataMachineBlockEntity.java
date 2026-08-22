@@ -139,6 +139,12 @@ dev.arubik.craftengine.rotation.KineticMember {
     private ConveyorItemDisplay[] specDisplays;
     private int[] specDisplayHashes;
     private ServerLevel lastKnownLevel;
+    // Throttles for tickSpecDisplays() packet/CPU cost — see its use for why. Kept as a constant
+    // rather than per-spec config: every continuously-rotating kinetic renderer wants the same
+    // treatment, and ConveyorItemDisplay's interpolation duration is widened to match
+    // ROTATION_PACKET_INTERVAL so the client still animates smoothly across the gap.
+    private static final long LIGHT_CHECK_INTERVAL = 10;
+    private static final long ROTATION_PACKET_INTERVAL = 4;
     public static volatile boolean SPEC_DISPLAY_DEBUG = false;
     public static volatile boolean SCRIPT_DEBUG = false;
     private static final Set<DataMachineBlockEntity> INSTANCES = Collections.newSetFromMap(new WeakHashMap());
@@ -1221,11 +1227,22 @@ dev.arubik.craftengine.rotation.KineticMember {
                         double wy = (double)pos.getY() + eid.offsetY();
                         double wz = (double)pos.getZ() + 0.5 + eid.offsetZ();
                         Quaternionf q = new Quaternionf().rotateY((float)Math.toRadians(eid.rotY())).rotateX((float)Math.toRadians(eid.rotX())).rotateZ((float)Math.toRadians(eid.rotZ()));
-                        boolean lightChanged = this.specDisplays[i].setLightFromLevel(nmsLevel, wx, wy, wz);
+                        // Light rarely changes tick-to-tick — the 6-neighbor brightness scan this
+                        // does is real per-tick CPU for every active display; only pay for it every
+                        // LIGHT_CHECK_INTERVAL ticks.
+                        boolean lightChanged = this.ticksAlive % LIGHT_CHECK_INTERVAL == 0
+                                && this.specDisplays[i].setLightFromLevel(nmsLevel, wx, wy, wz);
                         this.specDisplays[i].setScale(eid.scale());
                         this.specDisplays[i].setRotation(q);
+                        // Always consumed so it never accumulates stale, but a continuous spin
+                        // formula (tick()*rpm*...) marks this dirty EVERY tick — only actually flush
+                        // a metadata packet for that case every ROTATION_PACKET_INTERVAL ticks
+                        // (matching the widened interpolation duration in ConveyorItemDisplay), the
+                        // client smooths across the gap instead of needing a packet every tick.
                         boolean rotDirty = this.specDisplays[i].consumeRotationDirty();
+                        boolean sendRotUpdate = rotDirty && this.ticksAlive % ROTATION_PACKET_INTERVAL == 0;
                         int h = item.hashCode();
+                        boolean itemChanged = h != this.specDisplayHashes[i];
                         this.specDisplays[i].setNmsItem(item);
                         List<Player> effectiveViewers = viewers;
                         if (er.qualifyingPlayers != null) {
@@ -1235,7 +1252,7 @@ dev.arubik.craftengine.rotation.KineticMember {
                                 return pp instanceof org.bukkit.entity.Player && er.qualifyingPlayers.contains((bukkit = (org.bukkit.entity.Player)pp).getUniqueId());
                             }).collect(Collectors.toList());
                         }
-                        this.specDisplays[i].render(effectiveViewers, wx, wy, wz, lightChanged || h != this.specDisplayHashes[i] || rotDirty);
+                        this.specDisplays[i].render(effectiveViewers, wx, wy, wz, lightChanged || itemChanged || sendRotUpdate);
                         this.specDisplayHashes[i] = h;
                         continue;
                     }

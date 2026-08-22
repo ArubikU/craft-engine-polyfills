@@ -112,8 +112,12 @@ public final class ConveyorItemDisplay {
         DisplayData.Scale.addEntityData(this.scale, values);
         DisplayData.BrightnessOverride.addEntityData(this.packedLight, values);
         DisplayData.LeftRotation.addEntityData(this.rotation, values);
-        DisplayData.PosRotInterpolationDuration.addEntityData(1, values);
-        DisplayData.TransformationInterpolationDuration.addEntityData(2, values);
+        // Widened from 1/2 to match ROTATION_PACKET_INTERVAL (DataMachineBlockEntity) — metadata
+        // packets for a continuously-spinning display are now throttled to every few ticks instead
+        // of every tick, so the client needs a matching interpolation window to smooth across the
+        // gap instead of holding still then snapping.
+        DisplayData.PosRotInterpolationDuration.addEntityData(4, values);
+        DisplayData.TransformationInterpolationDuration.addEntityData(4, values);
         return values;
     }
 
@@ -183,6 +187,10 @@ public final class ConveyorItemDisplay {
 
     public void render(List<net.momirealms.craftengine.core.entity.player.Player> viewers, double x, double y, double z, boolean forceMeta) {
         HashSet<UUID> current = new HashSet<UUID>();
+        // Most of these displays sit at a fixed offset from their block and never actually move —
+        // only their rotation/scale/item animate. Sending a position-sync packet every tick anyway
+        // was pure waste; only send one when the anchor position genuinely changed.
+        boolean moved = Math.abs(x - this.curX) > 1.0E-4 || Math.abs(y - this.curY) > 1.0E-4 || Math.abs(z - this.curZ) > 1.0E-4;
         for (net.momirealms.craftengine.core.entity.player.Player p : viewers) {
             UUID id = ConveyorItemDisplay.uuidOf(p);
             if (id == null) continue;
@@ -191,7 +199,7 @@ public final class ConveyorItemDisplay {
                 this.spawn(p, x, y, z);
                 continue;
             }
-            this.updatePosition(p, x, y, z);
+            if (moved) this.updatePosition(p, x, y, z);
             if (!forceMeta) continue;
             this.updateMetadata(p);
         }
