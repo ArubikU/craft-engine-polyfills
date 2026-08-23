@@ -76,17 +76,30 @@ public final class EnergyEngine {
         queue.add(start.immutable());
         visited.add(start.asLong());
 
+        // Per-position lookup caches, scoped to this one BFS: every position is examined as a
+        // neighbor from up to 6 directions (once per incident edge) and, when dequeued, its OWN
+        // carrier/connectable are re-derived once per outgoing direction too — without this, a
+        // single node's block-state lookup + behavior-list search ran up to ~12x per BFS visit
+        // instead of once, purely from re-deriving the same (level, pos) answer repeatedly.
+        Map<Long, java.util.Optional<EnergyCarrier>> carrierCache = new HashMap<>();
+        Map<Long, ConnectableBlockBehavior> connCache = new HashMap<>();
+
         while (!queue.isEmpty() && positions.size() <= MAX_BLOCKS) {
             BlockPos pos = queue.poll();
             int ai = idx(index, positions, pos);
+            EnergyCarrier selfCarrier = carrier(level, pos, carrierCache);
+            ConnectableBlockBehavior selfConn = connectable(level, pos, connCache);
             for (Direction dir : Direction.values()) {
                 BlockPos np = pos.relative(dir);
-                if (!isCarrier(level, np) || !connected(level, pos, np, dir))
+                EnergyCarrier otherCarrier = carrier(level, np, carrierCache);
+                if (otherCarrier == null || !connected(selfConn, connectable(level, np, connCache), level, pos, np, dir))
                     continue;
                 int bi = idx(index, positions, np);
                 if (ai < bi) {
-                    boolean aToB = canOut(level, pos, dir) && canIn(level, np, dir.getOpposite());
-                    boolean bToA = canOut(level, np, dir.getOpposite()) && canIn(level, pos, dir);
+                    boolean aToB = selfCarrier != null && selfCarrier.canEnergyOutput(level, pos, dir)
+                            && otherCarrier.canEnergyInput(level, np, dir.getOpposite());
+                    boolean bToA = otherCarrier.canEnergyOutput(level, np, dir.getOpposite())
+                            && selfCarrier != null && selfCarrier.canEnergyInput(level, pos, dir);
                     if (aToB || bToA)
                         edgePairs.add(new int[] { ai, bi, (aToB && bToA) ? 0 : (aToB ? 1 : -1) });
                 }
@@ -188,18 +201,13 @@ public final class EnergyEngine {
         return i;
     }
 
-    private static boolean canOut(Level level, BlockPos pos, Direction side) {
-        EnergyCarrier c = EnergyTransferHelper.getCarrier(level, pos).orElse(null);
-        return c != null && c.canEnergyOutput(level, pos, side);
-    }
-
-    private static boolean canIn(Level level, BlockPos pos, Direction side) {
-        EnergyCarrier c = EnergyTransferHelper.getCarrier(level, pos).orElse(null);
-        return c != null && c.canEnergyInput(level, pos, side);
-    }
-
     private static boolean isCarrier(Level level, BlockPos pos) {
         return EnergyTransferHelper.getCarrier(level, pos).isPresent();
+    }
+
+    /** BFS-scoped cached carrier lookup — see the cache field comment at the call site. */
+    private static EnergyCarrier carrier(Level level, BlockPos pos, Map<Long, java.util.Optional<EnergyCarrier>> cache) {
+        return cache.computeIfAbsent(pos.asLong(), k -> EnergyTransferHelper.getCarrier(level, pos)).orElse(null);
     }
 
     private static ConnectableBlockBehavior connectable(Level level, BlockPos pos) {
@@ -212,9 +220,18 @@ public final class EnergyEngine {
         return state.behavior().getFirst(ConnectableBlockBehavior.class);
     }
 
-    private static boolean connected(Level level, BlockPos a, BlockPos b, Direction aToB) {
-        ConnectableBlockBehavior ca = connectable(level, a);
-        ConnectableBlockBehavior cb = connectable(level, b);
+    /** BFS-scoped cached connectable lookup — a sentinel isn't needed since a real ConnectableBlockBehavior
+     *  is never null once present; computeIfAbsent correctly re-tries a null result on repeat lookups, which
+     *  is fine here since a true null (not a carrier / no chunk) is cheap to re-derive and rare in practice. */
+    private static ConnectableBlockBehavior connectable(Level level, BlockPos pos, Map<Long, ConnectableBlockBehavior> cache) {
+        ConnectableBlockBehavior cached = cache.get(pos.asLong());
+        if (cached != null) return cached;
+        ConnectableBlockBehavior computed = connectable(level, pos);
+        if (computed != null) cache.put(pos.asLong(), computed);
+        return computed;
+    }
+
+    private static boolean connected(ConnectableBlockBehavior ca, ConnectableBlockBehavior cb, Level level, BlockPos a, BlockPos b, Direction aToB) {
         if (ca == null || cb == null)
             return false;
         return ca.canConnectTo(level, a, aToB) && cb.canConnectTo(level, b, aToB.getOpposite());

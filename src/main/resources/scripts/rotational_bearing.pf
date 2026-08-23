@@ -51,6 +51,17 @@ if contraption == null:
     return
 end
 
+# tick() (MinecraftServer's absolute tick counter) resets to 0 on every server restart, but
+# "assembled_tick" is a PERSISTED flag stamped at assembly time under the previous session's
+# tick count — after a restart, tick() < assembled_tick until it naturally grows back past the
+# old value (which could take hours), leaving the head-cap renderer's
+# (tick() - assembled_tick) epoch desynced from the contraption's own rotation the whole time.
+# Re-stamp the instant we detect the counter went backwards: cheap (one comparison/tick) and
+# self-heals on the very first tick after reconnecting, restart or not.
+if tick() < Machine.get_flag("assembled_tick"):
+    Machine.set_flag("assembled_tick", tick())
+end
+
 if rpm == 0:
     # Nothing feeding the bearing right now — hold still, don't charge for it.
     contraption.set_spin(_spin_axis(), 0)

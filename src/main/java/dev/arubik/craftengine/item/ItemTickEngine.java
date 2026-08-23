@@ -8,6 +8,7 @@ import org.bukkit.craftbukkit.CraftWorld;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.Plugin;
 
 import dev.arubik.craftengine.script.ScriptCall;
@@ -60,6 +61,20 @@ public final class ItemTickEngine implements Listener {
         EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS,
         EquipmentSlot.FEET, EquipmentSlot.MAINHAND, EquipmentSlot.OFFHAND
     };
+    private static final int SLOT_COUNT = EquipmentSlot.values().length;
+
+    /** Resolved "what does this slot's item do" outcome, cached per (player, slot) and keyed on
+     *  the equipped {@link ItemStack}'s own reference identity — re-resolving {@code
+     *  CraftEngineItems.getCustomItemId} (a Bukkit-mirror conversion + identity lookup) and {@link
+     *  ItemDefinition#byId} every tick for gear nobody swapped was the actual cost here, not the
+     *  eventual script call itself. {@link #NONE} marks "not a tickable custom item" so that
+     *  outcome is cached too, instead of re-deriving it every tick for vanilla/non-tickable gear. */
+    private record ResolvedSlot(ItemDefinition def, int tickInterval, ScriptCall call) {
+        static final ResolvedSlot NONE = new ResolvedSlot(null, 0, null);
+    }
+
+    private static final Map<UUID, ItemStack[]> lastStackPerSlot = new ConcurrentHashMap<>();
+    private static final Map<UUID, ResolvedSlot[]> resolvedPerSlot = new ConcurrentHashMap<>();
 
     public static void register(Plugin plugin) {
         plugin.getServer().getPluginManager().registerEvents(new ItemTickEngine(), plugin);
@@ -74,6 +89,18 @@ public final class ItemTickEngine implements Listener {
         if (event.getEntity().getType() != org.bukkit.entity.EntityType.PLAYER) return;
         Integer grace = fallGraceTicksLeft.get(event.getEntity().getUniqueId());
         if (grace != null && grace > 0) event.setCancelled(true);
+    }
+
+    /** Without this, all five per-player maps below grow unbounded across a long-running server
+     *  with 200+ players churning in and out — none of them were ever pruned on disconnect. */
+    @EventHandler
+    public void onQuit(PlayerQuitEvent event) {
+        UUID id = event.getPlayer().getUniqueId();
+        jumpTicksLeft.remove(id);
+        fallGraceTicksLeft.remove(id);
+        wasOnGround.remove(id);
+        lastStackPerSlot.remove(id);
+        resolvedPerSlot.remove(id);
     }
 
     private static void tickAll() {
@@ -114,18 +141,30 @@ public final class ItemTickEngine implements Listener {
         ItemStack nms = sp.getItemBySlot(slot);
         if (nms == null || nms.isEmpty()) return;
 
-        // CraftEngine's own item-identity API is Bukkit-based — this is the one unavoidable
-        // library-boundary conversion, immediately discarded once the id is resolved.
-        Key ceId = CraftEngineItems.getCustomItemId(nms.asBukkitMirror());
-        if (ceId == null) return;
-        ItemDefinition def = ItemDefinition.byId(ceId);
-        if (def == null) return;
-        String ref = def.script("on_equipped_tick");
-        if (ref == null) return;
-        if (globalTick % def.tickInterval() != 0) return;
+        int slotIdx = slot.ordinal();
+        ItemStack[] lastStacks = lastStackPerSlot.computeIfAbsent(id, k -> new ItemStack[SLOT_COUNT]);
+        ResolvedSlot[] resolvedSlots = resolvedPerSlot.computeIfAbsent(id, k -> new ResolvedSlot[SLOT_COUNT]);
+        ResolvedSlot resolved = resolvedSlots[slotIdx];
 
-        ScriptCall call = ScriptCall.parse(ref);
-        if (call == null) return;
+        // Only re-resolve identity when the equipped stack actually changed since last tick — the
+        // common case (gear nobody just swapped) skips the Bukkit-mirror conversion + identity
+        // lookup entirely. If a script mutates its own item every tick and setItemSlot doesn't
+        // hand back that exact reference, this just falls back to resolving every tick (today's
+        // cost, not a regression) rather than silently going stale.
+        if (lastStacks[slotIdx] != nms) {
+            lastStacks[slotIdx] = nms;
+            // CraftEngine's own item-identity API is Bukkit-based — this is the one unavoidable
+            // library-boundary conversion, immediately discarded once the id is resolved.
+            Key ceId = CraftEngineItems.getCustomItemId(nms.asBukkitMirror());
+            ItemDefinition def = ceId != null ? ItemDefinition.byId(ceId) : null;
+            String ref = def != null ? def.script("on_equipped_tick") : null;
+            ScriptCall call = ref != null ? ScriptCall.parse(ref) : null;
+            resolved = call != null ? new ResolvedSlot(def, def.tickInterval(), call) : ResolvedSlot.NONE;
+            resolvedSlots[slotIdx] = resolved;
+        }
+
+        if (resolved == ResolvedSlot.NONE) return;
+        if (globalTick % resolved.tickInterval() != 0) return;
 
         try {
             ScriptContext ctx = ScriptContext.builder()
@@ -137,10 +176,11 @@ public final class ItemTickEngine implements Listener {
                     // for a consistent event shape across every hook.
                     .event(new dev.arubik.craftengine.script.event.ItemActionEvent("on_equipped_tick"))
                     .build();
-            ScriptContext result = call.execute(ctx);
+            ScriptContext result = resolved.call().execute(ctx);
             ScriptValue iv = result.getVar("item");
             if (iv instanceof ScriptValue.Item itemVal && itemVal.stack() != null) {
                 sp.setItemSlot(slot, itemVal.stack());
+                lastStacks[slotIdx] = itemVal.stack();
             }
         } catch (Throwable ignored) {
         }

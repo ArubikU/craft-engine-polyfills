@@ -26,8 +26,12 @@
     {
       "type": "item_display",
       "item": "CraftEngineItem(\"cml:rotational_bearing_head_render\")",
-      "location": { "x": 0, "y": 0.5, "z": 0 },
-      "rot_y": "Machine.get_flag(\"assembled\") > 0 ? tick() * rpm * 0.3 : 0",
+      "location": {
+        "x": 0,
+        "y": 0.5,
+        "z": 0
+      },
+      "rot_y": "-(Machine.get_flag(\"assembled\") > 0 ? (tick() - Machine.get_flag(\"assembled_tick\")) * rpm * 0.3 : 0)",
       "scale": "1.0",
       "when": "Machine.facing == \"up\"",
       "update_when": "always",
@@ -42,7 +46,7 @@
         "z": 0
       },
       "rot_x": "180",
-      "rot_y": "tick() * rpm * 0.3",
+      "rot_y": "-((tick() - Machine.get_flag(\"assembled_tick\")) * rpm * 0.3)",
       "scale": "1.0",
       "when": "Machine.facing == \"up\"",
       "update_when": "always",
@@ -51,8 +55,12 @@
     {
       "type": "item_display",
       "item": "CraftEngineItem(\"cml:rotational_bearing_head_render\")",
-      "location": { "x": 0, "y": -0.25, "z": 0 },
-      "rot_y": "Machine.get_flag(\"assembled\") > 0 ? tick() * rpm * 0.3 : 0",
+      "location": {
+        "x": 0,
+        "y": -0.25,
+        "z": 0
+      },
+      "rot_y": "-(Machine.get_flag(\"assembled\") > 0 ? (tick() - Machine.get_flag(\"assembled_tick\")) * rpm * 0.3 : 0)",
       "scale": "1.0",
       "when": "Machine.facing == \"down\"",
       "update_when": "always",
@@ -66,7 +74,7 @@
         "y": 1,
         "z": 0
       },
-      "rot_y": "tick() * rpm * 0.3",
+      "rot_y": "-((tick() - Machine.get_flag(\"assembled_tick\")) * rpm * 0.3)",
       "scale": "1.0",
       "when": "Machine.facing == \"down\"",
       "update_when": "always",
@@ -75,9 +83,13 @@
     {
       "type": "item_display",
       "item": "CraftEngineItem(\"cml:rotational_bearing_head_render\")",
-      "location": { "x": 0.75, "y": 0.5, "z": 0 },
+      "location": {
+        "x": 0.75,
+        "y": 0.5,
+        "z": 0
+      },
       "rot_z": "90",
-      "rot_x": "Machine.get_flag(\"assembled\") > 0 ? tick() * rpm * 0.3 : 0",
+      "rot_x": "Machine.get_flag(\"assembled\") > 0 ? (tick() - Machine.get_flag(\"assembled_tick\")) * rpm * 0.3 : 0",
       "scale": "1.0",
       "when": "Machine.facing == \"east\"",
       "update_when": "always",
@@ -92,7 +104,7 @@
         "z": 0
       },
       "rot_z": "-90",
-      "rot_x": "tick() * rpm * 0.3",
+      "rot_x": "(tick() - Machine.get_flag(\"assembled_tick\")) * rpm * 0.3",
       "scale": "1.0",
       "when": "Machine.facing == \"east\"",
       "update_when": "always",
@@ -101,9 +113,13 @@
     {
       "type": "item_display",
       "item": "CraftEngineItem(\"cml:rotational_bearing_head_render\")",
-      "location": { "x": 0, "y": 0.5, "z": 0 },
+      "location": {
+        "x": 0,
+        "y": 0.5,
+        "z": 0
+      },
       "rot_z": "90",
-      "rot_x": "Machine.get_flag(\"assembled\") > 0 ? tick() * rpm * 0.3 : 0",
+      "rot_x": "Machine.get_flag(\"assembled\") > 0 ? (tick() - Machine.get_flag(\"assembled_tick\")) * rpm * 0.3 : 0",
       "scale": "1.0",
       "when": "Machine.facing == \"west\"",
       "update_when": "always",
@@ -118,7 +134,7 @@
         "z": 0
       },
       "rot_z": "90",
-      "rot_x": "tick() * rpm * 0.3",
+      "rot_x": "(tick() - Machine.get_flag(\"assembled_tick\")) * rpm * 0.3",
       "scale": "1.0",
       "when": "Machine.facing == \"west\"",
       "update_when": "always",
@@ -127,9 +143,13 @@
     {
       "type": "item_display",
       "item": "CraftEngineItem(\"cml:rotational_bearing_head_render\")",
-      "location": { "x": 0, "y": 0.5, "z": 0 },
+      "location": {
+        "x": 0,
+        "y": 0.5,
+        "z": 0
+      },
       "rot_z": "90",
-      "rot_x": "Machine.get_flag(\"assembled\") > 0 ? tick() * rpm * 0.3 : 0",
+      "rot_x": "Machine.get_flag(\"assembled\") > 0 ? (tick() - Machine.get_flag(\"assembled_tick\")) * rpm * 0.3 : 0",
       "rot_y": -90,
       "scale": "1.0",
       "when": "Machine.facing == \"north\"",
@@ -145,7 +165,7 @@
         "z": 0
       },
       "rot_z": "90",
-      "rot_x": "tick() * rpm * 0.3",
+      "rot_x": "(tick() - Machine.get_flag(\"assembled_tick\")) * rpm * 0.3",
       "rot_y": -90,
       "scale": "1.0",
       "when": "Machine.facing == \"north\"",
@@ -155,9 +175,13 @@
     {
       "type": "item_display",
       "item": "CraftEngineItem(\"cml:rotational_bearing_head_render\")",
-      "location": { "x": 0, "y": 0.5, "z": 0.75 },
+      "location": {
+        "x": 0,
+        "y": 0.5,
+        "z": 0.75
+      },
       "rot_z": "90",
-      "rot_x": "Machine.get_flag(\"assembled\") > 0 ? tick() * rpm * 0.3 : 0",
+      "rot_x": "Machine.get_flag(\"assembled\") > 0 ? (tick() - Machine.get_flag(\"assembled_tick\")) * rpm * 0.3 : 0",
       "rot_y": -90,
       "scale": "1.0",
       "when": "Machine.facing == \"south\"",
@@ -173,7 +197,7 @@
         "z": 0
       },
       "rot_z": "-90",
-      "rot_x": "tick() * rpm * 0.3",
+      "rot_x": "(tick() - Machine.get_flag(\"assembled_tick\")) * rpm * 0.3",
       "rot_y": -90,
       "scale": "1.0",
       "when": "Machine.facing == \"south\"",

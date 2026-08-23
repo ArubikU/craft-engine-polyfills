@@ -88,6 +88,11 @@ else:
                 print("[windmill] assembled uuid=" + contraption.uuid + " block_count=" + contraption.block_count)
                 Machine.set_str_flag("contraption_uuid", contraption.uuid)
                 Machine.set_flag("assembled", 1)
+                # Stamp the assembly tick so the head-cap renderer's tick()-based angle can be
+                # measured from the SAME epoch the contraption's own accumulated yaw/pitch/roll
+                # uses (which starts from 0 at assembly) instead of from server start -
+                # otherwise the two only agree by coincidence of when in server uptime it was assembled.
+                Machine.set_flag("assembled_tick", tick())
                 Player.send_message("<green>Windmill assembled <gray>(" + sails + " sails).")
             end
         end

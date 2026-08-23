@@ -153,45 +153,60 @@ implements ModelRendersDriven {
             ServerLevel sl = (ServerLevel)level;
             try {
                 float f;
-                LinkedHashMap<String, double[]> fluidTankData = new LinkedHashMap<String, double[]>();
-                for (Object tank : this.fluidTanks) {
-                    try {
-                        FluidStack stored = ((FluidTank)tank).getFluid((Level)sl, pos);
-                        fluidTankData.put(((FluidTank)tank).getName(), new double[]{stored.getAmount(), ((FluidTank)tank).getCapacity()});
-                    }
-                    catch (Throwable stored) {}
-                }
-                LinkedHashMap<String, double[]> gasTankData = new LinkedHashMap<String, double[]>();
-                for (Object tank : this.gasTanks) {
-                    try {
-                        GasStack stored = ((GasTank)tank).getGas((Level)sl, pos);
-                        gasTankData.put(((GasTank)tank).getName(), new double[]{stored.getAmount(), ((GasTank)tank).getCapacity()});
-                    }
-                    catch (Throwable stored) {}
-                }
-                LinkedHashMap<String, Integer> upgradesByType = new LinkedHashMap<String, Integer>();
-                if (!this.upgradeDefs.isEmpty()) {
-                    for (Object upSlot : this.definition.upgrades().slots()) {
-                        net.minecraft.world.item.ItemStack nmsItem = this.getItem((int)upSlot);
-                        if (nmsItem.isEmpty()) continue;
+                // buildScriptContext() below computes its OWN fluid/gas/upgrade maps and redstone
+                // signal internally, then this ctx gets replaced wholesale by
+                // ctx.augmented(machineCtx) (which swaps in the given ScriptContext as the cache,
+                // short-circuiting toScriptContext() so these fields are never read again) —
+                // building the real tank/upgrade maps here first was 100%-wasted allocation + tank
+                // iteration + a Level query on every tick for every rendering multiblock machine in
+                // the common case (same waste already fixed for DataMachineBlockEntity.tick()).
+                // Only actually needed as a fallback if buildScriptContext() fails.
+                ScriptContext machineCtx = this.buildScriptContext();
+                MachineRenderContext ctx;
+                if (machineCtx != null) {
+                    ctx = new MachineRenderContext(0.0, 0.0, 0.0, this.progress, this.maxProgress, 0.0, this.isProcessing(), false, false, this.burnTime > 0, null)
+                            .augmented(machineCtx);
+                } else {
+                    LinkedHashMap<String, double[]> fluidTankData = new LinkedHashMap<String, double[]>();
+                    for (Object tank : this.fluidTanks) {
                         try {
-                            BukkitItemDefinition ce = CraftEngineItems.byItemStack((ItemStack)CraftItemStack.asBukkitCopy((net.minecraft.world.item.ItemStack)nmsItem));
-                            String uid = ce != null ? ce.id().namespace() + ":" + ce.id().value() : BuiltInRegistries.ITEM.getKey(nmsItem.getItem()).toString();
-                            upgradesByType.merge(uid, 1, Integer::sum);
+                            FluidStack stored = ((FluidTank)tank).getFluid((Level)sl, pos);
+                            fluidTankData.put(((FluidTank)tank).getName(), new double[]{stored.getAmount(), ((FluidTank)tank).getCapacity()});
                         }
-                        catch (Throwable throwable) {
-                            // empty catch block
+                        catch (Throwable stored) {}
+                    }
+                    LinkedHashMap<String, double[]> gasTankData = new LinkedHashMap<String, double[]>();
+                    for (Object tank : this.gasTanks) {
+                        try {
+                            GasStack stored = ((GasTank)tank).getGas((Level)sl, pos);
+                            gasTankData.put(((GasTank)tank).getName(), new double[]{stored.getAmount(), ((GasTank)tank).getCapacity()});
+                        }
+                        catch (Throwable stored) {}
+                    }
+                    LinkedHashMap<String, Integer> upgradesByType = new LinkedHashMap<String, Integer>();
+                    if (!this.upgradeDefs.isEmpty()) {
+                        for (Object upSlot : this.definition.upgrades().slots()) {
+                            net.minecraft.world.item.ItemStack nmsItem = this.getItem((int)upSlot);
+                            if (nmsItem.isEmpty()) continue;
+                            try {
+                                BukkitItemDefinition ce = CraftEngineItems.byItemStack((ItemStack)CraftItemStack.asBukkitCopy((net.minecraft.world.item.ItemStack)nmsItem));
+                                String uid = ce != null ? ce.id().namespace() + ":" + ce.id().value() : BuiltInRegistries.ITEM.getKey(nmsItem.getItem()).toString();
+                                upgradesByType.merge(uid, 1, Integer::sum);
+                            }
+                            catch (Throwable throwable) {
+                                // empty catch block
+                            }
                         }
                     }
+                    int redstonePower = 0;
+                    try {
+                        redstonePower = sl.getBestNeighborSignal(pos);
+                    }
+                    catch (Throwable stored) {
+                        // empty catch block
+                    }
+                    ctx = new MachineRenderContext(0.0, 0.0, 0.0, this.progress, this.maxProgress, 0.0, this.isProcessing(), redstonePower > 0, false, this.burnTime > 0, null, upgradesByType, fluidTankData, gasTankData, redstonePower);
                 }
-                int redstonePower = 0;
-                try {
-                    redstonePower = sl.getBestNeighborSignal(pos);
-                }
-                catch (Throwable stored) {
-                    // empty catch block
-                }
-                MachineRenderContext ctx = new MachineRenderContext(0.0, 0.0, 0.0, this.progress, this.maxProgress, 0.0, this.isProcessing(), redstonePower > 0, false, this.burnTime > 0, null, upgradesByType, fluidTankData, gasTankData, redstonePower);
                 Direction facing = this.getFacing(level);
                 if (facing == null) {
                     f = 0.0f;
@@ -219,10 +234,6 @@ implements ModelRendersDriven {
                     }
                 }
                 float yaw = f;
-                ScriptContext machineCtx = this.buildScriptContext();
-                if (machineCtx != null) {
-                    ctx = ctx.augmented(machineCtx);
-                }
                 this.rendererManager.tick(ctx, sl, pos.getX(), pos.getY(), pos.getZ(), yaw);
             }
             catch (Throwable throwable) {

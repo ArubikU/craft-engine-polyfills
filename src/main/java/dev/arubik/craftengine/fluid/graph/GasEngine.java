@@ -79,24 +79,37 @@ public final class GasEngine {
         queue.add(start.immutable());
         visited.add(start.asLong());
 
+        // Per-position lookup caches, scoped to this one BFS — see EnergyEngine.step's identical
+        // comment: without these, a single node's block-state lookup + behavior-list search (via
+        // carrier/connectable/closedValve) ran once per incident direction instead of once total.
+        Map<Long, java.util.Optional<GasCarrier>> carrierCache = new HashMap<>();
+        Map<Long, ConnectableBlockBehavior> connCache = new HashMap<>();
+        Map<Long, Boolean> valveCache = new HashMap<>();
+
         while (!queue.isEmpty() && positions.size() <= MAX_BLOCKS) {
             BlockPos pos = queue.poll();
             int ai = idx(index, positions, pos);
+            GasCarrier selfCarrier = carrier(level, pos, carrierCache);
+            ConnectableBlockBehavior selfConn = connectable(level, pos, connCache);
+            boolean selfClosedValve = closedValve(level, pos, valveCache);
             for (Direction dir : Direction.values()) {
                 BlockPos np = pos.relative(dir);
+                GasCarrier otherCarrier = carrier(level, np, carrierCache);
                 if (DEBUG && start.equals(pos))
                     System.out.println("[GasConnect] node=" + pos.toShortString() + " dir=" + dir + " np="
-                            + np.toShortString() + " isCarrier=" + isCarrier(level, np) + " connected="
-                            + (isCarrier(level, np) && connected(level, pos, np, dir)));
-                if (!isCarrier(level, np) || !connected(level, pos, np, dir))
+                            + np.toShortString() + " isCarrier=" + (otherCarrier != null) + " connected="
+                            + (otherCarrier != null && connected(selfConn, connectable(level, np, connCache), level, pos, np, dir)));
+                if (otherCarrier == null || !connected(selfConn, connectable(level, np, connCache), level, pos, np, dir))
                     continue;
                 int bi = idx(index, positions, np);
-                if (ai < bi && !closedValve(level, pos) && !closedValve(level, np)) {
+                if (ai < bi && !selfClosedValve && !closedValve(level, np, valveCache)) {
                     // Connectivity is not permission. Each carrier's declared gas IO decides which
                     // way (if either) gas may cross this face; carriers that are plain conduits
                     // default to open, so pipes/pumps/tanks behave exactly as before.
-                    boolean aToB = canOut(level, pos, dir) && canIn(level, np, dir.getOpposite());
-                    boolean bToA = canOut(level, np, dir.getOpposite()) && canIn(level, pos, dir);
+                    boolean aToB = selfCarrier != null && selfCarrier.canGasOutput(level, pos, dir)
+                            && otherCarrier.canGasInput(level, np, dir.getOpposite());
+                    boolean bToA = otherCarrier.canGasOutput(level, np, dir.getOpposite())
+                            && selfCarrier != null && selfCarrier.canGasInput(level, pos, dir);
                     if (aToB || bToA)
                         edgePairs.add(new int[] { ai, bi, (aToB && bToA) ? 0 : (aToB ? 1 : -1) });
                 }
@@ -209,20 +222,13 @@ public final class GasEngine {
         return i;
     }
 
-    /** May gas leave {@code pos} through {@code side}? Missing carrier = no. */
-    private static boolean canOut(Level level, BlockPos pos, Direction side) {
-        GasCarrier c = GasTransferHelper.getCarrier(level, pos).orElse(null);
-        return c != null && c.canGasOutput(level, pos, side);
-    }
-
-    /** May gas enter {@code pos} through {@code side}? Missing carrier = no. */
-    private static boolean canIn(Level level, BlockPos pos, Direction side) {
-        GasCarrier c = GasTransferHelper.getCarrier(level, pos).orElse(null);
-        return c != null && c.canGasInput(level, pos, side);
-    }
-
     private static boolean isCarrier(Level level, BlockPos pos) {
         return GasTransferHelper.getCarrier(level, pos).isPresent();
+    }
+
+    /** BFS-scoped cached carrier lookup — see EnergyEngine's identical helper. */
+    private static GasCarrier carrier(Level level, BlockPos pos, Map<Long, java.util.Optional<GasCarrier>> cache) {
+        return cache.computeIfAbsent(pos.asLong(), k -> GasTransferHelper.getCarrier(level, pos)).orElse(null);
     }
 
     /** A CLOSED gas valve blocks flow on every incident edge (gas has no gravity, so open = bidirectional). */
@@ -238,6 +244,11 @@ public final class GasEngine {
         return v != null && !v.isOpen(level, pos);
     }
 
+    /** BFS-scoped cached valve-state lookup — see EnergyEngine's identical helper pattern. */
+    private static boolean closedValve(Level level, BlockPos pos, Map<Long, Boolean> cache) {
+        return cache.computeIfAbsent(pos.asLong(), k -> closedValve(level, pos));
+    }
+
     private static ConnectableBlockBehavior connectable(Level level, BlockPos pos) {
         if (!level.hasChunkAt(pos))
             return null; // see GasTransferHelper#getCarrier: an unguarded read here force-loads the chunk
@@ -247,9 +258,16 @@ public final class GasEngine {
         return state.behavior().getFirst(ConnectableBlockBehavior.class);
     }
 
-    private static boolean connected(Level level, BlockPos a, BlockPos b, Direction aToB) {
-        ConnectableBlockBehavior ca = connectable(level, a);
-        ConnectableBlockBehavior cb = connectable(level, b);
+    /** BFS-scoped cached connectable lookup — see EnergyEngine's identical helper. */
+    private static ConnectableBlockBehavior connectable(Level level, BlockPos pos, Map<Long, ConnectableBlockBehavior> cache) {
+        ConnectableBlockBehavior cached = cache.get(pos.asLong());
+        if (cached != null) return cached;
+        ConnectableBlockBehavior computed = connectable(level, pos);
+        if (computed != null) cache.put(pos.asLong(), computed);
+        return computed;
+    }
+
+    private static boolean connected(ConnectableBlockBehavior ca, ConnectableBlockBehavior cb, Level level, BlockPos a, BlockPos b, Direction aToB) {
         if (ca == null || cb == null) {
             if (DEBUG)
                 System.out.println("[GasConn2] a=" + a.toShortString() + " b=" + b.toShortString() + " caNull="
