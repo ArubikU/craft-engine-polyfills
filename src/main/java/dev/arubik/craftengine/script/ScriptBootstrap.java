@@ -37,6 +37,7 @@ public final class ScriptBootstrap {
 
         // ---- World / block types ------------------------------------------------
         BlockType.register();
+        BlockMetadataType.register();  // Block.get_metadata + its sign/container/skull/banner subtypes
         BlockStateType.register();
         WorldType.register();
         LocationType.register();

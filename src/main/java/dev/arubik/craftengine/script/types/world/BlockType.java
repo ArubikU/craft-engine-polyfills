@@ -91,6 +91,18 @@ public final class BlockType {
                 BlockRef r = ref(obj);
                 return ScriptValue.of(r.level().getBestNeighborSignal(r.pos()) > 0);
             })
+            // get_metadata — the real block entity at this position (sign text, container
+            // contents, skull owner, banner pattern, ...) as a type-appropriate script object,
+            // e.g. block.get_metadata.front.lines[0]. NULL when there's no block entity here,
+            // or its kind isn't modeled — see BlockMetadataType.
+            .property("get_metadata", obj -> BlockMetadataType.metadataOf(ref(obj).level(), ref(obj).pos()))
+            // metadata_type — which single BlockMetadata child type get_metadata would return
+            // (e.g. "SignMetadata"), or NULL — for branching on a block's kind without paying for
+            // the full metadata object first.
+            .property("metadata_type", obj -> BlockMetadataType.metadataTypeOf(ref(obj).level(), ref(obj).pos()))
+            // metadata_types — every modeled type name applicable to this block, most specific
+            // first, as an Array (empty when nothing is modeled for it).
+            .property("metadata_types", obj -> BlockMetadataType.metadataTypesOf(ref(obj).level(), ref(obj).pos()))
             .property("world", obj -> WorldType.wrap(ref(obj).level()))
             .property("location", obj -> LocationType.wrap(ref(obj).level(), ref(obj).pos().getX(), ref(obj).pos().getY(), ref(obj).pos().getZ()))
             // block_state — full BlockState wrapper (CE + vanilla properties, CE priority)
