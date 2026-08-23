@@ -111,6 +111,12 @@ public final class GlueRegistry {
             ResourceKey worldKey;
             CompoundTag w = worlds.getCompoundOrEmpty(i);
             String worldStr = w.getString("world").orElse("");
+            // saveAll always writes "namespace:path" (never a bare UUID) — this used to fall
+            // through unconditionally into the UUID.fromString branch below even after already
+            // resolving worldKey here, which always threw on a colon-containing string and
+            // discarded the entry via `continue` before worldKey was ever used. That's why glue
+            // never survived a restart: every saved world entry took this branch and was silently
+            // dropped. The UUID branch is now an `else`, reached only when there's no colon.
             if (worldStr.contains(":")) {
                 try {
                     Identifier loc = Identifier.parse((String)worldStr);
@@ -119,15 +125,16 @@ public final class GlueRegistry {
                 catch (Exception e) {
                     continue;
                 }
-            }
-            try {
-                UUID worldUuid = UUID.fromString(worldStr);
-                World bukkitWorld = Bukkit.getWorld((UUID)worldUuid);
-                if (bukkitWorld == null) continue;
-                worldKey = ((CraftWorld)bukkitWorld).getHandle().dimension();
-            }
-            catch (IllegalArgumentException bad) {
-                continue;
+            } else {
+                try {
+                    UUID worldUuid = UUID.fromString(worldStr);
+                    World bukkitWorld = Bukkit.getWorld((UUID)worldUuid);
+                    if (bukkitWorld == null) continue;
+                    worldKey = ((CraftWorld)bukkitWorld).getHandle().dimension();
+                }
+                catch (IllegalArgumentException bad) {
+                    continue;
+                }
             }
             long[] a = w.getLongArray("a").orElse(new long[0]);
             long[] b = w.getLongArray("b").orElse(new long[0]);

@@ -712,13 +712,52 @@ dev.arubik.craftengine.rotation.KineticMember {
         return this.definition.upgrades().slots();
     }
 
+    /** Cache for {@link #getMatchingRecipe} — a full-component copy of each input slot's stack as
+     *  of the last time the recipe list was actually scanned, and the recipe that scan produced
+     *  (possibly null). Recipe matching only ever looks at these slots, so while they're unchanged
+     *  from tick to tick (the overwhelmingly common case: a machine quietly processing the same
+     *  stack while {@code progress} climbs toward {@code time}) re-running every recipe's own
+     *  nested input/slot matching is pure repeated work with the same answer every time. */
+    private net.minecraft.world.item.ItemStack[] recipeInputSnapshot;
+    private AbstractProcessingRecipe cachedMatchingRecipe;
+
     @Override
     protected AbstractProcessingRecipe getMatchingRecipe(Level level) {
+        int[] slots = this.definition.inputSlots();
+        if (this.inputSlotsUnchanged(slots)) {
+            return this.cachedMatchingRecipe;
+        }
+        net.minecraft.world.item.ItemStack[] snapshot = new net.minecraft.world.item.ItemStack[slots.length];
+        for (int i = 0; i < slots.length; i++) {
+            snapshot[i] = this.getItem(slots[i]).copy();
+        }
+        this.recipeInputSnapshot = snapshot;
         for (AbstractProcessingRecipe recipe : RecipeManager.getRecipes(this.getMachineId())) {
             if (this.matchingInputSlot(recipe) < 0) continue;
+            this.cachedMatchingRecipe = recipe;
             return recipe;
         }
+        this.cachedMatchingRecipe = null;
         return null;
+    }
+
+    private boolean inputSlotsUnchanged(int[] slots) {
+        net.minecraft.world.item.ItemStack[] snapshot = this.recipeInputSnapshot;
+        if (snapshot == null || snapshot.length != slots.length) {
+            return false;
+        }
+        for (int i = 0; i < slots.length; i++) {
+            net.minecraft.world.item.ItemStack current = this.getItem(slots[i]);
+            net.minecraft.world.item.ItemStack previous = snapshot[i];
+            if (current.isEmpty() != previous.isEmpty()) {
+                return false;
+            }
+            if (!current.isEmpty() && (current.getCount() != previous.getCount()
+                    || !net.minecraft.world.item.ItemStack.isSameItemSameComponents(current, previous))) {
+                return false;
+            }
+        }
+        return true;
     }
 
     protected int matchingInputSlot(AbstractProcessingRecipe recipe) {

@@ -102,8 +102,12 @@ public final class ItemEngine {
     }
 
     /** One STORAGE endpoint reachable from the pipe network: which pipe segment owns the face,
-     * the world direction from that segment toward the container, and the container itself. */
-    record Endpoint(BlockPos pipePos, Direction fromPipe, BlockPos containerPos) {
+     * the world direction from that segment toward the container, and the container itself.
+     * {@code behavior} is the pipe segment's own behavior instance, ALREADY resolved once while
+     * walking the network in {@link #step} — carrying it here avoids re-resolving it (a block-state
+     * fetch + custom-state lookup + behavior-list search) from scratch in {@link #faceMode} for
+     * every endpoint, every tick. */
+    record Endpoint(BlockPos pipePos, Direction fromPipe, BlockPos containerPos, ItemPipeBehavior behavior) {
     }
 
     /** Steps the network containing {@code start}; returns every pipe position visited (so the caller
@@ -136,7 +140,7 @@ public final class ItemEngine {
                     continue;
                 }
                 if (ItemTransferHelper.getContainer(level, neighborPos).isPresent())
-                    endpoints.add(new Endpoint(pos.immutable(), dir, neighborPos.immutable()));
+                    endpoints.add(new Endpoint(pos.immutable(), dir, neighborPos.immutable(), beh));
             }
         }
 
@@ -218,7 +222,7 @@ public final class ItemEngine {
     }
 
     private static FaceMode faceMode(Level level, Endpoint e) {
-        ItemPipeBehavior beh = pipeBehaviorAt(level, e.pipePos());
+        ItemPipeBehavior beh = e.behavior();
         if (beh == null)
             return new FaceMode(false, false);
         IOConfiguration cfg = beh.getIOConfiguration(level, e.pipePos());

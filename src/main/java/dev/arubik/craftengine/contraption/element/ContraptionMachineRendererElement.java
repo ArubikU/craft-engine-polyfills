@@ -300,6 +300,9 @@ implements ContraptionElement {
         int lastBlockLight = -1;
         int lastSkyLight = -1;
         double lastScale = 1.0;
+        double lastYaw = Double.NaN;
+        double lastPitch = Double.NaN;
+        double lastRoll = Double.NaN;
         int interpTicks = 2;
 
         ItemCell(int specIndex) {
@@ -318,13 +321,27 @@ implements ContraptionElement {
             RendererSpec.EvaluatedItemDisplay ev = er.itemDisplay;
             Vec3 localWithOffset = new Vec3((double)ContraptionMachineRendererElement.this.localPos.getX() + 0.5 + ev.offsetX(), (double)ContraptionMachineRendererElement.this.localPos.getY() + ev.offsetY(), (double)ContraptionMachineRendererElement.this.localPos.getZ() + 0.5 + ev.offsetZ());
             Vec3 worldPos = ContraptionMath.renderPosition(localWithOffset, ctx.bearing(), ctx.yawRadians(), ctx.pitchRadians(), ctx.rollRadians(), ctx.scale());
-            float yawDeg = ev.rotY() + (float)ctx.yawDegrees();
             boolean itemChanged = ev.item() != this.lastItem;
-            boolean metaChanged = itemChanged || blockLight != this.lastBlockLight || skyLight != this.lastSkyLight || ctx.scale() != this.lastScale || ctx.interpTicks() != this.interpTicks;
+            // Item/text/fluid displays render their orientation ENTIRELY from the LeftRotation
+            // metadata quaternion, not from the entity's own yaw/pitch packet fields (see
+            // ConveyorItemDisplay, the proven real-world path, which always spawns with 0,0 and
+            // does 100% of rotation via LeftRotation) — the previous code stuffed
+            // "ev.rotY() + ctx.yawDegrees()" into the packet yaw field, which is inert for a
+            // Display entity's visual rotation, so an embedded machine's item_display never
+            // visually tilted/rotated with the contraption at all (position tracked correctly via
+            // worldPos, orientation stuck at its original fixed pose). Also: rotation only lives
+            // in metadata, so it must be part of metaChanged, not just item/light/scale/interp —
+            // otherwise a spinning/tilting contraption's ctx.moved()-only position sync would
+            // never carry the updated orientation.
+            boolean rotChanged = ctx.yawRadians() != this.lastYaw || ctx.pitchRadians() != this.lastPitch || ctx.rollRadians() != this.lastRoll;
+            boolean metaChanged = itemChanged || rotChanged || blockLight != this.lastBlockLight || skyLight != this.lastSkyLight || ctx.scale() != this.lastScale || ctx.interpTicks() != this.interpTicks;
             this.lastItem = ev.item();
             this.lastBlockLight = blockLight;
             this.lastSkyLight = skyLight;
             this.lastScale = ctx.scale();
+            this.lastYaw = ctx.yawRadians();
+            this.lastPitch = ctx.pitchRadians();
+            this.lastRoll = ctx.rollRadians();
             this.interpTicks = ctx.interpTicks();
             HashSet<UUID> current = new HashSet<UUID>();
             for (Player p : ctx.viewers()) {
@@ -332,36 +349,36 @@ implements ContraptionElement {
                 if (id == null) continue;
                 current.add(id);
                 if (this.shownTo.add(id)) {
-                    this.spawnFor(p, worldPos, yawDeg, ev, blockLight, skyLight, spec);
+                    this.spawnFor(p, worldPos, ev, ctx, blockLight, skyLight, spec);
                     continue;
                 }
                 if (ctx.moved()) {
-                    this.updatePositionFor(p, worldPos, yawDeg, ev);
+                    this.updatePositionFor(p, worldPos);
                     if (!metaChanged) continue;
-                    this.updateMetaFor(p, ev, blockLight, skyLight, spec);
+                    this.updateMetaFor(p, ev, ctx, blockLight, skyLight, spec);
                     continue;
                 }
                 if (!metaChanged) continue;
-                this.updateMetaFor(p, ev, blockLight, skyLight, spec);
+                this.updateMetaFor(p, ev, ctx, blockLight, skyLight, spec);
             }
             this.shownTo.retainAll(current);
         }
 
-        private void spawnFor(Player p, Vec3 pos, float yawDeg, RendererSpec.EvaluatedItemDisplay ev, int bl, int sl, RendererSpec.ItemDisplaySpec spec) {
-            Object add = MNms.INSTANCE.constructor$ClientboundAddEntityPacket(this.entityId, this.entityUuid, pos.x, pos.y, pos.z, ev.rotX(), yawDeg, EntityType.ITEM_DISPLAY, 0, Vec3.ZERO, 0.0);
-            Object data = MNms.INSTANCE.constructor$ClientboundSetEntityDataPacket(this.entityId, this.buildMeta(ev, bl, sl, spec));
+        private void spawnFor(Player p, Vec3 pos, RendererSpec.EvaluatedItemDisplay ev, RenderContext ctx, int bl, int sl, RendererSpec.ItemDisplaySpec spec) {
+            Object add = MNms.INSTANCE.constructor$ClientboundAddEntityPacket(this.entityId, this.entityUuid, pos.x, pos.y, pos.z, 0.0f, 0.0f, EntityType.ITEM_DISPLAY, 0, Vec3.ZERO, 0.0);
+            Object data = MNms.INSTANCE.constructor$ClientboundSetEntityDataPacket(this.entityId, this.buildMeta(ev, ctx, bl, sl, spec));
             p.sendPackets(List.of(add, data), false);
         }
 
-        private void updatePositionFor(Player p, Vec3 pos, float yawDeg, RendererSpec.EvaluatedItemDisplay ev) {
-            p.sendPacket(MNms.INSTANCE.constructor$ClientboundEntityPositionSyncPacket(this.entityId, pos.x, pos.y, pos.z, yawDeg, ev.rotX(), false), false);
+        private void updatePositionFor(Player p, Vec3 pos) {
+            p.sendPacket(MNms.INSTANCE.constructor$ClientboundEntityPositionSyncPacket(this.entityId, pos.x, pos.y, pos.z, 0.0f, 0.0f, false), false);
         }
 
-        private void updateMetaFor(Player p, RendererSpec.EvaluatedItemDisplay ev, int bl, int sl, RendererSpec.ItemDisplaySpec spec) {
-            p.sendPacket(MNms.INSTANCE.constructor$ClientboundSetEntityDataPacket(this.entityId, this.buildMeta(ev, bl, sl, spec)), false);
+        private void updateMetaFor(Player p, RendererSpec.EvaluatedItemDisplay ev, RenderContext ctx, int bl, int sl, RendererSpec.ItemDisplaySpec spec) {
+            p.sendPacket(MNms.INSTANCE.constructor$ClientboundSetEntityDataPacket(this.entityId, this.buildMeta(ev, ctx, bl, sl, spec)), false);
         }
 
-        private List<Object> buildMeta(RendererSpec.EvaluatedItemDisplay ev, int bl, int sl, RendererSpec.ItemDisplaySpec spec) {
+        private List<Object> buildMeta(RendererSpec.EvaluatedItemDisplay ev, RenderContext ctx, int bl, int sl, RendererSpec.ItemDisplaySpec spec) {
             byte bb;
             ArrayList<Object> values = new ArrayList<Object>();
             if (ev.item() != null && !ev.item().isEmpty()) {
@@ -369,13 +386,19 @@ implements ContraptionElement {
             }
             float s = ev.scale();
             DisplayData.Scale.addEntityData(new Vector3f(s, s, s), values);
-            float rx = ev.rotX();
-            float ry = ev.rotY();
-            float rz = ev.rotZ();
-            if (rx != 0.0f || ry != 0.0f || rz != 0.0f) {
-                Quaternionf q = new Quaternionf().rotateY((float)Math.toRadians(ry)).rotateX((float)Math.toRadians(rx)).rotateZ((float)Math.toRadians(rz));
-                DisplayData.LeftRotation.addEntityData(q, values);
-            }
+            // Contraption's own orientation (yaw uses Minecraft's clockwise convention, negated to
+            // match JOML's standard right-handed rotateY — see ContraptionType#set_spin's matching
+            // fix this session) is the OUTER transform, wrapping the spec's own authored local
+            // rotation (rot_x/y/z from the machine's "renderers" entry) as the inner one — so the
+            // item spins/tilts correctly in its own local sense AND rides the contraption's motion.
+            Quaternionf q = new Quaternionf()
+                    .rotateY((float)-ctx.yawRadians())
+                    .rotateX((float)ctx.pitchRadians())
+                    .rotateZ((float)ctx.rollRadians())
+                    .rotateY((float)Math.toRadians(ev.rotY()))
+                    .rotateX((float)Math.toRadians(ev.rotX()))
+                    .rotateZ((float)Math.toRadians(ev.rotZ()));
+            DisplayData.LeftRotation.addEntityData(q, values);
             if ((bb = ContraptionMachineRendererElement.itemBillboardByte(spec.billboard())) != 0) {
                 DisplayData.BillboardConstraints.addEntityData(bb, values);
             }
@@ -403,6 +426,9 @@ implements ContraptionElement {
         int lastBlockLight = -1;
         int lastSkyLight = -1;
         double lastScale3d = 1.0;
+        double lastYaw = Double.NaN;
+        double lastPitch = Double.NaN;
+        double lastRoll = Double.NaN;
         int interpTicks = 2;
 
         TextCell(int specIndex) {
@@ -420,13 +446,19 @@ implements ContraptionElement {
             }
             Vec3 localWithOffset = new Vec3((double)ContraptionMachineRendererElement.this.localPos.getX() + 0.5 + er.tdOx, (double)ContraptionMachineRendererElement.this.localPos.getY() + er.tdOy, (double)ContraptionMachineRendererElement.this.localPos.getZ() + 0.5 + er.tdOz);
             Vec3 worldPos = ContraptionMath.renderPosition(localWithOffset, ctx.bearing(), ctx.yawRadians(), ctx.pitchRadians(), ctx.rollRadians(), ctx.scale());
-            float yawDeg = (float)ctx.yawDegrees();
-            boolean metaChanged = !Objects.equals(er.textContent, this.lastText) || Float.compare(er.textScale, this.lastScale) != 0 || blockLight != this.lastBlockLight || skyLight != this.lastSkyLight || ctx.scale() != this.lastScale3d || ctx.interpTicks() != this.interpTicks;
+            // Same as ItemCell: orientation lives entirely in the LeftRotation metadata quaternion
+            // for a Display entity, not the entity's own yaw/pitch packet fields — matters mainly
+            // for billboard="none" text, but tracked here regardless for consistency/correctness.
+            boolean rotChanged = ctx.yawRadians() != this.lastYaw || ctx.pitchRadians() != this.lastPitch || ctx.rollRadians() != this.lastRoll;
+            boolean metaChanged = !Objects.equals(er.textContent, this.lastText) || Float.compare(er.textScale, this.lastScale) != 0 || rotChanged || blockLight != this.lastBlockLight || skyLight != this.lastSkyLight || ctx.scale() != this.lastScale3d || ctx.interpTicks() != this.interpTicks;
             this.lastText = er.textContent;
             this.lastScale = er.textScale;
             this.lastBlockLight = blockLight;
             this.lastSkyLight = skyLight;
             this.lastScale3d = ctx.scale();
+            this.lastYaw = ctx.yawRadians();
+            this.lastPitch = ctx.pitchRadians();
+            this.lastRoll = ctx.rollRadians();
             this.interpTicks = ctx.interpTicks();
             HashSet<UUID> current = new HashSet<UUID>();
             for (Player p : ctx.viewers()) {
@@ -434,36 +466,36 @@ implements ContraptionElement {
                 if (id == null) continue;
                 current.add(id);
                 if (this.shownTo.add(id)) {
-                    this.spawnFor(p, worldPos, yawDeg, er, spec, blockLight, skyLight);
+                    this.spawnFor(p, worldPos, er, ctx, spec, blockLight, skyLight);
                     continue;
                 }
                 if (ctx.moved()) {
-                    this.updatePositionFor(p, worldPos, yawDeg);
+                    this.updatePositionFor(p, worldPos);
                     if (!metaChanged) continue;
-                    this.updateMetaFor(p, er, spec, blockLight, skyLight);
+                    this.updateMetaFor(p, er, ctx, spec, blockLight, skyLight);
                     continue;
                 }
                 if (!metaChanged) continue;
-                this.updateMetaFor(p, er, spec, blockLight, skyLight);
+                this.updateMetaFor(p, er, ctx, spec, blockLight, skyLight);
             }
             this.shownTo.retainAll(current);
         }
 
-        private void spawnFor(Player p, Vec3 pos, float yawDeg, RendererManager.EvalResult er, RendererSpec.TextDisplaySpec spec, int bl, int sl) {
-            Object add = MNms.INSTANCE.constructor$ClientboundAddEntityPacket(this.entityId, this.entityUuid, pos.x, pos.y, pos.z, 0.0f, yawDeg, EntityType.TEXT_DISPLAY, 0, Vec3.ZERO, 0.0);
-            Object data = MNms.INSTANCE.constructor$ClientboundSetEntityDataPacket(this.entityId, this.buildMeta(er, spec, bl, sl));
+        private void spawnFor(Player p, Vec3 pos, RendererManager.EvalResult er, RenderContext ctx, RendererSpec.TextDisplaySpec spec, int bl, int sl) {
+            Object add = MNms.INSTANCE.constructor$ClientboundAddEntityPacket(this.entityId, this.entityUuid, pos.x, pos.y, pos.z, 0.0f, 0.0f, EntityType.TEXT_DISPLAY, 0, Vec3.ZERO, 0.0);
+            Object data = MNms.INSTANCE.constructor$ClientboundSetEntityDataPacket(this.entityId, this.buildMeta(er, ctx, spec, bl, sl));
             p.sendPackets(List.of(add, data), false);
         }
 
-        private void updatePositionFor(Player p, Vec3 pos, float yawDeg) {
-            p.sendPacket(MNms.INSTANCE.constructor$ClientboundEntityPositionSyncPacket(this.entityId, pos.x, pos.y, pos.z, yawDeg, 0.0f, false), false);
+        private void updatePositionFor(Player p, Vec3 pos) {
+            p.sendPacket(MNms.INSTANCE.constructor$ClientboundEntityPositionSyncPacket(this.entityId, pos.x, pos.y, pos.z, 0.0f, 0.0f, false), false);
         }
 
-        private void updateMetaFor(Player p, RendererManager.EvalResult er, RendererSpec.TextDisplaySpec spec, int bl, int sl) {
-            p.sendPacket(MNms.INSTANCE.constructor$ClientboundSetEntityDataPacket(this.entityId, this.buildMeta(er, spec, bl, sl)), false);
+        private void updateMetaFor(Player p, RendererManager.EvalResult er, RenderContext ctx, RendererSpec.TextDisplaySpec spec, int bl, int sl) {
+            p.sendPacket(MNms.INSTANCE.constructor$ClientboundSetEntityDataPacket(this.entityId, this.buildMeta(er, ctx, spec, bl, sl)), false);
         }
 
-        private List<Object> buildMeta(RendererManager.EvalResult er, RendererSpec.TextDisplaySpec spec, int bl, int sl) {
+        private List<Object> buildMeta(RendererManager.EvalResult er, RenderContext ctx, RendererSpec.TextDisplaySpec spec, int bl, int sl) {
             EntityDataAccessor acc;
             ArrayList<Object> values = new ArrayList<Object>();
             try {
@@ -473,6 +505,11 @@ implements ContraptionElement {
                 // empty catch block
             }
             DisplayData.Scale.addEntityData(new Vector3f(er.textScale, er.textScale, er.textScale), values);
+            Quaternionf tq = new Quaternionf()
+                    .rotateY((float)-ctx.yawRadians())
+                    .rotateX((float)ctx.pitchRadians())
+                    .rotateZ((float)ctx.rollRadians());
+            DisplayData.LeftRotation.addEntityData(tq, values);
             try {
                 byte bb = TextCell.textBillboardByte(spec.billboard());
                 DisplayData.BillboardConstraints.addEntityData(bb, values);
@@ -570,6 +607,9 @@ implements ContraptionElement {
         int lastBlockLight = -1;
         int lastSkyLight = -1;
         double lastScale = 1.0;
+        double lastYaw = Double.NaN;
+        double lastPitch = Double.NaN;
+        double lastRoll = Double.NaN;
         int interpTicks = 2;
 
         FluidCell(int specIndex) {
@@ -587,12 +627,19 @@ implements ContraptionElement {
             }
             Vec3 localWithOffset = new Vec3((double)ContraptionMachineRendererElement.this.localPos.getX() + 0.5 + er.specRelX, (double)ContraptionMachineRendererElement.this.localPos.getY() + er.specRelY, (double)ContraptionMachineRendererElement.this.localPos.getZ() + 0.5 + er.specRelZ);
             Vec3 worldPos = ContraptionMath.renderPosition(localWithOffset, ctx.bearing(), ctx.yawRadians(), ctx.pitchRadians(), ctx.rollRadians(), ctx.scale());
-            boolean metaChanged = er.ceFluidLevel != this.lastCeLevel || !Objects.equals(er.fluidTypeValue, this.lastFluidType) || blockLight != this.lastBlockLight || skyLight != this.lastSkyLight || ctx.scale() != this.lastScale || ctx.interpTicks() != this.interpTicks;
+            // A tilted contraption's tank should show its fluid surface tilted too — same missing-
+            // rotation bug as ItemCell/TextCell (position tracked via worldPos, orientation never
+            // touched previously).
+            boolean rotChanged = ctx.yawRadians() != this.lastYaw || ctx.pitchRadians() != this.lastPitch || ctx.rollRadians() != this.lastRoll;
+            boolean metaChanged = er.ceFluidLevel != this.lastCeLevel || !Objects.equals(er.fluidTypeValue, this.lastFluidType) || rotChanged || blockLight != this.lastBlockLight || skyLight != this.lastSkyLight || ctx.scale() != this.lastScale || ctx.interpTicks() != this.interpTicks;
             this.lastCeLevel = er.ceFluidLevel;
             this.lastFluidType = er.fluidTypeValue;
             this.lastBlockLight = blockLight;
             this.lastSkyLight = skyLight;
             this.lastScale = ctx.scale();
+            this.lastYaw = ctx.yawRadians();
+            this.lastPitch = ctx.pitchRadians();
+            this.lastRoll = ctx.rollRadians();
             this.interpTicks = ctx.interpTicks();
             HashSet<UUID> current = new HashSet<UUID>();
             for (Player p : ctx.viewers()) {
@@ -600,24 +647,24 @@ implements ContraptionElement {
                 if (id == null) continue;
                 current.add(id);
                 if (this.shownTo.add(id)) {
-                    this.spawnFor(p, worldPos, er, spec, blockLight, skyLight);
+                    this.spawnFor(p, worldPos, er, ctx, spec, blockLight, skyLight);
                     continue;
                 }
                 if (ctx.moved()) {
                     this.updatePositionFor(p, worldPos);
                     if (!metaChanged) continue;
-                    this.updateMetaFor(p, er, spec, blockLight, skyLight);
+                    this.updateMetaFor(p, er, ctx, spec, blockLight, skyLight);
                     continue;
                 }
                 if (!metaChanged) continue;
-                this.updateMetaFor(p, er, spec, blockLight, skyLight);
+                this.updateMetaFor(p, er, ctx, spec, blockLight, skyLight);
             }
             this.shownTo.retainAll(current);
         }
 
-        private void spawnFor(Player p, Vec3 pos, RendererManager.EvalResult er, RendererSpec.FluidTankSpec spec, int bl, int sl) {
+        private void spawnFor(Player p, Vec3 pos, RendererManager.EvalResult er, RenderContext ctx, RendererSpec.FluidTankSpec spec, int bl, int sl) {
             Object add = MNms.INSTANCE.constructor$ClientboundAddEntityPacket(this.entityId, this.entityUuid, pos.x, pos.y, pos.z, 0.0f, 0.0f, EntityType.ITEM_DISPLAY, 0, Vec3.ZERO, 0.0);
-            Object data = MNms.INSTANCE.constructor$ClientboundSetEntityDataPacket(this.entityId, this.buildMeta(er, spec, bl, sl));
+            Object data = MNms.INSTANCE.constructor$ClientboundSetEntityDataPacket(this.entityId, this.buildMeta(er, ctx, spec, bl, sl));
             p.sendPackets(List.of(add, data), false);
         }
 
@@ -625,11 +672,11 @@ implements ContraptionElement {
             p.sendPacket(MNms.INSTANCE.constructor$ClientboundEntityPositionSyncPacket(this.entityId, pos.x, pos.y, pos.z, 0.0f, 0.0f, false), false);
         }
 
-        private void updateMetaFor(Player p, RendererManager.EvalResult er, RendererSpec.FluidTankSpec spec, int bl, int sl) {
-            p.sendPacket(MNms.INSTANCE.constructor$ClientboundSetEntityDataPacket(this.entityId, this.buildMeta(er, spec, bl, sl)), false);
+        private void updateMetaFor(Player p, RendererManager.EvalResult er, RenderContext ctx, RendererSpec.FluidTankSpec spec, int bl, int sl) {
+            p.sendPacket(MNms.INSTANCE.constructor$ClientboundSetEntityDataPacket(this.entityId, this.buildMeta(er, ctx, spec, bl, sl)), false);
         }
 
-        private List<Object> buildMeta(RendererManager.EvalResult er, RendererSpec.FluidTankSpec spec, int bl, int sl) {
+        private List<Object> buildMeta(RendererManager.EvalResult er, RenderContext ctx, RendererSpec.FluidTankSpec spec, int bl, int sl) {
             ArrayList<Object> values = new ArrayList<Object>();
             try {
                 ItemStack bukkit;
@@ -645,6 +692,11 @@ implements ContraptionElement {
             }
             float scaleY = spec.maxHeight() * ((float)er.ceFluidLevel / 16.0f);
             DisplayData.Scale.addEntityData(new Vector3f(1.0f, scaleY, 1.0f), values);
+            Quaternionf fq = new Quaternionf()
+                    .rotateY((float)-ctx.yawRadians())
+                    .rotateX((float)ctx.pitchRadians())
+                    .rotateZ((float)ctx.rollRadians());
+            DisplayData.LeftRotation.addEntityData(fq, values);
             DisplayData.BrightnessOverride.addEntityData((bl << 4 | sl << 20), values);
             ContraptionMachineRendererElement.addInterpolation(values, this.interpTicks);
             return values;

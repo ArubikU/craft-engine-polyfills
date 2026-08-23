@@ -31,9 +31,30 @@ def _sail_count(contraption):
     return n
 end
 
+# Advances the SAME persisted angle the head-cap renderer reads (Machine.get_flag("head_angle"))
+# by exactly the amount contraption.set_spin() just advanced the real contraption's rotation —
+# same elapsed-real-ticks-since-last-call approach, same rpm value, same "1 RPM = 0.3 deg/tick"
+# constant. This replaces an earlier attempt that had the RENDERER recompute an angle from
+# "tick() - assembled_tick" (ticks since assembly) times the CURRENT rpm — correct only if rpm
+# had been constant literally since assembly, which breaks after any speed/direction change,
+# not just after a restart. Accumulating here, the same way the contraption itself does, stays
+# correct through rpm changes AND survives a restart for free: elapsed = clamp(now-last, 0, 100)
+# already floors to 0 when `now` resets below the old absolute `last` tick.
+def _advance_head_angle(rpm_value):
+    last = Machine.get_flag("head_last_tick")
+    now = tick()
+    if last <= 0:
+        last = now
+    end
+    elapsed = clamp(now - last, 0, 100)
+    Machine.set_flag("head_angle", Machine.get_flag("head_angle") + elapsed * rpm_value * 0.3)
+    Machine.set_flag("head_last_tick", now)
+end
+
 def _stop():
     Machine.set_rpm_output(0)
     Machine.report_su(0)
+    _advance_head_angle(0)
 end
 
 # The world axis the bearing turns about: the axis it FACES. A bearing on the ground faces up
@@ -74,17 +95,6 @@ if contraption == null:
     return
 end
 
-# tick() (MinecraftServer's absolute tick counter) resets to 0 on every server restart, but
-# "assembled_tick" is a PERSISTED flag stamped at assembly time under the previous session's
-# tick count — after a restart, tick() < assembled_tick until it naturally grows back past the
-# old value (which could take hours), leaving the head-cap renderer's
-# (tick() - assembled_tick) epoch desynced from the contraption's own rotation the whole time.
-# Re-stamp the instant we detect the counter went backwards: cheap (one comparison/tick) and
-# self-heals on the very first tick after reconnecting, restart or not.
-if tick() < Machine.get_flag("assembled_tick"):
-    Machine.set_flag("assembled_tick", tick())
-end
-
 sails = _sail_count(contraption)
 
 if sails < MIN_SAILS:
@@ -108,6 +118,7 @@ rpm_out = speed * dir
 # is what actually turns the body, about the bearing's own axis.
 contraption.set_spin(_spin_axis(), rpm_out)
 Machine.set_rpm_output(rpm_out)
+_advance_head_angle(rpm_out)
 
 su = speed * CAPACITY_PER_RPM
 Machine.report_su(-su)   # negative = generates capacity for the network

@@ -202,7 +202,7 @@ class ItemEngineTest {
     void extractOneRespectsMax() {
         FakeContainer src = FakeContainer.of(stack(Items.COBBLESTONE, 40));
         ItemEngine.Endpoint dummy = new ItemEngine.Endpoint(
-                new net.minecraft.core.BlockPos(0, 0, 0), Direction.NORTH, new net.minecraft.core.BlockPos(0, 0, 1));
+                new net.minecraft.core.BlockPos(0, 0, 0), Direction.NORTH, new net.minecraft.core.BlockPos(0, 0, 1), null);
 
         ItemStack taken = ItemEngine.extractOne(src, Direction.NORTH, 10, null, dummy);
 
@@ -215,7 +215,7 @@ class ItemEngineTest {
     void extractOneTakesWholeSmallStack() {
         FakeContainer src = FakeContainer.of(stack(Items.COBBLESTONE, 3));
         ItemEngine.Endpoint dummy = new ItemEngine.Endpoint(
-                new net.minecraft.core.BlockPos(0, 0, 0), Direction.NORTH, new net.minecraft.core.BlockPos(0, 0, 1));
+                new net.minecraft.core.BlockPos(0, 0, 0), Direction.NORTH, new net.minecraft.core.BlockPos(0, 0, 1), null);
 
         ItemStack taken = ItemEngine.extractOne(src, Direction.NORTH, 64, null, dummy);
 
@@ -229,7 +229,7 @@ class ItemEngineTest {
         FakeContainer src = FakeContainer.of(stack(Items.COBBLESTONE, 10));
         src.rejectTake = true;
         ItemEngine.Endpoint dummy = new ItemEngine.Endpoint(
-                new net.minecraft.core.BlockPos(0, 0, 0), Direction.NORTH, new net.minecraft.core.BlockPos(0, 0, 1));
+                new net.minecraft.core.BlockPos(0, 0, 0), Direction.NORTH, new net.minecraft.core.BlockPos(0, 0, 1), null);
 
         ItemStack taken = ItemEngine.extractOne(src, Direction.NORTH, 64, null, dummy);
 
@@ -242,7 +242,7 @@ class ItemEngineTest {
     void extractOneToleratesNullLevel() {
         FakeContainer src = FakeContainer.of(stack(Items.COBBLESTONE, 5));
         ItemEngine.Endpoint dummy = new ItemEngine.Endpoint(
-                new net.minecraft.core.BlockPos(0, 0, 0), Direction.NORTH, new net.minecraft.core.BlockPos(0, 0, 1));
+                new net.minecraft.core.BlockPos(0, 0, 0), Direction.NORTH, new net.minecraft.core.BlockPos(0, 0, 1), null);
 
         ItemStack taken = ItemEngine.extractOne(src, Direction.NORTH, 64, null, dummy);
 
@@ -346,7 +346,7 @@ class ItemEngineTest {
 
         int slot = ItemEngine.findEligibleSlot(source, Direction.NORTH, null,
                 new ItemEngine.Endpoint(new net.minecraft.core.BlockPos(0, 0, 0), Direction.NORTH,
-                        new net.minecraft.core.BlockPos(0, 0, 1)));
+                        new net.minecraft.core.BlockPos(0, 0, 1), null));
         assertTrue(slot >= 0, "the peek should still find the eligible slot — only the commit is gated");
         ItemStack peeked = source.getItem(slot);
 
@@ -372,7 +372,7 @@ class ItemEngineTest {
 
         int slot = ItemEngine.findEligibleSlot(source, Direction.NORTH, null,
                 new ItemEngine.Endpoint(new net.minecraft.core.BlockPos(0, 0, 0), Direction.NORTH,
-                        new net.minecraft.core.BlockPos(0, 0, 1)));
+                        new net.minecraft.core.BlockPos(0, 0, 1), null));
         ItemStack peeked = source.getItem(slot);
         int available = Math.min(64, peeked.getCount()); // mirrors step()'s min(minRate, peeked.getCount())
 
