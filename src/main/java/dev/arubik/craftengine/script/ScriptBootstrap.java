@@ -70,6 +70,7 @@ public final class ScriptBootstrap {
         // registered above, since these codecs read/write those PolyType instances.
         TypedKeyBridge.registerBuiltinCustomTypes();
         TypedKeyManagerType.register();    // TypedKey.define(...) — script-defined custom types
+        dev.arubik.craftengine.script.types.util.DialogManagerType.register();    // Dialog.base(...) — Paper Dialog API port
 
         // ---- Inventory / resource types -----------------------------------------
         InventoryType.register();

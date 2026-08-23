@@ -206,6 +206,15 @@ def generate_buttons():
             "name", "<yellow>Next Page ->", "action", "specialized_teleporter.pf:next_page"))
     end
 
+    # Second way to tune the frequency, alongside the ghost-slot item (slot 0): a dialog with a
+    # single text field, pre-filled with the current frequency. Doesn't replace the item-based
+    # tuning — some players find typing a name faster than finding/renaming an item, others the
+    # other way around, so both stay available.
+    out = push(out, make_map("slot", 5, "icon", "cml:teleporter_core",
+        "name", "<aqua>Tune via Dialog",
+        "lore", ["<gray>Type a frequency instead of", "<gray>inserting a renamed item."],
+        "action", "specialized_teleporter.pf:open_frequency_dialog"))
+
     start = offset * DEST_PAGE_SIZE
     for i in range(DEST_PAGE_SIZE):
         global_idx = start + i
@@ -257,6 +266,20 @@ def do_teleport_slot(idx):
         Player.teleport_to(loc)
         Player.send_message("<green>Teleported to " + parts.get(0) + ".")
     end
+end
+
+# --- Dialog-based frequency tuning (see generate_buttons' "Tune via Dialog" button). The dialog's
+# Accept button calls on_frequency_dialog_submit with whatever the player typed appended as its
+# argument — same convention any other action_ref callback uses, just supplied at click time
+# instead of baked into the ref string (see DialogManagerType / ScriptCall#executeWithExtraArgs).
+# Dialog is its own type (not hung off Machine), so Machine/Player are passed in explicitly.
+def open_frequency_dialog():
+    Dialog.base("Tune Frequency").input_text("value", "Frequency", get_frequency()).as_notice(Machine, "Accept", "specialized_teleporter.pf:on_frequency_dialog_submit").show(Player)
+end
+
+def on_frequency_dialog_submit(new_freq):
+    set_frequency(new_freq)
+    Machine.update()
 end
 
 # --- In-page pagination ---

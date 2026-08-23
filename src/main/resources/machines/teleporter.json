@@ -59,6 +59,16 @@
             "<dark_gray>Warps you to another teleporter tuned",
             "<dark_gray>to the same frequency."
           ]
+        },
+        {
+          "slot": 22,
+          "icon": "cml:teleporter_core",
+          "action": "teleporter.pf:open_frequency_dialog",
+          "name": "<aqua>Tune via Dialog",
+          "lore": [
+            "<gray>Type a frequency instead of",
+            "<gray>inserting a renamed item."
+          ]
         }
       ]
     }

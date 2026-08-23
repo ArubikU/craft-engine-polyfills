@@ -202,6 +202,21 @@ def do_teleport():
     Player.send_message("<red>No other teleporter is currently reachable on '" + freq + "'.")
 end
 
+# --- Dialog-based frequency tuning — second way to tune besides the ghost-slot item (slot 13),
+# same idea as specialized_teleporter.pf's identical button. Accept calls
+# on_frequency_dialog_submit with the typed text appended as its argument. Dialog is its own type
+# (not hung off Machine) — see DialogManagerType — so Machine is passed in explicitly, and the
+# built dialog is shown to whichever Player is bound in THIS script's own context (the one who
+# clicked the button that opened it).
+def open_frequency_dialog():
+    Dialog.base("Tune Frequency").input_text("value", "Frequency", get_frequency()).as_notice(Machine, "Accept", "teleporter.pf:on_frequency_dialog_submit").show(Player)
+end
+
+def on_frequency_dialog_submit(new_freq):
+    set_frequency(new_freq)
+    Machine.update()
+end
+
 # --- Cleanup: detune when the block breaks, so a dead teleporter never blocks a working link with
 # a stale, unreachable "world,x,y,z" entry that linked_count/do_teleport would otherwise still see.
 def on_break():

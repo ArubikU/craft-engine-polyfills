@@ -2503,6 +2503,7 @@ dev.arubik.craftengine.rotation.KineticMember {
             b.typed("ChainManager", dev.arubik.craftengine.script.types.chainery.ChainManagerType.INSTANCE);
             b.typed("TypedKey", dev.arubik.craftengine.script.types.util.TypedKeyManagerType.INSTANCE);
             b.typed("Glue", dev.arubik.craftengine.script.types.world.GlueType.INSTANCE);
+            b.typed("Dialog", dev.arubik.craftengine.script.types.util.DialogManagerType.INSTANCE);
             if (level instanceof ServerLevel sl) b.world(sl);
             return b.build();
         }

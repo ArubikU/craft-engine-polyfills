@@ -62,6 +62,28 @@ public record ScriptCall(String scriptName, String funcName, List<String> args) 
     }
 
     /**
+     * Like {@link #execute}, but appends {@code extraArgs} after the ref's own static args instead
+     * of relying only on what was written into the action-string at parse time — for a caller that
+     * only learns part of the argument list at runtime (e.g. a Dialog's accept callback appending
+     * whatever the player just typed/selected, which obviously can't be baked into the ref string).
+     */
+    public ScriptContext executeWithExtraArgs(ScriptContext ctx, List<ScriptValue> extraArgs) {
+        ScriptProgram prog = ScriptRegistry.get(scriptName);
+        if (prog == null) return ctx;
+        ScriptContext withDefs = prog.evaluate(ctx);
+        if (funcName == null || funcName.isBlank()) return withDefs;
+        ScriptValue fnVal = withDefs.getVar(funcName);
+        if (fnVal instanceof ScriptValue.Obj fnObj && fnObj.typeName().equals(UserFunction.TYPE)) {
+            UserFunction fn = (UserFunction) fnObj.instance();
+            List<ScriptValue> svArgs = new java.util.ArrayList<>(args.size() + extraArgs.size());
+            for (String a : args) svArgs.add(ScriptValue.of(a));
+            svArgs.addAll(extraArgs);
+            fn.call(svArgs, withDefs);
+        }
+        return withDefs;
+    }
+
+    /**
      * Like {@link #execute}, but returns the called function's own return value instead of the
      * post-execution context — for predicate-style scripts (e.g. a storage-slot filter) that
      * report a result rather than mutate state. {@code ScriptValue.NULL} if the ref names no
