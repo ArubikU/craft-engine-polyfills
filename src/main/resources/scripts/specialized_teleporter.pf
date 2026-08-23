@@ -80,6 +80,36 @@ def set_frequency(freq):
     Machine.set_flag("page_offset", 0)
 end
 
+# Reads the first non-empty line off a sign mounted on any of the 6 faces adjacent to
+# (world_name, x, y, z), or "" if none is found — lets a destination (or this teleporter itself)
+# show a friendly alias instead of raw coordinates when someone bothers to label it. Same helper
+# as teleporter.pf's — duplicated, not shared, per this file's own header note on why.
+def _sign_alias_at(world_name, x, y, z):
+    tw = world(world_name)
+    if is_empty(tw):
+        return ""
+    end
+    center = tw.get_block(int(x), int(y), int(z))
+    for dir in ["north", "south", "east", "west", "up", "down"]:
+        b = center.relative(dir)
+        if b.metadata_type == "SignMetadata":
+            for line in b.get_metadata.front.lines:
+                if line != "":
+                    return line
+                end
+            end
+            return ""
+        end
+    end
+    return ""
+end
+
+# This teleporter's own alias — the first non-empty front line of a sign mounted on one of its
+# own faces, or "" if it isn't labeled.
+def _own_alias():
+    return _sign_alias_at(World.name, Machine.x, Machine.y, Machine.z)
+end
+
 # Every OTHER teleporter tuned to freq, as "world,x,y,z" strings, in stable registration order —
 # the same list generate_buttons()/do_teleport_slot index into.
 def frequency_entries(freq):
@@ -132,6 +162,10 @@ def status_name():
     if freq == "":
         return "<red>No frequency tuned"
     end
+    alias = _own_alias()
+    if alias != "":
+        return "<yellow>Frequency: <white>" + freq + " <gray>(" + alias + ")"
+    end
     return "<yellow>Frequency: <white>" + freq
 end
 
@@ -180,13 +214,15 @@ def generate_buttons():
         end
         entry = entries.get(global_idx)
         parts = split(entry, ",")
+        alias = _sign_alias_at(parts.get(0), parts.get(1), parts.get(2), parts.get(3))
+        display_name = alias != "" ? alias : parts.get(0)
         lore = []
         lore = push(lore, "<gray>" + parts.get(1) + ", " + parts.get(2) + ", " + parts.get(3))
         lore = push(lore, "<dark_gray>Click to teleport <white>(" + TELEPORT_COST + " CE)")
         out = push(out, make_map(
             "slot", DEST_SLOTS.get(i),
             "icon", "cml:teleporter_core",
-            "name", "<yellow>" + parts.get(0),
+            "name", "<yellow>" + display_name,
             "lore", lore,
             "action", "specialized_teleporter.pf:do_teleport_slot:" + i
         ))
@@ -238,6 +274,45 @@ def prev_page():
     if cur > 0:
         Machine.set_flag("page_offset", cur - 1)
     end
+end
+
+# --- Redstone-triggered teleport-by-alias: wire a button/lever/pressure plate to this teleporter
+# (see specialized_teleporter.json's "on_redstone_actuator"). If THIS teleporter is labeled with a
+# sign, triggering it teleports the pressing player straight to whichever OTHER teleporter on the
+# same frequency is labeled with the SAME sign text — skipping the destination-picker GUI
+# entirely. RedstoneActuatorListener only calls this on an actual physical trigger (pressure plate
+# step, lever flip, button press), not every tick a lever/plate stays powered, so no rising-edge
+# tracking is needed here — and it hands us the real triggering Player, same as on_interact.
+def on_redstone_actuator():
+    alias = _own_alias()
+    if alias == "":
+        return
+    end
+    freq = get_frequency()
+    if freq == "":
+        return
+    end
+    for entry in frequency_entries(freq):
+        parts = split(entry, ",")
+        if _sign_alias_at(parts.get(0), parts.get(1), parts.get(2), parts.get(3)) == alias:
+            if Machine.energy_stored < TELEPORT_COST:
+                Player.send_message("<red>Not enough energy — need " + TELEPORT_COST + " CE.")
+                return
+            end
+            target_world = world(parts.get(0))
+            if is_empty(target_world):
+                Player.send_message("<red>That destination's world is not currently loaded.")
+                return
+            end
+            loc = target_world.location(int(parts.get(1)) + 0.5, int(parts.get(2)) + 1.5, int(parts.get(3)) + 0.5)
+            if Machine.consume_energy(TELEPORT_COST):
+                Player.teleport_to(loc)
+                Player.send_message("<green>Teleported to <white>" + alias + "<green>.")
+            end
+            return
+        end
+    end
+    Player.send_message("<red>No other teleporter labeled '" + alias + "' found on this frequency.")
 end
 
 # --- Cleanup: detune when the block breaks, same reasoning as teleporter.pf's on_break.

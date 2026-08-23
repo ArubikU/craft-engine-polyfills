@@ -2,6 +2,7 @@
   "id": "polyfills:specialized_teleporter",
   "title": "Specialized Teleporter",
   "on_break": "specialized_teleporter.pf:on_break",
+  "on_redstone_actuator": "specialized_teleporter.pf:on_redstone_actuator",
   "flags": {
     "recipes": false,
     "fuel": false

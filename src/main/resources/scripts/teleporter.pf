@@ -74,6 +74,30 @@ def set_frequency(freq):
     register_self(freq)
 end
 
+
+# Reads the first non-empty line off a sign mounted on any of the 6 faces adjacent to
+# (world_name, x, y, z), or "" if none is found — lets a teleporter's destination (or itself)
+# show a friendly alias instead of raw coordinates when someone bothers to label it.
+def _sign_alias_at(world_name, x, y, z):
+    tw = world(world_name)
+    if is_empty(tw):
+        return ""
+    end
+    center = tw.get_block(int(x), int(y), int(z))
+    for dir in ["north", "south", "east", "west", "up", "down"]:
+        b = center.relative(dir)
+        if b.metadata_type == "SignMetadata":
+            for line in b.get_metadata.front.lines:
+                if line != "":
+                    return line
+                end
+            end
+            return ""
+        end
+    end
+    return ""
+end
+
 def linked_count(freq):
     if freq == "":
         return 0
@@ -118,6 +142,10 @@ def status_name():
     if freq == "":
         return "<red>No frequency tuned"
     end
+    alias = _sign_alias_at(World.name, Machine.x, Machine.y, Machine.z)
+    if alias != "":
+        return "<yellow>Frequency: <white>" + freq + " <gray>(" + alias + ")"
+    end
     return "<yellow>Frequency: <white>" + freq
 end
 
@@ -160,7 +188,12 @@ def do_teleport():
                 if Machine.consume_energy(TELEPORT_COST):
                     Machine.close()
                     Player.teleport_to(loc)
-                    Player.send_message("<green>Teleported via frequency '" + freq + "'.")
+                    alias = _sign_alias_at(parts.get(0), parts.get(1), parts.get(2), parts.get(3))
+                    if alias != "":
+                        Player.send_message("<green>Teleported via frequency '" + freq + "' to <white>" + alias + "<green>.")
+                    else:
+                        Player.send_message("<green>Teleported via frequency '" + freq + "'.")
+                    end
                 end
                 return
             end
