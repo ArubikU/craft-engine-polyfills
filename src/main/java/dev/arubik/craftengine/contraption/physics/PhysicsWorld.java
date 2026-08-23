@@ -730,11 +730,16 @@ public final class PhysicsWorld {
             Vector3d oldCom = new Vector3d(entry.massModel.centerOfMass().x, entry.massModel.centerOfMass().y, entry.massModel.centerOfMass().z);
             entry.lastShapeHash = shape;
             entry.shapeObserved = true;
-            entry.massModel = mm = MassModel.of(contraptionLevel);
+            // Mass, friction, and floatability all independently walked every block in the
+            // contraption computing the same per-block weight — merged into one pass (see
+            // MassModel#ofWithFrictionAndFloatability) since all three only ever get recomputed
+            // together, right here, whenever the block set actually changes.
+            MassModel.Derived derived = MassModel.ofWithFrictionAndFloatability(contraptionLevel);
+            entry.massModel = mm = derived.mass();
             Vector3d com = new Vector3d(mm.centerOfMass().x, mm.centerOfMass().y, mm.centerOfMass().z);
             CollisionShape newShape = CollisionShape.of(contraptionLevel, com);
-            double floatability = FloatabilityModel.of(contraptionLevel).floatability();
-            double friction = FrictionModel.of(contraptionLevel).friction();
+            double floatability = derived.floatability();
+            double friction = derived.friction();
             ToDoubleFunction<Vector3d> restitutionField = PhysicsWorld.buildRestitutionField(contraptionLevel, com, body.body);
             double scaleNow = entry.lastScale > 0.0 ? entry.lastScale : 1.0;
             Vector3d comDelta = firstObservation ? null : new Vector3d((Vector3dc)com).sub((Vector3dc)oldCom);
@@ -948,12 +953,15 @@ public final class PhysicsWorld {
         if (cellsChanged) {
             entry.lastShapeHash = shape;
             entry.shapeObserved = true;
-            entry.massModel = MassModel.of(contraptionLevel);
+            // See the identical merge in syncMain() — mass/friction/floatability used to each walk
+            // every block in the contraption independently.
+            MassModel.Derived derived = MassModel.ofWithFrictionAndFloatability(contraptionLevel);
+            entry.massModel = derived.mass();
             Vector3d com = new Vector3d(entry.massModel.centerOfMass().x, entry.massModel.centerOfMass().y, entry.massModel.centerOfMass().z);
             body.shape = CollisionShape.of(contraptionLevel, com);
             body.body.setMassProperties(entry.massModel.inverseMass(), entry.massModel.inverseInertiaTensor());
-            body.floatability = FloatabilityModel.of(contraptionLevel).floatability();
-            body.body.setFriction(FrictionModel.of(contraptionLevel).friction());
+            body.floatability = derived.floatability();
+            body.body.setFriction(derived.friction());
             body.body.setRestitutionField(PhysicsWorld.buildRestitutionField(contraptionLevel, com, body.body));
             entry.initialized = false;
             body.wakeUp();

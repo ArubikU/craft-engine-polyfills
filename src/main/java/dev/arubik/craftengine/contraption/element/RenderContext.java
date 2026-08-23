@@ -16,7 +16,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.phys.Vec3;
 import net.momirealms.craftengine.core.entity.player.Player;
 
-public record RenderContext(List<Player> viewers, Vec3 bearing, double yawRadians, double pitchRadians, double rollRadians, double scale, boolean moved, ContraptionLevel level, ServerLevel realLevel, ContraptionLightMap lightMap, List<ContraptionElement> elements) {
+public record RenderContext(List<Player> viewers, Vec3 bearing, double yawRadians, double pitchRadians, double rollRadians, double scale, boolean moved, ContraptionLevel level, ServerLevel realLevel, ContraptionLightMap lightMap, List<ContraptionElement> elements, int interpTicks) {
     public double yawDegrees() {
         return Math.toDegrees(this.yawRadians);
     }

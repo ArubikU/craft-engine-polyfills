@@ -148,7 +148,7 @@ implements ContraptionElement {
         }
         Quaternionf tiltQ = ctx.pitchRadians() == 0.0 && ctx.rollRadians() == 0.0 ? null : new Quaternionf().rotateX((float)ctx.pitchRadians()).rotateZ((float)ctx.rollRadians());
         for (Cell cell : this.cells) {
-            cell.render(ctx.viewers(), ctx.bearing(), ctx.yawRadians(), ctx.pitchRadians(), ctx.rollRadians(), ctx.scale(), tiltQ, blockLight, skyLight, ctx.moved());
+            cell.render(ctx.viewers(), ctx.bearing(), ctx.yawRadians(), ctx.pitchRadians(), ctx.rollRadians(), ctx.scale(), tiltQ, blockLight, skyLight, ctx.moved(), ctx.interpTicks());
         }
     }
 
@@ -202,9 +202,9 @@ implements ContraptionElement {
         return null;
     }
 
-    private static void addInterpolationTuning(List<Object> values) {
-        DisplayData.PosRotInterpolationDuration.addEntityData(2, values);
-        DisplayData.TransformationInterpolationDuration.addEntityData(2, values);
+    private static void addInterpolationTuning(List<Object> values, int interpTicks) {
+        DisplayData.PosRotInterpolationDuration.addEntityData(interpTicks, values);
+        DisplayData.TransformationInterpolationDuration.addEntityData(interpTicks, values);
     }
 
     private static abstract class Cell {
@@ -214,6 +214,11 @@ implements ContraptionElement {
         int lastSkyLight = -1;
         double lastScale = 1.0;
         Quaternionf lastRotation;
+        // Real gap (in ticks) since the contraption's state last changed — see
+        // ContraptionEntity#lastMoveGapTicks / RenderContext#interpTicks. Adapts the client's
+        // interpolation window so a script-driven bearing that only mutates state every
+        // action_interval ticks still looks like continuous motion.
+        int interpTicks = 2;
 
         Cell(BlockPos local) {
             this.local = local;
@@ -250,17 +255,20 @@ implements ContraptionElement {
             return !next.equals((Quaternionfc)this.lastRotation, 1.0E-4f);
         }
 
-        void render(List<Player> viewers, Vec3 bearing, double yawRadians, double pitchRadians, double rollRadians, double scale, Quaternionf tiltQ, int blockLight, int skyLight, boolean moved) {
+        void render(List<Player> viewers, Vec3 bearing, double yawRadians, double pitchRadians, double rollRadians, double scale, Quaternionf tiltQ, int blockLight, int skyLight, boolean moved, int interpTicks) {
             Vector3f off = this.offset();
             Vec3 localWithOff = new Vec3((double)((float)this.local.getX() + off.x), (double)((float)this.local.getY() + off.y), (double)((float)this.local.getZ() + off.z));
             Vec3 worldPos = ContraptionMath.renderPosition(localWithOff, bearing, yawRadians, pitchRadians, rollRadians, scale);
             float yawDeg = this.baseYaw() + (float)Math.toDegrees(yawRadians);
             Quaternionf rotation = this.modelRotation(tiltQ);
-            boolean metaChanged = blockLight != this.lastBlockLight || skyLight != this.lastSkyLight || scale != this.lastScale || this.rotationChanged(rotation);
+            // The client only re-reads the interpolation-duration fields when metadata is actually
+            // resent — force that when the window itself changes, even if nothing else did.
+            boolean metaChanged = blockLight != this.lastBlockLight || skyLight != this.lastSkyLight || scale != this.lastScale || this.rotationChanged(rotation) || interpTicks != this.interpTicks;
             this.lastBlockLight = blockLight;
             this.lastSkyLight = skyLight;
             this.lastScale = scale;
             this.lastRotation = rotation;
+            this.interpTicks = interpTicks;
             HashSet<UUID> current = new HashSet<UUID>();
             for (Player p : viewers) {
                 UUID id = p.uuid();
@@ -336,7 +344,7 @@ implements ContraptionElement {
             ArrayList<Object> values = new ArrayList<Object>(this.element.config.metadataValues(player, this.element.tintSource));
             ContraptionRenderScale.applyTo(values, this.lastScale, this.lastRotation);
             DisplayData.BrightnessOverride.addEntityData((this.lastBlockLight << 4 | this.lastSkyLight << 20), values);
-            ContraptionEntityRendererElement.addInterpolationTuning(values);
+            ContraptionEntityRendererElement.addInterpolationTuning(values, this.interpTicks);
             return values;
         }
 
@@ -397,7 +405,7 @@ implements ContraptionElement {
             ArrayList<Object> values = new ArrayList<Object>(this.element.config.metadataValues(player));
             ContraptionRenderScale.applyTo(values, this.lastScale, this.lastRotation);
             DisplayData.BrightnessOverride.addEntityData((this.lastBlockLight << 4 | this.lastSkyLight << 20), values);
-            ContraptionEntityRendererElement.addInterpolationTuning(values);
+            ContraptionEntityRendererElement.addInterpolationTuning(values, this.interpTicks);
             return values;
         }
 
@@ -505,7 +513,7 @@ implements ContraptionElement {
         void spawn(Player player, Vec3 pos, float yawDeg) {
             Object add1 = MNms.INSTANCE.constructor$ClientboundAddEntityPacket(this.element.entityId1, this.uuid1, pos.x, pos.y, pos.z, 0.0f, 0.0f, EntityType.ITEM_DISPLAY, 0, Vec3.ZERO, 0.0);
             ArrayList<Object> displayValues = new ArrayList<Object>();
-            ContraptionEntityRendererElement.addInterpolationTuning(displayValues);
+            ContraptionEntityRendererElement.addInterpolationTuning(displayValues, this.interpTicks);
             Object data1 = MNms.INSTANCE.constructor$ClientboundSetEntityDataPacket(this.element.entityId1, displayValues);
             Object add2 = MNms.INSTANCE.constructor$ClientboundAddEntityPacket(this.element.entityId2, this.uuid2, pos.x, pos.y, pos.z, 0.0f, 0.0f, EntityType.ITEM, 0, Vec3.ZERO, 0.0);
             Object ride = MNms.INSTANCE.constructor$ClientboundSetEntityDataPacket(this.element.entityId2, this.element.config.metadataValues(player, this.element.tintSource));

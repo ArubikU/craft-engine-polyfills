@@ -273,9 +273,9 @@ implements ContraptionElement {
         }
     }
 
-    private static void addInterpolation(List<Object> values) {
-        DisplayData.PosRotInterpolationDuration.addEntityData(2, values);
-        DisplayData.TransformationInterpolationDuration.addEntityData(2, values);
+    private static void addInterpolation(List<Object> values, int interpTicks) {
+        DisplayData.PosRotInterpolationDuration.addEntityData(interpTicks, values);
+        DisplayData.TransformationInterpolationDuration.addEntityData(interpTicks, values);
     }
 
     private static byte itemBillboardByte(String mode) {
@@ -300,6 +300,7 @@ implements ContraptionElement {
         int lastBlockLight = -1;
         int lastSkyLight = -1;
         double lastScale = 1.0;
+        int interpTicks = 2;
 
         ItemCell(int specIndex) {
             this.specIndex = specIndex;
@@ -319,11 +320,12 @@ implements ContraptionElement {
             Vec3 worldPos = ContraptionMath.renderPosition(localWithOffset, ctx.bearing(), ctx.yawRadians(), ctx.pitchRadians(), ctx.rollRadians(), ctx.scale());
             float yawDeg = ev.rotY() + (float)ctx.yawDegrees();
             boolean itemChanged = ev.item() != this.lastItem;
-            boolean metaChanged = itemChanged || blockLight != this.lastBlockLight || skyLight != this.lastSkyLight || ctx.scale() != this.lastScale;
+            boolean metaChanged = itemChanged || blockLight != this.lastBlockLight || skyLight != this.lastSkyLight || ctx.scale() != this.lastScale || ctx.interpTicks() != this.interpTicks;
             this.lastItem = ev.item();
             this.lastBlockLight = blockLight;
             this.lastSkyLight = skyLight;
             this.lastScale = ctx.scale();
+            this.interpTicks = ctx.interpTicks();
             HashSet<UUID> current = new HashSet<UUID>();
             for (Player p : ctx.viewers()) {
                 UUID id = p.uuid();
@@ -378,7 +380,7 @@ implements ContraptionElement {
                 DisplayData.BillboardConstraints.addEntityData(bb, values);
             }
             DisplayData.BrightnessOverride.addEntityData((bl << 4 | sl << 20), values);
-            ContraptionMachineRendererElement.addInterpolation(values);
+            ContraptionMachineRendererElement.addInterpolation(values, this.interpTicks);
             return values;
         }
 
@@ -401,6 +403,7 @@ implements ContraptionElement {
         int lastBlockLight = -1;
         int lastSkyLight = -1;
         double lastScale3d = 1.0;
+        int interpTicks = 2;
 
         TextCell(int specIndex) {
             this.specIndex = specIndex;
@@ -418,12 +421,13 @@ implements ContraptionElement {
             Vec3 localWithOffset = new Vec3((double)ContraptionMachineRendererElement.this.localPos.getX() + 0.5 + er.tdOx, (double)ContraptionMachineRendererElement.this.localPos.getY() + er.tdOy, (double)ContraptionMachineRendererElement.this.localPos.getZ() + 0.5 + er.tdOz);
             Vec3 worldPos = ContraptionMath.renderPosition(localWithOffset, ctx.bearing(), ctx.yawRadians(), ctx.pitchRadians(), ctx.rollRadians(), ctx.scale());
             float yawDeg = (float)ctx.yawDegrees();
-            boolean metaChanged = !Objects.equals(er.textContent, this.lastText) || Float.compare(er.textScale, this.lastScale) != 0 || blockLight != this.lastBlockLight || skyLight != this.lastSkyLight || ctx.scale() != this.lastScale3d;
+            boolean metaChanged = !Objects.equals(er.textContent, this.lastText) || Float.compare(er.textScale, this.lastScale) != 0 || blockLight != this.lastBlockLight || skyLight != this.lastSkyLight || ctx.scale() != this.lastScale3d || ctx.interpTicks() != this.interpTicks;
             this.lastText = er.textContent;
             this.lastScale = er.textScale;
             this.lastBlockLight = blockLight;
             this.lastSkyLight = skyLight;
             this.lastScale3d = ctx.scale();
+            this.interpTicks = ctx.interpTicks();
             HashSet<UUID> current = new HashSet<UUID>();
             for (Player p : ctx.viewers()) {
                 UUID id = p.uuid();
@@ -518,7 +522,7 @@ implements ContraptionElement {
                 // empty catch block
             }
             DisplayData.BrightnessOverride.addEntityData((bl << 4 | sl << 20), values);
-            ContraptionMachineRendererElement.addInterpolation(values);
+            ContraptionMachineRendererElement.addInterpolation(values, this.interpTicks);
             return values;
         }
 
@@ -566,6 +570,7 @@ implements ContraptionElement {
         int lastBlockLight = -1;
         int lastSkyLight = -1;
         double lastScale = 1.0;
+        int interpTicks = 2;
 
         FluidCell(int specIndex) {
             this.specIndex = specIndex;
@@ -582,12 +587,13 @@ implements ContraptionElement {
             }
             Vec3 localWithOffset = new Vec3((double)ContraptionMachineRendererElement.this.localPos.getX() + 0.5 + er.specRelX, (double)ContraptionMachineRendererElement.this.localPos.getY() + er.specRelY, (double)ContraptionMachineRendererElement.this.localPos.getZ() + 0.5 + er.specRelZ);
             Vec3 worldPos = ContraptionMath.renderPosition(localWithOffset, ctx.bearing(), ctx.yawRadians(), ctx.pitchRadians(), ctx.rollRadians(), ctx.scale());
-            boolean metaChanged = er.ceFluidLevel != this.lastCeLevel || !Objects.equals(er.fluidTypeValue, this.lastFluidType) || blockLight != this.lastBlockLight || skyLight != this.lastSkyLight || ctx.scale() != this.lastScale;
+            boolean metaChanged = er.ceFluidLevel != this.lastCeLevel || !Objects.equals(er.fluidTypeValue, this.lastFluidType) || blockLight != this.lastBlockLight || skyLight != this.lastSkyLight || ctx.scale() != this.lastScale || ctx.interpTicks() != this.interpTicks;
             this.lastCeLevel = er.ceFluidLevel;
             this.lastFluidType = er.fluidTypeValue;
             this.lastBlockLight = blockLight;
             this.lastSkyLight = skyLight;
             this.lastScale = ctx.scale();
+            this.interpTicks = ctx.interpTicks();
             HashSet<UUID> current = new HashSet<UUID>();
             for (Player p : ctx.viewers()) {
                 UUID id = p.uuid();
@@ -640,7 +646,7 @@ implements ContraptionElement {
             float scaleY = spec.maxHeight() * ((float)er.ceFluidLevel / 16.0f);
             DisplayData.Scale.addEntityData(new Vector3f(1.0f, scaleY, 1.0f), values);
             DisplayData.BrightnessOverride.addEntityData((bl << 4 | sl << 20), values);
-            ContraptionMachineRendererElement.addInterpolation(values);
+            ContraptionMachineRendererElement.addInterpolation(values, this.interpTicks);
             return values;
         }
 

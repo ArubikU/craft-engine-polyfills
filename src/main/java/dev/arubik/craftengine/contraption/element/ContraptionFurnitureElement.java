@@ -167,7 +167,7 @@ implements ContraptionElement {
             for (Player viewer : ctx.viewers()) {
                 UUID viewerId = viewer.uuid();
                 if (!this.shownTo.contains(viewerId)) {
-                    mirror.spawn(viewer, worldPos, worldYaw, worldPitch);
+                    mirror.spawn(viewer, worldPos, worldYaw, worldPitch, ctx.interpTicks());
                     this.sendBrightness(viewer, mirror.entityId, this.lastBlockLight, this.lastSkyLight);
                     continue;
                 }
@@ -285,7 +285,7 @@ implements ContraptionElement {
             this.basePitch = basePitch;
         }
 
-        abstract void spawn(Player var1, Vec3 var2, float var3, float var4);
+        abstract void spawn(Player var1, Vec3 var2, float var3, float var4, int var5);
 
         abstract void updatePosition(Player var1, Vec3 var2, float var3, float var4);
     }
@@ -300,11 +300,11 @@ implements ContraptionElement {
         }
 
         @Override
-        void spawn(Player viewer, Vec3 pos, float yawDeg, float pitchDeg) {
+        void spawn(Player viewer, Vec3 pos, float yawDeg, float pitchDeg, int interpTicks) {
             Object add = MNms.INSTANCE.constructor$ClientboundAddEntityPacket(this.entityId, this.uuid, pos.x, pos.y, pos.z, pitchDeg, yawDeg, EntityType.ITEM_DISPLAY, 0, Vec3.ZERO, 0.0);
             ArrayList values = new ArrayList((Collection)this.config.metadata.apply(viewer, null));
-            DisplayData.PosRotInterpolationDuration.addEntityData(2, values);
-            DisplayData.TransformationInterpolationDuration.addEntityData(2, values);
+            DisplayData.PosRotInterpolationDuration.addEntityData(interpTicks, values);
+            DisplayData.TransformationInterpolationDuration.addEntityData(interpTicks, values);
             Object data = MNms.INSTANCE.constructor$ClientboundSetEntityDataPacket(this.entityId, values);
             viewer.sendPackets(List.of(add, data), false);
         }
@@ -325,11 +325,11 @@ implements ContraptionElement {
         }
 
         @Override
-        void spawn(Player viewer, Vec3 pos, float yawDeg, float pitchDeg) {
+        void spawn(Player viewer, Vec3 pos, float yawDeg, float pitchDeg, int interpTicks) {
             Object add = MNms.INSTANCE.constructor$ClientboundAddEntityPacket(this.entityId, this.uuid, pos.x, pos.y, pos.z, pitchDeg, yawDeg, EntityType.TEXT_DISPLAY, 0, Vec3.ZERO, 0.0);
             ArrayList values = new ArrayList((Collection)this.config.metadata.apply(viewer));
-            DisplayData.PosRotInterpolationDuration.addEntityData(2, values);
-            DisplayData.TransformationInterpolationDuration.addEntityData(2, values);
+            DisplayData.PosRotInterpolationDuration.addEntityData(interpTicks, values);
+            DisplayData.TransformationInterpolationDuration.addEntityData(interpTicks, values);
             Object data = MNms.INSTANCE.constructor$ClientboundSetEntityDataPacket(this.entityId, values);
             viewer.sendPackets(List.of(add, data), false);
         }
@@ -350,7 +350,7 @@ implements ContraptionElement {
         }
 
         @Override
-        void spawn(Player viewer, Vec3 pos, float yawDeg, float pitchDeg) {
+        void spawn(Player viewer, Vec3 pos, float yawDeg, float pitchDeg, int interpTicks) {
             Object add = MNms.INSTANCE.constructor$ClientboundAddEntityPacket(this.entityId, this.uuid, pos.x, pos.y, pos.z, pitchDeg, yawDeg, EntityType.ARMOR_STAND, 0, Vec3.ZERO, yawDeg);
             Object data = MNms.INSTANCE.constructor$ClientboundSetEntityDataPacket(this.entityId, this.config.metadata.apply(viewer));
             viewer.sendPackets(List.of(add, data), false);
@@ -372,11 +372,11 @@ implements ContraptionElement {
         }
 
         @Override
-        void spawn(Player viewer, Vec3 pos, float yawDeg, float pitchDeg) {
+        void spawn(Player viewer, Vec3 pos, float yawDeg, float pitchDeg, int interpTicks) {
             Object add = MNms.INSTANCE.constructor$ClientboundAddEntityPacket(this.entityId, this.uuid, pos.x, pos.y, pos.z, 0.0f, 0.0f, EntityType.ITEM_DISPLAY, 0, Vec3.ZERO, 0.0);
             ArrayList values = new ArrayList((Collection)this.config.metadata.apply(viewer, null));
-            DisplayData.PosRotInterpolationDuration.addEntityData(2, values);
-            DisplayData.TransformationInterpolationDuration.addEntityData(2, values);
+            DisplayData.PosRotInterpolationDuration.addEntityData(interpTicks, values);
+            DisplayData.TransformationInterpolationDuration.addEntityData(interpTicks, values);
             Object data = MNms.INSTANCE.constructor$ClientboundSetEntityDataPacket(this.entityId, values);
             viewer.sendPackets(List.of(add, data), false);
         }

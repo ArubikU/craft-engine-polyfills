@@ -48,6 +48,7 @@ public final class ContraptionCampfireElement extends ContraptionBlockElement {
     @SuppressWarnings("unchecked")
     private final Set<Player>[] itemShownTo = new Set[SLOTS];
     private final boolean[] itemDirty = new boolean[SLOTS];
+    private int interpTicks = 2;
 
     public ContraptionCampfireElement(BlockPos localPos, BlockState blockState) {
         super(localPos, blockState, null, false, 0f);
@@ -107,6 +108,11 @@ public final class ContraptionCampfireElement extends ContraptionBlockElement {
     @Override
     public void render(RenderContext ctx) {
         super.render(ctx); // BLOCK_DISPLAY via inherited ContraptionBlockElement.render()
+
+        if (ctx.interpTicks() != interpTicks) {
+            interpTicks = ctx.interpTicks();
+            Arrays.fill(itemDirty, true);
+        }
 
         // Cooking item ITEM_DISPLAY entities
         float yawDeg = (float) ctx.yawDegrees();
@@ -234,7 +240,7 @@ public final class ContraptionCampfireElement extends ContraptionBlockElement {
         DisplayData.LeftRotation.addEntityData(rot, meta);
         DisplayData.Scale.addEntityData(new Vector3f(0.375f, 0.375f, 0.375f), meta);
         DisplayData.BrightnessOverride.addEntityData((15 << 4) | (15 << 20), meta);
-        DisplayData.PosRotInterpolationDuration.addEntityData(2, meta);
+        DisplayData.PosRotInterpolationDuration.addEntityData(interpTicks, meta);
         return meta;
     }
 

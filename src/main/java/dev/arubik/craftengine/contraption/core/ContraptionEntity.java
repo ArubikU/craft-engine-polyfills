@@ -71,6 +71,17 @@ public final class ContraptionEntity {
     private double lastRenderPitch;
     private double lastRenderRoll;
     private double lastRenderScale = 1.0;
+    // Adaptive interpolation window: a script-driven bearing (windmill/rotational_bearing) only
+    // mutates rotation state once every action_interval real ticks, not every tick like a
+    // physics-driven contraption does — a fixed short interpolation duration (previously a
+    // hardcoded 2 everywhere) finishes smoothing well before the NEXT jump arrives, producing a
+    // visible "snap then freeze" instead of continuous motion. Tracking the real gap between
+    // consecutive actual moves and feeding it back as the interpolation duration for the next
+    // update makes every element interpolate across exactly the gap it's actually seeing —
+    // 1-2 ticks for a per-tick physics contraption (no change from before), N ticks for an
+    // action_interval=N script bearing — with no per-machine tuning needed.
+    private int ticksSinceLastMove = 0;
+    private int lastMoveGapTicks = 2;
     private final Set<UUID> elementViewerIds = ConcurrentHashMap.newKeySet();
     private boolean renderSuspended;
     private final Map<UUID, Float> seatFacing = new HashMap<UUID, Float>();
@@ -177,6 +188,15 @@ public final class ContraptionEntity {
         this.lastRenderPitch = pitch;
         this.lastRenderRoll = roll;
         this.lastRenderScale = scale;
+        if (moved) {
+            // Bound to [1,20]: 1 covers the always-true first render (a spawn, not a jump worth
+            // smoothing), 20 caps how long a client will coast in the wrong direction if a
+            // contraption stalls for a long time then suddenly resumes.
+            this.lastMoveGapTicks = Math.max(1, Math.min(20, this.ticksSinceLastMove));
+            this.ticksSinceLastMove = 0;
+        } else {
+            this.ticksSinceLastMove++;
+        }
         this.hitboxElement().setColliderExcludedViewer(this.anchorRiderId());
         this.hitboxElement().render(viewers, bearing, yaw, pitch, roll, scale, moved);
         if (realLevel != null) {
@@ -185,10 +205,10 @@ public final class ContraptionEntity {
         }
         this.itemPickupSwarm.tick(this.state.level());
         this.renderPistonShaft(viewers, realLevel, moved);
-        this.renderElements(viewers, bearing, yaw, pitch, roll, scale, moved, realLevel);
+        this.renderElements(viewers, bearing, yaw, pitch, roll, scale, moved, realLevel, this.lastMoveGapTicks);
     }
 
-    private void renderElements(List<Player> viewers, Vec3 bearing, double yaw, double pitch, double roll, double scale, boolean moved, ServerLevel realLevel) {
+    private void renderElements(List<Player> viewers, Vec3 bearing, double yaw, double pitch, double roll, double scale, boolean moved, ServerLevel realLevel, int interpTicks) {
         List<Player> culledViewers;
         List<ContraptionElement> elements = this.state.elements();
         if (elements.isEmpty()) {
@@ -296,7 +316,7 @@ public final class ContraptionEntity {
         } else {
             culledViewers = viewers;
         }
-        RenderContext ctx = new RenderContext(culledViewers, bearing, yaw, pitch, roll, scale, moved, this.state.level(), realLevel, this.state.lightMap(), elements);
+        RenderContext ctx = new RenderContext(culledViewers, bearing, yaw, pitch, roll, scale, moved, this.state.level(), realLevel, this.state.lightMap(), elements, interpTicks);
         for (ContraptionElement element : elements) {
             if (!element.isValid()) continue;
             element.tick(ctx);

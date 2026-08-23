@@ -90,7 +90,7 @@ implements ContraptionElement {
                 DisplayData.TextDisplayData.Text.addEntityData(Component.literal((String)this.label), values);
                 DisplayData.TextDisplayData.BackgroundColor.addEntityData(this.color, values);
                 DisplayData.BillboardConstraints.addEntityData((byte)3, values);
-                DisplayData.PosRotInterpolationDuration.addEntityData(2, values);
+                DisplayData.PosRotInterpolationDuration.addEntityData(ctx.interpTicks(), values);
                 Object data = MNms.INSTANCE.constructor$ClientboundSetEntityDataPacket(this.entityId, values);
                 viewer.sendPackets(List.of(add, data), false);
                 this.shownTo.add(viewerId);

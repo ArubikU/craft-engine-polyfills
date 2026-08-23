@@ -70,6 +70,7 @@ public abstract class ContraptionSignElement extends ContraptionBlockElement {
     private boolean frontGlowing = false;
     private boolean backGlowing = false;
     protected boolean textDirty = true;
+    private int interpTicks = 2;
 
     protected ContraptionSignElement(BlockPos localPos, BlockState blockState, CompoundTag beTag,
                                       float signYawOffset) {
@@ -123,6 +124,11 @@ public abstract class ContraptionSignElement extends ContraptionBlockElement {
     @Override
     public void render(RenderContext ctx) {
         super.render(ctx);
+
+        if (ctx.interpTicks() != interpTicks) {
+            interpTicks = ctx.interpTicks();
+            textDirty = true;
+        }
 
         Direction facing = getFacing();
         float contraptionYaw = (float) ctx.yawDegrees();
@@ -245,7 +251,7 @@ public abstract class ContraptionSignElement extends ContraptionBlockElement {
         }
         // No override = client uses natural light (TEXT_DISPLAY default)
         DisplayData.Scale.addEntityData(new org.joml.Vector3f(0.45f, 0.45f, 0.45f), meta);
-        DisplayData.PosRotInterpolationDuration.addEntityData(2, meta);
+        DisplayData.PosRotInterpolationDuration.addEntityData(interpTicks, meta);
         return meta;
     }
 

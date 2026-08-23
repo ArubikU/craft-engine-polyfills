@@ -65,6 +65,7 @@ implements ContraptionElement {
     private double lastScale = 1.0;
     private int lastBlockLight = -1;
     private int lastSkyLight = -1;
+    private int interpTicks = 2;
 
     public FluidRendererElement(Vec3 localOffset, Key fluidTypeId, int fluidLevel, float scaleX, float scaleY, float scaleZ) {
         this.localOffset = localOffset;
@@ -124,6 +125,10 @@ implements ContraptionElement {
             this.lastSkyLight = skyLight;
             this.metaDirty = true;
         }
+        if (ctx.interpTicks() != this.interpTicks) {
+            this.interpTicks = ctx.interpTicks();
+            this.metaDirty = true;
+        }
         Quaternionf rotation = this.buildRotation(ctx);
         for (Player viewer : ctx.viewers()) {
             UUID viewerId = viewer.uuid();
@@ -176,8 +181,8 @@ implements ContraptionElement {
         int bl = this.lastBlockLight >= 0 ? this.lastBlockLight : 15;
         int sl = this.lastSkyLight >= 0 ? this.lastSkyLight : 15;
         DisplayData.BrightnessOverride.addEntityData((bl << 4 | sl << 20), values);
-        DisplayData.PosRotInterpolationDuration.addEntityData(2, values);
-        DisplayData.TransformationInterpolationDuration.addEntityData(2, values);
+        DisplayData.PosRotInterpolationDuration.addEntityData(this.interpTicks, values);
+        DisplayData.TransformationInterpolationDuration.addEntityData(this.interpTicks, values);
         return values;
     }
 

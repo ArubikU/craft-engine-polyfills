@@ -49,6 +49,7 @@ public final class ContraptionItemFrameElement implements ContraptionElement {
     private final Set<UUID> itemShownTo = ConcurrentHashMap.newKeySet();
 
     private boolean metaDirty = true;
+    private int interpTicks = 2;
 
     public ContraptionItemFrameElement(UUID sourceEntityId, Vec3 localPos, Direction facing,
                                        ItemStack item, int rotation) {
@@ -93,6 +94,10 @@ public final class ContraptionItemFrameElement implements ContraptionElement {
 
     @Override
     public void render(RenderContext ctx) {
+        if (ctx.interpTicks() != interpTicks) {
+            interpTicks = ctx.interpTicks();
+            metaDirty = true;
+        }
         Vec3 worldPos = ContraptionMath.renderPosition(localPos, ctx.bearing(),
                 ctx.yawRadians(), ctx.pitchRadians(), ctx.rollRadians(), ctx.scale());
         float worldYaw = (float) ctx.yawDegrees();
@@ -194,7 +199,7 @@ public final class ContraptionItemFrameElement implements ContraptionElement {
         DisplayData.LeftRotation.addEntityData(faceRot, meta);
         DisplayData.Scale.addEntityData(new org.joml.Vector3f(1f, 1f, 1f), meta);
         DisplayData.BrightnessOverride.addEntityData((15 << 4) | (15 << 20), meta);
-        DisplayData.PosRotInterpolationDuration.addEntityData(2, meta);
+        DisplayData.PosRotInterpolationDuration.addEntityData(ctx.interpTicks(), meta);
         viewer.sendPackets(List.of(
                 MNms.INSTANCE.constructor$ClientboundAddEntityPacket(
                         frameEntityId, frameUuid, pos.x, pos.y, pos.z, 0f, yaw,
@@ -237,7 +242,7 @@ public final class ContraptionItemFrameElement implements ContraptionElement {
         DisplayData.LeftRotation.addEntityData(itemRot, meta);
         DisplayData.Scale.addEntityData(new org.joml.Vector3f(0.5f, 0.5f, 0.5f), meta);
         DisplayData.BrightnessOverride.addEntityData((15 << 4) | (15 << 20), meta);
-        DisplayData.PosRotInterpolationDuration.addEntityData(2, meta);
+        DisplayData.PosRotInterpolationDuration.addEntityData(ctx.interpTicks(), meta);
         return meta;
     }
 

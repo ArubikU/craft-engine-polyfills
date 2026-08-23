@@ -973,38 +973,6 @@ dev.arubik.craftengine.rotation.KineticMember {
         if (this.rendererManager != null && this.definition.tickRenderers()) {
             try {
                 float f;
-                int n = 0;
-                LinkedHashMap<String, double[]> fluidTankData = new LinkedHashMap<String, double[]>();
-                for (MachineDefinition.TankSpec tankSpec : this.definition.fluidTanks()) {
-                    FluidTank fluidTank = this.fluidTank(tankSpec.name());
-                    if (fluidTank == null) continue;
-                    FluidStack stored = fluidTank.getFluid(this.getNMSLevel(), this.getMachinePos());
-                    fluidTankData.put(tankSpec.name(), new double[]{stored.getAmount(), fluidTank.getCapacity()});
-                }
-                LinkedHashMap<String, double[]> gasTankData = new LinkedHashMap<String, double[]>();
-                for (MachineDefinition.TankSpec tankSpec : this.definition.gasTanks()) {
-                    GasTank tank = this.gasTank(tankSpec.name());
-                    if (tank == null) continue;
-                    GasStack stored = tank.getGas(this.getNMSLevel(), this.getMachinePos());
-                    gasTankData.put(tankSpec.name(), new double[]{stored.getAmount(), tank.getCapacity()});
-                }
-                LinkedHashMap<String, Integer> linkedHashMap = new LinkedHashMap<String, Integer>();
-                if (!this.upgradeDefs.isEmpty()) {
-                    for (int upSlot : this.definition.upgrades().slots()) {
-                        net.minecraft.world.item.ItemStack nmsItem = this.getItem(upSlot);
-                        Key uid = this.upgradeItemId(nmsItem);
-                        if (uid == null) continue;
-                        linkedHashMap.merge(uid.namespace() + ":" + uid.value(), 1, Integer::sum);
-                    }
-                }
-                boolean bl2 = false;
-                try {
-                    n = level.getBestNeighborSignal(pos);
-                }
-                catch (Throwable tank) {
-                    // empty catch block
-                }
-                MachineRenderContext ctx = new MachineRenderContext(this.inputRpm, this.overclock, this.curFuelEff, this.progress, this.maxProgress, this.curGeneration, this.isProcessing(), this.inputRpm > 0.0f, this.isOverclocked(), this.burnTime > 0, null, linkedHashMap, fluidTankData, gasTankData, n);
                 Direction facing = this.getFacing(level);
                 if (facing == null) {
                     f = 0.0f;
@@ -1032,9 +1000,50 @@ dev.arubik.craftengine.rotation.KineticMember {
                     }
                 }
                 float yaw = f;
+                // buildScriptContext() below computes its OWN fluid/gas/upgrade maps, redstone
+                // signal, and facing/yaw internally, then this ctx gets replaced wholesale by
+                // ctx.augmented(machineScriptCtx) (which swaps in the given ScriptContext as the
+                // cache, short-circuiting toScriptContext() so these fields are never read again).
+                // Building the real tank/upgrade maps here was therefore 100%-wasted allocation +
+                // tank iteration on every tick for every rendering machine in the common case —
+                // only actually needed as a fallback if buildScriptContext() fails, so defer it.
                 ScriptContext machineScriptCtx = this.buildScriptContext();
+                MachineRenderContext ctx;
                 if (machineScriptCtx != null) {
-                    ctx = ctx.augmented(machineScriptCtx);
+                    ctx = new MachineRenderContext(this.inputRpm, this.overclock, this.curFuelEff, this.progress, this.maxProgress, this.curGeneration, this.isProcessing(), this.inputRpm > 0.0f, this.isOverclocked(), this.burnTime > 0, null)
+                            .augmented(machineScriptCtx);
+                } else {
+                    int n = 0;
+                    LinkedHashMap<String, double[]> fluidTankData = new LinkedHashMap<String, double[]>();
+                    for (MachineDefinition.TankSpec tankSpec : this.definition.fluidTanks()) {
+                        FluidTank fluidTank = this.fluidTank(tankSpec.name());
+                        if (fluidTank == null) continue;
+                        FluidStack stored = fluidTank.getFluid(this.getNMSLevel(), this.getMachinePos());
+                        fluidTankData.put(tankSpec.name(), new double[]{stored.getAmount(), fluidTank.getCapacity()});
+                    }
+                    LinkedHashMap<String, double[]> gasTankData = new LinkedHashMap<String, double[]>();
+                    for (MachineDefinition.TankSpec tankSpec : this.definition.gasTanks()) {
+                        GasTank tank = this.gasTank(tankSpec.name());
+                        if (tank == null) continue;
+                        GasStack stored = tank.getGas(this.getNMSLevel(), this.getMachinePos());
+                        gasTankData.put(tankSpec.name(), new double[]{stored.getAmount(), tank.getCapacity()});
+                    }
+                    LinkedHashMap<String, Integer> linkedHashMap = new LinkedHashMap<String, Integer>();
+                    if (!this.upgradeDefs.isEmpty()) {
+                        for (int upSlot : this.definition.upgrades().slots()) {
+                            net.minecraft.world.item.ItemStack nmsItem = this.getItem(upSlot);
+                            Key uid = this.upgradeItemId(nmsItem);
+                            if (uid == null) continue;
+                            linkedHashMap.merge(uid.namespace() + ":" + uid.value(), 1, Integer::sum);
+                        }
+                    }
+                    try {
+                        n = level.getBestNeighborSignal(pos);
+                    }
+                    catch (Throwable tank) {
+                        // empty catch block
+                    }
+                    ctx = new MachineRenderContext(this.inputRpm, this.overclock, this.curFuelEff, this.progress, this.maxProgress, this.curGeneration, this.isProcessing(), this.inputRpm > 0.0f, this.isOverclocked(), this.burnTime > 0, null, linkedHashMap, fluidTankData, gasTankData, n);
                 }
                 this.rendererManager.tick(ctx, (ServerLevel)level, pos.getX(), pos.getY(), pos.getZ(), yaw);
                 this.tickSpecDisplays((ServerLevel)level, pos);
@@ -1219,7 +1228,8 @@ dev.arubik.craftengine.rotation.KineticMember {
                         System.out.println("[CEP specDisplay]  spec[" + i + "] active=" + String.valueOf(er != null ? Boolean.valueOf(er.active) : "null") + " item=" + String.valueOf(item != null ? item.getItem() : "null") + " itemDisplay=" + String.valueOf(er != null ? er.itemDisplay : "null"));
                     }
                     if (er != null && er.active && item != null && !item.isEmpty() && er.itemDisplay != null) {
-                        if (this.specDisplays[i] == null) {
+                        boolean justCreated = this.specDisplays[i] == null;
+                        if (justCreated) {
                             this.specDisplays[i] = new ConveyorItemDisplay();
                         }
                         RendererSpec.EvaluatedItemDisplay eid = er.itemDisplay;
@@ -1230,7 +1240,7 @@ dev.arubik.craftengine.rotation.KineticMember {
                         // Light rarely changes tick-to-tick — the 6-neighbor brightness scan this
                         // does is real per-tick CPU for every active display; only pay for it every
                         // LIGHT_CHECK_INTERVAL ticks.
-                        boolean lightChanged = this.ticksAlive % LIGHT_CHECK_INTERVAL == 0
+                        boolean lightChanged = (justCreated || this.ticksAlive % LIGHT_CHECK_INTERVAL == 0)
                                 && this.specDisplays[i].setLightFromLevel(nmsLevel, wx, wy, wz);
                         this.specDisplays[i].setScale(eid.scale());
                         this.specDisplays[i].setRotation(q);

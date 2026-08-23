@@ -31,8 +31,27 @@ import java.util.stream.Collectors;
  */
 public final class ScriptFormula {
 
+    // Formula strings come from static machine/renderer/item JSON config and are re-evaluated
+    // every tick per active instance (a renderer's rot_x/location/when, an action script's
+    // conditions, ...) — without this, "compile once, evaluate many times" (see class docs) was
+    // violated by every caller that didn't hand-roll its own cache (MachineRenderContext.evalNum/
+    // evalBool included), meaning the SAME expression string got fully re-parsed into a fresh AST
+    // on every single tick, for every machine/renderer instance using it. Node is a pure closure
+    // over ScriptContext (no mutable instance state), so a compiled ScriptFormula is safe to share
+    // across calls and threads — caching by the exact string is a correct, unbounded-but-small
+    // cache since the set of distinct expressions in use is fixed by config, not by tick count.
+    private static final java.util.concurrent.ConcurrentHashMap<String, ScriptFormula> CACHE = new java.util.concurrent.ConcurrentHashMap<>();
+
     public static ScriptFormula compile(String expr) {
         if (expr == null) throw new IllegalArgumentException("ScriptFormula: expression must not be null");
+        ScriptFormula cached = CACHE.get(expr);
+        if (cached != null) return cached;
+        ScriptFormula compiled = doCompile(expr);
+        CACHE.put(expr, compiled);
+        return compiled;
+    }
+
+    private static ScriptFormula doCompile(String expr) {
         Parser p = new Parser(expr.trim());
         Node root = p.parseExpr();
         p.skipSpaces();

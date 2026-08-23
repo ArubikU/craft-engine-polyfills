@@ -117,12 +117,12 @@ implements ContraptionElement {
             if (pipeNms != null) {
                 for (int i = 1; i <= pipeCount; ++i) {
                     Vec3 pos = new Vec3(bearingWorldPos.x + this.facing.x * (double)i + 0.5, bearingWorldPos.y + this.facing.y * (double)i + 0.5, bearingWorldPos.z + this.facing.z * (double)i + 0.5);
-                    this.segment(used++).render(viewers, pipeNms, IDENTITY, pos.x, pos.y, pos.z, moved);
+                    this.segment(used++).render(viewers, pipeNms, IDENTITY, pos.x, pos.y, pos.z, moved, ctx.interpTicks());
                 }
             }
             if (headNms != null) {
                 Vec3 pos = new Vec3(bearingWorldPos.x + this.facing.x * this.extended + 0.5, bearingWorldPos.y + this.facing.y * this.extended + 0.5, bearingWorldPos.z + this.facing.z * this.extended + 0.5);
-                this.segment(used++).render(viewers, headNms, ContraptionPistonShaftElement.headRotationFor(this.facing), pos.x, pos.y, pos.z, moved);
+                this.segment(used++).render(viewers, headNms, ContraptionPistonShaftElement.headRotationFor(this.facing), pos.x, pos.y, pos.z, moved, ctx.interpTicks());
             }
         }
         for (int i = used; i < this.segments.size(); ++i) {
@@ -232,6 +232,7 @@ implements ContraptionElement {
         private final Set<UUID> shownTo = ConcurrentHashMap.newKeySet();
         private Object lastNmsItem;
         private Quaternionf lastRotation = IDENTITY;
+        private int interpTicks = 2;
 
         Segment() {
             this.despawnPacket = MNms.INSTANCE.constructor$ClientboundRemoveEntitiesPacket(IntList.of((int)this.entityId));
@@ -242,14 +243,15 @@ implements ContraptionElement {
             DisplayData.ItemDisplayData.ItemStack.addEntityData(nmsItem, values);
             DisplayData.LeftRotation.addEntityData(rotation, values);
             DisplayData.BrightnessOverride.addEntityData(0xF000F0, values);
-            DisplayData.PosRotInterpolationDuration.addEntityData(2, values);
+            DisplayData.PosRotInterpolationDuration.addEntityData(this.interpTicks, values);
             return values;
         }
 
-        void render(List<net.momirealms.craftengine.core.entity.player.Player> viewers, Object nmsItem, Quaternionf rotation, double x, double y, double z, boolean moved) {
-            boolean metaChanged = nmsItem != this.lastNmsItem || !rotation.equals((Quaternionfc)this.lastRotation, 1.0E-4f);
+        void render(List<net.momirealms.craftengine.core.entity.player.Player> viewers, Object nmsItem, Quaternionf rotation, double x, double y, double z, boolean moved, int interpTicks) {
+            boolean metaChanged = nmsItem != this.lastNmsItem || !rotation.equals((Quaternionfc)this.lastRotation, 1.0E-4f) || interpTicks != this.interpTicks;
             this.lastNmsItem = nmsItem;
             this.lastRotation = rotation;
+            this.interpTicks = interpTicks;
             HashSet<UUID> current = new HashSet<UUID>();
             for (net.momirealms.craftengine.core.entity.player.Player p : viewers) {
                 UUID id = Segment.uuidOf(p);

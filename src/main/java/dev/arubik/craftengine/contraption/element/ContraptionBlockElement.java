@@ -90,6 +90,12 @@ implements ContraptionElement {
     protected double lastScale = 1.0;
     protected final boolean hasEntityRenderer;
     protected final float modelYawOffsetDegrees;
+    // How many ticks the client should interpolate the NEXT position/transform update over —
+    // adapts to the real gap between actual moves (see ContraptionEntity#lastMoveGapTicks) instead
+    // of a fixed guess, so a script-driven bearing that only mutates state every action_interval
+    // ticks still looks like continuous motion instead of snapping then freezing.
+    protected int interpTicks = 2;
+    private int lastSentInterpTicks = -1;
 
     public ContraptionBlockElement(BlockPos localPos, BlockState blockState, CompoundTag blockEntityNbt) {
         this(localPos, blockState, blockEntityNbt, false, 0.0f);
@@ -207,6 +213,15 @@ implements ContraptionElement {
 
     @Override
     public void render(RenderContext ctx) {
+        this.interpTicks = ctx.interpTicks();
+        if (this.interpTicks != this.lastSentInterpTicks) {
+            // The interpolation window itself changed (the real gap between moves settled on a
+            // new value) — the client only re-reads PosRot/TransformationInterpolationDuration
+            // when metadata is actually resent, so force that even if nothing else about this
+            // block changed this tick (a pure-yaw spin never touches pitch/roll/scale/light).
+            this.lastSentInterpTicks = this.interpTicks;
+            this.metaDirty = true;
+        }
         Vec3 center = this.localOffset();
         Vec3 pos = ContraptionMath.renderPosition(center, ctx.bearing(), ctx.yawRadians(), ctx.pitchRadians(), ctx.rollRadians(), ctx.scale());
         float yawDeg = (float)ctx.yawDegrees() + this.modelYawOffsetDegrees;
@@ -342,8 +357,8 @@ implements ContraptionElement {
                 DisplayData.Scale.addEntityData(new Vector3f(s, s, s), values);
             }
         }
-        DisplayData.PosRotInterpolationDuration.addEntityData(2, values);
-        DisplayData.TransformationInterpolationDuration.addEntityData(2, values);
+        DisplayData.PosRotInterpolationDuration.addEntityData(this.interpTicks, values);
+        DisplayData.TransformationInterpolationDuration.addEntityData(this.interpTicks, values);
         if (this.lastBlockLight >= 0 && this.lastSkyLight >= 0) {
             DisplayData.BrightnessOverride.addEntityData((this.lastBlockLight << 4 | this.lastSkyLight << 20), values);
         }

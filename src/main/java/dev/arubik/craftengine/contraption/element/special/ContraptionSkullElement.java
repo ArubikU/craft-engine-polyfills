@@ -41,6 +41,7 @@ public final class ContraptionSkullElement implements ContraptionElement {
     private final Set<UUID> shownTo = ConcurrentHashMap.newKeySet();
     private boolean metaDirty = true;
     private double lastPitch, lastRoll, lastScale = 1.0;
+    private int interpTicks = 2;
 
     public ContraptionSkullElement(BlockPos localPos, BlockState blockState, CompoundTag skullNbt) {
         this.localPos = localPos;
@@ -96,6 +97,10 @@ public final class ContraptionSkullElement implements ContraptionElement {
         if (!live.equals(blockState)) { blockState = live; metaDirty = true; }
         if (ctx.pitchRadians() != lastPitch || ctx.rollRadians() != lastRoll || ctx.scale() != lastScale) {
             lastPitch = ctx.pitchRadians(); lastRoll = ctx.rollRadians(); lastScale = ctx.scale();
+            metaDirty = true;
+        }
+        if (ctx.interpTicks() != interpTicks) {
+            interpTicks = ctx.interpTicks();
             metaDirty = true;
         }
         // Re-read skull NBT from level BE each tick so player head profile loads after placement
@@ -181,7 +186,7 @@ public final class ContraptionSkullElement implements ContraptionElement {
         float s = (float) lastScale;
         if (s != 1f) DisplayData.Scale.addEntityData(new Vector3f(s, s, s), meta);
         // No hardcoded brightness — skull inherits real-world light like other elements
-        DisplayData.PosRotInterpolationDuration.addEntityData(2, meta);
+        DisplayData.PosRotInterpolationDuration.addEntityData(interpTicks, meta);
         return meta;
     }
 

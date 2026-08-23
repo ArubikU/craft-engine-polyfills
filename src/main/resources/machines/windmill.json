@@ -12,7 +12,7 @@
   "action_script": "windmill",
   "status": "windmill.pf:status",
   "on_break": "windmill.pf:on_break",
-  "action_interval": 1,
+  "action_interval": 4,
   "on_right_click": "windmill_interact",
   "io": {
     "rpm": {
