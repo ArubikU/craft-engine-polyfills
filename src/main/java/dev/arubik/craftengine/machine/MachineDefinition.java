@@ -605,6 +605,16 @@ public final class MachineDefinition {
                 case "crafting"   -> org.bukkit.event.inventory.InventoryType.CRAFTING;
                 case "furnace"    -> org.bukkit.event.inventory.InventoryType.FURNACE;
                 case "brewing"    -> org.bukkit.event.inventory.InventoryType.BREWING;
+                // ANVIL (3 native slots: input1/input2/output) and SMITHING (4: template/base/
+                // addition/output) work the same way as the other non-chest types above — a
+                // custom InventoryHolder-backed inventory of these types never runs vanilla
+                // repair/smithing logic (that's tied to a real anvil/smithing-table BlockEntity),
+                // so the result slot is purely whatever the machine's own script/recipe puts
+                // there, same as every other machine here. The vanilla rename text field on an
+                // anvil GUI still works client-side; read the renamed text via the normal
+                // click-event item name, there's nothing anvil-specific to wire up for that.
+                case "anvil"      -> org.bukkit.event.inventory.InventoryType.ANVIL;
+                case "smithing"   -> org.bukkit.event.inventory.InventoryType.SMITHING;
                 default           -> org.bukkit.event.inventory.InventoryType.CHEST;
             };
         }

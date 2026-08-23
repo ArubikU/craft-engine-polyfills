@@ -1519,6 +1519,24 @@ public final class MachineType {
                     return ScriptValue.of(m.rebuildAndReopenMenu());
                 }
                 return ScriptValue.of(false);
+            })
+            // rename_text — the current text typed into an ANVIL-type page's rename field (a
+            // page declared with "size": "anvil" — see MachineDefinition.PageDef#inventoryType).
+            // Bukkit's AnvilInventory#getRenameText() works on this inventory even though no real
+            // anvil block backs it, so a machine can read whatever the player is typing live
+            // (e.g. to price a custom repair/combine recipe by name) without needing a real anvil
+            // recipe to be registered. "" if nobody has an anvil-type page of this machine open,
+            // or the open page isn't an anvil.
+            .property("rename_text", obj -> {
+                PersistentBlockEntity be = ref(obj).blockEntity();
+                if (be instanceof dev.arubik.craftengine.machine.block.entity.AbstractMachineBlockEntity m) {
+                    var openMenu = m.getOpenMenuOrNull();
+                    if (openMenu != null && openMenu.getInventory() instanceof org.bukkit.inventory.AnvilInventory anvil) {
+                        String text = anvil.getRenameText();
+                        return ScriptValue.of(text != null ? text : "");
+                    }
+                }
+                return ScriptValue.of("");
             });
     }
 
