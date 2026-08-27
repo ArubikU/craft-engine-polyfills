@@ -26,6 +26,15 @@ import java.util.logging.Logger;
 public final class ScriptProgram {
 
     private static final Logger LOG_ERR = Logger.getLogger("CraftEnginePolyfills");
+
+    /** Whole-file class-JIT outcomes, so a production log can answer "is the class JIT actually
+     *  running?" — which it previously could not, since neither success nor failure said anything. */
+    static final java.util.concurrent.atomic.AtomicInteger CLASS_JIT_OK =
+            new java.util.concurrent.atomic.AtomicInteger();
+    static final java.util.concurrent.atomic.AtomicInteger CLASS_JIT_DECLINED =
+            new java.util.concurrent.atomic.AtomicInteger();
+    static final java.util.concurrent.atomic.AtomicInteger CLASS_JIT_FAILED =
+            new java.util.concurrent.atomic.AtomicInteger();
     /** Every distinct (script, statement) pair whose evaluation has already logged a thrown
      *  exception — a statement runs every tick, so without this ONE broken line would spam a log
      *  entry per tick forever. Logged once per distinct key for the life of the JVM (matches
@@ -96,9 +105,28 @@ public final class ScriptProgram {
             // Without this the same thread re-enters and recurses until the stack gives out.
             if (compiling) return null;
             compiling = true;
-            try { compiledClass = ScriptClassCompiler.tryCompile(name, statements); }
-            catch (Throwable ignored) { compiledClass = null; }
-            finally { compiling = false; }
+            try {
+                compiledClass = ScriptClassCompiler.tryCompile(name, statements);
+                if (compiledClass != null) {
+                    CLASS_JIT_OK.incrementAndGet();
+                    LOG_ERR.info("[CEPolyfills] [class JIT] compiled " + name + " ("
+                            + compiledClass.methodsByDefName().size() + " defs, main "
+                            + (compiledClass.mainSkipReason() == null
+                                    ? "compiled" : "skipped: " + compiledClass.mainSkipReason()) + ")");
+                } else {
+                    CLASS_JIT_DECLINED.incrementAndGet();
+                }
+            } catch (Throwable t) {
+                // Previously swallowed outright, which made a compiler fault indistinguishable from
+                // a deliberate decline: everything silently kept running on the interpreter and no
+                // log line anywhere said so. The fallback is still the right BEHAVIOUR — it is why a
+                // fault here can never break a script — but it must not be invisible.
+                CLASS_JIT_FAILED.incrementAndGet();
+                LOG_ERR.log(java.util.logging.Level.WARNING,
+                        "[CEPolyfills] [class JIT] FAILED for " + name + " — falling back to the "
+                                + "interpreter for this file", t);
+                compiledClass = null;
+            } finally { compiling = false; }
             compileAttempted = true;
             return compiledClass;
         }

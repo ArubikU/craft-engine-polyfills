@@ -129,7 +129,14 @@ public final class ScriptBootstrap {
         // lazily, mid-compile — means each wrapper covers its type's FULL member set, so every
         // member gets a real generated Java method instead of only those registered before the
         // first script happened to compile against that type.
-        PolyClassGenerator.buildAll();
+        int polyClasses = PolyClassGenerator.buildAll();
+        // Reported because "did the PolyClass engine actually run?" was, until now, unanswerable
+        // from a production log: neither this nor the whole-file class JIT said anything at all,
+        // while the per-formula JIT logged two thousand lines. Absence of evidence read exactly
+        // like evidence of absence.
+        java.util.logging.Logger.getLogger("CraftEnginePolyfills").info(
+                "[CEPolyfills] [PolyClass] generated " + polyClasses + " wrapper class(es) for "
+                        + PolyTypeRegistry.typeNames().size() + " registered PolyType(s)");
     }
 
     public static void reload() {

@@ -124,15 +124,17 @@ final class PolyClassGenerator {
      * A reload that genuinely ADDS members to a type is the only case that mints a second class,
      * which is the correct trade — the alternative is those new members never being specialized.
      */
-    static void buildAll() {
+    static int buildAll() {
+        int generated = 0;
         for (String typeName : PolyTypeRegistry.typeNames()) {
             PolyType type = PolyTypeRegistry.get(typeName);
             if (type == null) continue;
             GeneratedPolyClass cached = CACHE.get(typeName);
             if (cached != null && cached.memberSet().containsAll(memberSetOf(type))) continue;
             GeneratedPolyClass fresh = generate(typeName, type);
-            if (fresh != null) CACHE.put(typeName, fresh);
+            if (fresh != null) { CACHE.put(typeName, fresh); generated++; }
         }
+        return generated;
     }
 
     private static void onRegistryMutation() {

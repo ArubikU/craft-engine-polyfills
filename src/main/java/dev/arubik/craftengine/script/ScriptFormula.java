@@ -79,14 +79,9 @@ public final class ScriptFormula {
     static java.util.Set<String> compiledExpressionsForTest() { return CACHE.keySet(); }
 
     private static ScriptFormula doCompile(String expr) {
-        // Try the real-bytecode JIT path first: it only ever succeeds for the pure-numeric/
-        // boolean grammar subset it recognizes (see ScriptBytecodeCompiler's doc), and is wrapped
-        // so ANY failure — an unsupported construct, or a genuine bug in the generator — silently
-        // falls through to the always-correct lambda-tree interpreter below. Never lets a codegen
-        // problem surface as a script failure.
-        Node compiled = JIT_ENABLED ? ScriptBytecodeCompiler.tryCompile(expr.trim()) : null;
-        if (compiled != null) return new ScriptFormula(expr, compiled);
-
+        // The lambda-tree interpreter is built HERE, eagerly, because it is also the validator: a
+        // malformed expression must still throw at compile time, where every caller already handles
+        // it. The bytecode JIT is NOT attempted here — see the class doc's "When the JIT runs".
         Parser p = new Parser(expr.trim());
         Node root = p.parseExpr();
         p.skipSpaces();
@@ -99,31 +94,73 @@ public final class ScriptFormula {
     }
 
     public ScriptValue evaluate(ScriptContext ctx) {
-        return root.eval(ctx);
+        return node().eval(ctx);
     }
 
     public boolean evaluateBool(ScriptContext ctx) {
-        return root.eval(ctx).asBool();
+        return node().eval(ctx).asBool();
     }
 
     public double evaluateNum(ScriptContext ctx) {
-        return root.eval(ctx).asNum();
+        return node().eval(ctx).asNum();
     }
 
     public String evaluateStr(ScriptContext ctx) {
-        return root.eval(ctx).asStr();
+        return node().eval(ctx).asStr();
     }
 
     public ItemStack evaluateItem(ScriptContext ctx) {
-        ScriptValue v = root.eval(ctx);
+        ScriptValue v = node().eval(ctx);
         return (v instanceof ScriptValue.Item i) ? i.stack() : null;
+    }
+
+    /**
+     * The node to evaluate: the JIT-generated one once it exists, otherwise the interpreter tree.
+     *
+     * <p>The JIT is attempted on FIRST EVALUATION rather than at compile time, and that timing is
+     * the point. {@code ScriptProgram}'s parser compiles a {@link ScriptFormula} for every
+     * expression in a {@code .pf} file as it builds the statements — so compiling eagerly generated
+     * a hidden class per expression for the whole script tree at load, roughly two thousand of them
+     * on a real server, and {@link ScriptClassCompiler} then compiled those very same expressions
+     * AGAIN into one class per file. Every one of those hidden classes was dead weight: a file the
+     * class JIT handles never evaluates its statements' formulas at all.
+     *
+     * <p>Deferring costs nothing where the JIT is still wanted. An expression that IS evaluated
+     * directly — a renderer, a machine-definition field, anything embedded in config rather than in
+     * a {@code .pf} — JITs on its first evaluation and is cached from then on, exactly as before.
+     * A {@code .pf} file the class JIT declines does the same for its statements.
+     *
+     * <p>Any failure still falls through to the interpreter tree, which is why a codegen fault can
+     * never surface as a script failure.
+     */
+    private Node node() {
+        Node n = jit;
+        if (n != null) return n;
+        if (jitAttempted) return root;
+        synchronized (this) {
+            if (!jitAttempted) {
+                Node compiled = null;
+                if (JIT_ENABLED) {
+                    try { compiled = ScriptBytecodeCompiler.tryCompile(rawExpr.trim()); }
+                    catch (Throwable ignored) { compiled = null; }
+                }
+                jit = compiled;
+                jitAttempted = true;
+            }
+        }
+        Node compiled = jit;
+        return compiled != null ? compiled : root;
     }
 
     @Override
     public String toString() { return rawExpr; }
 
     private final String rawExpr;
+    /** The lambda-tree interpreter — always present, always correct, the fallback for everything. */
     private final Node root;
+    /** The bytecode-JIT node once {@link #node()} has produced one; null if it never will. */
+    private volatile Node jit;
+    private volatile boolean jitAttempted;
 
     private ScriptFormula(String rawExpr, Node root) {
         this.rawExpr = rawExpr;
