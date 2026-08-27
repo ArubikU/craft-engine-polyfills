@@ -28,7 +28,6 @@ import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.world.level.block.entity.HopperBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 
 public final class ContraptionAccessor {
@@ -56,7 +55,13 @@ public final class ContraptionAccessor {
 
     public static Container realContainerAt(ServerLevel realLevel, BlockPos realPos) {
         try {
-            return HopperBlockEntity.getContainerAt((Level)realLevel, (BlockPos)realPos);
+            // HopperBlockEntity.getContainerAt only resolves a VANILLA Container/WorldlyContainer —
+            // a CraftEngine machine (a drill, a chest-type machine, ...) is never one, it's its own
+            // PersistentWorldlyBlockEntity. ItemTransferHelper.getContainer is the item pipe's own
+            // resolver for this exact gap: it ALSO checks the block's WorldlyContainerHolder
+            // capability (implemented by MachineBlockBehavior), falling back to a vanilla Container
+            // only for blocks that aren't a CraftEngine custom block at all.
+            return dev.arubik.craftengine.pipe.item.ItemTransferHelper.getContainer((Level) realLevel, realPos).orElse(null);
         }
         catch (Throwable t) {
             return null;

@@ -1,0 +1,11 @@
+{
+  "type": "saw",
+  "time": 50,
+  "fuelRequired": false,
+  "inputs": [
+    { "type": "item", "id": "minecraft:stripped_crimson_stem", "amount": 1 }
+  ],
+  "outputs": [
+    { "type": "item", "id": "minecraft:crimson_planks", "amount": 1, "chance": 1.0 }
+  ]
+}

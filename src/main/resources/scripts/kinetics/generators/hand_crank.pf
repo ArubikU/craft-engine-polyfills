@@ -1,0 +1,12 @@
+# Hand Crank — drains stored energy each tick, outputs RPM while energized.
+import "kinetics/utils.pf" { _update_activated }
+
+energy = Machine.get_typed("crank_energy", "int")
+if energy > 0:
+    Machine.set_typed("crank_energy", "int", energy - 1)
+    Machine.set_rpm_output(16)
+else:
+    Machine.set_rpm_output(0)
+end
+is_now = energy > 0 ? 1 : 0
+_update_activated("_hc_act", is_now)

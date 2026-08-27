@@ -640,6 +640,14 @@ public final class ScriptFormula {
         return Math.max(lo, Math.min(hi, v));
     }
 
+    /** Characters allowed in the "func:arg1:arg2" tail of an inline "file.pf:func:args" script-call
+     *  reference — deliberately narrow (identifier chars, ':', '.', '-') so it stops at whitespace,
+     *  parens/brackets, and comparison/ternary operators rather than swallowing the rest of the
+     *  surrounding expression. */
+    private static boolean isScriptCallArgChar(char c) {
+        return Character.isLetterOrDigit(c) || c == '_' || c == ':' || c == '.' || c == '-';
+    }
+
     // ---- Member access helpers ----
 
     static ScriptValue memberGet(ScriptValue obj, String prop, ScriptContext ctx) {
@@ -1120,6 +1128,31 @@ public final class ScriptFormula {
                 while (pos < src.length()
                         && (Character.isLetterOrDigit(src.charAt(pos)) || src.charAt(pos) == '_')) pos++;
                 String name = src.substring(start, pos);
+
+                // Cross-file script-call reference: "file.pf:func[:arg1:arg2...]" — the SAME
+                // whole-string shape ScriptCall already parses for config fields that take an
+                // entire string as one call (on_get_container, page item/name, ...), now usable
+                // as one atom INSIDE a larger formula — a renderer's rot_x/location/when/item, or
+                // (since TextTemplate's "${expr}" substitution already runs its expr through this
+                // same ScriptFormula) a name/lore template. Deliberately checked before the '.'
+                // member-access branch below, which would otherwise treat "pf" as a bogus property
+                // name and choke on the trailing ':'. Args are passed through as literal strings,
+                // same as ScriptCall's own convention — not sub-expressions — so no need to parse
+                // them as anything more (matches "gas_motor.pf:increase_rpm:8").
+                if (src.startsWith(".pf:", pos)) {
+                    int refStart = start;
+                    int p = pos + 4; // past ".pf:"
+                    while (p < src.length() && isScriptCallArgChar(src.charAt(p))) p++;
+                    String ref = src.substring(refStart, p);
+                    pos = p;
+                    skipSpaces();
+                    base = ctx -> {
+                        ScriptCall call = ScriptCall.parse(ref);
+                        if (call == null) return ScriptValue.NULL;
+                        try { return call.evaluate(ctx); } catch (Throwable ignored) { return ScriptValue.NULL; }
+                    };
+                    return parseSuffixChain(base);
+                }
                 skipSpaces();
 
                 // Dot access: Name.property or Name.method(args)
@@ -1182,8 +1215,15 @@ public final class ScriptFormula {
                 if ("TRUE".equals(name)  || "true".equals(name))  return ctx -> ScriptValue.of(true);
                 if ("FALSE".equals(name) || "false".equals(name)) return ctx -> ScriptValue.of(false);
 
-                // Variable reference
-                base = ctx -> ctx.getVar(name);
+                // Variable reference — check class instances (Player, Machine, World, ...) first,
+                // same fallback order as the dotted-access path above, since a bare identifier used
+                // as a plain value (e.g. Dialog.show(Player)) previously only ever checked ctx.getVar
+                // and silently resolved to NULL for any name that lived in ctx's classes map instead.
+                String bareName = name;
+                base = ctx -> {
+                    ScriptValue sv = ctx.getClassInstance(bareName);
+                    return sv != ScriptValue.NULL ? sv : ctx.getVar(bareName);
+                };
                 return parseSuffixChain(base);
             }
 

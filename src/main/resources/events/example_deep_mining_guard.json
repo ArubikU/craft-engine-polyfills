@@ -1,0 +1,7 @@
+{
+  "id": "example_deep_mining_guard",
+  "event": "org.bukkit.event.block.BlockBreakEvent",
+  "priority": "NORMAL",
+  "ignore_cancelled": false,
+  "script": "example_deep_mining_guard.pf:on_break"
+}

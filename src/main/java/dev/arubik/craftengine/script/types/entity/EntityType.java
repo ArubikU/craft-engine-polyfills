@@ -23,6 +23,12 @@ public final class EntityType {
 
     private EntityType() {}
 
+    /** Storage-key prefix for every TypedKeyBridge-backed accessor below — mirrors Machine/Item's
+     *  identical "tkey_" prefix (just over a PDC namespaced key instead of an NBT tag) so a typed
+     *  value bridged between an entity and either of those round-trips under the same key either
+     *  side reads. */
+    private static final String TYPED_PREFIX = "tkey_";
+
     public static void register() {
         // ---- Base Entity — only what ALL entities share -------------------------
         PolyTypeRegistry.define("Entity")
@@ -152,43 +158,29 @@ public final class EntityType {
                 entity(obj).discard();
                 return ScriptValue.of(true);
             })
-            // --- Persistent per-entity flags (int/string) — the Entity/Player-side counterpart
-            // of Machine.get_flag/set_flag/get_str_flag/set_str_flag, same naming convention, same
-            // "0"/"" absent-default semantics. Backed by Bukkit's PersistentDataContainer: modern
-            // (1.20.5+) NMS Entity no longer exposes its raw custom-data CompoundTag for live
-            // mutation the way it used to (it's a private CustomData component now, no public
-            // getter) — PDC is the actually-supported, version-stable way to attach arbitrary
-            // per-entity data today, unlike Server-scope state (see ServerFlags), which has no
-            // Bukkit-native equivalent at all and genuinely needs its own file.
-            .method("get_flag", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of(0);
-                org.bukkit.persistence.PersistentDataContainer pdc = entityPdc(obj);
-                if (pdc == null) return ScriptValue.of(0);
-                Integer v = pdc.get(flagKey(args.get(0).asStr()), org.bukkit.persistence.PersistentDataType.INTEGER);
-                return ScriptValue.of(v != null ? v : 0);
+            // --- Generic TypedKey storage (see dev.arubik.craftengine.script.TypedKeyBridge) ----
+            // Entity/Player-side counterpart of Machine.get_typed/set_typed/has_typed — backed by
+            // Bukkit's PersistentDataContainer instead of a raw NBT CompoundTag: modern (1.20.5+)
+            // NMS Entity no longer exposes its custom-data CompoundTag for live mutation (it's a
+            // private CustomData component now, no public getter) — PDC is the actually-supported,
+            // version-stable way to attach arbitrary per-entity data today.
+            .method("get_typed", (obj, args) -> {
+                if (args.size() < 2) return ScriptValue.NULL;
+                dev.arubik.craftengine.script.TypedKeyBridge.Codec codec = dev.arubik.craftengine.script.TypedKeyBridge.resolve(args.get(1).asStr());
+                if (codec == null) return ScriptValue.NULL;
+                return readTyped(obj, TYPED_PREFIX + args.get(0).asStr(), codec);
             })
-            .method("set_flag", (obj, args) -> {
+            .method("set_typed", (obj, args) -> {
+                if (args.size() < 3) return ScriptValue.of(false);
+                dev.arubik.craftengine.script.TypedKeyBridge.Codec codec = dev.arubik.craftengine.script.TypedKeyBridge.resolve(args.get(1).asStr());
+                if (codec == null) return ScriptValue.of(false);
+                return ScriptValue.of(writeTyped(obj, TYPED_PREFIX + args.get(0).asStr(), codec, args.get(2)));
+            })
+            .method("has_typed", (obj, args) -> {
                 if (args.size() < 2) return ScriptValue.of(false);
-                org.bukkit.persistence.PersistentDataContainer pdc = entityPdc(obj);
-                if (pdc == null) return ScriptValue.of(false);
-                pdc.set(flagKey(args.get(0).asStr()), org.bukkit.persistence.PersistentDataType.INTEGER,
-                        (int) args.get(1).asNum());
-                return ScriptValue.of(true);
-            })
-            .method("get_str_flag", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of("");
-                org.bukkit.persistence.PersistentDataContainer pdc = entityPdc(obj);
-                if (pdc == null) return ScriptValue.of("");
-                String v = pdc.get(flagKey(args.get(0).asStr()), org.bukkit.persistence.PersistentDataType.STRING);
-                return ScriptValue.of(v != null ? v : "");
-            })
-            .method("set_str_flag", (obj, args) -> {
-                if (args.size() < 2) return ScriptValue.of(false);
-                org.bukkit.persistence.PersistentDataContainer pdc = entityPdc(obj);
-                if (pdc == null) return ScriptValue.of(false);
-                pdc.set(flagKey(args.get(0).asStr()), org.bukkit.persistence.PersistentDataType.STRING,
-                        args.get(1).asStr());
-                return ScriptValue.of(true);
+                dev.arubik.craftengine.script.TypedKeyBridge.Codec codec = dev.arubik.craftengine.script.TypedKeyBridge.resolve(args.get(1).asStr());
+                if (codec == null) return ScriptValue.of(false);
+                return ScriptValue.of(hasTyped(obj, TYPED_PREFIX + args.get(0).asStr(), codec));
             });
 
         // ---- LivingEntity extends Entity ----------------------------------------
@@ -344,7 +336,7 @@ public final class EntityType {
         return new ScriptValue.Array(list);
     }
 
-    /** The Bukkit PersistentDataContainer backing get_flag/set_flag/get_str_flag/set_str_flag —
+    /** The Bukkit PersistentDataContainer backing every TypedKeyBridge-based accessor below —
      * null only if the entity has already been discarded/has no Bukkit mirror. */
     private static org.bukkit.persistence.PersistentDataContainer entityPdc(Object obj) {
         try {
@@ -355,8 +347,89 @@ public final class EntityType {
         }
     }
 
-    private static org.bukkit.NamespacedKey flagKey(String name) {
-        return new org.bukkit.NamespacedKey(dev.arubik.craftengine.CraftEnginePolyfills.instance(), "flag_" + name);
+    /** {@code storageKey} is the FULL prefixed key ("tkey_foo", ...) — callers add their own
+     *  prefix, this just turns it into a real NamespacedKey. */
+    private static org.bukkit.NamespacedKey pdcKey(String storageKey) {
+        return new org.bukkit.NamespacedKey(dev.arubik.craftengine.CraftEnginePolyfills.instance(), storageKey);
+    }
+
+    /** Maps a {@link dev.arubik.craftengine.util.NbtType} to the matching Paper
+     *  {@link org.bukkit.persistence.PersistentDataType} — every TypedKeyBridge codec's storage()
+     *  shape has a 1:1 PDC counterpart, so this is the only place that needs to know both. */
+    private static void setPdc(org.bukkit.persistence.PersistentDataContainer pdc, org.bukkit.NamespacedKey key,
+            dev.arubik.craftengine.util.NbtType type, Object value) {
+        switch (type) {
+            case BYTE -> pdc.set(key, org.bukkit.persistence.PersistentDataType.BYTE, (Byte) value);
+            case SHORT -> pdc.set(key, org.bukkit.persistence.PersistentDataType.SHORT, (Short) value);
+            case INTEGER -> pdc.set(key, org.bukkit.persistence.PersistentDataType.INTEGER, (Integer) value);
+            case LONG -> pdc.set(key, org.bukkit.persistence.PersistentDataType.LONG, (Long) value);
+            case FLOAT -> pdc.set(key, org.bukkit.persistence.PersistentDataType.FLOAT, (Float) value);
+            case DOUBLE -> pdc.set(key, org.bukkit.persistence.PersistentDataType.DOUBLE, (Double) value);
+            case STRING -> pdc.set(key, org.bukkit.persistence.PersistentDataType.STRING, (String) value);
+            case BOOLEAN -> pdc.set(key, org.bukkit.persistence.PersistentDataType.BOOLEAN, (Boolean) value);
+            case BYTE_ARRAY -> pdc.set(key, org.bukkit.persistence.PersistentDataType.BYTE_ARRAY, (byte[]) value);
+            case INTEGER_ARRAY -> pdc.set(key, org.bukkit.persistence.PersistentDataType.INTEGER_ARRAY, (int[]) value);
+            case LONG_ARRAY -> pdc.set(key, org.bukkit.persistence.PersistentDataType.LONG_ARRAY, (long[]) value);
+        }
+    }
+
+    private static Object getPdc(org.bukkit.persistence.PersistentDataContainer pdc, org.bukkit.NamespacedKey key,
+            dev.arubik.craftengine.util.NbtType type) {
+        return switch (type) {
+            case BYTE -> pdc.get(key, org.bukkit.persistence.PersistentDataType.BYTE);
+            case SHORT -> pdc.get(key, org.bukkit.persistence.PersistentDataType.SHORT);
+            case INTEGER -> pdc.get(key, org.bukkit.persistence.PersistentDataType.INTEGER);
+            case LONG -> pdc.get(key, org.bukkit.persistence.PersistentDataType.LONG);
+            case FLOAT -> pdc.get(key, org.bukkit.persistence.PersistentDataType.FLOAT);
+            case DOUBLE -> pdc.get(key, org.bukkit.persistence.PersistentDataType.DOUBLE);
+            case STRING -> pdc.get(key, org.bukkit.persistence.PersistentDataType.STRING);
+            case BOOLEAN -> pdc.get(key, org.bukkit.persistence.PersistentDataType.BOOLEAN);
+            case BYTE_ARRAY -> pdc.get(key, org.bukkit.persistence.PersistentDataType.BYTE_ARRAY);
+            case INTEGER_ARRAY -> pdc.get(key, org.bukkit.persistence.PersistentDataType.INTEGER_ARRAY);
+            case LONG_ARRAY -> pdc.get(key, org.bukkit.persistence.PersistentDataType.LONG_ARRAY);
+        };
+    }
+
+    private static boolean hasPdc(org.bukkit.persistence.PersistentDataContainer pdc, org.bukkit.NamespacedKey key,
+            dev.arubik.craftengine.util.NbtType type) {
+        return switch (type) {
+            case BYTE -> pdc.has(key, org.bukkit.persistence.PersistentDataType.BYTE);
+            case SHORT -> pdc.has(key, org.bukkit.persistence.PersistentDataType.SHORT);
+            case INTEGER -> pdc.has(key, org.bukkit.persistence.PersistentDataType.INTEGER);
+            case LONG -> pdc.has(key, org.bukkit.persistence.PersistentDataType.LONG);
+            case FLOAT -> pdc.has(key, org.bukkit.persistence.PersistentDataType.FLOAT);
+            case DOUBLE -> pdc.has(key, org.bukkit.persistence.PersistentDataType.DOUBLE);
+            case STRING -> pdc.has(key, org.bukkit.persistence.PersistentDataType.STRING);
+            case BOOLEAN -> pdc.has(key, org.bukkit.persistence.PersistentDataType.BOOLEAN);
+            case BYTE_ARRAY -> pdc.has(key, org.bukkit.persistence.PersistentDataType.BYTE_ARRAY);
+            case INTEGER_ARRAY -> pdc.has(key, org.bukkit.persistence.PersistentDataType.INTEGER_ARRAY);
+            case LONG_ARRAY -> pdc.has(key, org.bukkit.persistence.PersistentDataType.LONG_ARRAY);
+        };
+    }
+
+    /** Shared read path for every TypedKeyBridge-backed accessor. */
+    private static ScriptValue readTyped(Object obj, String storageKey, dev.arubik.craftengine.script.TypedKeyBridge.Codec codec) {
+        org.bukkit.persistence.PersistentDataContainer pdc = entityPdc(obj);
+        if (pdc == null) return codec.fromStorage(null);
+        try {
+            return codec.fromStorage(getPdc(pdc, pdcKey(storageKey), codec.storage()));
+        } catch (Throwable ignored) { return codec.fromStorage(null); }
+    }
+
+    private static boolean hasTyped(Object obj, String storageKey, dev.arubik.craftengine.script.TypedKeyBridge.Codec codec) {
+        org.bukkit.persistence.PersistentDataContainer pdc = entityPdc(obj);
+        if (pdc == null) return false;
+        try { return hasPdc(pdc, pdcKey(storageKey), codec.storage()); } catch (Throwable ignored) { return false; }
+    }
+
+    /** Shared write path. */
+    private static boolean writeTyped(Object obj, String storageKey, dev.arubik.craftengine.script.TypedKeyBridge.Codec codec, ScriptValue value) {
+        org.bukkit.persistence.PersistentDataContainer pdc = entityPdc(obj);
+        if (pdc == null) return false;
+        try {
+            setPdc(pdc, pdcKey(storageKey), codec.storage(), codec.toStorage(value));
+            return true;
+        } catch (Throwable ignored) { return false; }
     }
 
     private static Entity        entity(Object obj)     { return (Entity) obj; }

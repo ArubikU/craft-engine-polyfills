@@ -35,23 +35,6 @@ public final class ChainType {
             // Persistent per-chain data (int/string) — the same "0"/"" absent-default convention as
             // Machine/Server/World's *_flag family, backed directly by Chain's own typed NBT
             // convenience getters/setters (see Chain#getInt/getString) rather than a second store.
-            .method("get_flag", (obj, args) ->
-                ScriptValue.of(args.isEmpty() ? 0 : chain(obj).getInt(args.get(0).asStr(), 0)))
-            .method("set_flag", (obj, args) -> {
-                if (args.size() < 2) return ScriptValue.of(false);
-                chain(obj).setInt(args.get(0).asStr(), (int) args.get(1).asNum());
-                return ScriptValue.of(true);
-            })
-            .method("get_str_flag", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of("");
-                String v = chain(obj).getString(args.get(0).asStr());
-                return ScriptValue.of(v != null ? v : "");
-            })
-            .method("set_str_flag", (obj, args) -> {
-                if (args.size() < 2) return ScriptValue.of(false);
-                chain(obj).setString(args.get(0).asStr(), args.get(1).asStr());
-                return ScriptValue.of(true);
-            })
             // break(drop_items?) — severs this chain. drop_items defaults to false: a script-triggered
             // break didn't necessarily come with items consumed on creation, so refunding is opt-in.
             .method("break", (obj, args) -> {

@@ -73,8 +73,6 @@ class CogwheelTransmissionTest {
             })
             .method("set_rpm_output", (o, a) -> { rpmOut = a.isEmpty() ? 0 : a.get(0).asNum(); return ScriptValue.of(true); })
             .method("report_su", (o, a) -> ScriptValue.of(true))
-            .method("get_flag", (o, a) -> ScriptValue.of(flags.getOrDefault(a.get(0).asStr(), 0)))
-            .method("set_flag", (o, a) -> { flags.put(a.get(0).asStr(), (int) a.get(1).asNum()); return ScriptValue.of(true); })
             .method("set_state", (o, a) -> ScriptValue.of(true));
     }
 

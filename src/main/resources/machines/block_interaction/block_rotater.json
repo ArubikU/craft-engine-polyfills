@@ -1,0 +1,34 @@
+{
+  "id": "polyfills:block_rotater",
+  "title": "Block Rotater",
+  "flags": {
+    "fuel": false,
+    "recipes": true,
+    "continuous_fuel": false,
+    "ui": true,
+    "ui_tick": true,
+    "io_pull": true,
+    "renderers": true,
+    "scripts": true,
+    "animations": true,
+    "kinetics": false
+  },
+  "action_script": "block_interaction/block_rotater",
+  "action_interval": 20,
+  "pages": [
+    {
+      "title": "Block Rotater",
+      "size": 9,
+      "layout": [
+        {
+          "slot": 4,
+          "item": "recipe_info.pf:item",
+          "name": "recipe_info.pf:name",
+          "lore": [
+            "recipe_info.pf:lore"
+          ]
+        }
+      ]
+    }
+  ]
+}

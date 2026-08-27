@@ -1,0 +1,14 @@
+{
+  "name": "games",
+  "description": "Play a minigame against another player or a bot",
+  "subcommands": [
+    {
+      "name": "gomoku",
+      "description": "Play Gomoku (five in a row) against a player or 'bot'",
+      "args": [
+        { "name": "opponent", "type": "string" }
+      ],
+      "execute": "games/gomoku.pf:open_gomoku"
+    }
+  ]
+}

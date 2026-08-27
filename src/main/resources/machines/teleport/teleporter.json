@@ -1,0 +1,95 @@
+{
+  "id": "polyfills:teleporter",
+  "title": "Teleporter",
+  "on_break": "teleport/teleporter.pf:on_break",
+  "flags": {
+    "recipes": false,
+    "fuel": false,
+    "continuous_fuel": false,
+    "ui": true,
+    "ui_tick": true,
+    "io_pull": true,
+    "renderers": true,
+    "scripts": true,
+    "animations": true,
+    "kinetics": false
+  },
+  "energy": {
+    "capacity": 50000,
+    "max_input": 4000,
+    "max_output": 0,
+    "per_tick": 0
+  },
+  "io": {
+    "input": [
+      {
+        "types": [
+          "energy"
+        ],
+        "faces": [
+          "all"
+        ]
+      }
+    ]
+  },
+  "pages": [
+    {
+      "title": "Teleporter",
+      "size": 36,
+      "layout": [
+        {
+          "slot": 4,
+          "item": "cml:teleporter_core",
+          "name": "teleporter.pf:status_name",
+          "lore": [
+            "teleporter.pf:status_lore"
+          ]
+        }
+      ],
+      "bars": [
+        {
+          "id": "polyfills:energy",
+          "slots": [
+            35,
+            26,
+            17,
+            8
+          ],
+          "source": "energy"
+        }
+      ],
+      "ghost_slots": [
+        {
+          "slots": [
+            13
+          ],
+          "get": "teleporter.pf:ghost_get",
+          "set": "teleporter.pf:ghost_set",
+          "empty_icon": "cml:gui_empty"
+        }
+      ],
+      "buttons": [
+        {
+          "slot": 31,
+          "icon": "cml:overclock_button",
+          "action": "teleporter.pf:do_teleport",
+          "name": "<yellow>Teleport Now",
+          "lore": [
+            "<dark_gray>Warps you to another teleporter tuned",
+            "<dark_gray>to the same frequency."
+          ]
+        },
+        {
+          "slot": 22,
+          "icon": "cml:teleporter_core",
+          "action": "teleporter.pf:open_frequency_dialog",
+          "name": "<aqua>Tune via Dialog",
+          "lore": [
+            "<gray>Type a frequency instead of",
+            "<gray>inserting a renamed item."
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 package dev.arubik.craftengine.crafting;
 
 import dev.arubik.craftengine.block.entity.PersistentBlockEntity;
-import dev.arubik.craftengine.conveyor.ConveyorItemDisplay;
+import dev.arubik.craftengine.conveyor.belt.ConveyorItemDisplay;
 import dev.arubik.craftengine.multiblock.MultiCellGeometry;
 import net.momirealms.craftengine.core.block.ImmutableBlockState;
 import net.momirealms.craftengine.core.block.entity.BlockEntity;

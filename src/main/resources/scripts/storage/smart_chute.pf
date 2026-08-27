@@ -1,0 +1,26 @@
+# Smart Chute — adds a single-item filter (right-click sets it, empty hand clears it, exactly like
+# the saw's filter) and freezes while redstone-powered. Shift+right-click opens a slider dialog to
+# set the exact pull amount (-1 = any, 0..64 or the filtered item's own max stack size). No
+# diagonal facing, no window — matching real Create, Smart Chute only supports straight-down and
+# has no see-through variant either.
+
+import "storage/chute_utils.pf" { _chute_tick, _is_glass_item, _chute_drop_held, _chute_open_amount_dialog }
+
+def on_right_click():
+    if Player.is_sneaking:
+        _chute_open_amount_dialog()
+        return
+    end
+    held = Player.main_hand
+    if is_empty(held):
+        Machine.set_typed("_chute_filter", "str", "")
+    else if !_is_glass_item(held.id):
+        Machine.set_typed("_chute_filter", "str", held.id)
+    end
+end
+
+def on_break():
+    _chute_drop_held()
+end
+
+_chute_tick(true)

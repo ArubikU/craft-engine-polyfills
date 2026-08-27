@@ -14,6 +14,7 @@ import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientboundAddEntityPacket;
 import net.minecraft.network.protocol.game.ClientboundBlockDestructionPacket;
 import net.minecraft.network.protocol.game.ClientboundBundlePacket;
+import net.minecraft.network.protocol.game.ClientboundContainerSetSlotPacket;
 import net.minecraft.network.protocol.game.ClientboundEntityPositionSyncPacket;
 import net.minecraft.network.protocol.game.ClientboundRemoveEntitiesPacket;
 import net.minecraft.network.protocol.game.ClientboundSetEntityDataPacket;
@@ -191,5 +192,21 @@ public final class MNms {
         AttributeInstance instance = new AttributeInstance(Attributes.SCALE, ai -> {});
         instance.setBaseValue(scale);
         return new ClientboundUpdateAttributesPacket(entityId, List.of(instance));
+    }
+
+    /**
+     * CLIENT-ONLY inventory slot override — visually replaces what a SINGLE slot in a container
+     * looks like on the receiving client's screen, without touching the real server-side inventory
+     * (a real change would just overwrite this right back on the next resync). Container id
+     * {@code 0} is the player's own inventory screen; the first-person hand model is driven by the
+     * client's local copy of ITS OWN held hotbar slot, which is exactly this container — unlike
+     * {@code ClientboundSetEquipmentPacket} (what OTHER players see you holding), this is the only
+     * packet that actually changes your own hand render. {@code stateId} can be {@code 0}; the
+     * client only uses it to detect stale/out-of-order slot updates, and a slightly-behind id here
+     * just means a future REAL inventory update (or {@code Player#updateInventory()}) will
+     * immediately correct it, never crash it.
+     */
+    public Object constructor$ClientboundContainerSetSlotPacket(int containerId, int stateId, int slot, Object itemStack) {
+        return new ClientboundContainerSetSlotPacket(containerId, stateId, slot, (net.minecraft.world.item.ItemStack) itemStack);
     }
 }

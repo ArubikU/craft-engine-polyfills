@@ -63,8 +63,10 @@ class SensorScriptTest {
             .property("facing_dx", o -> ScriptValue.of(facingDx))
             .property("facing_dy", o -> ScriptValue.of(facingDy))
             .property("facing_dz", o -> ScriptValue.of(facingDz))
-            .method("get_flag", (o, a) -> ScriptValue.of(flags.getOrDefault(a.get(0).asStr(), 0)))
-            .method("set_flag", (o, a) -> { flags.put(a.get(0).asStr(), (int) a.get(1).asNum()); return ScriptValue.of(true); })
+            // Sensor scripts now call Machine.get_typed/set_typed(key, "int", ...) instead of the
+            // old get_flag/set_flag pair — same backing map, "type" arg ignored (int-only here).
+            .method("get_typed", (o, a) -> ScriptValue.of(flags.getOrDefault(a.get(0).asStr(), 0)))
+            .method("set_typed", (o, a) -> { flags.put(a.get(0).asStr(), (int) a.get(2).asNum()); return ScriptValue.of(true); })
             // An absent slot is NULL, which is what is_empty() recognises as empty.
             .method("get_item_in_slot", (o, a) -> slots.getOrDefault((int) a.get(0).asNum(), ScriptValue.NULL))
             .method("block_at", (o, a) -> {

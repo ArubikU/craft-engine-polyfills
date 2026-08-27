@@ -1,0 +1,34 @@
+{
+  "id": "polyfills:lava_spike",
+  "title": "Lava Spike",
+  "flags": {
+    "fuel": false,
+    "recipes": true,
+    "continuous_fuel": false,
+    "ui": true,
+    "ui_tick": true,
+    "io_pull": true,
+    "renderers": true,
+    "scripts": true,
+    "animations": true,
+    "kinetics": false
+  },
+  "action_script": "block_interaction/lava_spike",
+  "action_interval": 1,
+  "pages": [
+    {
+      "title": "Lava Spike",
+      "size": 9,
+      "layout": [
+        {
+          "slot": 4,
+          "item": "recipe_info.pf:item",
+          "name": "recipe_info.pf:name",
+          "lore": [
+            "recipe_info.pf:lore"
+          ]
+        }
+      ]
+    }
+  ]
+}

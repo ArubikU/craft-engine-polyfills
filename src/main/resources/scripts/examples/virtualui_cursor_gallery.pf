@@ -1,0 +1,73 @@
+# Cursor gallery demo (see /virtualui cursors) — exercises every cursor.states entry ported from
+# Kenney's Cursor Pixel Pack (kenney.nl, CC0/public domain — see virtualui.yml's cursor.states and
+# testserver/plugins/CraftEngine/resources/modern/configuration/item/polyfills/
+# virtualui_kenney_cursors.yml for the full ported set + source tile numbers). Each button here
+# forces the cursor into one EXTRA (opt-in-only) state via .hover_state(name) — a DECLARATIVE
+# per-widget override, no script callback needed at all (see VirtualUIScreen#hoverCursorStates) —
+# the 6 canonical states (normal/hover/hold/scroll_vertical/scroll_horizontal/processing) are
+# already exercised automatically just by using the sample screen.
+
+def open_cursor_gallery():
+    if VirtualUI.is_open(Player):
+        Player.send_message("<red>You already have a VirtualUI open — <white>/virtualui close</white> first.")
+        return
+    end
+
+    ui = VirtualUI.screen("Cursor gallery")
+    ui.bounds(6.5, 4.0)
+    ui.on_close("examples/virtualui_cursor_gallery.pf:on_close")
+
+    ui.label("title", "<gold><bold>CURSOR GALLERY</bold>\n<gray>Hover each button to preview its cursor state", 0.0, 2.4)
+
+    ui.button("btn_grab", "<white>grab</white>", -2.6, 1.0, "", 1.1, 0.5)
+    ui.hover_state("grab")
+
+    ui.button("btn_not_allowed", "<white>not_allowed</white>", -1.2, 1.0, "", 1.6, 0.5)
+    ui.hover_state("not_allowed")
+
+    ui.button("btn_help", "<white>help</white>", 0.4, 1.0, "", 1.0, 0.5)
+    ui.hover_state("help")
+
+    ui.button("btn_alert", "<white>alert</white>", 1.7, 1.0, "", 1.1, 0.5)
+    ui.hover_state("alert")
+
+    ui.button("btn_text", "<white>text</white>", 3.0, 1.0, "", 1.0, 0.5)
+    ui.hover_state("text")
+
+    ui.button("btn_crosshair", "<white>crosshair</white>", -2.6, 0.2, "", 1.5, 0.5)
+    ui.hover_state("crosshair")
+
+    ui.button("btn_zoom_in", "<white>zoom_in</white>", -0.9, 0.2, "", 1.3, 0.5)
+    ui.hover_state("zoom_in")
+
+    ui.button("btn_zoom_out", "<white>zoom_out</white>", 0.7, 0.2, "", 1.4, 0.5)
+    ui.hover_state("zoom_out")
+
+    ui.button("btn_move", "<white>move</white>", 2.4, 0.2, "", 1.0, 0.5)
+    ui.hover_state("move")
+
+    ui.button("btn_processing", "<white>processing</white>", -1.0, -0.6, "", 1.6, 0.5)
+    ui.hover_state("processing")
+
+    ui.scrollbar("demo_scrollbar", false, 0.0, -1.6, 2.4, 0.4, 0.5, "")
+    ui.on_hover("examples/virtualui_cursor_gallery.pf:on_scrollbar_armed")
+    ui.on_unhover("examples/virtualui_cursor_gallery.pf:on_scrollbar_released")
+
+    ui.label("status", "<gray>Hover a button to preview its cursor — no click needed", 0.0, -2.6)
+
+    built = ui.build()
+    built.show(Player)
+    Player.send_message("<aqua>Cursor gallery opened. <white>/virtualui close</white> to exit.")
+end
+
+def on_close():
+    Player.send_message("<gray>Cursor gallery closed.")
+end
+
+def on_scrollbar_armed(widget_id):
+    Player.send_actionbar("<yellow>Scrollbar armed — drag arms the 'hold' cursor automatically.")
+end
+
+def on_scrollbar_released(widget_id):
+    Player.send_actionbar("<gray>Scrollbar released.")
+end

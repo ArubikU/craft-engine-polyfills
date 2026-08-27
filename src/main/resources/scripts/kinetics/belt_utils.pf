@@ -1,0 +1,124 @@
+# Generic belt/depot take-and-give helpers for any machine that wants to pull from or push onto a
+# neighbor conveyor segment or container (depot, chest, another machine's own inventory) at a named
+# face, instead of hand-rolling Machine.belt_at/container_at + validation each time.
+#
+# `validator` (belt_take/depot_take): null accepts anything, a string is an item id or "#tag"
+# (Item.matches), an Item/ItemStack requires an exact match (Item.same_as / Container.pull_item's
+# own spec handling).
+# `amount` (optional): how many to take, default the whole stack found.
+# give-side (belt_give/depot_give) returns the LEFTOVER item — non-empty means it didn't fit/wasn't
+# accepted, so the caller should fall back (toss, try another face, ...).
+
+def _face_offset(face):
+    if face == "north":
+        return [0, 0, -1]
+    end
+    if face == "south":
+        return [0, 0, 1]
+    end
+    if face == "east":
+        return [1, 0, 0]
+    end
+    if face == "west":
+        return [-1, 0, 0]
+    end
+    if face == "up":
+        return [0, 1, 0]
+    end
+    if face == "down":
+        return [0, -1, 0]
+    end
+    return [0, 0, 0]
+end
+
+def _item_matches(item, validator):
+    if is_empty(item):
+        return false
+    end
+    if validator == null:
+        return true
+    end
+    if type_of(validator) == "str":
+        return item.matches(validator)
+    end
+    return item.same_as(validator)
+end
+
+# How close to fully arrived (progress toward 1.0) a carried item must be on a FEEDING belt
+# segment before belt_take will pull it — has_item alone is true for any item that just entered
+# the segment, even mid-transit toward some other destination; only one genuinely stalled at the
+# exit (blocked because this machine won't let it advance further) should actually be grabbed.
+BELT_TAKE_STALL_THRESHOLD = 0.99
+
+# Takes up to `amount` (default: the whole carried stack) from the belt at `face`, only if it
+# matches `validator` AND is actually stalled at the segment's exit (progress >= threshold —
+# see BELT_TAKE_STALL_THRESHOLD). Empty item if there's nothing there, it doesn't match, nothing
+# is carried, or it's still mid-transit.
+def belt_take(face, validator, amount):
+    off = _face_offset(face)
+    b = Machine.belt_at(off[0], off[1], off[2])
+    if !b.has_item || b.progress < BELT_TAKE_STALL_THRESHOLD:
+        return Item.create("minecraft:air")
+    end
+    carried = b.peek()
+    if !_item_matches(carried, validator):
+        return Item.create("minecraft:air")
+    end
+    taken = b.take()
+    want = amount == null ? item_count(taken) : amount
+    if want < item_count(taken):
+        remainder = MinecraftItem(taken.id, item_count(taken) - want)
+        b.put(remainder)
+        return MinecraftItem(taken.id, want)
+    end
+    return taken
+end
+
+# Pushes `item` onto the belt at `face`. Returns the leftover (empty if it all fit).
+def belt_give(face, item):
+    off = _face_offset(face)
+    b = Machine.belt_at(off[0], off[1], off[2])
+    return b.put(item)
+end
+
+# Same as belt_take, but for a depot (or any container-backed block) at `face`.
+def depot_take(face, validator, amount):
+    off = _face_offset(face)
+    c = Machine.container_at(off[0], off[1], off[2])
+    if c == null:
+        return Item.create("minecraft:air")
+    end
+    amt = amount == null ? 64 : amount
+    if validator == null:
+        return c.pull(amt)
+    end
+    return c.pull_item(validator, amt)
+end
+
+# Total count of items matching `validator` currently in the container at `face`, WITHOUT removing
+# anything — for a caller that needs "is there enough to take X at once" before actually pulling
+# (depot_take's own pull/pull_item always happily takes LESS than asked if that's all there is).
+def depot_count(face, validator):
+    off = _face_offset(face)
+    c = Machine.container_at(off[0], off[1], off[2])
+    if c == null:
+        return 0
+    end
+    total = 0
+    i = 0
+    while i < c.size:
+        total = total + (_item_matches(c.get_item(i), validator) ? item_count(c.get_item(i)) : 0)
+        i = i + 1
+    end
+    return total
+end
+
+# Same as belt_give, but for a depot (or any container-backed block) at `face`.
+def depot_give(face, item):
+    off = _face_offset(face)
+    c = Machine.container_at(off[0], off[1], off[2])
+    if c == null:
+        return item
+    end
+    return c.push(item)
+end

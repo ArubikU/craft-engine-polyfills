@@ -232,8 +232,18 @@ public final class MachineMenuConfig {
         public final List<String> lore;
         public final String lockedIcon;
         public final LockedWhen lockedWhen;
+        /** Optional, pre-built display item — see {@code MachineDefinition.ButtonSpec#customIcon()}.
+         *  Only ever non-null when bridged from a generator-produced {@code ButtonSpec} via {@link
+         *  dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity#toButton}; a plain
+         *  static YAML/JSON button never sets it. Ignored while the button is locked — the string
+         *  {@link #lockedIcon}/{@link #icon} path still governs the locked appearance. */
+        public final org.bukkit.inventory.ItemStack customIcon;
 
         public Button(int slot, String icon, Action action, String name, List<String> lore, String lockedIcon, LockedWhen lockedWhen) {
+            this(slot, icon, action, name, lore, lockedIcon, lockedWhen, null);
+        }
+
+        public Button(int slot, String icon, Action action, String name, List<String> lore, String lockedIcon, LockedWhen lockedWhen, org.bukkit.inventory.ItemStack customIcon) {
             this.slot = slot;
             this.icon = icon;
             this.action = action;
@@ -241,6 +251,7 @@ public final class MachineMenuConfig {
             this.lore = lore;
             this.lockedIcon = lockedIcon;
             this.lockedWhen = lockedWhen;
+            this.customIcon = customIcon;
         }
 
         /** Evaluate name with ${expr} inline scripts + MiniMessage parsing. */
@@ -274,28 +285,21 @@ public final class MachineMenuConfig {
             List<String> result = new ArrayList<>();
             for (String line : lore) {
                 if (line != null && line.contains(".pf:") && ctx != null) {
-                    // Try to call as a script function returning array of strings
+                    // Try to call as a script function returning array of strings — delegates to
+                    // ScriptCall (the one canonical "file.pf:func:args" parser/caller) instead of
+                    // hand-rolling the split+lookup here, which previously bypassed
+                    // UserFunction.call's normal param-binding/depth-guard path via direct
+                    // executor() access and had no way to pass ":args" at all.
                     try {
-                        String raw = line.trim();
-                        int colon = raw.indexOf(':');
-                        String scriptFile = raw.substring(0, colon);
-                        String funcName = raw.substring(colon + 1);
-                        String lookupKey = scriptFile.endsWith(".pf") ? scriptFile.substring(0, scriptFile.length() - 3) : scriptFile;
-                        dev.arubik.craftengine.script.ScriptProgram prog = dev.arubik.craftengine.script.ScriptRegistry.get(lookupKey);
-                        if (prog != null) {
-                            dev.arubik.craftengine.script.ScriptContext withDefs = prog.evaluate(ctx);
-                            dev.arubik.craftengine.script.ScriptValue fnVal = withDefs.getVar(funcName);
-                            if (fnVal instanceof dev.arubik.craftengine.script.ScriptValue.Obj fnObj
-                                    && fnObj.typeName().equals(dev.arubik.craftengine.script.UserFunction.TYPE)) {
-                                dev.arubik.craftengine.script.UserFunction fn = (dev.arubik.craftengine.script.UserFunction) fnObj.instance();
-                                dev.arubik.craftengine.script.ScriptContext.Builder rb = dev.arubik.craftengine.script.ScriptContext.builder().copyFrom(withDefs);
-                                fn.executor().accept(withDefs, rb);
-                                dev.arubik.craftengine.script.ScriptValue retVal = rb.build().getVar("__return__");
-                                if (retVal instanceof dev.arubik.craftengine.script.ScriptValue.Array arr) {
-                                    for (dev.arubik.craftengine.script.ScriptValue elem : arr.elements())
-                                        result.add(evaluateInline(elem.asStr(), ctx));
-                                    continue;
-                                }
+                        dev.arubik.craftengine.script.ScriptCall call = dev.arubik.craftengine.script.ScriptCall.parse(line.trim());
+                        if (call != null) {
+                            dev.arubik.craftengine.script.ScriptValue retVal = call.evaluate(ctx);
+                            if (retVal instanceof dev.arubik.craftengine.script.ScriptValue.Array arr) {
+                                for (dev.arubik.craftengine.script.ScriptValue elem : arr.elements())
+                                    result.add(evaluateInline(elem.asStr(), ctx));
+                                continue;
+                            }
+                            if (!(retVal instanceof dev.arubik.craftengine.script.ScriptValue.Null)) {
                                 result.add(evaluateInline(retVal.asStr(), ctx));
                                 continue;
                             }

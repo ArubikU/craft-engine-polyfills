@@ -1,0 +1,272 @@
+# Shared logic for polyfills:chute / polyfills:smart_chute — Create-alike item chute.
+# Each segment holds ONE real item stack (typed "item" storage — the FULL stack, not just an id
+# string + count, so anything beyond a bare vanilla item — enchantments, custom names, a
+# CraftEngine custom item's own component data — actually survives the trip instead of being
+# silently discarded) and passively falls it over CHUTE_STEP ticks: pulls from whatever container
+# sits directly above (chest, hopper, depot, another chute's hand-off) once empty, falling back to
+# vacuuming up a resting item entity directly above it (matches Create's own chutes sucking up
+# dropped items), then on completion either hands off directly into an empty polyfills chute at
+# its output offset (cross-machine typed write, same trick portable_storage_interface uses to
+# reach another machine) or pushes into a container there, or drops the item as a last resort.
+# "facing" ("down" or a horizontal direction) makes this segment DIAGONAL: down+sideways in that
+# direction each hand-off instead of straight down — sneak+right-click cycles it. Smart Chute adds
+# a single-item filter (right-click sets/clears, exactly like the saw) gating what it will pull,
+# and a redstone-power freeze. Either variant toggles its "window" (see-through) state when
+# right-clicked with any glass block/pane, matching Create's own chute window mechanic.
+
+import "utils.pf" { is_resting_item }
+import "kinetics/belt_utils.pf" { depot_take, depot_give, depot_count }
+
+# chute.json/smart_chute.json's item_display hardcodes this as "20.0" for the falling-item
+# animation (the chute is a solid block — a real dropped item entity can't fall through it, so the
+# whole "item sliding down" visual is this renderer, gated on window mode) — keep in sync.
+CHUTE_STEP = 20
+
+DIR_VEC = make_map(
+"north", [0, 0, -1],
+"south", [0, 0, 1],
+"east",  [1, 0, 0],
+"west",  [-1, 0, 0]
+)
+FACING_CYCLE = ["down", "north", "east", "south", "west"]
+
+def _chute_filter_id():
+    f = Machine.get_typed("_chute_filter", "str")
+    return (f == null || f == "") ? null : f
+end
+
+# Smart Chute's own configurable pull amount (shift+right-click opens a slider dialog to set this):
+# -1 = any amount (default, matches the plain Chute's own "whatever's there" pulling), 0..64 = pull
+# exactly that many per transfer, never more, never less (a 0 setting effectively pauses pulling).
+def _chute_pull_amount():
+    a = Machine.get_typed("_chute_pull_amount", "int")
+    return (a == null) ? -1 : a
+end
+
+# Max is 64 with no filter set, or the FILTERED item's own max stack size (e.g. 16 for ender
+# pearls, 1 for a bucket) once one is — no point offering a slider up to 64 for something that can
+# never actually carry more than its own real stack cap.
+def _chute_amount_max():
+    filter_id = _chute_filter_id()
+    if filter_id == null:
+        return 64
+    end
+    return Item.create(filter_id).max_count
+end
+
+def _chute_open_amount_dialog():
+    max = _chute_amount_max()
+    current = _chute_pull_amount()
+    initial = current > max ? max : current
+    Dialog.base("Pull Amount").input_number("amount", "Amount (-1 = any)", -1, max, 1, initial).on_close("storage/chute_utils.pf:_chute_on_amount_dialog_closed").as_notice(Machine, "Set", "storage/chute_utils.pf:_chute_on_amount_dialog_submit").show(Player)
+end
+
+def _chute_on_amount_dialog_submit(amount):
+    Machine.set_typed("_chute_pull_amount", "int", amount)
+end
+
+# Smart Chute has no menu at all (flags.ui:false) — this dialog is opened directly from a block
+# right-click, never from within a machine GUI, so there is nothing to "return to" once it closes.
+def _chute_on_amount_dialog_closed():
+    return null
+end
+
+# The offset this segment hands off toward: straight down for "down" facing, or down-and-sideways
+# in the named horizontal direction for a diagonal one.
+def _chute_out_offset():
+    facing = Machine.block.property("facing")
+    if facing == null || facing == "down":
+        return [0, -1, 0]
+    end
+    v = DIR_VEC.switch(facing, [0, 0, 0])
+    return [v[0], -1, v[2]]
+end
+
+# Returns [machine, is_smart] for the neighbor chute at this segment's output offset, or null if
+# there isn't one there — the caller needs is_smart too, since a plain chute below must never
+# receive more than PLAIN_TRANSFER_CAP at once regardless of what the GIVING chute is holding.
+def _chute_out_chute():
+    off = _chute_out_offset()
+    below = Machine.block_at(off[0], off[1], off[2])
+    if below == null || (below.id != "cml:chute" && below.id != "cml:smart_chute"):
+        return null
+    end
+    return [below.machine, below.id == "cml:smart_chute"]
+end
+
+def _chute_give_out(item):
+    off = _chute_out_offset()
+    c = Machine.container_at(off[0], off[1], off[2])
+    if c == null:
+        return item
+    end
+    return c.push(item)
+end
+
+# Plain Chute moves at most PLAIN_TRANSFER_CAP items per pull (a house rule for this addon, not
+# from Create) — Smart Chute has no such cap.
+PLAIN_TRANSFER_CAP = 16
+
+def _chute_pull(smart):
+    validator = smart ? _chute_filter_id() : null
+    cap = PLAIN_TRANSFER_CAP
+    exact = false
+    if smart:
+        set_amount = _chute_pull_amount()
+        if set_amount < 0:
+            cap = null
+        else:
+            cap = min(set_amount, _chute_amount_max())
+            exact = true
+        end
+    end
+
+    # An "exact amount" setting (not -1/any) means don't take ANY until there's at least that
+    # much available — a partial grab (whatever depot_take/an entity's own stack happens to have)
+    # isn't good enough once the player asked for a specific count.
+    if !exact || depot_count("up", validator) >= cap:
+        taken = depot_take("up", validator, cap)
+        if !is_empty(taken):
+            return taken
+        end
+    end
+
+    for entity in Machine.nearby_entities(0.6):
+        # entity.pos.y >= Machine.y excludes anything sitting BELOW this chute — without it, an
+        # item this SAME chute just dropped (nothing below to catch it) sits right under it and
+        # gets immediately vacuumed back up next tick, forever: drop, re-suck, drop, re-suck.
+        # Create's real chute only ever absorbs from above/at its own body, never from what it just
+        # ejected downward.
+        if is_resting_item(entity) && entity.pos.y >= Machine.y:
+            item = entity.item
+            if validator == null || item.matches(validator):
+                full = item_count(item)
+                if exact && full < cap:
+                    continue
+                end
+                if !smart && full > PLAIN_TRANSFER_CAP:
+                    entity.set_item(MinecraftItem(item.id, full - PLAIN_TRANSFER_CAP))
+                    return item.with_count(PLAIN_TRANSFER_CAP)
+                end
+                if exact && full > cap:
+                    entity.set_item(MinecraftItem(item.id, full - cap))
+                    return item.with_count(cap)
+                end
+                entity.remove()
+                return item
+            end
+        end
+    end
+    return Item.create("minecraft:air")
+end
+
+def _chute_sync_powered(smart):
+    if !smart:
+        return
+    end
+    cur = Machine.block.property("powered")
+    want = Machine.redstone.powered ? "true" : "false"
+    if cur != null && cur != want:
+        Machine.set_property("powered", want)
+    end
+end
+
+def _chute_tick(smart):
+    _chute_sync_powered(smart)
+    if smart && Machine.redstone.powered:
+        return
+    end
+
+    holding = Machine.get_typed("_chute_item", "item")
+    if is_empty(holding):
+        taken = _chute_pull(smart)
+        if !is_empty(taken):
+            Machine.set_typed("_chute_item", "item", taken)
+            Machine.set_typed("_chute_progress", "int", 0)
+        end
+        return
+    end
+
+    progress = Machine.get_typed("_chute_progress", "int")
+    if progress == null:
+        progress = 0
+    end
+    progress = progress + 1
+    if progress < CHUTE_STEP:
+        Machine.set_typed("_chute_progress", "int", progress)
+        return
+    end
+
+    below_info = _chute_out_chute()
+    if below_info != null:
+        below = below_info[0]
+        below_is_smart = below_info[1]
+        below_holding = below.get_typed("_chute_item", "item")
+        if is_empty(below_holding):
+            full = item_count(holding)
+            # A plain chute below can never carry more than PLAIN_TRANSFER_CAP at once, no matter
+            # how much the GIVING chute (smart, uncapped) is holding — otherwise a smart chute's
+            # hand-off silently bypasses the receiving plain chute's own 16-item limit.
+            if !below_is_smart && full > PLAIN_TRANSFER_CAP:
+                below.set_typed("_chute_item", "item", holding.with_count(PLAIN_TRANSFER_CAP))
+                Machine.set_typed("_chute_item", "item", holding.with_count(full - PLAIN_TRANSFER_CAP))
+            else:
+                below.set_typed("_chute_item", "item", holding)
+                Machine.set_typed("_chute_item", "item", null)
+            end
+            below.set_typed("_chute_progress", "int", 0)
+            Machine.set_typed("_chute_progress", "int", 0)
+        end
+        return
+    end
+
+    leftover = _chute_give_out(holding)
+    if !is_empty(leftover):
+        # Machine.drop_item_toward spawns AT the chute's OWN block center (only velocity is
+        # offset), so the entity starts inside this same chute's ground-vacuum range and gets
+        # sucked right back up before gravity ever pulls it clear — drop_item_at spawns it
+        # directly at the target block, with its item set atomically in the same constructor
+        # call (unlike World.spawn_entity + a separate set_item after, which creates the entity
+        # EMPTY first — vanilla ItemEntity discards itself on an empty tick, and depending on
+        # timing the item can vanish before set_item ever reaches it).
+        off = _chute_out_offset()
+        Machine.drop_item_at(leftover, off[0], off[1], off[2])
+    end
+    Machine.set_typed("_chute_item", "item", null)
+    Machine.set_typed("_chute_progress", "int", 0)
+end
+
+def _chute_toggle_window():
+    win = Machine.get_typed("_chute_window", "int")
+    win = (win == null || win == 0) ? 1 : 0
+    Machine.set_typed("_chute_window", "int", win)
+    Machine.set_property("window", win == 1 ? "true" : "false")
+end
+
+def _chute_cycle_facing():
+    cur = Machine.block.property("facing")
+    if cur == null:
+        cur = "down"
+    end
+    idx = 0
+    for f in FACING_CYCLE:
+        if f == cur:
+            break
+        end
+        idx = idx + 1
+    end
+    next = FACING_CYCLE[(idx + 1) % size(FACING_CYCLE)]
+    Machine.set_property("facing", next)
+end
+
+def _is_glass_item(id):
+    return id != null && contains(id, "glass")
+end
+
+# Whatever this segment was mid-transfer when it broke shouldn't just vanish with the block.
+def _chute_drop_held():
+    holding = Machine.get_typed("_chute_item", "item")
+    if !is_empty(holding):
+        Machine.drop_item(holding)
+    end
+end

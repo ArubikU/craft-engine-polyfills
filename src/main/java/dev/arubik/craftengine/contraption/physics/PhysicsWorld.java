@@ -93,6 +93,15 @@ public final class PhysicsWorld {
     private static final double COM_SMOOTH_SHIFT_MAX = 1.0;
     private static final Map<UUID, Entry> ENTRIES = new HashMap<UUID, Entry>();
     private static final Set<UUID> HELD = ConcurrentHashMap.newKeySet();
+    // Per-contraption set of INDEPENDENT hold registrations (e.g. one entry per drill riding the
+    // same contraption) — the contraption stays held as long as ANY registration is still active,
+    // and only resumes once every registrant has released. This is deliberately separate from
+    // HELD/setHeld above (a single on/off flag): that one backs the creative phys-wand's grab
+    // gesture, a single-owner action where "grabbed"/"not grabbed" is genuinely a plain boolean.
+    // Multiple script-driven holders (Contraption.hold()/release(), see ContraptionType) sharing
+    // ONE boolean would let whichever one releases FIRST resume the whole contraption out from
+    // under every other holder still mid-cut — see isHeld()'s combination of both sources below.
+    private static final Map<UUID, Set<Object>> HOLD_REGISTRY = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<UUID, Integer> RELEASE_DAMPING = new ConcurrentHashMap();
     private static final int RELEASE_DAMPING_TICKS = 5;
     private static volatile boolean ASYNC = true;
@@ -132,7 +141,41 @@ public final class PhysicsWorld {
     }
 
     public static boolean isHeld(UUID contraptionId) {
-        return HELD.contains(contraptionId);
+        if (HELD.contains(contraptionId)) {
+            return true;
+        }
+        Set<Object> holders = HOLD_REGISTRY.get(contraptionId);
+        return holders != null && !holders.isEmpty();
+    }
+
+    /** Registers {@code holderKey} as holding {@code contraptionId} — the contraption stays held
+     *  (see {@link #isHeld}) until every key registered against it has called {@link #release}. Safe
+     *  to call repeatedly with the same key (a no-op re-registration, not a second independent hold
+     *  needing two releases). */
+    public static void hold(UUID contraptionId, Object holderKey) {
+        if (contraptionId == null || holderKey == null) {
+            return;
+        }
+        HOLD_REGISTRY.computeIfAbsent(contraptionId, id -> ConcurrentHashMap.newKeySet()).add(holderKey);
+        RELEASE_DAMPING.remove(contraptionId);
+    }
+
+    /** Un-registers {@code holderKey}. Only actually releases the contraption once this was the
+     *  LAST remaining holder for it (see {@link #isHeld}'s "any registration = held" semantics) — a
+     *  no-op if {@code holderKey} was never registered or other holders remain. */
+    public static void release(UUID contraptionId, Object holderKey) {
+        if (contraptionId == null || holderKey == null) {
+            return;
+        }
+        Set<Object> holders = HOLD_REGISTRY.get(contraptionId);
+        if (holders == null) {
+            return;
+        }
+        holders.remove(holderKey);
+        if (holders.isEmpty()) {
+            HOLD_REGISTRY.remove(contraptionId);
+            RELEASE_DAMPING.put(contraptionId, 5);
+        }
     }
 
     private static boolean anyPlayerNear(ServerLevel level, ContraptionState state) {

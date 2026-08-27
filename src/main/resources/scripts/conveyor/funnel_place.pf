@@ -1,0 +1,39 @@
+# Funnel placement routing — machine-ified from the old FunnelPlaceListener.java. The single
+# cml:funnel item places a different block depending on which face was clicked: top -> floor
+# funnel, bottom -> ceiling funnel, any side -> the belt-facing funnel (facing set to that side).
+
+def on_right_click():
+    clicked = event.clicked_block
+    face = event.clicked_face
+    if clicked == null || face == null:
+        return
+    end
+    if !Player.is_sneaking && clicked.is_container:
+        return
+    end
+    target = clicked.relative(face)
+    if !target.is_air:
+        return
+    end
+
+    block_id = "cml:funnel"
+    props = null
+    if face == "up":
+        block_id = "cml:floor_funnel"
+    else if face == "down":
+        block_id = "cml:ceiling_funnel"
+    else:
+        props = make_map("facing", face)
+    end
+
+    placed = target.place_custom(block_id, props)
+    event.cancel()
+    if !placed:
+        return
+    end
+
+    if !Player.is_creative:
+        Player.remove_item("main_hand", 1)
+    end
+    target.play_sound("minecraft:block.copper.place", 1.0, 1.0)
+end

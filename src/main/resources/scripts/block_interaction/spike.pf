@@ -1,0 +1,30 @@
+# Spike Trap — damages entities on contact. Slot 0 weapon scales damage. Owner immune.
+
+cooldown = Machine.get_typed("atk_cd", "int")
+
+if cooldown > 0:
+    Machine.set_typed("atk_cd", "int", cooldown - 1)
+else:
+    weapon   = Machine.container.get_item(0)
+    base_dmg = is_empty(weapon) ? 2.0 : weapon.attack_damage
+    owner_id = Machine.owner_uuid
+    entities = Machine.nearby_entities(0.8)
+    hit_count = 0
+
+    for entity in entities:
+        if entity.is_alive && instanceof(entity, "LivingEntity"):
+            is_owner = owner_id != null && entity.uuid == owner_id
+            if !is_owner:
+                entity.damage(base_dmg)
+                hit_count++
+            end
+        end
+    end
+
+    if hit_count > 0:
+        Machine.set_typed("atk_cd", "int", 10)
+    end
+end
+
+
+

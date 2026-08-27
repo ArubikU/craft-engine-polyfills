@@ -1,0 +1,235 @@
+{
+  "id": "polyfills:item_pipe_panel",
+  "title": "Item Pipe",
+  "flags": {
+    "recipes": false,
+    "fuel": false,
+    "redstone": true,
+    "continuous_fuel": false,
+    "ui": true,
+    "ui_tick": true,
+    "io_pull": true,
+    "renderers": true,
+    "scripts": true,
+    "animations": true,
+    "kinetics": false
+  },
+  "action_script": "storage/item_pipe_panel",
+  "action_interval": 1,
+  "on_pipe_transfer": "storage/item_pipe_panel.pf:filter_item",
+  "pages": [
+    {
+      "title": "Item Pipe",
+      "size": 27,
+      "buttons": [
+        {
+          "slot": 0,
+          "icon": "cml:plus_icon",
+          "action": "item_pipe_panel.pf:mode_north",
+          "name": "<gray>North: <yellow>${if(Machine.neighbor_block('north').is_container,if(Machine.io_get('item','input','north') && Machine.io_get('item','output','north'),'Both',if(Machine.io_get('item','input','north'),'Input',if(Machine.io_get('item','output','north'),'Output','Disabled'))),if(Machine.io_get('item','input','north') || Machine.io_get('item','output','north'),'Connected','Disabled'))}",
+          "lore": [
+            "<dark_gray>Click to cycle Disabled → Input → Output → Both"
+          ]
+        },
+        {
+          "slot": 1,
+          "icon": "cml:plus_icon",
+          "action": "item_pipe_panel.pf:mode_south",
+          "name": "<gray>South: <yellow>${if(Machine.neighbor_block('south').is_container,if(Machine.io_get('item','input','south') && Machine.io_get('item','output','south'),'Both',if(Machine.io_get('item','input','south'),'Input',if(Machine.io_get('item','output','south'),'Output','Disabled'))),if(Machine.io_get('item','input','south') || Machine.io_get('item','output','south'),'Connected','Disabled'))}",
+          "lore": [
+            "<dark_gray>Click to cycle Disabled → Input → Output → Both"
+          ]
+        },
+        {
+          "slot": 2,
+          "icon": "cml:plus_icon",
+          "action": "item_pipe_panel.pf:mode_east",
+          "name": "<gray>East: <yellow>${if(Machine.neighbor_block('east').is_container,if(Machine.io_get('item','input','east') && Machine.io_get('item','output','east'),'Both',if(Machine.io_get('item','input','east'),'Input',if(Machine.io_get('item','output','east'),'Output','Disabled'))),if(Machine.io_get('item','input','east') || Machine.io_get('item','output','east'),'Connected','Disabled'))}",
+          "lore": [
+            "<dark_gray>Click to cycle Disabled → Input → Output → Both"
+          ]
+        },
+        {
+          "slot": 3,
+          "icon": "cml:plus_icon",
+          "action": "item_pipe_panel.pf:mode_west",
+          "name": "<gray>West: <yellow>${if(Machine.neighbor_block('west').is_container,if(Machine.io_get('item','input','west') && Machine.io_get('item','output','west'),'Both',if(Machine.io_get('item','input','west'),'Input',if(Machine.io_get('item','output','west'),'Output','Disabled'))),if(Machine.io_get('item','input','west') || Machine.io_get('item','output','west'),'Connected','Disabled'))}",
+          "lore": [
+            "<dark_gray>Click to cycle Disabled → Input → Output → Both"
+          ]
+        },
+        {
+          "slot": 4,
+          "icon": "cml:plus_icon",
+          "action": "item_pipe_panel.pf:mode_up",
+          "name": "<gray>Up: <yellow>${if(Machine.neighbor_block('up').is_container,if(Machine.io_get('item','input','up') && Machine.io_get('item','output','up'),'Both',if(Machine.io_get('item','input','up'),'Input',if(Machine.io_get('item','output','up'),'Output','Disabled'))),if(Machine.io_get('item','input','up') || Machine.io_get('item','output','up'),'Connected','Disabled'))}",
+          "lore": [
+            "<dark_gray>Click to cycle Disabled → Input → Output → Both"
+          ]
+        },
+        {
+          "slot": 5,
+          "icon": "cml:plus_icon",
+          "action": "item_pipe_panel.pf:mode_down",
+          "name": "<gray>Down: <yellow>${if(Machine.neighbor_block('down').is_container,if(Machine.io_get('item','input','down') && Machine.io_get('item','output','down'),'Both',if(Machine.io_get('item','input','down'),'Input',if(Machine.io_get('item','output','down'),'Output','Disabled'))),if(Machine.io_get('item','input','down') || Machine.io_get('item','output','down'),'Connected','Disabled'))}",
+          "lore": [
+            "<dark_gray>Click to cycle Disabled → Input → Output → Both"
+          ]
+        },
+        {
+          "slot": 9,
+          "icon": "cml:minus_icon",
+          "action": "item_pipe_panel.pf:redstone_north",
+          "name": "<gray>North: <yellow>${if(Machine.io_get('redstone','input','north'),'Required','Not Required')}",
+          "lore": [
+            "<dark_gray>Click to toggle whether a redstone signal is required"
+          ]
+        },
+        {
+          "slot": 10,
+          "icon": "cml:minus_icon",
+          "action": "item_pipe_panel.pf:redstone_south",
+          "name": "<gray>South: <yellow>${if(Machine.io_get('redstone','input','south'),'Required','Not Required')}",
+          "lore": [
+            "<dark_gray>Click to toggle whether a redstone signal is required"
+          ]
+        },
+        {
+          "slot": 11,
+          "icon": "cml:minus_icon",
+          "action": "item_pipe_panel.pf:redstone_east",
+          "name": "<gray>East: <yellow>${if(Machine.io_get('redstone','input','east'),'Required','Not Required')}",
+          "lore": [
+            "<dark_gray>Click to toggle whether a redstone signal is required"
+          ]
+        },
+        {
+          "slot": 12,
+          "icon": "cml:minus_icon",
+          "action": "item_pipe_panel.pf:redstone_west",
+          "name": "<gray>West: <yellow>${if(Machine.io_get('redstone','input','west'),'Required','Not Required')}",
+          "lore": [
+            "<dark_gray>Click to toggle whether a redstone signal is required"
+          ]
+        },
+        {
+          "slot": 13,
+          "icon": "cml:minus_icon",
+          "action": "item_pipe_panel.pf:redstone_up",
+          "name": "<gray>Up: <yellow>${if(Machine.io_get('redstone','input','up'),'Required','Not Required')}",
+          "lore": [
+            "<dark_gray>Click to toggle whether a redstone signal is required"
+          ]
+        },
+        {
+          "slot": 14,
+          "icon": "cml:minus_icon",
+          "action": "item_pipe_panel.pf:redstone_down",
+          "name": "<gray>Down: <yellow>${if(Machine.io_get('redstone','input','down'),'Required','Not Required')}",
+          "lore": [
+            "<dark_gray>Click to toggle whether a redstone signal is required"
+          ]
+        },
+        {
+          "slot": 18,
+          "icon": "cml:upgrade_button",
+          "action": "item_pipe_panel.pf:filter_north",
+          "name": "<yellow>North — edit item filter"
+        },
+        {
+          "slot": 19,
+          "icon": "cml:upgrade_button",
+          "action": "item_pipe_panel.pf:filter_south",
+          "name": "<yellow>South — edit item filter"
+        },
+        {
+          "slot": 20,
+          "icon": "cml:upgrade_button",
+          "action": "item_pipe_panel.pf:filter_east",
+          "name": "<yellow>East — edit item filter"
+        },
+        {
+          "slot": 21,
+          "icon": "cml:upgrade_button",
+          "action": "item_pipe_panel.pf:filter_west",
+          "name": "<yellow>West — edit item filter"
+        },
+        {
+          "slot": 22,
+          "icon": "cml:upgrade_button",
+          "action": "item_pipe_panel.pf:filter_up",
+          "name": "<yellow>Up — edit item filter"
+        },
+        {
+          "slot": 23,
+          "icon": "cml:upgrade_button",
+          "action": "item_pipe_panel.pf:filter_down",
+          "name": "<yellow>Down — edit item filter"
+        }
+      ]
+    },
+    {
+      "title": "Item Filter",
+      "size": 27,
+      "layout": [
+        {
+          "slot": 22,
+          "item": "cml:gui_empty",
+          "name": "<yellow>How to edit this filter",
+          "lore": [
+            "<gray>Left-click a slot with an item to filter by it.",
+            "<gray>Right-click a slot to clear it.",
+            "<dark_gray>Every click saves immediately — nothing to lose."
+          ]
+        }
+      ],
+      "ghost_slots": [
+        {
+          "slots": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8
+          ],
+          "get": "item_pipe_panel.pf:ghost_get",
+          "set": "item_pipe_panel.pf:ghost_set",
+          "empty_icon": "cml:gui_empty"
+        }
+      ],
+      "buttons": [
+        {
+          "slot": 13,
+          "icon": "cml:overclock_button",
+          "action": "item_pipe_panel.pf:cycle_filter_matchmode",
+          "name": "item_pipe_panel.pf:filter_matchmode_label",
+          "lore": [
+            "<dark_gray>Equals: same item + components + stack count.",
+            "<dark_gray>Seamsly: same item + components, any count.",
+            "<dark_gray>Id: only the base item type."
+          ]
+        },
+        {
+          "slot": 11,
+          "icon": "cml:overclock_button",
+          "action": "item_pipe_panel.pf:toggle_filter_whitelist",
+          "name": "<gray>Toggle Whitelist / Blacklist",
+          "lore": [
+            "<dark_gray>Whitelist: only listed items pass.",
+            "<dark_gray>Blacklist: everything EXCEPT listed items passes."
+          ]
+        },
+        {
+          "slot": 15,
+          "icon": "cml:return_icon",
+          "action": "open_page:0",
+          "name": "<lang:polyfill.ui.back>"
+        }
+      ]
+    }
+  ]
+}

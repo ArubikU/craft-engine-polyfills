@@ -107,6 +107,18 @@ WorldlyContainerHolder {
                 System.out.println("[MachineIO] getContainer @" + pos.toShortString() + " be=" + (be == null ? "null" : (be.controller == null ? "no-controller" : be.controller.getClass().getSimpleName())));
             }
             if (be != null && (blockEntityController = be.controller) instanceof Container) {
+                // This is the TRUE single choke point for "what container does this custom block
+                // expose" — reached both by our own ItemTransferHelper fallback AND (crucially)
+                // CraftEngine's own vanilla-hopper/comparator compatibility hooks, which call this
+                // WorldlyContainerHolder capability DIRECTLY and never go through
+                // ItemTransferHelper at all. Without checking on_get_container here too, a vanilla
+                // hopper sitting on a Portable Storage Interface (or any future on_get_container
+                // user) would only ever see the machine's own raw (empty) inventory — exactly what
+                // was happening before this check existed.
+                if (blockEntityController instanceof AbstractMachineBlockEntity machine) {
+                    var override = machine.resolveContainerOverride();
+                    if (override.isPresent()) return override.get();
+                }
                 Container c = (Container)blockEntityController;
                 return c;
             }

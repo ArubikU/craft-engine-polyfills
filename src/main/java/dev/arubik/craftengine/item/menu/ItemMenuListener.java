@@ -42,17 +42,37 @@ public final class ItemMenuListener implements Listener {
     public void onClick(InventoryClickEvent event) {
         if (!(event.getInventory().getHolder() instanceof ItemMenu menu)) return;
 
-        // Pressing Q over the EXACT inventory slot this menu's own item is sitting in (it stays
-        // there the whole time the menu is open — see ItemMenu#openPage/onClose) would drop the
-        // backing item while its menu is still showing a view into it, leaving the open menu
-        // pointing at nothing and any later edits nowhere to land. The item isn't removed from
-        // its slot on open, so nothing else guards against this — deny it structurally rather than
-        // leaving it to chance, same as button/ghost/background slots below are always immovable.
-        if (!menu.offhand() && isDropAction(event.getAction())
-                && event.getClickedInventory() == event.getWhoClicked().getInventory()
+        // ANY action that could move/replace the item sitting in the EXACT inventory slot this
+        // menu's own item occupies (it stays there the whole time the menu is open — see
+        // ItemMenu#openPage/onClose) must be denied — not just dropping it. onClose unconditionally
+        // does player.getInventory().setItem(originatingSlot, updated): if the backing item was
+        // moved OUT of that slot by anything else while the menu was open (dropped, but ALSO
+        // hotbar-swapped, shift-clicked via a bulk action, etc.) and something else now occupies
+        // that slot — or nothing does — onClose's write creates a FRESH re-serialized copy there
+        // while the original stack the player relocated is still sitting wherever they moved it:
+        // a real duplication (worse still if that "somewhere else" was one of THIS menu's own
+        // storage slots — the saved-back copy then has itself nested as one of its own contents).
+        // Was previously only checked for drop actions; that's what actually let a plain hotbar
+        // number-key press (HOTBAR_SWAP) on this exact slot duplicate the item.
+        if (!menu.offhand() && event.getClickedInventory() == event.getWhoClicked().getInventory()
                 && event.getSlot() == menu.originatingSlot()) {
             event.setCancelled(true);
-            if (event.getWhoClicked() instanceof Player player) runDropBlockedHook(menu, player);
+            if (isDropAction(event.getAction()) && event.getWhoClicked() instanceof Player player) {
+                runDropBlockedHook(menu, player);
+            }
+            return;
+        }
+        // HOTBAR_SWAP can ALSO target the anchor slot while a DIFFERENT slot (one of this menu's
+        // own, e.g.) is the one actually clicked — Bukkit swaps the clicked slot's contents with
+        // whatever is in the hotbar slot named by getHotbarButton(), regardless of which inventory
+        // the click landed in. That would yank the real backing item out of its anchor slot into
+        // the menu itself (nesting it into its own storage) the same way the direct-click case above
+        // does, just via the opposite slot. menu.originatingSlot() is a PlayerInventory index (0-35,
+        // set from wherever the item was held), matching getHotbarButton()'s 0-8 range directly when
+        // the item was held from the hotbar — the only case this swap could ever reach it.
+        if (!menu.offhand() && event.getAction() == InventoryAction.HOTBAR_SWAP
+                && event.getHotbarButton() == menu.originatingSlot()) {
+            event.setCancelled(true);
             return;
         }
 
@@ -217,6 +237,7 @@ public final class ItemMenuListener implements Listener {
                     .event(new dev.arubik.craftengine.script.event.GhostSlotEvent(slot, clickedIdStr, clickTypeName));
             b.val("clicked_item", cursorEmpty ? ScriptValue.NULL
                     : ScriptValue.ofItem(CraftItemStack.asNMSCopy(cursor)));
+            bindCommonNamespaces(b);
             call.execute(b.build());
             menu.render();
         } catch (Throwable ignored) {
@@ -232,15 +253,24 @@ public final class ItemMenuListener implements Listener {
             if (call == null) return stack;
             net.minecraft.server.level.ServerPlayer sp =
                     ((org.bukkit.craftbukkit.entity.CraftPlayer) player).getHandle();
-            ScriptContext ctx = ScriptContext.builder().item("item", stack).player(sp)
-                    .event(new dev.arubik.craftengine.script.event.ButtonEvent(slot, clickType))
-                    .build();
+            ScriptContext.Builder b = ScriptContext.builder().item("item", stack).player(sp)
+                    .event(new dev.arubik.craftengine.script.event.ButtonEvent(slot, clickType));
+            bindCommonNamespaces(b);
+            ScriptContext ctx = b.build();
             ScriptContext result = call.execute(ctx);
             ScriptValue iv = result.getVar("item");
             if (iv instanceof ScriptValue.Item itemVal && itemVal.stack() != null) return itemVal.stack();
         } catch (Throwable ignored) {
         }
         return stack;
+    }
+
+    /** Same namespace singletons every OTHER script-firing entry point in this codebase binds (Cmd
+     *  execution, the generic events bridge, TaskManager, machine scripts) — an item-menu button/
+     *  ghost-slot/drop-blocked script is just as likely to want to open ANOTHER menu, show a
+     *  dialog, schedule a task, or register a temporary event listener as any of those. */
+    private static void bindCommonNamespaces(ScriptContext.Builder b) {
+        b.typedAll(dev.arubik.craftengine.script.ScriptBootstrap.globalSingletons());
     }
 
     private static String itemStackId(org.bukkit.inventory.ItemStack stack) {
@@ -268,9 +298,10 @@ public final class ItemMenuListener implements Listener {
             if (call == null) return;
             net.minecraft.server.level.ServerPlayer sp =
                     ((org.bukkit.craftbukkit.entity.CraftPlayer) player).getHandle();
-            ScriptContext ctx = ScriptContext.builder().item("item", menu.workingStack()).player(sp)
-                    .event(new dev.arubik.craftengine.script.event.ItemActionEvent("on_drop_blocked"))
-                    .build();
+            ScriptContext.Builder b = ScriptContext.builder().item("item", menu.workingStack()).player(sp)
+                    .event(new dev.arubik.craftengine.script.event.ItemActionEvent("on_drop_blocked"));
+            bindCommonNamespaces(b);
+            ScriptContext ctx = b.build();
             call.execute(ctx);
         } catch (Throwable ignored) {}
     }

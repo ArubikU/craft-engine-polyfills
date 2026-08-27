@@ -1,0 +1,24 @@
+# Pulser — timed pulse. On rising edge, outputs for N ticks then off.
+duration = Machine.get_typed("duration", "int")
+if duration <= 0:
+    duration = 10
+end
+
+prev = Machine.get_typed("prev_power", "int")
+cur = Machine.redstone > 0 ? 1 : 0
+
+if cur == 1 && prev == 0:
+    Machine.set_typed("countdown", "int", duration)
+end
+
+t = Machine.get_typed("countdown", "int")
+if t > 0:
+    Machine.emit_redstone(15)
+    Machine.set_typed("countdown", "int", t - 1)
+else:
+    Machine.emit_redstone(0)
+end
+Machine.set_typed("prev_power", "int", cur)
+
+
+

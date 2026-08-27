@@ -1,0 +1,139 @@
+# Recipe info helper — use in layout slots:
+#   { "slot": 4, "item": "recipe_info.pf:item", "name": "recipe_info.pf:name", "lore": ["recipe_info.pf:lore"] }
+#
+# Shows, based on the current working_recipe (actively processing) or matching_recipe (would start
+# if powered): the real output item as the icon + display name, a live progress bar, outputs with
+# drop chance + craft/min, ingredients, and whichever of RPM / SU / item fuel (coal, ...) / CraftEnergy
+# the recipe actually needs — each section only appears when the recipe actually uses that resource,
+# so a plain no-power recipe doesn't show three empty power lines.
+
+def _recipe():
+    recipe = Machine.working_recipe
+    if recipe == null:
+        recipe = Machine.matching_recipe
+    end
+    return recipe
+end
+
+def _bar(percent, width, full_color, empty_color):
+    filled = floor(width * clamp(percent, 0, 100) / 100)
+    bar = ""
+    i = 0
+    while i < width:
+        bar = bar + (i < filled ? full_color + "█" : empty_color + "░")
+        i = i + 1
+    end
+    return bar
+end
+
+def _div():
+    return "<dark_gray><st>                              "
+end
+
+def item():
+    recipe = _recipe()
+    if recipe == null:
+        return "minecraft:barrier"
+    end
+    if recipe.outputs.length > 0:
+        first_item = first(recipe.outputs)
+        if !is_empty(first_item):
+            return first_item
+        end
+    end
+    return "minecraft:book"
+end
+
+def name():
+    recipe = _recipe()
+    if recipe == null:
+        return "<red><b>No Recipe"
+    end
+    if recipe.outputs.length == 0:
+        return "<gold><b>⚙ Recipe"
+    end
+    first_item = first(recipe.outputs)
+    if is_empty(first_item):
+        return "<gold><b>⚙ Recipe"
+    end
+    label = "<gold><b>" + first_item.name
+    if Machine.working_recipe != null:
+        return label + " <yellow>" + floor(Machine.progress_percent) + "%"
+    end
+    return label + " <dark_gray>(idle)"
+end
+
+def lore():
+    recipe = _recipe()
+    if recipe == null:
+        return ["<gray>No matching recipe for what's inside"]
+    end
+
+    eff_ticks = max(1, recipe.processing_time)
+    crafts_per_min = 1200 / eff_ticks
+    working = Machine.working_recipe != null
+
+    lines = []
+
+    if working:
+        lines = push(lines, _bar(Machine.progress_percent, 14, "<green>", "<dark_gray>") + " <white>" + floor(Machine.progress_percent) + "%")
+    else:
+        lines = push(lines, "<gray><i>Waiting to start…")
+    end
+    lines = push(lines, _div())
+
+    # Outputs — real display name, count, drop chance if not guaranteed, craft/min estimate.
+    lines = push(lines, "<white><b>OUTPUT")
+    out_i = 0
+    for out_item in recipe.outputs:
+        if !is_empty(out_item):
+            chance = recipe.output_chances.get(out_i)
+            per_min = round(crafts_per_min * out_item.count * chance * 10) / 10
+            line = "<green>➤ <white>" + out_item.name + " <gray>x" + out_item.count
+            if chance < 1:
+                line = line + " <gold>(" + floor(chance * 100) + "%)"
+            end
+            lines = push(lines, line)
+            lines = push(lines, "<dark_gray>   " + per_min + "/min")
+        end
+        out_i = out_i + 1
+    end
+
+    # Ingredients
+    if recipe.inputs.length > 0:
+        lines = push(lines, _div())
+        lines = push(lines, "<white><b>INGREDIENTS")
+        for in_item in recipe.inputs:
+            if !is_empty(in_item):
+                lines = push(lines, "<yellow>✦ <white>" + in_item.name + " <gray>x" + in_item.count)
+            end
+        end
+    end
+
+    # Power/resource requirements — only the ones this recipe actually uses.
+    has_power_line = recipe.min_rpm > 0 || recipe.su_cost > 0 || recipe.fuel_required || recipe.energy_cost > 0
+    if has_power_line:
+        lines = push(lines, _div())
+        lines = push(lines, "<white><b>POWER")
+    end
+    lines = push(lines, "<gray>⏱ Time: <white>" + round(eff_ticks / 20 * 10) / 10 + "s")
+    if recipe.min_rpm > 0:
+        lines = push(lines, "<gray>⚙ RPM: <white>" + recipe.min_rpm + " <dark_gray>min")
+    end
+    if recipe.su_cost > 0:
+        lines = push(lines, "<gray>⛭ SU: <aqua>" + recipe.su_cost)
+    end
+    if recipe.fuel_required:
+        if Machine.burn_time > 0:
+            fuel_pct = floor(Machine.burn_time / max(1, Machine.max_burn_time) * 100)
+            lines = push(lines, "<gray>🔥 Fuel: <gold>" + fuel_pct + "% <dark_gray>burning")
+        else:
+            lines = push(lines, "<gray>🔥 Fuel: <red>needed")
+        end
+    end
+    if recipe.energy_cost > 0:
+        lines = push(lines, "<gray>⚡ Energy: <white>" + Machine.energy_stored + "<dark_gray>/<white>" + Machine.energy_capacity + " <gray>(-" + recipe.energy_cost + "/t)")
+    end
+
+    return lines
+end

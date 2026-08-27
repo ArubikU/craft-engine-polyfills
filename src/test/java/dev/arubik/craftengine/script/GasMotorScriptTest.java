@@ -57,14 +57,17 @@ public class GasMotorScriptTest {
             dev.arubik.craftengine.script.types.primitive.MapType.register();
         }
         PolyType type = PolyTypeRegistry.define("Machine");
-        type.method("get_flag", (obj, args) -> {
+        // gas_motor.pf now calls Machine.get_typed/set_typed(key, "int", ...) instead of the old
+        // get_flag/set_flag pair — same backing map, the "type" arg is ignored since this mock only
+        // ever exercises "int" values.
+        type.method("get_typed", (obj, args) -> {
             if (args.isEmpty()) return ScriptValue.of(0);
             String name = args.get(0).asStr();
             return ScriptValue.of(mockMachine.flags.getOrDefault(name, 0));
         });
-        type.method("set_flag", (obj, args) -> {
-            if (args.size() < 2) return ScriptValue.of(false);
-            mockMachine.flags.put(args.get(0).asStr(), (int) args.get(1).asNum());
+        type.method("set_typed", (obj, args) -> {
+            if (args.size() < 3) return ScriptValue.of(false);
+            mockMachine.flags.put(args.get(0).asStr(), (int) args.get(2).asNum());
             return ScriptValue.of(true);
         });
         type.method("set_rpm_output", (obj, args) -> {

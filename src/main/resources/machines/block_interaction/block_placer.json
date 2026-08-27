@@ -1,0 +1,47 @@
+{
+  "id": "polyfills:block_placer",
+  "title": "Block Placer",
+  "flags": {
+    "fuel": false,
+    "recipes": true,
+    "continuous_fuel": false,
+    "ui": true,
+    "ui_tick": true,
+    "io_pull": true,
+    "renderers": true,
+    "scripts": true,
+    "animations": true,
+    "kinetics": false
+  },
+  "action_script": "block_interaction/block_placer",
+  "action_interval": 20,
+  "pages": [
+    {
+      "title": "Block Placer",
+      "size": 27,
+      "slots": {
+        "input": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8
+        ]
+      }
+    }
+  ],
+  "io": {
+    "input": {
+      "types": [
+        "item"
+      ],
+      "faces": [
+        "all"
+      ]
+    }
+  }
+}

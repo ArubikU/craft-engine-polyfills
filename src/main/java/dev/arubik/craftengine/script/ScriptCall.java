@@ -90,6 +90,20 @@ public record ScriptCall(String scriptName, String funcName, List<String> args) 
      * function (a plain script file) or the function isn't found.
      */
     public ScriptValue evaluate(ScriptContext ctx) {
+        return evaluate(ctx, ScriptValue::of);
+    }
+
+    /**
+     * Like {@link #evaluate(ScriptContext)}, but converts each raw string arg via {@code
+     * argConverter} instead of always wrapping it as a plain Str — e.g. TextTemplate's own auto
+     * Num/Bool/Str detection for name/lore templates, where a literal {@code "8"} should reach the
+     * callee as a Num, not a Str. This (plus {@link #parse}) is the single canonical place that
+     * parses/calls a {@code "file.pf:func:args"} reference — every spot that used to hand-roll its
+     * own {@code indexOf(':')}/{@code split(":")} for this same convention (TextTemplate,
+     * DynamicText, ScriptFormula's inline "file.pf:func:args" primary) now goes through here
+     * instead of drifting copies of the same parsing/calling logic.
+     */
+    public ScriptValue evaluate(ScriptContext ctx, java.util.function.Function<String, ScriptValue> argConverter) {
         ScriptProgram prog = ScriptRegistry.get(scriptName);
         if (prog == null || funcName == null || funcName.isBlank()) return ScriptValue.NULL;
         ScriptContext withDefs = prog.evaluate(ctx);
@@ -97,7 +111,27 @@ public record ScriptCall(String scriptName, String funcName, List<String> args) 
         if (fnVal instanceof ScriptValue.Obj fnObj && fnObj.typeName().equals(UserFunction.TYPE)) {
             UserFunction fn = (UserFunction) fnObj.instance();
             java.util.List<ScriptValue> svArgs = new java.util.ArrayList<>(args.size());
+            for (String a : args) svArgs.add(argConverter.apply(a));
+            return fn.call(svArgs, withDefs);
+        }
+        return ScriptValue.NULL;
+    }
+
+    /** Like {@link #evaluate}, but appends {@code extraArgs} after the ref's own static args —
+     *  the return-a-value counterpart of {@link #executeWithExtraArgs}, for a caller (e.g. a
+     *  registered PlaceholderAPI expansion — see {@code PlaceholderSupport#registerPlaceholder})
+     *  that needs to hand the script a value only known at request time (the placeholder's
+     *  {@code params} text) and read back what the script computed from it. */
+    public ScriptValue evaluateWithExtraArgs(ScriptContext ctx, List<ScriptValue> extraArgs) {
+        ScriptProgram prog = ScriptRegistry.get(scriptName);
+        if (prog == null || funcName == null || funcName.isBlank()) return ScriptValue.NULL;
+        ScriptContext withDefs = prog.evaluate(ctx);
+        ScriptValue fnVal = withDefs.getVar(funcName);
+        if (fnVal instanceof ScriptValue.Obj fnObj && fnObj.typeName().equals(UserFunction.TYPE)) {
+            UserFunction fn = (UserFunction) fnObj.instance();
+            List<ScriptValue> svArgs = new java.util.ArrayList<>(args.size() + extraArgs.size());
             for (String a : args) svArgs.add(ScriptValue.of(a));
+            svArgs.addAll(extraArgs);
             return fn.call(svArgs, withDefs);
         }
         return ScriptValue.NULL;

@@ -14,10 +14,84 @@ import java.util.List;
 
 public final class ItemType {
 
+    /** Storage-key prefix for every TypedKeyBridge-backed accessor below — one flat namespace on
+     *  the item's own CUSTOM_DATA tag, mirroring Machine's identical "tkey_" prefix over its block
+     *  entity's CE tag (see MachineType) so a typed value bridged between a machine and this item
+     *  (ItemDefinition#bridgeTyped, Machine.to_item) round-trips under the exact same key either
+     *  side reads. */
+    private static final String TYPED_PREFIX = "tkey_";
+
+    /** Namespace singleton bound as the bare {@code Item} identifier so a script can call
+     *  {@code Item.skull(player)} as a static-style constructor — see {@code ScriptContext.Builder
+     *  #typed("Item", ItemType.NAMESPACE)}. Every OTHER {@code Item.*} method above operates on a
+     *  real wrapped {@code ItemStack} instance instead; this is the one exception. */
+    public static final Object NAMESPACE = new Object();
+
     private ItemType() {}
 
     public static void register() {
         PolyTypeRegistry.define("Item")
+            // Item.skull(player) — a PLAYER_HEAD item carrying that player's skin, built via
+            // Bukkit's own SkullMeta#setOwningPlayer (the modern, non-deprecated way to set a
+            // skull's owner/texture) then converted back to the NMS ItemStack this codebase's
+            // ScriptValue.Item actually wraps. Only reachable through the NAMESPACE instance —
+            // every other Item.* method below expects `obj` to already be a real ItemStack.
+            .method("skull", (obj, args) -> {
+                if (args.isEmpty()) return ScriptValue.NULL;
+                try {
+                    org.bukkit.entity.Player bukkitPlayer = extractBukkitPlayer(args.get(0));
+                    if (bukkitPlayer == null) return ScriptValue.NULL;
+                    org.bukkit.inventory.ItemStack bukkitStack =
+                            new org.bukkit.inventory.ItemStack(org.bukkit.Material.PLAYER_HEAD);
+                    org.bukkit.inventory.meta.SkullMeta meta =
+                            (org.bukkit.inventory.meta.SkullMeta) bukkitStack.getItemMeta();
+                    meta.setOwningPlayer(bukkitPlayer);
+                    bukkitStack.setItemMeta(meta);
+                    ItemStack nmsStack = org.bukkit.craftbukkit.inventory.CraftItemStack.asNMSCopy(bukkitStack);
+                    return ItemType.wrap(nmsStack);
+                } catch (Throwable t) { return ScriptValue.NULL; }
+            })
+            // Item.create(id, count?) — the CraftEngine-aware counterpart to the plain-vanilla
+            // create_item(...) builtin (which only ever looks up BuiltInRegistries.ITEM, so it
+            // can't build e.g. "default:gui_head_size_1" or any "cml:"/"polyfills:" custom item).
+            // Tries CraftEngine's own item registry first, falls back to vanilla so this can fully
+            // replace create_item(...) in a script that wants ONE constructor for either kind.
+            .method("create", (obj, args) -> {
+                if (args.isEmpty()) return ScriptValue.NULL;
+                String id = args.get(0).asStr();
+                int count = args.size() >= 2 ? (int) args.get(1).asNum() : 1;
+                try {
+                    net.momirealms.craftengine.core.util.Key key = net.momirealms.craftengine.core.util.Key.of(id);
+                    var def = net.momirealms.craftengine.bukkit.api.CraftEngineItems.byId(key);
+                    // CraftEngineItems.byId only finds items registered under the ACTIVE resource
+                    // pack's own namespace ("cml" for this project's "modern" pack) — items from
+                    // CraftEngine's OTHER bundled packs (default_assets' "default:gui_head_size_1"
+                    // etc., loaded per the boot log's "Loaded pack: default_assets. Default
+                    // namespace: default") come back NULL here even though they're fully loaded and
+                    // CraftEngine's own "/craftengine item give" command can spawn them — decompiling
+                    // GiveItemCommand showed it falls back to BukkitItemManager.instance()
+                    // .getItemDefinitionByPath(path) (path-only, pack-agnostic) for exactly this
+                    // case, so do the same instead of silently degrading to a vanilla/AIR item.
+                    if (def == null) {
+                        var byPath = net.momirealms.craftengine.bukkit.item.BukkitItemManager.instance()
+                                .getItemDefinitionByPath(key.value());
+                        if (byPath.isPresent() && byPath.get() instanceof net.momirealms.craftengine.bukkit.item.BukkitItemDefinition bukkitDef) {
+                            def = bukkitDef;
+                        }
+                    }
+                    if (def != null) {
+                        org.bukkit.inventory.ItemStack bukkit = def.buildBukkitItem();
+                        bukkit.setAmount(count);
+                        return ItemType.wrap(org.bukkit.craftbukkit.inventory.CraftItemStack.asNMSCopy(bukkit));
+                    }
+                } catch (Throwable ignored) {}
+                try {
+                    var item = (net.minecraft.world.item.Item) BuiltInRegistries.ITEM.getValue(
+                            net.minecraft.resources.Identifier.parse(id.contains(":") ? id : "minecraft:" + id));
+                    if (item == null) return ScriptValue.NULL;
+                    return ItemType.wrap(new ItemStack(item, count));
+                } catch (Throwable ignored) { return ScriptValue.NULL; }
+            })
             // A CraftEngine custom item reports its CE id ("cml:crate_acacia"); only a plain
             // vanilla item falls back to the registry key. Without this, every CE item sharing a
             // base material (usually paper) had the same id and no filter could tell them apart.
@@ -153,11 +227,13 @@ public final class ItemType {
                     return new ScriptValue.Array(lines);
                 } catch (Throwable ignored) { return new ScriptValue.Array(List.of()); }
             })
+            // Accepts a plain id ("oak_log"/"minecraft:oak_log"/a CraftEngine custom id) OR a
+            // "#"-prefixed tag ("#minecraft:logs", vanilla or a CraftEngine custom item's own
+            // declared tags) — see ItemMatch, the shared id/tag matcher used across the script
+            // engine (Container.pull_item, the matches()/has_item() builtins, here).
             .method("matches", (obj, args) -> {
                 if (args.isEmpty()) return ScriptValue.of(false);
-                String id = args.get(0).asStr();
-                String myId = BuiltInRegistries.ITEM.getKey(stack(obj).getItem()).toString();
-                return ScriptValue.of(myId.equals(id) || myId.equals("minecraft:" + id));
+                return ScriptValue.of(dev.arubik.craftengine.script.types.util.ItemMatch.matches(stack(obj), args.get(0).asStr()));
             })
             // Full identity comparison (type + every data component — enchantments, custom name,
             // durability, everything), ignoring stack COUNT — the same rule vanilla stacking uses.
@@ -279,37 +355,25 @@ public final class ItemType {
             // ---- Generic TypedKey storage (see dev.arubik.craftengine.script.TypedKeyBridge) ----
             // Standardized get/set-by-NbtType over this item's own CUSTOM_DATA, the item-side
             // counterpart of Machine.get_typed/set_typed — one key/type convention instead of a
-            // bespoke get_X_flag pair per feature. Items are values here, so with_typed returns a
+            // bespoke accessor pair per feature. Items are values here, so with_typed returns a
             // NEW copy (same idiom as with_component) rather than mutating in place.
             .method("get_typed", (obj, args) -> {
                 if (args.size() < 2) return ScriptValue.NULL;
                 dev.arubik.craftengine.script.TypedKeyBridge.Codec codec = dev.arubik.craftengine.script.TypedKeyBridge.resolve(args.get(1).asStr());
                 if (codec == null) return ScriptValue.NULL;
-                try {
-                    var cd = stack(obj).get(DataComponents.CUSTOM_DATA);
-                    if (cd == null) return codec.fromStorage(null);
-                    return codec.fromStorage(readRaw(cd.copyTag(), "tkey_" + args.get(0).asStr(), codec.storage()));
-                } catch (Throwable ignored) { return codec.fromStorage(null); }
+                return readTyped(stack(obj), TYPED_PREFIX + args.get(0).asStr(), codec);
             })
             .method("has_typed", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of(false);
-                try {
-                    var cd = stack(obj).get(DataComponents.CUSTOM_DATA);
-                    return ScriptValue.of(cd != null && cd.copyTag().contains("tkey_" + args.get(0).asStr()));
-                } catch (Throwable ignored) { return ScriptValue.of(false); }
+                if (args.size() < 2) return ScriptValue.of(false);
+                dev.arubik.craftengine.script.TypedKeyBridge.Codec codec = dev.arubik.craftengine.script.TypedKeyBridge.resolve(args.get(1).asStr());
+                if (codec == null) return ScriptValue.of(false);
+                return ScriptValue.of(hasTyped(stack(obj), TYPED_PREFIX + args.get(0).asStr()));
             })
             .method("with_typed", (obj, args) -> {
                 if (args.size() < 3) return ScriptValue.ofItem(stack(obj));
                 dev.arubik.craftengine.script.TypedKeyBridge.Codec codec = dev.arubik.craftengine.script.TypedKeyBridge.resolve(args.get(1).asStr());
                 if (codec == null) return ScriptValue.ofItem(stack(obj));
-                try {
-                    ItemStack copy = stack(obj).copy();
-                    var cd = copy.getOrDefault(DataComponents.CUSTOM_DATA, net.minecraft.world.item.component.CustomData.EMPTY);
-                    CompoundTag tag = cd.copyTag();
-                    writeRaw(tag, "tkey_" + args.get(0).asStr(), codec.storage(), codec.toStorage(args.get(2)));
-                    copy.set(DataComponents.CUSTOM_DATA, net.minecraft.world.item.component.CustomData.of(tag));
-                    return ScriptValue.ofItem(copy);
-                } catch (Throwable ignored) { return ScriptValue.ofItem(stack(obj)); }
+                return ScriptValue.ofItem(writeTyped(stack(obj), TYPED_PREFIX + args.get(0).asStr(), codec, args.get(2)));
             })
 
             // ---- Item behavior motor API (dev.arubik.craftengine.item.ItemDefinition) ----
@@ -336,34 +400,36 @@ public final class ItemType {
                 } catch (Throwable ignored) { return ScriptValue.ofItem(stack(obj)); }
             })
 
+            // item.with_profile(player_or_name) — sets a REAL player-skin profile on THIS item
+            // (any material Bukkit exposes as SkullMeta for, including a custom item whose
+            // underlying material is player_head, e.g. CraftEngine's bundled
+            // "default:gui_head_size_1"/"gui_head_size_4" — see Item.create(...)). Lets a script
+            // combine a nicer GUI-scaled head model with an ARBITRARY target player's face, unlike
+            // that item's own default {@code client_bound_data: profile: <arg:player.name>}
+            // templating (which only ever shows the VIEWER their own face). Accepts either a
+            // wrapped Player/Entity value or a plain player-name string (works offline too, via
+            // whatever skin Bukkit already has cached for that name).
+            .method("with_profile", (obj, args) -> {
+                if (args.isEmpty()) return ScriptValue.ofItem(stack(obj));
+                try {
+                    org.bukkit.OfflinePlayer target = resolveProfileTarget(args.get(0));
+                    if (target == null) return ScriptValue.ofItem(stack(obj));
+                    org.bukkit.inventory.ItemStack bukkitStack =
+                            org.bukkit.craftbukkit.inventory.CraftItemStack.asBukkitCopy(stack(obj));
+                    if (!(bukkitStack.getItemMeta() instanceof org.bukkit.inventory.meta.SkullMeta meta)) {
+                        return ScriptValue.ofItem(stack(obj));
+                    }
+                    meta.setOwningPlayer(target);
+                    bukkitStack.setItemMeta(meta);
+                    return ItemType.wrap(org.bukkit.craftbukkit.inventory.CraftItemStack.asNMSCopy(bukkitStack));
+                } catch (Throwable ignored) { return ScriptValue.ofItem(stack(obj)); }
+            })
             // item.tank("name") → current amount stored in that named tank buffer
             .method("tank", (obj, args) -> {
                 if (args.isEmpty()) return ScriptValue.of(0);
                 return ScriptValue.of(dev.arubik.craftengine.item.ItemStateData.tankAmount(stack(obj), args.get(0).asStr()));
             })
 
-            // Generic per-item flag store — the item-side counterpart of Machine.get_flag/set_flag
-            // (and the string variant), mirroring their naming exactly. Mainly the bridge primitive
-            // for ItemDefinition#bridgeFlags/#bridgeStrFlags when converting to/from a machine, but
-            // usable by any script for its own per-item state.
-            .method("get_flag", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of(0);
-                return ScriptValue.of(dev.arubik.craftengine.item.ItemStateData.getFlag(stack(obj), args.get(0).asStr()));
-            })
-            .method("set_flag", (obj, args) -> {
-                if (args.size() < 2) return ScriptValue.ofItem(stack(obj));
-                return ScriptValue.ofItem(dev.arubik.craftengine.item.ItemStateData.setFlag(
-                        stack(obj), args.get(0).asStr(), (int) args.get(1).asNum()));
-            })
-            .method("get_str_flag", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of("");
-                return ScriptValue.of(dev.arubik.craftengine.item.ItemStateData.getStrFlag(stack(obj), args.get(0).asStr()));
-            })
-            .method("set_str_flag", (obj, args) -> {
-                if (args.size() < 2) return ScriptValue.ofItem(stack(obj));
-                return ScriptValue.ofItem(dev.arubik.craftengine.item.ItemStateData.setStrFlag(
-                        stack(obj), args.get(0).asStr(), args.get(1).asStr()));
-            })
 
             // item.tank_capacity("name") → capacity declared on this item's ItemDefinition, or 0
             .method("tank_capacity", (obj, args) -> {
@@ -435,7 +501,7 @@ public final class ItemType {
             // item.update() → re-renders this item's display name/lore from its ItemDefinition's
             // "name"/"lore" templates (MiniMessage, "${expr}" inline scripts, or a bare
             // "script.pf:func" call — see TextTemplate), a no-op if it declares neither. Scripts call
-            // this after changing state that a template reads (e.g. item.set_flag/set_tank) to make
+            // this after changing state that a template reads (e.g. item.with_typed/set_tank) to make
             // the change visible — there is no automatic re-render, since a plain data component
             // write has no hook of its own to piggyback on.
             .method("update", (obj, args) -> {
@@ -495,12 +561,55 @@ public final class ItemType {
         return v.asStr();
     }
 
+    /** The ROOT CAUSE of a whole class of "this Item value looks empty/wrong everywhere except
+     *  method chaining" bugs (e.g. GeneratedPageContent#customIcon rendering a real head/skull item
+     *  as its string-icon fallback, i.e. paper): {@code ScriptFormula#memberCall}/{@code memberGet}
+     *  dispatch methods identically for {@link ScriptValue.Item} and a plain {@code ScriptValue.Obj}
+     *  tagged "Item" (converting the latter internally), so a caller doing `Item.create(...).foo()`
+     *  never notices which one this returns — but every OTHER piece of code that pattern-matches
+     *  `instanceof ScriptValue.Item` (this class's own {@code is_item}/{@code to_item}/emptiness
+     *  checks in ScriptFormula, and consumers outside this package like GeneratedPageContent) only
+     *  recognizes the real record, not the lookalike Obj. Use {@link ScriptValue#ofItem} so a value
+     *  built here is indistinguishable from one built anywhere else in this codebase. */
     public static ScriptValue wrap(ItemStack stack) {
-        if (stack == null || stack.isEmpty()) return ScriptValue.NULL;
-        return ScriptValue.ofObj("Item", stack);
+        return ScriptValue.ofItem(stack);
     }
 
     private static ItemStack stack(Object obj) { return (ItemStack) obj; }
+
+    /** Pulls a real Bukkit {@link org.bukkit.entity.Player} out of a wrapped NMS {@code Player}/
+     *  {@code Entity} script value — the same "wrapped instance -> live Bukkit entity" idiom used
+     *  throughout this codebase via {@code getBukkitEntity()}. */
+    private static org.bukkit.entity.Player extractBukkitPlayer(ScriptValue v) {
+        if (!(v instanceof ScriptValue.Obj o) || !(o.instance() instanceof net.minecraft.world.entity.Entity nmsEntity)) {
+            return null;
+        }
+        org.bukkit.entity.Entity bukkit = nmsEntity.getBukkitEntity();
+        return bukkit instanceof org.bukkit.entity.Player p ? p : null;
+    }
+
+    /** {@code with_profile}'s target resolver — a wrapped online Player/Entity value first; else a
+     *  UUID string resolves via {@code Bukkit.getOfflinePlayer(UUID)} (safe — just wraps the id,
+     *  no network call); else a plain name resolves via {@code getOfflinePlayerIfCached(name)}
+     *  ONLY (never the deprecated {@code getOfflinePlayer(String)}, which can silently BLOCK the
+     *  main thread with a Mojang API call for a name this server has never seen before — a real
+     *  hazard at any real player count). A name that isn't cached simply yields no profile (a
+     *  plain default skin) rather than risking that stall — store the UUID at creation time (see
+     *  {@code warps.pf#create_warp}'s {@code Player.uuid}) if a target needs to resolve reliably
+     *  even before anyone else has ever seen that name on this server. */
+    private static org.bukkit.OfflinePlayer resolveProfileTarget(ScriptValue v) {
+        org.bukkit.entity.Player online = extractBukkitPlayer(v);
+        if (online != null) return online;
+        String raw = v.asStr();
+        if (raw == null || raw.isBlank()) return null;
+        try {
+            return org.bukkit.Bukkit.getOfflinePlayer(java.util.UUID.fromString(raw));
+        } catch (IllegalArgumentException notAUuid) {
+            return org.bukkit.Bukkit.getOfflinePlayerIfCached(raw);
+        } catch (Throwable ignored) {
+            return null;
+        }
+    }
 
     /** Reads one {@link dev.arubik.craftengine.util.NbtType}-primitive value out of an item's raw
      *  NMS custom-data tag (or null if absent) — the item-side counterpart of PersistentBlockEntity's
@@ -550,7 +659,12 @@ public final class ItemType {
         try {
             var cd = stack.get(DataComponents.CUSTOM_DATA);
             if (cd == null) return null;
-            return readRaw(cd.copyTag(), "tkey_" + name, type);
+            // getUnsafe(), not copyTag() — this is a READ-ONLY path (readRaw never mutates the
+            // tag it's given), so the defensive deep-copy copyTag() normally does to protect
+            // against accidental mutation is pure waste here. Matters because a typed-key read is
+            // exactly the kind of thing a script calls constantly (a per-tick flag/counter check),
+            // not just at save time.
+            return readRaw(cd.getUnsafe(), TYPED_PREFIX + name, type);
         } catch (Throwable ignored) { return null; }
     }
 
@@ -560,10 +674,40 @@ public final class ItemType {
             ItemStack copy = stack.copy();
             var cd = copy.getOrDefault(DataComponents.CUSTOM_DATA, net.minecraft.world.item.component.CustomData.EMPTY);
             CompoundTag tag = cd.copyTag();
-            writeRaw(tag, "tkey_" + name, type, value);
+            writeRaw(tag, TYPED_PREFIX + name, type, value);
             copy.set(DataComponents.CUSTOM_DATA, net.minecraft.world.item.component.CustomData.of(tag));
             return copy;
         } catch (Throwable ignored) { return stack; }
+    }
+
+    /** Shared read path for every TypedKeyBridge-backed accessor (get_typed) — {@code storageKey}
+     *  is the FULL prefixed key ("tkey_foo", ...). */
+    private static ScriptValue readTyped(ItemStack self, String storageKey, dev.arubik.craftengine.script.TypedKeyBridge.Codec codec) {
+        try {
+            var cd = self.get(DataComponents.CUSTOM_DATA);
+            if (cd == null) return codec.fromStorage(null);
+            // getUnsafe(), not copyTag() — read-only path, see readTypedRaw's identical note.
+            return codec.fromStorage(readRaw(cd.getUnsafe(), storageKey, codec.storage()));
+        } catch (Throwable ignored) { return codec.fromStorage(null); }
+    }
+
+    private static boolean hasTyped(ItemStack self, String storageKey) {
+        try {
+            var cd = self.get(DataComponents.CUSTOM_DATA);
+            return cd != null && cd.getUnsafe().contains(storageKey);
+        } catch (Throwable ignored) { return false; }
+    }
+
+    /** Shared write path — returns a NEW copy (items are copy-on-write, same idiom as with_component). */
+    private static ItemStack writeTyped(ItemStack self, String storageKey, dev.arubik.craftengine.script.TypedKeyBridge.Codec codec, ScriptValue value) {
+        try {
+            ItemStack copy = self.copy();
+            var cd = copy.getOrDefault(DataComponents.CUSTOM_DATA, net.minecraft.world.item.component.CustomData.EMPTY);
+            CompoundTag tag = cd.copyTag();
+            writeRaw(tag, storageKey, codec.storage(), codec.toStorage(value));
+            copy.set(DataComponents.CUSTOM_DATA, net.minecraft.world.item.component.CustomData.of(tag));
+            return copy;
+        } catch (Throwable ignored) { return self; }
     }
 
     /** This item's CraftEngine custom-item key, for looking up its {@code ItemDefinition}. */

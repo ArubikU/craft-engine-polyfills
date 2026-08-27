@@ -162,8 +162,10 @@ public final class WorkbenchLoader {
         List<dev.arubik.craftengine.machine.render.RendererSpec> renderers = new ArrayList<>();
         for (JsonView r : view.objectList("renderers")) {
             String rType = r.string("type", "item_display");
-            String whenExpr = r.raw().has("when") ? parseWhen(r.raw().get("when")) : "always";
-            String updateWhen = r.string("update_when", "always");
+            dev.arubik.craftengine.machine.render.WhenCondition whenExpr = dev.arubik.craftengine.machine.render.WhenCondition.parse(
+                    r.raw().has("when") ? parseWhen(r.raw().get("when")) : "always");
+            dev.arubik.craftengine.machine.render.UpdateWhen updateWhen =
+                    dev.arubik.craftengine.machine.render.UpdateWhen.parse(r.string("update_when", "always"));
             String scriptRef = r.string("run", null);
             dev.arubik.craftengine.machine.render.RendererSpec spec = switch (rType) {
                 case "bettermodel" -> new dev.arubik.craftengine.machine.render.RendererSpec.BetterModelSpec(
@@ -275,7 +277,13 @@ public final class WorkbenchLoader {
                         legacyLoc,
                         String.valueOf(rs.scale()),
                         String.valueOf(rs.rotation()[0]), String.valueOf(rs.rotation()[1]), String.valueOf(rs.rotation()[2]),
-                        "none", "always", "inventory", false, null));
+                        // "inventory" here used to be a meaningless, dead update_when string (the
+                        // field was never enforced) — now that update_when is actually wired up,
+                        // pass the real ALWAYS constant to preserve this legacy path's original
+                        // every-tick behavior instead of silently throttling it against a
+                        // nonexistent block-state property named "inventory".
+                        "none", dev.arubik.craftengine.machine.render.WhenCondition.ALWAYS,
+                        dev.arubik.craftengine.machine.render.UpdateWhen.ALWAYS, false, null));
             }
         }
 

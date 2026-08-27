@@ -1,0 +1,68 @@
+{
+  "id": "polyfills:portable_storage_interface",
+  "title": "Portable Storage Interface",
+  "flags": {
+    "recipes": false,
+    "fuel": false,
+    "redstone": true,
+    "continuous_fuel": false,
+    "ui": true,
+    "ui_tick": true,
+    "io_pull": true,
+    "renderers": true,
+    "scripts": true,
+    "animations": true,
+    "kinetics": false
+  },
+  "action_script": "contraption/portable_storage_interface",
+  "action_interval": 1,
+  "on_get_container": "contraption/portable_storage_interface.pf:on_get_container",
+  "pages": [
+    {
+      "title": "Portable Storage Interface",
+      "size": 9,
+      "layout": [
+        {
+          "slot": 4,
+          "item": "portable_storage_interface.pf:status_item",
+          "name": "portable_storage_interface.pf:status_name"
+        }
+      ]
+    }
+  ],
+  "renderers": [
+    {
+      "type": "item_display",
+      "item": "CraftEngineItem(\"cml:psi_top_render\")",
+      "location": "[Machine.facing_dx * 0, 0.5 + Machine.facing_dy * 0, Machine.facing_dz * 0]",
+      "when": "(Machine.get_typed(\"_psi_extend\", \"int\") ?? 0) <= 0",
+      "update_when": "on_change",
+      "global": true,
+      "rot_x": "Machine.block.property(\"facing\") == \"down\" ? 180 : 0",
+      "rot_y": "Machine.block.property(\"facing\") == \"north\" ? 90 : (Machine.block.property(\"facing\") == \"south\" ? 90 : 0)",
+      "rot_z": "Machine.block.property(\"facing\") == \"north\" ? -90 : (Machine.block.property(\"facing\") == \"south\" ? 90 : (Machine.block.property(\"facing\") == \"east\" ? -90 : (Machine.block.property(\"facing\") == \"west\" ? 90 : 0)))"
+    },
+    {
+      "type": "item_display",
+      "item": "CraftEngineItem((Machine.get_typed(\"_psi_extend\", \"int\") ?? 0) == 2 ? \"cml:psi_middle_powered_render\" : \"cml:psi_middle_render\")",
+      "location": "[Machine.facing_dx * 0.875, 0.5 + Machine.facing_dy * 0.875, Machine.facing_dz * 0.875]",
+      "when": "(Machine.get_typed(\"_psi_extend\", \"int\") ?? 0) >= 1",
+      "update_when": "on_change",
+      "global": true,
+      "rot_x": "Machine.block.property(\"facing\") == \"down\" ? 180 : 0",
+      "rot_y": "Machine.block.property(\"facing\") == \"north\" ? 90 : (Machine.block.property(\"facing\") == \"south\" ? 90 : 0)",
+      "rot_z": "Machine.block.property(\"facing\") == \"north\" ? -90 : (Machine.block.property(\"facing\") == \"south\" ? 90 : (Machine.block.property(\"facing\") == \"east\" ? -90 : (Machine.block.property(\"facing\") == \"west\" ? 90 : 0)))"
+    },
+    {
+      "type": "item_display",
+      "item": "CraftEngineItem(\"cml:psi_top_render\")",
+      "location": "[Machine.facing_dx , 0.5 + Machine.facing_dy , Machine.facing_dz]",
+      "when": "(Machine.get_typed(\"_psi_extend\", \"int\") ?? 0) >= 1",
+      "update_when": "on_change",
+      "global": true,
+      "rot_x": "Machine.block.property(\"facing\") == \"down\" ? 180 : 0",
+      "rot_y": "Machine.block.property(\"facing\") == \"north\" ? 90 : (Machine.block.property(\"facing\") == \"south\" ? 90 : 0)",
+      "rot_z": "Machine.block.property(\"facing\") == \"north\" ? -90 : (Machine.block.property(\"facing\") == \"south\" ? 90 : (Machine.block.property(\"facing\") == \"east\" ? -90 : (Machine.block.property(\"facing\") == \"west\" ? 90 : 0)))"
+    }
+  ]
+}

@@ -147,26 +147,16 @@ public class BlockBehaviors {
 
                 // Motors migrated to machines/*.json + scripts — no separate behavior needed.
                 RegistryUtils.registerBlockBehavior(
-                                dev.arubik.craftengine.conveyor.ConveyorBehavior.POLYFILL_CONVEYOR,
-                                dev.arubik.craftengine.conveyor.ConveyorBehavior.FACTORY);
+                                dev.arubik.craftengine.conveyor.belt.ConveyorBehavior.POLYFILL_CONVEYOR,
+                                dev.arubik.craftengine.conveyor.belt.ConveyorBehavior.FACTORY);
                 RegistryUtils.registerBlockBehavior(
-                                dev.arubik.craftengine.conveyor.MergerBehavior.FACTORY_KEY,
-                                dev.arubik.craftengine.conveyor.MergerBehavior.FACTORY);
+                                dev.arubik.craftengine.conveyor.routing.MergerBehavior.FACTORY_KEY,
+                                dev.arubik.craftengine.conveyor.routing.MergerBehavior.FACTORY);
                 RegistryUtils.registerBlockBehavior(
-                                dev.arubik.craftengine.conveyor.SplitterBehavior.FACTORY_KEY,
-                                dev.arubik.craftengine.conveyor.SplitterBehavior.FACTORY);
-                RegistryUtils.registerBlockBehavior(
-                                dev.arubik.craftengine.conveyor.DepotBehavior.FACTORY_KEY,
-                                dev.arubik.craftengine.conveyor.DepotBehavior.FACTORY);
-                RegistryUtils.registerBlockBehavior(
-                                dev.arubik.craftengine.conveyor.FunnelBehavior.FACTORY_KEY,
-                                dev.arubik.craftengine.conveyor.FunnelBehavior.FACTORY);
-                RegistryUtils.registerBlockBehavior(
-                                dev.arubik.craftengine.conveyor.FloorFunnelBehavior.FACTORY_KEY,
-                                dev.arubik.craftengine.conveyor.FloorFunnelBehavior.FACTORY);
-                RegistryUtils.registerBlockBehavior(
-                                dev.arubik.craftengine.conveyor.CeilingFunnelBehavior.FACTORY_KEY,
-                                dev.arubik.craftengine.conveyor.CeilingFunnelBehavior.FACTORY);
+                                dev.arubik.craftengine.conveyor.routing.SplitterBehavior.FACTORY_KEY,
+                                dev.arubik.craftengine.conveyor.routing.SplitterBehavior.FACTORY);
+                // Depot and Funnel/FloorFunnel/CeilingFunnel migrated to machines/*.json + scripts —
+                // conveyor.depot/conveyor.funnel removed entirely, no separate behavior needed.
                 RegistryUtils.registerBlockBehavior(
                                 dev.arubik.craftengine.crafting.CraftingTableBehavior.FACTORY_KEY,
                                 dev.arubik.craftengine.crafting.CraftingTableBehavior.FACTORY);

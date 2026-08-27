@@ -1,0 +1,99 @@
+# Harvester — Create-alike crop harvester. Only ever touches the SINGLE block it's directly
+# targeting — no area scan — matching drill.pf's own single-target model: standalone targets
+# Machine.facing_block, contraption-borne projects the same facing offset through the
+# contraption's live transform. No hold/release (unlike drill): harvesting is an instant
+# break_block, not a multi-tick tick_break, so there's nothing to keep the contraption anchored
+# against. No inventory: drops via _deposit.
+
+import "kinetics/utils.pf" { _deposit, _update_activated }
+
+CROP_MAX_AGE = make_map(
+"minecraft:wheat",        7,
+"minecraft:carrots",      7,
+"minecraft:potatoes",     7,
+"minecraft:beetroots",    3,
+"minecraft:nether_wart",  3,
+"minecraft:cocoa",        2
+)
+
+# Columnar plants (sugar cane, bamboo, kelp) aren't "grown then replanted" like a crop — they grow
+# by stacking new segments on top of a permanent base. Harvesting one means: keep the base (this
+# targeted block) standing so it keeps growing, break EVERY segment stacked above it (matching
+# vanilla's own physics, which breaks the whole unsupported stack the instant the base moves), and
+# collect every single one of those drops — not just whatever's directly targeted.
+COLUMN_PLANTS = make_map(
+"minecraft:sugar_cane", true,
+"minecraft:bamboo",     true,
+"minecraft:kelp",       true,
+"minecraft:kelp_plant", true
+)
+
+def _harvest_column_above(block):
+    world = block.world
+    x = block.pos.x
+    y = block.pos.y
+    z = block.pos.z
+    cy = y + 1
+    while true:
+        above = world.get_block(x, cy, z)
+        if above == null || !COLUMN_PLANTS.switch(above.id, false):
+            break
+        end
+        drops = above.break_and_drop()
+        for drop in drops:
+            _deposit(drop)
+        end
+        world.set_block(x, cy, z, "minecraft:air")
+        cy = cy + 1
+    end
+end
+
+def _try_harvest(block):
+    if block == null:
+        return
+    end
+    if COLUMN_PLANTS.switch(block.id, false):
+        _harvest_column_above(block)
+        return
+    end
+    if !block.has_property("age"):
+        return
+    end
+    max_age = CROP_MAX_AGE.switch(block.id, -1)
+    if max_age < 0 || block.property("age") < max_age:
+        return
+    end
+    crop_id = block.id
+    x = block.pos.x
+    y = block.pos.y
+    z = block.pos.z
+    world = block.world
+    drops = block.break_and_drop()
+    for drop in drops:
+        _deposit(drop)
+    end
+    world.set_block(x, y, z, crop_id)
+end
+
+contraption = Machine.contraption
+is_now = 0
+
+if contraption != null:
+    is_rotational = contraption.rpm != 0
+    is_linear = contraption.is_moving()
+    is_now = (is_rotational || is_linear) ? 1 : 0
+
+    if is_now > 0:
+        # Project through the contraption's LIVE transform — Machine.facing_block would resolve
+        # inside its virtual structure instead of the real world (see drill.pf).
+        target = contraption.contraption_world.real_block(Machine.x + Machine.facing_dx, Machine.y + Machine.facing_dy, Machine.z + Machine.facing_dz)
+        _try_harvest(target)
+    end
+else:
+    if rpm != 0:
+        _try_harvest(Machine.facing_block)
+        is_now = 1
+    end
+end
+
+_update_activated("_harvester_act", is_now)

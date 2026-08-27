@@ -42,7 +42,7 @@
 package dev.arubik.craftengine.machine.block.entity;
 
 import dev.arubik.craftengine.block.entity.BukkitBlockEntityTypes;
-import dev.arubik.craftengine.conveyor.ConveyorItemDisplay;
+import dev.arubik.craftengine.conveyor.belt.ConveyorItemDisplay;
 import dev.arubik.craftengine.fluid.FluidStack;
 import dev.arubik.craftengine.fluid.FluidTank;
 import dev.arubik.craftengine.fluid.FluidType;
@@ -148,10 +148,22 @@ dev.arubik.craftengine.rotation.KineticMember {
     public static volatile boolean SPEC_DISPLAY_DEBUG = false;
     public static volatile boolean SCRIPT_DEBUG = false;
     private static final Set<DataMachineBlockEntity> INSTANCES = Collections.newSetFromMap(new WeakHashMap());
+
+    // Global class singleton bindings (Server, SQL, Redis, Plugins, Menu, Dialog, ...) now live
+    // in ScriptBootstrap.globalSingletons() — computed ONCE for the whole plugin, shared by every
+    // script-firing entry point instead of each one (this hot per-tick-per-machine path included)
+    // re-allocating its own copy. See buildScriptContext() below.
     private float inputRpm = 0.0f;
     private final List<RpmProvider> activeMotors = new ArrayList<RpmProvider>();
     private RpmProvider activeMotor;
     private int lastSuLoad = 0;
+    // Per-instance, per-tick cache for the redstone neighbor-signal poll (level.getBestNeighborSignal
+    // scans all 6 adjacent blocks) — buildScriptContext() is called several times per real tick for
+    // the same machine (once for the render pass, again for action_script, again for any interact/
+    // generic script that needs a context), each unconditionally re-polling this. Cheap int fields,
+    // invalidated by comparing against the current server tick count rather than any explicit clear.
+    private int cachedRedstoneTick = Integer.MIN_VALUE;
+    private int cachedRedstoneSignal = 0;
     // ---- RpmNetwork fields --------------------------------------------------
     private long rpmNetworkId    = 0L;
     private float theoreticalSpeed = 0f;
@@ -176,6 +188,57 @@ dev.arubik.craftengine.rotation.KineticMember {
     private long ticksAlive = 0L;
     private static final dev.arubik.craftengine.util.TypedKey<Long> KEY_TICKS_ALIVE =
         dev.arubik.craftengine.util.TypedKey.of("polyfills", "ticks_alive", dev.arubik.craftengine.util.NbtType.LONG);
+    /** Transient, non-persisted: fires onLoadScript once per block-entity object lifetime
+     *  (placement AND every chunk/server load), unlike the persisted ticksAlive==0 on_place gate. */
+    private transient boolean firedOnLoad = false;
+
+    /** Per-instance, script-settable RPM face overrides — same raw-token vocabulary as the static
+     *  io block's rpm entries (front/back/left/right/north.../axis_pos/axis_neg/axis_perp), set via
+     *  Machine.set_rpm_input/set_rpm_output_same/set_rpm_output_same_inverted/set_rpm_output/
+     *  set_rpm_output_inverted, meant to be called from an on_place/on_load hook — mirrors
+     *  Machine.io's allow_input/allow_output for item/fluid/gas, but for rotational power. Not
+     *  persisted — on_load recomputes them every load from the block's own current state, so
+     *  nothing is lost across a reload. Each is null until first set ("not overridden, fall through
+     *  to the built-in faceSplitRpmAllows rule, then the static io declaration"); once ANY of the
+     *  four is set, ALL FOUR override the static declaration together (see isValidOutputFace /
+     *  isNewNetworkOutputFace / rpmThrough), same same/new-network x normal/inverted matrix as the
+     *  static fields (rpmOutputFacesRaw/rpmOutputSameInvertedRaw/rpmOutputNewNetworkFacesRaw/
+     *  rpmOutputInvertedRaw on MachineDefinition). */
+    private volatile Set<String> rpmInputOverrideRaw = null;
+    private volatile Set<String> rpmOutputSameOverrideRaw = null;
+    private volatile Set<String> rpmOutputSameInvertedOverrideRaw = null;
+    private volatile Set<String> rpmOutputNewNetworkOverrideRaw = null;
+    private volatile Set<String> rpmOutputInvertedOverrideRaw = null;
+    /** True once any Machine.set_rpm_output_* override has been set at least once — distinguishes
+     *  "no override, all four empty sets fall through to the static declaration" from "the script
+     *  deliberately cleared every output face" (all four overridden to empty). */
+    private volatile boolean rpmOutputOverrideActive = false;
+
+    private static Set<String> parseFaceCsv(String csv) {
+        if (csv == null || csv.isBlank()) return java.util.Set.of();
+        java.util.Set<String> out = new java.util.HashSet<>();
+        for (String tok : csv.split(",")) {
+            String t = tok.trim().toLowerCase();
+            if (!t.isEmpty()) out.add(t);
+        }
+        return out;
+    }
+
+    public void setRpmInputOverride(String csv) { this.rpmInputOverrideRaw = parseFaceCsv(csv); }
+    public void setRpmOutputSameOverride(String csv) { this.rpmOutputSameOverrideRaw = parseFaceCsv(csv); this.rpmOutputOverrideActive = true; }
+    public void setRpmOutputSameInvertedOverride(String csv) { this.rpmOutputSameInvertedOverrideRaw = parseFaceCsv(csv); this.rpmOutputOverrideActive = true; }
+    public void setRpmOutputNewNetworkOverride(String csv) { this.rpmOutputNewNetworkOverrideRaw = parseFaceCsv(csv); this.rpmOutputOverrideActive = true; }
+    public void setRpmOutputInvertedOverride(String csv) { this.rpmOutputInvertedOverrideRaw = parseFaceCsv(csv); this.rpmOutputOverrideActive = true; }
+    public void clearRpmOverride() {
+        this.rpmInputOverrideRaw = null;
+        this.rpmOutputSameOverrideRaw = null;
+        this.rpmOutputSameInvertedOverrideRaw = null;
+        this.rpmOutputNewNetworkOverrideRaw = null;
+        this.rpmOutputInvertedOverrideRaw = null;
+        this.rpmOutputOverrideActive = false;
+    }
+
+    private static Set<String> orEmpty(Set<String> s) { return s == null ? java.util.Set.of() : s; }
 
     public long ticksAlive() { return ticksAlive; }
     private int page = 0;
@@ -286,9 +349,7 @@ dev.arubik.craftengine.rotation.KineticMember {
                     axisIndex(face), axisSign(face), axisIndex(in), axisSign(in));
         }
 
-        Set<String> inverted = this.definition.rpmOutputInvertedRaw();
-        boolean flip = !inverted.isEmpty()
-                && rpmFacesContain(inverted, face, this.getFacing(level));
+        boolean flip = this.isInvertedOutputFace(face, level);
         return dev.arubik.craftengine.rotation.RpmPropagation.applyInversion(raw, flip);
     }
 
@@ -422,6 +483,28 @@ dev.arubik.craftengine.rotation.KineticMember {
         return this.sourceDistance < Integer.MAX_VALUE ? Math.abs(this.inputRpm) : 0.0f;
     }
 
+    /** The four RPM output face sets in effect right now: per-instance script override if one was
+     *  ever set (see {@link #rpmOutputOverrideActive}), else the static machine-definition
+     *  declaration. Index: [0]=same (relay), [1]=same_inverted (relay), [2]=new-network,
+     *  [3]=new-network inverted. */
+    private Set<String>[] currentRpmOutputSets() {
+        if (this.rpmOutputOverrideActive) {
+            return new Set[] {
+                orEmpty(this.rpmOutputSameOverrideRaw),
+                orEmpty(this.rpmOutputSameInvertedOverrideRaw),
+                orEmpty(this.rpmOutputNewNetworkOverrideRaw),
+                orEmpty(this.rpmOutputInvertedOverrideRaw)
+            };
+        }
+        if (this.definition == null) return new Set[] { Set.of(), Set.of(), Set.of(), Set.of() };
+        return new Set[] {
+            this.definition.rpmOutputFacesRaw(),
+            this.definition.rpmOutputSameInvertedRaw(),
+            this.definition.rpmOutputNewNetworkFacesRaw(),
+            this.definition.rpmOutputInvertedRaw()
+        };
+    }
+
     public boolean isValidOutputFace(Direction face, Level level) {
         // Only kinetic blocks restrict which faces may emit RPM. A machine that declares no rpm
         // output faces falls through to the unrestricted return just below, so recipe machines
@@ -429,13 +512,51 @@ dev.arubik.craftengine.rotation.KineticMember {
         if (this.definition == null || !this.definition.kinetics()) {
             return true;
         }
-        Set<String> same = this.definition.rpmOutputFacesRaw();
-        Set<String> inv = this.definition.rpmOutputInvertedRaw();
-        if (same.isEmpty() && inv.isEmpty() && !this.definition.rpmOutputDeclared()) {
+        if (!this.rpmOutputOverrideActive) {
+            Boolean faceSplit = this.faceSplitRpmAllows(face, true, level);
+            if (faceSplit != null) return faceSplit;
+        }
+        Set<String>[] sets = this.currentRpmOutputSets();
+        boolean anyDeclared = this.rpmOutputOverrideActive || this.definition.rpmOutputDeclared();
+        if (!anyDeclared && sets[0].isEmpty() && sets[1].isEmpty() && sets[2].isEmpty() && sets[3].isEmpty()) {
             return true;
         }
         Direction facing = this.getFacing(level);
-        return this.rpmFacesContainWithAxis(same, face, facing, level) || this.rpmFacesContainWithAxis(inv, face, facing, level);
+        Direction axisRef = this.getFacingAxisRef(level);
+        for (Set<String> s : sets) {
+            if (!s.isEmpty() && this.rpmFacesContainWithAxis(s, face, facing, axisRef, level)) return true;
+        }
+        return false;
+    }
+
+    /** Whether {@code face} is a NEW-NETWORK boundary (bare "output"/"output_inverted") rather than
+     *  a plain RELAY ("output_same"/"output_same_inverted") — see {@code MachineDefinition}'s
+     *  rpmOutput* javadoc for the full matrix. Only meaningful for a face that already passed
+     *  {@link #isValidOutputFace} — returns false (relay) for anything not declared at all, which is
+     *  the safe default (keeps propagating the same network, today's only behaviour, for any
+     *  machine that never opted into the new-network split). */
+    public boolean isNewNetworkOutputFace(Direction face, Level level) {
+        if (face == null || this.definition == null) return false;
+        Set<String>[] sets = this.currentRpmOutputSets();
+        Direction facing = this.getFacing(level);
+        Direction axisRef = this.getFacingAxisRef(level);
+        // Relay sets win ties (a face declared in both is treated as a relay, the safer default).
+        if (!sets[0].isEmpty() && this.rpmFacesContainWithAxis(sets[0], face, facing, axisRef, level)) return false;
+        if (!sets[1].isEmpty() && this.rpmFacesContainWithAxis(sets[1], face, facing, axisRef, level)) return false;
+        if (!sets[2].isEmpty() && this.rpmFacesContainWithAxis(sets[2], face, facing, axisRef, level)) return true;
+        if (!sets[3].isEmpty() && this.rpmFacesContainWithAxis(sets[3], face, facing, axisRef, level)) return true;
+        return false;
+    }
+
+    /** Whether {@code face} is one of the two INVERTED sets (same_inverted or new-network
+     *  inverted) — the sign-flip half of the matrix, orthogonal to the relay/new-network half. */
+    private boolean isInvertedOutputFace(Direction face, Level level) {
+        if (face == null) return false;
+        Set<String>[] sets = this.currentRpmOutputSets();
+        Direction facing = this.getFacing(level);
+        Direction axisRef = this.getFacingAxisRef(level);
+        return (!sets[1].isEmpty() && this.rpmFacesContainWithAxis(sets[1], face, facing, axisRef, level))
+                || (!sets[3].isEmpty() && this.rpmFacesContainWithAxis(sets[3], face, facing, axisRef, level));
     }
 
     /**
@@ -542,10 +663,18 @@ dev.arubik.craftengine.rotation.KineticMember {
     }
 
     boolean rpmFacesContainWithAxis(Set<String> raw, Direction d, Direction facing, Level level) {
+        return this.rpmFacesContainWithAxis(raw, d, facing, facing, level);
+    }
+
+    /** {@code axisRef} is the horizontalRef {@link #rpmFacesContain(Set, Direction, Direction,
+     *  Direction)} needs for "left"/"right" — see that method's javadoc. Irrelevant to the
+     *  axis_pos/axis_neg/axis_perp (shaft/gear) branch below, which has its own, unrelated "axis"
+     *  property concept. */
+    boolean rpmFacesContainWithAxis(Set<String> raw, Direction d, Direction facing, Direction axisRef, Level level) {
         boolean hasAxisNames;
         boolean bl = hasAxisNames = raw.contains("axis_pos") || raw.contains("axis_neg") || raw.contains("axis_perp");
         if (!hasAxisNames) {
-            return DataMachineBlockEntity.rpmFacesContain(raw, d, facing);
+            return DataMachineBlockEntity.rpmFacesContain(raw, d, facing, axisRef);
         }
         try {
             Property axisProp;
@@ -602,7 +731,7 @@ dev.arubik.craftengine.rotation.KineticMember {
                 nonAxis.remove("axis_neg");
                 nonAxis.remove("axis_perp");
                 if (!nonAxis.isEmpty()) {
-                    return DataMachineBlockEntity.rpmFacesContain(nonAxis, d, facing);
+                    return DataMachineBlockEntity.rpmFacesContain(nonAxis, d, facing, axisRef);
                 }
                 return false;
             }
@@ -610,7 +739,7 @@ dev.arubik.craftengine.rotation.KineticMember {
         catch (Throwable throwable) {
             // empty catch block
         }
-        return DataMachineBlockEntity.rpmFacesContain(raw, d, facing);
+        return DataMachineBlockEntity.rpmFacesContain(raw, d, facing, axisRef);
     }
 
     @Override
@@ -649,6 +778,7 @@ dev.arubik.craftengine.rotation.KineticMember {
         }
         if (!definition.renderers().isEmpty()) {
             this.rendererManager = new RendererManager(definition.renderers(), definition.variables());
+            this.rendererManager.setInteractRunner(this::runInteractScript);
             int n = definition.renderers().size();
             this.specDisplays = new ConveyorItemDisplay[n];
             this.specDisplayHashes = new int[n];
@@ -663,6 +793,7 @@ dev.arubik.craftengine.rotation.KineticMember {
             MachineDefinition machineDefinition = eff = fresh != null ? fresh : this.definition;
             if (!eff.renderers().isEmpty()) {
                 this.rendererManager = new RendererManager(eff.renderers(), eff.variables());
+                this.rendererManager.setInteractRunner(this::runInteractScript);
                 int n = eff.renderers().size();
                 this.specDisplays = new ConveyorItemDisplay[n];
                 this.specDisplayHashes = new int[n];
@@ -708,8 +839,26 @@ dev.arubik.craftengine.rotation.KineticMember {
     }
 
     @Override
+    protected String onGetContainerScriptRef() {
+        return this.definition.onGetContainerScript();
+    }
+
+    @Override
     public int[] getUpgradeSlots() {
         return this.definition.upgrades().slots();
+    }
+
+    /** Cumulative absolute container indices of every page's free {@code storage} slots — see
+     *  {@link #storageBaseOffset(int)}: page p's storage occupies container slots
+     *  {@code [storageBaseOffset(p), storageBaseOffset(p) + page.storageSlots().length)}. */
+    @Override
+    public int[] getStorageSlots() {
+        java.util.List<dev.arubik.craftengine.machine.MachineDefinition.PageDef> pages = this.definition.pages();
+        int total = 0;
+        for (dev.arubik.craftengine.machine.MachineDefinition.PageDef page : pages) total += page.storageSlots().length;
+        int[] result = new int[total];
+        for (int i = 0; i < total; i++) result[i] = i;
+        return result;
     }
 
     /** Cache for {@link #getMatchingRecipe} — a full-component copy of each input slot's stack as
@@ -915,6 +1064,19 @@ dev.arubik.craftengine.rotation.KineticMember {
             this.lastKnownLevel = sl = (ServerLevel)level;
         }
         boolean bl = needsRpm = this.definition.kinetics();
+        if (!level.isClientSide()) {
+            if (this.ticksAlive == 0 && this.definition.onPlaceScript() != null) {
+                // First tick after genuine placement (persisted ticksAlive gate) — fire on_place hook
+                try { runScriptRef(this.definition.onPlaceScript()); } catch (Throwable ignored) {}
+            }
+            if (!this.firedOnLoad) {
+                this.firedOnLoad = true;
+                // First tick after this object's instantiation (placement OR every load) — fire on_load hook
+                if (this.definition.onLoadScript() != null) {
+                    try { runScriptRef(this.definition.onLoadScript()); } catch (Throwable ignored) {}
+                }
+            }
+        }
         if (!level.isClientSide()
                 && dev.arubik.craftengine.rotation.RpmPropagation.shouldPull(
                         needsRpm, this.isRpmRelay(), this.rpmSourceActive)
@@ -926,10 +1088,6 @@ dev.arubik.craftengine.rotation.KineticMember {
         if (this.definition.runsRecipes()) {
             super.tick(level, pos, state);
             if (!level.isClientSide()) {
-                if (this.ticksAlive == 0 && this.definition.onPlaceScript() != null) {
-                    // First tick after placement — fire on_place hook
-                    try { runScriptRef(this.definition.onPlaceScript()); } catch (Throwable ignored) {}
-                }
                 this.ticksAlive++;
                 // Every 5 ticks: verify our source machine still exists; dissolve network if gone
                 if (this.ticksAlive % 5 == 0 && rpmNetworkId() != 0L
@@ -1039,6 +1197,11 @@ dev.arubik.craftengine.rotation.KineticMember {
                     }
                 }
                 float yaw = f;
+                // The real facing NAME (unlike yaw, which — see the switch above — has no case for
+                // up/down and can't represent them anyway, being a single horizontal angle) — passed
+                // straight through to RendererManager.tick() below so it doesn't re-derive "facing"
+                // from yaw itself (yawToFacing can only ever produce a horizontal result).
+                String facingName = facing != null ? facing.getName().toLowerCase(java.util.Locale.ROOT) : null;
                 // buildScriptContext() below computes its OWN fluid/gas/upgrade maps, redstone
                 // signal, and facing/yaw internally, then this ctx gets replaced wholesale by
                 // ctx.augmented(machineScriptCtx) (which swaps in the given ScriptContext as the
@@ -1076,15 +1239,10 @@ dev.arubik.craftengine.rotation.KineticMember {
                             linkedHashMap.merge(uid.namespace() + ":" + uid.value(), 1, Integer::sum);
                         }
                     }
-                    try {
-                        n = level.getBestNeighborSignal(pos);
-                    }
-                    catch (Throwable tank) {
-                        // empty catch block
-                    }
+                    n = this.cachedNeighborSignal(level, pos);
                     ctx = new MachineRenderContext(this.inputRpm, this.overclock, this.curFuelEff, this.progress, this.maxProgress, this.curGeneration, this.isProcessing(), this.inputRpm > 0.0f, this.isOverclocked(), this.burnTime > 0, null, linkedHashMap, fluidTankData, gasTankData, n);
                 }
-                this.rendererManager.tick(ctx, (ServerLevel)level, pos.getX(), pos.getY(), pos.getZ(), yaw);
+                this.rendererManager.tick(ctx, (ServerLevel)level, pos.getX(), pos.getY(), pos.getZ(), yaw, facingName, (int[][]) null);
                 this.tickSpecDisplays((ServerLevel)level, pos);
             }
             catch (Throwable throwable) {
@@ -1393,7 +1551,7 @@ dev.arubik.craftengine.rotation.KineticMember {
             // empty catch block
         }
         EnumSet<Direction> autoFacesFinal = autoFaces;
-        boolean bl = hasRpmInput = autoFacesFinal != null || this.definition != null && !this.definition.rpmInputFacesRaw().isEmpty();
+        boolean bl = hasRpmInput = autoFacesFinal != null || this.rpmInputOverrideRaw != null || this.definition != null && !this.definition.rpmInputFacesRaw().isEmpty();
         if (!hasRpmInput) {
             // A source (set_rpm_output) declares no rpm INPUT face, so it lands here every tick.
             // Resetting its sourceDistance to MAX_VALUE would make it invisible to neighbours
@@ -1413,7 +1571,18 @@ dev.arubik.craftengine.rotation.KineticMember {
             float pot;
             int providerDist;
             BlockEntityController blockEntityController;
-            if (this.definition == null || this.definition.rpmInputFacesRaw().isEmpty() ? autoFacesFinal != null && !autoFacesFinal.contains(d) : !this.rpmFacesContainWithAxis(this.definition.rpmInputFacesRaw(), d, this.getFacing(level), level)) continue;
+            Boolean faceSplitIn;
+            if (this.rpmInputOverrideRaw != null) {
+                if (!this.rpmFacesContainWithAxis(this.rpmInputOverrideRaw, d, this.getFacing(level), this.getFacingAxisRef(level), level)) continue;
+                // Override already fully validated this face — treat like a validated face-split
+                // pass so the downstream static io.rpm re-check (below) is skipped for it too.
+                faceSplitIn = Boolean.TRUE;
+            } else {
+                faceSplitIn = this.faceSplitRpmAllows(d, false, level);
+                if (faceSplitIn != null) {
+                    if (!faceSplitIn) continue;
+                } else if (this.definition == null || this.definition.rpmInputFacesRaw().isEmpty() ? autoFacesFinal != null && !autoFacesFinal.contains(d) : !this.rpmFacesContainWithAxis(this.definition.rpmInputFacesRaw(), d, this.getFacing(level), this.getFacingAxisRef(level), level)) continue;
+            }
             BlockEntity be = BukkitBlockEntityTypes.getIfLoaded(level, this.getMachinePos().relative(d));
             if (be == null || !((blockEntityController = be.controller) instanceof RpmProvider)) continue;
             RpmProvider p = (RpmProvider)blockEntityController;
@@ -1434,16 +1603,20 @@ dev.arubik.craftengine.rotation.KineticMember {
             } else {
                 providerDist = 0;
             }
-            if (this.definition != null && !this.definition.rpmInputFacesRaw().isEmpty()) {
+            if (faceSplitIn != null) {
+                // Already validated above — this second pass is the static io.rpm declaration's
+                // own check, which doesn't apply to a face-split block (see faceSplitRpmAllows).
+            } else if (this.definition != null && !this.definition.rpmInputFacesRaw().isEmpty()) {
                 Direction myFacing = this.getFacing(level);
-                if (!this.rpmFacesContainWithAxis(this.definition.rpmInputFacesRaw(), d, myFacing, level)) {
+                if (!this.rpmFacesContainWithAxis(this.definition.rpmInputFacesRaw(), d, myFacing, this.getFacingAxisRef(level), level)) {
                     continue;
                 }
             } else if (p instanceof DataMachineBlockEntity) {
                 DataMachineBlockEntity dm2 = (DataMachineBlockEntity)p;
                 if (dm2.definition != null) {
                     boolean providerOutputsAxisPerp;
-                    boolean bl3 = providerOutputsAxisPerp = dm2.definition.rpmOutputInvertedRaw().contains("axis_perp") || dm2.definition.rpmOutputFacesRaw().contains("axis_perp");
+                    Set<String>[] dm2Sets = dm2.currentRpmOutputSets();
+                    boolean bl3 = providerOutputsAxisPerp = java.util.Arrays.stream(dm2Sets).anyMatch(s -> s.contains("axis_perp"));
                     if (providerOutputsAxisPerp) {
                         boolean weAcceptAxisPerp;
                         boolean bl4 = weAcceptAxisPerp = this.definition != null && this.definition.rpmInputFacesRaw().contains("axis_perp");
@@ -1454,7 +1627,6 @@ dev.arubik.craftengine.rotation.KineticMember {
             if ((pot = p.potentialRpm()) <= 0.0f || !p.rpmReaches(cePos)) continue;
             float raw = p.getRpm();
             if (p instanceof DataMachineBlockEntity) {
-                Set<String> inv2;
                 DataMachineBlockEntity dm2 = (DataMachineBlockEntity)p;
                 if (dm2.definition != null && dm2.definition.rpmOutputRelative()) {
                     // Gearbox: the sign follows which face is actually driven, exactly as Create's
@@ -1467,8 +1639,7 @@ dev.arubik.craftengine.rotation.KineticMember {
                                 axisIndex(providerIn), axisSign(providerIn));
                     }
                 } else {
-                    Set<String> set = inv2 = dm2.definition != null ? dm2.definition.rpmOutputInvertedRaw() : Set.of();
-                    if (!inv2.isEmpty() && DataMachineBlockEntity.rpmFacesContain(inv2, d.getOpposite(), dm2.getFacing(level))) {
+                    if (dm2.isInvertedOutputFace(d.getOpposite(), level)) {
                         raw = dev.arubik.craftengine.rotation.RpmPropagation.applyInversion(raw, true);
                     }
                 }
@@ -1577,6 +1748,12 @@ dev.arubik.craftengine.rotation.KineticMember {
      * reached from set_rpm_output/relay_to but never from the pull path, so a consumer's
      * report_su landed in its own empty network and is_overstressed was meaningless for the
      * whole chain.
+     *
+     * <p>Exception: when the face we pulled from is one of the provider's NEW-NETWORK output faces
+     * (bare "output"/"output_inverted", as opposed to a plain "output_same" relay — see
+     * {@link #isNewNetworkOutputFace}), we deliberately do NOT join the provider's network. That
+     * face is a genuine kinetic-network boundary — a new stress network starts here instead, kept
+     * completely separate from whatever is upstream of the provider.
      */
     private void syncNetworkWithSource() {
         if (this.rpmSourceActive) return;   // we are the source; our own network is authoritative
@@ -1585,6 +1762,16 @@ dev.arubik.craftengine.rotation.KineticMember {
                 this.leaveNetwork();
             }
             return;
+        }
+        if (this.activeMotor instanceof DataMachineBlockEntity providerDm && this.rpmInputFace != null) {
+            Level level = this.getNMSLevel();
+            if (level != null && providerDm.isNewNetworkOutputFace(this.rpmInputFace.getOpposite(), level)) {
+                if (this.rpmNetworkId == 0L) {
+                    dev.arubik.craftengine.rotation.RpmNetwork created = dev.arubik.craftengine.rotation.RpmNetwork.create();
+                    this.joinNetwork(created.id());
+                }
+                return;
+            }
         }
         long netId = source.rpmNetworkId();
         if (netId == 0L) {
@@ -1705,31 +1892,21 @@ dev.arubik.craftengine.rotation.KineticMember {
             double range = Math.max(1.0, limit + 1.0);
             return new double[]{this.overclock + 1.0, range};
         }
-        // {file}.pf:{func} — execute function and use returned [value, max] or single value (0-1 fraction → *100)
+        // {file}.pf:{func[:args]} — execute function and use returned [value, max] or single value
+        // (0-1 fraction → *100). Delegates to ScriptCall (the one canonical "file.pf:func:args"
+        // parser/caller — see its javadoc) instead of hand-rolling the split+lookup here, which
+        // previously broke on any ":arg" suffix (the whole "func:arg" tail got treated as one
+        // bogus var name) and bypassed UserFunction.call's normal param-binding/depth-guard path.
         if (source.contains(".pf:")) {
             try {
-                int colon = source.indexOf(':');
-                String scriptFile = source.substring(0, colon);
-                String funcName = source.substring(colon + 1);
-                String lookupKey = scriptFile.endsWith(".pf") ? scriptFile.substring(0, scriptFile.length() - 3) : scriptFile;
-                dev.arubik.craftengine.script.ScriptProgram prog = dev.arubik.craftengine.script.ScriptRegistry.get(lookupKey);
-                if (prog != null) {
-                    dev.arubik.craftengine.script.ScriptContext baseCtx = this.buildScriptContext();
-                    if (baseCtx != null) {
-                        dev.arubik.craftengine.script.ScriptContext withDefs = prog.evaluate(baseCtx);
-                        dev.arubik.craftengine.script.ScriptValue fnVal = withDefs.getVar(funcName);
-                        if (fnVal instanceof dev.arubik.craftengine.script.ScriptValue.Obj fnObj
-                                && fnObj.typeName().equals(dev.arubik.craftengine.script.UserFunction.TYPE)) {
-                            dev.arubik.craftengine.script.UserFunction fn = (dev.arubik.craftengine.script.UserFunction) fnObj.instance();
-                            dev.arubik.craftengine.script.ScriptContext.Builder rb = dev.arubik.craftengine.script.ScriptContext.builder().copyFrom(withDefs);
-                            fn.executor().accept(withDefs, rb);
-                            dev.arubik.craftengine.script.ScriptValue result = rb.build().getVar("__return__");
-                            if (result instanceof dev.arubik.craftengine.script.ScriptValue.Array arr && arr.elements().size() >= 2) {
-                                return new double[]{arr.elements().get(0).asNum(), arr.elements().get(1).asNum()};
-                            }
-                            return new double[]{result.asNum() * 100.0, 100.0};
-                        }
+                dev.arubik.craftengine.script.ScriptCall call = dev.arubik.craftengine.script.ScriptCall.parse(source);
+                dev.arubik.craftengine.script.ScriptContext baseCtx = this.buildScriptContext();
+                if (call != null && baseCtx != null) {
+                    dev.arubik.craftengine.script.ScriptValue result = call.evaluate(baseCtx);
+                    if (result instanceof dev.arubik.craftengine.script.ScriptValue.Array arr && arr.elements().size() >= 2) {
+                        return new double[]{arr.elements().get(0).asNum(), arr.elements().get(1).asNum()};
                     }
+                    return new double[]{result.asNum() * 100.0, 100.0};
                 }
             } catch (Throwable ignored) {}
             return new double[]{0.0, 100.0};
@@ -2003,8 +2180,9 @@ dev.arubik.craftengine.rotation.KineticMember {
                         dev.arubik.craftengine.script.ScriptContext slotCtx = dev.arubik.craftengine.script.ScriptContext
                             .builder().copyFrom(ctx).val("slot", dev.arubik.craftengine.script.ScriptValue.of(ghostSlot)).build();
                         // evalPfFuncItem accepts EITHER a full Item return (exact display — every
-                        // enchant/component intact, see Machine.get_item_flag) OR a plain Str id
-                        // (a generic representative icon) — the `get` script picks its own fidelity.
+                        // enchant/component intact, see Machine.get_typed(..., "item")) OR a plain
+                        // Str id (a generic representative icon) — the `get` script picks its own
+                        // fidelity.
                         org.bukkit.inventory.ItemStack resolved = evalPfFuncItem(spec.getRef(), slotCtx);
                         return resolved != null ? resolved
                             : MenuText.iconItem(parseKey(spec.emptyIcon()), Material.AIR, Component.empty(), new Component[0]);
@@ -2019,8 +2197,9 @@ dev.arubik.craftengine.rotation.KineticMember {
                         // Both a plain id string AND the FULL clicked item (every component intact)
                         // are bound — a `set` script that only needs "which item type" can use
                         // clicked_id; one that needs to preserve enchantments/custom data (via
-                        // Machine.set_item_flag) uses clicked_item instead. Never touches/consumes
-                        // the actual cursor stack either way — see MenuSlotType#GHOST.
+                        // Machine.set_typed(..., "item", clicked_item)) uses clicked_item instead.
+                        // Never touches/consumes the actual cursor stack either way — see
+                        // MenuSlotType#GHOST.
                         dev.arubik.craftengine.script.ScriptContext.Builder setBuilder = dev.arubik.craftengine.script.ScriptContext
                             .builder().copyFrom(base)
                             .val("slot", dev.arubik.craftengine.script.ScriptValue.of(ghostSlot))
@@ -2057,7 +2236,15 @@ dev.arubik.craftengine.rotation.KineticMember {
 
                 // item supports: namespaced key, "${expr}", or "{file}.pf:{func}" returning Item/string
                 org.bukkit.inventory.ItemStack item = null;
-                if (ctx != null && itemKey != null && itemKey.contains(".pf:")) {
+                if (s.customIcon() != null) {
+                    // Generator-supplied pre-built item (e.g. a real skin-profile head) — used AS-IS,
+                    // name/lore still applied on top exactly like the string-id path below.
+                    Component nameComp1 = evalName != null
+                        ? net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(evalName)
+                            .decoration(net.kyori.adventure.text.format.TextDecoration.ITALIC, false)
+                        : Component.empty();
+                    item = dev.arubik.craftengine.machine.menu.MenuText.iconItem(s.customIcon(), nameComp1, new Component[0]);
+                } else if (ctx != null && itemKey != null && itemKey.contains(".pf:")) {
                     // Script function returns ScriptValue — Item → use stack, Str → use as key
                     item = evalPfFuncItem(itemKey, ctx);
                 }
@@ -2102,21 +2289,17 @@ dev.arubik.craftengine.rotation.KineticMember {
                     case SCRIPT -> {
                         dev.arubik.craftengine.script.ScriptContext sCtx = dmBtn.buildScriptContext();
                         if (sCtx == null) break;
-                        String target = parsed.target;
-                        if (target.contains(":")) {
-                            int col = target.indexOf(':'); String file = target.substring(0, col); String func = target.substring(col + 1);
-                            String key = file.endsWith(".pf") ? file.substring(0, file.length() - 3) : file;
-                            dev.arubik.craftengine.script.ScriptProgram prog = dev.arubik.craftengine.script.ScriptRegistry.get(key);
-                            if (prog != null) {
-                                dev.arubik.craftengine.script.ScriptContext withDefs = prog.evaluate(sCtx);
-                                dev.arubik.craftengine.script.ScriptValue fnVal = withDefs.getVar(func);
-                                if (fnVal instanceof dev.arubik.craftengine.script.ScriptValue.Obj fnObj && fnObj.typeName().equals(dev.arubik.craftengine.script.UserFunction.TYPE)) {
-                                    dev.arubik.craftengine.script.UserFunction fn = (dev.arubik.craftengine.script.UserFunction) fnObj.instance();
-                                    dev.arubik.craftengine.script.ScriptContext.Builder rb = dev.arubik.craftengine.script.ScriptContext.builder().copyFrom(withDefs);
-                                    fn.executor().accept(withDefs, rb);
-                                }
-                            }
-                        }
+                        // parsed.target is already "file.pf:funcname" (Action.parse split its args
+                        // off separately into parsed.args) — re-join them into one ref and let
+                        // ScriptCall do the parsing/calling, instead of re-splitting target here
+                        // (which, before this, silently dropped parsed.args entirely — a SCRIPT
+                        // button with args never actually passed them — and bypassed
+                        // UserFunction.call's normal param-binding/depth-guard path via direct
+                        // executor() access).
+                        String ref = parsed.target
+                                + (parsed.args.isEmpty() ? "" : ":" + String.join(":", parsed.args));
+                        dev.arubik.craftengine.script.ScriptCall call = dev.arubik.craftengine.script.ScriptCall.parse(ref);
+                        if (call != null) call.execute(sCtx);
                     }
                     default -> {}
                 }
@@ -2157,7 +2340,21 @@ dev.arubik.craftengine.rotation.KineticMember {
      *   "Shift(Images.from('cml:gui'), -12)"  → already-a-formula (no braces) also supported
      *   "\{literal braces\}"                  → escaped, won't be evaluated
      */
-    private static Component buildTitleComponent(String title, String guiImage, int guiImageShift) {
+    /** Public so a non-machine menu system (e.g. {@code CmdRegistry}'s declarative {@code
+     *  "pages"}) can reuse the SAME {@code {Images.from(id)}}/MiniMessage title template parser
+     *  a machine page's own {@code "title"} field already goes through, instead of a second,
+     *  drifting implementation. Purely a visibility change — behavior is untouched. */
+    public static Component buildTitleComponent(String title, String guiImage, int guiImageShift) {
+        return buildTitleComponent(title, guiImage, guiImageShift, null);
+    }
+
+    /** Same as the 3-arg overload, but {@code extra} (when non-null) is merged into the {@code
+     *  {expr}} evaluation context ALONGSIDE {@code Images} — e.g. a {@code /cmds} page passing its
+     *  own already-built context so a title can also read {@code {Player.name}} or any other
+     *  class/value that context has bound, not just build a background image. A machine page's
+     *  title never needed this (its title is evaluated with no player/context at menu-open time
+     *  in this same method's ORIGINAL call sites, which keep using the 3-arg form). */
+    public static Component buildTitleComponent(String title, String guiImage, int guiImageShift, dev.arubik.craftengine.script.ScriptContext extra) {
         if (title == null) return Component.empty();
 
         // Parse template: split on {expr} blocks
@@ -2193,10 +2390,13 @@ dev.arubik.craftengine.rotation.KineticMember {
                 i = j + 1;
                 // Evaluate expr as ScriptFormula
                 try {
-                    // Provide Images singleton so Images.from('id') resolves via PolyType
+                    // Provide Images singleton so Images.from('id') resolves via PolyType, plus
+                    // whatever the caller passed in `extra` (e.g. Player/Server for a /cmds page).
+                    dev.arubik.craftengine.script.ScriptContext.Builder evalCtxBuilder =
+                        dev.arubik.craftengine.script.ScriptContext.builder();
+                    if (extra != null) evalCtxBuilder.copyFrom(extra);
                     dev.arubik.craftengine.script.ScriptContext evalCtx =
-                        dev.arubik.craftengine.script.ScriptContext.builder()
-                            .typed("Images", "images_singleton").build();
+                        evalCtxBuilder.typed("Images", "images_singleton").build();
                     dev.arubik.craftengine.script.ScriptValue result =
                         dev.arubik.craftengine.script.ScriptFormula.compile(expr)
                             .evaluate(evalCtx);
@@ -2249,6 +2449,12 @@ dev.arubik.craftengine.rotation.KineticMember {
                 return dev.arubik.craftengine.machine.menu.MenuText.imageTitle(data[0], shift);
             } catch (Throwable ignored) {}
         }
+        // _TitleShift type from Images.shift() builtin — a bare cursor shift, no image
+        if (val instanceof dev.arubik.craftengine.script.ScriptValue.Obj obj
+                && "_TitleShift".equals(obj.typeName())
+                && obj.instance() instanceof Integer shift) {
+            return dev.arubik.craftengine.machine.menu.MenuText.shiftOnly(shift);
+        }
         // String result → MiniMessage
         if (val instanceof dev.arubik.craftengine.script.ScriptValue.Str s && !s.value().isBlank()) {
             try { return net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(s.value()); }
@@ -2276,59 +2482,44 @@ dev.arubik.craftengine.rotation.KineticMember {
         return result;
     }
 
+    /** Delegates parsing/calling to {@link dev.arubik.craftengine.script.ScriptCall} — the one
+     *  canonical "file.pf:func:args" parser/caller — instead of hand-rolling the split+lookup here,
+     *  which previously bypassed {@code UserFunction.call}'s normal param-binding/depth-guard path
+     *  via direct {@code executor()} access and had no way to pass {@code :args} at all. */
     private static String evalPfFuncStr(String ref, dev.arubik.craftengine.script.ScriptContext ctx) {
         try {
-            int colon = ref.indexOf(':');
-            String scriptFile = ref.substring(0, colon);
-            String funcName = ref.substring(colon + 1);
-            String key = scriptFile.endsWith(".pf") ? scriptFile.substring(0, scriptFile.length() - 3) : scriptFile;
-            dev.arubik.craftengine.script.ScriptProgram prog = dev.arubik.craftengine.script.ScriptRegistry.get(key);
-            if (prog == null) return "false";
-            dev.arubik.craftengine.script.ScriptContext withDefs = prog.evaluate(ctx);
-            dev.arubik.craftengine.script.ScriptValue fnVal = withDefs.getVar(funcName);
-            if (fnVal instanceof dev.arubik.craftengine.script.ScriptValue.Obj fnObj
-                    && fnObj.typeName().equals(dev.arubik.craftengine.script.UserFunction.TYPE)) {
-                dev.arubik.craftengine.script.UserFunction fn = (dev.arubik.craftengine.script.UserFunction) fnObj.instance();
-                dev.arubik.craftengine.script.ScriptContext.Builder rb = dev.arubik.craftengine.script.ScriptContext.builder().copyFrom(withDefs);
-                fn.executor().accept(withDefs, rb);
-                return rb.build().getVar("__return__").asStr();
-            }
+            dev.arubik.craftengine.script.ScriptCall call = dev.arubik.craftengine.script.ScriptCall.parse(ref);
+            if (call == null) return "false";
+            dev.arubik.craftengine.script.ScriptValue result = call.evaluate(ctx);
+            // "false" (not "null") when unresolvable — matches this method's pre-ScriptCall
+            // contract, which callers here (a status placeholder) rely on as their empty/default
+            // reading, distinct from a resolved call that genuinely returned null.
+            return result instanceof dev.arubik.craftengine.script.ScriptValue.Null ? "false" : result.asStr();
         } catch (Throwable ignored) {}
         return "false";
     }
 
-    /** Call a {file}.pf:{func} and return the ItemStack from __return__ (ScriptValue.Item → NMS→Bukkit, Str → key lookup). */
+    /** Call a {file}.pf:{func[:args]} and return the ItemStack from __return__ (ScriptValue.Item →
+     *  NMS→Bukkit, Str → key lookup). Same ScriptCall delegation as {@link #evalPfFuncStr}. */
     private static org.bukkit.inventory.ItemStack evalPfFuncItem(String ref, dev.arubik.craftengine.script.ScriptContext ctx) {
         try {
-            int colon = ref.indexOf(':');
-            String scriptFile = ref.substring(0, colon);
-            String funcName = ref.substring(colon + 1);
-            String key = scriptFile.endsWith(".pf") ? scriptFile.substring(0, scriptFile.length() - 3) : scriptFile;
-            dev.arubik.craftengine.script.ScriptProgram prog = dev.arubik.craftengine.script.ScriptRegistry.get(key);
-            if (prog == null) return null;
-            dev.arubik.craftengine.script.ScriptContext withDefs = prog.evaluate(ctx);
-            dev.arubik.craftengine.script.ScriptValue fnVal = withDefs.getVar(funcName);
-            if (fnVal instanceof dev.arubik.craftengine.script.ScriptValue.Obj fnObj
-                    && fnObj.typeName().equals(dev.arubik.craftengine.script.UserFunction.TYPE)) {
-                dev.arubik.craftengine.script.UserFunction fn = (dev.arubik.craftengine.script.UserFunction) fnObj.instance();
-                dev.arubik.craftengine.script.ScriptContext.Builder rb = dev.arubik.craftengine.script.ScriptContext.builder().copyFrom(withDefs);
-                fn.executor().accept(withDefs, rb);
-                dev.arubik.craftengine.script.ScriptValue result = rb.build().getVar("__return__");
-                if (result instanceof dev.arubik.craftengine.script.ScriptValue.Item i) {
-                    // NMS ItemStack → Bukkit
-                    return org.bukkit.craftbukkit.inventory.CraftItemStack.asBukkitCopy(i.stack());
-                }
-                if (result instanceof dev.arubik.craftengine.script.ScriptValue.Str s) {
-                    // Try as namespaced key → CraftEngine item or Bukkit material
-                    try {
-                        var ceDef = net.momirealms.craftengine.bukkit.api.CraftEngineItems.byId(net.momirealms.craftengine.core.util.Key.of(s.value()));
-                        if (ceDef != null) return ceDef.buildBukkitItem();
-                    } catch (Throwable ignored) {}
-                    try {
-                        org.bukkit.Material mat = org.bukkit.Material.matchMaterial(s.value());
-                        if (mat != null) return new org.bukkit.inventory.ItemStack(mat);
-                    } catch (Throwable ignored) {}
-                }
+            dev.arubik.craftengine.script.ScriptCall call = dev.arubik.craftengine.script.ScriptCall.parse(ref);
+            if (call == null) return null;
+            dev.arubik.craftengine.script.ScriptValue result = call.evaluate(ctx);
+            if (result instanceof dev.arubik.craftengine.script.ScriptValue.Item i) {
+                // NMS ItemStack → Bukkit
+                return org.bukkit.craftbukkit.inventory.CraftItemStack.asBukkitCopy(i.stack());
+            }
+            if (result instanceof dev.arubik.craftengine.script.ScriptValue.Str s) {
+                // Try as namespaced key → CraftEngine item or Bukkit material
+                try {
+                    var ceDef = net.momirealms.craftengine.bukkit.api.CraftEngineItems.byId(net.momirealms.craftengine.core.util.Key.of(s.value()));
+                    if (ceDef != null) return ceDef.buildBukkitItem();
+                } catch (Throwable ignored) {}
+                try {
+                    org.bukkit.Material mat = org.bukkit.Material.matchMaterial(s.value());
+                    if (mat != null) return new org.bukkit.inventory.ItemStack(mat);
+                } catch (Throwable ignored) {}
             }
         } catch (Throwable ignored) {}
         return null;
@@ -2414,6 +2605,34 @@ dev.arubik.craftengine.rotation.KineticMember {
     public void addOverclock(float delta) { setOverclock(this.overclock + delta); }
     public static double clampPublic(double v, double min, double max) { return clamp(v, min, max); }
 
+    /** {@code level.getBestNeighborSignal(pos)}, cached within the same server tick — see the
+     *  {@code cachedRedstoneTick}/{@code cachedRedstoneSignal} field doc. Falls back to an
+     *  uncached direct poll if the level isn't a {@link ServerLevel} (can't determine a tick
+     *  count) or the poll itself throws — matches the original call sites' own defensive
+     *  try/catch-and-ignore behavior exactly, just with the fast path added on top. */
+    private int cachedNeighborSignal(Level level, BlockPos pos) {
+        // flags.redstone off means this machine neither emits nor reads redstone — skip the poll
+        // (a real NMS scan of all 6 neighbours) entirely rather than caching a value nobody needed.
+        if (this.definition != null && !this.definition.flags().redstone()) return 0;
+        int tick;
+        if (level instanceof ServerLevel sl) {
+            try { tick = sl.getServer().getTickCount(); }
+            catch (Throwable ignored) { return pollNeighborSignal(level, pos); }
+        } else {
+            return pollNeighborSignal(level, pos);
+        }
+        if (tick == this.cachedRedstoneTick) return this.cachedRedstoneSignal;
+        int signal = pollNeighborSignal(level, pos);
+        this.cachedRedstoneTick = tick;
+        this.cachedRedstoneSignal = signal;
+        return signal;
+    }
+
+    private static int pollNeighborSignal(Level level, BlockPos pos) {
+        try { return level.getBestNeighborSignal(pos); }
+        catch (Throwable ignored) { return 0; }
+    }
+
     @Override
     public ScriptContext buildScriptContext() {
         try {
@@ -2448,12 +2667,7 @@ dev.arubik.craftengine.rotation.KineticMember {
                 }
             }
             boolean bl = false;
-            try {
-                n = level.getBestNeighborSignal(pos);
-            }
-            catch (Throwable tank) {
-                // empty catch block
-            }
+            n = this.cachedNeighborSignal(level, pos);
             MachineRenderContext mrc = new MachineRenderContext(this.inputRpm, this.overclock, this.curFuelEff, this.progress, this.maxProgress, this.curGeneration, this.isProcessing(), this.inputRpm > 0.0f, this.isOverclocked(), this.burnTime > 0, null, linkedHashMap, fluidTankData, gasTankData, n);
             Direction facing = this.getFacing(level);
             if (facing == null) {
@@ -2497,13 +2711,10 @@ dev.arubik.craftengine.rotation.KineticMember {
                 .typed("Network", new dev.arubik.craftengine.script.types.machine.NetworkType.NetworkRef((ServerLevel)level, ((ServerLevel)level).getWorld().getUID(), pos.getX(), pos.getY(), pos.getZ()));
             if (level instanceof dev.arubik.craftengine.contraption.core.ContraptionLevel cl)
                 b.typed("Contraption", cl);
-            // Global singletons available in all machine scripts
-            b.typed("ContraptionManager", dev.arubik.craftengine.script.types.world.ContraptionManagerType.INSTANCE);
-            b.typed("Server", dev.arubik.craftengine.script.types.world.ServerType.INSTANCE);
-            b.typed("ChainManager", dev.arubik.craftengine.script.types.chainery.ChainManagerType.INSTANCE);
-            b.typed("TypedKey", dev.arubik.craftengine.script.types.util.TypedKeyManagerType.INSTANCE);
-            b.typed("Glue", dev.arubik.craftengine.script.types.world.GlueType.INSTANCE);
-            b.typed("Dialog", dev.arubik.craftengine.script.types.util.DialogManagerType.INSTANCE);
+            // Global singletons available in all machine scripts — precomputed ONCE in
+            // ScriptBootstrap, shared across every script-firing entry point in the plugin, rather
+            // than re-allocating them here on every single tick for every machine on the server.
+            b.typedAll(dev.arubik.craftengine.script.ScriptBootstrap.globalSingletons());
             if (level instanceof ServerLevel sl) b.world(sl);
             return b.build();
         }
@@ -2523,6 +2734,8 @@ dev.arubik.craftengine.rotation.KineticMember {
             if (SCRIPT_DEBUG) System.out.println("[CEP script] OK " + scriptRef);
         } catch (Throwable t) {
             if (SCRIPT_DEBUG) t.printStackTrace();
+            dev.arubik.craftengine.CraftEnginePolyfills.instance().getLogger().log(
+                    java.util.logging.Level.WARNING, "[Cep] action_script " + scriptRef + " threw", t);
         }
     }
 
@@ -2544,7 +2757,18 @@ dev.arubik.craftengine.rotation.KineticMember {
                     .event(new dev.arubik.craftengine.script.event.InteractEvent(hookName, null))
                     .build();
             call.execute(ctx);
-        } catch (Throwable ignored) {}
+        } catch (Throwable t) {
+            dev.arubik.craftengine.CraftEnginePolyfills.instance().getLogger().log(
+                    java.util.logging.Level.WARNING, "[Cep] " + hookName + " " + scriptRef + " threw", t);
+        }
+    }
+
+    /** {@link dev.arubik.craftengine.machine.render.RendererManager.InteractScriptRunner} shape —
+     *  a single-block machine has no multi-part concept, so the clicked marker's offset from this
+     *  block is simply ignored and this delegates to the plain 3-arg overload. */
+    public void runInteractScript(String scriptRef, ServerPlayer player, String hookName,
+                                   double offsetX, double offsetY, double offsetZ) {
+        runInteractScript(scriptRef, player, hookName);
     }
 
     /** Run an arbitrary script ref (on_place, on_break, etc.) with the machine's context. */
@@ -2608,7 +2832,7 @@ dev.arubik.craftengine.rotation.KineticMember {
     }
 
     static MachineMenuConfig.Button toButton(MachineDefinition.ButtonSpec spec) {
-        return new MachineMenuConfig.Button(spec.slot(), spec.icon(), MachineMenuConfig.Action.parse(spec.action()), spec.name(), spec.lore(), spec.lockedIcon(), MachineMenuConfig.LockedWhen.parse(spec.lockedWhen()));
+        return new MachineMenuConfig.Button(spec.slot(), spec.icon(), MachineMenuConfig.Action.parse(spec.action()), spec.name(), spec.lore(), spec.lockedIcon(), MachineMenuConfig.LockedWhen.parse(spec.lockedWhen()), spec.customIcon());
     }
 
     private void installButton(MachineLayout layout, MachineMenuConfig.Button button) {
@@ -2623,7 +2847,11 @@ dev.arubik.craftengine.rotation.KineticMember {
             Component nameComp = rawName == null || rawName.isBlank() ? Component.empty()
                 : net.kyori.adventure.text.minimessage.MiniMessage.miniMessage()
                     .deserialize(rawName).decoration(net.kyori.adventure.text.format.TextDecoration.ITALIC, false);
-            org.bukkit.inventory.ItemStack item = MenuText.iconItem(icon, Material.PAPER, nameComp, new Component[0]);
+            // A generator-supplied pre-built item (real skin profile, etc.) is used AS-IS when not
+            // locked — the locked_icon/icon string path still governs the locked appearance.
+            org.bukkit.inventory.ItemStack item = (button.customIcon != null && !locked)
+                ? MenuText.iconItem(button.customIcon, nameComp, new Component[0])
+                : MenuText.iconItem(icon, Material.PAPER, nameComp, new Component[0]);
             if (item != null && loreLines != null && !loreLines.isEmpty()) {
                 org.bukkit.inventory.meta.ItemMeta meta = item.getItemMeta();
                 if (meta != null) {
@@ -2660,21 +2888,13 @@ dev.arubik.craftengine.rotation.KineticMember {
                     if (sCtx == null) break;
 
                     // Format: "gas_motor.pf:increase_rpm" stored as target="gas_motor.pf:increase_rpm"
-                    String actionTarget = button.action.target;
-                    String scriptFile, funcName;
-                    if (actionTarget.contains(":")) {
-                        int colon = actionTarget.indexOf(':');
-                        scriptFile = actionTarget.substring(0, colon);
-                        funcName = actionTarget.substring(colon + 1);
-                    } else {
-                        scriptFile = actionTarget;
-                        funcName = null;
-                    }
-
-                    // Remove ".pf" suffix for registry lookup
-                    String lookupKey = scriptFile.endsWith(".pf") ? scriptFile.substring(0, scriptFile.length() - 3) : scriptFile;
-                    ScriptProgram btnScript = ScriptRegistry.get(lookupKey);
-                    if (btnScript == null) break;
+                    // — parsing/calling delegates to ScriptCall (the one canonical "file.pf:func"
+                    // parser) instead of re-splitting target here; button.action.args (already
+                    // separated out by Action.parse) are threaded through via executeWithExtraArgs
+                    // rather than duplicating ScriptCall's own evaluate/execute dispatch.
+                    dev.arubik.craftengine.script.ScriptCall btnCall =
+                            dev.arubik.craftengine.script.ScriptCall.parse(button.action.target);
+                    if (btnCall == null) break;
 
                     // Inject args + click_type so scripts can branch on left/right/drop etc.
                     dev.arubik.craftengine.script.ScriptContext.Builder b = dev.arubik.craftengine.script.ScriptContext.builder().copyFrom(sCtx);
@@ -2689,22 +2909,11 @@ dev.arubik.craftengine.rotation.KineticMember {
                     for (int ai = 0; ai < button.action.args.size(); ai++)
                         b.str("arg" + ai, button.action.args.get(ai));
 
-                    if (funcName == null || funcName.isEmpty()) {
-                        // No function — execute whole script
-                        btnScript.evaluate(b.build());
-                    } else {
-                        // Execute script to register defs, then call the named function
-                        ScriptContext withDefs = btnScript.evaluate(b.build());
-                        dev.arubik.craftengine.script.ScriptValue fnVal = withDefs.getVar(funcName);
-                        if (fnVal instanceof dev.arubik.craftengine.script.ScriptValue.Obj fnObj
-                                && fnObj.typeName().equals(dev.arubik.craftengine.script.UserFunction.TYPE)) {
-                            dev.arubik.craftengine.script.UserFunction fn = (dev.arubik.craftengine.script.UserFunction) fnObj.instance();
-                            // Bind action args to function params by position (e.g. "8" → amount)
-                            java.util.List<dev.arubik.craftengine.script.ScriptValue> svArgs = new java.util.ArrayList<>(button.action.args.size());
-                            for (String a : button.action.args) svArgs.add(dev.arubik.craftengine.script.ScriptValue.of(a));
-                            fn.call(svArgs, withDefs);
-                        }
-                    }
+                    // Bind action args to function params by position (e.g. "8" → amount) — a
+                    // no-op (whole-script execute, no call) when the target has no funcName.
+                    java.util.List<dev.arubik.craftengine.script.ScriptValue> svArgs = new java.util.ArrayList<>(button.action.args.size());
+                    for (String a : button.action.args) svArgs.add(dev.arubik.craftengine.script.ScriptValue.of(a));
+                    btnCall.executeWithExtraArgs(b.build(), svArgs);
                     break;
                 }
                 case BUMP_OVERCLOCK: {
@@ -2759,24 +2968,48 @@ dev.arubik.craftengine.rotation.KineticMember {
     }
 
     public static Direction rpmFacesContainDir(String s, Direction facing) {
+        return rpmFacesContainDir(s, facing, facing);
+    }
+
+    /**
+     * {@code horizontalRef} is what "left"/"right" actually rotate — normally the same as {@code
+     * facing}, EXCEPT for a button-style face-split block (see AbstractMachineBlockEntity#getFacing
+     * / #getFacingAxisRef) mounted floor/ceiling, where {@code facing} has collapsed to plain UP/
+     * DOWN (correct for "front"/"back") but {@code Direction.getClockWise()}/{@code
+     * getCounterClockWise()} both THROW for a Y-axis input — there's no inherent "clockwise" for
+     * UP/DOWN without a horizontal reference axis. {@code horizontalRef} carries that reference
+     * (the block's own RAW stored horizontal "facing" property) so "left"/"right" still resolve to
+     * the axis perpendicular to whichever way the belt/facing actually runs.
+     */
+    public static Direction rpmFacesContainDir(String s, Direction facing, Direction horizontalRef) {
         if (facing == null) {
             facing = Direction.NORTH;
         }
+        Direction ref = (horizontalRef != null && horizontalRef.getAxis() != Direction.Axis.Y) ? horizontalRef : facing;
+        if (ref.getAxis() == Direction.Axis.Y) ref = Direction.NORTH; // last-resort: never crash
         return switch (s.toLowerCase()) {
             case "front" -> facing;
             case "back" -> facing.getOpposite();
-            case "right" -> facing.getClockWise();
-            case "left" -> facing.getCounterClockWise();
-            case "up" -> Direction.UP;
-            case "down" -> Direction.DOWN;
+            case "right" -> ref.getClockWise();
+            case "left" -> ref.getCounterClockWise();
+            case "up", "top" -> Direction.UP;
+            case "down", "bottom" -> Direction.DOWN;
             default -> Direction.byName((String)s.toLowerCase());
         };
     }
 
     private static boolean rpmFacesContain(Set<String> raw, Direction d, Direction facing) {
+        return rpmFacesContain(raw, d, facing, facing);
+    }
+
+    /** See {@link #rpmFacesContainDir(String, Direction, Direction)}'s javadoc for what
+     *  {@code horizontalRef} is and why "left"/"right" need it separately from {@code facing}. */
+    private static boolean rpmFacesContain(Set<String> raw, Direction d, Direction facing, Direction horizontalRef) {
         if (facing == null) {
             facing = Direction.NORTH;
         }
+        Direction ref = (horizontalRef != null && horizontalRef.getAxis() != Direction.Axis.Y) ? horizontalRef : facing;
+        if (ref.getAxis() == Direction.Axis.Y) ref = Direction.NORTH; // last-resort: never crash
         Iterator<String> iterator = raw.iterator();
         while (iterator.hasNext()) {
             boolean match;
@@ -2795,24 +3028,24 @@ dev.arubik.craftengine.rotation.KineticMember {
                     yield false;
                 }
                 case "right" -> {
-                    if (d == facing.getClockWise()) {
+                    if (d == ref.getClockWise()) {
                         yield true;
                     }
                     yield false;
                 }
                 case "left" -> {
-                    if (d == facing.getCounterClockWise()) {
+                    if (d == ref.getCounterClockWise()) {
                         yield true;
                     }
                     yield false;
                 }
-                case "up" -> {
+                case "up", "top" -> {
                     if (d == Direction.UP) {
                         yield true;
                     }
                     yield false;
                 }
-                case "down" -> {
+                case "down", "bottom" -> {
                     if (d == Direction.DOWN) {
                         yield true;
                     }

@@ -1,0 +1,82 @@
+{
+  "id": "polyfills:gearbox_v",
+  "title": "Vertical Gearbox",
+  "menu_size": 9,
+  "flags": {
+    "recipes": false,
+    "fuel": false,
+    "ui": false,
+    "ui_tick": false,
+    "kinetics": true,
+    "continuous_fuel": false,
+    "io_pull": true,
+    "renderers": true,
+    "scripts": true,
+    "animations": true
+  },
+  "action_script": "kinetics/shafts/gearbox_v",
+  "status": "kinetics/shafts/gearbox_v.pf:status",
+  "on_break": "kinetics/shafts/gearbox_v.pf:on_break",
+  "action_interval": 1,
+  "io": {
+    "input": [
+      {
+        "types": [
+          "rpm"
+        ],
+        "faces": [
+          "front",
+          "back",
+          "up",
+          "down"
+        ]
+      }
+    ],
+    "output_same": [
+      {
+        "types": [
+          "rpm"
+        ],
+        "faces": [
+          "front",
+          "back",
+          "up",
+          "down"
+        ],
+        "relative": true
+      }
+    ]
+  },
+  "renderers": [
+    {
+      "type": "item_display",
+      "item": "CraftEngineItem(\"cml:shaft_render\")",
+      "location": {
+        "x": 0,
+        "y": 0.5,
+        "z": 0
+      },
+      "rot_y": "tick() * rpm * 0.3",
+      "scale": "1.0",
+      "when": "Machine.activated",
+      "update_when": "always",
+      "global": true
+    },
+    {
+      "type": "item_display",
+      "item": "CraftEngineItem(\"cml:shaft_render\")",
+      "location": {
+        "x": 0,
+        "y": 0.5,
+        "z": 0
+      },
+      "rot_y": "(Machine.block.property(\"facing\") == \"north\" || Machine.block.property(\"facing\") == \"south\") ? -90 : 0",
+      "rot_z": "90",
+      "rot_x": "tick() * rpm * 0.3",
+      "scale": "1.0",
+      "when": "Machine.activated",
+      "update_when": "always",
+      "global": true
+    }
+  ]
+}

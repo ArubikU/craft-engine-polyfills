@@ -1,0 +1,47 @@
+{
+  "id": "polyfills:fertilizer",
+  "title": "Fertilizer",
+  "flags": {
+    "recipes": false,
+    "fuel": false,
+    "continuous_fuel": false,
+    "ui": true,
+    "ui_tick": true,
+    "io_pull": true,
+    "renderers": true,
+    "scripts": true,
+    "animations": true,
+    "kinetics": false
+  },
+  "action_script": "farming/fertilizer",
+  "action_interval": 20,
+  "pages": [
+    {
+      "title": "Fertilizer",
+      "size": 9,
+      "slots": {
+        "input": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8
+        ]
+      }
+    }
+  ],
+  "io": {
+    "input": {
+      "types": [
+        "item"
+      ],
+      "faces": [
+        "up"
+      ]
+    }
+  }
+}

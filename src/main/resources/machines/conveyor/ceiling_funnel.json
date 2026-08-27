@@ -1,0 +1,46 @@
+{
+  "id": "polyfills:ceiling_funnel",
+  "title": "Ceiling Funnel",
+  "flags": {
+    "recipes": false,
+    "fuel": false,
+    "ui": false,
+    "ui_tick": false,
+    "continuous_fuel": false,
+    "io_pull": true,
+    "renderers": true,
+    "scripts": true,
+    "animations": true,
+    "kinetics": false
+  },
+  "on_right_click": "conveyor/ceiling_funnel.pf:on_right_click",
+  "on_break": "conveyor/ceiling_funnel.pf:on_break",
+  "action_script": "conveyor/ceiling_funnel",
+  "action_interval": 1,
+  "slots": {
+    "input": [
+      0
+    ],
+    "output": [
+      0
+    ]
+  },
+  "io": {
+    "input": {
+      "types": [
+        "item"
+      ],
+      "faces": [
+        "all"
+      ]
+    },
+    "output": {
+      "types": [
+        "item"
+      ],
+      "faces": [
+        "all"
+      ]
+    }
+  }
+}

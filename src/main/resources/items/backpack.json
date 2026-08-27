@@ -4,9 +4,8 @@
   "open_on_right_click": true,
   "open_on_shift_right_click": false,
   "place_block": {
-    "block": "polyfills:storage_block",
+    "block": "polyfills:backpack_storage",
     "fill_storage": true,
-    "fill_flags": true,
     "fill_typed": true
   },
   "pages": [
@@ -17,7 +16,7 @@
         "storage": [0,1,2,3,4,5,6,7,8, 9,10,11,12,13,14,15,16,17],
         "storage_filter": {
           "deny": ["polyfills:backpack", "polyfills:jetpack"],
-          "script": "backpack.pf:can_store"
+          "script": "storage/backpack.pf:can_store"
         }
       },
       "buttons": [
@@ -31,7 +30,7 @@
         "storage": [0,1,2,3,4,5,6,7,8, 9,10,11,12,13,14,15,16,17],
         "storage_filter": {
           "deny": ["polyfills:backpack", "polyfills:jetpack"],
-          "script": "backpack.pf:can_store"
+          "script": "storage/backpack.pf:can_store"
         }
       },
       "buttons": [
@@ -40,6 +39,6 @@
     }
   ],
   "scripts": {
-    "on_place_block": "backpack.pf:on_place_block"
+    "on_place_block": "storage/backpack.pf:on_place_block"
   }
 }

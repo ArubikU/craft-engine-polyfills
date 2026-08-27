@@ -6,19 +6,17 @@ import dev.arubik.craftengine.util.ServerFlags;
 
 /**
  * "Server" singleton — the script-facing surface over {@link ServerFlags}: plain global
- * key/value state, scoped to neither a block ({@code Machine.*_flag}), an entity ({@code
- * Entity.*_flag}/{@code Player.*_flag}), nor a single world ({@code World.*_flag}).
+ * key/value state, scoped to neither a block ({@code Machine.get_typed}), an entity ({@code
+ * Entity.get_typed}/{@code Player.get_typed}), nor a single world ({@code World.get_typed}).
  *
- * <p>Same absent-default convention as every other {@code *_flag} family (0 / ""). A cross-block
- * feature that needs to track "every X currently registered under a name" — a frequency, a team,
- * a global toggle — stores it here as one string per name and encodes/decodes that string itself
- * with {@code split}/{@code join} (see {@code ScriptFormula}); this stays a flat store on purpose
- * so it keeps being reusable instead of growing a bespoke shape per feature.
+ * <p>A cross-block feature that needs to track "every X currently registered under a name" — a
+ * frequency, a team, a global toggle — stores it here under its own name; this stays a flat store
+ * on purpose so it keeps being reusable instead of growing a bespoke shape per feature.
  *
  * <pre>
- *   Server.set_flag("boss_defeated", 1)
- *   Server.set_str_flag("teleporter_freq_home", "minecraft:overworld,120,64,-30;minecraft:the_nether,15,80,4")
- *   for entry in split(Server.get_str_flag("teleporter_freq_home"), ";") { ... }
+ *   Server.set_typed("boss_defeated", "bool", true)
+ *   Server.set_typed("teleporter_freq_home", "string", "minecraft:overworld,120,64,-30;minecraft:the_nether,15,80,4")
+ *   for entry in split(Server.get_typed("teleporter_freq_home", "string"), ";") { ... }
  * </pre>
  */
 public final class ServerType {
@@ -30,19 +28,101 @@ public final class ServerType {
 
     public static void register() {
         PolyTypeRegistry.define("Server")
-            .method("get_flag", (obj, args) ->
-                ScriptValue.of(args.isEmpty() ? 0 : ServerFlags.getInt(args.get(0).asStr())))
-            .method("set_flag", (obj, args) -> {
-                if (args.size() < 2) return ScriptValue.of(false);
-                ServerFlags.setInt(args.get(0).asStr(), (int) args.get(1).asNum());
-                return ScriptValue.of(true);
+            // Generic TypedKey storage — one flat store that can hold ANY registered type by name
+            // ("int"/"bool"/"item"/"vector"/"compound"/"uuid"/a custom-registered one/...). Same
+            // encoding SQL.get_typed/set_typed and Redis.get_typed/set_typed use, so a value moved
+            // between this in-memory store and a real database round-trips identically.
+            .method("get_typed", (obj, args) -> {
+                if (args.size() < 2) return ScriptValue.NULL;
+                dev.arubik.craftengine.script.TypedKeyBridge.Codec codec =
+                        dev.arubik.craftengine.script.TypedKeyBridge.resolve(args.get(1).asStr());
+                if (codec == null) return ScriptValue.NULL;
+                return codec.fromStorage(ServerFlags.getTyped(args.get(0).asStr()));
             })
-            .method("get_str_flag", (obj, args) ->
-                ScriptValue.of(args.isEmpty() ? "" : ServerFlags.getStr(args.get(0).asStr())))
-            .method("set_str_flag", (obj, args) -> {
-                if (args.size() < 2) return ScriptValue.of(false);
-                ServerFlags.setStr(args.get(0).asStr(), args.get(1).asStr());
-                return ScriptValue.of(true);
+            .method("set_typed", (obj, args) -> {
+                if (args.size() < 3) return ScriptValue.of(false);
+                dev.arubik.craftengine.script.TypedKeyBridge.Codec codec =
+                        dev.arubik.craftengine.script.TypedKeyBridge.resolve(args.get(1).asStr());
+                if (codec == null) return ScriptValue.of(false);
+                try {
+                    ServerFlags.setTyped(args.get(0).asStr(), codec.toStorage(args.get(2)));
+                    return ScriptValue.of(true);
+                } catch (Throwable ignored) { return ScriptValue.of(false); }
+            })
+            .method("has_typed", (obj, args) ->
+                ScriptValue.of(!args.isEmpty() && ServerFlags.hasTyped(args.get(0).asStr())))
+            // time — current wall-clock epoch SECONDS (not millis — deliberately, so it round-trips
+            // cleanly through the (int) storage get_typed/set_typed already use everywhere, instead
+            // of needing a separate string-timestamp convention just for this). For a script that
+            // needs to stamp "when did this happen" and later check "has too long passed" itself
+            // (e.g. a request expiring after N minutes) rather than relying solely on a
+            // TaskManager cleanup task firing — the two are meant to be used TOGETHER: a stamped
+            // timestamp makes expiry checkable at any time (including right when someone tries to
+            // act on the stale state), while a TaskManager.schedule(...) cleanup actually reclaims
+            // the entry once nobody's looking.
+            .property("time", obj -> ScriptValue.of((double) (System.currentTimeMillis() / 1000L)))
+            // General escape hatch letting a script trigger any other registered command as console —
+            // e.g. a `/cmds`-defined command wanting to chain into another command without a player context.
+            .method("exec_command", (obj, args) -> {
+                if (args.isEmpty()) return ScriptValue.of(false);
+                String cmd = args.get(0).asStr();
+                if (cmd.startsWith("/")) cmd = cmd.substring(1);
+                try {
+                    boolean ok = org.bukkit.Bukkit.dispatchCommand(org.bukkit.Bukkit.getConsoleSender(), cmd);
+                    return ScriptValue.of(ok);
+                } catch (Throwable t) {
+                    return ScriptValue.of(false);
+                }
+            })
+            // get_player(name) — exact-match online-player lookup by name (not the fuzzy
+            // prefix-match Bukkit#getPlayer does, since a script branching on "did I find the
+            // right player" wants a deterministic yes/no, not a guess). NULL if offline/unknown —
+            // e.g. a `/cmds` auction command resolving a seller's name typed by a buyer.
+            .method("get_player", (obj, args) -> {
+                if (args.isEmpty()) return ScriptValue.NULL;
+                org.bukkit.entity.Player p = org.bukkit.Bukkit.getPlayerExact(args.get(0).asStr());
+                if (p == null) return ScriptValue.NULL;
+                return dev.arubik.craftengine.script.types.entity.PlayerType.wrap(((org.bukkit.craftbukkit.entity.CraftPlayer) p).getHandle());
+            })
+            // get_player_by_uuid(uuid) — same as get_player but by UUID string (survives a name
+            // change, e.g. re-resolving a UUID persisted in Server.get_typed/Player.get_typed storage).
+            .method("get_player_by_uuid", (obj, args) -> {
+                if (args.isEmpty()) return ScriptValue.NULL;
+                try {
+                    org.bukkit.entity.Player p = org.bukkit.Bukkit.getPlayer(java.util.UUID.fromString(args.get(0).asStr()));
+                    if (p == null) return ScriptValue.NULL;
+                    return dev.arubik.craftengine.script.types.entity.PlayerType.wrap(((org.bukkit.craftbukkit.entity.CraftPlayer) p).getHandle());
+                } catch (IllegalArgumentException badUuid) {
+                    return ScriptValue.NULL;
+                }
+            })
+            // get_entity_by_uuid(uuid) — any loaded entity (player or not) server-wide by UUID.
+            .method("get_entity_by_uuid", (obj, args) -> {
+                if (args.isEmpty()) return ScriptValue.NULL;
+                try {
+                    org.bukkit.entity.Entity e = org.bukkit.Bukkit.getEntity(java.util.UUID.fromString(args.get(0).asStr()));
+                    if (e == null) return ScriptValue.NULL;
+                    return dev.arubik.craftengine.script.types.entity.EntityType.wrap(((org.bukkit.craftbukkit.entity.CraftEntity) e).getHandle());
+                } catch (IllegalArgumentException badUuid) {
+                    return ScriptValue.NULL;
+                }
+            })
+            // get_offline_name(uuid) — a player's name whether they're online or not, resolved
+            // purely from Bukkit's local player-data cache (Bukkit.getOfflinePlayer(UUID) never
+            // makes a network call — unlike its String-name overload, which can silently BLOCK
+            // the main thread with a Mojang API request; that overload is deliberately never used
+            // anywhere in this addon's scripting API). "" if this UUID has never played here — a
+            // script that owns a NAME already (e.g. stashed at creation time, see warps.pf's
+            // warp_owner_name_key) should keep using that instead of round-tripping through here.
+            .method("get_offline_name", (obj, args) -> {
+                if (args.isEmpty()) return ScriptValue.of("");
+                try {
+                    org.bukkit.OfflinePlayer p = org.bukkit.Bukkit.getOfflinePlayer(java.util.UUID.fromString(args.get(0).asStr()));
+                    String name = p.getName();
+                    return ScriptValue.of(name != null ? name : "");
+                } catch (IllegalArgumentException badUuid) {
+                    return ScriptValue.of("");
+                }
             });
     }
 

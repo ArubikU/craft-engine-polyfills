@@ -1,0 +1,151 @@
+# Create-mod-textured VirtualUI demo (see /virtualui createdemo) — exercises every built-in widget
+# kind (button, label, image, icon, item, slot, player_render, block, scrollbar, toggle, select)
+# using icons SLICED from Create's own gui/icons.png sheet (ported into cml:create_* items — see
+# testserver/plugins/CraftEngine/resources/modern/configuration/item/polyfills/
+# virtualui_create_icons.yml), so every icon-bearing widget below shows real Create pixel art
+# instead of a placeholder vanilla item.
+
+def open_create_demo():
+    if VirtualUI.is_open(Player):
+        Player.send_message("<red>You already have a VirtualUI open — <white>/virtualui close</white> first.")
+        return
+    end
+
+    ui = VirtualUI.screen("Create-ported widget demo")
+    ui.bounds(6.5, 4.0)
+    ui.on_close("examples/virtualui_create_demo.pf:on_close")
+
+    ui.label("title", "<gold><bold>CREATE-STYLE DEMO</bold>\n<gray>Every widget, real Create icons", 0.0, 2.4)
+
+    # Icon-button toolbar — each is a Button widget with a Create icon attached via icon_of(...).
+    # on_hover/on_unhover wired to the shared handlers below so the "status" label's promise
+    # ("Hover a button to see its id in the actionbar") actually holds.
+    ui.button("btn_add", "", -3.2, 1.2, "examples/virtualui_create_demo.pf:on_add", 0.6, 0.6)
+    ui.icon_of("cml:create_plus", 0, 0, 0.6)
+    ui.on_hover("examples/virtualui_create_demo.pf:on_toolbar_hover")
+    ui.on_unhover("examples/virtualui_create_demo.pf:on_toolbar_unhover")
+    ui.button("btn_trash", "", -2.2, 1.2, "examples/virtualui_create_demo.pf:on_trash", 0.6, 0.6)
+    ui.icon_of("cml:create_trash", 0, 0, 0.6)
+    ui.on_hover("examples/virtualui_create_demo.pf:on_toolbar_hover")
+    ui.on_unhover("examples/virtualui_create_demo.pf:on_toolbar_unhover")
+    ui.button("btn_confirm", "", -1.2, 1.2, "examples/virtualui_create_demo.pf:on_confirm", 0.6, 0.6)
+    ui.icon_of("cml:create_check", 0, 0, 0.6)
+    ui.on_hover("examples/virtualui_create_demo.pf:on_toolbar_hover")
+    ui.on_unhover("examples/virtualui_create_demo.pf:on_toolbar_unhover")
+    ui.button("btn_cancel", "", -0.2, 1.2, "examples/virtualui_create_demo.pf:on_cancel_btn", 0.6, 0.6)
+    ui.icon_of("cml:create_cancel", 0, 0, 0.6)
+    ui.on_hover("examples/virtualui_create_demo.pf:on_toolbar_hover")
+    ui.on_unhover("examples/virtualui_create_demo.pf:on_toolbar_unhover")
+    ui.button("btn_edit", "", 0.8, 1.2, "examples/virtualui_create_demo.pf:on_edit", 0.6, 0.6)
+    ui.icon_of("cml:create_edit", 0, 0, 0.6)
+    ui.on_hover("examples/virtualui_create_demo.pf:on_toolbar_hover")
+    ui.on_unhover("examples/virtualui_create_demo.pf:on_toolbar_unhover")
+    ui.button("btn_refresh", "", 1.8, 1.2, "examples/virtualui_create_demo.pf:on_refresh", 0.6, 0.6)
+    ui.icon_of("cml:create_refresh", 0, 0, 0.6)
+    ui.on_hover("examples/virtualui_create_demo.pf:on_toolbar_hover")
+    ui.on_unhover("examples/virtualui_create_demo.pf:on_toolbar_unhover")
+
+    # Play/Pause toggle — on-state shows Create's pause icon (playing), off-state shows play icon.
+    ui.toggle("play_toggle", "", "", -3.2, 0.0, false, "examples/virtualui_create_demo.pf:on_play_toggle", 0.6, 0.6)
+    ui.icon_of("cml:create_pause", 0, 0, 0.6)
+
+    ui.icon("grid_icon", "cml:create_grid", -1.6, 0.0, 0.6)
+
+    # Layered "framed slot" look (real Create item-slot border texture) — a plain background icon
+    # placed at the SAME x/y as the item it frames, further away on the z axis (see .icon(...)'s
+    # doc on the new optional z param), so it renders visually behind with no new plumbing needed.
+    ui.icon("held_item_frame", "cml:create_slot_frame", -0.6, 0.0, 0.85, "", -0.3)
+    ui.item("held_item", "minecraft:golden_axe", -0.6, 0.0, 0.6)
+    ui.icon("gear_slot_frame", "cml:create_slot_frame", 0.4, 0.0, 0.85, "", -0.3)
+    ui.slot("gear_slot", 0, "minecraft:iron_ingot", 0.4, 0.0, 0.6, 0.6, "examples/virtualui_create_demo.pf:on_slot_click")
+    ui.block("brass_block", "minecraft:gold_block", 1.6, 0.0, 0.7)
+    ui.player_render("self_render", 2.8, 0.0, 1.2)
+
+    # Track/groove backdrop layered behind the scrollbar (same z-layering convention as the slot
+    # frames above) — Create's own scrollbar has no dedicated groove art (see
+    # virtualui_create_icons.yml's comment on create_scroll_track for the honest substitute used),
+    # stretched to the bar's own width/height via .image(...).
+    ui.image("speed_track_bg", "cml:create_scroll_track", -2.0, -1.4, 2.4, 0.3, "", -0.3)
+    ui.scrollbar("speed_scrollbar", false, -2.0, -1.4, 2.4, 0.4, 0.5,
+            "examples/virtualui_create_demo.pf:on_speed_change", "cml:create_scroll_handle")
+    ui.on_hover("examples/virtualui_create_demo.pf:on_scrollbar_armed")
+    ui.on_unhover("examples/virtualui_create_demo.pf:on_scrollbar_released")
+
+    ui.select("mode_select", ["Auto", "Manual", "Off"],
+            "<white>◀ <gold>${VUISelect.value()}</gold> ▶", 1.8, -1.4, 0, "examples/virtualui_create_demo.pf:on_mode_change")
+
+    # Non-interactive fill gauge (Widget.ProgressWidget) — value only ever moves via
+    # VirtualUI.set_progress(...), demoed here from btn_add/btn_trash above (+/-10% each press).
+    ui.progress("queue_progress", false, 0.0, -1.9, 3.2, 0.35, 0.35)
+
+    ui.label("status", "<gray>Hover a button to see its id in the actionbar", 0.0, -2.4)
+
+    built = ui.build()
+    built.show(Player)
+    Player.send_message("<aqua>Create-style demo opened. <white>/virtualui close</white> to exit.")
+end
+
+def on_close():
+    Player.send_message("<gray>Create-style demo closed.")
+end
+
+def on_toolbar_hover(widget_id):
+    Player.send_actionbar("<gray>Hovering: <white>" + widget_id)
+end
+
+def on_toolbar_unhover(widget_id):
+    Player.send_actionbar("")
+end
+
+# Each toolbar button also nudges the "queue_progress" gauge to a distinct level — a minimal but
+# real demo of VirtualUI.set_progress(player, widget_id, value), the only way a ProgressWidget's
+# fill ever moves.
+def on_add(widget_id):
+    Player.send_actionbar("<green>+ Add pressed")
+    VirtualUI.set_progress(Player, "queue_progress", 1.0)
+end
+def on_trash(widget_id):
+    Player.send_actionbar("<red>Trash pressed")
+    VirtualUI.set_progress(Player, "queue_progress", 0.0)
+end
+def on_confirm(widget_id):
+    Player.send_actionbar("<green>Confirmed")
+    VirtualUI.set_progress(Player, "queue_progress", 0.75)
+end
+def on_cancel_btn(widget_id): Player.send_actionbar("<red>Cancelled")        end
+def on_edit(widget_id):
+    Player.send_actionbar("<yellow>Edit pressed")
+    VirtualUI.set_progress(Player, "queue_progress", 0.5)
+end
+def on_refresh(widget_id):
+    Player.send_actionbar("<aqua>Refreshed")
+    VirtualUI.set_progress(Player, "queue_progress", 0.25)
+end
+
+def on_play_toggle(widget_id, is_on):
+    if is_on:
+        Player.send_actionbar("<green>▶ Playing")
+    else:
+        Player.send_actionbar("<gray>⏸ Paused")
+    end
+end
+
+def on_slot_click(widget_id, slot_index):
+    Player.send_actionbar("<white>Slot " + slot_index + " clicked")
+end
+
+def on_scrollbar_armed(widget_id):
+    Player.send_actionbar("<yellow>Speed scrollbar armed.")
+end
+
+def on_scrollbar_released(widget_id):
+    Player.send_actionbar("<gray>Speed scrollbar released.")
+end
+
+def on_speed_change(widget_id, value):
+    Player.send_actionbar("<aqua>Speed: <white>" + round(value * 100) + "%")
+end
+
+def on_mode_change(widget_id, option, index):
+    Player.send_actionbar("<aqua>Mode: <white>" + option)
+end

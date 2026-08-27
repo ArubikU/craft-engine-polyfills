@@ -15,8 +15,6 @@ import dev.arubik.craftengine.multiblock.IOConfiguration;
 import dev.arubik.craftengine.script.ScriptCall;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptValue;
-import dev.arubik.craftengine.util.NbtType;
-import dev.arubik.craftengine.util.TypedKey;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.Container;
@@ -53,12 +51,12 @@ import net.momirealms.craftengine.core.block.ImmutableBlockState;
  * ENTIRELY in script — {@code MachineDefinition#onTransferScript()} (the generic {@code
  * on_pipe_transfer} hook, shared with every other machine's own transfer gate, see
  * {@code AbstractMachineBlockEntity#runOnTransferScript}), run per-candidate-item with
- * `type`/`payload`/`direction`/`mode` bound in its script context, and expected to set
- * {@code Machine.set_flag("_transfer_cancel", …)}. Java never compares item ids itself; the shipped
- * {@code item_pipe_panel.json} stores its filter as one string flag per slot (`pipe_filter_<dir>_
- * <slot>`, via the already-generic {@code get_str_flag}/{@code set_str_flag}) and its script
- * (`scripts/item_pipe_panel.pf`) reads those flags to decide — swap the script and you change the
- * rule, no Java involved.
+ * `type`/`payload`/`direction`/`mode`/`event` bound in its script context, and expected to call
+ * {@code event.cancel()} to block. Java never compares item ids itself; the shipped {@code
+ * item_pipe_panel.json} stores its filter as one Item value per slot (`pipe_filter_<dir>_<slot>`,
+ * via the generic {@code Machine.get_typed}/{@code set_typed}) and its script (`scripts/
+ * item_pipe_panel.pf`) reads those to decide — swap the script and you change the rule, no Java
+ * involved.
  */
 public final class ItemEngine {
 
@@ -66,11 +64,6 @@ public final class ItemEngine {
     private static final int MAX_BLOCKS = 4096;
     /** Seed pipe positions -> that segment's configured stack-count-per-tick throughput. */
     private static final Map<Long, Integer> SEEDS = new java.util.concurrent.ConcurrentHashMap<>();
-
-    /** Same flag {@code AbstractMachineBlockEntity#runOnTransferScript} reads — one veto flag, one
-     * hook, for both a pipe segment's own per-face filter AND a destination machine's transfer veto. */
-    private static final TypedKey<Integer> TRANSFER_CANCEL_FLAG =
-            TypedKey.of("polyfills", "flag__transfer_cancel", NbtType.INTEGER);
 
     private ItemEngine() {
     }
@@ -139,7 +132,7 @@ public final class ItemEngine {
                         queue.add(neighborPos.immutable());
                     continue;
                 }
-                if (ItemTransferHelper.getContainer(level, neighborPos).isPresent())
+                if (ItemTransferHelper.getContainer(level, neighborPos, pos.immutable(), dir.getOpposite()).isPresent())
                     endpoints.add(new Endpoint(pos.immutable(), dir, neighborPos.immutable(), beh));
             }
         }
@@ -158,10 +151,10 @@ public final class ItemEngine {
         }
 
         for (Endpoint source : sources) {
-            Container src = ItemTransferHelper.getContainer(level, source.containerPos()).orElse(null);
+            Direction srcFace = source.fromPipe().getOpposite();
+            Container src = ItemTransferHelper.getContainer(level, source.containerPos(), source.pipePos(), srcFace).orElse(null);
             if (src == null)
                 continue;
-            Direction srcFace = source.fromPipe().getOpposite();
 
             // PEEK, don't take: find what's eligible without mutating anything yet. Extracting
             // first and only THEN looking for somewhere to put it (the old design) meant a stack
@@ -185,10 +178,10 @@ public final class ItemEngine {
                     continue;
                 if (!passesFilter(level, dest, peeked, "output"))
                     continue;
-                Container dst = ItemTransferHelper.getContainer(level, dest.containerPos()).orElse(null);
+                Direction dstFace = dest.fromPipe().getOpposite();
+                Container dst = ItemTransferHelper.getContainer(level, dest.containerPos(), dest.pipePos(), dstFace).orElse(null);
                 if (dst == null)
                     continue;
-                Direction dstFace = dest.fromPipe().getOpposite();
 
                 int room = simulateInsertRoom(dst, dstFace, peeked, available);
                 if (room <= 0)
@@ -257,7 +250,7 @@ public final class ItemEngine {
      * machine's own transfer gates, so a pipe segment's per-face filter and a destination machine's
      * transfer veto are one mechanism, not two. The actual whitelist/blacklist decision lives
      * entirely in the declared {@code .pf} script (see {@code scripts/item_pipe_panel.pf}'s
-     * {@code filter_item()}) — Java only wires the context and reads back {@code _transfer_cancel}.
+     * {@code filter_item()}) — Java only wires the context and reads back {@code event.cancelled}.
      * A panel that declares no {@code on_pipe_transfer} accepts everything (no filtering at all).
      */
     static boolean passesFilter(Level level, Endpoint e, ItemStack candidate, String mode) {
@@ -271,27 +264,30 @@ public final class ItemEngine {
         return true;
     }
 
-    /** @return true if the script vetoed this transfer (mirrors {@code AbstractMachineBlockEntity
-     * #runOnTransferScript}'s return convention exactly, so both call sites read the same flag the
-     * same way). */
+    /** @return true if the script vetoed this transfer via {@code event.cancel()} (mirrors {@code
+     * AbstractMachineBlockEntity#runOnTransferScript}'s return convention exactly, so both call
+     * sites use the same veto mechanism). */
     private static boolean runTransferScript(Level level, Endpoint e, DataMachineBlockEntity dm,
             MachineDefinition definition, ItemStack candidate, String mode) {
         try {
             ScriptContext base = dm.buildScriptContext();
             if (base == null)
                 return false;
+            dev.arubik.craftengine.script.event.TransferEvent transferEvent =
+                    new dev.arubik.craftengine.script.event.TransferEvent(
+                            "item", ScriptValue.ofItem(candidate), e.fromPipe().getName(), mode);
             ScriptContext ctx = ScriptContext.builder().copyFrom(base)
                     .typed("type", ScriptValue.of("item"))
                     .typed("payload", ScriptValue.ofItem(candidate))
                     .typed("direction", ScriptValue.of(e.fromPipe().getName()))
                     .typed("mode", ScriptValue.of(mode))
+                    .event(transferEvent)
                     .build();
             ScriptCall call = ScriptCall.parse(definition.onTransferScript());
             if (call == null)
                 return false;
             call.execute(ctx);
-            Integer cancelled = dm.get(TRANSFER_CANCEL_FLAG);
-            return cancelled != null && cancelled != 0; // fail-open: a script that never sets it never vetoes
+            return transferEvent.isCancelled();
         } catch (Throwable ignored) {
             return false;
         }

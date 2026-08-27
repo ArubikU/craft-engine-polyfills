@@ -1,0 +1,124 @@
+{
+  "id": "polyfills:energy_windmill",
+  "title": "Energy Windmill",
+  "flags": {
+    "recipes": false,
+    "fuel": false,
+    "continuous_fuel": false,
+    "ui": true,
+    "ui_tick": true,
+    "io_pull": true,
+    "renderers": true,
+    "scripts": true,
+    "animations": true,
+    "kinetics": false
+  },
+  "energy": {
+    "capacity": 16000,
+    "max_input": 0,
+    "max_output": 800,
+    "per_tick": 80
+  },
+  "action_script": "kinetics/generators/energy_windmill",
+  "action_interval": 20,
+  "cell_io": {
+    "default": "closed",
+    "rules": [
+      {
+        "y": 0,
+        "output": {
+          "types": [
+            "energy"
+          ],
+          "faces": [
+            "down"
+          ]
+        }
+      }
+    ]
+  },
+  "pages": [
+    {
+      "title": "{Images.from('cml:energy_windmill_gui')}",
+      "size": 54,
+      "layout": [
+        {
+          "slot": 4,
+          "item": "cml:energy_charge_icon",
+          "name": "<yellow>${Machine.energy_stored}/${Machine.energy_capacity} CE",
+          "lore": [
+            "<green>Out: +${Machine.energy_real_output}/t"
+          ]
+        }
+      ],
+      "bars": [
+        {
+          "id": "polyfills:energy",
+          "slots": [
+            35,
+            26,
+            17,
+            8
+          ],
+          "source": "energy"
+        }
+      ]
+    }
+  ],
+  "renderers": [
+    {
+      "type": "item_display",
+      "item": "CraftEngineItem(\"cml:energy_windmill_rotor_hub_render\")",
+      "location": {
+        "x": "Machine.block.property(\"facing\") == \"west\" ? 0.2 : (Machine.block.property(\"facing\") == \"east\" ? -0.2 : 0)",
+        "y": 3.5,
+        "z": "Machine.block.property(\"facing\") == \"south\" ? -0.2 : (Machine.block.property(\"facing\") == \"north\" ? 0.2 : 0)"
+      },
+      "rot_y": "Machine.block.property(\"facing\") == \"south\" ? 180 : (Machine.block.property(\"facing\") == \"north\" ? 0 : (Machine.block.property(\"facing\") == \"west\" ? 270 : 90))",
+      "update_when": "always",
+      "global": true
+    },
+    {
+      "type": "item_display",
+      "item": "CraftEngineItem(\"cml:energy_windmill_rotor_blade_render\")",
+      "location": {
+        "x": "Machine.block.property(\"facing\") == \"west\" ? 0.2 : (Machine.block.property(\"facing\") == \"east\" ? -0.2 : 0)",
+        "y": 3.5,
+        "z": "Machine.block.property(\"facing\") == \"south\" ? -0.2 : (Machine.block.property(\"facing\") == \"north\" ? 0.2 : 0)"
+      },
+      "rot_y": "Machine.block.property(\"facing\") == \"south\" ? 180 : (Machine.block.property(\"facing\") == \"north\" ? 0 : (Machine.block.property(\"facing\") == \"west\" ? 270 : 90))",
+      "rot_z": "tick() * 4",
+      "when": "Machine.activated",
+      "update_when": "always",
+      "global": true
+    },
+    {
+      "type": "item_display",
+      "item": "CraftEngineItem(\"cml:energy_windmill_rotor_blade_render\")",
+      "location": {
+        "x": "Machine.block.property(\"facing\") == \"west\" ? 0.2 : (Machine.block.property(\"facing\") == \"east\" ? -0.2 : 0)",
+        "y": 3.5,
+        "z": "Machine.block.property(\"facing\") == \"south\" ? -0.2 : (Machine.block.property(\"facing\") == \"north\" ? 0.2 : 0)"
+      },
+      "rot_y": "Machine.block.property(\"facing\") == \"south\" ? 180 : (Machine.block.property(\"facing\") == \"north\" ? 0 : (Machine.block.property(\"facing\") == \"west\" ? 270 : 90))",
+      "rot_z": "tick() * 4 + 120",
+      "when": "Machine.activated",
+      "update_when": "always",
+      "global": true
+    },
+    {
+      "type": "item_display",
+      "item": "CraftEngineItem(\"cml:energy_windmill_rotor_blade_render\")",
+      "location": {
+        "x": "Machine.block.property(\"facing\") == \"west\" ? 0.2 : (Machine.block.property(\"facing\") == \"east\" ? -0.2 : 0)",
+        "y": 3.5,
+        "z": "Machine.block.property(\"facing\") == \"south\" ? -0.2 : (Machine.block.property(\"facing\") == \"north\" ? 0.2 : 0)"
+      },
+      "rot_y": "Machine.block.property(\"facing\") == \"south\" ? 180 : (Machine.block.property(\"facing\") == \"north\" ? 0 : (Machine.block.property(\"facing\") == \"west\" ? 270 : 90))",
+      "rot_z": "tick() * 4 + 240",
+      "when": "Machine.activated",
+      "update_when": "always",
+      "global": true
+    }
+  ]
+}

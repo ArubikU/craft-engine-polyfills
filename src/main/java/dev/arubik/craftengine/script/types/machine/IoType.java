@@ -81,6 +81,8 @@ public final class IoType {
             case "back" -> out.add(facing.getOpposite());
             case "right" -> out.add(facing.getClockWise());
             case "left" -> out.add(facing.getCounterClockWise());
+            case "top" -> out.add(Direction.UP);
+            case "bottom" -> out.add(Direction.DOWN);
             default -> {
                 Direction d = Direction.byName(n);
                 if (d != null) out.add(d);

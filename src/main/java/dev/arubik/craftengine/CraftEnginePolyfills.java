@@ -35,6 +35,7 @@ public final class CraftEnginePolyfills extends JavaPlugin {
         PacketEvents.getAPI().init();
         ItemListener.register(this);
         dev.arubik.craftengine.item.menu.ItemMenuListener.register(this);
+        dev.arubik.craftengine.menu.ScriptMenuListener.register(this);
         dev.arubik.craftengine.item.ItemTickEngine.register(this);
         // The vanilla block tables the physics reads: how much a block IS (mass) and how a fluid pushes
         // it (floatability). Both are owner-editable overrides layered over a built-in family table —
@@ -56,11 +57,17 @@ public final class CraftEnginePolyfills extends JavaPlugin {
         } catch (Throwable t) {
             getLogger().warning("[Contraption] failed to load persisted glue graph: " + t);
         }
-        // Restore Server.*_flag global state — see ServerFlags.
+        // Restore Server.get_typed/set_typed global state — see ServerFlags.
         try {
             dev.arubik.craftengine.util.ServerFlags.loadAll(getDataFolder().toPath().resolve("server_flags.dat"));
         } catch (Throwable t) {
-            getLogger().warning("[Server] failed to load persisted server flags: " + t);
+            getLogger().warning("[Server] failed to load persisted typed state: " + t);
+        }
+        // Restore Player.get_typed/set_typed state — see PlayerFlags.
+        try {
+            dev.arubik.craftengine.util.PlayerFlags.loadAll(getDataFolder().toPath().resolve("player_flags.dat"));
+        } catch (Throwable t) {
+            getLogger().warning("[Player] failed to load persisted typed state: " + t);
         }
         // CHAINERY: restore placed chains (décor + contraption tethers) persisted at last shutdown, and
         // sweep any orphaned link display-entities a crash may have left behind before we re-render.
@@ -142,6 +149,12 @@ public final class CraftEnginePolyfills extends JavaPlugin {
             dev.arubik.craftengine.chainery.ChainInteractPacketListener.register();
         } catch (Throwable t) {
             getLogger().warning("[Chainery] failed to register chain interaction packet listener: " + t);
+        }
+        // Machine renderer "interaction" markers: packet-level click detection, same technique as chainery's.
+        try {
+            dev.arubik.craftengine.machine.render.MachineInteractPacketListener.register();
+        } catch (Throwable t) {
+            getLogger().warning("[Machine] failed to register renderer interaction packet listener: " + t);
         }
         // CHAINERY render clock: repositions every placed chain's links onto its live endpoints each tick,
         // so a chain tethered to a moving contraption follows it. (Physics coupling plugs in here in phase 2.)
@@ -228,16 +241,17 @@ public final class CraftEnginePolyfills extends JavaPlugin {
                 this);
         getServer().getPluginManager().registerEvents(new dev.arubik.craftengine.crafting.CraftingTableListener(),
                 this);
-        dev.arubik.craftengine.conveyor.ConveyorWandListener conveyorWand =
-                new dev.arubik.craftengine.conveyor.ConveyorWandListener();
+        dev.arubik.craftengine.conveyor.belt.ConveyorWandListener conveyorWand =
+                new dev.arubik.craftengine.conveyor.belt.ConveyorWandListener();
         getServer().getPluginManager().registerEvents(conveyorWand, this);
         conveyorWand.start(this); // live aim-tracking preview task
         dev.arubik.craftengine.pipe.PipeWandListener pipeWand =
                 new dev.arubik.craftengine.pipe.PipeWandListener();
         getServer().getPluginManager().registerEvents(pipeWand, this);
         pipeWand.start(this); // live aim-tracking preview task (MAGIC mode)
-        getServer().getPluginManager().registerEvents(new dev.arubik.craftengine.conveyor.FunnelPlaceListener(),
-                this);
+        // Funnel placement routing migrated to items/conveyor/funnel.json's on_right_click script
+        // (see Block.place_custom / ItemActionEvent.clicked_block/clicked_face) — FunnelPlaceListener
+        // removed.
         // Never started: without this the passive-preview tick loop is never scheduled and its
         // listener never registers, so the slime overlay that shows what is glued — and what the
         // next click would select — could not appear at all, no matter what the renderer did.
@@ -245,9 +259,9 @@ public final class CraftEnginePolyfills extends JavaPlugin {
 
         getServer().getPluginManager().registerEvents(new dev.arubik.craftengine.multiblock.HammerAssembleListener(),
                 this);
-        getServer().getPluginManager().registerEvents(new dev.arubik.craftengine.conveyor.ConveyorBreakListener(),
+        getServer().getPluginManager().registerEvents(new dev.arubik.craftengine.conveyor.belt.ConveyorBreakListener(),
                 this);
-        getServer().getPluginManager().registerEvents(new dev.arubik.craftengine.conveyor.ConveyorIoBreakListener(),
+        getServer().getPluginManager().registerEvents(new dev.arubik.craftengine.conveyor.routing.ConveyorIoBreakListener(),
                 this);
         getServer().getPluginManager().registerEvents(new dev.arubik.craftengine.machine.block.MachineBreakListener(),
                 this);
@@ -256,6 +270,15 @@ public final class CraftEnginePolyfills extends JavaPlugin {
         // upgrade_scrapped/upgrade_copper are loot-only: inject them into vanilla chest loot.
         getServer().getPluginManager().registerEvents(new dev.arubik.craftengine.loot.UpgradeLootListener(),
                 this);
+        // VirtualUI:  camera-locked cursor UI, built entirely via the VirtualUI
+        // script API — engine tuning only (virtualui.yml), no UI content lives in config.
+        saveDefaultResource("virtualui.yml");
+        dev.arubik.craftengine.virtualui.VirtualUIConfig.load(getDataFolder(), getClass().getClassLoader());
+        getServer().getPluginManager().registerEvents(new dev.arubik.craftengine.virtualui.VirtualUIListener(), this);
+        dev.arubik.craftengine.virtualui.VirtualUIMovementPacketListener.register();
+        dev.arubik.craftengine.virtualui.VirtualUIClickPacketListener.register();
+        dev.arubik.craftengine.virtualui.VirtualUIScrollPacketListener.register();
+        getServer().getScheduler().runTaskTimer(this, dev.arubik.craftengine.virtualui.VirtualUICameraSystem::tick, 1L, 1L);
         // cepolyfill command
         // sub command data get <block_pos>
         CepCommand cepCommand = new CepCommand();
@@ -280,6 +303,7 @@ public final class CraftEnginePolyfills extends JavaPlugin {
         dev.arubik.craftengine.contraption.config.ContraptionConfig.resolveFluidPatterns(getDataFolder());
         dev.arubik.craftengine.gas.GasTypeLoader.bootstrap();
         dev.arubik.craftengine.pipe.PipeTypeLoader.bootstrap();
+        dev.arubik.craftengine.conveyor.belt.BeltTypeLoader.bootstrap();
         dev.arubik.craftengine.pipe.PumpLoader.bootstrap();
         dev.arubik.craftengine.pipe.PumpLoader.load();
         dev.arubik.craftengine.fluid.FluidInteractionLoader.bootstrap();
@@ -303,6 +327,7 @@ public final class CraftEnginePolyfills extends JavaPlugin {
         // while loading its own packs, which happens before CraftEngineReloadEvent, and a
         // pipe behavior takes its connect set at construction time.
         dev.arubik.craftengine.pipe.PipeTypeLoader.load();
+        dev.arubik.craftengine.conveyor.belt.BeltTypeLoader.load();
         // Machine definitions likewise: the data_machine behavior resolves its definition
         // when CraftEngine constructs the block, which is before the reload event.
         dev.arubik.craftengine.machine.MachineDefinitionLoader.load();
@@ -321,7 +346,34 @@ public final class CraftEnginePolyfills extends JavaPlugin {
         for (String res : listBundledResources("scripts", ".pf"))
             saveDefaultResource(res);
         dev.arubik.craftengine.script.ScriptBootstrap.init();
+        // SQL/Redis connect BEFORE scripts load — a script's __init__() (see ScriptRegistry's own
+        // javadoc) is the intended place for CREATE TABLE IF NOT EXISTS-style setup, which needs a
+        // live connection already open when it runs.
+        dev.arubik.craftengine.sql.SQLDriver.init(getDataFolder(), getLogger());
+        dev.arubik.craftengine.sql.RedisDriver.init(getDataFolder(), getLogger());
         dev.arubik.craftengine.script.ScriptRegistry.loadAll(getDataFolder());
+
+        // /cmds — data-driven Brigadier commands calling .pf scripts (see CmdDefinition's javadoc
+        // for the JSON shape). Unlike scripts/*.pf, DataFiles.loadDirectory("cmds", ...) is
+        // disk-only (no bundled-resource fallback), so a bundled example command (e.g.
+        // cmds/virtualui_sample.json) needs the same seed-once-then-load pattern scripts already
+        // use, or it would never reach a fresh install's data folder at all.
+        for (String res : listBundledResources("cmds", ".json"))
+            saveDefaultResource(res);
+        // Must run after ScriptRegistry.loadAll above so "execute"/"suggest" refs resolve, and the
+        // lifecycle handler registration below must happen exactly once.
+        dev.arubik.craftengine.cmd.CmdDefinitionLoader.load();
+        dev.arubik.craftengine.cmd.CmdRegistry.registerLifecycleHandler(this);
+        // /crons — data-driven scheduled jobs (a cron expression or a plain every-N-seconds
+        // interval), each calling a .pf script with no player context.
+        dev.arubik.craftengine.cron.CronDefinitionLoader.load();
+        dev.arubik.craftengine.cron.CronScheduler.start(this);
+        // /events — generic Bukkit/Paper event bridge: any event class named in events/*.json
+        // fires its script with `event`/(when resolvable) `Player`/`Entity` bound, same one-shot-
+        // at-startup caveat as /cmds (see GenericEventBridge's javadoc).
+        dev.arubik.craftengine.events.EventDefinitionLoader.load();
+        dev.arubik.craftengine.events.GenericEventBridge.registerAll(this);
+
         dev.arubik.craftengine.data.Registries.addLoader("machine_recipes",
                 dev.arubik.craftengine.data.Registries.PHASE_RECIPES,
                 dev.arubik.craftengine.machine.recipe.loader.RecipeManager::loadRecipes);
@@ -374,6 +426,21 @@ public final class CraftEnginePolyfills extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        // Close every open VirtualUI session first — restores each viewer's real camera and
+        // despawns their widget/cursor displays + anchor entity before anything else tears down.
+        try {
+            dev.arubik.craftengine.virtualui.VirtualUICameraSystem.hideAll();
+        } catch (Throwable t) {
+            getLogger().warning("[VirtualUI] hideAll on shutdown threw: " + t);
+        }
+        // Fire every loaded script's __unload__() first — a full shutdown never re-runs
+        // ScriptRegistry.loadAll (that's the reload-time trigger), so this is the only place a
+        // script gets to release whatever it acquired in __init__() before SQL/Redis close below.
+        try {
+            dev.arubik.craftengine.script.ScriptRegistry.unloadAll();
+        } catch (Throwable t) {
+            getLogger().warning("[Script] __unload__ hooks threw: " + t);
+        }
         // Safety net (2026-07-01 session — "al cerrar el sv con el contraption esas entidades
         // se guarden tmb"): a ContraptionLevel's real entities (any mob that wandered in) are
         // NOT persisted by anything — the mini-dimension itself isn't saved/reloaded across a
@@ -448,7 +515,27 @@ public final class CraftEnginePolyfills extends JavaPlugin {
         try {
             dev.arubik.craftengine.util.ServerFlags.saveAll(getDataFolder().toPath().resolve("server_flags.dat"));
         } catch (Throwable t) {
-            getLogger().warning("[Server] failed to save server flags on shutdown: " + t);
+            getLogger().warning("[Server] failed to save typed state on shutdown: " + t);
+        }
+        // SQLDriver/RedisDriver: close connections + shut down their async pools so no query
+        // thread outlives the plugin (would otherwise leak on every /reload confirm or plugin
+        // disable). Scripts already had their chance to use these in __unload__() above.
+        try {
+            dev.arubik.craftengine.sql.SQLDriver.close();
+            dev.arubik.craftengine.sql.SQLDriver.shutdownAsyncPool();
+        } catch (Throwable t) {
+            getLogger().warning("[SQLDriver] failed to close on shutdown: " + t);
+        }
+        try {
+            dev.arubik.craftengine.sql.RedisDriver.close();
+            dev.arubik.craftengine.sql.RedisDriver.shutdownAsyncPool();
+        } catch (Throwable t) {
+            getLogger().warning("[RedisDriver] failed to close on shutdown: " + t);
+        }
+        try {
+            dev.arubik.craftengine.util.PlayerFlags.saveAll(getDataFolder().toPath().resolve("player_flags.dat"));
+        } catch (Throwable t) {
+            getLogger().warning("[Player] failed to save typed state on shutdown: " + t);
         }
         // Euler/robin_euler extended-solid bearings — persist so their redstone/timer trigger survives.
         try {

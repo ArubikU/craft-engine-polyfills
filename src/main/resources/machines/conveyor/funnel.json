@@ -1,0 +1,59 @@
+{
+  "id": "polyfills:funnel",
+  "title": "Funnel",
+  "flags": {
+    "recipes": false,
+    "fuel": false,
+    "ui": false,
+    "ui_tick": false,
+    "redstone": true,
+    "continuous_fuel": false,
+    "io_pull": true,
+    "renderers": true,
+    "scripts": true,
+    "animations": true,
+    "kinetics": false
+  },
+  "on_right_click": "conveyor/funnel.pf:on_right_click",
+  "on_break": "conveyor/funnel.pf:on_break",
+  "action_script": "conveyor/funnel",
+  "action_interval": 1,
+  "slots": {
+    "input": [
+      0
+    ],
+    "output": [
+      0
+    ]
+  },
+  "io": {
+    "input": {
+      "types": [
+        "item"
+      ],
+      "faces": [
+        "all"
+      ]
+    },
+    "output": {
+      "types": [
+        "item"
+      ],
+      "faces": [
+        "all"
+      ]
+    }
+  },
+  "renderers": [
+    {
+      "type": "item_display",
+      "item": "Machine.container.get_item(0)",
+      "location": "[Machine.facing_dx * ((Machine.get_typed(\"_funnel_progress\", \"float\") ?? 0.0) - 0.5) * (Machine.block.property(\"mode\") == \"in\" ? -1 : 1), 0.28, Machine.facing_dz * ((Machine.get_typed(\"_funnel_progress\", \"float\") ?? 0.0) - 0.5) * (Machine.block.property(\"mode\") == \"in\" ? -1 : 1)]",
+      "when": "is_not_empty(Machine.container.get_item(0))",
+      "update_when": "always",
+      "scale": "0.3",
+      "rot_y": "deg(atan2(-(Machine.facing_dx * (Machine.block.property(\"mode\") == \"in\" ? -1 : 1)), Machine.facing_dz * (Machine.block.property(\"mode\") == \"in\" ? -1 : 1)))",
+      "global": true
+    }
+  ]
+}

@@ -1,5 +1,7 @@
 package dev.arubik.craftengine.machine.render;
 
+import dev.arubik.craftengine.machine.render.renderer.BetterModelRenderer;
+import dev.arubik.craftengine.machine.render.renderer.MegRenderer;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
 import dev.arubik.craftengine.script.ScriptValue;
@@ -393,8 +395,8 @@ public final class ScriptAnimation {
     private final Map<String, UUID> entities = new ConcurrentHashMap<>();
 
     // Model plugin renderers keyed by display id
-    private final Map<String, BetterModelMachineRenderer>  bmRenderers = new ConcurrentHashMap<>();
-    private final Map<String, ModelEngineMachineRenderer>  meRenderers = new ConcurrentHashMap<>();
+    private final Map<String, BetterModelRenderer>  bmRenderers = new ConcurrentHashMap<>();
+    private final Map<String, MegRenderer>  meRenderers = new ConcurrentHashMap<>();
 
     private int currentTick      = 0;
     private float fractionalTick = 0f;
@@ -585,11 +587,11 @@ public final class ScriptAnimation {
                                    double wx, double wy, double wz,
                                    @Nullable ScriptContext ctx) {
         try {
-            if (!BetterModelMachineRenderer.available() || s.modelId == null) return;
+            if (!BetterModelRenderer.available() || s.modelId == null) return;
             String resolvedModel = evalExpr(s.modelId, ctx, s.modelId);
             float spd = s.modelSpeed;
-            BetterModelMachineRenderer r = bmRenderers.computeIfAbsent(id,
-                k -> new BetterModelMachineRenderer(resolvedModel, () -> spd));
+            BetterModelRenderer r = bmRenderers.computeIfAbsent(id,
+                k -> new BetterModelRenderer(resolvedModel, () -> spd));
             r.setLocation(world, wx, wy, wz, s.yaw);
             r.show();
             String anim = s.modelAnimation != null ? evalExpr(s.modelAnimation, ctx, s.modelAnimation) : null;
@@ -604,11 +606,11 @@ public final class ScriptAnimation {
                                    double wx, double wy, double wz,
                                    @Nullable ScriptContext ctx) {
         try {
-            if (!ModelEngineMachineRenderer.available() || s.modelId == null) return;
+            if (!MegRenderer.available() || s.modelId == null) return;
             String resolvedModel = evalExpr(s.modelId, ctx, s.modelId);
             float spd = s.modelSpeed;
-            ModelEngineMachineRenderer r = meRenderers.computeIfAbsent(id,
-                k -> new ModelEngineMachineRenderer(resolvedModel, () -> spd));
+            MegRenderer r = meRenderers.computeIfAbsent(id,
+                k -> new MegRenderer(resolvedModel, () -> spd));
             r.setLocation(world, wx, wy, wz, s.yaw);
             r.show();
             String anim = s.modelAnimation != null ? evalExpr(s.modelAnimation, ctx, s.modelAnimation) : null;

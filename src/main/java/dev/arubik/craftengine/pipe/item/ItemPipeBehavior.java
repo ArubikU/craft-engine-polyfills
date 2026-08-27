@@ -70,7 +70,7 @@ public class ItemPipeBehavior extends ConnectedBlockBehavior implements EntityBl
         if (super.shouldConnect(direction, pos, level))
             return true;
         BlockPos neighborPos = pos.relative(direction);
-        if (!ItemTransferHelper.getContainer(level, neighborPos).isPresent())
+        if (!ItemTransferHelper.getContainer(level, neighborPos, pos.immutable(), direction.getOpposite()).isPresent())
             return false;
         // A container neighbour only counts as visually/functionally connected if THIS face's own
         // item-transfer mode actually allows something to cross it — without this, a face the

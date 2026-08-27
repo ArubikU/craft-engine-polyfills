@@ -22,7 +22,7 @@ import net.momirealms.craftengine.core.entity.player.Player;
  * A server-side fake {@code minecraft:item_display} entity used to render a single translucent,
  * GLOWING pipe preview node while the pipe wand lays out a route.
  *
- * <p>Mirrors {@code dev.arubik.craftengine.conveyor.ConveyorPreviewDisplay} (direct clientbound
+ * <p>Mirrors {@code dev.arubik.craftengine.conveyor.belt.ConveyorPreviewDisplay} (direct clientbound
  * packets, full brightness, the shared {@code glowing} flag) but is its OWN class so the pipe wand
  * does not depend on the conveyor wand. The listener spawns one per planned cell, each showing the
  * connection-variant preview item-model that matches the cell's 6-direction mask, and despawns them

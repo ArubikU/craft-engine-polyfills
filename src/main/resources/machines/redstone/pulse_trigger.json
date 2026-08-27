@@ -1,0 +1,20 @@
+{
+  "id": "polyfills:pulse_trigger",
+  "title": "Pulse Trigger",
+  "menu_size": 9,
+  "flags": {
+    "recipes": false,
+    "fuel": false,
+    "ui": false,
+    "ui_tick": false,
+    "redstone": true,
+    "continuous_fuel": false,
+    "io_pull": true,
+    "renderers": true,
+    "scripts": true,
+    "animations": true,
+    "kinetics": false
+  },
+  "action_script": "redstone/pulse_trigger",
+  "action_interval": 1
+}

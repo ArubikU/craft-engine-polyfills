@@ -3,9 +3,9 @@
  */
 package dev.arubik.craftengine.machine.render;
 
-import dev.arubik.craftengine.machine.render.ModelEngineMachineRenderer;
+import dev.arubik.craftengine.machine.render.renderer.MegRenderer;
 
 public interface ModelEngineDriven {
-    public ModelEngineMachineRenderer modelEngineRenderer();
+    public MegRenderer modelEngineRenderer();
 }
 

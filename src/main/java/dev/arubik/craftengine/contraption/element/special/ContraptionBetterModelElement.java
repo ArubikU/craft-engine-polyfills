@@ -3,7 +3,7 @@ package dev.arubik.craftengine.contraption.element.special;
 import dev.arubik.craftengine.contraption.element.ContraptionElement;
 import dev.arubik.craftengine.contraption.element.ElementTypes;
 import dev.arubik.craftengine.contraption.element.RenderContext;
-import dev.arubik.craftengine.machine.render.BetterModelMachineRenderer;
+import dev.arubik.craftengine.machine.render.renderer.BetterModelRenderer;
 import kr.toxicity.model.api.BetterModel;
 import kr.toxicity.model.api.animation.AnimationIterator;
 import kr.toxicity.model.api.animation.AnimationModifier;
@@ -21,12 +21,12 @@ import java.util.*;
 public final class ContraptionBetterModelElement implements ContraptionElement {
 
     private final BlockPos localPos;
-    private final BetterModelMachineRenderer source;
+    private final BetterModelRenderer source;
     private DummyTracker mirrorTracker;
     private String mirrorAnim;
     private Set<UUID> shownToViewers = new HashSet<>();
 
-    public ContraptionBetterModelElement(BlockPos localPos, BetterModelMachineRenderer source) {
+    public ContraptionBetterModelElement(BlockPos localPos, BetterModelRenderer source) {
         this.localPos = localPos;
         this.source = source;
     }
@@ -66,7 +66,7 @@ public final class ContraptionBetterModelElement implements ContraptionElement {
 
     @Override
     public void render(RenderContext ctx) {
-        if (!BetterModelMachineRenderer.available()) {
+        if (!BetterModelRenderer.available()) {
             closeTracker();
             return;
         }

@@ -1,0 +1,11 @@
+{
+  "type": "saw",
+  "time": 50,
+  "fuelRequired": false,
+  "inputs": [
+    { "type": "item", "id": "minecraft:stripped_jungle_log", "amount": 1 }
+  ],
+  "outputs": [
+    { "type": "item", "id": "minecraft:jungle_planks", "amount": 1, "chance": 1.0 }
+  ]
+}

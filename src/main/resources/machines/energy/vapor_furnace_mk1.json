@@ -1,0 +1,303 @@
+{
+  "id": "polyfills:vapor_furnace_mk1",
+  "recipe_type": "vapor_furnace_mk1",
+  "title": "Vapor Furnace Mk1",
+  "upgrades": {
+    "count": 9,
+    "base_unlocked": 3,
+    "definitions": {
+      "cml:iron_cast": [
+        {
+          "attribute": "polyfill:extra_slots",
+          "operation": "add",
+          "value": 2
+        }
+      ],
+      "cml:gold_cast": [
+        {
+          "attribute": "polyfill:extra_slots",
+          "operation": "add",
+          "value": 3
+        }
+      ],
+      "cml:upgrade_iron": [
+        {
+          "attribute": "polyfill:generation",
+          "operation": "add",
+          "value": 0.05
+        }
+      ],
+      "cml:upgrade_gold": [
+        {
+          "attribute": "polyfill:generation",
+          "operation": "add",
+          "value": 0.1
+        },
+        {
+          "attribute": "polyfill:fuel_efficiency",
+          "operation": "add",
+          "value": 0.1
+        }
+      ],
+      "cml:upgrade_diamond": [
+        {
+          "attribute": "polyfill:generation",
+          "operation": "add",
+          "value": 0.15
+        },
+        {
+          "attribute": "polyfill:overclock_limit",
+          "operation": "add",
+          "value": 0.5
+        }
+      ]
+    }
+  },
+  "pages": [
+    {
+      "title": "{Images.from('cml:copper_furnace_gui')}",
+      "size": 54,
+      "slots": {
+        "input": [
+          11,
+          12
+        ],
+        "output": [
+          14,
+          15
+        ],
+        "fuel": [
+          31
+        ]
+      },
+      "layout": [
+        {
+          "slot": 4,
+          "item": "recipe_info.pf:item",
+          "name": "recipe_info.pf:name",
+          "lore": [
+            "recipe_info.pf:lore"
+          ]
+        }
+      ],
+      "bars": [
+        {
+          "id": "polyfills:fuel",
+          "slots": [
+            40
+          ],
+          "source": "fuel"
+        },
+        {
+          "id": "polyfills:progress",
+          "slots": [
+            13
+          ],
+          "source": "progress"
+        },
+        {
+          "id": "polyfills:fluid",
+          "slots": [
+            27,
+            18,
+            9,
+            0
+          ],
+          "source": "fluid:water"
+        },
+        {
+          "id": "polyfills:gas",
+          "slots": [
+            35,
+            26,
+            17,
+            8
+          ],
+          "source": "gas:steam"
+        }
+      ],
+      "buttons": [
+        {
+          "slot": 33,
+          "icon": "cml:upgrade_button",
+          "action": "open_page:1",
+          "name": "<lang:polyfill.ui.upgrades>",
+          "lore": [
+            "<lang:polyfill.ui.upgrades_desc>"
+          ]
+        },
+        {
+          "slot": 29,
+          "icon": "cml:overclock_button",
+          "action": "open_page:2",
+          "name": "<lang:polyfill.ui.overclock>",
+          "locked_icon": "cml:locked_icon",
+          "locked_when": "no_overclock"
+        },
+        {
+          "slot": 36,
+          "icon": "cml:empty_button",
+          "action": "deplete_fluid:water",
+          "name": "<lang:polyfill.ui.deplete>",
+          "lore": [
+            "<lang:polyfill.ui.fluid>"
+          ]
+        },
+        {
+          "slot": 44,
+          "icon": "cml:empty_button",
+          "action": "deplete_gas:steam",
+          "name": "<lang:polyfill.ui.deplete>",
+          "lore": [
+            "<lang:polyfill.ui.gas>"
+          ]
+        }
+      ]
+    },
+    {
+      "special": "upgrades",
+      "title": "{Images.from('cml:upgrades_gui')}"
+    },
+    {
+      "title": "{Images.from('cml:overclock_gui')}",
+      "size": 27,
+      "layout": [
+        {
+          "slot": 13,
+          "item": "cml:clock_${Machine.meter_state}",
+          "name": "<lang:polyfill.ui.overclock>",
+          "lore": [
+            "<lang:polyfill.ui.overclock> <yellow>${floor(Machine.overclock * 100)}%",
+            "<gray>Max: <white>+${floor(Machine.overclock_limit * 100)}%",
+            "<gray>Speed: <white>x${round((1 + Machine.overclock) * 100) / 100}"
+          ]
+        },
+        {
+          "slot": 3,
+          "item": "cml:gui_empty",
+          "components": {
+            "minecraft:tooltip_display": true
+          }
+        },
+        {
+          "slot": 4,
+          "item": "cml:gui_empty",
+          "components": {
+            "minecraft:tooltip_display": true
+          }
+        },
+        {
+          "slot": 5,
+          "item": "cml:gui_empty",
+          "components": {
+            "minecraft:tooltip_display": true
+          }
+        },
+        {
+          "slot": 12,
+          "item": "cml:gui_empty",
+          "components": {
+            "minecraft:tooltip_display": true
+          }
+        },
+        {
+          "slot": 14,
+          "item": "cml:gui_empty",
+          "components": {
+            "minecraft:tooltip_display": true
+          }
+        }
+      ],
+      "buttons": [
+        {
+          "slot": 10,
+          "icon": "cml:minus_icon",
+          "action": "overclock.pf:decrease",
+          "name": "<lang:polyfill.ui.oc_minus>",
+          "lore": [
+            "<lang:polyfill.ui.oc_hint_minus>"
+          ]
+        },
+        {
+          "slot": 16,
+          "icon": "cml:plus_icon",
+          "action": "overclock.pf:increase",
+          "name": "<lang:polyfill.ui.oc_plus>",
+          "lore": [
+            "<lang:polyfill.ui.oc_hint>"
+          ]
+        },
+        {
+          "slot": 22,
+          "icon": "cml:return_icon",
+          "action": "open_page:0",
+          "name": "<lang:polyfill.ui.back>"
+        }
+      ]
+    }
+  ],
+  "fluid_tanks": [
+    {
+      "name": "water",
+      "capacity": 8000,
+      "filter": "polyfills:water"
+    }
+  ],
+  "gas_tanks": [
+    {
+      "name": "steam",
+      "capacity": 8000,
+      "filter": "polyfills:steam"
+    }
+  ],
+  "io": {
+    "input": [
+      {
+        "types": [
+          "fluid"
+        ],
+        "faces": [
+          "horizontal"
+        ]
+      },
+      {
+        "types": [
+          "item"
+        ],
+        "faces": [
+          "horizontal"
+        ]
+      }
+    ],
+    "output": [
+      {
+        "types": [
+          "gas"
+        ],
+        "faces": [
+          "up"
+        ]
+      },
+      {
+        "types": [
+          "item"
+        ],
+        "faces": [
+          "down"
+        ]
+      }
+    ]
+  },
+  "flags": {
+    "recipes": true,
+    "fuel": true,
+    "continuous_fuel": false,
+    "ui": true,
+    "ui_tick": true,
+    "io_pull": true,
+    "renderers": true,
+    "scripts": true,
+    "animations": true,
+    "kinetics": false
+  }
+}

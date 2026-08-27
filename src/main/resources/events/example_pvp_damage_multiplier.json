@@ -1,0 +1,7 @@
+{
+  "id": "example_pvp_damage_multiplier",
+  "event": "org.bukkit.event.entity.EntityDamageByEntityEvent",
+  "priority": "NORMAL",
+  "ignore_cancelled": false,
+  "script": "example_pvp_damage_multiplier.pf:on_damage"
+}

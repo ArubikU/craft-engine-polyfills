@@ -1,0 +1,145 @@
+{
+  "id": "polyfills:specialized_teleporter",
+  "title": "Specialized Teleporter",
+  "on_break": "teleport/specialized_teleporter.pf:on_break",
+  "on_right_click": "teleport/specialized_teleporter.pf:on_right_click",
+  "on_redstone_actuator": "teleport/specialized_teleporter.pf:on_redstone_actuator",
+  "flags": {
+    "recipes": false,
+    "fuel": false,
+    "redstone": true,
+    "continuous_fuel": false,
+    "ui": true,
+    "ui_tick": true,
+    "io_pull": true,
+    "renderers": true,
+    "scripts": true,
+    "animations": true,
+    "kinetics": false
+  },
+  "energy": {
+    "capacity": 100000,
+    "max_input": 8000,
+    "max_output": 0,
+    "per_tick": 0
+  },
+  "io": {
+    "input": [
+      {
+        "types": [
+          "energy"
+        ],
+        "faces": [
+          "all"
+        ]
+      }
+    ]
+  },
+  "pages": [
+    {
+      "title": "Specialized Teleporter",
+      "size": 54,
+      "layout": [
+        {
+          "slot": 4,
+          "item": "cml:teleporter_core",
+          "name": "specialized_teleporter.pf:status_name",
+          "lore": [
+            "specialized_teleporter.pf:status_lore"
+          ]
+        },
+        {
+          "slot": 1,
+          "item": "cml:gui_empty"
+        },
+        {
+          "slot": 2,
+          "item": "cml:gui_empty"
+        },
+        {
+          "slot": 3,
+          "item": "cml:gui_empty"
+        },
+        {
+          "slot": 6,
+          "item": "cml:gui_empty"
+        },
+        {
+          "slot": 7,
+          "item": "cml:gui_empty"
+        },
+        {
+          "slot": 9,
+          "item": "cml:gui_empty"
+        },
+        {
+          "slot": 18,
+          "item": "cml:gui_empty"
+        },
+        {
+          "slot": 27,
+          "item": "cml:gui_empty"
+        },
+        {
+          "slot": 36,
+          "item": "cml:gui_empty"
+        },
+        {
+          "slot": 44,
+          "item": "cml:gui_empty"
+        },
+        {
+          "slot": 46,
+          "item": "cml:gui_empty"
+        },
+        {
+          "slot": 47,
+          "item": "cml:gui_empty"
+        },
+        {
+          "slot": 48,
+          "item": "cml:gui_empty"
+        },
+        {
+          "slot": 49,
+          "item": "cml:gui_empty"
+        },
+        {
+          "slot": 50,
+          "item": "cml:gui_empty"
+        },
+        {
+          "slot": 51,
+          "item": "cml:gui_empty"
+        },
+        {
+          "slot": 52,
+          "item": "cml:gui_empty"
+        }
+      ],
+      "bars": [
+        {
+          "id": "polyfills:energy",
+          "slots": [
+            35,
+            26,
+            17,
+            8
+          ],
+          "source": "energy"
+        }
+      ],
+      "ghost_slots": [
+        {
+          "slots": [
+            0
+          ],
+          "get": "specialized_teleporter.pf:ghost_get",
+          "set": "specialized_teleporter.pf:ghost_set",
+          "empty_icon": "cml:gui_empty"
+        }
+      ],
+      "buttons": "specialized_teleporter.pf:generate_buttons"
+    }
+  ]
+}

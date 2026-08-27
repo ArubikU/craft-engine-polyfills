@@ -1,0 +1,34 @@
+# Fan — pushes/pulls entities in facing direction.
+# Force = (redstone_power / 15) * (1 / distance). Inversed mode via flag.
+
+power = Machine.redstone
+if power <= 0:
+    return
+end
+
+strength = power / 15.0
+inversed = Machine.get_typed("inversed", "int")
+
+entities = Machine.nearby_entities(5)
+
+for entity in entities:
+    if entity.is_alive:
+        dx = entity.x - Machine.x
+        dy = entity.y - Machine.y
+        dz = entity.z - Machine.z
+        dist_sq = dx * dx + dy * dy + dz * dz
+        if dist_sq > 0.1:
+            dist = sqrt(dist_sq)
+            force = strength / dist
+            dir = vec(Machine.facing_dx, Machine.facing_dy, Machine.facing_dz)
+            if inversed > 0:
+                dir = dir.scale(-1)
+            end
+            impulse = dir.scale(force)
+            entity.push(impulse)
+        end
+    end
+end
+
+
+

@@ -17,7 +17,7 @@ import java.util.List;
  * BlockState type for scripts. Wraps both NMS BlockState and CE ImmutableBlockState.
  * CE properties take priority over vanilla. Exposed as "BlockState" in scripts.
  *
- * Usage in on_state_change script:
+ * Usage in on_property_change script:
  *   prevState.get("activated")   → "false"
  *   newState.get("activated")    → "true"
  *   newState.id                  → "polyfills:crusher"

@@ -1,0 +1,32 @@
+{
+  "id": "polyfills:chute",
+  "title": "Chute",
+  "flags": {
+    "recipes": false,
+    "fuel": false,
+    "ui": false,
+    "ui_tick": false,
+    "continuous_fuel": false,
+    "io_pull": true,
+    "renderers": true,
+    "scripts": true,
+    "animations": true,
+    "kinetics": false,
+    "redstone": true
+  },
+  "on_right_click": "storage/chute.pf:on_right_click",
+  "on_break": "storage/chute.pf:on_break",
+  "action_script": "storage/chute.pf",
+  "action_interval": 1,
+  "renderers": [
+    {
+      "type": "item_display",
+      "item": "Machine.get_typed(\"_chute_item\", \"item\") ?? Item.create(\"minecraft:air\")",
+      "location": "[(Machine.block.property(\"facing\") == \"east\" ? 1 : (Machine.block.property(\"facing\") == \"west\" ? -1 : 0)) * ((Machine.get_typed(\"_chute_progress\", \"int\") ?? 0) / 20.0), 0.9 - ((Machine.get_typed(\"_chute_progress\", \"int\") ?? 0) / 20.0) * 0.8, (Machine.block.property(\"facing\") == \"south\" ? 1 : (Machine.block.property(\"facing\") == \"north\" ? -1 : 0)) * ((Machine.get_typed(\"_chute_progress\", \"int\") ?? 0) / 20.0)]",
+      "when": "((Machine.get_typed(\"_chute_window\", \"int\") ?? 0) == 1) && is_not_empty(Machine.get_typed(\"_chute_item\", \"item\"))",
+      "update_when": "always",
+      "scale": "0.3",
+      "global": true
+    }
+  ]
+}

@@ -78,6 +78,50 @@ public final class MenuText {
         return MenuText.iconItem(Key.of((String)"cml", (String)"locked_icon"), Material.BARRIER, name, lore);
     }
 
+    /** Denominations this project's bundled negative/positive-space title glyphs come in — see
+     *  {@code testserver/plugins/CraftEngine/resources/internal/configuration/offset_chars.yml}
+     *  ({@code internal:neg_1..neg_16}/{@code neg_32/48/64/128/256}, mirrored by {@code pos_*}).
+     *  Largest-first so {@link #spaceRun} always greedily reaches for the biggest glyph that still
+     *  fits, minimizing how many characters get chained together for a given magnitude. */
+    private static final int[] SHIFT_DENOMS = {256, 128, 64, 48, 32, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1};
+
+    /** The single character for one glyph of the given magnitude (1..16, or 32/48/64/128/256) and
+     *  direction — {@code neg_*} run 0xF800..0xF80F then 0xF810..0xF814 for the "big" sizes,
+     *  {@code pos_*} the same shape starting at 0xF830/0xF840. */
+    private static char shiftChar(int magnitude, boolean negative) {
+        if (magnitude <= 16) return (char) ((negative ? 0xF800 : 0xF830) + magnitude - 1);
+        int bigIndex = switch (magnitude) { case 32 -> 0; case 48 -> 1; case 64 -> 2; case 128 -> 3; case 256 -> 4; default -> throw new IllegalArgumentException("no glyph for magnitude " + magnitude); };
+        return (char) ((negative ? 0xF810 : 0xF840) + bigIndex);
+    }
+
+    /** Builds an arbitrary-magnitude cursor shift by greedily chaining {@link #SHIFT_DENOMS}
+     *  glyphs (e.g. 129 → one neg_128 + one neg_1) — NOT capped to a single character's 16px max,
+     *  unlike the old implementation this replaced. {@code shiftPx < 0} moves the cursor left
+     *  ({@code neg_*} glyphs, the common case — matches Nexo's {@code %nexo_shift_-n%}); {@code
+     *  shiftPx > 0} moves it right ({@code pos_*}). */
+    private static Component spaceRun(int shiftPx) {
+        if (shiftPx == 0) return Component.empty();
+        boolean negative = shiftPx < 0;
+        int remaining = Math.abs(shiftPx);
+        net.kyori.adventure.key.Key font = net.kyori.adventure.key.Key.key("minecraft", "default");
+        Component out = null;
+        for (int d : SHIFT_DENOMS) {
+            while (remaining >= d) {
+                Component seg = Component.text(String.valueOf(shiftChar(d, negative))).font(font);
+                out = out == null ? seg : out.append(seg);
+                remaining -= d;
+            }
+        }
+        return out == null ? Component.empty() : out;
+    }
+
+    /** A bare cursor shift with NO image glyph — lets a title move the cursor mid-string (between
+     *  two plain text/image segments) the way Nexo's bare {@code %nexo_shift_n%} placeholder does,
+     *  instead of only ever being able to shift right before an {@code Images.from(...)} glyph. */
+    public static Component shiftOnly(int shiftPx) {
+        return spaceRun(shiftPx);
+    }
+
     public static Component imageTitle(String imageId, int shiftPx) {
         try {
             Image img = CraftEngineImages.byId((Key)Key.of((String)imageId));
@@ -86,11 +130,7 @@ public final class MenuText {
             }
             String imageMm = img.miniMessageAt(0, 0);
             Component out = MiniMessage.miniMessage().deserialize(imageMm).colorIfAbsent((TextColor)NamedTextColor.WHITE);
-            int px = Math.max(0, Math.min(16, -shiftPx));
-            if (px > 0) {
-                Component neg = Component.text((String)String.valueOf((char)(63488 + px - 1))).font(net.kyori.adventure.key.Key.key((String)"minecraft", (String)"default"));
-                out = neg.append(out);
-            }
+            out = spaceRun(shiftPx).append(out);
             return MenuText.noI(out);
         }
         catch (Throwable ignored) {
@@ -181,7 +221,27 @@ public final class MenuText {
         if (s == null || s.getType() == Material.AIR) {
             s = new ItemStack(fallback);
         }
-        if ((m = s.getItemMeta()) != null) {
+        return MenuText.applyNameLore(s, name, lore);
+    }
+
+    /**
+     * Sibling of {@link #iconItem(Key, Material, Component, Component...)} that starts from an
+     * ALREADY-BUILT {@code ItemStack} (e.g. a real player-skin head from a script's {@code
+     * Item.create(...).with_profile(...)}) instead of resolving a fresh one from a {@code Key} —
+     * preserves everything already on the stack (skin profile, custom model data, enchants, ...)
+     * while still applying the same name/lore/tooltip-hiding treatment as the {@code Key}-based
+     * overload, so a generator-supplied full item behaves identically once displayed. See {@code
+     * MachineDefinition.ButtonSpec#customIcon()} / {@code PageDef.StaticSlot#customIcon()}.
+     */
+    public static ItemStack iconItem(ItemStack baseStack, Component name, Component ... lore) {
+        ItemStack s = baseStack != null ? baseStack.clone() : new ItemStack(Material.PAPER);
+        return MenuText.applyNameLore(s, name, lore);
+    }
+
+    /** Shared name/lore application for both {@code iconItem} overloads above. */
+    private static ItemStack applyNameLore(ItemStack s, Component name, Component ... lore) {
+        ItemMeta m = s.getItemMeta();
+        if (m != null) {
             m.displayName(MenuText.noI(name));
             if (lore.length > 0) {
                 ArrayList<Component> ls = new ArrayList<Component>();

@@ -1,0 +1,128 @@
+{
+  "id": "polyfills:energy_cell",
+  "title": "Energy Cell",
+  "flags": {
+    "recipes": false,
+    "fuel": false,
+    "continuous_fuel": false,
+    "ui": true,
+    "ui_tick": true,
+    "io_pull": true,
+    "renderers": true,
+    "scripts": true,
+    "animations": true,
+    "kinetics": false
+  },
+  "energy": {
+    "capacity": 100000,
+    "max_input": 4000,
+    "max_output": 4000,
+    "per_tick": 0
+  },
+  "pages": [
+    {
+      "title": "Energy Cell",
+      "size": 36,
+      "layout": [
+        {
+          "slot": 4,
+          "item": "cml:energy_charge_icon",
+          "name": "<yellow>${Machine.energy_stored}/${Machine.energy_capacity} CE",
+          "lore": [
+            "<green>In: +${Machine.energy_real_input}/t",
+            "<red>Out: -${Machine.energy_real_output}/t"
+          ]
+        }
+      ],
+      "bars": [
+        {
+          "id": "polyfills:energy",
+          "slots": [
+            35,
+            26,
+            17,
+            8
+          ],
+          "source": "energy"
+        }
+      ],
+      "buttons": [
+        {
+          "slot": 31,
+          "icon": "cml:upgrade_button",
+          "action": "open_page:1",
+          "name": "<gray>Configure Sides",
+          "lore": [
+            "<dark_gray>Choose which faces charge / discharge"
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Energy Cell — Sides",
+      "size": 27,
+      "buttons": [
+        {
+          "slot": 0,
+          "icon": "cml:plus_icon",
+          "action": "energy_side_config.pf:energy_north",
+          "name": "<gray>North: <yellow>${if(Machine.io_get('energy','input','north') && Machine.io_get('energy','output','north'),'Both',if(Machine.io_get('energy','input','north'),'Input',if(Machine.io_get('energy','output','north'),'Output','Disabled')))}",
+          "lore": [
+            "<dark_gray>Click to cycle Disabled → Input → Output → Both"
+          ]
+        },
+        {
+          "slot": 1,
+          "icon": "cml:plus_icon",
+          "action": "energy_side_config.pf:energy_south",
+          "name": "<gray>South: <yellow>${if(Machine.io_get('energy','input','south') && Machine.io_get('energy','output','south'),'Both',if(Machine.io_get('energy','input','south'),'Input',if(Machine.io_get('energy','output','south'),'Output','Disabled')))}",
+          "lore": [
+            "<dark_gray>Click to cycle Disabled → Input → Output → Both"
+          ]
+        },
+        {
+          "slot": 2,
+          "icon": "cml:plus_icon",
+          "action": "energy_side_config.pf:energy_east",
+          "name": "<gray>East: <yellow>${if(Machine.io_get('energy','input','east') && Machine.io_get('energy','output','east'),'Both',if(Machine.io_get('energy','input','east'),'Input',if(Machine.io_get('energy','output','east'),'Output','Disabled')))}",
+          "lore": [
+            "<dark_gray>Click to cycle Disabled → Input → Output → Both"
+          ]
+        },
+        {
+          "slot": 3,
+          "icon": "cml:plus_icon",
+          "action": "energy_side_config.pf:energy_west",
+          "name": "<gray>West: <yellow>${if(Machine.io_get('energy','input','west') && Machine.io_get('energy','output','west'),'Both',if(Machine.io_get('energy','input','west'),'Input',if(Machine.io_get('energy','output','west'),'Output','Disabled')))}",
+          "lore": [
+            "<dark_gray>Click to cycle Disabled → Input → Output → Both"
+          ]
+        },
+        {
+          "slot": 4,
+          "icon": "cml:plus_icon",
+          "action": "energy_side_config.pf:energy_up",
+          "name": "<gray>Up: <yellow>${if(Machine.io_get('energy','input','up') && Machine.io_get('energy','output','up'),'Both',if(Machine.io_get('energy','input','up'),'Input',if(Machine.io_get('energy','output','up'),'Output','Disabled')))}",
+          "lore": [
+            "<dark_gray>Click to cycle Disabled → Input → Output → Both"
+          ]
+        },
+        {
+          "slot": 5,
+          "icon": "cml:plus_icon",
+          "action": "energy_side_config.pf:energy_down",
+          "name": "<gray>Down: <yellow>${if(Machine.io_get('energy','input','down') && Machine.io_get('energy','output','down'),'Both',if(Machine.io_get('energy','input','down'),'Input',if(Machine.io_get('energy','output','down'),'Output','Disabled')))}",
+          "lore": [
+            "<dark_gray>Click to cycle Disabled → Input → Output → Both"
+          ]
+        },
+        {
+          "slot": 22,
+          "icon": "cml:return_icon",
+          "action": "open_page:0",
+          "name": "<lang:polyfill.ui.back>"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "id": "example_join_log",
+  "event": "org.bukkit.event.player.PlayerJoinEvent",
+  "priority": "NORMAL",
+  "ignore_cancelled": false,
+  "script": "example_events.pf:on_join"
+}

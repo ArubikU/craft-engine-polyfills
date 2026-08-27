@@ -23,9 +23,15 @@ public final class MachineDefinition {
     private final String recipeType;
     private final String title;
     private final int menuSize;
-    private final int[] inputSlots;
-    private final int[] outputSlots;
-    private final int[] fuelSlots;
+    // Not final: a PAGED machine (pages[].slots.{input,output,fuel} — see setPages()) declares its
+    // real slots only after this object is already constructed (mirrors the existing setPages()/
+    // setEnergy() pattern below), unlike a single-page machine's top-level "slots":{...} block,
+    // which the constructor already has in hand. Both formats end up in these same three arrays so
+    // every reader (getMatchingRecipe(), getInputSlots()/getOutputSlots(), the menu's own slot-type
+    // lookups) sees ONE list regardless of which JSON style declared the machine.
+    private int[] inputSlots;
+    private int[] outputSlots;
+    private int[] fuelSlots;
     private final UpgradeSpec upgrades;
     private final int infoSlot;
     private final InfoSpec info;
@@ -52,20 +58,56 @@ public final class MachineDefinition {
     private float rpmRatio = 1.0f;
     private boolean isSail = false;
     private float sailRpmBonus = 1.0f;
+    /** "output_inverted" — a NEW-NETWORK boundary face (see {@link #rpmOutputNewNetworkFacesRaw})
+     *  whose sign is flipped. Paired with plain "output" the same way {@link #rpmOutputSameInvertedRaw}
+     *  pairs with "output_same": {input relay/new-network} x {normal/inverted} = 4 independent face
+     *  sets total. No shipped machine used this key before the same/new-network split existed, so
+     *  redefining it this way (rather than "any inverted face" regardless of relay/new-network, as
+     *  it briefly meant) breaks nothing already deployed. */
     private Set<String> rpmOutputInvertedRaw = Set.of();
     /** Gearbox-style: derive the output sign from the driven face instead of a static face list. */
     private boolean rpmOutputRelative = false;
+    /** Faces declared under the unified io block's bare "output" key (type "rpm") — DISTINCT from
+     *  "output_same"/{@link #rpmOutputFacesRaw}: a consumer pulling through one of THESE faces mints
+     *  its own fresh {@code RpmNetwork} instead of joining this machine's own network, i.e. this is a
+     *  genuine kinetic-network BOUNDARY (a new stress network starts here) — see
+     *  DataMachineBlockEntity#syncNetworkWithSource / #isNewNetworkOutputFace. "output_same"/
+     *  {@link #rpmOutputFacesRaw} (and its inverted twin, {@link #rpmOutputSameInvertedRaw}) are
+     *  plain RELAYS that keep propagating the SAME network downstream instead. */
+    private Set<String> rpmOutputNewNetworkFacesRaw = Set.of();
+    /** "output_same_inverted" — a RELAY face (same network as the input, like "output_same") whose
+     *  sign is flipped, e.g. a shaft that also mirrors direction without being a gearbox/ratio
+     *  boundary. See {@link #rpmOutputFacesRaw}'s javadoc for the full same/new x normal/inverted
+     *  matrix this and {@link #rpmOutputInvertedRaw} complete. */
+    private Set<String> rpmOutputSameInvertedRaw = Set.of();
     private String interactScript = null;
     private String attackScript = null;
     /** "auto" = Java default (isProcessing||hasPower), "{file}.pf:{func}" = script-driven activated state. */
     private String statusScript = null;
     private String onPlaceScript = null;
+    /** Fires once per block-entity JAVA OBJECT lifetime (placement OR every chunk/server load —
+     *  unlike onPlaceScript, which is gated on persisted ticksAlive==0 and so only ever fires on
+     *  genuine first-ever placement), on the first tick after it exists — the natural place for a
+     *  script to (re)compute anything derived from the block's OWN current state that needs to
+     *  survive a reload without waiting for a fresh placement, e.g. the saw's per-instance RPM
+     *  face override (see Machine.set_rpm_input/output) computed from its face+facing. */
+    private String onLoadScript = null;
     private String onBreakScript = null;
+    /** Optional redirect hook: {@code "{file}.pf:{func}"}, evaluated (not executed — its RETURN
+     *  value is what matters, like a storage-slot filter script) whenever something asks
+     *  {@link dev.arubik.craftengine.pipe.item.ItemTransferHelper#getContainer} for this machine's
+     *  container. If the function returns a {@code Container} script value (e.g.
+     *  {@code Machine.contraption.container} for a Portable Storage Interface mirroring a linked
+     *  contraption), THAT container is used instead of this machine's own inventory — for funnels,
+     *  hoppers, pipes, and any script calling {@code Machine.container}, uniformly. Returning
+     *  {@code null} (or declaring no hook at all) falls back to the machine's own container as
+     *  usual. See {@code MachineDefinitionLoader}'s {@code "on_get_container"} JSON key. */
+    private String onGetContainerScript = null;
     /** Fires when a player physically triggers a vanilla pressure plate / lever / button adjacent
      * to this machine — the exact player is available (Bukkit gives it directly, unlike a command
      * block's @p nearest-player guess), bound the same way on_interact binds Player. */
     private String redstoneActuatorScript = null;
-    private String onStateChangeScript = null;
+    private String onPropertyChangeScript = null;
     private List<PageDef> pages = List.of();
     /** CraftEnergy buffer (Forge-Energy-alike). Empty by default — no energy field on a machine
      * that doesn't declare one. See {@code energy.EnergyCarrier}. */
@@ -73,6 +115,30 @@ public final class MachineDefinition {
 
     public List<PageDef> pages() { return pages; }
     public void setPages(List<PageDef> p) { this.pages = p != null ? List.copyOf(p) : List.of(); }
+
+    /** Unions {@code pages[].slots.{input,output,fuel}} (absolute container offsets — every page's
+     *  own convention) into this definition's input/output/fuel slot lists. A single-page machine
+     *  declaring its slots via the older top-level {@code "slots":{...}} block already has these
+     *  populated from the constructor and never needs this; a PAGED machine (the drill, the
+     *  crusher, ...) has NOTHING there otherwise — {@link #inputSlots()}/{@link #outputSlots()}
+     *  would silently stay empty forever, which is what {@code getMatchingRecipe()} reads to find
+     *  its ingredient slots and what a hopper/funnel/pipe reads via {@code getInputSlots()}/{@code
+     *  getOutputSlots()}. Called once from {@code MachineDefinitionLoader#parse} right after {@link
+     *  #setPages}. */
+    public void mergePageSlots(int[] pageInputs, int[] pageOutputs, int[] pageFuels) {
+        this.inputSlots = mergeSlots(this.inputSlots, pageInputs);
+        this.outputSlots = mergeSlots(this.outputSlots, pageOutputs);
+        this.fuelSlots = mergeSlots(this.fuelSlots, pageFuels);
+    }
+
+    private static int[] mergeSlots(int[] existing, int[] extra) {
+        if (extra == null || extra.length == 0) return existing;
+        if (existing == null || existing.length == 0) return (int[]) extra.clone();
+        java.util.LinkedHashSet<Integer> merged = new java.util.LinkedHashSet<>();
+        for (int slot : existing) merged.add(slot);
+        for (int slot : extra) merged.add(slot);
+        return merged.stream().mapToInt(Integer::intValue).toArray();
+    }
 
     public EnergySpec energy() { return energy; }
     public void setEnergy(EnergySpec e) { this.energy = e == null ? EnergySpec.none() : e; }
@@ -356,6 +422,22 @@ public final class MachineDefinition {
         this.rpmOutputInvertedRaw = Set.copyOf(f);
     }
 
+    public Set<String> rpmOutputNewNetworkFacesRaw() {
+        return this.rpmOutputNewNetworkFacesRaw;
+    }
+
+    public void setRpmOutputNewNetworkFacesRaw(Set<String> f) {
+        this.rpmOutputNewNetworkFacesRaw = Set.copyOf(f);
+    }
+
+    public Set<String> rpmOutputSameInvertedRaw() {
+        return this.rpmOutputSameInvertedRaw;
+    }
+
+    public void setRpmOutputSameInvertedRaw(Set<String> f) {
+        this.rpmOutputSameInvertedRaw = Set.copyOf(f);
+    }
+
     public String interactScript() {
         return this.interactScript;
     }
@@ -372,8 +454,8 @@ public final class MachineDefinition {
      * insert/extract methods for fluid, gas, and energy. Called with {@code type} ("item"/"fluid"/
      * "gas"/"energy"), {@code payload} (an {@code Item} for "item", a {@code Map{type, amount}} for
      * "fluid"/"gas", or a plain number for "energy"), {@code direction}, and {@code mode} ("input"/
-     * "output") bound in its ScriptContext. A script vetoes the transfer with
-     * {@code Machine.set_flag("_transfer_cancel", 1)}; anything else (including never running) leaves
+     * "output") bound in its ScriptContext. A script vetoes the transfer with {@code event.cancel()};
+     * anything else (including never running) leaves
      * the existing IOConfiguration decision untouched — this is an ADDITIONAL veto/observation layer,
      * never a replacement for it. This is also the item pipe network's per-face identity filter (see
      * {@code pipe.item.ItemEngine}) — one hook covers both uses.
@@ -397,12 +479,16 @@ public final class MachineDefinition {
     public void setStatusScript(String s) { this.statusScript = s; }
     public String onPlaceScript() { return this.onPlaceScript; }
     public void setOnPlaceScript(String s) { this.onPlaceScript = s; }
+    public String onLoadScript() { return this.onLoadScript; }
+    public void setOnLoadScript(String s) { this.onLoadScript = s; }
     public String onBreakScript() { return this.onBreakScript; }
     public void setOnBreakScript(String s) { this.onBreakScript = s; }
+    public String onGetContainerScript() { return this.onGetContainerScript; }
+    public void setOnGetContainerScript(String s) { this.onGetContainerScript = s; }
     public String redstoneActuatorScript() { return this.redstoneActuatorScript; }
     public void setRedstoneActuatorScript(String s) { this.redstoneActuatorScript = s; }
-    public String onStateChangeScript() { return this.onStateChangeScript; }
-    public void setOnStateChangeScript(String s) { this.onStateChangeScript = s; }
+    public String onPropertyChangeScript() { return this.onPropertyChangeScript; }
+    public void setOnPropertyChangeScript(String s) { this.onPropertyChangeScript = s; }
 
     public static MachineDefinition byName(String name) {
         if (name == null || name.isBlank()) {
@@ -491,7 +577,20 @@ public final class MachineDefinition {
     public record BarRef(Key bar, int[] slots, String source) {
     }
 
-    public record ButtonSpec(int slot, String icon, String action, String name, List<String> lore, String lockedIcon, String lockedWhen) {
+    /**
+     * @param customIcon optional, pre-built display item (e.g. a real player-skin head built via
+     *                   {@code Item.create(...).with_profile(...)}) that, when non-null, is shown
+     *                   AS-IS (name/lore still applied on top — see {@code MenuText#iconItem(ItemStack, ...)})
+     *                   instead of resolving {@link #icon} from a plain id string. Only ever populated
+     *                   by a {@code "buttons": "file.pf:func"} GENERATOR (see
+     *                   {@code GeneratedPageContent#buttons}) whose {@code make_map(...)} entry's
+     *                   {@code "icon"} value is a full {@code Item}, not a string — a static JSON
+     *                   buttons array can only ever specify a string id, so it's always null there.
+     */
+    public record ButtonSpec(int slot, String icon, String action, String name, List<String> lore, String lockedIcon, String lockedWhen, org.bukkit.inventory.ItemStack customIcon) {
+        public ButtonSpec(int slot, String icon, String action, String name, List<String> lore, String lockedIcon, String lockedWhen) {
+            this(slot, icon, action, name, lore, lockedIcon, lockedWhen, null);
+        }
     }
 
     /**
@@ -585,14 +684,24 @@ public final class MachineDefinition {
          *               slot's {@code MenuSlotType}, so a placeholder can block a real
          *               input/output/fuel/upgrade slot that the machine still tracks.
          */
+        /**
+         * @param customIcon optional, pre-built display item — see {@link MachineDefinition.ButtonSpec#customIcon()}'s
+         *                   javadoc for the full rationale; same deal here for a {@code "layout": "file.pf:func"}
+         *                   generator entry whose {@code "item"} value is a full {@code Item}. Null for
+         *                   every static-JSON layout entry.
+         */
         public record StaticSlot(int slot, String item, String name, List<String> lore, String action,
-                                 boolean locked) {
+                                 boolean locked, org.bukkit.inventory.ItemStack customIcon) {
+            public StaticSlot(int slot, String item, String name, List<String> lore, String action, boolean locked) {
+                this(slot, item, name, lore, action, locked, null);
+            }
+
             public StaticSlot(int slot, String item, String name, List<String> lore, String action) {
-                this(slot, item, name, lore, action, false);
+                this(slot, item, name, lore, action, false, null);
             }
 
             public StaticSlot(int slot, String item, String name, List<String> lore) {
-                this(slot, item, name, lore, null, false);
+                this(slot, item, name, lore, null, false, null);
             }
         }
 

@@ -41,30 +41,14 @@ public final class DynamicText {
         List<String> result = new ArrayList<>();
         for (String line : lines) {
             if (line != null && line.contains(".pf:") && ctx != null) {
-                try {
-                    String raw = line.trim();
-                    int colon = raw.indexOf(':');
-                    String scriptFile = raw.substring(0, colon);
-                    String funcName = raw.substring(colon + 1);
-                    String lookupKey = scriptFile.endsWith(".pf") ? scriptFile.substring(0, scriptFile.length() - 3) : scriptFile;
-                    ScriptProgram prog = ScriptRegistry.get(lookupKey);
-                    if (prog != null) {
-                        ScriptContext withDefs = prog.evaluate(ctx);
-                        ScriptValue fnVal = withDefs.getVar(funcName);
-                        if (fnVal instanceof ScriptValue.Obj fnObj && fnObj.typeName().equals(UserFunction.TYPE)) {
-                            UserFunction fn = (UserFunction) fnObj.instance();
-                            ScriptContext.Builder rb = ScriptContext.builder().copyFrom(withDefs);
-                            fn.executor().accept(withDefs, rb);
-                            ScriptValue retVal = rb.build().getVar("__return__");
-                            if (retVal instanceof ScriptValue.Array arr) {
-                                for (ScriptValue elem : arr.elements()) result.add(elem.asStr());
-                                continue;
-                            }
-                            result.add(retVal.asStr());
-                            continue;
-                        }
+                ScriptValue retVal = callPfFunc(line, ctx);
+                if (retVal != null) {
+                    if (retVal instanceof ScriptValue.Array arr) {
+                        for (ScriptValue elem : arr.elements()) result.add(elem.asStr());
+                    } else {
+                        result.add(retVal.asStr());
                     }
-                } catch (Throwable ignored) {
+                    continue;
                 }
             }
             result.add(line != null && line.contains("${") ? evaluateFieldRaw(line, ctx) : line);
@@ -95,27 +79,27 @@ public final class DynamicText {
         return sb.toString();
     }
 
-    /** Calls {@code "file.pf:func"} with no arguments and returns its {@code __return__} as a raw
-     *  string, or null if the script/function can't be resolved. */
-    private static String callPfFuncStr(String ref, ScriptContext ctx) {
+    /** Calls {@code "file.pf:func[:args]"} and returns its return value, or null if the
+     *  script/function can't be resolved (or it genuinely returned null — not distinguished, same
+     *  as {@link TextTemplate#callPfFunc}). Parsing/dispatch delegates to {@link ScriptCall} — the
+     *  one canonical place for this convention — instead of DynamicText hand-rolling its own
+     *  {@code indexOf(':')} split (which, before this, silently broke on any {@code :arg} suffix by
+     *  treating the whole "func:arg" tail as one bogus function name, and bypassed {@link
+     *  UserFunction#call}'s normal param-binding/depth-guard path via direct {@code executor()}
+     *  access). */
+    private static ScriptValue callPfFunc(String ref, ScriptContext ctx) {
         try {
-            String raw = ref.trim();
-            int colon = raw.indexOf(':');
-            String scriptFile = raw.substring(0, colon);
-            String funcName = raw.substring(colon + 1);
-            String lookupKey = scriptFile.endsWith(".pf") ? scriptFile.substring(0, scriptFile.length() - 3) : scriptFile;
-            ScriptProgram prog = ScriptRegistry.get(lookupKey);
-            if (prog == null) return null;
-            ScriptContext withDefs = prog.evaluate(ctx);
-            ScriptValue fnVal = withDefs.getVar(funcName);
-            if (!(fnVal instanceof ScriptValue.Obj fnObj) || !fnObj.typeName().equals(UserFunction.TYPE))
-                return null;
-            UserFunction fn = (UserFunction) fnObj.instance();
-            ScriptContext.Builder rb = ScriptContext.builder().copyFrom(withDefs);
-            fn.executor().accept(withDefs, rb);
-            return rb.build().getVar("__return__").asStr();
+            ScriptCall call = ScriptCall.parse(ref);
+            if (call == null) return null;
+            ScriptValue result = call.evaluate(ctx);
+            return result instanceof ScriptValue.Null ? null : result;
         } catch (Throwable ignored) {
             return null;
         }
+    }
+
+    private static String callPfFuncStr(String ref, ScriptContext ctx) {
+        ScriptValue ret = callPfFunc(ref, ctx);
+        return ret == null ? null : ret.asStr();
     }
 }

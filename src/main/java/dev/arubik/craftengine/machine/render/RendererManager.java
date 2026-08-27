@@ -52,8 +52,8 @@
  */
 package dev.arubik.craftengine.machine.render;
 
-import dev.arubik.craftengine.machine.render.BetterModelMachineRenderer;
-import dev.arubik.craftengine.machine.render.ModelEngineMachineRenderer;
+import dev.arubik.craftengine.machine.render.renderer.BetterModelRenderer;
+import dev.arubik.craftengine.machine.render.renderer.MegRenderer;
 import dev.arubik.craftengine.machine.render.ParticleUtils;
 import dev.arubik.craftengine.machine.render.RendererSpec;
 import dev.arubik.craftengine.script.ScriptContext;
@@ -124,8 +124,8 @@ import org.joml.Vector3f;
 public final class RendererManager {
     private final List<RendererSpec> specs;
     private final Map<String, VariableSpec> varSpecs;
-    private final List<BetterModelMachineRenderer> bmRenderers;
-    private final List<ModelEngineMachineRenderer> meRenderers;
+    private final List<BetterModelRenderer> bmRenderers;
+    private final List<MegRenderer> meRenderers;
     private final double[] currentSpeeds;
     private final net.minecraft.world.item.ItemStack[] currentItems;
     private final int[] particleCooldowns;
@@ -135,15 +135,206 @@ public final class RendererManager {
     private final TextLevelDisplay[] textDisplays;
     private final ArmorStandDisplay[] armorStandDisplays;
     private final BlockDisplayHelper[] blockDisplayHelpers;
+    private final MachineInteraction[] interactionMarkers;
     private final EvalResult[] evalResults;
+    /** Callback into the owning machine block entity's {@code runInteractScript} — wired via
+     *  {@link #setInteractRunner}, {@code null} on any machine entity class that has no equivalent
+     *  method (e.g. multi-block machines today), in which case {@code InteractionSpec} clicks just
+     *  no-op. See {@link MachineInteractPacketListener}. */
+    private InteractScriptRunner interactRunner;
+
+    /** Runs an interact script with the given hook name — kept as a tiny callback here so {@code
+     *  RendererManager} doesn't need to depend on any one machine-entity class (it's shared by
+     *  several). {@code offsetX/Y/Z} is the clicked {@code InteractionSpec} marker's resolved
+     *  location minus the machine's own {@code (x+0.5, y, z+0.5)} — the same relative offset every
+     *  other per-spec renderer already computes (see {@code resolveSpecLocation}); a single-block
+     *  machine entity's implementation can just ignore it, a multi-block one uses it to work out
+     *  WHICH physical part was actually touched (see {@code DataMultiBlockMachineBlockEntity
+     *  .runInteractScript}). */
+    @FunctionalInterface
+    public interface InteractScriptRunner {
+        void run(String scriptRef, ServerPlayer player, String hookName, double offsetX, double offsetY, double offsetZ);
+    }
+
+    public void setInteractRunner(InteractScriptRunner r) {
+        this.interactRunner = r;
+    }
+
+    public InteractScriptRunner interactRunner() {
+        return this.interactRunner;
+    }
+    /** Per-spec tick counter backing the integer-interval form of {@code update_when} — see
+     *  {@link #shouldUpdateThisTick}. */
+    private final int[] updateTickCount;
+    /** Per-spec last-observed block state backing {@code update_when: "on_change"} — see
+     *  {@link #shouldUpdateThisTick}. Lazily populated (null until the first tick actually checks
+     *  it), so a spec that never uses "on_change" never pays for this at all. */
+    private final net.minecraft.world.level.block.state.BlockState[] lastSeenBlockState;
     private static final double LOC_NO_ROT = Double.NaN;
+
+    /** Context variable names a renderer VALUE formula (rot_x/rot_y/rot_z/scale, a bracket-literal
+     *  location's x/y/z, ...) is allowed to read and still be considered safe to SHARE its computed
+     *  result across every machine instance whose block sits in the same {@code BlockState} — see
+     *  {@link #computeSignature}, which determines PER FORMULA STRING (not guessed from its text)
+     *  exactly which of these it actually touches. Anything read that ISN'T in this set (Inventory
+     *  contents, Network/Contraption references, a get_typed lookup, a random draw, ...) is
+     *  genuinely per-instance or non-deterministic and must never be shared — {@code
+     *  computeSignature} rejects the WHOLE formula the moment it sees one such name, not just that
+     *  one read. */
+    private static final java.util.Set<String> SAFE_SHARED_VAR_NAMES = java.util.Set.of(
+        "rpm", "overclock", "efficiency", "progress", "max_progress", "tier",
+        "processing", "powered", "overclocked", "has_fuel",
+        "redstone", "redstone_power", "facing_dx", "facing_dy", "facing_dz", "facing_angle", "tick"
+    );
+
+    /** Whether a formula string is safe to share, and — if so — EXACTLY which context variable
+     *  names its result depends on (the cache key's value tuple). Determined ONCE per DISTINCT
+     *  formula string — the set of distinct strings in use is fixed by static JSON config, not by
+     *  machine count or tick count — by running one real evaluation with {@link
+     *  ScriptContext#beginTracking} active and inspecting precisely which variable names it read.
+     *  This is real dependency analysis, not a guessed text denylist: a formula that references an
+     *  unrecognized bare name (a custom {@code $variable}, an unlisted builtin, ...) is correctly
+     *  rejected without needing to know about it in advance, and one that only reads recognized
+     *  names is correctly accepted even if a naive substring search would have been fooled (e.g. a
+     *  variable literally named "my_progress_marker" would wrongly trip a "contains progress"
+     *  denylist; real tracking sees the EXACT name "my_progress_marker", not "progress"). */
+    private record FormulaSignature(boolean cacheable, java.util.List<String> keyVars) {}
+    private static final java.util.Map<String, FormulaSignature> FORMULA_SIGNATURES = new java.util.concurrent.ConcurrentHashMap<>();
+
+    private static FormulaSignature computeSignature(String expr, MachineRenderContext evalCtx) {
+        java.util.Set<String> tracked = ScriptContext.beginTracking();
+        try {
+            ScriptFormula.compile(expr).evaluate(evalCtx.toScriptContext());
+        } catch (Throwable ignored) {
+        } finally {
+            ScriptContext.endTracking();
+        }
+        if (!SAFE_SHARED_VAR_NAMES.containsAll(tracked)) return new FormulaSignature(false, java.util.List.of());
+        return new FormulaSignature(true, java.util.List.copyOf(tracked));
+    }
+
+    /** (formula string, exact BlockState, values of every {@link FormulaSignature#keyVars}) — two
+     *  machine instances agreeing on ALL of that (e.g. 10 energy_windmills all facing north — NMS
+     *  interns identical property combinations, so their BlockState objects are literally the same
+     *  reference and neither formula reads anything else — or 10 shafts all spinning at the same
+     *  rpm on the same kinetic network, where rpm is simply one more tracked/keyed variable) share
+     *  one cached evaluation instead of each re-walking the same formula every tick. */
+    private record SharedFormulaKey(String expr, net.minecraft.world.level.block.state.BlockState state, java.util.List<Object> keyVals) {}
+    private record SharedFormulaEntry(int tick, ScriptValue value) {}
+    private static final int SHARED_FORMULA_CACHE_MAX = 4096;
+    private static final java.util.LinkedHashMap<SharedFormulaKey, SharedFormulaEntry> SHARED_FORMULA_CACHE =
+        new java.util.LinkedHashMap<>(512, 0.75f, true) {
+            @Override
+            protected boolean removeEldestEntry(java.util.Map.Entry<SharedFormulaKey, SharedFormulaEntry> eldest) {
+                return size() > SHARED_FORMULA_CACHE_MAX;
+            }
+        };
+
+    /** Core of the cross-instance shared-formula cache. Evaluates {@code expr} against {@code
+     *  evalCtx} like normal, but if {@link #computeSignature} finds it depends only on known-safe,
+     *  boundable variables, the RESULT is shared with every other machine instance whose block is
+     *  in the exact same BlockState AND has the exact same values for those specific variables.
+     *  Works for both scalar (rot_x/y/z, scale) and array-returning (a bracket-literal {@code
+     *  location}) formulas alike — the cache stores the raw {@link ScriptValue}, not a pre-typed
+     *  double. */
+    private ScriptValue sharedEval(ServerLevel serverLevel, double x, double y, double z, String expr, MachineRenderContext evalCtx) {
+        ScriptContext sctx = evalCtx.toScriptContext();
+        if (expr == null) return ScriptValue.NULL;
+        if (serverLevel == null) return ScriptFormula.compile(expr).evaluate(sctx);
+        FormulaSignature sig = FORMULA_SIGNATURES.computeIfAbsent(expr, e -> computeSignature(e, evalCtx));
+        if (!sig.cacheable()) return ScriptFormula.compile(expr).evaluate(sctx);
+        int tick;
+        try { tick = serverLevel.getServer().getTickCount(); } catch (Throwable ignored) { return ScriptFormula.compile(expr).evaluate(sctx); }
+        net.minecraft.world.level.block.state.BlockState state =
+                serverLevel.getBlockState(net.minecraft.core.BlockPos.containing(x, y, z));
+        java.util.List<Object> keyVals = new java.util.ArrayList<>(sig.keyVars().size());
+        for (String var : sig.keyVars()) keyVals.add(sctx.getVar(var).asNum());
+        SharedFormulaKey key = new SharedFormulaKey(expr, state, keyVals);
+        SharedFormulaEntry cached = SHARED_FORMULA_CACHE.get(key);
+        if (cached != null && cached.tick() == tick) return cached.value();
+        ScriptValue val = ScriptFormula.compile(expr).evaluate(sctx);
+        SHARED_FORMULA_CACHE.put(key, new SharedFormulaEntry(tick, val));
+        return val;
+    }
+
+    private double sharedEvalNum(ServerLevel serverLevel, double x, double y, double z, String expr, MachineRenderContext evalCtx) {
+        return expr == null ? 0 : this.sharedEval(serverLevel, x, y, z, expr, evalCtx).asNum();
+    }
+
+    /** Item-display "item" expressions are frequently a fully CONSTANT call — {@code
+     *  CraftEngineItem("cml:energy_windmill_rotor_hub_render")} with no real context dependency at
+     *  all — so this is exactly as shareable as rot_x/y/z, often even more so (the function-name
+     *  self-lookup callBuiltin does to check for a user override no longer counts as a dependency —
+     *  see ScriptContext#getVar's own note — so a pure item-id constant like this ends up with an
+     *  EMPTY keyVars list, meaning every instance in the same BlockState shares one lookup). */
+    private net.minecraft.world.item.ItemStack sharedEvalItem(ServerLevel serverLevel, double x, double y, double z, String expr, MachineRenderContext evalCtx) {
+        if (expr == null) return null;
+        ScriptValue sv = this.sharedEval(serverLevel, x, y, z, expr, evalCtx);
+        return sv instanceof ScriptValue.Item item ? item.stack() : null;
+    }
+
+    /** Whether spec {@code i} should do ANY work this tick — {@code spec.updateWhen()} is already a
+     *  parsed {@link UpdateWhen} (classified once at machine-DEFINITION load time, in {@link
+     *  dev.arubik.craftengine.machine.MachineDefinitionLoader} — never re-parsed here), so this is
+     *  just a switch, never a string re-parse:
+     *  <ul>
+     *    <li>{@code Always}/{@code Never} — the obvious extremes ("never" still runs its very first
+     *        tick, or the display would sit forever in whatever default/empty state it started in).</li>
+     *    <li>{@code OnBlockChange} — a cheap {@code BlockState} equality check against what was last
+     *        seen; no script engine involved.</li>
+     *    <li>{@code FastProperty} — one of the 4 known {@link MachineRenderContext} booleans read
+     *        directly (no block lookup at all), OR — for any other bare name — a real block-state
+     *        property read via {@link dev.arubik.craftengine.script.types.world.BlockType#readProperty}
+     *        (still no script engine, just one block-state lookup).</li>
+     *    <li>{@code Interval} — plain int arithmetic, re-evaluate once every N ticks.</li>
+     *    <li>{@code ScriptGate} — the general fallback, routed through the normal script engine
+     *        ({@code MachineRenderContext#evalBool}, which already understands both a plain boolexpr
+     *        and a {@code "file.pf:func"} script-call reference).</li>
+     *  </ul> */
+    private boolean shouldUpdateThisTick(int i, RendererSpec spec, MachineRenderContext ctx,
+                                          ServerLevel serverLevel, double x, double y, double z) {
+        return switch (spec.updateWhen()) {
+            case UpdateWhen.Always ignored -> true;
+            case UpdateWhen.Never ignored -> this.updateTickCount[i]++ == 0;
+            case UpdateWhen.OnBlockChange ignored -> {
+                if (serverLevel == null) yield true;
+                net.minecraft.core.BlockPos pos = net.minecraft.core.BlockPos.containing(x, y, z);
+                net.minecraft.world.level.block.state.BlockState current = serverLevel.getBlockState(pos);
+                net.minecraft.world.level.block.state.BlockState last = this.lastSeenBlockState[i];
+                if (last == null || !current.equals(last)) {
+                    this.lastSeenBlockState[i] = current;
+                    yield true;
+                }
+                yield false;
+            }
+            case UpdateWhen.FastProperty fp -> switch (fp.name()) {
+                case "processing" -> ctx.processing();
+                case "powered" -> ctx.powered();
+                case "overclocked" -> ctx.overclocked();
+                case "has_fuel" -> ctx.hasFuel();
+                default -> {
+                    if (serverLevel == null) yield true;
+                    net.minecraft.core.BlockPos pos = net.minecraft.core.BlockPos.containing(x, y, z);
+                    net.minecraft.world.level.block.state.BlockState state = serverLevel.getBlockState(pos);
+                    String val = dev.arubik.craftengine.script.types.world.BlockType.readProperty(state, fp.name());
+                    yield val != null && !val.equalsIgnoreCase("false");
+                }
+            };
+            case UpdateWhen.Interval iv -> {
+                int cur = ++this.updateTickCount[i];
+                if (cur >= iv.ticks()) { this.updateTickCount[i] = 0; yield true; }
+                yield false;
+            }
+            case UpdateWhen.ScriptGate sg -> ctx.evalBool(sg.expr(), null);
+        };
+    }
 
     public RendererManager(List<RendererSpec> specs, Map<String, VariableSpec> varSpecs) {
         this.specs = List.copyOf(specs);
         this.varSpecs = varSpecs;
         int n = specs.size();
-        this.bmRenderers = new ArrayList<BetterModelMachineRenderer>(n);
-        this.meRenderers = new ArrayList<ModelEngineMachineRenderer>(n);
+        this.bmRenderers = new ArrayList<BetterModelRenderer>(n);
+        this.meRenderers = new ArrayList<MegRenderer>(n);
         this.currentSpeeds = new double[n];
         Arrays.fill(this.currentSpeeds, 1.0);
         this.currentItems = new net.minecraft.world.item.ItemStack[n];
@@ -153,10 +344,13 @@ public final class RendererManager {
         this.textDisplays = new TextLevelDisplay[n];
         this.armorStandDisplays = new ArmorStandDisplay[n];
         this.blockDisplayHelpers = new BlockDisplayHelper[n];
+        this.interactionMarkers = new MachineInteraction[n];
         this.evalResults = new EvalResult[n];
         for (int k = 0; k < n; ++k) {
             this.evalResults[k] = new EvalResult();
         }
+        this.updateTickCount = new int[n];
+        this.lastSeenBlockState = new net.minecraft.world.level.block.state.BlockState[n];
         for (int i = 0; i < n; ++i) {
             int idx = i;
             RendererSpec spec = specs.get(i);
@@ -168,14 +362,14 @@ public final class RendererManager {
             }
             if (actualSpec instanceof RendererSpec.BetterModelSpec) {
                 RendererSpec.BetterModelSpec bm = (RendererSpec.BetterModelSpec)actualSpec;
-                this.bmRenderers.add(new BetterModelMachineRenderer(bm.modelId(), () -> this.currentSpeeds[idx]));
+                this.bmRenderers.add(new BetterModelRenderer(bm.modelId(), () -> this.currentSpeeds[idx]));
                 this.meRenderers.add(null);
                 continue;
             }
             if (actualSpec instanceof RendererSpec.ModelEngineSpec) {
                 RendererSpec.ModelEngineSpec me = (RendererSpec.ModelEngineSpec)actualSpec;
                 this.bmRenderers.add(null);
-                this.meRenderers.add(new ModelEngineMachineRenderer(me.modelId(), () -> this.currentSpeeds[idx]));
+                this.meRenderers.add(new MegRenderer(me.modelId(), () -> this.currentSpeeds[idx]));
                 continue;
             }
             this.bmRenderers.add(null);
@@ -192,22 +386,40 @@ public final class RendererManager {
                 this.armorStandDisplays[i] = new ArmorStandDisplay();
                 continue;
             }
+            if (actualSpec instanceof RendererSpec.InteractionSpec is) {
+                this.interactionMarkers[i] = new MachineInteraction(is.onInteractRef(), this);
+                this.interactionMarkers[i].setSize(is.width(), is.height());
+                continue;
+            }
             if (!(actualSpec instanceof RendererSpec.BlockDisplaySpec)) continue;
             this.blockDisplayHelpers[i] = new BlockDisplayHelper();
         }
     }
 
     public void tick(MachineRenderContext ctx, ServerLevel serverLevel, double x, double y, double z, float yaw) {
-        this.tick(ctx, serverLevel, x, y, z, yaw, null);
+        this.tick(ctx, serverLevel, x, y, z, yaw, (String) null, (int[][]) null);
     }
 
     public void tick(MachineRenderContext ctx, ServerLevel serverLevel, double x, double y, double z, float yaw, int[] ... footprint) {
+        this.tick(ctx, serverLevel, x, y, z, yaw, (String) null, footprint);
+    }
+
+    /**
+     * Same as the other overloads, but {@code facing} (a real direction NAME — "north".."down") is
+     * used directly for the bare "facing" script var instead of being re-derived from {@code yaw}
+     * via {@link #yawToFacing}. That derivation can ONLY ever produce a horizontal result — a plain
+     * yaw angle has no way to express "up"/"down" — so any renderer "when" condition checking
+     * {@code facing == "up"}/{@code "down"} against the OLD overloads always saw a horizontal
+     * direction instead, no matter which way the machine actually faced. Pass {@code null} for
+     * {@code facing} to keep the old yaw-derived (horizontal-only) behavior.
+     */
+    public void tick(MachineRenderContext ctx, ServerLevel serverLevel, double x, double y, double z, float yaw, String facing, int[] ... footprint) {
         CraftWorld bukkitWorld;
         this.currentFootprint = footprint != null && footprint.length > 0 ? footprint : null;
         CraftWorld craftWorld = bukkitWorld = serverLevel != null ? serverLevel.getWorld() : null;
         if (serverLevel != null) {
-            String facing = RendererManager.yawToFacing(yaw);
-            ScriptContext.Builder augB = ScriptContext.builder().copyFrom(ctx.toScriptContext()).facing(facing, yaw);
+            String facingValue = facing != null ? facing : RendererManager.yawToFacing(yaw);
+            ScriptContext.Builder augB = ScriptContext.builder().copyFrom(ctx.toScriptContext()).facing(facingValue, yaw);
             ctx = ctx.augmented(augB.build());
         }
         if (this.varSpecs != null && !this.varSpecs.isEmpty()) {
@@ -232,6 +444,13 @@ public final class RendererManager {
                 rendererSpec = spec;
             }
             RendererSpec actualSpec = rendererSpec;
+            // update_when throttle gate — skip this spec's ENTIRE per-tick work (script-ref eval,
+            // whenExpr, value formulas, render update) when it says not to refresh this tick. A
+            // throttled tick leaves every already-shown display exactly as it was on the last tick
+            // that DID update — see shouldUpdateThisTick's own doc for the 3 supported forms.
+            if (!this.shouldUpdateThisTick(i, spec, ctx, serverLevel, x, y, z)) {
+                continue;
+            }
             MachineRenderContext evalCtx = ctx;
             String scriptRef = spec.scriptRef();
             ScriptProgram script2 = scriptRef != null ? ScriptRegistry.get(scriptRef) : null;
@@ -239,11 +458,11 @@ public final class RendererManager {
                 ScriptContext augmented = script2.evaluate(ctx.toScriptContext());
                 evalCtx = ctx.augmented(augmented);
             }
-            this.evalResults[i].active = active = evalCtx.evalBool(spec.whenExpr(), null);
+            this.evalResults[i].active = active = spec.whenExpr().evaluate(evalCtx);
             this.evalResults[i].emittedThisTick = false;
             if (actualSpec instanceof RendererSpec.BetterModelSpec) {
                 RendererSpec.BetterModelSpec bm = (RendererSpec.BetterModelSpec)actualSpec;
-                BetterModelMachineRenderer r = this.bmRenderers.get(i);
+                BetterModelRenderer r = this.bmRenderers.get(i);
                 if (r == null) continue;
                 boolean effectiveActive = active;
                 if (active) {
@@ -270,7 +489,7 @@ public final class RendererManager {
             }
             if (actualSpec instanceof RendererSpec.ModelEngineSpec) {
                 RendererSpec.ModelEngineSpec me = (RendererSpec.ModelEngineSpec)actualSpec;
-                ModelEngineMachineRenderer r = this.meRenderers.get(i);
+                MegRenderer r = this.meRenderers.get(i);
                 if (r == null) continue;
                 if (active) {
                     this.currentSpeeds[i] = evalCtx.evalNum(me.speedExpr() != null ? me.speedExpr() : "1.0", null);
@@ -289,13 +508,14 @@ public final class RendererManager {
             if (actualSpec instanceof RendererSpec.ItemDisplaySpec) {
                 boolean idPerPlayer;
                 RendererSpec.ItemDisplaySpec id = (RendererSpec.ItemDisplaySpec)actualSpec;
-                String idWhen = spec.whenExpr();
-                boolean bl = idPerPlayer = !id.global() && idWhen != null && !idWhen.equals("always") && (idWhen.contains("player_facing") || idWhen.contains("player_in_range"));
+                WhenCondition idWhen = spec.whenExpr();
+                String idWhenRaw = idWhen.raw();
+                boolean bl = idPerPlayer = !id.global() && !idWhenRaw.equals("always") && (idWhenRaw.contains("player_facing") || idWhenRaw.contains("player_in_range"));
                 if (idPerPlayer && serverLevel != null) {
                     HashSet<UUID> qualifying = new HashSet<UUID>();
                     for (ServerPlayer sp : serverLevel.players()) {
                         MachineRenderContext playerCtx = this.buildPlayerContext(evalCtx, sp, x, y, z, yaw);
-                        if (!playerCtx.evalBool(idWhen, null)) continue;
+                        if (!idWhen.evaluate(playerCtx)) continue;
                         qualifying.add(sp.getUUID());
                     }
                     this.evalResults[i].qualifyingPlayers = qualifying;
@@ -308,7 +528,7 @@ public final class RendererManager {
                     String expr = id.itemExpr();
                     boolean bl2 = isFormula = expr.startsWith("$") || expr.contains("(") || expr.contains(".");
                     if (isFormula) {
-                        this.currentItems[i] = evalCtx.evalItem(expr, null);
+                        this.currentItems[i] = this.sharedEvalItem(serverLevel, x, y, z, expr, evalCtx);
                     } else if (this.currentItems[i] == null) {
                         try {
                             Object full = expr.contains(":") ? expr : "minecraft:" + expr;
@@ -320,14 +540,22 @@ public final class RendererManager {
                         }
                     }
                     try {
-                        double[] wp2 = this.resolveSpecLocation(spec, evalCtx, x, y, z);
+                        double[] wp2 = this.resolveSpecLocation(spec, evalCtx, serverLevel, x, y, z);
                         double relX = wp2[0] - (x + 0.5);
                         double relY = wp2[1] - y;
                         double relZ = wp2[2] - (z + 0.5);
-                        float rotX = !Double.isNaN(wp2[3]) ? (float)wp2[3] : ((float)evalCtx.evalNum(id.rotX() != null ? id.rotX() : "0", null));
-                        float rotY = !Double.isNaN(wp2[4]) ? (float)wp2[4] : ( (float)evalCtx.evalNum(id.rotY() != null ? id.rotY() : "0", null));
-                        float rotZ = !Double.isNaN(wp2[5]) ? (float)wp2[5] : (float)evalCtx.evalNum(id.rotZ() != null ? id.rotZ() : "0", null);
-                        this.evalResults[i].itemDisplay = new RendererSpec.EvaluatedItemDisplay(i, this.currentItems[i], relX, relY, relZ, (float)evalCtx.evalNum(id.scale() != null && !id.scale().isEmpty() ? id.scale() : "1", null), rotX, rotY, rotZ);
+                        // sharedEvalNum, not a plain evalCtx.evalNum — rot_x/rot_y/rot_z/scale are
+                        // frequently PURE functions of the block itself (e.g. energy_windmill's
+                        // rot_y, computed only from Machine.block.property("facing")), in which
+                        // case every machine instance sharing that exact BlockState (10 windmills
+                        // all facing north, say) reuses one cached evaluation instead of each
+                        // re-walking the same formula every tick. Falls through to the normal
+                        // per-instance eval for anything that reads real instance state (rpm,
+                        // progress, ...) — see DYNAMIC_MARKERS.
+                        float rotX = !Double.isNaN(wp2[3]) ? (float)wp2[3] : (float) this.sharedEvalNum(serverLevel, x, y, z, id.rotX() != null ? id.rotX() : "0", evalCtx);
+                        float rotY = !Double.isNaN(wp2[4]) ? (float)wp2[4] : (float) this.sharedEvalNum(serverLevel, x, y, z, id.rotY() != null ? id.rotY() : "0", evalCtx);
+                        float rotZ = !Double.isNaN(wp2[5]) ? (float)wp2[5] : (float) this.sharedEvalNum(serverLevel, x, y, z, id.rotZ() != null ? id.rotZ() : "0", evalCtx);
+                        this.evalResults[i].itemDisplay = new RendererSpec.EvaluatedItemDisplay(i, this.currentItems[i], relX, relY, relZ, (float) this.sharedEvalNum(serverLevel, x, y, z, id.scale() != null && !id.scale().isEmpty() ? id.scale() : "1", evalCtx), rotX, rotY, rotZ);
                     }
                     catch (Throwable wp2) {}
                     continue;
@@ -369,7 +597,7 @@ public final class RendererManager {
                 this.evalResults[i].pType = ps.particle();
                 this.evalResults[i].pShape = emitShape;
                 this.evalResults[i].pDir = emitDir;
-                double[] ep0 = this.resolveSpecLocation(spec, evalCtx, x, y, z);
+                double[] ep0 = this.resolveSpecLocation(spec, evalCtx, serverLevel, x, y, z);
                 this.evalResults[i].specRelX = ep0[0] - (x + 0.5);
                 this.evalResults[i].specRelY = ep0[1] - y;
                 this.evalResults[i].specRelZ = ep0[2] - (z + 0.5);
@@ -378,10 +606,10 @@ public final class RendererManager {
                     if (particleType == null) continue;
                     List<double[]> emitPositions = this.resolvePositions(spec, evalCtx, x, y, z);
                     if (emitPositions.isEmpty()) {
-                        emitPositions = List.of(this.resolveSpecLocation(spec, evalCtx, x, y, z));
+                        emitPositions = List.of(this.resolveSpecLocation(spec, evalCtx, serverLevel, x, y, z));
                     }
                     double RANGE_SQ = 2304.0;
-                    String whenExpr = spec.whenExpr();
+                    WhenCondition whenExpr = spec.whenExpr();
                     for (double[] ep : emitPositions) {
                         double wx = ep[0];
                         double wy = ep[1];
@@ -392,7 +620,7 @@ public final class RendererManager {
                             double ddz;
                             double ddy;
                             double ddx = sp.getX() - wx;
-                            if (ddx * ddx + (ddy = sp.getY() - wy) * ddy + (ddz = sp.getZ() - wz) * ddz > 2304.0 || !(playerCtx = this.buildPlayerContext(evalCtx, (ServerPlayer)sp, x, y, z, yaw)).evalBool(whenExpr, null)) continue;
+                            if (ddx * ddx + (ddy = sp.getY() - wy) * ddy + (ddz = sp.getZ() - wz) * ddz > 2304.0 || !whenExpr.evaluate(playerCtx = this.buildPlayerContext(evalCtx, (ServerPlayer)sp, x, y, z, yaw))) continue;
                             qualifying.add(sp);
                         }
                         if (qualifying.isEmpty()) continue;
@@ -458,7 +686,7 @@ public final class RendererManager {
                 }
                 Key fluidKey = Key.of((String)"cml", (String)("fluidlvl_" + fluidTypeValue + "_" + ceLevel));
                 float scaleY = ft.maxHeight() * ((float)ceLevel / 16.0f);
-                double[] wp3 = this.resolveSpecLocation(spec, evalCtx, x, y, z);
+                double[] wp3 = this.resolveSpecLocation(spec, evalCtx, serverLevel, x, y, z);
                 this.evalResults[i].ceFluidLevel = ceLevel;
                 this.evalResults[i].fluidTypeValue = fluidTypeValue;
                 this.evalResults[i].specRelX = wp3[0] - (x + 0.5);
@@ -473,14 +701,14 @@ public final class RendererManager {
                 RendererSpec.TextDisplaySpec td = (RendererSpec.TextDisplaySpec)actualSpec;
                 TextLevelDisplay display = this.textDisplays[i];
                 if (display == null) continue;
-                String tdWhen = td.whenExpr();
+                String tdWhen = td.whenExpr().raw();
                 boolean bl = perPlayer = !td.global() && tdWhen != null && !tdWhen.equals("always") && (tdWhen.contains("player_facing") || tdWhen.contains("player_in_range") || tdWhen.contains("is_player_looking_at"));
                 if (perPlayer) {
                     String text2;
                     HashSet<UUID> qualifying = new HashSet<UUID>();
                     for (ServerPlayer sp : serverLevel.players()) {
                         MachineRenderContext playerCtx = this.buildPlayerContext(evalCtx, sp, x, y, z, yaw);
-                        if (!playerCtx.evalBool(tdWhen, null)) continue;
+                        if (!td.whenExpr().evaluate(playerCtx)) continue;
                         qualifying.add(sp.getUUID());
                     }
                     this.evalResults[i].qualifyingPlayers = qualifying;
@@ -494,7 +722,7 @@ public final class RendererManager {
                     catch (Throwable ignored) {
                         text2 = td.textExpr() != null ? td.textExpr() : "";
                     }
-                    double[] wp4 = this.resolveSpecLocation(spec, evalCtx, x, y, z);
+                    double[] wp4 = this.resolveSpecLocation(spec, evalCtx, serverLevel, x, y, z);
                     float scaleVal = (float)evalCtx.evalNum(td.scale() != null && !td.scale().isEmpty() ? td.scale() : "0.1", null);
                     this.evalResults[i].textContent = text2;
                     this.evalResults[i].tdOx = wp4[0] - (x + 0.5);
@@ -515,7 +743,7 @@ public final class RendererManager {
                 catch (Throwable ignored) {
                     text = td.textExpr() != null ? td.textExpr() : "";
                 }
-                double[] wp = this.resolveSpecLocation(spec, evalCtx, x, y, z);
+                double[] wp = this.resolveSpecLocation(spec, evalCtx, serverLevel, x, y, z);
                 float scaleVal = (float)evalCtx.evalNum(td.scale() != null && !td.scale().isEmpty() ? td.scale() : "0.1", null);
                 this.evalResults[i].textContent = text;
                 this.evalResults[i].tdOx = wp[0] - (x + 0.5);
@@ -556,8 +784,24 @@ public final class RendererManager {
                     display.despawnAll(serverLevel);
                     continue;
                 }
-                double[] wp5 = this.resolveSpecLocation(spec, evalCtx, x, y, z);
+                double[] wp5 = this.resolveSpecLocation(spec, evalCtx, serverLevel, x, y, z);
                 display.update(serverLevel, wp5[0], wp5[1], wp5[2], as.small(), as.invisible(), as.marker());
+                continue;
+            }
+            if (actualSpec instanceof RendererSpec.InteractionSpec) {
+                MachineInteraction marker = this.interactionMarkers[i];
+                if (marker == null) continue;
+                if (!active) {
+                    marker.despawnAll(serverLevel);
+                    continue;
+                }
+                double[] wp7 = this.resolveSpecLocation(spec, evalCtx, serverLevel, x, y, z);
+                // Same relative-offset convention every other per-spec renderer already uses (e.g.
+                // ParticleSpec's specRelX/Y/Z) — stashed on the marker so a click can report back
+                // WHERE (relative to the machine) it was clicked, for DataMultiBlockMachineBlockEntity
+                // .runInteractScript to resolve into a schema-relative MultiBlock part.
+                marker.setLastOffset(wp7[0] - (x + 0.5), wp7[1] - y, wp7[2] - (z + 0.5));
+                marker.render(serverLevel, wp7[0], wp7[1], wp7[2]);
                 continue;
             }
             if (!(actualSpec instanceof RendererSpec.BlockDisplaySpec)) continue;
@@ -568,7 +812,7 @@ public final class RendererManager {
                 display.despawnAll(serverLevel);
                 continue;
             }
-            double[] wp6 = this.resolveSpecLocation(spec, evalCtx, x, y, z);
+            double[] wp6 = this.resolveSpecLocation(spec, evalCtx, serverLevel, x, y, z);
             float scaleVal = (float)evalCtx.evalNum(bd.scale() != null && !bd.scale().isEmpty() ? bd.scale() : "1.0", null);
             try {
                 blockId = ScriptFormula.compile(bd.blockStateExpr()).evaluateStr(evalCtx.toScriptContext());
@@ -581,11 +825,11 @@ public final class RendererManager {
     }
 
     public void close() {
-        for (BetterModelMachineRenderer betterModelMachineRenderer : this.bmRenderers) {
+        for (BetterModelRenderer betterModelMachineRenderer : this.bmRenderers) {
             if (betterModelMachineRenderer == null) continue;
             betterModelMachineRenderer.close();
         }
-        for (ModelEngineMachineRenderer modelEngineMachineRenderer : this.meRenderers) {
+        for (MegRenderer modelEngineMachineRenderer : this.meRenderers) {
             if (modelEngineMachineRenderer == null) continue;
             modelEngineMachineRenderer.close();
         }
@@ -606,14 +850,45 @@ public final class RendererManager {
             if (d == null) continue;
             d.despawnAll(null);
         }
+        if (this.interactionMarkers != null) for (MachineInteraction m : this.interactionMarkers) {
+            if (m == null) continue;
+            m.despawnAll(null);
+            m.discard(); // drop from the global click-lookup map so a stale id never resolves again
+        }
     }
 
-    public List<BetterModelMachineRenderer> betterModelRenderers() {
+    public List<BetterModelRenderer> betterModelRenderers() {
         return Collections.unmodifiableList(this.bmRenderers);
     }
 
-    public List<ModelEngineMachineRenderer> modelEngineRenderers() {
+    public List<MegRenderer> modelEngineRenderers() {
         return Collections.unmodifiableList(this.meRenderers);
+    }
+
+    /** Index of the renderer entry declared with {@code "id": "<id>"} in JSON (see
+     *  RendererSpec#id/MachineDefinitionLoader), or -1 if no entry has that id — {@code null}/blank
+     *  never matches anything, since an unset id is {@code null} on every spec. Used by
+     *  {@code Machine.get_renderer(id)} (MachineType.java) to resolve a script-facing handle. */
+    public int indexOfId(String id) {
+        if (id == null || id.isBlank()) return -1;
+        for (int i = 0; i < this.specs.size(); i++) {
+            if (id.equals(this.specs.get(i).id())) return i;
+        }
+        return -1;
+    }
+
+    /** The {@link BetterModelRenderer} declared with {@code "id": "<id>"}, or {@code null}
+     *  if no such id exists OR the entry with that id isn't a {@code "bettermodel"} renderer. */
+    public BetterModelRenderer betterModelRendererById(String id) {
+        int i = indexOfId(id);
+        return i >= 0 ? this.bmRenderers.get(i) : null;
+    }
+
+    /** The {@link MegRenderer} declared with {@code "id": "<id>"}, or {@code null}
+     *  if no such id exists OR the entry with that id isn't a {@code "modelengine"} renderer. */
+    public MegRenderer modelEngineRendererById(String id) {
+        int i = indexOfId(id);
+        return i >= 0 ? this.meRenderers.get(i) : null;
     }
 
     public net.minecraft.world.item.ItemStack[] currentItems() {
@@ -638,6 +913,12 @@ public final class RendererManager {
         if (val instanceof ScriptValue.Obj obj && obj.instance() instanceof LocationType.LocationRef lc) {
             return new double[]{lc.x(), lc.y(), lc.z(), nan, nan, nan};
         }
+        // A Vector here (e.g. Machine.get_renderer(id).bone_location(name)) is already an ABSOLUTE
+        // world position, same as LocationRef above — NOT a machine-relative offset like the plain
+        // Array/Num cases below, since that's what bone_location's own live bone-tracking returns.
+        if (val instanceof ScriptValue.Obj obj && obj.instance() instanceof org.joml.Vector3d v) {
+            return new double[]{v.x, v.y, v.z, nan, nan, nan};
+        }
         if (val instanceof ScriptValue.Array a && a.elements().size() >= 3) {
             var e = a.elements();
             double rx = e.size() >= 5 ? e.get(3).asNum() : nan;
@@ -651,30 +932,77 @@ public final class RendererManager {
         return null;
     }
 
-    private double[] resolveSpecLocation(RendererSpec spec, MachineRenderContext evalCtx, double machX, double machY, double machZ) {
+    /** Matches the {@code "{rendererid}:meg:{bone_name}"} / {@code "{rendererid}:bm:{bone_name}"}
+     *  item-display location syntax — a stable renderer id (see {@link RendererSpec#id}), a literal
+     *  engine tag picking which id-namespace to look the id up in, then the target bone's name.
+     *  Bone names themselves may contain ':' (colon-separated group paths in some model exports), so
+     *  this only splits the first two colons and takes everything after as the bone name. */
+    private static final java.util.regex.Pattern BONE_LOCATION_PATTERN =
+        java.util.regex.Pattern.compile("^([^:]+):(meg|bm):(.+)$");
+
+    /** Resolves the {@code "{rendererid}:meg/bm:{bone_name}"} bone-path location syntax to that
+     *  bone's LIVE world position, or {@code null} if {@code locExpr} doesn't match the syntax, no
+     *  renderer with that id/engine exists, or the bone can't be found right now (e.g. the model
+     *  isn't currently shown). Lets an item_display (or any other positioned renderer) track a bone
+     *  on a DIFFERENT renderer entry declared elsewhere in the same machine's config, addressed by
+     *  its stable id — see {@code Machine.get_renderer(id)} (MachineType.java) for the script-facing
+     *  counterpart of the same id namespace. */
+    private double[] resolveBoneLocation(String locExpr) {
+        var m = BONE_LOCATION_PATTERN.matcher(locExpr);
+        if (!m.matches()) return null;
+        String rendererId = m.group(1);
+        String engine = m.group(2);
+        String boneName = m.group(3);
+        double[] pos;
+        if ("bm".equals(engine)) {
+            dev.arubik.craftengine.machine.render.renderer.BetterModelRenderer r = this.betterModelRendererById(rendererId);
+            pos = r == null ? null : r.boneWorldPosition(boneName);
+        } else {
+            dev.arubik.craftengine.machine.render.renderer.MegRenderer r = this.modelEngineRendererById(rendererId);
+            pos = r == null ? null : r.boneWorldPosition(boneName);
+        }
+        if (pos == null) return null;
+        return new double[]{pos[0], pos[1], pos[2], Double.NaN, Double.NaN, Double.NaN};
+    }
+
+    private double[] resolveSpecLocation(RendererSpec spec, MachineRenderContext evalCtx, ServerLevel serverLevel, double machX, double machY, double machZ) {
         String locExpr = spec.locationExpr();
         if (locExpr != null && !locExpr.isEmpty()) {
+            double[] boneLoc = this.resolveBoneLocation(locExpr);
+            if (boneLoc != null) {
+                return boneLoc;
+            }
             if (locExpr.startsWith("[")) {
-                try {
-                    String inner = locExpr.substring(1, locExpr.lastIndexOf(93));
-                    String[] parts = inner.split(",");
-                    if (parts.length >= 3) {
-                        double rx;
-                        double dx = Double.parseDouble(parts[0].trim());
-                        double dy = Double.parseDouble(parts[1].trim());
-                        double dz = Double.parseDouble(parts[2].trim());
-                        double d = rx = parts.length >= 5 ? Double.parseDouble(parts[3].trim()) : Double.NaN;
-                        double ry = parts.length == 4 ? Double.parseDouble(parts[3].trim()) : (parts.length >= 5 ? Double.parseDouble(parts[4].trim()) : Double.NaN);
-                        double rz = parts.length >= 6 ? Double.parseDouble(parts[5].trim()) : Double.NaN;
-                        return new double[]{machX + 0.5 + dx, machY + dy, machZ + 0.5 + dz, rx, ry, rz};
-                    }
-                }
-                catch (Throwable inner) {
-                    // empty catch block
+                // Pre-check EVERY part with looksLikePlainNumber before ever calling
+                // Double.parseDouble — an expression-based "[x, y, z]" (e.g. energy_windmill's
+                // offset, a ternary on Machine.block.property("facing")) is NOT a plain-literal
+                // array, so the OLD "just try parseDouble and catch the failure" approach threw
+                // (and immediately discarded) a NumberFormatException every single tick, for every
+                // instance, on this exact common pattern — exception construction/stack-fill is
+                // expensive in the JVM regardless of whether anything reads the trace, and profiling
+                // confirmed this alone was real, measurable server-thread time. A cheap character
+                // scan avoids ever throwing for the case that was ALWAYS going to fall through to
+                // the ScriptFormula path below anyway.
+                String inner = locExpr.substring(1, locExpr.lastIndexOf(93));
+                String[] parts = inner.split(",");
+                if (parts.length >= 3 && isPlainNumberArrayLocation(parts)) {
+                    double rx;
+                    double dx = Double.parseDouble(parts[0].trim());
+                    double dy = Double.parseDouble(parts[1].trim());
+                    double dz = Double.parseDouble(parts[2].trim());
+                    double d = rx = parts.length >= 5 ? Double.parseDouble(parts[3].trim()) : Double.NaN;
+                    double ry = parts.length == 4 ? Double.parseDouble(parts[3].trim()) : (parts.length >= 5 ? Double.parseDouble(parts[4].trim()) : Double.NaN);
+                    double rz = parts.length >= 6 ? Double.parseDouble(parts[5].trim()) : Double.NaN;
+                    return new double[]{machX + 0.5 + dx, machY + dy, machZ + 0.5 + dz, rx, ry, rz};
                 }
             }
             try {
-                ScriptValue val = ScriptFormula.compile(locExpr).evaluate(evalCtx.toScriptContext());
+                // sharedEval, not a plain compile+evaluate — a bracket-literal "location":
+                // {x,y,z} (parsed into one combined "[exprX, exprY, exprZ]" array-literal formula
+                // by MachineDefinitionLoader#parseLocationExpr) is exactly as likely to be a PURE
+                // function of the block itself (energy_windmill's offset only depends on facing)
+                // as rot_x/y/z are — see sharedEval's own doc for the windmill/shaft examples.
+                ScriptValue val = this.sharedEval(serverLevel, machX, machY, machZ, locExpr, evalCtx);
                 double[] pos = RendererManager.resolveLocation(val, machX, machY, machZ);
                 if (pos != null) {
                     return pos;
@@ -685,6 +1013,40 @@ public final class RendererManager {
             }
         }
         return new double[]{machX + 0.5, machY, machZ + 0.5, Double.NaN, Double.NaN, Double.NaN};
+    }
+
+    /** True only if every one of {@code parts} (a bracket-array location's comma-split pieces) is
+     *  cheaply recognizable as a plain numeric literal (optional sign, digits, at most one dot) —
+     *  used to skip the fast literal-offset parse path WITHOUT ever calling {@link
+     *  Double#parseDouble} on something that isn't one, instead of the old
+     *  try-parseDouble-and-catch-the-failure approach (see {@link #resolveSpecLocation}'s own note
+     *  on why that was a real per-tick cost). Deliberately conservative: anything this returns
+     *  false for still gets a fully correct answer via the ScriptFormula fallback right below —
+     *  this is purely an optimization to skip the common all-literal case's overhead, never a
+     *  correctness gate. */
+    private static boolean isPlainNumberArrayLocation(String[] parts) {
+        int checkUpTo = Math.min(parts.length, 6);
+        for (int i = 0; i < checkUpTo; i++) {
+            if (!looksLikePlainNumber(parts[i].trim())) return false;
+        }
+        return true;
+    }
+
+    private static boolean looksLikePlainNumber(String s) {
+        if (s.isEmpty()) return false;
+        int i = 0;
+        char c0 = s.charAt(0);
+        if (c0 == '-' || c0 == '+') i = 1;
+        if (i >= s.length()) return false;
+        boolean sawDigit = false;
+        boolean sawDot = false;
+        for (; i < s.length(); i++) {
+            char c = s.charAt(i);
+            if (c >= '0' && c <= '9') { sawDigit = true; continue; }
+            if (c == '.' && !sawDot) { sawDot = true; continue; }
+            return false;
+        }
+        return sawDigit;
     }
 
     private List<double[]> resolvePositions(RendererSpec spec, MachineRenderContext evalCtx, double machX, double machY, double machZ) {
@@ -1149,7 +1511,11 @@ public final class RendererManager {
                     Field sharedField = Entity.class.getDeclaredField("DATA_SHARED_FLAGS_ID");
                     sharedField.setAccessible(true);
                     acc = (EntityDataAccessor)sharedField.get(null);
-                    values.add(SynchedEntityData.DataValue.create((EntityDataAccessor)acc, 32));
+                    // DATA_SHARED_FLAGS_ID is a byte-typed field — the bare int literal 32 autoboxes
+                    // to Integer, and SynchedEntityData's write path casts it straight to Byte with
+                    // no coercion, crashing the client's packet decoder (ClassCastException: Integer
+                    // cannot be cast to Byte) the moment this entity's metadata syncs.
+                    values.add(SynchedEntityData.DataValue.create((EntityDataAccessor)acc, (byte)32));
                 }
                 Field asFlags = ArmorStand.class.getDeclaredField("DATA_CLIENT_FLAGS");
                 asFlags.setAccessible(true);

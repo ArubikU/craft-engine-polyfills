@@ -1,0 +1,141 @@
+# Tree-felling helpers, shared by any block that chops trees (saw.pf today). Import
+# "kinetics/tree_utils.pf" + "kinetics/utils.pf" (for _deposit).
+
+OFFSETS6 = [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]]
+
+def _is_log(id):
+    return id == "minecraft:oak_log" || id == "minecraft:spruce_log" || id == "minecraft:birch_log" || id == "minecraft:jungle_log" || id == "minecraft:acacia_log" || id == "minecraft:dark_oak_log" || id == "minecraft:cherry_log" || id == "minecraft:mangrove_log" || id == "minecraft:crimson_stem" || id == "minecraft:warped_stem" || id == "minecraft:stripped_oak_log" || id == "minecraft:stripped_spruce_log" || id == "minecraft:stripped_birch_log" || id == "minecraft:stripped_jungle_log" || id == "minecraft:stripped_acacia_log" || id == "minecraft:stripped_dark_oak_log" || id == "minecraft:mushroom_stem"
+end
+
+def _is_leaf_id(id):
+    return id == "minecraft:oak_leaves" || id == "minecraft:spruce_leaves" || id == "minecraft:birch_leaves" || id == "minecraft:jungle_leaves" || id == "minecraft:acacia_leaves" || id == "minecraft:dark_oak_leaves" || id == "minecraft:cherry_leaves" || id == "minecraft:azalea_leaves" || id == "minecraft:flowering_azalea_leaves" || id == "minecraft:mangrove_leaves"
+end
+
+def _is_choppable(id):
+    return _is_log(id) || _is_leaf_id(id)
+end
+
+# Block at an absolute world pos — resolves through a contraption's real_block if riding one.
+def _get_tree_block(contraption, x, y, z):
+    if contraption != null:
+        return contraption.contraption_world.real_block(x, y, z)
+    end
+    return World.get_block(x, y, z)
+end
+
+# BFS-finds the whole tree at (start_x,start_y,start_z): logs upward/outward, then leaves outward
+# by increasing vanilla "distance". Returns a ";"-joined "dx,dy,dz" string (logs first, then
+# leaves), since arrays here are immutable and can't be grown incrementally. Port of Create's
+# TreeCutter#findTree (logs: upward-only BFS; leaves: BFS by strictly-increasing distance).
+def _find_tree(contraption, start_x, start_y, start_z):
+    MAX_LOGS = 300
+    MAX_LEAVES = 400
+    MAX_ROUNDS = 80
+
+    found = "0,0,0"
+    frontier = "0,0,0"
+    log_count = 1
+    round_i = 0
+    while frontier != "" && round_i < MAX_ROUNDS && log_count < MAX_LOGS:
+        next_frontier = ""
+        for cell in split(frontier, ";"):
+            p = split(cell, ",")
+            cx = num(p[0])
+            cy = num(p[1])
+            cz = num(p[2])
+            dx = -1
+            while dx <= 1:
+                dy = 0
+                while dy <= 1:
+                    dz = -1
+                    while dz <= 1:
+                        is_self = dx == 0 && dy == 0 && dz == 0
+                        if !is_self && log_count < MAX_LOGS:
+                            nx = cx + dx
+                            ny = cy + dy
+                            nz = cz + dz
+                            key = nx + "," + ny + "," + nz
+                            if !contains(split(found, ";"), key):
+                                blk = _get_tree_block(contraption, start_x + nx, start_y + ny, start_z + nz)
+                                if blk != null && !blk.is_air && _is_log(blk.id):
+                                    found = found + ";" + key
+                                    next_frontier = (next_frontier == "") ? key : (next_frontier + ";" + key)
+                                    log_count = log_count + 1
+                                end
+                            end
+                        end
+                        dz = dz + 1
+                    end
+                    dy = dy + 1
+                end
+                dx = dx + 1
+            end
+        end
+        frontier = next_frontier
+        round_i = round_i + 1
+    end
+
+    leaves = ""
+    leaf_dist = make_map()
+    leaf_frontier = found
+    leaf_count = 0
+    lround_i = 0
+    while leaf_frontier != "" && lround_i < MAX_ROUNDS && leaf_count < MAX_LEAVES:
+        next_leaf_frontier = ""
+        for cell in split(leaf_frontier, ";"):
+            p = split(cell, ",")
+            cx = num(p[0])
+            cy = num(p[1])
+            cz = num(p[2])
+            prev_dist = num(leaf_dist.switch(cell, "0"))
+            for off in OFFSETS6:
+                if leaf_count < MAX_LEAVES:
+                    nx = cx + off[0]
+                    ny = cy + off[1]
+                    nz = cz + off[2]
+                    key = nx + "," + ny + "," + nz
+                    already = contains(split(found, ";"), key) || contains(split(leaves, ";"), key)
+                    if !already:
+                        blk = _get_tree_block(contraption, start_x + nx, start_y + ny, start_z + nz)
+                        if blk != null && !blk.is_air:
+                            dist_str = blk.property("distance")
+                            if dist_str != null && dist_str != "":
+                                dist = num(dist_str)
+                                if dist > prev_dist:
+                                    leaves = (leaves == "") ? key : (leaves + ";" + key)
+                                    leaf_dist = leaf_dist.with(key, str(dist))
+                                    next_leaf_frontier = (next_leaf_frontier == "") ? key : (next_leaf_frontier + ";" + key)
+                                    leaf_count = leaf_count + 1
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+        leaf_frontier = next_leaf_frontier
+        lround_i = lround_i + 1
+    end
+
+    return (leaves == "") ? found : (found + ";" + leaves)
+end
+
+# Chain-breaks every block of the tree at (base_x,base_y,base_z), depositing drops via _deposit.
+def _fell_tree(contraption, base_x, base_y, base_z, speed):
+    tree = _find_tree(contraption, base_x, base_y, base_z)
+    any_broken = false
+    for cell in split(tree, ";"):
+        p = split(cell, ",")
+        blk = _get_tree_block(contraption, base_x + num(p[0]), base_y + num(p[1]), base_z + num(p[2]))
+        if blk != null && !blk.is_air:
+            result = Machine.tick_break(blk, speed)
+            if result != null:
+                for item in result:
+                    _deposit(item)
+                end
+                any_broken = true
+            end
+        end
+    end
+    return any_broken
+end

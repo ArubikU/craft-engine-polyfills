@@ -1,0 +1,183 @@
+# Funnel (belt-facing, "facing"+"mode" blockstate) — Create-alike single-item hand-off between a
+# container behind it and a belt/container in front, mirroring the old FunnelBlockEntity Java
+# behavior 1:1: redstone freezes it entirely, "mode" (in/out) flips which side is the source vs
+# destination, progress rides the SAME speed as whatever belt is adjacent (front or back,
+# whichever is faster), same as the old inc() did — see Belt.speed.
+#
+# IN-mode's "receive from the belt in front" needs no code here at all — belt_types/conveyor.json's
+# own connects_to allowlist (see BeltRuntime#tryPushIntoConnectedContainer) already pushes straight
+# into this machine's own container whenever a belt reaches it, same as any other connects_to
+# target. This file only drives the OTHER half: pulling/pushing the container BEHIND it, and (for
+# OUT mode) actively handing the held item onto whatever's in front.
+
+DIR_VEC = make_map(
+"north", [0, 0, -1],
+"south", [0, 0, 1],
+"east",  [1, 0, 0],
+"west",  [-1, 0, 0]
+)
+
+# ConveyorMath.progressPerTick(64, 64, 16)'s cadence — used when no adjacent belt has a speed.
+DEFAULT_INC = 0.0625
+
+def _funnel_mode_out():
+    m = Machine.block.property("mode")
+    return m == null || m != "in"
+end
+
+def _funnel_facing_vec():
+    f = Machine.block.property("facing")
+    return DIR_VEC.switch(f, [0, 0, -1])
+end
+
+# Matches the old FunnelBlockEntity.inc(): the faster of whatever belt sits in front or behind,
+# falling back to the default cadence if neither side is a belt.
+def _funnel_inc(fx, fy, fz):
+    best = 0.0
+    bf = Machine.belt_at(fx, fy, fz)
+    if bf != null:
+        best = bf.speed
+    end
+    bo = Machine.belt_at(-fx, -fy, -fz)
+    if bo != null && bo.speed > best:
+        best = bo.speed
+    end
+    return best > 0.0 ? best : DEFAULT_INC
+end
+
+def _funnel_set_activated(behind_vec):
+    c = Machine.container_at(behind_vec[0], behind_vec[1], behind_vec[2])
+    Machine.set_property("activated", c != null ? "true" : "false")
+end
+
+# Tries to hand `item` to whatever's directly in front. Returns null on success (delivered, or
+# dropped into open air because nothing at all is there to receive it — the original, intentional
+# "funnel facing off a ledge" behavior). Returns the item BACK, unchanged, when a belt or container
+# IS there but has no room — the caller then HOLDS it instead of dropping it on the ground, see
+# _funnel_tick's OUT branch. Never falls through to drop_item_toward when a belt/container exists;
+# that used to happen for a full belt specifically (belt != null but is_full skipped the whole
+# belt.put branch, landing on the "nothing in front" drop path by accident) and was silently
+# voiding items into the ground the moment the belt ahead backed up.
+#
+# Machine.belt_at(...) ALWAYS returns a non-null wrapper (even for open air) — unlike
+# container_at's real null-when-absent contract — with is_full defaulting to true when there's no
+# real conveyor there. Without the belt.exists check, "no belt at all in front" and "belt exists
+# but is full" both looked identical (both is_full == true), so an open-facing funnel with nothing
+# in front just held forever instead of ever reaching the drop-into-open-air fallback below.
+def _funnel_give_forward(item, fx, fy, fz):
+    belt = Machine.belt_at(fx, fy, fz)
+    if belt != null && belt.exists:
+        if belt.is_full:
+            return item
+        end
+        return belt.put(item)
+    end
+    target_c = Machine.container_at(fx, fy, fz)
+    if target_c != null:
+        return target_c.push(item)
+    end
+    # Force scales with the same "how fast is the belt around here" reading _funnel_inc already
+    # uses for progress pacing — a fast belt shoves it out harder, a slow/absent one barely nudges
+    # it. At DEFAULT_INC (no real belt nearby) this lands on force=0.1, i.e. 1/10 of the old flat
+    # 1.0 push. Spawns at the funnel's OWN output face (half a block out, at the boundary) rather
+    # than the block's center — "exactly where it was", not from the middle of the funnel's tile.
+    force = (_funnel_inc(fx, fy, fz) / DEFAULT_INC) * 0.1
+    Machine.drop_item_toward(item, fx * force, fy * force, fz * force, fx * 0.5, fy * 0.5, fz * 0.5)
+    return null
+end
+
+def _funnel_tick():
+    v = _funnel_facing_vec()
+    fx = v[0]
+    fy = v[1]
+    fz = v[2]
+    bx = -fx
+    by = -fy
+    bz = -fz
+
+    if Machine.redstone.powered:
+        Machine.set_property("activated", "false")
+        return
+    end
+
+    out = _funnel_mode_out()
+    held = Machine.container.get_item(0)
+
+    if out:
+        if is_empty(held):
+            c = Machine.container_at(bx, by, bz)
+            if c != null:
+                taken = c.pull(1)
+                if !is_empty(taken):
+                    Machine.container.set_item(0, taken)
+                    held = taken
+                end
+            end
+        end
+        if !is_empty(held):
+            progress = Machine.get_typed("_funnel_progress", "float")
+            if progress == null:
+                progress = 0.0
+            end
+            progress = progress + _funnel_inc(fx, fy, fz)
+            if progress < 1.0:
+                Machine.set_typed("_funnel_progress", "float", progress)
+            else:
+                # Blocked (belt/container ahead has no room right now): leftover comes back
+                # non-empty, held item stays put untouched, progress is deliberately left
+                # UNPERSISTED at its pre-tick value (matches the IN branch below) so the funnel
+                # keeps retrying every tick without pulling anything new from behind meanwhile —
+                # a hold, not a drop.
+                leftover = _funnel_give_forward(held, fx, fy, fz)
+                if is_empty(leftover):
+                    Machine.container.set_item(0, null)
+                    Machine.set_typed("_funnel_progress", "float", 0.0)
+                end
+            end
+        end
+    else:
+        if !is_empty(held):
+            progress = Machine.get_typed("_funnel_progress", "float")
+            if progress == null:
+                progress = 0.0
+            end
+            progress = progress + _funnel_inc(fx, fy, fz)
+            if progress < 1.0:
+                Machine.set_typed("_funnel_progress", "float", progress)
+            else:
+                c = Machine.container_at(bx, by, bz)
+                if c != null:
+                    leftover = c.push(held)
+                    if is_empty(leftover):
+                        Machine.container.set_item(0, null)
+                        Machine.set_typed("_funnel_progress", "float", 0.0)
+                    end
+                end
+            end
+        end
+    end
+
+    _funnel_set_activated([bx, by, bz])
+end
+
+# Flipping IN<->OUT reuses the exact same "front"/"behind" pair of sides, just swapped — so
+# whatever progress had built up toward completing a hand-off in the OLD direction gets read
+# against the NEW direction's own completion check on the very next tick. A straight inversion
+# (1.0 - progress) only fixes the "was stuck holding at ~1.0" case (-> ~0.0, no more instant
+# teleport) but BREAKS the "was freshly at ~0.0" case the same way in reverse (-> ~1.0, NOW it
+# teleports instead). Either starting point needs the SAME outcome — a freshly-started transfer in
+# the new direction — so this just resets to 0.0 outright instead of inverting.
+def _funnel_toggle_mode():
+    cur = Machine.block.property("mode")
+    next = (cur == "in") ? "out" : "in"
+    Machine.set_property("mode", next)
+    Machine.set_typed("_funnel_progress", "float", 0.0)
+    Player.send_message("<yellow>Funnel mode: <white>" + upper(next))
+end
+
+def _funnel_drop_held():
+    held = Machine.container.get_item(0)
+    if !is_empty(held):
+        Machine.drop_item(held)
+    end
+end

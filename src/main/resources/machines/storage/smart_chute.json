@@ -1,0 +1,77 @@
+{
+  "id": "polyfills:smart_chute",
+  "title": "Smart Chute",
+  "flags": {
+    "recipes": false,
+    "fuel": false,
+    "ui": false,
+    "ui_tick": false,
+    "continuous_fuel": false,
+    "io_pull": true,
+    "renderers": true,
+    "scripts": true,
+    "animations": true,
+    "kinetics": false,
+    "redstone": true
+  },
+  "on_right_click": "storage/smart_chute.pf:on_right_click",
+  "on_break": "storage/smart_chute.pf:on_break",
+  "action_script": "storage/smart_chute.pf",
+  "action_interval": 1,
+  "renderers": [
+    {
+      "type": "item_display",
+      "item": "Item.create((Machine.get_typed(\"_chute_filter\", \"str\") ?? \"\") == \"\" ? \"minecraft:air\" : Machine.get_typed(\"_chute_filter\", \"str\"))",
+      "location": [
+        0,
+        0.7,
+        0.5
+      ],
+      "scale": "0.3",
+      "when": "(Machine.get_typed(\"_chute_filter\", \"str\") ?? \"\") != \"\"",
+      "update_when": "always",
+      "global": true
+    },
+    {
+      "type": "item_display",
+      "item": "Item.create((Machine.get_typed(\"_chute_filter\", \"str\") ?? \"\") == \"\" ? \"minecraft:air\" : Machine.get_typed(\"_chute_filter\", \"str\"))",
+      "location": [
+        0,
+        0.7,
+        -0.5
+      ],
+      "scale": "0.3",
+      "when": "(Machine.get_typed(\"_chute_filter\", \"str\") ?? \"\") != \"\"",
+      "update_when": "always",
+      "global": true
+    },
+    {
+      "type": "item_display",
+      "item": "Item.create((Machine.get_typed(\"_chute_filter\", \"str\") ?? \"\") == \"\" ? \"minecraft:air\" : Machine.get_typed(\"_chute_filter\", \"str\"))",
+      "location": [
+        -0.5,
+        0.7,
+        0
+      ],
+      "scale": "0.3",
+      "rot_y": "90",
+      "when": "(Machine.get_typed(\"_chute_filter\", \"str\") ?? \"\") != \"\"",
+      "update_when": "always",
+      "global": true
+    },
+    {
+      "type": "item_display",
+      "item": "Item.create((Machine.get_typed(\"_chute_filter\", \"str\") ?? \"\") == \"\" ? \"minecraft:air\" : Machine.get_typed(\"_chute_filter\", \"str\"))",
+      "location": [
+        0.5,
+        0.7,
+        0
+      ],
+      "scale": "0.3",
+      "rot_y": "-90",
+      "when": "(Machine.get_typed(\"_chute_filter\", \"str\") ?? \"\") != \"\"",
+      "update_when": "always",
+      "global": true
+    }
+  ]
+}

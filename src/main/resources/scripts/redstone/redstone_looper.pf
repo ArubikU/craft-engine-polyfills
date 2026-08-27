@@ -1,0 +1,17 @@
+# Redstone Looper — oscillates output at a configurable interval.
+# Machine.set_typed("interval", "int", N) where N = half-period in ticks (default 1 = 2-tick oscillation).
+
+interval = Machine.get_typed("interval", "int")
+if interval <= 0:
+    interval = 1
+end
+
+t = Machine.get_typed("_loop_t", "int") + 1
+Machine.set_typed("_loop_t", "int", t)
+
+full_cycle = interval * 2
+phase = t % full_cycle
+Machine.emit_redstone(phase < interval ? 15 : 0)
+
+
+

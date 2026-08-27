@@ -167,15 +167,21 @@ public final class ItemTickEngine implements Listener {
         if (globalTick % resolved.tickInterval() != 0) return;
 
         try {
-            ScriptContext ctx = ScriptContext.builder()
+            ScriptContext.Builder ctxBuilder = ScriptContext.builder()
                     .item("item", nms)
                     .player(sp)
                     .world((ServerLevel) sp.level())
                     .bool("jumped", jumped)
                     // A per-tick poll, not a discrete action — nothing to cancel, but still bound
                     // for a consistent event shape across every hook.
-                    .event(new dev.arubik.craftengine.script.event.ItemActionEvent("on_equipped_tick"))
-                    .build();
+                    .event(new dev.arubik.craftengine.script.event.ItemActionEvent("on_equipped_tick"));
+            // Same namespace singletons every OTHER script-firing entry point in this codebase
+            // binds — an on_equipped_tick script is just as likely to want to open a menu, show a
+            // dialog, schedule a task, or register a temporary event listener as any other hook.
+            // Precomputed once — see ScriptBootstrap. This runs per-tick per equipped item, so
+            // skipping the per-call allocation matters here too.
+            ctxBuilder.typedAll(dev.arubik.craftengine.script.ScriptBootstrap.globalSingletons());
+            ScriptContext ctx = ctxBuilder.build();
             ScriptContext result = resolved.call().execute(ctx);
             ScriptValue iv = result.getVar("item");
             if (iv instanceof ScriptValue.Item itemVal && itemVal.stack() != null) {

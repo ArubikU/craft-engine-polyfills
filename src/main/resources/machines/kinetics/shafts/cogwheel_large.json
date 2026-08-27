@@ -1,0 +1,92 @@
+{
+  "id": "polyfills:cogwheel_large",
+  "title": "Large Cogwheel",
+  "menu_size": 9,
+  "flags": {
+    "recipes": false,
+    "fuel": false,
+    "ui": false,
+    "ui_tick": false,
+    "kinetics": true,
+    "continuous_fuel": false,
+    "io_pull": true,
+    "renderers": true,
+    "scripts": true,
+    "animations": true
+  },
+  "action_script": "kinetics/shafts/cogwheel.pf:tick_large",
+  "status": "kinetics/shafts/cogwheel.pf:status",
+  "on_break": "kinetics/shafts/cogwheel.pf:on_break",
+  "action_interval": 2,
+  "io": {
+    "input": [
+      {
+        "types": [
+          "rpm"
+        ],
+        "faces": [
+          "axis_pos",
+          "axis_neg"
+        ]
+      }
+    ],
+    "output_same": [
+      {
+        "types": [
+          "rpm"
+        ],
+        "faces": [
+          "axis_pos",
+          "axis_neg"
+        ]
+      }
+    ]
+  },
+  "renderers": [
+    {
+      "type": "item_display",
+      "item": "CraftEngineItem(\"cml:cogwheel_large_render\")",
+      "location": {
+        "x": 0,
+        "y": 0.5,
+        "z": 0
+      },
+      "rot_y": "tick() * rpm * 0.3",
+      "scale": "1.0",
+      "when": "Machine.axis == \"y\" && Machine.activated",
+      "update_when": "always",
+      "global": true
+    },
+    {
+      "type": "item_display",
+      "item": "CraftEngineItem(\"cml:cogwheel_large_render\")",
+      "location": {
+        "x": 0,
+        "y": 0.5,
+        "z": 0
+      },
+      "rot_z": "90",
+      "rot_x": "tick() * rpm * 0.3",
+      "rot_y": -90,
+      "scale": "1.0",
+      "when": "Machine.axis == \"z\" && Machine.activated",
+      "update_when": "always",
+      "global": true
+    },
+    {
+      "type": "item_display",
+      "item": "CraftEngineItem(\"cml:cogwheel_large_render\")",
+      "location": {
+        "x": 0,
+        "y": 0.5,
+        "z": 0
+      },
+      "rot_z": "90",
+      "rot_x": "tick() * rpm * 0.3",
+      "scale": "1.0",
+      "when": "Machine.axis == \"x\" && Machine.activated",
+      "update_when": "always",
+      "global": true
+    }
+  ]
+}

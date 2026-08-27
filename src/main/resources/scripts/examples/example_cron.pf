@@ -1,0 +1,5 @@
+# Example cron job — see crons/example.json. Fires every 5 minutes when enabled, bumping a
+# global counter so `Server.get_typed("example_cron_runs", "int")` shows it's alive.
+def on_tick():
+    Server.set_typed("example_cron_runs", "int", Server.get_typed("example_cron_runs", "int") + 1)
+end

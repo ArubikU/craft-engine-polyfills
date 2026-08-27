@@ -1,0 +1,22 @@
+# Chute — plain vertical item chute, no filter, no redstone control (matches Create's own Chute
+# vs Smart Chute split). Right-click with any glass block/pane toggles the see-through window;
+# sneak+right-click cycles its facing (straight down / diagonal).
+
+import "storage/chute_utils.pf" { _chute_tick, _chute_toggle_window, _chute_cycle_facing, _is_glass_item, _chute_drop_held }
+
+def on_right_click():
+    if Player.is_sneaking:
+        _chute_cycle_facing()
+        return
+    end
+    held = Player.main_hand
+    if !is_empty(held) && _is_glass_item(held.id):
+        _chute_toggle_window()
+    end
+end
+
+def on_break():
+    _chute_drop_held()
+end
+
+_chute_tick(false)

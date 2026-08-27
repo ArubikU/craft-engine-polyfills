@@ -1,0 +1,17 @@
+# Item Trash — destroys items in input slots and nearby dropped item entities.
+
+for i in range(27):
+    if !is_empty(Machine.container.get_item(i)):
+        Machine.container.remove_item(i, 64)
+    end
+end
+
+entities = Machine.nearby_entities(1)
+for entity in entities:
+    if entity.type == "minecraft:item":
+        entity.remove()
+    end
+end
+
+
+

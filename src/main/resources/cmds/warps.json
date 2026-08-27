@@ -1,0 +1,329 @@
+{
+  "name": "warps",
+  "aliases": ["pwarps", "playerwarps"],
+  "description": "Browse, create, and manage player warps",
+  "subcommands": [
+    { "name": "buyslot", "description": "Spend XP to unlock an extra warp slot", "execute": "warps.pf:buy_extra_slot" },
+    { "name": "create", "description": "Create a warp at your current location",
+      "args": [{ "name": "name", "type": "greedy_string", "suggest": "warps.pf:owned_warp_names" }],
+      "execute": "warps.pf:on_create_command" },
+    { "name": "set", "description": "Create a warp, or move one of your own existing warps here",
+      "args": [{ "name": "name", "type": "greedy_string", "suggest": "warps.pf:owned_warp_names" }],
+      "execute": "warps.pf:on_set_command" },
+    { "name": "help", "description": "List /warps commands", "execute": "warps.pf:cmd_help" },
+    { "name": "remove", "description": "Delete one of your warps",
+      "args": [{ "name": "name", "type": "string", "suggest": "warps.pf:owned_warp_names" }],
+      "execute": "warps.pf:cmd_remove" },
+    { "name": "desc", "description": "Manage a warp's description", "subcommands": [
+      { "name": "set", "args": [
+          { "name": "name", "type": "string", "suggest": "warps.pf:owned_warp_names" },
+          { "name": "text", "type": "greedy_string" }],
+        "execute": "warps.pf:cmd_desc_set" },
+      { "name": "remove", "args": [{ "name": "name", "type": "string", "suggest": "warps.pf:owned_warp_names" }],
+        "execute": "warps.pf:cmd_desc_remove" }
+    ]},
+    { "name": "list", "description": "List your own warps", "execute": "warps.pf:cmd_list" },
+    { "name": "listof", "description": "List another player's warps",
+      "args": [{ "name": "player", "type": "player" }], "execute": "warps.pf:cmd_listof" },
+    { "name": "amount", "description": "Check your warp count/limit", "execute": "warps.pf:cmd_amount" },
+    { "name": "amountof", "description": "Check another player's warp count",
+      "args": [{ "name": "player", "type": "player" }], "execute": "warps.pf:cmd_amountof" },
+    { "name": "icon", "description": "Manage a warp's icon", "subcommands": [
+      { "name": "set", "args": [{ "name": "name", "type": "string", "suggest": "warps.pf:owned_warp_names" }],
+        "execute": "warps.pf:cmd_icon_set" },
+      { "name": "remove", "args": [{ "name": "name", "type": "string", "suggest": "warps.pf:owned_warp_names" }],
+        "execute": "warps.pf:cmd_icon_remove" }
+    ]},
+    { "name": "category", "description": "Manage a warp's category", "subcommands": [
+      { "name": "set", "args": [
+          { "name": "name", "type": "string", "suggest": "warps.pf:owned_warp_names" },
+          { "name": "category", "type": "string", "choices": ["houses","shops","farms","pvp","other","event"] }],
+        "execute": "warps.pf:cmd_category_set" },
+      { "name": "remove", "args": [{ "name": "name", "type": "string", "suggest": "warps.pf:owned_warp_names" }],
+        "execute": "warps.pf:cmd_category_remove" }
+    ]},
+    { "name": "rate", "description": "Rate a warp 0-5 stars", "args": [
+        { "name": "name", "type": "string", "suggest": "warps.pf:all_warp_names" },
+        { "name": "stars", "type": "integer" }],
+      "execute": "warps.pf:cmd_rate" },
+    { "name": "lock", "description": "Toggle whether a warp is public or hidden",
+      "args": [{ "name": "name", "type": "string", "suggest": "warps.pf:owned_warp_names" }],
+      "execute": "warps.pf:cmd_lock" },
+    { "name": "reset", "description": "Move a warp to your current location",
+      "args": [{ "name": "name", "type": "string", "suggest": "warps.pf:owned_warp_names" }],
+      "execute": "warps.pf:cmd_reset" },
+    { "name": "rename", "description": "Rename a warp", "args": [
+        { "name": "name", "type": "string", "suggest": "warps.pf:owned_warp_names" },
+        { "name": "new_name", "type": "greedy_string" }],
+      "execute": "warps.pf:cmd_rename" },
+    { "name": "setowner", "description": "Transfer a warp's ownership", "args": [
+        { "name": "name", "type": "string", "suggest": "warps.pf:owned_warp_names" },
+        { "name": "player", "type": "player" }],
+      "execute": "warps.pf:cmd_setowner" },
+    { "name": "ban", "description": "Manage a warp's ban list", "subcommands": [
+      { "name": "set", "args": [
+          { "name": "name", "type": "string", "suggest": "warps.pf:owned_warp_names" },
+          { "name": "player", "type": "player" }],
+        "execute": "warps.pf:cmd_ban_set" },
+      { "name": "remove", "args": [
+          { "name": "name", "type": "string", "suggest": "warps.pf:owned_warp_names" },
+          { "name": "player", "type": "string" }],
+        "execute": "warps.pf:cmd_ban_remove" }
+    ]},
+    { "name": "favourite", "description": "Toggle a warp as favourite",
+      "args": [{ "name": "name", "type": "string", "suggest": "warps.pf:all_warp_names" }],
+      "execute": "warps.pf:cmd_favourite" },
+    { "name": "removeall", "description": "(admin) Delete every warp a player owns", "permission": "polyfills.warps.admin.removeall",
+      "args": [{ "name": "player", "type": "string" }], "execute": "warps.pf:cmd_removeall" },
+    { "name": "reload", "description": "(admin) Reload warps scripts/commands", "permission": "polyfills.warps.admin.reload",
+      "execute": "warps.pf:cmd_reload" },
+    { "name": "addwarps", "description": "(admin) Grant a player extra warp slots", "permission": "polyfills.warps.admin.addwarps",
+      "args": [
+        { "name": "player", "type": "player" },
+        { "name": "amount", "type": "integer" }],
+      "execute": "warps.pf:cmd_addwarps" }
+  ],
+  "pages": [
+    {
+      "name": "main",
+      "title": "{Images.from('cml:player_warps_main')}",
+      "size": 54,
+      "layout": [
+        { "slot": 0, "item": "cml:invisible_item", "name": "<red>Quit", "action": "warps.pf:quit" },
+
+        { "slot": 7, "item": "cml:invisible_item", "name": "<yellow>Favourite Warps",
+          "lore": ["<gray>Warps you've favourited.", "", "<green>Click to open"], "action": "page:favourite" },
+        { "slot": 8, "item": "cml:invisible_item", "name": "<yellow>All Warps",
+          "lore": ["<gray>Browse every public warp.", "", "<green>Click to browse"], "action": "warps.pf:open_category:all" },
+
+        { "slot": 10, "item": "cml:invisible_item", "name": "<yellow>House Warps", "action": "warps.pf:open_category:houses" },
+        { "slot": 11, "item": "cml:invisible_item", "name": "<yellow>House Warps", "action": "warps.pf:open_category:houses" },
+        { "slot": 19, "item": "cml:invisible_item", "name": "<yellow>House Warps", "action": "warps.pf:open_category:houses" },
+        { "slot": 20, "item": "cml:invisible_item", "name": "<yellow>House Warps", "action": "warps.pf:open_category:houses" },
+
+        { "slot": 12, "item": "cml:invisible_item", "name": "<yellow>PvP Warps", "action": "warps.pf:open_category:pvp" },
+        { "slot": 13, "item": "cml:invisible_item", "name": "<yellow>PvP Warps", "action": "warps.pf:open_category:pvp" },
+        { "slot": 21, "item": "cml:invisible_item", "name": "<yellow>PvP Warps", "action": "warps.pf:open_category:pvp" },
+        { "slot": 22, "item": "cml:invisible_item", "name": "<yellow>PvP Warps", "action": "warps.pf:open_category:pvp" },
+
+        { "slot": 14, "item": "cml:invisible_item", "name": "<yellow>Shop Warps", "action": "warps.pf:open_category:shops" },
+        { "slot": 15, "item": "cml:invisible_item", "name": "<yellow>Shop Warps", "action": "warps.pf:open_category:shops" },
+        { "slot": 16, "item": "cml:invisible_item", "name": "<yellow>Shop Warps", "action": "warps.pf:open_category:shops" },
+        { "slot": 23, "item": "cml:invisible_item", "name": "<yellow>Shop Warps", "action": "warps.pf:open_category:shops" },
+        { "slot": 24, "item": "cml:invisible_item", "name": "<yellow>Shop Warps", "action": "warps.pf:open_category:shops" },
+        { "slot": 25, "item": "cml:invisible_item", "name": "<yellow>Shop Warps", "action": "warps.pf:open_category:shops" },
+
+        { "slot": 28, "item": "cml:invisible_item", "name": "<yellow>Farm Warps", "action": "warps.pf:open_category:farms" },
+        { "slot": 29, "item": "cml:invisible_item", "name": "<yellow>Farm Warps", "action": "warps.pf:open_category:farms" },
+        { "slot": 37, "item": "cml:invisible_item", "name": "<yellow>Farm Warps", "action": "warps.pf:open_category:farms" },
+        { "slot": 38, "item": "cml:invisible_item", "name": "<yellow>Farm Warps", "action": "warps.pf:open_category:farms" },
+
+        { "slot": 30, "item": "cml:invisible_item", "name": "<yellow>Other Warps", "action": "warps.pf:open_category:other" },
+        { "slot": 31, "item": "cml:invisible_item", "name": "<yellow>Other Warps", "action": "warps.pf:open_category:other" },
+        { "slot": 39, "item": "cml:invisible_item", "name": "<yellow>Other Warps", "action": "warps.pf:open_category:other" },
+        { "slot": 40, "item": "cml:invisible_item", "name": "<yellow>Other Warps", "action": "warps.pf:open_category:other" },
+
+        { "slot": 32, "item": "cml:invisible_item", "name": "<yellow>Event Warps", "action": "warps.pf:open_category:event" },
+        { "slot": 33, "item": "cml:invisible_item", "name": "<yellow>Event Warps", "action": "warps.pf:open_category:event" },
+        { "slot": 34, "item": "cml:invisible_item", "name": "<yellow>Event Warps", "action": "warps.pf:open_category:event" },
+        { "slot": 41, "item": "cml:invisible_item", "name": "<yellow>Event Warps", "action": "warps.pf:open_category:event" },
+        { "slot": 42, "item": "cml:invisible_item", "name": "<yellow>Event Warps", "action": "warps.pf:open_category:event" },
+        { "slot": 43, "item": "cml:invisible_item", "name": "<yellow>Event Warps", "action": "warps.pf:open_category:event" }
+      ],
+      "buttons": "warps.pf:generate_sponsor_buttons"
+    },
+
+    {
+      "name": "warps",
+      "title": "warps.pf:browse_title",
+      "size": 54,
+      "layout": [
+        { "slot": 0, "item": "cml:invisible_item", "name": "<red>Back to Categories", "action": "page:main" },
+        { "slot": 1, "item": "cml:invisible_item", "name": "<yellow>My Warps",
+          "lore": ["warps.pf:mywarps_count_line"], "action": "page:manage" },
+        { "slot": 6, "item": "cml:invisible_item", "name": "<yellow>Search",
+          "lore": ["<gray>Search by warp or owner name.", "", "<aqua>Click to search"], "action": "warps.pf:open_search_dialog:warps" },
+        { "slot": 7, "item": "cml:invisible_item", "name": "<yellow>Category",
+          "lore": ["warps.pf:category_lore_line", "", "<aqua>Click to cycle"], "action": "warps.pf:cycle_category" },
+        { "slot": 8, "item": "cml:invisible_item", "name": "<yellow>Sort",
+          "lore": ["warps.pf:sort_lore_line", "", "<aqua>Click to sort"], "action": "warps.pf:cycle_sort:warps" },
+
+        { "slot": 45, "item": "cml:invisible_item", "name": "<yellow><- Previous Page", "action": "warps.pf:prev_browse_page" },
+        { "slot": 46, "item": "cml:invisible_item", "name": "<yellow><- Previous Page", "action": "warps.pf:prev_browse_page" },
+        { "slot": 47, "item": "cml:invisible_item", "name": "<yellow><- Previous Page", "action": "warps.pf:prev_browse_page" },
+        { "slot": 51, "item": "cml:invisible_item", "name": "<yellow>Next Page ->", "action": "warps.pf:next_browse_page" },
+        { "slot": 52, "item": "cml:invisible_item", "name": "<yellow>Next Page ->", "action": "warps.pf:next_browse_page" },
+        { "slot": 53, "item": "cml:invisible_item", "name": "<yellow>Next Page ->", "action": "warps.pf:next_browse_page" }
+      ],
+      "buttons": "warps.pf:generate_browse_buttons"
+    },
+
+    {
+      "name": "manage",
+      "title": "warps.pf:manage_title",
+      "size": 54,
+      "layout": [
+        { "slot": 7, "item": "cml:invisible_item", "name": "<red>Back to menu", "action": "page:warps" },
+        { "slot": 24, "item": "cml:invisible_item", "name": "<yellow>Search",
+          "lore": ["<gray>Search your warps by name.", "", "<aqua>Click to search"], "action": "warps.pf:open_search_dialog:manage" },
+        { "slot": 25, "item": "cml:invisible_item", "name": "<yellow>Sort",
+          "lore": ["warps.pf:sort_lore_line", "", "<aqua>Click to sort"], "action": "warps.pf:cycle_sort:manage" },
+
+        { "slot": 46, "item": "cml:invisible_item", "name": "<yellow><- Previous Page", "action": "warps.pf:prev_manage_page" },
+        { "slot": 47, "item": "cml:invisible_item", "name": "<yellow><- Previous Page", "action": "warps.pf:prev_manage_page" },
+        { "slot": 51, "item": "cml:invisible_item", "name": "<yellow>Next Page ->", "action": "warps.pf:next_manage_page" },
+        { "slot": 52, "item": "cml:invisible_item", "name": "<yellow>Next Page ->", "action": "warps.pf:next_manage_page" }
+      ],
+      "buttons": "warps.pf:generate_manage_buttons"
+    },
+
+    {
+      "name": "favourite",
+      "title": "warps.pf:favourite_title",
+      "size": 54,
+      "layout": [
+        { "slot": 7, "item": "cml:invisible_item", "name": "<red>Back to menu", "action": "page:main" },
+        { "slot": 24, "item": "cml:invisible_item", "name": "<yellow>Search",
+          "lore": ["<gray>Search your favourites by name.", "", "<aqua>Click to search"], "action": "warps.pf:open_search_dialog:favourite" },
+        { "slot": 25, "item": "cml:invisible_item", "name": "<yellow>Sort",
+          "lore": ["warps.pf:sort_lore_line", "", "<aqua>Click to sort"], "action": "warps.pf:cycle_sort:favourite" },
+
+        { "slot": 46, "item": "cml:invisible_item", "name": "<yellow><- Previous Page", "action": "warps.pf:prev_favourite_page" },
+        { "slot": 47, "item": "cml:invisible_item", "name": "<yellow><- Previous Page", "action": "warps.pf:prev_favourite_page" },
+        { "slot": 51, "item": "cml:invisible_item", "name": "<yellow>Next Page ->", "action": "warps.pf:next_favourite_page" },
+        { "slot": 52, "item": "cml:invisible_item", "name": "<yellow>Next Page ->", "action": "warps.pf:next_favourite_page" }
+      ],
+      "buttons": "warps.pf:generate_favourite_buttons"
+    },
+
+    {
+      "name": "managewarp",
+      "title": "warps.pf:managewarp_title",
+      "size": 54,
+      "layout": [
+        { "slot": 7, "item": "cml:invisible_item", "name": "<red>Back to menu", "action": "page:manage" },
+
+        { "slot": 24, "item": "cml:invisible_item", "name": "<white>Teleport",
+          "lore": ["<green>Left-click to teleport to this warp"], "action": "warps.pf:mw_teleport" },
+        { "slot": 34, "item": "cml:invisible_item", "name": "<gray>Description",
+          "lore": ["<green>Left-click to set a description"], "action": "warps.pf:mw_open_desc_dialog" },
+
+        { "slot": 29, "item": "cml:invisible_item", "name": "<white>Toggle Lock",
+          "lore": ["<green>Left-click to toggle whether this", "<green>warp is public or hidden"], "action": "warps.pf:mw_toggle_lock" },
+        { "slot": 30, "item": "cml:invisible_item", "name": "<white>Toggle Lock",
+          "lore": ["<green>Left-click to toggle whether this", "<green>warp is public or hidden"], "action": "warps.pf:mw_toggle_lock" },
+
+        { "slot": 42, "item": "cml:invisible_item", "name": "<gray>Category",
+          "lore": ["<green>Left-click to set a category", "<aqua>Right-click to remove the category"], "action": "warps.pf:mw_open_category_dialog" },
+        { "slot": 43, "item": "cml:invisible_item", "name": "<white>Ban",
+          "lore": ["<green>Left-click to ban a player"], "action": "warps.pf:mw_open_ban_dialog" },
+        { "slot": 25, "item": "cml:invisible_item", "name": "<white>Icon",
+          "lore": ["<green>Left-click to set this warp's icon", "<green>to whatever you're holding"], "action": "warps.pf:mw_set_icon" },
+        { "slot": 20, "item": "cml:invisible_item", "name": "<white>Visited Players", "action": "warps.pf:mw_open_visited" },
+        { "slot": 21, "item": "cml:invisible_item", "name": "<white>Banned Players", "action": "warps.pf:mw_open_banned" },
+        { "slot": 33, "item": "cml:invisible_item", "name": "<gray>Rename",
+          "lore": ["<green>Left-click to rename this warp"], "action": "warps.pf:mw_open_rename_dialog" },
+        { "slot": 46, "item": "cml:invisible_item", "name": "<white>Delete warp",
+          "lore": ["<red>Left-click to remove this warp (IRREVERSIBLE)"], "action": "warps.pf:mw_delete" },
+        { "slot": 47, "item": "cml:invisible_item", "name": "<gray>Transfer ownership",
+          "lore": ["<green>Left-click to transfer ownership"], "action": "warps.pf:mw_open_transfer_dialog" }
+      ]
+    },
+
+    {
+      "name": "banned",
+      "title": "warps.pf:banned_title",
+      "size": 54,
+      "layout": [
+        { "slot": 7, "item": "cml:invisible_item", "name": "<gray>Back to menu", "action": "page:managewarp" },
+        { "slot": 19, "item": "cml:invisible_item", "name": "Manage", "action": "page:managewarp" },
+        { "slot": 20, "item": "cml:invisible_item", "name": "Visited Players", "action": "page:visited" },
+        { "slot": 21, "item": "cml:invisible_item", "name": "Banned Players", "action": "page:banned" },
+        { "slot": 25, "item": "cml:invisible_item", "name": "<white>Search",
+          "lore": ["<gray>Click to search for a player"], "action": "warps.pf:open_banned_search_dialog" },
+
+        { "slot": 46, "item": "cml:invisible_item", "name": "<yellow><- Previous Page", "action": "warps.pf:prev_banned_page" },
+        { "slot": 47, "item": "cml:invisible_item", "name": "<yellow><- Previous Page", "action": "warps.pf:prev_banned_page" },
+        { "slot": 51, "item": "cml:invisible_item", "name": "<yellow>Next Page ->", "action": "warps.pf:next_banned_page" },
+        { "slot": 52, "item": "cml:invisible_item", "name": "<yellow>Next Page ->", "action": "warps.pf:next_banned_page" }
+      ],
+      "buttons": "warps.pf:generate_banned_buttons"
+    },
+
+    {
+      "name": "visited",
+      "title": "warps.pf:visited_title",
+      "size": 54,
+      "layout": [
+        { "slot": 7, "item": "cml:invisible_item", "name": "<gray>Back to menu", "action": "page:managewarp" },
+        { "slot": 19, "item": "cml:invisible_item", "name": "Manage", "action": "page:managewarp" },
+        { "slot": 20, "item": "cml:invisible_item", "name": "Visited Players", "action": "page:visited" },
+        { "slot": 21, "item": "cml:invisible_item", "name": "Banned Players", "action": "page:banned" },
+        { "slot": 25, "item": "cml:invisible_item", "name": "<white>Search",
+          "lore": ["<gray>Click to search for a player"], "action": "warps.pf:open_visited_search_dialog" },
+
+        { "slot": 46, "item": "cml:invisible_item", "name": "<yellow><- Previous Page", "action": "warps.pf:prev_visited_page" },
+        { "slot": 47, "item": "cml:invisible_item", "name": "<yellow><- Previous Page", "action": "warps.pf:prev_visited_page" },
+        { "slot": 51, "item": "cml:invisible_item", "name": "<yellow>Next Page ->", "action": "warps.pf:next_visited_page" },
+        { "slot": 52, "item": "cml:invisible_item", "name": "<yellow>Next Page ->", "action": "warps.pf:next_visited_page" }
+      ],
+      "buttons": "warps.pf:generate_visited_buttons"
+    },
+
+    {
+      "name": "visitedit",
+      "title": "warps.pf:visitedit_title",
+      "size": 54,
+      "layout": [
+        { "slot": 7, "item": "cml:invisible_item", "name": "<gray>Back to menu", "action": "warps.pf:on_visitedit_back" },
+
+        { "slot": 37, "item": "cml:invisible_item", "name": "<gray>Rate", "lore": ["<green>Left-click to rate"], "action": "warps.pf:vi_open_rate_dialog" },
+        { "slot": 38, "item": "cml:invisible_item", "name": "<gray>Rate", "lore": ["<green>Left-click to rate"], "action": "warps.pf:vi_open_rate_dialog" },
+        { "slot": 39, "item": "cml:invisible_item", "name": "<gray>Rate", "lore": ["<green>Left-click to rate"], "action": "warps.pf:vi_open_rate_dialog" },
+        { "slot": 46, "item": "cml:invisible_item", "name": "<gray>Rate", "lore": ["<green>Left-click to rate"], "action": "warps.pf:vi_open_rate_dialog" },
+        { "slot": 47, "item": "cml:invisible_item", "name": "<gray>Rate", "lore": ["<green>Left-click to rate"], "action": "warps.pf:vi_open_rate_dialog" },
+        { "slot": 48, "item": "cml:invisible_item", "name": "<gray>Rate", "lore": ["<green>Left-click to rate"], "action": "warps.pf:vi_open_rate_dialog" },
+
+        { "slot": 40, "item": "cml:invisible_item", "name": "<white>Ratings", "action": "page:rate" },
+        { "slot": 41, "item": "cml:invisible_item", "name": "<white>Ratings", "action": "page:rate" },
+        { "slot": 42, "item": "cml:invisible_item", "name": "<white>Ratings", "action": "page:rate" },
+        { "slot": 43, "item": "cml:invisible_item", "name": "<white>Ratings", "action": "page:rate" },
+        { "slot": 49, "item": "cml:invisible_item", "name": "<white>Ratings", "action": "page:rate" },
+        { "slot": 50, "item": "cml:invisible_item", "name": "<white>Ratings", "action": "page:rate" },
+        { "slot": 51, "item": "cml:invisible_item", "name": "<white>Ratings", "action": "page:rate" },
+        { "slot": 52, "item": "cml:invisible_item", "name": "<white>Ratings", "action": "page:rate" },
+
+        { "slot": 19, "item": "cml:invisible_item", "name": "<white>Teleport", "action": "warps.pf:vi_teleport" },
+        { "slot": 20, "item": "cml:invisible_item", "name": "<white>Teleport", "action": "warps.pf:vi_teleport" },
+        { "slot": 21, "item": "cml:invisible_item", "name": "<white>Teleport", "action": "warps.pf:vi_teleport" },
+        { "slot": 28, "item": "cml:invisible_item", "name": "<white>Teleport", "action": "warps.pf:vi_teleport" },
+        { "slot": 29, "item": "cml:invisible_item", "name": "<white>Teleport", "action": "warps.pf:vi_teleport" },
+        { "slot": 30, "item": "cml:invisible_item", "name": "<white>Teleport", "action": "warps.pf:vi_teleport" },
+
+        { "slot": 22, "item": "cml:invisible_item", "name": "<white>Favourite", "lore": ["<aqua>Left-click to toggle favourite"], "action": "warps.pf:vi_toggle_favourite" },
+        { "slot": 23, "item": "cml:invisible_item", "name": "<white>Favourite", "lore": ["<aqua>Left-click to toggle favourite"], "action": "warps.pf:vi_toggle_favourite" },
+        { "slot": 24, "item": "cml:invisible_item", "name": "<white>Favourite", "lore": ["<aqua>Left-click to toggle favourite"], "action": "warps.pf:vi_toggle_favourite" },
+        { "slot": 25, "item": "cml:invisible_item", "name": "<white>Favourite", "lore": ["<aqua>Left-click to toggle favourite"], "action": "warps.pf:vi_toggle_favourite" },
+        { "slot": 31, "item": "cml:invisible_item", "name": "<white>Favourite", "lore": ["<aqua>Left-click to toggle favourite"], "action": "warps.pf:vi_toggle_favourite" },
+        { "slot": 32, "item": "cml:invisible_item", "name": "<white>Favourite", "lore": ["<aqua>Left-click to toggle favourite"], "action": "warps.pf:vi_toggle_favourite" },
+        { "slot": 33, "item": "cml:invisible_item", "name": "<white>Favourite", "lore": ["<aqua>Left-click to toggle favourite"], "action": "warps.pf:vi_toggle_favourite" },
+        { "slot": 34, "item": "cml:invisible_item", "name": "<white>Favourite", "lore": ["<aqua>Left-click to toggle favourite"], "action": "warps.pf:vi_toggle_favourite" }
+      ]
+    },
+
+    {
+      "name": "rate",
+      "title": "warps.pf:rate_title",
+      "size": 54,
+      "layout": [
+        { "slot": 7, "item": "cml:invisible_item", "name": "<gray>Back to menu", "action": "page:visitedit" },
+
+        { "slot": 46, "item": "cml:invisible_item", "name": "<yellow><- Previous Page", "action": "warps.pf:prev_rate_page" },
+        { "slot": 47, "item": "cml:invisible_item", "name": "<yellow><- Previous Page", "action": "warps.pf:prev_rate_page" },
+        { "slot": 51, "item": "cml:invisible_item", "name": "<yellow>Next Page ->", "action": "warps.pf:next_rate_page" },
+        { "slot": 52, "item": "cml:invisible_item", "name": "<yellow>Next Page ->", "action": "warps.pf:next_rate_page" }
+      ],
+      "buttons": "warps.pf:generate_rate_buttons"
+    }
+  ]
+}

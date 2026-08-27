@@ -1,0 +1,7 @@
+{
+  "id": "example_fancy_join_message",
+  "event": "org.bukkit.event.player.PlayerJoinEvent",
+  "priority": "NORMAL",
+  "ignore_cancelled": false,
+  "script": "example_fancy_join_message.pf:on_join"
+}

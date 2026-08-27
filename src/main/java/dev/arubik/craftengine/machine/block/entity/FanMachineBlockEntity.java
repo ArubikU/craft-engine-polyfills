@@ -69,7 +69,7 @@ import dev.arubik.craftengine.contraption.core.ContraptionManager;
 import dev.arubik.craftengine.contraption.core.ContraptionState;
 import dev.arubik.craftengine.contraption.level.BukkitContraptionLevel;
 import dev.arubik.craftengine.contraption.physics.PhysicsWorld;
-import dev.arubik.craftengine.conveyor.ConveyorBlockEntity;
+import dev.arubik.craftengine.conveyor.belt.ConveyorBlockEntity;
 import dev.arubik.craftengine.gas.GasStack;
 import dev.arubik.craftengine.gas.GasTank;
 import dev.arubik.craftengine.gas.GasType;

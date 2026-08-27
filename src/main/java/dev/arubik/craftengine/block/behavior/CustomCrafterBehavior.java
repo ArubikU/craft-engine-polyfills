@@ -272,7 +272,16 @@ public class CustomCrafterBehavior extends BukkitBlockBehavior
 
     private void dispenseItem(ServerLevel level, BlockPos pos, CustomCrafterBlockEntity crafter, ItemStack stack) {
         Direction front = frontOf(level, pos);
-        Container target = HopperBlockEntity.getContainerAt(level, pos.relative(front));
+        // HopperBlockEntity.getContainerAt only resolves a VANILLA Container/WorldlyContainer — a
+        // CraftEngine machine in front of this crafter is never one, it's its own
+        // PersistentWorldlyBlockEntity. ItemTransferHelper.getContainer (the item pipe's own
+        // resolver for this) also checks the block's WorldlyContainerHolder capability, so this
+        // crafter can dispense straight into a CraftEngine machine's input, not just vanilla
+        // containers. HopperBlockEntity.addItem below is a generic vanilla helper written against
+        // the Container/WorldlyContainer interfaces, not any vanilla-specific implementation, so it
+        // works unchanged against whatever Container this now resolves to.
+        Container target = dev.arubik.craftengine.pipe.item.ItemTransferHelper.getContainer(
+                level, pos.relative(front), pos, front.getOpposite()).orElse(null);
         ItemStack remaining = stack.copy();
         if (target != null) {
             while (!remaining.isEmpty()) {

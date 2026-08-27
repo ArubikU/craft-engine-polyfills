@@ -1,4 +1,0 @@
-# Hand Crank right-click — add energy (cap at 100)
-energy = Machine.get_flag("crank_energy")
-Machine.set_flag("crank_energy", min(energy + 20, 100))
-Machine.play_sound("minecraft:block.iron_door.close", 0.5, 1.5)

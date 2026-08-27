@@ -197,12 +197,18 @@ public final class MachineDefinitionLoader {
             Record spec;
             JsonView r = rendererIter.next();
             String rType = r.string("type", "bettermodel");
-            String whenExpr = r.raw().has("when") ? MachineDefinitionLoader.parseWhen(r.raw().get("when")) : "always";
-            String updateWhen = r.string("update_when", "always");
+            dev.arubik.craftengine.machine.render.WhenCondition whenExpr = dev.arubik.craftengine.machine.render.WhenCondition.parse(
+                    r.raw().has("when") ? MachineDefinitionLoader.parseWhen(r.raw().get("when")) : "always");
+            dev.arubik.craftengine.machine.render.UpdateWhen updateWhen =
+                    dev.arubik.craftengine.machine.render.UpdateWhen.parse(r.string("update_when", "always"));
             String scriptRef = r.string("run", null);
             if ((spec = (switch (rType) {
-                case "bettermodel" -> new RendererSpec.BetterModelSpec(r.string("model_id"), r.string("animation", null), r.string("speed", null), whenExpr, updateWhen, scriptRef, r.integer("margin", 0));
-                case "modelengine" -> new RendererSpec.ModelEngineSpec(r.string("model_id"), r.string("animation", null), r.string("speed", null), whenExpr, updateWhen, scriptRef);
+                // "id" (optional) — a stable renderer id a script can later look up via
+                // Machine.get_renderer(id) (see MachineType.java), e.g. for bone-level access
+                // ("{id}:meg/bm:{bone_name}" location strings) or IK. null if not declared —
+                // matches every other optional field's "null means unset" convention here.
+                case "bettermodel" -> new RendererSpec.BetterModelSpec(r.string("model_id"), r.string("animation", null), r.string("speed", null), whenExpr, updateWhen, scriptRef, r.integer("margin", 0), r.string("id", null));
+                case "modelengine" -> new RendererSpec.ModelEngineSpec(r.string("model_id"), r.string("animation", null), r.string("speed", null), whenExpr, updateWhen, scriptRef, r.string("id", null));
                 case "item_display" -> {
                     float[] rot3 = MachineDefinitionLoader.parseFloatArray(r, "rotation", 3, new float[]{0.0f, 0.0f, 0.0f});
                     String rx = r.raw().has("rot_x") ? r.string("rot_x") : String.valueOf(rot3[0]);
@@ -233,6 +239,7 @@ public final class MachineDefinitionLoader {
                 case "sound" -> new RendererSpec.SoundSpec(r.string("sound", "minecraft:block.note_block.pling"), MachineDefinitionLoader.readExprPrimitive(r, "volume", "1.0"), MachineDefinitionLoader.readExprPrimitive(r, "pitch", "1.0"), r.rangedInt("interval", 20, 0, 6000), whenExpr, updateWhen, scriptRef);
                 case "armor_stand" -> new RendererSpec.ArmorStandSpec(r.string("head_item", null), r.string("body_item", null), MachineDefinitionLoader.parseLocationExpr(r), MachineDefinitionLoader.readExprPrimitive(r, "rot_x"), MachineDefinitionLoader.readExprPrimitive(r, "rot_y"), MachineDefinitionLoader.readExprPrimitive(r, "rot_z"), r.bool("small", false), r.bool("invisible", true), r.bool("marker", true), whenExpr, updateWhen, scriptRef);
                 case "block_display" -> new RendererSpec.BlockDisplaySpec(r.string("block", "minecraft:stone"), MachineDefinitionLoader.parseLocationExpr(r), MachineDefinitionLoader.readExprPrimitive(r, "scale", "1.0"), MachineDefinitionLoader.readExprPrimitive(r, "rot_x"), MachineDefinitionLoader.readExprPrimitive(r, "rot_y"), MachineDefinitionLoader.readExprPrimitive(r, "rot_z"), whenExpr, updateWhen, scriptRef);
+                case "interaction" -> new RendererSpec.InteractionSpec(MachineDefinitionLoader.parseLocationExpr(r), r.floating("width", 0.5f), r.floating("height", 0.5f), whenExpr, updateWhen, r.string("on_interact", null));
                 default -> null;
             })) == null) continue;
             posExpr = r.raw().has("positions") ? r.string("positions") : (r.raw().has("locations") ? r.string("locations") : null);
@@ -283,9 +290,11 @@ public final class MachineDefinitionLoader {
         def.setAttackScript(attackScript);
         if (view.has("status"))    def.setStatusScript(view.string("status", null));
         if (view.has("on_place"))        def.setOnPlaceScript(view.string("on_place", null));
+        if (view.has("on_load"))         def.setOnLoadScript(view.string("on_load", null));
         if (view.has("on_break"))        def.setOnBreakScript(view.string("on_break", null));
+        if (view.has("on_get_container")) def.setOnGetContainerScript(view.string("on_get_container", null));
         if (view.has("on_redstone_actuator")) def.setRedstoneActuatorScript(view.string("on_redstone_actuator", null));
-        if (view.has("on_state_change")) def.setOnStateChangeScript(view.string("on_state_change", null));
+        if (view.has("on_property_change")) def.setOnPropertyChangeScript(view.string("on_property_change", null));
         if (view.has("on_pipe_transfer")) def.setOnTransferScript(view.string("on_pipe_transfer", null));
         if (view.has("rpm_ratio")) {
             def.setRpmRatio((float)view.decimal("rpm_ratio", 1.0));
@@ -311,15 +320,24 @@ public final class MachineDefinitionLoader {
         if (rpmIoObj != null) {
             try {
                 Map<String, Set<String>> filter;
-                String sameKey;
                 Set<String> in;
                 if (rpmIoObj.has("input") && !(in = MachineDefinitionLoader.parseRawFaces(rpmIoObj.get("input"))).isEmpty()) {
                     def.setRpmInputFacesRaw(in);
                 }
-                String string = sameKey = rpmIoObj.has("output_same") ? "output_same" : "output";
-                if (rpmIoObj.has(sameKey)) {
-                    Set<String> out = MachineDefinitionLoader.parseRawFaces(rpmIoObj.get(sameKey));
-                    def.setRpmOutputFacesRaw(out);
+                // "output_same"/"output_same_inverted" = RELAY (same network); bare "output"/
+                // "output_inverted" = NEW-NETWORK BOUNDARY. No legacy config used plain "output" as
+                // an alias of "output_same" (every shipped machine used "output_same" explicitly),
+                // so this split is not a breaking change for anything already deployed.
+                if (rpmIoObj.has("output_same")) {
+                    def.setRpmOutputFacesRaw(MachineDefinitionLoader.parseRawFaces(rpmIoObj.get("output_same")));
+                    def.setRpmOutputDeclared(true);
+                }
+                if (rpmIoObj.has("output_same_inverted")) {
+                    def.setRpmOutputSameInvertedRaw(MachineDefinitionLoader.parseRawFaces(rpmIoObj.get("output_same_inverted")));
+                    def.setRpmOutputDeclared(true);
+                }
+                if (rpmIoObj.has("output")) {
+                    def.setRpmOutputNewNetworkFacesRaw(MachineDefinitionLoader.parseRawFaces(rpmIoObj.get("output")));
                     def.setRpmOutputDeclared(true);
                 }
                 if (rpmIoObj.has("output_inverted")) {
@@ -343,6 +361,16 @@ public final class MachineDefinitionLoader {
                 // empty catch block
             }
         }
+        // Unified schema: RPM faces declared the SAME way item/fluid/gas faces are — as "rpm"-typed
+        // entries under the shared io.input/output_same/output/output_inverted blocks — instead of
+        // the legacy standalone io.rpm sub-object above (still supported, and merged with this).
+        // "output_same" is a plain RELAY: whatever network the input came from keeps propagating
+        // through it. Bare "output" is a NEW-NETWORK BOUNDARY: a consumer pulling through one of
+        // those faces mints its own fresh RpmNetwork instead of joining this block's — see
+        // DataMachineBlockEntity#syncNetworkWithSource/#isNewNetworkOutputFace. These are genuinely
+        // different concepts, not aliases of each other (unlike the legacy block's "output"
+        // fallback, kept above only for old configs that pre-date this distinction).
+        MachineDefinitionLoader.parseUnifiedRpmIo(view, def);
         // Parse pages[] — new configurable menu system
         if (view.raw().has("pages") && view.raw().get("pages").isJsonArray()) {
             List<MachineDefinition.PageDef> pages = new ArrayList<>();
@@ -351,6 +379,47 @@ public final class MachineDefinitionLoader {
                 pages.add(MachineDefinitionLoader.parsePage(pageEl.getAsJsonObject(), view));
             }
             def.setPages(pages);
+            // A paged machine's real input/output/fuel slots live on its PageDef(s) (absolute
+            // container offsets — see ItemDefinition's own "same absolute offset" convention), NOT
+            // on the constructor's inputSlots/outputSlots/fuelSlots params above (those only ever
+            // came from the OLDER top-level "slots": {...} single-page format, so they're empty for
+            // any purely-paged machine like the drill or the crusher). Two independent readers need
+            // this aggregate:
+            //   - MachineDefinition#mergePageSlots feeds it into #inputSlots()/#outputSlots()/
+            //     #fuelSlots() themselves — what getMatchingRecipe() reads to find its ingredient
+            //     slots, and what DataMachineBlockEntity#getInputSlots()/getOutputSlots() (a hopper/
+            //     funnel/pipe's real entry point via getSlotsForFace) read. Without this a paged
+            //     machine's recipe NEVER had any ingredient slot to check, and NO amount of "io"
+            //     block config could give a hopper/funnel a slot to pull from either.
+            //   - the "io" block's addOutput/addInput (above) only ever recorded PER-FACE type
+            //     PERMISSION ("is item output allowed through this face at all"), never which
+            //     physical slots those permissions apply to (IOConfiguration.Simple#getSlots
+            //     defaults to int[0] until told via setSlots) — wiring the same aggregate into it
+            //     too keeps a script's own Machine.io_get/io_set queries answering consistently
+            //     with what the hopper/funnel/pipe path actually sees.
+            java.util.LinkedHashSet<Integer> allInputs = new java.util.LinkedHashSet<>();
+            java.util.LinkedHashSet<Integer> allOutputs = new java.util.LinkedHashSet<>();
+            java.util.LinkedHashSet<Integer> allFuels = new java.util.LinkedHashSet<>();
+            for (MachineDefinition.PageDef page : pages) {
+                for (int slot : page.inputSlots()) allInputs.add(slot);
+                for (int slot : page.outputSlots()) allOutputs.add(slot);
+                for (int slot : page.fuelSlots()) allFuels.add(slot);
+            }
+            int[] pageInputs = allInputs.stream().mapToInt(Integer::intValue).toArray();
+            int[] pageOutputs = allOutputs.stream().mapToInt(Integer::intValue).toArray();
+            int[] pageFuels = allFuels.stream().mapToInt(Integer::intValue).toArray();
+            def.mergePageSlots(pageInputs, pageOutputs, pageFuels);
+            if (io instanceof IOConfiguration.Simple simpleIo) {
+                if (pageInputs.length > 0) {
+                    simpleIo.setSlots(IOConfiguration.IOType.ITEM, IOConfiguration.IORole.INPUT, pageInputs);
+                }
+                if (pageOutputs.length > 0) {
+                    simpleIo.setSlots(IOConfiguration.IOType.ITEM, IOConfiguration.IORole.OUTPUT, pageOutputs);
+                }
+                if (pageFuels.length > 0) {
+                    simpleIo.setSlots(IOConfiguration.IOType.ITEM, IOConfiguration.IORole.FUEL, pageFuels);
+                }
+            }
         }
         return def;
     }
@@ -532,6 +601,95 @@ public final class MachineDefinitionLoader {
         return map;
     }
 
+    /** Reads "rpm"-typed entries out of the SAME io.input/output_same/output/output_inverted blocks
+     *  item/fluid/gas/etc. already use (see {@link #applyGrants}), merging their raw face tokens
+     *  into the machine's existing rpm face sets — additive with (and on top of) the legacy
+     *  standalone io.rpm sub-object parsed just above this call site. */
+    private static void parseUnifiedRpmIo(JsonView view, MachineDefinition def) {
+        if (!view.raw().has("io") || !view.raw().get("io").isJsonObject()) {
+            return;
+        }
+        JsonObject ioObj = view.raw().get("io").getAsJsonObject();
+        Set<String> in = MachineDefinitionLoader.collectRpmFaces(ioObj, "input");
+        if (!in.isEmpty()) {
+            LinkedHashSet<String> merged = new LinkedHashSet<String>(def.rpmInputFacesRaw());
+            merged.addAll(in);
+            def.setRpmInputFacesRaw(merged);
+        }
+        Set<String> same = MachineDefinitionLoader.collectRpmFaces(ioObj, "output_same");
+        if (!same.isEmpty()) {
+            LinkedHashSet<String> merged = new LinkedHashSet<String>(def.rpmOutputFacesRaw());
+            merged.addAll(same);
+            def.setRpmOutputFacesRaw(merged);
+            def.setRpmOutputDeclared(true);
+        }
+        // Bare "output" (no "_same") — a genuine new-network boundary, NOT an alias of output_same.
+        Set<String> newNet = MachineDefinitionLoader.collectRpmFaces(ioObj, "output");
+        if (!newNet.isEmpty()) {
+            LinkedHashSet<String> merged = new LinkedHashSet<String>(def.rpmOutputNewNetworkFacesRaw());
+            merged.addAll(newNet);
+            def.setRpmOutputNewNetworkFacesRaw(merged);
+            def.setRpmOutputDeclared(true);
+        }
+        Set<String> inv = MachineDefinitionLoader.collectRpmFaces(ioObj, "output_inverted");
+        if (!inv.isEmpty()) {
+            LinkedHashSet<String> merged = new LinkedHashSet<String>(def.rpmOutputInvertedRaw());
+            merged.addAll(inv);
+            def.setRpmOutputInvertedRaw(merged);
+            def.setRpmOutputDeclared(true);
+        }
+        // Optional per-entry "relative": true (gearbox_h/v-style) on an output_same/output rpm entry.
+        if (MachineDefinitionLoader.rpmEntriesHaveRelativeFlag(ioObj, "output_same")
+                || MachineDefinitionLoader.rpmEntriesHaveRelativeFlag(ioObj, "output")) {
+            def.setRpmOutputRelative(true);
+            def.setRpmOutputDeclared(true);
+        }
+    }
+
+    private static List<JsonObject> rpmEntryObjects(JsonObject ioObj, String field) {
+        List<JsonObject> entries = new ArrayList<JsonObject>();
+        if (!ioObj.has(field)) return entries;
+        JsonElement el = ioObj.get(field);
+        if (el.isJsonArray()) {
+            for (JsonElement e : el.getAsJsonArray()) {
+                if (e.isJsonObject()) entries.add(e.getAsJsonObject());
+            }
+        } else if (el.isJsonObject()) {
+            entries.add(el.getAsJsonObject());
+        }
+        return entries;
+    }
+
+    private static boolean isRpmTyped(JsonObject entry) {
+        if (!entry.has("types") || !entry.get("types").isJsonArray()) return false;
+        for (JsonElement t : entry.get("types").getAsJsonArray()) {
+            try {
+                if ("rpm".equalsIgnoreCase(t.getAsString())) return true;
+            } catch (Throwable ignored) {}
+        }
+        return false;
+    }
+
+    private static Set<String> collectRpmFaces(JsonObject ioObj, String field) {
+        LinkedHashSet<String> out = new LinkedHashSet<String>();
+        for (JsonObject entry : MachineDefinitionLoader.rpmEntryObjects(ioObj, field)) {
+            if (!MachineDefinitionLoader.isRpmTyped(entry) || !entry.has("faces")) continue;
+            out.addAll(MachineDefinitionLoader.parseRawFaces(entry.get("faces")));
+        }
+        return out;
+    }
+
+    private static boolean rpmEntriesHaveRelativeFlag(JsonObject ioObj, String field) {
+        for (JsonObject entry : MachineDefinitionLoader.rpmEntryObjects(ioObj, field)) {
+            if (MachineDefinitionLoader.isRpmTyped(entry) && entry.has("relative")) {
+                try {
+                    if (entry.get("relative").getAsBoolean()) return true;
+                } catch (Throwable ignored) {}
+            }
+        }
+        return false;
+    }
+
     private static Set<String> parseRawFaces(JsonElement el) {
         LinkedHashSet<String> set = new LinkedHashSet<String>();
         if (el == null) {
@@ -630,6 +788,14 @@ public final class MachineDefinitionLoader {
         for (JsonView entry : entries) {
             ArrayList<IOConfiguration.IOType> types = new ArrayList<IOConfiguration.IOType>();
             for (String typeName : entry.stringList("types")) {
+                // RPM faces use a richer, facing-relative vocabulary (front/back/left/right/
+                // axis_pos/axis_neg/axis_perp) resolved per-instance at runtime, not this generic
+                // parser's fixed absolute-direction faceGroup() — parseUnifiedRpmIo (see its call
+                // site) handles "rpm"-typed entries from these SAME io.input/output_same/output/
+                // output_inverted blocks separately. Skip it here (not a real IOConfiguration.IOType
+                // at all) so its face tokens (e.g. "back"/"axis_perp") never reach faceGroup(),
+                // which would reject them as an "unknown face or face group".
+                if ("rpm".equalsIgnoreCase(typeName)) continue;
                 IOConfiguration.IOType type = null;
                 for (IOConfiguration.IOType candidate : IOConfiguration.IOType.values()) {
                     if (!candidate.name().equalsIgnoreCase(typeName)) continue;
@@ -639,6 +805,9 @@ public final class MachineDefinitionLoader {
                     throw entry.error("unknown io type '" + typeName + "'");
                 }
                 types.add(type);
+            }
+            if (types.isEmpty()) {
+                continue;
             }
             ArrayList<Direction> faces = new ArrayList<Direction>();
             for (String faceName : entry.stringList("faces")) {

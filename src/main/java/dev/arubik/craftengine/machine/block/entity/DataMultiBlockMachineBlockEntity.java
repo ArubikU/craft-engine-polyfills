@@ -138,6 +138,7 @@ implements ModelRendersDriven {
         }
         if (!definition.renderers().isEmpty()) {
             this.rendererManager = new RendererManager(definition.renderers(), definition.variables());
+            this.rendererManager.setInteractRunner(this::runInteractScript);
         }
     }
 
@@ -234,7 +235,11 @@ implements ModelRendersDriven {
                     }
                 }
                 float yaw = f;
-                this.rendererManager.tick(ctx, sl, pos.getX(), pos.getY(), pos.getZ(), yaw);
+                // See DataMachineBlockEntity's identical fix: yaw alone can't express up/down, so
+                // pass the real facing NAME through instead of letting RendererManager re-derive
+                // "facing" from yaw (yawToFacing can only ever produce a horizontal result).
+                String facingName = facing != null ? facing.getName().toLowerCase(java.util.Locale.ROOT) : null;
+                this.rendererManager.tick(ctx, sl, pos.getX(), pos.getY(), pos.getZ(), yaw, facingName, (int[][]) null);
             }
             catch (Throwable throwable) {
                 // empty catch block
@@ -332,10 +337,64 @@ implements ModelRendersDriven {
                 .world(sl)
                 .typed("Machine", new MachineType.MachineRef(sl, pos, facingName, this))
                 .typed("MultiBlock", new MultiBlockType.MultiBlockRef(0, 0, 0, true, partCount, true, sl, pos, facingName))
+                .typedAll(dev.arubik.craftengine.script.ScriptBootstrap.globalSingletons())
                 .build();
         }
         catch (Throwable ignored) {
             return null;
+        }
+    }
+
+    /** Same shape as {@code DataMachineBlockEntity.runInteractScript(String, ServerPlayer, String)} —
+     *  binds {@code Machine} (via {@link #buildScriptContext()}) + {@code Player} + an {@code Event}
+     *  tagged with {@code hookName}. Wired into {@link #rendererManager} as its {@link
+     *  dev.arubik.craftengine.machine.render.RendererManager.InteractScriptRunner} so an
+     *  {@code "interaction"} renderer's clicks work on multi-block machines too.
+     *
+     *  <p>{@code offsetX/Y/Z} is the clicked marker's resolved world-space location MINUS the core's
+     *  ({@code x+0.5, y, z+0.5}) — i.e. the exact same relative offset {@code RendererManager} already
+     *  renders the marker at (renderer JSON positions/offsets are NOT facing-rotated, same as every
+     *  other renderer type — see {@code resolveSpecLocation}). To tell scripts WHICH physical part of
+     *  the multiblock was actually touched, that raw offset is rotated back into SCHEMA space (the
+     *  core-facing-independent coordinate system {@code MultiBlockType.get_part_block}/{@code
+     *  rotateOffset} use) via the inverse of the core's facing rotation, and exposed on the bound
+     *  {@code MultiBlock} object's {@code rel_x}/{@code rel_y}/{@code rel_z} (and {@code is_at}/{@code
+     *  side}/{@code part_id}) instead of {@link #buildScriptContext()}'s own always-{@code (0,0,0)}
+     *  core-context default. */
+    public void runInteractScript(String scriptRef, net.minecraft.server.level.ServerPlayer player, String hookName,
+                                   double offsetX, double offsetY, double offsetZ) {
+        dev.arubik.craftengine.script.ScriptCall call = dev.arubik.craftengine.script.ScriptCall.parse(scriptRef);
+        if (call == null) return;
+        try {
+            ScriptContext base = this.buildScriptContext();
+            if (base == null) return;
+            Level level = this.getNMSLevel();
+            ServerLevel sl = level instanceof ServerLevel ? (ServerLevel) level : null;
+            BlockPos corePos = this.getMachinePos();
+            Direction facing = level != null ? this.getFacing(level) : null;
+            String facingName = facing != null ? facing.getName().toLowerCase(Locale.ROOT) : "north";
+            // These four facings form their own inverse pairs under MultiBlockType.rotateOffset
+            // (NORTH/SOUTH are self-inverse, WEST<->EAST swap) — see that method's own doc.
+            Direction inverseFacing = facing == Direction.WEST ? Direction.EAST
+                    : facing == Direction.EAST ? Direction.WEST : facing;
+            BlockPos worldOffset = new BlockPos((int) Math.round(offsetX), (int) Math.round(offsetY), (int) Math.round(offsetZ));
+            BlockPos schemaOffset = MultiBlockType.rotateOffset(worldOffset, inverseFacing);
+            int partCount = 0;
+            try {
+                partCount = this.getSchema().getParts().size();
+            } catch (Throwable ignored) {}
+            boolean isCore = schemaOffset.getX() == 0 && schemaOffset.getY() == 0 && schemaOffset.getZ() == 0;
+            MultiBlockType.MultiBlockRef partRef = new MultiBlockType.MultiBlockRef(
+                    schemaOffset.getX(), schemaOffset.getY(), schemaOffset.getZ(),
+                    isCore, partCount, true, sl, corePos, facingName);
+            ScriptContext ctx = ScriptContext.builder().copyFrom(base).player(player)
+                    .typed("MultiBlock", partRef)
+                    .event(new dev.arubik.craftengine.script.event.InteractEvent(hookName, null))
+                    .build();
+            call.execute(ctx);
+        } catch (Throwable t) {
+            dev.arubik.craftengine.CraftEnginePolyfills.instance().getLogger().log(
+                    java.util.logging.Level.WARNING, "[Cep] " + hookName + " " + scriptRef + " threw", t);
         }
     }
 
@@ -539,6 +598,20 @@ implements ModelRendersDriven {
     }
 
     @Override
+    protected String onGetContainerScriptRef() {
+        return this.definition.onGetContainerScript();
+    }
+
+    @Override
+    public int[] getStorageSlots() {
+        java.util.LinkedHashSet<Integer> all = new java.util.LinkedHashSet<>();
+        for (dev.arubik.craftengine.machine.MachineDefinition.PageDef page : this.definition.pages()) {
+            for (int s : page.storageSlots()) all.add(s);
+        }
+        return all.stream().mapToInt(Integer::intValue).toArray();
+    }
+
+    @Override
     public int[] getUpgradeSlots() {
         return this.definition.upgrades().slots();
     }
@@ -652,9 +725,11 @@ implements ModelRendersDriven {
                     ? net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(nameStr)
                         .decoration(net.kyori.adventure.text.format.TextDecoration.ITALIC, false)
                     : Component.empty();
-                org.bukkit.inventory.ItemStack item = MenuText.iconItem(
-                    itemKey != null ? net.momirealms.craftengine.core.util.Key.of(itemKey) : null,
-                    org.bukkit.Material.GRAY_STAINED_GLASS_PANE, nameComp, new Component[0]);
+                org.bukkit.inventory.ItemStack item = s.customIcon() != null
+                    ? MenuText.iconItem(s.customIcon(), nameComp, new Component[0])
+                    : MenuText.iconItem(
+                        itemKey != null ? net.momirealms.craftengine.core.util.Key.of(itemKey) : null,
+                        org.bukkit.Material.GRAY_STAINED_GLASS_PANE, nameComp, new Component[0]);
                 if (item != null && !lore.isEmpty()) {
                     org.bukkit.inventory.meta.ItemMeta meta = item.getItemMeta();
                     if (meta != null) {
@@ -673,21 +748,13 @@ implements ModelRendersDriven {
                     case SCRIPT -> {
                         dev.arubik.craftengine.script.ScriptContext sCtx = dm.buildScriptContext();
                         if (sCtx == null) break;
-                        String target = parsed.target;
-                        if (target.contains(":")) {
-                            int col = target.indexOf(':'); String file = target.substring(0, col); String func = target.substring(col + 1);
-                            String key = file.endsWith(".pf") ? file.substring(0, file.length() - 3) : file;
-                            dev.arubik.craftengine.script.ScriptProgram prog = dev.arubik.craftengine.script.ScriptRegistry.get(key);
-                            if (prog != null) {
-                                dev.arubik.craftengine.script.ScriptContext withDefs = prog.evaluate(sCtx);
-                                dev.arubik.craftengine.script.ScriptValue fnVal = withDefs.getVar(func);
-                                if (fnVal instanceof dev.arubik.craftengine.script.ScriptValue.Obj fnObj && fnObj.typeName().equals(dev.arubik.craftengine.script.UserFunction.TYPE)) {
-                                    dev.arubik.craftengine.script.UserFunction fn = (dev.arubik.craftengine.script.UserFunction) fnObj.instance();
-                                    dev.arubik.craftengine.script.ScriptContext.Builder rb = dev.arubik.craftengine.script.ScriptContext.builder().copyFrom(withDefs);
-                                    fn.executor().accept(withDefs, rb);
-                                }
-                            }
-                        }
+                        // Same ScriptCall delegation as DataMachineBlockEntity's identical button
+                        // SCRIPT handler — see its comment for why (args were silently dropped, and
+                        // this bypassed UserFunction.call's param-binding/depth-guard path).
+                        String ref = parsed.target
+                                + (parsed.args.isEmpty() ? "" : ":" + String.join(":", parsed.args));
+                        dev.arubik.craftengine.script.ScriptCall call = dev.arubik.craftengine.script.ScriptCall.parse(ref);
+                        if (call != null) call.execute(sCtx);
                     }
                     default -> {}
                 }
@@ -758,7 +825,13 @@ implements ModelRendersDriven {
                     double ocLimit2 = machine instanceof DataMultiBlockMachineBlockEntity mb2 ? mb2.curOverclockLimit : 0.0;
                     boolean locked = lw.isLocked(evalCtx2, ocLimit2);
                     Key key = locked ? lockedKey : iconKey;
-                    return MenuText.iconItem(key, Material.PAPER, (Component)Component.text((String)(s.name() == null ? "" : s.name())), new Component[0]);
+                    Component nameComp3 = (Component)Component.text((String)(s.name() == null ? "" : s.name()));
+                    // Generator-supplied pre-built item (real skin profile, etc.) used AS-IS when not
+                    // locked — the locked_icon/icon string path still governs the locked appearance.
+                    if (s.customIcon() != null && !locked) {
+                        return MenuText.iconItem(s.customIcon(), nameComp3, new Component[0]);
+                    }
+                    return MenuText.iconItem(key, Material.PAPER, nameComp3, new Component[0]);
                 }, (machine, player) -> {
                     if (!(machine instanceof DataMultiBlockMachineBlockEntity)) return;
                     DataMultiBlockMachineBlockEntity self = (DataMultiBlockMachineBlockEntity)machine;

@@ -1,0 +1,128 @@
+# Example /cmds command — see cmds/tpa.json. Demonstrates a typed "player" argument, subcommands
+# ("pages") as sibling literal branches, per-player storage via Player.*_flag (already
+# PDC-backed — no bespoke "Cmd storage" needed, see CmdInvocation's javadoc for why), a
+# move-cancels-teleport warmup via EventManager, a deferred teleport via TaskManager, and a
+# Server.time expiry check so an old, never-accepted request just stops existing on its own.
+
+TPA_WARMUP_TICKS = 60      # 3s countdown before the actual teleport
+TPA_EXPIRE_SECONDS = 300   # 5 minutes
+
+def on_request():
+    target = Cmd.arg("target")
+    if is_empty(target):
+        Player.send_message("<red>✘ <white>Player not found or offline.")
+        return
+    end
+    if target.name == Player.name:
+        Player.send_message("<red>✘ <white>You can't teleport to yourself.")
+        return
+    end
+    target.set_typed("tpa_from", "string", Player.name)
+    target.set_typed("tpa_requested_at", "int", int(Server.time))
+    target.send_message("<gold>⚑ <yellow>" + Player.name + " <white>wants to teleport to you.")
+    target.send_message("<gray> » <green><click:run_command:'/tpa accept'>[Accept]</click> <gray>or <red><click:run_command:'/tpa deny'>[Deny]</click>")
+    Player.send_message("<green>✔ <white>Teleport request sent to <yellow>" + target.name + "<white>.")
+end
+
+def on_accept():
+    requester_name = Player.get_typed("tpa_from", "string")
+    if requester_name == "":
+        Player.send_message("<red>✘ <white>No pending teleport request.")
+        return
+    end
+    # Lazily expire: a request older than TPA_EXPIRE_SECONDS just doesn't exist anymore, whether or
+    # not a cleanup task has actually gotten around to clearing the flag yet.
+    requested_at = Player.get_typed("tpa_requested_at", "int")
+    Player.set_typed("tpa_from", "string", "")
+    if int(Server.time) - requested_at > TPA_EXPIRE_SECONDS:
+        Player.send_message("<red>✘ <white>That request expired.")
+        return
+    end
+    requester = Server.get_player(requester_name)
+    if is_empty(requester):
+        Player.send_message("<red>✘ <white>" + requester_name + " is no longer online.")
+        return
+    end
+    requester.set_typed("tpa_target", "string", Player.name)
+    requester.set_typed("tpa_moved", "int", 0)
+    handle_id = EventManager.register("PlayerMoveEvent", "tpa.pf:on_move_cancel", TPA_WARMUP_TICKS)
+    requester.set_typed("tpa_move_handle", "string", handle_id)
+    requester.send_message("<green>✔ <white>Request accepted! Teleporting in <yellow>3s<white> — don't move.")
+    Player.send_message("<green>✔ <white>Teleporting <yellow>" + requester_name + "<white> to you in 3 seconds.")
+    TaskManager.schedule("tpa.pf:on_warmup_done:" + requester_name, TPA_WARMUP_TICKS)
+end
+
+def on_deny():
+    requester_name = Player.get_typed("tpa_from", "string")
+    if requester_name == "":
+        Player.send_message("<red>✘ <white>No pending teleport request.")
+        return
+    end
+    Player.set_typed("tpa_from", "string", "")
+    requester = Server.get_player(requester_name)
+    if !is_empty(requester):
+        requester.send_message("<red>✘ <white>" + Player.name + " denied your teleport request.")
+    end
+    Player.send_message("<yellow>Teleport request denied.")
+end
+
+# Fired at most once (see EventManager.register's javadoc) if the accepting player moves before
+# the warmup finishes — Player here is auto-bound to whoever fired PlayerMoveEvent, which may not
+# be the player mid-teleport (anyone moving fires PlayerMoveEvent globally), hence the flag checks.
+def on_move_cancel():
+    if Player.get_typed("tpa_target", "string") != "" && Player.get_typed("tpa_moved", "int") == 0:
+        Player.set_typed("tpa_moved", "int", 1)
+        Player.set_typed("tpa_target", "string", "")
+        Player.send_message("<red>✘ <white>Teleport cancelled — you moved.")
+    end
+end
+
+def on_warmup_done(name):
+    p = Server.get_player(name)
+    if is_empty(p):
+        return
+    end
+    if p.get_typed("tpa_moved", "int") == 1:
+        return
+    end
+    target_name = p.get_typed("tpa_target", "string")
+    if target_name == "":
+        return
+    end
+    p.set_typed("tpa_target", "string", "")
+    handle_id = p.get_typed("tpa_move_handle", "string")
+    if handle_id != "":
+        EventManager.unregister(handle_id)
+        p.set_typed("tpa_move_handle", "string", "")
+    end
+    target = Server.get_player(target_name)
+    if is_empty(target):
+        p.send_message("<red>✘ <white>" + target_name + " is no longer online.")
+        return
+    end
+    p.teleport_to(target.location)
+    p.send_message("<green>✔ <white>Teleported to <yellow>" + target_name + "<white>!")
+    target.send_message("<green>✔ <white>" + name + " has teleported to you.")
+end
+
+# /tpa list — a one-shot GUI showing the single pending request this design tracks (see the
+# tpa_from flag used throughout this file). Slot 13 (dead center of a 3-row chest) either shows the
+# requester's own skull with a click handler that accepts on their behalf, or a plain filler item
+# when there's nothing pending — no page/list widget needed since only one request is ever tracked
+# per player at a time.
+def open_requests_menu():
+    m = Menu.create(27, "<gold>Teleport Requests")
+    from_name = Player.get_typed("tpa_from", "string")
+    if from_name != "":
+        requester = Server.get_player(from_name)
+        if !is_empty(requester):
+            head = Item.skull(requester).with_name("<yellow>" + from_name).with_lore(["<gray>Click to accept"])
+            m = m.set_item(13, head, "tpa.pf:on_accept")
+        end
+    end
+    if from_name == "":
+        filler = create_item("minecraft:gray_stained_glass_pane", 1).with_name("<gray>No pending requests")
+        m = m.set_item(13, filler)
+    end
+    m.open(Player)
+end

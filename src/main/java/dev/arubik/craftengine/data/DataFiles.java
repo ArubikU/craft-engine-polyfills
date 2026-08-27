@@ -84,6 +84,34 @@ public final class DataFiles {
     }
 
     /**
+     * Loads exactly ONE file under {@code <dataFolder>/dir} — no directory walk, no seeding —
+     * for a targeted {@code /cep reload <type> <name>} instead of re-parsing everything under
+     * {@code dir} just to pick up one edited file. Returns false (and logs why) for a missing or
+     * malformed file; the caller decides what "reload failed" means for its own registry.
+     */
+    public static boolean loadSingleFile(String dir, String relativeName, BiConsumer<JsonView, String> consumer) {
+        File root = new File(CraftEnginePolyfills.instance().getDataFolder(), dir);
+        File file = new File(root, relativeName);
+        if (!file.isFile()) {
+            warn(dir + "/" + relativeName + " skipped — no such file");
+            return false;
+        }
+        String name = relativize(root, file);
+        try (Reader reader = Files.newBufferedReader(file.toPath(), StandardCharsets.UTF_8)) {
+            JsonObject json = GSON.fromJson(reader, JsonObject.class);
+            if (json == null) throw new JsonView.MalformedDataException(name + ": file is empty");
+            consumer.accept(JsonView.of(json, name), name);
+            return true;
+        } catch (JsonView.MalformedDataException e) {
+            warn(dir + "/" + name + " skipped — " + e.getMessage());
+            return false;
+        } catch (Exception e) {
+            CraftEnginePolyfills.instance().getLogger().log(Level.SEVERE, "Failed to load " + dir + "/" + name, e);
+            return false;
+        }
+    }
+
+    /**
      * Copies bundled {@code dir/*.json} resources that this server has never been
      * given before, recording them in {@code <dir>/.seeded}.
      */

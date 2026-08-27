@@ -1,0 +1,706 @@
+# /games gomoku <player|bot> — five-in-a-row on a 14x14 board rendered as a Dialog grid (see
+# DialogManagerType#as_multi_action's optional "columns" arg, added for this). Two humans converge
+# on the SAME game by sorting their names (make_game_id) so either one's invocation reaches it;
+# "bot" opponents get a name-scoped game of their own instead. All state lives in Server.*_typed
+# storage keyed by game id — no machine, no per-player storage, so any number of games can run
+# concurrently and either participant can reopen theirs from a fresh command any time.
+#
+# Board cells are ONE flat string ("E"/"B"/"W" per cell, row-major) rather than one key per row —
+# simpler to slice/rebuild with substring() than juggling BOARD_SIZE separate typed keys per game.
+# Redrawing after a move relies on BuiltDialog.show() being allowed to reopen a FRESH dialog for the
+# clicking player from within their own click's action — DialogManagerType's RESHOWN tracker (added
+# alongside the "columns" arg) suppresses the click's automatic closeDialog() when that happens, or
+# every move would flash the updated board and then immediately dismiss it.
+
+BOARD_SIZE = 14
+WIN_LEN = 5
+CELL_EMPTY = "E"
+CELL_BLACK = "B"
+CELL_WHITE = "W"
+BOT_NAME = "Bot"
+DIFF_EASY = "easy"
+DIFF_MEDIUM = "medium"
+DIFF_HARD = "hard"
+DIFF_DEFAULT = DIFF_MEDIUM
+CELL_WIDTH = 20
+
+def make_game_id(name1, name2):
+    if lower(name2) == "bot":
+        return "gomoku_" + name1 + "_bot"
+    end
+    pair = sort_strs([name1, name2])
+    return "gomoku_" + pair.get(0) + "_" + pair.get(1)
+end
+
+def empty_board():
+    row = ""
+    for i in range(0, BOARD_SIZE):
+        row = row + CELL_EMPTY
+    end
+    board = ""
+    for i in range(0, BOARD_SIZE):
+        board = board + row
+    end
+    return board
+end
+
+def cell_at(board, r, c):
+    return char_at(board, r * BOARD_SIZE + c)
+end
+
+def board_set(board, r, c, val):
+    idx = r * BOARD_SIZE + c
+    return substring(board, 0, idx) + val + substring(board, idx + 1, len(board))
+end
+
+def is_full(board):
+    for i in range(0, BOARD_SIZE * BOARD_SIZE):
+        if char_at(board, i) == CELL_EMPTY:
+            return false
+        end
+    end
+    return true
+end
+
+def count_dir(board, row, col, dr, dc, color):
+    r = row + dr
+    c = col + dc
+    n = 0
+    while r >= 0 && r < BOARD_SIZE && c >= 0 && c < BOARD_SIZE && cell_at(board, r, c) == color:
+        n = n + 1
+        r = r + dr
+        c = c + dc
+    end
+    return n
+end
+
+def has_five(board, row, col, color):
+    dirs = [[0,1],[1,0],[1,1],[1,-1]]
+    for d in dirs:
+        dr = d.get(0)
+        dc = d.get(1)
+        total = 1 + count_dir(board, row, col, dr, dc, color) + count_dir(board, row, col, -dr, -dc, color)
+        if total >= WIN_LEN:
+            return true
+        end
+    end
+    return false
+end
+
+# ---- Storage -----------------------------------------------------------------------------------
+
+def board_key(gid):
+    return "gmk_board_" + gid
+end
+def turn_key(gid):
+    return "gmk_turn_" + gid
+end
+def black_key(gid):
+    return "gmk_black_" + gid
+end
+def white_key(gid):
+    return "gmk_white_" + gid
+end
+def bot_key(gid):
+    return "gmk_bot_" + gid
+end
+def difficulty_key(gid):
+    return "gmk_diff_" + gid
+end
+def status_key(gid):
+    return "gmk_status_" + gid
+end
+
+def is_bot_game(gid):
+    return Server.get_typed(bot_key(gid), "string") == "1"
+end
+
+def bot_difficulty(gid):
+    d = Server.get_typed(difficulty_key(gid), "string")
+    return d == "" ? DIFF_DEFAULT : d
+end
+
+# ---- Entry point ---------------------------------------------------------------------------------
+
+def open_gomoku():
+    opp = Cmd.arg("opponent")
+    if is_empty(opp) || opp == "":
+        Player.send_message("<red>✘ <white>Usage: /games gomoku <player|bot>")
+        return
+    end
+    if lower(opp) == "bot":
+        gid = make_game_id(Player.name, BOT_NAME)
+        if Server.get_typed(status_key(gid), "string") == "active":
+            show_board(gid, Player)
+            return
+        end
+        show_difficulty_picker()
+        return
+    end
+    target = Server.get_player(opp)
+    if is_empty(target):
+        Player.send_message("<red>✘ <white>Player not found or offline.")
+        return
+    end
+    if target.name == Player.name:
+        Player.send_message("<red>✘ <white>You can't play yourself — try '/games gomoku bot'.")
+        return
+    end
+    gid = make_game_id(Player.name, target.name)
+    ensure_game(gid, Player.name, target.name, false, DIFF_DEFAULT)
+    show_board(gid, Player)
+end
+
+# Lets the player pick a bot strength BEFORE the game is created — separate from show_board so a
+# fresh "/games gomoku bot" never silently defaults to one difficulty; picking is a one-time step
+# per new bot game (an already-active one reopens straight to the board, see open_gomoku above).
+def show_difficulty_picker():
+    buttons = [
+        make_map("label", "<green>Easy", "tooltip", "<gray>Blocks your wins, otherwise plays casually.", "action", "games/gomoku.pf:start_bot_game:" + DIFF_EASY),
+        make_map("label", "<yellow>Medium", "tooltip", "<gray>Weighs threats on the whole board.", "action", "games/gomoku.pf:start_bot_game:" + DIFF_MEDIUM),
+        make_map("label", "<red>Hard", "tooltip", "<gray>Also thinks one move ahead.", "action", "games/gomoku.pf:start_bot_game:" + DIFF_HARD),
+    ]
+    Dialog.base("<gold>Gomoku — Bot Difficulty").body("<gray>Choose how strong the bot should play.").can_close_with_escape(true).as_multi_action(Machine, buttons, 1).show(Player)
+end
+
+def start_bot_game(difficulty):
+    gid = make_game_id(Player.name, BOT_NAME)
+    ensure_game(gid, Player.name, BOT_NAME, true, difficulty)
+    show_board(gid, Player)
+end
+
+# Starts a brand-new game, UNLESS one is already active under this id — a second player joining
+# (or either player just reopening the board) must never reset an in-progress game underneath them.
+def ensure_game(gid, starter, opponent, is_bot, difficulty):
+    if Server.get_typed(status_key(gid), "string") == "active":
+        return
+    end
+    Server.set_typed(board_key(gid), "string", empty_board())
+    Server.set_typed(turn_key(gid), "string", CELL_BLACK)
+    Server.set_typed(black_key(gid), "string", starter)
+    Server.set_typed(white_key(gid), "string", opponent)
+    Server.set_typed(bot_key(gid), "string", is_bot ? "1" : "0")
+    Server.set_typed(difficulty_key(gid), "string", difficulty)
+    Server.set_typed(status_key(gid), "string", "active")
+end
+
+# ---- Rendering ------------------------------------------------------------------------------------
+
+def status_line(status, turn, black, white):
+    if status == "black_win":
+        return "<gold>" + black + " <white>wins!"
+    end
+    if status == "white_win":
+        return "<gold>" + white + " <white>wins!"
+    end
+    if status == "draw":
+        return "<yellow>Draw — the board is full."
+    end
+    turn_name = turn == CELL_BLACK ? black : white
+    return [
+        "<gray>Turn: <yellow>" + turn_name + " <white>(",
+        turn == CELL_BLACK ? Images.from("gomoku:black") : Images.from("gomoku:white"),
+        "<white>)",
+    ]
+end
+
+def cell_glyph(ch):
+    if ch == CELL_BLACK:
+        return Images.from("gomoku:black")
+    end
+    if ch == CELL_WHITE:
+        return Images.from("gomoku:white")
+    end
+    return Images.from("gomoku:empty")
+end
+
+def show_board(gid, viewer):
+    board = Server.get_typed(board_key(gid), "string")
+    turn = Server.get_typed(turn_key(gid), "string")
+    black = Server.get_typed(black_key(gid), "string")
+    white = Server.get_typed(white_key(gid), "string")
+    status = Server.get_typed(status_key(gid), "string")
+
+    # Once the game is over, cells and the footer button both point at on_noop instead of their
+    # normal actions — clicking a stone no longer places anything (and stops re-sending the "game
+    # has ended" message on every click), and the footer becomes "Leave": on_noop never redisplays
+    # the dialog, so DialogManagerType's default auto-close just closes it, same mechanism Resign
+    # itself relies on (see on_resign's own comment).
+    is_over = status != "active"
+
+    buttons = []
+    for r in range(0, BOARD_SIZE):
+        for c in range(0, BOARD_SIZE):
+            ch = cell_at(board, r, c)
+            cell_action = is_over ? "games/gomoku.pf:on_noop" : "games/gomoku.pf:on_cell_click:" + gid + ":" + r + ":" + c
+            btn = make_map("label", cell_glyph(ch), "action", cell_action, "width", CELL_WIDTH)
+            buttons = push(buttons, btn)
+        end
+    end
+    footer_label = is_over ? "<gray>Leave" : "<red>Resign"
+    footer_action = is_over ? "games/gomoku.pf:on_noop" : "games/gomoku.pf:on_resign:" + gid
+    buttons = push(buttons, make_map("label", footer_label, "action", footer_action))
+
+    title = "<gold>Gomoku <gray>— <yellow>" + black + " <gray>vs <yellow>" + white
+    # can_close_with_escape(false): the Dialog API has no server-side "closed without clicking a
+    # button" signal (see DialogManagerType's on_close doc), so Escape can't be told apart from the
+    # player just alt-tabbing — the only way to make "leaving mid-game" reliably count as a
+    # resignation is to not let Escape leave at all; Resign is the one way out while a game is live.
+    Dialog.base(title).body(Images.from("gomoku:ui")).body(status_line(status, turn, black, white)).can_close_with_escape(status != "active").as_multi_action(Machine, buttons, BOARD_SIZE).show(viewer)
+end
+
+# Pushes the freshly-updated board to the OTHER human participant too (if online, and not a bot
+# game) — the acting player already sees it via show_board's own .show(Player) call, so both sides
+# stay in sync on the same click instead of the other player only finding out on their own next move.
+def notify_opponent(gid):
+    if is_bot_game(gid):
+        return
+    end
+    black = Server.get_typed(black_key(gid), "string")
+    white = Server.get_typed(white_key(gid), "string")
+    other_name = Player.name == black ? white : black
+    other = Server.get_player(other_name)
+    if !is_empty(other):
+        show_board(gid, other)
+    end
+end
+
+def notify_both_chat(gid, message):
+    black = Server.get_typed(black_key(gid), "string")
+    white = Server.get_typed(white_key(gid), "string")
+    b = Server.get_player(black)
+    if !is_empty(b):
+        b.send_message(message)
+    end
+    if !is_bot_game(gid):
+        w = Server.get_player(white)
+        if !is_empty(w):
+            w.send_message(message)
+        end
+    end
+end
+
+# ---- Moves ------------------------------------------------------------------------------------
+
+def apply_move(gid, row, col, color):
+    board = Server.get_typed(board_key(gid), "string")
+    board = board_set(board, row, col, color)
+    Server.set_typed(board_key(gid), "string", board)
+
+    black = Server.get_typed(black_key(gid), "string")
+    white = Server.get_typed(white_key(gid), "string")
+
+    if has_five(board, row, col, color):
+        Server.set_typed(status_key(gid), "string", color == CELL_BLACK ? "black_win" : "white_win")
+        winner = color == CELL_BLACK ? black : white
+        notify_both_chat(gid, "<gold>✦ <white>" + winner + " wins the Gomoku match!")
+        return
+    end
+    if is_full(board):
+        Server.set_typed(status_key(gid), "string", "draw")
+        notify_both_chat(gid, "<yellow>Gomoku match ended in a draw.")
+        return
+    end
+    next_turn = color == CELL_BLACK ? CELL_WHITE : CELL_BLACK
+    Server.set_typed(turn_key(gid), "string", next_turn)
+
+    if is_bot_game(gid) && next_turn == CELL_WHITE:
+        TaskManager.schedule("games/gomoku.pf:bot_move:" + gid, 15)
+    end
+end
+
+# Resolves a player BY NAME and shows them their board — the deferred counterpart to calling
+# show_board(gid, Player) directly. See on_cell_click's own comment for why this exists: Paper
+# treats "click a button, dialog action shows a NEW dialog in the same response" as a close-then-
+# reopen at the packet level no matter how hard buildAction's RESHOWN tracker tries to suppress its
+# OWN extra closeDialog() call — bot_apply_move/notify_opponent never had this problem because they
+# already run from OUTSIDE any click callback (a scheduled task, or showing a DIFFERENT player than
+# the one who clicked). Routing the clicker's own refresh through the exact same "cold push one
+# tick later" path makes it behave identically — no flicker, since the client isn't mid-processing
+# a click response when the new dialog arrives.
+def refresh_board(gid, player_name):
+    p = Server.get_player(player_name)
+    if !is_empty(p):
+        show_board(gid, p)
+    end
+end
+
+def on_cell_click(gid, row, col):
+    row = int(row)
+    col = int(col)
+    status = Server.get_typed(status_key(gid), "string")
+    if status != "active":
+        Player.send_message("<red>✘ <white>This game has already ended — run the command again to start a new one.")
+        TaskManager.schedule("games/gomoku.pf:refresh_board:" + gid + ":" + Player.name, 0)
+        return
+    end
+    black = Server.get_typed(black_key(gid), "string")
+    white = Server.get_typed(white_key(gid), "string")
+    turn = Server.get_typed(turn_key(gid), "string")
+
+    my_color = ""
+    if Player.name == black:
+        my_color = CELL_BLACK
+    end
+    if Player.name == white:
+        my_color = CELL_WHITE
+    end
+    if my_color == "":
+        Player.send_message("<red>✘ <white>You're not a player in this game.")
+        return
+    end
+    if my_color != turn:
+        Player.send_message("<red>✘ <white>It's not your turn.")
+        TaskManager.schedule("games/gomoku.pf:refresh_board:" + gid + ":" + Player.name, 0)
+        return
+    end
+
+    board = Server.get_typed(board_key(gid), "string")
+    if cell_at(board, row, col) != CELL_EMPTY:
+        Player.send_message("<red>✘ <white>That cell is already taken.")
+        TaskManager.schedule("games/gomoku.pf:refresh_board:" + gid + ":" + Player.name, 0)
+        return
+    end
+
+    apply_move(gid, row, col, my_color)
+    TaskManager.schedule("games/gomoku.pf:refresh_board:" + gid + ":" + Player.name, 0)
+    notify_opponent(gid)
+end
+
+# Resign always CLOSES the dialog for whoever clicked it — it doesn't call show_board(gid, Player)
+# for the resigner the way every other action does. DialogManagerType auto-closes a dialog action's
+# dialog unless the script explicitly redisplays one (see RESHOWN in buildAction); Resign is the one
+# action that WANTS that default close instead of redrawing the just-ended board back in the
+# resigner's face. The opponent still gets their board refreshed via notify_opponent as normal.
+def on_resign(gid):
+    status = Server.get_typed(status_key(gid), "string")
+    if status != "active":
+        Player.send_message("<yellow>This game has already ended.")
+        return
+    end
+    black = Server.get_typed(black_key(gid), "string")
+    white = Server.get_typed(white_key(gid), "string")
+    if Player.name != black && Player.name != white:
+        Player.send_message("<red>✘ <white>You're not a player in this game.")
+        return
+    end
+    resigner_is_black = Player.name == black
+    Server.set_typed(status_key(gid), "string", resigner_is_black ? "white_win" : "black_win")
+    winner = resigner_is_black ? white : black
+    notify_both_chat(gid, "<yellow>" + Player.name + " resigned. <gold>" + winner + " wins!")
+    notify_opponent(gid)
+end
+
+# Bound to every cell AND the footer button once a game has ended (see show_board's is_over) — does
+# nothing at all, so DialogManagerType's default auto-close just closes the dialog, the same "Leave"
+# behavior Resign itself relies on.
+def on_noop():
+end
+
+# ---- Bot ------------------------------------------------------------------------------------------
+#
+# Three independent, single-responsibility layers, composed instead of tangled together (the
+# scripting language has no classes, so this is the closest match to SOLID's spirit it can express):
+#
+#   1. Exact tactics   (find_winning_move) — a real, guaranteed-correct check via has_five, not a
+#      heuristic guess. Always tried first regardless of difficulty: a bot that ever misses a real
+#      5-in-a-row (its own or the human's) would feel broken, not "easy".
+#   2. Threat scoring  (line_score/evaluate_cell/find_candidates/combined_score) — one reusable
+#      evaluation function every difficulty ABOVE "easy" reads from. Adding a fourth tier never
+#      requires touching this layer (open/closed): a new tier just calls evaluate_cell differently.
+#   3. Move selection  (bot_move_easy/_medium/_hard) — one function per difficulty, each doing
+#      exactly one thing; bot_pick_move is the only place that knows which tier maps to which
+#      function, so adding DIFF_EXPERT later is a one-line addition there, not a rewrite of #1/#2.
+
+# ---- 1. Exact tactics ----
+
+def find_winning_move(board, color):
+    for r in range(0, BOARD_SIZE):
+        for c in range(0, BOARD_SIZE):
+            if cell_at(board, r, c) == CELL_EMPTY:
+                trial = board_set(board, r, c, color)
+                if has_five(trial, r, c, color):
+                    return [r, c]
+                end
+            end
+        end
+    end
+    return []
+end
+
+def find_any_move(board):
+    for r in range(0, BOARD_SIZE):
+        for c in range(0, BOARD_SIZE):
+            if cell_at(board, r, c) == CELL_EMPTY:
+                return [r, c]
+            end
+        end
+    end
+    return []
+end
+
+# ---- 2. Threat scoring ----
+
+# One line of {count} same-colored stones (INCLUDING the hypothetical one just placed) with
+# {open_ends} empty cells (0-2) immediately past either end — standard gomoku threat weights: an
+# open four is already an unstoppable win-next-move, so it outranks even a blocked five-minus-one.
+def line_score(count, open_ends):
+    if count >= WIN_LEN:
+        return 100000
+    end
+    if count == 4:
+        return open_ends == 2 ? 10000 : (open_ends == 1 ? 1000 : 0)
+    end
+    if count == 3:
+        return open_ends == 2 ? 500 : (open_ends == 1 ? 100 : 0)
+    end
+    if count == 2:
+        return open_ends == 2 ? 50 : (open_ends == 1 ? 10 : 0)
+    end
+    return open_ends > 0 ? 1 : 0
+end
+
+def is_open_cell(board, r, c):
+    return r >= 0 && r < BOARD_SIZE && c >= 0 && c < BOARD_SIZE && cell_at(board, r, c) == CELL_EMPTY
+end
+
+# How strong would {color} be if it played (row, col) right now — summed across all 4 axes (the
+# board is never actually mutated; count_dir already reads through {board} as-is).
+def evaluate_cell(board, row, col, color):
+    dirs = [[0,1],[1,0],[1,1],[1,-1]]
+    total = 0
+    for d in dirs:
+        dr = d.get(0)
+        dc = d.get(1)
+        fwd = count_dir(board, row, col, dr, dc, color)
+        bwd = count_dir(board, row, col, -dr, -dc, color)
+        count = 1 + fwd + bwd
+        end1_open = is_open_cell(board, row + dr * (fwd + 1), col + dc * (fwd + 1))
+        end2_open = is_open_cell(board, row - dr * (bwd + 1), col - dc * (bwd + 1))
+        open_ends = (end1_open ? 1 : 0) + (end2_open ? 1 : 0)
+        total = total + line_score(count, open_ends)
+    end
+    return total
+end
+
+# Every empty cell within 2 of an existing stone — pruning the full 196-cell board down to the
+# handful of squares that could plausibly matter, which is what keeps evaluate_cell's O(board)
+# scan affordable to run dozens of times per bot turn. An empty board has no stones to be near, so
+# it falls back to the center cell (the standard gomoku opening).
+def has_neighbor(board, r, c):
+    for dr in [-2, -1, 0, 1, 2]:
+        for dc in [-2, -1, 0, 1, 2]:
+            nr = r + dr
+            nc = c + dc
+            if nr >= 0 && nr < BOARD_SIZE && nc >= 0 && nc < BOARD_SIZE && cell_at(board, nr, nc) != CELL_EMPTY:
+                return true
+            end
+        end
+    end
+    return false
+end
+
+def find_candidates(board):
+    any_stone = false
+    for i in range(0, BOARD_SIZE * BOARD_SIZE):
+        if char_at(board, i) != CELL_EMPTY:
+            any_stone = true
+        end
+    end
+    if !any_stone:
+        center = int(BOARD_SIZE / 2)
+        return [[center, center]]
+    end
+    result = []
+    for r in range(0, BOARD_SIZE):
+        for c in range(0, BOARD_SIZE):
+            if cell_at(board, r, c) == CELL_EMPTY && has_neighbor(board, r, c):
+                result = push(result, [r, c])
+            end
+        end
+    end
+    return result
+end
+
+# Folds a cell's offensive score (playing there myself) and defensive score (denying it to the
+# opponent) into one number — dominant threat wins, the weaker one only breaks ties, so a cell
+# that's merely "pretty good" for both never beats a cell that's genuinely urgent for either side.
+def combined_score(offense, defense):
+    if offense >= defense:
+        return offense + defense * 0.2
+    end
+    return defense + offense * 0.2
+end
+
+# ---- 3. Move selection (one function per difficulty tier) ----
+
+def find_adjacent_move(board):
+    for r in range(0, BOARD_SIZE):
+        for c in range(0, BOARD_SIZE):
+            if cell_at(board, r, c) == CELL_EMPTY && has_neighbor(board, r, c):
+                return [r, c]
+            end
+        end
+    end
+    return []
+end
+
+# Easy: no board-wide evaluation at all — just claims the first cell touching an existing stone.
+def bot_move_easy(board, color, opponent):
+    return find_adjacent_move(board)
+end
+
+# Medium: single-ply — score every plausible cell once (combined offense/defense) and take the max.
+def bot_move_medium(board, color, opponent):
+    candidates = find_candidates(board)
+    best_r = -1
+    best_c = -1
+    best_score = -1
+    for cell in candidates:
+        r = cell.get(0)
+        c = cell.get(1)
+        score = combined_score(evaluate_cell(board, r, c, color), evaluate_cell(board, r, c, opponent))
+        if score > best_score:
+            best_score = score
+            best_r = r
+            best_c = c
+        end
+    end
+    if best_r < 0:
+        return []
+    end
+    return [best_r, best_c]
+end
+
+# Hard: medium's scoring PLUS one ply of lookahead — for the few candidates worth considering at
+# all (score >= 40, capped at 8 to bound the cost), simulate playing there and subtract the
+# opponent's best reply afterward, so a move that looks great alone but hands the opponent an
+# even bigger threat next turn no longer wins. Both loops are capped (8 of ours, 30 of theirs) —
+# this is a bounded 1-ply search, not full minimax, but is enough to stop most of the naive
+# heuristic's "walked right into a fork" mistakes.
+def bot_move_hard(board, color, opponent):
+    candidates = find_candidates(board)
+    best_net = -999999
+    best_r = -1
+    best_c = -1
+    considered = 0
+    for cell in candidates:
+        r = cell.get(0)
+        c = cell.get(1)
+        my_score = combined_score(evaluate_cell(board, r, c, color), evaluate_cell(board, r, c, opponent))
+        if my_score >= 40 && considered < 8:
+            considered = considered + 1
+            trial = board_set(board, r, c, color)
+            opp_candidates = find_candidates(trial)
+            opp_best = 0
+            opp_considered = 0
+            for ocell in opp_candidates:
+                opp_considered = opp_considered + 1
+                if opp_considered <= 30:
+                    orow = ocell.get(0)
+                    ocol = ocell.get(1)
+                    reply = combined_score(evaluate_cell(trial, orow, ocol, opponent), evaluate_cell(trial, orow, ocol, color))
+                    if reply > opp_best:
+                        opp_best = reply
+                    end
+                end
+            end
+            net = my_score - opp_best * 0.9
+            if net > best_net:
+                best_net = net
+                best_r = r
+                best_c = c
+            end
+        end
+    end
+    if best_r < 0:
+        return []
+    end
+    return [best_r, best_c]
+end
+
+# The only place that maps a difficulty NAME to a move-selection FUNCTION — adding a new tier is a
+# one-line addition here, nothing above or below it needs to change (open/closed).
+def bot_pick_move(board, color, difficulty):
+    opponent = color == CELL_WHITE ? CELL_BLACK : CELL_WHITE
+
+    win = find_winning_move(board, color)
+    if len(win) > 0:
+        return win
+    end
+    block = find_winning_move(board, opponent)
+    if len(block) > 0:
+        return block
+    end
+
+    move = []
+    if difficulty == DIFF_HARD:
+        move = bot_move_hard(board, color, opponent)
+    end
+    if difficulty == DIFF_MEDIUM:
+        move = bot_move_medium(board, color, opponent)
+    end
+    if difficulty == DIFF_EASY:
+        move = bot_move_easy(board, color, opponent)
+    end
+    if len(move) == 0:
+        move = find_any_move(board)
+    end
+    return move
+end
+
+# Split into three hops so the actual search (bot_compute_move) never runs on the main thread —
+# bot_pick_move's hard-tier lookahead is easily 10k+ interpreted operations, which was measured
+# freezing a whole server tick. Only bot_move and bot_apply_move touch Server.*/Dialog/Player;
+# bot_compute_move touches NOTHING but its own string/array/number arguments, which is exactly what
+# makes it safe to run on TaskManager.schedule_async's background thread (see that method's own doc
+# for what "safe" means here — ServerFlags is a plain unsynchronized HashMap, not thread-safe).
+def bot_move(gid):
+    if Server.get_typed(status_key(gid), "string") != "active":
+        return
+    end
+    if Server.get_typed(turn_key(gid), "string") != CELL_WHITE:
+        return
+    end
+    board = Server.get_typed(board_key(gid), "string")
+    difficulty = bot_difficulty(gid)
+    TaskManager.schedule_async("games/gomoku.pf:bot_compute_move:" + gid + ":" + board + ":" + difficulty, 0)
+end
+
+# OFF-THREAD. Pure computation only — bot_pick_move and everything it calls (has_five, count_dir,
+# evaluate_cell, find_candidates, combined_score, ...) only ever read the `board` string passed in
+# as an argument, never Server.get_typed, so there's no shared mutable state to race on.
+def bot_compute_move(gid, board, difficulty):
+    move = bot_pick_move(board, CELL_WHITE, difficulty)
+    if len(move) == 0:
+        return
+    end
+    TaskManager.schedule("games/gomoku.pf:bot_apply_move:" + gid + ":" + move.get(0) + ":" + move.get(1), 0)
+end
+
+# Back on the main thread (plain TaskManager.schedule). Re-validates the game is still exactly
+# where bot_move left it (still active, still White's turn, target cell still empty) — the async
+# compute above took at least a tick, during which the human could have resigned or the game could
+# have otherwise ended, so this can't just trust the move it was handed.
+def bot_apply_move(gid, row, col):
+    row = int(row)
+    col = int(col)
+    if Server.get_typed(status_key(gid), "string") != "active":
+        return
+    end
+    if Server.get_typed(turn_key(gid), "string") != CELL_WHITE:
+        return
+    end
+    board = Server.get_typed(board_key(gid), "string")
+    if cell_at(board, row, col) != CELL_EMPTY:
+        return
+    end
+
+    apply_move(gid, row, col, CELL_WHITE)
+
+    black = Server.get_typed(black_key(gid), "string")
+    human = Server.get_player(black)
+    if !is_empty(human):
+        show_board(gid, human)
+    end
+end

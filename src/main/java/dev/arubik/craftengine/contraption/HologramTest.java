@@ -27,7 +27,7 @@ import dev.arubik.craftengine.contraption.core.ContraptionState;
 import dev.arubik.craftengine.contraption.furniture.ContraptionFurnitureCapture;
 import dev.arubik.craftengine.contraption.glue.GlueRegistry;
 import dev.arubik.craftengine.contraption.player.CePlayers;
-import dev.arubik.craftengine.conveyor.ConveyorBlockEntity;
+import dev.arubik.craftengine.conveyor.belt.ConveyorBlockEntity;
 import dev.arubik.craftengine.fluid.behavior.FluidTankRender;
 import java.util.HashMap;
 import java.util.List;

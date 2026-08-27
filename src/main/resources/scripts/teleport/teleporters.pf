@@ -1,0 +1,116 @@
+# /teleporters — a standalone, block-less way into the SAME "teleporter_freq_<name>" frequency
+# registry teleporter.pf/specialized_teleporter.pf use (see teleporter.pf's own header for the full
+# registry-shape writeup): type a frequency, then pick any destination tuned to it from a Menu, for
+# 1 Nether Star per jump instead of a physical teleporter block's CE energy cost. Demonstrates the
+# Dialog API used with NO Machine at all (Dialog.as_notice's owner arg falls back to a generic
+# context when it isn't a real machine — see DialogManagerType#buildAction) and the standalone
+# Menu/Item.skull-adjacent GUI system from the same session as tpa.pf.
+
+TELEPORT_ITEM = "minecraft:nether_star"
+DEST_SLOTS = [10,11,12,13,14,15,16, 19,20,21,22,23,24,25, 28,29,30,31,32,33,34]
+
+def freq_key(freq):
+    return "teleporter_freq_" + freq
+end
+
+# Same sign-alias lookup as teleporter.pf/specialized_teleporter.pf — duplicated, not shared, per
+# those files' own header note on why (no cross-file function-call syntax for .pf scripts).
+def _sign_alias_at(world_name, x, y, z):
+    tw = world(world_name)
+    if is_empty(tw):
+        return ""
+    end
+    center = tw.get_block(int(x), int(y), int(z), true)
+    for dir in ["north", "south", "east", "west", "up", "down"]:
+        b = center.relative(dir)
+        if b.metadata_type == "SignMetadata":
+            for line in b.get_metadata.front.lines:
+                if line != "":
+                    return line
+                end
+            end
+            return ""
+        end
+    end
+    return ""
+end
+
+def open_frequency_dialog():
+    Dialog.base("Teleporter Frequency").input_text("value", "Frequency", Player.get_typed("teleporters_freq", "string")).as_notice(Machine, "Browse", "teleporters.pf:on_frequency_submit").show(Player)
+end
+
+def on_frequency_submit(freq):
+    if freq == "":
+        Player.send_message("<red>✘ <white>You must enter a frequency.")
+        return
+    end
+    Player.set_typed("teleporters_freq", "string", freq)
+    open_destination_menu()
+end
+
+def open_destination_menu():
+    freq = Player.get_typed("teleporters_freq", "string")
+    m = Menu.create(36, "<gold>Teleporters: <yellow>" + freq)
+    existing = Server.get_typed(freq_key(freq), "string")
+    entries = []
+    for entry in split(existing, ";"):
+        if entry != "":
+            entries = push(entries, entry)
+        end
+    end
+    i = 0
+    for entry in entries:
+        if i >= len(DEST_SLOTS):
+            break
+        end
+        parts = split(entry, ",")
+        alias = _sign_alias_at(parts.get(0), parts.get(1), parts.get(2), parts.get(3))
+        display_name = alias != "" ? alias : parts.get(0)
+        icon = create_item("minecraft:ender_pearl", 1).with_name("<yellow>" + display_name).with_lore([
+            "<gray>" + parts.get(1) + ", " + parts.get(2) + ", " + parts.get(3),
+            "<dark_gray>Costs 1 Nether Star",
+            "",
+            "<green>Click to teleport"
+        ])
+        m = m.set_item(DEST_SLOTS.get(i), icon, "teleporters.pf:on_teleport_slot:" + i)
+        i = i + 1
+    end
+    if i == 0:
+        filler = create_item("minecraft:barrier", 1).with_name("<red>No teleporters found on '" + freq + "'")
+        m = m.set_item(13, filler)
+    end
+    m.open(Player)
+end
+
+def on_teleport_slot(idx):
+    freq = Player.get_typed("teleporters_freq", "string")
+    existing = Server.get_typed(freq_key(freq), "string")
+    entries = []
+    for entry in split(existing, ";"):
+        if entry != "":
+            entries = push(entries, entry)
+        end
+    end
+    i = int(idx)
+    if i < 0 || i >= len(entries):
+        Player.send_message("<red>✘ <white>That destination is no longer available.")
+        return
+    end
+    if !Player.has_item(TELEPORT_ITEM, 1):
+        Player.send_message("<red>✘ <white>You need a Nether Star to use a teleporter this way.")
+        return
+    end
+    parts = split(entries.get(i), ",")
+    target_world = world(parts.get(0))
+    if is_empty(target_world):
+        Player.send_message("<red>✘ <white>That destination's world is not currently loaded.")
+        return
+    end
+    loc = target_world.location(int(parts.get(1)) + 0.5, int(parts.get(2)) + 1.5, int(parts.get(3)) + 0.5)
+    if !Player.consume_item(TELEPORT_ITEM, 1):
+        Player.send_message("<red>✘ <white>You need a Nether Star to use a teleporter this way.")
+        return
+    end
+    Player.teleport_to(loc)
+    Player.send_message("<green>✔ <white>Teleported using a Nether Star.")
+end

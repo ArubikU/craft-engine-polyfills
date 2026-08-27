@@ -1,0 +1,74 @@
+{
+  "id": "polyfills:energy_furnace",
+  "recipe_type": "energy_furnace",
+  "title": "Energy Furnace",
+  "menu_size": 54,
+  "flags": {
+    "fuel": false,
+    "recipes": true,
+    "continuous_fuel": false,
+    "ui": true,
+    "ui_tick": true,
+    "io_pull": true,
+    "renderers": true,
+    "scripts": true,
+    "animations": true,
+    "kinetics": false
+  },
+  "slots": {
+    "input": [
+      11
+    ],
+    "output": [
+      15
+    ]
+  },
+  "energy": {
+    "capacity": 8000,
+    "max_input": 500,
+    "max_output": 0
+  },
+  "pages": [
+    {
+      "title": "{Images.from('cml:copper_furnace_gui')}",
+      "size": 54,
+      "slots": {
+        "input": [
+          11
+        ],
+        "output": [
+          15
+        ]
+      },
+      "layout": [
+        {
+          "slot": 4,
+          "item": "recipe_info.pf:item",
+          "name": "recipe_info.pf:name",
+          "lore": [
+            "recipe_info.pf:lore"
+          ]
+        }
+      ],
+      "bars": [
+        {
+          "id": "polyfills:progress",
+          "slots": [
+            13
+          ],
+          "source": "progress"
+        },
+        {
+          "id": "polyfills:energy",
+          "slots": [
+            35,
+            26,
+            17,
+            8
+          ],
+          "source": "energy"
+        }
+      ]
+    }
+  ]
+}

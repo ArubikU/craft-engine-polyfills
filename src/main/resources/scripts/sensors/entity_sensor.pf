@@ -1,0 +1,47 @@
+# Entity Sensor — detects living entities in range, outputs redstone 0-15.
+# mode: 0=normal (on/off), 1=density (count-based), 2=proximity (closer = stronger)
+# Set via Machine.set_typed("scan_range", "int", N) and Machine.set_typed("mode", "int", 0-2).
+
+scan_range = Machine.get_typed("scan_range", "int")
+if scan_range <= 0:
+    scan_range = 5
+end
+
+mode = Machine.get_typed("mode", "int")  # 0=normal, 1=density, 2=proximity
+
+entities = Machine.nearby_entities(scan_range)
+count = 0
+min_dist_sq = 9999
+
+machine = Machine.pos
+for entity in entities:
+    if entity.is_living && entity.is_alive:
+        count = count + 1
+        dsq = entity.pos.distance_sq(machine)
+        if dsq < min_dist_sq:
+            min_dist_sq = dsq
+        end
+    end
+end
+
+power = 0
+if mode == 0:
+    power = count > 0 ? 15 : 0
+else if mode == 1:
+    threshold = Machine.get_typed("threshold", "int")
+    if threshold <= 0:
+        threshold = 5
+    end
+    power = clamp(floor(count / threshold * 15), 0, 15)
+else:
+    # proximity: closer = stronger
+    if count > 0:
+        min_dist = sqrt(min_dist_sq)
+        power = clamp(floor((1 - min_dist / scan_range) * 15), 0, 15)
+    end
+end
+
+Machine.emit_redstone(power)
+
+
+

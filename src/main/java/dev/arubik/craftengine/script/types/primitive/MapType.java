@@ -41,6 +41,23 @@ public final class MapType {
                 ScriptValue result = map(obj).get(key);
                 if (result != null) return result;
                 return args.size() >= 2 ? args.get(1) : ScriptValue.NULL;
+            })
+            // map.with(key, value) -> a NEW map with that key set/overwritten — same "returns a
+            // copy" idiom as Item's with_component/with_name, since there's no in-place mutator on
+            // this type. Lets a script build a dynamic-sized Map incrementally (m = m.with(k, v) in
+            // a loop) instead of needing every key/value known upfront at a single make_map(...) call.
+            .method("with", (obj, args) -> {
+                if (args.size() < 2) return ScriptValue.ofObj("Map", map(obj));
+                LinkedHashMap<String, ScriptValue> copy = new LinkedHashMap<>(map(obj));
+                copy.put(args.get(0).asStr(), args.get(1));
+                return ScriptValue.ofObj("Map", copy);
+            })
+            // map.without(key) -> a NEW map with that key removed (no-op if absent).
+            .method("without", (obj, args) -> {
+                if (args.isEmpty()) return ScriptValue.ofObj("Map", map(obj));
+                LinkedHashMap<String, ScriptValue> copy = new LinkedHashMap<>(map(obj));
+                copy.remove(args.get(0).asStr());
+                return ScriptValue.ofObj("Map", copy);
             });
     }
 

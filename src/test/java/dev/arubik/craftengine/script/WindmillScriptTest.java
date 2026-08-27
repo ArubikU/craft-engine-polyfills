@@ -73,10 +73,16 @@ class WindmillScriptTest {
             .property("facing_dx", o -> ScriptValue.of(facingDx))
             .property("facing_dy", o -> ScriptValue.of(facingDy))
             .property("facing_dz", o -> ScriptValue.of(facingDz))
-            .method("get_flag", (o, a) -> ScriptValue.of(flags.getOrDefault(a.get(0).asStr(), 0)))
-            .method("set_flag", (o, a) -> { flags.put(a.get(0).asStr(), (int) a.get(1).asNum()); return ScriptValue.of(true); })
-            .method("get_str_flag", (o, a) -> ScriptValue.of(""))
-            .method("set_str_flag", (o, a) -> ScriptValue.of(true))
+            // windmill.pf now calls Machine.get_typed/set_typed(key, type, ...) instead of the old
+            // get_flag/set_flag (+get_str_flag/set_str_flag) pairs. "int" routes to the same backing
+            // map get_flag/set_flag use; "string" mirrors the existing no-op str-flag stub above
+            // (this test never asserts on the string values, only the numeric ones).
+            .method("get_typed", (o, a) -> "string".equals(a.get(1).asStr())
+                    ? ScriptValue.of("") : ScriptValue.of(flags.getOrDefault(a.get(0).asStr(), 0)))
+            .method("set_typed", (o, a) -> {
+                if (!"string".equals(a.get(1).asStr())) flags.put(a.get(0).asStr(), (int) a.get(2).asNum());
+                return ScriptValue.of(true);
+            })
             .method("set_state", (o, a) -> ScriptValue.of(true))
             .method("set_rpm_output", (o, a) -> { rpmOut = a.get(0).asNum(); return ScriptValue.of(true); })
             .method("report_su", (o, a) -> { suOut = a.get(0).asNum(); return ScriptValue.of(true); });

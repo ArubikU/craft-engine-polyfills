@@ -1,0 +1,181 @@
+{
+  "id": "polyfills:depot",
+  "title": "Depot",
+  "menu_size": 9,
+  "flags": {
+    "recipes": false,
+    "fuel": false,
+    "ui": false,
+    "ui_tick": false,
+    "continuous_fuel": false,
+    "io_pull": true,
+    "renderers": true,
+    "scripts": true,
+    "animations": true,
+    "kinetics": false
+  },
+  "on_right_click": "storage/depot",
+  "action_script": "storage/depot_tick",
+  "action_interval": 2,
+  "slots": {
+    "input": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8
+    ],
+    "output": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8
+    ]
+  },
+  "io": {
+    "input": {
+      "types": [
+        "item"
+      ],
+      "faces": [
+        "all"
+      ]
+    },
+    "output": {
+      "types": [
+        "item"
+      ],
+      "faces": [
+        "all"
+      ]
+    }
+  },
+  "renderers": [
+    {
+      "type": "item_display",
+      "item": "Machine.container.get_item(0)",
+      "offset": [
+        -0.24,
+        0.94,
+        -0.24
+      ],
+      "rot_x": "-90",
+      "scale": "0.33",
+      "when": "is_not_empty(Machine.container.get_item(0))",
+      "update_when": "always"
+    },
+    {
+      "type": "item_display",
+      "item": "Machine.container.get_item(1)",
+      "offset": [
+        0,
+        0.94,
+        -0.24
+      ],
+      "rot_x": "-90",
+      "scale": "0.34",
+      "when": "is_not_empty(Machine.container.get_item(1))",
+      "update_when": "always"
+    },
+    {
+      "type": "item_display",
+      "item": "Machine.container.get_item(2)",
+      "offset": [
+        0.24,
+        0.94,
+        -0.24
+      ],
+      "rot_x": "-90",
+      "scale": "0.35",
+      "when": "is_not_empty(Machine.container.get_item(2))",
+      "update_when": "always"
+    },
+    {
+      "type": "item_display",
+      "item": "Machine.container.get_item(3)",
+      "offset": [
+        -0.24,
+        0.94,
+        0
+      ],
+      "rot_x": "-90",
+      "scale": "0.34",
+      "when": "is_not_empty(Machine.container.get_item(3))",
+      "update_when": "always"
+    },
+    {
+      "type": "item_display",
+      "item": "Machine.container.get_item(4)",
+      "offset": [
+        0,
+        0.94,
+        0
+      ],
+      "rot_x": "-90",
+      "scale": "0.35",
+      "when": "is_not_empty(Machine.container.get_item(4))",
+      "update_when": "always"
+    },
+    {
+      "type": "item_display",
+      "item": "Machine.container.get_item(5)",
+      "offset": [
+        0.24,
+        0.94,
+        0
+      ],
+      "rot_x": "-90",
+      "scale": "0.33",
+      "when": "is_not_empty(Machine.container.get_item(5))",
+      "update_when": "always"
+    },
+    {
+      "type": "item_display",
+      "item": "Machine.container.get_item(6)",
+      "offset": [
+        -0.24,
+        0.94,
+        0.24
+      ],
+      "rot_x": "-90",
+      "scale": "0.35",
+      "when": "is_not_empty(Machine.container.get_item(6))",
+      "update_when": "always"
+    },
+    {
+      "type": "item_display",
+      "item": "Machine.container.get_item(7)",
+      "offset": [
+        0,
+        0.94,
+        0.24
+      ],
+      "rot_x": "-90",
+      "scale": "0.33",
+      "when": "is_not_empty(Machine.container.get_item(7))",
+      "update_when": "always"
+    },
+    {
+      "type": "item_display",
+      "item": "Machine.container.get_item(8)",
+      "offset": [
+        0.24,
+        0.94,
+        0.24
+      ],
+      "rot_x": "-90",
+      "scale": "0.34",
+      "when": "is_not_empty(Machine.container.get_item(8))",
+      "update_when": "always"
+    }
+  ]
+}

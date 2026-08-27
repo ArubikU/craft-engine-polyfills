@@ -14,6 +14,10 @@ import net.minecraft.world.phys.AABB;
 
 public final class WorldType {
 
+    // World.get_typed's own namespace within ServerFlags.TYPED, keyed by dimension id — see
+    // worldTypedKey. Kept distinct from a bare Server.get_typed key of the same name.
+    private static final String TYPED_PREFIX = "typed_";
+
     private WorldType() {}
 
     public static void register() {
@@ -33,10 +37,23 @@ public final class WorldType {
                 if (args.size() < 3) return ScriptValue.NULL;
                 return LocationType.wrap(level(obj), args.get(0).asNum(), args.get(1).asNum(), args.get(2).asNum());
             })
+            // get_block(x, y, z, force_load?) — force_load (default false) synchronously loads
+            // the chunk first if it isn't already, for a caller that needs a reliable read of a
+            // possibly-distant position (e.g. reading a sign on a destination teleporter that may
+            // be far from any online player) instead of silently seeing air — plain NMS
+            // getBlockState/getBlockEntity on an unloaded chunk returns air without loading
+            // anything, the same "reads air on an unready chunk" gotcha ContraptionType's
+            // ensureChunkReady already works around for contraption virtual chunks. Left opt-in
+            // (default false) since forcing a load has a real one-time I/O/generation cost that a
+            // frequent, non-critical get_block call shouldn't pay unconditionally.
             .method("get_block", (obj, args) -> {
                 if (args.size() < 3) return ScriptValue.NULL;
                 int x = (int) args.get(0).asNum(), y = (int) args.get(1).asNum(), z = (int) args.get(2).asNum();
-                return BlockType.wrap(level(obj), new net.minecraft.core.BlockPos(x, y, z));
+                net.minecraft.core.BlockPos pos = new net.minecraft.core.BlockPos(x, y, z);
+                if (args.size() >= 4 && args.get(3).asBool()) {
+                    try { level(obj).getChunkAt(pos); } catch (Throwable ignored) {}
+                }
+                return BlockType.wrap(level(obj), pos);
             })
             .method("get_light", (obj, args) -> {
                 if (args.size() < 3) return ScriptValue.of(0);
@@ -121,29 +138,81 @@ public final class WorldType {
                     return ScriptValue.of(true);
                 } catch (Throwable ignored) { return ScriptValue.of(false); }
             })
-            // --- Persistent per-WORLD flags (int/string) — same "0"/"" absent-default convention
-            // as Machine/Entity's get_flag family. Backed by the SAME generic global store as
-            // Server.*_flag (see ServerFlags) with the dimension id folded into the key, rather
+            // --- Generic TypedKey storage — backed by the SAME generic global store as
+            // Server.get_typed (see ServerFlags) with the dimension id folded into the key, rather
             // than Bukkit's per-World PersistentDataContainer — this addon's persistence stays on
             // one NMS/CraftEngine-native path throughout instead of splitting across a second,
             // Bukkit-specific mechanism just for this one scope.
-            .method("get_flag", (obj, args) ->
-                ScriptValue.of(args.isEmpty() ? 0 : dev.arubik.craftengine.util.ServerFlags.getInt(worldFlagKey(obj, args.get(0).asStr()))))
-            .method("set_flag", (obj, args) -> {
-                if (args.size() < 2) return ScriptValue.of(false);
-                dev.arubik.craftengine.util.ServerFlags.setInt(worldFlagKey(obj, args.get(0).asStr()), (int) args.get(1).asNum());
-                return ScriptValue.of(true);
+            .method("get_typed", (obj, args) -> {
+                if (args.size() < 2) return ScriptValue.NULL;
+                dev.arubik.craftengine.script.TypedKeyBridge.Codec codec =
+                        dev.arubik.craftengine.script.TypedKeyBridge.resolve(args.get(1).asStr());
+                if (codec == null) return ScriptValue.NULL;
+                return codec.fromStorage(dev.arubik.craftengine.util.ServerFlags.getTyped(worldTypedKey(obj, TYPED_PREFIX + args.get(0).asStr())));
             })
-            .method("get_str_flag", (obj, args) ->
-                ScriptValue.of(args.isEmpty() ? "" : dev.arubik.craftengine.util.ServerFlags.getStr(worldFlagKey(obj, args.get(0).asStr()))))
-            .method("set_str_flag", (obj, args) -> {
-                if (args.size() < 2) return ScriptValue.of(false);
-                dev.arubik.craftengine.util.ServerFlags.setStr(worldFlagKey(obj, args.get(0).asStr()), args.get(1).asStr());
-                return ScriptValue.of(true);
+            .method("set_typed", (obj, args) -> {
+                if (args.size() < 3) return ScriptValue.of(false);
+                dev.arubik.craftengine.script.TypedKeyBridge.Codec codec =
+                        dev.arubik.craftengine.script.TypedKeyBridge.resolve(args.get(1).asStr());
+                if (codec == null) return ScriptValue.of(false);
+                try {
+                    dev.arubik.craftengine.util.ServerFlags.setTyped(worldTypedKey(obj, TYPED_PREFIX + args.get(0).asStr()), codec.toStorage(args.get(2)));
+                    return ScriptValue.of(true);
+                } catch (Throwable ignored) { return ScriptValue.of(false); }
+            })
+            .method("has_typed", (obj, args) -> {
+                if (args.isEmpty()) return ScriptValue.of(false);
+                return ScriptValue.of(dev.arubik.craftengine.util.ServerFlags.hasTyped(worldTypedKey(obj, TYPED_PREFIX + args.get(0).asStr())));
+            })
+            // broadcast_title(title, subtitle?, fade_in?, stay?, fade_out?) — sends the SAME title
+            // to every player currently in THIS world (not server-wide — see Server for that scope
+            // if it's ever needed). Same text/timing conventions as Player.send_title.
+            .method("broadcast_title", (obj, args) -> {
+                if (args.isEmpty()) return ScriptValue.of(false);
+                try {
+                    net.kyori.adventure.text.Component title = parseComponent(args.get(0).asStr());
+                    net.kyori.adventure.text.Component subtitle = args.size() > 1
+                        ? parseComponent(args.get(1).asStr()) : net.kyori.adventure.text.Component.empty();
+                    int fadeIn  = args.size() > 2 ? (int) args.get(2).asNum() : 10;
+                    int stay    = args.size() > 3 ? (int) args.get(3).asNum() : 70;
+                    int fadeOut = args.size() > 4 ? (int) args.get(4).asNum() : 20;
+                    net.kyori.adventure.title.Title t = net.kyori.adventure.title.Title.title(title, subtitle,
+                        net.kyori.adventure.title.Title.Times.times(
+                            java.time.Duration.ofMillis(fadeIn * 50L),
+                            java.time.Duration.ofMillis(stay * 50L),
+                            java.time.Duration.ofMillis(fadeOut * 50L)));
+                    for (net.minecraft.server.level.ServerPlayer sp : level(obj).players()) {
+                        sp.getBukkitEntity().showTitle(t);
+                    }
+                    return ScriptValue.of(true);
+                } catch (Throwable t) { return ScriptValue.of(false); }
+            })
+            // broadcast_actionbar(text) — same scope as broadcast_title (this world only).
+            .method("broadcast_actionbar", (obj, args) -> {
+                if (args.isEmpty()) return ScriptValue.of(false);
+                try {
+                    net.kyori.adventure.text.Component text = parseComponent(args.get(0).asStr());
+                    for (net.minecraft.server.level.ServerPlayer sp : level(obj).players()) {
+                        sp.getBukkitEntity().sendActionBar(text);
+                    }
+                    return ScriptValue.of(true);
+                } catch (Throwable t) { return ScriptValue.of(false); }
             });
     }
 
-    private static String worldFlagKey(Object obj, String name) {
+    /** Same MiniMessage-if-tagged / legacy-ampersand-otherwise heuristic {@code PlayerType} uses
+     *  for its own text methods, duplicated here (small enough not to be worth sharing a helper
+     *  across the two classes) so world-wide broadcasts accept either formatting convention too. */
+    private static net.kyori.adventure.text.Component parseComponent(String text) {
+        if (text != null && text.contains("<") && text.contains(">")) {
+            try { return net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(text); }
+            catch (Throwable ignored) {}
+        }
+        return net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacyAmpersand()
+            .deserialize(text == null ? "" : text);
+    }
+
+    private static String worldTypedKey(Object obj, String name) {
         return level(obj).dimension().identifier() + "|" + name;
     }
 

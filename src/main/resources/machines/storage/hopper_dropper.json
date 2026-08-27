@@ -1,0 +1,57 @@
+{
+  "id": "polyfills:hopper_dropper",
+  "title": "Hopper Dropper",
+  "flags": {
+    "fuel": false,
+    "recipes": true,
+    "continuous_fuel": false,
+    "ui": true,
+    "ui_tick": true,
+    "io_pull": true,
+    "renderers": true,
+    "scripts": true,
+    "animations": true,
+    "kinetics": false
+  },
+  "pages": [
+    {
+      "title": "Hopper Dropper",
+      "size": 9,
+      "slots": {
+        "output": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8
+        ]
+      }
+    }
+  ],
+  "io": {
+    "input": {
+      "types": [
+        "item"
+      ],
+      "faces": [
+        "up",
+        "north",
+        "south",
+        "east",
+        "west"
+      ]
+    },
+    "output": {
+      "types": [
+        "item"
+      ],
+      "faces": [
+        "down"
+      ]
+    }
+  }
+}

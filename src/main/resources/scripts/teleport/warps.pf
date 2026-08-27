@@ -1,0 +1,1740 @@
+# /warps — a faithful 1:1 port of the purchased "PlayerWarps" plugin's (Olzie-12, Blossom Studios
+# GUI pack) menu set, built on the same /cmds "pages" declarative GUI feature every other command
+# in this session uses (see cmds/warps.json + CmdPageDef's javadoc), plus this codebase's usual
+# generic primitives: SQL for the relational warp registry (see schema note below), Player.get_typed
+# for per-player UI/session state (pagination offsets, filters, current warp in context), Dialog for
+# every chat-prompt the source plugin drives via "[chat_wait]", and Cmd.open_page(...) for in-menu
+# navigation.
+#
+# ---- The source's "invisible item" multi-slot button technique (see cml:invisible_item's own
+# comment in configuration/item/polyfills/player_warps/player_warps_items.yml for the full
+# writeup) — EVERY multi-slot button in the real PlayerWarps guis/*.yml (e.g. bannedplayers.yml's
+# `next-page: slot: [51,52]`, category.yml's `shops: slot: [14,15,16,23,24,25]`) is really the
+# SAME clickable item placed in every listed slot, all sharing one action. There is no separate
+# "real icon slot" vs "filler slots" — the button's actual GRAPHIC is baked into that page's
+# cml:player_warps_* background image underneath; the invisible items just make that whole drawn
+# area clickable. Reproduced here the same way: cmds/warps.json's "layout" repeats the SAME
+# cml:invisible_item + action across every slot of a cluster.
+#
+# ---- Storage shape — a REAL relational schema (see __init__ below), not typed-flag blobs. The
+# warp itself is keyed by a UUID (`warps.id`), NOT its display name — a rename is then just
+# `UPDATE warps SET name = ? WHERE id = ?`, and every OTHER table below references that stable id
+# via a foreign key, so a rename never has to touch bans/favourites/visitors/ratings at all (the
+# old compound-blob version had to manually copy+clear FOUR separate keys on every rename because
+# it kept keying everything by the mutable name):
+#   warps            (id PK, name UNIQUE, owner_uuid, owner_name, world, x, y, z, desc, category,
+#                      locked, icon, visits, created_at)
+#   warp_bans        (warp_id FK -> warps.id ON DELETE CASCADE, uuid, name)      PK (warp_id, uuid)
+#   warp_favourites  (warp_id FK -> warps.id ON DELETE CASCADE, player_uuid)     PK (warp_id, player_uuid)
+#   warp_visitors    (warp_id FK -> warps.id ON DELETE CASCADE, uuid, name, count) PK (warp_id, uuid)
+#   warp_ratings     (warp_id FK -> warps.id ON DELETE CASCADE, uuid, name, stars) PK (warp_id, uuid)
+# ON DELETE CASCADE means delete_warp is now a ONE-ROW delete — every ban/favourite/visitor/rating
+# row for it disappears automatically (SQLDriver enables `PRAGMA foreign_keys = ON` for exactly
+# this). Ownership is likewise just a column on the warps row (owner_uuid) — there's no more
+# separate Player-side "warps_owned" list to keep in sync on create/delete/rename/transfer; owned
+# warps are simply `SELECT ... FROM warps WHERE owner_uuid = ?`.
+#
+# Everything genuinely per-PLAYER-SESSION (not relational data) stays exactly where it was:
+#   Player.get_typed("warps_browse_offset"/"warps_manage_offset"/"warps_favourite_offset"/
+#                    "warps_banned_offset"/"warps_visited_offset"/"warps_rate_offset", "int") -> page index
+#   Player.get_typed("warps_category_filter", "string")    -> browse page's category filter, default "all"
+#   Player.get_typed("warps_sort", "string")               -> "oldest"|"name"|"visits" (see SIMPLIFICATIONS)
+#   Player.get_typed("warps_search"/"warps_banned_search"/"warps_visited_search", "string") -> filters
+#   Player.get_typed("warps_current_warp", "string")       -> the warp NAME in context for managewarp/
+#                                                       banned/visited/visitedit/rate pages — the .pf
+#                                                       equivalent of the source's "%warp%" macro, set
+#                                                       right before Cmd.open_page(...) into one of them.
+#   Player.get_typed("warps_extra_slots", "int")           -> extra slots bought via /warps buyslot
+#
+# ---- Deliberate simplifications vs. the real PlayerWarps (documented, not silently dropped):
+#  - No Vault/economy hook exists in this codebase, so config.yml's real money PRICES aren't
+#    reproduced literally — Player.total_exp/give_exp/take_exp (a currency primitive added this
+#    session specifically for this) stands in for money instead: creating a warp costs
+#    WARP_CREATE_COST xp, teleporting costs WARP_TELEPORT_COST xp (free for a warp's own owner),
+#    and a sponsor slot beyond WARP_FREE_LIMIT can be bought outright for WARP_EXTRA_SLOT_COST xp
+#    via `/warps buyslot` — stacking on TOP of (not replacing) the permission-based unlimited tier
+#    (WARP_SPONSOR_PERMISSION) the original rough draft already had.
+#  - The source's invisible-item "Quit" button now actually closes the menu (Player.close_inventory()).
+#  - No sign-editing/ProtocolLib search exists in this engine; every "Search" button here opens a
+#    Dialog text prompt instead (equal or better UX, same end result: filters the list by name/
+#    owner substring).
+#  - Sort is reduced from the source's 9 modes (Highest/Lowest Visits, Alphabetical, Oldest/Newest
+#    Date, Rates, Rates Average, Favourite Count, Random) to 3 representative ones (oldest/name/
+#    visits) — cycled the same way via a "Sort" button.
+#  - rate.yml's own `blacklisted-slots: [""]` (effectively "use nearly the whole 54-slot grid") is
+#    ported using the SAME reused 14-slot list block as banned/visited/mywarps/favourite instead of
+#    a bespoke near-full-grid layout — visually smaller than the source but functionally identical
+#    (paginated list of rating entries).
+#  - The source's Leaderboard and Sponsor-purchase-flow (category.yml's sponsor-items /
+#    leaderboard blocks) are NOT ported — both are disabled by default in config.yml
+#    (`leaderboard.enabled: false`) or require the missing economy hook (sponsor purchases).
+#  - Category filtering only recognizes the 7 preset categories from category.yml's
+#    `category-items` (all/houses/shops/farms/pvp/other/event); a warp CAN still be assigned an
+#    arbitrary free-text category via the managewarp Category button (matches the source, which
+#    also allows arbitrary category text), it just won't match one of the 7 quick-filter buttons.
+
+CATEGORIES = ["all", "houses", "shops", "farms", "pvp", "other", "event"]
+SORT_MODES = ["oldest", "name", "visits"]
+
+WARP_SLOTS_BROWSE = range(9, 45)                                                 # 36 slots/page
+WARP_PAGE_SIZE_BROWSE = 36
+WARP_SLOTS_LIST = [28,29,30,31,32,33,34, 37,38,39,40,41,42,43]                   # 14 slots/page
+WARP_PAGE_SIZE_LIST = 14
+
+WARP_FREE_LIMIT = 2
+WARP_SPONSOR_PERMISSION = "polyfills.warps.extra"
+
+# ---- Command surface + permissions (source: config.yml's "sub-commands" list + the plugin's own
+# permission node reference) — ownership (is_owner) is already the real gate on every one of these
+# for a normal player (matches this addon's existing GUI actions, none of which needed a separate
+# permission node beyond owning the warp), so none of the per-command "pw.xxx" nodes below are
+# actually CHECKED for a command's normal owner-operates-on-their-own-warp path — only
+# PERM_ADMIN_BYPASS is (letting staff manage warps they don't own), plus the three true admin-only
+# commands (removeall/reload/addwarps). Gating the ordinary ones behind their own permission node
+# too, with no default grant declared anywhere, would just lock EVERY player out of their own warps
+# on a server with no permissions plugin installed — the source ships these granted-by-default via
+# its own permission defaults, which this addon has no equivalent registration for.
+PERM_ADMIN_BYPASS = "polyfills.warps.admin.bypass"
+PERM_ADMIN_REMOVEALL = "polyfills.warps.admin.removeall"
+PERM_ADMIN_RELOAD = "polyfills.warps.admin.reload"
+PERM_ADMIN_ADDWARPS = "polyfills.warps.admin.addwarps"
+
+# True for the warp's real owner OR a PERM_ADMIN_BYPASS staff member — use this instead of
+# is_owner(...) directly in any command that should let staff manage a warp they don't own.
+def can_manage(name):
+    return is_owner(name) || Player.has_permission(PERM_ADMIN_BYPASS)
+end
+
+# ---- XP economy (see the simplifications note above for why XP stands in for real money) -------
+WARP_CREATE_COST = 30
+WARP_TELEPORT_COST = 5
+WARP_EXTRA_SLOT_COST = 500
+
+# ---- Sponsor slots (category.yml's "sponsor-items" 1-5) — main-menu-featured warp slots, real
+# money ($100k/$50k/$35k/$25k/$10k) in the source, mapped to this project's XP economy instead
+# (see WARP_CREATE_COST/WARP_EXTRA_SLOT_COST above for the same substitution). Index 0 = slot #1
+# (priciest/longest) through index 4 = slot #5 (cheapest/shortest) — matches the source's own
+# slot-to-tier ordering exactly (its slot 47 = "Sponsor slot #1" at $100k/2 days, ... slot 51 =
+# "Sponsor slot #5" at $10k/1 hour).
+SPONSOR_SLOTS = [47, 48, 49, 50, 51]
+SPONSOR_PRICES = [1500, 900, 600, 400, 200]
+SPONSOR_DURATIONS = [172800, 86400, 43200, 21600, 3600]
+
+# Runs once when this script first loads AND on every /cep reload scripts (see ScriptRegistry's
+# own javadoc for the __init__/__unload__ lifecycle) — the natural place for idempotent schema
+# setup. CREATE TABLE IF NOT EXISTS is safe to re-run on every reload; it never touches existing
+# rows. See the storage-shape note at the top of this file for the full schema.
+def __init__():
+    SQL.execute("CREATE TABLE IF NOT EXISTS warps (" +
+        "id TEXT PRIMARY KEY, " +
+        "name TEXT NOT NULL UNIQUE, " +
+        "owner_uuid TEXT NOT NULL, " +
+        "owner_name TEXT NOT NULL, " +
+        "world TEXT NOT NULL, " +
+        "x REAL NOT NULL, y REAL NOT NULL, z REAL NOT NULL, " +
+        "desc TEXT NOT NULL DEFAULT '', " +
+        "category TEXT NOT NULL DEFAULT 'other', " +
+        "locked INTEGER NOT NULL DEFAULT 0, " +
+        "icon TEXT NOT NULL DEFAULT '', " +
+        "visits INTEGER NOT NULL DEFAULT 0, " +
+        "created_at INTEGER NOT NULL DEFAULT 0)")
+    SQL.execute("CREATE TABLE IF NOT EXISTS warp_bans (" +
+        "warp_id TEXT NOT NULL REFERENCES warps(id) ON DELETE CASCADE, " +
+        "uuid TEXT NOT NULL, name TEXT NOT NULL, PRIMARY KEY (warp_id, uuid))")
+    SQL.execute("CREATE TABLE IF NOT EXISTS warp_favourites (" +
+        "warp_id TEXT NOT NULL REFERENCES warps(id) ON DELETE CASCADE, " +
+        "player_uuid TEXT NOT NULL, PRIMARY KEY (warp_id, player_uuid))")
+    SQL.execute("CREATE TABLE IF NOT EXISTS warp_visitors (" +
+        "warp_id TEXT NOT NULL REFERENCES warps(id) ON DELETE CASCADE, " +
+        "uuid TEXT NOT NULL, name TEXT NOT NULL, count INTEGER NOT NULL DEFAULT 0, " +
+        "PRIMARY KEY (warp_id, uuid))")
+    SQL.execute("CREATE TABLE IF NOT EXISTS warp_ratings (" +
+        "warp_id TEXT NOT NULL REFERENCES warps(id) ON DELETE CASCADE, " +
+        "uuid TEXT NOT NULL, name TEXT NOT NULL, stars INTEGER NOT NULL, " +
+        "PRIMARY KEY (warp_id, uuid))")
+    # warp_id references ON DELETE CASCADE too — deleting the sponsored warp itself frees the slot
+    # automatically, same as every other per-warp table above.
+    SQL.execute("CREATE TABLE IF NOT EXISTS warp_sponsors (" +
+        "slot_num INTEGER PRIMARY KEY, " +
+        "warp_id TEXT NOT NULL REFERENCES warps(id) ON DELETE CASCADE, " +
+        "buyer_uuid TEXT NOT NULL, expires_at INTEGER NOT NULL)")
+end
+
+def quit():
+    Player.close_inventory()
+end
+
+# ---- Generic helpers ---------------------------------------------------------------------------
+
+def sanitize(s):
+    return trim(s)
+end
+
+def arr_contains(arr, val):
+    for x in arr:
+        if x == val:
+            return true
+        end
+    end
+    return false
+end
+
+# Real player-skin head for a "this row is about player X" list entry (banned/visited/rate rows
+# below) — prefers the LIVE online player (freshest skin), falling back to just the name string
+# when offline, since Item.create(...).with_profile(name) still resolves whatever skin Bukkit has
+# cached for that name even offline. Returned as a full Item value for "icon" in make_map(...),
+# which the buttons generator pipeline now displays AS-IS (see GeneratedPageContent#customIcon)
+# instead of the generic cml:2d_head placeholder these rows used to fall back to.
+def player_head_icon(name):
+    target = Server.get_player(name)
+    if is_empty(target):
+        return Item.create("default:gui_head_size_1", 1).with_profile(name)
+    end
+    return Item.create("default:gui_head_size_1", 1).with_profile(target)
+end
+
+# ---- Warp registry (see the schema note at the top of this file) -------------------------------
+
+# The warp's stable identity — every other table joins on THIS, never the display name (see
+# on_rename_submit: renaming only ever touches warps.name).
+def warp_id(name):
+    rows = SQL.query("SELECT id FROM warps WHERE name = ?", name)
+    if len(rows) <= 0:
+        return ""
+    end
+    return rows.get(0).get("id")
+end
+
+# The whole per-warp row — absent (never-created or deleted) warps read back as an empty Map, so
+# `is_null(warp_row(name).get("id"))` is this file's uniform "does this warp actually exist" check.
+def warp_row(name):
+    rows = SQL.query("SELECT * FROM warps WHERE name = ?", name)
+    if len(rows) <= 0:
+        return make_map()
+    end
+    return rows.get(0)
+end
+
+def all_warp_names():
+    out = []
+    for row in SQL.query("SELECT name FROM warps ORDER BY created_at ASC"):
+        out = push(out, row.get("name"))
+    end
+    return out
+end
+
+def warp_exists(name):
+    return len(SQL.query("SELECT 1 FROM warps WHERE name = ?", name)) > 0
+end
+
+# No more Player-side "warps_owned" list to keep in sync — ownership lives entirely on the warps
+# row itself.
+def owned_warp_names():
+    out = []
+    for row in SQL.query("SELECT name FROM warps WHERE owner_uuid = ? ORDER BY created_at ASC", Player.uuid):
+        out = push(out, row.get("name"))
+    end
+    return out
+end
+
+def is_owner(name):
+    return warp_row(name).get("owner_uuid") == Player.uuid
+end
+
+def create_warp(name):
+    if name == "" || warp_exists(name):
+        return false
+    end
+    loc = Player.location
+    SQL.execute("INSERT INTO warps (id, name, owner_uuid, owner_name, world, x, y, z, created_at) " +
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        Uuid.random(), name, Player.uuid, Player.name, loc.world.name, loc.x, loc.y, loc.z, Server.time)
+    return true
+end
+
+# ON DELETE CASCADE (see __init__) takes care of every ban/favourite/visitor/rating row for this
+# warp — no more manual per-table clearing.
+def delete_warp(name):
+    if !is_owner(name):
+        return false
+    end
+    SQL.execute("DELETE FROM warps WHERE id = ?", warp_id(name))
+    return true
+end
+
+def is_banned(name):
+    return len(SQL.query("SELECT 1 FROM warp_bans WHERE warp_id = ? AND uuid = ?", warp_id(name), Player.uuid)) > 0
+end
+
+def is_favourite(name):
+    return len(SQL.query("SELECT 1 FROM warp_favourites WHERE warp_id = ? AND player_uuid = ?", warp_id(name), Player.uuid)) > 0
+end
+
+# ---- Batch membership lookups for list pages (see generate_browse_buttons and friends) — ONE
+# query each for "every warp_id THIS player has favourited/is banned from", instead of is_favourite/
+# is_banned running a separate query PER ROW. A page of 36 warps went from 1 (list) + 36*2
+# (favourite+ban per row) + 36*2 (icon+lore re-fetching the row again) = 145 queries down to 3
+# total (list + these two) by combining this with warp_icon_of/warp_lore_of below.
+def player_favourite_ids():
+    out = []
+    for row in SQL.query("SELECT warp_id FROM warp_favourites WHERE player_uuid = ?", Player.uuid):
+        out = push(out, row.get("warp_id"))
+    end
+    return out
+end
+
+def player_banned_ids():
+    out = []
+    for row in SQL.query("SELECT warp_id FROM warp_bans WHERE uuid = ?", Player.uuid):
+        out = push(out, row.get("warp_id"))
+    end
+    return out
+end
+
+def record_visit(name):
+    wid = warp_id(name)
+    existing = SQL.query("SELECT count FROM warp_visitors WHERE warp_id = ? AND uuid = ?", wid, Player.uuid)
+    if len(existing) > 0:
+        SQL.execute("UPDATE warp_visitors SET count = count + 1, name = ? WHERE warp_id = ? AND uuid = ?",
+            Player.name, wid, Player.uuid)
+    else:
+        SQL.execute("INSERT INTO warp_visitors (warp_id, uuid, name, count) VALUES (?, ?, ?, 1)",
+            wid, Player.uuid, Player.name)
+    end
+end
+
+def teleport_to_warp(name):
+    data = warp_row(name)
+    if is_null(data.get("id")):
+        Player.send_message("<red>✘ <white>That warp no longer exists.")
+        return
+    end
+    if len(SQL.query("SELECT 1 FROM warp_bans WHERE warp_id = ? AND uuid = ?", data.get("id"), Player.uuid)) > 0:
+        Player.send_message("<red>✘ <white>You are banned from that warp.")
+        return
+    end
+    tw = world(data.get("world"))
+    if is_empty(tw):
+        Player.send_message("<red>✘ <white>That warp's world is not currently loaded.")
+        return
+    end
+    # Charged AFTER every failure check above, so a player never loses XP for a teleport that
+    # was never going to happen anyway (banned, deleted, world unloaded).
+    is_own_warp = data.get("owner_uuid") == Player.uuid
+    if !is_own_warp && !Player.take_exp(WARP_TELEPORT_COST):
+        Player.send_message("<red>✘ <white>You need " + WARP_TELEPORT_COST + " XP points to use a warp.")
+        return
+    end
+    loc = tw.location(data.get("x"), data.get("y"), data.get("z"))
+    Player.teleport_to(loc)
+    SQL.execute("UPDATE warps SET visits = visits + 1 WHERE id = ?", data.get("id"))
+    record_visit(name)
+    Player.send_message("<green>✔ <white>Welcome to <yellow>" + name + "<white>!")
+end
+
+# Pure — takes an already-fetched warp ROW (a full "SELECT * FROM warps" Map), no SQL of its own.
+# The _of/_for variants below are what the list-page generators use so N warps costs the SAME 3
+# queries total regardless of N; warp_icon/warp_lore (name-based, one lookup each) stay around for
+# the rare single-warp call sites (sponsor slots) where that's negligible.
+def warp_icon_of(row):
+    icon = row.get("icon")
+    if is_null(icon) || icon == "":
+        return "minecraft:ender_pearl"
+    end
+    return icon
+end
+
+def warp_lore_of(row, is_fav, is_ban):
+    desc = row.get("desc")
+    lore = []
+    lore = push(lore, "<gray>Owner: <white>" + row.get("owner_name"))
+    lore = push(lore, "<gray>World: <white>" + row.get("world"))
+    lore = push(lore, "<gray>Visits: <white>" + row.get("visits"))
+    lore = push(lore, "<gray>Category: <white>" + row.get("category"))
+    if !is_null(desc) && desc != "":
+        lore = push(lore, "<gray>Description: <white>" + desc)
+    end
+    if is_fav:
+        lore = push(lore, "<gold>★ Favourited")
+    end
+    if is_ban:
+        lore = push(lore, "<red>You are banned from this warp")
+    end
+    lore = push(lore, "")
+    lore = push(lore, "<green>Left-click <gray>to teleport")
+    lore = push(lore, "<yellow>Right-click <gray>for more options")
+    return lore
+end
+
+def warp_icon(name):
+    return warp_icon_of(warp_row(name))
+end
+
+def warp_lore(name):
+    return warp_lore_of(warp_row(name), is_favourite(name), is_banned(name))
+end
+
+# ---- Sorting / filtering / search — real SQL WHERE/ORDER BY now instead of loading every warp
+# and filtering/sorting it in-script (the exact overhead the SQL motor exists to remove; see
+# apply_sort's old O(n^2) sort_by_visits_desc, gone entirely below). ---------------------------
+
+def sort_order_clause():
+    mode = Player.get_typed("warps_sort", "string")
+    if mode == "name":
+        return "name ASC"
+    end
+    if mode == "visits":
+        return "visits DESC"
+    end
+    return "created_at ASC"
+end
+
+def sort_label():
+    mode = Player.get_typed("warps_sort", "string")
+    if mode == "name":
+        return "Alphabetical"
+    end
+    if mode == "visits":
+        return "Most Visited"
+    end
+    return "Oldest"
+end
+
+# page_name is which page to reopen after cycling — "Sort" appears on warps/manage/favourite,
+# and reopening a hardcoded "warps" regardless of which one was actually clicked from was exactly
+# the bug where clicking Sort on "My Warps" jumped to the public browse page instead of staying
+# put. Each JSON button passes its own page via the static-arg ref convention, e.g.
+# "warps.pf:cycle_sort:manage".
+def cycle_sort(page_name):
+    mode = Player.get_typed("warps_sort", "string")
+    idx = 0
+    for i in range(0, len(SORT_MODES)):
+        if SORT_MODES.get(i) == mode:
+            idx = i
+        end
+    end
+    next_idx = (idx + 1) % len(SORT_MODES)
+    Player.set_typed("warps_sort", "string", SORT_MODES.get(next_idx))
+    Cmd.open_page(page_name)
+end
+
+# Same "which page reopens" bug as cycle_sort above — Search also appears on warps/manage/
+# favourite, so the page to redraw after submitting has to travel with the dialog, not be assumed.
+def open_search_dialog(page_name):
+    Dialog.base("Search Warps").input_text("value", "Warp or owner name", Player.get_typed("warps_search", "string")).as_notice(Cmd, "Search", "warps.pf:on_search_submit:" + page_name).show(Player)
+end
+
+def on_search_submit(page_name, value):
+    Player.set_typed("warps_search", "string", sanitize(value))
+    Player.set_typed("warps_browse_offset", "int", 0)
+    Player.set_typed("warps_manage_offset", "int", 0)
+    Player.set_typed("warps_favourite_offset", "int", 0)
+    Cmd.open_page(page_name)
+end
+
+def clear_search(page_name):
+    Player.set_typed("warps_search", "string", "")
+    Cmd.open_page(page_name)
+end
+
+# ---- Category picker (category.yml -> cml:player_warps_main) --------------------------------
+
+def open_category(cat):
+    Player.set_typed("warps_category_filter", "string", cat)
+    Player.set_typed("warps_browse_offset", "int", 0)
+    Cmd.open_page("warps")
+end
+
+def cycle_category():
+    filter = Player.get_typed("warps_category_filter", "string")
+    if filter == "":
+        filter = "all"
+    end
+    idx = 0
+    for i in range(0, len(CATEGORIES)):
+        if CATEGORIES.get(i) == filter:
+            idx = i
+        end
+    end
+    next_idx = (idx + 1) % len(CATEGORIES)
+    Player.set_typed("warps_category_filter", "string", CATEGORIES.get(next_idx))
+    Player.set_typed("warps_browse_offset", "int", 0)
+    Cmd.open_page("warps")
+end
+
+def category_label():
+    filter = Player.get_typed("warps_category_filter", "string")
+    if filter == "houses":
+        return "Houses"
+    end
+    if filter == "shops":
+        return "Shops"
+    end
+    if filter == "farms":
+        return "Farms"
+    end
+    if filter == "pvp":
+        return "PvP"
+    end
+    if filter == "other":
+        return "Other"
+    end
+    if filter == "event":
+        return "Event"
+    end
+    return "All"
+end
+
+# ---- Browse page (playerwarp.yml -> cml:player_warps_warps) ---------------------------------
+
+def browse_title():
+    offset = Player.get_typed("warps_browse_offset", "int")
+    # Source (playerwarp.yml): shift -129 before the page-counter text.
+    return "{Images.from('cml:player_warps_warps')}{Images.shift(-170)}<black> Page " + (offset + 1) + "/" + (max_browse_offset() + 1)
+end
+
+# Full rows now (not just names) — generate_browse_buttons builds icons/lore straight from these
+# instead of re-querying per warp (see warp_icon_of/warp_lore_of + player_favourite_ids/
+# player_banned_ids above for why that matters).
+def filtered_browse_rows():
+    filter = Player.get_typed("warps_category_filter", "string")
+    like = "%" + lower(Player.get_typed("warps_search", "string")) + "%"
+    order = sort_order_clause()
+    if filter == "" || filter == "all":
+        return SQL.query("SELECT * FROM warps WHERE locked = 0 AND (lower(name) LIKE ? OR lower(owner_name) LIKE ?) ORDER BY " + order,
+            like, like)
+    end
+    return SQL.query("SELECT * FROM warps WHERE locked = 0 AND category = ? AND (lower(name) LIKE ? OR lower(owner_name) LIKE ?) ORDER BY " + order,
+        filter, like, like)
+end
+
+def max_browse_offset():
+    n = len(filtered_browse_rows())
+    if n <= 0:
+        return 0
+    end
+    return int(floor((n - 1) / WARP_PAGE_SIZE_BROWSE))
+end
+
+def generate_browse_buttons():
+    out = []
+    offset = Player.get_typed("warps_browse_offset", "int")
+    rows = filtered_browse_rows()
+    fav_ids = player_favourite_ids()
+    ban_ids = player_banned_ids()
+    start = offset * WARP_PAGE_SIZE_BROWSE
+    for i in range(0, WARP_PAGE_SIZE_BROWSE):
+        global_idx = start + i
+        if global_idx >= len(rows):
+            break
+        end
+        row = rows.get(global_idx)
+        name = row.get("name")
+        out = push(out, make_map("slot", WARP_SLOTS_BROWSE.get(i), "icon", warp_icon_of(row),
+            "name", "<yellow>" + name,
+            "lore", warp_lore_of(row, arr_contains(fav_ids, row.get("id")), arr_contains(ban_ids, row.get("id"))),
+            "action", "warps.pf:on_browse_click:" + name))
+    end
+    return out
+end
+
+def on_browse_click(name):
+    if MenuClick.click_type == "right":
+        Player.set_typed("warps_current_warp", "string", name)
+        Player.set_typed("warps_return_page", "string", "warps")
+        Cmd.open_page("visitedit")
+    else:
+        teleport_to_warp(name)
+    end
+end
+
+def prev_browse_page():
+    offset = Player.get_typed("warps_browse_offset", "int")
+    if offset > 0:
+        Player.set_typed("warps_browse_offset", "int", offset - 1)
+    end
+    Cmd.open_page("warps")
+end
+
+def next_browse_page():
+    offset = Player.get_typed("warps_browse_offset", "int")
+    if offset < max_browse_offset():
+        Player.set_typed("warps_browse_offset", "int", offset + 1)
+    end
+    Cmd.open_page("warps")
+end
+
+def effective_limit_num():
+    if Player.has_permission(WARP_SPONSOR_PERMISSION):
+        return 999999
+    end
+    return WARP_FREE_LIMIT + Player.get_typed("warps_extra_slots", "int")
+end
+
+def effective_limit():
+    if Player.has_permission(WARP_SPONSOR_PERMISSION):
+        return "∞"
+    end
+    return effective_limit_num()
+end
+
+# /warps buyslot — spends WARP_EXTRA_SLOT_COST xp to permanently raise THIS player's warp limit
+# by one, stacking with (not replacing) the permission-based unlimited tier.
+def buy_extra_slot():
+    if !Player.take_exp(WARP_EXTRA_SLOT_COST):
+        Player.send_message("<red>✘ <white>You need " + WARP_EXTRA_SLOT_COST + " XP points to buy an extra warp slot.")
+        return
+    end
+    Player.set_typed("warps_extra_slots", "int", Player.get_typed("warps_extra_slots", "int") + 1)
+    Player.send_message("<green>✔ <white>Unlocked an extra warp slot! (" + (len(owned_warp_names())) + "/" + effective_limit() + " used)")
+end
+
+def mywarps_count_line():
+    return "<gray>Current: <white>" + len(owned_warp_names()) + "/" + effective_limit()
+end
+
+def category_lore_line():
+    return "<gray>Current: <white>" + category_label()
+end
+
+def sort_lore_line():
+    return "<gray>Current: <white>" + sort_label()
+end
+
+# ---- Warp creation — a COMMAND ("/warps create <name>"/"/warps set <name>"), not a GUI button.
+# Checked against the real source: mywarps.yml has NO create button at all — the closest thing is
+# an "available-placeholder" (disabled by default) whose own lore just says "You can set warps via
+# /pw set". The earlier GUI "Create Warp" button on the manage page was a fabrication with no
+# background art to back it (there's no button drawn there in cml:player_warps_submenu_1), which
+# is exactly why it looked broken/misplaced — removed; see cmds/warps.json's "manage" page.
+
+def on_create_command():
+    on_create_submit(Cmd.arg("name"))
+end
+
+# /warps set <name> — same as create for a name that doesn't exist yet, but for one of YOUR OWN
+# existing warps it re-points that warp to your current location instead of failing with "already
+# exists" (matches the source command's real "set" semantics — it's meant to be re-runnable to
+# reposition a warp, not just a one-shot create). No XP charge here since nothing new is being
+# created, just repositioned; "already exists" only ever fires now for a NAME someone ELSE owns.
+def on_set_command():
+    name = sanitize(Cmd.arg("name"))
+    if name == "":
+        Player.send_message("<red>✘ <white>Warp name cannot be empty.")
+        return
+    end
+    if warp_exists(name):
+        if !is_owner(name):
+            Player.send_message("<red>✘ <white>A warp named '" + name + "' already exists.")
+            return
+        end
+        loc = Player.location
+        SQL.execute("UPDATE warps SET world = ?, x = ?, y = ?, z = ? WHERE id = ?",
+            loc.world.name, loc.x, loc.y, loc.z, warp_id(name))
+        Player.send_message("<green>✔ <white>Moved '" + name + "' to your current location.")
+        return
+    end
+    on_create_submit(name)
+end
+
+def on_create_submit(name):
+    name = sanitize(name)
+    if name == "":
+        Player.send_message("<red>✘ <white>Warp name cannot be empty.")
+        return
+    end
+    if warp_exists(name):
+        Player.send_message("<red>✘ <white>A warp named '" + name + "' already exists.")
+        return
+    end
+    if len(owned_warp_names()) >= effective_limit_num():
+        if Player.has_exp(WARP_EXTRA_SLOT_COST):
+            Player.send_message("<red>✘ <white>You've reached your warp limit. <yellow>You have enough XP to unlock another — try <white>/warps buyslot<yellow>, then create '" + name + "' again.")
+        else:
+            Player.send_message("<red>✘ <white>You've reached your warp limit.")
+        end
+        return
+    end
+    if !Player.has_exp(WARP_CREATE_COST):
+        Player.send_message("<red>✘ <white>You need " + WARP_CREATE_COST + " XP points to create a warp.")
+        return
+    end
+    if create_warp(name):
+        Player.take_exp(WARP_CREATE_COST)
+        Player.send_message("<green>✔ <white>Warp '" + name + "' created for " + WARP_CREATE_COST + " XP!")
+    else:
+        Player.send_message("<red>✘ <white>Could not create that warp.")
+    end
+end
+
+# ---- Sponsor slots (category.yml's "sponsor-items") — 5 slots on the main menu (47-51) a player
+# can pay XP to feature one of THEIR OWN warps on, for a limited time. See SPONSOR_SLOTS/PRICES/
+# DURATIONS above for the per-slot tiers. ON DELETE CASCADE (warp_sponsors.warp_id -> warps.id,
+# see __init__) means deleting the sponsored warp itself silently frees the slot too.
+
+def purge_expired_sponsors():
+    SQL.execute("DELETE FROM warp_sponsors WHERE expires_at < ?", Server.time)
+end
+
+# The occupying warp's name/buyer, or an empty Map if that slot is free (or its sponsorship just
+# expired — purge_expired_sponsors runs first so an expired row never shows as still occupied).
+def sponsor_row(slot_num):
+    purge_expired_sponsors()
+    rows = SQL.query("SELECT w.name AS name, s.buyer_uuid AS buyer_uuid, s.expires_at AS expires_at " +
+        "FROM warp_sponsors s JOIN warps w ON w.id = s.warp_id WHERE s.slot_num = ?", slot_num)
+    if len(rows) <= 0:
+        return make_map()
+    end
+    return rows.get(0)
+end
+
+def generate_sponsor_buttons():
+    out = []
+    for i in range(0, len(SPONSOR_SLOTS)):
+        slot_num = i + 1
+        slot = SPONSOR_SLOTS.get(i)
+        row = sponsor_row(slot_num)
+        name = row.get("name")
+        if is_null(name):
+            price = SPONSOR_PRICES.get(i)
+            hours = SPONSOR_DURATIONS.get(i) / 3600
+            out = push(out, make_map("slot", slot, "icon", "minecraft:diamond",
+                "name", "<yellow>Sponsor Slot #" + slot_num,
+                "lore", ["<gray>Feature one of YOUR warps here.", "", "<gray>Price: <white>" + price + " XP",
+                    "<gray>Time: <white>" + hours + "h", "", "<green>Left-click to purchase"],
+                "action", "warps.pf:open_sponsor_dialog:" + slot_num))
+        else:
+            lore = warp_lore(name)
+            if row.get("buyer_uuid") == Player.uuid:
+                lore = push(lore, "")
+                lore = push(lore, "<red>Shift-right-click to remove your sponsor")
+            end
+            out = push(out, make_map("slot", slot, "icon", warp_icon(name),
+                "name", "<gold>[Sponsored] <yellow>" + name, "lore", lore,
+                "action", "warps.pf:on_sponsor_click:" + slot_num))
+        end
+    end
+    return out
+end
+
+def open_sponsor_dialog(slot_num):
+    Dialog.base("Sponsor Slot #" + slot_num).input_text("value", "One of your warp names", "").as_notice(Cmd, "Sponsor", "warps.pf:on_sponsor_submit:" + slot_num).show(Player)
+end
+
+def on_sponsor_submit(slot_num, value):
+    name = sanitize(value)
+    if !is_owner(name):
+        Player.send_message("<red>✘ <white>You don't own a warp named '" + name + "'.")
+        return
+    end
+    idx = int(slot_num) - 1
+    if !is_null(sponsor_row(int(slot_num)).get("name")):
+        Player.send_message("<red>✘ <white>That sponsor slot is already taken.")
+        return
+    end
+    price = SPONSOR_PRICES.get(idx)
+    if !Player.has_exp(price):
+        Player.send_message("<red>✘ <white>You need " + price + " XP to sponsor slot #" + slot_num + ".")
+        return
+    end
+    Player.take_exp(price)
+    SQL.execute("DELETE FROM warp_sponsors WHERE slot_num = ?", int(slot_num))
+    SQL.execute("INSERT INTO warp_sponsors (slot_num, warp_id, buyer_uuid, expires_at) VALUES (?, ?, ?, ?)",
+        int(slot_num), warp_id(name), Player.uuid, Server.time + SPONSOR_DURATIONS.get(idx))
+    Player.send_message("<green>✔ <white>Sponsored '" + name + "' on slot #" + slot_num + "!")
+    Cmd.open_page("main")
+end
+
+def on_sponsor_click(slot_num):
+    row = sponsor_row(int(slot_num))
+    name = row.get("name")
+    if is_null(name):
+        return
+    end
+    if MenuClick.click_type == "shift_right" && row.get("buyer_uuid") == Player.uuid:
+        SQL.execute("DELETE FROM warp_sponsors WHERE slot_num = ?", int(slot_num))
+        Player.send_message("<yellow>Removed your sponsor from slot #" + slot_num + ".")
+        Cmd.open_page("main")
+        return
+    end
+    teleport_to_warp(name)
+end
+
+# ---- Manage page (mywarps.yml -> cml:player_warps_submenu_1) --------------------------------
+
+def manage_title():
+    offset = Player.get_typed("warps_manage_offset", "int")
+    # Source (mywarps.yml): shift -129 (page counter, unused here) then -170 before the label text.
+    return "{Images.from('cml:player_warps_submenu_1')}{Images.shift(-170)}<black> " + Player.name + "'s Warps"
+end
+
+def generate_manage_buttons():
+    out = []
+    like = "%" + lower(Player.get_typed("warps_search", "string")) + "%"
+    rows = SQL.query("SELECT * FROM warps WHERE owner_uuid = ? AND (lower(name) LIKE ? OR lower(owner_name) LIKE ?) ORDER BY " + sort_order_clause(),
+        Player.uuid, like, like)
+    fav_ids = player_favourite_ids()
+    ban_ids = player_banned_ids()
+    offset = Player.get_typed("warps_manage_offset", "int")
+    start = offset * WARP_PAGE_SIZE_LIST
+    for i in range(0, WARP_PAGE_SIZE_LIST):
+        global_idx = start + i
+        if global_idx >= len(rows):
+            break
+        end
+        row = rows.get(global_idx)
+        name = row.get("name")
+        out = push(out, make_map("slot", WARP_SLOTS_LIST.get(i), "icon", warp_icon_of(row),
+            "name", "<yellow>" + name,
+            "lore", warp_lore_of(row, arr_contains(fav_ids, row.get("id")), arr_contains(ban_ids, row.get("id"))),
+            "action", "warps.pf:on_mywarps_click:" + name))
+    end
+    return out
+end
+
+def on_mywarps_click(name):
+    Player.set_typed("warps_current_warp", "string", name)
+    if MenuClick.click_type == "right":
+        Player.set_typed("warps_return_page", "string", "manage")
+        Cmd.open_page("visitedit")
+    else:
+        Cmd.open_page("managewarp")
+    end
+end
+
+def max_manage_offset():
+    n = len(owned_warp_names())
+    if n <= 0:
+        return 0
+    end
+    return int(floor((n - 1) / WARP_PAGE_SIZE_LIST))
+end
+
+def prev_manage_page():
+    offset = Player.get_typed("warps_manage_offset", "int")
+    if offset > 0:
+        Player.set_typed("warps_manage_offset", "int", offset - 1)
+    end
+    Cmd.open_page("manage")
+end
+
+def next_manage_page():
+    offset = Player.get_typed("warps_manage_offset", "int")
+    if offset < max_manage_offset():
+        Player.set_typed("warps_manage_offset", "int", offset + 1)
+    end
+    Cmd.open_page("manage")
+end
+
+# ---- Favourite page (favourite.yml -> cml:player_warps_submenu_1) ---------------------------
+
+def favourite_title():
+    return "{Images.from('cml:player_warps_submenu_1')}{Images.shift(-170)}<black> Favourite Warps"
+end
+
+def favourite_rows():
+    like = "%" + lower(Player.get_typed("warps_search", "string")) + "%"
+    return SQL.query("SELECT w.* FROM warp_favourites f JOIN warps w ON w.id = f.warp_id " +
+        "WHERE f.player_uuid = ? AND (lower(w.name) LIKE ? OR lower(w.owner_name) LIKE ?) ORDER BY w.name ASC",
+        Player.uuid, like, like)
+end
+
+def generate_favourite_buttons():
+    out = []
+    rows = favourite_rows()
+    ban_ids = player_banned_ids()
+    offset = Player.get_typed("warps_favourite_offset", "int")
+    start = offset * WARP_PAGE_SIZE_LIST
+    for i in range(0, WARP_PAGE_SIZE_LIST):
+        global_idx = start + i
+        if global_idx >= len(rows):
+            break
+        end
+        row = rows.get(global_idx)
+        name = row.get("name")
+        # Every row here is already a favourite by construction (the JOIN itself is the
+        # membership check) — no need for a THIRD query to re-confirm what got it here.
+        out = push(out, make_map("slot", WARP_SLOTS_LIST.get(i), "icon", warp_icon_of(row),
+            "name", "<yellow>" + name,
+            "lore", warp_lore_of(row, true, arr_contains(ban_ids, row.get("id"))),
+            "action", "warps.pf:on_favourite_click:" + name))
+    end
+    return out
+end
+
+def on_favourite_click(name):
+    if MenuClick.click_type == "right":
+        Player.set_typed("warps_current_warp", "string", name)
+        Player.set_typed("warps_return_page", "string", "favourite")
+        Cmd.open_page("visitedit")
+    else:
+        teleport_to_warp(name)
+    end
+end
+
+def max_favourite_offset():
+    n = len(favourite_rows())
+    if n <= 0:
+        return 0
+    end
+    return int(floor((n - 1) / WARP_PAGE_SIZE_LIST))
+end
+
+def prev_favourite_page():
+    offset = Player.get_typed("warps_favourite_offset", "int")
+    if offset > 0:
+        Player.set_typed("warps_favourite_offset", "int", offset - 1)
+    end
+    Cmd.open_page("favourite")
+end
+
+def next_favourite_page():
+    offset = Player.get_typed("warps_favourite_offset", "int")
+    if offset < max_favourite_offset():
+        Player.set_typed("warps_favourite_offset", "int", offset + 1)
+    end
+    Cmd.open_page("favourite")
+end
+
+def toggle_favourite(name):
+    wid = warp_id(name)
+    was_fav = is_favourite(name)
+    if was_fav:
+        SQL.execute("DELETE FROM warp_favourites WHERE warp_id = ? AND player_uuid = ?", wid, Player.uuid)
+        Player.send_message("<yellow>Removed <white>" + name + " <yellow>from favourites.")
+    else:
+        SQL.execute("INSERT INTO warp_favourites (warp_id, player_uuid) VALUES (?, ?)", wid, Player.uuid)
+        Player.send_message("<green>Added <white>" + name + " <green>to favourites.")
+    end
+end
+
+# ---- managewarp.yml -> cml:player_warps_manage: single-warp control panel --------------------
+
+def current_warp():
+    return Player.get_typed("warps_current_warp", "string")
+end
+
+def managewarp_title():
+    name = current_warp()
+    locked = int(warp_row(name).get("locked")) == 1
+    state_img = "cml:pwarp_setting_enabled"
+    if locked:
+        state_img = "cml:pwarp_setting_disabled"
+    end
+    # Source (managewarp.yml): %nexo_shift_-8%%nexo_playerwarps_manage%%nexo_shift_-170%<state
+    # icon>%nexo_shift_-58%<title text> — MenuText#shiftOnly/imageTitle chain this project's
+    # offset_chars.yml glyphs (neg_1..16, neg_32/48/64/128/256) to hit exact arbitrary magnitudes,
+    # so these match the source pack's pixel offsets precisely, not just the right direction.
+    return "{Images.from('cml:player_warps_manage')}{Images.from('" + state_img + "', -129)}{Images.shift(-71)}<black> Manage > " + name
+end
+
+def mw_teleport():
+    teleport_to_warp(current_warp())
+end
+
+def mw_open_desc_dialog():
+    name = current_warp()
+    Dialog.base("Warp Description").input_text("value", "Description", warp_row(name).get("desc")).as_notice(Cmd, "Set", "warps.pf:on_desc_submit").show(Player)
+end
+
+def on_desc_submit(value):
+    name = current_warp()
+    if !is_owner(name):
+        return
+    end
+    SQL.execute("UPDATE warps SET desc = ? WHERE id = ?", sanitize(value), warp_id(name))
+    Player.send_message("<green>✔ <white>Description updated.")
+end
+
+def mw_toggle_lock():
+    name = current_warp()
+    if !is_owner(name):
+        return
+    end
+    data = warp_row(name)
+    if int(data.get("locked")) == 1:
+        SQL.execute("UPDATE warps SET locked = 0 WHERE id = ?", data.get("id"))
+        Player.send_message("<green>✔ <white>" + name + " is now public.")
+    else:
+        SQL.execute("UPDATE warps SET locked = 1 WHERE id = ?", data.get("id"))
+        Player.send_message("<yellow>" + name + " is now locked (hidden from the browser).")
+    end
+    Cmd.open_page("managewarp")
+end
+
+def mw_open_category_dialog():
+    name = current_warp()
+    if MenuClick.click_type == "right":
+        SQL.execute("UPDATE warps SET category = 'other' WHERE id = ?", warp_id(name))
+        Player.send_message("<yellow>Category removed (reset to 'other').")
+        return
+    end
+    Dialog.base("Warp Category").input_text("value", "Category", warp_row(name).get("category")).as_notice(Cmd, "Set", "warps.pf:on_category_submit").show(Player)
+end
+
+def on_category_submit(value):
+    name = current_warp()
+    if !is_owner(name):
+        return
+    end
+    cat = sanitize(value)
+    if cat == "":
+        cat = "other"
+    end
+    SQL.execute("UPDATE warps SET category = ? WHERE id = ?", lower(cat), warp_id(name))
+    Player.send_message("<green>✔ <white>Category set to '" + cat + "'.")
+end
+
+def mw_open_ban_dialog():
+    Dialog.base("Ban Player").input_text("value", "Player Name", "").as_notice(Cmd, "Ban", "warps.pf:on_ban_submit").show(Player)
+end
+
+def on_ban_submit(value):
+    name = current_warp()
+    if !is_owner(name):
+        return
+    end
+    target_name = sanitize(value)
+    target = Server.get_player(target_name)
+    if is_empty(target):
+        Player.send_message("<red>✘ <white>" + target_name + " is not online.")
+        return
+    end
+    wid = warp_id(name)
+    SQL.execute("DELETE FROM warp_bans WHERE warp_id = ? AND uuid = ?", wid, target.uuid)
+    SQL.execute("INSERT INTO warp_bans (warp_id, uuid, name) VALUES (?, ?, ?)", wid, target.uuid, target.name)
+    Player.send_message("<green>✔ <white>Banned " + target.name + " from " + name + ".")
+end
+
+def mw_set_icon():
+    name = current_warp()
+    if !is_owner(name):
+        return
+    end
+    held = Player.main_hand
+    if is_empty(held):
+        Player.send_message("<red>✘ <white>Hold an item first.")
+        return
+    end
+    SQL.execute("UPDATE warps SET icon = ? WHERE id = ?", held.id, warp_id(name))
+    Player.send_message("<green>✔ <white>Icon updated.")
+end
+
+def mw_open_visited():
+    Player.set_typed("warps_visited_offset", "int", 0)
+    Cmd.open_page("visited")
+end
+
+def mw_open_banned():
+    Player.set_typed("warps_banned_offset", "int", 0)
+    Cmd.open_page("banned")
+end
+
+def mw_open_rename_dialog():
+    Dialog.base("Rename Warp").input_text("value", "New Name", current_warp()).as_notice(Cmd, "Rename", "warps.pf:on_rename_submit").show(Player)
+end
+
+# The whole point of keying every OTHER table by warp_id (a stable UUID) instead of the display
+# name: renaming is now JUST this one UPDATE. Every ban/favourite/visitor/rating row is still
+# attached — none of them ever referenced the name.
+def on_rename_submit(value):
+    old_name = current_warp()
+    new_name = sanitize(value)
+    if !is_owner(old_name) || new_name == "" || warp_exists(new_name):
+        Player.send_message("<red>✘ <white>Could not rename that warp.")
+        return
+    end
+    SQL.execute("UPDATE warps SET name = ? WHERE id = ?", new_name, warp_id(old_name))
+    Player.set_typed("warps_current_warp", "string", new_name)
+    Player.send_message("<green>✔ <white>Renamed to '" + new_name + "'.")
+end
+
+def mw_delete():
+    name = current_warp()
+    if delete_warp(name):
+        Player.send_message("<green>✔ <white>Deleted warp '" + name + "'.")
+        Cmd.open_page("manage")
+    else:
+        Player.send_message("<red>✘ <white>You don't own that warp.")
+    end
+end
+
+def mw_open_transfer_dialog():
+    Dialog.base("Transfer Ownership").input_text("value", "New Owner Name", "").as_notice(Cmd, "Transfer", "warps.pf:on_transfer_submit").show(Player)
+end
+
+def on_transfer_submit(value):
+    name = current_warp()
+    if !is_owner(name):
+        return
+    end
+    target_name = sanitize(value)
+    target = Server.get_player(target_name)
+    if is_empty(target):
+        Player.send_message("<red>✘ <white>" + target_name + " is not online.")
+        return
+    end
+    SQL.execute("UPDATE warps SET owner_uuid = ?, owner_name = ? WHERE id = ?", target.uuid, target.name, warp_id(name))
+    Player.send_message("<green>✔ <white>Transferred " + name + " to " + target.name + ".")
+    Cmd.open_page("manage")
+end
+
+# ---- bannedplayers.yml -> cml:player_warps_banned_players ------------------------------------
+
+def banned_title():
+    return "{Images.from('cml:player_warps_banned_players')}{Images.shift(-170)}<black> Banned Players > " + current_warp()
+end
+
+# A REAL indexed query now (see __init__'s warp_bans table) instead of loading every ban and
+# filtering it in-script — the exact "search/filter" case the SQL motor exists for.
+def banned_records():
+    search = lower(Player.get_typed("warps_banned_search", "string"))
+    wid = warp_id(current_warp())
+    if search == "":
+        rows = SQL.query("SELECT uuid, name FROM warp_bans WHERE warp_id = ? ORDER BY name", wid)
+    else:
+        rows = SQL.query("SELECT uuid, name FROM warp_bans WHERE warp_id = ? AND lower(name) LIKE ? ORDER BY name",
+            wid, "%" + search + "%")
+    end
+    out = []
+    for row in rows:
+        out = push(out, make_map("uuid", row.get("uuid"), "name", row.get("name")))
+    end
+    return out
+end
+
+# Same "reopen the right page" convention as the warps/manage/favourite Search button — see
+# open_search_dialog/on_search_submit above — mirrored here for the banned/visited player lists
+# (ported from bannedplayers.yml/visitedplayers.yml's own "search" section, slot 25).
+def open_banned_search_dialog():
+    Dialog.base("Search Banned Players").input_text("value", "Player name", Player.get_typed("warps_banned_search", "string")).as_notice(Cmd, "Search", "warps.pf:on_banned_search_submit").show(Player)
+end
+
+def on_banned_search_submit(value):
+    Player.set_typed("warps_banned_search", "string", sanitize(value))
+    Player.set_typed("warps_banned_offset", "int", 0)
+    Cmd.open_page("banned")
+end
+
+def generate_banned_buttons():
+    out = []
+    records = banned_records()
+    offset = Player.get_typed("warps_banned_offset", "int")
+    start = offset * WARP_PAGE_SIZE_LIST
+    for i in range(0, WARP_PAGE_SIZE_LIST):
+        global_idx = start + i
+        if global_idx >= len(records):
+            break
+        end
+        entry = records.get(global_idx)
+        target_uuid = entry.get("uuid")
+        target_name = entry.get("name")
+        out = push(out, make_map("slot", WARP_SLOTS_LIST.get(i), "icon", player_head_icon(target_name),
+            "name", "<white>" + target_name,
+            "lore", ["<gray>Banned from <white>" + current_warp(), "", "<red>Left-click to unban"],
+            "action", "warps.pf:on_unban_click:" + target_uuid))
+    end
+    return out
+end
+
+def on_unban_click(target_uuid):
+    name = current_warp()
+    if !is_owner(name):
+        return
+    end
+    SQL.execute("DELETE FROM warp_bans WHERE warp_id = ? AND uuid = ?", warp_id(name), target_uuid)
+    Player.send_message("<green>✔ <white>Unbanned.")
+    Cmd.open_page("banned")
+end
+
+def max_banned_offset():
+    n = len(banned_records())
+    if n <= 0:
+        return 0
+    end
+    return int(floor((n - 1) / WARP_PAGE_SIZE_LIST))
+end
+
+def prev_banned_page():
+    offset = Player.get_typed("warps_banned_offset", "int")
+    if offset > 0:
+        Player.set_typed("warps_banned_offset", "int", offset - 1)
+    end
+    Cmd.open_page("banned")
+end
+
+def next_banned_page():
+    offset = Player.get_typed("warps_banned_offset", "int")
+    if offset < max_banned_offset():
+        Player.set_typed("warps_banned_offset", "int", offset + 1)
+    end
+    Cmd.open_page("banned")
+end
+
+# ---- visitedplayers.yml -> cml:player_warps_visited_players -----------------------------------
+
+def visited_title():
+    return "{Images.from('cml:player_warps_visited_players')}{Images.shift(-170)}<black> Visited Players > " + current_warp()
+end
+
+def visitor_records():
+    search = lower(Player.get_typed("warps_visited_search", "string"))
+    wid = warp_id(current_warp())
+    if search == "":
+        rows = SQL.query("SELECT uuid, name, count FROM warp_visitors WHERE warp_id = ? ORDER BY name", wid)
+    else:
+        rows = SQL.query("SELECT uuid, name, count FROM warp_visitors WHERE warp_id = ? AND lower(name) LIKE ? ORDER BY name",
+            wid, "%" + search + "%")
+    end
+    out = []
+    for row in rows:
+        out = push(out, make_map("uuid", row.get("uuid"), "name", row.get("name"), "count", row.get("count")))
+    end
+    return out
+end
+
+def open_visited_search_dialog():
+    Dialog.base("Search Visited Players").input_text("value", "Player name", Player.get_typed("warps_visited_search", "string")).as_notice(Cmd, "Search", "warps.pf:on_visited_search_submit").show(Player)
+end
+
+def on_visited_search_submit(value):
+    Player.set_typed("warps_visited_search", "string", sanitize(value))
+    Player.set_typed("warps_visited_offset", "int", 0)
+    Cmd.open_page("visited")
+end
+
+def generate_visited_buttons():
+    out = []
+    records = visitor_records()
+    offset = Player.get_typed("warps_visited_offset", "int")
+    start = offset * WARP_PAGE_SIZE_LIST
+    for i in range(0, WARP_PAGE_SIZE_LIST):
+        global_idx = start + i
+        if global_idx >= len(records):
+            break
+        end
+        entry = records.get(global_idx)
+        visitor_name = entry.get("name")
+        out = push(out, make_map("slot", WARP_SLOTS_LIST.get(i), "icon", player_head_icon(visitor_name),
+            "name", "<white>" + visitor_name,
+            "lore", ["<gray>Visited <white>" + int(entry.get("count")) + " <gray>time(s)"]))
+    end
+    return out
+end
+
+def max_visited_offset():
+    n = len(visitor_records())
+    if n <= 0:
+        return 0
+    end
+    return int(floor((n - 1) / WARP_PAGE_SIZE_LIST))
+end
+
+def prev_visited_page():
+    offset = Player.get_typed("warps_visited_offset", "int")
+    if offset > 0:
+        Player.set_typed("warps_visited_offset", "int", offset - 1)
+    end
+    Cmd.open_page("visited")
+end
+
+def next_visited_page():
+    offset = Player.get_typed("warps_visited_offset", "int")
+    if offset < max_visited_offset():
+        Player.set_typed("warps_visited_offset", "int", offset + 1)
+    end
+    Cmd.open_page("visited")
+end
+
+# ---- visitedit.yml -> cml:player_warps_manage_visit: quick Rate/Teleport/Favourite panel -----
+
+def visitedit_title():
+    return "{Images.from('cml:player_warps_manage_visit')}{Images.shift(-170)}<black> Manage Visit > " + current_warp()
+end
+
+# visitedit is reached by right-clicking a warp row from THREE different list pages (browse/
+# manage/favourite — see their on_*_click handlers, which each stamp "warps_return_page" right
+# before opening this page) — a static "page:X" back button can only ever be right for one of
+# them, which is exactly why it kept pointing at the wrong list. Falls back to "warps" if the flag
+# was somehow never set (e.g. this page reached some other way in the future).
+def on_visitedit_back():
+    target = Player.get_typed("warps_return_page", "string")
+    if target == "":
+        target = "warps"
+    end
+    Cmd.open_page(target)
+end
+
+def vi_teleport():
+    teleport_to_warp(current_warp())
+end
+
+def vi_toggle_favourite():
+    toggle_favourite(current_warp())
+end
+
+def vi_open_rate_dialog():
+    Dialog.base("Rate Warp").input_number("stars", "Stars (0-5)", 0, 5, 1, 5).as_notice(Cmd, "Rate", "warps.pf:on_rate_submit").show(Player)
+end
+
+def on_rate_submit(stars):
+    name = current_warp()
+    if is_owner(name):
+        Player.send_message("<red>✘ <white>You can't rate your own warp.")
+        return
+    end
+    n = int(stars)
+    if n < 0:
+        n = 0
+    end
+    if n > 5:
+        n = 5
+    end
+    wid = warp_id(name)
+    SQL.execute("DELETE FROM warp_ratings WHERE warp_id = ? AND uuid = ?", wid, Player.uuid)
+    SQL.execute("INSERT INTO warp_ratings (warp_id, uuid, name, stars) VALUES (?, ?, ?, ?)", wid, Player.uuid, Player.name, n)
+    Player.send_message("<green>✔ <white>Rated " + name + " " + n + " star(s).")
+end
+
+# ---- rate.yml -> cml:player_warps_submenu_2: this warp's rating list --------------------------
+
+def rate_title():
+    return "{Images.from('cml:player_warps_submenu_2')}{Images.shift(-170)}<black> Warp Rates > " + current_warp()
+end
+
+def rating_records():
+    rows = SQL.query("SELECT uuid, name, stars FROM warp_ratings WHERE warp_id = ? ORDER BY name", warp_id(current_warp()))
+    out = []
+    for row in rows:
+        out = push(out, make_map("uuid", row.get("uuid"), "name", row.get("name"), "stars", row.get("stars")))
+    end
+    return out
+end
+
+def generate_rate_buttons():
+    out = []
+    records = rating_records()
+    offset = Player.get_typed("warps_rate_offset", "int")
+    start = offset * WARP_PAGE_SIZE_LIST
+    for i in range(0, WARP_PAGE_SIZE_LIST):
+        global_idx = start + i
+        if global_idx >= len(records):
+            break
+        end
+        entry = records.get(global_idx)
+        rater_uuid = entry.get("uuid")
+        rater_name = entry.get("name")
+        stars = entry.get("stars")
+        lore = ["<gray>Rating: <yellow>" + stars + "/5"]
+        if rater_uuid == Player.uuid:
+            lore = push(lore, "")
+            lore = push(lore, "<red>Left-click to remove your rating")
+        end
+        out = push(out, make_map("slot", WARP_SLOTS_LIST.get(i), "icon", player_head_icon(rater_name),
+            "name", "<white>" + rater_name + "'s rate", "lore", lore,
+            "action", "warps.pf:on_unrate_click:" + rater_uuid))
+    end
+    return out
+end
+
+def on_unrate_click(rater_uuid):
+    if rater_uuid != Player.uuid:
+        return
+    end
+    SQL.execute("DELETE FROM warp_ratings WHERE warp_id = ? AND uuid = ?", warp_id(current_warp()), rater_uuid)
+    Cmd.open_page("rate")
+end
+
+def max_rate_offset():
+    n = len(rating_records())
+    if n <= 0:
+        return 0
+    end
+    return int(floor((n - 1) / WARP_PAGE_SIZE_LIST))
+end
+
+def prev_rate_page():
+    offset = Player.get_typed("warps_rate_offset", "int")
+    if offset > 0:
+        Player.set_typed("warps_rate_offset", "int", offset - 1)
+    end
+    Cmd.open_page("rate")
+end
+
+def next_rate_page():
+    offset = Player.get_typed("warps_rate_offset", "int")
+    if offset < max_rate_offset():
+        Player.set_typed("warps_rate_offset", "int", offset + 1)
+    end
+    Cmd.open_page("rate")
+end
+
+# ---- Chat command surface (config.yml's "sub-commands" list) — the command-line equivalent of
+# the GUI actions above, for players who prefer typing over clicking (or for a use case the GUI
+# doesn't cover at all, like managing a warp you don't own via PERM_ADMIN_BYPASS). Every one of
+# these reuses the SAME underlying SQL the GUI handlers use — no separate logic path to drift out
+# of sync. See the PERM_ADMIN_BYPASS/can_manage note above for why ordinary commands don't check a
+# permission node beyond ownership, and cmds/warps.json for the three that DO (removeall/reload/
+# addwarps — hidden entirely from a player without the node via Brigadier's own "permission" field,
+# not just refused after the fact).
+#
+# NOT ported (documented, not silently dropped — none of the underlying systems exist in this
+# engine and building them now would be its own separate project): password protection, whitelist,
+# managers (co-owners), warp renting, sign-based warping, /pw near, /pw rtp, per-warp teleport
+# COST overrides (this addon only has the one global WARP_TELEPORT_COST), and PAPI placeholders in
+# descriptions/ratings. "/pw list/amount [player]" became separate "list"/"listof" and "amount"/
+# "amountof" commands instead of one command with an optional trailing player arg — this command
+# engine's arg chains don't support an optional value arg cleanly.
+
+def cmd_help():
+    Player.send_message("<yellow>--- /warps commands ---")
+    Player.send_message("<white>/warps <gray>- open the warps menu")
+    Player.send_message("<white>/warps create|set <name> <gray>- create a warp (set also repositions your own)")
+    Player.send_message("<white>/warps remove <warp> <gray>- delete a warp you own")
+    Player.send_message("<white>/warps desc set <warp> <text> <gray>|<white> desc remove <warp>")
+    Player.send_message("<white>/warps list <gray>|<white> listof <player>")
+    Player.send_message("<white>/warps amount <gray>|<white> amountof <player>")
+    Player.send_message("<white>/warps icon set <warp> <gray>(uses held item) <white>|<gray> icon remove <warp>")
+    Player.send_message("<white>/warps category set <warp> <category> <gray>|<white> category remove <warp>")
+    Player.send_message("<white>/warps rate <warp> <0-5>")
+    Player.send_message("<white>/warps lock <warp> <gray>- toggle public/hidden")
+    Player.send_message("<white>/warps reset <warp> <gray>- move it to your location")
+    Player.send_message("<white>/warps rename <warp> <new name>")
+    Player.send_message("<white>/warps setowner <warp> <player>")
+    Player.send_message("<white>/warps ban set <warp> <player> <gray>|<white> ban remove <warp> <player>")
+    Player.send_message("<white>/warps favourite <warp> <gray>- toggle favourite")
+    Player.send_message("<white>/warps buyslot <gray>- spend XP for an extra warp slot")
+end
+
+def cmd_remove():
+    name = Cmd.arg("name")
+    if !warp_exists(name):
+        Player.send_message("<red>✘ <white>No warp named '" + name + "'.")
+        return
+    end
+    if !can_manage(name):
+        Player.send_message("<red>✘ <white>You don't own that warp.")
+        return
+    end
+    SQL.execute("DELETE FROM warps WHERE id = ?", warp_id(name))
+    Player.send_message("<green>✔ <white>Deleted warp '" + name + "'.")
+end
+
+def cmd_desc_set():
+    name = Cmd.arg("name")
+    if !warp_exists(name):
+        Player.send_message("<red>✘ <white>No warp named '" + name + "'.")
+        return
+    end
+    if !can_manage(name):
+        Player.send_message("<red>✘ <white>You don't own that warp.")
+        return
+    end
+    SQL.execute("UPDATE warps SET desc = ? WHERE id = ?", sanitize(Cmd.arg("text")), warp_id(name))
+    Player.send_message("<green>✔ <white>Description updated.")
+end
+
+def cmd_desc_remove():
+    name = Cmd.arg("name")
+    if !warp_exists(name):
+        Player.send_message("<red>✘ <white>No warp named '" + name + "'.")
+        return
+    end
+    if !can_manage(name):
+        Player.send_message("<red>✘ <white>You don't own that warp.")
+        return
+    end
+    SQL.execute("UPDATE warps SET desc = '' WHERE id = ?", warp_id(name))
+    Player.send_message("<green>✔ <white>Description cleared.")
+end
+
+def warp_names_summary(owner_uuid):
+    rows = SQL.query("SELECT name FROM warps WHERE owner_uuid = ? ORDER BY created_at ASC", owner_uuid)
+    names = ""
+    for row in rows:
+        if names == "":
+            names = row.get("name")
+        else:
+            names = names + "<gray>, <white>" + row.get("name")
+        end
+    end
+    return make_map("count", len(rows), "names", names)
+end
+
+def cmd_list():
+    info = warp_names_summary(Player.uuid)
+    if int(info.get("count")) <= 0:
+        Player.send_message("<yellow>You have no warps.")
+        return
+    end
+    Player.send_message("<yellow>Your warps (" + info.get("count") + "): <white>" + info.get("names"))
+end
+
+def cmd_listof():
+    target = Cmd.arg("player")
+    info = warp_names_summary(target.uuid)
+    if int(info.get("count")) <= 0:
+        Player.send_message("<yellow>" + target.name + " has no warps.")
+        return
+    end
+    Player.send_message("<yellow>" + target.name + "'s warps (" + info.get("count") + "): <white>" + info.get("names"))
+end
+
+def cmd_amount():
+    Player.send_message("<yellow>You have <white>" + len(owned_warp_names()) + "/" + effective_limit() + "<yellow> warps.")
+end
+
+def cmd_amountof():
+    target = Cmd.arg("player")
+    n = len(SQL.query("SELECT id FROM warps WHERE owner_uuid = ?", target.uuid))
+    Player.send_message("<yellow>" + target.name + " has <white>" + n + "<yellow> warp(s).")
+end
+
+def cmd_icon_set():
+    name = Cmd.arg("name")
+    if !warp_exists(name):
+        Player.send_message("<red>✘ <white>No warp named '" + name + "'.")
+        return
+    end
+    if !can_manage(name):
+        Player.send_message("<red>✘ <white>You don't own that warp.")
+        return
+    end
+    held = Player.main_hand
+    if is_empty(held):
+        Player.send_message("<red>✘ <white>Hold an item first.")
+        return
+    end
+    SQL.execute("UPDATE warps SET icon = ? WHERE id = ?", held.id, warp_id(name))
+    Player.send_message("<green>✔ <white>Icon updated.")
+end
+
+def cmd_icon_remove():
+    name = Cmd.arg("name")
+    if !warp_exists(name):
+        Player.send_message("<red>✘ <white>No warp named '" + name + "'.")
+        return
+    end
+    if !can_manage(name):
+        Player.send_message("<red>✘ <white>You don't own that warp.")
+        return
+    end
+    SQL.execute("UPDATE warps SET icon = '' WHERE id = ?", warp_id(name))
+    Player.send_message("<green>✔ <white>Icon reset to default.")
+end
+
+def cmd_category_set():
+    name = Cmd.arg("name")
+    if !warp_exists(name):
+        Player.send_message("<red>✘ <white>No warp named '" + name + "'.")
+        return
+    end
+    if !can_manage(name):
+        Player.send_message("<red>✘ <white>You don't own that warp.")
+        return
+    end
+    cat = sanitize(Cmd.arg("category"))
+    if cat == "":
+        cat = "other"
+    end
+    SQL.execute("UPDATE warps SET category = ? WHERE id = ?", lower(cat), warp_id(name))
+    Player.send_message("<green>✔ <white>Category set to '" + cat + "'.")
+end
+
+def cmd_category_remove():
+    name = Cmd.arg("name")
+    if !warp_exists(name):
+        Player.send_message("<red>✘ <white>No warp named '" + name + "'.")
+        return
+    end
+    if !can_manage(name):
+        Player.send_message("<red>✘ <white>You don't own that warp.")
+        return
+    end
+    SQL.execute("UPDATE warps SET category = 'other' WHERE id = ?", warp_id(name))
+    Player.send_message("<yellow>Category reset to 'other'.")
+end
+
+def cmd_rate():
+    name = Cmd.arg("name")
+    if !warp_exists(name):
+        Player.send_message("<red>✘ <white>No warp named '" + name + "'.")
+        return
+    end
+    if is_owner(name):
+        Player.send_message("<red>✘ <white>You can't rate your own warp.")
+        return
+    end
+    n = int(Cmd.arg("stars"))
+    if n < 0:
+        n = 0
+    end
+    if n > 5:
+        n = 5
+    end
+    wid = warp_id(name)
+    SQL.execute("DELETE FROM warp_ratings WHERE warp_id = ? AND uuid = ?", wid, Player.uuid)
+    SQL.execute("INSERT INTO warp_ratings (warp_id, uuid, name, stars) VALUES (?, ?, ?, ?)", wid, Player.uuid, Player.name, n)
+    Player.send_message("<green>✔ <white>Rated " + name + " " + n + " star(s).")
+end
+
+def cmd_lock():
+    name = Cmd.arg("name")
+    if !warp_exists(name):
+        Player.send_message("<red>✘ <white>No warp named '" + name + "'.")
+        return
+    end
+    if !can_manage(name):
+        Player.send_message("<red>✘ <white>You don't own that warp.")
+        return
+    end
+    row = warp_row(name)
+    if int(row.get("locked")) == 1:
+        SQL.execute("UPDATE warps SET locked = 0 WHERE id = ?", row.get("id"))
+        Player.send_message("<green>✔ <white>" + name + " is now public.")
+    else:
+        SQL.execute("UPDATE warps SET locked = 1 WHERE id = ?", row.get("id"))
+        Player.send_message("<yellow>" + name + " is now locked (hidden from the browser).")
+    end
+end
+
+def cmd_reset():
+    name = Cmd.arg("name")
+    if !warp_exists(name):
+        Player.send_message("<red>✘ <white>No warp named '" + name + "'.")
+        return
+    end
+    if !can_manage(name):
+        Player.send_message("<red>✘ <white>You don't own that warp.")
+        return
+    end
+    loc = Player.location
+    SQL.execute("UPDATE warps SET world = ?, x = ?, y = ?, z = ? WHERE id = ?",
+        loc.world.name, loc.x, loc.y, loc.z, warp_id(name))
+    Player.send_message("<green>✔ <white>Moved '" + name + "' to your current location.")
+end
+
+def cmd_rename():
+    old_name = Cmd.arg("name")
+    if !warp_exists(old_name):
+        Player.send_message("<red>✘ <white>No warp named '" + old_name + "'.")
+        return
+    end
+    if !can_manage(old_name):
+        Player.send_message("<red>✘ <white>You don't own that warp.")
+        return
+    end
+    new_name = sanitize(Cmd.arg("new_name"))
+    if new_name == "" || warp_exists(new_name):
+        Player.send_message("<red>✘ <white>Could not rename that warp.")
+        return
+    end
+    SQL.execute("UPDATE warps SET name = ? WHERE id = ?", new_name, warp_id(old_name))
+    Player.send_message("<green>✔ <white>Renamed to '" + new_name + "'.")
+end
+
+def cmd_setowner():
+    name = Cmd.arg("name")
+    if !warp_exists(name):
+        Player.send_message("<red>✘ <white>No warp named '" + name + "'.")
+        return
+    end
+    if !can_manage(name):
+        Player.send_message("<red>✘ <white>You don't own that warp.")
+        return
+    end
+    target = Cmd.arg("player")
+    SQL.execute("UPDATE warps SET owner_uuid = ?, owner_name = ? WHERE id = ?", target.uuid, target.name, warp_id(name))
+    Player.send_message("<green>✔ <white>Transferred " + name + " to " + target.name + ".")
+end
+
+def cmd_ban_set():
+    name = Cmd.arg("name")
+    if !warp_exists(name):
+        Player.send_message("<red>✘ <white>No warp named '" + name + "'.")
+        return
+    end
+    if !can_manage(name):
+        Player.send_message("<red>✘ <white>You don't own that warp.")
+        return
+    end
+    target = Cmd.arg("player")
+    wid = warp_id(name)
+    SQL.execute("DELETE FROM warp_bans WHERE warp_id = ? AND uuid = ?", wid, target.uuid)
+    SQL.execute("INSERT INTO warp_bans (warp_id, uuid, name) VALUES (?, ?, ?)", wid, target.uuid, target.name)
+    Player.send_message("<green>✔ <white>Banned " + target.name + " from " + name + ".")
+end
+
+# Target is a plain string (not a "player" arg) so an OFFLINE player already banned can still be
+# unbanned by name — matching against the name stored on the ban row itself, since that's the only
+# record of them this table keeps.
+def cmd_ban_remove():
+    name = Cmd.arg("name")
+    if !warp_exists(name):
+        Player.send_message("<red>✘ <white>No warp named '" + name + "'.")
+        return
+    end
+    if !can_manage(name):
+        Player.send_message("<red>✘ <white>You don't own that warp.")
+        return
+    end
+    player_name = Cmd.arg("player")
+    wid = warp_id(name)
+    rows = SQL.query("SELECT uuid, name FROM warp_bans WHERE warp_id = ? AND lower(name) = ?", wid, lower(player_name))
+    if len(rows) <= 0:
+        Player.send_message("<red>✘ <white>" + player_name + " isn't banned from that warp.")
+        return
+    end
+    SQL.execute("DELETE FROM warp_bans WHERE warp_id = ? AND uuid = ?", wid, rows.get(0).get("uuid"))
+    Player.send_message("<green>✔ <white>Unbanned " + rows.get(0).get("name") + ".")
+end
+
+def cmd_favourite():
+    name = Cmd.arg("name")
+    if !warp_exists(name):
+        Player.send_message("<red>✘ <white>No warp named '" + name + "'.")
+        return
+    end
+    toggle_favourite(name)
+end
+
+# ---- Admin-only (hidden from a player without the node at all — see cmds/warps.json's
+# "permission" field on these three; the has_permission check here is just defense-in-depth). -----
+
+def cmd_removeall():
+    if !Player.has_permission(PERM_ADMIN_REMOVEALL):
+        Player.send_message("<red>✘ <white>You don't have permission to do that.")
+        return
+    end
+    player_name = Cmd.arg("player")
+    target = Server.get_player(player_name)
+    if !is_empty(target):
+        n = len(SQL.query("SELECT id FROM warps WHERE owner_uuid = ?", target.uuid))
+        SQL.execute("DELETE FROM warps WHERE owner_uuid = ?", target.uuid)
+    else:
+        n = len(SQL.query("SELECT id FROM warps WHERE lower(owner_name) = ?", lower(player_name)))
+        SQL.execute("DELETE FROM warps WHERE lower(owner_name) = ?", lower(player_name))
+    end
+    Player.send_message("<green>✔ <white>Removed " + n + " warp(s) owned by " + player_name + ".")
+end
+
+def cmd_reload():
+    if !Player.has_permission(PERM_ADMIN_RELOAD):
+        Player.send_message("<red>✘ <white>You don't have permission to do that.")
+        return
+    end
+    Server.exec_command("cepolyfill reload scripts")
+    Server.exec_command("cepolyfill reload cmds")
+    Player.send_message("<green>✔ <white>Reloaded warps scripts/commands.")
+end
+
+def cmd_addwarps():
+    if !Player.has_permission(PERM_ADMIN_ADDWARPS):
+        Player.send_message("<red>✘ <white>You don't have permission to do that.")
+        return
+    end
+    target = Cmd.arg("player")
+    n = int(Cmd.arg("amount"))
+    target.set_typed("warps_extra_slots", "int", target.get_typed("warps_extra_slots", "int") + n)
+    Player.send_message("<green>✔ <white>Gave " + target.name + " " + n + " extra warp slot(s).")
+end

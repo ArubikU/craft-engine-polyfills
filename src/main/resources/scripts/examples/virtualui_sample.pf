@@ -1,0 +1,120 @@
+# Backing script for /virtualui sample|close (see cmds/virtualui_sample.json) — the ENTIRE screen,
+# visuals AND behavior, is built here via the VirtualUI script API. No Java code defines any widget
+# for this demo; open_sample() below is exactly what a server owner would write for their own UI.
+# Demonstrates every built-in widget kind (label, button, icon, block, player_render, scrollbar)
+# and every generic capability a click callback can reach (Player.open_url/send_message,
+# VirtualUI.change_hologram/hide) — port of 's own bundled sample config, one-to-one.
+
+def open_sample():
+    if VirtualUI.is_open(Player):
+        Player.send_message("<red>You already have a VirtualUI open — <white>/virtualui close</white> first.")
+        return
+    end
+
+    ui = VirtualUI.screen(" sample (ported)")
+    ui.bounds(6.0, 4.0)
+    ui.on_close("examples/virtualui_sample.pf:on_close")
+
+    ui.label("left", "<white><bold>LEFT HOLOGRAM</bold>\n<gray>Static label, like 's own sample", -2.0, 0.0)
+    ui.label("right", "<white><bold>RIGHT HOLOGRAM</bold>\n<gray>Static label", 2.0, 0.0)
+    ui.label("info", "<green><bold>Cursor Information</bold>\n<gray>Move the cursor over a button", 0.0, 1.6)
+
+    # Animation demo: VUIWidget.ticks_open() is a time axis every widget kind inherits — this label's
+    # text is re-evaluated every render tick via the "${...}" pipeline, so a pure sine-driven color
+    # pulse costs nothing extra beyond what the engine already does.
+    ui.label("pulse", "${if(sin(VUIText.ticks_open() * 0.1) > 0, '<yellow>', '<gold>')}<bold>* PULSING *</bold>", 0.0, 2.6)
+
+    ui.button("link_button", "<aqua><bold>Open a link</bold>", -0.9, -0.6, "examples/virtualui_sample.pf:on_click_link", 1.3, 0.5)
+    ui.on_hover("examples/virtualui_sample.pf:on_hover_info")
+    ui.on_unhover("examples/virtualui_sample.pf:on_unhover_info")
+
+    ui.button("close_button", "<red><bold>Close</bold>", 0.9, -0.6, "examples/virtualui_sample.pf:on_click_close", 1.0, 0.5)
+    ui.on_hover("examples/virtualui_sample.pf:on_hover_info")
+    ui.on_unhover("examples/virtualui_sample.pf:on_unhover_info")
+
+    ui.icon("icon_demo", "minecraft:compass", 0.0, -1.4)
+    ui.player_render("self_render", -2.5, -1.4)
+    ui.block("block_demo", "minecraft:diamond_block", 2.5, -1.4)
+
+    # trailing "minecraft:lever" is the thumb's tracker item icon — omit it (and the font-image
+    # arg after it) to fall back to the generated box-drawing bar instead.
+    ui.scrollbar("volume_scrollbar", false, 0.0, -2.2, 2.0, 0.4, 0.5, "examples/virtualui_sample.pf:on_scrollbar_change", "minecraft:lever")
+    ui.on_hover("examples/virtualui_sample.pf:on_scrollbar_armed")
+    ui.on_unhover("examples/virtualui_sample.pf:on_scrollbar_released")
+
+    ui.toggle("mute_toggle", "<green><bold>ON</bold>", "<red><bold>OFF</bold>", -3.2, -2.2, false,
+            "examples/virtualui_sample.pf:on_toggle_mute", 1.0, 0.5)
+
+    ui.select("difficulty_select", ["Easy", "Normal", "Hard"],
+            "<white>◀ <yellow>${VUISelect.value()}</yellow> ▶", 3.2, -2.2, 1,
+            "examples/virtualui_sample.pf:on_difficulty_change")
+
+    built = ui.build()
+    built.show(Player)
+    Player.send_message("<aqua>VirtualUI sample opened. Left/right-click a button, sneak, or <white>/virtualui close</white> to exit.")
+end
+
+def close_sample():
+    if !VirtualUI.is_open(Player):
+        Player.send_message("<gray>You don't have a VirtualUI open.")
+        return
+    end
+    VirtualUI.hide(Player)
+    Player.send_message("<aqua>VirtualUI closed.")
+end
+
+def on_hover_info(widget_id):
+    VirtualUI.change_hologram(Player, "info", "<green><bold>Cursor Information</bold></green>\n<gray>Hovering: " + widget_id)
+    # Tooltip demo (port of Create's TooltipArea): a cursor-following label independent of the
+    # widget's own hologram, shown/hidden from on_hover/on_unhover.
+    VirtualUI.show_tooltip(Player, "<dark_gray>Widget: <white>" + widget_id)
+end
+
+def on_unhover_info(widget_id):
+    VirtualUI.change_hologram(Player, "info", "<green><bold>Cursor Information</bold></green>\n<gray>Move the cursor over a button")
+    VirtualUI.hide_tooltip(Player)
+end
+
+def on_click_link(widget_id):
+    Player.send_message("<yellow>Opening the CraftEngine Polyfills repo link...")
+    Player.open_url("https://github.com/")
+end
+
+def on_click_close(widget_id):
+    Player.send_message("<gray>Closing VirtualUI sample.")
+    VirtualUI.hide(Player)
+end
+
+def on_close():
+    Player.send_message("<gray>VirtualUI sample closed.")
+end
+
+# Scrollbar demo (port of 's hotbar-scrollbar gesture): click the bar to arm it, move the
+# cursor to drag, click again to release. on_change fires every tick the value actually moves.
+def on_scrollbar_armed(widget_id):
+    Player.send_actionbar("<yellow>Volume scrollbar armed — move the cursor, click again to release.")
+end
+
+def on_scrollbar_released(widget_id):
+    Player.send_actionbar("<gray>Volume scrollbar released.")
+end
+
+def on_scrollbar_change(widget_id, value):
+    Player.send_actionbar("<aqua>Volume: <white>" + round(value * 100) + "%")
+end
+
+# Toggle demo: click flips state internally (no on_click needed) — on_change(widget_id, is_on)
+# fires with the new boolean.
+def on_toggle_mute(widget_id, is_on):
+    if is_on:
+        Player.send_actionbar("<red>Muted.")
+    else:
+        Player.send_actionbar("<green>Unmuted.")
+    end
+end
+
+# Select demo (port of Create's SelectionScrollInput): click OR scroll-wheel while hovering
+# advances through the options list. on_change fires with the option string AND its index.
+def on_difficulty_change(widget_id, option, index):
+    Player.send_actionbar("<aqua>Difficulty: <white>" + option + " <gray>(" + index + ")")
+end

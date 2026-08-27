@@ -1,0 +1,14 @@
+# Floor Funnel — machine-ified from the old FloorFunnelBehavior/FloorFunnelBlockEntity Java pair.
+# See floor_funnel_utils.pf for the shared tick logic (also used by ceiling_funnel.pf).
+
+import "conveyor/floor_funnel_utils.pf" { _floor_funnel_tick, _floor_funnel_on_right_click, _floor_funnel_drop_held }
+
+def on_right_click():
+    _floor_funnel_on_right_click()
+end
+
+def on_break():
+    _floor_funnel_drop_held()
+end
+
+_floor_funnel_tick(false)

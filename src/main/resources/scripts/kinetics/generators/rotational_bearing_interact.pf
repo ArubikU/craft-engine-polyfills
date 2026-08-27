@@ -1,0 +1,58 @@
+# Rotational Bearing — right-click interaction.
+#
+#   click while idle       assemble the structure attached to the bearing's FACE
+#   click while assembled  no-op (direction/speed already comes from the network, nothing to flip)
+#   sneak + click          disassemble, returning the blocks to the world
+#
+# Same assembly convention as windmill_interact.pf — see that file's writeup of why the seed lookup
+# prefers the bearing itself (when glued) over the block it faces.
+
+def _seed_block():
+    self = Machine.block_at(0, 0, 0)
+    if Glue.is_glued(self):
+        return self
+    end
+    return Machine.block_at(Machine.facing_dx, Machine.facing_dy, Machine.facing_dz)
+end
+
+assembled = Machine.get_typed("assembled", "int")
+
+if Player.is_sneaking:
+    if assembled > 0:
+        cid = Machine.get_typed("contraption_uuid", "string")
+        contraption = ContraptionManager.get(cid)
+        if contraption != null:
+            # disassemble(), not kill(): kill() only despawns/disposes — it never puts the blocks
+            # back.
+            contraption.disassemble()
+        end
+        Machine.set_typed("assembled", "int", 0)
+        Machine.set_typed("contraption_uuid", "string", "")
+        Machine.report_su(0)
+        Player.send_message("<gray>Rotational bearing disassembled.")
+    end
+else if assembled > 0:
+    Player.send_message("<gray>Already assembled — feed RPM from below to turn it.")
+else:
+    seed = _seed_block()
+    if seed == null || seed.is_air:
+        Player.send_message("<red>Nothing attached to the bearing's face to assemble.")
+    else if !Glue.is_glued(seed):
+        Player.send_message("<red>That structure is not glued together — glue it to itself and to the bearing.")
+    else:
+        # create_bearing, not create_at: the bearing is the PIVOT and must stay in the world.
+        contraption = ContraptionManager.create_bearing(seed, Machine.block_at(0, 0, 0))
+        if contraption == null:
+            Player.send_message("<red>Could not assemble that structure.")
+        else:
+            Machine.set_typed("contraption_uuid", "string", contraption.uuid)
+            Machine.set_typed("assembled", "int", 1)
+            # Stamp the assembly tick so the head-cap renderer's tick()-based angle can be
+            # measured from the SAME epoch the contraption's own accumulated yaw/pitch/roll
+            # uses (which starts from 0 at assembly) instead of from server start -
+            # otherwise the two only agree by coincidence of when in server uptime it was assembled.
+            Machine.set_typed("assembled_tick", "int", tick())
+            Player.send_message("<green>Rotational bearing assembled <gray>(" + contraption.block_count + " blocks, weight " + floor(contraption.weight) + ").")
+        end
+    end
+end

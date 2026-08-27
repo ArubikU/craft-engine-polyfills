@@ -1,0 +1,33 @@
+{
+  "id": "polyfills:hand_crank",
+  "title": "Hand Crank",
+  "menu_size": 9,
+  "flags": {
+    "recipes": false,
+    "fuel": false,
+    "ui": false,
+    "ui_tick": false,
+    "kinetics": true,
+    "continuous_fuel": false,
+    "io_pull": true,
+    "renderers": true,
+    "scripts": true,
+    "animations": true
+  },
+  "action_script": "kinetics/generators/hand_crank",
+  "action_interval": 1,
+  "on_right_click": "kinetics/generators/hand_crank_interact",
+  "io": {
+    "output_same": [
+      {
+        "types": [
+          "rpm"
+        ],
+        "faces": [
+          "front",
+          "back"
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,394 @@
+# Mechanical Saw — Create-alike. Tree-felling (facing a log, horizontal orientation) or belt/
+# ground item processing (facing "up"/floor-mounted), never both at once. No inventory: drops go
+# via _deposit (contraption storage or world).
+
+import "utils.pf" { is_resting_item }
+import "kinetics/utils.pf" { _deposit, _linear_break_speed, _update_activated }
+import "kinetics/tree_utils.pf" { _is_log, _is_leaf_id, _is_choppable, _get_tree_block, _find_tree, _fell_tree }
+import "kinetics/belt_utils.pf" { _face_offset, belt_take, belt_give, depot_give, _item_matches }
+
+# RPM/SU baseline: at BASE_RPM the saw draws BASE_SU stress and a belt item takes PROCESS_TICKS
+# ticks to finish; both scale linearly with actual RPM (Create's own stress/speed shape, addon's
+# own numbers). saw.json's item_display hardcodes BASE_PROCESS_WORK as "320.0" — keep in sync.
+BASE_RPM = 32
+BASE_SU = 8
+PROCESS_TICKS = 10
+BASE_PROCESS_WORK = PROCESS_TICKS * BASE_RPM
+
+def _saw_su_cost(current_rpm):
+    return BASE_SU * abs(current_rpm) / BASE_RPM
+end
+
+# How many of this saw's own registered recipes (recipes/saw_*.json) match item_id as input.
+def _saw_recipe_count(item_id):
+    count = 0
+    for r in Machine.recipes:
+        ins = r.inputs
+        if size(ins) > 0 && ins[0].id == item_id:
+            count = count + 1
+        end
+    end
+    return count
+end
+
+# The Nth (0-indexed) registered recipe matching item_id, or null.
+def _saw_recipe_at(item_id, target_idx):
+    idx = 0
+    for r in Machine.recipes:
+        ins = r.inputs
+        if size(ins) > 0 && ins[0].id == item_id:
+            if idx == target_idx:
+                return r
+            end
+            idx = idx + 1
+        end
+    end
+    return null
+end
+
+# Re-resolves the exact recipe (own registered, or vanilla stonecutter fallback) that produced
+# out_id from item_id — the pairing already chosen once by _saw_output_for at intake, re-found
+# per completion cycle since a Recipe object can't be persisted across ticks (typed storage only
+# holds primitives). Used for recipe.outputs() so each cut cycle gets the recipe's own real
+# (possibly chance-rolled) output instead of a flat guessed amount.
+def _saw_recipe_for(item_id, out_id):
+    for r in Machine.recipes:
+        ins = r.inputs
+        outs = r.outputs
+        if size(ins) > 0 && ins[0].id == item_id && size(outs) > 0 && outs[0].id == out_id:
+            return r
+        end
+    end
+    for r in Registry.recipes.stonecutter.for_input(item_id):
+        outs = r.outputs
+        if size(outs) > 0 && outs[0].id == out_id:
+            return r
+        end
+    end
+    return null
+end
+
+# Output item id for item_id: filter match wins if satisfiable, else round-robin (Create's real
+# recipeIndex++, not per-attempt random) over own recipes, falling back to vanilla stonecutting.
+def _saw_output_for(item_id):
+    filter_id = Machine.get_typed("_saw_filter", "str")
+    if filter_id == null:
+        filter_id = ""
+    end
+
+    count = _saw_recipe_count(item_id)
+    if count > 0:
+        if filter_id != "":
+            for r in Machine.recipes:
+                ins = r.inputs
+                if size(ins) > 0 && ins[0].id == item_id:
+                    outs = r.outputs
+                    if size(outs) > 0 && outs[0].id == filter_id:
+                        return filter_id
+                    end
+                end
+            end
+        end
+        idx = Machine.get_typed("_saw_recipe_index", "int")
+        if idx == null:
+            idx = 0
+        end
+        idx = idx % count
+        Machine.set_typed("_saw_recipe_index", "int", (idx + 1) % count)
+        picked = _saw_recipe_at(item_id, idx)
+        if picked != null:
+            outs = picked.outputs
+            if size(outs) > 0:
+                return outs[0].id
+            end
+        end
+        return null
+    end
+
+    stone_candidates = Registry.recipes.stonecutter.for_input(item_id)
+    if filter_id != "":
+        for r in stone_candidates:
+            outs = r.outputs
+            if size(outs) > 0 && outs[0].id == filter_id:
+                return filter_id
+            end
+        end
+    end
+    stone_count = size(stone_candidates)
+    if stone_count > 0:
+        idx = Machine.get_typed("_saw_recipe_index", "int")
+        if idx == null:
+            idx = 0
+        end
+        idx = idx % stone_count
+        Machine.set_typed("_saw_recipe_index", "int", (idx + 1) % stone_count)
+        outs = stone_candidates[idx].outputs
+        if size(outs) > 0:
+            return outs[0].id
+        end
+    end
+    return null
+end
+
+# No menu — right-click sets/clears the filter directly (Create's SawFilterSlot is a value-box,
+# not a GUI slot).
+def on_right_click():
+    held = Player.main_hand
+    if is_empty(held):
+        Machine.set_typed("_saw_filter", "str", "")
+    else:
+        Machine.set_typed("_saw_filter", "str", held.id)
+    end
+end
+
+# Output face: facing picks the axis (north/south -> east/west, east/west -> north/south), RPM
+# sign picks which one — matches saw.json's item_display exactly. NOT Machine.facing_dx/dz (those
+# use the EFFECTIVE, collapsed facing — UP for a floor-mounted saw, useless here). _face_offset
+# (kinetics/belt_utils.pf) converts this to a numeric (dx,dy,dz) where needed.
+def _saw_output_face():
+    facing = Machine.block.property("facing")
+    sign = Machine.get_typed("_saw_rpm_sign", "int")
+    if sign == null || sign == 0:
+        sign = 1
+    end
+    if facing == "north" || facing == "south":
+        return sign > 0 ? "east" : "west"
+    end
+    return sign > 0 ? "south" : "north"
+end
+
+# The face directly opposite _saw_output_face — the belt segment FEEDING this saw. Same rpm-sign
+# stability as output_face (both derive from the same persisted sign), so they can't disagree.
+def _saw_input_face():
+    face = _saw_output_face()
+    if face == "east":
+        return "west"
+    end
+    if face == "west":
+        return "east"
+    end
+    if face == "north":
+        return "south"
+    end
+    return "north"
+end
+
+# Persists the LAST NON-ZERO rpm sign (raw "rpm < 0 ? -1 : 1" defaults to +1 whenever rpm reads
+# exactly 0 — unpowered, momentary gaps — which flipped output/incoming sides on a fixed belt
+# layout that never changed). Call unconditionally every tick, before any gating.
+def _saw_update_rpm_sign(effective_rpm):
+    if effective_rpm != 0:
+        Machine.set_typed("_saw_rpm_sign", "int", effective_rpm < 0 ? -1 : 1)
+    end
+end
+
+# Configures this saw's own RPM faces from its current face+facing. output_same (relay, not
+# set_rpm_output/new-network) since the saw is a plain pass-through like a shaft. Runs on
+# on_place/on_load so a moved/rotated saw always has fresh faces.
+def _saw_setup_rpm():
+    face = Machine.block.property("face")
+    facing = Machine.block.property("facing")
+    if face == "wall":
+        # "back" (relative token) resolves via the machine's own getFacing(), not a hand-rolled
+        # opposite() off the raw property — that direction convention was backwards in-game.
+        Machine.set_rpm_input("back")
+        Machine.set_rpm_output_same("")
+    else:
+        if facing == "north" || facing == "south":
+            Machine.set_rpm_input("north,south")
+            Machine.set_rpm_output_same("north,south")
+        else:
+            Machine.set_rpm_input("east,west")
+            Machine.set_rpm_output_same("east,west")
+        end
+    end
+end
+
+# For a stationary saw's ground-pickup output — tries the output face's belt (belt_give), then a
+# depot there (depot_give), then a gentle toss as last resort. _deposit for a contraption-riding saw.
+def _saw_deposit_directional(item):
+    if is_empty(item):
+        return
+    end
+    if Machine.contraption != null:
+        _deposit(item)
+    else:
+        face = _saw_output_face()
+        off = _face_offset(face)
+        remaining = belt_give(face, item)
+        if !is_empty(remaining):
+            remaining = depot_give(face, remaining)
+        end
+        if !is_empty(remaining):
+            Machine.drop_item_toward(remaining, off[0] * 0.08, 0.05, off[2] * 0.08)
+        end
+    end
+end
+
+_hold_key = Machine.x + "," + Machine.y + "," + Machine.z
+contraption = Machine.contraption
+_saw_update_rpm_sign(contraption != null ? contraption.rpm : rpm)
+is_now = 0
+# face=="floor" (blade horizontal) is Create's real canProcess() orientation for item processing;
+# any other facing is exclusively block-breaking.
+is_belt_facing = Machine.block.property("face") == "floor"
+
+if contraption != null:
+    is_rotational = contraption.rpm != 0
+    is_linear = contraption.is_moving()
+    is_now = (is_rotational || is_linear) ? 1 : 0
+
+    if is_now > 0:
+        speed = is_rotational ? max(1, abs(contraption.rpm) / 10) : _linear_break_speed(contraption)
+        tx = Machine.x + Machine.facing_dx
+        ty = Machine.y + Machine.facing_dy
+        tz = Machine.z + Machine.facing_dz
+        target = contraption.contraption_world.real_block(tx, ty, tz)
+        if is_belt_facing || target == null || target.is_air || !_is_choppable(target.id):
+            contraption.release(_hold_key)
+        else:
+            contraption.hold(_hold_key)
+            if _is_log(target.id):
+                _fell_tree(contraption, tx, ty, tz, speed)
+            else:
+                result = Machine.tick_break(target, speed)
+                if result != null:
+                    for item in result:
+                        _deposit(item)
+                    end
+                end
+            end
+            Machine.report_su(is_rotational ? _saw_su_cost(contraption.rpm) : (6 + speed))
+        end
+    else:
+        contraption.release(_hold_key)
+    end
+else if rpm != 0:
+    speed = max(1, abs(rpm) / 10)
+    fb = Machine.facing_block
+    if !is_belt_facing && !fb.is_air && _is_choppable(fb.id):
+        if _is_log(fb.id):
+            _fell_tree(null, Machine.x + Machine.facing_dx, Machine.y + Machine.facing_dy, Machine.z + Machine.facing_dz, speed)
+        else:
+            result = Machine.tick_break(fb, speed)
+            if result != null:
+                for item in result:
+                    _deposit(item)
+                end
+            end
+        end
+        Machine.report_su(_saw_su_cost(rpm))
+    end
+    is_now = 1
+end
+
+# Belt/ground item processing — facing UP only. Item is TAKEN off the belt (the animated
+# item_display in saw.json is the only visible stand-in while mid-cut); power cutting out just
+# freezes progress until it returns.
+if is_now > 0 && is_belt_facing:
+    belt = Machine.belt
+    belt_rpm = contraption != null ? contraption.rpm : rpm
+    active_id = Machine.get_typed("_saw_item_id", "str")
+    if active_id == null:
+        active_id = ""
+    end
+
+    if active_id == "":
+        if belt.has_item:
+            carried = belt.peek()
+            out_id = _saw_output_for(carried.id)
+            print("[saw-debug] own-belt has_item id=" + carried.id + " out_id=" + (out_id == null ? "null" : out_id))
+            if out_id != null:
+                taken = belt.take()
+                Machine.set_typed("_saw_item_id", "str", taken.id)
+                Machine.set_typed("_saw_out_id", "str", out_id)
+                Machine.set_typed("_saw_count", "int", taken.count)
+                Machine.set_typed("_saw_progress", "int", 0)
+                Machine.set_typed("_saw_from_ground", "int", 0)
+            end
+        else:
+            # Stalled on the FEEDING belt segment (can't advance onto the saw's own non-belt tile)
+            # — pull it in via belt_take/belt_give (kinetics/belt_utils.pf); give it right back if
+            # the saw has no recipe for it.
+            in_face = _saw_input_face()
+            taken = belt_take(in_face, null, null)
+            if !is_empty(taken):
+                out_id = _saw_output_for(taken.id)
+                if out_id != null:
+                    Machine.set_typed("_saw_item_id", "str", taken.id)
+                    Machine.set_typed("_saw_out_id", "str", out_id)
+                    Machine.set_typed("_saw_count", "int", item_count(taken))
+                    Machine.set_typed("_saw_progress", "int", 0)
+                    # 2 (distinct from ground=1/own-belt=0): taken from a SIDE-adjacent feeding
+                    # belt, not the saw's own tile — completion must deposit via the directional
+                    # helper (output face), not belt.put() on Machine.belt (own position, no real
+                    # belt there for this layout).
+                    Machine.set_typed("_saw_from_ground", "int", 2)
+                else:
+                    belt_give(in_face, taken)
+                end
+            else:
+                # Depot-style ground pickup (is_resting_item, utils.pf) — no belt at all.
+                for entity in Machine.nearby_entities(0.7):
+                    if is_resting_item(entity):
+                        out_id = _saw_output_for(entity.item.id)
+                        if out_id != null:
+                            Machine.set_typed("_saw_item_id", "str", entity.item.id)
+                            Machine.set_typed("_saw_out_id", "str", out_id)
+                            Machine.set_typed("_saw_count", "int", item_count(entity.item))
+                            Machine.set_typed("_saw_progress", "int", 0)
+                            Machine.set_typed("_saw_from_ground", "int", 1)
+                            entity.remove()
+                            break
+                        end
+                    end
+                end
+            end
+        end
+    else:
+        progress = Machine.get_typed("_saw_progress", "int")
+        if progress == null:
+            progress = 0
+        end
+        progress = progress + abs(belt_rpm)
+        Machine.report_su(_saw_su_cost(belt_rpm))
+        if progress >= BASE_PROCESS_WORK:
+            # One input item per cut cycle, not the whole stack at once — the rest stays "held"
+            # (_saw_count = remaining, including the one just finished) and shows as a waiting pile
+            # via saw.json's third item_display (remaining-1, since the one mid-cut is the sliding
+            # renderer's own job) until it's this saw's turn.
+            out_id = Machine.get_typed("_saw_out_id", "str")
+            remaining = Machine.get_typed("_saw_count", "int")
+            if remaining == null || remaining <= 0:
+                remaining = 1
+            end
+            from_ground = Machine.get_typed("_saw_from_ground", "int")
+            recipe = _saw_recipe_for(active_id, out_id)
+            result = recipe != null ? recipe.outputs() : null
+            items = result != null ? result.items : [MinecraftItem(out_id, 1)]
+            for out_item in items:
+                if from_ground == 1 || from_ground == 2:
+                    # Ground pickup (1) or a side-adjacent feeding belt (2) — the saw's own tile
+                    # isn't a real belt in either case, so deposit via the output-face helper
+                    # (belt_give -> depot_give -> gentle toss), not Machine.belt (own position).
+                    _saw_deposit_directional(out_item)
+                else:
+                    leftover = belt.put(out_item)
+                    if !is_empty(leftover):
+                        _deposit(leftover)
+                    end
+                end
+            end
+            remaining = remaining - 1
+            Machine.set_typed("_saw_count", "int", remaining)
+            Machine.set_typed("_saw_progress", "int", 0)
+            if remaining <= 0:
+                Machine.set_typed("_saw_item_id", "str", "")
+            end
+        else:
+            Machine.set_typed("_saw_progress", "int", progress)
+        end
+    end
+end
+
+_update_activated("_saw_act", is_now)

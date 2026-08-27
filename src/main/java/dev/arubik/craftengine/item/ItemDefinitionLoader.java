@@ -61,33 +61,26 @@ public final class ItemDefinitionLoader {
         Map<String, String> scripts = ItemDefinition.parseScripts(view);
 
         // "place_block": { "block": "polyfills:...", "fill_storage": bool|"script.pf:func[:args]",
-        // "fill_flags": ..., "fill_typed": ... } — each fill_* switch is either a constant or a
-        // script condition evaluated fresh at fill time (see ItemDefinition.ScriptToggle), so e.g.
-        // a locked backpack can refuse to spill its storage into a freshly placed block. There is
-        // deliberately no "pickup" switch here — whether breaking the placed block hands the item
-        // back is entirely the block's own on_break script's call (e.g. backpack_storage.pf calling
+        // "fill_typed": ... } — each fill_* switch is either a constant or a script condition
+        // evaluated fresh at fill time (see ItemDefinition.ScriptToggle), so e.g. a locked backpack
+        // can refuse to spill its storage into a freshly placed block. There is deliberately no
+        // "pickup" switch here — whether breaking the placed block hands the item back is entirely
+        // the block's own on_break script's call (e.g. backpack_storage.pf calling
         // Machine.to_item), not a policy this generic item behavior should gate on its behalf.
         Key placeBlock = null;
         ItemDefinition.ScriptToggle fillStorage = ItemDefinition.ScriptToggle.TRUE;
-        ItemDefinition.ScriptToggle fillFlags = ItemDefinition.ScriptToggle.TRUE;
         ItemDefinition.ScriptToggle fillTyped = ItemDefinition.ScriptToggle.TRUE;
         if (view.has("place_block")) {
             JsonView pb = view.object("place_block");
             placeBlock = pb.key("block", "polyfills");
             fillStorage = readToggle(pb, "fill_storage", true);
-            fillFlags = readToggle(pb, "fill_flags", true);
             fillTyped = readToggle(pb, "fill_typed", true);
         }
         int tickInterval = view.rangedInt("tick_interval", 1, 1, 6000);
 
-        // "flags"/"str_flags" — Machine.get_flag/set_flag (and the string variant) names to carry
-        // over automatically when this item becomes a machine or vice versa. See
-        // ItemDefinition#bridgeFlags for why only explicitly-declared names can be bridged.
-        List<String> bridgeFlags = view.stringList("flags");
-        List<String> bridgeStrFlags = view.stringList("str_flags");
-
         // "typed": [{"name": "...", "type": "int"|"string"|...}] — generic TypedKey entries to
-        // bridge, same "no enumeration mechanism" reasoning as flags/str_flags above.
+        // bridge; a machine's TypedKey store has no enumeration mechanism, so only these
+        // explicitly-declared names are carried over automatically.
         List<ItemDefinition.TypedBridgeSpec> bridgeTyped = new ArrayList<>();
         for (JsonView t : view.objectList("typed")) {
             bridgeTyped.add(new ItemDefinition.TypedBridgeSpec(t.string("name"), t.string("type", "string")));
@@ -101,8 +94,8 @@ public final class ItemDefinitionLoader {
 
         return new ItemDefinition(id, view.string("title", id.value()), pages,
                 openOnRightClick, openOnShiftRightClick, tanks, scripts,
-                placeBlock, fillStorage, fillFlags, fillTyped, tickInterval,
-                bridgeFlags, bridgeStrFlags, bridgeTyped, nameTemplate, loreTemplate);
+                placeBlock, fillStorage, fillTyped, tickInterval,
+                bridgeTyped, nameTemplate, loreTemplate);
     }
 
     /** Reads a {@code place_block} switch that's either a JSON boolean or a

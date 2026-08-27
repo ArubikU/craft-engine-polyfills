@@ -106,7 +106,7 @@ public final class BlockAnchoredContraptionStore {
         try {
             root = new CompoundTag();
             root.putString("id", id.toString());
-            root.putString("world", state.worldId().toString());
+            root.putString("world", state.worldId().identifier().getNamespace() + ":" + state.worldId().identifier().getPath());
             root.putInt("bx", bearingPos.getX());
             root.putInt("by", bearingPos.getY());
             root.putInt("bz", bearingPos.getZ());
@@ -224,6 +224,15 @@ public final class BlockAnchoredContraptionStore {
         Key type;
         UUID id = UUID.fromString((String)root.getString("id").orElseThrow());
         String worldStr = (String)root.getString("world").orElseThrow();
+        // A save() bug (fixed) once wrote ResourceKey#toString()'s own debug format here instead of
+        // a plain "namespace:path" identifier — e.g. "ResourceKey[minecraft:dimension / minecraft:overworld]" —
+        // which Identifier.parse can never accept. Recover the identifier out of that old broken
+        // shape rather than discarding the whole save (and the machine it describes) on every boot.
+        if (worldStr.startsWith("ResourceKey[") && worldStr.contains("/")) {
+            String afterSlash = worldStr.substring(worldStr.indexOf('/') + 1).trim();
+            if (afterSlash.endsWith("]")) afterSlash = afterSlash.substring(0, afterSlash.length() - 1).trim();
+            worldStr = afterSlash;
+        }
         Identifier worldLoc = Identifier.parse((String)worldStr);
         ResourceKey world = ResourceKey.create((ResourceKey)Registries.DIMENSION, (Identifier)worldLoc);
         BlockPos bearingPos = new BlockPos(root.getInt("bx").orElse(0).intValue(), root.getInt("by").orElse(0).intValue(), root.getInt("bz").orElse(0).intValue());

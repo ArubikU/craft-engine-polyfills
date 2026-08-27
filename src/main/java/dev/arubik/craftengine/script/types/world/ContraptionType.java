@@ -1,6 +1,8 @@
 package dev.arubik.craftengine.script.types.world;
 
+import dev.arubik.craftengine.contraption.ContraptionContainerView;
 import dev.arubik.craftengine.contraption.ContraptionWorlds;
+import dev.arubik.craftengine.contraption.assembly.ContraptionMath;
 import dev.arubik.craftengine.contraption.behavior.MassModel;
 import dev.arubik.craftengine.contraption.core.ContraptionLevel;
 import dev.arubik.craftengine.contraption.physics.PhysicsWorld;
@@ -12,6 +14,12 @@ import net.minecraft.core.BlockPos;
 import org.joml.Vector3d;
 
 public final class ContraptionType {
+
+    /** How many ticks a script-reported move() /teleport() stays "recent" for
+     *  is_moving()/speed's fallback — generous enough to survive any reasonable action_interval
+     *  (the driving script may only call move() every few ticks) without misreporting "moving"
+     *  long after the contraption actually stopped. */
+    private static final long SCRIPT_MOVE_GRACE_TICKS = 20;
 
     private ContraptionType() {}
 
@@ -31,12 +39,38 @@ public final class ContraptionType {
             .property("pitch", obj -> ScriptValue.of(Math.toDegrees(cl(obj).realPitchRadians())))
             .property("roll",  obj -> ScriptValue.of(Math.toDegrees(cl(obj).realRollRadians())))
             .property("scale", obj -> ScriptValue.of(cl(obj).realScaleFactor()))
+            // Three fallback sources, in order:
+            //   1. a real PhysicsWorld body's velocity (linear/vehicle/phys bearing types);
+            //   2. ContraptionState#lastDeltaX/Y/Z — the velocity ContraptionEngine#stepKinematics
+            //      already accumulates every tick from EVERY attached MovementBehavior's own
+            //      velocityThisTick(), physics or not. This is what covers a minecart-bearing
+            //      contraption: MinecartFollowBehavior has no physics body, it just samples the
+            //      real minecart entity's position each tick and reports the delta as its
+            //      velocityThisTick() — stepKinematics already folds that into lastDelta today, this
+            //      was simply never read from here before;
+            //   3. a recently-reported script move() /teleport() (see ContraptionState#
+            //      reportScriptMove) — covers a "machine_contraption" elevator/piston bearing that
+            //      has no physics body AND no attached MovementBehavior at all, driving its own
+            //      position directly from its own action_script instead.
+            // Without ALL three, a drill riding a minecart or a script-driven lift always saw 0/
+            // false here regardless of how fast it was actually moving, identical to the
+            // contraption.rpm gap set_spin() had for the rotational case.
             .property("speed", obj -> {
                 try {
                     var entity = ContraptionWorlds.entityOf(cl(obj)).orElse(null);
                     if (entity != null) {
+                        if (PhysicsWorld.isHeld(entity.state().id())) return ScriptValue.of(0.0);
                         var body = PhysicsWorld.bodyOf(entity.state().id());
                         if (body != null) return ScriptValue.of(body.body.linearVelocity.length());
+                        var st = entity.state();
+                        double dx = st.lastDeltaX(), dy = st.lastDeltaY(), dz = st.lastDeltaZ();
+                        double behaviorSpeed = Math.sqrt(dx * dx + dy * dy + dz * dz);
+                        if (behaviorSpeed > 0.001) return ScriptValue.of(behaviorSpeed);
+                        long now = net.minecraft.server.MinecraftServer.getServer().getTickCount();
+                        if (st.scriptMoveRecent(now, SCRIPT_MOVE_GRACE_TICKS)) {
+                            double sx = st.lastScriptMoveSpeedX(), sy = st.lastScriptMoveSpeedY(), sz = st.lastScriptMoveSpeedZ();
+                            return ScriptValue.of(Math.sqrt(sx * sx + sy * sy + sz * sz));
+                        }
                     }
                 } catch (Throwable ignored) {}
                 return ScriptValue.of(0.0);
@@ -87,12 +121,21 @@ public final class ContraptionType {
                 } catch (Throwable ignored) {}
                 return ScriptValue.of(false);
             })
+            // See Contraption.speed's javadoc above for the three fallback sources (physics body,
+            // ContraptionState#lastDelta from ANY attached MovementBehavior — e.g. a minecart
+            // bearing's MinecartFollowBehavior — and a recently-reported script move()/teleport()).
             .method("is_moving", (obj, args) -> {
                 try {
                     var entity = ContraptionWorlds.entityOf(cl(obj)).orElse(null);
                     if (entity != null) {
+                        if (PhysicsWorld.isHeld(entity.state().id())) return ScriptValue.of(false);
                         var body = PhysicsWorld.bodyOf(entity.state().id());
-                        return ScriptValue.of(body != null && body.body.linearVelocity.lengthSquared() > 0.001);
+                        if (body != null) return ScriptValue.of(body.body.linearVelocity.lengthSquared() > 0.001);
+                        var st = entity.state();
+                        double dx = st.lastDeltaX(), dy = st.lastDeltaY(), dz = st.lastDeltaZ();
+                        if (dx * dx + dy * dy + dz * dz > 0.001 * 0.001) return ScriptValue.of(true);
+                        return ScriptValue.of(st.scriptMoveRecent(
+                                net.minecraft.server.MinecraftServer.getServer().getTickCount(), SCRIPT_MOVE_GRACE_TICKS));
                     }
                 } catch (Throwable ignored) {}
                 return ScriptValue.of(false);
@@ -117,16 +160,36 @@ public final class ContraptionType {
                 return ScriptValue.NULL;
             })
             .property("contraption_world", obj -> ScriptValue.ofObj("ContraptionWorld", cl(obj)))
+            // Combined pushable STORAGE+OUTPUT container across the whole contraption — see
+            // ContraptionContainerView's javadoc. Built fresh every access (cheap), so a script
+            // calling e.g. Machine.contraption.container.push(item) every tick always sees the
+            // contraption's current blocks/contents, not a stale snapshot from assembly time.
+            .property("container", obj -> ScriptValue.ofObj("ContraptionContainer", ContraptionContainerView.build(cl(obj))))
             // --- Motion control ---
+            // Both teleport() and move() below no-op (but still return true, i.e. "acknowledged")
+            // while Contraption.hold() is active — the same reasoning as set_spin()'s held check:
+            // a "machine_contraption" elevator/piston-style bearing driven by a script calling
+            // move()/teleport() every tick toward a target position (e.g. an initial-pos/final-pos
+            // lift) has no physics body either, so without this, hold() would have zero effect on
+            // it too and a drill riding along would sail straight through its target the same way
+            // it did for a rotating one before this fix.
             .method("teleport", (obj, args) -> {
                 if (args.size() < 3) return ScriptValue.of(false);
                 try {
                     var entity = ContraptionWorlds.entityOf(cl(obj)).orElse(null);
                     if (entity == null) return ScriptValue.of(false);
+                    if (PhysicsWorld.isHeld(entity.state().id())) return ScriptValue.of(true);
+                    var state = entity.state();
+                    double oldX = state.x(), oldY = state.y(), oldZ = state.z();
                     double x = args.get(0).asNum(), y = args.get(1).asNum(), z = args.get(2).asNum();
                     double yaw = args.size() >= 4 ? Math.toRadians(args.get(3).asNum()) : cl(obj).realYawRadians();
                     if (cl(obj).realLevel() instanceof net.minecraft.server.level.ServerLevel rl) {
                         entity.teleport(rl.getWorld(), x, y, z, yaw);
+                        // See Contraption.speed/is_moving() below — this is what lets those detect
+                        // a script-driven (no physics body) contraption sliding via repeated
+                        // teleport() calls, not just a real PhysicsWorld body's velocity.
+                        state.reportScriptMove(net.minecraft.server.MinecraftServer.getServer().getTickCount(),
+                                x - oldX, y - oldY, z - oldZ);
                         return ScriptValue.of(true);
                     }
                 } catch (Throwable ignored) {}
@@ -137,10 +200,14 @@ public final class ContraptionType {
                 try {
                     var entity = ContraptionWorlds.entityOf(cl(obj)).orElse(null);
                     if (entity == null) return ScriptValue.of(false);
+                    if (PhysicsWorld.isHeld(entity.state().id())) return ScriptValue.of(true);
                     net.minecraft.world.phys.Vec3 origin = cl(obj).realWorldPositionOf(new BlockPos(0,0,0));
-                    double nx = origin.x + args.get(0).asNum(), ny = origin.y + args.get(1).asNum(), nz = origin.z + args.get(2).asNum();
+                    double dx = args.get(0).asNum(), dy = args.get(1).asNum(), dz = args.get(2).asNum();
+                    double nx = origin.x + dx, ny = origin.y + dy, nz = origin.z + dz;
                     if (cl(obj).realLevel() instanceof net.minecraft.server.level.ServerLevel rl) {
                         entity.teleport(rl.getWorld(), nx, ny, nz, cl(obj).realYawRadians());
+                        // See teleport() above and Contraption.speed/is_moving() below.
+                        entity.state().reportScriptMove(net.minecraft.server.MinecraftServer.getServer().getTickCount(), dx, dy, dz);
                         return ScriptValue.of(true);
                     }
                 } catch (Throwable ignored) {}
@@ -237,20 +304,32 @@ public final class ContraptionType {
                 } catch (Throwable ignored) {}
                 return ScriptValue.of(false);
             })
+            // hold(key) / release(key) — REGISTERS/un-registers `key` as a reason the contraption
+            // must stay still, rather than a single shared on/off flag. Two blocks riding the same
+            // contraption (two drills on one rotating arm, say) each call hold() independently while
+            // they're mid-cut; with a plain boolean, whichever one finished and called release()
+            // FIRST would resume the whole contraption out from under the other one still cutting.
+            // With a per-key registry (PhysicsWorld#hold/#release), the contraption only actually
+            // resumes once EVERY registered key has released — see PhysicsWorld#isHeld. `key` should
+            // be something stable and unique per calling block, e.g. Machine.pos as a drill script
+            // would pass; the same key is safe to hold() again while already held (re-registration,
+            // not a second independent hold needing two releases).
             .method("hold", (obj, args) -> {
+                if (args.isEmpty()) return ScriptValue.of(false);
                 try {
                     var entity = ContraptionWorlds.entityOf(cl(obj)).orElse(null);
                     if (entity == null) return ScriptValue.of(false);
-                    PhysicsWorld.setHeld(entity.state().id(), true);
+                    PhysicsWorld.hold(entity.state().id(), holderKey(args.get(0)));
                     return ScriptValue.of(true);
                 } catch (Throwable ignored) {}
                 return ScriptValue.of(false);
             })
             .method("release", (obj, args) -> {
+                if (args.isEmpty()) return ScriptValue.of(false);
                 try {
                     var entity = ContraptionWorlds.entityOf(cl(obj)).orElse(null);
                     if (entity == null) return ScriptValue.of(false);
-                    PhysicsWorld.setHeld(entity.state().id(), false);
+                    PhysicsWorld.release(entity.state().id(), holderKey(args.get(0)));
                     return ScriptValue.of(true);
                 } catch (Throwable ignored) {}
                 return ScriptValue.of(false);
@@ -282,6 +361,32 @@ public final class ContraptionType {
                     long last = state.lastSetSpinTick();
                     long elapsedTicks = last == Long.MIN_VALUE ? 1L : Math.max(1L, Math.min(now - last, 100L));
                     state.setLastSetSpinTick(now);
+                    // A held contraption (Contraption.hold(), e.g. a drill pausing mid-break so it
+                    // doesn't sweep past its target) must actually stop turning. hold()/release()
+                    // only ever wrote to PhysicsWorld's held-set before this check existed — that's
+                    // read by the physics step for a real physics-body contraption, but a
+                    // "machine_contraption" bearing (create_bearing's default type, e.g.
+                    // rotational_bearing.pf) has NO physics body at all; set_spin() IS its entire
+                    // rotation mechanism, called unconditionally every tick regardless of hold
+                    // state, so the contraption kept spinning straight through a hold with zero
+                    // effect. Checking it here — the actual place rotation gets applied for this
+                    // bearing type — is what makes hold() real for it. Time isn't lost: elapsedTicks
+                    // was already stamped above, so releasing doesn't cause a catch-up jump; it
+                    // just resumes from wherever it left off.
+                    // Also stamp globalRpm with the reported rate — the same field
+                    // RotationalBearingBehavior/WindmillBearingBehavior (the OTHER, physics-less-
+                    // but-attached-MovementBehavior route) already keep current via
+                    // state.setGlobalRpm() every tick. A "machine_contraption" bearing (create_bearing's
+                    // default type, e.g. rotational_bearing.pf) has NO attached MovementBehavior at
+                    // all — set_spin() IS its entire rotation mechanism — so without this,
+                    // contraption.rpm/get_rpm() silently stayed 0 forever for it, and anything reading
+                    // "is this contraption spinning" off contraption.rpm (rather than polling yaw
+                    // itself) always saw false. Stamped even while held, below, so a reader still
+                    // sees "this is meant to be spinning at N rpm" rather than a stale/zero value.
+                    state.setGlobalRpm((float) args.get(1).asNum());
+                    if (PhysicsWorld.isHeld(entity.state().id())) {
+                        return ScriptValue.of(true);
+                    }
                     // 1 RPM = one turn per 60s = 2*PI rad / 1200 ticks.
                     double radiansPerTick = args.get(1).asNum() * (2.0 * Math.PI / 1200.0) * elapsedTicks;
                     switch (args.get(0).asStr().trim().toLowerCase(java.util.Locale.ROOT)) {
@@ -377,6 +482,48 @@ public final class ContraptionType {
                 } catch (Throwable ignored) {}
                 return ScriptValue.NULL;
             })
+            // real_direction(dx,dy,dz) → the real-world direction NAME ("north".."down") that a
+            // LOCAL direction (e.g. Machine.facing_dx/dy/dz) currently points to once the
+            // contraption's live rotation — yaw, pitch, AND roll, not yaw alone — is applied. NULL
+            // if any of the three isn't currently within ~1° of a multiple of 90°, same requirement
+            // Create's own Portable Storage Interface has (getCurrentFacingIfValid): a spinning or
+            // off-axis contraption can't make a valid facing-to-facing connection.
+            //
+            // Deliberately does NOT go through ContraptionWorlds#realDirectionOf/#isGridAligned —
+            // those ALSO require the contraption's anchor POSITION to sit within 0.05 of an integer
+            // block coordinate, a requirement that has nothing to do with rotation and silently
+            // returns empty for most contraptions (an anchor offset by even a fractional amount,
+            // which is completely normal) even when perfectly cardinal-aligned, and only ever
+            // checked yaw anyway — a contraption tipped on its side (rolled/pitched 90°) has a
+            // perfectly well-defined facing too, just not one yaw alone can express.
+            .method("real_direction", (obj, args) -> {
+                if (args.size() < 3) return ScriptValue.NULL;
+                try {
+                    double yaw = ContraptionMath.snapYawToCardinal(cl(obj).realYawRadians());
+                    double pitch = ContraptionMath.snapYawToCardinal(cl(obj).realPitchRadians());
+                    double roll = ContraptionMath.snapYawToCardinal(cl(obj).realRollRadians());
+                    // Widened from 0.02 rad (~1.1°) to 0.12 rad (~6.9°): a contraption spinning fast
+                    // enough can rotate several degrees between action_script ticks, so a too-tight
+                    // window meant it was frequently sampled just past "aligned" and never matched at
+                    // all — this still rejects anything visibly off-axis while giving fast movers a
+                    // real chance of being caught mid-tick.
+                    if (angleDiff(cl(obj).realYawRadians(), yaw) > 0.12
+                            || angleDiff(cl(obj).realPitchRadians(), pitch) > 0.12
+                            || angleDiff(cl(obj).realRollRadians(), roll) > 0.12) {
+                        return ScriptValue.NULL;
+                    }
+
+                    int dx = (int) args.get(0).asNum(), dy = (int) args.get(1).asNum(), dz = (int) args.get(2).asNum();
+                    net.minecraft.core.Direction local = net.minecraft.core.Direction.getNearest(dx, dy, dz, net.minecraft.core.Direction.NORTH);
+                    net.minecraft.world.phys.Vec3 rotated = ContraptionMath.rotateYawPitchRoll(
+                            new net.minecraft.world.phys.Vec3(local.getStepX(), local.getStepY(), local.getStepZ()), yaw, pitch, roll);
+                    int rx = (int) Math.round(rotated.x), ry = (int) Math.round(rotated.y), rz = (int) Math.round(rotated.z);
+                    for (net.minecraft.core.Direction d : net.minecraft.core.Direction.values()) {
+                        if (d.getStepX() == rx && d.getStepY() == ry && d.getStepZ() == rz) return ScriptValue.of(d.getName());
+                    }
+                } catch (Throwable ignored) {}
+                return ScriptValue.NULL;
+            })
             // get_block(lx,ly,lz) → BlockType at local contraption coords.
             .method("get_block", (obj, args) -> {
                 if (args.size() < 3) return ScriptValue.NULL;
@@ -431,6 +578,7 @@ public final class ContraptionType {
                 if (cl(obj).realLevel() instanceof net.minecraft.server.level.ServerLevel rl) return WorldType.wrap(rl);
                 return ScriptValue.NULL;
             })
+            .property("container", obj -> ScriptValue.ofObj("ContraptionContainer", ContraptionContainerView.build(cl(obj))))
             // real_pos(x,y,z) → Vec3 in real-world coords
             .method("real_pos", (obj, args) -> {
                 if (args.size() < 3) return ScriptValue.NULL;
@@ -438,14 +586,48 @@ public final class ContraptionType {
                     new net.minecraft.world.phys.Vec3(args.get(0).asNum(), args.get(1).asNum(), args.get(2).asNum()));
                 return VectorType.wrap(rp.x, rp.y, rp.z);
             })
-            // real_block(lx,ly,lz) → BlockType at projected real-world pos
+            // real_block(lx,ly,lz) → BlockType at projected real-world pos. lx/ly/lz are treated as
+            // a BLOCK (corner) coordinate, like get_block()/blocks() use — but the +0.5 centering
+            // below before rotating is NOT optional: every other renderPosition() caller in this
+            // codebase that projects a whole block (ContraptionMachineRendererElement,
+            // ContraptionBlockElement, ...) explicitly centers first, because rotating a raw CORNER
+            // coordinate about the local origin and then flooring can land in the wrong cell the
+            // moment yaw isn't an exact multiple of 90° — i.e. any tick a rotational_bearing-driven
+            // contraption is actually spinning, which is the entire point of calling this. Rotating
+            // the CENTER instead keeps the floor stable (this was the actual cause of a
+            // contraption-riding drill always seeing its target as air: this method had never been
+            // exercised by any real caller before that feature). Math.floor via BlockPos.containing
+            // (not a raw (int) cast, which truncates toward zero and is wrong for negative inputs)
+            // then recovers the containing block from that centered, rotated point.
             .method("real_block", (obj, args) -> {
                 if (args.size() < 3) return ScriptValue.NULL;
                 try {
                     net.minecraft.world.phys.Vec3 rp = cl(obj).realWorldPositionOf(
-                        new net.minecraft.world.phys.Vec3(args.get(0).asNum(), args.get(1).asNum(), args.get(2).asNum()));
+                        new net.minecraft.world.phys.Vec3(
+                            args.get(0).asNum() + 0.5, args.get(1).asNum() + 0.5, args.get(2).asNum() + 0.5));
                     if (cl(obj).realLevel() instanceof net.minecraft.server.level.ServerLevel rl)
-                        return BlockType.wrap(rl, new BlockPos((int)rp.x, (int)rp.y, (int)rp.z));
+                        return BlockType.wrap(rl, BlockPos.containing(rp.x, rp.y, rp.z));
+                } catch (Throwable ignored) {}
+                return ScriptValue.NULL;
+            })
+            // local_block(rx,ry,rz) → BlockType at the LOCAL contraption position that
+            // corresponds to real-world (rx,ry,rz) right now — the exact inverse of real_block(),
+            // using the same centered-then-floored convention (so real_block(local_block(p)) round-
+            // trips onto the same block p came from). This is what lets something OUTSIDE a
+            // contraption (a stationary Portable Storage Interface, say) answer "is the real block
+            // directly in front of me currently PART of this contraption" precisely — accounting for
+            // its current position AND rotation — instead of a rough is-it-nearby distance check.
+            .method("local_block", (obj, args) -> {
+                if (args.size() < 3) return ScriptValue.NULL;
+                try {
+                    net.minecraft.world.phys.Vec3 bearing = cl(obj).realWorldPositionOf(BlockPos.ZERO);
+                    net.minecraft.world.phys.Vec3 lp = ContraptionMath.realToLocal(
+                        new net.minecraft.world.phys.Vec3(
+                            args.get(0).asNum() + 0.5, args.get(1).asNum() + 0.5, args.get(2).asNum() + 0.5),
+                        bearing, cl(obj).realYawRadians(), cl(obj).realPitchRadians(), cl(obj).realRollRadians(), cl(obj).realScaleFactor());
+                    BlockPos bp = BlockPos.containing(lp.x, lp.y, lp.z);
+                    cl(obj).ensureChunkReady(bp);
+                    return BlockType.wrap(cl(obj).serverLevel(), bp);
                 } catch (Throwable ignored) {}
                 return ScriptValue.NULL;
             })
@@ -505,6 +687,16 @@ public final class ContraptionType {
                 } catch (Throwable ignored) {}
                 return ScriptValue.of(false);
             });
+
+        // ContraptionContainer — the combined pushable STORAGE+OUTPUT view returned by
+        // Contraption.container / ContraptionWorld.container (see ContraptionContainerView). This
+        // is what a belt-fed processing machine (sawmill, harvester, ...) riding a moving
+        // contraption uses to redirect its drops into the contraption's own storage instead of
+        // dropping them into the world, and what the Portable Storage Interface mirrors against.
+        // All actual get/set/push/has_room behavior lives on the generic "Container" base type
+        // (ContainerType) — nothing contraption-specific needed here beyond the subtype name itself
+        // (kept for future contraption-only additions and clearer script-side type checks).
+        PolyTypeRegistry.define("ContraptionContainer", "Container");
     }
 
     /** Null-safe: returns NULL if not a ContraptionLevel. */
@@ -514,4 +706,23 @@ public final class ContraptionType {
     }
 
     private static ContraptionLevel cl(Object obj) { return (ContraptionLevel) obj; }
+
+    /** Normalizes a hold()/release() key argument into a stable String for
+     *  PhysicsWorld#hold/#release's registry — ScriptValue.asStr() is only well-defined for a
+     *  primitive (string/number/bool), so a caller MUST pass one of those (e.g.
+     *  {@code Machine.x + "," + Machine.y + "," + Machine.z}), not a raw object like Machine.pos
+     *  (a Vector), which would coerce to the same "?" for every caller and collapse every holder
+     *  onto one key. */
+    private static String holderKey(ScriptValue v) {
+        return v.asStr();
+    }
+
+    /** Smallest absolute angular distance between two radian angles, wrapped into [-PI, PI] first —
+     *  used by real_direction() to check each of yaw/pitch/roll against its own 90°-snapped value. */
+    private static double angleDiff(double a, double b) {
+        double diff = a - b;
+        while (diff > Math.PI) diff -= 2.0 * Math.PI;
+        while (diff < -Math.PI) diff += 2.0 * Math.PI;
+        return Math.abs(diff);
+    }
 }

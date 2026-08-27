@@ -1,0 +1,14 @@
+# Funnel — belt-facing directional item hand-off, machine-ified from the old FunnelBehavior/
+# FunnelBlockEntity Java pair. See funnel_utils.pf for the shared tick logic.
+
+import "conveyor/funnel_utils.pf" { _funnel_tick, _funnel_toggle_mode, _funnel_drop_held }
+
+def on_right_click():
+    _funnel_toggle_mode()
+end
+
+def on_break():
+    _funnel_drop_held()
+end
+
+_funnel_tick()

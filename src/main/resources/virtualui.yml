@@ -1,0 +1,119 @@
+# VirtualUI engine tuning —  camera-locked cursor UI.
+# There is NO UI content here (no buttons, no holograms) — every VirtualUI screen is built
+# entirely by a script via the `VirtualUI` script API (see `/cep virtualui sample` for a demo,
+# and its source in CepCommand.java, for the exact calls). This file only tunes the engine.
+
+cursor:
+  # Kept at 0.1 per explicit direction — a higher value (0.3 was tried this session) made the
+  # cursor twitchier/less precise to place exactly, and amplified the predicted-vs-raw hit-test
+  # mismatch (see VirtualUIClickSystem.resolveHit's doc) into visibly broken clicks. The "camera
+  # moves too much" complaint is addressed instead by camera.max_rotation_degrees below, which caps
+  # how far the player can physically turn while a screen is open.
+  sensitivity_x: 0.1
+  sensitivity_y: 0.1
+  # The "screen border" — how far (world units at cursor.distance) the cursor can move from center
+  # on each axis before clamping. A screen's own .bounds(w, h) can override this per-screen (see
+  # Widget.MaxOffsetX/Y in VirtualUIScreen) — this is just the engine-wide default.
+  max_offset_x: 6.0
+  max_offset_y: 3.0
+  distance: 2.0
+  # How much CLOSER than "distance" above the cursor glyph/click-marker/tooltip render — keeps them
+  # always in front of every widget (nothing can configure its way in front of the cursor). Bigger
+  # = more separation from the widget plane, but also more perspective divergence between what the
+  # cursor visually sits over and where a widget's own hit-test bounds actually are (see
+  # VirtualUICameraSystem.cursorLocalPosAtDepth's doc) — this is already perspective-corrected, so
+  # the two stay visually aligned regardless of this value; only tune it if the cursor render order
+  # itself needs adjusting.
+  front_margin: 0.5
+  # World-unit width/height of the invisible EntityType.INTERACTION click-detection marker that
+  # every left/right click actually raycasts onto (see CameraSession#clickMarkerEntityId's doc).
+  # It's invisible, so bigger costs nothing and only adds forgiveness — shrink it only if you
+  # suspect it's catching clicks that should have missed entirely.
+  click_marker_size: 3.0
+  display:
+    text: "<white>+"
+    scale: 0.8
+    opacity: 254
+    billboard: "CENTER"
+    alignment: "CENTER"
+    line_width: 200
+    see_through: false
+    shadow: false
+    background_r: 0
+    background_g: 0
+    background_b: 0
+    background_a: 0
+    brightness_block: 15
+    brightness_sky: 15
+  # Predictive cursor — smooths the rendered cursor glyph a few ticks ahead of raw look-delta
+  # input using its own recent velocity, matching 's prediction system (hit-testing/click
+  # detection always uses the RAW cursor position, never the predicted one — this only affects
+  # what's drawn, so a click always registers exactly where the visible cursor was, never early).
+  prediction:
+    enabled: true
+    strength: 0.12    # ticks of velocity to extrapolate ahead
+    smoothing: 0.35    # 0-1 exponential smoothing applied to velocity (higher = snappier, jitterier)
+  # Cursor-state provider (port of 's cursor: normal/hover/hold/scroll_*/processing) —
+  # named alternate cursor appearances, auto-switched by context: a hovered clickable widget picks
+  # "hover"; a dragged scrollbar picks "scroll_vertical"/"scroll_horizontal" by its own orientation;
+  # a script can force any name (e.g. "processing") via VirtualUI.set_cursor_state(player, state) /
+  # release it with VirtualUI.clear_cursor_state(player); everything else falls back to "normal",
+  # which itself falls back to cursor.display above if unset here. Each state is EITHER `item: <id>`
+  # (renders as a small item icon) or the same text fields as cursor.display (text wins if `item`
+  # is absent). A per-screen VirtualUIBuilder.cursor_icon(...)/.cursor_item(...) only overrides the
+  # "normal" state, not the others below.
+  # Icons below are ported from Kenney's Cursor Pixel Pack (kenney.nl, CC0/public domain) — see
+  # testserver/plugins/CraftEngine/resources/modern/configuration/item/polyfills/
+  # virtualui_kenney_cursors.yml for the full ported set and which source tile each came from. The
+  # 6 canonical states below are auto-switched by context (see the doc above); everything past
+  # "processing" is EXTRA, opt-in only via VirtualUI.set_cursor_state(player, "<name>") — a script
+  # decides when e.g. "not_allowed" or "text" makes sense, the engine never picks those on its own.
+  states:
+    normal:
+      text: "<font:cml:kcursors></font>"
+    hover:
+      text: "<font:cml:kcursors></font>"
+    hold:
+      text: "<font:cml:kcursors></font>"
+    grab:
+      text: "<font:cml:kcursors></font>"
+    scroll_vertical:
+      text: "<font:cml:kcursors></font>"
+    scroll_horizontal:
+      text: "<font:cml:kcursors></font>"
+    processing:
+      text: "<font:cml:kcursors></font>"
+    not_allowed:
+      text: "<font:cml:kcursors></font>"
+    help:
+      text: "<font:cml:kcursors></font>"
+    alert:
+      text: "<font:cml:kcursors></font>"
+    text:
+      text: "<font:cml:kcursors></font>"
+    crosshair:
+      text: "<font:cml:kcursors></font>"
+    zoom_in:
+      text: "<font:cml:kcursors></font>"
+    zoom_out:
+      text: "<font:cml:kcursors></font>"
+    move:
+      text: "<font:cml:kcursors></font>"
+
+camera:
+  distance: 10.0
+  player_invisible_on_start: true
+  # Total allowed head-turn (degrees) per axis, centered on wherever the player was looking the
+  # instant a screen opened. Rotation itself is never frozen — turning past either deviation gets
+  # THAT axis clamped back to the edge of its own cone, so opening a UI can't be followed by
+  # spinning all the way around (yaw) or tilting all the way up/down (pitch) while it's open. Tuned
+  # separately since yaw has a full circle available but pitch is already naturally capped near
+  # ±90 by the client itself. 0 disables the clamp entirely for that axis.
+  max_yaw_degrees: 90.0
+  max_pitch_degrees: 90.0
+  # Vanilla or CraftEngine item id CLIENT-ONLY swapped into the player's held hotbar+offhand slots
+  # while a VirtualUI is open (never touches their real inventory — a real change would just get
+  # overwritten right back on the next resync). Point this at an invisible/transparent custom
+  # CraftEngine item so their real held item doesn't visually clutter the first-person view. Blank
+  # (default) leaves whatever's in their hand alone.
+  hide_held_item_as: ""

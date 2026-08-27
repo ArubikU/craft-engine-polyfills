@@ -1,0 +1,29 @@
+# Block Dispenser — if facing space is empty: place block from inventory.
+#                  If facing space is occupied: break it and collect drops.
+# Uses facing_block's own place_from_item/break_and_drop for proper block state handling.
+
+block = Machine.facing_block
+
+if block.is_air:
+    placed = false
+    for i in range(27):
+        if !placed:
+            item = Machine.container.get_item(i)
+            if !is_empty(item):
+                ok = block.place_from_item(item)
+                if ok:
+                    Machine.container.remove_item(i, 1)
+                    placed = true
+                end
+            end
+        end
+    end
+else:
+    drops = block.break_and_drop()
+    for drop in drops:
+        Machine.container.push(drop)
+    end
+end
+
+
+

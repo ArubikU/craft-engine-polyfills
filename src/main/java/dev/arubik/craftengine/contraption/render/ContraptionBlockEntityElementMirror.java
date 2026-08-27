@@ -47,7 +47,7 @@ import dev.arubik.craftengine.contraption.core.ContraptionLevel;
 import dev.arubik.craftengine.contraption.render.ContraptionLightEmitters;
 import dev.arubik.craftengine.contraption.render.ContraptionRenderScale;
 import dev.arubik.craftengine.machine.render.BetterModelDriven;
-import dev.arubik.craftengine.machine.render.BetterModelMachineRenderer;
+import dev.arubik.craftengine.machine.render.renderer.BetterModelRenderer;
 import dev.arubik.craftengine.machine.render.ModelRendersDriven;
 import dev.arubik.craftengine.machine.render.RendererManager;
 import dev.arubik.craftengine.machine.render.RendererSpec;
@@ -184,10 +184,10 @@ public final class ContraptionBlockEntityElementMirror {
                     BlockEntityController blockEntityController = be.controller;
                     if (blockEntityController instanceof ModelRendersDriven && (mrd = (ModelRendersDriven)blockEntityController).rendererManager() != null) {
                         RendererManager mgr = mrd.rendererManager();
-                        List<BetterModelMachineRenderer> bmList = mgr.betterModelRenderers();
+                        List<BetterModelRenderer> bmList = mgr.betterModelRenderers();
                         boolean bl = false;
                         for (int i = 0; i < bmList.size(); i++) {
-                            BetterModelMachineRenderer bmr = bmList.get(i);
+                            BetterModelRenderer bmr = bmList.get(i);
                             if (bmr != null) {
                                 cells.add(new BetterModelCell(bmr, local));
                             }
@@ -418,11 +418,11 @@ public final class ContraptionBlockEntityElementMirror {
 
     private static final class BetterModelCell
     extends Cell {
-        private final BetterModelMachineRenderer source;
+        private final BetterModelRenderer source;
         private DummyTracker mirrorTracker;
         private String mirrorAnim;
 
-        BetterModelCell(BetterModelMachineRenderer source, BlockPos local) {
+        BetterModelCell(BetterModelRenderer source, BlockPos local) {
             super(local);
             this.source = source;
         }
@@ -477,7 +477,7 @@ public final class ContraptionBlockEntityElementMirror {
 
         @Override
         void render(List<Player> viewers, ContraptionLevel level, int blockLight, int skyLight, double scale) {
-            if (!BetterModelMachineRenderer.available()) {
+            if (!BetterModelRenderer.available()) {
                 this.closeTracker();
                 return;
             }

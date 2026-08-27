@@ -148,7 +148,7 @@ public class DataItemBehavior extends ExtendedItemBehavior {
             ScriptCall call = ScriptCall.parse(ref);
             if (call == null) return;
             try {
-                ScriptContext ctx = ScriptContext.builder()
+                ScriptContext.Builder placeBuilder = ScriptContext.builder()
                         .item("item", itemSnapshot)
                         .player(nmsPlayer)
                         .world(nmsLevel)
@@ -156,8 +156,9 @@ public class DataItemBehavior extends ExtendedItemBehavior {
                         .machineAt(nmsLevel, nmsPos)
                         // The block is already placed by the time this fires, so cancelling has
                         // nothing left to veto — bound anyway for a consistent event shape.
-                        .event(new dev.arubik.craftengine.script.event.ItemActionEvent("on_place_block"))
-                        .build();
+                        .event(new dev.arubik.craftengine.script.event.ItemActionEvent("on_place_block"));
+                bindCommonNamespaces(placeBuilder);
+                ScriptContext ctx = placeBuilder.build();
                 call.execute(ctx);
             } catch (Throwable ignored) {}
         });
@@ -180,7 +181,7 @@ public class DataItemBehavior extends ExtendedItemBehavior {
      *  those because the source machine tank already knows its own type.
      *
      *  <p>Each bridge step is gated by its own {@code place_block} toggle ({@link ItemDefinition
-     *  #fillStorage()}/{@link ItemDefinition#fillFlags()}/{@link ItemDefinition#fillTyped()}), a
+     *  #fillStorage()}/{@link ItemDefinition#fillTyped()}), a
      *  constant or a {@code "script.pf:func[:args]"} condition evaluated here against a context
      *  binding {@code item} (this stack), {@code Player} (if known), and {@code Machine} (the
      *  freshly placed block) — so e.g. a locked backpack can refuse to spill its own storage. */
@@ -188,35 +189,32 @@ public class DataItemBehavior extends ExtendedItemBehavior {
             net.minecraft.core.BlockPos pos, ItemDefinition definition, net.minecraft.world.item.ItemStack stack,
             net.minecraft.server.level.ServerPlayer player) {
         BlockEntity be = dev.arubik.craftengine.block.entity.BukkitBlockEntityTypes.getIfLoaded(level, pos);
-        if (be == null || !(be.controller instanceof AbstractMachineBlockEntity machine)) return;
+        // Was `instanceof AbstractMachineBlockEntity` — that excludes ANY place_block target that
+        // isn't a real machine, including a plain polyfills:storage_block (StorageBlockEntity
+        // extends PersistentWorldlyBlockEntity directly, a SIBLING of AbstractMachineBlockEntity,
+        // not a subclass of it). The backpack's own place_block points at storage_block, so
+        // fillStorage/fillTyped silently did NOTHING for it — the item's own page contents never
+        // actually made it into the placed block despite fill_storage:true in backpack.json, and
+        // breaking the block back into an item (Machine.to_item, in backpack_storage.pf's on_break)
+        // rebuilt from whatever WAS there, which was nothing from this path. Checking the shared
+        // ancestor (setItem/getContainerSize/set(TypedKey,...) all live there) instead covers both.
+        if (be == null || !(be.controller instanceof dev.arubik.craftengine.block.entity.PersistentWorldlyBlockEntity container)) return;
 
         ScriptContext toggleCtx = ScriptContext.builder().item("item", stack).player(player)
                 .machineAt(level, pos).build();
 
         if (definition.fillStorage().evaluate(toggleCtx)) {
-            ItemStateData.writeToContainer(stack, definition, machine::setItem, machine.getContainerSize());
-            for (ItemDefinition.TankSpec spec : definition.tanks()) {
-                if (!spec.isEnergy()) continue;
-                try {
-                    int amount = ItemStateData.tankAmount(stack, spec.name());
-                    if (amount > 0) machine.setStoredEnergyRaw(level, amount);
-                } catch (Throwable ignored) {}
-            }
-        }
-        if (definition.fillFlags().evaluate(toggleCtx)) {
-            for (String name : definition.bridgeFlags()) {
-                try {
-                    int value = ItemStateData.getFlag(stack, name);
-                    machine.set(dev.arubik.craftengine.util.TypedKey.of(
-                            "polyfills", "flag_" + name, dev.arubik.craftengine.util.NbtType.INTEGER), value);
-                } catch (Throwable ignored) {}
-            }
-            for (String name : definition.bridgeStrFlags()) {
-                try {
-                    String value = ItemStateData.getStrFlag(stack, name);
-                    machine.set(dev.arubik.craftengine.util.TypedKey.of(
-                            "polyfills", "sflag_" + name, dev.arubik.craftengine.util.NbtType.STRING), value);
-                } catch (Throwable ignored) {}
+            ItemStateData.writeToContainer(stack, definition, container::setItem, container.getContainerSize());
+            // Energy is a machine-only concept (a plain storage block has no buffer to fill) —
+            // narrow back down to AbstractMachineBlockEntity just for this part.
+            if (container instanceof AbstractMachineBlockEntity machine) {
+                for (ItemDefinition.TankSpec spec : definition.tanks()) {
+                    if (!spec.isEnergy()) continue;
+                    try {
+                        int amount = ItemStateData.tankAmount(stack, spec.name());
+                        if (amount > 0) machine.setStoredEnergyRaw(level, amount);
+                    } catch (Throwable ignored) {}
+                }
             }
         }
         if (definition.fillTyped().evaluate(toggleCtx)) {
@@ -230,7 +228,7 @@ public class DataItemBehavior extends ExtendedItemBehavior {
                     if (value == null) continue;
                     dev.arubik.craftengine.util.TypedKey<Object> key = dev.arubik.craftengine.util.TypedKey.of(
                             "polyfills", "tkey_" + spec.name(), codec.storage());
-                    machine.set(key, value);
+                    container.set(key, value);
                 } catch (Throwable ignored) {}
             }
         }
@@ -326,6 +324,7 @@ public class DataItemBehavior extends ExtendedItemBehavior {
             ScriptContext.Builder builder = ScriptContext.builder().item("item", stack)
                     .event(new dev.arubik.craftengine.script.event.RenderEvent(holder, slot));
             if (holder instanceof ServerPlayer sp) builder.player(sp);
+            bindCommonNamespaces(builder);
             ScriptContext result = call.execute(builder.build());
             ScriptValue iv = result.getVar("item");
             if (iv instanceof ScriptValue.Item itemVal && itemVal.stack() != null) return itemVal.stack();
@@ -371,8 +370,13 @@ public class DataItemBehavior extends ExtendedItemBehavior {
                 scriptEvent.amount(d);
             }
         }
+        if (bukkitEvent instanceof PlayerInteractEvent pie && pie.getClickedBlock() != null) {
+            scriptEvent.clickedBlock(pie.getClickedBlock());
+            scriptEvent.clickedFace(pie.getBlockFace());
+        }
         ScriptContext.Builder builder = ScriptContext.builder().item("item", stack).event(scriptEvent);
         if (player != null) builder.player(player);
+        bindCommonNamespaces(builder);
         ScriptContext ctx = builder.build();
         try {
             ScriptContext result = call.execute(ctx);
@@ -385,6 +389,15 @@ public class DataItemBehavior extends ExtendedItemBehavior {
             }
         } catch (Throwable ignored) {}
         return stack;
+    }
+
+    /** Same namespace singletons every OTHER script-firing entry point in this codebase binds (Cmd
+     *  execution, the generic events bridge, TaskManager, machine scripts) — an item hook script is
+     *  just as likely to want to open a menu, show a dialog, schedule a task, or register a
+     *  temporary event listener as any of those, so it gets the same baseline instead of only
+     *  {@code item}/{@code Player}. */
+    private static void bindCommonNamespaces(ScriptContext.Builder b) {
+        b.typedAll(dev.arubik.craftengine.script.ScriptBootstrap.globalSingletons());
     }
 
     private static ServerPlayer findServerPlayer(Object[] args) {

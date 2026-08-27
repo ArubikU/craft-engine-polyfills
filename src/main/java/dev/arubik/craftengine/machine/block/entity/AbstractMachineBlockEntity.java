@@ -42,11 +42,11 @@ import dev.arubik.craftengine.block.entity.BukkitBlockEntityTypes;
 import dev.arubik.craftengine.block.entity.PersistentBlockEntity;
 import dev.arubik.craftengine.block.entity.PersistentWorldlyBlockEntity;
 import dev.arubik.craftengine.contraption.api.ContraptionTickable;
-import dev.arubik.craftengine.conveyor.ConveyorBlockEntity;
-import dev.arubik.craftengine.conveyor.ConveyorDisplayReceiver;
-import dev.arubik.craftengine.conveyor.ConveyorItemDisplay;
-import dev.arubik.craftengine.conveyor.ConveyorMath;
-import dev.arubik.craftengine.conveyor.ConveyorReceiver;
+import dev.arubik.craftengine.conveyor.belt.ConveyorBlockEntity;
+import dev.arubik.craftengine.conveyor.routing.ConveyorDisplayReceiver;
+import dev.arubik.craftengine.conveyor.belt.ConveyorItemDisplay;
+import dev.arubik.craftengine.conveyor.belt.ConveyorMath;
+import dev.arubik.craftengine.conveyor.routing.ConveyorReceiver;
 import dev.arubik.craftengine.fluid.FluidStack;
 import dev.arubik.craftengine.fluid.FluidTank;
 import dev.arubik.craftengine.fluid.behavior.FluidCarrier;
@@ -173,6 +173,10 @@ ConveyorDisplayReceiver {
         return this.burnTime;
     }
 
+    public int getMaxBurnTime() {
+        return this.maxBurnTime;
+    }
+
     public AbstractMachineBlockEntity(BlockEntity blockEntity, int size) {
         super(blockEntity, size);
     }
@@ -272,48 +276,160 @@ ConveyorDisplayReceiver {
         return this.ioConfiguration;
     }
 
-    protected net.minecraft.core.Direction getFacing(Level level) {
-        ConnectableBlockBehavior cbb;
-        ConnectableBlockBehavior c;
-        net.minecraft.core.Direction d;
-        if (level == null) {
-            return null;
-        }
+    /** Caches {@link #getFacing}/{@link #getFacingAxisRef}/{@link #faceSplitRpmAllows}'s shared
+     *  block-state-derived resolution ({@code state} kept for reference-equality invalidation only
+     *  — NMS interns identical property combinations, so two calls seeing the "same" BlockState get
+     *  the literal same object; a real rotation/placement change always produces a different one).
+     *  {@code faceVal} is the raw lowercased "face" property value ({@code null} if absent), used
+     *  by {@link #faceSplitRpmAllows} without redoing the BlockDefinition/property lookup itself. */
+    private record FacingCache(BlockState state, net.minecraft.core.Direction facing,
+                                net.minecraft.core.Direction axisRef, String faceVal) {}
+    private FacingCache facingCache;
+
+    /** Single block-state-derived resolution pass backing {@link #getFacing}, {@link
+     *  #getFacingAxisRef}, and {@link #faceSplitRpmAllows} — all three used to independently redo
+     *  the same {@code getBlockState}/{@code getOptionalCustomBlockState}/{@code getProperty}/
+     *  {@code get} lookups on every single call (profiling showed this as real, avoidable
+     *  server-thread cost inside {@code pullRotationalPower}'s kinetic-routing checks, which call
+     *  these several times per tick per machine). A machine's facing/face properties only change on
+     *  rotation or placement — nowhere near every tick — so this recomputes ONLY when {@code
+     *  level.getBlockState(pos)} returns a genuinely different {@link BlockState} than last seen,
+     *  reusing the cached {@link FacingCache} otherwise. Faithfully reproduces each of the three
+     *  original methods' own branching logic (see their current bodies below), just computed once
+     *  instead of three times. */
+    private FacingCache resolveFacingCache(Level level) {
+        if (level == null) return null;
         BlockPos pos = this.getMachinePos();
         BlockState state = level.getBlockState(pos);
-        ImmutableBlockState customState = BlockStateUtils.getOptionalCustomBlockState(state).orElse(null);
-        if (customState == null) {
-            return null;
+        FacingCache cached = this.facingCache;
+        if (cached != null && cached.state() == state) {
+            return cached;
         }
-        try {
-            BlockDefinition def = (BlockDefinition) customState.owner().value();
-            // Some block configs expose their orientation under "facing", others under
-            // "horizontal_facing" / "6_direction" / "4_direction" (see the equivalent lookup in
-            // DataMachineBlockEntity.getBlockFunctionalAxis). Checking only "facing" here made
-            // every bearing whose config uses one of the other names silently report NORTH no
-            // matter which way it was actually placed, which sent the windmill bearing's
-            // "seed" lookup (facing_dx/dy/dz) at the wrong neighbor whenever the bearing itself
-            // wasn't glued into the structure.
-            for (String propName : new String[]{"facing", "horizontal_facing", "6_direction", "4_direction"}) {
-                Property facingProp = def.getProperty(propName);
-                if (facingProp == null) {
-                    continue;
+        net.minecraft.core.Direction facing = null;
+        net.minecraft.core.Direction axisRef = null;
+        String faceVal = null;
+        ImmutableBlockState customState = BlockStateUtils.getOptionalCustomBlockState(state).orElse(null);
+        if (customState != null) {
+            try {
+                BlockDefinition def = (BlockDefinition) customState.owner().value();
+                // Button-style split state (vanilla ButtonBlock/FaceAttachedHorizontalDirectionalBlock:
+                // a "face" property — floor/wall/ceiling — PLUS a horizontal "facing" that only means
+                // anything when face=wall) — the saw uses this (see saw.yml) to get 12 real states
+                // (4 facings x 3 faces) instead of a plain 6-direction enum, so floor/ceiling mounting
+                // can still track which horizontal axis the belt runs along underneath/above it.
+                // Checked BEFORE the single-property loop below: a block with BOTH "face" and "facing"
+                // would otherwise just report whatever "facing" says even when face=floor/ceiling,
+                // which should really resolve to UP/DOWN regardless of the stored horizontal value.
+                Property faceProp = def.getProperty("face");
+                if (faceProp != null) {
+                    faceVal = String.valueOf(customState.get(faceProp)).toLowerCase();
+                    switch (faceVal) {
+                        case "floor": facing = net.minecraft.core.Direction.UP; break;
+                        case "ceiling": facing = net.minecraft.core.Direction.DOWN; break;
+                        case "wall": {
+                            Property wallFacingProp = def.getProperty("facing");
+                            if (wallFacingProp != null) {
+                                net.minecraft.core.Direction wallDir = net.minecraft.core.Direction.byName(
+                                        String.valueOf(customState.get(wallFacingProp)).toLowerCase());
+                                if (wallDir != null) facing = wallDir;
+                            }
+                            break;
+                        }
+                    }
+                    // getFacingAxisRef's own independent RAW "facing" lookup — regardless of what
+                    // faceVal is, matching its original "if def.getProperty(face) != null" gate.
+                    Property rawFacingProp = def.getProperty("facing");
+                    if (rawFacingProp != null) {
+                        net.minecraft.core.Direction rawDir = net.minecraft.core.Direction.byName(
+                                String.valueOf(customState.get(rawFacingProp)).toLowerCase());
+                        if (rawDir != null) axisRef = rawDir;
+                    }
                 }
-                d = net.minecraft.core.Direction.byName(String.valueOf(customState.get(facingProp)).toLowerCase());
-                if (d != null) {
-                    return d;
+                if (facing == null) {
+                    // Some block configs expose their orientation under "facing", others under
+                    // "horizontal_facing" / "6_direction" / "4_direction" (see the equivalent lookup in
+                    // DataMachineBlockEntity.getBlockFunctionalAxis). Checking only "facing" here made
+                    // every bearing whose config uses one of the other names silently report NORTH no
+                    // matter which way it was actually placed, which sent the windmill bearing's
+                    // "seed" lookup (facing_dx/dy/dz) at the wrong neighbor whenever the bearing itself
+                    // wasn't glued into the structure.
+                    for (String propName : new String[]{"facing", "horizontal_facing", "6_direction", "4_direction"}) {
+                        Property facingProp = def.getProperty(propName);
+                        if (facingProp == null) continue;
+                        net.minecraft.core.Direction d = net.minecraft.core.Direction.byName(
+                                String.valueOf(customState.get(facingProp)).toLowerCase());
+                        if (d != null) { facing = d; break; }
+                    }
+                }
+            } catch (Throwable ignored) {
+                // empty catch block — matches both original methods' own defensive catch
+            }
+            if (facing == null) {
+                BlockBehavior beh = customState.behavior();
+                ConnectableBlockBehavior cbb = beh instanceof ConnectableBlockBehavior ? (ConnectableBlockBehavior) beh
+                        : (beh != null ? (ConnectableBlockBehavior) beh.getFirst(ConnectableBlockBehavior.class) : null);
+                if (cbb != null) {
+                    net.minecraft.core.Direction d = cbb.toDirection(state);
+                    if (d != null) facing = d;
                 }
             }
+            if (facing == null) facing = net.minecraft.core.Direction.NORTH;
+            if (axisRef == null) axisRef = facing;
         }
-        catch (Throwable ignored) {
-            // empty catch block
+        // customState == null: facing/axisRef/faceVal stay null — matches getFacing returning
+        // null, and getFacingAxisRef's "if (customState == null) return this.getFacing(level);"
+        // (which itself also returns null in that case).
+        FacingCache fresh = new FacingCache(state, facing, axisRef, faceVal);
+        this.facingCache = fresh;
+        return fresh;
+    }
+
+    protected net.minecraft.core.Direction getFacing(Level level) {
+        FacingCache fc = this.resolveFacingCache(level);
+        return fc != null ? fc.facing() : null;
+    }
+
+    /**
+     * The RAW stored horizontal "facing" property, ignoring any "face" (floor/wall/ceiling) split
+     * — for a button-style block (see {@link #getFacing}), {@code getFacing()} collapses
+     * face=floor/ceiling down to plain UP/DOWN, which is correct for "front"/"back"/render-facing
+     * purposes but throws away exactly the piece of information "left"/"right" IO faces need: which
+     * horizontal axis a floor/ceiling-mounted saw's belt runs along, so its perpendicular
+     * (left/right) shaft connection faces can be computed. {@code Direction.getClockWise()}/
+     * {@code getCounterClockWise()} both throw for a Y-axis input (UP/DOWN has no inherent
+     * "clockwise" without a reference axis) — see {@code DataMachineBlockEntity#rpmFacesContain}'s
+     * horizontalRef parameter, which is exactly what this feeds. Falls back to {@link #getFacing}
+     * for a plain (non-face-split) block, where the two concepts are the same thing anyway.
+     */
+    /**
+     * The built-in RPM connection rule for a button-style face-split block (see {@link
+     * #getFacing}/{@link #getFacingAxisRef}) — Create's own real saw: wall-mounted takes input
+     * from directly BEHIND only and never outputs anywhere (the business end doesn't drive
+     * anything further); floor/ceiling-mounted acts like a shaft passing crosswise underneath/
+     * above it, connecting on BOTH the left and right of the belt axis, for BOTH input and output.
+     * Takes precedence over the machine definition's own declared io.rpm face lists whenever this
+     * returns non-null — a block with no "face" property at all (every machine other than the saw)
+     * gets null here, meaning "not applicable, use the normal io.rpm declaration instead."
+     */
+    protected Boolean faceSplitRpmAllows(net.minecraft.core.Direction d, boolean forOutput, Level level) {
+        if (d == null) return null;
+        FacingCache fc = this.resolveFacingCache(level);
+        if (fc == null || fc.faceVal() == null) return null;
+        String faceVal = fc.faceVal();
+        if ("wall".equals(faceVal)) {
+            if (forOutput) return false;
+            net.minecraft.core.Direction facing = fc.facing();
+            return facing != null && d == facing.getOpposite();
         }
-        BlockBehavior beh = customState.behavior();
-        cbb = beh instanceof ConnectableBlockBehavior ? (ConnectableBlockBehavior) beh : (beh != null ? (ConnectableBlockBehavior)(beh.getFirst(ConnectableBlockBehavior.class)) : null);
-        if (cbb != null && (d = cbb.toDirection(state)) != null) {
-            return d;
-        }
-        return net.minecraft.core.Direction.NORTH;
+        // floor or ceiling
+        net.minecraft.core.Direction axisRef = fc.axisRef();
+        if (axisRef == null || axisRef.getAxis() == net.minecraft.core.Direction.Axis.Y) return false;
+        return d == axisRef.getClockWise() || d == axisRef.getCounterClockWise();
+    }
+
+    public net.minecraft.core.Direction getFacingAxisRef(Level level) {
+        FacingCache fc = this.resolveFacingCache(level);
+        return fc != null ? fc.axisRef() : null;
     }
 
     public boolean fillTank(Level level, FluidStack fluid) {
@@ -547,6 +663,23 @@ ConveyorDisplayReceiver {
                         if (current.providesOutput(type, dir)) copy.addOutput(type, dir);
                     } catch (Throwable ignored) {
                         // An implementation that cannot answer for a pair simply grants nothing.
+                    }
+                }
+                // acceptsInput/providesOutput only probe PER-FACE PERMISSION, never which physical
+                // slots those permissions apply to (see IOConfiguration#getSlots's javadoc) — this
+                // loop was silently dropping a machine's declared INPUT/OUTPUT/FUEL slot list every
+                // time anything (a pipe panel, Machine.io_set, ...) triggered the very first
+                // mutableIO() copy, since getSlots() was never probed/copied alongside
+                // acceptsInput/providesOutput above. A machine with a real "io" block AND declared
+                // page slots (e.g. the drill) would work correctly right up until the first io
+                // mutation, then silently lose every output/input slot a hopper/funnel/pipe could
+                // see — this restores them onto the copy.
+                for (IOConfiguration.IORole role : IOConfiguration.IORole.values()) {
+                    try {
+                        int[] slots = current.getSlots(type, role);
+                        if (slots.length > 0) copy.setSlots(type, role, slots);
+                    } catch (Throwable ignored) {
+                        // An implementation with no slot concept (Open, ...) simply carries none over.
                     }
                 }
             }
@@ -1154,6 +1287,14 @@ ConveyorDisplayReceiver {
         return new int[0];
     }
 
+    /** Free/unrestricted {@link dev.arubik.craftengine.machine.menu.layout.MenuSlotType#STORAGE}
+     *  slots — empty for machines with no such slots (i.e. most of them). See the paged override
+     *  in {@link DataMachineBlockEntity#getStorageSlots()}. Used by {@link dev.arubik.craftengine.contraption.ContraptionContainerView}
+     *  to build a combined pushable container across a whole contraption. */
+    public int[] getStorageSlots() {
+        return new int[0];
+    }
+
     public int[] getUpgradeSlots() {
         return new int[0];
     }
@@ -1614,8 +1755,6 @@ ConveyorDisplayReceiver {
         return !this.runOnTransferScript("item", dev.arubik.craftengine.script.ScriptValue.ofItem(stack), side, "output");
     }
 
-    private static final dev.arubik.craftengine.util.TypedKey<Integer> TRANSFER_CANCEL_FLAG =
-            dev.arubik.craftengine.util.TypedKey.of("polyfills", "flag__transfer_cancel", dev.arubik.craftengine.util.NbtType.INTEGER);
 
     /**
      * Runs {@code MachineDefinition#onTransferScript()} (the generic {@code on_pipe_transfer} hook —
@@ -1657,11 +1796,7 @@ ConveyorDisplayReceiver {
             if (call == null)
                 return false;
             call.execute(ctx);
-            // event.cancel() is the new, preferred veto — the old Machine.set_flag("_transfer_cancel", 1)
-            // NBT-flag convention is deprecated but still checked, so existing scripts keep working.
-            if (transferEvent.isCancelled()) return true;
-            Integer cancelled = this.get(TRANSFER_CANCEL_FLAG);
-            return cancelled != null && cancelled != 0; // fail-open: a script that never sets it never vetoes
+            return transferEvent.isCancelled();
         } catch (Throwable ignored) {
             return false;
         }
@@ -2184,6 +2319,173 @@ ConveyorDisplayReceiver {
 
     public ScriptContext buildScriptContext() {
         return null;
+    }
+
+    /** The {@code "on_get_container"} script ref, if this machine declares one — see
+     *  {@link dev.arubik.craftengine.machine.MachineDefinition#onGetContainerScript()}'s javadoc.
+     *  {@code null} by default; overridden by {@link DataMachineBlockEntity}/
+     *  {@link DataMultiBlockMachineBlockEntity} to read their own definition. */
+    protected String onGetContainerScriptRef() {
+        return null;
+    }
+
+    /** {@link #resolveContainerOverride(net.minecraft.core.BlockPos, net.minecraft.core.Direction)}
+     *  with no accessor context — for a caller that isn't itself another block (e.g. a script
+     *  directly reading {@code Machine.container}). */
+    public java.util.Optional<net.minecraft.world.Container> resolveContainerOverride() {
+        return this.resolveContainerOverride(null, null);
+    }
+
+    /**
+     * Evaluates this machine's {@code on_get_container} hook (if declared) and, if it returned a
+     * script {@code Container} value, returns that instead of this machine's own inventory — see
+     * {@link dev.arubik.craftengine.machine.MachineDefinition#onGetContainerScript()}. Empty (no
+     * override) if no hook is declared, the hook returns null/non-container, or anything throws —
+     * callers fall back to treating this block entity as its own container as usual.
+     *
+     * {@code accessorPos}/{@code accessorFace} identify WHO is asking (a funnel/hopper/pipe
+     * segment's own position, and which of this machine's faces it's reaching in from) — exposed to
+     * the hook as {@code accessor_pos}/{@code accessor_x}/{@code accessor_y}/{@code accessor_z}/
+     * {@code accessor_face} script vars (all NULL/empty when unknown) so a Portable Storage
+     * Interface, say, can tell a hopper pulling from below apart from a script reading
+     * {@code Machine.container} directly, or refuse a direction it doesn't expose.
+     */
+    public java.util.Optional<net.minecraft.world.Container> resolveContainerOverride(
+            net.minecraft.core.BlockPos accessorPos, net.minecraft.core.Direction accessorFace) {
+        String ref = this.onGetContainerScriptRef();
+        if (ref == null || ref.isBlank()) return java.util.Optional.empty();
+        try {
+            ScriptContext base = this.buildScriptContext();
+            if (base == null) return java.util.Optional.empty();
+            ScriptContext.Builder ctxBuilder = ScriptContext.builder().copyFrom(base);
+            if (accessorPos != null) {
+                ctxBuilder.vector("accessor_pos", accessorPos.getX() + 0.5, accessorPos.getY() + 0.5, accessorPos.getZ() + 0.5)
+                        .num("accessor_x", accessorPos.getX())
+                        .num("accessor_y", accessorPos.getY())
+                        .num("accessor_z", accessorPos.getZ());
+            }
+            ctxBuilder.str("accessor_face", accessorFace != null ? accessorFace.getName() : "");
+            ScriptContext ctx = ctxBuilder.build();
+            dev.arubik.craftengine.script.ScriptCall call = dev.arubik.craftengine.script.ScriptCall.parse(ref);
+            if (call == null) return java.util.Optional.empty();
+            dev.arubik.craftengine.script.ScriptValue result = call.evaluate(ctx);
+            if (result instanceof dev.arubik.craftengine.script.ScriptValue.Obj o
+                    && o.instance() instanceof net.minecraft.world.Container c) {
+                // Wrapped so ANY on_get_container redirect (not just PSI) automatically stamps
+                // getLastTransferTick() whenever something actually moves through it — see that
+                // method's javadoc for why this exists (a contraption-mounted actor deciding whether
+                // to keep holding a contraption still while its connection is actively in use).
+                return java.util.Optional.of(new TransferTrackingContainer(c, this));
+            }
+        } catch (Throwable ignored) {}
+        return java.util.Optional.empty();
+    }
+
+    private static final dev.arubik.craftengine.util.TypedKey<Integer> LAST_TRANSFER_TICK_KEY =
+            dev.arubik.craftengine.util.TypedKey.of("polyfills", "last_transfer_tick", dev.arubik.craftengine.util.NbtType.INTEGER);
+
+    /**
+     * The world tick {@link #LAST_TRANSFER_TICK_KEY} was last stamped on THIS machine — i.e. the
+     * last time something actually moved an item into or out of whatever container its
+     * {@code on_get_container} hook currently redirects to (see {@link TransferTrackingContainer}).
+     * -1 if nothing has ever transferred. Exposed to scripts as {@code Machine.last_transfer_tick} —
+     * e.g. a Portable Storage Interface mounted on a contraption reads the STATIONARY partner's
+     * value (via {@code Block.machine}) to decide whether to keep {@code Contraption.hold()}ing
+     * itself still: recent activity means transfers might still be in flight, so the contraption
+     * should stay put a little longer rather than pulling away mid-transfer.
+     */
+    public int getLastTransferTick() {
+        PersistentBlockEntity be = this;
+        Integer v = be.get(LAST_TRANSFER_TICK_KEY);
+        return v != null ? v : -1;
+    }
+
+    /** Delegates every {@link net.minecraft.world.Container} call to {@code delegate}, stamping
+     *  {@link #LAST_TRANSFER_TICK_KEY} on {@code owner} whenever a mutating call actually changes
+     *  something (not on a no-op removal of nothing, or a read). Generic — applies to whatever ANY
+     *  machine's {@code on_get_container} hook returns, not just a Portable Storage Interface's. */
+    private static final class TransferTrackingContainer implements net.minecraft.world.WorldlyContainer {
+        private final net.minecraft.world.Container delegate;
+        private final AbstractMachineBlockEntity owner;
+
+        TransferTrackingContainer(net.minecraft.world.Container delegate, AbstractMachineBlockEntity owner) {
+            this.delegate = delegate;
+            this.owner = owner;
+        }
+
+        private void stamp() {
+            try {
+                int tick = net.minecraft.server.MinecraftServer.getServer().getTickCount();
+                this.owner.set(LAST_TRANSFER_TICK_KEY, tick);
+            } catch (Throwable ignored) {}
+        }
+
+        @Override public int getContainerSize() { return this.delegate.getContainerSize(); }
+        @Override public boolean isEmpty() { return this.delegate.isEmpty(); }
+        @Override public net.minecraft.world.item.ItemStack getItem(int i) { return this.delegate.getItem(i); }
+
+        @Override
+        public net.minecraft.world.item.ItemStack removeItem(int i, int count) {
+            net.minecraft.world.item.ItemStack result = this.delegate.removeItem(i, count);
+            if (!result.isEmpty()) this.stamp();
+            return result;
+        }
+
+        @Override public net.minecraft.world.item.ItemStack removeItemNoUpdate(int i) { return this.delegate.removeItemNoUpdate(i); }
+
+        @Override
+        public void setItem(int i, net.minecraft.world.item.ItemStack stack) {
+            net.minecraft.world.item.ItemStack before = this.delegate.getItem(i);
+            this.delegate.setItem(i, stack);
+            boolean changed = !net.minecraft.world.item.ItemStack.isSameItemSameComponents(before, stack)
+                    || before.getCount() != stack.getCount();
+            if (changed) this.stamp();
+        }
+
+        @Override public void setChanged() { this.delegate.setChanged(); }
+        @Override public boolean stillValid(net.minecraft.world.entity.player.Player player) { return this.delegate.stillValid(player); }
+        @Override public void clearContent() { this.delegate.clearContent(); }
+        @Override public org.bukkit.Location getLocation() { return this.delegate.getLocation(); }
+        @Override public void setMaxStackSize(int size) { this.delegate.setMaxStackSize(size); }
+        @Override public int getMaxStackSize() { return this.delegate.getMaxStackSize(); }
+        @Override public int getMaxStackSize(net.minecraft.world.item.ItemStack stack) { return this.delegate.getMaxStackSize(stack); }
+        @Override public void startOpen(net.minecraft.world.entity.ContainerUser user) { this.delegate.startOpen(user); }
+        @Override public void stopOpen(net.minecraft.world.entity.ContainerUser user) { this.delegate.stopOpen(user); }
+        @Override public java.util.List<net.minecraft.world.entity.ContainerUser> getEntitiesWithContainerOpen() { return this.delegate.getEntitiesWithContainerOpen(); }
+        @Override public boolean canPlaceItem(int i, net.minecraft.world.item.ItemStack stack) { return this.delegate.canPlaceItem(i, stack); }
+        @Override public boolean canTakeItem(net.minecraft.world.Container target, int i, net.minecraft.world.item.ItemStack stack) { return this.delegate.canTakeItem(target, i, stack); }
+        @Override public java.util.List<net.minecraft.world.item.ItemStack> getContents() { return this.delegate.getContents(); }
+        @Override public void onOpen(org.bukkit.craftbukkit.entity.CraftHumanEntity who) { this.delegate.onOpen(who); }
+        @Override public void onClose(org.bukkit.craftbukkit.entity.CraftHumanEntity who) { this.delegate.onClose(who); }
+        @Override public java.util.List<org.bukkit.entity.HumanEntity> getViewers() { return this.delegate.getViewers(); }
+        @Override public org.bukkit.inventory.InventoryHolder getOwner() { return this.delegate.getOwner(); }
+
+        // WorldlyContainer (face-aware) methods — vanilla hoppers cast straight to this interface
+        // for ANY block they find a Container at, so a wrapper that only implements plain Container
+        // crashes them outright (ClassCastException) rather than just failing to extract anything.
+        // Delegate to the wrapped container's own face rules if it happens to be WorldlyContainer
+        // too; otherwise fall back to the same permissive "every slot, every face" default
+        // PersistentWorldlyBlockEntity itself uses.
+        @Override
+        public int[] getSlotsForFace(net.minecraft.core.Direction side) {
+            if (this.delegate instanceof net.minecraft.world.WorldlyContainer wc) return wc.getSlotsForFace(side);
+            int size = this.delegate.getContainerSize();
+            int[] slots = new int[size];
+            for (int i = 0; i < size; i++) slots[i] = i;
+            return slots;
+        }
+
+        @Override
+        public boolean canPlaceItemThroughFace(int index, net.minecraft.world.item.ItemStack stack, net.minecraft.core.Direction direction) {
+            if (this.delegate instanceof net.minecraft.world.WorldlyContainer wc) return wc.canPlaceItemThroughFace(index, stack, direction);
+            return true;
+        }
+
+        @Override
+        public boolean canTakeItemThroughFace(int index, net.minecraft.world.item.ItemStack stack, net.minecraft.core.Direction direction) {
+            if (this.delegate instanceof net.minecraft.world.WorldlyContainer wc) return wc.canTakeItemThroughFace(index, stack, direction);
+            return true;
+        }
     }
 
     private static final class FunnelTransit {

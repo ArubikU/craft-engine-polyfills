@@ -1,0 +1,6 @@
+{
+  "id": "example_heartbeat",
+  "cron": "*/5 * * * *",
+  "script": "example_cron.pf:on_tick",
+  "enabled": false
+}

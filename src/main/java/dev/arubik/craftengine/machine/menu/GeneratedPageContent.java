@@ -38,14 +38,16 @@ public final class GeneratedPageContent {
     public static List<MachineDefinition.ButtonSpec> buttons(String generatorRef, ScriptContext ctx) {
         List<MachineDefinition.ButtonSpec> out = new ArrayList<>();
         for (Map<String, ScriptValue> m : entries(generatorRef, ctx)) {
+            org.bukkit.inventory.ItemStack customIcon = customIcon(m, "icon");
             out.add(new MachineDefinition.ButtonSpec(
                     (int) num(m, "slot", 0),
-                    str(m, "icon", "cml:gui_empty"),
+                    customIcon != null ? "cml:gui_empty" : str(m, "icon", "cml:gui_empty"),
                     str(m, "action", "none"),
                     strOrNull(m, "name"),
                     strList(m, "lore"),
                     strOrNull(m, "locked_icon"),
-                    str(m, "locked_when", "never")));
+                    str(m, "locked_when", "never"),
+                    customIcon));
         }
         return out;
     }
@@ -53,15 +55,34 @@ public final class GeneratedPageContent {
     public static List<MachineDefinition.PageDef.StaticSlot> layout(String generatorRef, ScriptContext ctx) {
         List<MachineDefinition.PageDef.StaticSlot> out = new ArrayList<>();
         for (Map<String, ScriptValue> m : entries(generatorRef, ctx)) {
+            org.bukkit.inventory.ItemStack customIcon = customIcon(m, "item");
             out.add(new MachineDefinition.PageDef.StaticSlot(
                     (int) num(m, "slot", -1),
-                    strOrNull(m, "item"),
+                    customIcon != null ? null : strOrNull(m, "item"),
                     strOrNull(m, "name"),
                     strList(m, "lore"),
                     strOrNull(m, "action"),
-                    bool(m, "locked", false)));
+                    bool(m, "locked", false),
+                    customIcon));
         }
         return out;
+    }
+
+    /**
+     * If {@code m.get(key)} is a full {@link ScriptValue.Item} (e.g. from a script's {@code
+     * Item.create(...).with_profile(...)}) rather than a plain string id, extract and return its
+     * {@code ItemStack} as a Bukkit copy so callers can populate {@code ButtonSpec#customIcon}/
+     * {@code StaticSlot#customIcon} — preserving the exact stack (skin profile, custom model data,
+     * ...) instead of stringifying it into a lookup id. Returns null for a plain string/absent value.
+     */
+    private static org.bukkit.inventory.ItemStack customIcon(Map<String, ScriptValue> m, String key) {
+        ScriptValue v = m.get(key);
+        if (v instanceof ScriptValue.Item item && item.stack() != null && !item.stack().isEmpty()) {
+            try {
+                return org.bukkit.craftbukkit.inventory.CraftItemStack.asBukkitCopy(item.stack());
+            } catch (Throwable ignored) {}
+        }
+        return null;
     }
 
     private static List<Map<String, ScriptValue>> entries(String generatorRef, ScriptContext ctx) {

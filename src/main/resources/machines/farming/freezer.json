@@ -1,0 +1,34 @@
+{
+  "id": "polyfills:freezer",
+  "title": "Freezer",
+  "flags": {
+    "fuel": false,
+    "recipes": true,
+    "continuous_fuel": false,
+    "ui": true,
+    "ui_tick": true,
+    "io_pull": true,
+    "renderers": true,
+    "scripts": true,
+    "animations": true,
+    "kinetics": false
+  },
+  "action_script": "farming/freezer",
+  "action_interval": 40,
+  "pages": [
+    {
+      "title": "Freezer",
+      "size": 9,
+      "layout": [
+        {
+          "slot": 4,
+          "item": "recipe_info.pf:item",
+          "name": "recipe_info.pf:name",
+          "lore": [
+            "recipe_info.pf:lore"
+          ]
+        }
+      ]
+    }
+  ]
+}

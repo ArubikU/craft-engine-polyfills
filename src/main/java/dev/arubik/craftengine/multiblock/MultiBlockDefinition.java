@@ -200,6 +200,11 @@ public final class MultiBlockDefinition {
             for (dev.arubik.craftengine.data.JsonView entry : entries) {
                 List<IOConfiguration.IOType> types = new ArrayList<>();
                 for (String typeName : entry.stringList("types")) {
+                    // Multiblocks have no kinetic-network RPM system today (unlike single-block
+                    // machines — see MachineDefinitionLoader#parseUnifiedRpmIo) — skip a "rpm" entry
+                    // by name rather than rejecting it outright, so the shared io.input/output JSON
+                    // shape stays forward-compatible if/when multiblock RPM support is added.
+                    if ("rpm".equalsIgnoreCase(typeName)) continue;
                     IOConfiguration.IOType type = null;
                     for (IOConfiguration.IOType candidate : IOConfiguration.IOType.values())
                         if (candidate.name().equalsIgnoreCase(typeName))
@@ -208,6 +213,7 @@ public final class MultiBlockDefinition {
                         throw entry.error("unknown io type '" + typeName + "'");
                     types.add(type);
                 }
+                if (types.isEmpty()) continue;
                 List<net.minecraft.core.Direction> faces = new ArrayList<>();
                 for (String faceName : entry.stringList("faces")) {
                     List<net.minecraft.core.Direction> group = faceGroup(faceName);

@@ -1,0 +1,65 @@
+{
+  "id": "polyfills:block_breaker",
+  "title": "Block Breaker",
+  "flags": {
+    "fuel": false,
+    "recipes": true,
+    "continuous_fuel": false,
+    "ui": true,
+    "ui_tick": true,
+    "io_pull": true,
+    "renderers": true,
+    "scripts": true,
+    "animations": true,
+    "kinetics": false
+  },
+  "action_script": "block_interaction/block_breaker",
+  "action_interval": 20,
+  "pages": [
+    {
+      "title": "Block Breaker",
+      "size": 27,
+      "slots": {
+        "output": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19,
+          20,
+          21,
+          22,
+          23,
+          24,
+          25,
+          26
+        ]
+      }
+    }
+  ],
+  "io": {
+    "output": {
+      "types": [
+        "item"
+      ],
+      "faces": [
+        "all"
+      ]
+    }
+  }
+}

@@ -1,0 +1,28 @@
+# Jump Pad — launches entities in facing direction + upward arc.
+
+force = Machine.get_typed("force", "int")
+if force <= 0:
+    force = 1.0
+end
+
+horiz_scale = 1.0 * force
+vert_power  = 0.8 * force
+
+is_vertical = Machine.facing_dy != 0
+
+entities = Machine.nearby_entities(0.7)
+
+for entity in entities:
+    if entity.is_alive:
+        if is_vertical:
+            entity.push(vec(0, vert_power, 0))
+        else:
+            dir = vec(Machine.facing_dx, 0, Machine.facing_dz).normalize()
+            launch = dir.scale(horiz_scale).add(vec(0, vert_power * 0.6, 0))
+            entity.push(launch)
+        end
+    end
+end
+
+
+

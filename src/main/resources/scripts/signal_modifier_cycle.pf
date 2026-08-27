@@ -1,5 +1,0 @@
-# Right-click cycles output level 0-15.
-level = Machine.get_flag("output_level")
-level = (level + 1) % 16
-Machine.set_flag("output_level", level)
-Machine.play_sound("minecraft:block.stone_button.click_on", 0.5, 1.0)

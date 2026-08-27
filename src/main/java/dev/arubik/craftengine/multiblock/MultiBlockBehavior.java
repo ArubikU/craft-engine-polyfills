@@ -1132,6 +1132,11 @@ public class MultiBlockBehavior extends dev.arubik.craftengine.machine.block.Mac
                     .world(serverLevel)
                     .block(serverLevel, pos)
                     .event(new dev.arubik.craftengine.script.event.FormEvent(disassembling))
+                    // Same namespace singletons every OTHER script-firing entry point in this
+                    // codebase binds — an on_form/on_disassemble script is just as likely to want
+                    // to open a menu, show a dialog, schedule a task, or register a temporary
+                    // event listener as any other hook. Precomputed once — see ScriptBootstrap.
+                    .typedAll(dev.arubik.craftengine.script.ScriptBootstrap.globalSingletons())
                     .build();
             call.execute(ctx);
         } catch (Throwable ignored) {

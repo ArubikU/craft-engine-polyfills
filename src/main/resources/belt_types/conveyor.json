@@ -1,0 +1,16 @@
+{
+  "id": "polyfills:conveyor",
+  "block": "cml:conveyor",
+  "height": 0.28,
+  "connects_to": [],
+  "energy_type": "none",
+  "energy_per_tick": 0,
+  "energy_capacity": 0,
+  "speed": 16,
+  "base_rpm": 64.0,
+  "stress_impact": 4.0,
+  "item_scale": 0.5,
+  "slots": 4,
+  "pickup_radius": 0.75,
+  "max_length": 64
+}

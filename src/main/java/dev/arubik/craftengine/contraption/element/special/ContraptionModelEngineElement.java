@@ -3,7 +3,7 @@ package dev.arubik.craftengine.contraption.element.special;
 import dev.arubik.craftengine.contraption.element.ContraptionElement;
 import dev.arubik.craftengine.contraption.element.ElementTypes;
 import dev.arubik.craftengine.contraption.element.RenderContext;
-import dev.arubik.craftengine.machine.render.ModelEngineMachineRenderer;
+import dev.arubik.craftengine.machine.render.renderer.MegRenderer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.phys.Vec3;
@@ -13,16 +13,16 @@ import net.momirealms.craftengine.core.util.Key;
 import java.util.List;
 
 /**
- * Contraption element that mirrors a {@link ModelEngineMachineRenderer} into the bearing's
+ * Contraption element that mirrors a {@link MegRenderer} into the bearing's
  * world-space position. ModelEngine manages a real Bukkit INTERACTION entity, so this element
  * does not need per-player show/hide logic — ME handles player visibility itself.
  */
 public final class ContraptionModelEngineElement implements ContraptionElement {
 
     private final BlockPos localPos;
-    private final ModelEngineMachineRenderer source;
+    private final MegRenderer source;
 
-    public ContraptionModelEngineElement(BlockPos localPos, ModelEngineMachineRenderer source) {
+    public ContraptionModelEngineElement(BlockPos localPos, MegRenderer source) {
         this.localPos = localPos;
         this.source = source;
     }
@@ -53,7 +53,7 @@ public final class ContraptionModelEngineElement implements ContraptionElement {
 
     @Override
     public void render(RenderContext ctx) {
-        if (!ModelEngineMachineRenderer.available()) return;
+        if (!MegRenderer.available()) return;
         if (!source.isShown()) return;
 
         if (ctx.level() == null) return;

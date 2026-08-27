@@ -1,0 +1,14 @@
+# Depot tick — auto-collect item entities sitting on top of the depot surface.
+# Mirrors DepotBlockEntity.receiveConveyorItem: items from belts/drops land here
+# and get absorbed into inventory if there's space.
+
+import "utils.pf" { is_resting_item }
+
+for entity in Machine.nearby_entities(0.7):
+    if is_resting_item(entity):
+        leftover = Machine.container.push(entity.item)
+        if is_empty(leftover):
+            entity.remove()
+        end
+    end
+end

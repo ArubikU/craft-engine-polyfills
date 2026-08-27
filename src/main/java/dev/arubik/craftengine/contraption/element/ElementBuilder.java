@@ -60,9 +60,9 @@ import dev.arubik.craftengine.contraption.element.special.ContraptionVanillaFlui
 import dev.arubik.craftengine.contraption.element.special.ContraptionWallSignElement;
 import dev.arubik.craftengine.contraption.furniture.ContraptionFurniture;
 import dev.arubik.craftengine.machine.render.BetterModelDriven;
-import dev.arubik.craftengine.machine.render.BetterModelMachineRenderer;
+import dev.arubik.craftengine.machine.render.renderer.BetterModelRenderer;
 import dev.arubik.craftengine.machine.render.ModelEngineDriven;
-import dev.arubik.craftengine.machine.render.ModelEngineMachineRenderer;
+import dev.arubik.craftengine.machine.render.renderer.MegRenderer;
 import dev.arubik.craftengine.machine.render.ModelRendersDriven;
 import dev.arubik.craftengine.machine.render.RendererManager;
 import dev.arubik.craftengine.machine.render.RendererSpec;
@@ -244,7 +244,7 @@ public final class ElementBuilder {
             if (!enabled) continue;
             elements.add(new ContraptionVanillaFluidElement(blockPos, lava, waterlogged, fs));
         }
-        if (BetterModelMachineRenderer.available()) {
+        if (BetterModelRenderer.available()) {
             for (BlockPos blockPos : livePositions) {
                 bs = level.getBlockState(blockPos);
                 if (bs == null || bs.isAir()) continue;
@@ -267,7 +267,7 @@ public final class ElementBuilder {
                 ((ContraptionBetterModelElement)entry.getValue()).despawn(viewers);
             }
         }
-        if (ModelEngineMachineRenderer.available()) {
+        if (MegRenderer.available()) {
             for (BlockPos blockPos : livePositions) {
                 bs = level.getBlockState(blockPos);
                 if (bs == null || bs.isAir()) continue;
@@ -307,9 +307,9 @@ public final class ElementBuilder {
                 ModelRendersDriven mrd = (ModelRendersDriven)modelYawOffset;
                 RendererManager mgr = mrd.rendererManager();
                 if (mgr == null) continue;
-                if (BetterModelMachineRenderer.available()) {
-                    List<BetterModelMachineRenderer> bmList = mgr.betterModelRenderers();
-                    for (BetterModelMachineRenderer bmr : bmList) {
+                if (BetterModelRenderer.available()) {
+                    List<BetterModelRenderer> bmList = mgr.betterModelRenderers();
+                    for (BetterModelRenderer bmr : bmList) {
                         if (bmr == null || existingBMByPos.containsKey(local)) continue;
                         elements.add(new ContraptionBetterModelElement(local, bmr));
                     }

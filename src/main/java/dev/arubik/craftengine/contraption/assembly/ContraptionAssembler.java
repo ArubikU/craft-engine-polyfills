@@ -42,7 +42,7 @@ import dev.arubik.craftengine.contraption.glue.GlueRegistry;
 import dev.arubik.craftengine.contraption.persistence.BlockAnchoredContraptionStore;
 import dev.arubik.craftengine.contraption.player.CePlayers;
 import dev.arubik.craftengine.contraption.protection.ContraptionProtectionRegistry;
-import dev.arubik.craftengine.conveyor.ConveyorBlockEntity;
+import dev.arubik.craftengine.conveyor.belt.ConveyorBlockEntity;
 import dev.arubik.craftengine.fluid.behavior.FluidTankRender;
 import dev.arubik.craftengine.machine.upgrade.UpgradeModifiers;
 import java.util.ArrayDeque;

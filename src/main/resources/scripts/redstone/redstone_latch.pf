@@ -1,0 +1,17 @@
+# Redstone SR Latch — toggles output on each rising edge of input.
+# Latched state persists across ticks.
+
+cur_power = Machine.redstone > 0 ? 1 : 0
+prev_power = Machine.get_typed("prev_power", "int")
+Machine.set_typed("prev_power", "int", cur_power)
+
+# Rising edge: toggle latch
+if cur_power > 0 && prev_power == 0:
+    latched = Machine.get_typed("latched", "int")
+    new_state = latched > 0 ? 0 : 1
+    Machine.set_typed("latched", "int", new_state)
+    Machine.emit_redstone(new_state > 0 ? 15 : 0)
+end
+
+
+

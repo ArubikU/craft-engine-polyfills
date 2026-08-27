@@ -1,0 +1,5 @@
+# Cycle pulse trigger mode: 0=rising, 1=falling, 2=both
+mode = Machine.get_typed("edge_mode", "int")
+mode = (mode + 1) % 3
+Machine.set_typed("edge_mode", "int", mode)
+Machine.play_sound("minecraft:block.stone_button.click_on", 0.5, 1.0)

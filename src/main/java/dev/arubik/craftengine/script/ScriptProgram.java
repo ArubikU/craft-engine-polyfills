@@ -29,6 +29,33 @@ public final class ScriptProgram {
     private final Map<String, ScriptFormula> topLevel;
     private final List<Statement> statements;
 
+    /** True when every top-level statement is a {@code def}/{@code import} — no top-level
+     *  {@code Assign}/{@code ExprStatement}/control-flow that could read the CALLER's context.
+     *  Covers the simplest machine .pf files (a flat collection of {@code def foo() {...}} blocks).
+     *  {@code topLevelCacheable} (below) subsumes this for the common case that ALSO has top-level
+     *  constant {@code Assign}s (e.g. {@code saw.pf}'s {@code BASE_RPM = 32}) — kept as a separate,
+     *  eagerly-known flag only because it's free to compute at construction time (no ctx needed),
+     *  unlike the dependency-tracked check. */
+    private final boolean pureDefs;
+    private volatile ScriptContext cachedDefsResult;
+
+    /** Null until the first {@link #evaluate} call determines it (needs a real {@link ScriptContext}
+     *  to test top-level {@code Assign} formulas against — see {@link #determineTopLevelCacheable}).
+     *  TRUE means the ENTIRE top level (defs, imports, AND any top-level Assigns) is safe to
+     *  register once and reuse forever, going beyond {@link #pureDefs}: a top-level {@code Assign}
+     *  is allowed as long as dependency-tracking (the same mechanism {@code RendererManager}'s
+     *  shared-formula cache uses) proves its formula reads ONLY names already established as safe —
+     *  an earlier top-level Assign/def/import in the SAME file, or nothing at all (a bare numeric
+     *  literal). This is exactly what lets {@code saw.pf}-style files (imports + a few constant
+     *  Assigns like {@code BASE_RPM = 32} + many defs) get the same one-time registration
+     *  {@code pureDefs} files already enjoyed, instead of re-registering every function closure on
+     *  every single tick just because a handful of harmless constants sit above the defs. ANY other
+     *  top-level statement kind (ExprStatement, if/for/while, ...), or an Assign that reads
+     *  anything NOT already proven safe (a real {@code Machine.*}/{@code World.*} read, a builtin
+     *  whose result could vary, ...), disqualifies the WHOLE file — falls back to today's correct
+     *  per-call re-evaluation, unchanged. */
+    private volatile Boolean topLevelCacheable;
+
     // ---- Statement model -----------------------------------------------------
 
     sealed interface Statement {
@@ -45,6 +72,12 @@ public final class ScriptProgram {
         record ContinueStatement() implements Statement {}
         record ReturnStatement(String expr) implements Statement {}
         record FunctionDef(String name, List<String> params, List<Statement> body) implements Statement {}
+        /** {@code import "path"} (namespace, default name = last path segment),
+         *  {@code import "path" as alias} (namespace, custom name), or
+         *  {@code import "path" { name1, name2 }} (selective — binds those names directly into
+         *  the importing script's own scope, no namespace object at all). {@code path} is resolved
+         *  relative to the scripts/ folder — see {@link ScriptRegistry#getOrLoadByPath}. */
+        record Import(String path, String alias, List<String> symbols) implements Statement {}
     }
 
     record Clause(ScriptFormula condition, List<Statement> body) {
@@ -69,6 +102,14 @@ public final class ScriptProgram {
         this.name = name;
         this.topLevel = topLevel;
         this.statements = statements;
+        boolean allDefsOrImports = true;
+        for (Statement s : statements) {
+            if (!(s instanceof Statement.FunctionDef) && !(s instanceof Statement.Import)) {
+                allDefsOrImports = false;
+                break;
+            }
+        }
+        this.pureDefs = allDefsOrImports;
     }
 
     public String name() { return name; }
@@ -91,6 +132,9 @@ public final class ScriptProgram {
     }
 
     public static ScriptProgram parse(String name, String src, Logger log) {
+        try { ScriptLinter.lint(name, src, log); } catch (Throwable ignored) {
+            // Lint failures must never block a script from loading — it's a hint pass, not a gate.
+        }
         Tokenizer tok = new Tokenizer(src);
         Parser par = new Parser(name, tok, log);
         List<Statement> stmts = par.parseBlock(false);
@@ -106,10 +150,71 @@ public final class ScriptProgram {
      * Run the script against {@code ctx}, returning an updated context with new variable values.
      */
     public ScriptContext evaluate(ScriptContext ctx) {
+        if (pureDefs || isTopLevelCacheable(ctx)) {
+            ScriptContext defs = cachedDefsResult;
+            if (defs != null) {
+                return ScriptContext.builder().copyFrom(ctx)
+                        .valsAll(defs.vars())
+                        .typedAll(defs.classInstances())
+                        .build();
+            }
+        }
         ScriptContext.Builder b = ScriptContext.builder().copyFrom(ctx);
         try { runStatements(statements, b); }
         catch (ReturnSignal rs) { b.val("__return__", rs.value); }
         return b.build();
+    }
+
+    /** Determines (once, lazily — see {@link #topLevelCacheable}'s own doc) whether this file's
+     *  ENTIRE top level is safe to register once and reuse forever, and if so populates {@link
+     *  #cachedDefsResult} as a side effect of that same determination pass (no separate second
+     *  evaluation needed). Walks {@link #statements} in declaration order, maintaining a growing
+     *  {@code safeNames} set: a {@code FunctionDef}'s or {@code Import}'s bound name(s) are always
+     *  safe (registering them never executes anything ctx-dependent); an {@code Assign} is safe
+     *  ONLY if {@link ScriptContext#beginTracking dependency-tracking} its formula's real
+     *  evaluation (against the SAME accumulating builder every other top-level statement writes
+     *  into) shows it read nothing outside {@code safeNames} — after which its own name joins the
+     *  set too, so LATER assigns may safely reference it. Any other statement kind, or an Assign
+     *  that fails this check, aborts immediately and returns false — {@link #cachedDefsResult}
+     *  stays whatever it already was (null, if this is the first/only determination attempt). */
+    private boolean isTopLevelCacheable(ScriptContext ctx) {
+        Boolean known = topLevelCacheable;
+        if (known != null) return known;
+        synchronized (this) {
+            known = topLevelCacheable;
+            if (known != null) return known;
+            java.util.Set<String> safeNames = new java.util.HashSet<>();
+            ScriptContext.Builder b = ScriptContext.builder();
+            boolean cacheable = true;
+            for (Statement s : statements) {
+                if (s instanceof Statement.FunctionDef fd) {
+                    runStatements(java.util.List.of(s), b);
+                    safeNames.add(fd.name());
+                } else if (s instanceof Statement.Import imp) {
+                    runStatements(java.util.List.of(s), b);
+                    if (!imp.symbols().isEmpty()) safeNames.addAll(imp.symbols());
+                    else safeNames.add(imp.alias() != null ? imp.alias() : defaultNamespaceName(imp.path()));
+                } else if (s instanceof Statement.Assign a) {
+                    java.util.Set<String> tracked = ScriptContext.beginTracking();
+                    ScriptValue val;
+                    try { val = a.formula().evaluate(b.peek()); }
+                    catch (Throwable ignored) { cacheable = false; break; }
+                    finally { ScriptContext.endTracking(); }
+                    if (!safeNames.containsAll(tracked)) { cacheable = false; break; }
+                    b.val(a.name(), val);
+                    safeNames.add(a.name());
+                } else {
+                    // Any other top-level statement kind (ExprStatement, if/for/while, return,
+                    // break, continue) is too complex to prove side-effect-free/ctx-independent
+                    // here — disqualify the WHOLE file rather than risk it.
+                    cacheable = false;
+                    break;
+                }
+            }
+            if (cacheable) cachedDefsResult = b.build();
+            topLevelCacheable = cacheable;
+            return cacheable;
+        }
     }
 
     /**
@@ -132,16 +237,22 @@ public final class ScriptProgram {
         for (Statement stmt : stmts) {
             switch (stmt) {
                 case Statement.Assign a -> {
-                    ScriptContext snap = b.build();
+                    // peek(), not build() — this snapshot is read once, right here, then thrown
+                    // away before the next mutation (b.val below). A real defensive copy is wasted
+                    // work for something never held past this one synchronous read.
+                    ScriptContext snap = b.peek();
                     try { b.val(a.name(), a.formula().evaluate(snap)); }
                     catch (Throwable ignored) {}
                 }
                 case Statement.ExprStatement es -> {
-                    ScriptContext snap = b.build();
+                    ScriptContext snap = b.peek();
                     try { es.formula().evaluate(snap); } catch (Throwable ignored) {}
                 }
                 case Statement.IfChain chain -> {
-                    ScriptContext snap = b.build();
+                    // peek() — every clause condition in this chain is evaluated against the SAME
+                    // snapshot before any mutation happens (the taken clause's body only runs AFTER
+                    // the loop below breaks), so nothing here survives past this statement either.
+                    ScriptContext snap = b.peek();
                     for (Clause clause : chain.clauses()) {
                         boolean taken;
                         if (clause.isElse()) {
@@ -154,7 +265,7 @@ public final class ScriptProgram {
                     }
                 }
                 case Statement.ForStatement fs -> {
-                    ScriptContext snap = b.build();
+                    ScriptContext snap = b.peek();
                     // Array evaluation genuinely wants to swallow errors (a bad iterExpr just
                     // skips the loop) — but that catch must NOT also wrap the loop body, or a
                     // `return` inside the loop throws ReturnSignal straight into this same
@@ -193,7 +304,7 @@ public final class ScriptProgram {
                                 b.val(vars.get(i), i < row.length ? row[i] : ScriptValue.NULL);
                             if (fs.guardExpr() != null) {
                                 boolean pass;
-                                try { pass = ScriptFormula.compile(fs.guardExpr()).evaluateBool(b.build()); }
+                                try { pass = ScriptFormula.compile(fs.guardExpr()).evaluateBool(b.peek()); }
                                 catch (Throwable ignored) { pass = false; }
                                 if (!pass) continue;
                             }
@@ -207,7 +318,7 @@ public final class ScriptProgram {
                     int iters = 0;
                     outer:
                     while (iters++ < ws.maxIter()) {
-                        ScriptContext snap = b.build();
+                        ScriptContext snap = b.peek();
                         boolean cond;
                         try { cond = ScriptFormula.compile(ws.condExpr()).evaluateBool(snap); }
                         catch (Throwable ignored) { break; }
@@ -222,24 +333,55 @@ public final class ScriptProgram {
                 case Statement.ReturnStatement rs -> {
                     ScriptValue val = ScriptValue.NULL;
                     if (!rs.expr().isEmpty()) {
-                        try { val = ScriptFormula.compile(rs.expr()).evaluate(b.build()); }
+                        try { val = ScriptFormula.compile(rs.expr()).evaluate(b.peek()); }
                         catch (Throwable ignored) {}
                     }
                     throw new ReturnSignal(val);
                 }
                 case Statement.FunctionDef fd -> {
-                    // Capture body and params — build a UserFunction and store as var
+                    // Capture body and params — build a UserFunction and store as var. definingCtx
+                    // is a snapshot of this file's OWN scope right up to this point (every sibling
+                    // def/const/import declared earlier in the same file) — see UserFunction.call's
+                    // javadoc for why this function needs it, not just the eventual caller's scope.
                     List<Statement> capturedBody = fd.body();
                     List<String> capturedParams = fd.params();
-                    UserFunction fn = new UserFunction(fd.name(), capturedParams,
+                    ScriptContext definingCtx = b.build();
+                    UserFunction fn = new UserFunction(fd.name(), capturedParams, definingCtx,
                         (callerCtx, resultB) -> {
                             try { runStatements(capturedBody, resultB); }
                             catch (ReturnSignal rs) { resultB.val("__return__", rs.value); }
                         });
                     b.val(fd.name(), ScriptValue.ofObj(UserFunction.TYPE, fn));
                 }
+                case Statement.Import imp -> {
+                    ScriptProgram prog = ScriptRegistry.getOrLoadByPath(imp.path());
+                    if (prog != null) {
+                        try {
+                            // Evaluated against the common bootstrap context, NOT the importing
+                            // script's own live vars — an imported utility file is meant to be a
+                            // self-contained library, not one that silently inherits whatever the
+                            // importer happened to have in scope at the point of import.
+                            ScriptContext importedCtx = prog.evaluate(ScriptBootstrap.commonContext());
+                            if (!imp.symbols().isEmpty()) {
+                                for (String sym : imp.symbols()) b.val(sym, importedCtx.getVar(sym));
+                            } else {
+                                String nsName = imp.alias() != null ? imp.alias() : defaultNamespaceName(imp.path());
+                                b.typed(nsName, new ScriptNamespace(importedCtx));
+                            }
+                        } catch (Throwable ignored) {}
+                    }
+                }
             }
         }
+    }
+
+    /** Default namespace name for a bare {@code import "path"} (no {@code as alias}) — the last
+     *  path segment, minus its ".pf" extension: "utils/math(.pf)" → "math". */
+    private static String defaultNamespaceName(String path) {
+        String p = path.replace('\\', '/');
+        int slash = p.lastIndexOf('/');
+        String base = slash >= 0 ? p.substring(slash + 1) : p;
+        return base.endsWith(".pf") ? base.substring(0, base.length() - 3) : base;
     }
 
     // =========================================================================
@@ -423,6 +565,7 @@ public final class ScriptProgram {
                     return new Statement.ReturnStatement(retExpr);
                 }
                 case "def" -> { return parseFunctionDef(); }
+                case "import" -> { return parseImport(); }
             }
 
             String name = t.text();
@@ -438,7 +581,7 @@ public final class ScriptProgram {
             if (op.type() == Tokenizer.TT.PERCENT_ASSIGN) { int ps = op.pos()+2; consume(); tok.reset(ps); Statement s = compile(name, name + " % (" + tok.readExprToEOL() + ")"); lookahead = tok.next(); return s; }
 
             if (op.type() != Tokenizer.TT.ASSIGN) {
-                // No '=' — treat as expression statement (e.g. Machine.set_flag(...), entity.remove())
+                // No '=' — treat as expression statement (e.g. Machine.set_typed(...), entity.remove())
                 tok.reset(t.pos()); // reset to start of the IDENT name
                 String callExpr = tok.readExprToEOL();
                 lookahead = tok.next();
@@ -683,6 +826,59 @@ public final class ScriptProgram {
                 if (!pn.isEmpty()) params.add(pn);
             }
             return new Statement.FunctionDef(funcName, params, body);
+        }
+
+        /**
+         * Parses: {@code import "path"}, {@code import "path" as alias}, or
+         * {@code import "path" { name1, name2 }}. Not a ScriptFormula expression (the trailing
+         * "as alias" / "{ names }" forms have no formula equivalent), so the raw remainder of the
+         * line is read manually — same pattern "return"'s header uses — and hand-parsed below.
+         */
+        private Statement parseImport() {
+            Tokenizer.Token t = peek(); // "import", not yet consumed
+            int afterImport = t.pos() + t.text().length();
+            consume();
+            tok.reset(afterImport);
+            String raw = tok.readExprToEOL();
+            lookahead = tok.next();
+            return parseImportHeader(raw.trim());
+        }
+
+        private Statement parseImportHeader(String s) {
+            if (!s.startsWith("\"") && !s.startsWith("'")) {
+                log.warning("[CEPolyfills] 'import' expects a quoted path in " + scriptName + ".pf: " + s);
+                return null;
+            }
+            char quote = s.charAt(0);
+            int close = s.indexOf(quote, 1);
+            if (close < 0) {
+                log.warning("[CEPolyfills] 'import' has an unterminated path string in " + scriptName + ".pf");
+                return null;
+            }
+            String path = s.substring(1, close);
+            String rest = s.substring(close + 1).trim();
+            if (rest.isEmpty()) return new Statement.Import(path, null, List.of());
+            if (rest.startsWith("as ") || rest.startsWith("as\t")) {
+                String alias = rest.substring(3).trim();
+                return new Statement.Import(path, alias.isEmpty() ? null : alias, List.of());
+            }
+            if (rest.startsWith("{")) {
+                // readExprToEOL (see its javadoc) already stops AT the closing '}' without
+                // consuming/including it when it isn't looking for one, so `rest` here is just
+                // "{ name1, name2" with no trailing brace — strip a leading '{' and an optional
+                // trailing '}' defensively either way.
+                String inner = rest.substring(1);
+                int endBrace = inner.indexOf('}');
+                if (endBrace >= 0) inner = inner.substring(0, endBrace);
+                List<String> symbols = new ArrayList<>();
+                for (String part : inner.split(",")) {
+                    String sym = part.trim();
+                    if (!sym.isEmpty()) symbols.add(sym);
+                }
+                return new Statement.Import(path, null, symbols);
+            }
+            log.warning("[CEPolyfills] Unrecognized 'import' trailer '" + rest + "' in " + scriptName + ".pf");
+            return new Statement.Import(path, null, List.of());
         }
 
         private Statement.Assign compile(String name, String expr) {

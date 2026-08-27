@@ -119,8 +119,10 @@ public class RendererBehavior extends BukkitBlockBehavior {
                     if (!(item instanceof Map<?, ?> m)) continue;
                     Map<String, Object> r = (Map<String, Object>) m;
                     String type = str(r, "type", "particle");
-                    String when = str(r, "when", "always");
-                    String updateWhen = str(r, "update_when", "always");
+                    dev.arubik.craftengine.machine.render.WhenCondition when =
+                            dev.arubik.craftengine.machine.render.WhenCondition.parse(str(r, "when", "always"));
+                    dev.arubik.craftengine.machine.render.UpdateWhen updateWhen =
+                            dev.arubik.craftengine.machine.render.UpdateWhen.parse(str(r, "update_when", "always"));
                     String run = str(r, "run", null);
 
                     // Build locationExpr from offset_x/y/z or location key

@@ -1,0 +1,117 @@
+OPPOSITE = make_map(
+"north", "south",
+"south", "north",
+"east",  "west",
+"west",  "east",
+"up",    "down",
+"down",  "up"
+)
+
+DIR_VEC = make_map(
+"north", [0, 0, -1],
+"south", [0, 0, 1],
+"east",  [1, 0, 0],
+"west",  [-1, 0, 0],
+"up",    [0, 1, 0],
+"down",  [0, -1, 0]
+)
+
+MAX_REACH = 4
+KEEPALIVE_TICKS = 6
+RELEASE_GRACE_TICKS = 40
+
+def _find_partner(contraption, real_facing, required_facing):
+    if required_facing == null:
+        return null
+    end
+    vec = DIR_VEC.switch(real_facing, null)
+    i = 0
+    while i < MAX_REACH:
+        check = contraption.contraption_world.real_block(
+            Machine.x + Machine.facing_dx * i,
+            Machine.y + Machine.facing_dy * i,
+            Machine.z + Machine.facing_dz * i)
+        if check != null && !check.is_air && check.id == "cml:portable_storage_interface":
+            target = check.machine
+            if target != null && !target.powered && target.block.property("facing") == required_facing:
+                return make_map("target", target, "i", i)
+            end
+        end
+        i = i + 1
+    end
+    return null
+end
+
+def on_get_container():
+    uuid = Machine.get_typed("_psi_uuid", "str")
+    if uuid == null || uuid == "":
+        return null
+    end
+    linked = ContraptionManager.get(uuid)
+    if linked == null:
+        return null
+    end
+    return linked.container
+end
+
+def status_item():
+    uuid = Machine.get_typed("_psi_uuid", "str")
+    return (uuid != null && uuid != "") ? "minecraft:lightning_rod" : "minecraft:iron_bars"
+end
+
+def status_name():
+    uuid = Machine.get_typed("_psi_uuid", "str")
+    if uuid != null && uuid != "":
+        return "<green><b>Linked"
+    end
+    return "<gray><b>Searching…"
+end
+
+if Machine.contraption != null:
+    contraption = Machine.contraption
+    hold_key = Machine.x + "," + Machine.y + "," + Machine.z
+    real_facing = contraption.real_direction(Machine.facing_dx, Machine.facing_dy, Machine.facing_dz)
+    required_facing = OPPOSITE.switch(real_facing, null)
+
+    result = _find_partner(contraption, real_facing, required_facing)
+    found = result == null ? null : result.get("target")
+    found_i = result == null ? -1 : result.get("i")
+
+    if found != null:
+        found.set_typed("_psi_uuid", "str", contraption.uuid)
+        found.set_typed("_psi_keepalive", "int", KEEPALIVE_TICKS)
+
+        last = found.last_transfer_tick
+        idle_ticks = last < 0 ? 0 : (tick() - last)
+        if idle_ticks <= RELEASE_GRACE_TICKS:
+            contraption.hold(hold_key)
+        else:
+            contraption.release(hold_key)
+        end
+    else:
+        contraption.release(hold_key)
+    end
+
+    if found != null && found_i >= 3:
+        recent = found.last_transfer_tick >= 0 && (tick() - found.last_transfer_tick) < 10
+        Machine.set_typed("_psi_extend", "int", recent ? 2 : 1)
+    else:
+        Machine.set_typed("_psi_extend", "int", 0)
+    end
+else:
+    keepalive = Machine.get_typed("_psi_keepalive", "int")
+    if keepalive == null:
+        keepalive = 0
+    end
+    if keepalive > 0:
+        Machine.set_typed("_psi_keepalive", "int", keepalive - 1)
+    else:
+        Machine.set_typed("_psi_uuid", "str", "")
+    end
+    if keepalive > 0:
+        recent = Machine.last_transfer_tick >= 0 && (tick() - Machine.last_transfer_tick) < 10
+        Machine.set_typed("_psi_extend", "int", recent ? 2 : 1)
+    else:
+        Machine.set_typed("_psi_extend", "int", 0)
+    end
+end

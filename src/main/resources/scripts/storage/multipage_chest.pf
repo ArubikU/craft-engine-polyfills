@@ -1,0 +1,20 @@
+# Multipage Chest — button action functions for page navigation.
+# Usage in buttons: action: "multipage_chest.pf:next_page"
+#                   action: "multipage_chest.pf:prev_page"
+
+def next_page():
+    Machine.turn_page(1)
+end
+
+def prev_page():
+    Machine.turn_page(-1)
+end
+
+def page_indicator():
+    cur = Machine.get_typed("_current_page", "int") + 1
+    total = 3
+    return "<gray>Page <white>" + cur + "<gray> / " + total
+end
+
+
+

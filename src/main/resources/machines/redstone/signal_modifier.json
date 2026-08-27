@@ -1,0 +1,21 @@
+{
+  "id": "polyfills:signal_modifier",
+  "title": "Signal Modifier",
+  "menu_size": 9,
+  "flags": {
+    "recipes": false,
+    "fuel": false,
+    "ui": false,
+    "ui_tick": false,
+    "redstone": true,
+    "continuous_fuel": false,
+    "io_pull": true,
+    "renderers": true,
+    "scripts": true,
+    "animations": true,
+    "kinetics": false
+  },
+  "action_script": "redstone/signal_modifier",
+  "action_interval": 1,
+  "on_right_click": "redstone/signal_modifier_interact"
+}

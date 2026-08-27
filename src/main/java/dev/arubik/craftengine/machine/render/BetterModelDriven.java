@@ -3,9 +3,9 @@
  */
 package dev.arubik.craftengine.machine.render;
 
-import dev.arubik.craftengine.machine.render.BetterModelMachineRenderer;
+import dev.arubik.craftengine.machine.render.renderer.BetterModelRenderer;
 
 public interface BetterModelDriven {
-    public BetterModelMachineRenderer betterModelRenderer();
+    public BetterModelRenderer betterModelRenderer();
 }
 

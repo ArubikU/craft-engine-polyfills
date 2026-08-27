@@ -180,13 +180,44 @@ public final class ItemMenu implements InventoryHolder {
 
     private org.bukkit.inventory.ItemStack renderButton(MachineDefinition.ButtonSpec spec) {
         if (spec == null) return null;
+        if (spec.customIcon() != null) {
+            return MenuText.iconItem(spec.customIcon(), nameComponent(spec.name()), loreComponents(spec.lore()));
+        }
         return new MachineDefinition.ItemSpec(spec.icon(), spec.name(), spec.lore(), Map.of()).build();
     }
 
     private org.bukkit.inventory.ItemStack renderBackground(int slotIdx) {
         MachineDefinition.PageDef.StaticSlot s = layoutSlots.get(slotIdx);
         if (s == null) return MenuText.emptyFiller();
+        if (s.customIcon() != null) {
+            return MenuText.iconItem(s.customIcon(), nameComponent(s.name()), loreComponents(s.lore()));
+        }
         return new MachineDefinition.ItemSpec(s.item(), s.name(), s.lore(), Map.of()).build();
+    }
+
+    /** Mirrors {@code MachineDefinition.ItemSpec#build}'s name-parsing so a {@code customIcon} item
+     *  gets the exact same MiniMessage name treatment as the plain-id path. */
+    private static Component nameComponent(String name) {
+        return (name != null && !name.isBlank())
+            ? MiniMessage.miniMessage().deserialize(name)
+                .decoration(net.kyori.adventure.text.format.TextDecoration.ITALIC, false)
+            : Component.empty();
+    }
+
+    /** Mirrors {@code MachineDefinition.ItemSpec#build}'s lore-parsing for a {@code customIcon} item. */
+    private static Component[] loreComponents(List<String> lore) {
+        if (lore == null || lore.isEmpty()) return new Component[0];
+        List<Component> out = new ArrayList<>();
+        for (String line : lore) {
+            if (line == null) continue;
+            try {
+                out.add(MiniMessage.miniMessage().deserialize(line)
+                    .decoration(net.kyori.adventure.text.format.TextDecoration.ITALIC, false));
+            } catch (Throwable ignored) {
+                out.add(Component.text(line));
+            }
+        }
+        return out.toArray(new Component[0]);
     }
 
     private org.bukkit.inventory.ItemStack renderGhost(int slotIdx, MachineDefinition.PageDef.GhostSlotSpec spec) {
@@ -243,6 +274,11 @@ public final class ItemMenu implements InventoryHolder {
                     ((org.bukkit.craftbukkit.entity.CraftPlayer) bukkitPlayer).getHandle();
             b.player(sp);
         }
+        // Same namespace singletons every OTHER script-firing entry point in this codebase binds —
+        // ghost-slot/bar/page-generator scripts are just as likely to want to open a menu, show a
+        // dialog, schedule a task, or register a temporary event listener as any button script.
+        // Precomputed once — see ScriptBootstrap.
+        b.typedAll(dev.arubik.craftengine.script.ScriptBootstrap.globalSingletons());
         return b.build();
     }
 

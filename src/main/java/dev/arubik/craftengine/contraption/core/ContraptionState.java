@@ -88,6 +88,40 @@ public final class ContraptionState {
         this.lastSetSpinTick = tick;
     }
 
+    /** Same idea as {@link #lastSetSpinTick}/{@link #globalRpm} but for LINEAR motion driven by a
+     *  script calling {@code Contraption.move()}/{@code teleport()} every tick (an elevator/piston-
+     *  style "machine_contraption" bearing moving between an initial and final position) instead of
+     *  a real {@code PhysicsWorld} body. Without this, {@code Contraption.is_moving()}/{@code speed}
+     *  only ever saw a physics body's velocity, so they silently reported "not moving" for this
+     *  entire style of contraption even while it was visibly sliding along — the same class of gap
+     *  {@link #globalRpm} closed for the rotational case. Speed is normalized per-tick immediately
+     *  (like set_spin's radiansPerTick), not raw per-call, so it stays correct regardless of how
+     *  often the driving script's action_interval calls move()/teleport(). */
+    private long lastScriptMoveTick = Long.MIN_VALUE;
+    private double lastScriptMoveSpeedX;
+    private double lastScriptMoveSpeedY;
+    private double lastScriptMoveSpeedZ;
+
+    public void reportScriptMove(long tick, double dx, double dy, double dz) {
+        long elapsed = this.lastScriptMoveTick == Long.MIN_VALUE
+                ? 1L : Math.max(1L, Math.min(tick - this.lastScriptMoveTick, 100L));
+        this.lastScriptMoveTick = tick;
+        this.lastScriptMoveSpeedX = dx / elapsed;
+        this.lastScriptMoveSpeedY = dy / elapsed;
+        this.lastScriptMoveSpeedZ = dz / elapsed;
+    }
+
+    /** True if a script reported linear motion within the last {@code graceTicks} — a grace window
+     *  (rather than "this exact tick") since the driving script's own action_interval may not call
+     *  move()/teleport() every single tick. */
+    public boolean scriptMoveRecent(long nowTick, long graceTicks) {
+        return this.lastScriptMoveTick != Long.MIN_VALUE && (nowTick - this.lastScriptMoveTick) <= graceTicks;
+    }
+
+    public double lastScriptMoveSpeedX() { return this.lastScriptMoveSpeedX; }
+    public double lastScriptMoveSpeedY() { return this.lastScriptMoveSpeedY; }
+    public double lastScriptMoveSpeedZ() { return this.lastScriptMoveSpeedZ; }
+
     public ContraptionState(UUID id, ResourceKey<Level> worldId, ContraptionLevel level, double x, double y, double z) {
         this.id = id;
         this.worldId = worldId;

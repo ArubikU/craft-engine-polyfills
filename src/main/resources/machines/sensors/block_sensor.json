@@ -1,0 +1,30 @@
+{
+  "id": "polyfills:block_sensor",
+  "title": "Block Sensor",
+  "flags": {
+    "recipes": false,
+    "fuel": false,
+    "continuous_fuel": false,
+    "ui": true,
+    "ui_tick": true,
+    "io_pull": true,
+    "renderers": true,
+    "scripts": true,
+    "animations": true,
+    "kinetics": false,
+    "redstone": true
+  },
+  "action_script": "sensors/block_sensor",
+  "action_interval": 5,
+  "pages": [
+    {
+      "title": "Block Sensor",
+      "size": 9,
+      "slots": {
+        "input": [
+          4
+        ]
+      }
+    }
+  ]
+}

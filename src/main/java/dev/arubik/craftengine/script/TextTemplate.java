@@ -89,20 +89,6 @@ public final class TextTemplate {
         return sb.toString();
     }
 
-    /** {@code "file.pf:func:arg1:arg2"} → (scriptFile, funcName, [arg1, arg2]). */
-    private record ParsedRef(String scriptFile, String funcName, List<String> rawArgs) {}
-
-    private static ParsedRef parseRef(String ref) {
-        String raw = ref.trim();
-        int firstColon = raw.indexOf(':');
-        String scriptFile = raw.substring(0, firstColon);
-        String rest = raw.substring(firstColon + 1);
-        String[] parts = rest.split(":");
-        String funcName = parts[0];
-        List<String> args = parts.length > 1 ? List.of(parts).subList(1, parts.length) : List.of();
-        return new ParsedRef(scriptFile, funcName, args);
-    }
-
     /** Auto-detects a raw ":"-separated arg literal as Num/Bool/Str. */
     private static ScriptValue argValue(String raw) {
         if (raw.equalsIgnoreCase("true")) return ScriptValue.of(true);
@@ -112,23 +98,18 @@ public final class TextTemplate {
     }
 
     /** Resolves and calls "{file}.pf:{func}[:args]" with {@code ctx} as the caller context (so the
-     *  called function sees the same {@code item}/{@code player}/{@code event} bindings), via
-     *  {@link UserFunction#call} — the same depth-guarded, param-binding entry point normal script
-     *  calls use. Returns {@code null} if the script/function can't be resolved. */
+     *  called function sees the same {@code item}/{@code player}/{@code event} bindings) — parsing
+     *  and dispatch both delegate to {@link ScriptCall} (the one canonical place for this
+     *  convention; see its {@link ScriptCall#evaluate(ScriptContext, java.util.function.Function)}),
+     *  with {@link #argValue} as the arg-conversion policy specific to name/lore templates. Returns
+     *  {@code null} if the script/function can't be resolved OR it genuinely returned null — same
+     *  as before, this doesn't distinguish the two. */
     public static ScriptValue callPfFunc(String ref, ScriptContext ctx) {
         try {
-            ParsedRef parsed = parseRef(ref);
-            String lookupKey = parsed.scriptFile().endsWith(".pf")
-                    ? parsed.scriptFile().substring(0, parsed.scriptFile().length() - 3) : parsed.scriptFile();
-            ScriptProgram prog = ScriptRegistry.get(lookupKey);
-            if (prog == null) return null;
-            ScriptContext withDefs = prog.evaluate(ctx);
-            ScriptValue fnVal = withDefs.getVar(parsed.funcName());
-            if (!(fnVal instanceof ScriptValue.Obj fnObj) || !fnObj.typeName().equals(UserFunction.TYPE)) return null;
-            UserFunction fn = (UserFunction) fnObj.instance();
-            List<ScriptValue> args = new ArrayList<>();
-            for (String rawArg : parsed.rawArgs()) args.add(argValue(rawArg));
-            return fn.call(args, withDefs);
+            ScriptCall call = ScriptCall.parse(ref);
+            if (call == null) return null;
+            ScriptValue result = call.evaluate(ctx, TextTemplate::argValue);
+            return result instanceof ScriptValue.Null ? null : result;
         } catch (Throwable ignored) {
             return null;
         }

@@ -1,0 +1,5 @@
+{
+  "name": "teleporters",
+  "description": "Browse every teleporter tuned to a frequency and warp to one for a Nether Star",
+  "gui": "teleporters.pf:open_frequency_dialog"
+}

@@ -1,0 +1,31 @@
+# Pulse Trigger — edge detector. Modes: 0=rising, 1=falling, 2=both.
+mode = Machine.get_typed("edge_mode", "int")
+prev = Machine.get_typed("prev_power", "int")
+cur = Machine.redstone > 0 ? 1 : 0
+
+fire = 0
+if mode == 0 && cur == 1 && prev == 0:
+    fire = 1
+end
+if mode == 1 && cur == 0 && prev == 1:
+    fire = 1
+end
+if mode == 2 && cur != prev:
+    fire = 1
+end
+
+if fire == 1:
+    Machine.set_typed("pulse_t", "int", 2)
+end
+
+t = Machine.get_typed("pulse_t", "int")
+if t > 0:
+    Machine.emit_redstone(15)
+    Machine.set_typed("pulse_t", "int", t - 1)
+else:
+    Machine.emit_redstone(0)
+end
+Machine.set_typed("prev_power", "int", cur)
+
+
+

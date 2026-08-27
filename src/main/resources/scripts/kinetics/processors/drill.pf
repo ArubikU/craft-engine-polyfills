@@ -1,0 +1,50 @@
+# Drill — RPM-driven block breaker. Standalone: speed = abs(rpm)/10, targets Machine.facing_block.
+# Contraption-borne: speed from contraption.rpm (rotational) or contraption.speed (linear); holds
+# the contraption while mid-break so it doesn't drift off target. No inventory: drops via _deposit.
+
+import "kinetics/utils.pf" { _deposit, _linear_break_speed, _update_activated }
+
+_hold_key = Machine.x + "," + Machine.y + "," + Machine.z
+contraption = Machine.contraption
+
+if contraption != null:
+    is_rotational = contraption.rpm != 0
+    is_linear = contraption.is_moving()
+    is_now = (is_rotational || is_linear) ? 1 : 0
+
+    if is_now > 0:
+        speed = is_rotational ? max(1, abs(contraption.rpm) / 10) : _linear_break_speed(contraption)
+        # Project through the contraption's LIVE transform — Machine.facing_block would resolve
+        # inside its virtual structure instead of the real world.
+        target = contraption.contraption_world.real_block(Machine.x + Machine.facing_dx, Machine.y + Machine.facing_dy, Machine.z + Machine.facing_dz)
+        if target == null || target.is_air:
+            contraption.release(_hold_key)
+        else:
+            contraption.hold(_hold_key)
+            result = Machine.tick_break(target, speed)
+            if result != null:
+                for item in result:
+                    _deposit(item)
+                end
+                contraption.release(_hold_key)
+            end
+            Machine.report_su(8 + speed)
+        end
+    else:
+        contraption.release(_hold_key)
+    end
+else if rpm == 0:
+    is_now = 0
+else:
+    speed = max(1, abs(rpm) / 10)
+    result = Machine.tick_break(Machine.facing_block, speed)
+    if result != null:
+        for item in result:
+            _deposit(item)
+        end
+    end
+    Machine.report_su(8 + speed)
+    is_now = 1
+end
+
+_update_activated("_drill_act", is_now)

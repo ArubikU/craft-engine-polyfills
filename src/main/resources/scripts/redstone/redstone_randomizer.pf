@@ -1,0 +1,17 @@
+# Redstone Randomizer — on each rising edge, picks a random output direction 0-3.
+# Stores result in "rand_dir" flag. Machine renderers can read the flag for directional output.
+
+cur_power = Machine.redstone > 0 ? 1 : 0
+prev_power = Machine.get_typed("prev_power", "int")
+Machine.set_typed("prev_power", "int", cur_power)
+
+if cur_power > 0 && prev_power == 0:
+    dir = floor(random(4))
+    Machine.set_typed("rand_dir", "int", dir)
+    Machine.emit_redstone(15)
+else if cur_power == 0:
+    Machine.emit_redstone(0)
+end
+
+
+

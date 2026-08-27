@@ -1,0 +1,91 @@
+{
+  "id": "polyfills:saw",
+  "title": "Mechanical Saw",
+  "flags": {
+    "recipes": false,
+    "fuel": false,
+    "ui": false,
+    "ui_tick": false,
+    "kinetics": true,
+    "continuous_fuel": false,
+    "io_pull": true,
+    "renderers": true,
+    "scripts": true,
+    "animations": true
+  },
+  "action_script": "kinetics/processors/saw",
+  "action_interval": 5,
+  "on_right_click": "kinetics/processors/saw.pf:on_right_click",
+  "on_place": "kinetics/processors/saw.pf:_saw_setup_rpm",
+  "on_load": "kinetics/processors/saw.pf:_saw_setup_rpm",
+  "io": {
+    "input": [
+      {
+        "types": [
+          "rpm"
+        ],
+        "faces": [
+          "north",
+          "south",
+          "east",
+          "west",
+          "up",
+          "down"
+        ]
+      }
+    ],
+    "output_same": [
+      {
+        "types": [
+          "rpm"
+        ],
+        "faces": []
+      }
+    ]
+  },
+  "renderers": [
+    {
+      "type": "item_display",
+      "item": "(((Machine.get_typed(\"_saw_progress\", \"int\") ?? 0) / 320.0) < 0.5) ? Item.create(Machine.get_typed(\"_saw_item_id\", \"str\") ?? \"minecraft:air\") : Item.create(Machine.get_typed(\"_saw_out_id\", \"str\") ?? \"minecraft:air\")",
+      "location": "[(Machine.block.property(\"facing\") == \"south\" ? 1 : (Machine.block.property(\"facing\") == \"north\" ? 1 : 0)) * ((Machine.get_typed(\"_saw_rpm_sign\", \"int\") ?? 1) == 0 ? 1 : (Machine.get_typed(\"_saw_rpm_sign\", \"int\") ?? 1)) * (((Machine.get_typed(\"_saw_progress\", \"int\") ?? 0) / 320.0) - 0.5), 0.75, (Machine.block.property(\"facing\") == \"east\" ? 1 : (Machine.block.property(\"facing\") == \"west\" ? 1 : 0)) * ((Machine.get_typed(\"_saw_rpm_sign\", \"int\") ?? 1) == 0 ? 1 : (Machine.get_typed(\"_saw_rpm_sign\", \"int\") ?? 1)) * (((Machine.get_typed(\"_saw_progress\", \"int\") ?? 0) / 320.0) - 0.5)]",
+      "when": "(Machine.get_typed(\"_saw_item_id\", \"str\") ?? \"\") != \"\"",
+      "update_when": "always",
+      "scale": "0.4",
+      "global": true
+    },
+    {
+      "type": "item_display",
+      "item": "Item.create(Machine.get_typed(\"_saw_item_id\", \"str\") ?? \"minecraft:air\").with_count(max(1, (Machine.get_typed(\"_saw_count\", \"int\") ?? 1) - 1))",
+      "location": "[(Machine.block.property(\"facing\") == \"south\" ? 1 : (Machine.block.property(\"facing\") == \"north\" ? 1 : 0)) * ((Machine.get_typed(\"_saw_rpm_sign\", \"int\") ?? 1) == 0 ? 1 : (Machine.get_typed(\"_saw_rpm_sign\", \"int\") ?? 1)) * -0.5, 0.75, (Machine.block.property(\"facing\") == \"east\" ? 1 : (Machine.block.property(\"facing\") == \"west\" ? 1 : 0)) * ((Machine.get_typed(\"_saw_rpm_sign\", \"int\") ?? 1) == 0 ? 1 : (Machine.get_typed(\"_saw_rpm_sign\", \"int\") ?? 1)) * -0.5]",
+      "when": "((Machine.get_typed(\"_saw_count\", \"int\") ?? 0) - 1) > 0",
+      "update_when": "always",
+      "scale": "0.35",
+      "global": true
+    },
+    {
+      "type": "item_display",
+      "item": "CraftEngineItem(\"cml:shaft_render\")",
+      "location": {
+        "x": 0,
+        "y": 0.5,
+        "z": 0
+      },
+      "rot_y": "(Machine.block.property(\"facing\") == \"north\" || Machine.block.property(\"facing\") == \"south\") ? -90 : 0",
+      "rot_z": "90",
+      "rot_x": "tick() * (Machine.contraption != null ? Machine.contraption.rpm : rpm) * 0.3",
+      "scale": "1.0",
+      "when": "Machine.block.property(\"face\") == \"floor\" || Machine.block.property(\"face\") == \"ceiling\"",
+      "update_when": "always",
+      "global": true
+    },
+    {
+      "type": "item_display",
+      "item": "Item.create((Machine.get_typed(\"_saw_filter\", \"str\") ?? \"\") == \"\" ? \"minecraft:air\" : Machine.get_typed(\"_saw_filter\", \"str\"))",
+      "location": "[(Machine.block.property(\"facing\") == \"east\" ? -0.2 : (Machine.block.property(\"facing\") == \"west\" ? 0.2 : 0)), 0.8, (Machine.block.property(\"facing\") == \"north\" ? 0.2 : (Machine.block.property(\"facing\") == \"south\" ? -0.2 : 0))]",
+      "scale": "0.2",
+      "when": "Machine.block.property(\"face\") == \"floor\"",
+      "update_when": "always",
+      "global": true
+    }
+  ]
+}

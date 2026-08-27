@@ -37,9 +37,14 @@ package dev.arubik.craftengine.machine;
  * @param scripts        run {@code action_script}, {@code status} and the placement hooks. Off makes
  *                       the machine inert to scripting without having to strip the fields.
  * @param animations     tick script-triggered animations.
- * @param redstone       may emit a redstone signal ({@code Machine.redstone.set(n)} /
- *                       {@code emit_redstone}). Off makes the emit calls no-ops, so a machine that
- *                       is not a sensor cannot accidentally power a neighbour.
+ * @param redstone       may emit AND read a redstone signal ({@code Machine.redstone.set(n)} /
+ *                       {@code emit_redstone} for emit; {@code Machine.redstone}/the bare
+ *                       {@code redstone}/{@code powered} script vars for read). Off makes the emit
+ *                       calls no-ops (so a machine that is not a sensor cannot accidentally power a
+ *                       neighbour) AND skips the per-tick {@code getBestNeighborSignal} poll
+ *                       entirely (reads as 0/not-powered) — a real NMS call scanning all 6 adjacent
+ *                       blocks, wasted every tick for the large share of machines that never
+ *                       reference redstone in either direction.
  */
 public record MachineFlags(
         boolean recipes,
@@ -57,7 +62,7 @@ public record MachineFlags(
 
     /** Defaults for a plain recipe machine with a GUI and no kinetics. */
     public static final MachineFlags DEFAULT =
-            new MachineFlags(true, true, false, true, true, false, true, true, true, true, true);
+            new MachineFlags(false, false, false, false, false, false, false, false, false, false, false);
 
     public MachineFlags withRecipes(boolean v) {
         return new MachineFlags(v, fuel, continuousFuel, ui, uiTick, kinetics, ioPull, renderers, scripts, animations, redstone);

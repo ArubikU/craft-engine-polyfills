@@ -15,9 +15,13 @@ import io.papermc.paper.registry.data.dialog.input.SingleOptionDialogInput;
 import io.papermc.paper.registry.data.dialog.type.DialogType;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickCallback;
+import net.kyori.adventure.text.event.ClickEvent;
 import net.minecraft.server.level.ServerPlayer;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.craftbukkit.entity.CraftPlayer;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.SkullMeta;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -74,15 +78,34 @@ public final class DialogManagerType {
         final List<DialogInput> inputs = new ArrayList<>();
         final List<InputSpec> specs = new ArrayList<>();
         boolean canCloseWithEscape = true;
+        String onCloseRef;
 
-        Builder(String title) { this.title = Component.text(title); }
+        Builder(ScriptValue title) { this.title = partsToComponent(title); }
     }
+
+    private static final java.util.logging.Logger LOG = java.util.logging.Logger.getLogger("CraftEnginePolyfills");
+
+    /** Set for the duration of one dialog action click (see {@link #buildAction}) to the CLICKING
+     *  player's UUID plus a mutable flag — {@code BuiltDialog.show}/{@code show_many} flip the flag
+     *  true when they successfully redisplay a dialog to that SAME player mid-click (never for some
+     *  other player also shown something in the same click, e.g. an opponent's board refresh), so
+     *  the click's own closeDialog() at the end doesn't immediately dismiss what the script just
+     *  showed. Unset outside a click (plain "open a dialog from a command" calls), where it's simply
+     *  not observed by anything. */
+    private record ReshowTracker(java.util.UUID clickingPlayer, boolean[] flag) {}
+    private static final ThreadLocal<ReshowTracker> RESHOWN = new ThreadLocal<>();
 
     public static void register() {
         PolyTypeRegistry.define("Dialog")
             .method("base", (obj, args) -> {
-                if (!DialogSupport.isAvailable() || args.isEmpty()) return ScriptValue.NULL;
-                return ScriptValue.ofObj("DialogBuilder", new Builder(args.get(0).asStr()));
+                if (!DialogSupport.isAvailable()) {
+                    LOG.warning("[Dialog] Dialog.base() called but DialogSupport.isAvailable() is false — "
+                        + "io.papermc.paper.dialog.Dialog / DialogAction couldn't be loaded on this server's "
+                        + "Paper implementation. Every Dialog.* call from a script silently no-ops as a result.");
+                    return ScriptValue.NULL;
+                }
+                if (args.isEmpty()) return ScriptValue.NULL;
+                return ScriptValue.ofObj("DialogBuilder", new Builder(args.get(0)));
             });
 
         PolyTypeRegistry.define("DialogBuilder")
@@ -92,25 +115,63 @@ public final class DialogManagerType {
                 b.canCloseWithEscape = args.isEmpty() || args.get(0).asBool();
                 return ScriptValue.ofObj("DialogBuilder", b);
             })
-            // body(text) — a plain message line. Call multiple times for multiple paragraphs.
-            .method("body", (obj, args) -> {
+            // on_close(action_ref) — called after ANY button action finishes (or, once Escape can be
+            // told apart from a real button click, on Escape too), in place of the default "reopen
+            // the machine's own menu" behavior. Call before .as_notice/.as_confirmation/
+            // .as_multi_action, since those are what finalize the buttons that read this. A dialog
+            // opened directly from a block right-click (no menu ever involved, e.g. Smart Chute's
+            // ui:false pull-amount slider) should set this instead of relying on flags.ui to suppress
+            // the reopen — flags.ui only happens to be false for every dialog-outside-a-menu case so
+            // far, not because it's actually what determines this.
+            .method("on_close", (obj, args) -> {
                 Builder b = builder(obj);
-                if (!args.isEmpty()) b.body.add(DialogBody.plainMessage(mm(args.get(0).asStr())));
+                if (!args.isEmpty()) b.onCloseRef = args.get(0).asStr();
                 return ScriptValue.ofObj("DialogBuilder", b);
             })
-            // body_item(item) — shows an ItemStack in the dialog body.
+            // body(text) — a plain message line, OR an Array mixing plain strings with
+            // Images.from(id)/Images.shift(n) parts (same convention a machine's title uses — see
+            // DataMachineBlockEntity#scriptValueToTitleComponent) for a line that embeds a
+            // CraftEngine font glyph. Call multiple times for multiple paragraphs.
+            .method("body", (obj, args) -> {
+                Builder b = builder(obj);
+                if (!args.isEmpty()) b.body.add(DialogBody.plainMessage(partsToComponent(args.get(0))));
+                return ScriptValue.ofObj("DialogBuilder", b);
+            })
+            // body_item(item, show_tooltip?) — shows an ItemStack in the dialog body.
             .method("body_item", (obj, args) -> {
                 Builder b = builder(obj);
                 if (!args.isEmpty() && args.get(0) instanceof ScriptValue.Item it) {
                     try {
-                        org.bukkit.inventory.ItemStack bukkit =
-                                org.bukkit.craftbukkit.inventory.CraftItemStack.asCraftMirror(it.stack());
-                        b.body.add(DialogBody.item(bukkit).build());
+                        ItemStack bukkit = org.bukkit.craftbukkit.inventory.CraftItemStack.asCraftMirror(it.stack());
+                        addItemBody(b, bukkit, args.size() >= 2 ? args.get(1) : null);
                     } catch (Throwable ignored) {}
                 }
                 return ScriptValue.ofObj("DialogBuilder", b);
             })
-            // input_text(key, label, initial?, width?)
+            // body_head(owner_name_or_uuid, show_tooltip?) — shows a player-head ItemStack, owned by
+            // that name/UUID, in the dialog body (Bukkit#getOfflinePlayer, no texture support).
+            .method("body_head", (obj, args) -> {
+                Builder b = builder(obj);
+                if (!args.isEmpty()) {
+                    try {
+                        String ownerStr = args.get(0).asStr();
+                        OfflinePlayer owner;
+                        try {
+                            owner = org.bukkit.Bukkit.getOfflinePlayer(java.util.UUID.fromString(ownerStr));
+                        } catch (IllegalArgumentException notUuid) {
+                            owner = org.bukkit.Bukkit.getOfflinePlayer(ownerStr);
+                        }
+                        ItemStack head = new ItemStack(org.bukkit.Material.PLAYER_HEAD);
+                        if (head.getItemMeta() instanceof SkullMeta meta) {
+                            meta.setOwningPlayer(owner);
+                            head.setItemMeta(meta);
+                        }
+                        addItemBody(b, head, args.size() >= 2 ? args.get(1) : null);
+                    } catch (Throwable ignored) {}
+                }
+                return ScriptValue.ofObj("DialogBuilder", b);
+            })
+            // input_text(key, label, initial?, width?, multiline?, max_lines?)
             .method("input_text", (obj, args) -> {
                 Builder b = builder(obj);
                 if (args.size() >= 2) {
@@ -118,6 +179,10 @@ public final class DialogManagerType {
                     var tb = DialogInput.text(key, mm(args.get(1).asStr()));
                     if (args.size() >= 3) tb.initial(args.get(2).asStr());
                     if (args.size() >= 4) tb.width((int) args.get(3).asNum());
+                    if (args.size() >= 5 && args.get(4).asBool()) {
+                        Integer maxLines = args.size() >= 6 ? (int) args.get(5).asNum() : null;
+                        tb.multiline(io.papermc.paper.registry.data.dialog.input.TextDialogInput.MultilineOptions.create(maxLines, null));
+                    }
                     b.inputs.add(tb.build());
                     b.specs.add(new InputSpec(key, Kind.TEXT));
                 }
@@ -171,61 +236,155 @@ public final class DialogManagerType {
                 }
                 return ScriptValue.ofObj("DialogBuilder", b);
             })
-            // as_notice(machine, button_label, action_ref) — single-button dialog. Accept calls
-            // action_ref with every declared input's value appended, in declaration order.
+            // as_notice(machine, button_label, action_ref, tooltip?, width?) — single-button dialog.
+            // Accept calls action_ref with every declared input's value appended, in declaration order.
             .method("as_notice", (obj, args) -> {
                 if (args.size() < 3) return ScriptValue.NULL;
                 Builder b = builder(obj);
-                DialogAction action = buildAction(machineOf(args.get(0)), args.get(2).asStr(), b.specs);
+                DialogAction action = buildAction(args.get(0), args.get(2).asStr(), b);
+                var buttonB = ActionButton.builder(mm(args.get(1).asStr())).action(action);
+                if (args.size() >= 4 && !args.get(3).asStr().isBlank()) buttonB.tooltip(mm(args.get(3).asStr()));
+                if (args.size() >= 5) buttonB.width((int) args.get(4).asNum());
                 DialogBase base = base(b);
-                DialogType type = DialogType.notice(ActionButton.builder(mm(args.get(1).asStr())).action(action).build());
+                DialogType type = DialogType.notice(buttonB.build());
                 return wrapDialog(base, type);
             })
-            // as_confirmation(machine, accept_label, cancel_label, accept_action_ref, cancel_action_ref?)
+            // as_confirmation(owner, accept_label, cancel_label, accept_action_ref, cancel_action_ref?,
+            // accept_tooltip?, cancel_tooltip?, accept_width?, cancel_width?)
             .method("as_confirmation", (obj, args) -> {
                 if (args.size() < 4) return ScriptValue.NULL;
                 Builder b = builder(obj);
-                MachineType.MachineRef m = machineOf(args.get(0));
-                DialogAction yes = buildAction(m, args.get(3).asStr(), b.specs);
+                ScriptValue owner = args.get(0);
+                DialogAction yes = buildAction(owner, args.get(3).asStr(), b);
                 DialogAction no = args.size() >= 5 && !args.get(4).asStr().isBlank()
-                        ? buildAction(m, args.get(4).asStr(), b.specs)
+                        ? buildAction(owner, args.get(4).asStr(), b)
                         : DialogAction.customClick((view, audience) -> { if (audience instanceof Player p) p.closeDialog(); },
                             ClickCallback.Options.builder().uses(1).build());
+                var acceptB = ActionButton.builder(mm(args.get(1).asStr())).action(yes);
+                var cancelB = ActionButton.builder(mm(args.get(2).asStr())).action(no);
+                if (args.size() >= 6 && !args.get(5).asStr().isBlank()) acceptB.tooltip(mm(args.get(5).asStr()));
+                if (args.size() >= 7 && !args.get(6).asStr().isBlank()) cancelB.tooltip(mm(args.get(6).asStr()));
+                if (args.size() >= 8) acceptB.width((int) args.get(7).asNum());
+                if (args.size() >= 9) cancelB.width((int) args.get(8).asNum());
                 DialogBase base = base(b);
-                DialogType type = DialogType.confirmation(
-                        ActionButton.builder(mm(args.get(1).asStr())).action(yes).build(),
-                        ActionButton.builder(mm(args.get(2).asStr())).action(no).build());
+                DialogType type = DialogType.confirmation(acceptB.build(), cancelB.build());
                 return wrapDialog(base, type);
             })
-            // as_multi_action(machine, buttons) — buttons is an Array of maps built with
-            // make_map("label", "...", "action", "file.pf:func"). Every button gets whatever
-            // inputs were declared appended as arguments, same as as_notice.
+            // as_multi_action(owner, buttons, columns?) — buttons is an Array of maps built with
+            // make_map("label", "...", "action", "file.pf:func", "tooltip", "...", "width", 100).
+            // "tooltip"/"width" are optional. Every button gets whatever inputs were declared
+            // appended as arguments, same as as_notice. Optional trailing "columns" (a grid-width
+            // integer, Paper's own MultiActionType#columns()) wraps buttons into rows of that width
+            // instead of Paper's default 2 — the ONLY way to lay out a fixed grid (e.g. a game
+            // board) that isn't just "however many buttons fit at their declared per-button width".
             .method("as_multi_action", (obj, args) -> {
                 if (args.size() < 2 || !(args.get(1) instanceof ScriptValue.Array arr)) return ScriptValue.NULL;
                 Builder b = builder(obj);
-                MachineType.MachineRef m = machineOf(args.get(0));
+                ScriptValue owner = args.get(0);
                 List<ActionButton> buttons = new ArrayList<>();
                 for (ScriptValue v : arr.elements()) {
                     if (!(v instanceof ScriptValue.Obj mo) || !(mo.instance() instanceof java.util.Map<?, ?> map)) continue;
                     Object labelV = map.get("label");
                     Object actionV = map.get("action");
-                    String label = labelV instanceof ScriptValue sv ? sv.asStr() : String.valueOf(labelV);
+                    Component labelComponent = labelV instanceof ScriptValue sv
+                            ? partsToComponent(sv) : mm(String.valueOf(labelV));
                     String actionRef = actionV instanceof ScriptValue sv ? sv.asStr() : String.valueOf(actionV);
-                    buttons.add(ActionButton.builder(mm(label)).action(buildAction(m, actionRef, b.specs)).build());
+                    var btnB = ActionButton.builder(labelComponent).action(buildAction(owner, actionRef, b));
+                    Object tooltipV = map.get("tooltip");
+                    if (tooltipV instanceof ScriptValue sv && !sv.asStr().isBlank()) btnB.tooltip(mm(sv.asStr()));
+                    Object widthV = map.get("width");
+                    if (widthV instanceof ScriptValue sv) btnB.width((int) sv.asNum());
+                    buttons.add(btnB.build());
                 }
                 DialogBase base = base(b);
-                DialogType type = DialogType.multiAction(buttons).build();
+                DialogType type = args.size() >= 3 && args.get(2).asNum() > 0
+                        ? DialogType.multiAction(buttons, null, (int) args.get(2).asNum())
+                        : DialogType.multiAction(buttons).build();
+                return wrapDialog(base, type);
+            })
+            // as_link(owner, button_label, url) — single-button dialog whose click opens a URL.
+            // Skips the .pf script engine entirely (no action_ref).
+            .method("as_link", (obj, args) -> {
+                if (args.size() < 3) return ScriptValue.NULL;
+                Builder b = builder(obj);
+                DialogAction action = DialogAction.staticAction(ClickEvent.openUrl(args.get(2).asStr()));
+                DialogBase base = base(b);
+                DialogType type = DialogType.notice(ActionButton.builder(mm(args.get(1).asStr())).action(action).build());
+                return wrapDialog(base, type);
+            })
+            // as_run_command(owner, button_label, command) — single-button dialog whose click runs a
+            // vanilla command. Skips the .pf script engine entirely (no action_ref).
+            .method("as_run_command", (obj, args) -> {
+                if (args.size() < 3) return ScriptValue.NULL;
+                Builder b = builder(obj);
+                DialogAction action = DialogAction.staticAction(ClickEvent.runCommand(args.get(2).asStr()));
+                DialogBase base = base(b);
+                DialogType type = DialogType.notice(ActionButton.builder(mm(args.get(1).asStr())).action(action).build());
                 return wrapDialog(base, type);
             });
 
         PolyTypeRegistry.define("BuiltDialog")
             // show(player) — display to that player.
             .method("show", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of(false);
+                if (args.isEmpty()) {
+                    LOG.warning("[Dialog] BuiltDialog.show() called with no player argument.");
+                    return ScriptValue.of(false);
+                }
                 Player p = playerOf(args.get(0));
-                if (p == null || !(dialogOf(obj) instanceof Dialog d)) return ScriptValue.of(false);
-                try { p.showDialog(d); return ScriptValue.of(true); } catch (Throwable ignored) { return ScriptValue.of(false); }
+                if (p == null) {
+                    LOG.warning("[Dialog] BuiltDialog.show(" + args.get(0) + ") — playerOf() couldn't resolve a "
+                        + "Bukkit Player from that argument (was it really a Player value, e.g. from the "
+                        + "bare \"Player\" binding?).");
+                    return ScriptValue.of(false);
+                }
+                if (!(dialogOf(obj) instanceof Dialog d)) {
+                    LOG.warning("[Dialog] BuiltDialog.show() — the receiver wasn't a built Dialog (did the "
+                        + ".as_notice/.as_confirmation/.as_multi_action call before it return NULL?).");
+                    return ScriptValue.of(false);
+                }
+                try {
+                    p.showDialog(d);
+                    markReshownIfClicker(p.getUniqueId());
+                    return ScriptValue.of(true);
+                } catch (Throwable t) {
+                    LOG.log(java.util.logging.Level.WARNING, "[Dialog] Player#showDialog threw", t);
+                    return ScriptValue.of(false);
+                }
+            })
+            // show_many(players) — display to every resolvable Player in that Array, skipping nulls.
+            // Returns the count of players actually shown.
+            .method("show_many", (obj, args) -> {
+                if (args.isEmpty() || !(args.get(0) instanceof ScriptValue.Array arr)) {
+                    LOG.warning("[Dialog] BuiltDialog.show_many() called with no players array argument.");
+                    return ScriptValue.of(0.0);
+                }
+                if (!(dialogOf(obj) instanceof Dialog d)) {
+                    LOG.warning("[Dialog] BuiltDialog.show_many() — the receiver wasn't a built Dialog (did the "
+                        + ".as_notice/.as_confirmation/.as_multi_action call before it return NULL?).");
+                    return ScriptValue.of(0.0);
+                }
+                int shown = 0;
+                for (ScriptValue v : arr.elements()) {
+                    Player p = playerOf(v);
+                    if (p == null) continue;
+                    try {
+                        p.showDialog(d);
+                        markReshownIfClicker(p.getUniqueId());
+                        shown++;
+                    } catch (Throwable t) {
+                        LOG.log(java.util.logging.Level.WARNING, "[Dialog] Player#showDialog threw", t);
+                    }
+                }
+                return ScriptValue.of((double) shown);
             });
+    }
+
+    /** Flags {@link #RESHOWN} when {@code shownTo} is the player whose OWN click is currently
+     *  executing (see {@link #buildAction}) — a no-op outside a click, or when a dialog action shows
+     *  a dialog to some OTHER player (e.g. pushing a refreshed board to an opponent). */
+    private static void markReshownIfClicker(java.util.UUID shownTo) {
+        ReshowTracker t = RESHOWN.get();
+        if (t != null && t.clickingPlayer().equals(shownTo)) t.flag()[0] = true;
     }
 
     /** MiniMessage-parse a dialog string, matching how every other display text in this codebase
@@ -239,6 +398,45 @@ public final class DialogManagerType {
         } catch (Throwable ignored) {
             return Component.text(text == null ? "" : text);
         }
+    }
+
+    /** Builds one {@link Component} from either a plain MiniMessage string or an {@code Array} of
+     *  parts mixing plain strings with {@code Images.from(id, shift?)}/{@code Images.shift(n)}
+     *  results — the SAME {@code _TitleImage}/{@code _TitleShift} script values a machine's title
+     *  already accepts (see {@code DataMachineBlockEntity#scriptValueToTitleComponent}), reusing
+     *  the exact same {@code MenuText.imageTitle}/{@code MenuText.shiftOnly} glyph-resolution the
+     *  rest of the codebase uses — a Dialog title/body/button label is no different a piece of text
+     *  than a menu's, so it should be built the same way instead of a second parallel mechanism. */
+    private static Component partsToComponent(ScriptValue value) {
+        if (value instanceof ScriptValue.Array arr) {
+            Component out = Component.empty();
+            for (ScriptValue part : arr.elements()) out = out.append(partToComponent(part));
+            return out;
+        }
+        return partToComponent(value);
+    }
+
+    private static Component partToComponent(ScriptValue part) {
+        if (part instanceof ScriptValue.Obj o && "_TitleImage".equals(o.typeName())
+                && o.instance() instanceof String[] data && data.length >= 2) {
+            try {
+                Component img = dev.arubik.craftengine.machine.menu.MenuText.imageTitle(
+                        data[0], Integer.parseInt(data[1]));
+                if (img != null) return img;
+            } catch (Throwable ignored) {}
+            return Component.empty();
+        }
+        if (part instanceof ScriptValue.Obj o && "_TitleShift".equals(o.typeName())
+                && o.instance() instanceof Integer shift) {
+            return dev.arubik.craftengine.machine.menu.MenuText.shiftOnly(shift);
+        }
+        return mm(part.asStr());
+    }
+
+    private static void addItemBody(Builder b, ItemStack bukkit, ScriptValue showTooltip) {
+        var ib = DialogBody.item(bukkit);
+        if (showTooltip != null) ib.showTooltip(showTooltip.asBool());
+        b.body.add(ib.build());
     }
 
     private static Builder builder(Object obj) { return (Builder) obj; }
@@ -303,23 +501,45 @@ public final class DialogManagerType {
     }
 
     /** Builds the DialogAction for one button: on click, resolves the clicking player, rebuilds a
-     *  fresh script context bound to {@code machine} + that REAL player (never a guess), and calls
+     *  fresh script context bound to {@code owner} + that REAL player (never a guess), and calls
      *  actionRef with every declared input's submitted value appended in declaration order, PLUS a
      *  trailing Map argument (key -> value, for every declared input) for named access — a callback
      *  that only cares about one of several inputs, or that's shared across dialogs with different
-     *  input sets, can read {@code results.get("key")} instead of relying on positional order. */
-    private static DialogAction buildAction(MachineType.MachineRef machine, String actionRef, List<InputSpec> specs) {
-        List<InputSpec> keys = List.copyOf(specs);
+     *  input sets, can read {@code results.get("key")} instead of relying on positional order.
+     *
+     *  <p>{@code owner} is whatever the script passed as {@code as_notice}/{@code
+     *  as_confirmation}/{@code as_multi_action}'s first argument. When it resolves to a real
+     *  {@code Machine} backed by a {@code DataMachineBlockEntity}, behavior is UNCHANGED from
+     *  before this was generalized: the fired script gets that machine's own full context, and the
+     *  dialog closes back into the machine's menu (not just to nothing) afterward. Any other value
+     *  — {@code NULL} included, e.g. a {@code /cmds} command with no machine at all — falls back to
+     *  a plain baseline context (the same {@code Server}/{@code Item}/{@code Menu}/{@code
+     *  EventManager}/{@code TaskManager} namespaces every other script entry point this session
+     *  binds) plus the clicking player, and the dialog just closes when done. This is what lets a
+     *  standalone command like {@code /teleporters} use the exact same Dialog API a machine button
+     *  does, with no machine involved at all. */
+    private static DialogAction buildAction(ScriptValue owner, String actionRef, Builder b) {
+        List<InputSpec> keys = List.copyOf(b.specs);
+        String onCloseRef = b.onCloseRef;
+        MachineType.MachineRef machine = machineOf(owner);
+        dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity dm =
+                machine != null && machine.blockEntity() instanceof dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity d
+                        ? d : null;
         return DialogAction.customClick(
                 (view, audience) -> {
                     if (!(audience instanceof Player bukkitPlayer)) return;
-                    if (machine == null || !(machine.blockEntity() instanceof dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity dm)) {
-                        bukkitPlayer.closeDialog();
-                        return;
-                    }
+                    ServerPlayer sp = ((CraftPlayer) bukkitPlayer).getHandle();
+                    // Tracks whether THIS click's own action script already re-displayed a (fresh)
+                    // dialog to this same player via BuiltDialog.show/show_many (see RESHOWN below) —
+                    // e.g. a turn-based game redrawing its own board after a move. Without this, the
+                    // unconditional bukkitPlayer.closeDialog() at the bottom of this finally block
+                    // would immediately dismiss whatever the script just showed, since Dialog has no
+                    // OTHER way (unlike a machine's inventory Menu) to stay open across one click's
+                    // own action — every non-machine dialog action used to hard-close every time.
+                    boolean[] reshown = {false};
+                    RESHOWN.set(new ReshowTracker(bukkitPlayer.getUniqueId(), reshown));
                     try {
-                        ServerPlayer sp = ((CraftPlayer) bukkitPlayer).getHandle();
-                        ScriptContext base = dm.buildScriptContext();
+                        ScriptContext base = dm != null ? dm.buildScriptContext() : genericBaseContext();
                         if (base != null) {
                             ScriptContext ctx = ScriptContext.builder().copyFrom(base).player(sp).build();
                             List<ScriptValue> extra = new ArrayList<>(keys.size() + 1);
@@ -335,17 +555,45 @@ public final class DialogManagerType {
                         }
                     } catch (Throwable ignored) {
                     } finally {
-                        // A dialog opened FROM a machine's own menu (e.g. a button) should return
-                        // TO that menu on accept/cancel, not just close to nothing — reopening the
-                        // same page both closes the dialog (the client can only show one such view
-                        // at a time) and restores context, matching Machine.update()'s "stay on the
-                        // same open menu" convention elsewhere in this script API.
-                        try { dm.openPage(bukkitPlayer, dm.currentPage()); }
-                        catch (Throwable ignored) { bukkitPlayer.closeDialog(); }
+                        boolean alreadyReshown = reshown[0];
+                        RESHOWN.remove();
+                        if (onCloseRef != null && !onCloseRef.isBlank()) {
+                            // Script opted out of the default "reopen the menu" behavior — run its own
+                            // fallback instead (or nothing, if it just wants the dialog to close).
+                            try {
+                                ScriptCall closeCall = ScriptCall.parse(onCloseRef);
+                                if (closeCall != null) {
+                                    ScriptContext closeBase = dm != null ? dm.buildScriptContext() : genericBaseContext();
+                                    if (closeBase != null) {
+                                        ScriptContext closeCtx = ScriptContext.builder().copyFrom(closeBase).player(sp).build();
+                                        closeCall.execute(closeCtx);
+                                    }
+                                }
+                            } catch (Throwable ignored) {}
+                            if (!alreadyReshown) bukkitPlayer.closeDialog();
+                        } else if (dm != null && dm.definition() != null && dm.definition().openUi()) {
+                            // Default when the script didn't ask for anything else: a dialog opened
+                            // FROM a machine's own menu (e.g. a button) returns TO that menu, matching
+                            // Machine.update()'s "stay on the same open menu" convention elsewhere.
+                            try { dm.openPage(bukkitPlayer, dm.currentPage()); }
+                            catch (Throwable ignored) { bukkitPlayer.closeDialog(); }
+                        } else if (!alreadyReshown) {
+                            bukkitPlayer.closeDialog();
+                        }
                     }
                 },
                 ClickCallback.Options.builder().uses(1).build()
         );
+    }
+
+    /** Baseline context for a machine-less dialog action — the same namespace singletons every
+     *  OTHER non-machine script entry point this session binds (Cmd execution, TaskManager, the
+     *  generic events bridge, script menus), so a {@code /cmds}-opened dialog's Accept button can
+     *  do anything those can (schedule a task, register a countdown, open a menu, build an item). */
+    private static ScriptContext genericBaseContext() {
+        ScriptContext.Builder b = ScriptContext.builder();
+        b.typedAll(dev.arubik.craftengine.script.ScriptBootstrap.globalSingletons());
+        return b.build();
     }
 
 }

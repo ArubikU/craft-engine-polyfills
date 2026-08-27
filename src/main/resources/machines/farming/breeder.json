@@ -1,0 +1,41 @@
+{
+  "id": "polyfills:breeder",
+  "title": "Auto Breeder",
+  "flags": {
+    "fuel": false,
+    "recipes": true,
+    "continuous_fuel": false,
+    "ui": true,
+    "ui_tick": true,
+    "io_pull": true,
+    "renderers": true,
+    "scripts": true,
+    "animations": true,
+    "kinetics": false
+  },
+  "action_script": "farming/breeder",
+  "action_interval": 100,
+  "pages": [
+    {
+      "title": "Auto Breeder",
+      "size": 9,
+      "slots": {
+        "input": [
+          0,
+          1,
+          2
+        ]
+      }
+    }
+  ],
+  "io": {
+    "input": {
+      "types": [
+        "item"
+      ],
+      "faces": [
+        "all"
+      ]
+    }
+  }
+}

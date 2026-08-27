@@ -57,6 +57,26 @@ public class CepCommand implements CommandExecutor, TabCompleter {
             return true;
         });
 
+        // /cep reload scripts <name> — targeted reload of exactly one <name>.pf, skipping every
+        // OTHER script's __init__/__unload__ churn (see ScriptRegistry#reloadOne's own javadoc for
+        // why that matters, e.g. warps.pf's CREATE TABLE calls). NOT run through ScriptBootstrap
+        // .reload() — that re-registers every PolyType from scratch, which is a whole-engine
+        // operation with nothing "one script" about it; this only ever needs to matter if a NEW
+        // builtin type was added, which a targeted single-file reload was never going to pick up
+        // anyway (that needs the jar rebuilt regardless).
+        cases.put(new ArgumentList("reload^", "scripts^", String.class), (sender, parsed) -> {
+            String name = (String) parsed[2];
+            try {
+                boolean ok = dev.arubik.craftengine.script.ScriptRegistry.reloadOne(
+                        CraftEnginePolyfills.instance().getDataFolder(), name);
+                if (ok) reloadMsg(sender, "scripts", "'" + name + ".pf' reloaded");
+                else reloadFail(sender, "scripts", new java.io.FileNotFoundException(name + ".pf"));
+            } catch (Throwable t) {
+                reloadFail(sender, "scripts", t);
+            }
+            return true;
+        });
+
         // /cep reload machines — re-read machines/*.json and re-point every placed machine.
         cases.put(new ArgumentList("reload^", "machines^"), (sender, parsed) -> {
             try {
@@ -107,10 +127,180 @@ public class CepCommand implements CommandExecutor, TabCompleter {
             return true;
         });
 
+        // /cep reload cmds — re-read cmds/*.json. Brigadier's command TREE (name/aliases/args/
+        // subcommand structure) is baked once at plugin enable and genuinely can't be rebuilt
+        // without a restart (see CmdRegistry's own javadoc) — this only refreshes the CONTENT an
+        // already-registered command reads live: execute/gui script refs, and every declarative
+        // "pages" layout (CmdPageDef reads straight from CmdRegistry.all() on each open, so an
+        // edited warps.json slot/button layout shows up on the NEXT menu open with no restart).
+        cases.put(new ArgumentList("reload^", "cmds^"), (sender, parsed) -> {
+            try {
+                dev.arubik.craftengine.cmd.CmdDefinitionLoader.load();
+                reloadMsg(sender, "cmds", dev.arubik.craftengine.cmd.CmdRegistry.all().size()
+                        + " command(s) re-read — NEW command files still need a restart, "
+                        + "existing ones' scripts/pages are live now");
+            } catch (Throwable t) {
+                reloadFail(sender, "cmds", t);
+            }
+            return true;
+        });
+
+        // /cep reload cmds <name> — targeted reload of exactly one cmds/<name>.json, leaving every
+        // other loaded command's definition object untouched (see CmdDefinitionLoader#loadOne).
+        // Same restart caveat as the bulk reload above for a BRAND NEW command file; an existing
+        // one's content (execute/gui refs, pages) is live immediately either way.
+        cases.put(new ArgumentList("reload^", "cmds^", String.class), (sender, parsed) -> {
+            String name = (String) parsed[2];
+            try {
+                boolean ok = dev.arubik.craftengine.cmd.CmdDefinitionLoader.loadOne(name);
+                if (ok) reloadMsg(sender, "cmds", "'" + name + ".json' re-read — a NEW command still "
+                        + "needs a restart, an existing one's scripts/pages are live now");
+                else reloadFail(sender, "cmds", new java.io.FileNotFoundException(name + ".json"));
+            } catch (Throwable t) {
+                reloadFail(sender, "cmds", t);
+            }
+            return true;
+        });
+
+        // /cep reload crons — re-read crons/*.json. CronScheduler's own ticking task reads
+        // CronRegistry live every firing, so this is a genuinely full reload — no restart caveat.
+        cases.put(new ArgumentList("reload^", "crons^"), (sender, parsed) -> {
+            try {
+                dev.arubik.craftengine.cron.CronDefinitionLoader.load();
+                reloadMsg(sender, "crons", dev.arubik.craftengine.cron.CronRegistry.all().size() + " job(s) re-read");
+            } catch (Throwable t) {
+                reloadFail(sender, "crons", t);
+            }
+            return true;
+        });
+
+        // /cep reload events — re-read events/*.json AND fully re-register every listener (see
+        // GenericEventBridge#reload's javadoc for why that's safe to do live, unlike /cmds) — a
+        // brand new events/*.json file dropped in after startup DOES take effect here, no restart
+        // needed at all (unlike /cmds' Brigadier-tree limitation).
+        cases.put(new ArgumentList("reload^", "events^"), (sender, parsed) -> {
+            try {
+                int n = dev.arubik.craftengine.events.GenericEventBridge.reload(CraftEnginePolyfills.instance());
+                reloadMsg(sender, "events", n + " definition(s) re-read and every listener re-registered");
+            } catch (Throwable t) {
+                reloadFail(sender, "events", t);
+            }
+            return true;
+        });
+
+        // /cep reload database — re-reads database.yml and reconnects SQLDriver/RedisDriver.
+        // Doesn't touch any script or its __init__ tables — reconnecting doesn't imply re-running
+        // setup, only /cep reload scripts (or a restart) does that.
+        cases.put(new ArgumentList("reload^", "database^"), (sender, parsed) -> {
+            try {
+                dev.arubik.craftengine.sql.SQLDriver.init(CraftEnginePolyfills.instance().getDataFolder(), CraftEnginePolyfills.instance().getLogger());
+                dev.arubik.craftengine.sql.RedisDriver.init(CraftEnginePolyfills.instance().getDataFolder(), CraftEnginePolyfills.instance().getLogger());
+                String status = "SQL " + (dev.arubik.craftengine.sql.SQLDriver.isReady() ? "ready (" + dev.arubik.craftengine.sql.SQLDriver.backend() + ")" : "FAILED: " + dev.arubik.craftengine.sql.SQLDriver.lastError())
+                        + ", Redis " + (!dev.arubik.craftengine.sql.RedisDriver.isEnabled() ? "disabled" : dev.arubik.craftengine.sql.RedisDriver.isReady() ? "ready" : "FAILED: " + dev.arubik.craftengine.sql.RedisDriver.lastError());
+                reloadMsg(sender, "database", status);
+            } catch (Throwable t) {
+                reloadFail(sender, "database", t);
+            }
+            return true;
+        });
+
+        // /cep debug item <id> — diagnoses the Item.create(id)/with_profile(...) pipeline used by
+        // warps.pf's player_head_icon() for "default:gui_head_size_1" GUI-scaled heads, since the
+        // pipeline can silently fall back to an empty/vanilla stack on any of several failure paths
+        // (CraftEngineItems.byId returning null, the defaulted vanilla ITEM registry returning AIR
+        // instead of null, or the built stack's meta not actually being SkullMeta) with no visible
+        // error anywhere — this reports every stage so the failure point doesn't have to be guessed.
+        cases.put(new ArgumentList("debug^", "item^", String.class), (sender, parsed) -> {
+            String id = (String) parsed[2];
+            try {
+                net.momirealms.craftengine.core.util.Key key = net.momirealms.craftengine.core.util.Key.of(id);
+                var def = net.momirealms.craftengine.bukkit.api.CraftEngineItems.byId(key);
+                sender.sendMessage("CraftEngineItems.byId(" + id + ") = " + (def == null ? "NULL" : def.getClass().getName()));
+                if (def == null) {
+                    var loaded = net.momirealms.craftengine.bukkit.api.CraftEngineItems.loadedItems();
+                    sender.sendMessage("loadedItems() size=" + loaded.size());
+                    int shown = 0;
+                    for (var k : loaded.keySet()) {
+                        if (k.toString().contains(id.substring(id.indexOf(':') + 1).split("_")[0]) || k.toString().startsWith("default:")) {
+                            sender.sendMessage("  candidate key: [" + k + "] equalsTarget=" + k.equals(key));
+                            if (++shown >= 15) break;
+                        }
+                    }
+                }
+                if (def != null) {
+                    org.bukkit.inventory.ItemStack bukkit = def.buildBukkitItem();
+                    sender.sendMessage("buildBukkitItem() = " + bukkit.getType() + " x" + bukkit.getAmount()
+                            + " meta=" + (bukkit.hasItemMeta() ? bukkit.getItemMeta().getClass().getSimpleName() : "none")
+                            + " isSkullMeta=" + (bukkit.getItemMeta() instanceof org.bukkit.inventory.meta.SkullMeta));
+                    org.bukkit.OfflinePlayer target = sender instanceof org.bukkit.entity.Player p ? p : null;
+                    if (target != null && bukkit.getItemMeta() instanceof org.bukkit.inventory.meta.SkullMeta meta) {
+                        meta.setOwningPlayer(target);
+                        bukkit.setItemMeta(meta);
+                        var ceId = net.momirealms.craftengine.bukkit.api.CraftEngineItems.getCustomItemId(bukkit);
+                        sender.sendMessage("after setOwningPlayer -> CraftEngineItems.getCustomItemId = " + ceId);
+                    }
+                }
+            } catch (Throwable t) {
+                sender.sendMessage("threw: " + t);
+                CraftEnginePolyfills.instance().getLogger().log(java.util.logging.Level.WARNING, "[Cep] debug item threw", t);
+            }
+            return true;
+        });
+
+        // /cep debug pf <ref> <arg> — evaluates a "file.pf:func" ScriptCall with ONE string arg
+        // exactly like the real page-generator pipeline does (see GeneratedPageContent#entries),
+        // and reports the resulting ScriptValue's actual runtime type — the earlier "debug item"
+        // case simulates the Item.create/with_profile Java calls directly, which can succeed while
+        // the real script path still fails (chained method dispatch, arg binding, etc. all add
+        // their own failure surface on top of what "debug item" alone can catch).
+        cases.put(new ArgumentList("debug^", "pf^", String.class, String.class), (sender, parsed) -> {
+            String ref = (String) parsed[2];
+            String arg = (String) parsed[3];
+            // Append the arg onto the ref itself ("file.pf:func:arg") — ScriptCall.evaluate() binds
+            // args from its OWN parsed `args` list, not from executeWithExtraArgs (that method calls
+            // fn.call(...) but discards its return value, always yielding NULL here regardless of
+            // what the function actually returns — evaluate() is what GeneratedPageContent's own
+            // generator-ref pipeline uses and is the only one of the three that reports a result).
+            if (!arg.isBlank()) ref = ref + ":" + arg;
+            try {
+                dev.arubik.craftengine.script.ScriptCall call = dev.arubik.craftengine.script.ScriptCall.parse(ref);
+                if (call == null) {
+                    sender.sendMessage("ScriptCall.parse(" + ref + ") = NULL");
+                    return true;
+                }
+                dev.arubik.craftengine.script.ScriptContext.Builder b = dev.arubik.craftengine.script.ScriptContext.builder();
+                b.typed("Server", dev.arubik.craftengine.script.types.world.ServerType.INSTANCE);
+                b.typed("SQL", dev.arubik.craftengine.script.types.util.SQLDriverType.INSTANCE);
+                b.typed("Redis", dev.arubik.craftengine.script.types.util.RedisDriverType.INSTANCE);
+                b.typed("Uuid", dev.arubik.craftengine.script.types.primitive.UuidType.NAMESPACE);
+                b.typed("Plugins", dev.arubik.craftengine.script.types.plugins.PluginsType.INSTANCE);
+                b.typed("Item", dev.arubik.craftengine.script.types.primitive.ItemType.NAMESPACE);
+                if (sender instanceof org.bukkit.entity.Player p) {
+                    b.player(((org.bukkit.craftbukkit.entity.CraftPlayer) p).getHandle());
+                }
+                dev.arubik.craftengine.script.ScriptValue result = call.evaluate(b.build());
+                sender.sendMessage("result class = " + result.getClass().getName());
+                if (result instanceof dev.arubik.craftengine.script.ScriptValue.Item item) {
+                    var stack = item.stack();
+                    sender.sendMessage("Item.stack() = " + (stack == null ? "NULL" : (stack.isEmpty() ? "EMPTY" : stack.getItem() + " x" + stack.getCount())));
+                    if (stack != null && !stack.isEmpty()) {
+                        var bukkit = org.bukkit.craftbukkit.inventory.CraftItemStack.asBukkitCopy(stack);
+                        sender.sendMessage("as bukkit: " + bukkit.getType() + " meta=" + (bukkit.hasItemMeta() ? bukkit.getItemMeta().getClass().getSimpleName() : "none"));
+                    }
+                } else {
+                    sender.sendMessage("asStr() = " + result.asStr());
+                }
+            } catch (Throwable t) {
+                sender.sendMessage("threw: " + t);
+                CraftEnginePolyfills.instance().getLogger().log(java.util.logging.Level.WARNING, "[Cep] debug pf threw", t);
+            }
+            return true;
+        });
+
         // /cep reload — usage, and the list of loaders a targeted reload can name.
         cases.put(new ArgumentList("reload^"), (sender, parsed) -> {
             sender.sendMessage(MiniMessage.miniMessage().deserialize(
-                    "<gray>Usage: <white>/cep reload <aqua>render<gray>|<aqua>machines<gray>|<aqua>items<gray>|<aqua>scripts"));
+                    "<gray>Usage: <white>/cep reload <aqua>render<gray>|<aqua>machines<gray>|<aqua>items<gray>|<aqua>scripts<gray>|<aqua>cmds<gray>|<aqua>crons<gray>|<aqua>events<gray>|<aqua>database"));
             sender.sendMessage(MiniMessage.miniMessage().deserialize(
                     "<dark_gray>loaders: <gray>"
                             + String.join(", ", dev.arubik.craftengine.data.Registries.loaderNames())));
@@ -806,6 +996,59 @@ public class CepCommand implements CommandExecutor, TabCompleter {
             sender.sendMessage("§bTeleported back to the real world.");
             CraftEnginePolyfills.instance().getLogger()
                     .info("[contraption debug] " + player.getName() + " left the contraption level.");
+            return true;
+        });
+
+        // /cep virtualui close — debug-only escape hatch (force-closes the sender's own open
+        // VirtualUI without going through any script) — the actual sample UI is the data-driven
+        // /virtualui command (cmds/virtualui_sample.json -> scripts/examples/virtualui_sample.pf),
+        // NOT built here in Java: /cmds is the idiomatic way a player-facing feature like this
+        // gets exposed in this codebase, same as /tpa or /warp.
+        cases.put(new ArgumentList("virtualui^", "close^"), (sender, parsed) -> {
+            if (!(sender instanceof Player player)) return true;
+            if (!dev.arubik.craftengine.virtualui.VirtualUICameraSystem.isOpen(player)) {
+                sender.sendMessage(MiniMessage.miniMessage().deserialize("<gray>You don't have a VirtualUI open."));
+                return true;
+            }
+            dev.arubik.craftengine.virtualui.VirtualUICameraSystem.hide(player);
+            sender.sendMessage(MiniMessage.miniMessage().deserialize("<aqua>VirtualUI closed (debug force-close)."));
+            return true;
+        });
+
+        // /cep virtualui show — toggles per-tick particle outlines of every open widget's
+        // interaction rectangle (yellow — the EXACT bounds VirtualUIClickSystem#resolveHit
+        // hit-tests against) plus the click-detection marker's own box (red), so "why didn't that
+        // click register" is visible instead of guessed at. Client-only, no effect on other players.
+        cases.put(new ArgumentList("virtualui^", "show^"), (sender, parsed) -> {
+            if (!(sender instanceof Player player)) return true;
+            var session = dev.arubik.craftengine.virtualui.VirtualUICameraSystem.session(player);
+            if (session == null) {
+                sender.sendMessage(MiniMessage.miniMessage().deserialize("<gray>You don't have a VirtualUI open."));
+                return true;
+            }
+            boolean next = !session.showHitboxes();
+            session.setShowHitboxes(next);
+            sender.sendMessage(MiniMessage.miniMessage().deserialize(next
+                    ? "<yellow>Hitbox outlines: <green>ON</green> — <gray>yellow = widget bounds, red = click marker."
+                    : "<yellow>Hitbox outlines: <red>OFF</red>."));
+            return true;
+        });
+
+        // /cep virtualui reload — re-reads virtualui.yml from disk (sensitivity, max_offset,
+        // max_yaw_degrees/max_pitch_degrees, cursor.front_margin, cursor.click_marker_size, prediction, cursor
+        // states, everything) with NO server restart needed. Every read of VirtualUIConfig.get()
+        // happens fresh per-tick/per-packet (nothing caches a stale copy at session-open time), so
+        // an already-open VirtualUI picks up the new values immediately too — safe to iterate on
+        // tuning live while testing.
+        cases.put(new ArgumentList("virtualui^", "reload^"), (sender, parsed) -> {
+            try {
+                dev.arubik.craftengine.virtualui.VirtualUIConfig.load(
+                        CraftEnginePolyfills.instance().getDataFolder(), CraftEnginePolyfills.instance().getClass().getClassLoader());
+                sender.sendMessage(MiniMessage.miniMessage().deserialize("<aqua>virtualui.yml reloaded."));
+            } catch (Throwable t) {
+                sender.sendMessage(MiniMessage.miniMessage().deserialize("<red>Reload failed: " + t.getMessage()));
+                CraftEnginePolyfills.instance().getLogger().log(java.util.logging.Level.WARNING, "[VirtualUI] reload failed", t);
+            }
             return true;
         });
     }

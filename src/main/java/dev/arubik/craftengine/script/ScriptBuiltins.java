@@ -497,9 +497,10 @@ public final class ScriptBuiltins {
         return false;
     }
 
+    // Accepts a plain id or a "#"-prefixed tag (vanilla or CraftEngine custom item) — see
+    // dev.arubik.craftengine.script.types.util.ItemMatch, the shared matcher used across the
+    // script engine (Container.pull_item, Item.matches, here).
     private static boolean itemMatchesId(ScriptValue v, String id) {
-        if (!(v instanceof ScriptValue.Item i) || i.stack() == null || i.stack().isEmpty()) return false;
-        String myId = BuiltInRegistries.ITEM.getKey(i.stack().getItem()).toString();
-        return myId.equals(id) || myId.equals("minecraft:" + id);
+        return dev.arubik.craftengine.script.types.util.ItemMatch.matches(v, id);
     }
 }

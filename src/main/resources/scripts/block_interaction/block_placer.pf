@@ -1,0 +1,23 @@
+# Block Placer — places a block from input slots into the facing direction.
+# Uses facing_block for proper block inspection instead of scan_block_at (string-only).
+
+facing = Machine.facing_block
+
+if facing.is_air:
+    placed = false
+    for i in range(9):
+        if !placed:
+            item = Machine.container.get_item(i)
+            if !is_empty(item):
+                ok = facing.place_from_item(item)
+                if ok:
+                    Machine.container.remove_item(i, 1)
+                    placed = true
+                end
+            end
+        end
+    end
+end
+
+
+

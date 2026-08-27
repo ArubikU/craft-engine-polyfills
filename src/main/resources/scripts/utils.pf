@@ -1,0 +1,36 @@
+# Shared helpers, imported via `import "utils.pf"` (or `import "utils.pf" { name1, name2 }` to pull
+# in only specific ones) — see ScriptRegistry#getOrLoadByPath / ScriptProgram's import statement.
+# Kept at the scripts/ ROOT (not under a category subfolder) since it's cross-cutting, not owned by
+# any one machine family.
+
+# Whether `entity` is an item entity resting directly on THIS machine's own top surface — the same
+# radius-independent height check depot_tick.pf and the saw's ground-pickup intake both duplicated
+# before this existed. Callers still choose their own Machine.nearby_entities(radius) and decide
+# what to do with a match (take it all, process one at a time, etc.) — this only answers "is this
+# specific entity a candidate at all".
+def is_resting_item(entity):
+    if entity.type != "minecraft:item":
+        return false
+    end
+    ey = entity.pos.y
+    by = Machine.y
+    return ey >= by - 0.2 && ey <= by + 1.2
+end
+
+# Horizontal opposite of a "facing"/"face"-style direction string (north<->south, east<->west).
+# Anything else (up/down, or an unrecognized value) passes through unchanged.
+def opposite_dir(d):
+    if d == "north":
+        return "south"
+    end
+    if d == "south":
+        return "north"
+    end
+    if d == "east":
+        return "west"
+    end
+    if d == "west":
+        return "east"
+    end
+    return d
+end

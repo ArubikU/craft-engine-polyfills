@@ -1,0 +1,6 @@
+{
+  "id": "cml:funnel",
+  "scripts": {
+    "on_right_click": "conveyor/funnel_place.pf:on_right_click"
+  }
+}

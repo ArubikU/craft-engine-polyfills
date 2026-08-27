@@ -75,7 +75,7 @@ public class PersistentBlockEntity extends BlockEntityController {
     }
 
     @SuppressWarnings("unchecked")
-    public <C> @Nullable C get(NamespacedKey key, NbtType type) {
+    public <C>  C get(NamespacedKey key, NbtType type) {
         if (!container.containsKey(key.getKey())) {
             return null;
         }
@@ -96,7 +96,7 @@ public class PersistentBlockEntity extends BlockEntityController {
         };
     }
 
-    public <C> @Nullable C get(Key key, NbtType type) {
+    public <C>  C get(Key key, NbtType type) {
         return this.get(NamespacedKey.fromString(key.toString()), type);
     }
 

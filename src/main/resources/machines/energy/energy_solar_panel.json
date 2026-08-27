@@ -1,0 +1,64 @@
+{
+  "id": "polyfills:energy_solar_panel",
+  "title": "Solar Panel",
+  "flags": {
+    "recipes": false,
+    "fuel": false,
+    "continuous_fuel": false,
+    "ui": true,
+    "ui_tick": true,
+    "io_pull": true,
+    "renderers": true,
+    "scripts": true,
+    "animations": true,
+    "kinetics": false
+  },
+  "energy": {
+    "capacity": 4000,
+    "max_input": 0,
+    "max_output": 200,
+    "per_tick": 40
+  },
+  "action_script": "energy_solar_panel",
+  "action_interval": 20,
+  "io": {
+    "output": [
+      {
+        "types": [
+          "energy"
+        ],
+        "faces": [
+          "all"
+        ]
+      }
+    ]
+  },
+  "pages": [
+    {
+      "title": "{Images.from('cml:energy_solar_panel_gui')}",
+      "size": 54,
+      "layout": [
+        {
+          "slot": 4,
+          "item": "cml:energy_charge_icon",
+          "name": "<yellow>${Machine.energy_stored}/${Machine.energy_capacity} CE",
+          "lore": [
+            "<green>Out: +${Machine.energy_real_output}/t"
+          ]
+        }
+      ],
+      "bars": [
+        {
+          "id": "polyfills:energy",
+          "slots": [
+            35,
+            26,
+            17,
+            8
+          ],
+          "source": "energy"
+        }
+      ]
+    }
+  ]
+}

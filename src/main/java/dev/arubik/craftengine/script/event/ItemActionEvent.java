@@ -26,6 +26,8 @@ import net.minecraft.world.entity.Entity;
 public final class ItemActionEvent extends ScriptEvent {
     private Entity otherEntity;
     private Double amount;
+    private org.bukkit.block.Block clickedBlock;
+    private org.bukkit.block.BlockFace clickedFace;
 
     public ItemActionEvent(String hookName) {
         super(hookName);
@@ -39,4 +41,15 @@ public final class ItemActionEvent extends ScriptEvent {
     /** The damage amount for on_damage_taken — null for every other hook. */
     public Double amount() { return amount; }
     public ItemActionEvent amount(double a) { this.amount = a; return this; }
+
+    /** The block right-clicked (before any placement) and which of its faces was clicked — null
+     *  unless this hook's underlying Bukkit event is a {@code PlayerInteractEvent} against a real
+     *  block (on_right_click, right-clicking air has neither). Lets a script implement its own
+     *  "place a different custom block depending on which face was clicked" placement routing
+     *  (see {@code Block#place_custom}) without a dedicated Java listener. */
+    public org.bukkit.block.Block clickedBlock() { return clickedBlock; }
+    public ItemActionEvent clickedBlock(org.bukkit.block.Block b) { this.clickedBlock = b; return this; }
+
+    public org.bukkit.block.BlockFace clickedFace() { return clickedFace; }
+    public ItemActionEvent clickedFace(org.bukkit.block.BlockFace f) { this.clickedFace = f; return this; }
 }

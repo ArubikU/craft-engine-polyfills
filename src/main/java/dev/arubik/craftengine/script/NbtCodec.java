@@ -73,10 +73,11 @@ public final class NbtCodec {
                 box.put(VALUE_KEY, encodeMap(nested));
             }
             case ScriptValue.Item i -> {
-                // Reuse the exact whole-ItemStack encoding TypedKeyBridge's "item" type already uses,
-                // so a compound holding an item slot round-trips the same way a bare "item" key does.
+                // Reuse the exact whole-ItemStack encoding TypedKeyBridge's "item" type already uses
+                // (a compressed byte[] via the vanilla CODEC — see TypedKeyBridge#ITEM_CODEC), so a
+                // compound holding an item slot round-trips the same way a bare "item" key does.
                 box.putString(TYPE_KEY, "item");
-                box.putString(VALUE_KEY, String.valueOf(TypedKeyBridge.resolve("item").toStorage(i)));
+                box.putByteArray(VALUE_KEY, (byte[]) TypedKeyBridge.resolve("item").toStorage(i));
             }
             default -> box.putString(TYPE_KEY, "null"); // an unsupported value type — drop safely
         }
@@ -99,7 +100,7 @@ public final class NbtCodec {
             }
             case "map" -> dev.arubik.craftengine.script.types.primitive.MapType.wrap(
                     decodeMap(box.getCompound(VALUE_KEY).orElseGet(CompoundTag::new)));
-            case "item" -> TypedKeyBridge.resolve("item").fromStorage(box.getString(VALUE_KEY).orElse(""));
+            case "item" -> TypedKeyBridge.resolve("item").fromStorage(box.getByteArray(VALUE_KEY).orElse(new byte[0]));
             default -> ScriptValue.NULL;
         };
     }

@@ -27,20 +27,17 @@ public final class ItemDefinition {
     private final Map<String, String> scripts;
     private final Key placeBlock;
     private final ScriptToggle fillStorage;
-    private final ScriptToggle fillFlags;
     private final ScriptToggle fillTyped;
     private final int tickInterval;
-    private final List<String> bridgeFlags;
-    private final List<String> bridgeStrFlags;
     private final List<TypedBridgeSpec> bridgeTyped;
     private final String nameTemplate;
     private final List<String> loreTemplate;
 
     public ItemDefinition(Key id, String title, List<MachineDefinition.PageDef> pages,
             boolean openOnRightClick, boolean openOnShiftRightClick, List<TankSpec> tanks,
-            Map<String, String> scripts, Key placeBlock, ScriptToggle fillStorage, ScriptToggle fillFlags,
+            Map<String, String> scripts, Key placeBlock, ScriptToggle fillStorage,
             ScriptToggle fillTyped,
-            int tickInterval, List<String> bridgeFlags, List<String> bridgeStrFlags, List<TypedBridgeSpec> bridgeTyped,
+            int tickInterval, List<TypedBridgeSpec> bridgeTyped,
             String nameTemplate, List<String> loreTemplate) {
         this.id = id;
         this.title = title;
@@ -51,11 +48,8 @@ public final class ItemDefinition {
         this.scripts = Map.copyOf(scripts);
         this.placeBlock = placeBlock;
         this.fillStorage = fillStorage != null ? fillStorage : ScriptToggle.TRUE;
-        this.fillFlags = fillFlags != null ? fillFlags : ScriptToggle.TRUE;
         this.fillTyped = fillTyped != null ? fillTyped : ScriptToggle.TRUE;
         this.tickInterval = Math.max(1, tickInterval);
-        this.bridgeFlags = bridgeFlags == null ? List.of() : List.copyOf(bridgeFlags);
-        this.bridgeStrFlags = bridgeStrFlags == null ? List.of() : List.copyOf(bridgeStrFlags);
         this.bridgeTyped = bridgeTyped == null ? List.of() : List.copyOf(bridgeTyped);
         this.nameTemplate = nameTemplate;
         this.loreTemplate = loreTemplate == null ? List.of() : List.copyOf(loreTemplate);
@@ -74,24 +68,14 @@ public final class ItemDefinition {
     /** {@code place_block.fill_storage} — whether placing this item's block should copy its page
      *  storage into the new machine's container. A constant or a script condition (see {@link ScriptToggle}). */
     public ScriptToggle fillStorage() { return fillStorage; }
-    /** {@code place_block.fill_flags} — whether placing should bridge {@link #bridgeFlags()}/
-     *  {@link #bridgeStrFlags()} onto the new machine. */
-    public ScriptToggle fillFlags() { return fillFlags; }
     /** {@code place_block.fill_typed} — whether placing should bridge this item's generic
      *  {@code TypedKey} store onto the new machine's (see {@code Item.with_typed}/{@code Machine.get_typed}). */
     public ScriptToggle fillTyped() { return fillTyped; }
     /** Tick spacing for {@code on_equipped_tick} — every N ticks, default 1 (every tick). */
     public int tickInterval() { return tickInterval; }
-    /** Names of {@code Machine.get_flag}/{@code set_flag} (int) flags to carry over when this item
-     *  becomes a machine ({@code place_block}) or a machine becomes this item ({@code Machine.to_item}).
-     *  A machine's TypedKey flags have no enumeration mechanism, so only these explicitly declared
-     *  names are bridged automatically — see {@code ItemStateData#getFlag}/{@code setFlag}. */
-    public List<String> bridgeFlags() { return bridgeFlags; }
-    /** Same as {@link #bridgeFlags()} but for {@code Machine.get_str_flag}/{@code set_str_flag}. */
-    public List<String> bridgeStrFlags() { return bridgeStrFlags; }
     /** {@code "typed": [{"name":..., "type":...}, ...]} — generic {@code TypedKey} entries to carry
-     *  over the same way {@link #bridgeFlags()} does for int/string flags, gated by {@link #fillTyped()}
-     *  on the item→machine direction (machine→item via {@code Machine.to_item} is unconditional, like flags). */
+     *  over between this item and a machine it places/becomes, gated by {@link #fillTyped()} on the
+     *  item→machine direction (machine→item via {@code Machine.to_item} is unconditional). */
     public List<TypedBridgeSpec> bridgeTyped() { return bridgeTyped; }
     /** Dynamic display-name template: plain MiniMessage, {@code ${expr}} inline scripts, or a bare
      *  {@code "script.pf:func"} call — re-evaluated by {@code Item.update()} (see {@code ItemType}). */

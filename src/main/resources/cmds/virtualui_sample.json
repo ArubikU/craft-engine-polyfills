@@ -1,0 +1,26 @@
+{
+  "name": "virtualui",
+  "description": "VirtualUI ( camera-locked cursor UI) sample screen",
+  "subcommands": [
+    {
+      "name": "sample",
+      "description": "Opens a sample VirtualUI screen — camera lock, buttons, icons, a scrollbar.",
+      "execute": "examples/virtualui_sample.pf:open_sample"
+    },
+    {
+      "name": "close",
+      "description": "Closes your currently open VirtualUI screen.",
+      "execute": "examples/virtualui_sample.pf:close_sample"
+    },
+    {
+      "name": "createdemo",
+      "description": "Opens a demo screen using ported Create mod GUI icon textures — every widget type.",
+      "execute": "examples/virtualui_create_demo.pf:open_create_demo"
+    },
+    {
+      "name": "cursors",
+      "description": "Opens a gallery of every extra cursor.states icon ported from Kenney's Cursor Pixel Pack.",
+      "execute": "examples/virtualui_cursor_gallery.pf:open_cursor_gallery"
+    }
+  ]
+}

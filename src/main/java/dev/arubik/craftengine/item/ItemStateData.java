@@ -30,8 +30,6 @@ public final class ItemStateData {
     private static final String ROOT = "PolyfillItem";
     private static final String TANKS = "Tanks";
     private static final String PAGES = "Pages";
-    private static final String FLAGS = "Flags";
-    private static final String STR_FLAGS = "StrFlags";
 
     private ItemStateData() {}
 
@@ -52,48 +50,6 @@ public final class ItemStateData {
         CompoundTag tanks = root.getCompoundOrEmpty(TANKS).copy();
         tanks.putInt(name, clamped);
         root.put(TANKS, tanks);
-        writeRoot(copy, root);
-        return copy;
-    }
-
-    // ------------------------------------------------------------------ flags
-
-    /** Generic per-item int flag store — the item-side counterpart of {@code Machine.get_flag}/
-     *  {@code set_flag}, used mainly as the bridge {@link ItemDefinition#flags()} names when
-     *  converting to/from the machine a placeable-container item becomes (see
-     *  {@code Machine.to_item} and {@code DataItemBehavior#fillMachineContainer}) — a machine's
-     *  {@code TypedKey} flags have no enumeration mechanism, so only EXPLICITLY declared names can
-     *  be bridged automatically; anything else a script needs must be carried over itself. */
-    public static int getFlag(ItemStack stack, String name) {
-        CompoundTag root = readRoot(stack);
-        if (root == null || !root.contains(FLAGS)) return 0;
-        return root.getCompoundOrEmpty(FLAGS).getIntOr(name, 0);
-    }
-
-    public static ItemStack setFlag(ItemStack stack, String name, int value) {
-        ItemStack copy = stack.copy();
-        CompoundTag root = readRoot(copy);
-        if (root == null) root = new CompoundTag();
-        CompoundTag flags = root.getCompoundOrEmpty(FLAGS).copy();
-        flags.putInt(name, value);
-        root.put(FLAGS, flags);
-        writeRoot(copy, root);
-        return copy;
-    }
-
-    public static String getStrFlag(ItemStack stack, String name) {
-        CompoundTag root = readRoot(stack);
-        if (root == null || !root.contains(STR_FLAGS)) return "";
-        return root.getCompoundOrEmpty(STR_FLAGS).getStringOr(name, "");
-    }
-
-    public static ItemStack setStrFlag(ItemStack stack, String name, String value) {
-        ItemStack copy = stack.copy();
-        CompoundTag root = readRoot(copy);
-        if (root == null) root = new CompoundTag();
-        CompoundTag flags = root.getCompoundOrEmpty(STR_FLAGS).copy();
-        flags.putString(name, value == null ? "" : value);
-        root.put(STR_FLAGS, flags);
         writeRoot(copy, root);
         return copy;
     }

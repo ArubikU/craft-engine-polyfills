@@ -1,0 +1,14 @@
+{
+  "name": "tpa",
+  "aliases": ["tpask"],
+  "description": "Request to teleport to another player",
+  "args": [
+    { "name": "target", "type": "player" }
+  ],
+  "execute": "tpa.pf:on_request",
+  "subcommands": [
+    { "name": "accept", "execute": "tpa.pf:on_accept" },
+    { "name": "deny", "execute": "tpa.pf:on_deny" },
+    { "name": "list", "gui": "tpa.pf:open_requests_menu" }
+  ]
+}

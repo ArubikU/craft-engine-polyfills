@@ -6,8 +6,8 @@
     { "name": "gas", "kind": "gas", "capacity": 8000 }
   ],
   "scripts": {
-    "on_equip": "jetpack.pf:on_equip",
-    "on_unequip": "jetpack.pf:on_unequip",
-    "on_equipped_tick": "jetpack.pf:on_equipped_tick"
+    "on_equip": "block_interaction/jetpack.pf:on_equip",
+    "on_unequip": "block_interaction/jetpack.pf:on_unequip",
+    "on_equipped_tick": "block_interaction/jetpack.pf:on_equipped_tick"
   }
 }

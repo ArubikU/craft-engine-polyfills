@@ -1,0 +1,235 @@
+{
+  "id": "polyfills:gas_motor_mk1",
+  "title": "Gas Motor Mk1",
+  "flags": {
+    "recipes": false,
+    "fuel": false,
+    "kinetics": true,
+    "continuous_fuel": false,
+    "ui": true,
+    "ui_tick": true,
+    "io_pull": true,
+    "renderers": true,
+    "scripts": true,
+    "animations": true
+  },
+  "action_script": "kinetics/generators/gas_motor",
+  "action_interval": 1,
+  "status": "kinetics/generators/gas_motor.pf:status",
+  "on_break": "kinetics/generators/gas_motor.pf:on_break",
+  "upgrades": {
+    "count": 9,
+    "base_unlocked": 3
+  },
+  "pages": [
+    {
+      "title": "Gas Motor Mk1",
+      "size": 54,
+      "layout": [
+        {
+          "slot": 4,
+          "item": "gas_info.pf:item",
+          "name": "gas_info.pf:name",
+          "lore": [
+            "gas_info.pf:lore"
+          ]
+        }
+      ],
+      "bars": [
+        {
+          "id": "polyfills:gas",
+          "slots": [
+            35,
+            26,
+            17,
+            8
+          ],
+          "source": "gas:vapor"
+        },
+        {
+          "id": "polyfills:rpm",
+          "slots": [
+            31
+          ],
+          "source": "rpm"
+        }
+      ],
+      "buttons": [
+        {
+          "slot": 33,
+          "icon": "cml:upgrade_button",
+          "action": "open_page:1",
+          "name": "<lang:polyfill.ui.upgrades>",
+          "lore": [
+            "<lang:polyfill.ui.upgrades_desc>"
+          ]
+        },
+        {
+          "slot": 29,
+          "icon": "cml:overclock_button",
+          "action": "open_page:2",
+          "name": "<lang:polyfill.ui.overclock>",
+          "locked_icon": "cml:locked_icon",
+          "locked_when": "no_overclock"
+        },
+        {
+          "slot": 44,
+          "icon": "cml:empty_button",
+          "action": "deplete_gas:vapor",
+          "name": "<lang:polyfill.ui.deplete>",
+          "lore": [
+            "<lang:polyfill.ui.gas>"
+          ]
+        },
+        {
+          "slot": 28,
+          "icon": "cml:rpm_up",
+          "action": "gas_motor.pf:increase_rpm:8",
+          "name": "<lang:polyfill.ui.rpm> <green>+8"
+        },
+        {
+          "slot": 30,
+          "icon": "cml:rpm_down",
+          "action": "gas_motor.pf:decrease_rpm:8",
+          "name": "<lang:polyfill.ui.rpm> <red>-8"
+        },
+        {
+          "slot": 37,
+          "icon": "cml:su_up",
+          "action": "gas_motor.pf:increase_su:16",
+          "name": "<lang:polyfill.ui.su> <green>+16"
+        },
+        {
+          "slot": 39,
+          "icon": "cml:su_down",
+          "action": "gas_motor.pf:decrease_su:16",
+          "name": "<lang:polyfill.ui.su> <red>-16"
+        }
+      ]
+    },
+    {
+      "special": "upgrades",
+      "title": "{Images.from('cml:upgrades_gui')}",
+      "items": {
+        "locked": {
+          "icon": "cml:locked_icon",
+          "name": "<lang:polyfill.ui.locked>",
+          "lore": [
+            "<lang:polyfill.ui.locked_desc>"
+          ]
+        },
+        "filler": {
+          "icon": "cml:gui_empty",
+          "components": {
+            "minecraft:tooltip_display": true
+          }
+        }
+      }
+    },
+    {
+      "title": "{Images.from('cml:overclock_gui')}",
+      "size": 27,
+      "layout": [
+        {
+          "slot": 13,
+          "item": "cml:clock_${Machine.meter_state}",
+          "name": "<lang:polyfill.ui.overclock>",
+          "lore": [
+            "<lang:polyfill.ui.overclock> <yellow>${floor(Machine.overclock * 100)}%",
+            "<gray>Max: <white>+${floor(Machine.overclock_limit * 100)}%",
+            "<gray>Speed: <white>x${round((1 + Machine.overclock) * 100) / 100}"
+          ]
+        },
+        {
+          "slot": 3,
+          "item": "cml:gui_empty",
+          "components": {
+            "minecraft:tooltip_display": true
+          }
+        },
+        {
+          "slot": 4,
+          "item": "cml:gui_empty",
+          "components": {
+            "minecraft:tooltip_display": true
+          }
+        },
+        {
+          "slot": 5,
+          "item": "cml:gui_empty",
+          "components": {
+            "minecraft:tooltip_display": true
+          }
+        },
+        {
+          "slot": 12,
+          "item": "cml:gui_empty",
+          "components": {
+            "minecraft:tooltip_display": true
+          }
+        },
+        {
+          "slot": 14,
+          "item": "cml:gui_empty",
+          "components": {
+            "minecraft:tooltip_display": true
+          }
+        }
+      ],
+      "buttons": [
+        {
+          "slot": 10,
+          "icon": "cml:minus_icon",
+          "action": "overclock.pf:decrease",
+          "name": "<lang:polyfill.ui.oc_minus>",
+          "lore": [
+            "<lang:polyfill.ui.oc_hint_minus>"
+          ]
+        },
+        {
+          "slot": 16,
+          "icon": "cml:plus_icon",
+          "action": "overclock.pf:increase",
+          "name": "<lang:polyfill.ui.oc_plus>",
+          "lore": [
+            "<lang:polyfill.ui.oc_hint>"
+          ]
+        },
+        {
+          "slot": 22,
+          "icon": "cml:return_icon",
+          "action": "open_page:0",
+          "name": "<lang:polyfill.ui.back>"
+        }
+      ]
+    }
+  ],
+  "gas_tanks": [
+    {
+      "name": "vapor",
+      "capacity": 10000
+    }
+  ],
+  "io": {
+    "input": [
+      {
+        "types": [
+          "gas"
+        ],
+        "faces": [
+          "up"
+        ]
+      }
+    ],
+    "output_same": [
+      {
+        "types": [
+          "rpm"
+        ],
+        "faces": [
+          "front"
+        ]
+      }
+    ]
+  }
+}
