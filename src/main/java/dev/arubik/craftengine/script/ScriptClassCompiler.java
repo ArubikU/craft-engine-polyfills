@@ -298,6 +298,29 @@ final class ScriptClassCompiler {
                 localTargets.put(fd.name(),
                         new ScriptBytecodeCompiler.LocalTarget(internalName, methodNames.get(fd.name()), fd.params()));
             }
+            // An `import "x.pf" { a, b }` makes a and b callable here. Resolve each to a direct
+            // INVOKESTATIC on the IMPORTED file's own generated class, so a cross-file call becomes
+            // a real Java call instead of a name lookup plus a reflective invoke through
+            // UserFunction. Only where that is equivalent — crossFileTargetFor refuses when the
+            // callee reads a file-level name of its own file, which a direct call would not supply
+            // (see its doc, and tree_utils' OFFSETS6 for the concrete case). Anything it refuses,
+            // or any file that didn't compile, simply keeps the existing interpreted path.
+            for (ScriptProgram.Statement s : statements) {
+                if (!(s instanceof ScriptProgram.Statement.Import imp)) continue;
+                if (imp.symbols() == null || imp.symbols().isEmpty()) continue;
+                ScriptProgram imported;
+                try { imported = ScriptRegistry.getOrLoadByPath(imp.path()); }
+                catch (Throwable ignored) { continue; }
+                if (imported == null) continue;
+                for (String sym : imp.symbols()) {
+                    if (localTargets.containsKey(sym)) continue; // a local def of the same name wins
+                    try {
+                        ScriptBytecodeCompiler.LocalTarget t = imported.crossFileTargetFor(sym);
+                        if (t != null) localTargets.put(sym, t);
+                    } catch (Throwable ignored) { /* keep the interpreted path for this symbol */ }
+                }
+            }
+
             ScriptBytecodeCompiler.LocalCallResolver resolver = localTargets::get;
 
             for (ScriptProgram.Statement.FunctionDef fd : defs) {
@@ -393,6 +416,21 @@ final class ScriptClassCompiler {
      *  text scan, not a real parse: correctness only needs it to never MISS a real call (a false
      *  positive just excludes a def/main-body that would have been fine, not a silent wrong
      *  result), so this errs conservative on purpose. */
+    /** Whether any expression in {@code stmts} mentions one of {@code names} as a bare token. Used
+     *  by {@link ScriptProgram#crossFileTargetFor} to decide whether an imported def can be called
+     *  directly; see that method for why a coarse textual test is the right conservatism here. */
+    static boolean bodyMentionsAnyName(List<ScriptProgram.Statement> stmts, java.util.Set<String> names) {
+        for (String expr : collectFormulaStrings(stmts)) {
+            for (String n : names) {
+                if (java.util.regex.Pattern.compile("(?<![A-Za-z0-9_.])" + java.util.regex.Pattern.quote(n)
+                        + "(?![A-Za-z0-9_])").matcher(expr).find()) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     private static boolean callsAnyOf(List<ScriptProgram.Statement> stmts, java.util.Set<String> defNames) {
         if (defNames.isEmpty()) return false;
         for (String expr : collectFormulaStrings(stmts)) {

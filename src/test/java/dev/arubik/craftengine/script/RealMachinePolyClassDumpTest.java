@@ -79,6 +79,18 @@ class RealMachinePolyClassDumpTest {
         tryRegister("Bars", () -> dev.arubik.craftengine.script.types.machine.BarsType.register());
         tryRegister("Network", () -> dev.arubik.craftengine.script.types.machine.NetworkType.register());
 
+        // Load the real script tree into ScriptRegistry. Without this, scriptsDir is null and every
+        // getOrLoadByPath returns null, so an `import` can't be resolved to the imported file's
+        // generated class — cross-file calls would silently look unoptimised in the dump for a
+        // reason that has nothing to do with the compiler. loadAll is file read + parse only, no
+        // Bukkit, so it runs headless.
+        try {
+            ScriptRegistry.loadAll(Path.of("src/main/resources").toFile());
+            System.out.println("[dump] script registry loaded");
+        } catch (Throwable t) {
+            System.out.println("[dump] ScriptRegistry.loadAll failed: " + t);
+        }
+
         int typeCount = PolyTypeRegistry.typeNames().size();
         System.out.println("[dump] registered types: " + typeCount);
         assertTrue(typeCount > 0, "no types registered — the dump would be meaningless");

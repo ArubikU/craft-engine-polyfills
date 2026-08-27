@@ -75,6 +75,44 @@ public final class ScriptContext {
         return classInstances.getOrDefault(name, ScriptValue.NULL);
     }
 
+    /**
+     * The one lookup every dot-access does: a class instance if there is one, otherwise a plain
+     * variable. Exactly {@code getClassInstance(name)} falling back to {@code getVar(name)} — same
+     * order, same dependency-tracking behaviour (only the {@code getVar} leg records a read, since
+     * that is the only leg that reaches it).
+     *
+     * <p>Exists so the compiler can emit ONE call instead of open-coding the pair with a branch
+     * between them. Reading a receiver is not a place that needs three statements and a jump in
+     * the generated code; it is one question with one answer.
+     */
+    public ScriptValue getClassOrVar(String name) {
+        ScriptValue sv = classInstances.getOrDefault(name, ScriptValue.NULL);
+        return sv != ScriptValue.NULL ? sv : getVar(name);
+    }
+
+    /**
+     * {@link #getClassOrVar} fused with the coercion, so a read that is only ever used as a number
+     * never materialises a {@code ScriptValue} local at all.
+     *
+     * <p>Reading a variable to do arithmetic with it is one operation, and the generated code should
+     * say so: {@code double rpm = ctx.getNum("BASE_RPM")}, not a boxed intermediate that exists for
+     * exactly one {@code asNum()} call. Same lookup and same coercion as before — {@code asNum} is
+     * total over every {@code ScriptValue} shape, including {@code NULL}, which yields 0.
+     */
+    public double getNum(String name) {
+        return getClassOrVar(name).asNum();
+    }
+
+    /** {@link #getNum}'s boolean counterpart. */
+    public boolean getBool(String name) {
+        return getClassOrVar(name).asBool();
+    }
+
+    /** {@link #getNum}'s string counterpart. */
+    public String getStr(String name) {
+        return getClassOrVar(name).asStr();
+    }
+
     public boolean hasVar(String name) {
         return vars.containsKey(name);
     }

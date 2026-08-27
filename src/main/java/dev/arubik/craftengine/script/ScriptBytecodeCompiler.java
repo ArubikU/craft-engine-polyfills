@@ -395,8 +395,39 @@ final class ScriptBytecodeCompiler {
 
     // ---- Coercions — mirror ScriptValue#asNum()/#asBool() exactly ----
 
+    /**
+     * A plain variable read, {@code ctx.getClassOrVar(name)}, kept as its own node so a coercion
+     * applied to it can be FUSED instead of stacked.
+     *
+     * <p>Reading a variable to do arithmetic with it is one operation, and the generated code should
+     * read that way: {@code double rpm = ctx.getNum("BASE_RPM")}, not a {@code ScriptValue} local
+     * that exists solely to have {@code asNum()} called on it once. {@link #toNum}/{@link #toBool}
+     * special-case this node into the fused {@code ScriptContext} accessor; anything else still
+     * gets the ordinary boxed read.
+     */
+    static final class VarRead extends BaseExpr {
+        final String name;
+        VarRead(String name) { super(Type.ANY); this.name = name; }
+        @Override public void emit(MethodVisitor mv, Ctx c) {
+            mv.visitVarInsn(ALOAD, c.ctxSlot);
+            mv.visitLdcInsn(name);
+            mv.visitMethodInsn(INVOKEVIRTUAL, CTX, "getClassOrVar", "(Ljava/lang/String;)L" + VALUE + ";", false);
+        }
+        /** Emits the fused accessor for one of {@code getNum}/{@code getBool}/{@code getStr}. */
+        void emitFused(MethodVisitor mv, Ctx c, String accessor, String returnDesc) {
+            mv.visitVarInsn(ALOAD, c.ctxSlot);
+            mv.visitLdcInsn(name);
+            mv.visitMethodInsn(INVOKEVIRTUAL, CTX, accessor, "(Ljava/lang/String;)" + returnDesc, false);
+        }
+    }
+
     static Expr toNum(Expr e) {
         if (e.type() == Type.NUM) return e;
+        if (e instanceof VarRead v) {
+            return new BaseExpr(Type.NUM) {
+                @Override public void emit(MethodVisitor mv, Ctx c) { v.emitFused(mv, c, "getNum", "D"); }
+            };
+        }
         if (e.type() == Type.BOOL) {
             return new BaseExpr(Type.NUM) {
                 @Override public void emit(MethodVisitor mv, Ctx c) { e.emit(mv, c); mv.visitInsn(I2D); }
@@ -414,6 +445,11 @@ final class ScriptBytecodeCompiler {
 
     static Expr toBool(Expr e) {
         if (e.type() == Type.BOOL) return e;
+        if (e instanceof VarRead v) {
+            return new BaseExpr(Type.BOOL) {
+                @Override public void emit(MethodVisitor mv, Ctx c) { v.emitFused(mv, c, "getBool", "Z"); }
+            };
+        }
         if (e.type() == Type.NUM) {
             return new BaseExpr(Type.BOOL) {
                 @Override public void emit(MethodVisitor mv, Ctx c) {
@@ -1331,13 +1367,7 @@ final class ScriptBytecodeCompiler {
                     }
                 }
 
-                return new BaseExpr(Type.ANY) {
-                    @Override public void emit(MethodVisitor mv, Ctx c) {
-                        int svSlot = c.allocRef();
-                        emitResolveInstanceOrVar(mv, c, varName, svSlot);
-                        mv.visitVarInsn(ALOAD, svSlot);
-                    }
-                };
+                return new VarRead(varName);
             }
 
             return null; // '$var' or anything else unsupported
@@ -1673,12 +1703,17 @@ final class ScriptBytecodeCompiler {
                         int objSlot = c.allocRef(), instSlot = c.allocRef();
                         emitPolyTypeGuard(mv, c, svSlot, name, objSlot, instSlot, fallbackL);
 
-                        // new <PolyClass>(instance).<member>(nativeArgs) — one small, escape-
-                        // analysis-friendly allocation plus a monomorphic INVOKEVIRTUAL.
+                        // Unbox the receiver into its PolyClass and hold it in a NAMED local, so the
+                        // generated code reads as `PolyClassMachine m = new PolyClassMachine(inst);
+                        // m.foo(...)` instead of burying a `new` inside the call. One small,
+                        // escape-analysis-friendly allocation plus a monomorphic INVOKEVIRTUAL.
                         mv.visitTypeInsn(NEW, wrapperName);
                         mv.visitInsn(DUP);
                         mv.visitVarInsn(ALOAD, instSlot);
                         mv.visitMethodInsn(INVOKESPECIAL, wrapperName, "<init>", "(Ljava/lang/Object;)V", false);
+                        int pcSlot = c.allocRef();
+                        mv.visitVarInsn(ASTORE, pcSlot);
+                        mv.visitVarInsn(ALOAD, pcSlot);
                         for (int i = 0; i < arity; i++) {
                             switch (finalArgSlotKinds[i]) {
                                 case NUM_RAW -> mv.visitVarInsn(DLOAD, argSlots[i]);
@@ -1898,22 +1933,15 @@ final class ScriptBytecodeCompiler {
             };
         }
 
-        /** {@code sv = ctx.getClassInstance(name); if (sv==NULL) sv = ctx.getVar(name);} — stores
-         *  the result in {@code svSlot}. */
+        /** {@code sv = ctx.getClassOrVar(name)} into {@code svSlot} — a single call. This used to be
+         *  open-coded as getClassInstance, a NULL compare, a branch, and a getVar, which is four
+         *  statements and a jump in the generated code for what is one question with one answer;
+         *  {@link ScriptContext#getClassOrVar} is that exact sequence, moved where it belongs. */
         private static void emitResolveInstanceOrVar(MethodVisitor mv, Ctx c, String name, int svSlot) {
             mv.visitVarInsn(ALOAD, c.ctxSlot);
             mv.visitLdcInsn(name);
-            mv.visitMethodInsn(INVOKEVIRTUAL, CTX, "getClassInstance", "(Ljava/lang/String;)L" + VALUE + ";", false);
+            mv.visitMethodInsn(INVOKEVIRTUAL, CTX, "getClassOrVar", "(Ljava/lang/String;)L" + VALUE + ";", false);
             mv.visitVarInsn(ASTORE, svSlot);
-            mv.visitVarInsn(ALOAD, svSlot);
-            emitGetNull(mv);
-            Label haveInstanceL = new Label();
-            mv.visitJumpInsn(IF_ACMPNE, haveInstanceL);
-            mv.visitVarInsn(ALOAD, c.ctxSlot);
-            mv.visitLdcInsn(name);
-            mv.visitMethodInsn(INVOKEVIRTUAL, CTX, "getVar", "(Ljava/lang/String;)L" + VALUE + ";", false);
-            mv.visitVarInsn(ASTORE, svSlot);
-            mv.visitLabel(haveInstanceL);
         }
 
         /** {@code new ArrayList<>()} in {@code listSlot}, then one {@code list.add(evaluatedArg)}

@@ -84,15 +84,66 @@ public final class ScriptProgram {
      *  throw), on the FIRST call that needs it. Never re-attempted even if it returns {@code
      *  null} (nothing in this file qualified) — same one-shot contract {@code
      *  ScriptClassCompiler.tryCompile}'s own doc already describes. */
+    private volatile boolean compiling;
+
     private ScriptClassCompiler.Compiled ensureCompiled() {
         if (compileAttempted) return compiledClass;
         synchronized (this) {
             if (compileAttempted) return compiledClass;
+            // Re-entrancy guard for an import CYCLE: compiling A now asks B to compile so A can
+            // call into it directly, and B may import A right back. Reporting "not compiled" to the
+            // inner request breaks the loop — that call site just keeps the interpreted path.
+            // Without this the same thread re-enters and recurses until the stack gives out.
+            if (compiling) return null;
+            compiling = true;
             try { compiledClass = ScriptClassCompiler.tryCompile(name, statements); }
             catch (Throwable ignored) { compiledClass = null; }
+            finally { compiling = false; }
             compileAttempted = true;
             return compiledClass;
         }
+    }
+
+    /**
+     * A direct-call target for {@code defName} in THIS file, for a compiled caller in a DIFFERENT
+     * file that imported it — or null when a direct call would not be equivalent.
+     *
+     * <p>The interpreter reaches an imported function through {@code UserFunction.call}, which
+     * layers this file's own defining context UNDER the caller's before running the body. A plain
+     * {@code INVOKESTATIC} passing only the caller's builder skips that layer, which is fine for
+     * most functions — a sibling {@code def} it calls is resolved statically at compile time, so it
+     * never needed the context for that — but NOT for one that reads a file-level name of its own.
+     * {@code kinetics/tree_utils.pf} is exactly that case: {@code _find_tree} reads the top-level
+     * {@code OFFSETS6}, which the importing file's context has never heard of, and the failure would
+     * be a silent NULL rather than an error.
+     *
+     * <p>So the check is: refuse if any of this file's top-level assigned names appears anywhere in
+     * the def's body. Deliberately a coarse textual test — over-refusing only costs the caller its
+     * old interpreted path, while under-refusing would silently change behaviour.
+     */
+    ScriptBytecodeCompiler.LocalTarget crossFileTargetFor(String defName) {
+        ScriptClassCompiler.Compiled c = ensureCompiled();
+        if (c == null) return null;
+        java.lang.reflect.Method m = c.methodsByDefName().get(defName);
+        if (m == null) return null;
+
+        Statement.FunctionDef def = null;
+        java.util.Set<String> fileLevelNames = new java.util.HashSet<>();
+        for (Statement s : statements) {
+            if (s instanceof Statement.FunctionDef fd) {
+                if (fd.name().equals(defName)) def = fd;
+            } else if (s instanceof Statement.Assign a) {
+                fileLevelNames.add(a.name());
+            } else if (s instanceof Statement.StaticDecl sd) {
+                fileLevelNames.add(sd.name());
+            }
+        }
+        if (def == null) return null;
+        if (!fileLevelNames.isEmpty() && ScriptClassCompiler.bodyMentionsAnyName(def.body(), fileLevelNames)) {
+            return null;
+        }
+        return new ScriptBytecodeCompiler.LocalTarget(
+                m.getDeclaringClass().getName().replace('.', '/'), m.getName(), def.params());
     }
 
     /** The compiled static method for {@code defName}, or {@code null} when the JIT kill switch
