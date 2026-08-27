@@ -1575,11 +1575,22 @@ final class ScriptBytecodeCompiler {
                     Label isNullL = new Label(), endL = new Label();
                     mv.visitJumpInsn(IF_ACMPEQ, isNullL);
 
-                    int listSlot = c.allocRef();
-                    emitBuildArgsList(mv, c, args, listSlot);
+                    if (specializeTyped) {
+                        // Evaluate each arg EXACTLY ONCE into its own local — never re-run an arg
+                        // expression to serve a second tier (a real side-effect hazard if an arg is
+                        // itself a call). The boxed ArrayList<ScriptValue> memberCall/the untyped
+                        // MethodHandler both need is then only ever actually BUILT inside whichever
+                        // of their two tiers' bodies runs — never on the typed tier's own path,
+                        // which is the expected common case (see dotMethodCall's own doc: a
+                        // resolveTypedMethod miss here is structurally unreachable today).
+                        int[] argSlots = new int[arity];
+                        for (int i = 0; i < arity; i++) {
+                            argSlots[i] = c.allocRef();
+                            args.get(i).emit(mv, c);
+                            mv.visitVarInsn(ASTORE, argSlots[i]);
+                        }
 
-                    if (resolved != null) {
-                        Label fallbackL = new Label(), fastL = new Label();
+                        Label fallbackL = new Label(), fastL = new Label(), typedMissL = new Label();
                         int objSlot = c.allocRef(), instSlot = c.allocRef();
                         emitPolyTypeGuard(mv, c, svSlot, name, objSlot, instSlot, fallbackL);
                         mv.visitLdcInsn(name);
@@ -1590,41 +1601,39 @@ final class ScriptBytecodeCompiler {
                         mv.visitVarInsn(ALOAD, typeSlot);
                         mv.visitJumpInsn(IFNULL, fallbackL);
 
-                        if (specializeTyped) {
-                            Label typedMissL = new Label();
-                            mv.visitVarInsn(ALOAD, typeSlot);
-                            mv.visitLdcInsn(method);
-                            mv.visitMethodInsn(INVOKEVIRTUAL, POLY_TYPE, "resolveTypedMethod",
-                                    "(Ljava/lang/String;)L" + TYPED_METHOD_DESCRIPTOR + ";", false);
-                            int descSlot = c.allocRef();
-                            mv.visitVarInsn(ASTORE, descSlot);
-                            mv.visitVarInsn(ALOAD, descSlot);
-                            mv.visitJumpInsn(IFNULL, typedMissL);
-                            mv.visitVarInsn(ALOAD, descSlot);
-                            mv.visitMethodInsn(INVOKEVIRTUAL, TYPED_METHOD_DESCRIPTOR, "handler",
-                                    "()Ljava/lang/Object;", false);
-                            mv.visitTypeInsn(CHECKCAST, handlerIface);
-                            int typedHandlerSlot = c.allocRef();
-                            mv.visitVarInsn(ASTORE, typedHandlerSlot);
+                        mv.visitVarInsn(ALOAD, typeSlot);
+                        mv.visitLdcInsn(method);
+                        mv.visitMethodInsn(INVOKEVIRTUAL, POLY_TYPE, "resolveTypedMethod",
+                                "(Ljava/lang/String;)L" + TYPED_METHOD_DESCRIPTOR + ";", false);
+                        int descSlot = c.allocRef();
+                        mv.visitVarInsn(ASTORE, descSlot);
+                        mv.visitVarInsn(ALOAD, descSlot);
+                        mv.visitJumpInsn(IFNULL, typedMissL);
+                        mv.visitVarInsn(ALOAD, descSlot);
+                        mv.visitMethodInsn(INVOKEVIRTUAL, TYPED_METHOD_DESCRIPTOR, "handler",
+                                "()Ljava/lang/Object;", false);
+                        mv.visitTypeInsn(CHECKCAST, handlerIface);
+                        int typedHandlerSlot = c.allocRef();
+                        mv.visitVarInsn(ASTORE, typedHandlerSlot);
 
-                            mv.visitVarInsn(ALOAD, typedHandlerSlot);
-                            mv.visitVarInsn(ALOAD, instSlot);
-                            for (int i = 0; i < arity; i++) {
-                                mv.visitVarInsn(ALOAD, listSlot);
-                                emitPushInt(mv, i);
-                                mv.visitMethodInsn(INVOKEINTERFACE, LIST, "get", "(I)Ljava/lang/Object;", true);
-                                mv.visitTypeInsn(CHECKCAST, VALUE);
-                                emitCodecDecodeInline(mv, finalArgKinds[i]);
-                            }
-                            StringBuilder desc = new StringBuilder("(");
-                            desc.append("Ljava/lang/Object;".repeat(arity + 1));
-                            desc.append(")Ljava/lang/Object;");
-                            mv.visitMethodInsn(INVOKEINTERFACE, handlerIface, "call", desc.toString(), true);
-                            emitCodecEncodeInline(mv, finalRetKind);
-                            mv.visitJumpInsn(GOTO, fastL);
-                            mv.visitLabel(typedMissL);
+                        mv.visitVarInsn(ALOAD, typedHandlerSlot);
+                        mv.visitVarInsn(ALOAD, instSlot);
+                        for (int i = 0; i < arity; i++) {
+                            mv.visitVarInsn(ALOAD, argSlots[i]);
+                            emitCodecDecodeInline(mv, finalArgKinds[i]);
                         }
+                        StringBuilder desc = new StringBuilder("(");
+                        desc.append("Ljava/lang/Object;".repeat(arity + 1));
+                        desc.append(")Ljava/lang/Object;");
+                        mv.visitMethodInsn(INVOKEINTERFACE, handlerIface, "call", desc.toString(), true);
+                        emitCodecEncodeInline(mv, finalRetKind);
+                        mv.visitJumpInsn(GOTO, fastL);
+                        mv.visitLabel(typedMissL);
 
+                        // Untyped tier — the boxed List is only built HERE, on this (structurally
+                        // unreachable) miss path, from the SAME already-evaluated argSlots.
+                        int listSlot = c.allocRef();
+                        emitListFromSlots(mv, argSlots, listSlot);
                         mv.visitVarInsn(ALOAD, typeSlot);
                         mv.visitLdcInsn(method);
                         mv.visitMethodInsn(INVOKEVIRTUAL, POLY_TYPE, "resolveMethod",
@@ -1639,21 +1648,65 @@ final class ScriptBytecodeCompiler {
                         mv.visitMethodInsn(INVOKEINTERFACE, METHOD_HANDLER, "call",
                                 "(Ljava/lang/Object;L" + LIST + ";)L" + VALUE + ";", true);
                         mv.visitJumpInsn(GOTO, fastL);
+
                         mv.visitLabel(fallbackL);
+                        // memberCall fallback — reachable via jumps that predate listSlot above, so
+                        // it builds its OWN list from the same argSlots rather than assuming that
+                        // one exists yet.
+                        int listSlot2 = c.allocRef();
+                        emitListFromSlots(mv, argSlots, listSlot2);
                         mv.visitVarInsn(ALOAD, svSlot);
                         mv.visitLdcInsn(method);
-                        mv.visitVarInsn(ALOAD, listSlot);
+                        mv.visitVarInsn(ALOAD, listSlot2);
                         mv.visitVarInsn(ALOAD, c.ctxSlot);
                         mv.visitMethodInsn(INVOKESTATIC, FORMULA, "memberCall",
                                 "(L" + VALUE + ";Ljava/lang/String;L" + LIST + ";L" + CTX + ";)L" + VALUE + ";", false);
                         mv.visitLabel(fastL);
                     } else {
-                        mv.visitVarInsn(ALOAD, svSlot);
-                        mv.visitLdcInsn(method);
-                        mv.visitVarInsn(ALOAD, listSlot);
-                        mv.visitVarInsn(ALOAD, c.ctxSlot);
-                        mv.visitMethodInsn(INVOKESTATIC, FORMULA, "memberCall",
-                                "(L" + VALUE + ";Ljava/lang/String;L" + LIST + ";L" + CTX + ";)L" + VALUE + ";", false);
+                        int listSlot = c.allocRef();
+                        emitBuildArgsList(mv, c, args, listSlot);
+
+                        if (resolved != null) {
+                            Label fallbackL = new Label(), fastL = new Label();
+                            int objSlot = c.allocRef(), instSlot = c.allocRef();
+                            emitPolyTypeGuard(mv, c, svSlot, name, objSlot, instSlot, fallbackL);
+                            mv.visitLdcInsn(name);
+                            mv.visitMethodInsn(INVOKESTATIC, POLY_TYPE_REGISTRY, "get",
+                                    "(Ljava/lang/String;)L" + POLY_TYPE + ";", false);
+                            int typeSlot = c.allocRef();
+                            mv.visitVarInsn(ASTORE, typeSlot);
+                            mv.visitVarInsn(ALOAD, typeSlot);
+                            mv.visitJumpInsn(IFNULL, fallbackL);
+                            mv.visitVarInsn(ALOAD, typeSlot);
+                            mv.visitLdcInsn(method);
+                            mv.visitMethodInsn(INVOKEVIRTUAL, POLY_TYPE, "resolveMethod",
+                                    "(Ljava/lang/String;)L" + METHOD_HANDLER + ";", false);
+                            int handlerSlot = c.allocRef();
+                            mv.visitVarInsn(ASTORE, handlerSlot);
+                            mv.visitVarInsn(ALOAD, handlerSlot);
+                            mv.visitJumpInsn(IFNULL, fallbackL);
+                            mv.visitVarInsn(ALOAD, handlerSlot);
+                            mv.visitVarInsn(ALOAD, instSlot);
+                            mv.visitVarInsn(ALOAD, listSlot);
+                            mv.visitMethodInsn(INVOKEINTERFACE, METHOD_HANDLER, "call",
+                                    "(Ljava/lang/Object;L" + LIST + ";)L" + VALUE + ";", true);
+                            mv.visitJumpInsn(GOTO, fastL);
+                            mv.visitLabel(fallbackL);
+                            mv.visitVarInsn(ALOAD, svSlot);
+                            mv.visitLdcInsn(method);
+                            mv.visitVarInsn(ALOAD, listSlot);
+                            mv.visitVarInsn(ALOAD, c.ctxSlot);
+                            mv.visitMethodInsn(INVOKESTATIC, FORMULA, "memberCall",
+                                    "(L" + VALUE + ";Ljava/lang/String;L" + LIST + ";L" + CTX + ";)L" + VALUE + ";", false);
+                            mv.visitLabel(fastL);
+                        } else {
+                            mv.visitVarInsn(ALOAD, svSlot);
+                            mv.visitLdcInsn(method);
+                            mv.visitVarInsn(ALOAD, listSlot);
+                            mv.visitVarInsn(ALOAD, c.ctxSlot);
+                            mv.visitMethodInsn(INVOKESTATIC, FORMULA, "memberCall",
+                                    "(L" + VALUE + ";Ljava/lang/String;L" + LIST + ";L" + CTX + ";)L" + VALUE + ";", false);
+                        }
                     }
 
                     mv.visitJumpInsn(GOTO, endL);
@@ -1664,17 +1717,19 @@ final class ScriptBytecodeCompiler {
             };
         }
 
-        /** Pushes an {@code int} constant using the cheapest opcode ASM would pick anyway — only
-         *  ever called with a call-site arg index, so the range is tiny (arity is capped at 7). */
-        private static void emitPushInt(MethodVisitor mv, int i) {
-            switch (i) {
-                case 0 -> mv.visitInsn(ICONST_0);
-                case 1 -> mv.visitInsn(ICONST_1);
-                case 2 -> mv.visitInsn(ICONST_2);
-                case 3 -> mv.visitInsn(ICONST_3);
-                case 4 -> mv.visitInsn(ICONST_4);
-                case 5 -> mv.visitInsn(ICONST_5);
-                default -> mv.visitIntInsn(BIPUSH, i);
+        /** Builds a fresh {@code ArrayList<ScriptValue>} from already-evaluated arg locals (see
+         *  {@link #dotMethodCall}'s typed tier) — never re-runs the arg expressions themselves,
+         *  just copies each already-boxed {@code ScriptValue} reference into the list. */
+        private static void emitListFromSlots(MethodVisitor mv, int[] argSlots, int listSlot) {
+            mv.visitTypeInsn(NEW, ARRAYLIST);
+            mv.visitInsn(DUP);
+            mv.visitMethodInsn(INVOKESPECIAL, ARRAYLIST, "<init>", "()V", false);
+            mv.visitVarInsn(ASTORE, listSlot);
+            for (int slot : argSlots) {
+                mv.visitVarInsn(ALOAD, listSlot);
+                mv.visitVarInsn(ALOAD, slot);
+                mv.visitMethodInsn(INVOKEINTERFACE, LIST, "add", "(Ljava/lang/Object;)Z", true);
+                mv.visitInsn(POP);
             }
         }
 

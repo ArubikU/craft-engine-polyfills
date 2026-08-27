@@ -262,4 +262,38 @@ class PolyTypeSpecializationTest {
         assertTrue(disassembly.contains("TypedMethodHandler1"),
                 "should CHECKCAST/INVOKEINTERFACE against the specific arity-1 typed handler interface:\n" + disassembly);
     }
+
+    @Test
+    void typedDispatchDoesNotAllocateTheBoxedArgsListOnItsOwnFastPath() throws Exception {
+        // The boxed ArrayList<ScriptValue> only needs to exist for the untyped MethodHandler tier
+        // and the memberCall fallback — the typed tier reads each arg straight out of its own local
+        // instead. Assert NEW ArrayList doesn't appear before the typed handler's own INVOKEINTERFACE
+        // call — it must only show up later, inside the (structurally unreachable in practice) miss
+        // tiers, never on the path the typed dispatch itself takes.
+        PolyTypeRegistry.define("SpecTypedNoListType")
+                .methodTyped1("greet", TypeCodecs.STRING, TypeCodecs.STRING, "",
+                        (Object o, String s) -> "hi " + s);
+
+        String src = "def test_typed_nolist():\n    return SpecTypedNoListType.greet(\"world\")\nend\n";
+        ScriptProgram prog = ScriptProgram.parse("spec-typed-nolist", src, Logger.getLogger("test"));
+        ScriptClassCompiler.Compiled compiled =
+                ScriptClassCompiler.tryCompile("spec/typed-nolist-" + System.identityHashCode(new Object()),
+                        prog.statementsForCompiler());
+        assertNotNull(compiled);
+        assertEquals("hi world",
+                ((ScriptValue) compiled.methodsByDefName().get("test_typed_nolist")
+                        .invoke(null, ScriptContext.builder().typed("SpecTypedNoListType", new Object()))).asStr());
+
+        ClassReader cr = new ClassReader(compiled.classBytes());
+        StringWriter sw = new StringWriter();
+        cr.accept(new TraceClassVisitor(new PrintWriter(sw)), 0);
+        String disassembly = sw.toString();
+
+        int typedHandlerCallIdx = disassembly.indexOf("TypedMethodHandler1.call");
+        int newArrayListIdx = disassembly.indexOf("NEW java/util/ArrayList");
+        assertTrue(typedHandlerCallIdx >= 0, "should call the typed handler directly:\n" + disassembly);
+        assertTrue(newArrayListIdx >= 0, "the miss/fallback tiers still need the list somewhere:\n" + disassembly);
+        assertTrue(typedHandlerCallIdx < newArrayListIdx,
+                "the typed tier's own call must be reachable BEFORE any ArrayList allocation:\n" + disassembly);
+    }
 }
