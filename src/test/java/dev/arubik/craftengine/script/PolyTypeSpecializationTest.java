@@ -147,7 +147,7 @@ class PolyTypeSpecializationTest {
         // An untyped .method() registration still gets a generated PolyClass shim (um$...), so the
         // receiver unboxes into that class and dispatches through it — no PolyTypeRegistry lookup
         // in the formula's own bytecode at all.
-        int wrapperIdx = disassembly.indexOf("PC_SpecDisasmType");
+        int wrapperIdx = disassembly.indexOf("PolyClassSpecDisasmType");
         int memberCallIdx = disassembly.indexOf("memberCall");
         assertTrue(wrapperIdx >= 0, "receiver should unbox into the generated PolyClass:\n" + disassembly);
         assertTrue(disassembly.contains(".um$"), "should call the generated untyped shim:\n" + disassembly);
@@ -255,7 +255,7 @@ class PolyTypeSpecializationTest {
         cr.accept(new TraceClassVisitor(new PrintWriter(sw)), 0);
         String disassembly = sw.toString();
 
-        int wrapperIdx = disassembly.indexOf("PC_SpecTypedDisasmType");
+        int wrapperIdx = disassembly.indexOf("PolyClassSpecTypedDisasmType");
         int memberCallIdx = disassembly.indexOf("memberCall");
         assertTrue(wrapperIdx >= 0, "receiver should unbox into the generated PolyClass:\n" + disassembly);
         assertTrue(disassembly.contains(".tm$"),

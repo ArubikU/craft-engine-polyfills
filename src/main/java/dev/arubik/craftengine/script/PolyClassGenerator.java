@@ -13,7 +13,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -44,8 +43,8 @@ import static org.objectweb.asm.Opcodes.*;
  *   <li>a static {@code refresh()} that re-resolves every one of those handler fields BY NAME.
  * </ul>
  *
- * <p>The generated hierarchy MIRRORS the {@link PolyType} hierarchy — {@code PC_Machine extends
- * PC_Block} — so a child emits only the members it declares itself and inherits the rest by
+ * <p>The generated hierarchy MIRRORS the {@link PolyType} hierarchy — {@code PolyClassMachine extends
+ * PolyClassBlock} — so a child emits only the members it declares itself and inherits the rest by
  * ordinary virtual dispatch. A child that re-registers an inherited member declares its own method,
  * which wins.
  *
@@ -83,7 +82,9 @@ final class PolyClassGenerator {
     private PolyClassGenerator() {}
 
     private static final Logger LOG = Logger.getLogger(PolyClassGenerator.class.getName());
-    private static final AtomicInteger COUNTER = new AtomicInteger();
+    /** sanitized type name -> how many classes have been generated for it, so a rebuild can pick a
+     *  non-colliding name. Normally every entry stays at 1. */
+    private static final ConcurrentHashMap<String, Integer> GENERATIONS = new ConcurrentHashMap<>();
 
     /** name -> the wrapper generated for it. Never invalidated: exactly one class per type name for
      *  the life of the process (see {@link #getOrGenerate}). */
@@ -260,7 +261,7 @@ final class PolyClassGenerator {
 
     private static GeneratedPolyClass generate(String typeName, PolyType type) {
         try {
-            // Mirror the PolyType hierarchy in the generated one: PC_Machine extends PC_Block, so a
+            // Mirror the PolyType hierarchy in the generated one: PolyClassMachine extends PolyClassBlock,
             // Machine wrapper simply INHERITS every method Block already generated instead of
             // re-emitting it. The parent must exist first, so build it (recursively) up front; if
             // that fails for any reason we fall back to a flat Object-rooted class carrying the
@@ -269,8 +270,15 @@ final class PolyClassGenerator {
             GeneratedPolyClass parent = parentType != null ? getOrGenerate(parentType.name()) : null;
             String superName = parent != null ? parent.internalName() : OBJECT;
 
+            // Named for the type it wraps, with no counter — the steady state is exactly one class
+            // per PolyType, so "PolyClassMachine" is the honest name. A suffix appears ONLY on the
+            // rare rebuild (buildAll seeing a type that gained members): defining the same binary
+            // name twice in one loader is a LinkageError, so the uniqueness has to come from
+            // somewhere, and this way it shows up only when a second class genuinely exists.
             String safeType = sanitize(typeName);
-            String className = "dev/arubik/craftengine/script/PC_" + safeType + "_" + COUNTER.incrementAndGet();
+            int generation = GENERATIONS.merge(safeType, 1, Integer::sum);
+            String className = "dev/arubik/craftengine/script/PolyClass" + safeType
+                    + (generation == 1 ? "" : "_v" + generation);
 
             SafeClassWriter cw = new SafeClassWriter(ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS, className);
             // Deliberately NOT ACC_FINAL: any type may later be declared a parent of another, and

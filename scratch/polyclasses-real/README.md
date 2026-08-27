@@ -1,41 +1,54 @@
-# The REAL MachineType PolyClass
+# The real MachineType PolyClass
 
-`../polyclasses/PC_Machine_1.java` is generated from the small stand-in "Machine" that
-WindmillScriptTest / WaterWheelScriptTest / etc. each register for their own purposes (~7 members).
-It is NOT the real `MachineType`, and it makes the generator look like it dropped almost everything.
-
-This directory holds the real one, generated from `MachineType.register()` (120 registrations):
+Generated from `MachineType.register()` — the actual production type, ~120 registrations.
 
 ```
-./gradlew.bat test --tests "*RealPolyClassGenerationTest" -PpolyclassDump=<dir>
+./gradlew.bat test --tests "*RealMachinePolyClassDumpTest" \
+    -PpolyclassDumpReal=true -PpolyclassDump=<dir>
+cd <dir>; for f in *.class; do java -jar <cfr.jar> "$f" > "${f%.class}.java"; done
 ```
 
-## Coverage: complete
+The `--tests` filter is load-bearing: that test registers the real MachineType into the
+process-global `PolyTypeRegistry`, replacing the small stand-in "Machine" other test classes
+register. Run alone, nothing else is there to clobber. (Routine coverage is guaranteed by
+`RealPolyClassGenerationTest` against a synthetic type, which pollutes nothing.)
 
-114 members generated, none dropped — pinned by `RealPolyClassGenerationTest`, which asserts every
-single `allMethodNames()` / `allPropertyNames()` entry has a generated Java method.
+## What it shows
+
+`PolyClassMachine extends PolyClassBlock` — the generated hierarchy mirrors the PolyType hierarchy.
+Machine doesn't redeclare the wrapped-`instance` field; it inherits Block's.
 
 | shape | count |
 |---|---|
-| typed (native Java signature) | 4 |
-| untyped shim `ScriptValue(List)` | 56 |
+| typed (native Java signature) | 58 |
+| untyped shim `ScriptValue(List)` | 60 |
 | property accessor `ScriptValue()` | 54 |
 
-## The remaining gap is porting, not the engine
+Every registered member has a generated method — none dropped.
 
-Only 4 methods get a native signature:
+**58 typed, up from 4.** That is the porting work: methods that used to register via untyped
+`.method(...)` now declare real types, so the generator can emit genuinely native signatures:
 
 ```java
-public ScriptValue tm$18_get_typed(String string, String string2)
-public boolean     tm$29_report_su(double d)
-public boolean     tm$42_set_typed(String string, String string2, ScriptValue scriptValue)
-public boolean     tm$54_set_rpm_output(double d)
+public boolean tm$11_consume_energy(double d)
+public boolean tm$7_turn_page(double d)
+public ScriptValue tm$2_tick_break(ScriptValue scriptValue, double d)
 ```
 
-The other 56 still register via untyped `.method(...)` in `MachineType.java`, so the generator can
-only emit the erased shim for them. They dispatch correctly and still skip the registry lookup —
-but they carry `ScriptValue` boxing that a `methodTypedN` registration would eliminate.
+No `ScriptValue` boxing on those paths at all. The 60 remaining shims are methods the typed API
+genuinely cannot express — variadic tails, multi-shape dispatch, all-or-nothing positional groups —
+each documented at its registration site.
 
-Of those 56, ~30 use the "default-if-missing" shape (`args.isEmpty() ? 0 : args.get(0).asNum()`),
-which the current typed API cannot express: its `onMissingArgs` SKIPS the handler and returns a
-fixed value, which would silently drop the side effect those bodies still perform.
+## Naming
+
+- `tm$N_<name>` — typed method, native signature
+- `um$N_<name>` — untyped method, `(List) -> ScriptValue`
+- `pg$N_<name>` — property getter, `() -> ScriptValue`
+- `h$N` / `m$N` / `p$N` — the corresponding cached handler field
+
+Prefixed and index-suffixed so a script-level member name can never collide with the wrapper's own
+`instance`/`refresh`/`of` members, or with a same-named property.
+
+A typed method also gets a `um$` companion: the native signature has a fixed arity, but a call site
+may legally pass fewer arguments (`methodTypedOptN` defaults, or `methodTypedN`'s `onMissingArgs`),
+and the shim is what applies that.

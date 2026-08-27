@@ -170,6 +170,11 @@ tasks.test {
     (project.findProperty("polyclassDump") as String?)?.let {
         systemProperty("craftengine.polyclass.dump", it)
     }
+    // Opt-in for RealMachinePolyClassDumpTest, which registers the real MachineType into the
+    // process-global registry and so must be run alone (see that test's own doc).
+    (project.findProperty("polyclassDumpReal") as String?)?.let {
+        systemProperty("polyclass.dumpReal", it)
+    }
 }
 
 tasks.processResources {

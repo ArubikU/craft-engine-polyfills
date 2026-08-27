@@ -1,25 +1,26 @@
-# Generated PolyClasses
+# Generated PolyClasses (from the test suite)
 
 Decompiled output of the real Java classes `PolyClassGenerator` builds at runtime — one per
-registered `PolyType`. This is what a script value **unboxes into**: a `Machine` value becomes an
-instance of `PC_Machine_*` wrapping the real underlying object.
-
-## Regenerating
+registered `PolyType`. This is what a script value **unboxes into**.
 
 ```
-./gradlew.bat test -PpolyclassDump=D:/Github/craft-engine-polyfills/scratch/polyclasses
-cd scratch/polyclasses
-for f in *.class; do java -jar <cfr.jar> "$f" > "${f%.class}.java"; done
+./gradlew.bat test -PpolyclassDump=<dir>
+cd <dir>; for f in *.class; do java -jar <cfr.jar> "$f" > "${f%.class}.java"; done
 ```
 
-The `-PpolyclassDump` flag is a debug aid only — without it the generator writes nothing and costs
-nothing. (These are the classes generated during the *test* run, so the types present are the ones
-the tests register.)
+These are the types the TEST SUITE registers, so most are small fixtures. In particular
+`PolyClassMachine` here is a ~7-member stand-in that the behavioural script tests register — **not**
+the real `MachineType`. For that one see `../polyclasses-real`.
+
+`PolyClassMachine_v2` is the documented rebuild case working as designed: two test classes register
+different fake "Machine" types, and `buildAll()` rebuilds a wrapper when a type has gained members
+its existing class doesn't cover. In production every type is fully registered before `buildAll()`
+runs, so each gets exactly one class and no `_v` suffix appears.
 
 ## What to look for
 
-**`PC_SpecTypedNumArgType_6.java`** — a `methodTypedN` registration with known codecs becomes a
-genuinely native Java signature. No `ScriptValue` anywhere on the fast path:
+**`PolyClassSpecTypedNumArgType.java`** — a typed registration becomes a genuinely native Java
+signature. No `ScriptValue` anywhere on the fast path:
 
 ```java
 public double tm$0_scale(double d) {
@@ -28,10 +29,8 @@ public double tm$0_scale(double d) {
 }
 ```
 
-**`PC_Machine_1.java`** — plain `.method(...)` registrations get the erased
-`ScriptValue name(List)` shape instead, and properties get `ScriptValue name()`. Still a win: the
-`PolyTypeRegistry.get`/`resolveMethod` lookup is gone from every call, hoisted into the static
-handler field.
+**`PolyClassSpecChildType.java`** — extends its parent's class and inherits its members rather than
+re-emitting them.
 
 ## The `refresh()` method
 
@@ -41,16 +40,6 @@ ever seen would be pinned for the life of the process — later `define`/`extend
 calls silently ignored. `PolyTypeRegistry` notifies the generator on every mutation and each live
 wrapper re-runs `refresh()`, re-resolving **by name**. Correct at zero per-call cost.
 
-`resolveTypedHandler` is also passed the exact signature the method was generated for (e.g.
-`"D:D"`). If a member is later re-registered with a different shape, it returns null and the
-generated method routes through generic dispatch — degrading to correct-but-slower, never to wrong.
-
-## Naming
-
-- `tm$N_<name>` — typed method, native signature
-- `um$N_<name>` — untyped method, `(List) -> ScriptValue`
-- `pg$N_<name>` — property getter, `() -> ScriptValue`
-- `h$N` / `m$N` / `p$N` — the corresponding cached handler field
-
-Prefixed and index-suffixed so a script-level member name can never collide with the wrapper's own
-`instance`/`refresh`/`of` members, or with a same-named property.
+`resolveTypedHandler` is also passed the exact signature the method was generated for (e.g. `"D:D"`).
+If a member is later re-registered with a different shape it returns null and the generated method
+routes through generic dispatch — degrading to correct-but-slower, never to wrong.
