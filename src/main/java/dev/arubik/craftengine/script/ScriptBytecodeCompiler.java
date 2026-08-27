@@ -650,17 +650,24 @@ final class ScriptBytecodeCompiler {
                     default: break;
                 }
 
-                // Plain variable read: ctx.getVar(name) — kept as ANY (not eagerly asNum()'d) so
-                // a formula that's just a bare passthrough (a Map/array/Item variable evaluated
-                // via a caller that wants the real value, not a coerced number) keeps its actual
-                // type; NUM/BOOL contexts coerce it via toNum()/toBool() same as the interpreter's
-                // implicit asNum()/asBool().
+                // Plain variable reference: mirrors ScriptFormula.Parser#parsePrimary's own bare-
+                // identifier branch EXACTLY — checks ctx.getClassInstance(name) FIRST, falling
+                // back to ctx.getVar(name) only if that's NULL. This matters: "Player", "Machine",
+                // "World", and every other global namespace are bound as CLASS instances, never as
+                // plain vars — a bare "Player" reference (e.g. `Dialog.base(...).show(Player)`)
+                // that only checked getVar() would always resolve to NULL for these, which is
+                // exactly the bug this comment used to have (getVar-only) before it was caught via
+                // a live "playerOf() couldn't resolve a Bukkit Player" warning. Kept as ANY (not
+                // eagerly asNum()'d) so a formula that's just a bare passthrough (a Map/array/Item/
+                // Player/Machine value evaluated via a caller that wants the real value, not a
+                // coerced number) keeps its actual type; NUM/BOOL contexts coerce it via
+                // toNum()/toBool() same as the interpreter's implicit asNum()/asBool().
                 String varName = name;
                 return new BaseExpr(Type.ANY) {
                     @Override public void emit(MethodVisitor mv, Ctx c) {
-                        mv.visitVarInsn(ALOAD, 1);
-                        mv.visitLdcInsn(varName);
-                        mv.visitMethodInsn(INVOKEVIRTUAL, CTX, "getVar", "(Ljava/lang/String;)L" + VALUE + ";", false);
+                        int svSlot = c.allocRef();
+                        emitResolveInstanceOrVar(mv, varName, svSlot);
+                        mv.visitVarInsn(ALOAD, svSlot);
                     }
                 };
             }
