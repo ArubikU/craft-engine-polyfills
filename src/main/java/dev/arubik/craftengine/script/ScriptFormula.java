@@ -51,13 +51,22 @@ public final class ScriptFormula {
         return compiled;
     }
 
+    /** Kill switch for the whole ScriptBytecodeCompiler JIT path. The JIT has already needed
+     *  several live-testing-driven correctness fixes (precedence, ==/!= and + type-polymorphism,
+     *  divide-by-zero semantics, bare-identifier classInstance resolution) and may still have more
+     *  latent bugs affecting renderer/menu formulas specifically (evaluated far more often, and
+     *  with far more Machine dot-access variety, than what's been directly stress-tested so far).
+     *  Flip to {@code false} to fall back to the always-correct interpreter for every formula if a
+     *  new correctness issue is suspected. */
+    static volatile boolean JIT_ENABLED = true;
+
     private static ScriptFormula doCompile(String expr) {
         // Try the real-bytecode JIT path first: it only ever succeeds for the pure-numeric/
         // boolean grammar subset it recognizes (see ScriptBytecodeCompiler's doc), and is wrapped
         // so ANY failure — an unsupported construct, or a genuine bug in the generator — silently
         // falls through to the always-correct lambda-tree interpreter below. Never lets a codegen
         // problem surface as a script failure.
-        Node compiled = ScriptBytecodeCompiler.tryCompile(expr.trim());
+        Node compiled = JIT_ENABLED ? ScriptBytecodeCompiler.tryCompile(expr.trim()) : null;
         if (compiled != null) return new ScriptFormula(expr, compiled);
 
         Parser p = new Parser(expr.trim());

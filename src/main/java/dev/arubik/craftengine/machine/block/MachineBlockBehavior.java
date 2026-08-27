@@ -184,10 +184,20 @@ WorldlyContainerHolder {
             }
         }
         catch (Throwable throwable) {
-            // empty catch block
+            // This used to be a bare empty catch — right-clicking a broken machine did nothing at
+            // all, with zero trace anywhere, indistinguishable from a machine that simply doesn't
+            // open a menu. Logged once per distinct exception TYPE+MESSAGE so repeated clicks on
+            // the same broken machine don't spam the log.
+            if (LOGGED_USE_WITHOUT_ITEM_FAIL.add(throwable.getClass().getName() + ":" + throwable.getMessage())) {
+                dev.arubik.craftengine.CraftEnginePolyfills.instance().getLogger().log(
+                    java.util.logging.Level.WARNING,
+                    "[Cep] useWithoutItem (right-click open) threw", throwable);
+            }
         }
         return InteractionResult.PASS;
     }
+
+    private static final java.util.Set<String> LOGGED_USE_WITHOUT_ITEM_FAIL = java.util.concurrent.ConcurrentHashMap.newKeySet();
 
     public int getSignal(Object thisBlock, Object[] args) {
         if (args == null || args.length < 3) {

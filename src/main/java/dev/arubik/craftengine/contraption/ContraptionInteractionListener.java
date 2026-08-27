@@ -162,6 +162,7 @@ implements Listener {
 
     @EventHandler(priority=EventPriority.LOWEST, ignoreCancelled=false)
     public void debugRawInteract(PlayerInteractEvent event) {
+        if (!PLACEMENT_DEBUG) return;
         Bukkit.getLogger().info("[Contraption][RAW] action=" + String.valueOf(event.getAction()) + " hand=" + String.valueOf(event.getHand()) + " cancelled=" + event.isCancelled() + " clickedBlock=" + String.valueOf(event.getClickedBlock()) + " item=" + String.valueOf(event.getItem()) + " player=" + event.getPlayer().getName());
     }
 
@@ -277,7 +278,7 @@ implements Listener {
             double scale = state.scale();
             Vec3 localEye = ContraptionMath.realToLocal(eye, bearingPos, yaw, pitch, roll, scale);
             Vec3 localEnd = ContraptionMath.realToLocal(end, bearingPos, yaw, pitch, roll, scale);
-            Bukkit.getLogger().info("[Contraption] raycast vs contraption bearing=" + String.valueOf(bearingPos) + " yaw=" + yaw + " cells=" + level.localPositions().size() + " localEye=" + String.valueOf(localEye) + " localEnd=" + String.valueOf(localEnd) + " maxDist=" + maxDistance);
+            if (PLACEMENT_DEBUG) Bukkit.getLogger().info("[Contraption] raycast vs contraption bearing=" + String.valueOf(bearingPos) + " yaw=" + yaw + " cells=" + level.localPositions().size() + " localEye=" + String.valueOf(localEye) + " localEnd=" + String.valueOf(localEnd) + " maxDist=" + maxDistance);
             for (BlockPos local : level.localPositions()) {
                 double distSq;
                 AABB box = ContraptionInteractionListener.localCellBox(level, local);
@@ -290,7 +291,7 @@ implements Listener {
                 best = new Hit(state, local, (Vec3)clip.get(), face);
             }
         }
-        if (best == null) {
+        if (best == null && PLACEMENT_DEBUG) {
             Bukkit.getLogger().info("[Contraption] raycast: " + contraptionCount + " contraption(s) checked, no cell clip hit");
         }
         return best;
