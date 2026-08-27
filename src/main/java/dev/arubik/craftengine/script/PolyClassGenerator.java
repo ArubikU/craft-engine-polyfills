@@ -34,7 +34,7 @@ import static org.objectweb.asm.Opcodes.*;
  *       is the whole point: no {@code PolyTypeRegistry.get}/{@code resolveMethod} lookup on any
  *       call, ever;
  *   <li>one real instance method per member. A {@code methodTypedN}/{@code methodTypedOptN}
- *       registration whose codecs are all known {@link TypeCodecs} singletons gets a genuinely
+ *       registration whose codecs this generator can classify (see {@link #kindOf}) gets a genuinely
  *       native signature ({@code double get_x()}, {@code boolean set_typed(String, double)}) AND an
  *       erased companion shim, because a call site may legally pass fewer arguments than the fixed
  *       native arity (per-argument defaults, or {@code onMissingArgs}) and the shim is what applies
@@ -156,6 +156,7 @@ final class PolyClassGenerator {
     private static final String RUNTIME = "dev/arubik/craftengine/script/PolyClassRuntime";
     private static final String METHOD_HANDLER = "dev/arubik/craftengine/script/PolyType$MethodHandler";
     private static final String PROPERTY_HANDLER = "dev/arubik/craftengine/script/PolyType$PropertyHandler";
+    private static final String TYPE_CODEC = "dev/arubik/craftengine/script/PolyType$TypeCodec";
     private static final String[] TYPED_HANDLER_IFACE = {
             "dev/arubik/craftengine/script/PolyType$TypedMethodHandler0",
             "dev/arubik/craftengine/script/PolyType$TypedMethodHandler1",
@@ -170,13 +171,23 @@ final class PolyClassGenerator {
     "dev/arubik/craftengine/script/PolyType$TypedMethodHandler10",
     };
 
-    enum Kind { DOUBLE, BOOL, STRING, RAW, UNKNOWN }
+    /**
+     * How a codec maps onto a generated method's slot. {@code LIST} is the odd one out: its JVM type
+     * is {@code ScriptValue}, identical to {@code RAW}, so the CALL SITE is unchanged and {@link
+     * ScriptBytecodeCompiler} needs to know nothing about it. The unwrapping to a real
+     * {@code List<T>} happens INSIDE the generated wrapper, which holds the codec in a static field
+     * next to the handler and calls {@code decode}/{@code encode} around the typed call.
+     */
+    enum Kind { DOUBLE, BOOL, STRING, RAW, LIST, UNKNOWN }
 
     static Kind kindOf(PolyType.TypeCodec<?> codec) {
         if (codec == TypeCodecs.DOUBLE) return Kind.DOUBLE;
         if (codec == TypeCodecs.BOOL) return Kind.BOOL;
         if (codec == TypeCodecs.STRING) return Kind.STRING;
         if (codec == TypeCodecs.RAW) return Kind.RAW;
+        // By TYPE, not identity: TypeCodecs.listOf(...) mints a fresh codec per call (it carries the
+        // element class), so the identity checks above could never match one.
+        if (codec instanceof TypeCodecs.ListCodec<?>) return Kind.LIST;
         return Kind.UNKNOWN;
     }
 
@@ -185,7 +196,7 @@ final class PolyClassGenerator {
             case DOUBLE -> "D";
             case BOOL -> "Z";
             case STRING -> "L" + STRING + ";";
-            case RAW -> "L" + VALUE + ";";
+            case RAW, LIST -> "L" + VALUE + ";";
             case UNKNOWN -> throw new IllegalStateException("jvmType(UNKNOWN)");
         };
     }
@@ -327,9 +338,25 @@ final class PolyClassGenerator {
                     refresh.visitTypeInsn(CHECKCAST, iface);
                     refresh.visitFieldInsn(PUTSTATIC, className, field, "L" + iface + ";");
 
+                    // A LIST slot needs its codec available inside the wrapper, and re-resolved BY
+                    // NAME on every refresh for the same reason the handler is (see the class doc's
+                    // Staleness section) — a re-registration can swap List<Player> for List<Entity>
+                    // without changing the signature this class was generated for.
+                    String[] argCodecFields = new String[argKinds.length];
+                    for (int a = 0; a < argKinds.length; a++) {
+                        if (argKinds[a] != Kind.LIST) continue;
+                        argCodecFields[a] = "c$" + idx + "_a" + a;
+                        emitCodecField(cw, refresh, className, argCodecFields[a], typeName, methodName, a);
+                    }
+                    String retCodecField = null;
+                    if (retKind == Kind.LIST) {
+                        retCodecField = "c$" + idx + "_r";
+                        emitCodecField(cw, refresh, className, retCodecField, typeName, methodName, -1);
+                    }
+
                     String javaName = "tm$" + idx + "_" + sanitize(methodName);
                     String desc = emitTypedMethod(cw, className, instanceOwner, javaName, typeName, methodName,
-                            field, iface, argKinds, retKind);
+                            field, iface, argKinds, retKind, argCodecFields, retCodecField);
                     typedRefs.put(methodName, new TypedMemberRef(javaName, desc, argKinds, retKind));
 
                     // ALSO emit the erased shim for a typed method. The native signature has a fixed
@@ -442,8 +469,9 @@ final class PolyClassGenerator {
     }
 
     /** The arg kinds of {@code method}'s typed registration, or null when it has none, its arity
-     *  exceeds the 7 the {@code TypedMethodHandlerN} family covers, or any codec isn't one of the
-     *  four known {@link TypeCodecs} singletons. */
+     *  exceeds the 7 the {@code TypedMethodHandlerN} family covers, or any codec is one this
+     *  generator can't classify ({@link #kindOf} — the four {@link TypeCodecs} singletons plus any
+     *  {@link TypeCodecs.ListCodec}). */
     private static Kind[] typedArgKinds(PolyType type, String method) {
         PolyType.TypedMethodDescriptor d = type.resolveTypedMethod(method);
         if (d == null || d.arity() > 10) return null;
@@ -453,6 +481,19 @@ final class PolyClassGenerator {
             if (kinds[i] == Kind.UNKNOWN) return null;
         }
         return kindOf(d.returnType()) == Kind.UNKNOWN ? null : kinds;
+    }
+
+    /** Declares one {@code private static volatile TypeCodec} field and appends the {@code refresh()}
+     *  instructions that (re-)resolve it. {@code argIndex} is negative for the return slot. */
+    private static void emitCodecField(ClassWriter cw, MethodVisitor refresh, String className, String field,
+                                        String typeName, String methodName, int argIndex) {
+        cw.visitField(ACC_PRIVATE | ACC_STATIC | ACC_VOLATILE, field, "L" + TYPE_CODEC + ";", null, null).visitEnd();
+        refresh.visitLdcInsn(typeName);
+        refresh.visitLdcInsn(methodName);
+        pushInt(refresh, argIndex);
+        refresh.visitMethodInsn(INVOKESTATIC, RUNTIME, "resolveListCodec",
+                "(Ljava/lang/String;Ljava/lang/String;I)L" + TYPE_CODEC + ";", false);
+        refresh.visitFieldInsn(PUTSTATIC, className, field, "L" + TYPE_CODEC + ";");
     }
 
     private static String signatureOf(Kind[] argKinds, Kind retKind) {
@@ -472,7 +513,8 @@ final class PolyClassGenerator {
      *  back up and routes through {@link PolyClassRuntime#genericCall}. */
     private static String emitTypedMethod(ClassWriter cw, String className, String instanceOwner, String javaName,
                                            String typeName, String scriptName, String field, String iface,
-                                           Kind[] argKinds, Kind retKind) {
+                                           Kind[] argKinds, Kind retKind,
+                                           String[] argCodecFields, String retCodecField) {
         StringBuilder desc = new StringBuilder("(");
         for (Kind k : argKinds) desc.append(jvmType(k));
         desc.append(")").append(jvmType(retKind));
@@ -482,12 +524,37 @@ final class PolyClassGenerator {
         Label slow = new Label();
         mv.visitFieldInsn(GETSTATIC, className, field, "L" + iface + ";");
         mv.visitJumpInsn(IFNULL, slow);
+        // A LIST slot's codec is guarded too: an unresolvable codec means the registered shape is no
+        // longer one this wrapper can decode for, so take the same generic fallback the handler-gone
+        // case takes rather than risking an NPE mid-call.
+        for (String codecField : argCodecFields) {
+            if (codecField == null) continue;
+            mv.visitFieldInsn(GETSTATIC, className, codecField, "L" + TYPE_CODEC + ";");
+            mv.visitJumpInsn(IFNULL, slow);
+        }
+        if (retCodecField != null) {
+            mv.visitFieldInsn(GETSTATIC, className, retCodecField, "L" + TYPE_CODEC + ";");
+            mv.visitJumpInsn(IFNULL, slow);
+        }
 
+        // Pushed FIRST because encode() is an instance call on the codec and the value to encode is
+        // whatever the handler call below leaves on the stack.
+        if (retCodecField != null) mv.visitFieldInsn(GETSTATIC, className, retCodecField, "L" + TYPE_CODEC + ";");
         mv.visitFieldInsn(GETSTATIC, className, field, "L" + iface + ";");
         mv.visitVarInsn(ALOAD, 0);
         mv.visitFieldInsn(GETFIELD, instanceOwner, "instance", "Ljava/lang/Object;");
         int slot = 1;
-        for (Kind k : argKinds) {
+        for (int i = 0; i < argKinds.length; i++) {
+            Kind k = argKinds[i];
+            if (k == Kind.LIST) {
+                // ScriptValue in the signature, real List<T> to the handler: unwrap right here.
+                mv.visitFieldInsn(GETSTATIC, className, argCodecFields[i], "L" + TYPE_CODEC + ";");
+                mv.visitVarInsn(ALOAD, slot);
+                mv.visitMethodInsn(INVOKEINTERFACE, TYPE_CODEC, "decode",
+                        "(L" + VALUE + ";)Ljava/lang/Object;", true);
+                slot += slotWidth(k);
+                continue;
+            }
             mv.visitVarInsn(loadOpcode(k), slot);
             switch (k) {
                 case DOUBLE -> mv.visitMethodInsn(INVOKESTATIC, "java/lang/Double", "valueOf", "(D)Ljava/lang/Double;", false);
@@ -509,6 +576,11 @@ final class PolyClassGenerator {
             }
             case STRING -> mv.visitTypeInsn(CHECKCAST, STRING);
             case RAW -> mv.visitTypeInsn(CHECKCAST, VALUE);
+            // The handler returned a real List; the codec pushed before the call turns it back into
+            // the ScriptValue.Array this method's signature promises. No CHECKCAST needed — encode()
+            // is already declared to return a ScriptValue.
+            case LIST -> mv.visitMethodInsn(INVOKEINTERFACE, TYPE_CODEC, "encode",
+                    "(Ljava/lang/Object;)L" + VALUE + ";", true);
             case UNKNOWN -> throw new IllegalStateException("emitTypedMethod(UNKNOWN ret)");
         }
         mv.visitInsn(returnOpcode(retKind));
@@ -530,7 +602,10 @@ final class PolyClassGenerator {
                 case DOUBLE -> mv.visitMethodInsn(INVOKESTATIC, VALUE, "of", "(D)L" + VALUE + ";", true);
                 case BOOL -> mv.visitMethodInsn(INVOKESTATIC, VALUE, "of", "(Z)L" + VALUE + ";", true);
                 case STRING -> mv.visitMethodInsn(INVOKESTATIC, VALUE, "of", "(Ljava/lang/String;)L" + VALUE + ";", true);
-                case RAW -> { /* already a ScriptValue */ }
+                // A LIST parameter is a ScriptValue at this signature exactly like RAW — the decode
+                // to List<T> only happens on the fast path, and the generic handler expects the
+                // boxed Array anyway.
+                case RAW, LIST -> { /* already a ScriptValue */ }
                 case UNKNOWN -> throw new IllegalStateException("emitTypedMethod(UNKNOWN arg)");
             }
             mv.visitInsn(AASTORE);
@@ -542,7 +617,9 @@ final class PolyClassGenerator {
             case DOUBLE -> mv.visitMethodInsn(INVOKEINTERFACE, VALUE, "asNum", "()D", true);
             case BOOL -> mv.visitMethodInsn(INVOKEINTERFACE, VALUE, "asBool", "()Z", true);
             case STRING -> mv.visitMethodInsn(INVOKEINTERFACE, VALUE, "asStr", "()Ljava/lang/String;", true);
-            case RAW -> { /* genericCall already returns a ScriptValue */ }
+            // LIST: the untyped MethodHandler the typed registration installed already ran the
+            // codec's encode(), so genericCall hands back the ScriptValue.Array directly.
+            case RAW, LIST -> { /* genericCall already returns a ScriptValue */ }
             case UNKNOWN -> throw new IllegalStateException("emitTypedMethod(UNKNOWN ret)");
         }
         mv.visitInsn(returnOpcode(retKind));
@@ -625,6 +702,7 @@ final class PolyClassGenerator {
 
     private static void pushInt(MethodVisitor mv, int i) {
         switch (i) {
+            case -1 -> mv.visitInsn(ICONST_M1);
             case 0 -> mv.visitInsn(ICONST_0);
             case 1 -> mv.visitInsn(ICONST_1);
             case 2 -> mv.visitInsn(ICONST_2);

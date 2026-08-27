@@ -1772,7 +1772,8 @@ final class ScriptBytecodeCompiler {
                 case DOUBLE -> mv.visitMethodInsn(INVOKEINTERFACE, VALUE, "asNum", "()D", true);
                 case BOOL -> mv.visitMethodInsn(INVOKEINTERFACE, VALUE, "asBool", "()Z", true);
                 case STRING -> mv.visitMethodInsn(INVOKEINTERFACE, VALUE, "asStr", "()Ljava/lang/String;", true);
-                case RAW -> { /* already a ScriptValue reference, pass through untouched */ }
+                case RAW, LIST -> { /* already a ScriptValue at this call site — a LIST slot is decoded to a
+                                       real List INSIDE the generated wrapper, not here */ }
                 case UNKNOWN -> throw new IllegalStateException("emitDecodeToNative called with UNKNOWN");
             }
         }
@@ -1785,7 +1786,8 @@ final class ScriptBytecodeCompiler {
                 case DOUBLE -> mv.visitMethodInsn(INVOKESTATIC, VALUE, "of", "(D)L" + VALUE + ";", true);
                 case BOOL -> mv.visitMethodInsn(INVOKESTATIC, VALUE, "of", "(Z)L" + VALUE + ";", true);
                 case STRING -> mv.visitMethodInsn(INVOKESTATIC, VALUE, "of", "(Ljava/lang/String;)L" + VALUE + ";", true);
-                case RAW -> { /* the wrapper already returns a ScriptValue */ }
+                case RAW, LIST -> { /* the wrapper already returns a ScriptValue (a LIST return was
+                                       encoded back to an Array inside it) */ }
                 case UNKNOWN -> throw new IllegalStateException("emitBoxNativeToScriptValue called with UNKNOWN");
             }
         }

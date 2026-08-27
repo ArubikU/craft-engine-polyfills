@@ -36,6 +36,7 @@ public final class PolyClassRuntime {
             case BOOL -> 'Z';
             case STRING -> 'S';
             case RAW -> 'R';
+            case LIST -> 'L';
             case UNKNOWN -> '?';
         };
     }
@@ -66,6 +67,34 @@ public final class PolyClassRuntime {
         }
         if (kindCharOf(d.returnType()) != retSig.charAt(0)) return null;
         return d.handler();
+    }
+
+    /**
+     * Resolves the LIST codec currently registered for one slot of {@code typeName.method} —
+     * {@code argIndex >= 0} for an argument, negative for the return value — or null if that slot no
+     * longer holds one (type/method gone, now untyped, arity shrank, codec swapped).
+     *
+     * <p>Called from a generated wrapper's {@code refresh()}, alongside the handler resolution, for
+     * exactly the same reason (see the class doc's Staleness section): the wrapper must not pin the
+     * codec object that happened to be registered when it was generated. A LIST slot's SHAPE
+     * character is just {@code 'L'}, so {@link #resolveTypedHandler} cannot tell {@code List<Player>}
+     * from {@code List<Entity>} — re-fetching the codec by name every mutation is what makes a
+     * re-registration with a different element type decode correctly instead of unwrapping against
+     * the stale element class and silently yielding an empty list.
+     */
+    public static PolyType.TypeCodec<?> resolveListCodec(String typeName, String method, int argIndex) {
+        PolyType type = PolyTypeRegistry.get(typeName);
+        if (type == null) return null;
+        PolyType.TypedMethodDescriptor d = type.resolveTypedMethod(method);
+        if (d == null) return null;
+        PolyType.TypeCodec<?> codec;
+        if (argIndex < 0) {
+            codec = d.returnType();
+        } else {
+            if (argIndex >= d.argTypes().size()) return null;
+            codec = d.argTypes().get(argIndex);
+        }
+        return codec instanceof TypeCodecs.ListCodec<?> ? codec : null;
     }
 
     /** Resolves the plain (erased) method handler for {@code typeName.method}, or null. */
