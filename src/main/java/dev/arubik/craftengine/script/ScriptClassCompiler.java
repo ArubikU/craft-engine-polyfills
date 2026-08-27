@@ -152,6 +152,32 @@ final class ScriptClassCompiler {
          *  actually ran" without real per-branch merging this compiler doesn't attempt. */
         final Map<String, ScriptBytecodeCompiler.CachedVarRef> cachedVars = new java.util.HashMap<>();
         final ScriptBytecodeCompiler.VarTypeHint varHint = cachedVars::get;
+        /** name -> a JVM local holding the ScriptValue that {@code getClassInstance}/{@code getVar}
+         *  already resolved for that name earlier in this method. Same invalidation points as
+         *  {@link #cachedVars} (plus an assignment to that name, and any import) — see
+         *  {@link ScriptBytecodeCompiler.ReceiverHint}'s doc for why what's cached is the value
+         *  BEFORE the type guard rather than after. */
+        /**
+         * The ONE {@code Builder.peek()} result for this whole method, emitted in the prologue.
+         *
+         * <p>Every expression used to take a fresh snapshot, on the belief that an earlier
+         * statement's assignment must be visible to the next expression. But {@code peek()} is not a
+         * snapshot: it wraps the builder's own {@code vars}/{@code classes} maps — {@code private
+         * final}, never reassigned, only mutated in place — in {@code unmodifiableMap}, which is a
+         * LIVE VIEW. So a context taken once at entry sees every later {@code val()} write exactly
+         * as a freshly-taken one would; the two are behaviourally indistinguishable. ({@code
+         * build()} is the real defensive copy, and stays untouched.) That made the per-expression
+         * call pure waste: three objects allocated and discarded per expression, per tick — 585
+         * sites across just eight of the shipped scripts.
+         *
+         * <p>Only the OBJECT IDENTITY of the context differs, and nothing compares contexts by
+         * identity; dependency tracking is thread-local static state on {@code ScriptContext}, not
+         * per-instance, so it is unaffected too.
+         *
+         * <p>Depends on {@code Builder.vars}/{@code classes} staying final and never being replaced.
+         * A future scope push/pop that swapped the map instance would break this.
+         */
+        int sharedCtxSlot = -1;
         MethodCtx(boolean isMain, ScriptBytecodeCompiler.LocalCallResolver resolver) {
             this.isMain = isMain;
             this.resolver = resolver;
@@ -279,6 +305,7 @@ final class ScriptClassCompiler {
                         "(L" + BUILDER + ";)L" + VALUE + ";", null, null);
                 mv.visitCode();
                 MethodCtx mc = new MethodCtx(false, resolver);
+                emitCtxPrologue(mv, mc);
                 if (!emitBody(mv, fd.body(), mc)) return null; // isSupported/emitBody drifted — bail defensively
                 // Fell off the end without an explicit return — matches the interpreter's
                 // UserFunction.call, which yields NULL when the body never hits ReturnStatement.
@@ -331,6 +358,7 @@ final class ScriptClassCompiler {
                 MethodVisitor mv = cw.visitMethod(ACC_PUBLIC | ACC_STATIC, mainMethodName, "(L" + BUILDER + ";)V", null, null);
                 mv.visitCode();
                 MethodCtx mc = new MethodCtx(true, resolver);
+                emitCtxPrologue(mv, mc);
                 if (!emitBody(mv, mainBody, mc)) return null; // isSupported/emitBody drifted — bail defensively
                 mv.visitInsn(RETURN);
                 mv.visitMaxs(0, 0);
@@ -441,6 +469,15 @@ final class ScriptClassCompiler {
         return true;
     }
 
+    /** Emits the single Builder.peek() this method will reuse — see MethodCtx#sharedCtxSlot.
+     *  Must run in the PROLOGUE, before any branch, so every use is dominated by the store. */
+    private static void emitCtxPrologue(MethodVisitor mv, MethodCtx mc) {
+        mc.sharedCtxSlot = mc.alloc();
+        mv.visitVarInsn(ALOAD, 0); // the Builder parameter
+        mv.visitMethodInsn(INVOKEVIRTUAL, BUILDER, "peek", "()L" + CTX + ";", false);
+        mv.visitVarInsn(ASTORE, mc.sharedCtxSlot);
+    }
+
     /** Emits {@code stmts} into the current method; only ever called after {@link #isSupported}
      *  has already confirmed the whole body is representable, so the {@code false} return here is
      *  a defensive fallback (the two checks drifting out of sync would be a real bug), not the
@@ -540,8 +577,7 @@ final class ScriptClassCompiler {
         int rowSlot = mc.alloc();
 
         mv.visitLdcInsn(fs.iterExpr());
-        mv.visitVarInsn(ALOAD, 0);
-        mv.visitMethodInsn(INVOKEVIRTUAL, BUILDER, "peek", "()L" + CTX + ";", false);
+        mv.visitVarInsn(ALOAD, mc.sharedCtxSlot);
         emitIntConst(mv, vars.size());
         mv.visitMethodInsn(INVOKESTATIC, PROGRAM, "resolveForRows",
                 "(Ljava/lang/String;L" + CTX + ";I)L" + LIST + ";", false);
@@ -684,10 +720,7 @@ final class ScriptClassCompiler {
             mv.visitInsn(POP);
             return;
         }
-        int ctxSlot = mc.alloc();
-        mv.visitVarInsn(ALOAD, 0);
-        mv.visitMethodInsn(INVOKEVIRTUAL, BUILDER, "peek", "()L" + CTX + ";", false);
-        mv.visitVarInsn(ASTORE, ctxSlot);
+        int ctxSlot = mc.sharedCtxSlot;
         ScriptBytecodeCompiler.Ctx ec = new ScriptBytecodeCompiler.Ctx(ctxSlot, mc.nextSlot);
         parsed.emit(mv, ec); // NOT toAny — that box is exactly what we're avoiding
         mc.nextSlot = ec.next;
@@ -698,10 +731,7 @@ final class ScriptClassCompiler {
     private static void emitEvaluate(MethodVisitor mv, MethodCtx mc, String expr, boolean asBool) {
         ScriptBytecodeCompiler.Expr parsed = ScriptBytecodeCompiler.tryParse(expr, mc.resolver, mc.varHint);
         if (parsed != null) {
-            int ctxSlot = mc.alloc();
-            mv.visitVarInsn(ALOAD, 0);
-            mv.visitMethodInsn(INVOKEVIRTUAL, BUILDER, "peek", "()L" + CTX + ";", false);
-            mv.visitVarInsn(ASTORE, ctxSlot);
+            int ctxSlot = mc.sharedCtxSlot;
             ScriptBytecodeCompiler.Ctx ec = new ScriptBytecodeCompiler.Ctx(ctxSlot, mc.nextSlot);
             ScriptBytecodeCompiler.Expr finalExpr = asBool
                     ? ScriptBytecodeCompiler.toBool(parsed)
@@ -712,8 +742,7 @@ final class ScriptClassCompiler {
         }
         mv.visitLdcInsn(expr);
         mv.visitMethodInsn(INVOKESTATIC, FORMULA, "compile", "(Ljava/lang/String;)L" + FORMULA + ";", false);
-        mv.visitVarInsn(ALOAD, 0);
-        mv.visitMethodInsn(INVOKEVIRTUAL, BUILDER, "peek", "()L" + CTX + ";", false);
+        mv.visitVarInsn(ALOAD, mc.sharedCtxSlot);
         if (asBool) {
             mv.visitMethodInsn(INVOKEVIRTUAL, FORMULA, "evaluateBool", "(L" + CTX + ";)Z", false);
         } else {
@@ -783,10 +812,7 @@ final class ScriptClassCompiler {
         }
 
         ScriptBytecodeCompiler.Type type = parsed.type();
-        int ctxSlot = mc.alloc();
-        mv.visitVarInsn(ALOAD, 0);
-        mv.visitMethodInsn(INVOKEVIRTUAL, BUILDER, "peek", "()L" + CTX + ";", false);
-        mv.visitVarInsn(ASTORE, ctxSlot);
+        int ctxSlot = mc.sharedCtxSlot;
         ScriptBytecodeCompiler.Ctx ec = new ScriptBytecodeCompiler.Ctx(ctxSlot, mc.nextSlot);
         parsed.emit(mv, ec); // raw NUM double / raw BOOL int / already-boxed ANY reference
         mc.nextSlot = ec.next;

@@ -149,6 +149,20 @@ final class ScriptBytecodeCompiler {
         CachedVarRef get(String name);
     }
 
+    // NOT DONE, deliberately: caching a resolved dot-access receiver across statements
+    // (windmill.pf resolves "Machine" 36 times in one file, and each one repeats
+    // getClassInstance + getVar). It was implemented and reverted — it produced
+    // "VerifyError: Bad local variable type" on 33 of the 103 shipped scripts.
+    //
+    // The reason is structural, not a slip: emitResolveInstanceOrVar also runs from inside
+    // expressions with CONDITIONAL execution — the right operand of a short-circuit && / ||, a
+    // ternary arm. A slot written there does not dominate later reads, so a subsequent statement
+    // can load it on a path where it was never stored. cachedVars avoids this only because
+    // emitAssign always writes at statement level, where the store does dominate.
+    //
+    // Making it sound needs dominance tracking inside expression emission. That is a real piece of
+    // machinery, and the payoff is two map lookups per call site — not worth it at that price.
+
     /** {@code slot}: the JVM local holding the value — {@code DLOAD}/{@code ILOAD}/{@code ALOAD}
      *  depending on {@code type}. Every {@link Type} is cacheable: NUM/BOOL hold a raw unboxed
      *  primitive, ANY holds the already-boxed {@code ScriptValue} reference (a string, array, map,
