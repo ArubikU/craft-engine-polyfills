@@ -196,6 +196,17 @@ final class ScriptBytecodeCompiler {
         return CodecKind.UNKNOWN;
     }
 
+    /** How one arg of a typed-dispatch call site is cached in a local, per {@link #dotMethodCall}'s
+     *  typed tier. {@code NUM_RAW}/{@code BOOL_RAW}: the raw (pre-{@code toAny}) arg expression is
+     *  ALREADY exactly the native shape its {@link CodecKind} wants (a NUM expr into a DOUBLE
+     *  codec, a BOOL expr into a BOOL codec) — cached as a genuinely unboxed JVM primitive local, so
+     *  the typed handler call boxes it directly ({@code Double.valueOf}/{@code Boolean.valueOf}),
+     *  with NO {@code ScriptValue.of(...)} box followed by an immediate {@code asNum}/{@code asBool}
+     *  unbox in between. {@code ANY_BOXED}: everything else — a STRING/RAW codec, or a type mismatch
+     *  (e.g. a STRING expr feeding a DOUBLE-codec'd slot) — cached as the boxed {@code ScriptValue}
+     *  {@code toAny} already produces, decoded via {@link #emitCodecDecodeInline} same as before. */
+    private enum ArgSlotKind { NUM_RAW, BOOL_RAW, ANY_BOXED }
+
     /** name -> java.lang.Math method of the same (double)->double shape. Only pure, total (no
      *  exceptions) single-argument math functions — everything else falls through to {@code
      *  callBuiltin} via the generic function-call path instead of bailing the whole formula. */
@@ -1566,6 +1577,25 @@ final class ScriptBytecodeCompiler {
             CodecKind finalRetKind = retKind;
             String handlerIface = specializeTyped ? TYPED_HANDLER_IFACE[arity] : null;
 
+            // Per-arg slot representation for the typed tier: when the RAW (pre-toAny) arg
+            // expression is ALREADY the exact native shape the codec wants (a NUM expr feeding a
+            // DOUBLE codec, a BOOL expr feeding a BOOL codec), cache it as a genuinely raw JVM
+            // primitive local — no box-to-ScriptValue-then-immediately-unbox round trip. Anything
+            // else evaluates as ANY (a boxed ScriptValue), decoded via asNum/asBool/asStr same as
+            // before. Never never-mind toAny for the OTHER tiers below (args/emitBuildArgsList) —
+            // those still need every arg pre-boxed, unchanged.
+            ArgSlotKind[] argSlotKinds = null;
+            if (specializeTyped) {
+                argSlotKinds = new ArgSlotKind[arity];
+                for (int i = 0; i < arity; i++) {
+                    Type rawType = rawArgs.get(i).type();
+                    if (finalArgKinds[i] == CodecKind.DOUBLE && rawType == Type.NUM) argSlotKinds[i] = ArgSlotKind.NUM_RAW;
+                    else if (finalArgKinds[i] == CodecKind.BOOL && rawType == Type.BOOL) argSlotKinds[i] = ArgSlotKind.BOOL_RAW;
+                    else argSlotKinds[i] = ArgSlotKind.ANY_BOXED;
+                }
+            }
+            ArgSlotKind[] finalArgSlotKinds = argSlotKinds;
+
             return new BaseExpr(Type.ANY) {
                 @Override public void emit(MethodVisitor mv, Ctx c) {
                     int svSlot = c.allocRef();
@@ -1585,9 +1615,23 @@ final class ScriptBytecodeCompiler {
                         // resolveTypedMethod miss here is structurally unreachable today).
                         int[] argSlots = new int[arity];
                         for (int i = 0; i < arity; i++) {
-                            argSlots[i] = c.allocRef();
-                            args.get(i).emit(mv, c);
-                            mv.visitVarInsn(ASTORE, argSlots[i]);
+                            switch (finalArgSlotKinds[i]) {
+                                case NUM_RAW -> {
+                                    argSlots[i] = c.allocD();
+                                    rawArgs.get(i).emit(mv, c);
+                                    mv.visitVarInsn(DSTORE, argSlots[i]);
+                                }
+                                case BOOL_RAW -> {
+                                    argSlots[i] = c.allocRef();
+                                    rawArgs.get(i).emit(mv, c);
+                                    mv.visitVarInsn(ISTORE, argSlots[i]);
+                                }
+                                case ANY_BOXED -> {
+                                    argSlots[i] = c.allocRef();
+                                    toAny(rawArgs.get(i)).emit(mv, c);
+                                    mv.visitVarInsn(ASTORE, argSlots[i]);
+                                }
+                            }
                         }
 
                         Label fallbackL = new Label(), fastL = new Label(), typedMissL = new Label();
@@ -1619,8 +1663,22 @@ final class ScriptBytecodeCompiler {
                         mv.visitVarInsn(ALOAD, typedHandlerSlot);
                         mv.visitVarInsn(ALOAD, instSlot);
                         for (int i = 0; i < arity; i++) {
-                            mv.visitVarInsn(ALOAD, argSlots[i]);
-                            emitCodecDecodeInline(mv, finalArgKinds[i]);
+                            switch (finalArgSlotKinds[i]) {
+                                case NUM_RAW -> {
+                                    mv.visitVarInsn(DLOAD, argSlots[i]);
+                                    mv.visitMethodInsn(INVOKESTATIC, "java/lang/Double", "valueOf",
+                                            "(D)Ljava/lang/Double;", false);
+                                }
+                                case BOOL_RAW -> {
+                                    mv.visitVarInsn(ILOAD, argSlots[i]);
+                                    mv.visitMethodInsn(INVOKESTATIC, "java/lang/Boolean", "valueOf",
+                                            "(Z)Ljava/lang/Boolean;", false);
+                                }
+                                case ANY_BOXED -> {
+                                    mv.visitVarInsn(ALOAD, argSlots[i]);
+                                    emitCodecDecodeInline(mv, finalArgKinds[i]);
+                                }
+                            }
                         }
                         StringBuilder desc = new StringBuilder("(");
                         desc.append("Ljava/lang/Object;".repeat(arity + 1));
@@ -1633,7 +1691,7 @@ final class ScriptBytecodeCompiler {
                         // Untyped tier — the boxed List is only built HERE, on this (structurally
                         // unreachable) miss path, from the SAME already-evaluated argSlots.
                         int listSlot = c.allocRef();
-                        emitListFromSlots(mv, argSlots, listSlot);
+                        emitListFromSlots(mv, argSlots, finalArgSlotKinds, listSlot);
                         mv.visitVarInsn(ALOAD, typeSlot);
                         mv.visitLdcInsn(method);
                         mv.visitMethodInsn(INVOKEVIRTUAL, POLY_TYPE, "resolveMethod",
@@ -1654,7 +1712,7 @@ final class ScriptBytecodeCompiler {
                         // it builds its OWN list from the same argSlots rather than assuming that
                         // one exists yet.
                         int listSlot2 = c.allocRef();
-                        emitListFromSlots(mv, argSlots, listSlot2);
+                        emitListFromSlots(mv, argSlots, finalArgSlotKinds, listSlot2);
                         mv.visitVarInsn(ALOAD, svSlot);
                         mv.visitLdcInsn(method);
                         mv.visitVarInsn(ALOAD, listSlot2);
@@ -1718,16 +1776,29 @@ final class ScriptBytecodeCompiler {
         }
 
         /** Builds a fresh {@code ArrayList<ScriptValue>} from already-evaluated arg locals (see
-         *  {@link #dotMethodCall}'s typed tier) — never re-runs the arg expressions themselves,
-         *  just copies each already-boxed {@code ScriptValue} reference into the list. */
-        private static void emitListFromSlots(MethodVisitor mv, int[] argSlots, int listSlot) {
+         *  {@link #dotMethodCall}'s typed tier) — never re-runs the arg expressions themselves.
+         *  A {@code NUM_RAW}/{@code BOOL_RAW} slot holds a genuinely unboxed primitive (never
+         *  boxed to {@code ScriptValue} at all on the typed tier's own path), so it's boxed HERE,
+         *  on this miss-only path, via {@code ScriptValue.of(D/Z)} — an {@code ANY_BOXED} slot is
+         *  already a {@code ScriptValue} reference and needs no conversion. */
+        private static void emitListFromSlots(MethodVisitor mv, int[] argSlots, ArgSlotKind[] kinds, int listSlot) {
             mv.visitTypeInsn(NEW, ARRAYLIST);
             mv.visitInsn(DUP);
             mv.visitMethodInsn(INVOKESPECIAL, ARRAYLIST, "<init>", "()V", false);
             mv.visitVarInsn(ASTORE, listSlot);
-            for (int slot : argSlots) {
+            for (int i = 0; i < argSlots.length; i++) {
                 mv.visitVarInsn(ALOAD, listSlot);
-                mv.visitVarInsn(ALOAD, slot);
+                switch (kinds[i]) {
+                    case NUM_RAW -> {
+                        mv.visitVarInsn(DLOAD, argSlots[i]);
+                        mv.visitMethodInsn(INVOKESTATIC, VALUE, "of", "(D)L" + VALUE + ";", true);
+                    }
+                    case BOOL_RAW -> {
+                        mv.visitVarInsn(ILOAD, argSlots[i]);
+                        mv.visitMethodInsn(INVOKESTATIC, VALUE, "of", "(Z)L" + VALUE + ";", true);
+                    }
+                    case ANY_BOXED -> mv.visitVarInsn(ALOAD, argSlots[i]);
+                }
                 mv.visitMethodInsn(INVOKEINTERFACE, LIST, "add", "(Ljava/lang/Object;)Z", true);
                 mv.visitInsn(POP);
             }

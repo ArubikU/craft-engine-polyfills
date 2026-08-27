@@ -296,4 +296,41 @@ class PolyTypeSpecializationTest {
         assertTrue(typedHandlerCallIdx < newArrayListIdx,
                 "the typed tier's own call must be reachable BEFORE any ArrayList allocation:\n" + disassembly);
     }
+
+    @Test
+    void typedDispatchWithANumericArgSkipsTheScriptValueBoxUnboxRoundTrip() throws Exception {
+        // "2 + 3" is a NUM-typed raw expression feeding a DOUBLE-codec'd arg slot — the typed tier
+        // should cache it as a genuinely unboxed double local (DSTORE/DLOAD), never routing it
+        // through ScriptValue.of(D) only to immediately call asNum() back on it.
+        PolyTypeRegistry.define("SpecTypedNumArgType")
+                .methodTyped1("scale", TypeCodecs.DOUBLE, TypeCodecs.DOUBLE, 0.0,
+                        (Object o, Double n) -> n * 10.0);
+
+        String src = "def test_typed_numarg():\n    return SpecTypedNumArgType.scale(2 + 3)\nend\n";
+        ScriptProgram prog = ScriptProgram.parse("spec-typed-numarg", src, Logger.getLogger("test"));
+        ScriptClassCompiler.Compiled compiled =
+                ScriptClassCompiler.tryCompile("spec/typed-numarg-" + System.identityHashCode(new Object()),
+                        prog.statementsForCompiler());
+        assertNotNull(compiled);
+        assertEquals(50.0,
+                ((ScriptValue) compiled.methodsByDefName().get("test_typed_numarg")
+                        .invoke(null, ScriptContext.builder().typed("SpecTypedNumArgType", new Object())))
+                        .asNum());
+
+        ClassReader cr = new ClassReader(compiled.classBytes());
+        StringWriter sw = new StringWriter();
+        cr.accept(new TraceClassVisitor(new PrintWriter(sw)), 0);
+        String disassembly = sw.toString();
+
+        int typedHandlerCallIdx = disassembly.indexOf("TypedMethodHandler1.call");
+        assertTrue(typedHandlerCallIdx >= 0);
+        String beforeCall = disassembly.substring(0, typedHandlerCallIdx);
+        assertFalse(beforeCall.contains("ScriptValue.of"),
+                "a NUM arg feeding a DOUBLE codec must never be boxed via ScriptValue.of before the typed call:\n"
+                        + disassembly);
+        assertFalse(beforeCall.contains("asNum"),
+                "must never immediately un-box what it never boxed:\n" + disassembly);
+        assertTrue(beforeCall.contains("DSTORE") && beforeCall.contains("DLOAD"),
+                "should cache the arg as a genuinely raw double local:\n" + disassembly);
+    }
 }
