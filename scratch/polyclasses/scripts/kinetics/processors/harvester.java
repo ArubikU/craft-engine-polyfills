@@ -21,8 +21,12 @@ import dev.arubik.craftengine.script.ScriptProgram;
 import dev.arubik.craftengine.script.ScriptValue;
 import dev.arubik.craftengine.script.gen.Utils;
 import java.lang.invoke.CallSite;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 
+/*
+ * Uses jvm11+ dynamic constants - pseudocode provided - see https://www.benf.org/other/cfr/dynamic-constants.html
+ */
 public final class Harvester {
     private static volatile ScriptContext FILE_SCOPE;
 
@@ -52,7 +56,7 @@ public final class Harvester {
         var8_8 = var1_1.getClassOrVar("block");
         var9_9 = PolyDispatch.bootstrapGet("memberGet", "z", (ScriptValue)(var8_8 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "pos", (ScriptValue)var8_8, (ScriptContext)var1_1) : ScriptValue.NULL), (ScriptContext)var1_1);
         var0.val("z", (ScriptValue)var9_9);
-        var10_10 = ScriptFormula.addPolymorphic((ScriptValue)var7_7, (ScriptValue)ScriptValue.of((double)1.0));
+        var10_10 = ScriptFormula.addPolymorphic((ScriptValue)var7_7, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Harvester.class, 1.0)));
         var0.val("cy", var10_10);
         var11_11 = 0;
         while (var11_11 < 1000) {
@@ -76,7 +80,7 @@ public final class Harvester {
                 var16_16 = new ArrayList<ScriptValue>();
                 var17_17 = var1_1.getClassOrVar("above");
                 var16_16.add((ScriptValue)(var17_17 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "id", (ScriptValue)var17_17, (ScriptContext)var1_1) : ScriptValue.NULL));
-                var16_16.add(ScriptValue.of((boolean)false));
+                var16_16.add( /* dynamic constant */ (ScriptValue)ScriptValue.constBool("b", MethodHandles.lookup(), "constBool", Harvester.class, 0));
                 v1 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "switch", (ScriptValue)var15_15, var16_16, (ScriptContext)var1_1);
             } else {
                 v1 /* !! */  = ScriptValue.NULL;
@@ -113,12 +117,12 @@ public final class Harvester {
                 var26_26.add(var5_5);
                 var26_26.add((CallSite)var1_1.getClassOrVar("cy"));
                 var26_26.add(var9_9);
-                var26_26.add((CallSite)ScriptValue.of((String)"minecraft:air"));
+                var26_26.add((CallSite)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Harvester.class, "minecraft:air")));
                 v4 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "set_block", (ScriptValue)var25_25, var26_26, (ScriptContext)var1_1);
             } else {
                 v4 /* !! */  = ScriptValue.NULL;
             }
-            var27_27 = ScriptFormula.addPolymorphic((ScriptValue)var1_1.getClassOrVar("cy"), (ScriptValue)ScriptValue.of((double)1.0));
+            var27_27 = ScriptFormula.addPolymorphic((ScriptValue)var1_1.getClassOrVar("cy"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Harvester.class, 1.0)));
             var0.val("cy", var27_27);
         }
         return ScriptValue.NULL;
@@ -138,7 +142,7 @@ public final class Harvester {
             var3_3 = new ArrayList<ScriptValue>();
             var4_4 = var1_1.getClassOrVar("block");
             var3_3.add((ScriptValue)(var4_4 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "id", (ScriptValue)var4_4, (ScriptContext)var1_1) : ScriptValue.NULL));
-            var3_3.add(ScriptValue.of((boolean)false));
+            var3_3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constBool("b", MethodHandles.lookup(), "constBool", Harvester.class, 0));
             v0 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "switch", (ScriptValue)var2_2, var3_3, (ScriptContext)var1_1);
         } else {
             v0 /* !! */  = ScriptValue.NULL;
@@ -152,7 +156,7 @@ public final class Harvester {
         var6_6 = var1_1.getClassOrVar("block");
         if (var6_6 != ScriptValue.NULL) {
             var7_7 = new ArrayList<ScriptValue>();
-            var7_7.add(ScriptValue.of((String)"age"));
+            var7_7.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Harvester.class, "age"));
             v1 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "has_property", (ScriptValue)var6_6, var7_7, (ScriptContext)var1_1);
         } else {
             v1 /* !! */  = ScriptValue.NULL;
@@ -176,7 +180,7 @@ public final class Harvester {
         var12_12 = var1_1.getClassOrVar("block");
         if (var12_12 != ScriptValue.NULL) {
             var13_13 = new ArrayList<ScriptValue>();
-            var13_13.add(ScriptValue.of((String)"age"));
+            var13_13.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Harvester.class, "age"));
             v3 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "property", (ScriptValue)var12_12, var13_13, (ScriptContext)var1_1);
         } else {
             v3 /* !! */  = ScriptValue.NULL;
@@ -246,29 +250,29 @@ public final class Harvester {
         arrayList.add("_update_activated");
         ScriptProgram.applyImport((ScriptContext.Builder)builder, (String)"kinetics/utils.pf", null, arrayList);
         ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
-        arrayList2.add(ScriptValue.of((String)"minecraft:wheat"));
-        arrayList2.add(ScriptValue.of((double)7.0));
-        arrayList2.add(ScriptValue.of((String)"minecraft:carrots"));
-        arrayList2.add(ScriptValue.of((double)7.0));
-        arrayList2.add(ScriptValue.of((String)"minecraft:potatoes"));
-        arrayList2.add(ScriptValue.of((double)7.0));
-        arrayList2.add(ScriptValue.of((String)"minecraft:beetroots"));
-        arrayList2.add(ScriptValue.of((double)3.0));
-        arrayList2.add(ScriptValue.of((String)"minecraft:nether_wart"));
-        arrayList2.add(ScriptValue.of((double)3.0));
-        arrayList2.add(ScriptValue.of((String)"minecraft:cocoa"));
-        arrayList2.add(ScriptValue.of((double)2.0));
+        arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Harvester.class, "minecraft:wheat"));
+        arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Harvester.class, 7.0));
+        arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Harvester.class, "minecraft:carrots"));
+        arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Harvester.class, 7.0));
+        arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Harvester.class, "minecraft:potatoes"));
+        arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Harvester.class, 7.0));
+        arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Harvester.class, "minecraft:beetroots"));
+        arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Harvester.class, 3.0));
+        arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Harvester.class, "minecraft:nether_wart"));
+        arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Harvester.class, 3.0));
+        arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Harvester.class, "minecraft:cocoa"));
+        arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Harvester.class, 2.0));
         ScriptValue scriptValue = ScriptFormula.callBuiltin((String)"make_map", arrayList2, (ScriptContext)scriptContext);
         builder.val("CROP_MAX_AGE", scriptValue);
         ArrayList<ScriptValue> arrayList3 = new ArrayList<ScriptValue>();
-        arrayList3.add(ScriptValue.of((String)"minecraft:sugar_cane"));
-        arrayList3.add(ScriptValue.of((boolean)true));
-        arrayList3.add(ScriptValue.of((String)"minecraft:bamboo"));
-        arrayList3.add(ScriptValue.of((boolean)true));
-        arrayList3.add(ScriptValue.of((String)"minecraft:kelp"));
-        arrayList3.add(ScriptValue.of((boolean)true));
-        arrayList3.add(ScriptValue.of((String)"minecraft:kelp_plant"));
-        arrayList3.add(ScriptValue.of((boolean)true));
+        arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Harvester.class, "minecraft:sugar_cane"));
+        arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constBool("b", MethodHandles.lookup(), "constBool", Harvester.class, 1));
+        arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Harvester.class, "minecraft:bamboo"));
+        arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constBool("b", MethodHandles.lookup(), "constBool", Harvester.class, 1));
+        arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Harvester.class, "minecraft:kelp"));
+        arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constBool("b", MethodHandles.lookup(), "constBool", Harvester.class, 1));
+        arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Harvester.class, "minecraft:kelp_plant"));
+        arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constBool("b", MethodHandles.lookup(), "constBool", Harvester.class, 1));
         ScriptValue scriptValue2 = ScriptFormula.callBuiltin((String)"make_map", arrayList3, (ScriptContext)scriptContext);
         builder.val("COLUMN_PLANTS", scriptValue2);
         ScriptValue scriptValue3 = scriptContext.getClassOrVar("Machine");
@@ -280,7 +284,7 @@ public final class Harvester {
         if (ScriptFormula.valuesEqual((ScriptValue)scriptValue4, (ScriptValue)scriptContext.getClassOrVar("null")) ^ true) {
             Object object;
             ScriptValue scriptValue6 = scriptContext.getClassOrVar("contraption");
-            boolean bl = ScriptFormula.valuesEqual((ScriptValue)(scriptValue6 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "rpm", (ScriptValue)scriptValue6, (ScriptContext)scriptContext) : ScriptValue.NULL), (ScriptValue)ScriptValue.of((double)0.0)) ^ true;
+            boolean bl = ScriptFormula.valuesEqual((ScriptValue)(scriptValue6 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "rpm", (ScriptValue)scriptValue6, (ScriptContext)scriptContext) : ScriptValue.NULL), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Harvester.class, 0.0))) ^ true;
             ScriptValue scriptValue7 = ScriptValue.of((boolean)bl);
             builder.val("is_rotational", scriptValue7);
             ScriptValue scriptValue8 = scriptContext.getClassOrVar("contraption");
@@ -319,7 +323,7 @@ public final class Harvester {
                 builder2.val("block", (ScriptValue)callSite);
                 Harvester._tryHarvest(builder2);
             }
-        } else if (ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("rpm"), (ScriptValue)ScriptValue.of((double)0.0)) ^ true) {
+        } else if (ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("rpm"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Harvester.class, 0.0))) ^ true) {
             PolyClassMachine_v4 polyClassMachine_v48;
             ScriptContext.Builder builder3 = ScriptContext.builder().copyFrom(scriptContext);
             ScriptValue scriptValue18 = scriptContext.getClassOrVar("Machine");
@@ -330,7 +334,7 @@ public final class Harvester {
             builder.val("is_now", scriptValue19);
         }
         ScriptContext.Builder builder4 = ScriptContext.builder().copyFrom(Utils.1.fileScope()).copyFrom(scriptContext);
-        builder4.val("act_key", ScriptValue.of((String)"_harvester_act"));
+        builder4.val("act_key",  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Harvester.class, "_harvester_act"));
         builder4.val("is_now", scriptContext.getClassOrVar("is_now"));
         Utils.1._updateActivated((ScriptContext.Builder)builder4);
         FILE_SCOPE = builder.build();

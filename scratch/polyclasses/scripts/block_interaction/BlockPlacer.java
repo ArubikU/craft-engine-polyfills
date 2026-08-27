@@ -24,9 +24,13 @@ import dev.arubik.craftengine.script.ScriptFormula;
 import dev.arubik.craftengine.script.ScriptProgram;
 import dev.arubik.craftengine.script.ScriptValue;
 import java.lang.invoke.CallSite;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.List;
 
+/*
+ * Uses jvm11+ dynamic constants - pseudocode provided - see https://www.benf.org/other/cfr/dynamic-constants.html
+ */
 public final class BlockPlacer {
     private static volatile ScriptContext FILE_SCOPE;
 
@@ -50,7 +54,7 @@ public final class BlockPlacer {
             ScriptValue scriptValue4 = ScriptValue.of((boolean)false);
             builder.val("placed", scriptValue4);
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((double)9.0));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", BlockPlacer.class, 9.0));
             List list = ScriptProgram.elementsOf((ScriptValue)ScriptFormula.callBuiltin((String)"range", arrayList, (ScriptContext)scriptContext));
             if (list != null) {
                 for (ScriptValue scriptValue5 : list) {

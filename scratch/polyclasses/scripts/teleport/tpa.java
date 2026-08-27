@@ -25,8 +25,12 @@ import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
 import dev.arubik.craftengine.script.ScriptValue;
 import java.lang.invoke.CallSite;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 
+/*
+ * Uses jvm11+ dynamic constants - pseudocode provided - see https://www.benf.org/other/cfr/dynamic-constants.html
+ */
 public final class Tpa {
     private static volatile ScriptContext FILE_SCOPE;
 
@@ -45,7 +49,7 @@ public final class Tpa {
         ScriptValue scriptValue = scriptContext.getClassOrVar("Cmd");
         if (scriptValue != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"target"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Tpa.class, "target"));
             object = PolyDispatch.bootstrapCall("memberCall", "arg", (ScriptValue)scriptValue, arrayList, (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
@@ -100,8 +104,8 @@ public final class Tpa {
         if (scriptValue7 != ScriptValue.NULL) {
             PolyClassPlayer polyClassPlayer4;
             ArrayList<ScriptValue> arrayList4 = new ArrayList<ScriptValue>();
-            arrayList4.add(ScriptValue.of((String)"tpa_from"));
-            arrayList4.add(ScriptValue.of((String)"string"));
+            arrayList4.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Tpa.class, "tpa_from"));
+            arrayList4.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Tpa.class, "string"));
             ScriptValue scriptValue8 = scriptContext.getClassOrVar("Player");
             arrayList4.add((ScriptValue)(scriptValue8 != ScriptValue.NULL ? ((polyClassPlayer4 = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue8)) != null ? polyClassPlayer4.pg$67_name() : PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue8, (ScriptContext)scriptContext)) : ScriptValue.NULL));
             v5 = PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue7, arrayList4, (ScriptContext)scriptContext);
@@ -112,8 +116,8 @@ public final class Tpa {
         if (scriptValue9 != ScriptValue.NULL) {
             PolyClassServer polyClassServer;
             ArrayList<ScriptValue> arrayList5 = new ArrayList<ScriptValue>();
-            arrayList5.add(ScriptValue.of((String)"tpa_requested_at"));
-            arrayList5.add(ScriptValue.of((String)"int"));
+            arrayList5.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Tpa.class, "tpa_requested_at"));
+            arrayList5.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Tpa.class, "int"));
             ArrayList<ScriptValue> arrayList6 = new ArrayList<ScriptValue>();
             ScriptValue scriptValue10 = scriptContext.getClassOrVar("Server");
             arrayList6.add((ScriptValue)(scriptValue10 != ScriptValue.NULL ? ((polyClassServer = PolyClassServer.ofGuarded((ScriptValue)scriptValue10)) != null ? polyClassServer.pg$16_time() : PolyDispatch.bootstrapGet("memberGet", "time", (ScriptValue)scriptValue10, (ScriptContext)scriptContext)) : ScriptValue.NULL));
@@ -135,7 +139,7 @@ public final class Tpa {
         ScriptValue scriptValue13 = scriptContext.getClassOrVar("target");
         if (scriptValue13 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList8 = new ArrayList<ScriptValue>();
-            arrayList8.add(ScriptValue.of((String)"<gray> \u00bb <green><click:run_command:'/tpa accept'>[Accept]</click> <gray>or <red><click:run_command:'/tpa deny'>[Deny]</click>"));
+            arrayList8.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Tpa.class, "<gray> \u00bb <green><click:run_command:'/tpa accept'>[Accept]</click> <gray>or <red><click:run_command:'/tpa deny'>[Deny]</click>"));
             v8 = PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue13, arrayList8, (ScriptContext)scriptContext);
         } else {
             v8 = ScriptValue.NULL;
@@ -232,7 +236,7 @@ public final class Tpa {
             Object object8;
             String string = "tpa_from";
             String string4 = "string";
-            ScriptValue scriptValue7 = ScriptValue.of((String)"");
+            ScriptValue scriptValue7 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Tpa.class, "");
             if (scriptValue6 instanceof ScriptValue.Obj && (object8 = (obj = (ScriptValue.Obj)scriptValue6).instance()) != null && !(object8 instanceof PolyClass) && obj.typeName().equals("Player")) {
                 PolyClassPlayer polyClassPlayer = new PolyClassPlayer(object8);
                 v3 = ScriptValue.of((boolean)polyClassPlayer.tm$30_set_typed(string, string4, scriptValue7));
@@ -311,8 +315,8 @@ public final class Tpa {
         if (scriptValue15 != ScriptValue.NULL) {
             PolyClassPlayer polyClassPlayer;
             ArrayList<ScriptValue> arrayList6 = new ArrayList<ScriptValue>();
-            arrayList6.add(ScriptValue.of((String)"tpa_target"));
-            arrayList6.add(ScriptValue.of((String)"string"));
+            arrayList6.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Tpa.class, "tpa_target"));
+            arrayList6.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Tpa.class, "string"));
             ScriptValue scriptValue16 = scriptContext.getClassOrVar("Player");
             arrayList6.add((ScriptValue)(scriptValue16 != ScriptValue.NULL ? ((polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue16)) != null ? polyClassPlayer.pg$67_name() : PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue16, (ScriptContext)scriptContext)) : ScriptValue.NULL));
             v7 = PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue15, arrayList6, (ScriptContext)scriptContext);
@@ -322,9 +326,9 @@ public final class Tpa {
         ScriptValue scriptValue17 = scriptContext.getClassOrVar("requester");
         if (scriptValue17 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList7 = new ArrayList<ScriptValue>();
-            arrayList7.add(ScriptValue.of((String)"tpa_moved"));
-            arrayList7.add(ScriptValue.of((String)"int"));
-            arrayList7.add(ScriptValue.of((double)0.0));
+            arrayList7.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Tpa.class, "tpa_moved"));
+            arrayList7.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Tpa.class, "int"));
+            arrayList7.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Tpa.class, 0.0));
             v8 = PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue17, arrayList7, (ScriptContext)scriptContext);
         } else {
             v8 = ScriptValue.NULL;
@@ -332,8 +336,8 @@ public final class Tpa {
         ScriptValue scriptValue18 = scriptContext.getClassOrVar("EventManager");
         if (scriptValue18 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList8 = new ArrayList<ScriptValue>();
-            arrayList8.add(ScriptValue.of((String)"PlayerMoveEvent"));
-            arrayList8.add(ScriptValue.of((String)"tpa.pf:on_move_cancel"));
+            arrayList8.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Tpa.class, "PlayerMoveEvent"));
+            arrayList8.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Tpa.class, "tpa.pf:on_move_cancel"));
             arrayList8.add(scriptContext.getClassOrVar("TPA_WARMUP_TICKS"));
             object = PolyDispatch.bootstrapCall("memberCall", "register", (ScriptValue)scriptValue18, arrayList8, (ScriptContext)scriptContext);
         } else {
@@ -344,8 +348,8 @@ public final class Tpa {
         ScriptValue scriptValue20 = scriptContext.getClassOrVar("requester");
         if (scriptValue20 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList9 = new ArrayList<ScriptValue>();
-            arrayList9.add(ScriptValue.of((String)"tpa_move_handle"));
-            arrayList9.add(ScriptValue.of((String)"string"));
+            arrayList9.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Tpa.class, "tpa_move_handle"));
+            arrayList9.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Tpa.class, "string"));
             arrayList9.add(scriptValue19);
             v10 = PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue20, arrayList9, (ScriptContext)scriptContext);
         } else {
@@ -354,7 +358,7 @@ public final class Tpa {
         ScriptValue scriptValue21 = scriptContext.getClassOrVar("requester");
         if (scriptValue21 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList10 = new ArrayList<ScriptValue>();
-            arrayList10.add(ScriptValue.of((String)"<green>\u2714 <white>Request accepted! Teleporting in <yellow>3s<white> - don't move."));
+            arrayList10.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Tpa.class, "<green>\u2714 <white>Request accepted! Teleporting in <yellow>3s<white> - don't move."));
             v11 = PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue21, arrayList10, (ScriptContext)scriptContext);
         } else {
             v11 = ScriptValue.NULL;
@@ -437,7 +441,7 @@ public final class Tpa {
             Object object5;
             String string = "tpa_from";
             String string3 = "string";
-            ScriptValue scriptValue6 = ScriptValue.of((String)"");
+            ScriptValue scriptValue6 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Tpa.class, "");
             if (scriptValue5 instanceof ScriptValue.Obj && (object5 = (obj = (ScriptValue.Obj)scriptValue5).instance()) != null && !(object5 instanceof PolyClass) && obj.typeName().equals("Player")) {
                 PolyClassPlayer polyClassPlayer = new PolyClassPlayer(object5);
                 v2 = ScriptValue.of((boolean)polyClassPlayer.tm$30_set_typed(string, string3, scriptValue6));
@@ -541,7 +545,7 @@ public final class Tpa {
             } else {
                 v1 /* !! */  = ScriptValue.NULL;
             }
-            if (ScriptFormula.valuesEqual((ScriptValue)v1 /* !! */ , (ScriptValue)ScriptValue.of((double)0.0))) {
+            if (ScriptFormula.valuesEqual((ScriptValue)v1 /* !! */ , (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Tpa.class, 0.0)))) {
                 v2 = true;
             } else lbl-1000:
             // 2 sources
@@ -554,7 +558,7 @@ public final class Tpa {
             if (var16_16 != ScriptValue.NULL) {
                 var17_17 = "tpa_moved";
                 var18_18 = "int";
-                var19_19 = ScriptValue.of((double)1.0);
+                var19_19 =  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Tpa.class, 1.0);
                 if (var16_16 instanceof ScriptValue.Obj && (var21_21 = (var20_20 = (ScriptValue.Obj)var16_16).instance()) != null && !(var21_21 instanceof PolyClass) && var20_20.typeName().equals("Player")) {
                     var22_22 = new PolyClassPlayer(var21_21);
                     v3 /* !! */  = ScriptValue.of((boolean)var22_22.tm$30_set_typed(var17_17, var18_18, var19_19));
@@ -572,7 +576,7 @@ public final class Tpa {
             if (var24_24 != ScriptValue.NULL) {
                 var25_25 = "tpa_target";
                 var26_26 = "string";
-                var27_27 = ScriptValue.of((String)"");
+                var27_27 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Tpa.class, "");
                 if (var24_24 instanceof ScriptValue.Obj && (var29_29 = (var28_28 = (ScriptValue.Obj)var24_24).instance()) != null && !(var29_29 instanceof PolyClass) && var28_28.typeName().equals("Player")) {
                     var30_30 = new PolyClassPlayer(var29_29);
                     v4 /* !! */  = ScriptValue.of((boolean)var30_30.tm$30_set_typed(var25_25, var26_26, var27_27));
@@ -638,20 +642,20 @@ public final class Tpa {
         ScriptValue scriptValue5 = scriptContext.getClassOrVar("p");
         if (scriptValue5 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
-            arrayList2.add(ScriptValue.of((String)"tpa_moved"));
-            arrayList2.add(ScriptValue.of((String)"int"));
+            arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Tpa.class, "tpa_moved"));
+            arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Tpa.class, "int"));
             object4 = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue5, arrayList2, (ScriptContext)scriptContext);
         } else {
             object4 = ScriptValue.NULL;
         }
-        if (ScriptFormula.valuesEqual((ScriptValue)object4, (ScriptValue)ScriptValue.of((double)1.0))) {
+        if (ScriptFormula.valuesEqual((ScriptValue)object4, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Tpa.class, 1.0)))) {
             return ScriptValue.NULL;
         }
         ScriptValue scriptValue6 = scriptContext.getClassOrVar("p");
         if (scriptValue6 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList3 = new ArrayList<ScriptValue>();
-            arrayList3.add(ScriptValue.of((String)"tpa_target"));
-            arrayList3.add(ScriptValue.of((String)"string"));
+            arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Tpa.class, "tpa_target"));
+            arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Tpa.class, "string"));
             object3 = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue6, arrayList3, (ScriptContext)scriptContext);
         } else {
             object3 = ScriptValue.NULL;
@@ -664,9 +668,9 @@ public final class Tpa {
         ScriptValue scriptValue8 = scriptContext.getClassOrVar("p");
         if (scriptValue8 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList4 = new ArrayList<ScriptValue>();
-            arrayList4.add(ScriptValue.of((String)"tpa_target"));
-            arrayList4.add(ScriptValue.of((String)"string"));
-            arrayList4.add(ScriptValue.of((String)""));
+            arrayList4.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Tpa.class, "tpa_target"));
+            arrayList4.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Tpa.class, "string"));
+            arrayList4.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Tpa.class, ""));
             v3 = PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue8, arrayList4, (ScriptContext)scriptContext);
         } else {
             v3 = ScriptValue.NULL;
@@ -674,8 +678,8 @@ public final class Tpa {
         ScriptValue scriptValue9 = scriptContext.getClassOrVar("p");
         if (scriptValue9 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList5 = new ArrayList<ScriptValue>();
-            arrayList5.add(ScriptValue.of((String)"tpa_move_handle"));
-            arrayList5.add(ScriptValue.of((String)"string"));
+            arrayList5.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Tpa.class, "tpa_move_handle"));
+            arrayList5.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Tpa.class, "string"));
             object2 = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue9, arrayList5, (ScriptContext)scriptContext);
         } else {
             object2 = ScriptValue.NULL;
@@ -694,9 +698,9 @@ public final class Tpa {
             ScriptValue scriptValue12 = scriptContext.getClassOrVar("p");
             if (scriptValue12 != ScriptValue.NULL) {
                 ArrayList<ScriptValue> arrayList7 = new ArrayList<ScriptValue>();
-                arrayList7.add(ScriptValue.of((String)"tpa_move_handle"));
-                arrayList7.add(ScriptValue.of((String)"string"));
-                arrayList7.add(ScriptValue.of((String)""));
+                arrayList7.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Tpa.class, "tpa_move_handle"));
+                arrayList7.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Tpa.class, "string"));
+                arrayList7.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Tpa.class, ""));
                 v6 = PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue12, arrayList7, (ScriptContext)scriptContext);
             } else {
                 v6 = ScriptValue.NULL;
@@ -768,8 +772,8 @@ public final class Tpa {
         ScriptValue scriptValue2 = scriptContext.getClassOrVar("Menu");
         if (scriptValue2 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((double)27.0));
-            arrayList.add(ScriptValue.of((String)"<gold>Teleport Requests"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Tpa.class, 27.0));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Tpa.class, "<gold>Teleport Requests"));
             object2 = PolyDispatch.bootstrapCall("memberCall", "create", (ScriptValue)scriptValue2, arrayList, (ScriptContext)scriptContext);
         } else {
             object2 = ScriptValue.NULL;
@@ -823,7 +827,7 @@ public final class Tpa {
                 Object object7;
                 ArrayList<ScriptValue.Array> arrayList2 = new ArrayList<ScriptValue.Array>();
                 ArrayList<ScriptValue> arrayList3 = new ArrayList<ScriptValue>();
-                arrayList3.add(ScriptValue.of((String)"<gray>Click to accept"));
+                arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Tpa.class, "<gray>Click to accept"));
                 arrayList2.add(new ScriptValue.Array(arrayList3));
                 ArrayList<ScriptValue> arrayList4 = new ArrayList<ScriptValue>();
                 arrayList4.add(ScriptValue.of((String)("<yellow>" + scriptValue5.asStr())));
@@ -848,9 +852,9 @@ public final class Tpa {
                 ScriptValue scriptValue11 = scriptContext.getClassOrVar("m");
                 if (scriptValue11 != ScriptValue.NULL) {
                     ArrayList<Object> arrayList6 = new ArrayList<Object>();
-                    arrayList6.add(ScriptValue.of((double)13.0));
+                    arrayList6.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Tpa.class, 13.0));
                     arrayList6.add(callSite);
-                    arrayList6.add(ScriptValue.of((String)"tpa.pf:on_accept"));
+                    arrayList6.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Tpa.class, "tpa.pf:on_accept"));
                     object6 = PolyDispatch.bootstrapCall("memberCall", "set_item", (ScriptValue)scriptValue11, arrayList6, (ScriptContext)scriptContext);
                 } else {
                     object6 = ScriptValue.NULL;
@@ -862,16 +866,16 @@ public final class Tpa {
         if (ScriptFormula.valuesEqualStr((ScriptValue)scriptValue5, (String)"")) {
             Object object9;
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"<gray>No pending requests"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Tpa.class, "<gray>No pending requests"));
             ArrayList<ScriptValue> arrayList7 = new ArrayList<ScriptValue>();
-            arrayList7.add(ScriptValue.of((String)"minecraft:gray_stained_glass_pane"));
-            arrayList7.add(ScriptValue.of((double)1.0));
+            arrayList7.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Tpa.class, "minecraft:gray_stained_glass_pane"));
+            arrayList7.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Tpa.class, 1.0));
             CallSite callSite = PolyDispatch.bootstrapCall("memberCall", "with_name", (ScriptValue)ScriptFormula.callBuiltin((String)"create_item", arrayList7, (ScriptContext)scriptContext), arrayList, (ScriptContext)scriptContext);
             builder.val("filler", (ScriptValue)callSite);
             ScriptValue scriptValue13 = scriptContext.getClassOrVar("m");
             if (scriptValue13 != ScriptValue.NULL) {
                 ArrayList<Object> arrayList8 = new ArrayList<Object>();
-                arrayList8.add(ScriptValue.of((double)13.0));
+                arrayList8.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Tpa.class, 13.0));
                 arrayList8.add(callSite);
                 object9 = PolyDispatch.bootstrapCall("memberCall", "set_item", (ScriptValue)scriptValue13, arrayList8, (ScriptContext)scriptContext);
             } else {

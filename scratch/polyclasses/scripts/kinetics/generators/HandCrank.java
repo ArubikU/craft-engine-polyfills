@@ -21,8 +21,12 @@ import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptProgram;
 import dev.arubik.craftengine.script.ScriptValue;
 import dev.arubik.craftengine.script.gen.Utils;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 
+/*
+ * Uses jvm11+ dynamic constants - pseudocode provided - see https://www.benf.org/other/cfr/dynamic-constants.html
+ */
 public final class HandCrank {
     private static volatile ScriptContext FILE_SCOPE;
 
@@ -119,7 +123,7 @@ public final class HandCrank {
         ScriptValue scriptValue7 = ScriptValue.of((double)d);
         builder.val("is_now", scriptValue7);
         ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(Utils.1.fileScope()).copyFrom(scriptContext);
-        builder2.val("act_key", ScriptValue.of((String)"_hc_act"));
+        builder2.val("act_key",  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", HandCrank.class, "_hc_act"));
         builder2.val("is_now", ScriptValue.of((double)d));
         Utils.1._updateActivated((ScriptContext.Builder)builder2);
         FILE_SCOPE = builder.build();

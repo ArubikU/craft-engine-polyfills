@@ -3,7 +3,7 @@
  * 
  * Could not load the following classes:
  *  dev.arubik.craftengine.script.PolyClass
- *  dev.arubik.craftengine.script.PolyClassBlock
+ *  dev.arubik.craftengine.script.PolyClassBlock_v3
  *  dev.arubik.craftengine.script.PolyClassContainer
  *  dev.arubik.craftengine.script.PolyClassMachine_v4
  *  dev.arubik.craftengine.script.PolyClassPlayer
@@ -19,7 +19,7 @@
 package dev.arubik.craftengine.script.gen.conveyor;
 
 import dev.arubik.craftengine.script.PolyClass;
-import dev.arubik.craftengine.script.PolyClassBlock;
+import dev.arubik.craftengine.script.PolyClassBlock_v3;
 import dev.arubik.craftengine.script.PolyClassContainer;
 import dev.arubik.craftengine.script.PolyClassMachine_v4;
 import dev.arubik.craftengine.script.PolyClassPlayer;
@@ -29,8 +29,12 @@ import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
 import dev.arubik.craftengine.script.ScriptValue;
 import java.lang.invoke.CallSite;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 
+/*
+ * Uses jvm11+ dynamic constants - pseudocode provided - see https://www.benf.org/other/cfr/dynamic-constants.html
+ */
 public final class FunnelUtils {
     private static volatile ScriptContext FILE_SCOPE;
 
@@ -52,8 +56,8 @@ public final class FunnelUtils {
         ScriptValue scriptValue2 = scriptValue != ScriptValue.NULL ? ((polyClassMachine_v4 = PolyClassMachine_v4.ofGuarded((ScriptValue)scriptValue)) != null ? polyClassMachine_v4.pg$139_block() : PolyDispatch.bootstrapGet("memberGet", "block", (ScriptValue)scriptValue, (ScriptContext)scriptContext)) : ScriptValue.NULL;
         String string = "mode";
         if (scriptValue2 instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue2).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Block")) {
-            PolyClassBlock polyClassBlock = new PolyClassBlock(object);
-            callSite = polyClassBlock.tm$24_property(string);
+            PolyClassBlock_v3 polyClassBlock_v3 = new PolyClassBlock_v3(object);
+            callSite = polyClassBlock_v3.tm$24_property(string);
         } else {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
             arrayList.add(ScriptValue.of((String)string));
@@ -75,8 +79,8 @@ public final class FunnelUtils {
         ScriptValue scriptValue2 = scriptValue != ScriptValue.NULL ? ((polyClassMachine_v4 = PolyClassMachine_v4.ofGuarded((ScriptValue)scriptValue)) != null ? polyClassMachine_v4.pg$139_block() : PolyDispatch.bootstrapGet("memberGet", "block", (ScriptValue)scriptValue, (ScriptContext)scriptContext)) : ScriptValue.NULL;
         String string = "facing";
         if (scriptValue2 instanceof ScriptValue.Obj && (object2 = (obj = (ScriptValue.Obj)scriptValue2).instance()) != null && !(object2 instanceof PolyClass) && obj.typeName().equals("Block")) {
-            PolyClassBlock polyClassBlock = new PolyClassBlock(object2);
-            callSite = polyClassBlock.tm$24_property(string);
+            PolyClassBlock_v3 polyClassBlock_v3 = new PolyClassBlock_v3(object2);
+            callSite = polyClassBlock_v3.tm$24_property(string);
         } else {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
             arrayList.add(ScriptValue.of((String)string));
@@ -89,8 +93,8 @@ public final class FunnelUtils {
             ArrayList<CallSite> arrayList = new ArrayList<CallSite>();
             arrayList.add(callSite2);
             ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
-            arrayList2.add(ScriptValue.of((double)0.0));
-            arrayList2.add(ScriptValue.of((double)0.0));
+            arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", FunnelUtils.class, 0.0));
+            arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", FunnelUtils.class, 0.0));
             arrayList2.add(ScriptValue.of((double)(-1.0)));
             arrayList.add((CallSite)new ScriptValue.Array(arrayList2));
             object = PolyDispatch.bootstrapCall("memberCall", "switch", (ScriptValue)scriptValue3, arrayList, (ScriptContext)scriptContext);
@@ -179,9 +183,9 @@ public final class FunnelUtils {
         if (scriptValue != ScriptValue.NULL) {
             ScriptValue.Obj obj;
             Object object2;
-            ScriptValue scriptValue2 = ScriptFormula.subscriptGet((ScriptValue)scriptContext.getClassOrVar("behind_vec"), (ScriptValue)ScriptValue.of((double)0.0));
-            ScriptValue scriptValue3 = ScriptFormula.subscriptGet((ScriptValue)scriptContext.getClassOrVar("behind_vec"), (ScriptValue)ScriptValue.of((double)1.0));
-            ScriptValue scriptValue4 = ScriptFormula.subscriptGet((ScriptValue)scriptContext.getClassOrVar("behind_vec"), (ScriptValue)ScriptValue.of((double)2.0));
+            ScriptValue scriptValue2 = ScriptFormula.subscriptGet((ScriptValue)scriptContext.getClassOrVar("behind_vec"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", FunnelUtils.class, 0.0)));
+            ScriptValue scriptValue3 = ScriptFormula.subscriptGet((ScriptValue)scriptContext.getClassOrVar("behind_vec"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", FunnelUtils.class, 1.0)));
+            ScriptValue scriptValue4 = ScriptFormula.subscriptGet((ScriptValue)scriptContext.getClassOrVar("behind_vec"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", FunnelUtils.class, 2.0)));
             if (scriptValue instanceof ScriptValue.Obj && (object2 = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object2 instanceof PolyClass) && obj.typeName().equals("Machine")) {
                 PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object2);
                 object = polyClassMachine_v4.tm$17_container_at(scriptValue2.asNum(), scriptValue3.asNum(), scriptValue4.asNum());
@@ -203,7 +207,7 @@ public final class FunnelUtils {
             Object object3;
             ScriptValue scriptValue7;
             String string = "activated";
-            ScriptValue scriptValue8 = scriptValue7 = ScriptFormula.valuesEqual((ScriptValue)scriptValue5, (ScriptValue)scriptContext.getClassOrVar("null")) ^ true ? ScriptValue.of((String)"true") : ScriptValue.of((String)"false");
+            ScriptValue scriptValue8 = scriptValue7 = ScriptFormula.valuesEqual((ScriptValue)scriptValue5, (ScriptValue)scriptContext.getClassOrVar("null")) ^ true ? ( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", FunnelUtils.class, "true")) : ( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", FunnelUtils.class, "false"));
             if (scriptValue6 instanceof ScriptValue.Obj && (object3 = (obj = (ScriptValue.Obj)scriptValue6).instance()) != null && !(object3 instanceof PolyClass) && obj.typeName().equals("Machine")) {
                 PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object3);
                 v2 = ScriptValue.of((boolean)polyClassMachine_v4.tm$16_set_property(string, scriptValue7.asStr()));
@@ -339,11 +343,11 @@ public final class FunnelUtils {
         ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
         ScriptValue scriptValue = FunnelUtils._funnelFacingVec(builder2);
         builder.val("v", scriptValue);
-        ScriptValue scriptValue2 = ScriptFormula.subscriptGet((ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((double)0.0));
+        ScriptValue scriptValue2 = ScriptFormula.subscriptGet((ScriptValue)scriptValue, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", FunnelUtils.class, 0.0)));
         builder.val("fx", scriptValue2);
-        ScriptValue scriptValue3 = ScriptFormula.subscriptGet((ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((double)1.0));
+        ScriptValue scriptValue3 = ScriptFormula.subscriptGet((ScriptValue)scriptValue, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", FunnelUtils.class, 1.0)));
         builder.val("fy", scriptValue3);
-        ScriptValue scriptValue4 = ScriptFormula.subscriptGet((ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((double)2.0));
+        ScriptValue scriptValue4 = ScriptFormula.subscriptGet((ScriptValue)scriptValue, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", FunnelUtils.class, 2.0)));
         builder.val("fz", scriptValue4);
         double d = -scriptValue2.asNum();
         ScriptValue scriptValue5 = ScriptValue.of((double)d);
@@ -426,7 +430,7 @@ public final class FunnelUtils {
                     ScriptValue scriptValue16 = scriptContext.getClassOrVar("c");
                     if (scriptValue16 != ScriptValue.NULL) {
                         ArrayList<ScriptValue> arrayList3 = new ArrayList<ScriptValue>();
-                        arrayList3.add(ScriptValue.of((double)1.0));
+                        arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", FunnelUtils.class, 1.0));
                         object5 = PolyDispatch.bootstrapCall("memberCall", "pull", (ScriptValue)scriptValue16, arrayList3, (ScriptContext)scriptContext);
                     } else {
                         object5 = ScriptValue.NULL;
@@ -547,7 +551,7 @@ public final class FunnelUtils {
                             Object object11;
                             String string = "_funnel_progress";
                             String string5 = "float";
-                            ScriptValue scriptValue34 = ScriptValue.of((double)0.0);
+                            ScriptValue scriptValue34 =  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", FunnelUtils.class, 0.0);
                             if (scriptValue33 instanceof ScriptValue.Obj && (object11 = (obj8 = (ScriptValue.Obj)scriptValue33).instance()) != null && !(object11 instanceof PolyClass) && obj8.typeName().equals("Machine")) {
                                 PolyClassMachine_v4 polyClassMachine_v49 = new PolyClassMachine_v4(object11);
                                 v9 = ScriptValue.of((boolean)polyClassMachine_v49.tm$82_set_typed(string, string5, scriptValue34));
@@ -683,7 +687,7 @@ public final class FunnelUtils {
                                 Object object19;
                                 String string = "_funnel_progress";
                                 String string8 = "float";
-                                ScriptValue scriptValue50 = ScriptValue.of((double)0.0);
+                                ScriptValue scriptValue50 =  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", FunnelUtils.class, 0.0);
                                 if (scriptValue49 instanceof ScriptValue.Obj && (object19 = (obj13 = (ScriptValue.Obj)scriptValue49).instance()) != null && !(object19 instanceof PolyClass) && obj13.typeName().equals("Machine")) {
                                     PolyClassMachine_v4 polyClassMachine_v414 = new PolyClassMachine_v4(object19);
                                     v16 = ScriptValue.of((boolean)polyClassMachine_v414.tm$82_set_typed(string, string8, scriptValue50));
@@ -722,8 +726,8 @@ public final class FunnelUtils {
         ScriptValue scriptValue2 = scriptValue != ScriptValue.NULL ? ((polyClassMachine_v4 = PolyClassMachine_v4.ofGuarded((ScriptValue)scriptValue)) != null ? polyClassMachine_v4.pg$139_block() : PolyDispatch.bootstrapGet("memberGet", "block", (ScriptValue)scriptValue, (ScriptContext)scriptContext)) : ScriptValue.NULL;
         String string = "mode";
         if (scriptValue2 instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue2).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Block")) {
-            PolyClassBlock polyClassBlock = new PolyClassBlock(object);
-            callSite = polyClassBlock.tm$24_property(string);
+            PolyClassBlock_v3 polyClassBlock_v3 = new PolyClassBlock_v3(object);
+            callSite = polyClassBlock_v3.tm$24_property(string);
         } else {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
             arrayList.add(ScriptValue.of((String)string));
@@ -731,7 +735,7 @@ public final class FunnelUtils {
         }
         CallSite callSite2 = callSite;
         builder.val("cur", (ScriptValue)callSite2);
-        ScriptValue scriptValue3 = ScriptFormula.valuesEqualStr((ScriptValue)callSite2, (String)"in") ? ScriptValue.of((String)"out") : ScriptValue.of((String)"in");
+        ScriptValue scriptValue3 = ScriptFormula.valuesEqualStr((ScriptValue)callSite2, (String)"in") ? ( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", FunnelUtils.class, "out")) : ( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", FunnelUtils.class, "in"));
         builder.val("next", scriptValue3);
         ScriptValue scriptValue4 = scriptContext.getClassOrVar("Machine");
         if (scriptValue4 != ScriptValue.NULL) {
@@ -757,7 +761,7 @@ public final class FunnelUtils {
             Object object3;
             String string3 = "_funnel_progress";
             String string4 = "float";
-            ScriptValue scriptValue7 = ScriptValue.of((double)0.0);
+            ScriptValue scriptValue7 =  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", FunnelUtils.class, 0.0);
             if (scriptValue6 instanceof ScriptValue.Obj && (object3 = (obj3 = (ScriptValue.Obj)scriptValue6).instance()) != null && !(object3 instanceof PolyClass) && obj3.typeName().equals("Machine")) {
                 PolyClassMachine_v4 polyClassMachine_v43 = new PolyClassMachine_v4(object3);
                 v2 = ScriptValue.of((boolean)polyClassMachine_v43.tm$82_set_typed(string3, string4, scriptValue7));
@@ -833,29 +837,29 @@ public final class FunnelUtils {
     public static void run(ScriptContext.Builder builder) {
         ScriptContext scriptContext = builder.peek();
         ArrayList<Object> arrayList = new ArrayList<Object>();
-        arrayList.add(ScriptValue.of((String)"north"));
+        arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", FunnelUtils.class, "north"));
         ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
-        arrayList2.add(ScriptValue.of((double)0.0));
-        arrayList2.add(ScriptValue.of((double)0.0));
+        arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", FunnelUtils.class, 0.0));
+        arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", FunnelUtils.class, 0.0));
         arrayList2.add(ScriptValue.of((double)(-1.0)));
         arrayList.add(new ScriptValue.Array(arrayList2));
-        arrayList.add(ScriptValue.of((String)"south"));
+        arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", FunnelUtils.class, "south"));
         ArrayList<ScriptValue> arrayList3 = new ArrayList<ScriptValue>();
-        arrayList3.add(ScriptValue.of((double)0.0));
-        arrayList3.add(ScriptValue.of((double)0.0));
-        arrayList3.add(ScriptValue.of((double)1.0));
+        arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", FunnelUtils.class, 0.0));
+        arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", FunnelUtils.class, 0.0));
+        arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", FunnelUtils.class, 1.0));
         arrayList.add(new ScriptValue.Array(arrayList3));
-        arrayList.add(ScriptValue.of((String)"east"));
+        arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", FunnelUtils.class, "east"));
         ArrayList<ScriptValue> arrayList4 = new ArrayList<ScriptValue>();
-        arrayList4.add(ScriptValue.of((double)1.0));
-        arrayList4.add(ScriptValue.of((double)0.0));
-        arrayList4.add(ScriptValue.of((double)0.0));
+        arrayList4.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", FunnelUtils.class, 1.0));
+        arrayList4.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", FunnelUtils.class, 0.0));
+        arrayList4.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", FunnelUtils.class, 0.0));
         arrayList.add(new ScriptValue.Array(arrayList4));
-        arrayList.add(ScriptValue.of((String)"west"));
+        arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", FunnelUtils.class, "west"));
         ArrayList<ScriptValue> arrayList5 = new ArrayList<ScriptValue>();
         arrayList5.add(ScriptValue.of((double)(-1.0)));
-        arrayList5.add(ScriptValue.of((double)0.0));
-        arrayList5.add(ScriptValue.of((double)0.0));
+        arrayList5.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", FunnelUtils.class, 0.0));
+        arrayList5.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", FunnelUtils.class, 0.0));
         arrayList.add(new ScriptValue.Array(arrayList5));
         ScriptValue scriptValue = ScriptFormula.callBuiltin((String)"make_map", arrayList, (ScriptContext)scriptContext);
         builder.val("DIR_VEC", scriptValue);

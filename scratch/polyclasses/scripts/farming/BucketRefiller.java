@@ -24,8 +24,12 @@ import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
 import dev.arubik.craftengine.script.ScriptValue;
 import java.lang.invoke.CallSite;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 
+/*
+ * Uses jvm11+ dynamic constants - pseudocode provided - see https://www.benf.org/other/cfr/dynamic-constants.html
+ */
 public final class BucketRefiller {
     private static volatile ScriptContext FILE_SCOPE;
 
@@ -86,7 +90,7 @@ public final class BucketRefiller {
                 arrayList2.add(PolyDispatch.bootstrapGet("memberGet", "y", (ScriptValue)(scriptValue9 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "pos", (ScriptValue)scriptValue9, (ScriptContext)scriptContext) : ScriptValue.NULL), (ScriptContext)scriptContext));
                 ScriptValue scriptValue10 = scriptContext.getClassOrVar("front");
                 arrayList2.add(PolyDispatch.bootstrapGet("memberGet", "z", (ScriptValue)(scriptValue10 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "pos", (ScriptValue)scriptValue10, (ScriptContext)scriptContext) : ScriptValue.NULL), (ScriptContext)scriptContext));
-                arrayList2.add((CallSite)ScriptValue.of((String)"minecraft:air"));
+                arrayList2.add((CallSite)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", BucketRefiller.class, "minecraft:air")));
                 ScriptValue scriptValue11 = scriptContext.getClassOrVar("front");
                 PolyDispatch.bootstrapCall("memberCall", "set_block", (ScriptValue)(scriptValue11 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "world", (ScriptValue)scriptValue11, (ScriptContext)scriptContext) : ScriptValue.NULL), arrayList2, (ScriptContext)scriptContext);
                 ScriptValue scriptValue12 = scriptContext.getClassOrVar("Machine");
@@ -106,13 +110,13 @@ public final class BucketRefiller {
                 ScriptValue scriptValue15 = scriptValue14 != ScriptValue.NULL ? ((polyClassMachine_v43 = PolyClassMachine_v4.ofGuarded((ScriptValue)scriptValue14)) != null ? polyClassMachine_v43.pg$120_container() : PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)scriptValue14, (ScriptContext)scriptContext)) : ScriptValue.NULL;
                 double d4 = 5.0;
                 ArrayList<ScriptValue> arrayList4 = new ArrayList<ScriptValue>();
-                arrayList4.add(ScriptValue.of((double)1.0));
+                arrayList4.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", BucketRefiller.class, 1.0));
                 ScriptValue scriptValue16 = scriptContext.getClassOrVar("Item");
                 if (scriptValue16 != ScriptValue.NULL) {
                     ScriptValue.Obj obj4;
                     Object object5;
                     ArrayList<ScriptValue> arrayList5 = new ArrayList<ScriptValue>();
-                    arrayList5.add(ScriptValue.of((String)"minecraft:water_bucket"));
+                    arrayList5.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", BucketRefiller.class, "minecraft:water_bucket"));
                     object3 = scriptValue16 instanceof ScriptValue.Obj && (object5 = (obj4 = (ScriptValue.Obj)scriptValue16).instance()) != null && !(object5 instanceof PolyClass) && obj4.typeName().equals("Item") ? new PolyClassItem(object5).um$21_create(arrayList5) : PolyDispatch.bootstrapCall("memberCall", "create", (ScriptValue)scriptValue16, arrayList5, (ScriptContext)scriptContext);
                 } else {
                     object3 = ScriptValue.NULL;
@@ -143,7 +147,7 @@ public final class BucketRefiller {
                 arrayList7.add(PolyDispatch.bootstrapGet("memberGet", "y", (ScriptValue)(scriptValue18 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "pos", (ScriptValue)scriptValue18, (ScriptContext)scriptContext) : ScriptValue.NULL), (ScriptContext)scriptContext));
                 ScriptValue scriptValue19 = scriptContext.getClassOrVar("front");
                 arrayList7.add(PolyDispatch.bootstrapGet("memberGet", "z", (ScriptValue)(scriptValue19 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "pos", (ScriptValue)scriptValue19, (ScriptContext)scriptContext) : ScriptValue.NULL), (ScriptContext)scriptContext));
-                arrayList7.add((CallSite)ScriptValue.of((String)"minecraft:air"));
+                arrayList7.add((CallSite)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", BucketRefiller.class, "minecraft:air")));
                 ScriptValue scriptValue20 = scriptContext.getClassOrVar("front");
                 PolyDispatch.bootstrapCall("memberCall", "set_block", (ScriptValue)(scriptValue20 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "world", (ScriptValue)scriptValue20, (ScriptContext)scriptContext) : ScriptValue.NULL), arrayList7, (ScriptContext)scriptContext);
                 ScriptValue scriptValue21 = scriptContext.getClassOrVar("Machine");
@@ -163,13 +167,13 @@ public final class BucketRefiller {
                 ScriptValue scriptValue24 = scriptValue23 != ScriptValue.NULL ? ((polyClassMachine_v45 = PolyClassMachine_v4.ofGuarded((ScriptValue)scriptValue23)) != null ? polyClassMachine_v45.pg$120_container() : PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)scriptValue23, (ScriptContext)scriptContext)) : ScriptValue.NULL;
                 double d7 = 5.0;
                 ArrayList<ScriptValue> arrayList9 = new ArrayList<ScriptValue>();
-                arrayList9.add(ScriptValue.of((double)1.0));
+                arrayList9.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", BucketRefiller.class, 1.0));
                 ScriptValue scriptValue25 = scriptContext.getClassOrVar("Item");
                 if (scriptValue25 != ScriptValue.NULL) {
                     ScriptValue.Obj obj7;
                     Object object9;
                     ArrayList<ScriptValue> arrayList10 = new ArrayList<ScriptValue>();
-                    arrayList10.add(ScriptValue.of((String)"minecraft:lava_bucket"));
+                    arrayList10.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", BucketRefiller.class, "minecraft:lava_bucket"));
                     object7 = scriptValue25 instanceof ScriptValue.Obj && (object9 = (obj7 = (ScriptValue.Obj)scriptValue25).instance()) != null && !(object9 instanceof PolyClass) && obj7.typeName().equals("Item") ? new PolyClassItem(object9).um$21_create(arrayList10) : PolyDispatch.bootstrapCall("memberCall", "create", (ScriptValue)scriptValue25, arrayList10, (ScriptContext)scriptContext);
                 } else {
                     object7 = ScriptValue.NULL;

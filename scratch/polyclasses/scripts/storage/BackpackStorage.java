@@ -17,8 +17,12 @@ import dev.arubik.craftengine.script.PolyClassMachine_v4;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptValue;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 
+/*
+ * Uses jvm11+ dynamic constants - pseudocode provided - see https://www.benf.org/other/cfr/dynamic-constants.html
+ */
 public final class BackpackStorage {
     private static volatile ScriptContext FILE_SCOPE;
 
@@ -38,7 +42,7 @@ public final class BackpackStorage {
             ScriptValue.Obj obj;
             Object object2;
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"polyfills:backpack"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", BackpackStorage.class, "polyfills:backpack"));
             object = scriptValue instanceof ScriptValue.Obj && (object2 = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object2 instanceof PolyClass) && obj.typeName().equals("Machine") ? new PolyClassMachine_v4(object2).um$117_to_item(arrayList) : PolyDispatch.bootstrapCall("memberCall", "to_item", (ScriptValue)scriptValue, arrayList, (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;

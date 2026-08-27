@@ -19,8 +19,12 @@ import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
 import dev.arubik.craftengine.script.ScriptValue;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 
+/*
+ * Uses jvm11+ dynamic constants - pseudocode provided - see https://www.benf.org/other/cfr/dynamic-constants.html
+ */
 public final class RotationalBearing {
     private static volatile ScriptContext FILE_SCOPE;
 
@@ -64,8 +68,8 @@ public final class RotationalBearing {
         }
         ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
         arrayList2.add(ScriptValue.of((double)(scriptValue3.asNum() - scriptContext.getNum("last"))));
-        arrayList2.add(ScriptValue.of((double)0.0));
-        arrayList2.add(ScriptValue.of((double)100.0));
+        arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", RotationalBearing.class, 0.0));
+        arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", RotationalBearing.class, 100.0));
         ScriptValue scriptValue5 = ScriptFormula.callBuiltin((String)"clamp", arrayList2, (ScriptContext)scriptContext);
         builder.val("elapsed", scriptValue5);
         ScriptValue scriptValue6 = scriptContext.getClassOrVar("Machine");
@@ -149,7 +153,7 @@ public final class RotationalBearing {
             v0 = ScriptValue.NULL;
         }
         ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
-        builder2.val("rpm_value", ScriptValue.of((double)0.0));
+        builder2.val("rpm_value",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", RotationalBearing.class, 0.0));
         RotationalBearing._advanceHeadAngle(builder2);
         return ScriptValue.NULL;
     }
@@ -160,15 +164,15 @@ public final class RotationalBearing {
         ScriptContext scriptContext = builder.peek();
         ScriptValue scriptValue = scriptContext.getClassOrVar("Machine");
         Object object = scriptValue != ScriptValue.NULL ? ((polyClassMachine_v42 = PolyClassMachine_v4.ofGuarded((ScriptValue)scriptValue)) != null ? polyClassMachine_v42.pg$129_facing_dy() : PolyDispatch.bootstrapGet("memberGet", "facing_dy", (ScriptValue)scriptValue, (ScriptContext)scriptContext)) : ScriptValue.NULL;
-        if (ScriptFormula.valuesEqual((ScriptValue)object, (ScriptValue)ScriptValue.of((double)0.0)) ^ true) {
-            return ScriptValue.of((String)"y");
+        if (ScriptFormula.valuesEqual((ScriptValue)object, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", RotationalBearing.class, 0.0))) ^ true) {
+            return  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", RotationalBearing.class, "y");
         }
         ScriptValue scriptValue2 = scriptContext.getClassOrVar("Machine");
         Object object2 = scriptValue2 != ScriptValue.NULL ? ((polyClassMachine_v4 = PolyClassMachine_v4.ofGuarded((ScriptValue)scriptValue2)) != null ? polyClassMachine_v4.pg$133_facing_dx() : PolyDispatch.bootstrapGet("memberGet", "facing_dx", (ScriptValue)scriptValue2, (ScriptContext)scriptContext)) : ScriptValue.NULL;
-        if (ScriptFormula.valuesEqual((ScriptValue)object2, (ScriptValue)ScriptValue.of((double)0.0)) ^ true) {
-            return ScriptValue.of((String)"x");
+        if (ScriptFormula.valuesEqual((ScriptValue)object2, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", RotationalBearing.class, 0.0))) ^ true) {
+            return  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", RotationalBearing.class, "x");
         }
-        return ScriptValue.of((String)"z");
+        return  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", RotationalBearing.class, "z");
     }
 
     public static ScriptValue status(ScriptContext.Builder builder) {
@@ -192,7 +196,7 @@ public final class RotationalBearing {
         } else {
             object = ScriptValue.NULL;
         }
-        return object.asNum() > 0.0 && ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("rpm"), (ScriptValue)ScriptValue.of((double)0.0)) ^ true ? ScriptValue.of((String)"true") : ScriptValue.of((String)"false");
+        return object.asNum() > 0.0 && ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("rpm"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", RotationalBearing.class, 0.0))) ^ true ? ( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", RotationalBearing.class, "true")) : ( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", RotationalBearing.class, "false"));
     }
 
     public static ScriptValue onBreak(ScriptContext.Builder builder) {
@@ -242,7 +246,7 @@ public final class RotationalBearing {
                 Object object3;
                 String string = "assembled";
                 String string3 = "int";
-                ScriptValue scriptValue6 = ScriptValue.of((double)0.0);
+                ScriptValue scriptValue6 =  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", RotationalBearing.class, 0.0);
                 if (scriptValue5 instanceof ScriptValue.Obj && (object3 = (obj = (ScriptValue.Obj)scriptValue5).instance()) != null && !(object3 instanceof PolyClass) && obj.typeName().equals("Machine")) {
                     PolyClassMachine_v4 polyClassMachine_v44 = new PolyClassMachine_v4(object3);
                     v1 = ScriptValue.of((boolean)polyClassMachine_v44.tm$82_set_typed(string, string3, scriptValue6));
@@ -262,7 +266,7 @@ public final class RotationalBearing {
                 Object object4;
                 String string = "contraption_uuid";
                 String string4 = "string";
-                ScriptValue scriptValue8 = ScriptValue.of((String)"");
+                ScriptValue scriptValue8 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", RotationalBearing.class, "");
                 if (scriptValue7 instanceof ScriptValue.Obj && (object4 = (obj = (ScriptValue.Obj)scriptValue7).instance()) != null && !(object4 instanceof PolyClass) && obj.typeName().equals("Machine")) {
                     PolyClassMachine_v4 polyClassMachine_v45 = new PolyClassMachine_v4(object4);
                     v2 = ScriptValue.of((boolean)polyClassMachine_v45.tm$82_set_typed(string, string4, scriptValue8));
@@ -281,13 +285,13 @@ public final class RotationalBearing {
             builder.val("__return__", ScriptValue.NULL);
             return;
         }
-        if (ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("rpm"), (ScriptValue)ScriptValue.of((double)0.0))) {
+        if (ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("rpm"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", RotationalBearing.class, 0.0)))) {
             ScriptValue scriptValue9 = scriptContext.getClassOrVar("contraption");
             if (scriptValue9 != ScriptValue.NULL) {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 ScriptContext.Builder builder4 = ScriptContext.builder().copyFrom(scriptContext);
                 arrayList.add(RotationalBearing._spinAxis(builder4));
-                arrayList.add(ScriptValue.of((double)0.0));
+                arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", RotationalBearing.class, 0.0));
                 v3 = PolyDispatch.bootstrapCall("memberCall", "set_spin", (ScriptValue)scriptValue9, arrayList, (ScriptContext)scriptContext);
             } else {
                 v3 = ScriptValue.NULL;
@@ -309,7 +313,7 @@ public final class RotationalBearing {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 ScriptContext.Builder builder6 = ScriptContext.builder().copyFrom(scriptContext);
                 arrayList.add(RotationalBearing._spinAxis(builder6));
-                arrayList.add(ScriptValue.of((double)0.0));
+                arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", RotationalBearing.class, 0.0));
                 v5 = PolyDispatch.bootstrapCall("memberCall", "set_spin", (ScriptValue)scriptValue12, arrayList, (ScriptContext)scriptContext);
             } else {
                 v5 = ScriptValue.NULL;
@@ -331,7 +335,7 @@ public final class RotationalBearing {
                 v6 = ScriptValue.NULL;
             }
             ScriptContext.Builder builder7 = ScriptContext.builder().copyFrom(scriptContext);
-            builder7.val("rpm_value", ScriptValue.of((double)0.0));
+            builder7.val("rpm_value",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", RotationalBearing.class, 0.0));
             RotationalBearing._advanceHeadAngle(builder7);
             builder.val("__return__", ScriptValue.NULL);
             return;

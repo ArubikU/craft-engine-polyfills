@@ -20,8 +20,12 @@ import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
 import dev.arubik.craftengine.script.ScriptValue;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 
+/*
+ * Uses jvm11+ dynamic constants - pseudocode provided - see https://www.benf.org/other/cfr/dynamic-constants.html
+ */
 public final class VirtualuiCreateDemo {
     private static volatile ScriptContext FILE_SCOPE;
 
@@ -68,7 +72,7 @@ public final class VirtualuiCreateDemo {
         ScriptValue scriptValue3 = scriptContext.getClassOrVar("VirtualUI");
         if (scriptValue3 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"Create-ported widget demo"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, "Create-ported widget demo"));
             object2 = PolyDispatch.bootstrapCall("memberCall", "screen", (ScriptValue)scriptValue3, arrayList, (ScriptContext)scriptContext);
         } else {
             object2 = ScriptValue.NULL;
@@ -78,8 +82,8 @@ public final class VirtualuiCreateDemo {
         ScriptValue scriptValue5 = scriptContext.getClassOrVar("ui");
         if (scriptValue5 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((double)6.5));
-            arrayList.add(ScriptValue.of((double)4.0));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 6.5));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 4.0));
             v3 = PolyDispatch.bootstrapCall("memberCall", "bounds", (ScriptValue)scriptValue5, arrayList, (ScriptContext)scriptContext);
         } else {
             v3 = ScriptValue.NULL;
@@ -87,7 +91,7 @@ public final class VirtualuiCreateDemo {
         ScriptValue scriptValue6 = scriptContext.getClassOrVar("ui");
         if (scriptValue6 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"examples/virtualui_create_demo.pf:on_close"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, "examples/virtualui_create_demo.pf:on_close"));
             v4 = PolyDispatch.bootstrapCall("memberCall", "on_close", (ScriptValue)scriptValue6, arrayList, (ScriptContext)scriptContext);
         } else {
             v4 = ScriptValue.NULL;
@@ -95,10 +99,10 @@ public final class VirtualuiCreateDemo {
         ScriptValue scriptValue7 = scriptContext.getClassOrVar("ui");
         if (scriptValue7 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"title"));
-            arrayList.add(ScriptValue.of((String)"<gold><bold>CREATE-STYLE DEMO</bold>\n<gray>Every widget, real Create icons"));
-            arrayList.add(ScriptValue.of((double)0.0));
-            arrayList.add(ScriptValue.of((double)2.4));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, "title"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, "<gold><bold>CREATE-STYLE DEMO</bold>\n<gray>Every widget, real Create icons"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 0.0));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 2.4));
             v5 = PolyDispatch.bootstrapCall("memberCall", "label", (ScriptValue)scriptValue7, arrayList, (ScriptContext)scriptContext);
         } else {
             v5 = ScriptValue.NULL;
@@ -106,13 +110,13 @@ public final class VirtualuiCreateDemo {
         ScriptValue scriptValue8 = scriptContext.getClassOrVar("ui");
         if (scriptValue8 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"btn_add"));
-            arrayList.add(ScriptValue.of((String)""));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, "btn_add"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, ""));
             arrayList.add(ScriptValue.of((double)(-3.2)));
-            arrayList.add(ScriptValue.of((double)1.2));
-            arrayList.add(ScriptValue.of((String)"examples/virtualui_create_demo.pf:on_add"));
-            arrayList.add(ScriptValue.of((double)0.6));
-            arrayList.add(ScriptValue.of((double)0.6));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 1.2));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, "examples/virtualui_create_demo.pf:on_add"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 0.6));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 0.6));
             v6 = PolyDispatch.bootstrapCall("memberCall", "button", (ScriptValue)scriptValue8, arrayList, (ScriptContext)scriptContext);
         } else {
             v6 = ScriptValue.NULL;
@@ -120,10 +124,10 @@ public final class VirtualuiCreateDemo {
         ScriptValue scriptValue9 = scriptContext.getClassOrVar("ui");
         if (scriptValue9 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"cml:create_plus"));
-            arrayList.add(ScriptValue.of((double)0.0));
-            arrayList.add(ScriptValue.of((double)0.0));
-            arrayList.add(ScriptValue.of((double)0.6));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, "cml:create_plus"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 0.0));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 0.0));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 0.6));
             v7 = PolyDispatch.bootstrapCall("memberCall", "icon_of", (ScriptValue)scriptValue9, arrayList, (ScriptContext)scriptContext);
         } else {
             v7 = ScriptValue.NULL;
@@ -131,7 +135,7 @@ public final class VirtualuiCreateDemo {
         ScriptValue scriptValue10 = scriptContext.getClassOrVar("ui");
         if (scriptValue10 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"examples/virtualui_create_demo.pf:on_toolbar_hover"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, "examples/virtualui_create_demo.pf:on_toolbar_hover"));
             v8 = PolyDispatch.bootstrapCall("memberCall", "on_hover", (ScriptValue)scriptValue10, arrayList, (ScriptContext)scriptContext);
         } else {
             v8 = ScriptValue.NULL;
@@ -139,7 +143,7 @@ public final class VirtualuiCreateDemo {
         ScriptValue scriptValue11 = scriptContext.getClassOrVar("ui");
         if (scriptValue11 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"examples/virtualui_create_demo.pf:on_toolbar_unhover"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, "examples/virtualui_create_demo.pf:on_toolbar_unhover"));
             v9 = PolyDispatch.bootstrapCall("memberCall", "on_unhover", (ScriptValue)scriptValue11, arrayList, (ScriptContext)scriptContext);
         } else {
             v9 = ScriptValue.NULL;
@@ -147,13 +151,13 @@ public final class VirtualuiCreateDemo {
         ScriptValue scriptValue12 = scriptContext.getClassOrVar("ui");
         if (scriptValue12 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"btn_trash"));
-            arrayList.add(ScriptValue.of((String)""));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, "btn_trash"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, ""));
             arrayList.add(ScriptValue.of((double)(-2.2)));
-            arrayList.add(ScriptValue.of((double)1.2));
-            arrayList.add(ScriptValue.of((String)"examples/virtualui_create_demo.pf:on_trash"));
-            arrayList.add(ScriptValue.of((double)0.6));
-            arrayList.add(ScriptValue.of((double)0.6));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 1.2));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, "examples/virtualui_create_demo.pf:on_trash"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 0.6));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 0.6));
             v10 = PolyDispatch.bootstrapCall("memberCall", "button", (ScriptValue)scriptValue12, arrayList, (ScriptContext)scriptContext);
         } else {
             v10 = ScriptValue.NULL;
@@ -161,10 +165,10 @@ public final class VirtualuiCreateDemo {
         ScriptValue scriptValue13 = scriptContext.getClassOrVar("ui");
         if (scriptValue13 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"cml:create_trash"));
-            arrayList.add(ScriptValue.of((double)0.0));
-            arrayList.add(ScriptValue.of((double)0.0));
-            arrayList.add(ScriptValue.of((double)0.6));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, "cml:create_trash"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 0.0));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 0.0));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 0.6));
             v11 = PolyDispatch.bootstrapCall("memberCall", "icon_of", (ScriptValue)scriptValue13, arrayList, (ScriptContext)scriptContext);
         } else {
             v11 = ScriptValue.NULL;
@@ -172,7 +176,7 @@ public final class VirtualuiCreateDemo {
         ScriptValue scriptValue14 = scriptContext.getClassOrVar("ui");
         if (scriptValue14 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"examples/virtualui_create_demo.pf:on_toolbar_hover"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, "examples/virtualui_create_demo.pf:on_toolbar_hover"));
             v12 = PolyDispatch.bootstrapCall("memberCall", "on_hover", (ScriptValue)scriptValue14, arrayList, (ScriptContext)scriptContext);
         } else {
             v12 = ScriptValue.NULL;
@@ -180,7 +184,7 @@ public final class VirtualuiCreateDemo {
         ScriptValue scriptValue15 = scriptContext.getClassOrVar("ui");
         if (scriptValue15 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"examples/virtualui_create_demo.pf:on_toolbar_unhover"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, "examples/virtualui_create_demo.pf:on_toolbar_unhover"));
             v13 = PolyDispatch.bootstrapCall("memberCall", "on_unhover", (ScriptValue)scriptValue15, arrayList, (ScriptContext)scriptContext);
         } else {
             v13 = ScriptValue.NULL;
@@ -188,13 +192,13 @@ public final class VirtualuiCreateDemo {
         ScriptValue scriptValue16 = scriptContext.getClassOrVar("ui");
         if (scriptValue16 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"btn_confirm"));
-            arrayList.add(ScriptValue.of((String)""));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, "btn_confirm"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, ""));
             arrayList.add(ScriptValue.of((double)(-1.2)));
-            arrayList.add(ScriptValue.of((double)1.2));
-            arrayList.add(ScriptValue.of((String)"examples/virtualui_create_demo.pf:on_confirm"));
-            arrayList.add(ScriptValue.of((double)0.6));
-            arrayList.add(ScriptValue.of((double)0.6));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 1.2));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, "examples/virtualui_create_demo.pf:on_confirm"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 0.6));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 0.6));
             v14 = PolyDispatch.bootstrapCall("memberCall", "button", (ScriptValue)scriptValue16, arrayList, (ScriptContext)scriptContext);
         } else {
             v14 = ScriptValue.NULL;
@@ -202,10 +206,10 @@ public final class VirtualuiCreateDemo {
         ScriptValue scriptValue17 = scriptContext.getClassOrVar("ui");
         if (scriptValue17 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"cml:create_check"));
-            arrayList.add(ScriptValue.of((double)0.0));
-            arrayList.add(ScriptValue.of((double)0.0));
-            arrayList.add(ScriptValue.of((double)0.6));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, "cml:create_check"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 0.0));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 0.0));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 0.6));
             v15 = PolyDispatch.bootstrapCall("memberCall", "icon_of", (ScriptValue)scriptValue17, arrayList, (ScriptContext)scriptContext);
         } else {
             v15 = ScriptValue.NULL;
@@ -213,7 +217,7 @@ public final class VirtualuiCreateDemo {
         ScriptValue scriptValue18 = scriptContext.getClassOrVar("ui");
         if (scriptValue18 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"examples/virtualui_create_demo.pf:on_toolbar_hover"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, "examples/virtualui_create_demo.pf:on_toolbar_hover"));
             v16 = PolyDispatch.bootstrapCall("memberCall", "on_hover", (ScriptValue)scriptValue18, arrayList, (ScriptContext)scriptContext);
         } else {
             v16 = ScriptValue.NULL;
@@ -221,7 +225,7 @@ public final class VirtualuiCreateDemo {
         ScriptValue scriptValue19 = scriptContext.getClassOrVar("ui");
         if (scriptValue19 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"examples/virtualui_create_demo.pf:on_toolbar_unhover"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, "examples/virtualui_create_demo.pf:on_toolbar_unhover"));
             v17 = PolyDispatch.bootstrapCall("memberCall", "on_unhover", (ScriptValue)scriptValue19, arrayList, (ScriptContext)scriptContext);
         } else {
             v17 = ScriptValue.NULL;
@@ -229,13 +233,13 @@ public final class VirtualuiCreateDemo {
         ScriptValue scriptValue20 = scriptContext.getClassOrVar("ui");
         if (scriptValue20 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"btn_cancel"));
-            arrayList.add(ScriptValue.of((String)""));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, "btn_cancel"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, ""));
             arrayList.add(ScriptValue.of((double)(-0.2)));
-            arrayList.add(ScriptValue.of((double)1.2));
-            arrayList.add(ScriptValue.of((String)"examples/virtualui_create_demo.pf:on_cancel_btn"));
-            arrayList.add(ScriptValue.of((double)0.6));
-            arrayList.add(ScriptValue.of((double)0.6));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 1.2));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, "examples/virtualui_create_demo.pf:on_cancel_btn"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 0.6));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 0.6));
             v18 = PolyDispatch.bootstrapCall("memberCall", "button", (ScriptValue)scriptValue20, arrayList, (ScriptContext)scriptContext);
         } else {
             v18 = ScriptValue.NULL;
@@ -243,10 +247,10 @@ public final class VirtualuiCreateDemo {
         ScriptValue scriptValue21 = scriptContext.getClassOrVar("ui");
         if (scriptValue21 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"cml:create_cancel"));
-            arrayList.add(ScriptValue.of((double)0.0));
-            arrayList.add(ScriptValue.of((double)0.0));
-            arrayList.add(ScriptValue.of((double)0.6));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, "cml:create_cancel"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 0.0));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 0.0));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 0.6));
             v19 = PolyDispatch.bootstrapCall("memberCall", "icon_of", (ScriptValue)scriptValue21, arrayList, (ScriptContext)scriptContext);
         } else {
             v19 = ScriptValue.NULL;
@@ -254,7 +258,7 @@ public final class VirtualuiCreateDemo {
         ScriptValue scriptValue22 = scriptContext.getClassOrVar("ui");
         if (scriptValue22 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"examples/virtualui_create_demo.pf:on_toolbar_hover"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, "examples/virtualui_create_demo.pf:on_toolbar_hover"));
             v20 = PolyDispatch.bootstrapCall("memberCall", "on_hover", (ScriptValue)scriptValue22, arrayList, (ScriptContext)scriptContext);
         } else {
             v20 = ScriptValue.NULL;
@@ -262,7 +266,7 @@ public final class VirtualuiCreateDemo {
         ScriptValue scriptValue23 = scriptContext.getClassOrVar("ui");
         if (scriptValue23 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"examples/virtualui_create_demo.pf:on_toolbar_unhover"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, "examples/virtualui_create_demo.pf:on_toolbar_unhover"));
             v21 = PolyDispatch.bootstrapCall("memberCall", "on_unhover", (ScriptValue)scriptValue23, arrayList, (ScriptContext)scriptContext);
         } else {
             v21 = ScriptValue.NULL;
@@ -270,13 +274,13 @@ public final class VirtualuiCreateDemo {
         ScriptValue scriptValue24 = scriptContext.getClassOrVar("ui");
         if (scriptValue24 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"btn_edit"));
-            arrayList.add(ScriptValue.of((String)""));
-            arrayList.add(ScriptValue.of((double)0.8));
-            arrayList.add(ScriptValue.of((double)1.2));
-            arrayList.add(ScriptValue.of((String)"examples/virtualui_create_demo.pf:on_edit"));
-            arrayList.add(ScriptValue.of((double)0.6));
-            arrayList.add(ScriptValue.of((double)0.6));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, "btn_edit"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, ""));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 0.8));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 1.2));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, "examples/virtualui_create_demo.pf:on_edit"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 0.6));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 0.6));
             v22 = PolyDispatch.bootstrapCall("memberCall", "button", (ScriptValue)scriptValue24, arrayList, (ScriptContext)scriptContext);
         } else {
             v22 = ScriptValue.NULL;
@@ -284,10 +288,10 @@ public final class VirtualuiCreateDemo {
         ScriptValue scriptValue25 = scriptContext.getClassOrVar("ui");
         if (scriptValue25 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"cml:create_edit"));
-            arrayList.add(ScriptValue.of((double)0.0));
-            arrayList.add(ScriptValue.of((double)0.0));
-            arrayList.add(ScriptValue.of((double)0.6));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, "cml:create_edit"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 0.0));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 0.0));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 0.6));
             v23 = PolyDispatch.bootstrapCall("memberCall", "icon_of", (ScriptValue)scriptValue25, arrayList, (ScriptContext)scriptContext);
         } else {
             v23 = ScriptValue.NULL;
@@ -295,7 +299,7 @@ public final class VirtualuiCreateDemo {
         ScriptValue scriptValue26 = scriptContext.getClassOrVar("ui");
         if (scriptValue26 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"examples/virtualui_create_demo.pf:on_toolbar_hover"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, "examples/virtualui_create_demo.pf:on_toolbar_hover"));
             v24 = PolyDispatch.bootstrapCall("memberCall", "on_hover", (ScriptValue)scriptValue26, arrayList, (ScriptContext)scriptContext);
         } else {
             v24 = ScriptValue.NULL;
@@ -303,7 +307,7 @@ public final class VirtualuiCreateDemo {
         ScriptValue scriptValue27 = scriptContext.getClassOrVar("ui");
         if (scriptValue27 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"examples/virtualui_create_demo.pf:on_toolbar_unhover"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, "examples/virtualui_create_demo.pf:on_toolbar_unhover"));
             v25 = PolyDispatch.bootstrapCall("memberCall", "on_unhover", (ScriptValue)scriptValue27, arrayList, (ScriptContext)scriptContext);
         } else {
             v25 = ScriptValue.NULL;
@@ -311,13 +315,13 @@ public final class VirtualuiCreateDemo {
         ScriptValue scriptValue28 = scriptContext.getClassOrVar("ui");
         if (scriptValue28 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"btn_refresh"));
-            arrayList.add(ScriptValue.of((String)""));
-            arrayList.add(ScriptValue.of((double)1.8));
-            arrayList.add(ScriptValue.of((double)1.2));
-            arrayList.add(ScriptValue.of((String)"examples/virtualui_create_demo.pf:on_refresh"));
-            arrayList.add(ScriptValue.of((double)0.6));
-            arrayList.add(ScriptValue.of((double)0.6));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, "btn_refresh"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, ""));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 1.8));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 1.2));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, "examples/virtualui_create_demo.pf:on_refresh"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 0.6));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 0.6));
             v26 = PolyDispatch.bootstrapCall("memberCall", "button", (ScriptValue)scriptValue28, arrayList, (ScriptContext)scriptContext);
         } else {
             v26 = ScriptValue.NULL;
@@ -325,10 +329,10 @@ public final class VirtualuiCreateDemo {
         ScriptValue scriptValue29 = scriptContext.getClassOrVar("ui");
         if (scriptValue29 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"cml:create_refresh"));
-            arrayList.add(ScriptValue.of((double)0.0));
-            arrayList.add(ScriptValue.of((double)0.0));
-            arrayList.add(ScriptValue.of((double)0.6));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, "cml:create_refresh"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 0.0));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 0.0));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 0.6));
             v27 = PolyDispatch.bootstrapCall("memberCall", "icon_of", (ScriptValue)scriptValue29, arrayList, (ScriptContext)scriptContext);
         } else {
             v27 = ScriptValue.NULL;
@@ -336,7 +340,7 @@ public final class VirtualuiCreateDemo {
         ScriptValue scriptValue30 = scriptContext.getClassOrVar("ui");
         if (scriptValue30 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"examples/virtualui_create_demo.pf:on_toolbar_hover"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, "examples/virtualui_create_demo.pf:on_toolbar_hover"));
             v28 = PolyDispatch.bootstrapCall("memberCall", "on_hover", (ScriptValue)scriptValue30, arrayList, (ScriptContext)scriptContext);
         } else {
             v28 = ScriptValue.NULL;
@@ -344,7 +348,7 @@ public final class VirtualuiCreateDemo {
         ScriptValue scriptValue31 = scriptContext.getClassOrVar("ui");
         if (scriptValue31 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"examples/virtualui_create_demo.pf:on_toolbar_unhover"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, "examples/virtualui_create_demo.pf:on_toolbar_unhover"));
             v29 = PolyDispatch.bootstrapCall("memberCall", "on_unhover", (ScriptValue)scriptValue31, arrayList, (ScriptContext)scriptContext);
         } else {
             v29 = ScriptValue.NULL;
@@ -352,15 +356,15 @@ public final class VirtualuiCreateDemo {
         ScriptValue scriptValue32 = scriptContext.getClassOrVar("ui");
         if (scriptValue32 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"play_toggle"));
-            arrayList.add(ScriptValue.of((String)""));
-            arrayList.add(ScriptValue.of((String)""));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, "play_toggle"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, ""));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, ""));
             arrayList.add(ScriptValue.of((double)(-3.2)));
-            arrayList.add(ScriptValue.of((double)0.0));
-            arrayList.add(ScriptValue.of((boolean)false));
-            arrayList.add(ScriptValue.of((String)"examples/virtualui_create_demo.pf:on_play_toggle"));
-            arrayList.add(ScriptValue.of((double)0.6));
-            arrayList.add(ScriptValue.of((double)0.6));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 0.0));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constBool("b", MethodHandles.lookup(), "constBool", VirtualuiCreateDemo.class, 0));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, "examples/virtualui_create_demo.pf:on_play_toggle"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 0.6));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 0.6));
             v30 = PolyDispatch.bootstrapCall("memberCall", "toggle", (ScriptValue)scriptValue32, arrayList, (ScriptContext)scriptContext);
         } else {
             v30 = ScriptValue.NULL;
@@ -368,10 +372,10 @@ public final class VirtualuiCreateDemo {
         ScriptValue scriptValue33 = scriptContext.getClassOrVar("ui");
         if (scriptValue33 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"cml:create_pause"));
-            arrayList.add(ScriptValue.of((double)0.0));
-            arrayList.add(ScriptValue.of((double)0.0));
-            arrayList.add(ScriptValue.of((double)0.6));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, "cml:create_pause"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 0.0));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 0.0));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 0.6));
             v31 = PolyDispatch.bootstrapCall("memberCall", "icon_of", (ScriptValue)scriptValue33, arrayList, (ScriptContext)scriptContext);
         } else {
             v31 = ScriptValue.NULL;
@@ -379,11 +383,11 @@ public final class VirtualuiCreateDemo {
         ScriptValue scriptValue34 = scriptContext.getClassOrVar("ui");
         if (scriptValue34 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"grid_icon"));
-            arrayList.add(ScriptValue.of((String)"cml:create_grid"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, "grid_icon"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, "cml:create_grid"));
             arrayList.add(ScriptValue.of((double)(-1.6)));
-            arrayList.add(ScriptValue.of((double)0.0));
-            arrayList.add(ScriptValue.of((double)0.6));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 0.0));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 0.6));
             v32 = PolyDispatch.bootstrapCall("memberCall", "icon", (ScriptValue)scriptValue34, arrayList, (ScriptContext)scriptContext);
         } else {
             v32 = ScriptValue.NULL;
@@ -391,12 +395,12 @@ public final class VirtualuiCreateDemo {
         ScriptValue scriptValue35 = scriptContext.getClassOrVar("ui");
         if (scriptValue35 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"held_item_frame"));
-            arrayList.add(ScriptValue.of((String)"cml:create_slot_frame"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, "held_item_frame"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, "cml:create_slot_frame"));
             arrayList.add(ScriptValue.of((double)(-0.6)));
-            arrayList.add(ScriptValue.of((double)0.0));
-            arrayList.add(ScriptValue.of((double)0.85));
-            arrayList.add(ScriptValue.of((String)""));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 0.0));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 0.85));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, ""));
             arrayList.add(ScriptValue.of((double)(-0.3)));
             v33 = PolyDispatch.bootstrapCall("memberCall", "icon", (ScriptValue)scriptValue35, arrayList, (ScriptContext)scriptContext);
         } else {
@@ -405,11 +409,11 @@ public final class VirtualuiCreateDemo {
         ScriptValue scriptValue36 = scriptContext.getClassOrVar("ui");
         if (scriptValue36 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"held_item"));
-            arrayList.add(ScriptValue.of((String)"minecraft:golden_axe"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, "held_item"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, "minecraft:golden_axe"));
             arrayList.add(ScriptValue.of((double)(-0.6)));
-            arrayList.add(ScriptValue.of((double)0.0));
-            arrayList.add(ScriptValue.of((double)0.6));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 0.0));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 0.6));
             v34 = PolyDispatch.bootstrapCall("memberCall", "item", (ScriptValue)scriptValue36, arrayList, (ScriptContext)scriptContext);
         } else {
             v34 = ScriptValue.NULL;
@@ -417,12 +421,12 @@ public final class VirtualuiCreateDemo {
         ScriptValue scriptValue37 = scriptContext.getClassOrVar("ui");
         if (scriptValue37 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"gear_slot_frame"));
-            arrayList.add(ScriptValue.of((String)"cml:create_slot_frame"));
-            arrayList.add(ScriptValue.of((double)0.4));
-            arrayList.add(ScriptValue.of((double)0.0));
-            arrayList.add(ScriptValue.of((double)0.85));
-            arrayList.add(ScriptValue.of((String)""));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, "gear_slot_frame"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, "cml:create_slot_frame"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 0.4));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 0.0));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 0.85));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, ""));
             arrayList.add(ScriptValue.of((double)(-0.3)));
             v35 = PolyDispatch.bootstrapCall("memberCall", "icon", (ScriptValue)scriptValue37, arrayList, (ScriptContext)scriptContext);
         } else {
@@ -431,14 +435,14 @@ public final class VirtualuiCreateDemo {
         ScriptValue scriptValue38 = scriptContext.getClassOrVar("ui");
         if (scriptValue38 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"gear_slot"));
-            arrayList.add(ScriptValue.of((double)0.0));
-            arrayList.add(ScriptValue.of((String)"minecraft:iron_ingot"));
-            arrayList.add(ScriptValue.of((double)0.4));
-            arrayList.add(ScriptValue.of((double)0.0));
-            arrayList.add(ScriptValue.of((double)0.6));
-            arrayList.add(ScriptValue.of((double)0.6));
-            arrayList.add(ScriptValue.of((String)"examples/virtualui_create_demo.pf:on_slot_click"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, "gear_slot"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 0.0));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, "minecraft:iron_ingot"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 0.4));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 0.0));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 0.6));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 0.6));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, "examples/virtualui_create_demo.pf:on_slot_click"));
             v36 = PolyDispatch.bootstrapCall("memberCall", "slot", (ScriptValue)scriptValue38, arrayList, (ScriptContext)scriptContext);
         } else {
             v36 = ScriptValue.NULL;
@@ -446,11 +450,11 @@ public final class VirtualuiCreateDemo {
         ScriptValue scriptValue39 = scriptContext.getClassOrVar("ui");
         if (scriptValue39 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"brass_block"));
-            arrayList.add(ScriptValue.of((String)"minecraft:gold_block"));
-            arrayList.add(ScriptValue.of((double)1.6));
-            arrayList.add(ScriptValue.of((double)0.0));
-            arrayList.add(ScriptValue.of((double)0.7));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, "brass_block"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, "minecraft:gold_block"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 1.6));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 0.0));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 0.7));
             v37 = PolyDispatch.bootstrapCall("memberCall", "block", (ScriptValue)scriptValue39, arrayList, (ScriptContext)scriptContext);
         } else {
             v37 = ScriptValue.NULL;
@@ -458,10 +462,10 @@ public final class VirtualuiCreateDemo {
         ScriptValue scriptValue40 = scriptContext.getClassOrVar("ui");
         if (scriptValue40 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"self_render"));
-            arrayList.add(ScriptValue.of((double)2.8));
-            arrayList.add(ScriptValue.of((double)0.0));
-            arrayList.add(ScriptValue.of((double)1.2));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, "self_render"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 2.8));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 0.0));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 1.2));
             v38 = PolyDispatch.bootstrapCall("memberCall", "player_render", (ScriptValue)scriptValue40, arrayList, (ScriptContext)scriptContext);
         } else {
             v38 = ScriptValue.NULL;
@@ -469,13 +473,13 @@ public final class VirtualuiCreateDemo {
         ScriptValue scriptValue41 = scriptContext.getClassOrVar("ui");
         if (scriptValue41 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"speed_track_bg"));
-            arrayList.add(ScriptValue.of((String)"cml:create_scroll_track"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, "speed_track_bg"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, "cml:create_scroll_track"));
             arrayList.add(ScriptValue.of((double)(-2.0)));
             arrayList.add(ScriptValue.of((double)(-1.4)));
-            arrayList.add(ScriptValue.of((double)2.4));
-            arrayList.add(ScriptValue.of((double)0.3));
-            arrayList.add(ScriptValue.of((String)""));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 2.4));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 0.3));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, ""));
             arrayList.add(ScriptValue.of((double)(-0.3)));
             v39 = PolyDispatch.bootstrapCall("memberCall", "image", (ScriptValue)scriptValue41, arrayList, (ScriptContext)scriptContext);
         } else {
@@ -484,15 +488,15 @@ public final class VirtualuiCreateDemo {
         ScriptValue scriptValue42 = scriptContext.getClassOrVar("ui");
         if (scriptValue42 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"speed_scrollbar"));
-            arrayList.add(ScriptValue.of((boolean)false));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, "speed_scrollbar"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constBool("b", MethodHandles.lookup(), "constBool", VirtualuiCreateDemo.class, 0));
             arrayList.add(ScriptValue.of((double)(-2.0)));
             arrayList.add(ScriptValue.of((double)(-1.4)));
-            arrayList.add(ScriptValue.of((double)2.4));
-            arrayList.add(ScriptValue.of((double)0.4));
-            arrayList.add(ScriptValue.of((double)0.5));
-            arrayList.add(ScriptValue.of((String)"examples/virtualui_create_demo.pf:on_speed_change"));
-            arrayList.add(ScriptValue.of((String)"cml:create_scroll_handle"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 2.4));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 0.4));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 0.5));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, "examples/virtualui_create_demo.pf:on_speed_change"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, "cml:create_scroll_handle"));
             v40 = PolyDispatch.bootstrapCall("memberCall", "scrollbar", (ScriptValue)scriptValue42, arrayList, (ScriptContext)scriptContext);
         } else {
             v40 = ScriptValue.NULL;
@@ -500,7 +504,7 @@ public final class VirtualuiCreateDemo {
         ScriptValue scriptValue43 = scriptContext.getClassOrVar("ui");
         if (scriptValue43 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"examples/virtualui_create_demo.pf:on_scrollbar_armed"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, "examples/virtualui_create_demo.pf:on_scrollbar_armed"));
             v41 = PolyDispatch.bootstrapCall("memberCall", "on_hover", (ScriptValue)scriptValue43, arrayList, (ScriptContext)scriptContext);
         } else {
             v41 = ScriptValue.NULL;
@@ -508,7 +512,7 @@ public final class VirtualuiCreateDemo {
         ScriptValue scriptValue44 = scriptContext.getClassOrVar("ui");
         if (scriptValue44 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"examples/virtualui_create_demo.pf:on_scrollbar_released"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, "examples/virtualui_create_demo.pf:on_scrollbar_released"));
             v42 = PolyDispatch.bootstrapCall("memberCall", "on_unhover", (ScriptValue)scriptValue44, arrayList, (ScriptContext)scriptContext);
         } else {
             v42 = ScriptValue.NULL;
@@ -516,17 +520,17 @@ public final class VirtualuiCreateDemo {
         ScriptValue scriptValue45 = scriptContext.getClassOrVar("ui");
         if (scriptValue45 != ScriptValue.NULL) {
             ArrayList<Object> arrayList = new ArrayList<Object>();
-            arrayList.add(ScriptValue.of((String)"mode_select"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, "mode_select"));
             ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
-            arrayList2.add(ScriptValue.of((String)"Auto"));
-            arrayList2.add(ScriptValue.of((String)"Manual"));
-            arrayList2.add(ScriptValue.of((String)"Off"));
+            arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, "Auto"));
+            arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, "Manual"));
+            arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, "Off"));
             arrayList.add(new ScriptValue.Array(arrayList2));
-            arrayList.add(ScriptValue.of((String)"<white>\u25c0 <gold>${VUISelect.value()}</gold> \u25b6"));
-            arrayList.add(ScriptValue.of((double)1.8));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, "<white>\u25c0 <gold>${VUISelect.value()}</gold> \u25b6"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 1.8));
             arrayList.add(ScriptValue.of((double)(-1.4)));
-            arrayList.add(ScriptValue.of((double)0.0));
-            arrayList.add(ScriptValue.of((String)"examples/virtualui_create_demo.pf:on_mode_change"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 0.0));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, "examples/virtualui_create_demo.pf:on_mode_change"));
             v43 = PolyDispatch.bootstrapCall("memberCall", "select", (ScriptValue)scriptValue45, arrayList, (ScriptContext)scriptContext);
         } else {
             v43 = ScriptValue.NULL;
@@ -534,13 +538,13 @@ public final class VirtualuiCreateDemo {
         ScriptValue scriptValue46 = scriptContext.getClassOrVar("ui");
         if (scriptValue46 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"queue_progress"));
-            arrayList.add(ScriptValue.of((boolean)false));
-            arrayList.add(ScriptValue.of((double)0.0));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, "queue_progress"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constBool("b", MethodHandles.lookup(), "constBool", VirtualuiCreateDemo.class, 0));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 0.0));
             arrayList.add(ScriptValue.of((double)(-1.9)));
-            arrayList.add(ScriptValue.of((double)3.2));
-            arrayList.add(ScriptValue.of((double)0.35));
-            arrayList.add(ScriptValue.of((double)0.35));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 3.2));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 0.35));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 0.35));
             v44 = PolyDispatch.bootstrapCall("memberCall", "progress", (ScriptValue)scriptValue46, arrayList, (ScriptContext)scriptContext);
         } else {
             v44 = ScriptValue.NULL;
@@ -548,9 +552,9 @@ public final class VirtualuiCreateDemo {
         ScriptValue scriptValue47 = scriptContext.getClassOrVar("ui");
         if (scriptValue47 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"status"));
-            arrayList.add(ScriptValue.of((String)"<gray>Hover a button to see its id in the actionbar"));
-            arrayList.add(ScriptValue.of((double)0.0));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, "status"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, "<gray>Hover a button to see its id in the actionbar"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 0.0));
             arrayList.add(ScriptValue.of((double)(-2.4)));
             v45 = PolyDispatch.bootstrapCall("memberCall", "label", (ScriptValue)scriptValue47, arrayList, (ScriptContext)scriptContext);
         } else {
@@ -677,8 +681,8 @@ public final class VirtualuiCreateDemo {
         if (scriptValue2 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
             arrayList.add(scriptContext.getClassOrVar("Player"));
-            arrayList.add(ScriptValue.of((String)"queue_progress"));
-            arrayList.add(ScriptValue.of((double)1.0));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, "queue_progress"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 1.0));
             v1 = PolyDispatch.bootstrapCall("memberCall", "set_progress", (ScriptValue)scriptValue2, arrayList, (ScriptContext)scriptContext);
         } else {
             v1 = ScriptValue.NULL;
@@ -708,8 +712,8 @@ public final class VirtualuiCreateDemo {
         if (scriptValue2 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
             arrayList.add(scriptContext.getClassOrVar("Player"));
-            arrayList.add(ScriptValue.of((String)"queue_progress"));
-            arrayList.add(ScriptValue.of((double)0.0));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, "queue_progress"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 0.0));
             v1 = PolyDispatch.bootstrapCall("memberCall", "set_progress", (ScriptValue)scriptValue2, arrayList, (ScriptContext)scriptContext);
         } else {
             v1 = ScriptValue.NULL;
@@ -739,8 +743,8 @@ public final class VirtualuiCreateDemo {
         if (scriptValue2 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
             arrayList.add(scriptContext.getClassOrVar("Player"));
-            arrayList.add(ScriptValue.of((String)"queue_progress"));
-            arrayList.add(ScriptValue.of((double)0.75));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, "queue_progress"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 0.75));
             v1 = PolyDispatch.bootstrapCall("memberCall", "set_progress", (ScriptValue)scriptValue2, arrayList, (ScriptContext)scriptContext);
         } else {
             v1 = ScriptValue.NULL;
@@ -775,8 +779,8 @@ public final class VirtualuiCreateDemo {
         if (scriptValue2 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
             arrayList.add(scriptContext.getClassOrVar("Player"));
-            arrayList.add(ScriptValue.of((String)"queue_progress"));
-            arrayList.add(ScriptValue.of((double)0.5));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, "queue_progress"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 0.5));
             v1 = PolyDispatch.bootstrapCall("memberCall", "set_progress", (ScriptValue)scriptValue2, arrayList, (ScriptContext)scriptContext);
         } else {
             v1 = ScriptValue.NULL;
@@ -806,8 +810,8 @@ public final class VirtualuiCreateDemo {
         if (scriptValue2 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
             arrayList.add(scriptContext.getClassOrVar("Player"));
-            arrayList.add(ScriptValue.of((String)"queue_progress"));
-            arrayList.add(ScriptValue.of((double)0.25));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", VirtualuiCreateDemo.class, "queue_progress"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", VirtualuiCreateDemo.class, 0.25));
             v1 = PolyDispatch.bootstrapCall("memberCall", "set_progress", (ScriptValue)scriptValue2, arrayList, (ScriptContext)scriptContext);
         } else {
             v1 = ScriptValue.NULL;

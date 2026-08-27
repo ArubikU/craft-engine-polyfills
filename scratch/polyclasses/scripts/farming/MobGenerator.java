@@ -24,8 +24,12 @@ import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
 import dev.arubik.craftengine.script.ScriptValue;
 import java.lang.invoke.CallSite;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 
+/*
+ * Uses jvm11+ dynamic constants - pseudocode provided - see https://www.benf.org/other/cfr/dynamic-constants.html
+ */
 public final class MobGenerator {
     private static volatile ScriptContext FILE_SCOPE;
 
@@ -70,38 +74,38 @@ public final class MobGenerator {
             ScriptValue scriptValue4 = ScriptValue.of((double)1.0);
             builder.val("mob_idx", scriptValue4);
         }
-        ScriptValue scriptValue5 = ScriptValue.of((String)"minecraft:zombie");
+        ScriptValue scriptValue5 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", MobGenerator.class, "minecraft:zombie");
         builder.val("mob_type", scriptValue5);
-        if (ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("mob_idx"), (ScriptValue)ScriptValue.of((double)2.0))) {
-            ScriptValue scriptValue6 = ScriptValue.of((String)"minecraft:skeleton");
+        if (ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("mob_idx"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", MobGenerator.class, 2.0)))) {
+            ScriptValue scriptValue6 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", MobGenerator.class, "minecraft:skeleton");
             builder.val("mob_type", scriptValue6);
         }
-        if (ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("mob_idx"), (ScriptValue)ScriptValue.of((double)3.0))) {
-            ScriptValue scriptValue7 = ScriptValue.of((String)"minecraft:spider");
+        if (ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("mob_idx"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", MobGenerator.class, 3.0)))) {
+            ScriptValue scriptValue7 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", MobGenerator.class, "minecraft:spider");
             builder.val("mob_type", scriptValue7);
         }
-        if (ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("mob_idx"), (ScriptValue)ScriptValue.of((double)4.0))) {
-            ScriptValue scriptValue8 = ScriptValue.of((String)"minecraft:wither_skeleton");
+        if (ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("mob_idx"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", MobGenerator.class, 4.0)))) {
+            ScriptValue scriptValue8 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", MobGenerator.class, "minecraft:wither_skeleton");
             builder.val("mob_type", scriptValue8);
         }
-        if (ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("mob_idx"), (ScriptValue)ScriptValue.of((double)5.0))) {
-            ScriptValue scriptValue9 = ScriptValue.of((String)"minecraft:creeper");
+        if (ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("mob_idx"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", MobGenerator.class, 5.0)))) {
+            ScriptValue scriptValue9 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", MobGenerator.class, "minecraft:creeper");
             builder.val("mob_type", scriptValue9);
         }
-        if (ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("mob_idx"), (ScriptValue)ScriptValue.of((double)6.0))) {
-            ScriptValue scriptValue10 = ScriptValue.of((String)"minecraft:piglin");
+        if (ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("mob_idx"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", MobGenerator.class, 6.0)))) {
+            ScriptValue scriptValue10 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", MobGenerator.class, "minecraft:piglin");
             builder.val("mob_type", scriptValue10);
         }
-        if (ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("mob_idx"), (ScriptValue)ScriptValue.of((double)7.0))) {
-            ScriptValue scriptValue11 = ScriptValue.of((String)"minecraft:enderman");
+        if (ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("mob_idx"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", MobGenerator.class, 7.0)))) {
+            ScriptValue scriptValue11 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", MobGenerator.class, "minecraft:enderman");
             builder.val("mob_type", scriptValue11);
         }
-        if (ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("mob_idx"), (ScriptValue)ScriptValue.of((double)8.0))) {
-            ScriptValue scriptValue12 = ScriptValue.of((String)"minecraft:iron_golem");
+        if (ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("mob_idx"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", MobGenerator.class, 8.0)))) {
+            ScriptValue scriptValue12 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", MobGenerator.class, "minecraft:iron_golem");
             builder.val("mob_type", scriptValue12);
         }
-        if (ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("mob_idx"), (ScriptValue)ScriptValue.of((double)9.0))) {
-            ScriptValue scriptValue13 = ScriptValue.of((String)"minecraft:slime");
+        if (ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("mob_idx"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", MobGenerator.class, 9.0)))) {
+            ScriptValue scriptValue13 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", MobGenerator.class, "minecraft:slime");
             builder.val("mob_type", scriptValue13);
         }
         ScriptValue scriptValue14 = (scriptValue = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? ((polyClassMachine_v4 = PolyClassMachine_v4.ofGuarded((ScriptValue)scriptValue)) != null ? polyClassMachine_v4.pg$120_container() : PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)scriptValue, (ScriptContext)scriptContext)) : ScriptValue.NULL;
@@ -131,11 +135,11 @@ public final class MobGenerator {
                 PolyClassMachine_v4 polyClassMachine_v46;
                 ScriptValue scriptValue16 = scriptContext.getClassOrVar("mob_type");
                 ScriptValue scriptValue17 = scriptContext.getClassOrVar("Machine");
-                ScriptValue scriptValue18 = ScriptFormula.addPolymorphic((ScriptValue)(scriptValue17 != ScriptValue.NULL ? ((polyClassMachine_v46 = PolyClassMachine_v4.ofGuarded((ScriptValue)scriptValue17)) != null ? polyClassMachine_v46.pg$199_x() : PolyDispatch.bootstrapGet("memberGet", "x", (ScriptValue)scriptValue17, (ScriptContext)scriptContext)) : ScriptValue.NULL), (ScriptValue)ScriptValue.of((double)0.5));
+                ScriptValue scriptValue18 = ScriptFormula.addPolymorphic((ScriptValue)(scriptValue17 != ScriptValue.NULL ? ((polyClassMachine_v46 = PolyClassMachine_v4.ofGuarded((ScriptValue)scriptValue17)) != null ? polyClassMachine_v46.pg$199_x() : PolyDispatch.bootstrapGet("memberGet", "x", (ScriptValue)scriptValue17, (ScriptContext)scriptContext)) : ScriptValue.NULL), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", MobGenerator.class, 0.5)));
                 ScriptValue scriptValue19 = scriptContext.getClassOrVar("Machine");
-                ScriptValue scriptValue20 = ScriptFormula.addPolymorphic((ScriptValue)(scriptValue19 != ScriptValue.NULL ? ((polyClassMachine_v45 = PolyClassMachine_v4.ofGuarded((ScriptValue)scriptValue19)) != null ? polyClassMachine_v45.pg$201_y() : PolyDispatch.bootstrapGet("memberGet", "y", (ScriptValue)scriptValue19, (ScriptContext)scriptContext)) : ScriptValue.NULL), (ScriptValue)ScriptValue.of((double)1.0));
+                ScriptValue scriptValue20 = ScriptFormula.addPolymorphic((ScriptValue)(scriptValue19 != ScriptValue.NULL ? ((polyClassMachine_v45 = PolyClassMachine_v4.ofGuarded((ScriptValue)scriptValue19)) != null ? polyClassMachine_v45.pg$201_y() : PolyDispatch.bootstrapGet("memberGet", "y", (ScriptValue)scriptValue19, (ScriptContext)scriptContext)) : ScriptValue.NULL), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", MobGenerator.class, 1.0)));
                 ScriptValue scriptValue21 = scriptContext.getClassOrVar("Machine");
-                ScriptValue scriptValue22 = ScriptFormula.addPolymorphic((ScriptValue)(scriptValue21 != ScriptValue.NULL ? ((polyClassMachine_v44 = PolyClassMachine_v4.ofGuarded((ScriptValue)scriptValue21)) != null ? polyClassMachine_v44.pg$205_z() : PolyDispatch.bootstrapGet("memberGet", "z", (ScriptValue)scriptValue21, (ScriptContext)scriptContext)) : ScriptValue.NULL), (ScriptValue)ScriptValue.of((double)0.5));
+                ScriptValue scriptValue22 = ScriptFormula.addPolymorphic((ScriptValue)(scriptValue21 != ScriptValue.NULL ? ((polyClassMachine_v44 = PolyClassMachine_v4.ofGuarded((ScriptValue)scriptValue21)) != null ? polyClassMachine_v44.pg$205_z() : PolyDispatch.bootstrapGet("memberGet", "z", (ScriptValue)scriptValue21, (ScriptContext)scriptContext)) : ScriptValue.NULL), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", MobGenerator.class, 0.5)));
                 if (scriptValue15 instanceof ScriptValue.Obj && (object5 = (obj4 = (ScriptValue.Obj)scriptValue15).instance()) != null && !(object5 instanceof PolyClass) && obj4.typeName().equals("World")) {
                     PolyClassWorld polyClassWorld = new PolyClassWorld(object5);
                     v2 = polyClassWorld.tm$8_spawn_entity(scriptValue16.asStr(), scriptValue18.asNum(), scriptValue20.asNum(), scriptValue22.asNum());

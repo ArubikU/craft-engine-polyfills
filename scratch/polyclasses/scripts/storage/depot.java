@@ -26,8 +26,12 @@ import dev.arubik.craftengine.script.ScriptFormula;
 import dev.arubik.craftengine.script.ScriptProgram;
 import dev.arubik.craftengine.script.ScriptValue;
 import java.lang.invoke.CallSite;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 
+/*
+ * Uses jvm11+ dynamic constants - pseudocode provided - see https://www.benf.org/other/cfr/dynamic-constants.html
+ */
 public final class Depot {
     private static volatile ScriptContext FILE_SCOPE;
 
@@ -143,7 +147,7 @@ public final class Depot {
             var57_53 = new ArrayList<CallSite>();
             var57_53.add(var56_52);
             if (ScriptFormula.callBuiltin((String)"is_empty", var57_53, (ScriptContext)var1_1).asBool()) {
-                v6 = ScriptValue.of((double)0.0);
+                v6 =  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Depot.class, 0.0);
             } else {
                 var58_54 = new ArrayList<CallSite>();
                 var58_54.add(var56_52);

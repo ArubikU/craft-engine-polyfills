@@ -24,9 +24,13 @@ import dev.arubik.craftengine.script.ScriptFormula;
 import dev.arubik.craftengine.script.ScriptProgram;
 import dev.arubik.craftengine.script.ScriptValue;
 import java.lang.invoke.CallSite;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.List;
 
+/*
+ * Uses jvm11+ dynamic constants - pseudocode provided - see https://www.benf.org/other/cfr/dynamic-constants.html
+ */
 public final class ItemTrash {
     private static volatile ScriptContext FILE_SCOPE;
 
@@ -43,7 +47,7 @@ public final class ItemTrash {
         ScriptValue scriptValue;
         ScriptContext scriptContext = builder.peek();
         ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-        arrayList.add(ScriptValue.of((double)27.0));
+        arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", ItemTrash.class, 27.0));
         List list = ScriptProgram.elementsOf((ScriptValue)ScriptFormula.callBuiltin((String)"range", arrayList, (ScriptContext)scriptContext));
         if (list != null) {
             for (ScriptValue scriptValue2 : list) {

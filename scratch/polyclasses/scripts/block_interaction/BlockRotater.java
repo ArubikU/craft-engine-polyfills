@@ -14,8 +14,12 @@ import dev.arubik.craftengine.script.PolyClassMachine_v4;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptValue;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 
+/*
+ * Uses jvm11+ dynamic constants - pseudocode provided - see https://www.benf.org/other/cfr/dynamic-constants.html
+ */
 public final class BlockRotater {
     private static volatile ScriptContext FILE_SCOPE;
 
@@ -39,7 +43,7 @@ public final class BlockRotater {
             ScriptValue scriptValue4 = scriptContext.getClassOrVar("block");
             if (scriptValue4 != ScriptValue.NULL) {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-                arrayList.add(ScriptValue.of((String)"facing"));
+                arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", BlockRotater.class, "facing"));
                 object = PolyDispatch.bootstrapCall("memberCall", "has_property", (ScriptValue)scriptValue4, arrayList, (ScriptContext)scriptContext);
             } else {
                 object = ScriptValue.NULL;
@@ -48,7 +52,7 @@ public final class BlockRotater {
                 ScriptValue scriptValue5 = scriptContext.getClassOrVar("block");
                 if (scriptValue5 != ScriptValue.NULL) {
                     ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-                    arrayList.add(ScriptValue.of((String)"facing"));
+                    arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", BlockRotater.class, "facing"));
                     v1 = PolyDispatch.bootstrapCall("memberCall", "cycle_prop", (ScriptValue)scriptValue5, arrayList, (ScriptContext)scriptContext);
                 } else {
                     v1 = ScriptValue.NULL;
@@ -58,7 +62,7 @@ public final class BlockRotater {
                 ScriptValue scriptValue6 = scriptContext.getClassOrVar("block");
                 if (scriptValue6 != ScriptValue.NULL) {
                     ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-                    arrayList.add(ScriptValue.of((String)"horizontal_facing"));
+                    arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", BlockRotater.class, "horizontal_facing"));
                     object2 = PolyDispatch.bootstrapCall("memberCall", "has_property", (ScriptValue)scriptValue6, arrayList, (ScriptContext)scriptContext);
                 } else {
                     object2 = ScriptValue.NULL;
@@ -67,7 +71,7 @@ public final class BlockRotater {
                     ScriptValue scriptValue7 = scriptContext.getClassOrVar("block");
                     if (scriptValue7 != ScriptValue.NULL) {
                         ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-                        arrayList.add(ScriptValue.of((String)"horizontal_facing"));
+                        arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", BlockRotater.class, "horizontal_facing"));
                         v3 = PolyDispatch.bootstrapCall("memberCall", "cycle_prop", (ScriptValue)scriptValue7, arrayList, (ScriptContext)scriptContext);
                     } else {
                         v3 = ScriptValue.NULL;

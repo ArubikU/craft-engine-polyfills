@@ -19,8 +19,12 @@ import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
 import dev.arubik.craftengine.script.ScriptValue;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 
+/*
+ * Uses jvm11+ dynamic constants - pseudocode provided - see https://www.benf.org/other/cfr/dynamic-constants.html
+ */
 public final class RedstoneCounter {
     private static volatile ScriptContext FILE_SCOPE;
 
@@ -81,7 +85,7 @@ public final class RedstoneCounter {
         } else {
             v2 = ScriptValue.NULL;
         }
-        if (d > 0.0 && ScriptFormula.valuesEqual((ScriptValue)scriptValue4, (ScriptValue)ScriptValue.of((double)0.0))) {
+        if (d > 0.0 && ScriptFormula.valuesEqual((ScriptValue)scriptValue4, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", RedstoneCounter.class, 0.0)))) {
             Object object5;
             ScriptValue scriptValue7;
             Object object6;
@@ -127,7 +131,7 @@ public final class RedstoneCounter {
             } else {
                 object5 = ScriptValue.NULL;
             }
-            ScriptValue scriptValue11 = ScriptFormula.addPolymorphic((ScriptValue)object5, (ScriptValue)ScriptValue.of((double)1.0));
+            ScriptValue scriptValue11 = ScriptFormula.addPolymorphic((ScriptValue)object5, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", RedstoneCounter.class, 1.0)));
             builder.val("count", scriptValue11);
             if (scriptValue11.asNum() >= scriptContext.getNum("max_count")) {
                 ScriptValue scriptValue12 = scriptContext.getClassOrVar("Machine");
@@ -136,7 +140,7 @@ public final class RedstoneCounter {
                     Object object9;
                     String string = "count";
                     String string6 = "int";
-                    ScriptValue scriptValue13 = ScriptValue.of((double)0.0);
+                    ScriptValue scriptValue13 =  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", RedstoneCounter.class, 0.0);
                     if (scriptValue12 instanceof ScriptValue.Obj && (object9 = (obj = (ScriptValue.Obj)scriptValue12).instance()) != null && !(object9 instanceof PolyClass) && obj.typeName().equals("Machine")) {
                         PolyClassMachine_v4 polyClassMachine_v46 = new PolyClassMachine_v4(object9);
                         v5 = ScriptValue.of((boolean)polyClassMachine_v46.tm$82_set_typed(string, string6, scriptValue13));

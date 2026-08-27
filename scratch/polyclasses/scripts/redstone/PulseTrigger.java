@@ -19,8 +19,12 @@ import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
 import dev.arubik.craftengine.script.ScriptValue;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 
+/*
+ * Uses jvm11+ dynamic constants - pseudocode provided - see https://www.benf.org/other/cfr/dynamic-constants.html
+ */
 public final class PulseTrigger {
     private static volatile ScriptContext FILE_SCOPE;
 
@@ -87,29 +91,29 @@ public final class PulseTrigger {
         double d2 = 0.0;
         ScriptValue scriptValue8 = ScriptValue.of((double)0.0);
         builder.val("fire", scriptValue8);
-        if (ScriptFormula.valuesEqual((ScriptValue)scriptValue3, (ScriptValue)ScriptValue.of((double)0.0)) && d == 1.0 && ScriptFormula.valuesEqual((ScriptValue)scriptValue5, (ScriptValue)ScriptValue.of((double)0.0))) {
+        if (ScriptFormula.valuesEqual((ScriptValue)scriptValue3, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", PulseTrigger.class, 0.0))) && d == 1.0 && ScriptFormula.valuesEqual((ScriptValue)scriptValue5, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", PulseTrigger.class, 0.0)))) {
             double d3 = 1.0;
             ScriptValue scriptValue9 = ScriptValue.of((double)1.0);
             builder.val("fire", scriptValue9);
         }
-        if (ScriptFormula.valuesEqual((ScriptValue)scriptValue3, (ScriptValue)ScriptValue.of((double)1.0)) && d == 0.0 && ScriptFormula.valuesEqual((ScriptValue)scriptValue5, (ScriptValue)ScriptValue.of((double)1.0))) {
+        if (ScriptFormula.valuesEqual((ScriptValue)scriptValue3, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", PulseTrigger.class, 1.0))) && d == 0.0 && ScriptFormula.valuesEqual((ScriptValue)scriptValue5, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", PulseTrigger.class, 1.0)))) {
             double d4 = 1.0;
             ScriptValue scriptValue10 = ScriptValue.of((double)1.0);
             builder.val("fire", scriptValue10);
         }
-        if (ScriptFormula.valuesEqual((ScriptValue)scriptValue3, (ScriptValue)ScriptValue.of((double)2.0)) && ScriptFormula.valuesEqual((ScriptValue)ScriptValue.of((double)d), (ScriptValue)scriptValue5) ^ true) {
+        if (ScriptFormula.valuesEqual((ScriptValue)scriptValue3, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", PulseTrigger.class, 2.0))) && ScriptFormula.valuesEqual((ScriptValue)ScriptValue.of((double)d), (ScriptValue)scriptValue5) ^ true) {
             double d5 = 1.0;
             ScriptValue scriptValue11 = ScriptValue.of((double)1.0);
             builder.val("fire", scriptValue11);
         }
-        if (ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("fire"), (ScriptValue)ScriptValue.of((double)1.0))) {
+        if (ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("fire"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", PulseTrigger.class, 1.0)))) {
             ScriptValue scriptValue12 = scriptContext.getClassOrVar("Machine");
             if (scriptValue12 != ScriptValue.NULL) {
                 ScriptValue.Obj obj;
                 Object object7;
                 String string = "pulse_t";
                 String string4 = "int";
-                ScriptValue scriptValue13 = ScriptValue.of((double)2.0);
+                ScriptValue scriptValue13 =  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", PulseTrigger.class, 2.0);
                 if (scriptValue12 instanceof ScriptValue.Obj && (object7 = (obj = (ScriptValue.Obj)scriptValue12).instance()) != null && !(object7 instanceof PolyClass) && obj.typeName().equals("Machine")) {
                     PolyClassMachine_v4 polyClassMachine_v44 = new PolyClassMachine_v4(object7);
                     v3 = ScriptValue.of((boolean)polyClassMachine_v44.tm$82_set_typed(string, string4, scriptValue13));

@@ -22,8 +22,12 @@ import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
 import dev.arubik.craftengine.script.ScriptValue;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 
+/*
+ * Uses jvm11+ dynamic constants - pseudocode provided - see https://www.benf.org/other/cfr/dynamic-constants.html
+ */
 public final class BeltUtils {
     private static volatile ScriptContext FILE_SCOPE;
 
@@ -39,50 +43,50 @@ public final class BeltUtils {
         ScriptContext scriptContext = builder.peek();
         if (scriptContext.getStr("face").equals("north")) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((double)0.0));
-            arrayList.add(ScriptValue.of((double)0.0));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", BeltUtils.class, 0.0));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", BeltUtils.class, 0.0));
             arrayList.add(ScriptValue.of((double)(-1.0)));
             return new ScriptValue.Array(arrayList);
         }
         if (scriptContext.getStr("face").equals("south")) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((double)0.0));
-            arrayList.add(ScriptValue.of((double)0.0));
-            arrayList.add(ScriptValue.of((double)1.0));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", BeltUtils.class, 0.0));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", BeltUtils.class, 0.0));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", BeltUtils.class, 1.0));
             return new ScriptValue.Array(arrayList);
         }
         if (scriptContext.getStr("face").equals("east")) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((double)1.0));
-            arrayList.add(ScriptValue.of((double)0.0));
-            arrayList.add(ScriptValue.of((double)0.0));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", BeltUtils.class, 1.0));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", BeltUtils.class, 0.0));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", BeltUtils.class, 0.0));
             return new ScriptValue.Array(arrayList);
         }
         if (scriptContext.getStr("face").equals("west")) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
             arrayList.add(ScriptValue.of((double)(-1.0)));
-            arrayList.add(ScriptValue.of((double)0.0));
-            arrayList.add(ScriptValue.of((double)0.0));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", BeltUtils.class, 0.0));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", BeltUtils.class, 0.0));
             return new ScriptValue.Array(arrayList);
         }
         if (scriptContext.getStr("face").equals("up")) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((double)0.0));
-            arrayList.add(ScriptValue.of((double)1.0));
-            arrayList.add(ScriptValue.of((double)0.0));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", BeltUtils.class, 0.0));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", BeltUtils.class, 1.0));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", BeltUtils.class, 0.0));
             return new ScriptValue.Array(arrayList);
         }
         if (scriptContext.getStr("face").equals("down")) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((double)0.0));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", BeltUtils.class, 0.0));
             arrayList.add(ScriptValue.of((double)(-1.0)));
-            arrayList.add(ScriptValue.of((double)0.0));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", BeltUtils.class, 0.0));
             return new ScriptValue.Array(arrayList);
         }
         ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-        arrayList.add(ScriptValue.of((double)0.0));
-        arrayList.add(ScriptValue.of((double)0.0));
-        arrayList.add(ScriptValue.of((double)0.0));
+        arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", BeltUtils.class, 0.0));
+        arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", BeltUtils.class, 0.0));
+        arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", BeltUtils.class, 0.0));
         return new ScriptValue.Array(arrayList);
     }
 
@@ -92,10 +96,10 @@ public final class BeltUtils {
         ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
         arrayList.add(scriptContext.getClassOrVar("item"));
         if (ScriptFormula.callBuiltin((String)"is_empty", arrayList, (ScriptContext)scriptContext).asBool()) {
-            return ScriptValue.of((boolean)false);
+            return  /* dynamic constant */ (ScriptValue)ScriptValue.constBool("b", MethodHandles.lookup(), "constBool", BeltUtils.class, 0);
         }
         if (ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("validator"), (ScriptValue)scriptContext.getClassOrVar("null"))) {
-            return ScriptValue.of((boolean)true);
+            return  /* dynamic constant */ (ScriptValue)ScriptValue.constBool("b", MethodHandles.lookup(), "constBool", BeltUtils.class, 1);
         }
         ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
         arrayList2.add(scriptContext.getClassOrVar("validator"));
@@ -134,9 +138,9 @@ public final class BeltUtils {
         var0.val("off", var3_3);
         var4_4 = var1_1.getClassOrVar("Machine");
         if (var4_4 != ScriptValue.NULL) {
-            var5_5 = ScriptFormula.subscriptGet((ScriptValue)var3_3, (ScriptValue)ScriptValue.of((double)0.0));
-            var6_6 = ScriptFormula.subscriptGet((ScriptValue)var3_3, (ScriptValue)ScriptValue.of((double)1.0));
-            var7_7 = ScriptFormula.subscriptGet((ScriptValue)var3_3, (ScriptValue)ScriptValue.of((double)2.0));
+            var5_5 = ScriptFormula.subscriptGet((ScriptValue)var3_3, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", BeltUtils.class, 0.0)));
+            var6_6 = ScriptFormula.subscriptGet((ScriptValue)var3_3, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", BeltUtils.class, 1.0)));
+            var7_7 = ScriptFormula.subscriptGet((ScriptValue)var3_3, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", BeltUtils.class, 2.0)));
             if (var4_4 instanceof ScriptValue.Obj && (var9_9 = (var8_8 = (ScriptValue.Obj)var4_4).instance()) != null && !(var9_9 instanceof PolyClass) && var8_8.typeName().equals("Machine")) {
                 var10_10 = new PolyClassMachine_v4(var9_9);
                 v0 /* !! */  = var10_10.tm$62_belt_at(var5_5.asNum(), var6_6.asNum(), var7_7.asNum());
@@ -168,7 +172,7 @@ public final class BeltUtils {
             var15_15 = var1_1.getClassOrVar("Item");
             if (var15_15 != ScriptValue.NULL) {
                 var16_16 = new ArrayList<ScriptValue>();
-                var16_16.add(ScriptValue.of((String)"minecraft:air"));
+                var16_16.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", BeltUtils.class, "minecraft:air"));
                 v3 /* !! */  = var15_15 instanceof ScriptValue.Obj && (var18_18 = (var17_17 = (ScriptValue.Obj)var15_15).instance()) != null && !(var18_18 instanceof PolyClass) && var17_17.typeName().equals("Item") ? new PolyClassItem(var18_18).um$21_create(var16_16) : PolyDispatch.bootstrapCall("memberCall", "create", (ScriptValue)var15_15, var16_16, (ScriptContext)var1_1);
             } else {
                 v3 /* !! */  = ScriptValue.NULL;
@@ -191,7 +195,7 @@ public final class BeltUtils {
             var23_23 = var1_1.getClassOrVar("Item");
             if (var23_23 != ScriptValue.NULL) {
                 var24_24 = new ArrayList<ScriptValue>();
-                var24_24.add(ScriptValue.of((String)"minecraft:air"));
+                var24_24.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", BeltUtils.class, "minecraft:air"));
                 v5 /* !! */  = var23_23 instanceof ScriptValue.Obj && (var26_26 = (var25_25 = (ScriptValue.Obj)var23_23).instance()) != null && !(var26_26 instanceof PolyClass) && var25_25.typeName().equals("Item") ? new PolyClassItem(var26_26).um$21_create(var24_24) : PolyDispatch.bootstrapCall("memberCall", "create", (ScriptValue)var23_23, var24_24, (ScriptContext)var1_1);
             } else {
                 v5 /* !! */  = ScriptValue.NULL;
@@ -257,9 +261,9 @@ public final class BeltUtils {
         if (scriptValue2 != ScriptValue.NULL) {
             ScriptValue.Obj obj;
             Object object3;
-            ScriptValue scriptValue3 = ScriptFormula.subscriptGet((ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((double)0.0));
-            ScriptValue scriptValue4 = ScriptFormula.subscriptGet((ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((double)1.0));
-            ScriptValue scriptValue5 = ScriptFormula.subscriptGet((ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((double)2.0));
+            ScriptValue scriptValue3 = ScriptFormula.subscriptGet((ScriptValue)scriptValue, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", BeltUtils.class, 0.0)));
+            ScriptValue scriptValue4 = ScriptFormula.subscriptGet((ScriptValue)scriptValue, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", BeltUtils.class, 1.0)));
+            ScriptValue scriptValue5 = ScriptFormula.subscriptGet((ScriptValue)scriptValue, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", BeltUtils.class, 2.0)));
             if (scriptValue2 instanceof ScriptValue.Obj && (object3 = (obj = (ScriptValue.Obj)scriptValue2).instance()) != null && !(object3 instanceof PolyClass) && obj.typeName().equals("Machine")) {
                 PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object3);
                 object2 = polyClassMachine_v4.tm$62_belt_at(scriptValue3.asNum(), scriptValue4.asNum(), scriptValue5.asNum());
@@ -298,9 +302,9 @@ public final class BeltUtils {
         if (scriptValue2 != ScriptValue.NULL) {
             ScriptValue.Obj obj;
             Object object3;
-            ScriptValue scriptValue3 = ScriptFormula.subscriptGet((ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((double)0.0));
-            ScriptValue scriptValue4 = ScriptFormula.subscriptGet((ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((double)1.0));
-            ScriptValue scriptValue5 = ScriptFormula.subscriptGet((ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((double)2.0));
+            ScriptValue scriptValue3 = ScriptFormula.subscriptGet((ScriptValue)scriptValue, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", BeltUtils.class, 0.0)));
+            ScriptValue scriptValue4 = ScriptFormula.subscriptGet((ScriptValue)scriptValue, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", BeltUtils.class, 1.0)));
+            ScriptValue scriptValue5 = ScriptFormula.subscriptGet((ScriptValue)scriptValue, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", BeltUtils.class, 2.0)));
             if (scriptValue2 instanceof ScriptValue.Obj && (object3 = (obj = (ScriptValue.Obj)scriptValue2).instance()) != null && !(object3 instanceof PolyClass) && obj.typeName().equals("Machine")) {
                 PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object3);
                 object2 = polyClassMachine_v4.tm$17_container_at(scriptValue3.asNum(), scriptValue4.asNum(), scriptValue5.asNum());
@@ -323,14 +327,14 @@ public final class BeltUtils {
                 ScriptValue.Obj obj;
                 Object object5;
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-                arrayList.add(ScriptValue.of((String)"minecraft:air"));
+                arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", BeltUtils.class, "minecraft:air"));
                 object4 = scriptValue7 instanceof ScriptValue.Obj && (object5 = (obj = (ScriptValue.Obj)scriptValue7).instance()) != null && !(object5 instanceof PolyClass) && obj.typeName().equals("Item") ? new PolyClassItem(object5).um$21_create(arrayList) : PolyDispatch.bootstrapCall("memberCall", "create", (ScriptValue)scriptValue7, arrayList, (ScriptContext)scriptContext);
             } else {
                 object4 = ScriptValue.NULL;
             }
             return object4;
         }
-        ScriptValue scriptValue8 = ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("amount"), (ScriptValue)scriptContext.getClassOrVar("null")) ? ScriptValue.of((double)64.0) : scriptContext.getClassOrVar("amount");
+        ScriptValue scriptValue8 = ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("amount"), (ScriptValue)scriptContext.getClassOrVar("null")) ? ( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", BeltUtils.class, 64.0)) : scriptContext.getClassOrVar("amount");
         builder.val("amt", scriptValue8);
         if (ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("validator"), (ScriptValue)scriptContext.getClassOrVar("null"))) {
             Object object6;
@@ -367,9 +371,9 @@ public final class BeltUtils {
         if (scriptValue2 != ScriptValue.NULL) {
             ScriptValue.Obj obj;
             Object object2;
-            ScriptValue scriptValue3 = ScriptFormula.subscriptGet((ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((double)0.0));
-            ScriptValue scriptValue4 = ScriptFormula.subscriptGet((ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((double)1.0));
-            ScriptValue scriptValue5 = ScriptFormula.subscriptGet((ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((double)2.0));
+            ScriptValue scriptValue3 = ScriptFormula.subscriptGet((ScriptValue)scriptValue, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", BeltUtils.class, 0.0)));
+            ScriptValue scriptValue4 = ScriptFormula.subscriptGet((ScriptValue)scriptValue, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", BeltUtils.class, 1.0)));
+            ScriptValue scriptValue5 = ScriptFormula.subscriptGet((ScriptValue)scriptValue, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", BeltUtils.class, 2.0)));
             if (scriptValue2 instanceof ScriptValue.Obj && (object2 = (obj = (ScriptValue.Obj)scriptValue2).instance()) != null && !(object2 instanceof PolyClass) && obj.typeName().equals("Machine")) {
                 PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object2);
                 object = polyClassMachine_v4.tm$17_container_at(scriptValue3.asNum(), scriptValue4.asNum(), scriptValue5.asNum());
@@ -386,7 +390,7 @@ public final class BeltUtils {
         ScriptValue scriptValue6 = object;
         builder.val("c", scriptValue6);
         if (ScriptFormula.valuesEqual((ScriptValue)scriptValue6, (ScriptValue)scriptContext.getClassOrVar("null"))) {
-            return ScriptValue.of((double)0.0);
+            return  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", BeltUtils.class, 0.0);
         }
         double d = 0.0;
         ScriptValue scriptValue7 = ScriptValue.of((double)0.0);
@@ -429,11 +433,11 @@ public final class BeltUtils {
                 arrayList.add((ScriptValue)object5);
                 scriptValue9 = ScriptFormula.callBuiltin((String)"item_count", arrayList, (ScriptContext)scriptContext);
             } else {
-                scriptValue9 = ScriptValue.of((double)0.0);
+                scriptValue9 =  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", BeltUtils.class, 0.0);
             }
             ScriptValue scriptValue14 = ScriptFormula.addPolymorphic((ScriptValue)scriptValue11, (ScriptValue)scriptValue9);
             builder.val("total", scriptValue14);
-            ScriptValue scriptValue15 = ScriptFormula.addPolymorphic((ScriptValue)scriptContext.getClassOrVar("i"), (ScriptValue)ScriptValue.of((double)1.0));
+            ScriptValue scriptValue15 = ScriptFormula.addPolymorphic((ScriptValue)scriptContext.getClassOrVar("i"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", BeltUtils.class, 1.0)));
             builder.val("i", scriptValue15);
         }
         return scriptContext.getClassOrVar("total");
@@ -451,9 +455,9 @@ public final class BeltUtils {
         if (scriptValue2 != ScriptValue.NULL) {
             ScriptValue.Obj obj;
             Object object3;
-            ScriptValue scriptValue3 = ScriptFormula.subscriptGet((ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((double)0.0));
-            ScriptValue scriptValue4 = ScriptFormula.subscriptGet((ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((double)1.0));
-            ScriptValue scriptValue5 = ScriptFormula.subscriptGet((ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((double)2.0));
+            ScriptValue scriptValue3 = ScriptFormula.subscriptGet((ScriptValue)scriptValue, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", BeltUtils.class, 0.0)));
+            ScriptValue scriptValue4 = ScriptFormula.subscriptGet((ScriptValue)scriptValue, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", BeltUtils.class, 1.0)));
+            ScriptValue scriptValue5 = ScriptFormula.subscriptGet((ScriptValue)scriptValue, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", BeltUtils.class, 2.0)));
             if (scriptValue2 instanceof ScriptValue.Obj && (object3 = (obj = (ScriptValue.Obj)scriptValue2).instance()) != null && !(object3 instanceof PolyClass) && obj.typeName().equals("Machine")) {
                 PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object3);
                 object2 = polyClassMachine_v4.tm$17_container_at(scriptValue3.asNum(), scriptValue4.asNum(), scriptValue5.asNum());

@@ -14,8 +14,12 @@ import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptProgram;
 import dev.arubik.craftengine.script.ScriptValue;
 import dev.arubik.craftengine.script.gen.FloorFunnelUtils;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 
+/*
+ * Uses jvm11+ dynamic constants - pseudocode provided - see https://www.benf.org/other/cfr/dynamic-constants.html
+ */
 public final class FloorFunnel {
     private static volatile ScriptContext FILE_SCOPE;
 
@@ -49,7 +53,7 @@ public final class FloorFunnel {
         arrayList.add("_floor_funnel_drop_held");
         ScriptProgram.applyImport((ScriptContext.Builder)builder, (String)"conveyor/floor_funnel_utils.pf", null, arrayList);
         ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(FloorFunnelUtils.fileScope()).copyFrom(scriptContext);
-        builder2.val("pull_above", ScriptValue.of((boolean)false));
+        builder2.val("pull_above",  /* dynamic constant */ (ScriptValue)ScriptValue.constBool("b", MethodHandles.lookup(), "constBool", FloorFunnel.class, 0));
         FloorFunnelUtils._floorFunnelTick((ScriptContext.Builder)builder2);
         FILE_SCOPE = builder.build();
     }

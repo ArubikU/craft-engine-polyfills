@@ -17,8 +17,12 @@ import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
 import dev.arubik.craftengine.script.ScriptValue;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 
+/*
+ * Uses jvm11+ dynamic constants - pseudocode provided - see https://www.benf.org/other/cfr/dynamic-constants.html
+ */
 public final class XpInfo {
     private static volatile ScriptContext FILE_SCOPE;
 
@@ -45,7 +49,7 @@ public final class XpInfo {
         ScriptValue scriptValue4 = scriptContext.getClassOrVar("tanks");
         if (scriptValue4 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((double)0.0));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", XpInfo.class, 0.0));
             object = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue4, arrayList, (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
@@ -55,12 +59,12 @@ public final class XpInfo {
 
     public static ScriptValue item(ScriptContext.Builder builder) {
         ScriptContext scriptContext = builder.peek();
-        return ScriptValue.of((String)"minecraft:experience_bottle");
+        return  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", XpInfo.class, "minecraft:experience_bottle");
     }
 
     public static ScriptValue name(ScriptContext.Builder builder) {
         ScriptContext scriptContext = builder.peek();
-        return ScriptValue.of((String)"<green>XP Collector");
+        return  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", XpInfo.class, "<green>XP Collector");
     }
 
     public static ScriptValue lore(ScriptContext.Builder builder) {
@@ -73,13 +77,13 @@ public final class XpInfo {
         builder.val("tank", scriptValue);
         if (ScriptFormula.valuesEqual((ScriptValue)scriptValue, (ScriptValue)scriptContext.getClassOrVar("null"))) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"<gray>No XP tank"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", XpInfo.class, "<gray>No XP tank"));
             return new ScriptValue.Array(arrayList);
         }
         ScriptValue scriptValue2 = scriptContext.getClassOrVar("tank");
         if (scriptValue2 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"level"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", XpInfo.class, "level"));
             object2 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue2, arrayList, (ScriptContext)scriptContext);
         } else {
             object2 = ScriptValue.NULL;
@@ -89,7 +93,7 @@ public final class XpInfo {
         ScriptValue scriptValue4 = scriptContext.getClassOrVar("tank");
         if (scriptValue4 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"capacity"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", XpInfo.class, "capacity"));
             object = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue4, arrayList, (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
@@ -100,7 +104,7 @@ public final class XpInfo {
         ScriptValue scriptValue6 = ScriptValue.of((double)d2);
         builder.val("pct", scriptValue6);
         ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-        arrayList.add(ScriptValue.of((String)"<gray>Absorbs nearby experience orbs."));
+        arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", XpInfo.class, "<gray>Absorbs nearby experience orbs."));
         arrayList.add(ScriptValue.of((String)("<gray>Stored: <white>" + ScriptFormula.numToStr((double)Math.floor(scriptValue3.asNum())) + " <gray>/ <white>" + ScriptFormula.numToStr((double)Math.floor(scriptValue5.asNum())) + " mB")));
         arrayList.add(ScriptValue.of((String)("<gray>Fill: <yellow>" + ScriptFormula.numToStr((double)d2) + "%")));
         return new ScriptValue.Array(arrayList);

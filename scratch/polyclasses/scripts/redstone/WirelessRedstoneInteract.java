@@ -21,8 +21,12 @@ import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
 import dev.arubik.craftengine.script.ScriptValue;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 
+/*
+ * Uses jvm11+ dynamic constants - pseudocode provided - see https://www.benf.org/other/cfr/dynamic-constants.html
+ */
 public final class WirelessRedstoneInteract {
     private static volatile ScriptContext FILE_SCOPE;
 
@@ -61,7 +65,7 @@ public final class WirelessRedstoneInteract {
             }
             ScriptValue scriptValue3 = object;
             builder.val("mode", scriptValue3);
-            double d = ScriptFormula.valuesEqual((ScriptValue)scriptValue3, (ScriptValue)ScriptValue.of((double)0.0)) ? 1.0 : 0.0;
+            double d = ScriptFormula.valuesEqual((ScriptValue)scriptValue3, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", WirelessRedstoneInteract.class, 0.0))) ? 1.0 : 0.0;
             ScriptValue scriptValue4 = ScriptValue.of((double)d);
             builder.val("new_mode", scriptValue4);
             ScriptValue scriptValue5 = scriptContext.getClassOrVar("Machine");
@@ -142,7 +146,7 @@ public final class WirelessRedstoneInteract {
             ScriptValue scriptValue10 = object;
             builder.val("ch", scriptValue10);
             double d = 16.0;
-            double d2 = 16.0 == 0.0 ? 0.0 : ScriptFormula.addPolymorphic((ScriptValue)scriptValue10, (ScriptValue)ScriptValue.of((double)1.0)).asNum() % d;
+            double d2 = 16.0 == 0.0 ? 0.0 : ScriptFormula.addPolymorphic((ScriptValue)scriptValue10, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", WirelessRedstoneInteract.class, 1.0))).asNum() % d;
             ScriptValue scriptValue11 = ScriptValue.of((double)d2);
             builder.val("new_ch", scriptValue11);
             ScriptValue scriptValue12 = scriptContext.getClassOrVar("Machine");

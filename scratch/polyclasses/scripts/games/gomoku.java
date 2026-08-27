@@ -24,9 +24,13 @@ import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
 import dev.arubik.craftengine.script.ScriptProgram;
 import dev.arubik.craftengine.script.ScriptValue;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.List;
 
+/*
+ * Uses jvm11+ dynamic constants - pseudocode provided - see https://www.benf.org/other/cfr/dynamic-constants.html
+ */
 public final class Gomoku {
     private static volatile ScriptContext FILE_SCOPE;
 
@@ -58,7 +62,7 @@ public final class Gomoku {
         ScriptValue scriptValue2 = scriptContext.getClassOrVar("pair");
         if (scriptValue2 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList4 = new ArrayList<ScriptValue>();
-            arrayList4.add(ScriptValue.of((double)0.0));
+            arrayList4.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 0.0));
             object2 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue2, arrayList4, (ScriptContext)scriptContext);
         } else {
             object2 = ScriptValue.NULL;
@@ -67,7 +71,7 @@ public final class Gomoku {
         ScriptValue scriptValue3 = scriptContext.getClassOrVar("pair");
         if (scriptValue3 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList5 = new ArrayList<ScriptValue>();
-            arrayList5.add(ScriptValue.of((double)1.0));
+            arrayList5.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 1.0));
             object = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue3, arrayList5, (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
@@ -77,10 +81,10 @@ public final class Gomoku {
 
     public static ScriptValue emptyBoard(ScriptContext.Builder builder) {
         ScriptContext scriptContext = builder.peek();
-        ScriptValue scriptValue = ScriptValue.of((String)"");
+        ScriptValue scriptValue =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Gomoku.class, "");
         builder.val("row", scriptValue);
         ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-        arrayList.add(ScriptValue.of((double)0.0));
+        arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 0.0));
         arrayList.add(scriptContext.getClassOrVar("BOARD_SIZE"));
         List list = ScriptProgram.elementsOf((ScriptValue)ScriptFormula.callBuiltin((String)"range", arrayList, (ScriptContext)scriptContext));
         if (list != null) {
@@ -90,10 +94,10 @@ public final class Gomoku {
                 builder.val("row", scriptValue3);
             }
         }
-        ScriptValue scriptValue4 = ScriptValue.of((String)"");
+        ScriptValue scriptValue4 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Gomoku.class, "");
         builder.val("board", scriptValue4);
         ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
-        arrayList2.add(ScriptValue.of((double)0.0));
+        arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 0.0));
         arrayList2.add(scriptContext.getClassOrVar("BOARD_SIZE"));
         List list2 = ScriptProgram.elementsOf((ScriptValue)ScriptFormula.callBuiltin((String)"range", arrayList2, (ScriptContext)scriptContext));
         if (list2 != null) {
@@ -120,12 +124,12 @@ public final class Gomoku {
         builder.val("idx", scriptValue);
         ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
         arrayList.add(scriptContext.getClassOrVar("board"));
-        arrayList.add(ScriptValue.of((double)0.0));
+        arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 0.0));
         arrayList.add(scriptValue);
         ScriptValue scriptValue2 = ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.callBuiltin((String)"substring", arrayList, (ScriptContext)scriptContext), (ScriptValue)scriptContext.getClassOrVar("val"));
         ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
         arrayList2.add(scriptContext.getClassOrVar("board"));
-        arrayList2.add(ScriptFormula.addPolymorphic((ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((double)1.0)));
+        arrayList2.add(ScriptFormula.addPolymorphic((ScriptValue)scriptValue, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 1.0))));
         ArrayList<ScriptValue> arrayList3 = new ArrayList<ScriptValue>();
         arrayList3.add(scriptContext.getClassOrVar("board"));
         arrayList2.add(ScriptFormula.callBuiltin((String)"len", arrayList3, (ScriptContext)scriptContext));
@@ -135,7 +139,7 @@ public final class Gomoku {
     public static ScriptValue isFull(ScriptContext.Builder builder) {
         ScriptContext scriptContext = builder.peek();
         ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-        arrayList.add(ScriptValue.of((double)0.0));
+        arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 0.0));
         arrayList.add(ScriptValue.of((double)(scriptContext.getNum("BOARD_SIZE") * scriptContext.getNum("BOARD_SIZE"))));
         List list = ScriptProgram.elementsOf((ScriptValue)ScriptFormula.callBuiltin((String)"range", arrayList, (ScriptContext)scriptContext));
         if (list != null) {
@@ -145,10 +149,10 @@ public final class Gomoku {
                 arrayList2.add(scriptContext.getClassOrVar("board"));
                 arrayList2.add(scriptContext.getClassOrVar("i"));
                 if (!ScriptFormula.valuesEqual((ScriptValue)ScriptFormula.callBuiltin((String)"char_at", arrayList2, (ScriptContext)scriptContext), (ScriptValue)scriptContext.getClassOrVar("CELL_EMPTY"))) continue;
-                return ScriptValue.of((boolean)false);
+                return  /* dynamic constant */ (ScriptValue)ScriptValue.constBool("b", MethodHandles.lookup(), "constBool", Gomoku.class, 0);
             }
         }
-        return ScriptValue.of((boolean)true);
+        return  /* dynamic constant */ (ScriptValue)ScriptValue.constBool("b", MethodHandles.lookup(), "constBool", Gomoku.class, 1);
     }
 
     /*
@@ -180,7 +184,7 @@ public final class Gomoku {
                 v0 = false;
             }
             if (!v0) break;
-            var9_8 = ScriptFormula.addPolymorphic((ScriptValue)var1_1.getClassOrVar("n"), (ScriptValue)ScriptValue.of((double)1.0));
+            var9_8 = ScriptFormula.addPolymorphic((ScriptValue)var1_1.getClassOrVar("n"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 1.0)));
             var0.val("n", var9_8);
             var10_9 = ScriptFormula.addPolymorphic((ScriptValue)var1_1.getClassOrVar("r"), (ScriptValue)var1_1.getClassOrVar("dr"));
             var0.val("r", var10_9);
@@ -194,19 +198,19 @@ public final class Gomoku {
         ScriptContext scriptContext = builder.peek();
         ArrayList<ScriptValue.Array> arrayList = new ArrayList<ScriptValue.Array>();
         ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
-        arrayList2.add(ScriptValue.of((double)0.0));
-        arrayList2.add(ScriptValue.of((double)1.0));
+        arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 0.0));
+        arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 1.0));
         arrayList.add(new ScriptValue.Array(arrayList2));
         ArrayList<ScriptValue> arrayList3 = new ArrayList<ScriptValue>();
-        arrayList3.add(ScriptValue.of((double)1.0));
-        arrayList3.add(ScriptValue.of((double)0.0));
+        arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 1.0));
+        arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 0.0));
         arrayList.add(new ScriptValue.Array(arrayList3));
         ArrayList<ScriptValue> arrayList4 = new ArrayList<ScriptValue>();
-        arrayList4.add(ScriptValue.of((double)1.0));
-        arrayList4.add(ScriptValue.of((double)1.0));
+        arrayList4.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 1.0));
+        arrayList4.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 1.0));
         arrayList.add(new ScriptValue.Array(arrayList4));
         ArrayList<ScriptValue> arrayList5 = new ArrayList<ScriptValue>();
-        arrayList5.add(ScriptValue.of((double)1.0));
+        arrayList5.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 1.0));
         arrayList5.add(ScriptValue.of((double)(-1.0)));
         arrayList.add(new ScriptValue.Array(arrayList5));
         ScriptValue.Array array = new ScriptValue.Array(arrayList);
@@ -220,7 +224,7 @@ public final class Gomoku {
                 ScriptValue scriptValue2 = scriptContext.getClassOrVar("d");
                 if (scriptValue2 != ScriptValue.NULL) {
                     ArrayList<ScriptValue> arrayList6 = new ArrayList<ScriptValue>();
-                    arrayList6.add(ScriptValue.of((double)0.0));
+                    arrayList6.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 0.0));
                     object2 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue2, arrayList6, (ScriptContext)scriptContext);
                 } else {
                     object2 = ScriptValue.NULL;
@@ -230,14 +234,14 @@ public final class Gomoku {
                 ScriptValue scriptValue4 = scriptContext.getClassOrVar("d");
                 if (scriptValue4 != ScriptValue.NULL) {
                     ArrayList<ScriptValue> arrayList7 = new ArrayList<ScriptValue>();
-                    arrayList7.add(ScriptValue.of((double)1.0));
+                    arrayList7.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 1.0));
                     object = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue4, arrayList7, (ScriptContext)scriptContext);
                 } else {
                     object = ScriptValue.NULL;
                 }
                 ScriptValue scriptValue5 = object;
                 builder.val("dc", scriptValue5);
-                ScriptValue scriptValue6 = ScriptValue.of((double)1.0);
+                ScriptValue scriptValue6 =  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 1.0);
                 ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
                 builder2.val("board", scriptContext.getClassOrVar("board"));
                 builder2.val("row", scriptContext.getClassOrVar("row"));
@@ -256,10 +260,10 @@ public final class Gomoku {
                 ScriptValue scriptValue8 = ScriptFormula.addPolymorphic((ScriptValue)scriptValue7, (ScriptValue)Gomoku.countDir(builder3));
                 builder.val("total", scriptValue8);
                 if (!(scriptValue8.asNum() >= scriptContext.getNum("WIN_LEN"))) continue;
-                return ScriptValue.of((boolean)true);
+                return  /* dynamic constant */ (ScriptValue)ScriptValue.constBool("b", MethodHandles.lookup(), "constBool", Gomoku.class, 1);
             }
         }
-        return ScriptValue.of((boolean)false);
+        return  /* dynamic constant */ (ScriptValue)ScriptValue.constBool("b", MethodHandles.lookup(), "constBool", Gomoku.class, 0);
     }
 
     public static ScriptValue boardKey(ScriptContext.Builder builder) {
@@ -361,7 +365,7 @@ public final class Gomoku {
         ScriptValue scriptValue = scriptContext.getClassOrVar("Cmd");
         if (scriptValue != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"opponent"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Gomoku.class, "opponent"));
             object2 = PolyDispatch.bootstrapCall("memberCall", "arg", (ScriptValue)scriptValue, arrayList, (ScriptContext)scriptContext);
         } else {
             object2 = ScriptValue.NULL;
@@ -506,7 +510,7 @@ public final class Gomoku {
         builder7.val("starter", (ScriptValue)(scriptValue18 != ScriptValue.NULL ? ((polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue18)) != null ? polyClassPlayer.pg$67_name() : PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue18, (ScriptContext)scriptContext)) : ScriptValue.NULL));
         ScriptValue scriptValue19 = scriptContext.getClassOrVar("target");
         builder7.val("opponent", (ScriptValue)(scriptValue19 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue19, (ScriptContext)scriptContext) : ScriptValue.NULL));
-        builder7.val("is_bot", ScriptValue.of((boolean)false));
+        builder7.val("is_bot",  /* dynamic constant */ (ScriptValue)ScriptValue.constBool("b", MethodHandles.lookup(), "constBool", Gomoku.class, 0));
         builder7.val("difficulty", scriptContext.getClassOrVar("DIFF_DEFAULT"));
         Gomoku.ensureGame(builder7);
         ScriptContext.Builder builder8 = ScriptContext.builder().copyFrom(scriptContext);
@@ -526,15 +530,15 @@ public final class Gomoku {
         ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
         arrayList2.add(scriptContext.getClassOrVar("Machine"));
         arrayList2.add(scriptContext.getClassOrVar("buttons"));
-        arrayList2.add(ScriptValue.of((double)1.0));
+        arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 1.0));
         ArrayList<ScriptValue> arrayList3 = new ArrayList<ScriptValue>();
-        arrayList3.add(ScriptValue.of((boolean)true));
+        arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constBool("b", MethodHandles.lookup(), "constBool", Gomoku.class, 1));
         ArrayList<ScriptValue> arrayList4 = new ArrayList<ScriptValue>();
-        arrayList4.add(ScriptValue.of((String)"<gray>Choose how strong the bot should play."));
+        arrayList4.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Gomoku.class, "<gray>Choose how strong the bot should play."));
         ScriptValue scriptValue2 = scriptContext.getClassOrVar("Dialog");
         if (scriptValue2 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList5 = new ArrayList<ScriptValue>();
-            arrayList5.add(ScriptValue.of((String)"<gold>Gomoku - Bot Difficulty"));
+            arrayList5.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Gomoku.class, "<gold>Gomoku - Bot Difficulty"));
             object = PolyDispatch.bootstrapCall("memberCall", "base", (ScriptValue)scriptValue2, arrayList5, (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
@@ -558,7 +562,7 @@ public final class Gomoku {
         ScriptValue scriptValue3 = scriptContext.getClassOrVar("Player");
         builder3.val("starter", (ScriptValue)(scriptValue3 != ScriptValue.NULL ? ((polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue3)) != null ? polyClassPlayer.pg$67_name() : PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue3, (ScriptContext)scriptContext)) : ScriptValue.NULL));
         builder3.val("opponent", scriptContext.getClassOrVar("BOT_NAME"));
-        builder3.val("is_bot", ScriptValue.of((boolean)true));
+        builder3.val("is_bot",  /* dynamic constant */ (ScriptValue)ScriptValue.constBool("b", MethodHandles.lookup(), "constBool", Gomoku.class, 1));
         builder3.val("difficulty", scriptContext.getClassOrVar("difficulty"));
         Gomoku.ensureGame(builder3);
         ScriptContext.Builder builder4 = ScriptContext.builder().copyFrom(scriptContext);
@@ -692,7 +696,7 @@ public final class Gomoku {
             builder8.val("gid", scriptContext.getClassOrVar("gid"));
             ScriptValue scriptValue17 = Gomoku.botKey(builder8);
             String string = "string";
-            ScriptValue scriptValue18 = scriptValue16 = scriptContext.getBool("is_bot") ? ScriptValue.of((String)"1") : ScriptValue.of((String)"0");
+            ScriptValue scriptValue18 = scriptValue16 = scriptContext.getBool("is_bot") ? ( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Gomoku.class, "1")) : ( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Gomoku.class, "0"));
             if (scriptValue15 instanceof ScriptValue.Obj && (object7 = (obj = (ScriptValue.Obj)scriptValue15).instance()) != null && !(object7 instanceof PolyClass) && obj.typeName().equals("Server")) {
                 PolyClassServer polyClassServer = new PolyClassServer(object7);
                 v6 = ScriptValue.of((boolean)polyClassServer.tm$0_set_typed(scriptValue17.asStr(), string, scriptValue16));
@@ -736,7 +740,7 @@ public final class Gomoku {
             builder10.val("gid", scriptContext.getClassOrVar("gid"));
             ScriptValue scriptValue23 = Gomoku.statusKey(builder10);
             String string = "string";
-            ScriptValue scriptValue24 = ScriptValue.of((String)"active");
+            ScriptValue scriptValue24 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Gomoku.class, "active");
             if (scriptValue22 instanceof ScriptValue.Obj && (object9 = (obj = (ScriptValue.Obj)scriptValue22).instance()) != null && !(object9 instanceof PolyClass) && obj.typeName().equals("Server")) {
                 PolyClassServer polyClassServer = new PolyClassServer(object9);
                 v8 = ScriptValue.of((boolean)polyClassServer.tm$0_set_typed(scriptValue23.asStr(), string, scriptValue24));
@@ -762,7 +766,7 @@ public final class Gomoku {
             return ScriptValue.of((String)("<gold>" + scriptContext.getStr("white") + " <white>wins!"));
         }
         if (scriptContext.getStr("status").equals("draw")) {
-            return ScriptValue.of((String)"<yellow>Draw - the board is full.");
+            return  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Gomoku.class, "<yellow>Draw - the board is full.");
         }
         ScriptValue scriptValue = ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("turn"), (ScriptValue)scriptContext.getClassOrVar("CELL_BLACK")) ? scriptContext.getClassOrVar("black") : scriptContext.getClassOrVar("white");
         builder.val("turn_name", scriptValue);
@@ -777,7 +781,7 @@ public final class Gomoku {
             ScriptValue scriptValue = scriptContext.getClassOrVar("Images");
             if (scriptValue != ScriptValue.NULL) {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-                arrayList.add(ScriptValue.of((String)"gomoku:black"));
+                arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Gomoku.class, "gomoku:black"));
                 object2 = PolyDispatch.bootstrapCall("memberCall", "from", (ScriptValue)scriptValue, arrayList, (ScriptContext)scriptContext);
             } else {
                 object2 = ScriptValue.NULL;
@@ -789,7 +793,7 @@ public final class Gomoku {
             ScriptValue scriptValue = scriptContext.getClassOrVar("Images");
             if (scriptValue != ScriptValue.NULL) {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-                arrayList.add(ScriptValue.of((String)"gomoku:white"));
+                arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Gomoku.class, "gomoku:white"));
                 object3 = PolyDispatch.bootstrapCall("memberCall", "from", (ScriptValue)scriptValue, arrayList, (ScriptContext)scriptContext);
             } else {
                 object3 = ScriptValue.NULL;
@@ -799,7 +803,7 @@ public final class Gomoku {
         ScriptValue scriptValue = scriptContext.getClassOrVar("Images");
         if (scriptValue != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"gomoku:empty"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Gomoku.class, "gomoku:empty"));
             object = PolyDispatch.bootstrapCall("memberCall", "from", (ScriptValue)scriptValue, arrayList, (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
@@ -933,14 +937,14 @@ public final class Gomoku {
         ScriptValue.Array array = new ScriptValue.Array(arrayList);
         builder.val("buttons", (ScriptValue)array);
         ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
-        arrayList2.add(ScriptValue.of((double)0.0));
+        arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 0.0));
         arrayList2.add(scriptContext.getClassOrVar("BOARD_SIZE"));
         List list = ScriptProgram.elementsOf((ScriptValue)ScriptFormula.callBuiltin((String)"range", arrayList2, (ScriptContext)scriptContext));
         if (list != null) {
             for (ScriptValue scriptValue17 : list) {
                 builder.val("r", scriptValue17);
                 ArrayList<ScriptValue> arrayList3 = new ArrayList<ScriptValue>();
-                arrayList3.add(ScriptValue.of((double)0.0));
+                arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 0.0));
                 arrayList3.add(scriptContext.getClassOrVar("BOARD_SIZE"));
                 List list2 = ScriptProgram.elementsOf((ScriptValue)ScriptFormula.callBuiltin((String)"range", arrayList3, (ScriptContext)scriptContext));
                 if (list2 == null) continue;
@@ -952,16 +956,16 @@ public final class Gomoku {
                     builder7.val("c", scriptContext.getClassOrVar("c"));
                     ScriptValue scriptValue19 = Gomoku.cellAt(builder7);
                     builder.val("ch", scriptValue19);
-                    ScriptValue scriptValue20 = bl ? ScriptValue.of((String)"games/gomoku.pf:on_noop") : ScriptValue.of((String)("games/gomoku.pf:on_cell_click:" + scriptContext.getStr("gid") + ":" + scriptContext.getStr("r") + ":" + scriptContext.getStr("c")));
+                    ScriptValue scriptValue20 = bl ? ( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Gomoku.class, "games/gomoku.pf:on_noop")) : ScriptValue.of((String)("games/gomoku.pf:on_cell_click:" + scriptContext.getStr("gid") + ":" + scriptContext.getStr("r") + ":" + scriptContext.getStr("c")));
                     builder.val("cell_action", scriptValue20);
                     ArrayList<ScriptValue> arrayList4 = new ArrayList<ScriptValue>();
-                    arrayList4.add(ScriptValue.of((String)"label"));
+                    arrayList4.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Gomoku.class, "label"));
                     ScriptContext.Builder builder8 = ScriptContext.builder().copyFrom(scriptContext);
                     builder8.val("ch", scriptValue19);
                     arrayList4.add(Gomoku.cellGlyph(builder8));
-                    arrayList4.add(ScriptValue.of((String)"action"));
+                    arrayList4.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Gomoku.class, "action"));
                     arrayList4.add(scriptValue20);
-                    arrayList4.add(ScriptValue.of((String)"width"));
+                    arrayList4.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Gomoku.class, "width"));
                     arrayList4.add(scriptContext.getClassOrVar("CELL_WIDTH"));
                     ScriptValue scriptValue21 = ScriptFormula.callBuiltin((String)"make_map", arrayList4, (ScriptContext)scriptContext);
                     builder.val("btn", scriptValue21);
@@ -973,16 +977,16 @@ public final class Gomoku {
                 }
             }
         }
-        ScriptValue scriptValue23 = bl ? ScriptValue.of((String)"<gray>Leave") : ScriptValue.of((String)"<red>Resign");
+        ScriptValue scriptValue23 = bl ? ( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Gomoku.class, "<gray>Leave")) : ( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Gomoku.class, "<red>Resign"));
         builder.val("footer_label", scriptValue23);
-        ScriptValue scriptValue24 = bl ? ScriptValue.of((String)"games/gomoku.pf:on_noop") : ScriptValue.of((String)("games/gomoku.pf:on_resign:" + scriptContext.getStr("gid")));
+        ScriptValue scriptValue24 = bl ? ( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Gomoku.class, "games/gomoku.pf:on_noop")) : ScriptValue.of((String)("games/gomoku.pf:on_resign:" + scriptContext.getStr("gid")));
         builder.val("footer_action", scriptValue24);
         ArrayList<ScriptValue> arrayList6 = new ArrayList<ScriptValue>();
         arrayList6.add(scriptContext.getClassOrVar("buttons"));
         ArrayList<ScriptValue> arrayList7 = new ArrayList<ScriptValue>();
-        arrayList7.add(ScriptValue.of((String)"label"));
+        arrayList7.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Gomoku.class, "label"));
         arrayList7.add(scriptValue23);
-        arrayList7.add(ScriptValue.of((String)"action"));
+        arrayList7.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Gomoku.class, "action"));
         arrayList7.add(scriptValue24);
         arrayList6.add(ScriptFormula.callBuiltin((String)"make_map", arrayList7, (ScriptContext)scriptContext));
         ScriptValue scriptValue25 = ScriptFormula.callBuiltin((String)"push", arrayList6, (ScriptContext)scriptContext);
@@ -1008,7 +1012,7 @@ public final class Gomoku {
         ScriptValue scriptValue27 = scriptContext.getClassOrVar("Images");
         if (scriptValue27 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList13 = new ArrayList<ScriptValue>();
-            arrayList13.add(ScriptValue.of((String)"gomoku:ui"));
+            arrayList13.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Gomoku.class, "gomoku:ui"));
             object2 = PolyDispatch.bootstrapCall("memberCall", "from", (ScriptValue)scriptValue27, arrayList13, (ScriptContext)scriptContext);
         } else {
             object2 = ScriptValue.NULL;
@@ -1348,7 +1352,7 @@ public final class Gomoku {
                     builder8.val("gid", scriptContext.getClassOrVar("gid"));
                     ScriptValue scriptValue16 = Gomoku.statusKey(builder8);
                     String string = "string";
-                    ScriptValue scriptValue17 = scriptValue15 = ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("color"), (ScriptValue)scriptContext.getClassOrVar("CELL_BLACK")) ? ScriptValue.of((String)"black_win") : ScriptValue.of((String)"white_win");
+                    ScriptValue scriptValue17 = scriptValue15 = ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("color"), (ScriptValue)scriptContext.getClassOrVar("CELL_BLACK")) ? ( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Gomoku.class, "black_win")) : ( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Gomoku.class, "white_win"));
                     if (scriptValue14 instanceof ScriptValue.Obj && (object8 = (obj = (ScriptValue.Obj)scriptValue14).instance()) != null && !(object8 instanceof PolyClass) && obj.typeName().equals("Server")) {
                         PolyClassServer polyClassServer = new PolyClassServer(object8);
                         v5 = ScriptValue.of((boolean)polyClassServer.tm$0_set_typed(scriptValue16.asStr(), string, scriptValue15));
@@ -1381,7 +1385,7 @@ public final class Gomoku {
                     builder11.val("gid", scriptContext.getClassOrVar("gid"));
                     ScriptValue scriptValue20 = Gomoku.statusKey(builder11);
                     String string = "string";
-                    ScriptValue scriptValue21 = ScriptValue.of((String)"draw");
+                    ScriptValue scriptValue21 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Gomoku.class, "draw");
                     if (scriptValue19 instanceof ScriptValue.Obj && (object9 = (obj = (ScriptValue.Obj)scriptValue19).instance()) != null && !(object9 instanceof PolyClass) && obj.typeName().equals("Server")) {
                         PolyClassServer polyClassServer = new PolyClassServer(object9);
                         v6 = ScriptValue.of((boolean)polyClassServer.tm$0_set_typed(scriptValue20.asStr(), string, scriptValue21));
@@ -1397,7 +1401,7 @@ public final class Gomoku {
                 }
                 ScriptContext.Builder builder12 = ScriptContext.builder().copyFrom(scriptContext);
                 builder12.val("gid", scriptContext.getClassOrVar("gid"));
-                builder12.val("message", ScriptValue.of((String)"<yellow>Gomoku match ended in a draw."));
+                builder12.val("message",  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Gomoku.class, "<yellow>Gomoku match ended in a draw."));
                 Gomoku.notifyBothChat(builder12);
                 return ScriptValue.NULL;
             }
@@ -1432,7 +1436,7 @@ public final class Gomoku {
             if (scriptValue26 != ScriptValue.NULL) {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 arrayList.add(ScriptValue.of((String)("games/gomoku.pf:bot_move:" + scriptContext.getStr("gid"))));
-                arrayList.add(ScriptValue.of((double)15.0));
+                arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 15.0));
                 v8 = PolyDispatch.bootstrapCall("memberCall", "schedule", (ScriptValue)scriptValue26, arrayList, (ScriptContext)scriptContext);
             } else {
                 v8 = ScriptValue.NULL;
@@ -1537,7 +1541,7 @@ public final class Gomoku {
                 ScriptValue scriptValue9;
                 ArrayList<ScriptValue> arrayList5 = new ArrayList<ScriptValue>();
                 arrayList5.add(ScriptValue.of((String)("games/gomoku.pf:refresh_board:" + scriptContext.getStr("gid") + ":" + ((scriptValue9 = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? ((polyClassPlayer4 = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue9)) != null ? polyClassPlayer4.tg$68_name() : PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue9, (ScriptContext)scriptContext).asStr()) : ScriptValue.NULL.asStr()))));
-                arrayList5.add(ScriptValue.of((double)0.0));
+                arrayList5.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 0.0));
                 v2 = PolyDispatch.bootstrapCall("memberCall", "schedule", (ScriptValue)scriptValue8, arrayList5, (ScriptContext)scriptContext);
             } else {
                 v2 = ScriptValue.NULL;
@@ -1610,7 +1614,7 @@ public final class Gomoku {
         }
         ScriptValue scriptValue18 = object2;
         builder.val("turn", scriptValue18);
-        ScriptValue scriptValue19 = ScriptValue.of((String)"");
+        ScriptValue scriptValue19 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Gomoku.class, "");
         builder.val("my_color", scriptValue19);
         ScriptValue scriptValue20 = scriptContext.getClassOrVar("Player");
         Object object11 = scriptValue20 != ScriptValue.NULL ? ((polyClassPlayer2 = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue20)) != null ? polyClassPlayer2.pg$67_name() : PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue20, (ScriptContext)scriptContext)) : ScriptValue.NULL;
@@ -1665,7 +1669,7 @@ public final class Gomoku {
                 ScriptValue scriptValue26;
                 ArrayList<ScriptValue> arrayList11 = new ArrayList<ScriptValue>();
                 arrayList11.add(ScriptValue.of((String)("games/gomoku.pf:refresh_board:" + scriptContext.getStr("gid") + ":" + ((scriptValue26 = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? ((polyClassPlayer7 = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue26)) != null ? polyClassPlayer7.tg$68_name() : PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue26, (ScriptContext)scriptContext).asStr()) : ScriptValue.NULL.asStr()))));
-                arrayList11.add(ScriptValue.of((double)0.0));
+                arrayList11.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 0.0));
                 v10 = PolyDispatch.bootstrapCall("memberCall", "schedule", (ScriptValue)scriptValue25, arrayList11, (ScriptContext)scriptContext);
             } else {
                 v10 = ScriptValue.NULL;
@@ -1721,7 +1725,7 @@ public final class Gomoku {
                 ScriptValue scriptValue32;
                 ArrayList<ScriptValue> arrayList14 = new ArrayList<ScriptValue>();
                 arrayList14.add(ScriptValue.of((String)("games/gomoku.pf:refresh_board:" + scriptContext.getStr("gid") + ":" + ((scriptValue32 = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? ((polyClassPlayer9 = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue32)) != null ? polyClassPlayer9.tg$68_name() : PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue32, (ScriptContext)scriptContext).asStr()) : ScriptValue.NULL.asStr()))));
-                arrayList14.add(ScriptValue.of((double)0.0));
+                arrayList14.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 0.0));
                 v13 = PolyDispatch.bootstrapCall("memberCall", "schedule", (ScriptValue)scriptValue31, arrayList14, (ScriptContext)scriptContext);
             } else {
                 v13 = ScriptValue.NULL;
@@ -1740,7 +1744,7 @@ public final class Gomoku {
             ScriptValue scriptValue34;
             ArrayList<ScriptValue> arrayList15 = new ArrayList<ScriptValue>();
             arrayList15.add(ScriptValue.of((String)("games/gomoku.pf:refresh_board:" + scriptContext.getStr("gid") + ":" + ((scriptValue34 = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? ((polyClassPlayer10 = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue34)) != null ? polyClassPlayer10.tg$68_name() : PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue34, (ScriptContext)scriptContext).asStr()) : ScriptValue.NULL.asStr()))));
-            arrayList15.add(ScriptValue.of((double)0.0));
+            arrayList15.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 0.0));
             v14 = PolyDispatch.bootstrapCall("memberCall", "schedule", (ScriptValue)scriptValue33, arrayList15, (ScriptContext)scriptContext);
         } else {
             v14 = ScriptValue.NULL;
@@ -1874,7 +1878,7 @@ public final class Gomoku {
             var51_50.val("gid", var1_1.getClassOrVar("gid"));
             var50_51 = Gomoku.statusKey(var51_50);
             var52_52 = "string";
-            v8 = var53_53 = var47_47 != false ? ScriptValue.of((String)"white_win") : ScriptValue.of((String)"black_win");
+            v8 = var53_53 = var47_47 != false ? ( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Gomoku.class, "white_win")) : ( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Gomoku.class, "black_win"));
             if (var49_49 instanceof ScriptValue.Obj && (var55_55 = (var54_54 = (ScriptValue.Obj)var49_49).instance()) != null && !(var55_55 instanceof PolyClass) && var54_54.typeName().equals("Server")) {
                 var56_56 = new PolyClassServer(var55_55);
                 v9 /* !! */  = ScriptValue.of((boolean)var56_56.tm$0_set_typed(var50_51.asStr(), var52_52, var53_53));
@@ -1909,14 +1913,14 @@ public final class Gomoku {
     public static ScriptValue findWinningMove(ScriptContext.Builder builder) {
         ScriptContext scriptContext = builder.peek();
         ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-        arrayList.add(ScriptValue.of((double)0.0));
+        arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 0.0));
         arrayList.add(scriptContext.getClassOrVar("BOARD_SIZE"));
         List list = ScriptProgram.elementsOf((ScriptValue)ScriptFormula.callBuiltin((String)"range", arrayList, (ScriptContext)scriptContext));
         if (list != null) {
             for (ScriptValue scriptValue : list) {
                 builder.val("r", scriptValue);
                 ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
-                arrayList2.add(ScriptValue.of((double)0.0));
+                arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 0.0));
                 arrayList2.add(scriptContext.getClassOrVar("BOARD_SIZE"));
                 List list2 = ScriptProgram.elementsOf((ScriptValue)ScriptFormula.callBuiltin((String)"range", arrayList2, (ScriptContext)scriptContext));
                 if (list2 == null) continue;
@@ -1954,14 +1958,14 @@ public final class Gomoku {
     public static ScriptValue findAnyMove(ScriptContext.Builder builder) {
         ScriptContext scriptContext = builder.peek();
         ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-        arrayList.add(ScriptValue.of((double)0.0));
+        arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 0.0));
         arrayList.add(scriptContext.getClassOrVar("BOARD_SIZE"));
         List list = ScriptProgram.elementsOf((ScriptValue)ScriptFormula.callBuiltin((String)"range", arrayList, (ScriptContext)scriptContext));
         if (list != null) {
             for (ScriptValue scriptValue : list) {
                 builder.val("r", scriptValue);
                 ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
-                arrayList2.add(ScriptValue.of((double)0.0));
+                arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 0.0));
                 arrayList2.add(scriptContext.getClassOrVar("BOARD_SIZE"));
                 List list2 = ScriptProgram.elementsOf((ScriptValue)ScriptFormula.callBuiltin((String)"range", arrayList2, (ScriptContext)scriptContext));
                 if (list2 == null) continue;
@@ -1986,16 +1990,16 @@ public final class Gomoku {
     public static ScriptValue lineScore(ScriptContext.Builder builder) {
         ScriptContext scriptContext = builder.peek();
         if (scriptContext.getNum("count") >= scriptContext.getNum("WIN_LEN")) {
-            return ScriptValue.of((double)100000.0);
+            return  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 100000.0);
         }
-        if (ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("count"), (ScriptValue)ScriptValue.of((double)4.0))) {
-            return ScriptValue.of((double)(ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("open_ends"), (ScriptValue)ScriptValue.of((double)2.0)) ? 10000.0 : (ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("open_ends"), (ScriptValue)ScriptValue.of((double)1.0)) ? 1000.0 : 0.0)));
+        if (ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("count"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 4.0)))) {
+            return ScriptValue.of((double)(ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("open_ends"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 2.0))) ? 10000.0 : (ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("open_ends"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 1.0))) ? 1000.0 : 0.0)));
         }
-        if (ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("count"), (ScriptValue)ScriptValue.of((double)3.0))) {
-            return ScriptValue.of((double)(ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("open_ends"), (ScriptValue)ScriptValue.of((double)2.0)) ? 500.0 : (ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("open_ends"), (ScriptValue)ScriptValue.of((double)1.0)) ? 100.0 : 0.0)));
+        if (ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("count"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 3.0)))) {
+            return ScriptValue.of((double)(ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("open_ends"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 2.0))) ? 500.0 : (ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("open_ends"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 1.0))) ? 100.0 : 0.0)));
         }
-        if (ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("count"), (ScriptValue)ScriptValue.of((double)2.0))) {
-            return ScriptValue.of((double)(ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("open_ends"), (ScriptValue)ScriptValue.of((double)2.0)) ? 50.0 : (ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("open_ends"), (ScriptValue)ScriptValue.of((double)1.0)) ? 10.0 : 0.0)));
+        if (ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("count"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 2.0)))) {
+            return ScriptValue.of((double)(ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("open_ends"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 2.0))) ? 50.0 : (ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("open_ends"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 1.0))) ? 10.0 : 0.0)));
         }
         return ScriptValue.of((double)(scriptContext.getNum("open_ends") > 0.0 ? 1.0 : 0.0));
     }
@@ -2024,19 +2028,19 @@ public final class Gomoku {
         ScriptContext scriptContext = builder.peek();
         ArrayList<ScriptValue.Array> arrayList = new ArrayList<ScriptValue.Array>();
         ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
-        arrayList2.add(ScriptValue.of((double)0.0));
-        arrayList2.add(ScriptValue.of((double)1.0));
+        arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 0.0));
+        arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 1.0));
         arrayList.add(new ScriptValue.Array(arrayList2));
         ArrayList<ScriptValue> arrayList3 = new ArrayList<ScriptValue>();
-        arrayList3.add(ScriptValue.of((double)1.0));
-        arrayList3.add(ScriptValue.of((double)0.0));
+        arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 1.0));
+        arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 0.0));
         arrayList.add(new ScriptValue.Array(arrayList3));
         ArrayList<ScriptValue> arrayList4 = new ArrayList<ScriptValue>();
-        arrayList4.add(ScriptValue.of((double)1.0));
-        arrayList4.add(ScriptValue.of((double)1.0));
+        arrayList4.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 1.0));
+        arrayList4.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 1.0));
         arrayList.add(new ScriptValue.Array(arrayList4));
         ArrayList<ScriptValue> arrayList5 = new ArrayList<ScriptValue>();
-        arrayList5.add(ScriptValue.of((double)1.0));
+        arrayList5.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 1.0));
         arrayList5.add(ScriptValue.of((double)(-1.0)));
         arrayList.add(new ScriptValue.Array(arrayList5));
         ScriptValue.Array array = new ScriptValue.Array(arrayList);
@@ -2053,7 +2057,7 @@ public final class Gomoku {
                 ScriptValue scriptValue3 = scriptContext.getClassOrVar("d");
                 if (scriptValue3 != ScriptValue.NULL) {
                     ArrayList<ScriptValue> arrayList6 = new ArrayList<ScriptValue>();
-                    arrayList6.add(ScriptValue.of((double)0.0));
+                    arrayList6.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 0.0));
                     object2 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue3, arrayList6, (ScriptContext)scriptContext);
                 } else {
                     object2 = ScriptValue.NULL;
@@ -2063,7 +2067,7 @@ public final class Gomoku {
                 ScriptValue scriptValue5 = scriptContext.getClassOrVar("d");
                 if (scriptValue5 != ScriptValue.NULL) {
                     ArrayList<ScriptValue> arrayList7 = new ArrayList<ScriptValue>();
-                    arrayList7.add(ScriptValue.of((double)1.0));
+                    arrayList7.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 1.0));
                     object = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue5, arrayList7, (ScriptContext)scriptContext);
                 } else {
                     object = ScriptValue.NULL;
@@ -2088,18 +2092,18 @@ public final class Gomoku {
                 builder3.val("color", scriptContext.getClassOrVar("color"));
                 ScriptValue scriptValue8 = Gomoku.countDir(builder3);
                 builder.val("bwd", scriptValue8);
-                ScriptValue scriptValue9 = ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)ScriptValue.of((double)1.0), (ScriptValue)scriptValue7), (ScriptValue)scriptValue8);
+                ScriptValue scriptValue9 = ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 1.0)), (ScriptValue)scriptValue7), (ScriptValue)scriptValue8);
                 builder.val("count", scriptValue9);
                 ScriptContext.Builder builder4 = ScriptContext.builder().copyFrom(scriptContext);
                 builder4.val("board", scriptContext.getClassOrVar("board"));
-                builder4.val("r", ScriptFormula.addPolymorphic((ScriptValue)scriptContext.getClassOrVar("row"), (ScriptValue)ScriptValue.of((double)(scriptValue4.asNum() * ScriptFormula.addPolymorphic((ScriptValue)scriptValue7, (ScriptValue)ScriptValue.of((double)1.0)).asNum()))));
-                builder4.val("c", ScriptFormula.addPolymorphic((ScriptValue)scriptContext.getClassOrVar("col"), (ScriptValue)ScriptValue.of((double)(scriptValue6.asNum() * ScriptFormula.addPolymorphic((ScriptValue)scriptValue7, (ScriptValue)ScriptValue.of((double)1.0)).asNum()))));
+                builder4.val("r", ScriptFormula.addPolymorphic((ScriptValue)scriptContext.getClassOrVar("row"), (ScriptValue)ScriptValue.of((double)(scriptValue4.asNum() * ScriptFormula.addPolymorphic((ScriptValue)scriptValue7, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 1.0))).asNum()))));
+                builder4.val("c", ScriptFormula.addPolymorphic((ScriptValue)scriptContext.getClassOrVar("col"), (ScriptValue)ScriptValue.of((double)(scriptValue6.asNum() * ScriptFormula.addPolymorphic((ScriptValue)scriptValue7, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 1.0))).asNum()))));
                 ScriptValue scriptValue10 = Gomoku.isOpenCell(builder4);
                 builder.val("end1_open", scriptValue10);
                 ScriptContext.Builder builder5 = ScriptContext.builder().copyFrom(scriptContext);
                 builder5.val("board", scriptContext.getClassOrVar("board"));
-                builder5.val("r", ScriptValue.of((double)(scriptContext.getNum("row") - scriptValue4.asNum() * ScriptFormula.addPolymorphic((ScriptValue)scriptValue8, (ScriptValue)ScriptValue.of((double)1.0)).asNum())));
-                builder5.val("c", ScriptValue.of((double)(scriptContext.getNum("col") - scriptValue6.asNum() * ScriptFormula.addPolymorphic((ScriptValue)scriptValue8, (ScriptValue)ScriptValue.of((double)1.0)).asNum())));
+                builder5.val("r", ScriptValue.of((double)(scriptContext.getNum("row") - scriptValue4.asNum() * ScriptFormula.addPolymorphic((ScriptValue)scriptValue8, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 1.0))).asNum())));
+                builder5.val("c", ScriptValue.of((double)(scriptContext.getNum("col") - scriptValue6.asNum() * ScriptFormula.addPolymorphic((ScriptValue)scriptValue8, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 1.0))).asNum())));
                 ScriptValue scriptValue11 = Gomoku.isOpenCell(builder5);
                 builder.val("end2_open", scriptValue11);
                 double d2 = (scriptValue10.asBool() ? 1.0 : 0.0) + (scriptValue11.asBool() ? 1.0 : 0.0);
@@ -2125,9 +2129,9 @@ public final class Gomoku {
             var5_2 = new ArrayList<ScriptValue>();
             var5_2.add(ScriptValue.of((double)(-2.0)));
             var5_2.add(ScriptValue.of((double)(-1.0)));
-            var5_2.add(ScriptValue.of((double)0.0));
-            var5_2.add(ScriptValue.of((double)1.0));
-            var5_2.add(ScriptValue.of((double)2.0));
+            var5_2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 0.0));
+            var5_2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 1.0));
+            var5_2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 2.0));
             var2_3 = ScriptProgram.elementsOf((ScriptValue)new ScriptValue.Array(var5_2));
             if (var2_3 == null) break block4;
             for (ScriptValue var4_5 : var2_3) {
@@ -2135,9 +2139,9 @@ public final class Gomoku {
                 var9_9 = new ArrayList<ScriptValue>();
                 var9_9.add(ScriptValue.of((double)(-2.0)));
                 var9_9.add(ScriptValue.of((double)(-1.0)));
-                var9_9.add(ScriptValue.of((double)0.0));
-                var9_9.add(ScriptValue.of((double)1.0));
-                var9_9.add(ScriptValue.of((double)2.0));
+                var9_9.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 0.0));
+                var9_9.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 1.0));
+                var9_9.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 2.0));
                 var6_6 = ScriptProgram.elementsOf((ScriptValue)new ScriptValue.Array(var9_9));
                 if (var6_6 == null) continue;
                 for (ScriptValue var8_8 : var6_6) {
@@ -2160,11 +2164,11 @@ public final class Gomoku {
                         v0 = false;
                     }
                     if (!v0) continue;
-                    return ScriptValue.of((boolean)true);
+                    return  /* dynamic constant */ (ScriptValue)ScriptValue.constBool("b", MethodHandles.lookup(), "constBool", Gomoku.class, 1);
                 }
             }
         }
-        return ScriptValue.of((boolean)false);
+        return  /* dynamic constant */ (ScriptValue)ScriptValue.constBool("b", MethodHandles.lookup(), "constBool", Gomoku.class, 0);
     }
 
     /*
@@ -2177,7 +2181,7 @@ public final class Gomoku {
             var3_3 = ScriptValue.of((boolean)false);
             var0.val("any_stone", var3_3);
             var7_4 = new ArrayList<ScriptValue>();
-            var7_4.add(ScriptValue.of((double)0.0));
+            var7_4.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 0.0));
             var7_4.add(ScriptValue.of((double)(var1_1.getNum("BOARD_SIZE") * var1_1.getNum("BOARD_SIZE"))));
             var4_5 = ScriptProgram.elementsOf((ScriptValue)ScriptFormula.callBuiltin((String)"range", var7_4, (ScriptContext)var1_1));
             if (var4_5 != null) {
@@ -2209,14 +2213,14 @@ public final class Gomoku {
             var18_17 = new ScriptValue.Array(var17_16);
             var0.val("result", (ScriptValue)var18_17);
             var22_18 = new ArrayList<ScriptValue>();
-            var22_18.add(ScriptValue.of((double)0.0));
+            var22_18.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 0.0));
             var22_18.add(var1_1.getClassOrVar("BOARD_SIZE"));
             var19_19 = ScriptProgram.elementsOf((ScriptValue)ScriptFormula.callBuiltin((String)"range", var22_18, (ScriptContext)var1_1));
             if (var19_19 == null) break block7;
             for (ScriptValue var21_21 : var19_19) {
                 var0.val("r", var21_21);
                 var26_25 = new ArrayList<ScriptValue>();
-                var26_25.add(ScriptValue.of((double)0.0));
+                var26_25.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 0.0));
                 var26_25.add(var1_1.getClassOrVar("BOARD_SIZE"));
                 var23_22 = ScriptProgram.elementsOf((ScriptValue)ScriptFormula.callBuiltin((String)"range", var26_25, (ScriptContext)var1_1));
                 if (var23_22 == null) continue;
@@ -2269,14 +2273,14 @@ public final class Gomoku {
         block4: {
             var1_1 = var0.peek();
             var5_2 = new ArrayList<ScriptValue>();
-            var5_2.add(ScriptValue.of((double)0.0));
+            var5_2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 0.0));
             var5_2.add(var1_1.getClassOrVar("BOARD_SIZE"));
             var2_3 = ScriptProgram.elementsOf((ScriptValue)ScriptFormula.callBuiltin((String)"range", var5_2, (ScriptContext)var1_1));
             if (var2_3 == null) break block4;
             for (ScriptValue var4_5 : var2_3) {
                 var0.val("r", var4_5);
                 var9_9 = new ArrayList<ScriptValue>();
-                var9_9.add(ScriptValue.of((double)0.0));
+                var9_9.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 0.0));
                 var9_9.add(var1_1.getClassOrVar("BOARD_SIZE"));
                 var6_6 = ScriptProgram.elementsOf((ScriptValue)ScriptFormula.callBuiltin((String)"range", var9_9, (ScriptContext)var1_1));
                 if (var6_6 == null) continue;
@@ -2342,7 +2346,7 @@ public final class Gomoku {
                 ScriptValue scriptValue6 = scriptContext.getClassOrVar("cell");
                 if (scriptValue6 != ScriptValue.NULL) {
                     ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-                    arrayList.add(ScriptValue.of((double)0.0));
+                    arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 0.0));
                     object2 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue6, arrayList, (ScriptContext)scriptContext);
                 } else {
                     object2 = ScriptValue.NULL;
@@ -2352,7 +2356,7 @@ public final class Gomoku {
                 ScriptValue scriptValue8 = scriptContext.getClassOrVar("cell");
                 if (scriptValue8 != ScriptValue.NULL) {
                     ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-                    arrayList.add(ScriptValue.of((double)1.0));
+                    arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 1.0));
                     object = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue8, arrayList, (ScriptContext)scriptContext);
                 } else {
                     object = ScriptValue.NULL;
@@ -2420,7 +2424,7 @@ public final class Gomoku {
                 ScriptValue scriptValue7 = scriptContext.getClassOrVar("cell");
                 if (scriptValue7 != ScriptValue.NULL) {
                     ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-                    arrayList.add(ScriptValue.of((double)0.0));
+                    arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 0.0));
                     object2 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue7, arrayList, (ScriptContext)scriptContext);
                 } else {
                     object2 = ScriptValue.NULL;
@@ -2430,7 +2434,7 @@ public final class Gomoku {
                 ScriptValue scriptValue9 = scriptContext.getClassOrVar("cell");
                 if (scriptValue9 != ScriptValue.NULL) {
                     ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-                    arrayList.add(ScriptValue.of((double)1.0));
+                    arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 1.0));
                     object = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue9, arrayList, (ScriptContext)scriptContext);
                 } else {
                     object = ScriptValue.NULL;
@@ -2453,7 +2457,7 @@ public final class Gomoku {
                 ScriptValue scriptValue11 = Gomoku.combinedScore(builder3);
                 builder.val("my_score", scriptValue11);
                 if (!(scriptValue11.asNum() >= 40.0 && scriptContext.getNum("considered") < 8.0)) continue;
-                ScriptValue scriptValue12 = ScriptFormula.addPolymorphic((ScriptValue)scriptContext.getClassOrVar("considered"), (ScriptValue)ScriptValue.of((double)1.0));
+                ScriptValue scriptValue12 = ScriptFormula.addPolymorphic((ScriptValue)scriptContext.getClassOrVar("considered"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 1.0)));
                 builder.val("considered", scriptValue12);
                 ScriptContext.Builder builder6 = ScriptContext.builder().copyFrom(scriptContext);
                 builder6.val("board", scriptContext.getClassOrVar("board"));
@@ -2478,13 +2482,13 @@ public final class Gomoku {
                         Object object3;
                         Object object4;
                         builder.val("ocell", scriptValue17);
-                        ScriptValue scriptValue18 = ScriptFormula.addPolymorphic((ScriptValue)scriptContext.getClassOrVar("opp_considered"), (ScriptValue)ScriptValue.of((double)1.0));
+                        ScriptValue scriptValue18 = ScriptFormula.addPolymorphic((ScriptValue)scriptContext.getClassOrVar("opp_considered"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 1.0)));
                         builder.val("opp_considered", scriptValue18);
                         if (!(scriptValue18.asNum() <= 30.0)) continue;
                         ScriptValue scriptValue19 = scriptContext.getClassOrVar("ocell");
                         if (scriptValue19 != ScriptValue.NULL) {
                             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-                            arrayList.add(ScriptValue.of((double)0.0));
+                            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 0.0));
                             object4 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue19, arrayList, (ScriptContext)scriptContext);
                         } else {
                             object4 = ScriptValue.NULL;
@@ -2494,7 +2498,7 @@ public final class Gomoku {
                         ScriptValue scriptValue21 = scriptContext.getClassOrVar("ocell");
                         if (scriptValue21 != ScriptValue.NULL) {
                             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-                            arrayList.add(ScriptValue.of((double)1.0));
+                            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 1.0));
                             object3 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue21, arrayList, (ScriptContext)scriptContext);
                         } else {
                             object3 = ScriptValue.NULL;
@@ -2599,7 +2603,7 @@ public final class Gomoku {
             }
             ArrayList<ScriptValue> arrayList4 = new ArrayList<ScriptValue>();
             arrayList4.add(scriptContext.getClassOrVar("move"));
-            if (!ScriptFormula.valuesEqual((ScriptValue)ScriptFormula.callBuiltin((String)"len", arrayList4, (ScriptContext)scriptContext), (ScriptValue)ScriptValue.of((double)0.0))) break block5;
+            if (!ScriptFormula.valuesEqual((ScriptValue)ScriptFormula.callBuiltin((String)"len", arrayList4, (ScriptContext)scriptContext), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 0.0)))) break block5;
             ScriptContext.Builder builder7 = ScriptContext.builder().copyFrom(scriptContext);
             builder7.val("board", scriptContext.getClassOrVar("board"));
             ScriptValue scriptValue7 = Gomoku.findAnyMove(builder7);
@@ -2689,7 +2693,7 @@ public final class Gomoku {
         if (scriptValue9 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
             arrayList.add(ScriptValue.of((String)("games/gomoku.pf:bot_compute_move:" + scriptContext.getStr("gid") + ":" + scriptValue7.asStr() + ":" + scriptValue8.asStr())));
-            arrayList.add(ScriptValue.of((double)0.0));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 0.0));
             v3 = PolyDispatch.bootstrapCall("memberCall", "schedule_async", (ScriptValue)scriptValue9, arrayList, (ScriptContext)scriptContext);
         } else {
             v3 = ScriptValue.NULL;
@@ -2707,7 +2711,7 @@ public final class Gomoku {
         builder.val("move", scriptValue);
         ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
         arrayList.add(scriptValue);
-        if (ScriptFormula.valuesEqual((ScriptValue)ScriptFormula.callBuiltin((String)"len", arrayList, (ScriptContext)scriptContext), (ScriptValue)ScriptValue.of((double)0.0))) {
+        if (ScriptFormula.valuesEqual((ScriptValue)ScriptFormula.callBuiltin((String)"len", arrayList, (ScriptContext)scriptContext), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 0.0)))) {
             return ScriptValue.NULL;
         }
         ScriptValue scriptValue2 = scriptContext.getClassOrVar("TaskManager");
@@ -2719,7 +2723,7 @@ public final class Gomoku {
             ScriptValue scriptValue3 = scriptContext.getClassOrVar("move");
             if (scriptValue3 != ScriptValue.NULL) {
                 ArrayList<ScriptValue> arrayList3 = new ArrayList<ScriptValue>();
-                arrayList3.add(ScriptValue.of((double)0.0));
+                arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 0.0));
                 object2 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue3, arrayList3, (ScriptContext)scriptContext);
             } else {
                 object2 = ScriptValue.NULL;
@@ -2728,13 +2732,13 @@ public final class Gomoku {
             ScriptValue scriptValue4 = scriptContext.getClassOrVar("move");
             if (scriptValue4 != ScriptValue.NULL) {
                 ArrayList<ScriptValue> arrayList4 = new ArrayList<ScriptValue>();
-                arrayList4.add(ScriptValue.of((double)1.0));
+                arrayList4.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 1.0));
                 object = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue4, arrayList4, (ScriptContext)scriptContext);
             } else {
                 object = ScriptValue.NULL;
             }
             arrayList2.add(ScriptValue.of((String)stringBuilder2.append(object.asStr()).toString()));
-            arrayList2.add(ScriptValue.of((double)0.0));
+            arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 0.0));
             v4 = PolyDispatch.bootstrapCall("memberCall", "schedule", (ScriptValue)scriptValue2, arrayList2, (ScriptContext)scriptContext);
         } else {
             v4 = ScriptValue.NULL;
@@ -2898,19 +2902,19 @@ public final class Gomoku {
         double d2 = 5.0;
         ScriptValue scriptValue2 = ScriptValue.of((double)5.0);
         builder.val("WIN_LEN", scriptValue2);
-        ScriptValue scriptValue3 = ScriptValue.of((String)"E");
+        ScriptValue scriptValue3 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Gomoku.class, "E");
         builder.val("CELL_EMPTY", scriptValue3);
-        ScriptValue scriptValue4 = ScriptValue.of((String)"B");
+        ScriptValue scriptValue4 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Gomoku.class, "B");
         builder.val("CELL_BLACK", scriptValue4);
-        ScriptValue scriptValue5 = ScriptValue.of((String)"W");
+        ScriptValue scriptValue5 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Gomoku.class, "W");
         builder.val("CELL_WHITE", scriptValue5);
-        ScriptValue scriptValue6 = ScriptValue.of((String)"Bot");
+        ScriptValue scriptValue6 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Gomoku.class, "Bot");
         builder.val("BOT_NAME", scriptValue6);
-        ScriptValue scriptValue7 = ScriptValue.of((String)"easy");
+        ScriptValue scriptValue7 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Gomoku.class, "easy");
         builder.val("DIFF_EASY", scriptValue7);
-        ScriptValue scriptValue8 = ScriptValue.of((String)"medium");
+        ScriptValue scriptValue8 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Gomoku.class, "medium");
         builder.val("DIFF_MEDIUM", scriptValue8);
-        ScriptValue scriptValue9 = ScriptValue.of((String)"hard");
+        ScriptValue scriptValue9 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Gomoku.class, "hard");
         builder.val("DIFF_HARD", scriptValue9);
         ScriptValue scriptValue10 = scriptValue8;
         builder.val("DIFF_DEFAULT", scriptValue10);

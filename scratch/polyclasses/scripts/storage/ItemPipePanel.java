@@ -21,9 +21,13 @@ import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
 import dev.arubik.craftengine.script.ScriptProgram;
 import dev.arubik.craftengine.script.ScriptValue;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.List;
 
+/*
+ * Uses jvm11+ dynamic constants - pseudocode provided - see https://www.benf.org/other/cfr/dynamic-constants.html
+ */
 public final class ItemPipePanel {
     private static volatile ScriptContext FILE_SCOPE;
 
@@ -412,7 +416,7 @@ public final class ItemPipePanel {
     public static ScriptValue modeNorth(ScriptContext.Builder builder) {
         ScriptContext scriptContext = builder.peek();
         ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
-        builder2.val("dir", ScriptValue.of((String)"north"));
+        builder2.val("dir",  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", ItemPipePanel.class, "north"));
         ItemPipePanel.cycleMode(builder2);
         return ScriptValue.NULL;
     }
@@ -420,7 +424,7 @@ public final class ItemPipePanel {
     public static ScriptValue modeSouth(ScriptContext.Builder builder) {
         ScriptContext scriptContext = builder.peek();
         ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
-        builder2.val("dir", ScriptValue.of((String)"south"));
+        builder2.val("dir",  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", ItemPipePanel.class, "south"));
         ItemPipePanel.cycleMode(builder2);
         return ScriptValue.NULL;
     }
@@ -428,7 +432,7 @@ public final class ItemPipePanel {
     public static ScriptValue modeEast(ScriptContext.Builder builder) {
         ScriptContext scriptContext = builder.peek();
         ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
-        builder2.val("dir", ScriptValue.of((String)"east"));
+        builder2.val("dir",  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", ItemPipePanel.class, "east"));
         ItemPipePanel.cycleMode(builder2);
         return ScriptValue.NULL;
     }
@@ -436,7 +440,7 @@ public final class ItemPipePanel {
     public static ScriptValue modeWest(ScriptContext.Builder builder) {
         ScriptContext scriptContext = builder.peek();
         ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
-        builder2.val("dir", ScriptValue.of((String)"west"));
+        builder2.val("dir",  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", ItemPipePanel.class, "west"));
         ItemPipePanel.cycleMode(builder2);
         return ScriptValue.NULL;
     }
@@ -444,7 +448,7 @@ public final class ItemPipePanel {
     public static ScriptValue modeUp(ScriptContext.Builder builder) {
         ScriptContext scriptContext = builder.peek();
         ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
-        builder2.val("dir", ScriptValue.of((String)"up"));
+        builder2.val("dir",  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", ItemPipePanel.class, "up"));
         ItemPipePanel.cycleMode(builder2);
         return ScriptValue.NULL;
     }
@@ -452,7 +456,7 @@ public final class ItemPipePanel {
     public static ScriptValue modeDown(ScriptContext.Builder builder) {
         ScriptContext scriptContext = builder.peek();
         ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
-        builder2.val("dir", ScriptValue.of((String)"down"));
+        builder2.val("dir",  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", ItemPipePanel.class, "down"));
         ItemPipePanel.cycleMode(builder2);
         return ScriptValue.NULL;
     }
@@ -460,7 +464,7 @@ public final class ItemPipePanel {
     public static ScriptValue redstoneNorth(ScriptContext.Builder builder) {
         ScriptContext scriptContext = builder.peek();
         ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
-        builder2.val("dir", ScriptValue.of((String)"north"));
+        builder2.val("dir",  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", ItemPipePanel.class, "north"));
         ItemPipePanel.toggleRedstone(builder2);
         return ScriptValue.NULL;
     }
@@ -468,7 +472,7 @@ public final class ItemPipePanel {
     public static ScriptValue redstoneSouth(ScriptContext.Builder builder) {
         ScriptContext scriptContext = builder.peek();
         ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
-        builder2.val("dir", ScriptValue.of((String)"south"));
+        builder2.val("dir",  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", ItemPipePanel.class, "south"));
         ItemPipePanel.toggleRedstone(builder2);
         return ScriptValue.NULL;
     }
@@ -476,7 +480,7 @@ public final class ItemPipePanel {
     public static ScriptValue redstoneEast(ScriptContext.Builder builder) {
         ScriptContext scriptContext = builder.peek();
         ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
-        builder2.val("dir", ScriptValue.of((String)"east"));
+        builder2.val("dir",  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", ItemPipePanel.class, "east"));
         ItemPipePanel.toggleRedstone(builder2);
         return ScriptValue.NULL;
     }
@@ -484,7 +488,7 @@ public final class ItemPipePanel {
     public static ScriptValue redstoneWest(ScriptContext.Builder builder) {
         ScriptContext scriptContext = builder.peek();
         ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
-        builder2.val("dir", ScriptValue.of((String)"west"));
+        builder2.val("dir",  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", ItemPipePanel.class, "west"));
         ItemPipePanel.toggleRedstone(builder2);
         return ScriptValue.NULL;
     }
@@ -492,7 +496,7 @@ public final class ItemPipePanel {
     public static ScriptValue redstoneUp(ScriptContext.Builder builder) {
         ScriptContext scriptContext = builder.peek();
         ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
-        builder2.val("dir", ScriptValue.of((String)"up"));
+        builder2.val("dir",  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", ItemPipePanel.class, "up"));
         ItemPipePanel.toggleRedstone(builder2);
         return ScriptValue.NULL;
     }
@@ -500,29 +504,29 @@ public final class ItemPipePanel {
     public static ScriptValue redstoneDown(ScriptContext.Builder builder) {
         ScriptContext scriptContext = builder.peek();
         ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
-        builder2.val("dir", ScriptValue.of((String)"down"));
+        builder2.val("dir",  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", ItemPipePanel.class, "down"));
         ItemPipePanel.toggleRedstone(builder2);
         return ScriptValue.NULL;
     }
 
     public static ScriptValue dirName(ScriptContext.Builder builder) {
         ScriptContext scriptContext = builder.peek();
-        if (ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("idx"), (ScriptValue)ScriptValue.of((double)0.0))) {
-            return ScriptValue.of((String)"north");
+        if (ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("idx"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", ItemPipePanel.class, 0.0)))) {
+            return  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", ItemPipePanel.class, "north");
         }
-        if (ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("idx"), (ScriptValue)ScriptValue.of((double)1.0))) {
-            return ScriptValue.of((String)"south");
+        if (ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("idx"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", ItemPipePanel.class, 1.0)))) {
+            return  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", ItemPipePanel.class, "south");
         }
-        if (ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("idx"), (ScriptValue)ScriptValue.of((double)2.0))) {
-            return ScriptValue.of((String)"east");
+        if (ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("idx"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", ItemPipePanel.class, 2.0)))) {
+            return  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", ItemPipePanel.class, "east");
         }
-        if (ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("idx"), (ScriptValue)ScriptValue.of((double)3.0))) {
-            return ScriptValue.of((String)"west");
+        if (ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("idx"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", ItemPipePanel.class, 3.0)))) {
+            return  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", ItemPipePanel.class, "west");
         }
-        if (ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("idx"), (ScriptValue)ScriptValue.of((double)4.0))) {
-            return ScriptValue.of((String)"up");
+        if (ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("idx"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", ItemPipePanel.class, 4.0)))) {
+            return  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", ItemPipePanel.class, "up");
         }
-        return ScriptValue.of((String)"down");
+        return  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", ItemPipePanel.class, "down");
     }
 
     public static ScriptValue openFilter(ScriptContext.Builder builder) {
@@ -569,7 +573,7 @@ public final class ItemPipePanel {
     public static ScriptValue filterNorth(ScriptContext.Builder builder) {
         ScriptContext scriptContext = builder.peek();
         ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
-        builder2.val("idx", ScriptValue.of((double)0.0));
+        builder2.val("idx",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", ItemPipePanel.class, 0.0));
         ItemPipePanel.openFilter(builder2);
         return ScriptValue.NULL;
     }
@@ -577,7 +581,7 @@ public final class ItemPipePanel {
     public static ScriptValue filterSouth(ScriptContext.Builder builder) {
         ScriptContext scriptContext = builder.peek();
         ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
-        builder2.val("idx", ScriptValue.of((double)1.0));
+        builder2.val("idx",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", ItemPipePanel.class, 1.0));
         ItemPipePanel.openFilter(builder2);
         return ScriptValue.NULL;
     }
@@ -585,7 +589,7 @@ public final class ItemPipePanel {
     public static ScriptValue filterEast(ScriptContext.Builder builder) {
         ScriptContext scriptContext = builder.peek();
         ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
-        builder2.val("idx", ScriptValue.of((double)2.0));
+        builder2.val("idx",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", ItemPipePanel.class, 2.0));
         ItemPipePanel.openFilter(builder2);
         return ScriptValue.NULL;
     }
@@ -593,7 +597,7 @@ public final class ItemPipePanel {
     public static ScriptValue filterWest(ScriptContext.Builder builder) {
         ScriptContext scriptContext = builder.peek();
         ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
-        builder2.val("idx", ScriptValue.of((double)3.0));
+        builder2.val("idx",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", ItemPipePanel.class, 3.0));
         ItemPipePanel.openFilter(builder2);
         return ScriptValue.NULL;
     }
@@ -601,7 +605,7 @@ public final class ItemPipePanel {
     public static ScriptValue filterUp(ScriptContext.Builder builder) {
         ScriptContext scriptContext = builder.peek();
         ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
-        builder2.val("idx", ScriptValue.of((double)4.0));
+        builder2.val("idx",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", ItemPipePanel.class, 4.0));
         ItemPipePanel.openFilter(builder2);
         return ScriptValue.NULL;
     }
@@ -609,7 +613,7 @@ public final class ItemPipePanel {
     public static ScriptValue filterDown(ScriptContext.Builder builder) {
         ScriptContext scriptContext = builder.peek();
         ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
-        builder2.val("idx", ScriptValue.of((double)5.0));
+        builder2.val("idx",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", ItemPipePanel.class, 5.0));
         ItemPipePanel.openFilter(builder2);
         return ScriptValue.NULL;
     }
@@ -662,14 +666,14 @@ public final class ItemPipePanel {
         }
         ScriptValue scriptValue6 = object;
         builder.val("cur", scriptValue6);
-        if (ScriptFormula.valuesEqual((ScriptValue)scriptValue6, (ScriptValue)ScriptValue.of((double)0.0))) {
+        if (ScriptFormula.valuesEqual((ScriptValue)scriptValue6, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", ItemPipePanel.class, 0.0)))) {
             ScriptValue scriptValue7 = scriptContext.getClassOrVar("Machine");
             if (scriptValue7 != ScriptValue.NULL) {
                 ScriptValue.Obj obj;
                 Object object5;
                 ScriptValue scriptValue8 = scriptValue3;
                 String string = "int";
-                ScriptValue scriptValue9 = ScriptValue.of((double)1.0);
+                ScriptValue scriptValue9 =  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", ItemPipePanel.class, 1.0);
                 if (scriptValue7 instanceof ScriptValue.Obj && (object5 = (obj = (ScriptValue.Obj)scriptValue7).instance()) != null && !(object5 instanceof PolyClass) && obj.typeName().equals("Machine")) {
                     PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object5);
                     v2 = ScriptValue.of((boolean)polyClassMachine_v4.tm$82_set_typed(scriptValue8.asStr(), string, scriptValue9));
@@ -690,7 +694,7 @@ public final class ItemPipePanel {
                 Object object6;
                 ScriptValue scriptValue11 = scriptValue3;
                 String string = "int";
-                ScriptValue scriptValue12 = ScriptValue.of((double)0.0);
+                ScriptValue scriptValue12 =  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", ItemPipePanel.class, 0.0);
                 if (scriptValue10 instanceof ScriptValue.Obj && (object6 = (obj = (ScriptValue.Obj)scriptValue10).instance()) != null && !(object6 instanceof PolyClass) && obj.typeName().equals("Machine")) {
                     PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object6);
                     v3 = ScriptValue.of((boolean)polyClassMachine_v4.tm$82_set_typed(scriptValue11.asStr(), string, scriptValue12));
@@ -732,7 +736,7 @@ public final class ItemPipePanel {
         ScriptValue scriptValue3 = object;
         builder.val("m", scriptValue3);
         if (ScriptFormula.valuesEqualStr((ScriptValue)scriptValue3, (String)"")) {
-            return ScriptValue.of((String)"seamsly");
+            return  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", ItemPipePanel.class, "seamsly");
         }
         return scriptValue3;
     }
@@ -767,18 +771,18 @@ public final class ItemPipePanel {
         builder3.val("dir", scriptValue3);
         ScriptValue scriptValue4 = ItemPipePanel.filterMatchmode(builder3);
         builder.val("cur", scriptValue4);
-        ScriptValue scriptValue5 = ScriptValue.of((String)"seamsly");
+        ScriptValue scriptValue5 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", ItemPipePanel.class, "seamsly");
         builder.val("next", scriptValue5);
         if (ScriptFormula.valuesEqualStr((ScriptValue)scriptValue4, (String)"seamsly")) {
-            ScriptValue scriptValue6 = ScriptValue.of((String)"id");
+            ScriptValue scriptValue6 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", ItemPipePanel.class, "id");
             builder.val("next", scriptValue6);
         }
         if (ScriptFormula.valuesEqualStr((ScriptValue)scriptValue4, (String)"id")) {
-            ScriptValue scriptValue7 = ScriptValue.of((String)"equals");
+            ScriptValue scriptValue7 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", ItemPipePanel.class, "equals");
             builder.val("next", scriptValue7);
         }
         if (ScriptFormula.valuesEqualStr((ScriptValue)scriptValue4, (String)"equals")) {
-            ScriptValue scriptValue8 = ScriptValue.of((String)"seamsly");
+            ScriptValue scriptValue8 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", ItemPipePanel.class, "seamsly");
             builder.val("next", scriptValue8);
         }
         if ((scriptValue = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL) {
@@ -832,14 +836,14 @@ public final class ItemPipePanel {
         builder3.val("dir", scriptValue2);
         ScriptValue scriptValue3 = ItemPipePanel.filterMatchmode(builder3);
         builder.val("m", scriptValue3);
-        ScriptValue scriptValue4 = ScriptValue.of((String)"Seamsly");
+        ScriptValue scriptValue4 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", ItemPipePanel.class, "Seamsly");
         builder.val("text", scriptValue4);
         if (ScriptFormula.valuesEqualStr((ScriptValue)scriptValue3, (String)"id")) {
-            ScriptValue scriptValue5 = ScriptValue.of((String)"Id");
+            ScriptValue scriptValue5 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", ItemPipePanel.class, "Id");
             builder.val("text", scriptValue5);
         }
         if (ScriptFormula.valuesEqualStr((ScriptValue)scriptValue3, (String)"equals")) {
-            ScriptValue scriptValue6 = ScriptValue.of((String)"Equals");
+            ScriptValue scriptValue6 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", ItemPipePanel.class, "Equals");
             builder.val("text", scriptValue6);
         }
         return ScriptValue.of((String)("<gray>Filter Mode: <yellow>" + scriptContext.getStr("text")));
@@ -1040,8 +1044,8 @@ public final class ItemPipePanel {
             ScriptValue scriptValue3 = ScriptValue.of((boolean)false);
             builder.val("any_filter", scriptValue3);
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((double)0.0));
-            arrayList.add(ScriptValue.of((double)9.0));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", ItemPipePanel.class, 0.0));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", ItemPipePanel.class, 9.0));
             List list = ScriptProgram.elementsOf((ScriptValue)ScriptFormula.callBuiltin((String)"range", arrayList, (ScriptContext)scriptContext));
             if (list != null) {
                 for (ScriptValue scriptValue4 : list) {
@@ -1108,7 +1112,7 @@ public final class ItemPipePanel {
             builder.val("whitelist", scriptValue12);
             ScriptValue scriptValue13 = scriptContext.getClassOrVar("listed");
             builder.val("passes", scriptValue13);
-            if (ScriptFormula.valuesEqual((ScriptValue)scriptValue12, (ScriptValue)ScriptValue.of((double)0.0))) {
+            if (ScriptFormula.valuesEqual((ScriptValue)scriptValue12, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", ItemPipePanel.class, 0.0)))) {
                 boolean bl5 = scriptContext.getBool("listed") ^ true;
                 ScriptValue scriptValue14 = ScriptValue.of((boolean)bl5);
                 builder.val("passes", scriptValue14);

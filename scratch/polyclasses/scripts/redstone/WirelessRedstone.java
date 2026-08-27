@@ -21,8 +21,12 @@ import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
 import dev.arubik.craftengine.script.ScriptValue;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 
+/*
+ * Uses jvm11+ dynamic constants - pseudocode provided - see https://www.benf.org/other/cfr/dynamic-constants.html
+ */
 public final class WirelessRedstone {
     private static volatile ScriptContext FILE_SCOPE;
 
@@ -78,7 +82,7 @@ public final class WirelessRedstone {
         }
         ScriptValue scriptValue4 = object;
         builder.val("ch", scriptValue4);
-        if (ScriptFormula.valuesEqual((ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((double)0.0))) {
+        if (ScriptFormula.valuesEqual((ScriptValue)scriptValue2, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", WirelessRedstone.class, 0.0)))) {
             PolyClassMachine_v4 polyClassMachine_v4;
             ScriptValue scriptValue5 = scriptContext.getClassOrVar("Network");
             if (scriptValue5 != ScriptValue.NULL) {
@@ -140,8 +144,8 @@ public final class WirelessRedstone {
                 Object object10;
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 arrayList.add(scriptValue11);
-                arrayList.add(ScriptValue.of((double)0.0));
-                arrayList.add(ScriptValue.of((double)15.0));
+                arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", WirelessRedstone.class, 0.0));
+                arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", WirelessRedstone.class, 15.0));
                 double d = Math.floor(ScriptFormula.callBuiltin((String)"clamp", arrayList, (ScriptContext)scriptContext).asNum());
                 if (scriptValue12 instanceof ScriptValue.Obj && (object10 = (obj = (ScriptValue.Obj)scriptValue12).instance()) != null && !(object10 instanceof PolyClass) && obj.typeName().equals("Machine")) {
                     PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object10);

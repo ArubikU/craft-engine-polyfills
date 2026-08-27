@@ -24,8 +24,12 @@ import dev.arubik.craftengine.script.ScriptFormula;
 import dev.arubik.craftengine.script.ScriptProgram;
 import dev.arubik.craftengine.script.ScriptValue;
 import java.lang.invoke.CallSite;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 
+/*
+ * Uses jvm11+ dynamic constants - pseudocode provided - see https://www.benf.org/other/cfr/dynamic-constants.html
+ */
 public final class Spike {
     private static volatile ScriptContext FILE_SCOPE;
 
@@ -100,7 +104,7 @@ public final class Spike {
                 var0.val("weapon", (ScriptValue)var27_26);
                 var28_27 = new ArrayList<CallSite>();
                 var28_27.add(var27_26);
-                var30_29 = ScriptFormula.callBuiltin((String)"is_empty", var28_27, (ScriptContext)var1_1).asBool() != false ? ScriptValue.of((double)2.0) : ((var29_28 = var1_1.getClassOrVar("weapon")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "attack_damage", (ScriptValue)var29_28, (ScriptContext)var1_1) : ScriptValue.NULL);
+                var30_29 = ScriptFormula.callBuiltin((String)"is_empty", var28_27, (ScriptContext)var1_1).asBool() != false ? ( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Spike.class, 2.0)) : ((var29_28 = var1_1.getClassOrVar("weapon")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "attack_damage", (ScriptValue)var29_28, (ScriptContext)var1_1) : ScriptValue.NULL);
                 var0.val("base_dmg", var30_29);
                 var31_30 = var1_1.getClassOrVar("Machine");
                 var33_32 = var31_30 != ScriptValue.NULL ? ((var32_31 = PolyClassMachine_v4.ofGuarded((ScriptValue)var31_30)) != null ? var32_31.pg$209_owner_uuid() : PolyDispatch.bootstrapGet("memberGet", "owner_uuid", (ScriptValue)var31_30, (ScriptContext)var1_1)) : ScriptValue.NULL;
@@ -132,7 +136,7 @@ public final class Spike {
                     if (!(var48_45 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "is_alive", (ScriptValue)var48_45, (ScriptContext)var1_1) : ScriptValue.NULL).asBool()) ** GOTO lbl-1000
                     var49_46 = new ArrayList<ScriptValue>();
                     var49_46.add(var1_1.getClassOrVar("entity"));
-                    var49_46.add(ScriptValue.of((String)"LivingEntity"));
+                    var49_46.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Spike.class, "LivingEntity"));
                     if (ScriptFormula.callBuiltin((String)"instanceof", var49_46, (ScriptContext)var1_1).asBool()) {
                         v4 = true;
                     } else lbl-1000:
@@ -154,7 +158,7 @@ public final class Spike {
                     } else {
                         v5 /* !! */  = ScriptValue.NULL;
                     }
-                    var55_52 = ScriptFormula.addPolymorphic((ScriptValue)var1_1.getClassOrVar("hit_count"), (ScriptValue)ScriptValue.of((double)1.0));
+                    var55_52 = ScriptFormula.addPolymorphic((ScriptValue)var1_1.getClassOrVar("hit_count"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Spike.class, 1.0)));
                     var0.val("hit_count", var55_52);
                 }
             }
@@ -163,7 +167,7 @@ public final class Spike {
                 if (var56_53 != ScriptValue.NULL) {
                     var57_54 = "atk_cd";
                     var58_55 = "int";
-                    var59_56 = ScriptValue.of((double)10.0);
+                    var59_56 =  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Spike.class, 10.0);
                     if (var56_53 instanceof ScriptValue.Obj && (var61_58 = (var60_57 = (ScriptValue.Obj)var56_53).instance()) != null && !(var61_58 instanceof PolyClass) && var60_57.typeName().equals("Machine")) {
                         var62_59 = new PolyClassMachine_v4(var61_58);
                         v6 /* !! */  = ScriptValue.of((boolean)var62_59.tm$82_set_typed(var57_54, var58_55, var59_56));

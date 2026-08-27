@@ -20,8 +20,12 @@ import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
 import dev.arubik.craftengine.script.ScriptValue;
 import java.lang.invoke.CallSite;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 
+/*
+ * Uses jvm11+ dynamic constants - pseudocode provided - see https://www.benf.org/other/cfr/dynamic-constants.html
+ */
 public final class Utils {
     private static volatile ScriptContext FILE_SCOPE;
 
@@ -122,7 +126,7 @@ public final class Utils {
                 Object object3;
                 ScriptValue scriptValue5;
                 String string = "activated";
-                ScriptValue scriptValue6 = scriptValue5 = scriptContext.getNum("is_now") > 0.0 ? ScriptValue.of((String)"true") : ScriptValue.of((String)"false");
+                ScriptValue scriptValue6 = scriptValue5 = scriptContext.getNum("is_now") > 0.0 ? ( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Utils.class, "true")) : ( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Utils.class, "false"));
                 if (scriptValue4 instanceof ScriptValue.Obj && (object3 = (obj = (ScriptValue.Obj)scriptValue4).instance()) != null && !(object3 instanceof PolyClass) && obj.typeName().equals("Machine")) {
                     PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object3);
                     v2 = ScriptValue.of((boolean)polyClassMachine_v4.tm$16_set_property(string, scriptValue5.asStr()));

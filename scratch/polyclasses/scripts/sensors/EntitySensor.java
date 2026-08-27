@@ -22,9 +22,13 @@ import dev.arubik.craftengine.script.ScriptFormula;
 import dev.arubik.craftengine.script.ScriptProgram;
 import dev.arubik.craftengine.script.ScriptValue;
 import java.lang.invoke.CallSite;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.List;
 
+/*
+ * Uses jvm11+ dynamic constants - pseudocode provided - see https://www.benf.org/other/cfr/dynamic-constants.html
+ */
 public final class EntitySensor {
     private static volatile ScriptContext FILE_SCOPE;
 
@@ -121,7 +125,7 @@ public final class EntitySensor {
                 builder.val("entity", scriptValue13);
                 ScriptValue scriptValue15 = scriptContext.getClassOrVar("entity");
                 if (!((scriptValue15 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "is_living", (ScriptValue)scriptValue15, (ScriptContext)scriptContext) : ScriptValue.NULL).asBool() && ((scriptValue14 = scriptContext.getClassOrVar("entity")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "is_alive", (ScriptValue)scriptValue14, (ScriptContext)scriptContext) : ScriptValue.NULL).asBool())) continue;
-                ScriptValue scriptValue16 = ScriptFormula.addPolymorphic((ScriptValue)scriptContext.getClassOrVar("count"), (ScriptValue)ScriptValue.of((double)1.0));
+                ScriptValue scriptValue16 = ScriptFormula.addPolymorphic((ScriptValue)scriptContext.getClassOrVar("count"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", EntitySensor.class, 1.0)));
                 builder.val("count", scriptValue16);
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 arrayList.add(scriptValue12);
@@ -136,11 +140,11 @@ public final class EntitySensor {
         double d3 = 0.0;
         ScriptValue scriptValue18 = ScriptValue.of((double)0.0);
         builder.val("power", scriptValue18);
-        if (ScriptFormula.valuesEqual((ScriptValue)scriptValue5, (ScriptValue)ScriptValue.of((double)0.0))) {
+        if (ScriptFormula.valuesEqual((ScriptValue)scriptValue5, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", EntitySensor.class, 0.0)))) {
             double d4 = scriptContext.getNum("count") > 0.0 ? 15.0 : 0.0;
             ScriptValue scriptValue19 = ScriptValue.of((double)d4);
             builder.val("power", scriptValue19);
-        } else if (ScriptFormula.valuesEqual((ScriptValue)scriptValue5, (ScriptValue)ScriptValue.of((double)1.0))) {
+        } else if (ScriptFormula.valuesEqual((ScriptValue)scriptValue5, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", EntitySensor.class, 1.0)))) {
             Object object7;
             ScriptValue scriptValue20 = scriptContext.getClassOrVar("Machine");
             if (scriptValue20 != ScriptValue.NULL) {
@@ -170,8 +174,8 @@ public final class EntitySensor {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
             double d6 = scriptContext.getNum("threshold");
             arrayList.add(ScriptValue.of((double)Math.floor((d6 == 0.0 ? 0.0 : scriptContext.getNum("count") / d6) * 15.0)));
-            arrayList.add(ScriptValue.of((double)0.0));
-            arrayList.add(ScriptValue.of((double)15.0));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", EntitySensor.class, 0.0));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", EntitySensor.class, 15.0));
             ScriptValue scriptValue23 = ScriptFormula.callBuiltin((String)"clamp", arrayList, (ScriptContext)scriptContext);
             builder.val("power", scriptValue23);
         } else if (scriptContext.getNum("count") > 0.0) {
@@ -181,8 +185,8 @@ public final class EntitySensor {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
             double d8 = scriptContext.getNum("scan_range");
             arrayList.add(ScriptValue.of((double)Math.floor((1.0 - (d8 == 0.0 ? 0.0 : d7 / d8)) * 15.0)));
-            arrayList.add(ScriptValue.of((double)0.0));
-            arrayList.add(ScriptValue.of((double)15.0));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", EntitySensor.class, 0.0));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", EntitySensor.class, 15.0));
             ScriptValue scriptValue25 = ScriptFormula.callBuiltin((String)"clamp", arrayList, (ScriptContext)scriptContext);
             builder.val("power", scriptValue25);
         }

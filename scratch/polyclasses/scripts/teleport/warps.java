@@ -27,9 +27,13 @@ import dev.arubik.craftengine.script.ScriptFormula;
 import dev.arubik.craftengine.script.ScriptProgram;
 import dev.arubik.craftengine.script.ScriptValue;
 import java.lang.invoke.CallSite;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.List;
 
+/*
+ * Uses jvm11+ dynamic constants - pseudocode provided - see https://www.benf.org/other/cfr/dynamic-constants.html
+ */
 public final class Warps {
     private static volatile ScriptContext FILE_SCOPE;
 
@@ -109,10 +113,10 @@ public final class Warps {
             for (ScriptValue scriptValue : list) {
                 builder.val("x", scriptValue);
                 if (!ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("x"), (ScriptValue)scriptContext.getClassOrVar("val"))) continue;
-                return ScriptValue.of((boolean)true);
+                return  /* dynamic constant */ (ScriptValue)ScriptValue.constBool("b", MethodHandles.lookup(), "constBool", Warps.class, 1);
             }
         }
-        return ScriptValue.of((boolean)false);
+        return  /* dynamic constant */ (ScriptValue)ScriptValue.constBool("b", MethodHandles.lookup(), "constBool", Warps.class, 0);
     }
 
     public static ScriptValue playerHeadIcon(ScriptContext.Builder builder) {
@@ -193,7 +197,7 @@ public final class Warps {
         ScriptValue scriptValue = scriptContext.getClassOrVar("SQL");
         if (scriptValue != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"SELECT id FROM warps WHERE name = ?"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "SELECT id FROM warps WHERE name = ?"));
             arrayList.add(scriptContext.getClassOrVar("name"));
             object2 = PolyDispatch.bootstrapCall("memberCall", "query", (ScriptValue)scriptValue, arrayList, (ScriptContext)scriptContext);
         } else {
@@ -204,14 +208,14 @@ public final class Warps {
         ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
         arrayList.add(scriptValue2);
         if (ScriptFormula.callBuiltin((String)"len", arrayList, (ScriptContext)scriptContext).asNum() <= 0.0) {
-            return ScriptValue.of((String)"");
+            return  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "");
         }
         ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
-        arrayList2.add(ScriptValue.of((String)"id"));
+        arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "id"));
         ScriptValue scriptValue3 = scriptContext.getClassOrVar("rows");
         if (scriptValue3 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList3 = new ArrayList<ScriptValue>();
-            arrayList3.add(ScriptValue.of((double)0.0));
+            arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 0.0));
             object = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue3, arrayList3, (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
@@ -226,7 +230,7 @@ public final class Warps {
         ScriptValue scriptValue = scriptContext.getClassOrVar("SQL");
         if (scriptValue != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"SELECT * FROM warps WHERE name = ?"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "SELECT * FROM warps WHERE name = ?"));
             arrayList.add(scriptContext.getClassOrVar("name"));
             object2 = PolyDispatch.bootstrapCall("memberCall", "query", (ScriptValue)scriptValue, arrayList, (ScriptContext)scriptContext);
         } else {
@@ -243,7 +247,7 @@ public final class Warps {
         ScriptValue scriptValue3 = scriptContext.getClassOrVar("rows");
         if (scriptValue3 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList3 = new ArrayList<ScriptValue>();
-            arrayList3.add(ScriptValue.of((double)0.0));
+            arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 0.0));
             object = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue3, arrayList3, (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
@@ -260,7 +264,7 @@ public final class Warps {
         ScriptValue scriptValue = scriptContext.getClassOrVar("SQL");
         if (scriptValue != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
-            arrayList2.add(ScriptValue.of((String)"SELECT name FROM warps ORDER BY created_at ASC"));
+            arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "SELECT name FROM warps ORDER BY created_at ASC"));
             object = PolyDispatch.bootstrapCall("memberCall", "query", (ScriptValue)scriptValue, arrayList2, (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
@@ -275,7 +279,7 @@ public final class Warps {
                 ScriptValue scriptValue3 = scriptContext.getClassOrVar("row");
                 if (scriptValue3 != ScriptValue.NULL) {
                     ArrayList<ScriptValue> arrayList4 = new ArrayList<ScriptValue>();
-                    arrayList4.add(ScriptValue.of((String)"name"));
+                    arrayList4.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "name"));
                     object2 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue3, arrayList4, (ScriptContext)scriptContext);
                 } else {
                     object2 = ScriptValue.NULL;
@@ -295,7 +299,7 @@ public final class Warps {
         ScriptValue scriptValue = scriptContext.getClassOrVar("SQL");
         if (scriptValue != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
-            arrayList2.add(ScriptValue.of((String)"SELECT 1 FROM warps WHERE name = ?"));
+            arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "SELECT 1 FROM warps WHERE name = ?"));
             arrayList2.add(scriptContext.getClassOrVar("name"));
             object = PolyDispatch.bootstrapCall("memberCall", "query", (ScriptValue)scriptValue, arrayList2, (ScriptContext)scriptContext);
         } else {
@@ -315,7 +319,7 @@ public final class Warps {
         if (scriptValue != ScriptValue.NULL) {
             PolyClassPlayer polyClassPlayer;
             ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
-            arrayList2.add(ScriptValue.of((String)"SELECT name FROM warps WHERE owner_uuid = ? ORDER BY created_at ASC"));
+            arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "SELECT name FROM warps WHERE owner_uuid = ? ORDER BY created_at ASC"));
             ScriptValue scriptValue2 = scriptContext.getClassOrVar("Player");
             arrayList2.add((ScriptValue)(scriptValue2 != ScriptValue.NULL ? ((polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue2)) != null ? polyClassPlayer.pg$34_uuid() : PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue2, (ScriptContext)scriptContext)) : ScriptValue.NULL));
             object = PolyDispatch.bootstrapCall("memberCall", "query", (ScriptValue)scriptValue, arrayList2, (ScriptContext)scriptContext);
@@ -332,7 +336,7 @@ public final class Warps {
                 ScriptValue scriptValue4 = scriptContext.getClassOrVar("row");
                 if (scriptValue4 != ScriptValue.NULL) {
                     ArrayList<ScriptValue> arrayList4 = new ArrayList<ScriptValue>();
-                    arrayList4.add(ScriptValue.of((String)"name"));
+                    arrayList4.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "name"));
                     object2 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue4, arrayList4, (ScriptContext)scriptContext);
                 } else {
                     object2 = ScriptValue.NULL;
@@ -349,7 +353,7 @@ public final class Warps {
         PolyClassPlayer polyClassPlayer;
         ScriptContext scriptContext = builder.peek();
         ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-        arrayList.add(ScriptValue.of((String)"owner_uuid"));
+        arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "owner_uuid"));
         ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
         builder2.val("name", scriptContext.getClassOrVar("name"));
         ScriptValue scriptValue = scriptContext.getClassOrVar("Player");
@@ -374,7 +378,7 @@ public final class Warps {
             v0 = true;
         }
         if (v0) {
-            return ScriptValue.of((boolean)false);
+            return  /* dynamic constant */ (ScriptValue)ScriptValue.constBool("b", MethodHandles.lookup(), "constBool", Warps.class, 0);
         }
         var3_3 = var1_1.getClassOrVar("Player");
         var5_5 = var3_3 != ScriptValue.NULL ? ((var4_4 = PolyClassPlayer.ofGuarded((ScriptValue)var3_3)) != null ? var4_4.pg$73_location() : PolyDispatch.bootstrapGet("memberGet", "location", (ScriptValue)var3_3, (ScriptContext)var1_1)) : ScriptValue.NULL;
@@ -410,7 +414,7 @@ public final class Warps {
         } else {
             v2 /* !! */  = ScriptValue.NULL;
         }
-        return ScriptValue.of((boolean)true);
+        return  /* dynamic constant */ (ScriptValue)ScriptValue.constBool("b", MethodHandles.lookup(), "constBool", Warps.class, 1);
     }
 
     public static ScriptValue deleteWarp(ScriptContext.Builder builder) {
@@ -418,12 +422,12 @@ public final class Warps {
         ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
         builder2.val("name", scriptContext.getClassOrVar("name"));
         if (Warps.isOwner(builder2).asBool() ^ true) {
-            return ScriptValue.of((boolean)false);
+            return  /* dynamic constant */ (ScriptValue)ScriptValue.constBool("b", MethodHandles.lookup(), "constBool", Warps.class, 0);
         }
         ScriptValue scriptValue = scriptContext.getClassOrVar("SQL");
         if (scriptValue != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"DELETE FROM warps WHERE id = ?"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "DELETE FROM warps WHERE id = ?"));
             ScriptContext.Builder builder3 = ScriptContext.builder().copyFrom(scriptContext);
             builder3.val("name", scriptContext.getClassOrVar("name"));
             arrayList.add(Warps.warpId(builder3));
@@ -431,7 +435,7 @@ public final class Warps {
         } else {
             v0 = ScriptValue.NULL;
         }
-        return ScriptValue.of((boolean)true);
+        return  /* dynamic constant */ (ScriptValue)ScriptValue.constBool("b", MethodHandles.lookup(), "constBool", Warps.class, 1);
     }
 
     public static ScriptValue isBanned(ScriptContext.Builder builder) {
@@ -442,7 +446,7 @@ public final class Warps {
         if (scriptValue != ScriptValue.NULL) {
             PolyClassPlayer polyClassPlayer;
             ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
-            arrayList2.add(ScriptValue.of((String)"SELECT 1 FROM warp_bans WHERE warp_id = ? AND uuid = ?"));
+            arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "SELECT 1 FROM warp_bans WHERE warp_id = ? AND uuid = ?"));
             ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
             builder2.val("name", scriptContext.getClassOrVar("name"));
             arrayList2.add(Warps.warpId(builder2));
@@ -464,7 +468,7 @@ public final class Warps {
         if (scriptValue != ScriptValue.NULL) {
             PolyClassPlayer polyClassPlayer;
             ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
-            arrayList2.add(ScriptValue.of((String)"SELECT 1 FROM warp_favourites WHERE warp_id = ? AND player_uuid = ?"));
+            arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "SELECT 1 FROM warp_favourites WHERE warp_id = ? AND player_uuid = ?"));
             ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
             builder2.val("name", scriptContext.getClassOrVar("name"));
             arrayList2.add(Warps.warpId(builder2));
@@ -488,7 +492,7 @@ public final class Warps {
         if (scriptValue != ScriptValue.NULL) {
             PolyClassPlayer polyClassPlayer;
             ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
-            arrayList2.add(ScriptValue.of((String)"SELECT warp_id FROM warp_favourites WHERE player_uuid = ?"));
+            arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "SELECT warp_id FROM warp_favourites WHERE player_uuid = ?"));
             ScriptValue scriptValue2 = scriptContext.getClassOrVar("Player");
             arrayList2.add((ScriptValue)(scriptValue2 != ScriptValue.NULL ? ((polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue2)) != null ? polyClassPlayer.pg$34_uuid() : PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue2, (ScriptContext)scriptContext)) : ScriptValue.NULL));
             object = PolyDispatch.bootstrapCall("memberCall", "query", (ScriptValue)scriptValue, arrayList2, (ScriptContext)scriptContext);
@@ -505,7 +509,7 @@ public final class Warps {
                 ScriptValue scriptValue4 = scriptContext.getClassOrVar("row");
                 if (scriptValue4 != ScriptValue.NULL) {
                     ArrayList<ScriptValue> arrayList4 = new ArrayList<ScriptValue>();
-                    arrayList4.add(ScriptValue.of((String)"warp_id"));
+                    arrayList4.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "warp_id"));
                     object2 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue4, arrayList4, (ScriptContext)scriptContext);
                 } else {
                     object2 = ScriptValue.NULL;
@@ -528,7 +532,7 @@ public final class Warps {
         if (scriptValue != ScriptValue.NULL) {
             PolyClassPlayer polyClassPlayer;
             ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
-            arrayList2.add(ScriptValue.of((String)"SELECT warp_id FROM warp_bans WHERE uuid = ?"));
+            arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "SELECT warp_id FROM warp_bans WHERE uuid = ?"));
             ScriptValue scriptValue2 = scriptContext.getClassOrVar("Player");
             arrayList2.add((ScriptValue)(scriptValue2 != ScriptValue.NULL ? ((polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue2)) != null ? polyClassPlayer.pg$34_uuid() : PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue2, (ScriptContext)scriptContext)) : ScriptValue.NULL));
             object = PolyDispatch.bootstrapCall("memberCall", "query", (ScriptValue)scriptValue, arrayList2, (ScriptContext)scriptContext);
@@ -545,7 +549,7 @@ public final class Warps {
                 ScriptValue scriptValue4 = scriptContext.getClassOrVar("row");
                 if (scriptValue4 != ScriptValue.NULL) {
                     ArrayList<ScriptValue> arrayList4 = new ArrayList<ScriptValue>();
-                    arrayList4.add(ScriptValue.of((String)"warp_id"));
+                    arrayList4.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "warp_id"));
                     object2 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue4, arrayList4, (ScriptContext)scriptContext);
                 } else {
                     object2 = ScriptValue.NULL;
@@ -569,7 +573,7 @@ public final class Warps {
         if (scriptValue2 != ScriptValue.NULL) {
             PolyClassPlayer polyClassPlayer;
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"SELECT count FROM warp_visitors WHERE warp_id = ? AND uuid = ?"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "SELECT count FROM warp_visitors WHERE warp_id = ? AND uuid = ?"));
             arrayList.add(scriptValue);
             ScriptValue scriptValue3 = scriptContext.getClassOrVar("Player");
             arrayList.add((ScriptValue)(scriptValue3 != ScriptValue.NULL ? ((polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue3)) != null ? polyClassPlayer.pg$34_uuid() : PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue3, (ScriptContext)scriptContext)) : ScriptValue.NULL));
@@ -587,7 +591,7 @@ public final class Warps {
                 PolyClassPlayer polyClassPlayer;
                 PolyClassPlayer polyClassPlayer2;
                 ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
-                arrayList2.add(ScriptValue.of((String)"UPDATE warp_visitors SET count = count + 1, name = ? WHERE warp_id = ? AND uuid = ?"));
+                arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "UPDATE warp_visitors SET count = count + 1, name = ? WHERE warp_id = ? AND uuid = ?"));
                 ScriptValue scriptValue6 = scriptContext.getClassOrVar("Player");
                 arrayList2.add((ScriptValue)(scriptValue6 != ScriptValue.NULL ? ((polyClassPlayer2 = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue6)) != null ? polyClassPlayer2.pg$67_name() : PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue6, (ScriptContext)scriptContext)) : ScriptValue.NULL));
                 arrayList2.add(scriptValue);
@@ -603,7 +607,7 @@ public final class Warps {
                 PolyClassPlayer polyClassPlayer;
                 PolyClassPlayer polyClassPlayer3;
                 ArrayList<ScriptValue> arrayList3 = new ArrayList<ScriptValue>();
-                arrayList3.add(ScriptValue.of((String)"INSERT INTO warp_visitors (warp_id, uuid, name, count) VALUES (?, ?, ?, 1)"));
+                arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "INSERT INTO warp_visitors (warp_id, uuid, name, count) VALUES (?, ?, ?, 1)"));
                 arrayList3.add(scriptValue);
                 ScriptValue scriptValue9 = scriptContext.getClassOrVar("Player");
                 arrayList3.add((ScriptValue)(scriptValue9 != ScriptValue.NULL ? ((polyClassPlayer3 = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue9)) != null ? polyClassPlayer3.pg$34_uuid() : PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue9, (ScriptContext)scriptContext)) : ScriptValue.NULL));
@@ -631,7 +635,7 @@ public final class Warps {
         var5_5 = var1_1.getClassOrVar("data");
         if (var5_5 != ScriptValue.NULL) {
             var6_6 = new ArrayList<ScriptValue>();
-            var6_6.add(ScriptValue.of((String)"id"));
+            var6_6.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "id"));
             v0 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)var5_5, var6_6, (ScriptContext)var1_1);
         } else {
             v0 /* !! */  = ScriptValue.NULL;
@@ -658,11 +662,11 @@ public final class Warps {
         var14_14 = var1_1.getClassOrVar("SQL");
         if (var14_14 != ScriptValue.NULL) {
             var15_15 = new ArrayList<ScriptValue>();
-            var15_15.add(ScriptValue.of((String)"SELECT 1 FROM warp_bans WHERE warp_id = ? AND uuid = ?"));
+            var15_15.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "SELECT 1 FROM warp_bans WHERE warp_id = ? AND uuid = ?"));
             var16_16 = var1_1.getClassOrVar("data");
             if (var16_16 != ScriptValue.NULL) {
                 var17_17 = new ArrayList<ScriptValue>();
-                var17_17.add(ScriptValue.of((String)"id"));
+                var17_17.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "id"));
                 v2 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)var16_16, var17_17, (ScriptContext)var1_1);
             } else {
                 v2 /* !! */  = ScriptValue.NULL;
@@ -696,7 +700,7 @@ public final class Warps {
         var27_27 = var1_1.getClassOrVar("data");
         if (var27_27 != ScriptValue.NULL) {
             var28_28 = new ArrayList<ScriptValue>();
-            var28_28.add(ScriptValue.of((String)"world"));
+            var28_28.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "world"));
             v5 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)var27_27, var28_28, (ScriptContext)var1_1);
         } else {
             v5 /* !! */  = ScriptValue.NULL;
@@ -726,7 +730,7 @@ public final class Warps {
         var37_37 = var1_1.getClassOrVar("data");
         if (var37_37 != ScriptValue.NULL) {
             var38_38 = new ArrayList<ScriptValue>();
-            var38_38.add(ScriptValue.of((String)"owner_uuid"));
+            var38_38.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "owner_uuid"));
             v7 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)var37_37, var38_38, (ScriptContext)var1_1);
         } else {
             v7 /* !! */  = ScriptValue.NULL;
@@ -781,7 +785,7 @@ public final class Warps {
             var57_57 = var1_1.getClassOrVar("data");
             if (var57_57 != ScriptValue.NULL) {
                 var58_58 = new ArrayList<ScriptValue>();
-                var58_58.add(ScriptValue.of((String)"x"));
+                var58_58.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "x"));
                 v11 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)var57_57, var58_58, (ScriptContext)var1_1);
             } else {
                 v11 /* !! */  = ScriptValue.NULL;
@@ -790,7 +794,7 @@ public final class Warps {
             var59_59 = var1_1.getClassOrVar("data");
             if (var59_59 != ScriptValue.NULL) {
                 var60_60 = new ArrayList<ScriptValue>();
-                var60_60.add(ScriptValue.of((String)"y"));
+                var60_60.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "y"));
                 v12 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)var59_59, var60_60, (ScriptContext)var1_1);
             } else {
                 v12 /* !! */  = ScriptValue.NULL;
@@ -799,7 +803,7 @@ public final class Warps {
             var61_61 = var1_1.getClassOrVar("data");
             if (var61_61 != ScriptValue.NULL) {
                 var62_62 = new ArrayList<ScriptValue>();
-                var62_62.add(ScriptValue.of((String)"z"));
+                var62_62.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "z"));
                 v13 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)var61_61, var62_62, (ScriptContext)var1_1);
             } else {
                 v13 /* !! */  = ScriptValue.NULL;
@@ -828,11 +832,11 @@ public final class Warps {
         var70_70 = var1_1.getClassOrVar("SQL");
         if (var70_70 != ScriptValue.NULL) {
             var71_71 = new ArrayList<ScriptValue>();
-            var71_71.add(ScriptValue.of((String)"UPDATE warps SET visits = visits + 1 WHERE id = ?"));
+            var71_71.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "UPDATE warps SET visits = visits + 1 WHERE id = ?"));
             var72_72 = var1_1.getClassOrVar("data");
             if (var72_72 != ScriptValue.NULL) {
                 var73_73 = new ArrayList<ScriptValue>();
-                var73_73.add(ScriptValue.of((String)"id"));
+                var73_73.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "id"));
                 v16 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)var72_72, var73_73, (ScriptContext)var1_1);
             } else {
                 v16 /* !! */  = ScriptValue.NULL;
@@ -868,7 +872,7 @@ public final class Warps {
         ScriptValue scriptValue = scriptContext.getClassOrVar("row");
         if (scriptValue != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"icon"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "icon"));
             object = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue, arrayList, (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
@@ -878,7 +882,7 @@ public final class Warps {
         ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
         arrayList.add(scriptValue2);
         if (ScriptFormula.callBuiltin((String)"is_null", arrayList, (ScriptContext)scriptContext).asBool() || ScriptFormula.valuesEqualStr((ScriptValue)scriptValue2, (String)"")) {
-            return ScriptValue.of((String)"minecraft:ender_pearl");
+            return  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "minecraft:ender_pearl");
         }
         return scriptValue2;
     }
@@ -893,7 +897,7 @@ public final class Warps {
         ScriptValue scriptValue = scriptContext.getClassOrVar("row");
         if (scriptValue != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"desc"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "desc"));
             object5 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue, arrayList, (ScriptContext)scriptContext);
         } else {
             object5 = ScriptValue.NULL;
@@ -909,7 +913,7 @@ public final class Warps {
         ScriptValue scriptValue3 = scriptContext.getClassOrVar("row");
         if (scriptValue3 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList3 = new ArrayList<ScriptValue>();
-            arrayList3.add(ScriptValue.of((String)"owner_name"));
+            arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "owner_name"));
             object4 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue3, arrayList3, (ScriptContext)scriptContext);
         } else {
             object4 = ScriptValue.NULL;
@@ -923,7 +927,7 @@ public final class Warps {
         ScriptValue scriptValue5 = scriptContext.getClassOrVar("row");
         if (scriptValue5 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList5 = new ArrayList<ScriptValue>();
-            arrayList5.add(ScriptValue.of((String)"world"));
+            arrayList5.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "world"));
             object3 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue5, arrayList5, (ScriptContext)scriptContext);
         } else {
             object3 = ScriptValue.NULL;
@@ -937,7 +941,7 @@ public final class Warps {
         ScriptValue scriptValue7 = scriptContext.getClassOrVar("row");
         if (scriptValue7 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList7 = new ArrayList<ScriptValue>();
-            arrayList7.add(ScriptValue.of((String)"visits"));
+            arrayList7.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "visits"));
             object2 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue7, arrayList7, (ScriptContext)scriptContext);
         } else {
             object2 = ScriptValue.NULL;
@@ -951,7 +955,7 @@ public final class Warps {
         ScriptValue scriptValue9 = scriptContext.getClassOrVar("row");
         if (scriptValue9 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList9 = new ArrayList<ScriptValue>();
-            arrayList9.add(ScriptValue.of((String)"category"));
+            arrayList9.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "category"));
             object = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue9, arrayList9, (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
@@ -971,30 +975,30 @@ public final class Warps {
         if (scriptContext.getBool("is_fav")) {
             ArrayList<ScriptValue> arrayList12 = new ArrayList<ScriptValue>();
             arrayList12.add(scriptContext.getClassOrVar("lore"));
-            arrayList12.add(ScriptValue.of((String)"<gold>\u2605 Favourited"));
+            arrayList12.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "<gold>\u2605 Favourited"));
             ScriptValue scriptValue12 = ScriptFormula.callBuiltin((String)"push", arrayList12, (ScriptContext)scriptContext);
             builder.val("lore", scriptValue12);
         }
         if (scriptContext.getBool("is_ban")) {
             ArrayList<ScriptValue> arrayList13 = new ArrayList<ScriptValue>();
             arrayList13.add(scriptContext.getClassOrVar("lore"));
-            arrayList13.add(ScriptValue.of((String)"<red>You are banned from this warp"));
+            arrayList13.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "<red>You are banned from this warp"));
             ScriptValue scriptValue13 = ScriptFormula.callBuiltin((String)"push", arrayList13, (ScriptContext)scriptContext);
             builder.val("lore", scriptValue13);
         }
         ArrayList<ScriptValue> arrayList14 = new ArrayList<ScriptValue>();
         arrayList14.add(scriptContext.getClassOrVar("lore"));
-        arrayList14.add(ScriptValue.of((String)""));
+        arrayList14.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, ""));
         ScriptValue scriptValue14 = ScriptFormula.callBuiltin((String)"push", arrayList14, (ScriptContext)scriptContext);
         builder.val("lore", scriptValue14);
         ArrayList<ScriptValue> arrayList15 = new ArrayList<ScriptValue>();
         arrayList15.add(scriptContext.getClassOrVar("lore"));
-        arrayList15.add(ScriptValue.of((String)"<green>Left-click <gray>to teleport"));
+        arrayList15.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "<green>Left-click <gray>to teleport"));
         ScriptValue scriptValue15 = ScriptFormula.callBuiltin((String)"push", arrayList15, (ScriptContext)scriptContext);
         builder.val("lore", scriptValue15);
         ArrayList<ScriptValue> arrayList16 = new ArrayList<ScriptValue>();
         arrayList16.add(scriptContext.getClassOrVar("lore"));
-        arrayList16.add(ScriptValue.of((String)"<yellow>Right-click <gray>for more options"));
+        arrayList16.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "<yellow>Right-click <gray>for more options"));
         ScriptValue scriptValue16 = ScriptFormula.callBuiltin((String)"push", arrayList16, (ScriptContext)scriptContext);
         builder.val("lore", scriptValue16);
         return scriptValue16;
@@ -1048,12 +1052,12 @@ public final class Warps {
         ScriptValue scriptValue2 = object;
         builder.val("mode", scriptValue2);
         if (ScriptFormula.valuesEqualStr((ScriptValue)scriptValue2, (String)"name")) {
-            return ScriptValue.of((String)"name ASC");
+            return  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "name ASC");
         }
         if (ScriptFormula.valuesEqualStr((ScriptValue)scriptValue2, (String)"visits")) {
-            return ScriptValue.of((String)"visits DESC");
+            return  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "visits DESC");
         }
-        return ScriptValue.of((String)"created_at ASC");
+        return  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "created_at ASC");
     }
 
     public static ScriptValue sortLabel(ScriptContext.Builder builder) {
@@ -1080,12 +1084,12 @@ public final class Warps {
         ScriptValue scriptValue2 = object;
         builder.val("mode", scriptValue2);
         if (ScriptFormula.valuesEqualStr((ScriptValue)scriptValue2, (String)"name")) {
-            return ScriptValue.of((String)"Alphabetical");
+            return  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "Alphabetical");
         }
         if (ScriptFormula.valuesEqualStr((ScriptValue)scriptValue2, (String)"visits")) {
-            return ScriptValue.of((String)"Most Visited");
+            return  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "Most Visited");
         }
-        return ScriptValue.of((String)"Oldest");
+        return  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "Oldest");
     }
 
     public static ScriptValue cycleSort(ScriptContext.Builder builder) {
@@ -1115,7 +1119,7 @@ public final class Warps {
         ScriptValue scriptValue3 = ScriptValue.of((double)0.0);
         builder.val("idx", scriptValue3);
         ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-        arrayList.add(ScriptValue.of((double)0.0));
+        arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 0.0));
         ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
         arrayList2.add(scriptContext.getClassOrVar("SORT_MODES"));
         arrayList.add(ScriptFormula.callBuiltin((String)"len", arrayList2, (ScriptContext)scriptContext));
@@ -1140,7 +1144,7 @@ public final class Warps {
         ArrayList<ScriptValue> arrayList4 = new ArrayList<ScriptValue>();
         arrayList4.add(scriptContext.getClassOrVar("SORT_MODES"));
         double d2 = ScriptFormula.callBuiltin((String)"len", arrayList4, (ScriptContext)scriptContext).asNum();
-        double d3 = d2 == 0.0 ? 0.0 : ScriptFormula.addPolymorphic((ScriptValue)scriptContext.getClassOrVar("idx"), (ScriptValue)ScriptValue.of((double)1.0)).asNum() % d2;
+        double d3 = d2 == 0.0 ? 0.0 : ScriptFormula.addPolymorphic((ScriptValue)scriptContext.getClassOrVar("idx"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 1.0))).asNum() % d2;
         ScriptValue scriptValue7 = ScriptValue.of((double)d3);
         builder.val("next_idx", scriptValue7);
         ScriptValue scriptValue8 = scriptContext.getClassOrVar("Player");
@@ -1190,11 +1194,11 @@ public final class Warps {
         arrayList.add(scriptContext.getClassOrVar("Player"));
         ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
         arrayList2.add(scriptContext.getClassOrVar("Cmd"));
-        arrayList2.add(ScriptValue.of((String)"Search"));
+        arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "Search"));
         arrayList2.add(ScriptValue.of((String)("warps.pf:on_search_submit:" + scriptContext.getStr("page_name"))));
         ArrayList<ScriptValue> arrayList3 = new ArrayList<ScriptValue>();
-        arrayList3.add(ScriptValue.of((String)"value"));
-        arrayList3.add(ScriptValue.of((String)"Warp or owner name"));
+        arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "value"));
+        arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "Warp or owner name"));
         ScriptValue scriptValue = scriptContext.getClassOrVar("Player");
         if (scriptValue != ScriptValue.NULL) {
             ScriptValue.Obj obj;
@@ -1217,7 +1221,7 @@ public final class Warps {
         ScriptValue scriptValue2 = scriptContext.getClassOrVar("Dialog");
         if (scriptValue2 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList5 = new ArrayList<ScriptValue>();
-            arrayList5.add(ScriptValue.of((String)"Search Warps"));
+            arrayList5.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "Search Warps"));
             object = PolyDispatch.bootstrapCall("memberCall", "base", (ScriptValue)scriptValue2, arrayList5, (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
@@ -1256,7 +1260,7 @@ public final class Warps {
             Object object;
             String string = "warps_browse_offset";
             String string3 = "int";
-            ScriptValue scriptValue4 = ScriptValue.of((double)0.0);
+            ScriptValue scriptValue4 =  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 0.0);
             if (scriptValue3 instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue3).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Player")) {
                 PolyClassPlayer polyClassPlayer = new PolyClassPlayer(object);
                 v1 = ScriptValue.of((boolean)polyClassPlayer.tm$30_set_typed(string, string3, scriptValue4));
@@ -1276,7 +1280,7 @@ public final class Warps {
             Object object;
             String string = "warps_manage_offset";
             String string4 = "int";
-            ScriptValue scriptValue6 = ScriptValue.of((double)0.0);
+            ScriptValue scriptValue6 =  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 0.0);
             if (scriptValue5 instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue5).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Player")) {
                 PolyClassPlayer polyClassPlayer = new PolyClassPlayer(object);
                 v2 = ScriptValue.of((boolean)polyClassPlayer.tm$30_set_typed(string, string4, scriptValue6));
@@ -1296,7 +1300,7 @@ public final class Warps {
             Object object;
             String string = "warps_favourite_offset";
             String string5 = "int";
-            ScriptValue scriptValue8 = ScriptValue.of((double)0.0);
+            ScriptValue scriptValue8 =  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 0.0);
             if (scriptValue7 instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue7).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Player")) {
                 PolyClassPlayer polyClassPlayer = new PolyClassPlayer(object);
                 v3 = ScriptValue.of((boolean)polyClassPlayer.tm$30_set_typed(string, string5, scriptValue8));
@@ -1329,7 +1333,7 @@ public final class Warps {
             Object object;
             String string = "warps_search";
             String string2 = "string";
-            ScriptValue scriptValue2 = ScriptValue.of((String)"");
+            ScriptValue scriptValue2 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "");
             if (scriptValue instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Player")) {
                 PolyClassPlayer polyClassPlayer = new PolyClassPlayer(object);
                 v0 = ScriptValue.of((boolean)polyClassPlayer.tm$30_set_typed(string, string2, scriptValue2));
@@ -1382,7 +1386,7 @@ public final class Warps {
             Object object;
             String string = "warps_browse_offset";
             String string3 = "int";
-            ScriptValue scriptValue4 = ScriptValue.of((double)0.0);
+            ScriptValue scriptValue4 =  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 0.0);
             if (scriptValue3 instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue3).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Player")) {
                 PolyClassPlayer polyClassPlayer = new PolyClassPlayer(object);
                 v1 = ScriptValue.of((boolean)polyClassPlayer.tm$30_set_typed(string, string3, scriptValue4));
@@ -1399,7 +1403,7 @@ public final class Warps {
         ScriptValue scriptValue5 = scriptContext.getClassOrVar("Cmd");
         if (scriptValue5 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"warps"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "warps"));
             v2 = PolyDispatch.bootstrapCall("memberCall", "open_page", (ScriptValue)scriptValue5, arrayList, (ScriptContext)scriptContext);
         } else {
             v2 = ScriptValue.NULL;
@@ -1431,14 +1435,14 @@ public final class Warps {
         ScriptValue scriptValue2 = object;
         builder.val("filter", scriptValue2);
         if (ScriptFormula.valuesEqualStr((ScriptValue)scriptValue2, (String)"")) {
-            ScriptValue scriptValue3 = ScriptValue.of((String)"all");
+            ScriptValue scriptValue3 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "all");
             builder.val("filter", scriptValue3);
         }
         double d = 0.0;
         ScriptValue scriptValue4 = ScriptValue.of((double)0.0);
         builder.val("idx", scriptValue4);
         ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-        arrayList.add(ScriptValue.of((double)0.0));
+        arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 0.0));
         ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
         arrayList2.add(scriptContext.getClassOrVar("CATEGORIES"));
         arrayList.add(ScriptFormula.callBuiltin((String)"len", arrayList2, (ScriptContext)scriptContext));
@@ -1463,7 +1467,7 @@ public final class Warps {
         ArrayList<ScriptValue> arrayList4 = new ArrayList<ScriptValue>();
         arrayList4.add(scriptContext.getClassOrVar("CATEGORIES"));
         double d2 = ScriptFormula.callBuiltin((String)"len", arrayList4, (ScriptContext)scriptContext).asNum();
-        double d3 = d2 == 0.0 ? 0.0 : ScriptFormula.addPolymorphic((ScriptValue)scriptContext.getClassOrVar("idx"), (ScriptValue)ScriptValue.of((double)1.0)).asNum() % d2;
+        double d3 = d2 == 0.0 ? 0.0 : ScriptFormula.addPolymorphic((ScriptValue)scriptContext.getClassOrVar("idx"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 1.0))).asNum() % d2;
         ScriptValue scriptValue8 = ScriptValue.of((double)d3);
         builder.val("next_idx", scriptValue8);
         ScriptValue scriptValue9 = scriptContext.getClassOrVar("Player");
@@ -1500,7 +1504,7 @@ public final class Warps {
             Object object5;
             String string = "warps_browse_offset";
             String string4 = "int";
-            ScriptValue scriptValue13 = ScriptValue.of((double)0.0);
+            ScriptValue scriptValue13 =  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 0.0);
             if (scriptValue12 instanceof ScriptValue.Obj && (object5 = (obj = (ScriptValue.Obj)scriptValue12).instance()) != null && !(object5 instanceof PolyClass) && obj.typeName().equals("Player")) {
                 PolyClassPlayer polyClassPlayer = new PolyClassPlayer(object5);
                 v4 = ScriptValue.of((boolean)polyClassPlayer.tm$30_set_typed(string, string4, scriptValue13));
@@ -1517,7 +1521,7 @@ public final class Warps {
         ScriptValue scriptValue14 = scriptContext.getClassOrVar("Cmd");
         if (scriptValue14 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList8 = new ArrayList<ScriptValue>();
-            arrayList8.add(ScriptValue.of((String)"warps"));
+            arrayList8.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "warps"));
             v5 = PolyDispatch.bootstrapCall("memberCall", "open_page", (ScriptValue)scriptValue14, arrayList8, (ScriptContext)scriptContext);
         } else {
             v5 = ScriptValue.NULL;
@@ -1549,24 +1553,24 @@ public final class Warps {
         ScriptValue scriptValue2 = object;
         builder.val("filter", scriptValue2);
         if (ScriptFormula.valuesEqualStr((ScriptValue)scriptValue2, (String)"houses")) {
-            return ScriptValue.of((String)"Houses");
+            return  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "Houses");
         }
         if (ScriptFormula.valuesEqualStr((ScriptValue)scriptValue2, (String)"shops")) {
-            return ScriptValue.of((String)"Shops");
+            return  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "Shops");
         }
         if (ScriptFormula.valuesEqualStr((ScriptValue)scriptValue2, (String)"farms")) {
-            return ScriptValue.of((String)"Farms");
+            return  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "Farms");
         }
         if (ScriptFormula.valuesEqualStr((ScriptValue)scriptValue2, (String)"pvp")) {
-            return ScriptValue.of((String)"PvP");
+            return  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "PvP");
         }
         if (ScriptFormula.valuesEqualStr((ScriptValue)scriptValue2, (String)"other")) {
-            return ScriptValue.of((String)"Other");
+            return  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "Other");
         }
         if (ScriptFormula.valuesEqualStr((ScriptValue)scriptValue2, (String)"event")) {
-            return ScriptValue.of((String)"Event");
+            return  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "Event");
         }
-        return ScriptValue.of((String)"All");
+        return  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "All");
     }
 
     public static ScriptValue browseTitle(ScriptContext.Builder builder) {
@@ -1593,7 +1597,7 @@ public final class Warps {
         ScriptValue scriptValue2 = object;
         builder.val("offset", scriptValue2);
         ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
-        return ScriptValue.of((String)("{Images.from('cml:player_warps_warps')}{Images.shift(-170)}<black> Page " + ScriptFormula.addPolymorphic((ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((double)1.0)).asStr() + "/" + ScriptFormula.addPolymorphic((ScriptValue)Warps.maxBrowseOffset(builder2), (ScriptValue)ScriptValue.of((double)1.0)).asStr()));
+        return ScriptValue.of((String)("{Images.from('cml:player_warps_warps')}{Images.shift(-170)}<black> Page " + ScriptFormula.addPolymorphic((ScriptValue)scriptValue2, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 1.0))).asStr() + "/" + ScriptFormula.addPolymorphic((ScriptValue)Warps.maxBrowseOffset(builder2), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 1.0))).asStr()));
     }
 
     public static ScriptValue filteredBrowseRows(ScriptContext.Builder builder) {
@@ -1683,7 +1687,7 @@ public final class Warps {
         ScriptValue scriptValue = ScriptFormula.callBuiltin((String)"len", arrayList, (ScriptContext)scriptContext);
         builder.val("n", scriptValue);
         if (scriptValue.asNum() <= 0.0) {
-            return ScriptValue.of((double)0.0);
+            return  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 0.0);
         }
         ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
         double d = scriptContext.getNum("WARP_PAGE_SIZE_BROWSE");
@@ -1730,7 +1734,7 @@ public final class Warps {
         ScriptValue scriptValue6 = ScriptValue.of((double)d);
         builder.val("start", scriptValue6);
         ArrayList<ScriptValue> arrayList3 = new ArrayList<ScriptValue>();
-        arrayList3.add(ScriptValue.of((double)0.0));
+        arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 0.0));
         arrayList3.add(scriptContext.getClassOrVar("WARP_PAGE_SIZE_BROWSE"));
         List list = ScriptProgram.elementsOf((ScriptValue)ScriptFormula.callBuiltin((String)"range", arrayList3, (ScriptContext)scriptContext));
         if (list != null) {
@@ -1760,7 +1764,7 @@ public final class Warps {
                 ScriptValue scriptValue11 = scriptContext.getClassOrVar("row");
                 if (scriptValue11 != ScriptValue.NULL) {
                     ArrayList<ScriptValue> arrayList6 = new ArrayList<ScriptValue>();
-                    arrayList6.add(ScriptValue.of((String)"name"));
+                    arrayList6.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "name"));
                     object6 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue11, arrayList6, (ScriptContext)scriptContext);
                 } else {
                     object6 = ScriptValue.NULL;
@@ -1770,7 +1774,7 @@ public final class Warps {
                 ArrayList<ScriptValue> arrayList7 = new ArrayList<ScriptValue>();
                 arrayList7.add(scriptContext.getClassOrVar("out"));
                 ArrayList<ScriptValue> arrayList8 = new ArrayList<ScriptValue>();
-                arrayList8.add(ScriptValue.of((String)"slot"));
+                arrayList8.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "slot"));
                 ScriptValue scriptValue13 = scriptContext.getClassOrVar("WARP_SLOTS_BROWSE");
                 if (scriptValue13 != ScriptValue.NULL) {
                     ArrayList<ScriptValue> arrayList9 = new ArrayList<ScriptValue>();
@@ -1780,13 +1784,13 @@ public final class Warps {
                     object5 = ScriptValue.NULL;
                 }
                 arrayList8.add((ScriptValue)object5);
-                arrayList8.add(ScriptValue.of((String)"icon"));
+                arrayList8.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "icon"));
                 ScriptContext.Builder builder5 = ScriptContext.builder().copyFrom(scriptContext);
                 builder5.val("row", scriptValue10);
                 arrayList8.add(Warps.warpIconOf(builder5));
-                arrayList8.add(ScriptValue.of((String)"name"));
+                arrayList8.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "name"));
                 arrayList8.add(ScriptValue.of((String)("<yellow>" + scriptValue12.asStr())));
-                arrayList8.add(ScriptValue.of((String)"lore"));
+                arrayList8.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "lore"));
                 ScriptContext.Builder builder6 = ScriptContext.builder().copyFrom(scriptContext);
                 builder6.val("row", scriptValue10);
                 ScriptContext.Builder builder7 = ScriptContext.builder().copyFrom(scriptContext);
@@ -1794,7 +1798,7 @@ public final class Warps {
                 ScriptValue scriptValue14 = scriptContext.getClassOrVar("row");
                 if (scriptValue14 != ScriptValue.NULL) {
                     ArrayList<ScriptValue> arrayList10 = new ArrayList<ScriptValue>();
-                    arrayList10.add(ScriptValue.of((String)"id"));
+                    arrayList10.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "id"));
                     object4 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue14, arrayList10, (ScriptContext)scriptContext);
                 } else {
                     object4 = ScriptValue.NULL;
@@ -1806,7 +1810,7 @@ public final class Warps {
                 ScriptValue scriptValue15 = scriptContext.getClassOrVar("row");
                 if (scriptValue15 != ScriptValue.NULL) {
                     ArrayList<ScriptValue> arrayList11 = new ArrayList<ScriptValue>();
-                    arrayList11.add(ScriptValue.of((String)"id"));
+                    arrayList11.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "id"));
                     object3 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue15, arrayList11, (ScriptContext)scriptContext);
                 } else {
                     object3 = ScriptValue.NULL;
@@ -1814,7 +1818,7 @@ public final class Warps {
                 builder8.val("val", object3);
                 builder6.val("is_ban", Warps.arrContains(builder8));
                 arrayList8.add(Warps.warpLoreOf(builder6));
-                arrayList8.add(ScriptValue.of((String)"action"));
+                arrayList8.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "action"));
                 arrayList8.add(ScriptValue.of((String)("warps.pf:on_browse_click:" + scriptValue12.asStr())));
                 arrayList7.add(ScriptFormula.callBuiltin((String)"make_map", arrayList8, (ScriptContext)scriptContext));
                 ScriptValue scriptValue16 = ScriptFormula.callBuiltin((String)"push", arrayList7, (ScriptContext)scriptContext);
@@ -1854,7 +1858,7 @@ public final class Warps {
                 Object object;
                 String string = "warps_return_page";
                 String string3 = "string";
-                ScriptValue scriptValue5 = ScriptValue.of((String)"warps");
+                ScriptValue scriptValue5 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "warps");
                 if (scriptValue4 instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue4).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Player")) {
                     PolyClassPlayer polyClassPlayer = new PolyClassPlayer(object);
                     v1 = ScriptValue.of((boolean)polyClassPlayer.tm$30_set_typed(string, string3, scriptValue5));
@@ -1871,7 +1875,7 @@ public final class Warps {
             ScriptValue scriptValue6 = scriptContext.getClassOrVar("Cmd");
             if (scriptValue6 != ScriptValue.NULL) {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-                arrayList.add(ScriptValue.of((String)"visitedit"));
+                arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "visitedit"));
                 v2 = PolyDispatch.bootstrapCall("memberCall", "open_page", (ScriptValue)scriptValue6, arrayList, (ScriptContext)scriptContext);
             } else {
                 v2 = ScriptValue.NULL;
@@ -1932,7 +1936,7 @@ public final class Warps {
         }
         if ((scriptValue = scriptContext.getClassOrVar("Cmd")) != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"warps"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "warps"));
             v2 = PolyDispatch.bootstrapCall("memberCall", "open_page", (ScriptValue)scriptValue, arrayList, (ScriptContext)scriptContext);
         } else {
             v2 = ScriptValue.NULL;
@@ -1972,7 +1976,7 @@ public final class Warps {
                 Object object3;
                 String string = "warps_browse_offset";
                 String string3 = "int";
-                ScriptValue scriptValue5 = ScriptFormula.addPolymorphic((ScriptValue)scriptValue3, (ScriptValue)ScriptValue.of((double)1.0));
+                ScriptValue scriptValue5 = ScriptFormula.addPolymorphic((ScriptValue)scriptValue3, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 1.0)));
                 if (scriptValue4 instanceof ScriptValue.Obj && (object3 = (obj = (ScriptValue.Obj)scriptValue4).instance()) != null && !(object3 instanceof PolyClass) && obj.typeName().equals("Player")) {
                     PolyClassPlayer polyClassPlayer = new PolyClassPlayer(object3);
                     v1 = ScriptValue.of((boolean)polyClassPlayer.tm$30_set_typed(string, string3, scriptValue5));
@@ -1989,7 +1993,7 @@ public final class Warps {
         }
         if ((scriptValue = scriptContext.getClassOrVar("Cmd")) != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"warps"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "warps"));
             v2 = PolyDispatch.bootstrapCall("memberCall", "open_page", (ScriptValue)scriptValue, arrayList, (ScriptContext)scriptContext);
         } else {
             v2 = ScriptValue.NULL;
@@ -2018,7 +2022,7 @@ public final class Warps {
             object2 = ScriptValue.NULL;
         }
         if (object2.asBool()) {
-            return ScriptValue.of((double)999999.0);
+            return  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 999999.0);
         }
         ScriptValue scriptValue3 = scriptContext.getClassOrVar("WARP_FREE_LIMIT");
         ScriptValue scriptValue4 = scriptContext.getClassOrVar("Player");
@@ -2062,7 +2066,7 @@ public final class Warps {
             object = ScriptValue.NULL;
         }
         if (object.asBool()) {
-            return ScriptValue.of((String)"\u221e");
+            return  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "\u221e");
         }
         ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
         return Warps.effectiveLimitNum(builder2);
@@ -2131,7 +2135,7 @@ public final class Warps {
             } else {
                 object5 = ScriptValue.NULL;
             }
-            ScriptValue scriptValue7 = ScriptFormula.addPolymorphic((ScriptValue)object5, (ScriptValue)ScriptValue.of((double)1.0));
+            ScriptValue scriptValue7 = ScriptFormula.addPolymorphic((ScriptValue)object5, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 1.0)));
             if (scriptValue5 instanceof ScriptValue.Obj && (object4 = (obj = (ScriptValue.Obj)scriptValue5).instance()) != null && !(object4 instanceof PolyClass) && obj.typeName().equals("Player")) {
                 PolyClassPlayer polyClassPlayer = new PolyClassPlayer(object4);
                 v3 = ScriptValue.of((boolean)polyClassPlayer.tm$30_set_typed(string, string2, scriptValue7));
@@ -2198,7 +2202,7 @@ public final class Warps {
         ScriptValue scriptValue = scriptContext.getClassOrVar("Cmd");
         if (scriptValue != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"name"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "name"));
             object = PolyDispatch.bootstrapCall("memberCall", "arg", (ScriptValue)scriptValue, arrayList, (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
@@ -2215,7 +2219,7 @@ public final class Warps {
         ScriptValue scriptValue = scriptContext.getClassOrVar("Cmd");
         if (scriptValue != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"name"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "name"));
             object = PolyDispatch.bootstrapCall("memberCall", "arg", (ScriptValue)scriptValue, arrayList, (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
@@ -2273,7 +2277,7 @@ public final class Warps {
             ScriptValue scriptValue8 = scriptContext.getClassOrVar("SQL");
             if (scriptValue8 != ScriptValue.NULL) {
                 ArrayList<Object> arrayList = new ArrayList<Object>();
-                arrayList.add(ScriptValue.of((String)"UPDATE warps SET world = ?, x = ?, y = ?, z = ? WHERE id = ?"));
+                arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "UPDATE warps SET world = ?, x = ?, y = ?, z = ? WHERE id = ?"));
                 ScriptValue scriptValue9 = scriptContext.getClassOrVar("loc");
                 arrayList.add(PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)(scriptValue9 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "world", (ScriptValue)scriptValue9, (ScriptContext)scriptContext) : ScriptValue.NULL), (ScriptContext)scriptContext));
                 ScriptValue scriptValue10 = scriptContext.getClassOrVar("loc");
@@ -2516,7 +2520,7 @@ public final class Warps {
         if (scriptValue != ScriptValue.NULL) {
             PolyClassServer polyClassServer;
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"DELETE FROM warp_sponsors WHERE expires_at < ?"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "DELETE FROM warp_sponsors WHERE expires_at < ?"));
             ScriptValue scriptValue2 = scriptContext.getClassOrVar("Server");
             arrayList.add((ScriptValue)(scriptValue2 != ScriptValue.NULL ? ((polyClassServer = PolyClassServer.ofGuarded((ScriptValue)scriptValue2)) != null ? polyClassServer.pg$16_time() : PolyDispatch.bootstrapGet("memberGet", "time", (ScriptValue)scriptValue2, (ScriptContext)scriptContext)) : ScriptValue.NULL));
             v0 = PolyDispatch.bootstrapCall("memberCall", "execute", (ScriptValue)scriptValue, arrayList, (ScriptContext)scriptContext);
@@ -2552,7 +2556,7 @@ public final class Warps {
         ScriptValue scriptValue3 = scriptContext.getClassOrVar("rows");
         if (scriptValue3 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList3 = new ArrayList<ScriptValue>();
-            arrayList3.add(ScriptValue.of((double)0.0));
+            arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 0.0));
             object = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue3, arrayList3, (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
@@ -2566,7 +2570,7 @@ public final class Warps {
         ScriptValue.Array array = new ScriptValue.Array(arrayList);
         builder.val("out", (ScriptValue)array);
         ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
-        arrayList2.add(ScriptValue.of((double)0.0));
+        arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 0.0));
         ArrayList<ScriptValue> arrayList3 = new ArrayList<ScriptValue>();
         arrayList3.add(scriptContext.getClassOrVar("SPONSOR_SLOTS"));
         arrayList2.add(ScriptFormula.callBuiltin((String)"len", arrayList3, (ScriptContext)scriptContext));
@@ -2578,7 +2582,7 @@ public final class Warps {
                 Object object2;
                 Object object3;
                 builder.val("i", scriptValue);
-                ScriptValue scriptValue2 = ScriptFormula.addPolymorphic((ScriptValue)scriptContext.getClassOrVar("i"), (ScriptValue)ScriptValue.of((double)1.0));
+                ScriptValue scriptValue2 = ScriptFormula.addPolymorphic((ScriptValue)scriptContext.getClassOrVar("i"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 1.0)));
                 builder.val("slot_num", scriptValue2);
                 ScriptValue scriptValue3 = scriptContext.getClassOrVar("SPONSOR_SLOTS");
                 if (scriptValue3 != ScriptValue.NULL) {
@@ -2597,7 +2601,7 @@ public final class Warps {
                 ScriptValue scriptValue6 = scriptContext.getClassOrVar("row");
                 if (scriptValue6 != ScriptValue.NULL) {
                     ArrayList<ScriptValue> arrayList5 = new ArrayList<ScriptValue>();
-                    arrayList5.add(ScriptValue.of((String)"name"));
+                    arrayList5.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "name"));
                     object2 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue6, arrayList5, (ScriptContext)scriptContext);
                 } else {
                     object2 = ScriptValue.NULL;
@@ -2640,22 +2644,22 @@ public final class Warps {
                     ArrayList<ScriptValue> arrayList9 = new ArrayList<ScriptValue>();
                     arrayList9.add(scriptContext.getClassOrVar("out"));
                     ArrayList<Object> arrayList10 = new ArrayList<Object>();
-                    arrayList10.add(ScriptValue.of((String)"slot"));
+                    arrayList10.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "slot"));
                     arrayList10.add(scriptValue4);
-                    arrayList10.add(ScriptValue.of((String)"icon"));
-                    arrayList10.add(ScriptValue.of((String)"minecraft:diamond"));
-                    arrayList10.add(ScriptValue.of((String)"name"));
+                    arrayList10.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "icon"));
+                    arrayList10.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "minecraft:diamond"));
+                    arrayList10.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "name"));
                     arrayList10.add(ScriptValue.of((String)("<yellow>Sponsor Slot #" + scriptValue2.asStr())));
-                    arrayList10.add(ScriptValue.of((String)"lore"));
+                    arrayList10.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "lore"));
                     ArrayList<ScriptValue> arrayList11 = new ArrayList<ScriptValue>();
-                    arrayList11.add(ScriptValue.of((String)"<gray>Feature one of YOUR warps here."));
-                    arrayList11.add(ScriptValue.of((String)""));
+                    arrayList11.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "<gray>Feature one of YOUR warps here."));
+                    arrayList11.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, ""));
                     arrayList11.add(ScriptValue.of((String)("<gray>Price: <white>" + scriptValue9.asStr() + " XP")));
                     arrayList11.add(ScriptValue.of((String)("<gray>Time: <white>" + ScriptFormula.numToStr((double)d3) + "h")));
-                    arrayList11.add(ScriptValue.of((String)""));
-                    arrayList11.add(ScriptValue.of((String)"<green>Left-click to purchase"));
+                    arrayList11.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, ""));
+                    arrayList11.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "<green>Left-click to purchase"));
                     arrayList10.add(new ScriptValue.Array(arrayList11));
-                    arrayList10.add(ScriptValue.of((String)"action"));
+                    arrayList10.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "action"));
                     arrayList10.add(ScriptValue.of((String)("warps.pf:open_sponsor_dialog:" + scriptValue2.asStr())));
                     arrayList9.add(ScriptFormula.callBuiltin((String)"make_map", arrayList10, (ScriptContext)scriptContext));
                     ScriptValue scriptValue12 = ScriptFormula.callBuiltin((String)"push", arrayList9, (ScriptContext)scriptContext);
@@ -2669,7 +2673,7 @@ public final class Warps {
                 ScriptValue scriptValue14 = scriptContext.getClassOrVar("row");
                 if (scriptValue14 != ScriptValue.NULL) {
                     ArrayList<ScriptValue> arrayList12 = new ArrayList<ScriptValue>();
-                    arrayList12.add(ScriptValue.of((String)"buyer_uuid"));
+                    arrayList12.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "buyer_uuid"));
                     object = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue14, arrayList12, (ScriptContext)scriptContext);
                 } else {
                     object = ScriptValue.NULL;
@@ -2679,29 +2683,29 @@ public final class Warps {
                 if (ScriptFormula.valuesEqual((ScriptValue)object, (ScriptValue)object6)) {
                     ArrayList<ScriptValue> arrayList13 = new ArrayList<ScriptValue>();
                     arrayList13.add(scriptContext.getClassOrVar("lore"));
-                    arrayList13.add(ScriptValue.of((String)""));
+                    arrayList13.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, ""));
                     ScriptValue scriptValue16 = ScriptFormula.callBuiltin((String)"push", arrayList13, (ScriptContext)scriptContext);
                     builder.val("lore", scriptValue16);
                     ArrayList<ScriptValue> arrayList14 = new ArrayList<ScriptValue>();
                     arrayList14.add(scriptContext.getClassOrVar("lore"));
-                    arrayList14.add(ScriptValue.of((String)"<red>Shift-right-click to remove your sponsor"));
+                    arrayList14.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "<red>Shift-right-click to remove your sponsor"));
                     ScriptValue scriptValue17 = ScriptFormula.callBuiltin((String)"push", arrayList14, (ScriptContext)scriptContext);
                     builder.val("lore", scriptValue17);
                 }
                 ArrayList<ScriptValue> arrayList15 = new ArrayList<ScriptValue>();
                 arrayList15.add(scriptContext.getClassOrVar("out"));
                 ArrayList<ScriptValue> arrayList16 = new ArrayList<ScriptValue>();
-                arrayList16.add(ScriptValue.of((String)"slot"));
+                arrayList16.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "slot"));
                 arrayList16.add(scriptValue4);
-                arrayList16.add(ScriptValue.of((String)"icon"));
+                arrayList16.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "icon"));
                 ScriptContext.Builder builder4 = ScriptContext.builder().copyFrom(scriptContext);
                 builder4.val("name", scriptValue7);
                 arrayList16.add(Warps.warpIcon(builder4));
-                arrayList16.add(ScriptValue.of((String)"name"));
+                arrayList16.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "name"));
                 arrayList16.add(ScriptValue.of((String)("<gold>[Sponsored] <yellow>" + scriptValue7.asStr())));
-                arrayList16.add(ScriptValue.of((String)"lore"));
+                arrayList16.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "lore"));
                 arrayList16.add(scriptContext.getClassOrVar("lore"));
-                arrayList16.add(ScriptValue.of((String)"action"));
+                arrayList16.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "action"));
                 arrayList16.add(ScriptValue.of((String)("warps.pf:on_sponsor_click:" + scriptValue2.asStr())));
                 arrayList15.add(ScriptFormula.callBuiltin((String)"make_map", arrayList16, (ScriptContext)scriptContext));
                 ScriptValue scriptValue18 = ScriptFormula.callBuiltin((String)"push", arrayList15, (ScriptContext)scriptContext);
@@ -2718,12 +2722,12 @@ public final class Warps {
         arrayList.add(scriptContext.getClassOrVar("Player"));
         ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
         arrayList2.add(scriptContext.getClassOrVar("Cmd"));
-        arrayList2.add(ScriptValue.of((String)"Sponsor"));
+        arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "Sponsor"));
         arrayList2.add(ScriptValue.of((String)("warps.pf:on_sponsor_submit:" + scriptContext.getStr("slot_num"))));
         ArrayList<ScriptValue> arrayList3 = new ArrayList<ScriptValue>();
-        arrayList3.add(ScriptValue.of((String)"value"));
-        arrayList3.add(ScriptValue.of((String)"One of your warp names"));
-        arrayList3.add(ScriptValue.of((String)""));
+        arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "value"));
+        arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "One of your warp names"));
+        arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, ""));
         ScriptValue scriptValue = scriptContext.getClassOrVar("Dialog");
         if (scriptValue != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList4 = new ArrayList<ScriptValue>();
@@ -2772,7 +2776,7 @@ public final class Warps {
         builder.val("idx", scriptValue4);
         ArrayList<CallSite> arrayList2 = new ArrayList<CallSite>();
         ArrayList<ScriptValue> arrayList3 = new ArrayList<ScriptValue>();
-        arrayList3.add(ScriptValue.of((String)"name"));
+        arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "name"));
         ScriptContext.Builder builder4 = ScriptContext.builder().copyFrom(scriptContext);
         ArrayList<ScriptValue> arrayList4 = new ArrayList<ScriptValue>();
         arrayList4.add(scriptContext.getClassOrVar("slot_num"));
@@ -2861,7 +2865,7 @@ public final class Warps {
         ScriptValue scriptValue14 = scriptContext.getClassOrVar("SQL");
         if (scriptValue14 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList10 = new ArrayList<ScriptValue>();
-            arrayList10.add(ScriptValue.of((String)"DELETE FROM warp_sponsors WHERE slot_num = ?"));
+            arrayList10.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "DELETE FROM warp_sponsors WHERE slot_num = ?"));
             ArrayList<ScriptValue> arrayList11 = new ArrayList<ScriptValue>();
             arrayList11.add(scriptContext.getClassOrVar("slot_num"));
             arrayList10.add(ScriptFormula.callBuiltin((String)"int", arrayList11, (ScriptContext)scriptContext));
@@ -2875,7 +2879,7 @@ public final class Warps {
             PolyClassServer polyClassServer;
             PolyClassPlayer polyClassPlayer;
             ArrayList<ScriptValue> arrayList12 = new ArrayList<ScriptValue>();
-            arrayList12.add(ScriptValue.of((String)"INSERT INTO warp_sponsors (slot_num, warp_id, buyer_uuid, expires_at) VALUES (?, ?, ?, ?)"));
+            arrayList12.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "INSERT INTO warp_sponsors (slot_num, warp_id, buyer_uuid, expires_at) VALUES (?, ?, ?, ?)"));
             ArrayList<ScriptValue> arrayList13 = new ArrayList<ScriptValue>();
             arrayList13.add(scriptContext.getClassOrVar("slot_num"));
             arrayList12.add(ScriptFormula.callBuiltin((String)"int", arrayList13, (ScriptContext)scriptContext));
@@ -2918,7 +2922,7 @@ public final class Warps {
         ScriptValue scriptValue21 = scriptContext.getClassOrVar("Cmd");
         if (scriptValue21 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList16 = new ArrayList<ScriptValue>();
-            arrayList16.add(ScriptValue.of((String)"main"));
+            arrayList16.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "main"));
             v11 = PolyDispatch.bootstrapCall("memberCall", "open_page", (ScriptValue)scriptValue21, arrayList16, (ScriptContext)scriptContext);
         } else {
             v11 = ScriptValue.NULL;
@@ -2941,7 +2945,7 @@ public final class Warps {
         var5_5 = var1_1.getClassOrVar("row");
         if (var5_5 != ScriptValue.NULL) {
             var6_6 = new ArrayList<ScriptValue>();
-            var6_6.add(ScriptValue.of((String)"name"));
+            var6_6.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "name"));
             v0 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)var5_5, var6_6, (ScriptContext)var1_1);
         } else {
             v0 /* !! */  = ScriptValue.NULL;
@@ -2958,7 +2962,7 @@ public final class Warps {
         var10_10 = var1_1.getClassOrVar("row");
         if (var10_10 != ScriptValue.NULL) {
             var11_11 = new ArrayList<ScriptValue>();
-            var11_11.add(ScriptValue.of((String)"buyer_uuid"));
+            var11_11.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "buyer_uuid"));
             v1 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)var10_10, var11_11, (ScriptContext)var1_1);
         } else {
             v1 /* !! */  = ScriptValue.NULL;
@@ -2977,7 +2981,7 @@ public final class Warps {
             var14_14 = var1_1.getClassOrVar("SQL");
             if (var14_14 != ScriptValue.NULL) {
                 var15_15 = new ArrayList<ScriptValue>();
-                var15_15.add(ScriptValue.of((String)"DELETE FROM warp_sponsors WHERE slot_num = ?"));
+                var15_15.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "DELETE FROM warp_sponsors WHERE slot_num = ?"));
                 var16_16 = new ArrayList<ScriptValue>();
                 var16_16.add(var1_1.getClassOrVar("slot_num"));
                 var15_15.add(ScriptFormula.callBuiltin((String)"int", var16_16, (ScriptContext)var1_1));
@@ -3002,7 +3006,7 @@ public final class Warps {
             var23_23 = var1_1.getClassOrVar("Cmd");
             if (var23_23 != ScriptValue.NULL) {
                 var24_24 = new ArrayList<ScriptValue>();
-                var24_24.add(ScriptValue.of((String)"main"));
+                var24_24.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "main"));
                 v6 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "open_page", (ScriptValue)var23_23, var24_24, (ScriptContext)var1_1);
             } else {
                 v6 /* !! */  = ScriptValue.NULL;
@@ -3120,7 +3124,7 @@ public final class Warps {
         ScriptValue scriptValue10 = ScriptValue.of((double)d);
         builder.val("start", scriptValue10);
         ArrayList<ScriptValue> arrayList6 = new ArrayList<ScriptValue>();
-        arrayList6.add(ScriptValue.of((double)0.0));
+        arrayList6.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 0.0));
         arrayList6.add(scriptContext.getClassOrVar("WARP_PAGE_SIZE_LIST"));
         List list = ScriptProgram.elementsOf((ScriptValue)ScriptFormula.callBuiltin((String)"range", arrayList6, (ScriptContext)scriptContext));
         if (list != null) {
@@ -3150,7 +3154,7 @@ public final class Warps {
                 ScriptValue scriptValue15 = scriptContext.getClassOrVar("row");
                 if (scriptValue15 != ScriptValue.NULL) {
                     ArrayList<ScriptValue> arrayList9 = new ArrayList<ScriptValue>();
-                    arrayList9.add(ScriptValue.of((String)"name"));
+                    arrayList9.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "name"));
                     object9 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue15, arrayList9, (ScriptContext)scriptContext);
                 } else {
                     object9 = ScriptValue.NULL;
@@ -3160,7 +3164,7 @@ public final class Warps {
                 ArrayList<ScriptValue> arrayList10 = new ArrayList<ScriptValue>();
                 arrayList10.add(scriptContext.getClassOrVar("out"));
                 ArrayList<ScriptValue> arrayList11 = new ArrayList<ScriptValue>();
-                arrayList11.add(ScriptValue.of((String)"slot"));
+                arrayList11.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "slot"));
                 ScriptValue scriptValue17 = scriptContext.getClassOrVar("WARP_SLOTS_LIST");
                 if (scriptValue17 != ScriptValue.NULL) {
                     ArrayList<ScriptValue> arrayList12 = new ArrayList<ScriptValue>();
@@ -3170,13 +3174,13 @@ public final class Warps {
                     object8 = ScriptValue.NULL;
                 }
                 arrayList11.add((ScriptValue)object8);
-                arrayList11.add(ScriptValue.of((String)"icon"));
+                arrayList11.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "icon"));
                 ScriptContext.Builder builder5 = ScriptContext.builder().copyFrom(scriptContext);
                 builder5.val("row", scriptValue14);
                 arrayList11.add(Warps.warpIconOf(builder5));
-                arrayList11.add(ScriptValue.of((String)"name"));
+                arrayList11.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "name"));
                 arrayList11.add(ScriptValue.of((String)("<yellow>" + scriptValue16.asStr())));
-                arrayList11.add(ScriptValue.of((String)"lore"));
+                arrayList11.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "lore"));
                 ScriptContext.Builder builder6 = ScriptContext.builder().copyFrom(scriptContext);
                 builder6.val("row", scriptValue14);
                 ScriptContext.Builder builder7 = ScriptContext.builder().copyFrom(scriptContext);
@@ -3184,7 +3188,7 @@ public final class Warps {
                 ScriptValue scriptValue18 = scriptContext.getClassOrVar("row");
                 if (scriptValue18 != ScriptValue.NULL) {
                     ArrayList<ScriptValue> arrayList13 = new ArrayList<ScriptValue>();
-                    arrayList13.add(ScriptValue.of((String)"id"));
+                    arrayList13.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "id"));
                     object7 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue18, arrayList13, (ScriptContext)scriptContext);
                 } else {
                     object7 = ScriptValue.NULL;
@@ -3196,7 +3200,7 @@ public final class Warps {
                 ScriptValue scriptValue19 = scriptContext.getClassOrVar("row");
                 if (scriptValue19 != ScriptValue.NULL) {
                     ArrayList<ScriptValue> arrayList14 = new ArrayList<ScriptValue>();
-                    arrayList14.add(ScriptValue.of((String)"id"));
+                    arrayList14.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "id"));
                     object6 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue19, arrayList14, (ScriptContext)scriptContext);
                 } else {
                     object6 = ScriptValue.NULL;
@@ -3204,7 +3208,7 @@ public final class Warps {
                 builder8.val("val", object6);
                 builder6.val("is_ban", Warps.arrContains(builder8));
                 arrayList11.add(Warps.warpLoreOf(builder6));
-                arrayList11.add(ScriptValue.of((String)"action"));
+                arrayList11.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "action"));
                 arrayList11.add(ScriptValue.of((String)("warps.pf:on_mywarps_click:" + scriptValue16.asStr())));
                 arrayList10.add(ScriptFormula.callBuiltin((String)"make_map", arrayList11, (ScriptContext)scriptContext));
                 ScriptValue scriptValue20 = ScriptFormula.callBuiltin((String)"push", arrayList10, (ScriptContext)scriptContext);
@@ -3244,7 +3248,7 @@ public final class Warps {
                 Object object;
                 String string = "warps_return_page";
                 String string3 = "string";
-                ScriptValue scriptValue5 = ScriptValue.of((String)"manage");
+                ScriptValue scriptValue5 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "manage");
                 if (scriptValue4 instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue4).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Player")) {
                     PolyClassPlayer polyClassPlayer = new PolyClassPlayer(object);
                     v1 = ScriptValue.of((boolean)polyClassPlayer.tm$30_set_typed(string, string3, scriptValue5));
@@ -3261,7 +3265,7 @@ public final class Warps {
             ScriptValue scriptValue6 = scriptContext.getClassOrVar("Cmd");
             if (scriptValue6 != ScriptValue.NULL) {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-                arrayList.add(ScriptValue.of((String)"visitedit"));
+                arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "visitedit"));
                 v2 = PolyDispatch.bootstrapCall("memberCall", "open_page", (ScriptValue)scriptValue6, arrayList, (ScriptContext)scriptContext);
             } else {
                 v2 = ScriptValue.NULL;
@@ -3270,7 +3274,7 @@ public final class Warps {
             ScriptValue scriptValue7 = scriptContext.getClassOrVar("Cmd");
             if (scriptValue7 != ScriptValue.NULL) {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-                arrayList.add(ScriptValue.of((String)"managewarp"));
+                arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "managewarp"));
                 v3 = PolyDispatch.bootstrapCall("memberCall", "open_page", (ScriptValue)scriptValue7, arrayList, (ScriptContext)scriptContext);
             } else {
                 v3 = ScriptValue.NULL;
@@ -3287,7 +3291,7 @@ public final class Warps {
         ScriptValue scriptValue = ScriptFormula.callBuiltin((String)"len", arrayList, (ScriptContext)scriptContext);
         builder.val("n", scriptValue);
         if (scriptValue.asNum() <= 0.0) {
-            return ScriptValue.of((double)0.0);
+            return  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 0.0);
         }
         ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
         double d = scriptContext.getNum("WARP_PAGE_SIZE_LIST");
@@ -3343,7 +3347,7 @@ public final class Warps {
         }
         if ((scriptValue = scriptContext.getClassOrVar("Cmd")) != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"manage"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "manage"));
             v2 = PolyDispatch.bootstrapCall("memberCall", "open_page", (ScriptValue)scriptValue, arrayList, (ScriptContext)scriptContext);
         } else {
             v2 = ScriptValue.NULL;
@@ -3383,7 +3387,7 @@ public final class Warps {
                 Object object3;
                 String string = "warps_manage_offset";
                 String string3 = "int";
-                ScriptValue scriptValue5 = ScriptFormula.addPolymorphic((ScriptValue)scriptValue3, (ScriptValue)ScriptValue.of((double)1.0));
+                ScriptValue scriptValue5 = ScriptFormula.addPolymorphic((ScriptValue)scriptValue3, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 1.0)));
                 if (scriptValue4 instanceof ScriptValue.Obj && (object3 = (obj = (ScriptValue.Obj)scriptValue4).instance()) != null && !(object3 instanceof PolyClass) && obj.typeName().equals("Player")) {
                     PolyClassPlayer polyClassPlayer = new PolyClassPlayer(object3);
                     v1 = ScriptValue.of((boolean)polyClassPlayer.tm$30_set_typed(string, string3, scriptValue5));
@@ -3400,7 +3404,7 @@ public final class Warps {
         }
         if ((scriptValue = scriptContext.getClassOrVar("Cmd")) != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"manage"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "manage"));
             v2 = PolyDispatch.bootstrapCall("memberCall", "open_page", (ScriptValue)scriptValue, arrayList, (ScriptContext)scriptContext);
         } else {
             v2 = ScriptValue.NULL;
@@ -3410,7 +3414,7 @@ public final class Warps {
 
     public static ScriptValue favouriteTitle(ScriptContext.Builder builder) {
         ScriptContext scriptContext = builder.peek();
-        return ScriptValue.of((String)"{Images.from('cml:player_warps_submenu_1')}{Images.shift(-170)}<black> Favourite Warps");
+        return  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "{Images.from('cml:player_warps_submenu_1')}{Images.shift(-170)}<black> Favourite Warps");
     }
 
     public static ScriptValue favouriteRows(ScriptContext.Builder builder) {
@@ -3492,7 +3496,7 @@ public final class Warps {
         ScriptValue scriptValue5 = ScriptValue.of((double)d);
         builder.val("start", scriptValue5);
         ArrayList<ScriptValue> arrayList3 = new ArrayList<ScriptValue>();
-        arrayList3.add(ScriptValue.of((double)0.0));
+        arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 0.0));
         arrayList3.add(scriptContext.getClassOrVar("WARP_PAGE_SIZE_LIST"));
         List list = ScriptProgram.elementsOf((ScriptValue)ScriptFormula.callBuiltin((String)"range", arrayList3, (ScriptContext)scriptContext));
         if (list != null) {
@@ -3521,7 +3525,7 @@ public final class Warps {
                 ScriptValue scriptValue10 = scriptContext.getClassOrVar("row");
                 if (scriptValue10 != ScriptValue.NULL) {
                     ArrayList<ScriptValue> arrayList6 = new ArrayList<ScriptValue>();
-                    arrayList6.add(ScriptValue.of((String)"name"));
+                    arrayList6.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "name"));
                     object5 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue10, arrayList6, (ScriptContext)scriptContext);
                 } else {
                     object5 = ScriptValue.NULL;
@@ -3531,7 +3535,7 @@ public final class Warps {
                 ArrayList<ScriptValue> arrayList7 = new ArrayList<ScriptValue>();
                 arrayList7.add(scriptContext.getClassOrVar("out"));
                 ArrayList<ScriptValue> arrayList8 = new ArrayList<ScriptValue>();
-                arrayList8.add(ScriptValue.of((String)"slot"));
+                arrayList8.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "slot"));
                 ScriptValue scriptValue12 = scriptContext.getClassOrVar("WARP_SLOTS_LIST");
                 if (scriptValue12 != ScriptValue.NULL) {
                     ArrayList<ScriptValue> arrayList9 = new ArrayList<ScriptValue>();
@@ -3541,22 +3545,22 @@ public final class Warps {
                     object4 = ScriptValue.NULL;
                 }
                 arrayList8.add((ScriptValue)object4);
-                arrayList8.add(ScriptValue.of((String)"icon"));
+                arrayList8.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "icon"));
                 ScriptContext.Builder builder4 = ScriptContext.builder().copyFrom(scriptContext);
                 builder4.val("row", scriptValue9);
                 arrayList8.add(Warps.warpIconOf(builder4));
-                arrayList8.add(ScriptValue.of((String)"name"));
+                arrayList8.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "name"));
                 arrayList8.add(ScriptValue.of((String)("<yellow>" + scriptValue11.asStr())));
-                arrayList8.add(ScriptValue.of((String)"lore"));
+                arrayList8.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "lore"));
                 ScriptContext.Builder builder5 = ScriptContext.builder().copyFrom(scriptContext);
                 builder5.val("row", scriptValue9);
-                builder5.val("is_fav", ScriptValue.of((boolean)true));
+                builder5.val("is_fav",  /* dynamic constant */ (ScriptValue)ScriptValue.constBool("b", MethodHandles.lookup(), "constBool", Warps.class, 1));
                 ScriptContext.Builder builder6 = ScriptContext.builder().copyFrom(scriptContext);
                 builder6.val("arr", scriptValue2);
                 ScriptValue scriptValue13 = scriptContext.getClassOrVar("row");
                 if (scriptValue13 != ScriptValue.NULL) {
                     ArrayList<ScriptValue> arrayList10 = new ArrayList<ScriptValue>();
-                    arrayList10.add(ScriptValue.of((String)"id"));
+                    arrayList10.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "id"));
                     object3 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue13, arrayList10, (ScriptContext)scriptContext);
                 } else {
                     object3 = ScriptValue.NULL;
@@ -3564,7 +3568,7 @@ public final class Warps {
                 builder6.val("val", object3);
                 builder5.val("is_ban", Warps.arrContains(builder6));
                 arrayList8.add(Warps.warpLoreOf(builder5));
-                arrayList8.add(ScriptValue.of((String)"action"));
+                arrayList8.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "action"));
                 arrayList8.add(ScriptValue.of((String)("warps.pf:on_favourite_click:" + scriptValue11.asStr())));
                 arrayList7.add(ScriptFormula.callBuiltin((String)"make_map", arrayList8, (ScriptContext)scriptContext));
                 ScriptValue scriptValue14 = ScriptFormula.callBuiltin((String)"push", arrayList7, (ScriptContext)scriptContext);
@@ -3604,7 +3608,7 @@ public final class Warps {
                 Object object;
                 String string = "warps_return_page";
                 String string3 = "string";
-                ScriptValue scriptValue5 = ScriptValue.of((String)"favourite");
+                ScriptValue scriptValue5 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "favourite");
                 if (scriptValue4 instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue4).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Player")) {
                     PolyClassPlayer polyClassPlayer = new PolyClassPlayer(object);
                     v1 = ScriptValue.of((boolean)polyClassPlayer.tm$30_set_typed(string, string3, scriptValue5));
@@ -3621,7 +3625,7 @@ public final class Warps {
             ScriptValue scriptValue6 = scriptContext.getClassOrVar("Cmd");
             if (scriptValue6 != ScriptValue.NULL) {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-                arrayList.add(ScriptValue.of((String)"visitedit"));
+                arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "visitedit"));
                 v2 = PolyDispatch.bootstrapCall("memberCall", "open_page", (ScriptValue)scriptValue6, arrayList, (ScriptContext)scriptContext);
             } else {
                 v2 = ScriptValue.NULL;
@@ -3642,7 +3646,7 @@ public final class Warps {
         ScriptValue scriptValue = ScriptFormula.callBuiltin((String)"len", arrayList, (ScriptContext)scriptContext);
         builder.val("n", scriptValue);
         if (scriptValue.asNum() <= 0.0) {
-            return ScriptValue.of((double)0.0);
+            return  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 0.0);
         }
         ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
         double d = scriptContext.getNum("WARP_PAGE_SIZE_LIST");
@@ -3698,7 +3702,7 @@ public final class Warps {
         }
         if ((scriptValue = scriptContext.getClassOrVar("Cmd")) != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"favourite"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "favourite"));
             v2 = PolyDispatch.bootstrapCall("memberCall", "open_page", (ScriptValue)scriptValue, arrayList, (ScriptContext)scriptContext);
         } else {
             v2 = ScriptValue.NULL;
@@ -3738,7 +3742,7 @@ public final class Warps {
                 Object object3;
                 String string = "warps_favourite_offset";
                 String string3 = "int";
-                ScriptValue scriptValue5 = ScriptFormula.addPolymorphic((ScriptValue)scriptValue3, (ScriptValue)ScriptValue.of((double)1.0));
+                ScriptValue scriptValue5 = ScriptFormula.addPolymorphic((ScriptValue)scriptValue3, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 1.0)));
                 if (scriptValue4 instanceof ScriptValue.Obj && (object3 = (obj = (ScriptValue.Obj)scriptValue4).instance()) != null && !(object3 instanceof PolyClass) && obj.typeName().equals("Player")) {
                     PolyClassPlayer polyClassPlayer = new PolyClassPlayer(object3);
                     v1 = ScriptValue.of((boolean)polyClassPlayer.tm$30_set_typed(string, string3, scriptValue5));
@@ -3755,7 +3759,7 @@ public final class Warps {
         }
         if ((scriptValue = scriptContext.getClassOrVar("Cmd")) != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"favourite"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "favourite"));
             v2 = PolyDispatch.bootstrapCall("memberCall", "open_page", (ScriptValue)scriptValue, arrayList, (ScriptContext)scriptContext);
         } else {
             v2 = ScriptValue.NULL;
@@ -3778,7 +3782,7 @@ public final class Warps {
             if (scriptValue3 != ScriptValue.NULL) {
                 PolyClassPlayer polyClassPlayer;
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-                arrayList.add(ScriptValue.of((String)"DELETE FROM warp_favourites WHERE warp_id = ? AND player_uuid = ?"));
+                arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "DELETE FROM warp_favourites WHERE warp_id = ? AND player_uuid = ?"));
                 arrayList.add(scriptValue);
                 ScriptValue scriptValue4 = scriptContext.getClassOrVar("Player");
                 arrayList.add((ScriptValue)(scriptValue4 != ScriptValue.NULL ? ((polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue4)) != null ? polyClassPlayer.pg$34_uuid() : PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue4, (ScriptContext)scriptContext)) : ScriptValue.NULL));
@@ -3807,7 +3811,7 @@ public final class Warps {
             if (scriptValue7 != ScriptValue.NULL) {
                 PolyClassPlayer polyClassPlayer;
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-                arrayList.add(ScriptValue.of((String)"INSERT INTO warp_favourites (warp_id, player_uuid) VALUES (?, ?)"));
+                arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "INSERT INTO warp_favourites (warp_id, player_uuid) VALUES (?, ?)"));
                 arrayList.add(scriptValue);
                 ScriptValue scriptValue8 = scriptContext.getClassOrVar("Player");
                 arrayList.add((ScriptValue)(scriptValue8 != ScriptValue.NULL ? ((polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue8)) != null ? polyClassPlayer.pg$34_uuid() : PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue8, (ScriptContext)scriptContext)) : ScriptValue.NULL));
@@ -3866,17 +3870,17 @@ public final class Warps {
         builder.val("name", scriptValue);
         ArrayList<CallSite> arrayList = new ArrayList<CallSite>();
         ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
-        arrayList2.add(ScriptValue.of((String)"locked"));
+        arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "locked"));
         ScriptContext.Builder builder3 = ScriptContext.builder().copyFrom(scriptContext);
         builder3.val("name", scriptValue);
         arrayList.add(PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)Warps.warpRow(builder3), arrayList2, (ScriptContext)scriptContext));
-        boolean bl = ScriptFormula.valuesEqual((ScriptValue)ScriptFormula.callBuiltin((String)"int", arrayList, (ScriptContext)scriptContext), (ScriptValue)ScriptValue.of((double)1.0));
+        boolean bl = ScriptFormula.valuesEqual((ScriptValue)ScriptFormula.callBuiltin((String)"int", arrayList, (ScriptContext)scriptContext), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 1.0)));
         ScriptValue scriptValue2 = ScriptValue.of((boolean)bl);
         builder.val("locked", scriptValue2);
-        ScriptValue scriptValue3 = ScriptValue.of((String)"cml:pwarp_setting_enabled");
+        ScriptValue scriptValue3 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "cml:pwarp_setting_enabled");
         builder.val("state_img", scriptValue3);
         if (bl) {
-            ScriptValue scriptValue4 = ScriptValue.of((String)"cml:pwarp_setting_disabled");
+            ScriptValue scriptValue4 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "cml:pwarp_setting_disabled");
             builder.val("state_img", scriptValue4);
         }
         return ScriptValue.of((String)("{Images.from('cml:player_warps_manage')}{Images.from('" + scriptContext.getStr("state_img") + "', -129)}{Images.shift(-71)}<black> Manage > " + scriptValue.asStr()));
@@ -3901,20 +3905,20 @@ public final class Warps {
         arrayList.add(scriptContext.getClassOrVar("Player"));
         ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
         arrayList2.add(scriptContext.getClassOrVar("Cmd"));
-        arrayList2.add(ScriptValue.of((String)"Set"));
-        arrayList2.add(ScriptValue.of((String)"warps.pf:on_desc_submit"));
+        arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "Set"));
+        arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "warps.pf:on_desc_submit"));
         ArrayList<Object> arrayList3 = new ArrayList<Object>();
-        arrayList3.add(ScriptValue.of((String)"value"));
-        arrayList3.add(ScriptValue.of((String)"Description"));
+        arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "value"));
+        arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "Description"));
         ArrayList<ScriptValue> arrayList4 = new ArrayList<ScriptValue>();
-        arrayList4.add(ScriptValue.of((String)"desc"));
+        arrayList4.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "desc"));
         ScriptContext.Builder builder3 = ScriptContext.builder().copyFrom(scriptContext);
         builder3.val("name", scriptValue);
         arrayList3.add(PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)Warps.warpRow(builder3), arrayList4, (ScriptContext)scriptContext));
         ScriptValue scriptValue2 = scriptContext.getClassOrVar("Dialog");
         if (scriptValue2 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList5 = new ArrayList<ScriptValue>();
-            arrayList5.add(ScriptValue.of((String)"Warp Description"));
+            arrayList5.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "Warp Description"));
             object = PolyDispatch.bootstrapCall("memberCall", "base", (ScriptValue)scriptValue2, arrayList5, (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
@@ -3936,7 +3940,7 @@ public final class Warps {
         ScriptValue scriptValue2 = scriptContext.getClassOrVar("SQL");
         if (scriptValue2 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"UPDATE warps SET desc = ? WHERE id = ?"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "UPDATE warps SET desc = ? WHERE id = ?"));
             ScriptContext.Builder builder4 = ScriptContext.builder().copyFrom(scriptContext);
             builder4.val("s", scriptContext.getClassOrVar("value"));
             arrayList.add(Warps.sanitize(builder4));
@@ -3985,22 +3989,22 @@ public final class Warps {
         ScriptValue scriptValue3 = scriptContext.getClassOrVar("data");
         if (scriptValue3 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
-            arrayList2.add(ScriptValue.of((String)"locked"));
+            arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "locked"));
             object = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue3, arrayList2, (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
         }
         arrayList.add((ScriptValue)object);
-        if (ScriptFormula.valuesEqual((ScriptValue)ScriptFormula.callBuiltin((String)"int", arrayList, (ScriptContext)scriptContext), (ScriptValue)ScriptValue.of((double)1.0))) {
+        if (ScriptFormula.valuesEqual((ScriptValue)ScriptFormula.callBuiltin((String)"int", arrayList, (ScriptContext)scriptContext), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 1.0)))) {
             ScriptValue scriptValue4 = scriptContext.getClassOrVar("SQL");
             if (scriptValue4 != ScriptValue.NULL) {
                 Object object2;
                 ArrayList<ScriptValue> arrayList3 = new ArrayList<ScriptValue>();
-                arrayList3.add(ScriptValue.of((String)"UPDATE warps SET locked = 0 WHERE id = ?"));
+                arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "UPDATE warps SET locked = 0 WHERE id = ?"));
                 ScriptValue scriptValue5 = scriptContext.getClassOrVar("data");
                 if (scriptValue5 != ScriptValue.NULL) {
                     ArrayList<ScriptValue> arrayList4 = new ArrayList<ScriptValue>();
-                    arrayList4.add(ScriptValue.of((String)"id"));
+                    arrayList4.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "id"));
                     object2 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue5, arrayList4, (ScriptContext)scriptContext);
                 } else {
                     object2 = ScriptValue.NULL;
@@ -4031,11 +4035,11 @@ public final class Warps {
             if (scriptValue8 != ScriptValue.NULL) {
                 Object object4;
                 ArrayList<ScriptValue> arrayList6 = new ArrayList<ScriptValue>();
-                arrayList6.add(ScriptValue.of((String)"UPDATE warps SET locked = 1 WHERE id = ?"));
+                arrayList6.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "UPDATE warps SET locked = 1 WHERE id = ?"));
                 ScriptValue scriptValue9 = scriptContext.getClassOrVar("data");
                 if (scriptValue9 != ScriptValue.NULL) {
                     ArrayList<ScriptValue> arrayList7 = new ArrayList<ScriptValue>();
-                    arrayList7.add(ScriptValue.of((String)"id"));
+                    arrayList7.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "id"));
                     object4 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue9, arrayList7, (ScriptContext)scriptContext);
                 } else {
                     object4 = ScriptValue.NULL;
@@ -4065,7 +4069,7 @@ public final class Warps {
         ScriptValue scriptValue12 = scriptContext.getClassOrVar("Cmd");
         if (scriptValue12 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList9 = new ArrayList<ScriptValue>();
-            arrayList9.add(ScriptValue.of((String)"managewarp"));
+            arrayList9.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "managewarp"));
             v7 = PolyDispatch.bootstrapCall("memberCall", "open_page", (ScriptValue)scriptValue12, arrayList9, (ScriptContext)scriptContext);
         } else {
             v7 = ScriptValue.NULL;
@@ -4084,7 +4088,7 @@ public final class Warps {
             ScriptValue scriptValue3 = scriptContext.getClassOrVar("SQL");
             if (scriptValue3 != ScriptValue.NULL) {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-                arrayList.add(ScriptValue.of((String)"UPDATE warps SET category = 'other' WHERE id = ?"));
+                arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "UPDATE warps SET category = 'other' WHERE id = ?"));
                 ScriptContext.Builder builder3 = ScriptContext.builder().copyFrom(scriptContext);
                 builder3.val("name", scriptValue);
                 arrayList.add(Warps.warpId(builder3));
@@ -4114,20 +4118,20 @@ public final class Warps {
         arrayList.add(scriptContext.getClassOrVar("Player"));
         ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
         arrayList2.add(scriptContext.getClassOrVar("Cmd"));
-        arrayList2.add(ScriptValue.of((String)"Set"));
-        arrayList2.add(ScriptValue.of((String)"warps.pf:on_category_submit"));
+        arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "Set"));
+        arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "warps.pf:on_category_submit"));
         ArrayList<Object> arrayList3 = new ArrayList<Object>();
-        arrayList3.add(ScriptValue.of((String)"value"));
-        arrayList3.add(ScriptValue.of((String)"Category"));
+        arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "value"));
+        arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "Category"));
         ArrayList<ScriptValue> arrayList4 = new ArrayList<ScriptValue>();
-        arrayList4.add(ScriptValue.of((String)"category"));
+        arrayList4.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "category"));
         ScriptContext.Builder builder4 = ScriptContext.builder().copyFrom(scriptContext);
         builder4.val("name", scriptValue);
         arrayList3.add(PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)Warps.warpRow(builder4), arrayList4, (ScriptContext)scriptContext));
         ScriptValue scriptValue5 = scriptContext.getClassOrVar("Dialog");
         if (scriptValue5 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList5 = new ArrayList<ScriptValue>();
-            arrayList5.add(ScriptValue.of((String)"Warp Category"));
+            arrayList5.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "Warp Category"));
             object = PolyDispatch.bootstrapCall("memberCall", "base", (ScriptValue)scriptValue5, arrayList5, (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
@@ -4152,12 +4156,12 @@ public final class Warps {
         ScriptValue scriptValue3 = Warps.sanitize(builder4);
         builder.val("cat", scriptValue3);
         if (ScriptFormula.valuesEqualStr((ScriptValue)scriptValue3, (String)"")) {
-            ScriptValue scriptValue4 = ScriptValue.of((String)"other");
+            ScriptValue scriptValue4 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "other");
             builder.val("cat", scriptValue4);
         }
         if ((scriptValue = scriptContext.getClassOrVar("SQL")) != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"UPDATE warps SET category = ? WHERE id = ?"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "UPDATE warps SET category = ? WHERE id = ?"));
             ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
             arrayList2.add(scriptContext.getClassOrVar("cat"));
             arrayList.add(ScriptFormula.callBuiltin((String)"lower", arrayList2, (ScriptContext)scriptContext));
@@ -4194,16 +4198,16 @@ public final class Warps {
         arrayList.add(scriptContext.getClassOrVar("Player"));
         ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
         arrayList2.add(scriptContext.getClassOrVar("Cmd"));
-        arrayList2.add(ScriptValue.of((String)"Ban"));
-        arrayList2.add(ScriptValue.of((String)"warps.pf:on_ban_submit"));
+        arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "Ban"));
+        arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "warps.pf:on_ban_submit"));
         ArrayList<ScriptValue> arrayList3 = new ArrayList<ScriptValue>();
-        arrayList3.add(ScriptValue.of((String)"value"));
-        arrayList3.add(ScriptValue.of((String)"Player Name"));
-        arrayList3.add(ScriptValue.of((String)""));
+        arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "value"));
+        arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "Player Name"));
+        arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, ""));
         ScriptValue scriptValue = scriptContext.getClassOrVar("Dialog");
         if (scriptValue != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList4 = new ArrayList<ScriptValue>();
-            arrayList4.add(ScriptValue.of((String)"Ban Player"));
+            arrayList4.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "Ban Player"));
             object = PolyDispatch.bootstrapCall("memberCall", "base", (ScriptValue)scriptValue, arrayList4, (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
@@ -4273,7 +4277,7 @@ public final class Warps {
         ScriptValue scriptValue9 = scriptContext.getClassOrVar("SQL");
         if (scriptValue9 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList3 = new ArrayList<ScriptValue>();
-            arrayList3.add(ScriptValue.of((String)"DELETE FROM warp_bans WHERE warp_id = ? AND uuid = ?"));
+            arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "DELETE FROM warp_bans WHERE warp_id = ? AND uuid = ?"));
             arrayList3.add(scriptValue8);
             ScriptValue scriptValue10 = scriptContext.getClassOrVar("target");
             arrayList3.add((ScriptValue)(scriptValue10 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue10, (ScriptContext)scriptContext) : ScriptValue.NULL));
@@ -4284,7 +4288,7 @@ public final class Warps {
         ScriptValue scriptValue11 = scriptContext.getClassOrVar("SQL");
         if (scriptValue11 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList4 = new ArrayList<ScriptValue>();
-            arrayList4.add(ScriptValue.of((String)"INSERT INTO warp_bans (warp_id, uuid, name) VALUES (?, ?, ?)"));
+            arrayList4.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "INSERT INTO warp_bans (warp_id, uuid, name) VALUES (?, ?, ?)"));
             arrayList4.add(scriptValue8);
             ScriptValue scriptValue12 = scriptContext.getClassOrVar("target");
             arrayList4.add((ScriptValue)(scriptValue12 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue12, (ScriptContext)scriptContext) : ScriptValue.NULL));
@@ -4352,7 +4356,7 @@ public final class Warps {
         ScriptValue scriptValue5 = scriptContext.getClassOrVar("SQL");
         if (scriptValue5 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList3 = new ArrayList<ScriptValue>();
-            arrayList3.add(ScriptValue.of((String)"UPDATE warps SET icon = ? WHERE id = ?"));
+            arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "UPDATE warps SET icon = ? WHERE id = ?"));
             ScriptValue scriptValue6 = scriptContext.getClassOrVar("held");
             arrayList3.add((ScriptValue)(scriptValue6 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "id", (ScriptValue)scriptValue6, (ScriptContext)scriptContext) : ScriptValue.NULL));
             ScriptContext.Builder builder4 = ScriptContext.builder().copyFrom(scriptContext);
@@ -4389,7 +4393,7 @@ public final class Warps {
             Object object;
             String string = "warps_visited_offset";
             String string2 = "int";
-            ScriptValue scriptValue2 = ScriptValue.of((double)0.0);
+            ScriptValue scriptValue2 =  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 0.0);
             if (scriptValue instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Player")) {
                 PolyClassPlayer polyClassPlayer = new PolyClassPlayer(object);
                 v0 = ScriptValue.of((boolean)polyClassPlayer.tm$30_set_typed(string, string2, scriptValue2));
@@ -4406,7 +4410,7 @@ public final class Warps {
         ScriptValue scriptValue3 = scriptContext.getClassOrVar("Cmd");
         if (scriptValue3 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"visited"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "visited"));
             v1 = PolyDispatch.bootstrapCall("memberCall", "open_page", (ScriptValue)scriptValue3, arrayList, (ScriptContext)scriptContext);
         } else {
             v1 = ScriptValue.NULL;
@@ -4422,7 +4426,7 @@ public final class Warps {
             Object object;
             String string = "warps_banned_offset";
             String string2 = "int";
-            ScriptValue scriptValue2 = ScriptValue.of((double)0.0);
+            ScriptValue scriptValue2 =  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 0.0);
             if (scriptValue instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Player")) {
                 PolyClassPlayer polyClassPlayer = new PolyClassPlayer(object);
                 v0 = ScriptValue.of((boolean)polyClassPlayer.tm$30_set_typed(string, string2, scriptValue2));
@@ -4439,7 +4443,7 @@ public final class Warps {
         ScriptValue scriptValue3 = scriptContext.getClassOrVar("Cmd");
         if (scriptValue3 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"banned"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "banned"));
             v1 = PolyDispatch.bootstrapCall("memberCall", "open_page", (ScriptValue)scriptValue3, arrayList, (ScriptContext)scriptContext);
         } else {
             v1 = ScriptValue.NULL;
@@ -4454,17 +4458,17 @@ public final class Warps {
         arrayList.add(scriptContext.getClassOrVar("Player"));
         ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
         arrayList2.add(scriptContext.getClassOrVar("Cmd"));
-        arrayList2.add(ScriptValue.of((String)"Rename"));
-        arrayList2.add(ScriptValue.of((String)"warps.pf:on_rename_submit"));
+        arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "Rename"));
+        arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "warps.pf:on_rename_submit"));
         ArrayList<ScriptValue> arrayList3 = new ArrayList<ScriptValue>();
-        arrayList3.add(ScriptValue.of((String)"value"));
-        arrayList3.add(ScriptValue.of((String)"New Name"));
+        arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "value"));
+        arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "New Name"));
         ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
         arrayList3.add(Warps.currentWarp(builder2));
         ScriptValue scriptValue = scriptContext.getClassOrVar("Dialog");
         if (scriptValue != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList4 = new ArrayList<ScriptValue>();
-            arrayList4.add(ScriptValue.of((String)"Rename Warp"));
+            arrayList4.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "Rename Warp"));
             object = PolyDispatch.bootstrapCall("memberCall", "base", (ScriptValue)scriptValue, arrayList4, (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
@@ -4519,7 +4523,7 @@ public final class Warps {
         var14_14 = var1_1.getClassOrVar("SQL");
         if (var14_14 != ScriptValue.NULL) {
             var15_15 = new ArrayList<ScriptValue>();
-            var15_15.add(ScriptValue.of((String)"UPDATE warps SET name = ? WHERE id = ?"));
+            var15_15.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "UPDATE warps SET name = ? WHERE id = ?"));
             var15_15.add(var5_5);
             var16_16 = ScriptContext.builder().copyFrom(var1_1);
             var16_16.val("name", var3_3);
@@ -4590,7 +4594,7 @@ public final class Warps {
             ScriptValue scriptValue4 = scriptContext.getClassOrVar("Cmd");
             if (scriptValue4 != ScriptValue.NULL) {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-                arrayList.add(ScriptValue.of((String)"manage"));
+                arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "manage"));
                 v1 = PolyDispatch.bootstrapCall("memberCall", "open_page", (ScriptValue)scriptValue4, arrayList, (ScriptContext)scriptContext);
             } else {
                 v1 = ScriptValue.NULL;
@@ -4623,16 +4627,16 @@ public final class Warps {
         arrayList.add(scriptContext.getClassOrVar("Player"));
         ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
         arrayList2.add(scriptContext.getClassOrVar("Cmd"));
-        arrayList2.add(ScriptValue.of((String)"Transfer"));
-        arrayList2.add(ScriptValue.of((String)"warps.pf:on_transfer_submit"));
+        arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "Transfer"));
+        arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "warps.pf:on_transfer_submit"));
         ArrayList<ScriptValue> arrayList3 = new ArrayList<ScriptValue>();
-        arrayList3.add(ScriptValue.of((String)"value"));
-        arrayList3.add(ScriptValue.of((String)"New Owner Name"));
-        arrayList3.add(ScriptValue.of((String)""));
+        arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "value"));
+        arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "New Owner Name"));
+        arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, ""));
         ScriptValue scriptValue = scriptContext.getClassOrVar("Dialog");
         if (scriptValue != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList4 = new ArrayList<ScriptValue>();
-            arrayList4.add(ScriptValue.of((String)"Transfer Ownership"));
+            arrayList4.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "Transfer Ownership"));
             object = PolyDispatch.bootstrapCall("memberCall", "base", (ScriptValue)scriptValue, arrayList4, (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
@@ -4698,7 +4702,7 @@ public final class Warps {
         ScriptValue scriptValue8 = scriptContext.getClassOrVar("SQL");
         if (scriptValue8 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList3 = new ArrayList<ScriptValue>();
-            arrayList3.add(ScriptValue.of((String)"UPDATE warps SET owner_uuid = ?, owner_name = ? WHERE id = ?"));
+            arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "UPDATE warps SET owner_uuid = ?, owner_name = ? WHERE id = ?"));
             ScriptValue scriptValue9 = scriptContext.getClassOrVar("target");
             arrayList3.add((ScriptValue)(scriptValue9 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue9, (ScriptContext)scriptContext) : ScriptValue.NULL));
             ScriptValue scriptValue10 = scriptContext.getClassOrVar("target");
@@ -4730,7 +4734,7 @@ public final class Warps {
         ScriptValue scriptValue14 = scriptContext.getClassOrVar("Cmd");
         if (scriptValue14 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList5 = new ArrayList<ScriptValue>();
-            arrayList5.add(ScriptValue.of((String)"manage"));
+            arrayList5.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "manage"));
             v4 = PolyDispatch.bootstrapCall("memberCall", "open_page", (ScriptValue)scriptValue14, arrayList5, (ScriptContext)scriptContext);
         } else {
             v4 = ScriptValue.NULL;
@@ -4779,7 +4783,7 @@ public final class Warps {
             ScriptValue scriptValue4 = scriptContext.getClassOrVar("SQL");
             if (scriptValue4 != ScriptValue.NULL) {
                 ArrayList<ScriptValue> arrayList3 = new ArrayList<ScriptValue>();
-                arrayList3.add(ScriptValue.of((String)"SELECT uuid, name FROM warp_bans WHERE warp_id = ? ORDER BY name"));
+                arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "SELECT uuid, name FROM warp_bans WHERE warp_id = ? ORDER BY name"));
                 arrayList3.add(scriptValue3);
                 object3 = PolyDispatch.bootstrapCall("memberCall", "query", (ScriptValue)scriptValue4, arrayList3, (ScriptContext)scriptContext);
             } else {
@@ -4792,7 +4796,7 @@ public final class Warps {
             ScriptValue scriptValue6 = scriptContext.getClassOrVar("SQL");
             if (scriptValue6 != ScriptValue.NULL) {
                 ArrayList<ScriptValue> arrayList4 = new ArrayList<ScriptValue>();
-                arrayList4.add(ScriptValue.of((String)"SELECT uuid, name FROM warp_bans WHERE warp_id = ? AND lower(name) LIKE ? ORDER BY name"));
+                arrayList4.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "SELECT uuid, name FROM warp_bans WHERE warp_id = ? AND lower(name) LIKE ? ORDER BY name"));
                 arrayList4.add(scriptValue3);
                 arrayList4.add(ScriptValue.of((String)("%" + scriptValue2.asStr() + "%")));
                 object4 = PolyDispatch.bootstrapCall("memberCall", "query", (ScriptValue)scriptValue6, arrayList4, (ScriptContext)scriptContext);
@@ -4814,21 +4818,21 @@ public final class Warps {
                 ArrayList<ScriptValue> arrayList6 = new ArrayList<ScriptValue>();
                 arrayList6.add(scriptContext.getClassOrVar("out"));
                 ArrayList<ScriptValue> arrayList7 = new ArrayList<ScriptValue>();
-                arrayList7.add(ScriptValue.of((String)"uuid"));
+                arrayList7.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "uuid"));
                 ScriptValue scriptValue9 = scriptContext.getClassOrVar("row");
                 if (scriptValue9 != ScriptValue.NULL) {
                     ArrayList<ScriptValue> arrayList8 = new ArrayList<ScriptValue>();
-                    arrayList8.add(ScriptValue.of((String)"uuid"));
+                    arrayList8.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "uuid"));
                     object6 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue9, arrayList8, (ScriptContext)scriptContext);
                 } else {
                     object6 = ScriptValue.NULL;
                 }
                 arrayList7.add((ScriptValue)object6);
-                arrayList7.add(ScriptValue.of((String)"name"));
+                arrayList7.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "name"));
                 ScriptValue scriptValue10 = scriptContext.getClassOrVar("row");
                 if (scriptValue10 != ScriptValue.NULL) {
                     ArrayList<ScriptValue> arrayList9 = new ArrayList<ScriptValue>();
-                    arrayList9.add(ScriptValue.of((String)"name"));
+                    arrayList9.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "name"));
                     object5 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue10, arrayList9, (ScriptContext)scriptContext);
                 } else {
                     object5 = ScriptValue.NULL;
@@ -4850,11 +4854,11 @@ public final class Warps {
         arrayList.add(scriptContext.getClassOrVar("Player"));
         ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
         arrayList2.add(scriptContext.getClassOrVar("Cmd"));
-        arrayList2.add(ScriptValue.of((String)"Search"));
-        arrayList2.add(ScriptValue.of((String)"warps.pf:on_banned_search_submit"));
+        arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "Search"));
+        arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "warps.pf:on_banned_search_submit"));
         ArrayList<ScriptValue> arrayList3 = new ArrayList<ScriptValue>();
-        arrayList3.add(ScriptValue.of((String)"value"));
-        arrayList3.add(ScriptValue.of((String)"Player name"));
+        arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "value"));
+        arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "Player name"));
         ScriptValue scriptValue = scriptContext.getClassOrVar("Player");
         if (scriptValue != ScriptValue.NULL) {
             ScriptValue.Obj obj;
@@ -4877,7 +4881,7 @@ public final class Warps {
         ScriptValue scriptValue2 = scriptContext.getClassOrVar("Dialog");
         if (scriptValue2 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList5 = new ArrayList<ScriptValue>();
-            arrayList5.add(ScriptValue.of((String)"Search Banned Players"));
+            arrayList5.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "Search Banned Players"));
             object = PolyDispatch.bootstrapCall("memberCall", "base", (ScriptValue)scriptValue2, arrayList5, (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
@@ -4916,7 +4920,7 @@ public final class Warps {
             Object object;
             String string = "warps_banned_offset";
             String string3 = "int";
-            ScriptValue scriptValue4 = ScriptValue.of((double)0.0);
+            ScriptValue scriptValue4 =  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 0.0);
             if (scriptValue3 instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue3).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Player")) {
                 PolyClassPlayer polyClassPlayer = new PolyClassPlayer(object);
                 v1 = ScriptValue.of((boolean)polyClassPlayer.tm$30_set_typed(string, string3, scriptValue4));
@@ -4933,7 +4937,7 @@ public final class Warps {
         ScriptValue scriptValue5 = scriptContext.getClassOrVar("Cmd");
         if (scriptValue5 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"banned"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "banned"));
             v2 = PolyDispatch.bootstrapCall("memberCall", "open_page", (ScriptValue)scriptValue5, arrayList, (ScriptContext)scriptContext);
         } else {
             v2 = ScriptValue.NULL;
@@ -4974,7 +4978,7 @@ public final class Warps {
         ScriptValue scriptValue4 = ScriptValue.of((double)d);
         builder.val("start", scriptValue4);
         ArrayList<ScriptValue> arrayList3 = new ArrayList<ScriptValue>();
-        arrayList3.add(ScriptValue.of((double)0.0));
+        arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 0.0));
         arrayList3.add(scriptContext.getClassOrVar("WARP_PAGE_SIZE_LIST"));
         List list = ScriptProgram.elementsOf((ScriptValue)ScriptFormula.callBuiltin((String)"range", arrayList3, (ScriptContext)scriptContext));
         if (list != null) {
@@ -5003,7 +5007,7 @@ public final class Warps {
                 ScriptValue scriptValue9 = scriptContext.getClassOrVar("entry");
                 if (scriptValue9 != ScriptValue.NULL) {
                     ArrayList<ScriptValue> arrayList6 = new ArrayList<ScriptValue>();
-                    arrayList6.add(ScriptValue.of((String)"uuid"));
+                    arrayList6.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "uuid"));
                     object5 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue9, arrayList6, (ScriptContext)scriptContext);
                 } else {
                     object5 = ScriptValue.NULL;
@@ -5013,7 +5017,7 @@ public final class Warps {
                 ScriptValue scriptValue11 = scriptContext.getClassOrVar("entry");
                 if (scriptValue11 != ScriptValue.NULL) {
                     ArrayList<ScriptValue> arrayList7 = new ArrayList<ScriptValue>();
-                    arrayList7.add(ScriptValue.of((String)"name"));
+                    arrayList7.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "name"));
                     object4 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue11, arrayList7, (ScriptContext)scriptContext);
                 } else {
                     object4 = ScriptValue.NULL;
@@ -5023,7 +5027,7 @@ public final class Warps {
                 ArrayList<ScriptValue> arrayList8 = new ArrayList<ScriptValue>();
                 arrayList8.add(scriptContext.getClassOrVar("out"));
                 ArrayList<Object> arrayList9 = new ArrayList<Object>();
-                arrayList9.add(ScriptValue.of((String)"slot"));
+                arrayList9.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "slot"));
                 ScriptValue scriptValue13 = scriptContext.getClassOrVar("WARP_SLOTS_LIST");
                 if (scriptValue13 != ScriptValue.NULL) {
                     ArrayList<ScriptValue> arrayList10 = new ArrayList<ScriptValue>();
@@ -5033,20 +5037,20 @@ public final class Warps {
                     object3 = ScriptValue.NULL;
                 }
                 arrayList9.add(object3);
-                arrayList9.add(ScriptValue.of((String)"icon"));
+                arrayList9.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "icon"));
                 ScriptContext.Builder builder3 = ScriptContext.builder().copyFrom(scriptContext);
                 builder3.val("name", scriptValue12);
                 arrayList9.add(Warps.playerHeadIcon(builder3));
-                arrayList9.add(ScriptValue.of((String)"name"));
+                arrayList9.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "name"));
                 arrayList9.add(ScriptValue.of((String)("<white>" + scriptValue12.asStr())));
-                arrayList9.add(ScriptValue.of((String)"lore"));
+                arrayList9.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "lore"));
                 ArrayList<ScriptValue> arrayList11 = new ArrayList<ScriptValue>();
                 ScriptContext.Builder builder4 = ScriptContext.builder().copyFrom(scriptContext);
                 arrayList11.add(ScriptValue.of((String)("<gray>Banned from <white>" + Warps.currentWarp(builder4).asStr())));
-                arrayList11.add(ScriptValue.of((String)""));
-                arrayList11.add(ScriptValue.of((String)"<red>Left-click to unban"));
+                arrayList11.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, ""));
+                arrayList11.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "<red>Left-click to unban"));
                 arrayList9.add(new ScriptValue.Array(arrayList11));
-                arrayList9.add(ScriptValue.of((String)"action"));
+                arrayList9.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "action"));
                 arrayList9.add(ScriptValue.of((String)("warps.pf:on_unban_click:" + scriptValue10.asStr())));
                 arrayList8.add(ScriptFormula.callBuiltin((String)"make_map", arrayList9, (ScriptContext)scriptContext));
                 ScriptValue scriptValue14 = ScriptFormula.callBuiltin((String)"push", arrayList8, (ScriptContext)scriptContext);
@@ -5069,7 +5073,7 @@ public final class Warps {
         ScriptValue scriptValue2 = scriptContext.getClassOrVar("SQL");
         if (scriptValue2 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"DELETE FROM warp_bans WHERE warp_id = ? AND uuid = ?"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "DELETE FROM warp_bans WHERE warp_id = ? AND uuid = ?"));
             ScriptContext.Builder builder4 = ScriptContext.builder().copyFrom(scriptContext);
             builder4.val("name", scriptValue);
             arrayList.add(Warps.warpId(builder4));
@@ -5097,7 +5101,7 @@ public final class Warps {
         ScriptValue scriptValue4 = scriptContext.getClassOrVar("Cmd");
         if (scriptValue4 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"banned"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "banned"));
             v2 = PolyDispatch.bootstrapCall("memberCall", "open_page", (ScriptValue)scriptValue4, arrayList, (ScriptContext)scriptContext);
         } else {
             v2 = ScriptValue.NULL;
@@ -5113,7 +5117,7 @@ public final class Warps {
         ScriptValue scriptValue = ScriptFormula.callBuiltin((String)"len", arrayList, (ScriptContext)scriptContext);
         builder.val("n", scriptValue);
         if (scriptValue.asNum() <= 0.0) {
-            return ScriptValue.of((double)0.0);
+            return  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 0.0);
         }
         ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
         double d = scriptContext.getNum("WARP_PAGE_SIZE_LIST");
@@ -5169,7 +5173,7 @@ public final class Warps {
         }
         if ((scriptValue = scriptContext.getClassOrVar("Cmd")) != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"banned"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "banned"));
             v2 = PolyDispatch.bootstrapCall("memberCall", "open_page", (ScriptValue)scriptValue, arrayList, (ScriptContext)scriptContext);
         } else {
             v2 = ScriptValue.NULL;
@@ -5209,7 +5213,7 @@ public final class Warps {
                 Object object3;
                 String string = "warps_banned_offset";
                 String string3 = "int";
-                ScriptValue scriptValue5 = ScriptFormula.addPolymorphic((ScriptValue)scriptValue3, (ScriptValue)ScriptValue.of((double)1.0));
+                ScriptValue scriptValue5 = ScriptFormula.addPolymorphic((ScriptValue)scriptValue3, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 1.0)));
                 if (scriptValue4 instanceof ScriptValue.Obj && (object3 = (obj = (ScriptValue.Obj)scriptValue4).instance()) != null && !(object3 instanceof PolyClass) && obj.typeName().equals("Player")) {
                     PolyClassPlayer polyClassPlayer = new PolyClassPlayer(object3);
                     v1 = ScriptValue.of((boolean)polyClassPlayer.tm$30_set_typed(string, string3, scriptValue5));
@@ -5226,7 +5230,7 @@ public final class Warps {
         }
         if ((scriptValue = scriptContext.getClassOrVar("Cmd")) != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"banned"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "banned"));
             v2 = PolyDispatch.bootstrapCall("memberCall", "open_page", (ScriptValue)scriptValue, arrayList, (ScriptContext)scriptContext);
         } else {
             v2 = ScriptValue.NULL;
@@ -5275,7 +5279,7 @@ public final class Warps {
             ScriptValue scriptValue4 = scriptContext.getClassOrVar("SQL");
             if (scriptValue4 != ScriptValue.NULL) {
                 ArrayList<ScriptValue> arrayList3 = new ArrayList<ScriptValue>();
-                arrayList3.add(ScriptValue.of((String)"SELECT uuid, name, count FROM warp_visitors WHERE warp_id = ? ORDER BY name"));
+                arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "SELECT uuid, name, count FROM warp_visitors WHERE warp_id = ? ORDER BY name"));
                 arrayList3.add(scriptValue3);
                 object3 = PolyDispatch.bootstrapCall("memberCall", "query", (ScriptValue)scriptValue4, arrayList3, (ScriptContext)scriptContext);
             } else {
@@ -5288,7 +5292,7 @@ public final class Warps {
             ScriptValue scriptValue6 = scriptContext.getClassOrVar("SQL");
             if (scriptValue6 != ScriptValue.NULL) {
                 ArrayList<ScriptValue> arrayList4 = new ArrayList<ScriptValue>();
-                arrayList4.add(ScriptValue.of((String)"SELECT uuid, name, count FROM warp_visitors WHERE warp_id = ? AND lower(name) LIKE ? ORDER BY name"));
+                arrayList4.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "SELECT uuid, name, count FROM warp_visitors WHERE warp_id = ? AND lower(name) LIKE ? ORDER BY name"));
                 arrayList4.add(scriptValue3);
                 arrayList4.add(ScriptValue.of((String)("%" + scriptValue2.asStr() + "%")));
                 object4 = PolyDispatch.bootstrapCall("memberCall", "query", (ScriptValue)scriptValue6, arrayList4, (ScriptContext)scriptContext);
@@ -5311,31 +5315,31 @@ public final class Warps {
                 ArrayList<ScriptValue> arrayList6 = new ArrayList<ScriptValue>();
                 arrayList6.add(scriptContext.getClassOrVar("out"));
                 ArrayList<ScriptValue> arrayList7 = new ArrayList<ScriptValue>();
-                arrayList7.add(ScriptValue.of((String)"uuid"));
+                arrayList7.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "uuid"));
                 ScriptValue scriptValue9 = scriptContext.getClassOrVar("row");
                 if (scriptValue9 != ScriptValue.NULL) {
                     ArrayList<ScriptValue> arrayList8 = new ArrayList<ScriptValue>();
-                    arrayList8.add(ScriptValue.of((String)"uuid"));
+                    arrayList8.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "uuid"));
                     object7 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue9, arrayList8, (ScriptContext)scriptContext);
                 } else {
                     object7 = ScriptValue.NULL;
                 }
                 arrayList7.add((ScriptValue)object7);
-                arrayList7.add(ScriptValue.of((String)"name"));
+                arrayList7.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "name"));
                 ScriptValue scriptValue10 = scriptContext.getClassOrVar("row");
                 if (scriptValue10 != ScriptValue.NULL) {
                     ArrayList<ScriptValue> arrayList9 = new ArrayList<ScriptValue>();
-                    arrayList9.add(ScriptValue.of((String)"name"));
+                    arrayList9.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "name"));
                     object6 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue10, arrayList9, (ScriptContext)scriptContext);
                 } else {
                     object6 = ScriptValue.NULL;
                 }
                 arrayList7.add((ScriptValue)object6);
-                arrayList7.add(ScriptValue.of((String)"count"));
+                arrayList7.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "count"));
                 ScriptValue scriptValue11 = scriptContext.getClassOrVar("row");
                 if (scriptValue11 != ScriptValue.NULL) {
                     ArrayList<ScriptValue> arrayList10 = new ArrayList<ScriptValue>();
-                    arrayList10.add(ScriptValue.of((String)"count"));
+                    arrayList10.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "count"));
                     object5 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue11, arrayList10, (ScriptContext)scriptContext);
                 } else {
                     object5 = ScriptValue.NULL;
@@ -5357,11 +5361,11 @@ public final class Warps {
         arrayList.add(scriptContext.getClassOrVar("Player"));
         ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
         arrayList2.add(scriptContext.getClassOrVar("Cmd"));
-        arrayList2.add(ScriptValue.of((String)"Search"));
-        arrayList2.add(ScriptValue.of((String)"warps.pf:on_visited_search_submit"));
+        arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "Search"));
+        arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "warps.pf:on_visited_search_submit"));
         ArrayList<ScriptValue> arrayList3 = new ArrayList<ScriptValue>();
-        arrayList3.add(ScriptValue.of((String)"value"));
-        arrayList3.add(ScriptValue.of((String)"Player name"));
+        arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "value"));
+        arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "Player name"));
         ScriptValue scriptValue = scriptContext.getClassOrVar("Player");
         if (scriptValue != ScriptValue.NULL) {
             ScriptValue.Obj obj;
@@ -5384,7 +5388,7 @@ public final class Warps {
         ScriptValue scriptValue2 = scriptContext.getClassOrVar("Dialog");
         if (scriptValue2 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList5 = new ArrayList<ScriptValue>();
-            arrayList5.add(ScriptValue.of((String)"Search Visited Players"));
+            arrayList5.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "Search Visited Players"));
             object = PolyDispatch.bootstrapCall("memberCall", "base", (ScriptValue)scriptValue2, arrayList5, (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
@@ -5423,7 +5427,7 @@ public final class Warps {
             Object object;
             String string = "warps_visited_offset";
             String string3 = "int";
-            ScriptValue scriptValue4 = ScriptValue.of((double)0.0);
+            ScriptValue scriptValue4 =  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 0.0);
             if (scriptValue3 instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue3).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Player")) {
                 PolyClassPlayer polyClassPlayer = new PolyClassPlayer(object);
                 v1 = ScriptValue.of((boolean)polyClassPlayer.tm$30_set_typed(string, string3, scriptValue4));
@@ -5440,7 +5444,7 @@ public final class Warps {
         ScriptValue scriptValue5 = scriptContext.getClassOrVar("Cmd");
         if (scriptValue5 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"visited"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "visited"));
             v2 = PolyDispatch.bootstrapCall("memberCall", "open_page", (ScriptValue)scriptValue5, arrayList, (ScriptContext)scriptContext);
         } else {
             v2 = ScriptValue.NULL;
@@ -5481,7 +5485,7 @@ public final class Warps {
         ScriptValue scriptValue4 = ScriptValue.of((double)d);
         builder.val("start", scriptValue4);
         ArrayList<ScriptValue> arrayList3 = new ArrayList<ScriptValue>();
-        arrayList3.add(ScriptValue.of((double)0.0));
+        arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 0.0));
         arrayList3.add(scriptContext.getClassOrVar("WARP_PAGE_SIZE_LIST"));
         List list = ScriptProgram.elementsOf((ScriptValue)ScriptFormula.callBuiltin((String)"range", arrayList3, (ScriptContext)scriptContext));
         if (list != null) {
@@ -5510,7 +5514,7 @@ public final class Warps {
                 ScriptValue scriptValue9 = scriptContext.getClassOrVar("entry");
                 if (scriptValue9 != ScriptValue.NULL) {
                     ArrayList<ScriptValue> arrayList6 = new ArrayList<ScriptValue>();
-                    arrayList6.add(ScriptValue.of((String)"name"));
+                    arrayList6.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "name"));
                     object5 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue9, arrayList6, (ScriptContext)scriptContext);
                 } else {
                     object5 = ScriptValue.NULL;
@@ -5520,7 +5524,7 @@ public final class Warps {
                 ArrayList<ScriptValue> arrayList7 = new ArrayList<ScriptValue>();
                 arrayList7.add(scriptContext.getClassOrVar("out"));
                 ArrayList<Object> arrayList8 = new ArrayList<Object>();
-                arrayList8.add(ScriptValue.of((String)"slot"));
+                arrayList8.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "slot"));
                 ScriptValue scriptValue11 = scriptContext.getClassOrVar("WARP_SLOTS_LIST");
                 if (scriptValue11 != ScriptValue.NULL) {
                     ArrayList<ScriptValue> arrayList9 = new ArrayList<ScriptValue>();
@@ -5530,20 +5534,20 @@ public final class Warps {
                     object4 = ScriptValue.NULL;
                 }
                 arrayList8.add(object4);
-                arrayList8.add(ScriptValue.of((String)"icon"));
+                arrayList8.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "icon"));
                 ScriptContext.Builder builder3 = ScriptContext.builder().copyFrom(scriptContext);
                 builder3.val("name", scriptValue10);
                 arrayList8.add(Warps.playerHeadIcon(builder3));
-                arrayList8.add(ScriptValue.of((String)"name"));
+                arrayList8.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "name"));
                 arrayList8.add(ScriptValue.of((String)("<white>" + scriptValue10.asStr())));
-                arrayList8.add(ScriptValue.of((String)"lore"));
+                arrayList8.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "lore"));
                 ArrayList<ScriptValue> arrayList10 = new ArrayList<ScriptValue>();
                 StringBuilder stringBuilder = new StringBuilder().append("<gray>Visited <white>");
                 ArrayList<ScriptValue> arrayList11 = new ArrayList<ScriptValue>();
                 ScriptValue scriptValue12 = scriptContext.getClassOrVar("entry");
                 if (scriptValue12 != ScriptValue.NULL) {
                     ArrayList<ScriptValue> arrayList12 = new ArrayList<ScriptValue>();
-                    arrayList12.add(ScriptValue.of((String)"count"));
+                    arrayList12.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "count"));
                     object3 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue12, arrayList12, (ScriptContext)scriptContext);
                 } else {
                     object3 = ScriptValue.NULL;
@@ -5567,7 +5571,7 @@ public final class Warps {
         ScriptValue scriptValue = ScriptFormula.callBuiltin((String)"len", arrayList, (ScriptContext)scriptContext);
         builder.val("n", scriptValue);
         if (scriptValue.asNum() <= 0.0) {
-            return ScriptValue.of((double)0.0);
+            return  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 0.0);
         }
         ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
         double d = scriptContext.getNum("WARP_PAGE_SIZE_LIST");
@@ -5623,7 +5627,7 @@ public final class Warps {
         }
         if ((scriptValue = scriptContext.getClassOrVar("Cmd")) != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"visited"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "visited"));
             v2 = PolyDispatch.bootstrapCall("memberCall", "open_page", (ScriptValue)scriptValue, arrayList, (ScriptContext)scriptContext);
         } else {
             v2 = ScriptValue.NULL;
@@ -5663,7 +5667,7 @@ public final class Warps {
                 Object object3;
                 String string = "warps_visited_offset";
                 String string3 = "int";
-                ScriptValue scriptValue5 = ScriptFormula.addPolymorphic((ScriptValue)scriptValue3, (ScriptValue)ScriptValue.of((double)1.0));
+                ScriptValue scriptValue5 = ScriptFormula.addPolymorphic((ScriptValue)scriptValue3, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 1.0)));
                 if (scriptValue4 instanceof ScriptValue.Obj && (object3 = (obj = (ScriptValue.Obj)scriptValue4).instance()) != null && !(object3 instanceof PolyClass) && obj.typeName().equals("Player")) {
                     PolyClassPlayer polyClassPlayer = new PolyClassPlayer(object3);
                     v1 = ScriptValue.of((boolean)polyClassPlayer.tm$30_set_typed(string, string3, scriptValue5));
@@ -5680,7 +5684,7 @@ public final class Warps {
         }
         if ((scriptValue = scriptContext.getClassOrVar("Cmd")) != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"visited"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "visited"));
             v2 = PolyDispatch.bootstrapCall("memberCall", "open_page", (ScriptValue)scriptValue, arrayList, (ScriptContext)scriptContext);
         } else {
             v2 = ScriptValue.NULL;
@@ -5719,7 +5723,7 @@ public final class Warps {
         ScriptValue scriptValue3 = object;
         builder.val("target", scriptValue3);
         if (ScriptFormula.valuesEqualStr((ScriptValue)scriptValue3, (String)"")) {
-            ScriptValue scriptValue4 = ScriptValue.of((String)"warps");
+            ScriptValue scriptValue4 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "warps");
             builder.val("target", scriptValue4);
         }
         if ((scriptValue = scriptContext.getClassOrVar("Cmd")) != ScriptValue.NULL) {
@@ -5757,19 +5761,19 @@ public final class Warps {
         arrayList.add(scriptContext.getClassOrVar("Player"));
         ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
         arrayList2.add(scriptContext.getClassOrVar("Cmd"));
-        arrayList2.add(ScriptValue.of((String)"Rate"));
-        arrayList2.add(ScriptValue.of((String)"warps.pf:on_rate_submit"));
+        arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "Rate"));
+        arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "warps.pf:on_rate_submit"));
         ArrayList<ScriptValue> arrayList3 = new ArrayList<ScriptValue>();
-        arrayList3.add(ScriptValue.of((String)"stars"));
-        arrayList3.add(ScriptValue.of((String)"Stars (0-5)"));
-        arrayList3.add(ScriptValue.of((double)0.0));
-        arrayList3.add(ScriptValue.of((double)5.0));
-        arrayList3.add(ScriptValue.of((double)1.0));
-        arrayList3.add(ScriptValue.of((double)5.0));
+        arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "stars"));
+        arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "Stars (0-5)"));
+        arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 0.0));
+        arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 5.0));
+        arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 1.0));
+        arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 5.0));
         ScriptValue scriptValue = scriptContext.getClassOrVar("Dialog");
         if (scriptValue != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList4 = new ArrayList<ScriptValue>();
-            arrayList4.add(ScriptValue.of((String)"Rate Warp"));
+            arrayList4.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "Rate Warp"));
             object = PolyDispatch.bootstrapCall("memberCall", "base", (ScriptValue)scriptValue, arrayList4, (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
@@ -5826,7 +5830,7 @@ public final class Warps {
         if (scriptValue7 != ScriptValue.NULL) {
             PolyClassPlayer polyClassPlayer;
             ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
-            arrayList2.add(ScriptValue.of((String)"DELETE FROM warp_ratings WHERE warp_id = ? AND uuid = ?"));
+            arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "DELETE FROM warp_ratings WHERE warp_id = ? AND uuid = ?"));
             arrayList2.add(scriptValue6);
             ScriptValue scriptValue8 = scriptContext.getClassOrVar("Player");
             arrayList2.add((ScriptValue)(scriptValue8 != ScriptValue.NULL ? ((polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue8)) != null ? polyClassPlayer.pg$34_uuid() : PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue8, (ScriptContext)scriptContext)) : ScriptValue.NULL));
@@ -5839,7 +5843,7 @@ public final class Warps {
             PolyClassPlayer polyClassPlayer;
             PolyClassPlayer polyClassPlayer2;
             ArrayList<ScriptValue> arrayList3 = new ArrayList<ScriptValue>();
-            arrayList3.add(ScriptValue.of((String)"INSERT INTO warp_ratings (warp_id, uuid, name, stars) VALUES (?, ?, ?, ?)"));
+            arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "INSERT INTO warp_ratings (warp_id, uuid, name, stars) VALUES (?, ?, ?, ?)"));
             arrayList3.add(scriptValue6);
             ScriptValue scriptValue10 = scriptContext.getClassOrVar("Player");
             arrayList3.add((ScriptValue)(scriptValue10 != ScriptValue.NULL ? ((polyClassPlayer2 = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue10)) != null ? polyClassPlayer2.pg$34_uuid() : PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue10, (ScriptContext)scriptContext)) : ScriptValue.NULL));
@@ -5881,7 +5885,7 @@ public final class Warps {
         ScriptValue scriptValue = scriptContext.getClassOrVar("SQL");
         if (scriptValue != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"SELECT uuid, name, stars FROM warp_ratings WHERE warp_id = ? ORDER BY name"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "SELECT uuid, name, stars FROM warp_ratings WHERE warp_id = ? ORDER BY name"));
             ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
             ScriptContext.Builder builder3 = ScriptContext.builder().copyFrom(scriptContext);
             builder2.val("name", Warps.currentWarp(builder3));
@@ -5905,31 +5909,31 @@ public final class Warps {
                 ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
                 arrayList2.add(scriptContext.getClassOrVar("out"));
                 ArrayList<ScriptValue> arrayList3 = new ArrayList<ScriptValue>();
-                arrayList3.add(ScriptValue.of((String)"uuid"));
+                arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "uuid"));
                 ScriptValue scriptValue4 = scriptContext.getClassOrVar("row");
                 if (scriptValue4 != ScriptValue.NULL) {
                     ArrayList<ScriptValue> arrayList4 = new ArrayList<ScriptValue>();
-                    arrayList4.add(ScriptValue.of((String)"uuid"));
+                    arrayList4.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "uuid"));
                     object4 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue4, arrayList4, (ScriptContext)scriptContext);
                 } else {
                     object4 = ScriptValue.NULL;
                 }
                 arrayList3.add((ScriptValue)object4);
-                arrayList3.add(ScriptValue.of((String)"name"));
+                arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "name"));
                 ScriptValue scriptValue5 = scriptContext.getClassOrVar("row");
                 if (scriptValue5 != ScriptValue.NULL) {
                     ArrayList<ScriptValue> arrayList5 = new ArrayList<ScriptValue>();
-                    arrayList5.add(ScriptValue.of((String)"name"));
+                    arrayList5.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "name"));
                     object3 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue5, arrayList5, (ScriptContext)scriptContext);
                 } else {
                     object3 = ScriptValue.NULL;
                 }
                 arrayList3.add((ScriptValue)object3);
-                arrayList3.add(ScriptValue.of((String)"stars"));
+                arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "stars"));
                 ScriptValue scriptValue6 = scriptContext.getClassOrVar("row");
                 if (scriptValue6 != ScriptValue.NULL) {
                     ArrayList<ScriptValue> arrayList6 = new ArrayList<ScriptValue>();
-                    arrayList6.add(ScriptValue.of((String)"stars"));
+                    arrayList6.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "stars"));
                     object2 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue6, arrayList6, (ScriptContext)scriptContext);
                 } else {
                     object2 = ScriptValue.NULL;
@@ -5976,7 +5980,7 @@ public final class Warps {
         ScriptValue scriptValue4 = ScriptValue.of((double)d);
         builder.val("start", scriptValue4);
         ArrayList<ScriptValue> arrayList3 = new ArrayList<ScriptValue>();
-        arrayList3.add(ScriptValue.of((double)0.0));
+        arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 0.0));
         arrayList3.add(scriptContext.getClassOrVar("WARP_PAGE_SIZE_LIST"));
         List list = ScriptProgram.elementsOf((ScriptValue)ScriptFormula.callBuiltin((String)"range", arrayList3, (ScriptContext)scriptContext));
         if (list != null) {
@@ -6007,7 +6011,7 @@ public final class Warps {
                 ScriptValue scriptValue9 = scriptContext.getClassOrVar("entry");
                 if (scriptValue9 != ScriptValue.NULL) {
                     ArrayList<ScriptValue> arrayList6 = new ArrayList<ScriptValue>();
-                    arrayList6.add(ScriptValue.of((String)"uuid"));
+                    arrayList6.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "uuid"));
                     object6 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue9, arrayList6, (ScriptContext)scriptContext);
                 } else {
                     object6 = ScriptValue.NULL;
@@ -6017,7 +6021,7 @@ public final class Warps {
                 ScriptValue scriptValue11 = scriptContext.getClassOrVar("entry");
                 if (scriptValue11 != ScriptValue.NULL) {
                     ArrayList<ScriptValue> arrayList7 = new ArrayList<ScriptValue>();
-                    arrayList7.add(ScriptValue.of((String)"name"));
+                    arrayList7.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "name"));
                     object5 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue11, arrayList7, (ScriptContext)scriptContext);
                 } else {
                     object5 = ScriptValue.NULL;
@@ -6027,7 +6031,7 @@ public final class Warps {
                 ScriptValue scriptValue13 = scriptContext.getClassOrVar("entry");
                 if (scriptValue13 != ScriptValue.NULL) {
                     ArrayList<ScriptValue> arrayList8 = new ArrayList<ScriptValue>();
-                    arrayList8.add(ScriptValue.of((String)"stars"));
+                    arrayList8.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "stars"));
                     object4 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue13, arrayList8, (ScriptContext)scriptContext);
                 } else {
                     object4 = ScriptValue.NULL;
@@ -6043,19 +6047,19 @@ public final class Warps {
                 if (ScriptFormula.valuesEqual((ScriptValue)scriptValue10, (ScriptValue)object8)) {
                     ArrayList<ScriptValue> arrayList10 = new ArrayList<ScriptValue>();
                     arrayList10.add(scriptContext.getClassOrVar("lore"));
-                    arrayList10.add(ScriptValue.of((String)""));
+                    arrayList10.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, ""));
                     ScriptValue scriptValue16 = ScriptFormula.callBuiltin((String)"push", arrayList10, (ScriptContext)scriptContext);
                     builder.val("lore", scriptValue16);
                     ArrayList<ScriptValue> arrayList11 = new ArrayList<ScriptValue>();
                     arrayList11.add(scriptContext.getClassOrVar("lore"));
-                    arrayList11.add(ScriptValue.of((String)"<red>Left-click to remove your rating"));
+                    arrayList11.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "<red>Left-click to remove your rating"));
                     ScriptValue scriptValue17 = ScriptFormula.callBuiltin((String)"push", arrayList11, (ScriptContext)scriptContext);
                     builder.val("lore", scriptValue17);
                 }
                 ArrayList<ScriptValue> arrayList12 = new ArrayList<ScriptValue>();
                 arrayList12.add(scriptContext.getClassOrVar("out"));
                 ArrayList<ScriptValue> arrayList13 = new ArrayList<ScriptValue>();
-                arrayList13.add(ScriptValue.of((String)"slot"));
+                arrayList13.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "slot"));
                 ScriptValue scriptValue18 = scriptContext.getClassOrVar("WARP_SLOTS_LIST");
                 if (scriptValue18 != ScriptValue.NULL) {
                     ArrayList<ScriptValue> arrayList14 = new ArrayList<ScriptValue>();
@@ -6065,15 +6069,15 @@ public final class Warps {
                     object3 = ScriptValue.NULL;
                 }
                 arrayList13.add((ScriptValue)object3);
-                arrayList13.add(ScriptValue.of((String)"icon"));
+                arrayList13.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "icon"));
                 ScriptContext.Builder builder3 = ScriptContext.builder().copyFrom(scriptContext);
                 builder3.val("name", scriptValue12);
                 arrayList13.add(Warps.playerHeadIcon(builder3));
-                arrayList13.add(ScriptValue.of((String)"name"));
+                arrayList13.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "name"));
                 arrayList13.add(ScriptValue.of((String)("<white>" + scriptValue12.asStr() + "'s rate")));
-                arrayList13.add(ScriptValue.of((String)"lore"));
+                arrayList13.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "lore"));
                 arrayList13.add(scriptContext.getClassOrVar("lore"));
-                arrayList13.add(ScriptValue.of((String)"action"));
+                arrayList13.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "action"));
                 arrayList13.add(ScriptValue.of((String)("warps.pf:on_unrate_click:" + scriptValue10.asStr())));
                 arrayList12.add(ScriptFormula.callBuiltin((String)"make_map", arrayList13, (ScriptContext)scriptContext));
                 ScriptValue scriptValue19 = ScriptFormula.callBuiltin((String)"push", arrayList12, (ScriptContext)scriptContext);
@@ -6095,7 +6099,7 @@ public final class Warps {
         ScriptValue scriptValue3 = scriptContext.getClassOrVar("SQL");
         if (scriptValue3 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"DELETE FROM warp_ratings WHERE warp_id = ? AND uuid = ?"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "DELETE FROM warp_ratings WHERE warp_id = ? AND uuid = ?"));
             ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
             ScriptContext.Builder builder3 = ScriptContext.builder().copyFrom(scriptContext);
             builder2.val("name", Warps.currentWarp(builder3));
@@ -6108,7 +6112,7 @@ public final class Warps {
         ScriptValue scriptValue4 = scriptContext.getClassOrVar("Cmd");
         if (scriptValue4 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"rate"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "rate"));
             v3 = PolyDispatch.bootstrapCall("memberCall", "open_page", (ScriptValue)scriptValue4, arrayList, (ScriptContext)scriptContext);
         } else {
             v3 = ScriptValue.NULL;
@@ -6124,7 +6128,7 @@ public final class Warps {
         ScriptValue scriptValue = ScriptFormula.callBuiltin((String)"len", arrayList, (ScriptContext)scriptContext);
         builder.val("n", scriptValue);
         if (scriptValue.asNum() <= 0.0) {
-            return ScriptValue.of((double)0.0);
+            return  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 0.0);
         }
         ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
         double d = scriptContext.getNum("WARP_PAGE_SIZE_LIST");
@@ -6180,7 +6184,7 @@ public final class Warps {
         }
         if ((scriptValue = scriptContext.getClassOrVar("Cmd")) != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"rate"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "rate"));
             v2 = PolyDispatch.bootstrapCall("memberCall", "open_page", (ScriptValue)scriptValue, arrayList, (ScriptContext)scriptContext);
         } else {
             v2 = ScriptValue.NULL;
@@ -6220,7 +6224,7 @@ public final class Warps {
                 Object object3;
                 String string = "warps_rate_offset";
                 String string3 = "int";
-                ScriptValue scriptValue5 = ScriptFormula.addPolymorphic((ScriptValue)scriptValue3, (ScriptValue)ScriptValue.of((double)1.0));
+                ScriptValue scriptValue5 = ScriptFormula.addPolymorphic((ScriptValue)scriptValue3, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 1.0)));
                 if (scriptValue4 instanceof ScriptValue.Obj && (object3 = (obj = (ScriptValue.Obj)scriptValue4).instance()) != null && !(object3 instanceof PolyClass) && obj.typeName().equals("Player")) {
                     PolyClassPlayer polyClassPlayer = new PolyClassPlayer(object3);
                     v1 = ScriptValue.of((boolean)polyClassPlayer.tm$30_set_typed(string, string3, scriptValue5));
@@ -6237,7 +6241,7 @@ public final class Warps {
         }
         if ((scriptValue = scriptContext.getClassOrVar("Cmd")) != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"rate"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "rate"));
             v2 = PolyDispatch.bootstrapCall("memberCall", "open_page", (ScriptValue)scriptValue, arrayList, (ScriptContext)scriptContext);
         } else {
             v2 = ScriptValue.NULL;
@@ -6528,7 +6532,7 @@ public final class Warps {
         ScriptValue scriptValue = scriptContext.getClassOrVar("Cmd");
         if (scriptValue != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"name"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "name"));
             object = PolyDispatch.bootstrapCall("memberCall", "arg", (ScriptValue)scriptValue, arrayList, (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
@@ -6580,7 +6584,7 @@ public final class Warps {
         ScriptValue scriptValue6 = scriptContext.getClassOrVar("SQL");
         if (scriptValue6 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"DELETE FROM warps WHERE id = ?"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "DELETE FROM warps WHERE id = ?"));
             ScriptContext.Builder builder4 = ScriptContext.builder().copyFrom(scriptContext);
             builder4.val("name", scriptValue2);
             arrayList.add(Warps.warpId(builder4));
@@ -6613,7 +6617,7 @@ public final class Warps {
         ScriptValue scriptValue = scriptContext.getClassOrVar("Cmd");
         if (scriptValue != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"name"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "name"));
             object = PolyDispatch.bootstrapCall("memberCall", "arg", (ScriptValue)scriptValue, arrayList, (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
@@ -6666,12 +6670,12 @@ public final class Warps {
         if (scriptValue6 != ScriptValue.NULL) {
             Object object4;
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"UPDATE warps SET desc = ? WHERE id = ?"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "UPDATE warps SET desc = ? WHERE id = ?"));
             ScriptContext.Builder builder4 = ScriptContext.builder().copyFrom(scriptContext);
             ScriptValue scriptValue7 = scriptContext.getClassOrVar("Cmd");
             if (scriptValue7 != ScriptValue.NULL) {
                 ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
-                arrayList2.add(ScriptValue.of((String)"text"));
+                arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "text"));
                 object4 = PolyDispatch.bootstrapCall("memberCall", "arg", (ScriptValue)scriptValue7, arrayList2, (ScriptContext)scriptContext);
             } else {
                 object4 = ScriptValue.NULL;
@@ -6710,7 +6714,7 @@ public final class Warps {
         ScriptValue scriptValue = scriptContext.getClassOrVar("Cmd");
         if (scriptValue != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"name"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "name"));
             object = PolyDispatch.bootstrapCall("memberCall", "arg", (ScriptValue)scriptValue, arrayList, (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
@@ -6762,7 +6766,7 @@ public final class Warps {
         ScriptValue scriptValue6 = scriptContext.getClassOrVar("SQL");
         if (scriptValue6 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"UPDATE warps SET desc = '' WHERE id = ?"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "UPDATE warps SET desc = '' WHERE id = ?"));
             ScriptContext.Builder builder4 = ScriptContext.builder().copyFrom(scriptContext);
             builder4.val("name", scriptValue2);
             arrayList.add(Warps.warpId(builder4));
@@ -6795,7 +6799,7 @@ public final class Warps {
         ScriptValue scriptValue = scriptContext.getClassOrVar("SQL");
         if (scriptValue != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"SELECT name FROM warps WHERE owner_uuid = ? ORDER BY created_at ASC"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "SELECT name FROM warps WHERE owner_uuid = ? ORDER BY created_at ASC"));
             arrayList.add(scriptContext.getClassOrVar("owner_uuid"));
             object = PolyDispatch.bootstrapCall("memberCall", "query", (ScriptValue)scriptValue, arrayList, (ScriptContext)scriptContext);
         } else {
@@ -6803,7 +6807,7 @@ public final class Warps {
         }
         ScriptValue scriptValue2 = object;
         builder.val("rows", scriptValue2);
-        ScriptValue scriptValue3 = ScriptValue.of((String)"");
+        ScriptValue scriptValue3 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "");
         builder.val("names", scriptValue3);
         List list = ScriptProgram.elementsOf((ScriptValue)scriptValue2);
         if (list != null) {
@@ -6815,7 +6819,7 @@ public final class Warps {
                     ScriptValue scriptValue5 = scriptContext.getClassOrVar("row");
                     if (scriptValue5 != ScriptValue.NULL) {
                         ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-                        arrayList.add(ScriptValue.of((String)"name"));
+                        arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "name"));
                         object3 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue5, arrayList, (ScriptContext)scriptContext);
                     } else {
                         object3 = ScriptValue.NULL;
@@ -6828,7 +6832,7 @@ public final class Warps {
                 ScriptValue scriptValue7 = scriptContext.getClassOrVar("row");
                 if (scriptValue7 != ScriptValue.NULL) {
                     ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-                    arrayList.add(ScriptValue.of((String)"name"));
+                    arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "name"));
                     object2 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue7, arrayList, (ScriptContext)scriptContext);
                 } else {
                     object2 = ScriptValue.NULL;
@@ -6838,11 +6842,11 @@ public final class Warps {
             }
         }
         ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-        arrayList.add(ScriptValue.of((String)"count"));
+        arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "count"));
         ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
         arrayList2.add(scriptValue2);
         arrayList.add(ScriptFormula.callBuiltin((String)"len", arrayList2, (ScriptContext)scriptContext));
-        arrayList.add(ScriptValue.of((String)"names"));
+        arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "names"));
         arrayList.add(scriptContext.getClassOrVar("names"));
         return ScriptFormula.callBuiltin((String)"make_map", arrayList, (ScriptContext)scriptContext);
     }
@@ -6860,7 +6864,7 @@ public final class Warps {
         ScriptValue scriptValue3 = scriptContext.getClassOrVar("info");
         if (scriptValue3 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
-            arrayList2.add(ScriptValue.of((String)"count"));
+            arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "count"));
             object = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue3, arrayList2, (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
@@ -6895,7 +6899,7 @@ public final class Warps {
             ScriptValue scriptValue6 = scriptContext.getClassOrVar("info");
             if (scriptValue6 != ScriptValue.NULL) {
                 ArrayList<ScriptValue> arrayList4 = new ArrayList<ScriptValue>();
-                arrayList4.add(ScriptValue.of((String)"count"));
+                arrayList4.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "count"));
                 object5 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue6, arrayList4, (ScriptContext)scriptContext);
             } else {
                 object5 = ScriptValue.NULL;
@@ -6904,7 +6908,7 @@ public final class Warps {
             ScriptValue scriptValue7 = scriptContext.getClassOrVar("info");
             if (scriptValue7 != ScriptValue.NULL) {
                 ArrayList<ScriptValue> arrayList5 = new ArrayList<ScriptValue>();
-                arrayList5.add(ScriptValue.of((String)"names"));
+                arrayList5.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "names"));
                 object4 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue7, arrayList5, (ScriptContext)scriptContext);
             } else {
                 object4 = ScriptValue.NULL;
@@ -6931,7 +6935,7 @@ public final class Warps {
         ScriptValue scriptValue = scriptContext.getClassOrVar("Cmd");
         if (scriptValue != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"player"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "player"));
             object2 = PolyDispatch.bootstrapCall("memberCall", "arg", (ScriptValue)scriptValue, arrayList, (ScriptContext)scriptContext);
         } else {
             object2 = ScriptValue.NULL;
@@ -6947,7 +6951,7 @@ public final class Warps {
         ScriptValue scriptValue5 = scriptContext.getClassOrVar("info");
         if (scriptValue5 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
-            arrayList2.add(ScriptValue.of((String)"count"));
+            arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "count"));
             object = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue5, arrayList2, (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
@@ -6984,7 +6988,7 @@ public final class Warps {
             ScriptValue scriptValue11 = scriptContext.getClassOrVar("info");
             if (scriptValue11 != ScriptValue.NULL) {
                 ArrayList<ScriptValue> arrayList4 = new ArrayList<ScriptValue>();
-                arrayList4.add(ScriptValue.of((String)"count"));
+                arrayList4.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "count"));
                 object6 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue11, arrayList4, (ScriptContext)scriptContext);
             } else {
                 object6 = ScriptValue.NULL;
@@ -6993,7 +6997,7 @@ public final class Warps {
             ScriptValue scriptValue12 = scriptContext.getClassOrVar("info");
             if (scriptValue12 != ScriptValue.NULL) {
                 ArrayList<ScriptValue> arrayList5 = new ArrayList<ScriptValue>();
-                arrayList5.add(ScriptValue.of((String)"names"));
+                arrayList5.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "names"));
                 object5 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue12, arrayList5, (ScriptContext)scriptContext);
             } else {
                 object5 = ScriptValue.NULL;
@@ -7046,7 +7050,7 @@ public final class Warps {
         ScriptValue scriptValue = scriptContext.getClassOrVar("Cmd");
         if (scriptValue != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"player"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "player"));
             object2 = PolyDispatch.bootstrapCall("memberCall", "arg", (ScriptValue)scriptValue, arrayList, (ScriptContext)scriptContext);
         } else {
             object2 = ScriptValue.NULL;
@@ -7057,7 +7061,7 @@ public final class Warps {
         ScriptValue scriptValue3 = scriptContext.getClassOrVar("SQL");
         if (scriptValue3 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
-            arrayList2.add(ScriptValue.of((String)"SELECT id FROM warps WHERE owner_uuid = ?"));
+            arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "SELECT id FROM warps WHERE owner_uuid = ?"));
             ScriptValue scriptValue4 = scriptContext.getClassOrVar("target");
             arrayList2.add((ScriptValue)(scriptValue4 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue4, (ScriptContext)scriptContext) : ScriptValue.NULL));
             object = PolyDispatch.bootstrapCall("memberCall", "query", (ScriptValue)scriptValue3, arrayList2, (ScriptContext)scriptContext);
@@ -7094,7 +7098,7 @@ public final class Warps {
         ScriptValue scriptValue = scriptContext.getClassOrVar("Cmd");
         if (scriptValue != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"name"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "name"));
             object = PolyDispatch.bootstrapCall("memberCall", "arg", (ScriptValue)scriptValue, arrayList, (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
@@ -7170,7 +7174,7 @@ public final class Warps {
         ScriptValue scriptValue9 = scriptContext.getClassOrVar("SQL");
         if (scriptValue9 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList3 = new ArrayList<ScriptValue>();
-            arrayList3.add(ScriptValue.of((String)"UPDATE warps SET icon = ? WHERE id = ?"));
+            arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "UPDATE warps SET icon = ? WHERE id = ?"));
             ScriptValue scriptValue10 = scriptContext.getClassOrVar("held");
             arrayList3.add((ScriptValue)(scriptValue10 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "id", (ScriptValue)scriptValue10, (ScriptContext)scriptContext) : ScriptValue.NULL));
             ScriptContext.Builder builder4 = ScriptContext.builder().copyFrom(scriptContext);
@@ -7205,7 +7209,7 @@ public final class Warps {
         ScriptValue scriptValue = scriptContext.getClassOrVar("Cmd");
         if (scriptValue != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"name"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "name"));
             object = PolyDispatch.bootstrapCall("memberCall", "arg", (ScriptValue)scriptValue, arrayList, (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
@@ -7257,7 +7261,7 @@ public final class Warps {
         ScriptValue scriptValue6 = scriptContext.getClassOrVar("SQL");
         if (scriptValue6 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"UPDATE warps SET icon = '' WHERE id = ?"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "UPDATE warps SET icon = '' WHERE id = ?"));
             ScriptContext.Builder builder4 = ScriptContext.builder().copyFrom(scriptContext);
             builder4.val("name", scriptValue2);
             arrayList.add(Warps.warpId(builder4));
@@ -7292,7 +7296,7 @@ public final class Warps {
         ScriptValue scriptValue2 = scriptContext.getClassOrVar("Cmd");
         if (scriptValue2 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"name"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "name"));
             object2 = PolyDispatch.bootstrapCall("memberCall", "arg", (ScriptValue)scriptValue2, arrayList, (ScriptContext)scriptContext);
         } else {
             object2 = ScriptValue.NULL;
@@ -7345,7 +7349,7 @@ public final class Warps {
         ScriptValue scriptValue7 = scriptContext.getClassOrVar("Cmd");
         if (scriptValue7 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"category"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "category"));
             object = PolyDispatch.bootstrapCall("memberCall", "arg", (ScriptValue)scriptValue7, arrayList, (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
@@ -7354,12 +7358,12 @@ public final class Warps {
         ScriptValue scriptValue8 = Warps.sanitize(builder4);
         builder.val("cat", scriptValue8);
         if (ScriptFormula.valuesEqualStr((ScriptValue)scriptValue8, (String)"")) {
-            ScriptValue scriptValue9 = ScriptValue.of((String)"other");
+            ScriptValue scriptValue9 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "other");
             builder.val("cat", scriptValue9);
         }
         if ((scriptValue = scriptContext.getClassOrVar("SQL")) != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"UPDATE warps SET category = ? WHERE id = ?"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "UPDATE warps SET category = ? WHERE id = ?"));
             ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
             arrayList2.add(scriptContext.getClassOrVar("cat"));
             arrayList.add(ScriptFormula.callBuiltin((String)"lower", arrayList2, (ScriptContext)scriptContext));
@@ -7395,7 +7399,7 @@ public final class Warps {
         ScriptValue scriptValue = scriptContext.getClassOrVar("Cmd");
         if (scriptValue != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"name"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "name"));
             object = PolyDispatch.bootstrapCall("memberCall", "arg", (ScriptValue)scriptValue, arrayList, (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
@@ -7447,7 +7451,7 @@ public final class Warps {
         ScriptValue scriptValue6 = scriptContext.getClassOrVar("SQL");
         if (scriptValue6 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"UPDATE warps SET category = 'other' WHERE id = ?"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "UPDATE warps SET category = 'other' WHERE id = ?"));
             ScriptContext.Builder builder4 = ScriptContext.builder().copyFrom(scriptContext);
             builder4.val("name", scriptValue2);
             arrayList.add(Warps.warpId(builder4));
@@ -7481,7 +7485,7 @@ public final class Warps {
         ScriptValue scriptValue = scriptContext.getClassOrVar("Cmd");
         if (scriptValue != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"name"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "name"));
             object2 = PolyDispatch.bootstrapCall("memberCall", "arg", (ScriptValue)scriptValue, arrayList, (ScriptContext)scriptContext);
         } else {
             object2 = ScriptValue.NULL;
@@ -7534,7 +7538,7 @@ public final class Warps {
         ScriptValue scriptValue6 = scriptContext.getClassOrVar("Cmd");
         if (scriptValue6 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
-            arrayList2.add(ScriptValue.of((String)"stars"));
+            arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "stars"));
             object = PolyDispatch.bootstrapCall("memberCall", "arg", (ScriptValue)scriptValue6, arrayList2, (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
@@ -7560,7 +7564,7 @@ public final class Warps {
         if (scriptValue11 != ScriptValue.NULL) {
             PolyClassPlayer polyClassPlayer;
             ArrayList<ScriptValue> arrayList3 = new ArrayList<ScriptValue>();
-            arrayList3.add(ScriptValue.of((String)"DELETE FROM warp_ratings WHERE warp_id = ? AND uuid = ?"));
+            arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "DELETE FROM warp_ratings WHERE warp_id = ? AND uuid = ?"));
             arrayList3.add(scriptValue10);
             ScriptValue scriptValue12 = scriptContext.getClassOrVar("Player");
             arrayList3.add((ScriptValue)(scriptValue12 != ScriptValue.NULL ? ((polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue12)) != null ? polyClassPlayer.pg$34_uuid() : PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue12, (ScriptContext)scriptContext)) : ScriptValue.NULL));
@@ -7573,7 +7577,7 @@ public final class Warps {
             PolyClassPlayer polyClassPlayer;
             PolyClassPlayer polyClassPlayer2;
             ArrayList<ScriptValue> arrayList4 = new ArrayList<ScriptValue>();
-            arrayList4.add(ScriptValue.of((String)"INSERT INTO warp_ratings (warp_id, uuid, name, stars) VALUES (?, ?, ?, ?)"));
+            arrayList4.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "INSERT INTO warp_ratings (warp_id, uuid, name, stars) VALUES (?, ?, ?, ?)"));
             arrayList4.add(scriptValue10);
             ScriptValue scriptValue14 = scriptContext.getClassOrVar("Player");
             arrayList4.add((ScriptValue)(scriptValue14 != ScriptValue.NULL ? ((polyClassPlayer2 = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue14)) != null ? polyClassPlayer2.pg$34_uuid() : PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue14, (ScriptContext)scriptContext)) : ScriptValue.NULL));
@@ -7610,7 +7614,7 @@ public final class Warps {
         ScriptValue scriptValue = scriptContext.getClassOrVar("Cmd");
         if (scriptValue != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"name"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "name"));
             object2 = PolyDispatch.bootstrapCall("memberCall", "arg", (ScriptValue)scriptValue, arrayList, (ScriptContext)scriptContext);
         } else {
             object2 = ScriptValue.NULL;
@@ -7667,22 +7671,22 @@ public final class Warps {
         ScriptValue scriptValue7 = scriptContext.getClassOrVar("row");
         if (scriptValue7 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
-            arrayList2.add(ScriptValue.of((String)"locked"));
+            arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "locked"));
             object = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue7, arrayList2, (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
         }
         arrayList.add((ScriptValue)object);
-        if (ScriptFormula.valuesEqual((ScriptValue)ScriptFormula.callBuiltin((String)"int", arrayList, (ScriptContext)scriptContext), (ScriptValue)ScriptValue.of((double)1.0))) {
+        if (ScriptFormula.valuesEqual((ScriptValue)ScriptFormula.callBuiltin((String)"int", arrayList, (ScriptContext)scriptContext), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 1.0)))) {
             ScriptValue scriptValue8 = scriptContext.getClassOrVar("SQL");
             if (scriptValue8 != ScriptValue.NULL) {
                 Object object5;
                 ArrayList<ScriptValue> arrayList3 = new ArrayList<ScriptValue>();
-                arrayList3.add(ScriptValue.of((String)"UPDATE warps SET locked = 0 WHERE id = ?"));
+                arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "UPDATE warps SET locked = 0 WHERE id = ?"));
                 ScriptValue scriptValue9 = scriptContext.getClassOrVar("row");
                 if (scriptValue9 != ScriptValue.NULL) {
                     ArrayList<ScriptValue> arrayList4 = new ArrayList<ScriptValue>();
-                    arrayList4.add(ScriptValue.of((String)"id"));
+                    arrayList4.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "id"));
                     object5 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue9, arrayList4, (ScriptContext)scriptContext);
                 } else {
                     object5 = ScriptValue.NULL;
@@ -7713,11 +7717,11 @@ public final class Warps {
             if (scriptValue12 != ScriptValue.NULL) {
                 Object object7;
                 ArrayList<ScriptValue> arrayList6 = new ArrayList<ScriptValue>();
-                arrayList6.add(ScriptValue.of((String)"UPDATE warps SET locked = 1 WHERE id = ?"));
+                arrayList6.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "UPDATE warps SET locked = 1 WHERE id = ?"));
                 ScriptValue scriptValue13 = scriptContext.getClassOrVar("row");
                 if (scriptValue13 != ScriptValue.NULL) {
                     ArrayList<ScriptValue> arrayList7 = new ArrayList<ScriptValue>();
-                    arrayList7.add(ScriptValue.of((String)"id"));
+                    arrayList7.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "id"));
                     object7 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue13, arrayList7, (ScriptContext)scriptContext);
                 } else {
                     object7 = ScriptValue.NULL;
@@ -7754,7 +7758,7 @@ public final class Warps {
         ScriptValue scriptValue = scriptContext.getClassOrVar("Cmd");
         if (scriptValue != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"name"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "name"));
             object = PolyDispatch.bootstrapCall("memberCall", "arg", (ScriptValue)scriptValue, arrayList, (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
@@ -7809,7 +7813,7 @@ public final class Warps {
         ScriptValue scriptValue8 = scriptContext.getClassOrVar("SQL");
         if (scriptValue8 != ScriptValue.NULL) {
             ArrayList<Object> arrayList = new ArrayList<Object>();
-            arrayList.add(ScriptValue.of((String)"UPDATE warps SET world = ?, x = ?, y = ?, z = ? WHERE id = ?"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "UPDATE warps SET world = ?, x = ?, y = ?, z = ? WHERE id = ?"));
             ScriptValue scriptValue9 = scriptContext.getClassOrVar("loc");
             arrayList.add(PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)(scriptValue9 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "world", (ScriptValue)scriptValue9, (ScriptContext)scriptContext) : ScriptValue.NULL), (ScriptContext)scriptContext));
             ScriptValue scriptValue10 = scriptContext.getClassOrVar("loc");
@@ -7853,7 +7857,7 @@ public final class Warps {
         var2_2 = var1_1.getClassOrVar("Cmd");
         if (var2_2 != ScriptValue.NULL) {
             var3_3 = new ArrayList<ScriptValue>();
-            var3_3.add(ScriptValue.of((String)"name"));
+            var3_3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "name"));
             v0 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "arg", (ScriptValue)var2_2, var3_3, (ScriptContext)var1_1);
         } else {
             v0 /* !! */  = ScriptValue.NULL;
@@ -7902,7 +7906,7 @@ public final class Warps {
         var20_20 = var1_1.getClassOrVar("Cmd");
         if (var20_20 != ScriptValue.NULL) {
             var21_21 = new ArrayList<ScriptValue>();
-            var21_21.add(ScriptValue.of((String)"new_name"));
+            var21_21.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "new_name"));
             v3 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "arg", (ScriptValue)var20_20, var21_21, (ScriptContext)var1_1);
         } else {
             v3 /* !! */  = ScriptValue.NULL;
@@ -7941,7 +7945,7 @@ public final class Warps {
         var30_30 = var1_1.getClassOrVar("SQL");
         if (var30_30 != ScriptValue.NULL) {
             var31_31 = new ArrayList<ScriptValue>();
-            var31_31.add(ScriptValue.of((String)"UPDATE warps SET name = ? WHERE id = ?"));
+            var31_31.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "UPDATE warps SET name = ? WHERE id = ?"));
             var31_31.add(var22_22);
             var32_32 = ScriptContext.builder().copyFrom(var1_1);
             var32_32.val("name", var4_4);
@@ -7974,7 +7978,7 @@ public final class Warps {
         ScriptValue scriptValue = scriptContext.getClassOrVar("Cmd");
         if (scriptValue != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"name"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "name"));
             object2 = PolyDispatch.bootstrapCall("memberCall", "arg", (ScriptValue)scriptValue, arrayList, (ScriptContext)scriptContext);
         } else {
             object2 = ScriptValue.NULL;
@@ -8026,7 +8030,7 @@ public final class Warps {
         ScriptValue scriptValue6 = scriptContext.getClassOrVar("Cmd");
         if (scriptValue6 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"player"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "player"));
             object = PolyDispatch.bootstrapCall("memberCall", "arg", (ScriptValue)scriptValue6, arrayList, (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
@@ -8036,7 +8040,7 @@ public final class Warps {
         ScriptValue scriptValue8 = scriptContext.getClassOrVar("SQL");
         if (scriptValue8 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"UPDATE warps SET owner_uuid = ?, owner_name = ? WHERE id = ?"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "UPDATE warps SET owner_uuid = ?, owner_name = ? WHERE id = ?"));
             ScriptValue scriptValue9 = scriptContext.getClassOrVar("target");
             arrayList.add((ScriptValue)(scriptValue9 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue9, (ScriptContext)scriptContext) : ScriptValue.NULL));
             ScriptValue scriptValue10 = scriptContext.getClassOrVar("target");
@@ -8075,7 +8079,7 @@ public final class Warps {
         ScriptValue scriptValue = scriptContext.getClassOrVar("Cmd");
         if (scriptValue != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"name"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "name"));
             object2 = PolyDispatch.bootstrapCall("memberCall", "arg", (ScriptValue)scriptValue, arrayList, (ScriptContext)scriptContext);
         } else {
             object2 = ScriptValue.NULL;
@@ -8127,7 +8131,7 @@ public final class Warps {
         ScriptValue scriptValue6 = scriptContext.getClassOrVar("Cmd");
         if (scriptValue6 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"player"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "player"));
             object = PolyDispatch.bootstrapCall("memberCall", "arg", (ScriptValue)scriptValue6, arrayList, (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
@@ -8141,7 +8145,7 @@ public final class Warps {
         ScriptValue scriptValue9 = scriptContext.getClassOrVar("SQL");
         if (scriptValue9 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"DELETE FROM warp_bans WHERE warp_id = ? AND uuid = ?"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "DELETE FROM warp_bans WHERE warp_id = ? AND uuid = ?"));
             arrayList.add(scriptValue8);
             ScriptValue scriptValue10 = scriptContext.getClassOrVar("target");
             arrayList.add((ScriptValue)(scriptValue10 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue10, (ScriptContext)scriptContext) : ScriptValue.NULL));
@@ -8152,7 +8156,7 @@ public final class Warps {
         ScriptValue scriptValue11 = scriptContext.getClassOrVar("SQL");
         if (scriptValue11 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"INSERT INTO warp_bans (warp_id, uuid, name) VALUES (?, ?, ?)"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "INSERT INTO warp_bans (warp_id, uuid, name) VALUES (?, ?, ?)"));
             arrayList.add(scriptValue8);
             ScriptValue scriptValue12 = scriptContext.getClassOrVar("target");
             arrayList.add((ScriptValue)(scriptValue12 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue12, (ScriptContext)scriptContext) : ScriptValue.NULL));
@@ -8190,7 +8194,7 @@ public final class Warps {
         ScriptValue scriptValue = scriptContext.getClassOrVar("Cmd");
         if (scriptValue != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"name"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "name"));
             object3 = PolyDispatch.bootstrapCall("memberCall", "arg", (ScriptValue)scriptValue, arrayList, (ScriptContext)scriptContext);
         } else {
             object3 = ScriptValue.NULL;
@@ -8242,7 +8246,7 @@ public final class Warps {
         ScriptValue scriptValue6 = scriptContext.getClassOrVar("Cmd");
         if (scriptValue6 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"player"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "player"));
             object2 = PolyDispatch.bootstrapCall("memberCall", "arg", (ScriptValue)scriptValue6, arrayList, (ScriptContext)scriptContext);
         } else {
             object2 = ScriptValue.NULL;
@@ -8256,7 +8260,7 @@ public final class Warps {
         ScriptValue scriptValue9 = scriptContext.getClassOrVar("SQL");
         if (scriptValue9 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"SELECT uuid, name FROM warp_bans WHERE warp_id = ? AND lower(name) = ?"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "SELECT uuid, name FROM warp_bans WHERE warp_id = ? AND lower(name) = ?"));
             arrayList.add(scriptValue8);
             ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
             arrayList2.add(scriptValue7);
@@ -8292,14 +8296,14 @@ public final class Warps {
         if (scriptValue13 != ScriptValue.NULL) {
             Object object7;
             ArrayList<Object> arrayList4 = new ArrayList<Object>();
-            arrayList4.add(ScriptValue.of((String)"DELETE FROM warp_bans WHERE warp_id = ? AND uuid = ?"));
+            arrayList4.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "DELETE FROM warp_bans WHERE warp_id = ? AND uuid = ?"));
             arrayList4.add(scriptValue8);
             ArrayList<ScriptValue> arrayList5 = new ArrayList<ScriptValue>();
-            arrayList5.add(ScriptValue.of((String)"uuid"));
+            arrayList5.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "uuid"));
             ScriptValue scriptValue14 = scriptContext.getClassOrVar("rows");
             if (scriptValue14 != ScriptValue.NULL) {
                 ArrayList<ScriptValue> arrayList6 = new ArrayList<ScriptValue>();
-                arrayList6.add(ScriptValue.of((double)0.0));
+                arrayList6.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 0.0));
                 object7 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue14, arrayList6, (ScriptContext)scriptContext);
             } else {
                 object7 = ScriptValue.NULL;
@@ -8316,11 +8320,11 @@ public final class Warps {
             Object object9;
             StringBuilder stringBuilder = new StringBuilder().append("<green>\u2714 <white>Unbanned ");
             ArrayList<ScriptValue> arrayList7 = new ArrayList<ScriptValue>();
-            arrayList7.add(ScriptValue.of((String)"name"));
+            arrayList7.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "name"));
             ScriptValue scriptValue16 = scriptContext.getClassOrVar("rows");
             if (scriptValue16 != ScriptValue.NULL) {
                 ArrayList<ScriptValue> arrayList8 = new ArrayList<ScriptValue>();
-                arrayList8.add(ScriptValue.of((double)0.0));
+                arrayList8.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 0.0));
                 object9 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue16, arrayList8, (ScriptContext)scriptContext);
             } else {
                 object9 = ScriptValue.NULL;
@@ -8346,7 +8350,7 @@ public final class Warps {
         ScriptValue scriptValue = scriptContext.getClassOrVar("Cmd");
         if (scriptValue != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"name"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "name"));
             object = PolyDispatch.bootstrapCall("memberCall", "arg", (ScriptValue)scriptValue, arrayList, (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
@@ -8423,7 +8427,7 @@ public final class Warps {
         ScriptValue scriptValue4 = scriptContext.getClassOrVar("Cmd");
         if (scriptValue4 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"player"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "player"));
             object2 = PolyDispatch.bootstrapCall("memberCall", "arg", (ScriptValue)scriptValue4, arrayList, (ScriptContext)scriptContext);
         } else {
             object2 = ScriptValue.NULL;
@@ -8456,7 +8460,7 @@ public final class Warps {
             ScriptValue scriptValue9 = scriptContext.getClassOrVar("SQL");
             if (scriptValue9 != ScriptValue.NULL) {
                 ArrayList<ScriptValue> arrayList3 = new ArrayList<ScriptValue>();
-                arrayList3.add(ScriptValue.of((String)"SELECT id FROM warps WHERE owner_uuid = ?"));
+                arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "SELECT id FROM warps WHERE owner_uuid = ?"));
                 ScriptValue scriptValue10 = scriptContext.getClassOrVar("target");
                 arrayList3.add((ScriptValue)(scriptValue10 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue10, (ScriptContext)scriptContext) : ScriptValue.NULL));
                 object7 = PolyDispatch.bootstrapCall("memberCall", "query", (ScriptValue)scriptValue9, arrayList3, (ScriptContext)scriptContext);
@@ -8469,7 +8473,7 @@ public final class Warps {
             ScriptValue scriptValue12 = scriptContext.getClassOrVar("SQL");
             if (scriptValue12 != ScriptValue.NULL) {
                 ArrayList<ScriptValue> arrayList4 = new ArrayList<ScriptValue>();
-                arrayList4.add(ScriptValue.of((String)"DELETE FROM warps WHERE owner_uuid = ?"));
+                arrayList4.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "DELETE FROM warps WHERE owner_uuid = ?"));
                 ScriptValue scriptValue13 = scriptContext.getClassOrVar("target");
                 arrayList4.add((ScriptValue)(scriptValue13 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue13, (ScriptContext)scriptContext) : ScriptValue.NULL));
                 v5 = PolyDispatch.bootstrapCall("memberCall", "execute", (ScriptValue)scriptValue12, arrayList4, (ScriptContext)scriptContext);
@@ -8482,7 +8486,7 @@ public final class Warps {
             ScriptValue scriptValue14 = scriptContext.getClassOrVar("SQL");
             if (scriptValue14 != ScriptValue.NULL) {
                 ArrayList<ScriptValue> arrayList6 = new ArrayList<ScriptValue>();
-                arrayList6.add(ScriptValue.of((String)"SELECT id FROM warps WHERE lower(owner_name) = ?"));
+                arrayList6.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "SELECT id FROM warps WHERE lower(owner_name) = ?"));
                 ArrayList<ScriptValue> arrayList7 = new ArrayList<ScriptValue>();
                 arrayList7.add(scriptValue5);
                 arrayList6.add(ScriptFormula.callBuiltin((String)"lower", arrayList7, (ScriptContext)scriptContext));
@@ -8496,7 +8500,7 @@ public final class Warps {
             ScriptValue scriptValue16 = scriptContext.getClassOrVar("SQL");
             if (scriptValue16 != ScriptValue.NULL) {
                 ArrayList<ScriptValue> arrayList8 = new ArrayList<ScriptValue>();
-                arrayList8.add(ScriptValue.of((String)"DELETE FROM warps WHERE lower(owner_name) = ?"));
+                arrayList8.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "DELETE FROM warps WHERE lower(owner_name) = ?"));
                 ArrayList<ScriptValue> arrayList9 = new ArrayList<ScriptValue>();
                 arrayList9.add(scriptValue5);
                 arrayList8.add(ScriptFormula.callBuiltin((String)"lower", arrayList9, (ScriptContext)scriptContext));
@@ -8656,7 +8660,7 @@ public final class Warps {
         ScriptValue scriptValue4 = scriptContext.getClassOrVar("Cmd");
         if (scriptValue4 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"player"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "player"));
             object2 = PolyDispatch.bootstrapCall("memberCall", "arg", (ScriptValue)scriptValue4, arrayList, (ScriptContext)scriptContext);
         } else {
             object2 = ScriptValue.NULL;
@@ -8667,7 +8671,7 @@ public final class Warps {
         ScriptValue scriptValue6 = scriptContext.getClassOrVar("Cmd");
         if (scriptValue6 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
-            arrayList2.add(ScriptValue.of((String)"amount"));
+            arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "amount"));
             object = PolyDispatch.bootstrapCall("memberCall", "arg", (ScriptValue)scriptValue6, arrayList2, (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
@@ -8679,13 +8683,13 @@ public final class Warps {
         if (scriptValue8 != ScriptValue.NULL) {
             Object object6;
             ArrayList<ScriptValue> arrayList3 = new ArrayList<ScriptValue>();
-            arrayList3.add(ScriptValue.of((String)"warps_extra_slots"));
-            arrayList3.add(ScriptValue.of((String)"int"));
+            arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "warps_extra_slots"));
+            arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "int"));
             ScriptValue scriptValue9 = scriptContext.getClassOrVar("target");
             if (scriptValue9 != ScriptValue.NULL) {
                 ArrayList<ScriptValue> arrayList4 = new ArrayList<ScriptValue>();
-                arrayList4.add(ScriptValue.of((String)"warps_extra_slots"));
-                arrayList4.add(ScriptValue.of((String)"int"));
+                arrayList4.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "warps_extra_slots"));
+                arrayList4.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "int"));
                 object6 = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue9, arrayList4, (ScriptContext)scriptContext);
             } else {
                 object6 = ScriptValue.NULL;
@@ -8718,44 +8722,44 @@ public final class Warps {
     public static void run(ScriptContext.Builder builder) {
         ScriptContext scriptContext = builder.peek();
         ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-        arrayList.add(ScriptValue.of((String)"all"));
-        arrayList.add(ScriptValue.of((String)"houses"));
-        arrayList.add(ScriptValue.of((String)"shops"));
-        arrayList.add(ScriptValue.of((String)"farms"));
-        arrayList.add(ScriptValue.of((String)"pvp"));
-        arrayList.add(ScriptValue.of((String)"other"));
-        arrayList.add(ScriptValue.of((String)"event"));
+        arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "all"));
+        arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "houses"));
+        arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "shops"));
+        arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "farms"));
+        arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "pvp"));
+        arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "other"));
+        arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "event"));
         ScriptValue.Array array = new ScriptValue.Array(arrayList);
         builder.val("CATEGORIES", (ScriptValue)array);
         ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
-        arrayList2.add(ScriptValue.of((String)"oldest"));
-        arrayList2.add(ScriptValue.of((String)"name"));
-        arrayList2.add(ScriptValue.of((String)"visits"));
+        arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "oldest"));
+        arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "name"));
+        arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "visits"));
         ScriptValue.Array array2 = new ScriptValue.Array(arrayList2);
         builder.val("SORT_MODES", (ScriptValue)array2);
         ArrayList<ScriptValue> arrayList3 = new ArrayList<ScriptValue>();
-        arrayList3.add(ScriptValue.of((double)9.0));
-        arrayList3.add(ScriptValue.of((double)45.0));
+        arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 9.0));
+        arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 45.0));
         ScriptValue scriptValue = ScriptFormula.callBuiltin((String)"range", arrayList3, (ScriptContext)scriptContext);
         builder.val("WARP_SLOTS_BROWSE", scriptValue);
         double d = 36.0;
         ScriptValue scriptValue2 = ScriptValue.of((double)36.0);
         builder.val("WARP_PAGE_SIZE_BROWSE", scriptValue2);
         ArrayList<ScriptValue> arrayList4 = new ArrayList<ScriptValue>();
-        arrayList4.add(ScriptValue.of((double)28.0));
-        arrayList4.add(ScriptValue.of((double)29.0));
-        arrayList4.add(ScriptValue.of((double)30.0));
-        arrayList4.add(ScriptValue.of((double)31.0));
-        arrayList4.add(ScriptValue.of((double)32.0));
-        arrayList4.add(ScriptValue.of((double)33.0));
-        arrayList4.add(ScriptValue.of((double)34.0));
-        arrayList4.add(ScriptValue.of((double)37.0));
-        arrayList4.add(ScriptValue.of((double)38.0));
-        arrayList4.add(ScriptValue.of((double)39.0));
-        arrayList4.add(ScriptValue.of((double)40.0));
-        arrayList4.add(ScriptValue.of((double)41.0));
-        arrayList4.add(ScriptValue.of((double)42.0));
-        arrayList4.add(ScriptValue.of((double)43.0));
+        arrayList4.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 28.0));
+        arrayList4.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 29.0));
+        arrayList4.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 30.0));
+        arrayList4.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 31.0));
+        arrayList4.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 32.0));
+        arrayList4.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 33.0));
+        arrayList4.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 34.0));
+        arrayList4.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 37.0));
+        arrayList4.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 38.0));
+        arrayList4.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 39.0));
+        arrayList4.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 40.0));
+        arrayList4.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 41.0));
+        arrayList4.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 42.0));
+        arrayList4.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 43.0));
         ScriptValue.Array array3 = new ScriptValue.Array(arrayList4);
         builder.val("WARP_SLOTS_LIST", (ScriptValue)array3);
         double d2 = 14.0;
@@ -8764,15 +8768,15 @@ public final class Warps {
         double d3 = 2.0;
         ScriptValue scriptValue4 = ScriptValue.of((double)2.0);
         builder.val("WARP_FREE_LIMIT", scriptValue4);
-        ScriptValue scriptValue5 = ScriptValue.of((String)"polyfills.warps.extra");
+        ScriptValue scriptValue5 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "polyfills.warps.extra");
         builder.val("WARP_SPONSOR_PERMISSION", scriptValue5);
-        ScriptValue scriptValue6 = ScriptValue.of((String)"polyfills.warps.admin.bypass");
+        ScriptValue scriptValue6 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "polyfills.warps.admin.bypass");
         builder.val("PERM_ADMIN_BYPASS", scriptValue6);
-        ScriptValue scriptValue7 = ScriptValue.of((String)"polyfills.warps.admin.removeall");
+        ScriptValue scriptValue7 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "polyfills.warps.admin.removeall");
         builder.val("PERM_ADMIN_REMOVEALL", scriptValue7);
-        ScriptValue scriptValue8 = ScriptValue.of((String)"polyfills.warps.admin.reload");
+        ScriptValue scriptValue8 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "polyfills.warps.admin.reload");
         builder.val("PERM_ADMIN_RELOAD", scriptValue8);
-        ScriptValue scriptValue9 = ScriptValue.of((String)"polyfills.warps.admin.addwarps");
+        ScriptValue scriptValue9 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "polyfills.warps.admin.addwarps");
         builder.val("PERM_ADMIN_ADDWARPS", scriptValue9);
         double d4 = 30.0;
         ScriptValue scriptValue10 = ScriptValue.of((double)30.0);
@@ -8784,27 +8788,27 @@ public final class Warps {
         ScriptValue scriptValue12 = ScriptValue.of((double)500.0);
         builder.val("WARP_EXTRA_SLOT_COST", scriptValue12);
         ArrayList<ScriptValue> arrayList5 = new ArrayList<ScriptValue>();
-        arrayList5.add(ScriptValue.of((double)47.0));
-        arrayList5.add(ScriptValue.of((double)48.0));
-        arrayList5.add(ScriptValue.of((double)49.0));
-        arrayList5.add(ScriptValue.of((double)50.0));
-        arrayList5.add(ScriptValue.of((double)51.0));
+        arrayList5.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 47.0));
+        arrayList5.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 48.0));
+        arrayList5.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 49.0));
+        arrayList5.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 50.0));
+        arrayList5.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 51.0));
         ScriptValue.Array array4 = new ScriptValue.Array(arrayList5);
         builder.val("SPONSOR_SLOTS", (ScriptValue)array4);
         ArrayList<ScriptValue> arrayList6 = new ArrayList<ScriptValue>();
-        arrayList6.add(ScriptValue.of((double)1500.0));
-        arrayList6.add(ScriptValue.of((double)900.0));
-        arrayList6.add(ScriptValue.of((double)600.0));
-        arrayList6.add(ScriptValue.of((double)400.0));
-        arrayList6.add(ScriptValue.of((double)200.0));
+        arrayList6.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 1500.0));
+        arrayList6.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 900.0));
+        arrayList6.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 600.0));
+        arrayList6.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 400.0));
+        arrayList6.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 200.0));
         ScriptValue.Array array5 = new ScriptValue.Array(arrayList6);
         builder.val("SPONSOR_PRICES", (ScriptValue)array5);
         ArrayList<ScriptValue> arrayList7 = new ArrayList<ScriptValue>();
-        arrayList7.add(ScriptValue.of((double)172800.0));
-        arrayList7.add(ScriptValue.of((double)86400.0));
-        arrayList7.add(ScriptValue.of((double)43200.0));
-        arrayList7.add(ScriptValue.of((double)21600.0));
-        arrayList7.add(ScriptValue.of((double)3600.0));
+        arrayList7.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 172800.0));
+        arrayList7.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 86400.0));
+        arrayList7.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 43200.0));
+        arrayList7.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 21600.0));
+        arrayList7.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 3600.0));
         ScriptValue.Array array6 = new ScriptValue.Array(arrayList7);
         builder.val("SPONSOR_DURATIONS", (ScriptValue)array6);
         FILE_SCOPE = builder.build();

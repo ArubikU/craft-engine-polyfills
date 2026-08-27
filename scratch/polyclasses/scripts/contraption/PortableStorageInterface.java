@@ -22,8 +22,12 @@ import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
 import dev.arubik.craftengine.script.ScriptValue;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 
+/*
+ * Uses jvm11+ dynamic constants - pseudocode provided - see https://www.benf.org/other/cfr/dynamic-constants.html
+ */
 public final class PortableStorageInterface {
     private static volatile ScriptContext FILE_SCOPE;
 
@@ -82,7 +86,7 @@ public final class PortableStorageInterface {
                 var0.val("target", var27_26);
                 if (!((ScriptFormula.valuesEqual((ScriptValue)var27_26, (ScriptValue)var1_1.getClassOrVar("null")) ^ true) != false && (((var28_27 = var1_1.getClassOrVar("target")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "powered", (ScriptValue)var28_27, (ScriptContext)var1_1) : ScriptValue.NULL).asBool() ^ true) != false)) ** GOTO lbl-1000
                 var29_28 = new ArrayList<ScriptValue>();
-                var29_28.add(ScriptValue.of((String)"facing"));
+                var29_28.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", PortableStorageInterface.class, "facing"));
                 var30_29 = var1_1.getClassOrVar("target");
                 if (ScriptFormula.valuesEqual((ScriptValue)PolyDispatch.bootstrapCall("memberCall", "property", (ScriptValue)(var30_29 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "block", (ScriptValue)var30_29, (ScriptContext)var1_1) : ScriptValue.NULL), var29_28, (ScriptContext)var1_1), (ScriptValue)var1_1.getClassOrVar("required_facing"))) {
                     v1 = true;
@@ -94,14 +98,14 @@ public final class PortableStorageInterface {
                 }
                 if (v1) {
                     var31_31 = new ArrayList<ScriptValue>();
-                    var31_31.add(ScriptValue.of((String)"target"));
+                    var31_31.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", PortableStorageInterface.class, "target"));
                     var31_31.add(var27_26);
-                    var31_31.add(ScriptValue.of((String)"i"));
+                    var31_31.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", PortableStorageInterface.class, "i"));
                     var31_31.add(var1_1.getClassOrVar("i"));
                     return ScriptFormula.callBuiltin((String)"make_map", var31_31, (ScriptContext)var1_1);
                 }
             }
-            var32_30 = ScriptFormula.addPolymorphic((ScriptValue)var1_1.getClassOrVar("i"), (ScriptValue)ScriptValue.of((double)1.0));
+            var32_30 = ScriptFormula.addPolymorphic((ScriptValue)var1_1.getClassOrVar("i"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", PortableStorageInterface.class, 1.0)));
             var0.val("i", var32_30);
         }
         return var1_1.getClassOrVar("null");
@@ -182,7 +186,7 @@ public final class PortableStorageInterface {
         }
         ScriptValue scriptValue2 = object;
         builder.val("uuid", scriptValue2);
-        return ScriptFormula.valuesEqual((ScriptValue)scriptValue2, (ScriptValue)scriptContext.getClassOrVar("null")) ^ true && ScriptFormula.valuesEqualStr((ScriptValue)scriptValue2, (String)"") ^ true ? ScriptValue.of((String)"minecraft:lightning_rod") : ScriptValue.of((String)"minecraft:iron_bars");
+        return ScriptFormula.valuesEqual((ScriptValue)scriptValue2, (ScriptValue)scriptContext.getClassOrVar("null")) ^ true && ScriptFormula.valuesEqualStr((ScriptValue)scriptValue2, (String)"") ^ true ? ( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", PortableStorageInterface.class, "minecraft:lightning_rod")) : ( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", PortableStorageInterface.class, "minecraft:iron_bars"));
     }
 
     public static ScriptValue statusName(ScriptContext.Builder builder) {
@@ -209,9 +213,9 @@ public final class PortableStorageInterface {
         ScriptValue scriptValue2 = object;
         builder.val("uuid", scriptValue2);
         if (ScriptFormula.valuesEqual((ScriptValue)scriptValue2, (ScriptValue)scriptContext.getClassOrVar("null")) ^ true && ScriptFormula.valuesEqualStr((ScriptValue)scriptValue2, (String)"") ^ true) {
-            return ScriptValue.of((String)"<green><b>Linked");
+            return  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", PortableStorageInterface.class, "<green><b>Linked");
         }
-        return ScriptValue.of((String)"<gray><b>Searching\u2026");
+        return  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", PortableStorageInterface.class, "<gray><b>Searching\u2026");
     }
 
     /*
@@ -225,56 +229,56 @@ public final class PortableStorageInterface {
                     block64: {
                         var1_1 = var0.peek();
                         var2_2 = new ArrayList<ScriptValue>();
-                        var2_2.add(ScriptValue.of((String)"north"));
-                        var2_2.add(ScriptValue.of((String)"south"));
-                        var2_2.add(ScriptValue.of((String)"south"));
-                        var2_2.add(ScriptValue.of((String)"north"));
-                        var2_2.add(ScriptValue.of((String)"east"));
-                        var2_2.add(ScriptValue.of((String)"west"));
-                        var2_2.add(ScriptValue.of((String)"west"));
-                        var2_2.add(ScriptValue.of((String)"east"));
-                        var2_2.add(ScriptValue.of((String)"up"));
-                        var2_2.add(ScriptValue.of((String)"down"));
-                        var2_2.add(ScriptValue.of((String)"down"));
-                        var2_2.add(ScriptValue.of((String)"up"));
+                        var2_2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", PortableStorageInterface.class, "north"));
+                        var2_2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", PortableStorageInterface.class, "south"));
+                        var2_2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", PortableStorageInterface.class, "south"));
+                        var2_2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", PortableStorageInterface.class, "north"));
+                        var2_2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", PortableStorageInterface.class, "east"));
+                        var2_2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", PortableStorageInterface.class, "west"));
+                        var2_2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", PortableStorageInterface.class, "west"));
+                        var2_2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", PortableStorageInterface.class, "east"));
+                        var2_2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", PortableStorageInterface.class, "up"));
+                        var2_2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", PortableStorageInterface.class, "down"));
+                        var2_2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", PortableStorageInterface.class, "down"));
+                        var2_2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", PortableStorageInterface.class, "up"));
                         var3_3 = ScriptFormula.callBuiltin((String)"make_map", var2_2, (ScriptContext)var1_1);
                         var0.val("OPPOSITE", var3_3);
                         var4_4 = new ArrayList<Object>();
-                        var4_4.add(ScriptValue.of((String)"north"));
+                        var4_4.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", PortableStorageInterface.class, "north"));
                         var5_5 = new ArrayList<ScriptValue>();
-                        var5_5.add(ScriptValue.of((double)0.0));
-                        var5_5.add(ScriptValue.of((double)0.0));
+                        var5_5.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", PortableStorageInterface.class, 0.0));
+                        var5_5.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", PortableStorageInterface.class, 0.0));
                         var5_5.add(ScriptValue.of((double)(-1.0)));
                         var4_4.add(new ScriptValue.Array(var5_5));
-                        var4_4.add(ScriptValue.of((String)"south"));
+                        var4_4.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", PortableStorageInterface.class, "south"));
                         var6_6 = new ArrayList<ScriptValue>();
-                        var6_6.add(ScriptValue.of((double)0.0));
-                        var6_6.add(ScriptValue.of((double)0.0));
-                        var6_6.add(ScriptValue.of((double)1.0));
+                        var6_6.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", PortableStorageInterface.class, 0.0));
+                        var6_6.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", PortableStorageInterface.class, 0.0));
+                        var6_6.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", PortableStorageInterface.class, 1.0));
                         var4_4.add(new ScriptValue.Array(var6_6));
-                        var4_4.add(ScriptValue.of((String)"east"));
+                        var4_4.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", PortableStorageInterface.class, "east"));
                         var7_7 = new ArrayList<ScriptValue>();
-                        var7_7.add(ScriptValue.of((double)1.0));
-                        var7_7.add(ScriptValue.of((double)0.0));
-                        var7_7.add(ScriptValue.of((double)0.0));
+                        var7_7.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", PortableStorageInterface.class, 1.0));
+                        var7_7.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", PortableStorageInterface.class, 0.0));
+                        var7_7.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", PortableStorageInterface.class, 0.0));
                         var4_4.add(new ScriptValue.Array(var7_7));
-                        var4_4.add(ScriptValue.of((String)"west"));
+                        var4_4.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", PortableStorageInterface.class, "west"));
                         var8_8 = new ArrayList<ScriptValue>();
                         var8_8.add(ScriptValue.of((double)(-1.0)));
-                        var8_8.add(ScriptValue.of((double)0.0));
-                        var8_8.add(ScriptValue.of((double)0.0));
+                        var8_8.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", PortableStorageInterface.class, 0.0));
+                        var8_8.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", PortableStorageInterface.class, 0.0));
                         var4_4.add(new ScriptValue.Array(var8_8));
-                        var4_4.add(ScriptValue.of((String)"up"));
+                        var4_4.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", PortableStorageInterface.class, "up"));
                         var9_9 = new ArrayList<ScriptValue>();
-                        var9_9.add(ScriptValue.of((double)0.0));
-                        var9_9.add(ScriptValue.of((double)1.0));
-                        var9_9.add(ScriptValue.of((double)0.0));
+                        var9_9.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", PortableStorageInterface.class, 0.0));
+                        var9_9.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", PortableStorageInterface.class, 1.0));
+                        var9_9.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", PortableStorageInterface.class, 0.0));
                         var4_4.add(new ScriptValue.Array(var9_9));
-                        var4_4.add(ScriptValue.of((String)"down"));
+                        var4_4.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", PortableStorageInterface.class, "down"));
                         var10_10 = new ArrayList<ScriptValue>();
-                        var10_10.add(ScriptValue.of((double)0.0));
+                        var10_10.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", PortableStorageInterface.class, 0.0));
                         var10_10.add(ScriptValue.of((double)(-1.0)));
-                        var10_10.add(ScriptValue.of((double)0.0));
+                        var10_10.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", PortableStorageInterface.class, 0.0));
                         var4_4.add(new ScriptValue.Array(var10_10));
                         var11_11 = ScriptFormula.callBuiltin((String)"make_map", var4_4, (ScriptContext)var1_1);
                         var0.val("DIR_VEC", var11_11);
@@ -336,7 +340,7 @@ public final class PortableStorageInterface {
                             var47_44 = var1_1.getClassOrVar("result");
                             if (var47_44 != ScriptValue.NULL) {
                                 var48_45 = new ArrayList<ScriptValue>();
-                                var48_45.add(ScriptValue.of((String)"target"));
+                                var48_45.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", PortableStorageInterface.class, "target"));
                                 v3 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)var47_44, var48_45, (ScriptContext)var1_1);
                             } else {
                                 v3 /* !! */  = ScriptValue.NULL;
@@ -350,7 +354,7 @@ public final class PortableStorageInterface {
                             var50_47 = var1_1.getClassOrVar("result");
                             if (var50_47 != ScriptValue.NULL) {
                                 var51_48 = new ArrayList<ScriptValue>();
-                                var51_48.add(ScriptValue.of((String)"i"));
+                                var51_48.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", PortableStorageInterface.class, "i"));
                                 v4 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)var50_47, var51_48, (ScriptContext)var1_1);
                             } else {
                                 v4 /* !! */  = ScriptValue.NULL;
@@ -362,8 +366,8 @@ public final class PortableStorageInterface {
                             var53_50 = var1_1.getClassOrVar("found");
                             if (var53_50 != ScriptValue.NULL) {
                                 var54_51 = new ArrayList<ScriptValue>();
-                                var54_51.add(ScriptValue.of((String)"_psi_uuid"));
-                                var54_51.add(ScriptValue.of((String)"str"));
+                                var54_51.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", PortableStorageInterface.class, "_psi_uuid"));
+                                var54_51.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", PortableStorageInterface.class, "str"));
                                 var55_52 = var1_1.getClassOrVar("contraption");
                                 var54_51.add((ScriptValue)(var55_52 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)var55_52, (ScriptContext)var1_1) : ScriptValue.NULL));
                                 v5 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)var53_50, var54_51, (ScriptContext)var1_1);
@@ -373,8 +377,8 @@ public final class PortableStorageInterface {
                             var56_53 = var1_1.getClassOrVar("found");
                             if (var56_53 != ScriptValue.NULL) {
                                 var57_54 = new ArrayList<ScriptValue>();
-                                var57_54.add(ScriptValue.of((String)"_psi_keepalive"));
-                                var57_54.add(ScriptValue.of((String)"int"));
+                                var57_54.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", PortableStorageInterface.class, "_psi_keepalive"));
+                                var57_54.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", PortableStorageInterface.class, "int"));
                                 var57_54.add(ScriptValue.of((double)var15_14));
                                 v6 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)var56_53, var57_54, (ScriptContext)var1_1);
                             } else {
@@ -464,7 +468,7 @@ public final class PortableStorageInterface {
                     if (var83_79 != ScriptValue.NULL) {
                         var84_80 = "_psi_extend";
                         var85_81 = "int";
-                        var86_82 = ScriptValue.of((double)0.0);
+                        var86_82 =  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", PortableStorageInterface.class, 0.0);
                         if (var83_79 instanceof ScriptValue.Obj && (var88_84 = (var87_83 = (ScriptValue.Obj)var83_79).instance()) != null && !(var88_84 instanceof PolyClass) && var87_83.typeName().equals("Machine")) {
                             var89_85 = new PolyClassMachine_v4(var88_84);
                             v16 /* !! */  = ScriptValue.of((boolean)var89_85.tm$82_set_typed(var84_80, var85_81, var86_82));
@@ -527,7 +531,7 @@ public final class PortableStorageInterface {
                     if (var110_105 != ScriptValue.NULL) {
                         var111_106 = "_psi_uuid";
                         var112_107 = "str";
-                        var113_108 = ScriptValue.of((String)"");
+                        var113_108 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", PortableStorageInterface.class, "");
                         if (var110_105 instanceof ScriptValue.Obj && (var115_110 = (var114_109 = (ScriptValue.Obj)var110_105).instance()) != null && !(var115_110 instanceof PolyClass) && var114_109.typeName().equals("Machine")) {
                             var116_111 = new PolyClassMachine_v4(var115_110);
                             v19 /* !! */  = ScriptValue.of((boolean)var116_111.tm$82_set_typed(var111_106, var112_107, var113_108));
@@ -585,7 +589,7 @@ public final class PortableStorageInterface {
             if (var133_128 != ScriptValue.NULL) {
                 var134_129 = "_psi_extend";
                 var135_130 = "int";
-                var136_131 = ScriptValue.of((double)0.0);
+                var136_131 =  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", PortableStorageInterface.class, 0.0);
                 if (var133_128 instanceof ScriptValue.Obj && (var138_133 = (var137_132 = (ScriptValue.Obj)var133_128).instance()) != null && !(var138_133 instanceof PolyClass) && var137_132.typeName().equals("Machine")) {
                     var139_134 = new PolyClassMachine_v4(var138_133);
                     v25 /* !! */  = ScriptValue.of((boolean)var139_134.tm$82_set_typed(var134_129, var135_130, var136_131));

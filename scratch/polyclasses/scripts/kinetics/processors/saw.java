@@ -3,7 +3,7 @@
  * 
  * Could not load the following classes:
  *  dev.arubik.craftengine.script.PolyClass
- *  dev.arubik.craftengine.script.PolyClassBlock
+ *  dev.arubik.craftengine.script.PolyClassBlock_v3
  *  dev.arubik.craftengine.script.PolyClassMachine_v4
  *  dev.arubik.craftengine.script.PolyClassPlayer
  *  dev.arubik.craftengine.script.PolyClassRecipeRegistry
@@ -23,7 +23,7 @@
 package dev.arubik.craftengine.script.gen.kinetics.processors;
 
 import dev.arubik.craftengine.script.PolyClass;
-import dev.arubik.craftengine.script.PolyClassBlock;
+import dev.arubik.craftengine.script.PolyClassBlock_v3;
 import dev.arubik.craftengine.script.PolyClassMachine_v4;
 import dev.arubik.craftengine.script.PolyClassPlayer;
 import dev.arubik.craftengine.script.PolyClassRecipeRegistry;
@@ -37,9 +37,13 @@ import dev.arubik.craftengine.script.gen.BeltUtils;
 import dev.arubik.craftengine.script.gen.TreeUtils;
 import dev.arubik.craftengine.script.gen.Utils;
 import java.lang.invoke.CallSite;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.List;
 
+/*
+ * Uses jvm11+ dynamic constants - pseudocode provided - see https://www.benf.org/other/cfr/dynamic-constants.html
+ */
 public final class Saw {
     private static volatile ScriptContext FILE_SCOPE;
 
@@ -73,8 +77,8 @@ public final class Saw {
                 builder.val("ins", scriptValue5);
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 arrayList.add(scriptValue5);
-                if (!(ScriptFormula.callBuiltin((String)"size", arrayList, (ScriptContext)scriptContext).asNum() > 0.0 && ScriptFormula.valuesEqual((ScriptValue)PolyDispatch.bootstrapGet("memberGet", "id", (ScriptValue)ScriptFormula.subscriptGet((ScriptValue)scriptValue5, (ScriptValue)ScriptValue.of((double)0.0)), (ScriptContext)scriptContext), (ScriptValue)scriptContext.getClassOrVar("item_id")))) continue;
-                ScriptValue scriptValue6 = ScriptFormula.addPolymorphic((ScriptValue)scriptContext.getClassOrVar("count"), (ScriptValue)ScriptValue.of((double)1.0));
+                if (!(ScriptFormula.callBuiltin((String)"size", arrayList, (ScriptContext)scriptContext).asNum() > 0.0 && ScriptFormula.valuesEqual((ScriptValue)PolyDispatch.bootstrapGet("memberGet", "id", (ScriptValue)ScriptFormula.subscriptGet((ScriptValue)scriptValue5, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Saw.class, 0.0))), (ScriptContext)scriptContext), (ScriptValue)scriptContext.getClassOrVar("item_id")))) continue;
+                ScriptValue scriptValue6 = ScriptFormula.addPolymorphic((ScriptValue)scriptContext.getClassOrVar("count"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Saw.class, 1.0)));
                 builder.val("count", scriptValue6);
             }
         }
@@ -97,11 +101,11 @@ public final class Saw {
                 builder.val("ins", scriptValue5);
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 arrayList.add(scriptValue5);
-                if (!(ScriptFormula.callBuiltin((String)"size", arrayList, (ScriptContext)scriptContext).asNum() > 0.0 && ScriptFormula.valuesEqual((ScriptValue)PolyDispatch.bootstrapGet("memberGet", "id", (ScriptValue)ScriptFormula.subscriptGet((ScriptValue)scriptValue5, (ScriptValue)ScriptValue.of((double)0.0)), (ScriptContext)scriptContext), (ScriptValue)scriptContext.getClassOrVar("item_id")))) continue;
+                if (!(ScriptFormula.callBuiltin((String)"size", arrayList, (ScriptContext)scriptContext).asNum() > 0.0 && ScriptFormula.valuesEqual((ScriptValue)PolyDispatch.bootstrapGet("memberGet", "id", (ScriptValue)ScriptFormula.subscriptGet((ScriptValue)scriptValue5, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Saw.class, 0.0))), (ScriptContext)scriptContext), (ScriptValue)scriptContext.getClassOrVar("item_id")))) continue;
                 if (ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("idx"), (ScriptValue)scriptContext.getClassOrVar("target_idx"))) {
                     return scriptContext.getClassOrVar("r");
                 }
-                ScriptValue scriptValue6 = ScriptFormula.addPolymorphic((ScriptValue)scriptContext.getClassOrVar("idx"), (ScriptValue)ScriptValue.of((double)1.0));
+                ScriptValue scriptValue6 = ScriptFormula.addPolymorphic((ScriptValue)scriptContext.getClassOrVar("idx"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Saw.class, 1.0)));
                 builder.val("idx", scriptValue6);
             }
         }
@@ -127,7 +131,7 @@ public final class Saw {
                 var0.val("outs", var10_10);
                 var11_11 = new ArrayList<ScriptValue>();
                 var11_11.add(var8_8);
-                if (!(ScriptFormula.callBuiltin((String)"size", var11_11, (ScriptContext)var1_1).asNum() > 0.0 != false && ScriptFormula.valuesEqual((ScriptValue)PolyDispatch.bootstrapGet("memberGet", "id", (ScriptValue)ScriptFormula.subscriptGet((ScriptValue)var8_8, (ScriptValue)ScriptValue.of((double)0.0)), (ScriptContext)var1_1), (ScriptValue)var1_1.getClassOrVar("item_id")) != false)) ** GOTO lbl-1000
+                if (!(ScriptFormula.callBuiltin((String)"size", var11_11, (ScriptContext)var1_1).asNum() > 0.0 != false && ScriptFormula.valuesEqual((ScriptValue)PolyDispatch.bootstrapGet("memberGet", "id", (ScriptValue)ScriptFormula.subscriptGet((ScriptValue)var8_8, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Saw.class, 0.0))), (ScriptContext)var1_1), (ScriptValue)var1_1.getClassOrVar("item_id")) != false)) ** GOTO lbl-1000
                 var12_12 = new ArrayList<ScriptValue>();
                 var12_12.add(var10_10);
                 if (ScriptFormula.callBuiltin((String)"size", var12_12, (ScriptContext)var1_1).asNum() > 0.0) {
@@ -138,7 +142,7 @@ public final class Saw {
                 {
                     v0 = false;
                 }
-                if (!(v0 != false && ScriptFormula.valuesEqual((ScriptValue)PolyDispatch.bootstrapGet("memberGet", "id", (ScriptValue)ScriptFormula.subscriptGet((ScriptValue)var10_10, (ScriptValue)ScriptValue.of((double)0.0)), (ScriptContext)var1_1), (ScriptValue)var1_1.getClassOrVar("out_id")) != false)) continue;
+                if (!(v0 != false && ScriptFormula.valuesEqual((ScriptValue)PolyDispatch.bootstrapGet("memberGet", "id", (ScriptValue)ScriptFormula.subscriptGet((ScriptValue)var10_10, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Saw.class, 0.0))), (ScriptContext)var1_1), (ScriptValue)var1_1.getClassOrVar("out_id")) != false)) continue;
                 return var1_1.getClassOrVar("r");
             }
         }
@@ -156,7 +160,7 @@ public final class Saw {
                 var0.val("outs", var22_22);
                 var23_23 = new ArrayList<ScriptValue>();
                 var23_23.add(var22_22);
-                if (!(ScriptFormula.callBuiltin((String)"size", var23_23, (ScriptContext)var1_1).asNum() > 0.0 != false && ScriptFormula.valuesEqual((ScriptValue)PolyDispatch.bootstrapGet("memberGet", "id", (ScriptValue)ScriptFormula.subscriptGet((ScriptValue)var22_22, (ScriptValue)ScriptValue.of((double)0.0)), (ScriptContext)var1_1), (ScriptValue)var1_1.getClassOrVar("out_id")) != false)) continue;
+                if (!(ScriptFormula.callBuiltin((String)"size", var23_23, (ScriptContext)var1_1).asNum() > 0.0 != false && ScriptFormula.valuesEqual((ScriptValue)PolyDispatch.bootstrapGet("memberGet", "id", (ScriptValue)ScriptFormula.subscriptGet((ScriptValue)var22_22, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Saw.class, 0.0))), (ScriptContext)var1_1), (ScriptValue)var1_1.getClassOrVar("out_id")) != false)) continue;
                 return var1_1.getClassOrVar("r");
             }
         }
@@ -189,7 +193,7 @@ public final class Saw {
         ScriptValue scriptValue2 = object;
         builder.val("filter_id", scriptValue2);
         if (ScriptFormula.valuesEqual((ScriptValue)scriptValue2, (ScriptValue)scriptContext.getClassOrVar("null"))) {
-            ScriptValue scriptValue3 = ScriptValue.of((String)"");
+            ScriptValue scriptValue3 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Saw.class, "");
             builder.val("filter_id", scriptValue3);
         }
         ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
@@ -212,13 +216,13 @@ public final class Saw {
                         builder.val("ins", scriptValue9);
                         ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                         arrayList.add(scriptValue9);
-                        if (!(ScriptFormula.callBuiltin((String)"size", arrayList, (ScriptContext)scriptContext).asNum() > 0.0 && ScriptFormula.valuesEqual((ScriptValue)PolyDispatch.bootstrapGet("memberGet", "id", (ScriptValue)ScriptFormula.subscriptGet((ScriptValue)scriptValue9, (ScriptValue)ScriptValue.of((double)0.0)), (ScriptContext)scriptContext), (ScriptValue)scriptContext.getClassOrVar("item_id")))) continue;
+                        if (!(ScriptFormula.callBuiltin((String)"size", arrayList, (ScriptContext)scriptContext).asNum() > 0.0 && ScriptFormula.valuesEqual((ScriptValue)PolyDispatch.bootstrapGet("memberGet", "id", (ScriptValue)ScriptFormula.subscriptGet((ScriptValue)scriptValue9, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Saw.class, 0.0))), (ScriptContext)scriptContext), (ScriptValue)scriptContext.getClassOrVar("item_id")))) continue;
                         ScriptValue scriptValue10 = scriptContext.getClassOrVar("r");
                         ScriptValue scriptValue11 = scriptValue10 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "outputs", (ScriptValue)scriptValue10, (ScriptContext)scriptContext) : ScriptValue.NULL;
                         builder.val("outs", scriptValue11);
                         ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
                         arrayList2.add(scriptValue11);
-                        if (!(ScriptFormula.callBuiltin((String)"size", arrayList2, (ScriptContext)scriptContext).asNum() > 0.0 && ScriptFormula.valuesEqual((ScriptValue)PolyDispatch.bootstrapGet("memberGet", "id", (ScriptValue)ScriptFormula.subscriptGet((ScriptValue)scriptValue11, (ScriptValue)ScriptValue.of((double)0.0)), (ScriptContext)scriptContext), (ScriptValue)scriptContext.getClassOrVar("filter_id")))) continue;
+                        if (!(ScriptFormula.callBuiltin((String)"size", arrayList2, (ScriptContext)scriptContext).asNum() > 0.0 && ScriptFormula.valuesEqual((ScriptValue)PolyDispatch.bootstrapGet("memberGet", "id", (ScriptValue)ScriptFormula.subscriptGet((ScriptValue)scriptValue11, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Saw.class, 0.0))), (ScriptContext)scriptContext), (ScriptValue)scriptContext.getClassOrVar("filter_id")))) continue;
                         return scriptContext.getClassOrVar("filter_id");
                     }
                 }
@@ -283,7 +287,7 @@ public final class Saw {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 arrayList.add(scriptValue19);
                 if (ScriptFormula.callBuiltin((String)"size", arrayList, (ScriptContext)scriptContext).asNum() > 0.0) {
-                    return PolyDispatch.bootstrapGet("memberGet", "id", (ScriptValue)ScriptFormula.subscriptGet((ScriptValue)scriptValue19, (ScriptValue)ScriptValue.of((double)0.0)), (ScriptContext)scriptContext);
+                    return PolyDispatch.bootstrapGet("memberGet", "id", (ScriptValue)ScriptFormula.subscriptGet((ScriptValue)scriptValue19, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Saw.class, 0.0))), (ScriptContext)scriptContext);
                 }
             }
             return scriptContext.getClassOrVar("null");
@@ -303,7 +307,7 @@ public final class Saw {
                 builder.val("outs", scriptValue24);
                 ArrayList<ScriptValue> arrayList3 = new ArrayList<ScriptValue>();
                 arrayList3.add(scriptValue24);
-                if (!(ScriptFormula.callBuiltin((String)"size", arrayList3, (ScriptContext)scriptContext).asNum() > 0.0 && ScriptFormula.valuesEqual((ScriptValue)PolyDispatch.bootstrapGet("memberGet", "id", (ScriptValue)ScriptFormula.subscriptGet((ScriptValue)scriptValue24, (ScriptValue)ScriptValue.of((double)0.0)), (ScriptContext)scriptContext), (ScriptValue)scriptContext.getClassOrVar("filter_id")))) continue;
+                if (!(ScriptFormula.callBuiltin((String)"size", arrayList3, (ScriptContext)scriptContext).asNum() > 0.0 && ScriptFormula.valuesEqual((ScriptValue)PolyDispatch.bootstrapGet("memberGet", "id", (ScriptValue)ScriptFormula.subscriptGet((ScriptValue)scriptValue24, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Saw.class, 0.0))), (ScriptContext)scriptContext), (ScriptValue)scriptContext.getClassOrVar("filter_id")))) continue;
                 return scriptContext.getClassOrVar("filter_id");
             }
         }
@@ -368,7 +372,7 @@ public final class Saw {
             ArrayList<CallSite> arrayList7 = new ArrayList<CallSite>();
             arrayList7.add(callSite2);
             if (ScriptFormula.callBuiltin((String)"size", arrayList7, (ScriptContext)scriptContext).asNum() > 0.0) {
-                return PolyDispatch.bootstrapGet("memberGet", "id", (ScriptValue)ScriptFormula.subscriptGet((ScriptValue)callSite2, (ScriptValue)ScriptValue.of((double)0.0)), (ScriptContext)scriptContext);
+                return PolyDispatch.bootstrapGet("memberGet", "id", (ScriptValue)ScriptFormula.subscriptGet((ScriptValue)callSite2, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Saw.class, 0.0))), (ScriptContext)scriptContext);
             }
         }
         return scriptContext.getClassOrVar("null");
@@ -389,7 +393,7 @@ public final class Saw {
                 Object object;
                 String string = "_saw_filter";
                 String string2 = "str";
-                ScriptValue scriptValue4 = ScriptValue.of((String)"");
+                ScriptValue scriptValue4 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Saw.class, "");
                 if (scriptValue3 instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue3).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Machine")) {
                     PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object);
                     v0 = ScriptValue.of((boolean)polyClassMachine_v4.tm$82_set_typed(string, string2, scriptValue4));
@@ -441,8 +445,8 @@ public final class Saw {
         ScriptValue scriptValue2 = scriptValue != ScriptValue.NULL ? ((polyClassMachine_v4 = PolyClassMachine_v4.ofGuarded((ScriptValue)scriptValue)) != null ? polyClassMachine_v4.pg$139_block() : PolyDispatch.bootstrapGet("memberGet", "block", (ScriptValue)scriptValue, (ScriptContext)scriptContext)) : ScriptValue.NULL;
         String string = "facing";
         if (scriptValue2 instanceof ScriptValue.Obj && (object2 = (obj = (ScriptValue.Obj)scriptValue2).instance()) != null && !(object2 instanceof PolyClass) && obj.typeName().equals("Block")) {
-            PolyClassBlock polyClassBlock = new PolyClassBlock(object2);
-            callSite = polyClassBlock.tm$24_property(string);
+            PolyClassBlock_v3 polyClassBlock_v3 = new PolyClassBlock_v3(object2);
+            callSite = polyClassBlock_v3.tm$24_property(string);
         } else {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
             arrayList.add(ScriptValue.of((String)string));
@@ -470,15 +474,15 @@ public final class Saw {
         }
         ScriptValue scriptValue4 = object;
         builder.val("sign", scriptValue4);
-        if (ScriptFormula.valuesEqual((ScriptValue)scriptValue4, (ScriptValue)scriptContext.getClassOrVar("null")) || ScriptFormula.valuesEqual((ScriptValue)scriptValue4, (ScriptValue)ScriptValue.of((double)0.0))) {
+        if (ScriptFormula.valuesEqual((ScriptValue)scriptValue4, (ScriptValue)scriptContext.getClassOrVar("null")) || ScriptFormula.valuesEqual((ScriptValue)scriptValue4, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Saw.class, 0.0)))) {
             double d = 1.0;
             ScriptValue scriptValue5 = ScriptValue.of((double)1.0);
             builder.val("sign", scriptValue5);
         }
         if (ScriptFormula.valuesEqualStr((ScriptValue)callSite2, (String)"north") || ScriptFormula.valuesEqualStr((ScriptValue)callSite2, (String)"south")) {
-            return scriptContext.getNum("sign") > 0.0 ? ScriptValue.of((String)"east") : ScriptValue.of((String)"west");
+            return scriptContext.getNum("sign") > 0.0 ? ( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Saw.class, "east")) : ( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Saw.class, "west"));
         }
-        return scriptContext.getNum("sign") > 0.0 ? ScriptValue.of((String)"south") : ScriptValue.of((String)"north");
+        return scriptContext.getNum("sign") > 0.0 ? ( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Saw.class, "south")) : ( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Saw.class, "north"));
     }
 
     public static ScriptValue _sawInputFace(ScriptContext.Builder builder) {
@@ -487,21 +491,21 @@ public final class Saw {
         ScriptValue scriptValue = Saw._sawOutputFace(builder2);
         builder.val("face", scriptValue);
         if (ScriptFormula.valuesEqualStr((ScriptValue)scriptValue, (String)"east")) {
-            return ScriptValue.of((String)"west");
+            return  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Saw.class, "west");
         }
         if (ScriptFormula.valuesEqualStr((ScriptValue)scriptValue, (String)"west")) {
-            return ScriptValue.of((String)"east");
+            return  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Saw.class, "east");
         }
         if (ScriptFormula.valuesEqualStr((ScriptValue)scriptValue, (String)"north")) {
-            return ScriptValue.of((String)"south");
+            return  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Saw.class, "south");
         }
-        return ScriptValue.of((String)"north");
+        return  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Saw.class, "north");
     }
 
     public static ScriptValue _sawUpdateRpmSign(ScriptContext.Builder builder) {
         block4: {
             ScriptContext scriptContext = builder.peek();
-            if (!(ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("effective_rpm"), (ScriptValue)ScriptValue.of((double)0.0)) ^ true)) break block4;
+            if (!(ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("effective_rpm"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Saw.class, 0.0))) ^ true)) break block4;
             ScriptValue scriptValue = scriptContext.getClassOrVar("Machine");
             if (scriptValue != ScriptValue.NULL) {
                 ScriptValue.Obj obj;
@@ -540,8 +544,8 @@ public final class Saw {
         ScriptValue scriptValue2 = scriptValue != ScriptValue.NULL ? ((polyClassMachine_v42 = PolyClassMachine_v4.ofGuarded((ScriptValue)scriptValue)) != null ? polyClassMachine_v42.pg$139_block() : PolyDispatch.bootstrapGet("memberGet", "block", (ScriptValue)scriptValue, (ScriptContext)scriptContext)) : ScriptValue.NULL;
         String string = "face";
         if (scriptValue2 instanceof ScriptValue.Obj && (object2 = (obj2 = (ScriptValue.Obj)scriptValue2).instance()) != null && !(object2 instanceof PolyClass) && obj2.typeName().equals("Block")) {
-            PolyClassBlock polyClassBlock = new PolyClassBlock(object2);
-            callSite2 = polyClassBlock.tm$24_property(string);
+            PolyClassBlock_v3 polyClassBlock_v3 = new PolyClassBlock_v3(object2);
+            callSite2 = polyClassBlock_v3.tm$24_property(string);
         } else {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
             arrayList.add(ScriptValue.of((String)string));
@@ -553,8 +557,8 @@ public final class Saw {
         ScriptValue scriptValue4 = scriptValue3 != ScriptValue.NULL ? ((polyClassMachine_v4 = PolyClassMachine_v4.ofGuarded((ScriptValue)scriptValue3)) != null ? polyClassMachine_v4.pg$139_block() : PolyDispatch.bootstrapGet("memberGet", "block", (ScriptValue)scriptValue3, (ScriptContext)scriptContext)) : ScriptValue.NULL;
         String string2 = "facing";
         if (scriptValue4 instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue4).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Block")) {
-            PolyClassBlock polyClassBlock = new PolyClassBlock(object);
-            callSite = polyClassBlock.tm$24_property(string2);
+            PolyClassBlock_v3 polyClassBlock_v3 = new PolyClassBlock_v3(object);
+            callSite = polyClassBlock_v3.tm$24_property(string2);
         } else {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
             arrayList.add(ScriptValue.of((String)string2));
@@ -714,9 +718,9 @@ public final class Saw {
                 Object object;
                 ArrayList<ScriptValue> arrayList3 = new ArrayList<ScriptValue>();
                 arrayList3.add(scriptContext.getClassOrVar("remaining"));
-                arrayList3.add(ScriptValue.of((double)(ScriptFormula.subscriptGet((ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((double)0.0)).asNum() * 0.08)));
-                arrayList3.add(ScriptValue.of((double)0.05));
-                arrayList3.add(ScriptValue.of((double)(ScriptFormula.subscriptGet((ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((double)2.0)).asNum() * 0.08)));
+                arrayList3.add(ScriptValue.of((double)(ScriptFormula.subscriptGet((ScriptValue)scriptValue2, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Saw.class, 0.0))).asNum() * 0.08)));
+                arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Saw.class, 0.05));
+                arrayList3.add(ScriptValue.of((double)(ScriptFormula.subscriptGet((ScriptValue)scriptValue2, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Saw.class, 2.0))).asNum() * 0.08)));
                 v1 = scriptValue5 instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue5).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Machine") ? new PolyClassMachine_v4(object).um$19_drop_item_toward(arrayList3) : PolyDispatch.bootstrapCall("memberCall", "drop_item_toward", (ScriptValue)scriptValue5, arrayList3, (ScriptContext)scriptContext);
             } else {
                 v1 = ScriptValue.NULL;
@@ -787,7 +791,7 @@ public final class Saw {
                     var29_26 = var30_24 != ScriptValue.NULL ? ((var31_25 = PolyClassMachine_v4.ofGuarded((ScriptValue)var30_24)) != null ? var31_25.pg$139_block() : PolyDispatch.bootstrapGet("memberGet", "block", (ScriptValue)var30_24, (ScriptContext)var1_1)) : ScriptValue.NULL;
                     var32_27 = "face";
                     if (var29_26 instanceof ScriptValue.Obj && (var34_29 = (var33_28 = (ScriptValue.Obj)var29_26).instance()) != null && !(var34_29 instanceof PolyClass) && var33_28.typeName().equals("Block")) {
-                        var35_30 = new PolyClassBlock(var34_29);
+                        var35_30 = new PolyClassBlock_v3(var34_29);
                         v4 = var35_30.tm$24_property(var32_27);
                     } else {
                         var36_31 = new ArrayList<ScriptValue>();
@@ -799,7 +803,7 @@ public final class Saw {
                     var0.val("is_belt_facing", var38_33);
                     if (!(ScriptFormula.valuesEqual((ScriptValue)var23_19, (ScriptValue)var1_1.getClassOrVar("null")) ^ true)) break block185;
                     var39_34 = var1_1.getClassOrVar("contraption");
-                    var40_35 = ScriptFormula.valuesEqual((ScriptValue)(var39_34 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "rpm", (ScriptValue)var39_34, (ScriptContext)var1_1) : ScriptValue.NULL), (ScriptValue)ScriptValue.of((double)0.0)) ^ true;
+                    var40_35 = ScriptFormula.valuesEqual((ScriptValue)(var39_34 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "rpm", (ScriptValue)var39_34, (ScriptContext)var1_1) : ScriptValue.NULL), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Saw.class, 0.0))) ^ true;
                     var41_36 = ScriptValue.of((boolean)var40_35);
                     var0.val("is_rotational", var41_36);
                     var42_37 = var1_1.getClassOrVar("contraption");
@@ -921,7 +925,7 @@ public final class Saw {
                                 var95_87.val("current_rpm", (ScriptValue)(var96_88 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "rpm", (ScriptValue)var96_88, (ScriptContext)var1_1) : ScriptValue.NULL));
                                 v11 = Saw._sawSuCost(var95_87);
                             } else {
-                                v11 = var94_89 = ScriptFormula.addPolymorphic((ScriptValue)ScriptValue.of((double)6.0), (ScriptValue)var52_45);
+                                v11 = var94_89 = ScriptFormula.addPolymorphic((ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Saw.class, 6.0)), (ScriptValue)var52_45);
                             }
                             if (var93_86 instanceof ScriptValue.Obj && (var98_91 = (var97_90 = (ScriptValue.Obj)var93_86).instance()) != null && !(var98_91 instanceof PolyClass) && var97_90.typeName().equals("Machine")) {
                                 var99_92 = new PolyClassMachine_v4(var98_91);
@@ -947,7 +951,7 @@ public final class Saw {
                 }
                 break block187;
             }
-            if (!(ScriptFormula.valuesEqual((ScriptValue)var1_1.getClassOrVar("rpm"), (ScriptValue)ScriptValue.of((double)0.0)) ^ true)) break block187;
+            if (!(ScriptFormula.valuesEqual((ScriptValue)var1_1.getClassOrVar("rpm"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Saw.class, 0.0))) ^ true)) break block187;
             var103_96 = 10.0;
             var105_97 = Math.max(1.0, 10.0 == 0.0 ? 0.0 : Math.abs(var1_1.getNum("rpm")) / var103_96);
             var107_98 = ScriptValue.of((double)var105_97);
@@ -1059,7 +1063,7 @@ public final class Saw {
             var164_153 = v17 /* !! */ ;
             var0.val("active_id", var164_153);
             if (ScriptFormula.valuesEqual((ScriptValue)var164_153, (ScriptValue)var1_1.getClassOrVar("null"))) {
-                var165_154 = ScriptValue.of((String)"");
+                var165_154 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Saw.class, "");
                 var0.val("active_id", var165_154);
             }
             if (var1_1.getStr("active_id").equals("")) {
@@ -1081,7 +1085,7 @@ public final class Saw {
                     var0.val("out_id", var172_161);
                     var173_162 = new ArrayList<ScriptValue>();
                     var174_163 = var1_1.getClassOrVar("carried");
-                    var173_162.add(ScriptValue.of((String)("[saw-debug] own-belt has_item id=" + (var174_163 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "id", (ScriptValue)var174_163, (ScriptContext)var1_1) : ScriptValue.NULL).asStr() + " out_id=" + (ScriptFormula.valuesEqual((ScriptValue)var172_161, (ScriptValue)var1_1.getClassOrVar("null")) != false ? ScriptValue.of((String)"null") : var172_161).asStr())));
+                    var173_162.add(ScriptValue.of((String)("[saw-debug] own-belt has_item id=" + (var174_163 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "id", (ScriptValue)var174_163, (ScriptContext)var1_1) : ScriptValue.NULL).asStr() + " out_id=" + (ScriptFormula.valuesEqual((ScriptValue)var172_161, (ScriptValue)var1_1.getClassOrVar("null")) != false ? ( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Saw.class, "null")) : var172_161).asStr())));
                     ScriptFormula.callBuiltin((String)"print", var173_162, (ScriptContext)var1_1);
                     if (ScriptFormula.valuesEqual((ScriptValue)var172_161, (ScriptValue)var1_1.getClassOrVar("null")) ^ true) {
                         var175_164 = var1_1.getClassOrVar("belt");
@@ -1153,7 +1157,7 @@ public final class Saw {
                         if (var204_193 != ScriptValue.NULL) {
                             var205_194 = "_saw_progress";
                             var206_195 = "int";
-                            var207_196 = ScriptValue.of((double)0.0);
+                            var207_196 =  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Saw.class, 0.0);
                             if (var204_193 instanceof ScriptValue.Obj && (var209_198 = (var208_197 = (ScriptValue.Obj)var204_193).instance()) != null && !(var209_198 instanceof PolyClass) && var208_197.typeName().equals("Machine")) {
                                 var210_199 = new PolyClassMachine_v4(var209_198);
                                 v25 /* !! */  = ScriptValue.of((boolean)var210_199.tm$82_set_typed(var205_194, var206_195, var207_196));
@@ -1171,7 +1175,7 @@ public final class Saw {
                         if (var212_201 != ScriptValue.NULL) {
                             var213_202 = "_saw_from_ground";
                             var214_203 = "int";
-                            var215_204 = ScriptValue.of((double)0.0);
+                            var215_204 =  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Saw.class, 0.0);
                             if (var212_201 instanceof ScriptValue.Obj && (var217_206 = (var216_205 = (ScriptValue.Obj)var212_201).instance()) != null && !(var217_206 instanceof PolyClass) && var216_205.typeName().equals("Machine")) {
                                 var218_207 = new PolyClassMachine_v4(var217_206);
                                 v26 /* !! */  = ScriptValue.of((boolean)var218_207.tm$82_set_typed(var213_202, var214_203, var215_204));
@@ -1266,7 +1270,7 @@ public final class Saw {
                             if (var254_243 != ScriptValue.NULL) {
                                 var255_244 = "_saw_progress";
                                 var256_245 = "int";
-                                var257_246 = ScriptValue.of((double)0.0);
+                                var257_246 =  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Saw.class, 0.0);
                                 if (var254_243 instanceof ScriptValue.Obj && (var259_248 = (var258_247 = (ScriptValue.Obj)var254_243).instance()) != null && !(var259_248 instanceof PolyClass) && var258_247.typeName().equals("Machine")) {
                                     var260_249 = new PolyClassMachine_v4(var259_248);
                                     v31 /* !! */  = ScriptValue.of((boolean)var260_249.tm$82_set_typed(var255_244, var256_245, var257_246));
@@ -1284,7 +1288,7 @@ public final class Saw {
                             if (var262_251 != ScriptValue.NULL) {
                                 var263_252 = "_saw_from_ground";
                                 var264_253 = "int";
-                                var265_254 = ScriptValue.of((double)2.0);
+                                var265_254 =  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Saw.class, 2.0);
                                 if (var262_251 instanceof ScriptValue.Obj && (var267_256 = (var266_255 = (ScriptValue.Obj)var262_251).instance()) != null && !(var267_256 instanceof PolyClass) && var266_255.typeName().equals("Machine")) {
                                     var268_257 = new PolyClassMachine_v4(var267_256);
                                     v32 /* !! */  = ScriptValue.of((boolean)var268_257.tm$82_set_typed(var263_252, var264_253, var265_254));
@@ -1394,7 +1398,7 @@ public final class Saw {
                                 if (var312_300 != ScriptValue.NULL) {
                                     var313_301 = "_saw_progress";
                                     var314_302 = "int";
-                                    var315_303 = ScriptValue.of((double)0.0);
+                                    var315_303 =  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Saw.class, 0.0);
                                     if (var312_300 instanceof ScriptValue.Obj && (var317_305 = (var316_304 = (ScriptValue.Obj)var312_300).instance()) != null && !(var317_305 instanceof PolyClass) && var316_304.typeName().equals("Machine")) {
                                         var318_306 = new PolyClassMachine_v4(var317_305);
                                         v37 /* !! */  = ScriptValue.of((boolean)var318_306.tm$82_set_typed(var313_301, var314_302, var315_303));
@@ -1412,7 +1416,7 @@ public final class Saw {
                                 if (var320_308 != ScriptValue.NULL) {
                                     var321_309 = "_saw_from_ground";
                                     var322_310 = "int";
-                                    var323_311 = ScriptValue.of((double)1.0);
+                                    var323_311 =  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Saw.class, 1.0);
                                     if (var320_308 instanceof ScriptValue.Obj && (var325_313 = (var324_312 = (ScriptValue.Obj)var320_308).instance()) != null && !(var325_313 instanceof PolyClass) && var324_312.typeName().equals("Machine")) {
                                         var326_314 = new PolyClassMachine_v4(var325_313);
                                         v38 /* !! */  = ScriptValue.of((boolean)var326_314.tm$82_set_typed(var321_309, var322_310, var323_311));
@@ -1564,7 +1568,7 @@ public final class Saw {
                         var382_368 = new ArrayList<ScriptValue>();
                         var383_369 = new ArrayList<ScriptValue>();
                         var383_369.add(var356_343);
-                        var383_369.add(ScriptValue.of((double)1.0));
+                        var383_369.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Saw.class, 1.0));
                         var382_368.add(ScriptFormula.callBuiltin((String)"MinecraftItem", var383_369, (ScriptContext)var1_1));
                         v46 /* !! */  = new ScriptValue.Array(var382_368);
                     }
@@ -1574,7 +1578,7 @@ public final class Saw {
                     if (var385_371 != null) {
                         for (ScriptValue var387_373 : var385_371) {
                             var0.val("out_item", var387_373);
-                            if (ScriptFormula.valuesEqual((ScriptValue)var375_361, (ScriptValue)ScriptValue.of((double)1.0)) != false || ScriptFormula.valuesEqual((ScriptValue)var375_361, (ScriptValue)ScriptValue.of((double)2.0)) != false) {
+                            if (ScriptFormula.valuesEqual((ScriptValue)var375_361, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Saw.class, 1.0))) != false || ScriptFormula.valuesEqual((ScriptValue)var375_361, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Saw.class, 2.0))) != false) {
                                 var388_374 = ScriptContext.builder().copyFrom(var1_1);
                                 var388_374.val("item", var1_1.getClassOrVar("out_item"));
                                 Saw._sawDepositDirectional(var388_374);
@@ -1623,7 +1627,7 @@ public final class Saw {
                     if (var405_390 != ScriptValue.NULL) {
                         var406_391 = "_saw_progress";
                         var407_392 = "int";
-                        var408_393 = ScriptValue.of((double)0.0);
+                        var408_393 =  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Saw.class, 0.0);
                         if (var405_390 instanceof ScriptValue.Obj && (var410_395 = (var409_394 = (ScriptValue.Obj)var405_390).instance()) != null && !(var410_395 instanceof PolyClass) && var409_394.typeName().equals("Machine")) {
                             var411_396 = new PolyClassMachine_v4(var410_395);
                             v49 /* !! */  = ScriptValue.of((boolean)var411_396.tm$82_set_typed(var406_391, var407_392, var408_393));
@@ -1642,7 +1646,7 @@ public final class Saw {
                         if (var413_398 != ScriptValue.NULL) {
                             var414_399 = "_saw_item_id";
                             var415_400 = "str";
-                            var416_401 = ScriptValue.of((String)"");
+                            var416_401 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Saw.class, "");
                             if (var413_398 instanceof ScriptValue.Obj && (var418_403 = (var417_402 = (ScriptValue.Obj)var413_398).instance()) != null && !(var418_403 instanceof PolyClass) && var417_402.typeName().equals("Machine")) {
                                 var419_404 = new PolyClassMachine_v4(var418_403);
                                 v50 /* !! */  = ScriptValue.of((boolean)var419_404.tm$82_set_typed(var414_399, var415_400, var416_401));
@@ -1680,7 +1684,7 @@ public final class Saw {
             }
         }
         var429_414 = ScriptContext.builder().copyFrom(Utils.1.fileScope()).copyFrom(var1_1);
-        var429_414.val("act_key", ScriptValue.of((String)"_saw_act"));
+        var429_414.val("act_key",  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Saw.class, "_saw_act"));
         var429_414.val("is_now", var1_1.getClassOrVar("is_now"));
         Utils.1._updateActivated((ScriptContext.Builder)var429_414);
         Saw.FILE_SCOPE = var0.build();

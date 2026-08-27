@@ -19,8 +19,12 @@ import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
 import dev.arubik.craftengine.script.ScriptProgram;
 import dev.arubik.craftengine.script.ScriptValue;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 
+/*
+ * Uses jvm11+ dynamic constants - pseudocode provided - see https://www.benf.org/other/cfr/dynamic-constants.html
+ */
 public final class RecipeInfo {
     private static volatile ScriptContext FILE_SCOPE;
 
@@ -59,14 +63,14 @@ public final class RecipeInfo {
             double d3 = scriptContext.getNum("width");
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
             arrayList.add(scriptContext.getClassOrVar("percent"));
-            arrayList.add(ScriptValue.of((double)0.0));
-            arrayList.add(ScriptValue.of((double)100.0));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", RecipeInfo.class, 0.0));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", RecipeInfo.class, 100.0));
             d = d3 * ScriptFormula.callBuiltin((String)"clamp", arrayList, (ScriptContext)scriptContext).asNum() / d2;
         }
         double d4 = Math.floor(d);
         ScriptValue scriptValue = ScriptValue.of((double)d4);
         builder.val("filled", scriptValue);
-        ScriptValue scriptValue2 = ScriptValue.of((String)"");
+        ScriptValue scriptValue2 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", RecipeInfo.class, "");
         builder.val("bar", scriptValue2);
         double d5 = 0.0;
         ScriptValue scriptValue3 = ScriptValue.of((double)0.0);
@@ -75,7 +79,7 @@ public final class RecipeInfo {
             if (!(scriptContext.getNum("i") < scriptContext.getNum("width"))) break;
             ScriptValue scriptValue4 = ScriptFormula.addPolymorphic((ScriptValue)scriptContext.getClassOrVar("bar"), (ScriptValue)(scriptContext.getNum("i") < d4 ? ScriptValue.of((String)(scriptContext.getStr("full_color") + "\u2588")) : ScriptValue.of((String)(scriptContext.getStr("empty_color") + "\u2591"))));
             builder.val("bar", scriptValue4);
-            ScriptValue scriptValue5 = ScriptFormula.addPolymorphic((ScriptValue)scriptContext.getClassOrVar("i"), (ScriptValue)ScriptValue.of((double)1.0));
+            ScriptValue scriptValue5 = ScriptFormula.addPolymorphic((ScriptValue)scriptContext.getClassOrVar("i"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", RecipeInfo.class, 1.0)));
             builder.val("i", scriptValue5);
         }
         return scriptContext.getClassOrVar("bar");
@@ -83,7 +87,7 @@ public final class RecipeInfo {
 
     public static ScriptValue _div(ScriptContext.Builder builder) {
         ScriptContext scriptContext = builder.peek();
-        return ScriptValue.of((String)"<dark_gray><st>                              ");
+        return  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", RecipeInfo.class, "<dark_gray><st>                              ");
     }
 
     public static ScriptValue item(ScriptContext.Builder builder) {
@@ -92,7 +96,7 @@ public final class RecipeInfo {
         ScriptValue scriptValue = RecipeInfo._recipe(builder2);
         builder.val("recipe", scriptValue);
         if (ScriptFormula.valuesEqual((ScriptValue)scriptValue, (ScriptValue)scriptContext.getClassOrVar("null"))) {
-            return ScriptValue.of((String)"minecraft:barrier");
+            return  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", RecipeInfo.class, "minecraft:barrier");
         }
         ScriptValue scriptValue2 = scriptContext.getClassOrVar("recipe");
         Object object = scriptValue2 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "outputs", (ScriptValue)scriptValue2, (ScriptContext)scriptContext) : ScriptValue.NULL;
@@ -108,7 +112,7 @@ public final class RecipeInfo {
                 return scriptValue4;
             }
         }
-        return ScriptValue.of((String)"minecraft:book");
+        return  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", RecipeInfo.class, "minecraft:book");
     }
 
     public static ScriptValue name(ScriptContext.Builder builder) {
@@ -119,11 +123,11 @@ public final class RecipeInfo {
         ScriptValue scriptValue2 = RecipeInfo._recipe(builder2);
         builder.val("recipe", scriptValue2);
         if (ScriptFormula.valuesEqual((ScriptValue)scriptValue2, (ScriptValue)scriptContext.getClassOrVar("null"))) {
-            return ScriptValue.of((String)"<red><b>No Recipe");
+            return  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", RecipeInfo.class, "<red><b>No Recipe");
         }
         ScriptValue scriptValue3 = scriptContext.getClassOrVar("recipe");
-        if (ScriptFormula.valuesEqual((ScriptValue)PolyDispatch.bootstrapGet("memberGet", "length", (ScriptValue)(scriptValue3 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "outputs", (ScriptValue)scriptValue3, (ScriptContext)scriptContext) : ScriptValue.NULL), (ScriptContext)scriptContext), (ScriptValue)ScriptValue.of((double)0.0))) {
-            return ScriptValue.of((String)"<gold><b>\u2699 Recipe");
+        if (ScriptFormula.valuesEqual((ScriptValue)PolyDispatch.bootstrapGet("memberGet", "length", (ScriptValue)(scriptValue3 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "outputs", (ScriptValue)scriptValue3, (ScriptContext)scriptContext) : ScriptValue.NULL), (ScriptContext)scriptContext), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", RecipeInfo.class, 0.0)))) {
+            return  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", RecipeInfo.class, "<gold><b>\u2699 Recipe");
         }
         ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
         ScriptValue scriptValue4 = scriptContext.getClassOrVar("recipe");
@@ -133,7 +137,7 @@ public final class RecipeInfo {
         ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
         arrayList2.add(scriptValue5);
         if (ScriptFormula.callBuiltin((String)"is_empty", arrayList2, (ScriptContext)scriptContext).asBool()) {
-            return ScriptValue.of((String)"<gold><b>\u2699 Recipe");
+            return  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", RecipeInfo.class, "<gold><b>\u2699 Recipe");
         }
         ScriptValue scriptValue6 = ScriptValue.of((String)("<gold><b>" + ((scriptValue = scriptContext.getClassOrVar("first_item")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue, (ScriptContext)scriptContext) : ScriptValue.NULL).asStr()));
         builder.val("label", scriptValue6);
@@ -159,7 +163,7 @@ public final class RecipeInfo {
             var0.val("recipe", var3_3);
             if (ScriptFormula.valuesEqual((ScriptValue)var3_3, (ScriptValue)var1_1.getClassOrVar("null"))) {
                 var4_4 = new ArrayList<ScriptValue>();
-                var4_4.add(ScriptValue.of((String)"<gray>No matching recipe for what's inside"));
+                var4_4.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", RecipeInfo.class, "<gray>No matching recipe for what's inside"));
                 return new ScriptValue.Array(var4_4);
             }
             var5_5 = var1_1.getClassOrVar("recipe");
@@ -184,9 +188,9 @@ public final class RecipeInfo {
                 var21_18 = ScriptContext.builder().copyFrom(var1_1);
                 var22_19 = var1_1.getClassOrVar("Machine");
                 var21_18.val("percent", (ScriptValue)(var22_19 != ScriptValue.NULL ? ((var23_20 = PolyClassMachine_v4.ofGuarded((ScriptValue)var22_19)) != null ? var23_20.pg$147_progress_percent() : PolyDispatch.bootstrapGet("memberGet", "progress_percent", (ScriptValue)var22_19, (ScriptContext)var1_1)) : ScriptValue.NULL));
-                var21_18.val("width", ScriptValue.of((double)14.0));
-                var21_18.val("full_color", ScriptValue.of((String)"<green>"));
-                var21_18.val("empty_color", ScriptValue.of((String)"<dark_gray>"));
+                var21_18.val("width",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", RecipeInfo.class, 14.0));
+                var21_18.val("full_color",  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", RecipeInfo.class, "<green>"));
+                var21_18.val("empty_color",  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", RecipeInfo.class, "<dark_gray>"));
                 var24_21 = var1_1.getClassOrVar("Machine");
                 var20_17.add(ScriptValue.of((String)v0.append(RecipeInfo._bar(var21_18).asStr()).append(" <white>").append(ScriptFormula.numToStr((double)Math.floor(var24_21 != ScriptValue.NULL ? ((var25_22 = PolyClassMachine_v4.ofGuarded((ScriptValue)var24_21)) != null ? var25_22.tg$148_progress_percent() : PolyDispatch.bootstrapGet("memberGet", "progress_percent", (ScriptValue)var24_21, (ScriptContext)var1_1).asNum()) : ScriptValue.NULL.asNum()))).append("%").toString()));
                 var26_23 = ScriptFormula.callBuiltin((String)"push", var20_17, (ScriptContext)var1_1);
@@ -194,7 +198,7 @@ public final class RecipeInfo {
             } else {
                 var27_24 = new ArrayList<ScriptValue>();
                 var27_24.add(var1_1.getClassOrVar("lines"));
-                var27_24.add(ScriptValue.of((String)"<gray><i>Waiting to start\u2026"));
+                var27_24.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", RecipeInfo.class, "<gray><i>Waiting to start\u2026"));
                 var28_25 = ScriptFormula.callBuiltin((String)"push", var27_24, (ScriptContext)var1_1);
                 var0.val("lines", var28_25);
             }
@@ -206,7 +210,7 @@ public final class RecipeInfo {
             var0.val("lines", var31_28);
             var32_29 = new ArrayList<ScriptValue>();
             var32_29.add(var1_1.getClassOrVar("lines"));
-            var32_29.add(ScriptValue.of((String)"<white><b>OUTPUT"));
+            var32_29.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", RecipeInfo.class, "<white><b>OUTPUT"));
             var33_30 = ScriptFormula.callBuiltin((String)"push", var32_29, (ScriptContext)var1_1);
             var0.val("lines", var33_30);
             var34_31 = 0.0;
@@ -256,7 +260,7 @@ public final class RecipeInfo {
                         var59_53 = ScriptFormula.callBuiltin((String)"push", var58_52, (ScriptContext)var1_1);
                         var0.val("lines", var59_53);
                     }
-                    var60_54 = ScriptFormula.addPolymorphic((ScriptValue)var1_1.getClassOrVar("out_i"), (ScriptValue)ScriptValue.of((double)1.0));
+                    var60_54 = ScriptFormula.addPolymorphic((ScriptValue)var1_1.getClassOrVar("out_i"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", RecipeInfo.class, 1.0)));
                     var0.val("out_i", var60_54);
                 }
             }
@@ -270,7 +274,7 @@ public final class RecipeInfo {
                 var0.val("lines", var64_58);
                 var65_59 = new ArrayList<ScriptValue>();
                 var65_59.add(var1_1.getClassOrVar("lines"));
-                var65_59.add(ScriptValue.of((String)"<white><b>INGREDIENTS"));
+                var65_59.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", RecipeInfo.class, "<white><b>INGREDIENTS"));
                 var66_60 = ScriptFormula.callBuiltin((String)"push", var65_59, (ScriptContext)var1_1);
                 var0.val("lines", var66_60);
                 var70_61 = var1_1.getClassOrVar("recipe");
@@ -326,7 +330,7 @@ public final class RecipeInfo {
                 var0.val("lines", var84_78);
                 var85_79 = new ArrayList<ScriptValue>();
                 var85_79.add(var1_1.getClassOrVar("lines"));
-                var85_79.add(ScriptValue.of((String)"<white><b>POWER"));
+                var85_79.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", RecipeInfo.class, "<white><b>POWER"));
                 var86_80 = ScriptFormula.callBuiltin((String)"push", var85_79, (ScriptContext)var1_1);
                 var0.val("lines", var86_80);
             }
@@ -382,7 +386,7 @@ public final class RecipeInfo {
                 } else {
                     var116_106 = new ArrayList<ScriptValue>();
                     var116_106.add(var1_1.getClassOrVar("lines"));
-                    var116_106.add(ScriptValue.of((String)"<gray>\ud83d\udd25 Fuel: <red>needed"));
+                    var116_106.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", RecipeInfo.class, "<gray>\ud83d\udd25 Fuel: <red>needed"));
                     var117_107 = ScriptFormula.callBuiltin((String)"push", var116_106, (ScriptContext)var1_1);
                     var0.val("lines", var117_107);
                 }

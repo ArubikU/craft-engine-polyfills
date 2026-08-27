@@ -28,9 +28,13 @@ import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
 import dev.arubik.craftengine.script.ScriptProgram;
 import dev.arubik.craftengine.script.ScriptValue;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.List;
 
+/*
+ * Uses jvm11+ dynamic constants - pseudocode provided - see https://www.benf.org/other/cfr/dynamic-constants.html
+ */
 public final class SpecializedTeleporter {
     private static volatile ScriptContext FILE_SCOPE;
 
@@ -119,7 +123,7 @@ public final class SpecializedTeleporter {
         builder.val("mine", scriptValue5);
         ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
         arrayList.add(scriptValue4);
-        arrayList.add(ScriptValue.of((String)";"));
+        arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", SpecializedTeleporter.class, ";"));
         List list = ScriptProgram.elementsOf((ScriptValue)ScriptFormula.callBuiltin((String)"split", arrayList, (ScriptContext)scriptContext));
         if (list != null) {
             for (ScriptValue scriptValue6 : list) {
@@ -208,11 +212,11 @@ public final class SpecializedTeleporter {
         ScriptContext.Builder builder3 = ScriptContext.builder().copyFrom(scriptContext);
         ScriptValue scriptValue6 = SpecializedTeleporter.myPosStr(builder3);
         builder.val("mine", scriptValue6);
-        ScriptValue scriptValue7 = ScriptValue.of((String)"");
+        ScriptValue scriptValue7 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", SpecializedTeleporter.class, "");
         builder.val("result", scriptValue7);
         ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
         arrayList.add(scriptValue5);
-        arrayList.add(ScriptValue.of((String)";"));
+        arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", SpecializedTeleporter.class, ";"));
         List list = ScriptProgram.elementsOf((ScriptValue)ScriptFormula.callBuiltin((String)"split", arrayList, (ScriptContext)scriptContext));
         if (list != null) {
             for (ScriptValue scriptValue8 : list) {
@@ -289,7 +293,7 @@ public final class SpecializedTeleporter {
             Object object;
             String string = "page_offset";
             String string3 = "int";
-            ScriptValue scriptValue5 = ScriptValue.of((double)0.0);
+            ScriptValue scriptValue5 =  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", SpecializedTeleporter.class, 0.0);
             if (scriptValue4 instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue4).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Machine")) {
                 PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object);
                 v1 = ScriptValue.of((boolean)polyClassMachine_v4.tm$82_set_typed(string, string3, scriptValue5));
@@ -316,7 +320,7 @@ public final class SpecializedTeleporter {
         ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
         arrayList2.add(scriptValue);
         if (ScriptFormula.callBuiltin((String)"is_empty", arrayList2, (ScriptContext)scriptContext).asBool()) {
-            return ScriptValue.of((String)"");
+            return  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", SpecializedTeleporter.class, "");
         }
         ScriptValue scriptValue2 = scriptContext.getClassOrVar("tw");
         if (scriptValue2 != ScriptValue.NULL) {
@@ -330,7 +334,7 @@ public final class SpecializedTeleporter {
             ArrayList<ScriptValue> arrayList6 = new ArrayList<ScriptValue>();
             arrayList6.add(scriptContext.getClassOrVar("z"));
             arrayList3.add(ScriptFormula.callBuiltin((String)"int", arrayList6, (ScriptContext)scriptContext));
-            arrayList3.add(ScriptValue.of((boolean)true));
+            arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constBool("b", MethodHandles.lookup(), "constBool", SpecializedTeleporter.class, 1));
             object = PolyDispatch.bootstrapCall("memberCall", "get_block", (ScriptValue)scriptValue2, arrayList3, (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
@@ -338,12 +342,12 @@ public final class SpecializedTeleporter {
         ScriptValue scriptValue3 = object;
         builder.val("center", scriptValue3);
         ArrayList<ScriptValue> arrayList7 = new ArrayList<ScriptValue>();
-        arrayList7.add(ScriptValue.of((String)"north"));
-        arrayList7.add(ScriptValue.of((String)"south"));
-        arrayList7.add(ScriptValue.of((String)"east"));
-        arrayList7.add(ScriptValue.of((String)"west"));
-        arrayList7.add(ScriptValue.of((String)"up"));
-        arrayList7.add(ScriptValue.of((String)"down"));
+        arrayList7.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", SpecializedTeleporter.class, "north"));
+        arrayList7.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", SpecializedTeleporter.class, "south"));
+        arrayList7.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", SpecializedTeleporter.class, "east"));
+        arrayList7.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", SpecializedTeleporter.class, "west"));
+        arrayList7.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", SpecializedTeleporter.class, "up"));
+        arrayList7.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", SpecializedTeleporter.class, "down"));
         List list = ScriptProgram.elementsOf((ScriptValue)new ScriptValue.Array(arrayList7));
         if (list != null) {
             for (ScriptValue scriptValue4 : list) {
@@ -370,10 +374,10 @@ public final class SpecializedTeleporter {
                         return scriptContext.getClassOrVar("line");
                     }
                 }
-                return ScriptValue.of((String)"");
+                return  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", SpecializedTeleporter.class, "");
             }
         }
-        return ScriptValue.of((String)"");
+        return  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", SpecializedTeleporter.class, "");
     }
 
     public static ScriptValue _ownAlias(ScriptContext.Builder builder) {
@@ -430,7 +434,7 @@ public final class SpecializedTeleporter {
         builder.val("mine", scriptValue4);
         ArrayList<ScriptValue> arrayList3 = new ArrayList<ScriptValue>();
         arrayList3.add(scriptValue3);
-        arrayList3.add(ScriptValue.of((String)";"));
+        arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", SpecializedTeleporter.class, ";"));
         List list = ScriptProgram.elementsOf((ScriptValue)ScriptFormula.callBuiltin((String)"split", arrayList3, (ScriptContext)scriptContext));
         if (list != null) {
             for (ScriptValue scriptValue5 : list) {
@@ -455,24 +459,24 @@ public final class SpecializedTeleporter {
         ScriptValue scriptValue = ScriptFormula.callBuiltin((String)"len", arrayList, (ScriptContext)scriptContext);
         builder.val("n", scriptValue);
         if (scriptValue.asNum() <= 0.0) {
-            return ScriptValue.of((double)1.0);
+            return  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", SpecializedTeleporter.class, 1.0);
         }
         ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
         double d = scriptContext.getNum("DEST_PAGE_SIZE");
         arrayList2.add(ScriptValue.of((double)Math.floor(d == 0.0 ? 0.0 : (scriptValue.asNum() - 1.0) / d)));
-        return ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.callBuiltin((String)"int", arrayList2, (ScriptContext)scriptContext), (ScriptValue)ScriptValue.of((double)1.0));
+        return ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.callBuiltin((String)"int", arrayList2, (ScriptContext)scriptContext), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", SpecializedTeleporter.class, 1.0)));
     }
 
     public static ScriptValue ghostGet(ScriptContext.Builder builder) {
         ScriptContext scriptContext = builder.peek();
-        return ScriptValue.of((String)"cml:teleporter_core");
+        return  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", SpecializedTeleporter.class, "cml:teleporter_core");
     }
 
     public static ScriptValue ghostSet(ScriptContext.Builder builder) {
         ScriptContext scriptContext = builder.peek();
         if (scriptContext.getStr("click_type").equals("right") || scriptContext.getStr("click_type").equals("shift_right")) {
             ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
-            builder2.val("freq", ScriptValue.of((String)""));
+            builder2.val("freq",  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", SpecializedTeleporter.class, ""));
             SpecializedTeleporter.setFrequency(builder2);
             ScriptValue scriptValue = scriptContext.getClassOrVar("Machine");
             if (scriptValue != ScriptValue.NULL) {
@@ -522,7 +526,7 @@ public final class SpecializedTeleporter {
         ScriptValue scriptValue = SpecializedTeleporter.getFrequency(builder2);
         builder.val("freq", scriptValue);
         if (ScriptFormula.valuesEqualStr((ScriptValue)scriptValue, (String)"")) {
-            return ScriptValue.of((String)"<red>No frequency tuned");
+            return  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", SpecializedTeleporter.class, "<red>No frequency tuned");
         }
         ScriptContext.Builder builder3 = ScriptContext.builder().copyFrom(scriptContext);
         ScriptValue scriptValue2 = SpecializedTeleporter._ownAlias(builder3);
@@ -545,7 +549,7 @@ public final class SpecializedTeleporter {
         if (ScriptFormula.valuesEqualStr((ScriptValue)scriptValue, (String)"")) {
             ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
             arrayList2.add(scriptContext.getClassOrVar("lines"));
-            arrayList2.add(ScriptValue.of((String)"<gray>Insert a renamed item below to tune one."));
+            arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", SpecializedTeleporter.class, "<gray>Insert a renamed item below to tune one."));
             ScriptValue scriptValue2 = ScriptFormula.callBuiltin((String)"push", arrayList2, (ScriptContext)scriptContext);
             builder.val("lines", scriptValue2);
             return scriptValue2;
@@ -565,7 +569,7 @@ public final class SpecializedTeleporter {
         } else {
             ArrayList<ScriptValue> arrayList5 = new ArrayList<ScriptValue>();
             arrayList5.add(scriptContext.getClassOrVar("lines"));
-            arrayList5.add(ScriptValue.of((String)"<red>No other teleporter tuned to this frequency yet."));
+            arrayList5.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", SpecializedTeleporter.class, "<red>No other teleporter tuned to this frequency yet."));
             ScriptValue scriptValue5 = ScriptFormula.callBuiltin((String)"push", arrayList5, (ScriptContext)scriptContext);
             builder.val("lines", scriptValue5);
         }
@@ -590,7 +594,7 @@ public final class SpecializedTeleporter {
         } else {
             object = ScriptValue.NULL;
         }
-        StringBuilder stringBuilder2 = stringBuilder.append(ScriptFormula.addPolymorphic((ScriptValue)object, (ScriptValue)ScriptValue.of((double)1.0)).asStr()).append("<gray>/<white>");
+        StringBuilder stringBuilder2 = stringBuilder.append(ScriptFormula.addPolymorphic((ScriptValue)object, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", SpecializedTeleporter.class, 1.0))).asStr()).append("<gray>/<white>");
         ScriptContext.Builder builder4 = ScriptContext.builder().copyFrom(scriptContext);
         builder4.val("freq", scriptValue);
         arrayList6.add(ScriptValue.of((String)stringBuilder2.append(SpecializedTeleporter.totalPages(builder4).asStr()).toString()));
@@ -645,30 +649,30 @@ public final class SpecializedTeleporter {
             ArrayList<ScriptValue> arrayList3 = new ArrayList<ScriptValue>();
             arrayList3.add(scriptContext.getClassOrVar("out"));
             ArrayList<ScriptValue> arrayList4 = new ArrayList<ScriptValue>();
-            arrayList4.add(ScriptValue.of((String)"slot"));
-            arrayList4.add(ScriptValue.of((double)45.0));
-            arrayList4.add(ScriptValue.of((String)"icon"));
-            arrayList4.add(ScriptValue.of((String)"cml:prev_icon"));
-            arrayList4.add(ScriptValue.of((String)"name"));
-            arrayList4.add(ScriptValue.of((String)"<yellow><- Previous Page"));
-            arrayList4.add(ScriptValue.of((String)"action"));
-            arrayList4.add(ScriptValue.of((String)"specialized_teleporter.pf:prev_page"));
+            arrayList4.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", SpecializedTeleporter.class, "slot"));
+            arrayList4.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", SpecializedTeleporter.class, 45.0));
+            arrayList4.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", SpecializedTeleporter.class, "icon"));
+            arrayList4.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", SpecializedTeleporter.class, "cml:prev_icon"));
+            arrayList4.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", SpecializedTeleporter.class, "name"));
+            arrayList4.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", SpecializedTeleporter.class, "<yellow><- Previous Page"));
+            arrayList4.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", SpecializedTeleporter.class, "action"));
+            arrayList4.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", SpecializedTeleporter.class, "specialized_teleporter.pf:prev_page"));
             arrayList3.add(ScriptFormula.callBuiltin((String)"make_map", arrayList4, (ScriptContext)scriptContext));
             ScriptValue scriptValue6 = ScriptFormula.callBuiltin((String)"push", arrayList3, (ScriptContext)scriptContext);
             builder.val("out", scriptValue6);
         }
-        if (ScriptFormula.addPolymorphic((ScriptValue)scriptValue4, (ScriptValue)ScriptValue.of((double)1.0)).asNum() < scriptValue5.asNum()) {
+        if (ScriptFormula.addPolymorphic((ScriptValue)scriptValue4, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", SpecializedTeleporter.class, 1.0))).asNum() < scriptValue5.asNum()) {
             ArrayList<ScriptValue> arrayList5 = new ArrayList<ScriptValue>();
             arrayList5.add(scriptContext.getClassOrVar("out"));
             ArrayList<ScriptValue> arrayList6 = new ArrayList<ScriptValue>();
-            arrayList6.add(ScriptValue.of((String)"slot"));
-            arrayList6.add(ScriptValue.of((double)53.0));
-            arrayList6.add(ScriptValue.of((String)"icon"));
-            arrayList6.add(ScriptValue.of((String)"internal:next_page_0"));
-            arrayList6.add(ScriptValue.of((String)"name"));
-            arrayList6.add(ScriptValue.of((String)"<yellow>Next Page ->"));
-            arrayList6.add(ScriptValue.of((String)"action"));
-            arrayList6.add(ScriptValue.of((String)"specialized_teleporter.pf:next_page"));
+            arrayList6.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", SpecializedTeleporter.class, "slot"));
+            arrayList6.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", SpecializedTeleporter.class, 53.0));
+            arrayList6.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", SpecializedTeleporter.class, "icon"));
+            arrayList6.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", SpecializedTeleporter.class, "internal:next_page_0"));
+            arrayList6.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", SpecializedTeleporter.class, "name"));
+            arrayList6.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", SpecializedTeleporter.class, "<yellow>Next Page ->"));
+            arrayList6.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", SpecializedTeleporter.class, "action"));
+            arrayList6.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", SpecializedTeleporter.class, "specialized_teleporter.pf:next_page"));
             arrayList5.add(ScriptFormula.callBuiltin((String)"make_map", arrayList6, (ScriptContext)scriptContext));
             ScriptValue scriptValue7 = ScriptFormula.callBuiltin((String)"push", arrayList5, (ScriptContext)scriptContext);
             builder.val("out", scriptValue7);
@@ -676,19 +680,19 @@ public final class SpecializedTeleporter {
         ArrayList<ScriptValue> arrayList7 = new ArrayList<ScriptValue>();
         arrayList7.add(scriptContext.getClassOrVar("out"));
         ArrayList<Object> arrayList8 = new ArrayList<Object>();
-        arrayList8.add(ScriptValue.of((String)"slot"));
-        arrayList8.add(ScriptValue.of((double)5.0));
-        arrayList8.add(ScriptValue.of((String)"icon"));
-        arrayList8.add(ScriptValue.of((String)"cml:teleporter_core"));
-        arrayList8.add(ScriptValue.of((String)"name"));
-        arrayList8.add(ScriptValue.of((String)"<aqua>Tune via Dialog"));
-        arrayList8.add(ScriptValue.of((String)"lore"));
+        arrayList8.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", SpecializedTeleporter.class, "slot"));
+        arrayList8.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", SpecializedTeleporter.class, 5.0));
+        arrayList8.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", SpecializedTeleporter.class, "icon"));
+        arrayList8.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", SpecializedTeleporter.class, "cml:teleporter_core"));
+        arrayList8.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", SpecializedTeleporter.class, "name"));
+        arrayList8.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", SpecializedTeleporter.class, "<aqua>Tune via Dialog"));
+        arrayList8.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", SpecializedTeleporter.class, "lore"));
         ArrayList<ScriptValue> arrayList9 = new ArrayList<ScriptValue>();
-        arrayList9.add(ScriptValue.of((String)"<gray>Type a frequency instead of"));
-        arrayList9.add(ScriptValue.of((String)"<gray>inserting a renamed item."));
+        arrayList9.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", SpecializedTeleporter.class, "<gray>Type a frequency instead of"));
+        arrayList9.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", SpecializedTeleporter.class, "<gray>inserting a renamed item."));
         arrayList8.add(new ScriptValue.Array(arrayList9));
-        arrayList8.add(ScriptValue.of((String)"action"));
-        arrayList8.add(ScriptValue.of((String)"specialized_teleporter.pf:open_frequency_dialog"));
+        arrayList8.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", SpecializedTeleporter.class, "action"));
+        arrayList8.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", SpecializedTeleporter.class, "specialized_teleporter.pf:open_frequency_dialog"));
         arrayList7.add(ScriptFormula.callBuiltin((String)"make_map", arrayList8, (ScriptContext)scriptContext));
         ScriptValue scriptValue8 = ScriptFormula.callBuiltin((String)"push", arrayList7, (ScriptContext)scriptContext);
         builder.val("out", scriptValue8);
@@ -729,14 +733,14 @@ public final class SpecializedTeleporter {
                 builder.val("entry", scriptValue13);
                 ArrayList<ScriptValue> arrayList13 = new ArrayList<ScriptValue>();
                 arrayList13.add(scriptValue13);
-                arrayList13.add(ScriptValue.of((String)","));
+                arrayList13.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", SpecializedTeleporter.class, ","));
                 ScriptValue scriptValue14 = ScriptFormula.callBuiltin((String)"split", arrayList13, (ScriptContext)scriptContext);
                 builder.val("parts", scriptValue14);
                 ScriptContext.Builder builder5 = ScriptContext.builder().copyFrom(scriptContext);
                 ScriptValue scriptValue15 = scriptContext.getClassOrVar("parts");
                 if (scriptValue15 != ScriptValue.NULL) {
                     ArrayList<ScriptValue> arrayList14 = new ArrayList<ScriptValue>();
-                    arrayList14.add(ScriptValue.of((double)0.0));
+                    arrayList14.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", SpecializedTeleporter.class, 0.0));
                     object11 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue15, arrayList14, (ScriptContext)scriptContext);
                 } else {
                     object11 = ScriptValue.NULL;
@@ -745,7 +749,7 @@ public final class SpecializedTeleporter {
                 ScriptValue scriptValue16 = scriptContext.getClassOrVar("parts");
                 if (scriptValue16 != ScriptValue.NULL) {
                     ArrayList<ScriptValue> arrayList15 = new ArrayList<ScriptValue>();
-                    arrayList15.add(ScriptValue.of((double)1.0));
+                    arrayList15.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", SpecializedTeleporter.class, 1.0));
                     object10 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue16, arrayList15, (ScriptContext)scriptContext);
                 } else {
                     object10 = ScriptValue.NULL;
@@ -754,7 +758,7 @@ public final class SpecializedTeleporter {
                 ScriptValue scriptValue17 = scriptContext.getClassOrVar("parts");
                 if (scriptValue17 != ScriptValue.NULL) {
                     ArrayList<ScriptValue> arrayList16 = new ArrayList<ScriptValue>();
-                    arrayList16.add(ScriptValue.of((double)2.0));
+                    arrayList16.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", SpecializedTeleporter.class, 2.0));
                     object9 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue17, arrayList16, (ScriptContext)scriptContext);
                 } else {
                     object9 = ScriptValue.NULL;
@@ -763,7 +767,7 @@ public final class SpecializedTeleporter {
                 ScriptValue scriptValue18 = scriptContext.getClassOrVar("parts");
                 if (scriptValue18 != ScriptValue.NULL) {
                     ArrayList<ScriptValue> arrayList17 = new ArrayList<ScriptValue>();
-                    arrayList17.add(ScriptValue.of((double)3.0));
+                    arrayList17.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", SpecializedTeleporter.class, 3.0));
                     object8 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue18, arrayList17, (ScriptContext)scriptContext);
                 } else {
                     object8 = ScriptValue.NULL;
@@ -777,7 +781,7 @@ public final class SpecializedTeleporter {
                     ScriptValue scriptValue20 = scriptContext.getClassOrVar("parts");
                     if (scriptValue20 != ScriptValue.NULL) {
                         ArrayList<ScriptValue> arrayList18 = new ArrayList<ScriptValue>();
-                        arrayList18.add(ScriptValue.of((double)0.0));
+                        arrayList18.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", SpecializedTeleporter.class, 0.0));
                         object7 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue20, arrayList18, (ScriptContext)scriptContext);
                     } else {
                         object7 = ScriptValue.NULL;
@@ -794,7 +798,7 @@ public final class SpecializedTeleporter {
                 ScriptValue scriptValue22 = scriptContext.getClassOrVar("parts");
                 if (scriptValue22 != ScriptValue.NULL) {
                     ArrayList<ScriptValue> arrayList21 = new ArrayList<ScriptValue>();
-                    arrayList21.add(ScriptValue.of((double)1.0));
+                    arrayList21.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", SpecializedTeleporter.class, 1.0));
                     object6 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue22, arrayList21, (ScriptContext)scriptContext);
                 } else {
                     object6 = ScriptValue.NULL;
@@ -803,7 +807,7 @@ public final class SpecializedTeleporter {
                 ScriptValue scriptValue23 = scriptContext.getClassOrVar("parts");
                 if (scriptValue23 != ScriptValue.NULL) {
                     ArrayList<ScriptValue> arrayList22 = new ArrayList<ScriptValue>();
-                    arrayList22.add(ScriptValue.of((double)2.0));
+                    arrayList22.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", SpecializedTeleporter.class, 2.0));
                     object5 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue23, arrayList22, (ScriptContext)scriptContext);
                 } else {
                     object5 = ScriptValue.NULL;
@@ -812,7 +816,7 @@ public final class SpecializedTeleporter {
                 ScriptValue scriptValue24 = scriptContext.getClassOrVar("parts");
                 if (scriptValue24 != ScriptValue.NULL) {
                     ArrayList<ScriptValue> arrayList23 = new ArrayList<ScriptValue>();
-                    arrayList23.add(ScriptValue.of((double)3.0));
+                    arrayList23.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", SpecializedTeleporter.class, 3.0));
                     object4 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue24, arrayList23, (ScriptContext)scriptContext);
                 } else {
                     object4 = ScriptValue.NULL;
@@ -828,7 +832,7 @@ public final class SpecializedTeleporter {
                 ArrayList<ScriptValue> arrayList25 = new ArrayList<ScriptValue>();
                 arrayList25.add(scriptContext.getClassOrVar("out"));
                 ArrayList<ScriptValue> arrayList26 = new ArrayList<ScriptValue>();
-                arrayList26.add(ScriptValue.of((String)"slot"));
+                arrayList26.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", SpecializedTeleporter.class, "slot"));
                 ScriptValue scriptValue27 = scriptContext.getClassOrVar("DEST_SLOTS");
                 if (scriptValue27 != ScriptValue.NULL) {
                     ArrayList<ScriptValue> arrayList27 = new ArrayList<ScriptValue>();
@@ -838,13 +842,13 @@ public final class SpecializedTeleporter {
                     object3 = ScriptValue.NULL;
                 }
                 arrayList26.add((ScriptValue)object3);
-                arrayList26.add(ScriptValue.of((String)"icon"));
-                arrayList26.add(ScriptValue.of((String)"cml:teleporter_core"));
-                arrayList26.add(ScriptValue.of((String)"name"));
+                arrayList26.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", SpecializedTeleporter.class, "icon"));
+                arrayList26.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", SpecializedTeleporter.class, "cml:teleporter_core"));
+                arrayList26.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", SpecializedTeleporter.class, "name"));
                 arrayList26.add(ScriptValue.of((String)("<yellow>" + scriptValue21.asStr())));
-                arrayList26.add(ScriptValue.of((String)"lore"));
+                arrayList26.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", SpecializedTeleporter.class, "lore"));
                 arrayList26.add(scriptValue26);
-                arrayList26.add(ScriptValue.of((String)"action"));
+                arrayList26.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", SpecializedTeleporter.class, "action"));
                 arrayList26.add(ScriptValue.of((String)("specialized_teleporter.pf:do_teleport_slot:" + scriptContext.getStr("i"))));
                 arrayList25.add(ScriptFormula.callBuiltin((String)"make_map", arrayList26, (ScriptContext)scriptContext));
                 ScriptValue scriptValue28 = ScriptFormula.callBuiltin((String)"push", arrayList25, (ScriptContext)scriptContext);
@@ -938,14 +942,14 @@ public final class SpecializedTeleporter {
             var0.val("entry", var26_26);
             var27_27 = new ArrayList<ScriptValue>();
             var27_27.add(var26_26);
-            var27_27.add(ScriptValue.of((String)","));
+            var27_27.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", SpecializedTeleporter.class, ","));
             var28_28 = ScriptFormula.callBuiltin((String)"split", var27_27, (ScriptContext)var1_1);
             var0.val("parts", var28_28);
             var29_29 = new ArrayList<ScriptValue>();
             var30_30 = var1_1.getClassOrVar("parts");
             if (var30_30 != ScriptValue.NULL) {
                 var31_31 = new ArrayList<ScriptValue>();
-                var31_31.add(ScriptValue.of((double)0.0));
+                var31_31.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", SpecializedTeleporter.class, 0.0));
                 v7 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)var30_30, var31_31, (ScriptContext)var1_1);
             } else {
                 v7 /* !! */  = ScriptValue.NULL;
@@ -979,35 +983,35 @@ public final class SpecializedTeleporter {
                 var43_43 = var1_1.getClassOrVar("parts");
                 if (var43_43 != ScriptValue.NULL) {
                     var44_44 = new ArrayList<ScriptValue>();
-                    var44_44.add(ScriptValue.of((double)1.0));
+                    var44_44.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", SpecializedTeleporter.class, 1.0));
                     v9 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)var43_43, var44_44, (ScriptContext)var1_1);
                 } else {
                     v9 /* !! */  = ScriptValue.NULL;
                 }
                 var42_42.add(v9 /* !! */ );
-                var41_41.add(ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.callBuiltin((String)"int", var42_42, (ScriptContext)var1_1), (ScriptValue)ScriptValue.of((double)0.5)));
+                var41_41.add(ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.callBuiltin((String)"int", var42_42, (ScriptContext)var1_1), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", SpecializedTeleporter.class, 0.5))));
                 var45_45 = new ArrayList<ScriptValue>();
                 var46_46 = var1_1.getClassOrVar("parts");
                 if (var46_46 != ScriptValue.NULL) {
                     var47_47 = new ArrayList<ScriptValue>();
-                    var47_47.add(ScriptValue.of((double)2.0));
+                    var47_47.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", SpecializedTeleporter.class, 2.0));
                     v10 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)var46_46, var47_47, (ScriptContext)var1_1);
                 } else {
                     v10 /* !! */  = ScriptValue.NULL;
                 }
                 var45_45.add(v10 /* !! */ );
-                var41_41.add(ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.callBuiltin((String)"int", var45_45, (ScriptContext)var1_1), (ScriptValue)ScriptValue.of((double)1.5)));
+                var41_41.add(ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.callBuiltin((String)"int", var45_45, (ScriptContext)var1_1), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", SpecializedTeleporter.class, 1.5))));
                 var48_48 = new ArrayList<ScriptValue>();
                 var49_49 = var1_1.getClassOrVar("parts");
                 if (var49_49 != ScriptValue.NULL) {
                     var50_50 = new ArrayList<ScriptValue>();
-                    var50_50.add(ScriptValue.of((double)3.0));
+                    var50_50.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", SpecializedTeleporter.class, 3.0));
                     v11 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)var49_49, var50_50, (ScriptContext)var1_1);
                 } else {
                     v11 /* !! */  = ScriptValue.NULL;
                 }
                 var48_48.add(v11 /* !! */ );
-                var41_41.add(ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.callBuiltin((String)"int", var48_48, (ScriptContext)var1_1), (ScriptValue)ScriptValue.of((double)0.5)));
+                var41_41.add(ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.callBuiltin((String)"int", var48_48, (ScriptContext)var1_1), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", SpecializedTeleporter.class, 0.5))));
                 v12 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "location", (ScriptValue)var40_40, var41_41, (ScriptContext)var1_1);
             } else {
                 v12 /* !! */  = ScriptValue.NULL;
@@ -1061,7 +1065,7 @@ public final class SpecializedTeleporter {
                 var71_70 = var1_1.getClassOrVar("parts");
                 if (var71_70 != ScriptValue.NULL) {
                     var72_71 = new ArrayList<ScriptValue>();
-                    var72_71.add(ScriptValue.of((double)0.0));
+                    var72_71.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", SpecializedTeleporter.class, 0.0));
                     v17 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)var71_70, var72_71, (ScriptContext)var1_1);
                 } else {
                     v17 /* !! */  = ScriptValue.NULL;
@@ -1089,17 +1093,17 @@ public final class SpecializedTeleporter {
         arrayList.add(scriptContext.getClassOrVar("Player"));
         ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
         arrayList2.add(scriptContext.getClassOrVar("Machine"));
-        arrayList2.add(ScriptValue.of((String)"Accept"));
-        arrayList2.add(ScriptValue.of((String)"specialized_teleporter.pf:on_frequency_dialog_submit"));
+        arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", SpecializedTeleporter.class, "Accept"));
+        arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", SpecializedTeleporter.class, "specialized_teleporter.pf:on_frequency_dialog_submit"));
         ArrayList<ScriptValue> arrayList3 = new ArrayList<ScriptValue>();
-        arrayList3.add(ScriptValue.of((String)"value"));
-        arrayList3.add(ScriptValue.of((String)"Frequency"));
+        arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", SpecializedTeleporter.class, "value"));
+        arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", SpecializedTeleporter.class, "Frequency"));
         ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
         arrayList3.add(SpecializedTeleporter.getFrequency(builder2));
         ScriptValue scriptValue = scriptContext.getClassOrVar("Dialog");
         if (scriptValue != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList4 = new ArrayList<ScriptValue>();
-            arrayList4.add(ScriptValue.of((String)"Tune Frequency"));
+            arrayList4.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", SpecializedTeleporter.class, "Tune Frequency"));
             object = PolyDispatch.bootstrapCall("memberCall", "base", (ScriptValue)scriptValue, arrayList4, (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
@@ -1161,14 +1165,14 @@ public final class SpecializedTeleporter {
             }
             ScriptValue scriptValue4 = object;
             builder.val("cur", scriptValue4);
-            if (!(ScriptFormula.addPolymorphic((ScriptValue)scriptValue4, (ScriptValue)ScriptValue.of((double)1.0)).asNum() < scriptValue2.asNum())) break block8;
+            if (!(ScriptFormula.addPolymorphic((ScriptValue)scriptValue4, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", SpecializedTeleporter.class, 1.0))).asNum() < scriptValue2.asNum())) break block8;
             ScriptValue scriptValue5 = scriptContext.getClassOrVar("Machine");
             if (scriptValue5 != ScriptValue.NULL) {
                 ScriptValue.Obj obj;
                 Object object3;
                 String string = "page_offset";
                 String string3 = "int";
-                ScriptValue scriptValue6 = ScriptFormula.addPolymorphic((ScriptValue)scriptValue4, (ScriptValue)ScriptValue.of((double)1.0));
+                ScriptValue scriptValue6 = ScriptFormula.addPolymorphic((ScriptValue)scriptValue4, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", SpecializedTeleporter.class, 1.0)));
                 if (scriptValue5 instanceof ScriptValue.Obj && (object3 = (obj = (ScriptValue.Obj)scriptValue5).instance()) != null && !(object3 instanceof PolyClass) && obj.typeName().equals("Machine")) {
                     PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object3);
                     v1 = ScriptValue.of((boolean)polyClassMachine_v4.tm$82_set_typed(string, string3, scriptValue6));
@@ -1266,14 +1270,14 @@ public final class SpecializedTeleporter {
                 builder.val("entry", scriptValue4);
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 arrayList.add(scriptContext.getClassOrVar("entry"));
-                arrayList.add(ScriptValue.of((String)","));
+                arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", SpecializedTeleporter.class, ","));
                 ScriptValue scriptValue5 = ScriptFormula.callBuiltin((String)"split", arrayList, (ScriptContext)scriptContext);
                 builder.val("parts", scriptValue5);
                 ScriptContext.Builder builder5 = ScriptContext.builder().copyFrom(scriptContext);
                 ScriptValue scriptValue6 = scriptContext.getClassOrVar("parts");
                 if (scriptValue6 != ScriptValue.NULL) {
                     ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
-                    arrayList2.add(ScriptValue.of((double)0.0));
+                    arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", SpecializedTeleporter.class, 0.0));
                     object7 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue6, arrayList2, (ScriptContext)scriptContext);
                 } else {
                     object7 = ScriptValue.NULL;
@@ -1282,7 +1286,7 @@ public final class SpecializedTeleporter {
                 ScriptValue scriptValue7 = scriptContext.getClassOrVar("parts");
                 if (scriptValue7 != ScriptValue.NULL) {
                     ArrayList<ScriptValue> arrayList3 = new ArrayList<ScriptValue>();
-                    arrayList3.add(ScriptValue.of((double)1.0));
+                    arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", SpecializedTeleporter.class, 1.0));
                     object6 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue7, arrayList3, (ScriptContext)scriptContext);
                 } else {
                     object6 = ScriptValue.NULL;
@@ -1291,7 +1295,7 @@ public final class SpecializedTeleporter {
                 ScriptValue scriptValue8 = scriptContext.getClassOrVar("parts");
                 if (scriptValue8 != ScriptValue.NULL) {
                     ArrayList<ScriptValue> arrayList4 = new ArrayList<ScriptValue>();
-                    arrayList4.add(ScriptValue.of((double)2.0));
+                    arrayList4.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", SpecializedTeleporter.class, 2.0));
                     object5 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue8, arrayList4, (ScriptContext)scriptContext);
                 } else {
                     object5 = ScriptValue.NULL;
@@ -1300,7 +1304,7 @@ public final class SpecializedTeleporter {
                 ScriptValue scriptValue9 = scriptContext.getClassOrVar("parts");
                 if (scriptValue9 != ScriptValue.NULL) {
                     ArrayList<ScriptValue> arrayList5 = new ArrayList<ScriptValue>();
-                    arrayList5.add(ScriptValue.of((double)3.0));
+                    arrayList5.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", SpecializedTeleporter.class, 3.0));
                     object4 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue9, arrayList5, (ScriptContext)scriptContext);
                 } else {
                     object4 = ScriptValue.NULL;
@@ -1332,7 +1336,7 @@ public final class SpecializedTeleporter {
                 ScriptValue scriptValue13 = scriptContext.getClassOrVar("parts");
                 if (scriptValue13 != ScriptValue.NULL) {
                     ArrayList<ScriptValue> arrayList8 = new ArrayList<ScriptValue>();
-                    arrayList8.add(ScriptValue.of((double)0.0));
+                    arrayList8.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", SpecializedTeleporter.class, 0.0));
                     object3 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue13, arrayList8, (ScriptContext)scriptContext);
                 } else {
                     object3 = ScriptValue.NULL;
@@ -1371,35 +1375,35 @@ public final class SpecializedTeleporter {
                     ScriptValue scriptValue17 = scriptContext.getClassOrVar("parts");
                     if (scriptValue17 != ScriptValue.NULL) {
                         ArrayList<ScriptValue> arrayList13 = new ArrayList<ScriptValue>();
-                        arrayList13.add(ScriptValue.of((double)1.0));
+                        arrayList13.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", SpecializedTeleporter.class, 1.0));
                         object12 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue17, arrayList13, (ScriptContext)scriptContext);
                     } else {
                         object12 = ScriptValue.NULL;
                     }
                     arrayList12.add((ScriptValue)object12);
-                    arrayList11.add(ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.callBuiltin((String)"int", arrayList12, (ScriptContext)scriptContext), (ScriptValue)ScriptValue.of((double)0.5)));
+                    arrayList11.add(ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.callBuiltin((String)"int", arrayList12, (ScriptContext)scriptContext), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", SpecializedTeleporter.class, 0.5))));
                     ArrayList<ScriptValue> arrayList14 = new ArrayList<ScriptValue>();
                     ScriptValue scriptValue18 = scriptContext.getClassOrVar("parts");
                     if (scriptValue18 != ScriptValue.NULL) {
                         ArrayList<ScriptValue> arrayList15 = new ArrayList<ScriptValue>();
-                        arrayList15.add(ScriptValue.of((double)2.0));
+                        arrayList15.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", SpecializedTeleporter.class, 2.0));
                         object11 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue18, arrayList15, (ScriptContext)scriptContext);
                     } else {
                         object11 = ScriptValue.NULL;
                     }
                     arrayList14.add((ScriptValue)object11);
-                    arrayList11.add(ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.callBuiltin((String)"int", arrayList14, (ScriptContext)scriptContext), (ScriptValue)ScriptValue.of((double)1.5)));
+                    arrayList11.add(ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.callBuiltin((String)"int", arrayList14, (ScriptContext)scriptContext), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", SpecializedTeleporter.class, 1.5))));
                     ArrayList<ScriptValue> arrayList16 = new ArrayList<ScriptValue>();
                     ScriptValue scriptValue19 = scriptContext.getClassOrVar("parts");
                     if (scriptValue19 != ScriptValue.NULL) {
                         ArrayList<ScriptValue> arrayList17 = new ArrayList<ScriptValue>();
-                        arrayList17.add(ScriptValue.of((double)3.0));
+                        arrayList17.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", SpecializedTeleporter.class, 3.0));
                         object10 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue19, arrayList17, (ScriptContext)scriptContext);
                     } else {
                         object10 = ScriptValue.NULL;
                     }
                     arrayList16.add((ScriptValue)object10);
-                    arrayList11.add(ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.callBuiltin((String)"int", arrayList16, (ScriptContext)scriptContext), (ScriptValue)ScriptValue.of((double)0.5)));
+                    arrayList11.add(ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.callBuiltin((String)"int", arrayList16, (ScriptContext)scriptContext), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", SpecializedTeleporter.class, 0.5))));
                     object2 = PolyDispatch.bootstrapCall("memberCall", "location", (ScriptValue)scriptValue16, arrayList11, (ScriptContext)scriptContext);
                 } else {
                     object2 = ScriptValue.NULL;
@@ -1516,34 +1520,34 @@ public final class SpecializedTeleporter {
         ScriptValue scriptValue2 = ScriptValue.of((double)28.0);
         builder.val("DEST_PAGE_SIZE", scriptValue2);
         ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-        arrayList.add(ScriptValue.of((double)10.0));
-        arrayList.add(ScriptValue.of((double)11.0));
-        arrayList.add(ScriptValue.of((double)12.0));
-        arrayList.add(ScriptValue.of((double)13.0));
-        arrayList.add(ScriptValue.of((double)14.0));
-        arrayList.add(ScriptValue.of((double)15.0));
-        arrayList.add(ScriptValue.of((double)16.0));
-        arrayList.add(ScriptValue.of((double)19.0));
-        arrayList.add(ScriptValue.of((double)20.0));
-        arrayList.add(ScriptValue.of((double)21.0));
-        arrayList.add(ScriptValue.of((double)22.0));
-        arrayList.add(ScriptValue.of((double)23.0));
-        arrayList.add(ScriptValue.of((double)24.0));
-        arrayList.add(ScriptValue.of((double)25.0));
-        arrayList.add(ScriptValue.of((double)28.0));
-        arrayList.add(ScriptValue.of((double)29.0));
-        arrayList.add(ScriptValue.of((double)30.0));
-        arrayList.add(ScriptValue.of((double)31.0));
-        arrayList.add(ScriptValue.of((double)32.0));
-        arrayList.add(ScriptValue.of((double)33.0));
-        arrayList.add(ScriptValue.of((double)34.0));
-        arrayList.add(ScriptValue.of((double)37.0));
-        arrayList.add(ScriptValue.of((double)38.0));
-        arrayList.add(ScriptValue.of((double)39.0));
-        arrayList.add(ScriptValue.of((double)40.0));
-        arrayList.add(ScriptValue.of((double)41.0));
-        arrayList.add(ScriptValue.of((double)42.0));
-        arrayList.add(ScriptValue.of((double)43.0));
+        arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", SpecializedTeleporter.class, 10.0));
+        arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", SpecializedTeleporter.class, 11.0));
+        arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", SpecializedTeleporter.class, 12.0));
+        arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", SpecializedTeleporter.class, 13.0));
+        arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", SpecializedTeleporter.class, 14.0));
+        arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", SpecializedTeleporter.class, 15.0));
+        arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", SpecializedTeleporter.class, 16.0));
+        arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", SpecializedTeleporter.class, 19.0));
+        arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", SpecializedTeleporter.class, 20.0));
+        arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", SpecializedTeleporter.class, 21.0));
+        arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", SpecializedTeleporter.class, 22.0));
+        arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", SpecializedTeleporter.class, 23.0));
+        arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", SpecializedTeleporter.class, 24.0));
+        arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", SpecializedTeleporter.class, 25.0));
+        arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", SpecializedTeleporter.class, 28.0));
+        arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", SpecializedTeleporter.class, 29.0));
+        arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", SpecializedTeleporter.class, 30.0));
+        arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", SpecializedTeleporter.class, 31.0));
+        arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", SpecializedTeleporter.class, 32.0));
+        arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", SpecializedTeleporter.class, 33.0));
+        arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", SpecializedTeleporter.class, 34.0));
+        arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", SpecializedTeleporter.class, 37.0));
+        arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", SpecializedTeleporter.class, 38.0));
+        arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", SpecializedTeleporter.class, 39.0));
+        arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", SpecializedTeleporter.class, 40.0));
+        arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", SpecializedTeleporter.class, 41.0));
+        arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", SpecializedTeleporter.class, 42.0));
+        arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", SpecializedTeleporter.class, 43.0));
         ScriptValue.Array array = new ScriptValue.Array(arrayList);
         builder.val("DEST_SLOTS", (ScriptValue)array);
         FILE_SCOPE = builder.build();

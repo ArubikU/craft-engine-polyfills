@@ -21,8 +21,12 @@ import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
 import dev.arubik.craftengine.script.ScriptProgram;
 import dev.arubik.craftengine.script.ScriptValue;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 
+/*
+ * Uses jvm11+ dynamic constants - pseudocode provided - see https://www.benf.org/other/cfr/dynamic-constants.html
+ */
 public final class LavaSpike {
     private static volatile ScriptContext FILE_SCOPE;
 
@@ -112,7 +116,7 @@ public final class LavaSpike {
                     if (!(var35_33 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "is_alive", (ScriptValue)var35_33, (ScriptContext)var1_1) : ScriptValue.NULL).asBool()) ** GOTO lbl-1000
                     var36_34 = new ArrayList<ScriptValue>();
                     var36_34.add(var1_1.getClassOrVar("entity"));
-                    var36_34.add(ScriptValue.of((String)"LivingEntity"));
+                    var36_34.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", LavaSpike.class, "LivingEntity"));
                     if (ScriptFormula.callBuiltin((String)"instanceof", var36_34, (ScriptContext)var1_1).asBool()) {
                         v3 = true;
                     } else lbl-1000:
@@ -129,7 +133,7 @@ public final class LavaSpike {
                     var40_38 = var1_1.getClassOrVar("entity");
                     if (var40_38 != ScriptValue.NULL) {
                         var41_39 = new ArrayList<ScriptValue>();
-                        var41_39.add(ScriptValue.of((double)80.0));
+                        var41_39.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", LavaSpike.class, 80.0));
                         v4 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "fire", (ScriptValue)var40_38, var41_39, (ScriptContext)var1_1);
                     } else {
                         v4 /* !! */  = ScriptValue.NULL;
@@ -137,12 +141,12 @@ public final class LavaSpike {
                     var42_40 = var1_1.getClassOrVar("entity");
                     if (var42_40 != ScriptValue.NULL) {
                         var43_41 = new ArrayList<ScriptValue>();
-                        var43_41.add(ScriptValue.of((double)2.0));
+                        var43_41.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", LavaSpike.class, 2.0));
                         v5 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "damage", (ScriptValue)var42_40, var43_41, (ScriptContext)var1_1);
                     } else {
                         v5 /* !! */  = ScriptValue.NULL;
                     }
-                    var44_42 = ScriptFormula.addPolymorphic((ScriptValue)var1_1.getClassOrVar("hit_count"), (ScriptValue)ScriptValue.of((double)1.0));
+                    var44_42 = ScriptFormula.addPolymorphic((ScriptValue)var1_1.getClassOrVar("hit_count"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", LavaSpike.class, 1.0)));
                     var0.val("hit_count", var44_42);
                 }
             }
@@ -151,7 +155,7 @@ public final class LavaSpike {
                 if (var45_43 != ScriptValue.NULL) {
                     var46_44 = "atk_cd";
                     var47_45 = "int";
-                    var48_46 = ScriptValue.of((double)15.0);
+                    var48_46 =  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", LavaSpike.class, 15.0);
                     if (var45_43 instanceof ScriptValue.Obj && (var50_48 = (var49_47 = (ScriptValue.Obj)var45_43).instance()) != null && !(var50_48 instanceof PolyClass) && var49_47.typeName().equals("Machine")) {
                         var51_49 = new PolyClassMachine_v4(var50_48);
                         v6 /* !! */  = ScriptValue.of((boolean)var51_49.tm$82_set_typed(var46_44, var47_45, var48_46));

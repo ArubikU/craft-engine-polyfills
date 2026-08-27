@@ -19,8 +19,12 @@ import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
 import dev.arubik.craftengine.script.ScriptValue;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 
+/*
+ * Uses jvm11+ dynamic constants - pseudocode provided - see https://www.benf.org/other/cfr/dynamic-constants.html
+ */
 public final class SignalModifierInteract {
     private static volatile ScriptContext FILE_SCOPE;
 
@@ -54,7 +58,7 @@ public final class SignalModifierInteract {
         } else {
             object = ScriptValue.NULL;
         }
-        ScriptValue scriptValue3 = ScriptFormula.addPolymorphic((ScriptValue)object, (ScriptValue)ScriptValue.of((double)1.0));
+        ScriptValue scriptValue3 = ScriptFormula.addPolymorphic((ScriptValue)object, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", SignalModifierInteract.class, 1.0)));
         builder.val("level", scriptValue3);
         if (scriptValue3.asNum() > 15.0) {
             double d = 0.0;

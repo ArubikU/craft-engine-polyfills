@@ -24,9 +24,13 @@ import dev.arubik.craftengine.script.ScriptProgram;
 import dev.arubik.craftengine.script.ScriptValue;
 import dev.arubik.craftengine.script.gen.Utils;
 import java.lang.invoke.CallSite;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.List;
 
+/*
+ * Uses jvm11+ dynamic constants - pseudocode provided - see https://www.benf.org/other/cfr/dynamic-constants.html
+ */
 public final class Drill {
     private static volatile ScriptContext FILE_SCOPE;
 
@@ -60,7 +64,7 @@ public final class Drill {
         if (ScriptFormula.valuesEqual((ScriptValue)scriptValue6, (ScriptValue)scriptContext.getClassOrVar("null")) ^ true) {
             Object object;
             ScriptValue scriptValue7 = scriptContext.getClassOrVar("contraption");
-            boolean bl = ScriptFormula.valuesEqual((ScriptValue)(scriptValue7 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "rpm", (ScriptValue)scriptValue7, (ScriptContext)scriptContext) : ScriptValue.NULL), (ScriptValue)ScriptValue.of((double)0.0)) ^ true;
+            boolean bl = ScriptFormula.valuesEqual((ScriptValue)(scriptValue7 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "rpm", (ScriptValue)scriptValue7, (ScriptContext)scriptContext) : ScriptValue.NULL), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Drill.class, 0.0))) ^ true;
             ScriptValue scriptValue8 = ScriptValue.of((boolean)bl);
             builder.val("is_rotational", scriptValue8);
             ScriptValue scriptValue9 = scriptContext.getClassOrVar("contraption");
@@ -170,7 +174,7 @@ public final class Drill {
                     if ((scriptValue24 = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL) {
                         ScriptValue.Obj obj;
                         Object object4;
-                        ScriptValue scriptValue31 = ScriptFormula.addPolymorphic((ScriptValue)ScriptValue.of((double)8.0), (ScriptValue)scriptValue15);
+                        ScriptValue scriptValue31 = ScriptFormula.addPolymorphic((ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Drill.class, 8.0)), (ScriptValue)scriptValue15);
                         if (scriptValue24 instanceof ScriptValue.Obj && (object4 = (obj = (ScriptValue.Obj)scriptValue24).instance()) != null && !(object4 instanceof PolyClass) && obj.typeName().equals("Machine")) {
                             PolyClassMachine_v4 polyClassMachine_v412 = new PolyClassMachine_v4(object4);
                             v7 = ScriptValue.of((boolean)polyClassMachine_v412.tm$56_report_su(scriptValue31.asNum()));
@@ -193,7 +197,7 @@ public final class Drill {
                     v8 = ScriptValue.NULL;
                 }
             }
-        } else if (ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("rpm"), (ScriptValue)ScriptValue.of((double)0.0))) {
+        } else if (ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("rpm"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Drill.class, 0.0)))) {
             double d = 0.0;
             ScriptValue scriptValue33 = ScriptValue.of((double)0.0);
             builder.val("is_now", scriptValue33);
@@ -255,7 +259,7 @@ public final class Drill {
             builder.val("is_now", scriptValue41);
         }
         ScriptContext.Builder builder5 = ScriptContext.builder().copyFrom(Utils.1.fileScope()).copyFrom(scriptContext);
-        builder5.val("act_key", ScriptValue.of((String)"_drill_act"));
+        builder5.val("act_key",  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Drill.class, "_drill_act"));
         builder5.val("is_now", scriptContext.getClassOrVar("is_now"));
         Utils.1._updateActivated((ScriptContext.Builder)builder5);
         FILE_SCOPE = builder.build();

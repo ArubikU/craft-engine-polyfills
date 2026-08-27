@@ -19,8 +19,12 @@ import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
 import dev.arubik.craftengine.script.ScriptValue;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 
+/*
+ * Uses jvm11+ dynamic constants - pseudocode provided - see https://www.benf.org/other/cfr/dynamic-constants.html
+ */
 public final class RedstoneLatch {
     private static volatile ScriptContext FILE_SCOPE;
 
@@ -81,7 +85,7 @@ public final class RedstoneLatch {
         } else {
             v2 = ScriptValue.NULL;
         }
-        if (d > 0.0 && ScriptFormula.valuesEqual((ScriptValue)scriptValue4, (ScriptValue)ScriptValue.of((double)0.0))) {
+        if (d > 0.0 && ScriptFormula.valuesEqual((ScriptValue)scriptValue4, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", RedstoneLatch.class, 0.0)))) {
             Object object5;
             ScriptValue scriptValue7 = scriptContext.getClassOrVar("Machine");
             if (scriptValue7 != ScriptValue.NULL) {

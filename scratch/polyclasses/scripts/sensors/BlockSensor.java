@@ -26,9 +26,13 @@ import dev.arubik.craftengine.script.ScriptFormula;
 import dev.arubik.craftengine.script.ScriptProgram;
 import dev.arubik.craftengine.script.ScriptValue;
 import java.lang.invoke.CallSite;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.List;
 
+/*
+ * Uses jvm11+ dynamic constants - pseudocode provided - see https://www.benf.org/other/cfr/dynamic-constants.html
+ */
 public final class BlockSensor {
     private static volatile ScriptContext FILE_SCOPE;
 
@@ -108,7 +112,7 @@ public final class BlockSensor {
             for (ScriptValue scriptValue11 : list) {
                 Object object5;
                 builder.val("i", scriptValue11);
-                ScriptValue scriptValue12 = ScriptFormula.addPolymorphic((ScriptValue)scriptContext.getClassOrVar("i"), (ScriptValue)ScriptValue.of((double)1.0));
+                ScriptValue scriptValue12 = ScriptFormula.addPolymorphic((ScriptValue)scriptContext.getClassOrVar("i"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", BlockSensor.class, 1.0)));
                 builder.val("n", scriptValue12);
                 ScriptValue scriptValue13 = scriptContext.getClassOrVar("Machine");
                 if (scriptValue13 != ScriptValue.NULL) {
@@ -143,11 +147,11 @@ public final class BlockSensor {
                 if (ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("filter_id"), (ScriptValue)scriptContext.getClassOrVar("null")) ^ true) {
                     ScriptValue scriptValue19 = scriptContext.getClassOrVar("b");
                     if (!ScriptFormula.valuesEqual((ScriptValue)(scriptValue19 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "id", (ScriptValue)scriptValue19, (ScriptContext)scriptContext) : ScriptValue.NULL), (ScriptValue)scriptContext.getClassOrVar("filter_id"))) continue;
-                    ScriptValue scriptValue20 = ScriptFormula.addPolymorphic((ScriptValue)scriptContext.getClassOrVar("matched"), (ScriptValue)ScriptValue.of((double)1.0));
+                    ScriptValue scriptValue20 = ScriptFormula.addPolymorphic((ScriptValue)scriptContext.getClassOrVar("matched"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", BlockSensor.class, 1.0)));
                     builder.val("matched", scriptValue20);
                     continue;
                 }
-                ScriptValue scriptValue21 = ScriptFormula.addPolymorphic((ScriptValue)scriptContext.getClassOrVar("matched"), (ScriptValue)ScriptValue.of((double)1.0));
+                ScriptValue scriptValue21 = ScriptFormula.addPolymorphic((ScriptValue)scriptContext.getClassOrVar("matched"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", BlockSensor.class, 1.0)));
                 builder.val("matched", scriptValue21);
             }
         }
@@ -158,8 +162,8 @@ public final class BlockSensor {
             ArrayList<ScriptValue> arrayList4 = new ArrayList<ScriptValue>();
             double d7 = scriptContext.getNum("scan_range");
             arrayList4.add(ScriptValue.of((double)Math.floor((d7 == 0.0 ? 0.0 : scriptContext.getNum("matched") / d7) * 15.0)));
-            arrayList4.add(ScriptValue.of((double)1.0));
-            arrayList4.add(ScriptValue.of((double)15.0));
+            arrayList4.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", BlockSensor.class, 1.0));
+            arrayList4.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", BlockSensor.class, 15.0));
             ScriptValue scriptValue23 = ScriptFormula.callBuiltin((String)"clamp", arrayList4, (ScriptContext)scriptContext);
             builder.val("power", scriptValue23);
         }

@@ -24,9 +24,13 @@ import dev.arubik.craftengine.script.ScriptFormula;
 import dev.arubik.craftengine.script.ScriptProgram;
 import dev.arubik.craftengine.script.ScriptValue;
 import java.lang.invoke.CallSite;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.List;
 
+/*
+ * Uses jvm11+ dynamic constants - pseudocode provided - see https://www.benf.org/other/cfr/dynamic-constants.html
+ */
 public final class ItemMagnet {
     private static volatile ScriptContext FILE_SCOPE;
 
@@ -105,7 +109,7 @@ public final class ItemMagnet {
                     continue;
                 }
                 ArrayList<ScriptValue> arrayList4 = new ArrayList<ScriptValue>();
-                arrayList4.add(ScriptValue.of((double)0.2));
+                arrayList4.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", ItemMagnet.class, 0.2));
                 ArrayList arrayList5 = new ArrayList();
                 ScriptValue scriptValue14 = scriptContext.getClassOrVar("machine");
                 if (scriptValue14 != ScriptValue.NULL) {

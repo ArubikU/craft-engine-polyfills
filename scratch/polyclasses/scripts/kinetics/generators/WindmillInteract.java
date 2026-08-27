@@ -3,7 +3,7 @@
  * 
  * Could not load the following classes:
  *  dev.arubik.craftengine.script.PolyClass
- *  dev.arubik.craftengine.script.PolyClassBlock
+ *  dev.arubik.craftengine.script.PolyClassBlock_v3
  *  dev.arubik.craftengine.script.PolyClassContraptionManager
  *  dev.arubik.craftengine.script.PolyClassGlue
  *  dev.arubik.craftengine.script.PolyClassMachine_v4
@@ -18,7 +18,7 @@
 package dev.arubik.craftengine.script.gen.kinetics.generators;
 
 import dev.arubik.craftengine.script.PolyClass;
-import dev.arubik.craftengine.script.PolyClassBlock;
+import dev.arubik.craftengine.script.PolyClassBlock_v3;
 import dev.arubik.craftengine.script.PolyClassContraptionManager;
 import dev.arubik.craftengine.script.PolyClassGlue;
 import dev.arubik.craftengine.script.PolyClassMachine_v4;
@@ -28,8 +28,12 @@ import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
 import dev.arubik.craftengine.script.ScriptValue;
 import java.lang.invoke.CallSite;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 
+/*
+ * Uses jvm11+ dynamic constants - pseudocode provided - see https://www.benf.org/other/cfr/dynamic-constants.html
+ */
 public final class WindmillInteract {
     private static volatile ScriptContext FILE_SCOPE;
 
@@ -203,7 +207,7 @@ public final class WindmillInteract {
                     Object object7;
                     String string = "assembled";
                     String string4 = "int";
-                    ScriptValue scriptValue12 = ScriptValue.of((double)0.0);
+                    ScriptValue scriptValue12 =  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", WindmillInteract.class, 0.0);
                     if (scriptValue5 instanceof ScriptValue.Obj && (object7 = (obj = (ScriptValue.Obj)scriptValue5).instance()) != null && !(object7 instanceof PolyClass) && obj.typeName().equals("Machine")) {
                         PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object7);
                         v5 = ScriptValue.of((boolean)polyClassMachine_v4.tm$82_set_typed(string, string4, scriptValue12));
@@ -223,7 +227,7 @@ public final class WindmillInteract {
                     Object object8;
                     String string = "contraption_uuid";
                     String string5 = "string";
-                    ScriptValue scriptValue14 = ScriptValue.of((String)"");
+                    ScriptValue scriptValue14 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", WindmillInteract.class, "");
                     if (scriptValue13 instanceof ScriptValue.Obj && (object8 = (obj = (ScriptValue.Obj)scriptValue13).instance()) != null && !(object8 instanceof PolyClass) && obj.typeName().equals("Machine")) {
                         PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object8);
                         v6 = ScriptValue.of((boolean)polyClassMachine_v4.tm$82_set_typed(string, string5, scriptValue14));
@@ -308,7 +312,7 @@ public final class WindmillInteract {
             }
             ScriptValue scriptValue19 = object12;
             builder.val("dir", scriptValue19);
-            if (ScriptFormula.valuesEqual((ScriptValue)scriptValue19, (ScriptValue)ScriptValue.of((double)0.0))) {
+            if (ScriptFormula.valuesEqual((ScriptValue)scriptValue19, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", WindmillInteract.class, 0.0)))) {
                 double d4 = 1.0;
                 ScriptValue scriptValue20 = ScriptValue.of((double)1.0);
                 builder.val("dir", scriptValue20);
@@ -341,7 +345,7 @@ public final class WindmillInteract {
                 ScriptValue.Obj obj;
                 Object object15;
                 ScriptValue scriptValue25;
-                ScriptValue scriptValue26 = scriptValue25 = d5 > 0.0 ? ScriptValue.of((String)"<gray>Windmill now turns <white>clockwise<gray>.") : ScriptValue.of((String)"<gray>Windmill now turns <white>counter-clockwise<gray>.");
+                ScriptValue scriptValue26 = scriptValue25 = d5 > 0.0 ? ( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", WindmillInteract.class, "<gray>Windmill now turns <white>clockwise<gray>.")) : ( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", WindmillInteract.class, "<gray>Windmill now turns <white>counter-clockwise<gray>."));
                 if (scriptValue24 instanceof ScriptValue.Obj && (object15 = (obj = (ScriptValue.Obj)scriptValue24).instance()) != null && !(object15 instanceof PolyClass) && obj.typeName().equals("Player")) {
                     PolyClassPlayer polyClassPlayer3 = new PolyClassPlayer(object15);
                     v13 = ScriptValue.of((boolean)polyClassPlayer3.tm$42_send_message(scriptValue25.asStr()));
@@ -375,8 +379,8 @@ public final class WindmillInteract {
                 ScriptValue scriptValue31 = scriptValue30 != ScriptValue.NULL ? ((polyClassMachine_v44 = PolyClassMachine_v4.ofGuarded((ScriptValue)scriptValue30)) != null ? polyClassMachine_v44.pg$139_block() : PolyDispatch.bootstrapGet("memberGet", "block", (ScriptValue)scriptValue30, (ScriptContext)scriptContext)) : ScriptValue.NULL;
                 String string = "facing";
                 if (scriptValue31 instanceof ScriptValue.Obj && (object18 = (obj2 = (ScriptValue.Obj)scriptValue31).instance()) != null && !(object18 instanceof PolyClass) && obj2.typeName().equals("Block")) {
-                    PolyClassBlock polyClassBlock = new PolyClassBlock(object18);
-                    callSite = polyClassBlock.tm$24_property(string);
+                    PolyClassBlock_v3 polyClassBlock_v3 = new PolyClassBlock_v3(object18);
+                    callSite = polyClassBlock_v3.tm$24_property(string);
                 } else {
                     ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                     arrayList.add(ScriptValue.of((String)string));
@@ -613,7 +617,7 @@ public final class WindmillInteract {
                                 Object object35;
                                 String string = "assembled";
                                 String string9 = "int";
-                                ScriptValue scriptValue58 = ScriptValue.of((double)1.0);
+                                ScriptValue scriptValue58 =  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", WindmillInteract.class, 1.0);
                                 if (scriptValue57 instanceof ScriptValue.Obj && (object35 = (obj = (ScriptValue.Obj)scriptValue57).instance()) != null && !(object35 instanceof PolyClass) && obj.typeName().equals("Machine")) {
                                     PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object35);
                                     v31 = ScriptValue.of((boolean)polyClassMachine_v4.tm$82_set_typed(string, string9, scriptValue58));

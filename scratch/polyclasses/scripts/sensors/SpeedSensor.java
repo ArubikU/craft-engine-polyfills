@@ -23,9 +23,13 @@ import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
 import dev.arubik.craftengine.script.ScriptProgram;
 import dev.arubik.craftengine.script.ScriptValue;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.List;
 
+/*
+ * Uses jvm11+ dynamic constants - pseudocode provided - see https://www.benf.org/other/cfr/dynamic-constants.html
+ */
 public final class SpeedSensor {
     private static volatile ScriptContext FILE_SCOPE;
 
@@ -203,7 +207,7 @@ public final class SpeedSensor {
                 ScriptValue scriptValue24 = scriptContext.getClassOrVar("entity");
                 ScriptValue scriptValue25 = scriptValue24 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "velocity_x", (ScriptValue)scriptValue24, (ScriptContext)scriptContext) : ScriptValue.NULL;
                 builder.val("vx", scriptValue25);
-                ScriptValue scriptValue26 = scriptValue16.asNum() > 0.0 ? ((scriptValue22 = scriptContext.getClassOrVar("entity")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "velocity_y", (ScriptValue)scriptValue22, (ScriptContext)scriptContext) : ScriptValue.NULL) : ScriptValue.of((double)0.0);
+                ScriptValue scriptValue26 = scriptValue16.asNum() > 0.0 ? ((scriptValue22 = scriptContext.getClassOrVar("entity")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "velocity_y", (ScriptValue)scriptValue22, (ScriptContext)scriptContext) : ScriptValue.NULL) : ( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", SpeedSensor.class, 0.0));
                 builder.val("vy", scriptValue26);
                 ScriptValue scriptValue27 = scriptContext.getClassOrVar("entity");
                 ScriptValue scriptValue28 = scriptValue27 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "velocity_z", (ScriptValue)scriptValue27, (ScriptContext)scriptContext) : ScriptValue.NULL;
@@ -226,8 +230,8 @@ public final class SpeedSensor {
             double d10 = Math.max(d2 - d5, 0.01);
             arrayList2.add(ScriptValue.of((double)((d10 == 0.0 ? 0.0 : (scriptContext.getNum("max_speed") - d5) / d10) * 15.0)));
             arrayList.add(ScriptFormula.callBuiltin((String)"round", arrayList2, (ScriptContext)scriptContext));
-            arrayList.add(ScriptValue.of((double)1.0));
-            arrayList.add(ScriptValue.of((double)15.0));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", SpeedSensor.class, 1.0));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", SpeedSensor.class, 15.0));
             ScriptValue scriptValue32 = ScriptFormula.callBuiltin((String)"clamp", arrayList, (ScriptContext)scriptContext);
             builder.val("power", scriptValue32);
         }

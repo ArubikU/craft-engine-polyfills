@@ -21,9 +21,13 @@ import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
 import dev.arubik.craftengine.script.ScriptProgram;
 import dev.arubik.craftengine.script.ScriptValue;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.List;
 
+/*
+ * Uses jvm11+ dynamic constants - pseudocode provided - see https://www.benf.org/other/cfr/dynamic-constants.html
+ */
 public final class Windmill {
     private static volatile ScriptContext FILE_SCOPE;
 
@@ -55,9 +59,9 @@ public final class Windmill {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 ScriptValue scriptValue4 = scriptContext.getClassOrVar("block");
                 arrayList.add((ScriptValue)(scriptValue4 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "id", (ScriptValue)scriptValue4, (ScriptContext)scriptContext) : ScriptValue.NULL));
-                arrayList.add(ScriptValue.of((String)"sail"));
+                arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Windmill.class, "sail"));
                 if (!ScriptFormula.callBuiltin((String)"contains", arrayList, (ScriptContext)scriptContext).asBool()) continue;
-                ScriptValue scriptValue5 = ScriptFormula.addPolymorphic((ScriptValue)scriptContext.getClassOrVar("n"), (ScriptValue)ScriptValue.of((double)1.0));
+                ScriptValue scriptValue5 = ScriptFormula.addPolymorphic((ScriptValue)scriptContext.getClassOrVar("n"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Windmill.class, 1.0)));
                 builder.val("n", scriptValue5);
             }
         }
@@ -96,8 +100,8 @@ public final class Windmill {
         }
         ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
         arrayList2.add(ScriptValue.of((double)(scriptValue3.asNum() - scriptContext.getNum("last"))));
-        arrayList2.add(ScriptValue.of((double)0.0));
-        arrayList2.add(ScriptValue.of((double)100.0));
+        arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Windmill.class, 0.0));
+        arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Windmill.class, 100.0));
         ScriptValue scriptValue5 = ScriptFormula.callBuiltin((String)"clamp", arrayList2, (ScriptContext)scriptContext);
         builder.val("elapsed", scriptValue5);
         ScriptValue scriptValue6 = scriptContext.getClassOrVar("Machine");
@@ -197,7 +201,7 @@ public final class Windmill {
             v1 = ScriptValue.NULL;
         }
         ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
-        builder2.val("rpm_value", ScriptValue.of((double)0.0));
+        builder2.val("rpm_value",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Windmill.class, 0.0));
         Windmill._advanceHeadAngle(builder2);
         return ScriptValue.NULL;
     }
@@ -208,20 +212,20 @@ public final class Windmill {
         ScriptContext scriptContext = builder.peek();
         ScriptValue scriptValue = scriptContext.getClassOrVar("Machine");
         Object object = scriptValue != ScriptValue.NULL ? ((polyClassMachine_v42 = PolyClassMachine_v4.ofGuarded((ScriptValue)scriptValue)) != null ? polyClassMachine_v42.pg$129_facing_dy() : PolyDispatch.bootstrapGet("memberGet", "facing_dy", (ScriptValue)scriptValue, (ScriptContext)scriptContext)) : ScriptValue.NULL;
-        if (ScriptFormula.valuesEqual((ScriptValue)object, (ScriptValue)ScriptValue.of((double)0.0)) ^ true) {
-            return ScriptValue.of((String)"y");
+        if (ScriptFormula.valuesEqual((ScriptValue)object, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Windmill.class, 0.0))) ^ true) {
+            return  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Windmill.class, "y");
         }
         ScriptValue scriptValue2 = scriptContext.getClassOrVar("Machine");
         Object object2 = scriptValue2 != ScriptValue.NULL ? ((polyClassMachine_v4 = PolyClassMachine_v4.ofGuarded((ScriptValue)scriptValue2)) != null ? polyClassMachine_v4.pg$133_facing_dx() : PolyDispatch.bootstrapGet("memberGet", "facing_dx", (ScriptValue)scriptValue2, (ScriptContext)scriptContext)) : ScriptValue.NULL;
-        if (ScriptFormula.valuesEqual((ScriptValue)object2, (ScriptValue)ScriptValue.of((double)0.0)) ^ true) {
-            return ScriptValue.of((String)"x");
+        if (ScriptFormula.valuesEqual((ScriptValue)object2, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Windmill.class, 0.0))) ^ true) {
+            return  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Windmill.class, "x");
         }
-        return ScriptValue.of((String)"z");
+        return  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Windmill.class, "z");
     }
 
     public static ScriptValue status(ScriptContext.Builder builder) {
         ScriptContext scriptContext = builder.peek();
-        return ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("rpm"), (ScriptValue)ScriptValue.of((double)0.0)) ^ true ? ScriptValue.of((String)"true") : ScriptValue.of((String)"false");
+        return ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("rpm"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Windmill.class, 0.0))) ^ true ? ( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Windmill.class, "true")) : ( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Windmill.class, "false"));
     }
 
     public static ScriptValue onBreak(ScriptContext.Builder builder) {
@@ -312,7 +316,7 @@ public final class Windmill {
                 Object object4;
                 String string = "assembled";
                 String string3 = "int";
-                ScriptValue scriptValue9 = ScriptValue.of((double)0.0);
+                ScriptValue scriptValue9 =  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Windmill.class, 0.0);
                 if (scriptValue8 instanceof ScriptValue.Obj && (object4 = (obj = (ScriptValue.Obj)scriptValue8).instance()) != null && !(object4 instanceof PolyClass) && obj.typeName().equals("Machine")) {
                     PolyClassMachine_v4 polyClassMachine_v43 = new PolyClassMachine_v4(object4);
                     v1 = ScriptValue.of((boolean)polyClassMachine_v43.tm$82_set_typed(string, string3, scriptValue9));
@@ -332,7 +336,7 @@ public final class Windmill {
                 Object object5;
                 String string = "contraption_uuid";
                 String string4 = "string";
-                ScriptValue scriptValue11 = ScriptValue.of((String)"");
+                ScriptValue scriptValue11 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Windmill.class, "");
                 if (scriptValue10 instanceof ScriptValue.Obj && (object5 = (obj = (ScriptValue.Obj)scriptValue10).instance()) != null && !(object5 instanceof PolyClass) && obj.typeName().equals("Machine")) {
                     PolyClassMachine_v4 polyClassMachine_v44 = new PolyClassMachine_v4(object5);
                     v2 = ScriptValue.of((boolean)polyClassMachine_v44.tm$82_set_typed(string, string4, scriptValue11));
@@ -361,7 +365,7 @@ public final class Windmill {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 ScriptContext.Builder builder5 = ScriptContext.builder().copyFrom(scriptContext);
                 arrayList.add(Windmill._spinAxis(builder5));
-                arrayList.add(ScriptValue.of((double)0.0));
+                arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Windmill.class, 0.0));
                 v3 = PolyDispatch.bootstrapCall("memberCall", "set_spin", (ScriptValue)scriptValue13, arrayList, (ScriptContext)scriptContext);
             } else {
                 v3 = ScriptValue.NULL;
@@ -391,7 +395,7 @@ public final class Windmill {
         }
         ScriptValue scriptValue15 = object;
         builder.val("dir", scriptValue15);
-        if (ScriptFormula.valuesEqual((ScriptValue)scriptValue15, (ScriptValue)ScriptValue.of((double)0.0))) {
+        if (ScriptFormula.valuesEqual((ScriptValue)scriptValue15, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Windmill.class, 0.0)))) {
             double d5 = 1.0;
             ScriptValue scriptValue16 = ScriptValue.of((double)1.0);
             builder.val("dir", scriptValue16);
@@ -399,7 +403,7 @@ public final class Windmill {
         ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
         double d6 = d;
         arrayList.add(ScriptValue.of((double)Math.floor(d6 == 0.0 ? 0.0 : scriptValue12.asNum() / d6)));
-        arrayList.add(ScriptValue.of((double)1.0));
+        arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Windmill.class, 1.0));
         arrayList.add(ScriptValue.of((double)d2));
         ScriptValue scriptValue17 = ScriptFormula.callBuiltin((String)"clamp", arrayList, (ScriptContext)scriptContext);
         builder.val("speed", scriptValue17);

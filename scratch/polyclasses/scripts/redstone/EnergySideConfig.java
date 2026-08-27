@@ -17,8 +17,12 @@ import dev.arubik.craftengine.script.PolyClassMachine_v4;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptValue;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 
+/*
+ * Uses jvm11+ dynamic constants - pseudocode provided - see https://www.benf.org/other/cfr/dynamic-constants.html
+ */
 public final class EnergySideConfig {
     private static volatile ScriptContext FILE_SCOPE;
 
@@ -221,7 +225,7 @@ public final class EnergySideConfig {
     public static ScriptValue energyNorth(ScriptContext.Builder builder) {
         ScriptContext scriptContext = builder.peek();
         ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
-        builder2.val("dir", ScriptValue.of((String)"north"));
+        builder2.val("dir",  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", EnergySideConfig.class, "north"));
         EnergySideConfig.cycleEnergy(builder2);
         return ScriptValue.NULL;
     }
@@ -229,7 +233,7 @@ public final class EnergySideConfig {
     public static ScriptValue energySouth(ScriptContext.Builder builder) {
         ScriptContext scriptContext = builder.peek();
         ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
-        builder2.val("dir", ScriptValue.of((String)"south"));
+        builder2.val("dir",  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", EnergySideConfig.class, "south"));
         EnergySideConfig.cycleEnergy(builder2);
         return ScriptValue.NULL;
     }
@@ -237,7 +241,7 @@ public final class EnergySideConfig {
     public static ScriptValue energyEast(ScriptContext.Builder builder) {
         ScriptContext scriptContext = builder.peek();
         ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
-        builder2.val("dir", ScriptValue.of((String)"east"));
+        builder2.val("dir",  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", EnergySideConfig.class, "east"));
         EnergySideConfig.cycleEnergy(builder2);
         return ScriptValue.NULL;
     }
@@ -245,7 +249,7 @@ public final class EnergySideConfig {
     public static ScriptValue energyWest(ScriptContext.Builder builder) {
         ScriptContext scriptContext = builder.peek();
         ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
-        builder2.val("dir", ScriptValue.of((String)"west"));
+        builder2.val("dir",  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", EnergySideConfig.class, "west"));
         EnergySideConfig.cycleEnergy(builder2);
         return ScriptValue.NULL;
     }
@@ -253,7 +257,7 @@ public final class EnergySideConfig {
     public static ScriptValue energyUp(ScriptContext.Builder builder) {
         ScriptContext scriptContext = builder.peek();
         ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
-        builder2.val("dir", ScriptValue.of((String)"up"));
+        builder2.val("dir",  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", EnergySideConfig.class, "up"));
         EnergySideConfig.cycleEnergy(builder2);
         return ScriptValue.NULL;
     }
@@ -261,7 +265,7 @@ public final class EnergySideConfig {
     public static ScriptValue energyDown(ScriptContext.Builder builder) {
         ScriptContext scriptContext = builder.peek();
         ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
-        builder2.val("dir", ScriptValue.of((String)"down"));
+        builder2.val("dir",  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", EnergySideConfig.class, "down"));
         EnergySideConfig.cycleEnergy(builder2);
         return ScriptValue.NULL;
     }

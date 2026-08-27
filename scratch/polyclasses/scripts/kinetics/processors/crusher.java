@@ -21,9 +21,13 @@ import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
 import dev.arubik.craftengine.script.ScriptProgram;
 import dev.arubik.craftengine.script.ScriptValue;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.List;
 
+/*
+ * Uses jvm11+ dynamic constants - pseudocode provided - see https://www.benf.org/other/cfr/dynamic-constants.html
+ */
 public final class Crusher {
     private static volatile ScriptContext FILE_SCOPE;
 
@@ -52,11 +56,11 @@ public final class Crusher {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
             double d4 = 10.0;
             arrayList.add(ScriptValue.of((double)Math.floor(10.0 == 0.0 ? 0.0 : scriptContext.getNum("rpm") / d4)));
-            arrayList.add(ScriptValue.of((double)1.0));
-            arrayList.add(ScriptValue.of((double)6.0));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Crusher.class, 1.0));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Crusher.class, 6.0));
             scriptValue = ScriptFormula.callBuiltin((String)"clamp", arrayList, (ScriptContext)scriptContext);
         } else {
-            scriptValue = ScriptValue.of((double)0.0);
+            scriptValue =  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Crusher.class, 0.0);
         }
         ScriptValue scriptValue4 = scriptValue;
         builder.val("smoke_count", scriptValue4);

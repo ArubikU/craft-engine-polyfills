@@ -24,8 +24,12 @@ import dev.arubik.craftengine.script.ScriptFormula;
 import dev.arubik.craftengine.script.ScriptProgram;
 import dev.arubik.craftengine.script.ScriptValue;
 import java.lang.invoke.CallSite;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 
+/*
+ * Uses jvm11+ dynamic constants - pseudocode provided - see https://www.benf.org/other/cfr/dynamic-constants.html
+ */
 public final class Fertilizer {
     private static volatile ScriptContext FILE_SCOPE;
 
@@ -67,7 +71,7 @@ public final class Fertilizer {
                 var12_11 = ScriptValue.of((double)1.0);
                 var0.val("level_flag", var12_11);
             }
-            var13_12 = ScriptFormula.addPolymorphic((ScriptValue)var1_1.getClassOrVar("level_flag"), (ScriptValue)ScriptValue.of((double)2.0));
+            var13_12 = ScriptFormula.addPolymorphic((ScriptValue)var1_1.getClassOrVar("level_flag"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Fertilizer.class, 2.0)));
             var0.val("radius", var13_12);
             var14_13 = new ArrayList<CallSite>();
             var16_14 = var1_1.getClassOrVar("Machine");
@@ -106,7 +110,7 @@ public final class Fertilizer {
                 var34_32 = var1_1.getClassOrVar("block");
                 if (var34_32 != ScriptValue.NULL) {
                     var35_33 = new ArrayList<ScriptValue>();
-                    var35_33.add(ScriptValue.of((String)"age"));
+                    var35_33.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Fertilizer.class, "age"));
                     v3 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "has_property", (ScriptValue)var34_32, var35_33, (ScriptContext)var1_1);
                 } else {
                     v3 /* !! */  = ScriptValue.NULL;
@@ -115,7 +119,7 @@ public final class Fertilizer {
                 var36_34 = var1_1.getClassOrVar("block");
                 if (var36_34 != ScriptValue.NULL) {
                     var37_35 = new ArrayList<ScriptValue>();
-                    var37_35.add(ScriptValue.of((String)"growth"));
+                    var37_35.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Fertilizer.class, "growth"));
                     v4 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "has_property", (ScriptValue)var36_34, var37_35, (ScriptContext)var1_1);
                 } else {
                     v4 /* !! */  = ScriptValue.NULL;

@@ -25,8 +25,12 @@ import dev.arubik.craftengine.script.ScriptFormula;
 import dev.arubik.craftengine.script.ScriptProgram;
 import dev.arubik.craftengine.script.ScriptValue;
 import dev.arubik.craftengine.script.gen.ChuteUtils;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 
+/*
+ * Uses jvm11+ dynamic constants - pseudocode provided - see https://www.benf.org/other/cfr/dynamic-constants.html
+ */
 public final class SmartChute {
     private static volatile ScriptContext FILE_SCOPE;
 
@@ -64,7 +68,7 @@ public final class SmartChute {
                     Object object;
                     String string = "_chute_filter";
                     String string2 = "str";
-                    ScriptValue scriptValue5 = ScriptValue.of((String)"");
+                    ScriptValue scriptValue5 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", SmartChute.class, "");
                     if (scriptValue4 instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue4).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Machine")) {
                         PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object);
                         v1 = ScriptValue.of((boolean)polyClassMachine_v4.tm$82_set_typed(string, string2, scriptValue5));
@@ -126,7 +130,7 @@ public final class SmartChute {
         arrayList.add("_chute_open_amount_dialog");
         ScriptProgram.applyImport((ScriptContext.Builder)builder, (String)"storage/chute_utils.pf", null, arrayList);
         ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(ChuteUtils.fileScope()).copyFrom(scriptContext);
-        builder2.val("smart", ScriptValue.of((boolean)true));
+        builder2.val("smart",  /* dynamic constant */ (ScriptValue)ScriptValue.constBool("b", MethodHandles.lookup(), "constBool", SmartChute.class, 1));
         ChuteUtils._chuteTick((ScriptContext.Builder)builder2);
         FILE_SCOPE = builder.build();
     }

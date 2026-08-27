@@ -17,8 +17,12 @@ import dev.arubik.craftengine.script.PolyClassMachine_v4;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptValue;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 
+/*
+ * Uses jvm11+ dynamic constants - pseudocode provided - see https://www.benf.org/other/cfr/dynamic-constants.html
+ */
 public final class Overclock {
     private static volatile ScriptContext FILE_SCOPE;
 
@@ -33,18 +37,18 @@ public final class Overclock {
     public static ScriptValue _step(ScriptContext.Builder builder) {
         ScriptContext scriptContext = builder.peek();
         if (scriptContext.getStr("click_type").equals("drop")) {
-            return ScriptValue.of((double)0.5);
+            return  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Overclock.class, 0.5);
         }
         if (scriptContext.getStr("click_type").equals("control_drop")) {
-            return ScriptValue.of((double)0.5);
+            return  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Overclock.class, 0.5);
         }
         if (scriptContext.getStr("click_type").equals("right")) {
-            return ScriptValue.of((double)0.25);
+            return  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Overclock.class, 0.25);
         }
         if (scriptContext.getStr("click_type").equals("shift_right")) {
-            return ScriptValue.of((double)0.25);
+            return  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Overclock.class, 0.25);
         }
-        return ScriptValue.of((double)0.01);
+        return  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Overclock.class, 0.01);
     }
 
     public static ScriptValue increase(ScriptContext.Builder builder) {

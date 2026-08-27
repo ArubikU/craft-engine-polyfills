@@ -23,8 +23,12 @@ import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
 import dev.arubik.craftengine.script.ScriptProgram;
 import dev.arubik.craftengine.script.ScriptValue;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 
+/*
+ * Uses jvm11+ dynamic constants - pseudocode provided - see https://www.benf.org/other/cfr/dynamic-constants.html
+ */
 public final class BlockBreaker {
     private static volatile ScriptContext FILE_SCOPE;
 
@@ -43,12 +47,12 @@ public final class BlockBreaker {
     public static void run(ScriptContext.Builder var0) {
         var1_1 = var0.peek();
         var2_2 = new ArrayList<ScriptValue>();
-        var2_2.add(ScriptValue.of((String)"minecraft:bedrock"));
-        var2_2.add(ScriptValue.of((boolean)true));
-        var2_2.add(ScriptValue.of((String)"minecraft:end_portal"));
-        var2_2.add(ScriptValue.of((boolean)true));
-        var2_2.add(ScriptValue.of((String)"minecraft:barrier"));
-        var2_2.add(ScriptValue.of((boolean)true));
+        var2_2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", BlockBreaker.class, "minecraft:bedrock"));
+        var2_2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constBool("b", MethodHandles.lookup(), "constBool", BlockBreaker.class, 1));
+        var2_2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", BlockBreaker.class, "minecraft:end_portal"));
+        var2_2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constBool("b", MethodHandles.lookup(), "constBool", BlockBreaker.class, 1));
+        var2_2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", BlockBreaker.class, "minecraft:barrier"));
+        var2_2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constBool("b", MethodHandles.lookup(), "constBool", BlockBreaker.class, 1));
         var3_3 = ScriptFormula.callBuiltin((String)"make_map", var2_2, (ScriptContext)var1_1);
         var0.val("UNBREAKABLE", var3_3);
         var4_4 = var1_1.getClassOrVar("Machine");

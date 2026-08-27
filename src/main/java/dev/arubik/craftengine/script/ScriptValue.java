@@ -19,6 +19,39 @@ public sealed interface ScriptValue {
 
     ScriptValue NULL = new Null();
 
+    // ---- Dynamic-constant bootstraps, for compiled code's literals ----
+    //
+    // A literal that has to reach something as a ScriptValue used to compile to LDC + ScriptValue.of
+    // at EVERY occurrence, allocating a fresh Str/Num each time the line ran — for a value that can
+    // never change. As a `condy` (JVMS 4.4.10 dynamically-computed constant) it is one LDC of a
+    // constant-pool entry the JVM resolves once, on first execution, and caches forever: no call, no
+    // allocation, and one instruction less of bytecode at each of the ~2000 sites in a real script
+    // corpus.
+    //
+    // Sharing one instance across every occurrence is safe because these records are immutable and
+    // nothing compares ScriptValues by identity — the same reasoning that already lets NULL be a
+    // singleton and Cache intern small Nums.
+
+    /** Bootstrap for a constant {@link Str}. The value rides as a static bootstrap argument rather
+     *  than in the constant's name, so no assumption is made about what a name may contain. */
+    static ScriptValue constStr(java.lang.invoke.MethodHandles.Lookup lookup, String name,
+                                Class<?> type, String value) {
+        return of(value);
+    }
+
+    /** Bootstrap for a constant {@link Num}. */
+    static ScriptValue constNum(java.lang.invoke.MethodHandles.Lookup lookup, String name,
+                                Class<?> type, double value) {
+        return of(value);
+    }
+
+    /** Bootstrap for a constant {@link Bool}. A condy static argument cannot be a boolean, so it
+     *  arrives as an int — 0 is false, anything else true. */
+    static ScriptValue constBool(java.lang.invoke.MethodHandles.Lookup lookup, String name,
+                                 Class<?> type, int value) {
+        return of(value != 0);
+    }
+
     /**
      * Implemented by an {@link Obj} instance that has a meaningful scalar reading, so the object
      * can be used directly in arithmetic and comparisons.

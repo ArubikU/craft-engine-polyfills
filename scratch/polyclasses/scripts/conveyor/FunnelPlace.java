@@ -19,8 +19,12 @@ import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
 import dev.arubik.craftengine.script.ScriptValue;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 
+/*
+ * Uses jvm11+ dynamic constants - pseudocode provided - see https://www.benf.org/other/cfr/dynamic-constants.html
+ */
 public final class FunnelPlace {
     private static volatile ScriptContext FILE_SCOPE;
 
@@ -68,19 +72,19 @@ public final class FunnelPlace {
         if ((scriptValue10 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "is_air", (ScriptValue)scriptValue10, (ScriptContext)scriptContext) : ScriptValue.NULL).asBool() ^ true) {
             return ScriptValue.NULL;
         }
-        ScriptValue scriptValue11 = ScriptValue.of((String)"cml:funnel");
+        ScriptValue scriptValue11 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", FunnelPlace.class, "cml:funnel");
         builder.val("block_id", scriptValue11);
         ScriptValue scriptValue12 = scriptContext.getClassOrVar("null");
         builder.val("props", scriptValue12);
         if (ScriptFormula.valuesEqualStr((ScriptValue)scriptValue6, (String)"up")) {
-            ScriptValue scriptValue13 = ScriptValue.of((String)"cml:floor_funnel");
+            ScriptValue scriptValue13 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", FunnelPlace.class, "cml:floor_funnel");
             builder.val("block_id", scriptValue13);
         } else if (ScriptFormula.valuesEqualStr((ScriptValue)scriptValue6, (String)"down")) {
-            ScriptValue scriptValue14 = ScriptValue.of((String)"cml:ceiling_funnel");
+            ScriptValue scriptValue14 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", FunnelPlace.class, "cml:ceiling_funnel");
             builder.val("block_id", scriptValue14);
         } else {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"facing"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", FunnelPlace.class, "facing"));
             arrayList.add(scriptValue6);
             ScriptValue scriptValue15 = ScriptFormula.callBuiltin((String)"make_map", arrayList, (ScriptContext)scriptContext);
             builder.val("props", scriptValue15);
@@ -130,9 +134,9 @@ public final class FunnelPlace {
         }
         if ((scriptValue = scriptContext.getClassOrVar("target")) != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"minecraft:block.copper.place"));
-            arrayList.add(ScriptValue.of((double)1.0));
-            arrayList.add(ScriptValue.of((double)1.0));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", FunnelPlace.class, "minecraft:block.copper.place"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", FunnelPlace.class, 1.0));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", FunnelPlace.class, 1.0));
             v6 = PolyDispatch.bootstrapCall("memberCall", "play_sound", (ScriptValue)scriptValue, arrayList, (ScriptContext)scriptContext);
         } else {
             v6 = ScriptValue.NULL;

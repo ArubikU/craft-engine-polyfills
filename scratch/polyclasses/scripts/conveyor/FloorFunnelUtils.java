@@ -29,8 +29,12 @@ import dev.arubik.craftengine.script.ScriptProgram;
 import dev.arubik.craftengine.script.ScriptValue;
 import dev.arubik.craftengine.script.gen.Utils;
 import java.lang.invoke.CallSite;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 
+/*
+ * Uses jvm11+ dynamic constants - pseudocode provided - see https://www.benf.org/other/cfr/dynamic-constants.html
+ */
 public final class FloorFunnelUtils {
     private static volatile ScriptContext FILE_SCOPE;
 
@@ -98,7 +102,7 @@ public final class FloorFunnelUtils {
         }
         if ((var20_19 = var1_1.getClassOrVar("Item")) != ScriptValue.NULL) {
             var21_20 = new ArrayList<ScriptValue>();
-            var21_20.add(ScriptValue.of((String)"minecraft:air"));
+            var21_20.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", FloorFunnelUtils.class, "minecraft:air"));
             v5 /* !! */  = var20_19 instanceof ScriptValue.Obj && (var23_22 = (var22_21 = (ScriptValue.Obj)var20_19).instance()) != null && !(var23_22 instanceof PolyClass) && var22_21.typeName().equals("Item") ? new PolyClassItem(var23_22).um$21_create(var21_20) : PolyDispatch.bootstrapCall("memberCall", "create", (ScriptValue)var20_19, var21_20, (ScriptContext)var1_1);
         } else {
             v5 /* !! */  = ScriptValue.NULL;
@@ -171,7 +175,7 @@ public final class FloorFunnelUtils {
                     ScriptValue scriptValue7 = scriptContext.getClassOrVar("above");
                     if (scriptValue7 != ScriptValue.NULL) {
                         ArrayList<ScriptValue> arrayList4 = new ArrayList<ScriptValue>();
-                        arrayList4.add(ScriptValue.of((double)64.0));
+                        arrayList4.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", FloorFunnelUtils.class, 64.0));
                         object7 = PolyDispatch.bootstrapCall("memberCall", "pull", (ScriptValue)scriptValue7, arrayList4, (ScriptContext)scriptContext);
                     } else {
                         object7 = ScriptValue.NULL;

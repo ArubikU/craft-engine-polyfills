@@ -1,6 +1,7 @@
 package dev.arubik.craftengine.script;
 
 import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.ConstantDynamic;
 import org.objectweb.asm.Handle;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Label;
@@ -386,6 +387,36 @@ final class ScriptBytecodeCompiler {
         Literal(Type type) { super(type); }
     }
 
+    private static final String LOOKUP_DESC = "Ljava/lang/invoke/MethodHandles$Lookup;";
+
+    private static Handle constBsm(String name, String argDesc) {
+        return new Handle(H_INVOKESTATIC, VALUE, name,
+                "(" + LOOKUP_DESC + "Ljava/lang/String;Ljava/lang/Class;" + argDesc + ")L" + VALUE + ";",
+                true);
+    }
+
+    private static final Handle CONST_STR  = constBsm("constStr", "Ljava/lang/String;");
+    private static final Handle CONST_NUM  = constBsm("constNum", "D");
+    private static final Handle CONST_BOOL = constBsm("constBool", "I");
+
+    /**
+     * Pushes a literal already boxed as a {@link ScriptValue}, as a dynamic constant.
+     *
+     * <p>One LDC, resolved once by the JVM and cached in the constant pool, instead of LDC plus a
+     * {@code ScriptValue.of} call that allocated a fresh record every time the line ran. See the
+     * bootstraps' own comment in {@link ScriptValue} for why sharing the instance is safe.
+     */
+    static void emitConstValue(MethodVisitor mv, Object value) {
+        String desc = "L" + VALUE + ";";
+        ConstantDynamic c = switch (value) {
+            case String s -> new ConstantDynamic("s", desc, CONST_STR, s);
+            case Double d -> new ConstantDynamic("n", desc, CONST_NUM, d);
+            case Boolean b -> new ConstantDynamic("b", desc, CONST_BOOL, b ? 1 : 0);
+            default -> throw new IllegalArgumentException("not a literal: " + value);
+        };
+        mv.visitLdcInsn(c);
+    }
+
     /** A string literal, which keeps its raw Java {@link String} rather than only knowing how to
      *  emit a boxed {@code ScriptValue}. That matters at a typed call site: a generated PolyClass
      *  method taking a native {@code String} parameter would otherwise be handed
@@ -396,13 +427,25 @@ final class ScriptBytecodeCompiler {
      *
      *  <p>Still a {@link Literal}, so {@link #tryCompile}'s "a bare literal needs no class at all"
      *  bail is unchanged. */
+    /** A numeric literal. Named (rather than anonymous) so {@link #toAny} can recognise it and box
+     *  it as a dynamic constant instead of emitting the primitive plus a {@code ScriptValue.of}. */
+    static final class NumLiteral extends Literal {
+        final double value;
+        NumLiteral(double value) { super(Type.NUM); this.value = value; }
+        @Override public void emit(MethodVisitor mv, Ctx c) { mv.visitLdcInsn(value); }
+    }
+
+    /** A boolean literal — see {@link NumLiteral}. */
+    static final class BoolLiteral extends Literal {
+        final boolean value;
+        BoolLiteral(boolean value) { super(Type.BOOL); this.value = value; }
+        @Override public void emit(MethodVisitor mv, Ctx c) { mv.visitInsn(value ? ICONST_1 : ICONST_0); }
+    }
+
     static final class StrLiteral extends Literal {
         final String value;
         StrLiteral(String value) { super(Type.ANY); this.value = value; }
-        @Override public void emit(MethodVisitor mv, Ctx c) {
-            mv.visitLdcInsn(value);
-            mv.visitMethodInsn(INVOKESTATIC, VALUE, "of", "(Ljava/lang/String;)L" + VALUE + ";", true);
-        }
+        @Override public void emit(MethodVisitor mv, Ctx c) { emitConstValue(mv, value); }
     }
 
     // ---- Coercions — mirror ScriptValue#asNum()/#asBool() exactly ----
@@ -738,6 +781,15 @@ final class ScriptBytecodeCompiler {
 
     static Expr toAny(Expr e) {
         if (e.type() == Type.ANY) return e;
+        // A literal that has to be boxed is a compile-time constant all the way through: emit the
+        // boxed form as a dynamic constant rather than the primitive plus a ScriptValue.of call.
+        Object literal = e instanceof NumLiteral n ? (Object) n.value
+                : e instanceof BoolLiteral b ? (Object) b.value : null;
+        if (literal != null) {
+            return new BaseExpr(Type.ANY) {
+                @Override public void emit(MethodVisitor mv, Ctx c) { emitConstValue(mv, literal); }
+            };
+        }
         if (e.type() == Type.NUM) {
             return new BaseExpr(Type.ANY) {
                 @Override public void emit(MethodVisitor mv, Ctx c) {
@@ -1764,17 +1816,9 @@ final class ScriptBytecodeCompiler {
             return args;
         }
 
-        private static Expr numLit(double v) {
-            return new Literal(Type.NUM) {
-                @Override public void emit(MethodVisitor mv, Ctx c) { mv.visitLdcInsn(v); }
-            };
-        }
+        private static Expr numLit(double v) { return new NumLiteral(v); }
 
-        private static Expr boolLit(boolean v) {
-            return new Literal(Type.BOOL) {
-                @Override public void emit(MethodVisitor mv, Ctx c) { mv.visitInsn(v ? ICONST_1 : ICONST_0); }
-            };
-        }
+        private static Expr boolLit(boolean v) { return new BoolLiteral(v); }
 
         /** A string literal — ANY-typed (like every other {@code ScriptValue}-boxed result here),
          *  since a string is exactly one of the runtime shapes an ANY value already has to

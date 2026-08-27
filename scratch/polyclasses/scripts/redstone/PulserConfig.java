@@ -19,8 +19,12 @@ import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
 import dev.arubik.craftengine.script.ScriptValue;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 
+/*
+ * Uses jvm11+ dynamic constants - pseudocode provided - see https://www.benf.org/other/cfr/dynamic-constants.html
+ */
 public final class PulserConfig {
     private static volatile ScriptContext FILE_SCOPE;
 
@@ -57,7 +61,7 @@ public final class PulserConfig {
         ScriptValue scriptValue3 = object;
         builder.val("idx", scriptValue3);
         double d = 6.0;
-        double d2 = 6.0 == 0.0 ? 0.0 : ScriptFormula.addPolymorphic((ScriptValue)scriptValue3, (ScriptValue)ScriptValue.of((double)1.0)).asNum() % d;
+        double d2 = 6.0 == 0.0 ? 0.0 : ScriptFormula.addPolymorphic((ScriptValue)scriptValue3, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", PulserConfig.class, 1.0))).asNum() % d;
         ScriptValue scriptValue4 = ScriptValue.of((double)d2);
         builder.val("next_idx", scriptValue4);
         ScriptValue scriptValue5 = scriptContext.getClassOrVar("Machine");

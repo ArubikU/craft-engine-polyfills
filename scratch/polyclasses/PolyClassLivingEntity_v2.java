@@ -22,7 +22,7 @@ import dev.arubik.craftengine.script.PolyType;
 import dev.arubik.craftengine.script.ScriptValue;
 import java.util.List;
 
-public class PolyClassLivingEntity
+public class PolyClassLivingEntity_v2
 extends PolyClassEntity_v2 {
     private static volatile PolyType.TypedMethodHandler1 h$0;
     private static volatile PolyType.MethodHandler m$1;
@@ -325,19 +325,19 @@ extends PolyClassEntity_v2 {
         return PolyClassRuntime.genericProperty((String)"LivingEntity", (String)"frozen_ticks", (Object)this.instance).asNum();
     }
 
-    public PolyClassLivingEntity(Object object) {
+    public PolyClassLivingEntity_v2(Object object) {
         super(object);
     }
 
-    public static PolyClassLivingEntity of(Object object) {
-        return new PolyClassLivingEntity(object);
+    public static PolyClassLivingEntity_v2 of(Object object) {
+        return new PolyClassLivingEntity_v2(object);
     }
 
-    public static PolyClassLivingEntity ofGuarded(ScriptValue scriptValue) {
+    public static PolyClassLivingEntity_v2 ofGuarded(ScriptValue scriptValue) {
         ScriptValue.Obj obj;
         Object object;
         if (scriptValue instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("LivingEntity")) {
-            return new PolyClassLivingEntity(object);
+            return new PolyClassLivingEntity_v2(object);
         }
         return null;
     }

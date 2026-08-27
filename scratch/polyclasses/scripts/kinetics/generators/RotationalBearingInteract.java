@@ -25,8 +25,12 @@ import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
 import dev.arubik.craftengine.script.ScriptValue;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 
+/*
+ * Uses jvm11+ dynamic constants - pseudocode provided - see https://www.benf.org/other/cfr/dynamic-constants.html
+ */
 public final class RotationalBearingInteract {
     private static volatile ScriptContext FILE_SCOPE;
 
@@ -197,7 +201,7 @@ public final class RotationalBearingInteract {
                     Object object7;
                     String string = "assembled";
                     String string4 = "int";
-                    ScriptValue scriptValue11 = ScriptValue.of((double)0.0);
+                    ScriptValue scriptValue11 =  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", RotationalBearingInteract.class, 0.0);
                     if (scriptValue4 instanceof ScriptValue.Obj && (object7 = (obj = (ScriptValue.Obj)scriptValue4).instance()) != null && !(object7 instanceof PolyClass) && obj.typeName().equals("Machine")) {
                         PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object7);
                         v5 = ScriptValue.of((boolean)polyClassMachine_v4.tm$82_set_typed(string, string4, scriptValue11));
@@ -217,7 +221,7 @@ public final class RotationalBearingInteract {
                     Object object8;
                     String string = "contraption_uuid";
                     String string5 = "string";
-                    ScriptValue scriptValue13 = ScriptValue.of((String)"");
+                    ScriptValue scriptValue13 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", RotationalBearingInteract.class, "");
                     if (scriptValue12 instanceof ScriptValue.Obj && (object8 = (obj = (ScriptValue.Obj)scriptValue12).instance()) != null && !(object8 instanceof PolyClass) && obj.typeName().equals("Machine")) {
                         PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object8);
                         v6 = ScriptValue.of((boolean)polyClassMachine_v4.tm$82_set_typed(string, string5, scriptValue13));
@@ -420,7 +424,7 @@ public final class RotationalBearingInteract {
                             Object object23;
                             String string = "assembled";
                             String string7 = "int";
-                            ScriptValue scriptValue31 = ScriptValue.of((double)1.0);
+                            ScriptValue scriptValue31 =  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", RotationalBearingInteract.class, 1.0);
                             if (scriptValue30 instanceof ScriptValue.Obj && (object23 = (obj = (ScriptValue.Obj)scriptValue30).instance()) != null && !(object23 instanceof PolyClass) && obj.typeName().equals("Machine")) {
                                 PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object23);
                                 v18 = ScriptValue.of((boolean)polyClassMachine_v4.tm$82_set_typed(string, string7, scriptValue31));

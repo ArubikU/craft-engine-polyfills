@@ -19,8 +19,12 @@ import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
 import dev.arubik.craftengine.script.ScriptValue;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 
+/*
+ * Uses jvm11+ dynamic constants - pseudocode provided - see https://www.benf.org/other/cfr/dynamic-constants.html
+ */
 public final class HandCrankInteract {
     private static volatile ScriptContext FILE_SCOPE;
 
@@ -61,7 +65,7 @@ public final class HandCrankInteract {
             Object object3;
             String string = "crank_energy";
             String string3 = "int";
-            ScriptValue scriptValue4 = ScriptValue.of((double)Math.min(ScriptFormula.addPolymorphic((ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((double)20.0)).asNum(), 100.0));
+            ScriptValue scriptValue4 = ScriptValue.of((double)Math.min(ScriptFormula.addPolymorphic((ScriptValue)scriptValue2, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", HandCrankInteract.class, 20.0))).asNum(), 100.0));
             if (scriptValue3 instanceof ScriptValue.Obj && (object3 = (obj = (ScriptValue.Obj)scriptValue3).instance()) != null && !(object3 instanceof PolyClass) && obj.typeName().equals("Machine")) {
                 PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object3);
                 v1 = ScriptValue.of((boolean)polyClassMachine_v4.tm$82_set_typed(string, string3, scriptValue4));

@@ -19,8 +19,12 @@ import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
 import dev.arubik.craftengine.script.ScriptValue;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 
+/*
+ * Uses jvm11+ dynamic constants - pseudocode provided - see https://www.benf.org/other/cfr/dynamic-constants.html
+ */
 public final class GasMotor {
     private static volatile ScriptContext FILE_SCOPE;
 
@@ -197,7 +201,7 @@ public final class GasMotor {
                 Object object4;
                 String string = "target_su";
                 String string4 = "int";
-                ScriptValue scriptValue8 = ScriptValue.of((double)0.0);
+                ScriptValue scriptValue8 =  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", GasMotor.class, 0.0);
                 if (scriptValue7 instanceof ScriptValue.Obj && (object4 = (obj = (ScriptValue.Obj)scriptValue7).instance()) != null && !(object4 instanceof PolyClass) && obj.typeName().equals("Machine")) {
                     PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object4);
                     v3 = ScriptValue.of((boolean)polyClassMachine_v4.tm$82_set_typed(string, string4, scriptValue8));
@@ -389,12 +393,12 @@ public final class GasMotor {
         ScriptValue scriptValue3 = scriptContext.getClassOrVar("tanks");
         Object object4 = scriptValue3 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "length", (ScriptValue)scriptValue3, (ScriptContext)scriptContext) : ScriptValue.NULL;
         if (object4.asNum() <= 0.0) {
-            return ScriptValue.of((String)"false");
+            return  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", GasMotor.class, "false");
         }
         ScriptValue scriptValue4 = scriptContext.getClassOrVar("tanks");
         if (scriptValue4 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((double)0.0));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", GasMotor.class, 0.0));
             object3 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue4, arrayList, (ScriptContext)scriptContext);
         } else {
             object3 = ScriptValue.NULL;
@@ -404,13 +408,13 @@ public final class GasMotor {
         ScriptValue scriptValue6 = scriptContext.getClassOrVar("tank");
         if (scriptValue6 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"is_empty"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", GasMotor.class, "is_empty"));
             object2 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue6, arrayList, (ScriptContext)scriptContext);
         } else {
             object2 = ScriptValue.NULL;
         }
         if (object2.asBool()) {
-            return ScriptValue.of((String)"false");
+            return  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", GasMotor.class, "false");
         }
         ScriptValue scriptValue7 = scriptContext.getClassOrVar("Machine");
         if (scriptValue7 != ScriptValue.NULL) {
@@ -433,9 +437,9 @@ public final class GasMotor {
         ScriptValue scriptValue8 = object;
         builder.val("t_rpm", scriptValue8);
         if (scriptValue8.asNum() <= 0.0) {
-            return ScriptValue.of((String)"false");
+            return  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", GasMotor.class, "false");
         }
-        return ScriptValue.of((String)"true");
+        return  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", GasMotor.class, "true");
     }
 
     public static ScriptValue onBreak(ScriptContext.Builder builder) {
@@ -491,23 +495,23 @@ public final class GasMotor {
         Object object8;
         ScriptContext scriptContext = builder.peek();
         ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-        arrayList.add(ScriptValue.of((String)"polyfills:steam"));
+        arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", GasMotor.class, "polyfills:steam"));
         ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
-        arrayList2.add(ScriptValue.of((String)"rpm"));
-        arrayList2.add(ScriptValue.of((double)32.0));
-        arrayList2.add(ScriptValue.of((String)"su"));
-        arrayList2.add(ScriptValue.of((double)64.0));
-        arrayList2.add(ScriptValue.of((String)"per_tick"));
-        arrayList2.add(ScriptValue.of((double)10.0));
+        arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", GasMotor.class, "rpm"));
+        arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", GasMotor.class, 32.0));
+        arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", GasMotor.class, "su"));
+        arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", GasMotor.class, 64.0));
+        arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", GasMotor.class, "per_tick"));
+        arrayList2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", GasMotor.class, 10.0));
         arrayList.add(ScriptFormula.callBuiltin((String)"make_map", arrayList2, (ScriptContext)scriptContext));
-        arrayList.add(ScriptValue.of((String)"polyfills:heavy_steam"));
+        arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", GasMotor.class, "polyfills:heavy_steam"));
         ArrayList<ScriptValue> arrayList3 = new ArrayList<ScriptValue>();
-        arrayList3.add(ScriptValue.of((String)"rpm"));
-        arrayList3.add(ScriptValue.of((double)64.0));
-        arrayList3.add(ScriptValue.of((String)"su"));
-        arrayList3.add(ScriptValue.of((double)128.0));
-        arrayList3.add(ScriptValue.of((String)"per_tick"));
-        arrayList3.add(ScriptValue.of((double)15.0));
+        arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", GasMotor.class, "rpm"));
+        arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", GasMotor.class, 64.0));
+        arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", GasMotor.class, "su"));
+        arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", GasMotor.class, 128.0));
+        arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", GasMotor.class, "per_tick"));
+        arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", GasMotor.class, 15.0));
         arrayList.add(ScriptFormula.callBuiltin((String)"make_map", arrayList3, (ScriptContext)scriptContext));
         ScriptValue scriptValue2 = ScriptFormula.callBuiltin((String)"make_map", arrayList, (ScriptContext)scriptContext);
         builder.val("GAS_SPECS", scriptValue2);
@@ -595,7 +599,7 @@ public final class GasMotor {
         ScriptValue scriptValue12 = scriptContext.getClassOrVar("gas_tanks");
         if (scriptValue12 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList8 = new ArrayList<ScriptValue>();
-            arrayList8.add(ScriptValue.of((double)0.0));
+            arrayList8.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", GasMotor.class, 0.0));
             object6 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue12, arrayList8, (ScriptContext)scriptContext);
         } else {
             object6 = ScriptValue.NULL;
@@ -605,21 +609,21 @@ public final class GasMotor {
         ScriptValue scriptValue14 = scriptContext.getClassOrVar("tank");
         if (scriptValue14 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList9 = new ArrayList<ScriptValue>();
-            arrayList9.add(ScriptValue.of((String)"level"));
+            arrayList9.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", GasMotor.class, "level"));
             object5 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue14, arrayList9, (ScriptContext)scriptContext);
         } else {
             object5 = ScriptValue.NULL;
         }
         ScriptValue scriptValue15 = object5;
         builder.val("gas_level", scriptValue15);
-        ScriptValue scriptValue16 = ScriptValue.of((String)"");
+        ScriptValue scriptValue16 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", GasMotor.class, "");
         builder.val("gas_id", scriptValue16);
         ScriptValue scriptValue17 = scriptContext.getClassOrVar("null");
         builder.val("spec", scriptValue17);
         ScriptValue scriptValue18 = scriptContext.getClassOrVar("tank");
         if (scriptValue18 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList10 = new ArrayList<ScriptValue>();
-            arrayList10.add(ScriptValue.of((String)"is_empty"));
+            arrayList10.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", GasMotor.class, "is_empty"));
             object4 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue18, arrayList10, (ScriptContext)scriptContext);
         } else {
             object4 = ScriptValue.NULL;
@@ -630,7 +634,7 @@ public final class GasMotor {
             ScriptValue scriptValue19 = scriptContext.getClassOrVar("tank");
             if (scriptValue19 != ScriptValue.NULL) {
                 ArrayList<ScriptValue> arrayList11 = new ArrayList<ScriptValue>();
-                arrayList11.add(ScriptValue.of((String)"contents_key"));
+                arrayList11.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", GasMotor.class, "contents_key"));
                 object15 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue19, arrayList11, (ScriptContext)scriptContext);
             } else {
                 object15 = ScriptValue.NULL;
@@ -687,7 +691,7 @@ public final class GasMotor {
         ScriptValue scriptValue25 = scriptContext.getClassOrVar("spec");
         if (scriptValue25 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList15 = new ArrayList<ScriptValue>();
-            arrayList15.add(ScriptValue.of((String)"rpm"));
+            arrayList15.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", GasMotor.class, "rpm"));
             object3 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue25, arrayList15, (ScriptContext)scriptContext);
         } else {
             object3 = ScriptValue.NULL;
@@ -697,7 +701,7 @@ public final class GasMotor {
         ScriptValue scriptValue27 = scriptContext.getClassOrVar("spec");
         if (scriptValue27 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList16 = new ArrayList<ScriptValue>();
-            arrayList16.add(ScriptValue.of((String)"su"));
+            arrayList16.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", GasMotor.class, "su"));
             object2 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue27, arrayList16, (ScriptContext)scriptContext);
         } else {
             object2 = ScriptValue.NULL;
@@ -707,7 +711,7 @@ public final class GasMotor {
         ScriptValue scriptValue29 = scriptContext.getClassOrVar("spec");
         if (scriptValue29 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList17 = new ArrayList<ScriptValue>();
-            arrayList17.add(ScriptValue.of((String)"per_tick"));
+            arrayList17.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", GasMotor.class, "per_tick"));
             object = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue29, arrayList17, (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
@@ -762,7 +766,7 @@ public final class GasMotor {
                 v16 = ScriptValue.NULL;
             }
         }
-        ScriptValue scriptValue37 = ScriptFormula.addPolymorphic((ScriptValue)ScriptValue.of((double)1.0), (ScriptValue)((scriptValue = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? ((polyClassMachine_v43 = PolyClassMachine_v4.ofGuarded((ScriptValue)scriptValue)) != null ? polyClassMachine_v43.pg$171_overclock() : PolyDispatch.bootstrapGet("memberGet", "overclock", (ScriptValue)scriptValue, (ScriptContext)scriptContext)) : ScriptValue.NULL));
+        ScriptValue scriptValue37 = ScriptFormula.addPolymorphic((ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", GasMotor.class, 1.0)), (ScriptValue)((scriptValue = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? ((polyClassMachine_v43 = PolyClassMachine_v4.ofGuarded((ScriptValue)scriptValue)) != null ? polyClassMachine_v43.pg$171_overclock() : PolyDispatch.bootstrapGet("memberGet", "overclock", (ScriptValue)scriptValue, (ScriptContext)scriptContext)) : ScriptValue.NULL));
         builder.val("oc_factor", scriptValue37);
         double d = scriptContext.getNum("target_rpm") * scriptValue37.asNum();
         ScriptValue scriptValue38 = ScriptValue.of((double)d);

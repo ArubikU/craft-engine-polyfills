@@ -24,8 +24,12 @@ import dev.arubik.craftengine.script.ScriptFormula;
 import dev.arubik.craftengine.script.ScriptProgram;
 import dev.arubik.craftengine.script.ScriptValue;
 import dev.arubik.craftengine.script.gen.Utils;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 
+/*
+ * Uses jvm11+ dynamic constants - pseudocode provided - see https://www.benf.org/other/cfr/dynamic-constants.html
+ */
 public final class CogwheelSmall {
     private static volatile ScriptContext FILE_SCOPE;
 
@@ -356,7 +360,7 @@ public final class CogwheelSmall {
                 var155_119 = var1_1.getClassOrVar("neighbor");
                 if (var155_119 != ScriptValue.NULL) {
                     var156_120 = new ArrayList<ScriptValue>();
-                    var156_120.add(ScriptValue.of((String)"axis"));
+                    var156_120.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", CogwheelSmall.class, "axis"));
                     v14 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "property", (ScriptValue)var155_119, var156_120, (ScriptContext)var1_1);
                 } else {
                     v14 /* !! */  = ScriptValue.NULL;
@@ -367,11 +371,11 @@ public final class CogwheelSmall {
                 var0.val("nid", var158_122);
                 var159_123 = new ArrayList<ScriptValue>();
                 var159_123.add(var158_122);
-                var159_123.add(ScriptValue.of((String)"cogwheel_small"));
+                var159_123.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", CogwheelSmall.class, "cogwheel_small"));
                 if (!ScriptFormula.callBuiltin((String)"contains", var159_123, (ScriptContext)var1_1).asBool()) ** GOTO lbl-1000
                 var160_124 = new ArrayList<ScriptValue>();
                 var160_124.add(var158_122);
-                var160_124.add(ScriptValue.of((String)"large"));
+                var160_124.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", CogwheelSmall.class, "large"));
                 if (ScriptFormula.callBuiltin((String)"contains", var160_124, (ScriptContext)var1_1).asBool() ^ true) {
                     v15 = true;
                 } else lbl-1000:
@@ -394,7 +398,7 @@ public final class CogwheelSmall {
                 }
                 var165_129 = new ArrayList<ScriptValue>();
                 var165_129.add(var158_122);
-                var165_129.add(ScriptValue.of((String)"cogwheel_large"));
+                var165_129.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", CogwheelSmall.class, "cogwheel_large"));
                 if (!ScriptFormula.callBuiltin((String)"contains", var165_129, (ScriptContext)var1_1).asBool()) continue;
                 var166_130 = var1_1.getClassOrVar("Machine");
                 if (var166_130 != ScriptValue.NULL) {
@@ -412,11 +416,11 @@ public final class CogwheelSmall {
                 v17 /* !! */  = ScriptValue.NULL;
             }
         }
-        var170_134 = (ScriptFormula.valuesEqual((ScriptValue)var1_1.getClassOrVar("rpm"), (ScriptValue)ScriptValue.of((double)0.0)) ^ true) != false ? 1.0 : 0.0;
+        var170_134 = (ScriptFormula.valuesEqual((ScriptValue)var1_1.getClassOrVar("rpm"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", CogwheelSmall.class, 0.0))) ^ true) != false ? 1.0 : 0.0;
         var172_135 = ScriptValue.of((double)var170_134);
         var0.val("is_now", var172_135);
         var173_136 = ScriptContext.builder().copyFrom(Utils.1.fileScope()).copyFrom(var1_1);
-        var173_136.val("act_key", ScriptValue.of((String)"_cog_act"));
+        var173_136.val("act_key",  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", CogwheelSmall.class, "_cog_act"));
         var173_136.val("is_now", ScriptValue.of((double)var170_134));
         Utils.1._updateActivated((ScriptContext.Builder)var173_136);
         CogwheelSmall.FILE_SCOPE = var0.build();

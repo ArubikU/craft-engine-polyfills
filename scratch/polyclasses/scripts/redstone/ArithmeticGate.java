@@ -19,8 +19,12 @@ import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
 import dev.arubik.craftengine.script.ScriptValue;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 
+/*
+ * Uses jvm11+ dynamic constants - pseudocode provided - see https://www.benf.org/other/cfr/dynamic-constants.html
+ */
 public final class ArithmeticGate {
     private static volatile ScriptContext FILE_SCOPE;
 
@@ -101,41 +105,41 @@ public final class ArithmeticGate {
         double d = 0.0;
         ScriptValue scriptValue8 = ScriptValue.of((double)0.0);
         builder.val("result", scriptValue8);
-        if (ScriptFormula.valuesEqual((ScriptValue)scriptValue3, (ScriptValue)ScriptValue.of((double)0.0))) {
+        if (ScriptFormula.valuesEqual((ScriptValue)scriptValue3, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", ArithmeticGate.class, 0.0)))) {
             ScriptValue scriptValue9 = ScriptFormula.addPolymorphic((ScriptValue)scriptValue5, (ScriptValue)scriptValue7);
             builder.val("result", scriptValue9);
         }
-        if (ScriptFormula.valuesEqual((ScriptValue)scriptValue3, (ScriptValue)ScriptValue.of((double)1.0))) {
+        if (ScriptFormula.valuesEqual((ScriptValue)scriptValue3, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", ArithmeticGate.class, 1.0)))) {
             double d2 = scriptValue5.asNum() - scriptValue7.asNum();
             ScriptValue scriptValue10 = ScriptValue.of((double)d2);
             builder.val("result", scriptValue10);
         }
-        if (ScriptFormula.valuesEqual((ScriptValue)scriptValue3, (ScriptValue)ScriptValue.of((double)2.0))) {
+        if (ScriptFormula.valuesEqual((ScriptValue)scriptValue3, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", ArithmeticGate.class, 2.0)))) {
             double d3 = scriptValue5.asNum() * scriptValue7.asNum();
             ScriptValue scriptValue11 = ScriptValue.of((double)d3);
             builder.val("result", scriptValue11);
         }
-        if (ScriptFormula.valuesEqual((ScriptValue)scriptValue3, (ScriptValue)ScriptValue.of((double)3.0))) {
+        if (ScriptFormula.valuesEqual((ScriptValue)scriptValue3, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", ArithmeticGate.class, 3.0)))) {
             double d4;
-            double d5 = ScriptFormula.valuesEqual((ScriptValue)scriptValue7, (ScriptValue)ScriptValue.of((double)0.0)) ^ true ? Math.floor((d4 = scriptValue7.asNum()) == 0.0 ? 0.0 : scriptValue5.asNum() / d4) : 0.0;
+            double d5 = ScriptFormula.valuesEqual((ScriptValue)scriptValue7, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", ArithmeticGate.class, 0.0))) ^ true ? Math.floor((d4 = scriptValue7.asNum()) == 0.0 ? 0.0 : scriptValue5.asNum() / d4) : 0.0;
             ScriptValue scriptValue12 = ScriptValue.of((double)d5);
             builder.val("result", scriptValue12);
         }
-        if (ScriptFormula.valuesEqual((ScriptValue)scriptValue3, (ScriptValue)ScriptValue.of((double)4.0))) {
+        if (ScriptFormula.valuesEqual((ScriptValue)scriptValue3, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", ArithmeticGate.class, 4.0)))) {
             ScriptValue scriptValue13 = scriptValue5.asNum() < scriptValue7.asNum() ? scriptValue5 : scriptValue7;
             builder.val("result", scriptValue13);
         }
-        if (ScriptFormula.valuesEqual((ScriptValue)scriptValue3, (ScriptValue)ScriptValue.of((double)5.0))) {
+        if (ScriptFormula.valuesEqual((ScriptValue)scriptValue3, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", ArithmeticGate.class, 5.0)))) {
             ScriptValue scriptValue14 = scriptValue5.asNum() > scriptValue7.asNum() ? scriptValue5 : scriptValue7;
             builder.val("result", scriptValue14);
         }
-        if (ScriptFormula.valuesEqual((ScriptValue)scriptValue3, (ScriptValue)ScriptValue.of((double)6.0))) {
+        if (ScriptFormula.valuesEqual((ScriptValue)scriptValue3, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", ArithmeticGate.class, 6.0)))) {
             double d6;
-            double d7 = ScriptFormula.valuesEqual((ScriptValue)scriptValue7, (ScriptValue)ScriptValue.of((double)0.0)) ^ true ? ((d6 = scriptValue7.asNum()) == 0.0 ? 0.0 : scriptValue5.asNum() % d6) : 0.0;
+            double d7 = ScriptFormula.valuesEqual((ScriptValue)scriptValue7, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", ArithmeticGate.class, 0.0))) ^ true ? ((d6 = scriptValue7.asNum()) == 0.0 ? 0.0 : scriptValue5.asNum() % d6) : 0.0;
             ScriptValue scriptValue15 = ScriptValue.of((double)d7);
             builder.val("result", scriptValue15);
         }
-        if (ScriptFormula.valuesEqual((ScriptValue)scriptValue3, (ScriptValue)ScriptValue.of((double)7.0))) {
+        if (ScriptFormula.valuesEqual((ScriptValue)scriptValue3, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", ArithmeticGate.class, 7.0)))) {
             double d8 = Math.floor(Math.pow(scriptValue5.asNum(), scriptValue7.asNum()));
             ScriptValue scriptValue16 = ScriptValue.of((double)d8);
             builder.val("result", scriptValue16);

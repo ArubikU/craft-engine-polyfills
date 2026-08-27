@@ -22,8 +22,12 @@ import dev.arubik.craftengine.script.ScriptFormula;
 import dev.arubik.craftengine.script.ScriptProgram;
 import dev.arubik.craftengine.script.ScriptValue;
 import java.lang.invoke.CallSite;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 
+/*
+ * Uses jvm11+ dynamic constants - pseudocode provided - see https://www.benf.org/other/cfr/dynamic-constants.html
+ */
 public final class Freezer {
     private static volatile ScriptContext FILE_SCOPE;
 
@@ -43,8 +47,8 @@ public final class Freezer {
         block16: {
             var1_1 = var0.peek();
             var2_2 = new ArrayList<ScriptValue>();
-            var2_2.add(ScriptValue.of((String)"minecraft:water"));
-            var2_2.add(ScriptValue.of((String)"minecraft:ice"));
+            var2_2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Freezer.class, "minecraft:water"));
+            var2_2.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Freezer.class, "minecraft:ice"));
             var3_3 = ScriptFormula.callBuiltin((String)"make_map", var2_2, (ScriptContext)var1_1);
             var0.val("WATER_TO_ICE", var3_3);
             var4_4 = var1_1.getClassOrVar("Machine");
@@ -115,7 +119,7 @@ public final class Freezer {
                 if (!(var35_33 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "is_alive", (ScriptValue)var35_33, (ScriptContext)var1_1) : ScriptValue.NULL).asBool()) ** GOTO lbl-1000
                 var36_34 = new ArrayList<ScriptValue>();
                 var36_34.add(var1_1.getClassOrVar("entity"));
-                var36_34.add(ScriptValue.of((String)"LivingEntity"));
+                var36_34.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Freezer.class, "LivingEntity"));
                 if (ScriptFormula.callBuiltin((String)"instanceof", var36_34, (ScriptContext)var1_1).asBool()) {
                     v3 = true;
                 } else lbl-1000:
@@ -128,7 +132,7 @@ public final class Freezer {
                 var37_35 = var1_1.getClassOrVar("entity");
                 if (var37_35 != ScriptValue.NULL) {
                     var38_36 = new ArrayList<ScriptValue>();
-                    var38_36.add(ScriptValue.of((double)120.0));
+                    var38_36.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Freezer.class, 120.0));
                     v4 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "freeze", (ScriptValue)var37_35, var38_36, (ScriptContext)var1_1);
                     continue;
                 }

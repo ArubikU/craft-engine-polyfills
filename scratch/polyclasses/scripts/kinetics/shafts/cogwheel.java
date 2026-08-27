@@ -22,9 +22,13 @@ import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
 import dev.arubik.craftengine.script.ScriptProgram;
 import dev.arubik.craftengine.script.ScriptValue;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.List;
 
+/*
+ * Uses jvm11+ dynamic constants - pseudocode provided - see https://www.benf.org/other/cfr/dynamic-constants.html
+ */
 public final class Cogwheel {
     private static volatile ScriptContext FILE_SCOPE;
 
@@ -39,11 +43,11 @@ public final class Cogwheel {
     public static ScriptValue _off(ScriptContext.Builder builder) {
         ScriptContext scriptContext = builder.peek();
         ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-        arrayList.add(ScriptValue.of((String)"dx"));
+        arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Cogwheel.class, "dx"));
         arrayList.add(scriptContext.getClassOrVar("dx"));
-        arrayList.add(ScriptValue.of((String)"dy"));
+        arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Cogwheel.class, "dy"));
         arrayList.add(scriptContext.getClassOrVar("dy"));
-        arrayList.add(ScriptValue.of((String)"dz"));
+        arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Cogwheel.class, "dz"));
         arrayList.add(scriptContext.getClassOrVar("dz"));
         return ScriptFormula.callBuiltin((String)"make_map", arrayList, (ScriptContext)scriptContext);
     }
@@ -61,7 +65,7 @@ public final class Cogwheel {
             ScriptValue scriptValue3 = scriptContext.getClassOrVar("o");
             if (scriptValue3 != ScriptValue.NULL) {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-                arrayList.add(ScriptValue.of((String)"dx"));
+                arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Cogwheel.class, "dx"));
                 object4 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue3, arrayList, (ScriptContext)scriptContext);
             } else {
                 object4 = ScriptValue.NULL;
@@ -70,7 +74,7 @@ public final class Cogwheel {
             ScriptValue scriptValue5 = scriptContext.getClassOrVar("o");
             if (scriptValue5 != ScriptValue.NULL) {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-                arrayList.add(ScriptValue.of((String)"dy"));
+                arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Cogwheel.class, "dy"));
                 object3 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue5, arrayList, (ScriptContext)scriptContext);
             } else {
                 object3 = ScriptValue.NULL;
@@ -79,7 +83,7 @@ public final class Cogwheel {
             ScriptValue scriptValue7 = scriptContext.getClassOrVar("o");
             if (scriptValue7 != ScriptValue.NULL) {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-                arrayList.add(ScriptValue.of((String)"dz"));
+                arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Cogwheel.class, "dz"));
                 v2 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue7, arrayList, (ScriptContext)scriptContext);
             } else {
                 v2 = scriptValue2 = ScriptValue.NULL;
@@ -108,7 +112,7 @@ public final class Cogwheel {
             ScriptValue scriptValue = scriptContext.getClassOrVar("o");
             if (scriptValue != ScriptValue.NULL) {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-                arrayList.add(ScriptValue.of((String)"dx"));
+                arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Cogwheel.class, "dx"));
                 object2 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue, arrayList, (ScriptContext)scriptContext);
             } else {
                 object2 = ScriptValue.NULL;
@@ -120,7 +124,7 @@ public final class Cogwheel {
             ScriptValue scriptValue = scriptContext.getClassOrVar("o");
             if (scriptValue != ScriptValue.NULL) {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-                arrayList.add(ScriptValue.of((String)"dy"));
+                arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Cogwheel.class, "dy"));
                 object3 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue, arrayList, (ScriptContext)scriptContext);
             } else {
                 object3 = ScriptValue.NULL;
@@ -130,7 +134,7 @@ public final class Cogwheel {
         ScriptValue scriptValue = scriptContext.getClassOrVar("o");
         if (scriptValue != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((String)"dz"));
+            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Cogwheel.class, "dz"));
             object = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue, arrayList, (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
@@ -142,7 +146,7 @@ public final class Cogwheel {
         ScriptContext scriptContext = builder.peek();
         ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
         arrayList.add(scriptContext.getClassOrVar("id"));
-        arrayList.add(ScriptValue.of((String)"cogwheel_small"));
+        arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Cogwheel.class, "cogwheel_small"));
         return ScriptFormula.callBuiltin((String)"contains", arrayList, (ScriptContext)scriptContext);
     }
 
@@ -150,7 +154,7 @@ public final class Cogwheel {
         ScriptContext scriptContext = builder.peek();
         ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
         arrayList.add(scriptContext.getClassOrVar("id"));
-        arrayList.add(ScriptValue.of((String)"cogwheel_large"));
+        arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Cogwheel.class, "cogwheel_large"));
         return ScriptFormula.callBuiltin((String)"contains", arrayList, (ScriptContext)scriptContext);
     }
 
@@ -163,23 +167,23 @@ public final class Cogwheel {
         if (ScriptFormula.valuesEqualStr((ScriptValue)scriptValue2, (String)"y")) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
             ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
-            builder2.val("dx", ScriptValue.of((double)1.0));
-            builder2.val("dy", ScriptValue.of((double)0.0));
-            builder2.val("dz", ScriptValue.of((double)0.0));
+            builder2.val("dx",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 1.0));
+            builder2.val("dy",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 0.0));
+            builder2.val("dz",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 0.0));
             arrayList.add(Cogwheel._off(builder2));
             ScriptContext.Builder builder3 = ScriptContext.builder().copyFrom(scriptContext);
             builder3.val("dx", ScriptValue.of((double)(-1.0)));
-            builder3.val("dy", ScriptValue.of((double)0.0));
-            builder3.val("dz", ScriptValue.of((double)0.0));
+            builder3.val("dy",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 0.0));
+            builder3.val("dz",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 0.0));
             arrayList.add(Cogwheel._off(builder3));
             ScriptContext.Builder builder4 = ScriptContext.builder().copyFrom(scriptContext);
-            builder4.val("dx", ScriptValue.of((double)0.0));
-            builder4.val("dy", ScriptValue.of((double)0.0));
-            builder4.val("dz", ScriptValue.of((double)1.0));
+            builder4.val("dx",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 0.0));
+            builder4.val("dy",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 0.0));
+            builder4.val("dz",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 1.0));
             arrayList.add(Cogwheel._off(builder4));
             ScriptContext.Builder builder5 = ScriptContext.builder().copyFrom(scriptContext);
-            builder5.val("dx", ScriptValue.of((double)0.0));
-            builder5.val("dy", ScriptValue.of((double)0.0));
+            builder5.val("dx",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 0.0));
+            builder5.val("dy",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 0.0));
             builder5.val("dz", ScriptValue.of((double)(-1.0)));
             arrayList.add(Cogwheel._off(builder5));
             return new ScriptValue.Array(arrayList);
@@ -187,47 +191,47 @@ public final class Cogwheel {
         if (ScriptFormula.valuesEqualStr((ScriptValue)scriptValue2, (String)"x")) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
             ScriptContext.Builder builder6 = ScriptContext.builder().copyFrom(scriptContext);
-            builder6.val("dx", ScriptValue.of((double)0.0));
-            builder6.val("dy", ScriptValue.of((double)1.0));
-            builder6.val("dz", ScriptValue.of((double)0.0));
+            builder6.val("dx",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 0.0));
+            builder6.val("dy",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 1.0));
+            builder6.val("dz",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 0.0));
             arrayList.add(Cogwheel._off(builder6));
             ScriptContext.Builder builder7 = ScriptContext.builder().copyFrom(scriptContext);
-            builder7.val("dx", ScriptValue.of((double)0.0));
+            builder7.val("dx",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 0.0));
             builder7.val("dy", ScriptValue.of((double)(-1.0)));
-            builder7.val("dz", ScriptValue.of((double)0.0));
+            builder7.val("dz",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 0.0));
             arrayList.add(Cogwheel._off(builder7));
             ScriptContext.Builder builder8 = ScriptContext.builder().copyFrom(scriptContext);
-            builder8.val("dx", ScriptValue.of((double)0.0));
-            builder8.val("dy", ScriptValue.of((double)0.0));
-            builder8.val("dz", ScriptValue.of((double)1.0));
+            builder8.val("dx",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 0.0));
+            builder8.val("dy",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 0.0));
+            builder8.val("dz",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 1.0));
             arrayList.add(Cogwheel._off(builder8));
             ScriptContext.Builder builder9 = ScriptContext.builder().copyFrom(scriptContext);
-            builder9.val("dx", ScriptValue.of((double)0.0));
-            builder9.val("dy", ScriptValue.of((double)0.0));
+            builder9.val("dx",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 0.0));
+            builder9.val("dy",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 0.0));
             builder9.val("dz", ScriptValue.of((double)(-1.0)));
             arrayList.add(Cogwheel._off(builder9));
             return new ScriptValue.Array(arrayList);
         }
         ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
         ScriptContext.Builder builder10 = ScriptContext.builder().copyFrom(scriptContext);
-        builder10.val("dx", ScriptValue.of((double)1.0));
-        builder10.val("dy", ScriptValue.of((double)0.0));
-        builder10.val("dz", ScriptValue.of((double)0.0));
+        builder10.val("dx",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 1.0));
+        builder10.val("dy",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 0.0));
+        builder10.val("dz",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 0.0));
         arrayList.add(Cogwheel._off(builder10));
         ScriptContext.Builder builder11 = ScriptContext.builder().copyFrom(scriptContext);
         builder11.val("dx", ScriptValue.of((double)(-1.0)));
-        builder11.val("dy", ScriptValue.of((double)0.0));
-        builder11.val("dz", ScriptValue.of((double)0.0));
+        builder11.val("dy",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 0.0));
+        builder11.val("dz",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 0.0));
         arrayList.add(Cogwheel._off(builder11));
         ScriptContext.Builder builder12 = ScriptContext.builder().copyFrom(scriptContext);
-        builder12.val("dx", ScriptValue.of((double)0.0));
-        builder12.val("dy", ScriptValue.of((double)1.0));
-        builder12.val("dz", ScriptValue.of((double)0.0));
+        builder12.val("dx",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 0.0));
+        builder12.val("dy",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 1.0));
+        builder12.val("dz",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 0.0));
         arrayList.add(Cogwheel._off(builder12));
         ScriptContext.Builder builder13 = ScriptContext.builder().copyFrom(scriptContext);
-        builder13.val("dx", ScriptValue.of((double)0.0));
+        builder13.val("dx",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 0.0));
         builder13.val("dy", ScriptValue.of((double)(-1.0)));
-        builder13.val("dz", ScriptValue.of((double)0.0));
+        builder13.val("dz",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 0.0));
         arrayList.add(Cogwheel._off(builder13));
         return new ScriptValue.Array(arrayList);
     }
@@ -241,23 +245,23 @@ public final class Cogwheel {
         if (ScriptFormula.valuesEqualStr((ScriptValue)scriptValue2, (String)"y")) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
             ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
-            builder2.val("dx", ScriptValue.of((double)1.0));
-            builder2.val("dy", ScriptValue.of((double)0.0));
-            builder2.val("dz", ScriptValue.of((double)1.0));
+            builder2.val("dx",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 1.0));
+            builder2.val("dy",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 0.0));
+            builder2.val("dz",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 1.0));
             arrayList.add(Cogwheel._off(builder2));
             ScriptContext.Builder builder3 = ScriptContext.builder().copyFrom(scriptContext);
-            builder3.val("dx", ScriptValue.of((double)1.0));
-            builder3.val("dy", ScriptValue.of((double)0.0));
+            builder3.val("dx",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 1.0));
+            builder3.val("dy",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 0.0));
             builder3.val("dz", ScriptValue.of((double)(-1.0)));
             arrayList.add(Cogwheel._off(builder3));
             ScriptContext.Builder builder4 = ScriptContext.builder().copyFrom(scriptContext);
             builder4.val("dx", ScriptValue.of((double)(-1.0)));
-            builder4.val("dy", ScriptValue.of((double)0.0));
-            builder4.val("dz", ScriptValue.of((double)1.0));
+            builder4.val("dy",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 0.0));
+            builder4.val("dz",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 1.0));
             arrayList.add(Cogwheel._off(builder4));
             ScriptContext.Builder builder5 = ScriptContext.builder().copyFrom(scriptContext);
             builder5.val("dx", ScriptValue.of((double)(-1.0)));
-            builder5.val("dy", ScriptValue.of((double)0.0));
+            builder5.val("dy",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 0.0));
             builder5.val("dz", ScriptValue.of((double)(-1.0)));
             arrayList.add(Cogwheel._off(builder5));
             return new ScriptValue.Array(arrayList);
@@ -265,22 +269,22 @@ public final class Cogwheel {
         if (ScriptFormula.valuesEqualStr((ScriptValue)scriptValue2, (String)"x")) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
             ScriptContext.Builder builder6 = ScriptContext.builder().copyFrom(scriptContext);
-            builder6.val("dx", ScriptValue.of((double)0.0));
-            builder6.val("dy", ScriptValue.of((double)1.0));
-            builder6.val("dz", ScriptValue.of((double)1.0));
+            builder6.val("dx",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 0.0));
+            builder6.val("dy",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 1.0));
+            builder6.val("dz",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 1.0));
             arrayList.add(Cogwheel._off(builder6));
             ScriptContext.Builder builder7 = ScriptContext.builder().copyFrom(scriptContext);
-            builder7.val("dx", ScriptValue.of((double)0.0));
-            builder7.val("dy", ScriptValue.of((double)1.0));
+            builder7.val("dx",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 0.0));
+            builder7.val("dy",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 1.0));
             builder7.val("dz", ScriptValue.of((double)(-1.0)));
             arrayList.add(Cogwheel._off(builder7));
             ScriptContext.Builder builder8 = ScriptContext.builder().copyFrom(scriptContext);
-            builder8.val("dx", ScriptValue.of((double)0.0));
+            builder8.val("dx",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 0.0));
             builder8.val("dy", ScriptValue.of((double)(-1.0)));
-            builder8.val("dz", ScriptValue.of((double)1.0));
+            builder8.val("dz",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 1.0));
             arrayList.add(Cogwheel._off(builder8));
             ScriptContext.Builder builder9 = ScriptContext.builder().copyFrom(scriptContext);
-            builder9.val("dx", ScriptValue.of((double)0.0));
+            builder9.val("dx",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 0.0));
             builder9.val("dy", ScriptValue.of((double)(-1.0)));
             builder9.val("dz", ScriptValue.of((double)(-1.0)));
             arrayList.add(Cogwheel._off(builder9));
@@ -288,24 +292,24 @@ public final class Cogwheel {
         }
         ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
         ScriptContext.Builder builder10 = ScriptContext.builder().copyFrom(scriptContext);
-        builder10.val("dx", ScriptValue.of((double)1.0));
-        builder10.val("dy", ScriptValue.of((double)1.0));
-        builder10.val("dz", ScriptValue.of((double)0.0));
+        builder10.val("dx",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 1.0));
+        builder10.val("dy",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 1.0));
+        builder10.val("dz",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 0.0));
         arrayList.add(Cogwheel._off(builder10));
         ScriptContext.Builder builder11 = ScriptContext.builder().copyFrom(scriptContext);
-        builder11.val("dx", ScriptValue.of((double)1.0));
+        builder11.val("dx",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 1.0));
         builder11.val("dy", ScriptValue.of((double)(-1.0)));
-        builder11.val("dz", ScriptValue.of((double)0.0));
+        builder11.val("dz",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 0.0));
         arrayList.add(Cogwheel._off(builder11));
         ScriptContext.Builder builder12 = ScriptContext.builder().copyFrom(scriptContext);
         builder12.val("dx", ScriptValue.of((double)(-1.0)));
-        builder12.val("dy", ScriptValue.of((double)1.0));
-        builder12.val("dz", ScriptValue.of((double)0.0));
+        builder12.val("dy",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 1.0));
+        builder12.val("dz",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 0.0));
         arrayList.add(Cogwheel._off(builder12));
         ScriptContext.Builder builder13 = ScriptContext.builder().copyFrom(scriptContext);
         builder13.val("dx", ScriptValue.of((double)(-1.0)));
         builder13.val("dy", ScriptValue.of((double)(-1.0)));
-        builder13.val("dz", ScriptValue.of((double)0.0));
+        builder13.val("dz",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 0.0));
         arrayList.add(Cogwheel._off(builder13));
         return new ScriptValue.Array(arrayList);
     }
@@ -319,42 +323,42 @@ public final class Cogwheel {
         if (ScriptFormula.valuesEqualStr((ScriptValue)scriptValue2, (String)"y")) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
             ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
-            builder2.val("dx", ScriptValue.of((double)1.0));
-            builder2.val("dy", ScriptValue.of((double)1.0));
-            builder2.val("dz", ScriptValue.of((double)0.0));
+            builder2.val("dx",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 1.0));
+            builder2.val("dy",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 1.0));
+            builder2.val("dz",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 0.0));
             arrayList.add(Cogwheel._off(builder2));
             ScriptContext.Builder builder3 = ScriptContext.builder().copyFrom(scriptContext);
-            builder3.val("dx", ScriptValue.of((double)1.0));
+            builder3.val("dx",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 1.0));
             builder3.val("dy", ScriptValue.of((double)(-1.0)));
-            builder3.val("dz", ScriptValue.of((double)0.0));
+            builder3.val("dz",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 0.0));
             arrayList.add(Cogwheel._off(builder3));
             ScriptContext.Builder builder4 = ScriptContext.builder().copyFrom(scriptContext);
             builder4.val("dx", ScriptValue.of((double)(-1.0)));
-            builder4.val("dy", ScriptValue.of((double)1.0));
-            builder4.val("dz", ScriptValue.of((double)0.0));
+            builder4.val("dy",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 1.0));
+            builder4.val("dz",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 0.0));
             arrayList.add(Cogwheel._off(builder4));
             ScriptContext.Builder builder5 = ScriptContext.builder().copyFrom(scriptContext);
             builder5.val("dx", ScriptValue.of((double)(-1.0)));
             builder5.val("dy", ScriptValue.of((double)(-1.0)));
-            builder5.val("dz", ScriptValue.of((double)0.0));
+            builder5.val("dz",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 0.0));
             arrayList.add(Cogwheel._off(builder5));
             ScriptContext.Builder builder6 = ScriptContext.builder().copyFrom(scriptContext);
-            builder6.val("dx", ScriptValue.of((double)0.0));
-            builder6.val("dy", ScriptValue.of((double)1.0));
-            builder6.val("dz", ScriptValue.of((double)1.0));
+            builder6.val("dx",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 0.0));
+            builder6.val("dy",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 1.0));
+            builder6.val("dz",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 1.0));
             arrayList.add(Cogwheel._off(builder6));
             ScriptContext.Builder builder7 = ScriptContext.builder().copyFrom(scriptContext);
-            builder7.val("dx", ScriptValue.of((double)0.0));
-            builder7.val("dy", ScriptValue.of((double)1.0));
+            builder7.val("dx",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 0.0));
+            builder7.val("dy",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 1.0));
             builder7.val("dz", ScriptValue.of((double)(-1.0)));
             arrayList.add(Cogwheel._off(builder7));
             ScriptContext.Builder builder8 = ScriptContext.builder().copyFrom(scriptContext);
-            builder8.val("dx", ScriptValue.of((double)0.0));
+            builder8.val("dx",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 0.0));
             builder8.val("dy", ScriptValue.of((double)(-1.0)));
-            builder8.val("dz", ScriptValue.of((double)1.0));
+            builder8.val("dz",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 1.0));
             arrayList.add(Cogwheel._off(builder8));
             ScriptContext.Builder builder9 = ScriptContext.builder().copyFrom(scriptContext);
-            builder9.val("dx", ScriptValue.of((double)0.0));
+            builder9.val("dx",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 0.0));
             builder9.val("dy", ScriptValue.of((double)(-1.0)));
             builder9.val("dz", ScriptValue.of((double)(-1.0)));
             arrayList.add(Cogwheel._off(builder9));
@@ -363,85 +367,85 @@ public final class Cogwheel {
         if (ScriptFormula.valuesEqualStr((ScriptValue)scriptValue2, (String)"x")) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
             ScriptContext.Builder builder10 = ScriptContext.builder().copyFrom(scriptContext);
-            builder10.val("dx", ScriptValue.of((double)1.0));
-            builder10.val("dy", ScriptValue.of((double)1.0));
-            builder10.val("dz", ScriptValue.of((double)0.0));
+            builder10.val("dx",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 1.0));
+            builder10.val("dy",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 1.0));
+            builder10.val("dz",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 0.0));
             arrayList.add(Cogwheel._off(builder10));
             ScriptContext.Builder builder11 = ScriptContext.builder().copyFrom(scriptContext);
-            builder11.val("dx", ScriptValue.of((double)1.0));
+            builder11.val("dx",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 1.0));
             builder11.val("dy", ScriptValue.of((double)(-1.0)));
-            builder11.val("dz", ScriptValue.of((double)0.0));
+            builder11.val("dz",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 0.0));
             arrayList.add(Cogwheel._off(builder11));
             ScriptContext.Builder builder12 = ScriptContext.builder().copyFrom(scriptContext);
             builder12.val("dx", ScriptValue.of((double)(-1.0)));
-            builder12.val("dy", ScriptValue.of((double)1.0));
-            builder12.val("dz", ScriptValue.of((double)0.0));
+            builder12.val("dy",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 1.0));
+            builder12.val("dz",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 0.0));
             arrayList.add(Cogwheel._off(builder12));
             ScriptContext.Builder builder13 = ScriptContext.builder().copyFrom(scriptContext);
             builder13.val("dx", ScriptValue.of((double)(-1.0)));
             builder13.val("dy", ScriptValue.of((double)(-1.0)));
-            builder13.val("dz", ScriptValue.of((double)0.0));
+            builder13.val("dz",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 0.0));
             arrayList.add(Cogwheel._off(builder13));
             ScriptContext.Builder builder14 = ScriptContext.builder().copyFrom(scriptContext);
-            builder14.val("dx", ScriptValue.of((double)1.0));
-            builder14.val("dy", ScriptValue.of((double)0.0));
-            builder14.val("dz", ScriptValue.of((double)1.0));
+            builder14.val("dx",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 1.0));
+            builder14.val("dy",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 0.0));
+            builder14.val("dz",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 1.0));
             arrayList.add(Cogwheel._off(builder14));
             ScriptContext.Builder builder15 = ScriptContext.builder().copyFrom(scriptContext);
-            builder15.val("dx", ScriptValue.of((double)1.0));
-            builder15.val("dy", ScriptValue.of((double)0.0));
+            builder15.val("dx",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 1.0));
+            builder15.val("dy",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 0.0));
             builder15.val("dz", ScriptValue.of((double)(-1.0)));
             arrayList.add(Cogwheel._off(builder15));
             ScriptContext.Builder builder16 = ScriptContext.builder().copyFrom(scriptContext);
             builder16.val("dx", ScriptValue.of((double)(-1.0)));
-            builder16.val("dy", ScriptValue.of((double)0.0));
-            builder16.val("dz", ScriptValue.of((double)1.0));
+            builder16.val("dy",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 0.0));
+            builder16.val("dz",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 1.0));
             arrayList.add(Cogwheel._off(builder16));
             ScriptContext.Builder builder17 = ScriptContext.builder().copyFrom(scriptContext);
             builder17.val("dx", ScriptValue.of((double)(-1.0)));
-            builder17.val("dy", ScriptValue.of((double)0.0));
+            builder17.val("dy",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 0.0));
             builder17.val("dz", ScriptValue.of((double)(-1.0)));
             arrayList.add(Cogwheel._off(builder17));
             return new ScriptValue.Array(arrayList);
         }
         ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
         ScriptContext.Builder builder18 = ScriptContext.builder().copyFrom(scriptContext);
-        builder18.val("dx", ScriptValue.of((double)1.0));
-        builder18.val("dy", ScriptValue.of((double)0.0));
-        builder18.val("dz", ScriptValue.of((double)1.0));
+        builder18.val("dx",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 1.0));
+        builder18.val("dy",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 0.0));
+        builder18.val("dz",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 1.0));
         arrayList.add(Cogwheel._off(builder18));
         ScriptContext.Builder builder19 = ScriptContext.builder().copyFrom(scriptContext);
-        builder19.val("dx", ScriptValue.of((double)1.0));
-        builder19.val("dy", ScriptValue.of((double)0.0));
+        builder19.val("dx",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 1.0));
+        builder19.val("dy",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 0.0));
         builder19.val("dz", ScriptValue.of((double)(-1.0)));
         arrayList.add(Cogwheel._off(builder19));
         ScriptContext.Builder builder20 = ScriptContext.builder().copyFrom(scriptContext);
         builder20.val("dx", ScriptValue.of((double)(-1.0)));
-        builder20.val("dy", ScriptValue.of((double)0.0));
-        builder20.val("dz", ScriptValue.of((double)1.0));
+        builder20.val("dy",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 0.0));
+        builder20.val("dz",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 1.0));
         arrayList.add(Cogwheel._off(builder20));
         ScriptContext.Builder builder21 = ScriptContext.builder().copyFrom(scriptContext);
         builder21.val("dx", ScriptValue.of((double)(-1.0)));
-        builder21.val("dy", ScriptValue.of((double)0.0));
+        builder21.val("dy",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 0.0));
         builder21.val("dz", ScriptValue.of((double)(-1.0)));
         arrayList.add(Cogwheel._off(builder21));
         ScriptContext.Builder builder22 = ScriptContext.builder().copyFrom(scriptContext);
-        builder22.val("dx", ScriptValue.of((double)0.0));
-        builder22.val("dy", ScriptValue.of((double)1.0));
-        builder22.val("dz", ScriptValue.of((double)1.0));
+        builder22.val("dx",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 0.0));
+        builder22.val("dy",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 1.0));
+        builder22.val("dz",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 1.0));
         arrayList.add(Cogwheel._off(builder22));
         ScriptContext.Builder builder23 = ScriptContext.builder().copyFrom(scriptContext);
-        builder23.val("dx", ScriptValue.of((double)0.0));
-        builder23.val("dy", ScriptValue.of((double)1.0));
+        builder23.val("dx",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 0.0));
+        builder23.val("dy",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 1.0));
         builder23.val("dz", ScriptValue.of((double)(-1.0)));
         arrayList.add(Cogwheel._off(builder23));
         ScriptContext.Builder builder24 = ScriptContext.builder().copyFrom(scriptContext);
-        builder24.val("dx", ScriptValue.of((double)0.0));
+        builder24.val("dx",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 0.0));
         builder24.val("dy", ScriptValue.of((double)(-1.0)));
-        builder24.val("dz", ScriptValue.of((double)1.0));
+        builder24.val("dz",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 1.0));
         arrayList.add(Cogwheel._off(builder24));
         ScriptContext.Builder builder25 = ScriptContext.builder().copyFrom(scriptContext);
-        builder25.val("dx", ScriptValue.of((double)0.0));
+        builder25.val("dx",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 0.0));
         builder25.val("dy", ScriptValue.of((double)(-1.0)));
         builder25.val("dz", ScriptValue.of((double)(-1.0)));
         arrayList.add(Cogwheel._off(builder25));
@@ -480,7 +484,7 @@ public final class Cogwheel {
         } else {
             v0 = ScriptValue.NULL;
         }
-        if (ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("rpm"), (ScriptValue)ScriptValue.of((double)0.0))) {
+        if (ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("rpm"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 0.0)))) {
             return ScriptValue.NULL;
         }
         ScriptValue scriptValue5 = scriptContext.getClassOrVar("Machine");
@@ -498,7 +502,7 @@ public final class Cogwheel {
                 ScriptValue scriptValue9 = scriptContext.getClassOrVar("nb");
                 if (scriptValue9 != ScriptValue.NULL) {
                     ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-                    arrayList.add(ScriptValue.of((String)"axis"));
+                    arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Cogwheel.class, "axis"));
                     object2 = PolyDispatch.bootstrapCall("memberCall", "property", (ScriptValue)scriptValue9, arrayList, (ScriptContext)scriptContext);
                 } else {
                     object2 = ScriptValue.NULL;
@@ -538,7 +542,7 @@ public final class Cogwheel {
                 ScriptValue scriptValue14 = scriptContext.getClassOrVar("nb");
                 if (scriptValue14 != ScriptValue.NULL) {
                     ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-                    arrayList.add(ScriptValue.of((String)"axis"));
+                    arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Cogwheel.class, "axis"));
                     object4 = PolyDispatch.bootstrapCall("memberCall", "property", (ScriptValue)scriptValue14, arrayList, (ScriptContext)scriptContext);
                 } else {
                     object4 = ScriptValue.NULL;
@@ -603,7 +607,7 @@ public final class Cogwheel {
                 ScriptValue scriptValue21 = scriptContext.getClassOrVar("nb");
                 if (scriptValue21 != ScriptValue.NULL) {
                     ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-                    arrayList.add(ScriptValue.of((String)"axis"));
+                    arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Cogwheel.class, "axis"));
                     object8 = PolyDispatch.bootstrapCall("memberCall", "property", (ScriptValue)scriptValue21, arrayList, (ScriptContext)scriptContext);
                 } else {
                     object8 = ScriptValue.NULL;
@@ -625,7 +629,7 @@ public final class Cogwheel {
                 builder13.val("axis", scriptValue22);
                 ScriptValue scriptValue25 = Cogwheel._comp(builder13);
                 builder.val("theirs", scriptValue25);
-                if (ScriptFormula.valuesEqual((ScriptValue)scriptValue24, (ScriptValue)ScriptValue.of((double)0.0)) || ScriptFormula.valuesEqual((ScriptValue)scriptValue25, (ScriptValue)ScriptValue.of((double)0.0))) continue;
+                if (ScriptFormula.valuesEqual((ScriptValue)scriptValue24, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 0.0))) || ScriptFormula.valuesEqual((ScriptValue)scriptValue25, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 0.0)))) continue;
                 double d = (double)(scriptValue24.asNum() > 0.0 ? 1 : 0) != (double)(scriptValue25.asNum() > 0.0 ? 1 : 0) ? -1.0 : 1.0;
                 ScriptValue scriptValue26 = ScriptValue.of((double)d);
                 builder.val("sign", scriptValue26);
@@ -653,7 +657,7 @@ public final class Cogwheel {
     public static ScriptValue tickLarge(ScriptContext.Builder builder) {
         ScriptContext scriptContext = builder.peek();
         ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
-        builder2.val("is_large", ScriptValue.of((boolean)true));
+        builder2.val("is_large",  /* dynamic constant */ (ScriptValue)ScriptValue.constBool("b", MethodHandles.lookup(), "constBool", Cogwheel.class, 1));
         Cogwheel._mesh(builder2);
         return ScriptValue.NULL;
     }
@@ -661,14 +665,14 @@ public final class Cogwheel {
     public static ScriptValue tickSmall(ScriptContext.Builder builder) {
         ScriptContext scriptContext = builder.peek();
         ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
-        builder2.val("is_large", ScriptValue.of((boolean)false));
+        builder2.val("is_large",  /* dynamic constant */ (ScriptValue)ScriptValue.constBool("b", MethodHandles.lookup(), "constBool", Cogwheel.class, 0));
         Cogwheel._mesh(builder2);
         return ScriptValue.NULL;
     }
 
     public static ScriptValue status(ScriptContext.Builder builder) {
         ScriptContext scriptContext = builder.peek();
-        return ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("rpm"), (ScriptValue)ScriptValue.of((double)0.0)) ^ true ? ScriptValue.of((String)"true") : ScriptValue.of((String)"false");
+        return ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("rpm"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 0.0))) ^ true ? ( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Cogwheel.class, "true")) : ( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Cogwheel.class, "false"));
     }
 
     public static ScriptValue onBreak(ScriptContext.Builder builder) {

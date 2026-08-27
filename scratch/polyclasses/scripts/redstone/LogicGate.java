@@ -19,8 +19,12 @@ import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
 import dev.arubik.craftengine.script.ScriptValue;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 
+/*
+ * Uses jvm11+ dynamic constants - pseudocode provided - see https://www.benf.org/other/cfr/dynamic-constants.html
+ */
 public final class LogicGate {
     private static volatile ScriptContext FILE_SCOPE;
 
@@ -103,32 +107,32 @@ public final class LogicGate {
         double d3 = 0.0;
         ScriptValue scriptValue8 = ScriptValue.of((double)0.0);
         builder.val("result", scriptValue8);
-        if (ScriptFormula.valuesEqual((ScriptValue)scriptValue3, (ScriptValue)ScriptValue.of((double)0.0))) {
+        if (ScriptFormula.valuesEqual((ScriptValue)scriptValue3, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", LogicGate.class, 0.0)))) {
             double d4 = d != 0.0 || d2 != 0.0 ? 15.0 : 0.0;
             ScriptValue scriptValue9 = ScriptValue.of((double)d4);
             builder.val("result", scriptValue9);
         }
-        if (ScriptFormula.valuesEqual((ScriptValue)scriptValue3, (ScriptValue)ScriptValue.of((double)1.0))) {
+        if (ScriptFormula.valuesEqual((ScriptValue)scriptValue3, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", LogicGate.class, 1.0)))) {
             double d5 = d != 0.0 && d2 != 0.0 ? 15.0 : 0.0;
             ScriptValue scriptValue10 = ScriptValue.of((double)d5);
             builder.val("result", scriptValue10);
         }
-        if (ScriptFormula.valuesEqual((ScriptValue)scriptValue3, (ScriptValue)ScriptValue.of((double)2.0))) {
+        if (ScriptFormula.valuesEqual((ScriptValue)scriptValue3, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", LogicGate.class, 2.0)))) {
             double d6 = d != 0.0 && d2 != 0.0 ? 0.0 : 15.0;
             ScriptValue scriptValue11 = ScriptValue.of((double)d6);
             builder.val("result", scriptValue11);
         }
-        if (ScriptFormula.valuesEqual((ScriptValue)scriptValue3, (ScriptValue)ScriptValue.of((double)3.0))) {
+        if (ScriptFormula.valuesEqual((ScriptValue)scriptValue3, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", LogicGate.class, 3.0)))) {
             double d7 = d != 0.0 || d2 != 0.0 ? 0.0 : 15.0;
             ScriptValue scriptValue12 = ScriptValue.of((double)d7);
             builder.val("result", scriptValue12);
         }
-        if (ScriptFormula.valuesEqual((ScriptValue)scriptValue3, (ScriptValue)ScriptValue.of((double)4.0))) {
+        if (ScriptFormula.valuesEqual((ScriptValue)scriptValue3, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", LogicGate.class, 4.0)))) {
             double d8 = d != d2 ? 15.0 : 0.0;
             ScriptValue scriptValue13 = ScriptValue.of((double)d8);
             builder.val("result", scriptValue13);
         }
-        if (ScriptFormula.valuesEqual((ScriptValue)scriptValue3, (ScriptValue)ScriptValue.of((double)5.0))) {
+        if (ScriptFormula.valuesEqual((ScriptValue)scriptValue3, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", LogicGate.class, 5.0)))) {
             double d9 = d == d2 ? 15.0 : 0.0;
             ScriptValue scriptValue14 = ScriptValue.of((double)d9);
             builder.val("result", scriptValue14);

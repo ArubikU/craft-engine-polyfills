@@ -19,8 +19,12 @@ import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
 import dev.arubik.craftengine.script.ScriptValue;
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 
+/*
+ * Uses jvm11+ dynamic constants - pseudocode provided - see https://www.benf.org/other/cfr/dynamic-constants.html
+ */
 public final class ExampleCron {
     private static volatile ScriptContext FILE_SCOPE;
 
@@ -59,7 +63,7 @@ public final class ExampleCron {
             } else {
                 object2 = ScriptValue.NULL;
             }
-            ScriptValue scriptValue3 = ScriptFormula.addPolymorphic((ScriptValue)object2, (ScriptValue)ScriptValue.of((double)1.0));
+            ScriptValue scriptValue3 = ScriptFormula.addPolymorphic((ScriptValue)object2, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", ExampleCron.class, 1.0)));
             if (scriptValue instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Server")) {
                 PolyClassServer polyClassServer = new PolyClassServer(object);
                 v1 = ScriptValue.of((boolean)polyClassServer.tm$0_set_typed(string, string2, scriptValue3));
