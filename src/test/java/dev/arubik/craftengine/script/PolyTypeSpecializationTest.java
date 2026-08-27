@@ -403,6 +403,25 @@ class PolyTypeSpecializationTest {
     }
 
     @Test
+    void exactlyOnePolyClassIsEverGeneratedPerType() {
+        // One PolyType => one generated class, for the life of the process. Classes are never
+        // unloaded, so minting a fresh one per registration (which an invalidate-on-mutation cache
+        // would do) leaks one per type per reload. Re-registering must re-point the EXISTING
+        // wrapper's handlers instead — which is exactly what makes the staleness tests above pass.
+        PolyType type = PolyTypeRegistry.define("SpecOneClassType")
+                .method("a", (o, args) -> ScriptValue.of("a1"));
+        String first = PolyClassGenerator.getOrGenerate("SpecOneClassType").internalName();
+
+        type.replaceMethod("a", (o, args) -> ScriptValue.of("a2"));
+        type.method("b", (o, args) -> ScriptValue.of("b"));
+        type.property("p", o -> ScriptValue.of(1.0));
+        PolyTypeRegistry.define("SpecOneClassType").method("a", (o, args) -> ScriptValue.of("a3"));
+
+        assertEquals(first, PolyClassGenerator.getOrGenerate("SpecOneClassType").internalName(),
+                "re-registering must reuse the same generated class, never mint another");
+    }
+
+    @Test
     void aPropertyReplacedAfterCompileIsAlsoPickedUp() {
         PolyType type = PolyTypeRegistry.define("SpecPropRefreshType")
                 .property("value", o -> ScriptValue.of(1.0));

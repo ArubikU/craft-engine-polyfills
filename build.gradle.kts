@@ -165,6 +165,11 @@ sourceSets.test {
 
 tasks.test {
     useJUnitPlatform()
+    // Debug aid, off unless asked for: -PpolyclassDump=<dir> makes PolyClassGenerator write every
+    // PolyClass it generates during the test run to that directory, for disassembly/decompilation.
+    (project.findProperty("polyclassDump") as String?)?.let {
+        systemProperty("craftengine.polyclass.dump", it)
+    }
 }
 
 tasks.processResources {

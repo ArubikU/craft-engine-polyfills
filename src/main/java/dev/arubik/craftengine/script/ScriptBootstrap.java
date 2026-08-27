@@ -123,6 +123,13 @@ public final class ScriptBootstrap {
 
         // ---- Global builtins ----------------------------------------------------
         ScriptBuiltins.init();
+
+        // Every type is registered by now, so scan the whole registry ONCE and emit exactly one
+        // generated PolyClass per PolyType (see PolyClassGenerator). Doing it here — rather than
+        // lazily, mid-compile — means each wrapper covers its type's FULL member set, so every
+        // member gets a real generated Java method instead of only those registered before the
+        // first script happened to compile against that type.
+        PolyClassGenerator.buildAll();
     }
 
     public static void reload() {

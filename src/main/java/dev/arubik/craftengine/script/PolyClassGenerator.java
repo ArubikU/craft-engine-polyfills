@@ -89,8 +89,34 @@ final class PolyClassGenerator {
      *  asked for a wrapper yet. Called by {@link ScriptBytecodeCompiler} before it consults us. */
     static void init() { /* triggers <clinit> */ }
 
+    /** The set of members a wrapper was generated for — {@code "m:"}/{@code "p:"}-prefixed so a
+     *  method and a property of the same name stay distinct. Recorded for diagnostics; a wrapper is
+     *  never regenerated, so this is not used to invalidate anything (see {@link #getOrGenerate}). */
+    private static java.util.Set<String> memberSetOf(PolyType type) {
+        java.util.Set<String> members = new java.util.HashSet<>();
+        for (String m : type.allMethodNames()) members.add("m:" + m);
+        for (String p : type.allPropertyNames()) members.add("p:" + p);
+        return members;
+    }
+
+    /**
+     * Generates the wrapper for EVERY currently-registered type in one pass — the "scan the whole
+     * registry once, emit exactly one PolyClass per PolyType" entry point. Call this after all
+     * registration is complete (end of {@code ScriptBootstrap.init()}/{@code reload()}) so every
+     * type's wrapper covers its FULL member set before any script compiles against it.
+     *
+     * <p>Idempotent: types already generated are skipped, never regenerated.
+     */
+    static void buildAll() {
+        for (String typeName : PolyTypeRegistry.typeNames()) {
+            getOrGenerate(typeName);
+        }
+    }
+
     private static void onRegistryMutation() {
-        CACHE.clear();
+        // Deliberately does NOT invalidate CACHE: exactly one class is ever generated per type name
+        // (see getOrGenerate). Mutations only re-point the existing wrappers' handler fields at
+        // whatever is registered now, which is what keeps already-compiled formulas correct.
         for (MethodHandle refresher : LIVE_REFRESHERS) {
             try {
                 refresher.invokeExact();
@@ -152,11 +178,22 @@ final class PolyClassGenerator {
     /** The generated wrapper for one {@link PolyType}. The three maps are keyed by SCRIPT-level
      *  member name and give the generated Java method to call. */
     record GeneratedPolyClass(String internalName, Map<String, TypedMemberRef> typedMethods,
-                               Map<String, String> untypedMethods, Map<String, String> properties) {}
+                               Map<String, String> untypedMethods, Map<String, String> properties,
+                               java.util.Set<String> memberSet) {}
 
-    /** The wrapper for {@code typeName}, generating it on first use, or null if the type isn't
-     *  registered or generation failed — either way the caller must fall back to fully generic
-     *  dispatch, never to a silent shortcut. */
+    /**
+     * The wrapper for {@code typeName}, generating it on first use, or null if the type isn't
+     * registered or generation failed — either way the caller must fall back to fully generic
+     * dispatch, never to a silent shortcut.
+     *
+     * <p>EXACTLY ONE class is ever generated per type name, for the whole life of the process. It
+     * is never invalidated or regenerated: a later re-registration re-points the existing wrapper's
+     * handler fields (see {@link #onRegistryMutation}) rather than minting a new class, since
+     * classes are never unloaded and a fresh one per mutation would leak. A member added AFTER a
+     * wrapper was built simply has no generated method, so call sites for it use the ordinary
+     * {@code memberCall} path — correct, just unspecialized. {@link #buildAll()} exists so that
+     * normally never happens: it builds every type's wrapper once registration is complete.
+     */
     static GeneratedPolyClass getOrGenerate(String typeName) {
         GeneratedPolyClass cached = CACHE.get(typeName);
         if (cached != null) return cached;
@@ -283,7 +320,9 @@ final class PolyClassGenerator {
             factory.visitEnd();
 
             cw.visitEnd();
-            Class<?> defined = MethodHandles.lookup().defineClass(cw.toByteArray());
+            byte[] bytes = cw.toByteArray();
+            dumpIfRequested(className, bytes);
+            Class<?> defined = MethodHandles.lookup().defineClass(bytes);
 
             // Resolve every handler field NOW, and keep a handle so every future registry mutation
             // can re-resolve them (see this class's own doc — the whole staleness story).
@@ -296,7 +335,7 @@ final class PolyClassGenerator {
                     + " (" + typedRefs.size() + " typed, " + untypedRefs.size() + " untyped, "
                     + propRefs.size() + " properties)");
             return new GeneratedPolyClass(className, Map.copyOf(typedRefs), Map.copyOf(untypedRefs),
-                    Map.copyOf(propRefs));
+                    Map.copyOf(propRefs), memberSetOf(type));
         } catch (Throwable t) {
             LOG.log(Level.WARNING, t, () -> "[CEPolyfills] [JIT] failed to generate PolyClass for " + typeName
                     + " — falling back to generic dispatch");
@@ -467,6 +506,23 @@ final class PolyClassGenerator {
         mv.visitInsn(ARETURN);
         mv.visitMaxs(0, 0);
         mv.visitEnd();
+    }
+
+    /** Debug aid: with {@code -Dcraftengine.polyclass.dump=<dir>}, writes every generated class to
+     *  that directory so it can be disassembled/decompiled and read as ordinary Java. Off (and
+     *  free) unless the property is set — this is for inspecting what the JIT built, not a
+     *  production path. */
+    private static void dumpIfRequested(String internalName, byte[] bytes) {
+        String dir = System.getProperty("craftengine.polyclass.dump");
+        if (dir == null || dir.isBlank()) return;
+        try {
+            java.nio.file.Path out = java.nio.file.Path.of(dir);
+            java.nio.file.Files.createDirectories(out);
+            String simple = internalName.substring(internalName.lastIndexOf('/') + 1);
+            java.nio.file.Files.write(out.resolve(simple + ".class"), bytes);
+        } catch (Exception e) {
+            LOG.log(Level.WARNING, e, () -> "[CEPolyfills] [JIT] could not dump " + internalName);
+        }
     }
 
     private static void pushInt(MethodVisitor mv, int i) {
