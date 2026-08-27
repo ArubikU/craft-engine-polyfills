@@ -3,6 +3,7 @@
  * 
  * Could not load the following classes:
  *  dev.arubik.craftengine.script.PolyClass
+ *  dev.arubik.craftengine.script.ScriptContext
  *  dev.arubik.craftengine.script.ScriptValue
  *  dev.arubik.craftengine.script.ScriptValue$Obj
  */
@@ -10,6 +11,7 @@ package dev.arubik.craftengine.script;
 
 import dev.arubik.craftengine.script.PolyClass;
 import dev.arubik.craftengine.script.PolyClassBlockPlaceEvent;
+import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptValue;
 
 public class PolyClassBlockMultiPlaceEvent
@@ -32,5 +34,9 @@ extends PolyClassBlockPlaceEvent {
             return new PolyClassBlockMultiPlaceEvent(object);
         }
         return null;
+    }
+
+    public static PolyClassBlockMultiPlaceEvent ofVar(ScriptContext scriptContext, String string) {
+        return PolyClassBlockMultiPlaceEvent.ofGuarded(scriptContext.getClassOrVar(string));
     }
 }

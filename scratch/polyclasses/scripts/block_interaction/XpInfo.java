@@ -35,10 +35,10 @@ public final class XpInfo {
     }
 
     public static ScriptValue _tank(ScriptContext.Builder builder) {
-        PolyClassMachine_v2 polyClassMachine_v2;
+        ScriptValue scriptValue;
         ScriptContext scriptContext = builder.peek();
-        ScriptValue scriptValue = scriptContext.getClassOrVar("Machine");
-        ScriptValue scriptValue2 = scriptValue != ScriptValue.NULL ? ((polyClassMachine_v2 = PolyClassMachine_v2.ofGuarded((ScriptValue)scriptValue)) != null ? polyClassMachine_v2.pg$178_fluid_tanks() : PolyDispatch.bootstrapGet("memberGet", "fluid_tanks", (ScriptValue)scriptValue, (ScriptContext)scriptContext)) : ScriptValue.NULL;
+        PolyClassMachine_v2 polyClassMachine_v2 = PolyClassMachine_v2.ofVar((ScriptContext)scriptContext, (String)"Machine");
+        ScriptValue scriptValue2 = polyClassMachine_v2 != null ? polyClassMachine_v2.pg$178_fluid_tanks() : ((scriptValue = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "fluid_tanks", (ScriptValue)scriptValue, (ScriptContext)scriptContext) : ScriptValue.NULL);
         builder.val("tanks", scriptValue2);
         ScriptValue scriptValue3 = scriptContext.getClassOrVar("tanks");
         Object object = scriptValue3 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "length", (ScriptValue)scriptValue3, (ScriptContext)scriptContext) : ScriptValue.NULL;

@@ -5,6 +5,7 @@
  *  dev.arubik.craftengine.script.PolyClass
  *  dev.arubik.craftengine.script.PolyClassRuntime
  *  dev.arubik.craftengine.script.PolyType$PropertyHandler
+ *  dev.arubik.craftengine.script.ScriptContext
  *  dev.arubik.craftengine.script.ScriptValue
  *  dev.arubik.craftengine.script.ScriptValue$Obj
  */
@@ -14,6 +15,7 @@ import dev.arubik.craftengine.script.PolyClass;
 import dev.arubik.craftengine.script.PolyClassEvent;
 import dev.arubik.craftengine.script.PolyClassRuntime;
 import dev.arubik.craftengine.script.PolyType;
+import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptValue;
 
 public class PolyClassInventoryCloseEvent
@@ -46,5 +48,9 @@ extends PolyClassEvent {
             return new PolyClassInventoryCloseEvent(object);
         }
         return null;
+    }
+
+    public static PolyClassInventoryCloseEvent ofVar(ScriptContext scriptContext, String string) {
+        return PolyClassInventoryCloseEvent.ofGuarded(scriptContext.getClassOrVar(string));
     }
 }

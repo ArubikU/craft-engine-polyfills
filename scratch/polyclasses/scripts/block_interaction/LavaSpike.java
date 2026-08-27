@@ -79,8 +79,8 @@ public final class LavaSpike {
                     }
                     break block21;
                 }
-                var16_16 = var1_1.getClassOrVar("Machine");
-                var18_18 = var16_16 != ScriptValue.NULL ? ((var17_17 = PolyClassMachine_v2.ofGuarded((ScriptValue)var16_16)) != null ? var17_17.pg$210_owner_uuid() : PolyDispatch.bootstrapGet("memberGet", "owner_uuid", (ScriptValue)var16_16, (ScriptContext)var1_1)) : ScriptValue.NULL;
+                var16_16 = PolyClassMachine_v2.ofVar((ScriptContext)var1_1, (String)"Machine");
+                var18_18 = var16_16 != null ? var16_16.pg$210_owner_uuid() : ((var17_17 = var1_1.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "owner_uuid", (ScriptValue)var17_17, (ScriptContext)var1_1) : ScriptValue.NULL);
                 var0.val("owner_id", var18_18);
                 var19_19 = var1_1.getClassOrVar("Machine");
                 if (var19_19 != ScriptValue.NULL) {

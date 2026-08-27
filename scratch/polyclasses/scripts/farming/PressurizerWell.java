@@ -33,10 +33,10 @@ public final class PressurizerWell {
 
     public static void run(ScriptContext.Builder builder) {
         Object object;
-        PolyClassMultiBlock polyClassMultiBlock;
+        ScriptValue scriptValue;
         ScriptContext scriptContext = builder.peek();
-        ScriptValue scriptValue = scriptContext.getClassOrVar("MultiBlock");
-        ScriptValue scriptValue2 = scriptValue != ScriptValue.NULL ? ((polyClassMultiBlock = PolyClassMultiBlock.ofGuarded((ScriptValue)scriptValue)) != null ? polyClassMultiBlock.pg$22_formed() : PolyDispatch.bootstrapGet("memberGet", "formed", (ScriptValue)scriptValue, (ScriptContext)scriptContext)) : ScriptValue.NULL;
+        PolyClassMultiBlock polyClassMultiBlock = PolyClassMultiBlock.ofVar((ScriptContext)scriptContext, (String)"MultiBlock");
+        ScriptValue scriptValue2 = polyClassMultiBlock != null ? polyClassMultiBlock.pg$22_formed() : ((scriptValue = scriptContext.getClassOrVar("MultiBlock")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "formed", (ScriptValue)scriptValue, (ScriptContext)scriptContext) : ScriptValue.NULL);
         builder.val("formed", scriptValue2);
         double d = scriptValue2.asBool() && scriptContext.getBool("has_fuel") ? 1.0 : 0.0;
         ScriptValue scriptValue3 = ScriptValue.of((double)d);

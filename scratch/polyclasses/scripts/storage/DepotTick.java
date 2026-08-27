@@ -66,13 +66,13 @@ public final class DepotTick {
                 ScriptValue.Obj obj;
                 Object object3;
                 ScriptValue scriptValue3;
-                PolyClassMachine_v2 polyClassMachine_v2;
+                ScriptValue scriptValue4;
                 builder.val("entity", scriptValue2);
                 ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(Utils.fileScope()).copyFrom(scriptContext);
                 builder2.val("entity", scriptContext.getClassOrVar("entity"));
                 if (!Utils.isRestingItem(builder2).asBool()) continue;
-                ScriptValue scriptValue4 = scriptContext.getClassOrVar("Machine");
-                ScriptValue scriptValue5 = scriptValue4 != ScriptValue.NULL ? ((polyClassMachine_v2 = PolyClassMachine_v2.ofGuarded((ScriptValue)scriptValue4)) != null ? polyClassMachine_v2.pg$120_container() : PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)scriptValue4, (ScriptContext)scriptContext)) : ScriptValue.NULL;
+                PolyClassMachine_v2 polyClassMachine_v2 = PolyClassMachine_v2.ofVar((ScriptContext)scriptContext, (String)"Machine");
+                ScriptValue scriptValue5 = polyClassMachine_v2 != null ? polyClassMachine_v2.pg$120_container() : ((scriptValue4 = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)scriptValue4, (ScriptContext)scriptContext) : ScriptValue.NULL);
                 ScriptValue scriptValue6 = scriptContext.getClassOrVar("entity");
                 Object object4 = scriptValue3 = scriptValue6 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "item", (ScriptValue)scriptValue6, (ScriptContext)scriptContext) : ScriptValue.NULL;
                 if (scriptValue5 instanceof ScriptValue.Obj && (object3 = (obj = (ScriptValue.Obj)scriptValue5).instance()) != null && !(object3 instanceof PolyClass) && obj.typeName().equals("Container")) {

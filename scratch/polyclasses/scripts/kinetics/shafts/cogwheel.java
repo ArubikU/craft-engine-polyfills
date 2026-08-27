@@ -109,10 +109,10 @@ public final class Cogwheel {
     }
 
     public static ScriptValue _perpOffsets(ScriptContext.Builder builder) {
-        PolyClassMachine_v2 polyClassMachine_v2;
+        ScriptValue scriptValue;
         ScriptContext scriptContext = builder.peek();
-        ScriptValue scriptValue = scriptContext.getClassOrVar("Machine");
-        ScriptValue scriptValue2 = scriptValue != ScriptValue.NULL ? ((polyClassMachine_v2 = PolyClassMachine_v2.ofGuarded((ScriptValue)scriptValue)) != null ? polyClassMachine_v2.pg$127_axis() : PolyDispatch.bootstrapGet("memberGet", "axis", (ScriptValue)scriptValue, (ScriptContext)scriptContext)) : ScriptValue.NULL;
+        PolyClassMachine_v2 polyClassMachine_v2 = PolyClassMachine_v2.ofVar((ScriptContext)scriptContext, (String)"Machine");
+        ScriptValue scriptValue2 = polyClassMachine_v2 != null ? polyClassMachine_v2.pg$127_axis() : ((scriptValue = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "axis", (ScriptValue)scriptValue, (ScriptContext)scriptContext) : ScriptValue.NULL);
         builder.val("a", scriptValue2);
         if (ScriptFormula.valuesEqualStr((ScriptValue)scriptValue2, (String)"y")) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
@@ -187,10 +187,10 @@ public final class Cogwheel {
     }
 
     public static ScriptValue _planeDiagOffsets(ScriptContext.Builder builder) {
-        PolyClassMachine_v2 polyClassMachine_v2;
+        ScriptValue scriptValue;
         ScriptContext scriptContext = builder.peek();
-        ScriptValue scriptValue = scriptContext.getClassOrVar("Machine");
-        ScriptValue scriptValue2 = scriptValue != ScriptValue.NULL ? ((polyClassMachine_v2 = PolyClassMachine_v2.ofGuarded((ScriptValue)scriptValue)) != null ? polyClassMachine_v2.pg$127_axis() : PolyDispatch.bootstrapGet("memberGet", "axis", (ScriptValue)scriptValue, (ScriptContext)scriptContext)) : ScriptValue.NULL;
+        PolyClassMachine_v2 polyClassMachine_v2 = PolyClassMachine_v2.ofVar((ScriptContext)scriptContext, (String)"Machine");
+        ScriptValue scriptValue2 = polyClassMachine_v2 != null ? polyClassMachine_v2.pg$127_axis() : ((scriptValue = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "axis", (ScriptValue)scriptValue, (ScriptContext)scriptContext) : ScriptValue.NULL);
         builder.val("a", scriptValue2);
         if (ScriptFormula.valuesEqualStr((ScriptValue)scriptValue2, (String)"y")) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
@@ -265,10 +265,10 @@ public final class Cogwheel {
     }
 
     public static ScriptValue _crossDiagOffsets(ScriptContext.Builder builder) {
-        PolyClassMachine_v2 polyClassMachine_v2;
+        ScriptValue scriptValue;
         ScriptContext scriptContext = builder.peek();
-        ScriptValue scriptValue = scriptContext.getClassOrVar("Machine");
-        ScriptValue scriptValue2 = scriptValue != ScriptValue.NULL ? ((polyClassMachine_v2 = PolyClassMachine_v2.ofGuarded((ScriptValue)scriptValue)) != null ? polyClassMachine_v2.pg$127_axis() : PolyDispatch.bootstrapGet("memberGet", "axis", (ScriptValue)scriptValue, (ScriptContext)scriptContext)) : ScriptValue.NULL;
+        PolyClassMachine_v2 polyClassMachine_v2 = PolyClassMachine_v2.ofVar((ScriptContext)scriptContext, (String)"Machine");
+        ScriptValue scriptValue2 = polyClassMachine_v2 != null ? polyClassMachine_v2.pg$127_axis() : ((scriptValue = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "axis", (ScriptValue)scriptValue, (ScriptContext)scriptContext) : ScriptValue.NULL);
         builder.val("a", scriptValue2);
         if (ScriptFormula.valuesEqualStr((ScriptValue)scriptValue2, (String)"y")) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
@@ -409,25 +409,25 @@ public final class Cogwheel {
         List list2;
         ScriptContext.Builder builder4;
         List list3;
-        PolyClassMachine_v2 polyClassMachine_v2;
-        PolyClassMachine_v2 polyClassMachine_v22;
+        ScriptValue scriptValue;
+        ScriptValue scriptValue2;
         ScriptContext scriptContext = builder.peek();
-        ScriptValue scriptValue = scriptContext.getClassOrVar("Machine");
-        ScriptValue scriptValue2 = scriptValue != ScriptValue.NULL ? ((polyClassMachine_v22 = PolyClassMachine_v2.ofGuarded((ScriptValue)scriptValue)) != null ? polyClassMachine_v22.pg$127_axis() : PolyDispatch.bootstrapGet("memberGet", "axis", (ScriptValue)scriptValue, (ScriptContext)scriptContext)) : ScriptValue.NULL;
-        builder.val("axis", scriptValue2);
-        if (ScriptFormula.valuesEqual((ScriptValue)scriptValue2, (ScriptValue)scriptContext.getClassOrVar("null"))) {
+        PolyClassMachine_v2 polyClassMachine_v2 = PolyClassMachine_v2.ofVar((ScriptContext)scriptContext, (String)"Machine");
+        ScriptValue scriptValue3 = polyClassMachine_v2 != null ? polyClassMachine_v2.pg$127_axis() : ((scriptValue2 = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "axis", (ScriptValue)scriptValue2, (ScriptContext)scriptContext) : ScriptValue.NULL);
+        builder.val("axis", scriptValue3);
+        if (ScriptFormula.valuesEqual((ScriptValue)scriptValue3, (ScriptValue)scriptContext.getClassOrVar("null"))) {
             return ScriptValue.NULL;
         }
-        ScriptValue scriptValue3 = scriptContext.getClassOrVar("Machine");
-        if (scriptValue3 != ScriptValue.NULL) {
+        ScriptValue scriptValue4 = scriptContext.getClassOrVar("Machine");
+        if (scriptValue4 != ScriptValue.NULL) {
             ScriptValue.Obj obj;
             Object object;
-            ScriptValue scriptValue4 = scriptContext.getClassOrVar("rpm");
-            if (scriptValue3 instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue3).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                PolyClassMachine_v2 polyClassMachine_v23 = new PolyClassMachine_v2(object);
-                v0 = ScriptValue.of((boolean)polyClassMachine_v23.tm$106_set_rpm_output(scriptValue4.asNum()));
+            ScriptValue scriptValue5 = scriptContext.getClassOrVar("rpm");
+            if (scriptValue4 instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue4).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Machine")) {
+                PolyClassMachine_v2 polyClassMachine_v22 = new PolyClassMachine_v2(object);
+                v0 = ScriptValue.of((boolean)polyClassMachine_v22.tm$106_set_rpm_output(scriptValue5.asNum()));
             } else {
-                v0 = PolyDispatch.bootstrapCall("memberCall", "set_rpm_output", (ScriptValue)scriptValue3, (ScriptValue)scriptValue4, (ScriptContext)scriptContext);
+                v0 = PolyDispatch.bootstrapCall("memberCall", "set_rpm_output", (ScriptValue)scriptValue4, (ScriptValue)scriptValue5, (ScriptContext)scriptContext);
             }
         } else {
             v0 = ScriptValue.NULL;
@@ -435,8 +435,8 @@ public final class Cogwheel {
         if (ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("rpm"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Cogwheel.class, 0.0)))) {
             return ScriptValue.NULL;
         }
-        ScriptValue scriptValue5 = scriptContext.getClassOrVar("Machine");
-        ScriptValue scriptValue6 = scriptValue5 != ScriptValue.NULL ? ((polyClassMachine_v2 = PolyClassMachine_v2.ofGuarded((ScriptValue)scriptValue5)) != null ? polyClassMachine_v2.pg$183_rpm_network() : PolyDispatch.bootstrapGet("memberGet", "rpm_network", (ScriptValue)scriptValue5, (ScriptContext)scriptContext)) : ScriptValue.NULL;
+        PolyClassMachine_v2 polyClassMachine_v23 = PolyClassMachine_v2.ofVar((ScriptContext)scriptContext, (String)"Machine");
+        ScriptValue scriptValue6 = polyClassMachine_v23 != null ? polyClassMachine_v23.pg$183_rpm_network() : ((scriptValue = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "rpm_network", (ScriptValue)scriptValue, (ScriptContext)scriptContext) : ScriptValue.NULL);
         builder.val("net", scriptValue6);
         if (scriptContext.getBool("is_large") ^ true && (list3 = ScriptProgram.elementsOf((ScriptValue)Cogwheel._perpOffsets(builder4 = ScriptContext.builder().copyFrom(scriptContext)))) != null) {
             for (ScriptValue scriptValue7 : list3) {
@@ -447,7 +447,7 @@ public final class Cogwheel {
                 ScriptValue scriptValue8 = Cogwheel._block(builder5);
                 builder.val("nb", scriptValue8);
                 ScriptValue scriptValue9 = scriptContext.getClassOrVar("nb");
-                if (ScriptFormula.valuesEqual((ScriptValue)(scriptValue9 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "property", (ScriptValue)scriptValue9, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Cogwheel.class, "axis")), (ScriptContext)scriptContext) : ScriptValue.NULL), (ScriptValue)scriptValue2) ^ true) continue;
+                if (ScriptFormula.valuesEqual((ScriptValue)(scriptValue9 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "property", (ScriptValue)scriptValue9, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Cogwheel.class, "axis")), (ScriptContext)scriptContext) : ScriptValue.NULL), (ScriptValue)scriptValue3) ^ true) continue;
                 ScriptContext.Builder builder6 = ScriptContext.builder().copyFrom(scriptContext);
                 ScriptValue scriptValue10 = scriptContext.getClassOrVar("nb");
                 builder6.val("id", (ScriptValue)(scriptValue10 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "id", (ScriptValue)scriptValue10, (ScriptContext)scriptContext) : ScriptValue.NULL));
@@ -479,7 +479,7 @@ public final class Cogwheel {
                 ScriptValue scriptValue13 = Cogwheel._block(builder7);
                 builder.val("nb", scriptValue13);
                 ScriptValue scriptValue14 = scriptContext.getClassOrVar("nb");
-                if (ScriptFormula.valuesEqual((ScriptValue)(scriptValue14 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "property", (ScriptValue)scriptValue14, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Cogwheel.class, "axis")), (ScriptContext)scriptContext) : ScriptValue.NULL), (ScriptValue)scriptValue2) ^ true) continue;
+                if (ScriptFormula.valuesEqual((ScriptValue)(scriptValue14 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "property", (ScriptValue)scriptValue14, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Cogwheel.class, "axis")), (ScriptContext)scriptContext) : ScriptValue.NULL), (ScriptValue)scriptValue3) ^ true) continue;
                 ScriptValue scriptValue15 = scriptContext.getClassOrVar("nb");
                 ScriptValue scriptValue16 = scriptValue15 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "id", (ScriptValue)scriptValue15, (ScriptContext)scriptContext) : ScriptValue.NULL;
                 builder.val("nid", scriptValue16);
@@ -538,14 +538,14 @@ public final class Cogwheel {
                 ScriptValue scriptValue21 = scriptContext.getClassOrVar("nb");
                 ScriptValue scriptValue22 = scriptValue21 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "property", (ScriptValue)scriptValue21, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Cogwheel.class, "axis")), (ScriptContext)scriptContext) : ScriptValue.NULL;
                 builder.val("their_axis", scriptValue22);
-                if (ScriptFormula.valuesEqual((ScriptValue)scriptValue22, (ScriptValue)scriptContext.getClassOrVar("null")) || ScriptFormula.valuesEqual((ScriptValue)scriptValue22, (ScriptValue)scriptValue2)) continue;
+                if (ScriptFormula.valuesEqual((ScriptValue)scriptValue22, (ScriptValue)scriptContext.getClassOrVar("null")) || ScriptFormula.valuesEqual((ScriptValue)scriptValue22, (ScriptValue)scriptValue3)) continue;
                 ScriptContext.Builder builder11 = ScriptContext.builder().copyFrom(scriptContext);
                 ScriptValue scriptValue23 = scriptContext.getClassOrVar("nb");
                 builder11.val("id", (ScriptValue)(scriptValue23 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "id", (ScriptValue)scriptValue23, (ScriptContext)scriptContext) : ScriptValue.NULL));
                 if (Cogwheel._isLarge(builder11).asBool() ^ true) continue;
                 ScriptContext.Builder builder12 = ScriptContext.builder().copyFrom(scriptContext);
                 builder12.val("o", scriptContext.getClassOrVar("o"));
-                builder12.val("axis", scriptValue2);
+                builder12.val("axis", scriptValue3);
                 ScriptValue scriptValue24 = Cogwheel._comp(builder12);
                 builder.val("mine", scriptValue24);
                 ScriptContext.Builder builder13 = ScriptContext.builder().copyFrom(scriptContext);

@@ -8,6 +8,7 @@
  *  dev.arubik.craftengine.script.PolyType$TypeCodec
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler1
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler2
+ *  dev.arubik.craftengine.script.ScriptContext
  *  dev.arubik.craftengine.script.ScriptValue
  *  dev.arubik.craftengine.script.ScriptValue$Obj
  */
@@ -16,6 +17,7 @@ package dev.arubik.craftengine.script;
 import dev.arubik.craftengine.script.PolyClass;
 import dev.arubik.craftengine.script.PolyClassRuntime;
 import dev.arubik.craftengine.script.PolyType;
+import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptValue;
 import java.util.List;
 
@@ -114,5 +116,9 @@ public class PolyClassGlue {
             return new PolyClassGlue(object);
         }
         return null;
+    }
+
+    public static PolyClassGlue ofVar(ScriptContext scriptContext, String string) {
+        return PolyClassGlue.ofGuarded(scriptContext.getClassOrVar(string));
     }
 }

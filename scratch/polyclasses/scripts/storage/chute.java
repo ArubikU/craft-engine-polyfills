@@ -2,7 +2,7 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  dev.arubik.craftengine.script.PolyClassPlayer_v2
+ *  dev.arubik.craftengine.script.PolyClassPlayer
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
  *  dev.arubik.craftengine.script.ScriptContext$Builder
@@ -13,7 +13,7 @@
  */
 package dev.arubik.craftengine.script.gen.storage;
 
-import dev.arubik.craftengine.script.PolyClassPlayer_v2;
+import dev.arubik.craftengine.script.PolyClassPlayer;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
@@ -43,15 +43,14 @@ public final class Chute {
     public static ScriptValue onRightClick(ScriptContext.Builder var0) {
         block3: {
             var1_1 = var0.peek();
-            var2_2 = var1_1.getClassOrVar("Player");
-            v0 = var2_2 != ScriptValue.NULL ? ((var3_3 = PolyClassPlayer_v2.ofGuarded((ScriptValue)var2_2)) != null ? var3_3.tg$49_is_sneaking() : PolyDispatch.bootstrapGet("memberGet", "is_sneaking", (ScriptValue)var2_2, (ScriptContext)var1_1).asBool()) : ScriptValue.NULL.asBool();
-            if (v0) {
+            var2_2 = PolyClassPlayer.ofVar((ScriptContext)var1_1, (String)"Player");
+            if (var2_2 != null ? var2_2.tg$49_is_sneaking() : ((var3_3 = var1_1.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "is_sneaking", (ScriptValue)var3_3, (ScriptContext)var1_1).asBool() : ScriptValue.NULL.asBool())) {
                 var4_4 = ScriptContext.builder().copyFrom(ChuteUtils.fileScope()).copyFrom(var1_1);
                 ChuteUtils._chuteCycleFacing((ScriptContext.Builder)var4_4);
                 return ScriptValue.NULL;
             }
-            var5_5 = var1_1.getClassOrVar("Player");
-            var7_7 = var5_5 != ScriptValue.NULL ? ((var6_6 = PolyClassPlayer_v2.ofGuarded((ScriptValue)var5_5)) != null ? var6_6.pg$48_main_hand() : PolyDispatch.bootstrapGet("memberGet", "main_hand", (ScriptValue)var5_5, (ScriptContext)var1_1)) : ScriptValue.NULL;
+            var5_5 = PolyClassPlayer.ofVar((ScriptContext)var1_1, (String)"Player");
+            var7_7 = var5_5 != null ? var5_5.pg$48_main_hand() : ((var6_6 = var1_1.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "main_hand", (ScriptValue)var6_6, (ScriptContext)var1_1) : ScriptValue.NULL);
             var0.val("held", var7_7);
             var8_8 = new ArrayList<ScriptValue>();
             var8_8.add(var7_7);
@@ -60,14 +59,14 @@ public final class Chute {
             var10_10 = var1_1.getClassOrVar("held");
             var9_9.val("id", (ScriptValue)(var10_10 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "id", (ScriptValue)var10_10, (ScriptContext)var1_1) : ScriptValue.NULL));
             if (ChuteUtils._isGlassItem((ScriptContext.Builder)var9_9).asBool()) {
-                v1 = true;
+                v0 = true;
             } else lbl-1000:
             // 2 sources
 
             {
-                v1 = false;
+                v0 = false;
             }
-            if (!v1) break block3;
+            if (!v0) break block3;
             var11_11 = ScriptContext.builder().copyFrom(ChuteUtils.fileScope()).copyFrom(var1_1);
             ChuteUtils._chuteToggleWindow((ScriptContext.Builder)var11_11);
         }

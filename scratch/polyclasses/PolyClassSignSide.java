@@ -6,6 +6,7 @@
  *  dev.arubik.craftengine.script.PolyClassRuntime
  *  dev.arubik.craftengine.script.PolyType$PropertyHandler
  *  dev.arubik.craftengine.script.PolyType$TypedPropertyHandler
+ *  dev.arubik.craftengine.script.ScriptContext
  *  dev.arubik.craftengine.script.ScriptValue
  *  dev.arubik.craftengine.script.ScriptValue$Obj
  */
@@ -14,6 +15,7 @@ package dev.arubik.craftengine.script;
 import dev.arubik.craftengine.script.PolyClass;
 import dev.arubik.craftengine.script.PolyClassRuntime;
 import dev.arubik.craftengine.script.PolyType;
+import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptValue;
 
 public class PolyClassSignSide {
@@ -82,5 +84,9 @@ public class PolyClassSignSide {
             return new PolyClassSignSide(object);
         }
         return null;
+    }
+
+    public static PolyClassSignSide ofVar(ScriptContext scriptContext, String string) {
+        return PolyClassSignSide.ofGuarded(scriptContext.getClassOrVar(string));
     }
 }

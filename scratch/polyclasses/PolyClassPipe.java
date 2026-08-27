@@ -6,6 +6,7 @@
  *  dev.arubik.craftengine.script.PolyClassRuntime
  *  dev.arubik.craftengine.script.PolyType$PropertyHandler
  *  dev.arubik.craftengine.script.PolyType$TypedPropertyHandler
+ *  dev.arubik.craftengine.script.ScriptContext
  *  dev.arubik.craftengine.script.ScriptValue
  *  dev.arubik.craftengine.script.ScriptValue$Obj
  */
@@ -14,6 +15,7 @@ package dev.arubik.craftengine.script;
 import dev.arubik.craftengine.script.PolyClass;
 import dev.arubik.craftengine.script.PolyClassRuntime;
 import dev.arubik.craftengine.script.PolyType;
+import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptValue;
 
 public class PolyClassPipe {
@@ -163,5 +165,9 @@ public class PolyClassPipe {
             return new PolyClassPipe(object);
         }
         return null;
+    }
+
+    public static PolyClassPipe ofVar(ScriptContext scriptContext, String string) {
+        return PolyClassPipe.ofGuarded(scriptContext.getClassOrVar(string));
     }
 }

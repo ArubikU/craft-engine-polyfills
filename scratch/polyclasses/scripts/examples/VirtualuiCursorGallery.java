@@ -3,7 +3,7 @@
  * 
  * Could not load the following classes:
  *  dev.arubik.craftengine.script.PolyClass
- *  dev.arubik.craftengine.script.PolyClassPlayer_v2
+ *  dev.arubik.craftengine.script.PolyClassPlayer
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
  *  dev.arubik.craftengine.script.ScriptContext$Builder
@@ -13,7 +13,7 @@
 package dev.arubik.craftengine.script.gen.examples;
 
 import dev.arubik.craftengine.script.PolyClass;
-import dev.arubik.craftengine.script.PolyClassPlayer_v2;
+import dev.arubik.craftengine.script.PolyClassPlayer;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptValue;
@@ -43,8 +43,8 @@ public final class VirtualuiCursorGallery {
                 Object object;
                 String string = "<red>You already have a VirtualUI open - <white>/virtualui close</white> first.";
                 if (scriptValue2 instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue2).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Player")) {
-                    PolyClassPlayer_v2 polyClassPlayer_v2 = new PolyClassPlayer_v2(object);
-                    v0 = ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(string));
+                    PolyClassPlayer polyClassPlayer = new PolyClassPlayer(object);
+                    v0 = ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string));
                 } else {
                     v0 = PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
                 }
@@ -121,8 +121,8 @@ public final class VirtualuiCursorGallery {
             Object object29;
             String string = "<aqua>Cursor gallery opened. <white>/virtualui close</white> to exit.";
             if (scriptValue35 instanceof ScriptValue.Obj && (object29 = (obj = (ScriptValue.Obj)scriptValue35).instance()) != null && !(object29 instanceof PolyClass) && obj.typeName().equals("Player")) {
-                PolyClassPlayer_v2 polyClassPlayer_v2 = new PolyClassPlayer_v2(object29);
-                v29 = ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(string));
+                PolyClassPlayer polyClassPlayer = new PolyClassPlayer(object29);
+                v29 = ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string));
             } else {
                 v29 = PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue35, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
             }
@@ -140,8 +140,8 @@ public final class VirtualuiCursorGallery {
             Object object;
             String string = "<gray>Cursor gallery closed.";
             if (scriptValue instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Player")) {
-                PolyClassPlayer_v2 polyClassPlayer_v2 = new PolyClassPlayer_v2(object);
-                v0 = ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(string));
+                PolyClassPlayer polyClassPlayer = new PolyClassPlayer(object);
+                v0 = ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string));
             } else {
                 v0 = PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
             }
@@ -159,8 +159,8 @@ public final class VirtualuiCursorGallery {
             Object object;
             String string = "<yellow>Scrollbar armed - drag arms the 'hold' cursor automatically.";
             if (scriptValue instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Player")) {
-                PolyClassPlayer_v2 polyClassPlayer_v2 = new PolyClassPlayer_v2(object);
-                v0 = ScriptValue.of((boolean)polyClassPlayer_v2.tm$36_send_actionbar(string));
+                PolyClassPlayer polyClassPlayer = new PolyClassPlayer(object);
+                v0 = ScriptValue.of((boolean)polyClassPlayer.tm$36_send_actionbar(string));
             } else {
                 v0 = PolyDispatch.bootstrapCall("memberCall", "send_actionbar", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
             }
@@ -178,8 +178,8 @@ public final class VirtualuiCursorGallery {
             Object object;
             String string = "<gray>Scrollbar released.";
             if (scriptValue instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Player")) {
-                PolyClassPlayer_v2 polyClassPlayer_v2 = new PolyClassPlayer_v2(object);
-                v0 = ScriptValue.of((boolean)polyClassPlayer_v2.tm$36_send_actionbar(string));
+                PolyClassPlayer polyClassPlayer = new PolyClassPlayer(object);
+                v0 = ScriptValue.of((boolean)polyClassPlayer.tm$36_send_actionbar(string));
             } else {
                 v0 = PolyDispatch.bootstrapCall("memberCall", "send_actionbar", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
             }

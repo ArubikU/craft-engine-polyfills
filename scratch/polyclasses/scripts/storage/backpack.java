@@ -3,7 +3,7 @@
  * 
  * Could not load the following classes:
  *  dev.arubik.craftengine.script.PolyClass
- *  dev.arubik.craftengine.script.PolyClassPlayer_v2
+ *  dev.arubik.craftengine.script.PolyClassPlayer
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
  *  dev.arubik.craftengine.script.ScriptContext$Builder
@@ -13,7 +13,7 @@
 package dev.arubik.craftengine.script.gen.storage;
 
 import dev.arubik.craftengine.script.PolyClass;
-import dev.arubik.craftengine.script.PolyClassPlayer_v2;
+import dev.arubik.craftengine.script.PolyClassPlayer;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptValue;
@@ -41,8 +41,8 @@ public final class Backpack {
             Object object;
             String string = "<green>Backpack unpacked into a storage block.";
             if (scriptValue instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Player")) {
-                PolyClassPlayer_v2 polyClassPlayer_v2 = new PolyClassPlayer_v2(object);
-                v0 = ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(string));
+                PolyClassPlayer polyClassPlayer = new PolyClassPlayer(object);
+                v0 = ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string));
             } else {
                 v0 = PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
             }
@@ -63,8 +63,8 @@ public final class Backpack {
                 Object object2;
                 String string = "<red>That won't fit - enchanted items stay out of the backpack.";
                 if (scriptValue2 instanceof ScriptValue.Obj && (object2 = (obj = (ScriptValue.Obj)scriptValue2).instance()) != null && !(object2 instanceof PolyClass) && obj.typeName().equals("Player")) {
-                    PolyClassPlayer_v2 polyClassPlayer_v2 = new PolyClassPlayer_v2(object2);
-                    v1 = ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(string));
+                    PolyClassPlayer polyClassPlayer = new PolyClassPlayer(object2);
+                    v1 = ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string));
                 } else {
                     v1 = PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
                 }

@@ -157,6 +157,7 @@ final class PolyClassGenerator {
     private static final String METHOD_HANDLER = "dev/arubik/craftengine/script/PolyType$MethodHandler";
     private static final String PROPERTY_HANDLER = "dev/arubik/craftengine/script/PolyType$PropertyHandler";
     private static final String TYPE_CODEC = "dev/arubik/craftengine/script/PolyType$TypeCodec";
+    private static final String CTX = "dev/arubik/craftengine/script/ScriptContext";
     private static final String TYPED_PROPERTY_HANDLER =
             "dev/arubik/craftengine/script/PolyType$TypedPropertyHandler";
     private static final String[] TYPED_HANDLER_IFACE = {
@@ -562,6 +563,29 @@ final class PolyClassGenerator {
             guarded.visitInsn(ARETURN);
             guarded.visitMaxs(0, 0);
             guarded.visitEnd();
+
+            // ofVar(ctx, name): the same guard, but reading the receiver itself. A first-hop call
+            // site had to keep the raw ScriptValue in a local purely to feed ofGuarded and to
+            // null-compare it, so the generated code opened with a ScriptValue nobody wanted:
+            //     ScriptValue sv = ctx.getClassOrVar("Machine");
+            //     PolyClassMachine m = sv != NULL ? PolyClassMachine.ofGuarded(sv) : null;
+            // With this it is one line and one typed local:
+            //     PolyClassMachine m = PolyClassMachine.ofVar(ctx, "Machine");
+            // The NULL case needs no test of its own — NULL is not an Obj, so it takes the same
+            // "not ours" exit as a wrong type. The call site's fallback arm re-reads the variable
+            // and keeps its own NULL check, so the two are still distinguished where it matters.
+            MethodVisitor ofVar = cw.visitMethod(ACC_PUBLIC | ACC_STATIC, "ofVar",
+                    "(L" + CTX + ";Ljava/lang/String;)L" + className + ";", null, null);
+            ofVar.visitCode();
+            ofVar.visitVarInsn(ALOAD, 0);
+            ofVar.visitVarInsn(ALOAD, 1);
+            ofVar.visitMethodInsn(INVOKEVIRTUAL, CTX, "getClassOrVar",
+                    "(Ljava/lang/String;)L" + VALUE + ";", false);
+            ofVar.visitMethodInsn(INVOKESTATIC, className, "ofGuarded",
+                    "(L" + VALUE + ";)L" + className + ";", false);
+            ofVar.visitInsn(ARETURN);
+            ofVar.visitMaxs(0, 0);
+            ofVar.visitEnd();
 
             cw.visitEnd();
             byte[] bytes = cw.toByteArray();

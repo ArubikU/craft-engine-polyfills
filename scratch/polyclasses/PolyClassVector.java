@@ -9,6 +9,7 @@
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler0
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler1
  *  dev.arubik.craftengine.script.PolyType$TypedPropertyHandler
+ *  dev.arubik.craftengine.script.ScriptContext
  *  dev.arubik.craftengine.script.ScriptValue
  *  dev.arubik.craftengine.script.ScriptValue$Obj
  */
@@ -17,6 +18,7 @@ package dev.arubik.craftengine.script;
 import dev.arubik.craftengine.script.PolyClass;
 import dev.arubik.craftengine.script.PolyClassRuntime;
 import dev.arubik.craftengine.script.PolyType;
+import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptValue;
 import java.util.List;
 
@@ -221,5 +223,9 @@ public class PolyClassVector {
             return new PolyClassVector(object);
         }
         return null;
+    }
+
+    public static PolyClassVector ofVar(ScriptContext scriptContext, String string) {
+        return PolyClassVector.ofGuarded(scriptContext.getClassOrVar(string));
     }
 }

@@ -130,8 +130,8 @@ public final class Breeder {
                 for (ScriptValue var25_24 : var23_22) {
                     var0.val("i", var25_24);
                     if (!(var1_1.getBool("fed") ^ true)) continue;
-                    var28_27 = var1_1.getClassOrVar("Machine");
-                    var27_26 = var28_27 != ScriptValue.NULL ? ((var29_28 = PolyClassMachine_v2.ofGuarded((ScriptValue)var28_27)) != null ? var29_28.pg$120_container() : PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)var28_27, (ScriptContext)var1_1)) : ScriptValue.NULL;
+                    var28_27 = PolyClassMachine_v2.ofVar((ScriptContext)var1_1, (String)"Machine");
+                    var27_26 = var28_27 != null ? var28_27.pg$120_container() : ((var29_28 = var1_1.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)var29_28, (ScriptContext)var1_1) : ScriptValue.NULL);
                     var30_29 = var1_1.getClassOrVar("i");
                     if (var27_26 instanceof ScriptValue.Obj && (var32_31 = (var31_30 = (ScriptValue.Obj)var27_26).instance()) != null && !(var32_31 instanceof PolyClass) && var31_30.typeName().equals("Container")) {
                         var33_32 = new PolyClassContainer(var32_31);

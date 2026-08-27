@@ -55,22 +55,22 @@ public final class PortableStorageInterface {
         while (n < 1000) {
             ScriptValue scriptValue4;
             ScriptValue scriptValue5;
-            PolyClassMachine_v2 polyClassMachine_v2;
-            PolyClassMachine_v2 polyClassMachine_v22;
-            PolyClassMachine_v2 polyClassMachine_v23;
-            PolyClassMachine_v2 polyClassMachine_v24;
-            PolyClassMachine_v2 polyClassMachine_v25;
-            PolyClassMachine_v2 polyClassMachine_v26;
             ScriptValue scriptValue6;
+            ScriptValue scriptValue7;
+            ScriptValue scriptValue8;
+            ScriptValue scriptValue9;
+            ScriptValue scriptValue10;
+            ScriptValue scriptValue11;
+            PolyClassMachine_v2 polyClassMachine_v2;
             ++n;
             if (!(scriptContext.getNum("i") < scriptContext.getNum("MAX_REACH"))) break;
-            ScriptValue scriptValue7 = scriptContext.getClassOrVar("Machine");
-            ScriptValue scriptValue8 = scriptContext.getClassOrVar("Machine");
-            ScriptValue scriptValue9 = scriptContext.getClassOrVar("Machine");
-            ScriptValue scriptValue10 = scriptContext.getClassOrVar("Machine");
-            ScriptValue scriptValue11 = scriptContext.getClassOrVar("Machine");
+            PolyClassMachine_v2 polyClassMachine_v22 = PolyClassMachine_v2.ofVar((ScriptContext)scriptContext, (String)"Machine");
+            PolyClassMachine_v2 polyClassMachine_v23 = PolyClassMachine_v2.ofVar((ScriptContext)scriptContext, (String)"Machine");
+            PolyClassMachine_v2 polyClassMachine_v24 = PolyClassMachine_v2.ofVar((ScriptContext)scriptContext, (String)"Machine");
+            PolyClassMachine_v2 polyClassMachine_v25 = PolyClassMachine_v2.ofVar((ScriptContext)scriptContext, (String)"Machine");
+            PolyClassMachine_v2 polyClassMachine_v26 = PolyClassMachine_v2.ofVar((ScriptContext)scriptContext, (String)"Machine");
             ScriptValue scriptValue12 = scriptContext.getClassOrVar("contraption");
-            CallSite callSite = PolyDispatch.bootstrapCall("memberCall", "real_block", (ScriptValue)(scriptValue12 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "contraption_world", (ScriptValue)scriptValue12, (ScriptContext)scriptContext) : ScriptValue.NULL), (ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)((scriptValue6 = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? ((polyClassMachine_v26 = PolyClassMachine_v2.ofGuarded((ScriptValue)scriptValue6)) != null ? polyClassMachine_v26.pg$200_x() : PolyDispatch.bootstrapGet("memberGet", "x", (ScriptValue)scriptValue6, (ScriptContext)scriptContext)) : ScriptValue.NULL), (ScriptValue)ScriptValue.of((double)((scriptValue7 != ScriptValue.NULL ? ((polyClassMachine_v25 = PolyClassMachine_v2.ofGuarded((ScriptValue)scriptValue7)) != null ? polyClassMachine_v25.tg$134_facing_dx() : PolyDispatch.bootstrapGet("memberGet", "facing_dx", (ScriptValue)scriptValue7, (ScriptContext)scriptContext).asNum()) : ScriptValue.NULL.asNum()) * scriptContext.getNum("i")))), (ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)(scriptValue8 != ScriptValue.NULL ? ((polyClassMachine_v24 = PolyClassMachine_v2.ofGuarded((ScriptValue)scriptValue8)) != null ? polyClassMachine_v24.pg$202_y() : PolyDispatch.bootstrapGet("memberGet", "y", (ScriptValue)scriptValue8, (ScriptContext)scriptContext)) : ScriptValue.NULL), (ScriptValue)ScriptValue.of((double)((scriptValue9 != ScriptValue.NULL ? ((polyClassMachine_v23 = PolyClassMachine_v2.ofGuarded((ScriptValue)scriptValue9)) != null ? polyClassMachine_v23.tg$130_facing_dy() : PolyDispatch.bootstrapGet("memberGet", "facing_dy", (ScriptValue)scriptValue9, (ScriptContext)scriptContext).asNum()) : ScriptValue.NULL.asNum()) * scriptContext.getNum("i")))), (ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)(scriptValue10 != ScriptValue.NULL ? ((polyClassMachine_v22 = PolyClassMachine_v2.ofGuarded((ScriptValue)scriptValue10)) != null ? polyClassMachine_v22.pg$206_z() : PolyDispatch.bootstrapGet("memberGet", "z", (ScriptValue)scriptValue10, (ScriptContext)scriptContext)) : ScriptValue.NULL), (ScriptValue)ScriptValue.of((double)((scriptValue11 != ScriptValue.NULL ? ((polyClassMachine_v2 = PolyClassMachine_v2.ofGuarded((ScriptValue)scriptValue11)) != null ? polyClassMachine_v2.tg$132_facing_dz() : PolyDispatch.bootstrapGet("memberGet", "facing_dz", (ScriptValue)scriptValue11, (ScriptContext)scriptContext).asNum()) : ScriptValue.NULL.asNum()) * scriptContext.getNum("i")))), (ScriptContext)scriptContext);
+            CallSite callSite = PolyDispatch.bootstrapCall("memberCall", "real_block", (ScriptValue)(scriptValue12 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "contraption_world", (ScriptValue)scriptValue12, (ScriptContext)scriptContext) : ScriptValue.NULL), (ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)((polyClassMachine_v2 = PolyClassMachine_v2.ofVar((ScriptContext)scriptContext, (String)"Machine")) != null ? polyClassMachine_v2.pg$200_x() : ((scriptValue11 = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "x", (ScriptValue)scriptValue11, (ScriptContext)scriptContext) : ScriptValue.NULL)), (ScriptValue)ScriptValue.of((double)((polyClassMachine_v22 != null ? polyClassMachine_v22.tg$134_facing_dx() : ((scriptValue10 = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "facing_dx", (ScriptValue)scriptValue10, (ScriptContext)scriptContext).asNum() : ScriptValue.NULL.asNum())) * scriptContext.getNum("i")))), (ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)(polyClassMachine_v23 != null ? polyClassMachine_v23.pg$202_y() : ((scriptValue9 = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "y", (ScriptValue)scriptValue9, (ScriptContext)scriptContext) : ScriptValue.NULL)), (ScriptValue)ScriptValue.of((double)((polyClassMachine_v24 != null ? polyClassMachine_v24.tg$130_facing_dy() : ((scriptValue8 = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "facing_dy", (ScriptValue)scriptValue8, (ScriptContext)scriptContext).asNum() : ScriptValue.NULL.asNum())) * scriptContext.getNum("i")))), (ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)(polyClassMachine_v25 != null ? polyClassMachine_v25.pg$206_z() : ((scriptValue7 = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "z", (ScriptValue)scriptValue7, (ScriptContext)scriptContext) : ScriptValue.NULL)), (ScriptValue)ScriptValue.of((double)((polyClassMachine_v26 != null ? polyClassMachine_v26.tg$132_facing_dz() : ((scriptValue6 = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "facing_dz", (ScriptValue)scriptValue6, (ScriptContext)scriptContext).asNum() : ScriptValue.NULL.asNum())) * scriptContext.getNum("i")))), (ScriptContext)scriptContext);
             builder.val("check", (ScriptValue)callSite);
             if (ScriptFormula.valuesEqual((ScriptValue)callSite, (ScriptValue)scriptContext.getClassOrVar("null")) ^ true && ((scriptValue5 = scriptContext.getClassOrVar("check")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "is_air", (ScriptValue)scriptValue5, (ScriptContext)scriptContext) : ScriptValue.NULL).asBool() ^ true && ScriptFormula.valuesEqualStr((ScriptValue)((scriptValue4 = scriptContext.getClassOrVar("check")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "id", (ScriptValue)scriptValue4, (ScriptContext)scriptContext) : ScriptValue.NULL), (String)"cml:portable_storage_interface")) {
                 ScriptValue scriptValue13;
@@ -262,23 +262,23 @@ public final class PortableStorageInterface {
                         var18_16 = 40.0;
                         var20_17 = ScriptValue.of((double)40.0);
                         var0.val("RELEASE_GRACE_TICKS", var20_17);
-                        var21_18 = var1_1.getClassOrVar("Machine");
-                        v0 /* !! */  = var21_18 != ScriptValue.NULL ? ((var22_19 = PolyClassMachine_v2.ofGuarded((ScriptValue)var21_18)) != null ? var22_19.pg$191_contraption() : PolyDispatch.bootstrapGet("memberGet", "contraption", (ScriptValue)var21_18, (ScriptContext)var1_1)) : ScriptValue.NULL;
-                        if (!(ScriptFormula.valuesEqual((ScriptValue)v0 /* !! */ , (ScriptValue)var1_1.getClassOrVar("null")) ^ true)) break block43;
-                        var23_20 = var1_1.getClassOrVar("Machine");
-                        var25_22 = var23_20 != ScriptValue.NULL ? ((var24_21 = PolyClassMachine_v2.ofGuarded((ScriptValue)var23_20)) != null ? var24_21.pg$191_contraption() : PolyDispatch.bootstrapGet("memberGet", "contraption", (ScriptValue)var23_20, (ScriptContext)var1_1)) : ScriptValue.NULL;
+                        var21_18 = PolyClassMachine_v2.ofVar((ScriptContext)var1_1, (String)"Machine");
+                        if (!(ScriptFormula.valuesEqual((ScriptValue)(var21_18 != null ? var21_18.pg$191_contraption() : ((var22_19 = var1_1.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "contraption", (ScriptValue)var22_19, (ScriptContext)var1_1) : ScriptValue.NULL)), (ScriptValue)var1_1.getClassOrVar("null")) ^ true)) break block43;
+                        var23_20 = PolyClassMachine_v2.ofVar((ScriptContext)var1_1, (String)"Machine");
+                        var25_22 = var23_20 != null ? var23_20.pg$191_contraption() : ((var24_21 = var1_1.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "contraption", (ScriptValue)var24_21, (ScriptContext)var1_1) : ScriptValue.NULL);
                         var0.val("contraption", var25_22);
-                        var26_23 = var1_1.getClassOrVar("Machine");
-                        var28_25 = var1_1.getClassOrVar("Machine");
-                        var30_27 = var1_1.getClassOrVar("Machine");
-                        var32_29 = ScriptValue.of((String)((var26_23 != ScriptValue.NULL ? ((var27_24 = PolyClassMachine_v2.ofGuarded((ScriptValue)var26_23)) != null ? var27_24.pg$200_x() : PolyDispatch.bootstrapGet("memberGet", "x", (ScriptValue)var26_23, (ScriptContext)var1_1)) : ScriptValue.NULL).asStr() + "," + (var28_25 != ScriptValue.NULL ? ((var29_26 = PolyClassMachine_v2.ofGuarded((ScriptValue)var28_25)) != null ? var29_26.pg$202_y() : PolyDispatch.bootstrapGet("memberGet", "y", (ScriptValue)var28_25, (ScriptContext)var1_1)) : ScriptValue.NULL).asStr() + "," + (var30_27 != ScriptValue.NULL ? ((var31_28 = PolyClassMachine_v2.ofGuarded((ScriptValue)var30_27)) != null ? var31_28.pg$206_z() : PolyDispatch.bootstrapGet("memberGet", "z", (ScriptValue)var30_27, (ScriptContext)var1_1)) : ScriptValue.NULL).asStr()));
+                        var26_23 = PolyClassMachine_v2.ofVar((ScriptContext)var1_1, (String)"Machine");
+                        var28_25 = PolyClassMachine_v2.ofVar((ScriptContext)var1_1, (String)"Machine");
+                        var30_27 = PolyClassMachine_v2.ofVar((ScriptContext)var1_1, (String)"Machine");
+                        var32_29 = ScriptValue.of((String)((var26_23 != null ? var26_23.pg$200_x() : ((var27_24 = var1_1.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "x", (ScriptValue)var27_24, (ScriptContext)var1_1) : ScriptValue.NULL)).asStr() + "," + (var28_25 != null ? var28_25.pg$202_y() : ((var29_26 = var1_1.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "y", (ScriptValue)var29_26, (ScriptContext)var1_1) : ScriptValue.NULL)).asStr() + "," + (var30_27 != null ? var30_27.pg$206_z() : ((var31_28 = var1_1.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "z", (ScriptValue)var31_28, (ScriptContext)var1_1) : ScriptValue.NULL)).asStr()));
                         var0.val("hold_key", var32_29);
                         var33_30 = var1_1.getClassOrVar("contraption");
                         if (var33_30 != ScriptValue.NULL) {
-                            var36_33 = var1_1.getClassOrVar("Machine");
-                            var38_35 = var1_1.getClassOrVar("Machine");
-                            var34_31 = var1_1.getClassOrVar("Machine");
-                            v1 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "real_direction", (ScriptValue)var33_30, (ScriptValue)(var34_31 != ScriptValue.NULL ? ((var35_32 = PolyClassMachine_v2.ofGuarded((ScriptValue)var34_31)) != null ? var35_32.pg$133_facing_dx() : PolyDispatch.bootstrapGet("memberGet", "facing_dx", (ScriptValue)var34_31, (ScriptContext)var1_1)) : ScriptValue.NULL), (ScriptValue)(var36_33 != ScriptValue.NULL ? ((var37_34 = PolyClassMachine_v2.ofGuarded((ScriptValue)var36_33)) != null ? var37_34.pg$129_facing_dy() : PolyDispatch.bootstrapGet("memberGet", "facing_dy", (ScriptValue)var36_33, (ScriptContext)var1_1)) : ScriptValue.NULL), (ScriptValue)(var38_35 != ScriptValue.NULL ? ((var39_36 = PolyClassMachine_v2.ofGuarded((ScriptValue)var38_35)) != null ? var39_36.pg$131_facing_dz() : PolyDispatch.bootstrapGet("memberGet", "facing_dz", (ScriptValue)var38_35, (ScriptContext)var1_1)) : ScriptValue.NULL), (ScriptContext)var1_1);
+                            var34_31 = PolyClassMachine_v2.ofVar((ScriptContext)var1_1, (String)"Machine");
+                            v0 /* !! */  = var34_31 != null ? var34_31.pg$133_facing_dx() : ((var35_32 = var1_1.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "facing_dx", (ScriptValue)var35_32, (ScriptContext)var1_1) : ScriptValue.NULL);
+                            var36_33 = PolyClassMachine_v2.ofVar((ScriptContext)var1_1, (String)"Machine");
+                            var38_35 = PolyClassMachine_v2.ofVar((ScriptContext)var1_1, (String)"Machine");
+                            v1 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "real_direction", (ScriptValue)var33_30, (ScriptValue)v0 /* !! */ , (ScriptValue)(var36_33 != null ? var36_33.pg$129_facing_dy() : ((var37_34 = var1_1.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "facing_dy", (ScriptValue)var37_34, (ScriptContext)var1_1) : ScriptValue.NULL)), (ScriptValue)(var38_35 != null ? var38_35.pg$131_facing_dz() : ((var39_36 = var1_1.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "facing_dz", (ScriptValue)var39_36, (ScriptContext)var1_1) : ScriptValue.NULL)), (ScriptContext)var1_1);
                         } else {
                             v1 /* !! */  = ScriptValue.NULL;
                         }
@@ -428,13 +428,13 @@ public final class PortableStorageInterface {
                     }
                 }
                 if (!(var1_1.getNum("keepalive") > 0.0)) break block46;
-                var104_99 = var1_1.getClassOrVar("Machine");
-                v17 = var104_99 != ScriptValue.NULL ? ((var105_100 = PolyClassMachine_v2.ofGuarded((ScriptValue)var104_99)) != null ? var105_100.tg$136_last_transfer_tick() : PolyDispatch.bootstrapGet("memberGet", "last_transfer_tick", (ScriptValue)var104_99, (ScriptContext)var1_1).asNum()) : ScriptValue.NULL.asNum();
+                var104_99 = PolyClassMachine_v2.ofVar((ScriptContext)var1_1, (String)"Machine");
+                v17 = var104_99 != null ? var104_99.tg$136_last_transfer_tick() : ((var105_100 = var1_1.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "last_transfer_tick", (ScriptValue)var105_100, (ScriptContext)var1_1).asNum() : ScriptValue.NULL.asNum());
                 if (!(v17 >= 0.0)) ** GOTO lbl-1000
                 var106_101 = new ArrayList<E>();
                 v18 = ScriptFormula.callBuiltin((String)"tick", var106_101, (ScriptContext)var1_1).asNum();
-                var107_102 = var1_1.getClassOrVar("Machine");
-                v19 = var107_102 != ScriptValue.NULL ? ((var108_103 = PolyClassMachine_v2.ofGuarded((ScriptValue)var107_102)) != null ? var108_103.tg$136_last_transfer_tick() : PolyDispatch.bootstrapGet("memberGet", "last_transfer_tick", (ScriptValue)var107_102, (ScriptContext)var1_1).asNum()) : ScriptValue.NULL.asNum();
+                var107_102 = PolyClassMachine_v2.ofVar((ScriptContext)var1_1, (String)"Machine");
+                v19 = var107_102 != null ? var107_102.tg$136_last_transfer_tick() : ((var108_103 = var1_1.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "last_transfer_tick", (ScriptValue)var108_103, (ScriptContext)var1_1).asNum() : ScriptValue.NULL.asNum());
                 if (v18 - v19 < 10.0) {
                     v20 = true;
                 } else lbl-1000:

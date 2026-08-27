@@ -51,9 +51,9 @@ public final class EyeSensor {
         if (object.asBool()) {
             ScriptValue.Obj obj;
             Object object3;
-            PolyClassMachine_v2 polyClassMachine_v2;
-            ScriptValue scriptValue2 = scriptContext.getClassOrVar("Machine");
-            ScriptValue scriptValue3 = scriptValue2 != ScriptValue.NULL ? ((polyClassMachine_v2 = PolyClassMachine_v2.ofGuarded((ScriptValue)scriptValue2)) != null ? polyClassMachine_v2.pg$171_redstone() : PolyDispatch.bootstrapGet("memberGet", "redstone", (ScriptValue)scriptValue2, (ScriptContext)scriptContext)) : ScriptValue.NULL;
+            ScriptValue scriptValue2;
+            PolyClassMachine_v2 polyClassMachine_v2 = PolyClassMachine_v2.ofVar((ScriptContext)scriptContext, (String)"Machine");
+            ScriptValue scriptValue3 = polyClassMachine_v2 != null ? polyClassMachine_v2.pg$171_redstone() : ((scriptValue2 = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "redstone", (ScriptValue)scriptValue2, (ScriptContext)scriptContext) : ScriptValue.NULL);
             double d = 15.0;
             if (scriptValue3 instanceof ScriptValue.Obj && (object3 = (obj = (ScriptValue.Obj)scriptValue3).instance()) != null && !(object3 instanceof PolyClass) && obj.typeName().equals("Redstone")) {
                 PolyClassRedstone polyClassRedstone = new PolyClassRedstone(object3);
@@ -65,14 +65,14 @@ public final class EyeSensor {
             ScriptValue.Obj obj;
             Object object4;
             ScriptValue scriptValue4;
-            PolyClassMachine_v2 polyClassMachine_v2;
-            ScriptValue scriptValue5 = scriptContext.getClassOrVar("Machine");
-            Object object5 = scriptValue5 != ScriptValue.NULL ? ((polyClassMachine_v2 = PolyClassMachine_v2.ofGuarded((ScriptValue)scriptValue5)) != null ? polyClassMachine_v2.pg$171_redstone() : PolyDispatch.bootstrapGet("memberGet", "redstone", (ScriptValue)scriptValue5, (ScriptContext)scriptContext)) : (scriptValue4 = ScriptValue.NULL);
-            if (scriptValue4 instanceof ScriptValue.Obj && (object4 = (obj = (ScriptValue.Obj)scriptValue4).instance()) != null && !(object4 instanceof PolyClass) && obj.typeName().equals("Redstone")) {
+            ScriptValue scriptValue5;
+            PolyClassMachine_v2 polyClassMachine_v2 = PolyClassMachine_v2.ofVar((ScriptContext)scriptContext, (String)"Machine");
+            Object object5 = polyClassMachine_v2 != null ? polyClassMachine_v2.pg$171_redstone() : (scriptValue5 = (scriptValue4 = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "redstone", (ScriptValue)scriptValue4, (ScriptContext)scriptContext) : ScriptValue.NULL);
+            if (scriptValue5 instanceof ScriptValue.Obj && (object4 = (obj = (ScriptValue.Obj)scriptValue5).instance()) != null && !(object4 instanceof PolyClass) && obj.typeName().equals("Redstone")) {
                 PolyClassRedstone polyClassRedstone = new PolyClassRedstone(object4);
                 v3 = ScriptValue.of((boolean)polyClassRedstone.tm$8_off());
             } else {
-                v3 = PolyDispatch.bootstrapCall("memberCall", "off", (ScriptValue)scriptValue4, (ScriptContext)scriptContext);
+                v3 = PolyDispatch.bootstrapCall("memberCall", "off", (ScriptValue)scriptValue5, (ScriptContext)scriptContext);
             }
         }
         FILE_SCOPE = builder.build();

@@ -41,15 +41,15 @@ public final class Utils {
         block6: {
             ScriptContext scriptContext;
             block5: {
-                PolyClassMachine_v2 polyClassMachine_v2;
+                ScriptValue scriptValue;
                 scriptContext = builder.peek();
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 arrayList.add(scriptContext.getClassOrVar("item"));
                 if (ScriptFormula.callBuiltin((String)"is_empty", arrayList, (ScriptContext)scriptContext).asBool()) {
                     return ScriptValue.NULL;
                 }
-                ScriptValue scriptValue = scriptContext.getClassOrVar("Machine");
-                ScriptValue scriptValue2 = scriptValue != ScriptValue.NULL ? ((polyClassMachine_v2 = PolyClassMachine_v2.ofGuarded((ScriptValue)scriptValue)) != null ? polyClassMachine_v2.pg$191_contraption() : PolyDispatch.bootstrapGet("memberGet", "contraption", (ScriptValue)scriptValue, (ScriptContext)scriptContext)) : ScriptValue.NULL;
+                PolyClassMachine_v2 polyClassMachine_v2 = PolyClassMachine_v2.ofVar((ScriptContext)scriptContext, (String)"Machine");
+                ScriptValue scriptValue2 = polyClassMachine_v2 != null ? polyClassMachine_v2.pg$191_contraption() : ((scriptValue = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "contraption", (ScriptValue)scriptValue, (ScriptContext)scriptContext) : ScriptValue.NULL);
                 builder.val("contraption", scriptValue2);
                 if (!(ScriptFormula.valuesEqual((ScriptValue)scriptValue2, (ScriptValue)scriptContext.getClassOrVar("null")) ^ true)) break block5;
                 ScriptValue scriptValue3 = scriptContext.getClassOrVar("contraption");

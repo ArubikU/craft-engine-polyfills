@@ -82,8 +82,8 @@ public final class Spike {
                     }
                     break block23;
                 }
-                var17_16 = var1_1.getClassOrVar("Machine");
-                var16_18 = var17_16 != ScriptValue.NULL ? ((var18_17 = PolyClassMachine_v2.ofGuarded((ScriptValue)var17_16)) != null ? var18_17.pg$120_container() : PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)var17_16, (ScriptContext)var1_1)) : ScriptValue.NULL;
+                var17_16 = PolyClassMachine_v2.ofVar((ScriptContext)var1_1, (String)"Machine");
+                var16_18 = var17_16 != null ? var17_16.pg$120_container() : ((var18_17 = var1_1.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)var18_17, (ScriptContext)var1_1) : ScriptValue.NULL);
                 var19_19 = 0.0;
                 if (var16_18 instanceof ScriptValue.Obj && (var22_21 = (var21_20 = (ScriptValue.Obj)var16_18).instance()) != null && !(var22_21 instanceof PolyClass) && var21_20.typeName().equals("Container")) {
                     var23_22 = new PolyClassContainer(var22_21);
@@ -97,8 +97,8 @@ public final class Spike {
                 var25_24.add(var24_23);
                 var27_26 = ScriptFormula.callBuiltin((String)"is_empty", var25_24, (ScriptContext)var1_1).asBool() != false ? ( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Spike.class, 2.0)) : ((var26_25 = var1_1.getClassOrVar("weapon")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "attack_damage", (ScriptValue)var26_25, (ScriptContext)var1_1) : ScriptValue.NULL);
                 var0.val("base_dmg", var27_26);
-                var28_27 = var1_1.getClassOrVar("Machine");
-                var30_29 = var28_27 != ScriptValue.NULL ? ((var29_28 = PolyClassMachine_v2.ofGuarded((ScriptValue)var28_27)) != null ? var29_28.pg$210_owner_uuid() : PolyDispatch.bootstrapGet("memberGet", "owner_uuid", (ScriptValue)var28_27, (ScriptContext)var1_1)) : ScriptValue.NULL;
+                var28_27 = PolyClassMachine_v2.ofVar((ScriptContext)var1_1, (String)"Machine");
+                var30_29 = var28_27 != null ? var28_27.pg$210_owner_uuid() : ((var29_28 = var1_1.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "owner_uuid", (ScriptValue)var29_28, (ScriptContext)var1_1) : ScriptValue.NULL);
                 var0.val("owner_id", var30_29);
                 var31_30 = var1_1.getClassOrVar("Machine");
                 if (var31_30 != ScriptValue.NULL) {

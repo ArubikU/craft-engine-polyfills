@@ -6,6 +6,7 @@
  *  dev.arubik.craftengine.script.PolyClassRuntime
  *  dev.arubik.craftengine.script.PolyType$PropertyHandler
  *  dev.arubik.craftengine.script.PolyType$TypedPropertyHandler
+ *  dev.arubik.craftengine.script.ScriptContext
  *  dev.arubik.craftengine.script.ScriptValue
  *  dev.arubik.craftengine.script.ScriptValue$Obj
  */
@@ -15,6 +16,7 @@ import dev.arubik.craftengine.script.PolyClass;
 import dev.arubik.craftengine.script.PolyClassBlockMetadata;
 import dev.arubik.craftengine.script.PolyClassRuntime;
 import dev.arubik.craftengine.script.PolyType;
+import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptValue;
 
 public class PolyClassSkullMetadata
@@ -92,5 +94,9 @@ extends PolyClassBlockMetadata {
             return new PolyClassSkullMetadata(object);
         }
         return null;
+    }
+
+    public static PolyClassSkullMetadata ofVar(ScriptContext scriptContext, String string) {
+        return PolyClassSkullMetadata.ofGuarded(scriptContext.getClassOrVar(string));
     }
 }

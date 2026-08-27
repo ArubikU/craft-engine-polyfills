@@ -143,17 +143,15 @@ public final class RotationalBearing {
     }
 
     public static ScriptValue _spinAxis(ScriptContext.Builder builder) {
-        PolyClassMachine_v2 polyClassMachine_v2;
-        PolyClassMachine_v2 polyClassMachine_v22;
+        ScriptValue scriptValue;
+        ScriptValue scriptValue2;
         ScriptContext scriptContext = builder.peek();
-        ScriptValue scriptValue = scriptContext.getClassOrVar("Machine");
-        Object object = scriptValue != ScriptValue.NULL ? ((polyClassMachine_v22 = PolyClassMachine_v2.ofGuarded((ScriptValue)scriptValue)) != null ? polyClassMachine_v22.pg$129_facing_dy() : PolyDispatch.bootstrapGet("memberGet", "facing_dy", (ScriptValue)scriptValue, (ScriptContext)scriptContext)) : ScriptValue.NULL;
-        if (ScriptFormula.valuesEqual((ScriptValue)object, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", RotationalBearing.class, 0.0))) ^ true) {
+        PolyClassMachine_v2 polyClassMachine_v2 = PolyClassMachine_v2.ofVar((ScriptContext)scriptContext, (String)"Machine");
+        if (ScriptFormula.valuesEqual((ScriptValue)(polyClassMachine_v2 != null ? polyClassMachine_v2.pg$129_facing_dy() : ((scriptValue2 = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "facing_dy", (ScriptValue)scriptValue2, (ScriptContext)scriptContext) : ScriptValue.NULL)), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", RotationalBearing.class, 0.0))) ^ true) {
             return  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", RotationalBearing.class, "y");
         }
-        ScriptValue scriptValue2 = scriptContext.getClassOrVar("Machine");
-        Object object2 = scriptValue2 != ScriptValue.NULL ? ((polyClassMachine_v2 = PolyClassMachine_v2.ofGuarded((ScriptValue)scriptValue2)) != null ? polyClassMachine_v2.pg$133_facing_dx() : PolyDispatch.bootstrapGet("memberGet", "facing_dx", (ScriptValue)scriptValue2, (ScriptContext)scriptContext)) : ScriptValue.NULL;
-        if (ScriptFormula.valuesEqual((ScriptValue)object2, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", RotationalBearing.class, 0.0))) ^ true) {
+        PolyClassMachine_v2 polyClassMachine_v22 = PolyClassMachine_v2.ofVar((ScriptContext)scriptContext, (String)"Machine");
+        if (ScriptFormula.valuesEqual((ScriptValue)(polyClassMachine_v22 != null ? polyClassMachine_v22.pg$133_facing_dx() : ((scriptValue = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "facing_dx", (ScriptValue)scriptValue, (ScriptContext)scriptContext) : ScriptValue.NULL)), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", RotationalBearing.class, 0.0))) ^ true) {
             return  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", RotationalBearing.class, "x");
         }
         return  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", RotationalBearing.class, "z");
@@ -188,22 +186,22 @@ public final class RotationalBearing {
     }
 
     public static void run(ScriptContext.Builder builder) {
-        PolyClassMachine_v2 polyClassMachine_v2;
         ScriptValue scriptValue;
-        PolyClassMachine_v2 polyClassMachine_v22;
+        ScriptValue scriptValue2;
+        ScriptValue scriptValue3;
         Object object;
         ScriptContext scriptContext = builder.peek();
-        ScriptValue scriptValue2 = scriptContext.getClassOrVar("Machine");
-        if (scriptValue2 != ScriptValue.NULL) {
+        ScriptValue scriptValue4 = scriptContext.getClassOrVar("Machine");
+        if (scriptValue4 != ScriptValue.NULL) {
             ScriptValue.Obj obj;
             Object object2;
             String string = "assembled";
             String string2 = "int";
-            if (scriptValue2 instanceof ScriptValue.Obj && (object2 = (obj = (ScriptValue.Obj)scriptValue2).instance()) != null && !(object2 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                PolyClassMachine_v2 polyClassMachine_v23 = new PolyClassMachine_v2(object2);
-                object = polyClassMachine_v23.tm$34_get_typed(string, string2);
+            if (scriptValue4 instanceof ScriptValue.Obj && (object2 = (obj = (ScriptValue.Obj)scriptValue4).instance()) != null && !(object2 instanceof PolyClass) && obj.typeName().equals("Machine")) {
+                PolyClassMachine_v2 polyClassMachine_v2 = new PolyClassMachine_v2(object2);
+                object = polyClassMachine_v2.tm$34_get_typed(string, string2);
             } else {
-                object = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
+                object = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue4, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
             }
         } else {
             object = ScriptValue.NULL;
@@ -214,38 +212,38 @@ public final class RotationalBearing {
             builder.val("__return__", ScriptValue.NULL);
             return;
         }
-        ScriptValue scriptValue3 = scriptContext.getClassOrVar("Machine");
-        ScriptValue scriptValue4 = scriptValue3 != ScriptValue.NULL ? ((polyClassMachine_v22 = PolyClassMachine_v2.ofGuarded((ScriptValue)scriptValue3)) != null ? polyClassMachine_v22.pg$191_contraption() : PolyDispatch.bootstrapGet("memberGet", "contraption", (ScriptValue)scriptValue3, (ScriptContext)scriptContext)) : ScriptValue.NULL;
-        builder.val("contraption", scriptValue4);
-        if (ScriptFormula.valuesEqual((ScriptValue)scriptValue4, (ScriptValue)scriptContext.getClassOrVar("null"))) {
-            ScriptValue scriptValue5 = scriptContext.getClassOrVar("Machine");
-            if (scriptValue5 != ScriptValue.NULL) {
+        PolyClassMachine_v2 polyClassMachine_v2 = PolyClassMachine_v2.ofVar((ScriptContext)scriptContext, (String)"Machine");
+        ScriptValue scriptValue5 = polyClassMachine_v2 != null ? polyClassMachine_v2.pg$191_contraption() : ((scriptValue3 = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "contraption", (ScriptValue)scriptValue3, (ScriptContext)scriptContext) : ScriptValue.NULL);
+        builder.val("contraption", scriptValue5);
+        if (ScriptFormula.valuesEqual((ScriptValue)scriptValue5, (ScriptValue)scriptContext.getClassOrVar("null"))) {
+            ScriptValue scriptValue6 = scriptContext.getClassOrVar("Machine");
+            if (scriptValue6 != ScriptValue.NULL) {
                 ScriptValue.Obj obj;
                 Object object3;
                 String string = "assembled";
                 String string3 = "int";
-                ScriptValue scriptValue6 =  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", RotationalBearing.class, 0.0);
-                if (scriptValue5 instanceof ScriptValue.Obj && (object3 = (obj = (ScriptValue.Obj)scriptValue5).instance()) != null && !(object3 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                    PolyClassMachine_v2 polyClassMachine_v24 = new PolyClassMachine_v2(object3);
-                    v1 = ScriptValue.of((boolean)polyClassMachine_v24.tm$82_set_typed(string, string3, scriptValue6));
+                ScriptValue scriptValue7 =  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", RotationalBearing.class, 0.0);
+                if (scriptValue6 instanceof ScriptValue.Obj && (object3 = (obj = (ScriptValue.Obj)scriptValue6).instance()) != null && !(object3 instanceof PolyClass) && obj.typeName().equals("Machine")) {
+                    PolyClassMachine_v2 polyClassMachine_v22 = new PolyClassMachine_v2(object3);
+                    v1 = ScriptValue.of((boolean)polyClassMachine_v22.tm$82_set_typed(string, string3, scriptValue7));
                 } else {
-                    v1 = PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue5, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string3), (ScriptValue)scriptValue6, (ScriptContext)scriptContext);
+                    v1 = PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue6, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string3), (ScriptValue)scriptValue7, (ScriptContext)scriptContext);
                 }
             } else {
                 v1 = ScriptValue.NULL;
             }
-            ScriptValue scriptValue7 = scriptContext.getClassOrVar("Machine");
-            if (scriptValue7 != ScriptValue.NULL) {
+            ScriptValue scriptValue8 = scriptContext.getClassOrVar("Machine");
+            if (scriptValue8 != ScriptValue.NULL) {
                 ScriptValue.Obj obj;
                 Object object4;
                 String string = "contraption_uuid";
                 String string4 = "string";
-                ScriptValue scriptValue8 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", RotationalBearing.class, "");
-                if (scriptValue7 instanceof ScriptValue.Obj && (object4 = (obj = (ScriptValue.Obj)scriptValue7).instance()) != null && !(object4 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                    PolyClassMachine_v2 polyClassMachine_v25 = new PolyClassMachine_v2(object4);
-                    v2 = ScriptValue.of((boolean)polyClassMachine_v25.tm$82_set_typed(string, string4, scriptValue8));
+                ScriptValue scriptValue9 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", RotationalBearing.class, "");
+                if (scriptValue8 instanceof ScriptValue.Obj && (object4 = (obj = (ScriptValue.Obj)scriptValue8).instance()) != null && !(object4 instanceof PolyClass) && obj.typeName().equals("Machine")) {
+                    PolyClassMachine_v2 polyClassMachine_v23 = new PolyClassMachine_v2(object4);
+                    v2 = ScriptValue.of((boolean)polyClassMachine_v23.tm$82_set_typed(string, string4, scriptValue9));
                 } else {
-                    v2 = PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue7, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string4), (ScriptValue)scriptValue8, (ScriptContext)scriptContext);
+                    v2 = PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue8, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string4), (ScriptValue)scriptValue9, (ScriptContext)scriptContext);
                 }
             } else {
                 v2 = ScriptValue.NULL;
@@ -256,10 +254,10 @@ public final class RotationalBearing {
             return;
         }
         if (ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("rpm"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", RotationalBearing.class, 0.0)))) {
-            ScriptValue scriptValue9 = scriptContext.getClassOrVar("contraption");
-            if (scriptValue9 != ScriptValue.NULL) {
+            ScriptValue scriptValue10 = scriptContext.getClassOrVar("contraption");
+            if (scriptValue10 != ScriptValue.NULL) {
                 ScriptContext.Builder builder4 = ScriptContext.builder().copyFrom(scriptContext);
-                v3 = PolyDispatch.bootstrapCall("memberCall", "set_spin", (ScriptValue)scriptValue9, (ScriptValue)RotationalBearing._spinAxis(builder4), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", RotationalBearing.class, 0.0)), (ScriptContext)scriptContext);
+                v3 = PolyDispatch.bootstrapCall("memberCall", "set_spin", (ScriptValue)scriptValue10, (ScriptValue)RotationalBearing._spinAxis(builder4), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", RotationalBearing.class, 0.0)), (ScriptContext)scriptContext);
             } else {
                 v3 = ScriptValue.NULL;
             }
@@ -269,18 +267,17 @@ public final class RotationalBearing {
             return;
         }
         double d = 5.0;
-        double d2 = Math.floor(5.0 == 0.0 ? 0.0 : ((scriptValue = scriptContext.getClassOrVar("contraption")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "weight", (ScriptValue)scriptValue, (ScriptContext)scriptContext) : ScriptValue.NULL).asNum() / d);
-        ScriptValue scriptValue10 = ScriptValue.of((double)d2);
-        builder.val("su", scriptValue10);
-        ScriptValue scriptValue11 = scriptContext.getClassOrVar("Machine");
-        boolean bl = scriptValue11 != ScriptValue.NULL ? ((polyClassMachine_v2 = PolyClassMachine_v2.ofGuarded((ScriptValue)scriptValue11)) != null ? polyClassMachine_v2.tg$199_is_overstressed() : PolyDispatch.bootstrapGet("memberGet", "is_overstressed", (ScriptValue)scriptValue11, (ScriptContext)scriptContext).asBool()) : ScriptValue.NULL.asBool();
-        if (bl) {
+        double d2 = Math.floor(5.0 == 0.0 ? 0.0 : ((scriptValue2 = scriptContext.getClassOrVar("contraption")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "weight", (ScriptValue)scriptValue2, (ScriptContext)scriptContext) : ScriptValue.NULL).asNum() / d);
+        ScriptValue scriptValue11 = ScriptValue.of((double)d2);
+        builder.val("su", scriptValue11);
+        PolyClassMachine_v2 polyClassMachine_v24 = PolyClassMachine_v2.ofVar((ScriptContext)scriptContext, (String)"Machine");
+        if (polyClassMachine_v24 != null ? polyClassMachine_v24.tg$199_is_overstressed() : ((scriptValue = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "is_overstressed", (ScriptValue)scriptValue, (ScriptContext)scriptContext).asBool() : ScriptValue.NULL.asBool())) {
             ScriptValue scriptValue12 = scriptContext.getClassOrVar("contraption");
             if (scriptValue12 != ScriptValue.NULL) {
                 ScriptContext.Builder builder6 = ScriptContext.builder().copyFrom(scriptContext);
-                v5 = PolyDispatch.bootstrapCall("memberCall", "set_spin", (ScriptValue)scriptValue12, (ScriptValue)RotationalBearing._spinAxis(builder6), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", RotationalBearing.class, 0.0)), (ScriptContext)scriptContext);
+                v4 = PolyDispatch.bootstrapCall("memberCall", "set_spin", (ScriptValue)scriptValue12, (ScriptValue)RotationalBearing._spinAxis(builder6), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", RotationalBearing.class, 0.0)), (ScriptContext)scriptContext);
             } else {
-                v5 = ScriptValue.NULL;
+                v4 = ScriptValue.NULL;
             }
             ScriptValue scriptValue13 = scriptContext.getClassOrVar("Machine");
             if (scriptValue13 != ScriptValue.NULL) {
@@ -288,13 +285,13 @@ public final class RotationalBearing {
                 Object object5;
                 double d3 = d2;
                 if (scriptValue13 instanceof ScriptValue.Obj && (object5 = (obj = (ScriptValue.Obj)scriptValue13).instance()) != null && !(object5 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                    PolyClassMachine_v2 polyClassMachine_v26 = new PolyClassMachine_v2(object5);
-                    v6 = ScriptValue.of((boolean)polyClassMachine_v26.tm$56_report_su(d3));
+                    PolyClassMachine_v2 polyClassMachine_v25 = new PolyClassMachine_v2(object5);
+                    v5 = ScriptValue.of((boolean)polyClassMachine_v25.tm$56_report_su(d3));
                 } else {
-                    v6 = PolyDispatch.bootstrapCall("memberCall", "report_su", (ScriptValue)scriptValue13, (ScriptValue)ScriptValue.of((double)d3), (ScriptContext)scriptContext);
+                    v5 = PolyDispatch.bootstrapCall("memberCall", "report_su", (ScriptValue)scriptValue13, (ScriptValue)ScriptValue.of((double)d3), (ScriptContext)scriptContext);
                 }
             } else {
-                v6 = ScriptValue.NULL;
+                v5 = ScriptValue.NULL;
             }
             ScriptContext.Builder builder7 = ScriptContext.builder().copyFrom(scriptContext);
             builder7.val("rpm_value",  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", RotationalBearing.class, 0.0));
@@ -305,9 +302,9 @@ public final class RotationalBearing {
         ScriptValue scriptValue14 = scriptContext.getClassOrVar("contraption");
         if (scriptValue14 != ScriptValue.NULL) {
             ScriptContext.Builder builder8 = ScriptContext.builder().copyFrom(scriptContext);
-            v7 = PolyDispatch.bootstrapCall("memberCall", "set_spin", (ScriptValue)scriptValue14, (ScriptValue)RotationalBearing._spinAxis(builder8), (ScriptValue)scriptContext.getClassOrVar("rpm"), (ScriptContext)scriptContext);
+            v6 = PolyDispatch.bootstrapCall("memberCall", "set_spin", (ScriptValue)scriptValue14, (ScriptValue)RotationalBearing._spinAxis(builder8), (ScriptValue)scriptContext.getClassOrVar("rpm"), (ScriptContext)scriptContext);
         } else {
-            v7 = ScriptValue.NULL;
+            v6 = ScriptValue.NULL;
         }
         ScriptValue scriptValue15 = scriptContext.getClassOrVar("Machine");
         if (scriptValue15 != ScriptValue.NULL) {
@@ -315,13 +312,13 @@ public final class RotationalBearing {
             Object object6;
             double d4 = d2;
             if (scriptValue15 instanceof ScriptValue.Obj && (object6 = (obj = (ScriptValue.Obj)scriptValue15).instance()) != null && !(object6 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                PolyClassMachine_v2 polyClassMachine_v27 = new PolyClassMachine_v2(object6);
-                v8 = ScriptValue.of((boolean)polyClassMachine_v27.tm$56_report_su(d4));
+                PolyClassMachine_v2 polyClassMachine_v26 = new PolyClassMachine_v2(object6);
+                v7 = ScriptValue.of((boolean)polyClassMachine_v26.tm$56_report_su(d4));
             } else {
-                v8 = PolyDispatch.bootstrapCall("memberCall", "report_su", (ScriptValue)scriptValue15, (ScriptValue)ScriptValue.of((double)d4), (ScriptContext)scriptContext);
+                v7 = PolyDispatch.bootstrapCall("memberCall", "report_su", (ScriptValue)scriptValue15, (ScriptValue)ScriptValue.of((double)d4), (ScriptContext)scriptContext);
             }
         } else {
-            v8 = ScriptValue.NULL;
+            v7 = ScriptValue.NULL;
         }
         ScriptContext.Builder builder9 = ScriptContext.builder().copyFrom(scriptContext);
         builder9.val("rpm_value", scriptContext.getClassOrVar("rpm"));

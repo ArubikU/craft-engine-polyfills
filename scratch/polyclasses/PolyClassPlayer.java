@@ -13,6 +13,7 @@
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler4
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler5
  *  dev.arubik.craftengine.script.PolyType$TypedPropertyHandler
+ *  dev.arubik.craftengine.script.ScriptContext
  *  dev.arubik.craftengine.script.ScriptValue
  *  dev.arubik.craftengine.script.ScriptValue$Obj
  */
@@ -22,6 +23,7 @@ import dev.arubik.craftengine.script.PolyClass;
 import dev.arubik.craftengine.script.PolyClassLivingEntity;
 import dev.arubik.craftengine.script.PolyClassRuntime;
 import dev.arubik.craftengine.script.PolyType;
+import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptValue;
 import java.util.List;
 
@@ -640,5 +642,9 @@ extends PolyClassLivingEntity {
             return new PolyClassPlayer(object);
         }
         return null;
+    }
+
+    public static PolyClassPlayer ofVar(ScriptContext scriptContext, String string) {
+        return PolyClassPlayer.ofGuarded(scriptContext.getClassOrVar(string));
     }
 }

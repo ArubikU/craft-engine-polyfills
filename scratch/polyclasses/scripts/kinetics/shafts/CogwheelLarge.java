@@ -96,15 +96,15 @@ public final class CogwheelLarge {
             } else {
                 v1 /* !! */  = ScriptValue.NULL;
             }
-            var7_7 = var1_1.getClassOrVar("Machine");
-            var9_9 = var7_7 != ScriptValue.NULL ? ((var8_8 = PolyClassMachine_v2.ofGuarded((ScriptValue)var7_7)) != null ? var8_8.pg$127_axis() : PolyDispatch.bootstrapGet("memberGet", "axis", (ScriptValue)var7_7, (ScriptContext)var1_1)) : ScriptValue.NULL;
+            var7_7 = PolyClassMachine_v2.ofVar((ScriptContext)var1_1, (String)"Machine");
+            var9_9 = var7_7 != null ? var7_7.pg$127_axis() : ((var8_8 = var1_1.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "axis", (ScriptValue)var8_8, (ScriptContext)var1_1) : ScriptValue.NULL);
             var0.val("axis", var9_9);
             if (ScriptFormula.valuesEqual((ScriptValue)var9_9, (ScriptValue)var1_1.getClassOrVar("null"))) {
                 var0.val("__return__", ScriptValue.NULL);
                 return;
             }
-            var10_10 = var1_1.getClassOrVar("Machine");
-            var12_12 = var10_10 != ScriptValue.NULL ? ((var11_11 = PolyClassMachine_v2.ofGuarded((ScriptValue)var10_10)) != null ? var11_11.pg$183_rpm_network() : PolyDispatch.bootstrapGet("memberGet", "rpm_network", (ScriptValue)var10_10, (ScriptContext)var1_1)) : ScriptValue.NULL;
+            var10_10 = PolyClassMachine_v2.ofVar((ScriptContext)var1_1, (String)"Machine");
+            var12_12 = var10_10 != null ? var10_10.pg$183_rpm_network() : ((var11_11 = var1_1.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "rpm_network", (ScriptValue)var11_11, (ScriptContext)var1_1) : ScriptValue.NULL);
             var0.val("net", var12_12);
             if (ScriptFormula.valuesEqualStr((ScriptValue)var9_9, (String)"y")) {
                 var13_13 = new ArrayList<ScriptValue>();

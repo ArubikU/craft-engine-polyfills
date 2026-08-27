@@ -26,7 +26,7 @@ import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptValue;
 import java.util.List;
 
-public class PolyClassBlock_v3 {
+public class PolyClassBlock_v5 {
     protected final Object instance;
     private static volatile PolyType.TypedMethodHandler1 h$0;
     private static volatile PolyType.MethodHandler m$1;
@@ -781,24 +781,24 @@ public class PolyClassBlock_v3 {
         return PolyClassRuntime.genericProperty((String)"Block", (String)"redstone", (Object)this.instance).asNum();
     }
 
-    public PolyClassBlock_v3(Object object) {
+    public PolyClassBlock_v5(Object object) {
         this.instance = object;
     }
 
-    public static PolyClassBlock_v3 of(Object object) {
-        return new PolyClassBlock_v3(object);
+    public static PolyClassBlock_v5 of(Object object) {
+        return new PolyClassBlock_v5(object);
     }
 
-    public static PolyClassBlock_v3 ofGuarded(ScriptValue scriptValue) {
+    public static PolyClassBlock_v5 ofGuarded(ScriptValue scriptValue) {
         ScriptValue.Obj obj;
         Object object;
         if (scriptValue instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Block")) {
-            return new PolyClassBlock_v3(object);
+            return new PolyClassBlock_v5(object);
         }
         return null;
     }
 
-    public static PolyClassBlock_v3 ofVar(ScriptContext scriptContext, String string) {
-        return PolyClassBlock_v3.ofGuarded(scriptContext.getClassOrVar(string));
+    public static PolyClassBlock_v5 ofVar(ScriptContext scriptContext, String string) {
+        return PolyClassBlock_v5.ofGuarded(scriptContext.getClassOrVar(string));
     }
 }

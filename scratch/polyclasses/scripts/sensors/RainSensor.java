@@ -31,50 +31,43 @@ public final class RainSensor {
         return scriptContext;
     }
 
-    /*
-     * Unable to fully structure code
-     * Could not resolve type clashes
-     */
-    public static void run(ScriptContext.Builder var0) {
-        var1_1 = var0.peek();
-        var2_2 = var1_1.getClassOrVar("World");
-        if (var2_2 != ScriptValue.NULL ? ((var3_3 = PolyClassWorld.ofGuarded((ScriptValue)var2_2)) != null ? var3_3.tg$39_is_raining() : PolyDispatch.bootstrapGet("memberGet", "is_raining", (ScriptValue)var2_2, (ScriptContext)var1_1).asBool()) : ScriptValue.NULL.asBool()) ** GOTO lbl-1000
-        var4_4 = var1_1.getClassOrVar("World");
-        if (!(var4_4 != ScriptValue.NULL ? ((var5_5 = PolyClassWorld.ofGuarded((ScriptValue)var4_4)) != null ? var5_5.tg$41_is_thundering() : PolyDispatch.bootstrapGet("memberGet", "is_thundering", (ScriptValue)var4_4, (ScriptContext)var1_1).asBool()) : ScriptValue.NULL.asBool())) {
-            v0 = false;
-        } else lbl-1000:
-        // 2 sources
-
-        {
-            v0 = true;
-        }
-        if (v0) {
-            var6_6 = var1_1.getClassOrVar("Machine");
-            if (var6_6 != ScriptValue.NULL) {
-                var7_7 = 15.0;
-                if (var6_6 instanceof ScriptValue.Obj && (var10_9 = (var9_8 = (ScriptValue.Obj)var6_6).instance()) != null && !(var10_9 instanceof PolyClass) && var9_8.typeName().equals("Machine")) {
-                    var11_10 = new PolyClassMachine_v2(var10_9);
-                    v1 /* !! */  = ScriptValue.of((boolean)var11_10.tm$108_emit_redstone(var7_7));
+    public static void run(ScriptContext.Builder builder) {
+        ScriptValue scriptValue;
+        PolyClassWorld polyClassWorld;
+        ScriptValue scriptValue2;
+        ScriptContext scriptContext = builder.peek();
+        PolyClassWorld polyClassWorld2 = PolyClassWorld.ofVar((ScriptContext)scriptContext, (String)"World");
+        if ((polyClassWorld2 != null ? polyClassWorld2.tg$39_is_raining() : ((scriptValue2 = scriptContext.getClassOrVar("World")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "is_raining", (ScriptValue)scriptValue2, (ScriptContext)scriptContext).asBool() : ScriptValue.NULL.asBool())) || ((polyClassWorld = PolyClassWorld.ofVar((ScriptContext)scriptContext, (String)"World")) != null ? polyClassWorld.tg$41_is_thundering() : ((scriptValue = scriptContext.getClassOrVar("World")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "is_thundering", (ScriptValue)scriptValue, (ScriptContext)scriptContext).asBool() : ScriptValue.NULL.asBool()))) {
+            ScriptValue scriptValue3 = scriptContext.getClassOrVar("Machine");
+            if (scriptValue3 != ScriptValue.NULL) {
+                ScriptValue.Obj obj;
+                Object object;
+                double d = 15.0;
+                if (scriptValue3 instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue3).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Machine")) {
+                    PolyClassMachine_v2 polyClassMachine_v2 = new PolyClassMachine_v2(object);
+                    v0 = ScriptValue.of((boolean)polyClassMachine_v2.tm$108_emit_redstone(d));
                 } else {
-                    v1 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "emit_redstone", (ScriptValue)var6_6, (ScriptValue)ScriptValue.of((double)var7_7), (ScriptContext)var1_1);
+                    v0 = PolyDispatch.bootstrapCall("memberCall", "emit_redstone", (ScriptValue)scriptValue3, (ScriptValue)ScriptValue.of((double)d), (ScriptContext)scriptContext);
                 }
             } else {
-                v1 /* !! */  = ScriptValue.NULL;
+                v0 = ScriptValue.NULL;
             }
         } else {
-            var12_11 = var1_1.getClassOrVar("Machine");
-            if (var12_11 != ScriptValue.NULL) {
-                var13_12 = 0.0;
-                if (var12_11 instanceof ScriptValue.Obj && (var16_14 = (var15_13 = (ScriptValue.Obj)var12_11).instance()) != null && !(var16_14 instanceof PolyClass) && var15_13.typeName().equals("Machine")) {
-                    var17_15 = new PolyClassMachine_v2(var16_14);
-                    v2 /* !! */  = ScriptValue.of((boolean)var17_15.tm$108_emit_redstone(var13_12));
+            ScriptValue scriptValue4 = scriptContext.getClassOrVar("Machine");
+            if (scriptValue4 != ScriptValue.NULL) {
+                ScriptValue.Obj obj;
+                Object object;
+                double d = 0.0;
+                if (scriptValue4 instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue4).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Machine")) {
+                    PolyClassMachine_v2 polyClassMachine_v2 = new PolyClassMachine_v2(object);
+                    v1 = ScriptValue.of((boolean)polyClassMachine_v2.tm$108_emit_redstone(d));
                 } else {
-                    v2 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "emit_redstone", (ScriptValue)var12_11, (ScriptValue)ScriptValue.of((double)var13_12), (ScriptContext)var1_1);
+                    v1 = PolyDispatch.bootstrapCall("memberCall", "emit_redstone", (ScriptValue)scriptValue4, (ScriptValue)ScriptValue.of((double)d), (ScriptContext)scriptContext);
                 }
             } else {
-                v2 /* !! */  = ScriptValue.NULL;
+                v1 = ScriptValue.NULL;
             }
         }
-        RainSensor.FILE_SCOPE = var0.build();
+        FILE_SCOPE = builder.build();
     }
 }

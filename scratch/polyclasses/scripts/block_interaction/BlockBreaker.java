@@ -45,7 +45,7 @@ public final class BlockBreaker {
     public static void run(ScriptContext.Builder builder) {
         ScriptValue scriptValue;
         ScriptValue scriptValue2;
-        PolyClassMachine_v2 polyClassMachine_v2;
+        ScriptValue scriptValue3;
         ScriptContext scriptContext = builder.peek();
         ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
         arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", BlockBreaker.class, "minecraft:bedrock"));
@@ -54,10 +54,10 @@ public final class BlockBreaker {
         arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constBool("b", MethodHandles.lookup(), "constBool", BlockBreaker.class, 1));
         arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", BlockBreaker.class, "minecraft:barrier"));
         arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constBool("b", MethodHandles.lookup(), "constBool", BlockBreaker.class, 1));
-        ScriptValue scriptValue3 = ScriptFormula.callBuiltin((String)"make_map", arrayList, (ScriptContext)scriptContext);
-        builder.val("UNBREAKABLE", scriptValue3);
-        ScriptValue scriptValue4 = scriptContext.getClassOrVar("Machine");
-        ScriptValue scriptValue5 = scriptValue4 != ScriptValue.NULL ? ((polyClassMachine_v2 = PolyClassMachine_v2.ofGuarded((ScriptValue)scriptValue4)) != null ? polyClassMachine_v2.pg$137_facing_block() : PolyDispatch.bootstrapGet("memberGet", "facing_block", (ScriptValue)scriptValue4, (ScriptContext)scriptContext)) : ScriptValue.NULL;
+        ScriptValue scriptValue4 = ScriptFormula.callBuiltin((String)"make_map", arrayList, (ScriptContext)scriptContext);
+        builder.val("UNBREAKABLE", scriptValue4);
+        PolyClassMachine_v2 polyClassMachine_v2 = PolyClassMachine_v2.ofVar((ScriptContext)scriptContext, (String)"Machine");
+        ScriptValue scriptValue5 = polyClassMachine_v2 != null ? polyClassMachine_v2.pg$137_facing_block() : ((scriptValue3 = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "facing_block", (ScriptValue)scriptValue3, (ScriptContext)scriptContext) : ScriptValue.NULL);
         builder.val("block", scriptValue5);
         ScriptValue scriptValue6 = scriptContext.getClassOrVar("block");
         if ((scriptValue6 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "is_air", (ScriptValue)scriptValue6, (ScriptContext)scriptContext) : ScriptValue.NULL).asBool() ^ true && ((scriptValue2 = scriptContext.getClassOrVar("UNBREAKABLE")) != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "has", (ScriptValue)scriptValue2, (ScriptValue)((scriptValue = scriptContext.getClassOrVar("block")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "id", (ScriptValue)scriptValue, (ScriptContext)scriptContext) : ScriptValue.NULL), (ScriptContext)scriptContext) : ScriptValue.NULL).asBool() ^ true) {
@@ -100,10 +100,10 @@ public final class BlockBreaker {
                         CallSite callSite;
                         ScriptValue.Obj obj;
                         Object object4;
-                        PolyClassMachine_v2 polyClassMachine_v24;
+                        ScriptValue scriptValue13;
                         builder.val("drop", scriptValue12);
-                        ScriptValue scriptValue13 = scriptContext.getClassOrVar("Machine");
-                        ScriptValue scriptValue14 = scriptValue13 != ScriptValue.NULL ? ((polyClassMachine_v24 = PolyClassMachine_v2.ofGuarded((ScriptValue)scriptValue13)) != null ? polyClassMachine_v24.pg$120_container() : PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)scriptValue13, (ScriptContext)scriptContext)) : ScriptValue.NULL;
+                        PolyClassMachine_v2 polyClassMachine_v24 = PolyClassMachine_v2.ofVar((ScriptContext)scriptContext, (String)"Machine");
+                        ScriptValue scriptValue14 = polyClassMachine_v24 != null ? polyClassMachine_v24.pg$120_container() : ((scriptValue13 = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)scriptValue13, (ScriptContext)scriptContext) : ScriptValue.NULL);
                         ScriptValue scriptValue15 = scriptContext.getClassOrVar("drop");
                         if (scriptValue14 instanceof ScriptValue.Obj && (object4 = (obj = (ScriptValue.Obj)scriptValue14).instance()) != null && !(object4 instanceof PolyClass) && obj.typeName().equals("Container")) {
                             PolyClassContainer polyClassContainer = new PolyClassContainer(object4);

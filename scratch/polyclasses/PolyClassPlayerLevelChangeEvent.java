@@ -6,6 +6,7 @@
  *  dev.arubik.craftengine.script.PolyClassRuntime
  *  dev.arubik.craftengine.script.PolyType$PropertyHandler
  *  dev.arubik.craftengine.script.PolyType$TypedPropertyHandler
+ *  dev.arubik.craftengine.script.ScriptContext
  *  dev.arubik.craftengine.script.ScriptValue
  *  dev.arubik.craftengine.script.ScriptValue$Obj
  */
@@ -15,6 +16,7 @@ import dev.arubik.craftengine.script.PolyClass;
 import dev.arubik.craftengine.script.PolyClassEvent;
 import dev.arubik.craftengine.script.PolyClassRuntime;
 import dev.arubik.craftengine.script.PolyType;
+import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptValue;
 
 public class PolyClassPlayerLevelChangeEvent
@@ -74,5 +76,9 @@ extends PolyClassEvent {
             return new PolyClassPlayerLevelChangeEvent(object);
         }
         return null;
+    }
+
+    public static PolyClassPlayerLevelChangeEvent ofVar(ScriptContext scriptContext, String string) {
+        return PolyClassPlayerLevelChangeEvent.ofGuarded(scriptContext.getClassOrVar(string));
     }
 }

@@ -512,10 +512,10 @@ public final class WaterWheel {
 
     public static ScriptValue _run(ScriptContext.Builder builder) {
         ScriptValue scriptValue;
-        PolyClassMachine_v2 polyClassMachine_v2;
+        ScriptValue scriptValue2;
         ScriptContext scriptContext = builder.peek();
-        ScriptValue scriptValue2 = scriptContext.getClassOrVar("Machine");
-        ScriptValue scriptValue3 = scriptValue2 != ScriptValue.NULL ? ((polyClassMachine_v2 = PolyClassMachine_v2.ofGuarded((ScriptValue)scriptValue2)) != null ? polyClassMachine_v2.pg$127_axis() : PolyDispatch.bootstrapGet("memberGet", "axis", (ScriptValue)scriptValue2, (ScriptContext)scriptContext)) : ScriptValue.NULL;
+        PolyClassMachine_v2 polyClassMachine_v2 = PolyClassMachine_v2.ofVar((ScriptContext)scriptContext, (String)"Machine");
+        ScriptValue scriptValue3 = polyClassMachine_v2 != null ? polyClassMachine_v2.pg$127_axis() : ((scriptValue2 = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "axis", (ScriptValue)scriptValue2, (ScriptContext)scriptContext) : ScriptValue.NULL);
         builder.val("axis", scriptValue3);
         if (ScriptFormula.valuesEqual((ScriptValue)scriptValue3, (ScriptValue)scriptContext.getClassOrVar("null"))) {
             ScriptValue scriptValue4 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", WaterWheel.class, "z");

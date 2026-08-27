@@ -32,17 +32,16 @@ public final class EnergyWindmill {
     }
 
     public static void run(ScriptContext.Builder builder) {
-        PolyClassWorld polyClassWorld;
+        ScriptValue scriptValue;
         ScriptContext scriptContext = builder.peek();
         double d = 80.0;
-        ScriptValue scriptValue = ScriptValue.of((double)80.0);
-        builder.val("BASE", scriptValue);
+        ScriptValue scriptValue2 = ScriptValue.of((double)80.0);
+        builder.val("BASE", scriptValue2);
         double d2 = 120.0;
-        ScriptValue scriptValue2 = ScriptValue.of((double)120.0);
-        builder.val("STORM_BONUS", scriptValue2);
-        ScriptValue scriptValue3 = scriptContext.getClassOrVar("World");
-        boolean bl = scriptValue3 != ScriptValue.NULL ? ((polyClassWorld = PolyClassWorld.ofGuarded((ScriptValue)scriptValue3)) != null ? polyClassWorld.tg$41_is_thundering() : PolyDispatch.bootstrapGet("memberGet", "is_thundering", (ScriptValue)scriptValue3, (ScriptContext)scriptContext).asBool()) : ScriptValue.NULL.asBool();
-        if (bl) {
+        ScriptValue scriptValue3 = ScriptValue.of((double)120.0);
+        builder.val("STORM_BONUS", scriptValue3);
+        PolyClassWorld polyClassWorld = PolyClassWorld.ofVar((ScriptContext)scriptContext, (String)"World");
+        if (polyClassWorld != null ? polyClassWorld.tg$41_is_thundering() : ((scriptValue = scriptContext.getClassOrVar("World")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "is_thundering", (ScriptValue)scriptValue, (ScriptContext)scriptContext).asBool() : ScriptValue.NULL.asBool())) {
             ScriptValue scriptValue4 = scriptContext.getClassOrVar("Machine");
             if (scriptValue4 != ScriptValue.NULL) {
                 ScriptValue.Obj obj;
@@ -50,18 +49,17 @@ public final class EnergyWindmill {
                 double d3 = d + d2;
                 if (scriptValue4 instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue4).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Machine")) {
                     PolyClassMachine_v2 polyClassMachine_v2 = new PolyClassMachine_v2(object);
-                    v1 = ScriptValue.of((boolean)polyClassMachine_v2.tm$48_set_energy_per_tick(d3));
+                    v0 = ScriptValue.of((boolean)polyClassMachine_v2.tm$48_set_energy_per_tick(d3));
                 } else {
-                    v1 = PolyDispatch.bootstrapCall("memberCall", "set_energy_per_tick", (ScriptValue)scriptValue4, (ScriptValue)ScriptValue.of((double)d3), (ScriptContext)scriptContext);
+                    v0 = PolyDispatch.bootstrapCall("memberCall", "set_energy_per_tick", (ScriptValue)scriptValue4, (ScriptValue)ScriptValue.of((double)d3), (ScriptContext)scriptContext);
                 }
             } else {
-                v1 = ScriptValue.NULL;
+                v0 = ScriptValue.NULL;
             }
         } else {
-            PolyClassWorld polyClassWorld2;
-            ScriptValue scriptValue5 = scriptContext.getClassOrVar("World");
-            boolean bl2 = scriptValue5 != ScriptValue.NULL ? ((polyClassWorld2 = PolyClassWorld.ofGuarded((ScriptValue)scriptValue5)) != null ? polyClassWorld2.tg$39_is_raining() : PolyDispatch.bootstrapGet("memberGet", "is_raining", (ScriptValue)scriptValue5, (ScriptContext)scriptContext).asBool()) : ScriptValue.NULL.asBool();
-            if (bl2) {
+            ScriptValue scriptValue5;
+            PolyClassWorld polyClassWorld2 = PolyClassWorld.ofVar((ScriptContext)scriptContext, (String)"World");
+            if (polyClassWorld2 != null ? polyClassWorld2.tg$39_is_raining() : ((scriptValue5 = scriptContext.getClassOrVar("World")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "is_raining", (ScriptValue)scriptValue5, (ScriptContext)scriptContext).asBool() : ScriptValue.NULL.asBool())) {
                 ScriptValue scriptValue6 = scriptContext.getClassOrVar("Machine");
                 if (scriptValue6 != ScriptValue.NULL) {
                     ScriptValue.Obj obj;
@@ -70,12 +68,12 @@ public final class EnergyWindmill {
                     double d5 = d + (2.0 == 0.0 ? 0.0 : d2 / d4);
                     if (scriptValue6 instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue6).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Machine")) {
                         PolyClassMachine_v2 polyClassMachine_v2 = new PolyClassMachine_v2(object);
-                        v3 = ScriptValue.of((boolean)polyClassMachine_v2.tm$48_set_energy_per_tick(d5));
+                        v1 = ScriptValue.of((boolean)polyClassMachine_v2.tm$48_set_energy_per_tick(d5));
                     } else {
-                        v3 = PolyDispatch.bootstrapCall("memberCall", "set_energy_per_tick", (ScriptValue)scriptValue6, (ScriptValue)ScriptValue.of((double)d5), (ScriptContext)scriptContext);
+                        v1 = PolyDispatch.bootstrapCall("memberCall", "set_energy_per_tick", (ScriptValue)scriptValue6, (ScriptValue)ScriptValue.of((double)d5), (ScriptContext)scriptContext);
                     }
                 } else {
-                    v3 = ScriptValue.NULL;
+                    v1 = ScriptValue.NULL;
                 }
             } else {
                 ScriptValue scriptValue7 = scriptContext.getClassOrVar("Machine");
@@ -85,12 +83,12 @@ public final class EnergyWindmill {
                     double d6 = d;
                     if (scriptValue7 instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue7).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Machine")) {
                         PolyClassMachine_v2 polyClassMachine_v2 = new PolyClassMachine_v2(object);
-                        v4 = ScriptValue.of((boolean)polyClassMachine_v2.tm$48_set_energy_per_tick(d6));
+                        v2 = ScriptValue.of((boolean)polyClassMachine_v2.tm$48_set_energy_per_tick(d6));
                     } else {
-                        v4 = PolyDispatch.bootstrapCall("memberCall", "set_energy_per_tick", (ScriptValue)scriptValue7, (ScriptValue)ScriptValue.of((double)d6), (ScriptContext)scriptContext);
+                        v2 = PolyDispatch.bootstrapCall("memberCall", "set_energy_per_tick", (ScriptValue)scriptValue7, (ScriptValue)ScriptValue.of((double)d6), (ScriptContext)scriptContext);
                     }
                 } else {
-                    v4 = ScriptValue.NULL;
+                    v2 = ScriptValue.NULL;
                 }
             }
         }

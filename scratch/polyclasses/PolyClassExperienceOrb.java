@@ -6,6 +6,7 @@
  *  dev.arubik.craftengine.script.PolyClassRuntime
  *  dev.arubik.craftengine.script.PolyType$PropertyHandler
  *  dev.arubik.craftengine.script.PolyType$TypedPropertyHandler
+ *  dev.arubik.craftengine.script.ScriptContext
  *  dev.arubik.craftengine.script.ScriptValue
  *  dev.arubik.craftengine.script.ScriptValue$Obj
  */
@@ -15,6 +16,7 @@ import dev.arubik.craftengine.script.PolyClass;
 import dev.arubik.craftengine.script.PolyClassEntity;
 import dev.arubik.craftengine.script.PolyClassRuntime;
 import dev.arubik.craftengine.script.PolyType;
+import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptValue;
 
 public class PolyClassExperienceOrb
@@ -74,5 +76,9 @@ extends PolyClassEntity {
             return new PolyClassExperienceOrb(object);
         }
         return null;
+    }
+
+    public static PolyClassExperienceOrb ofVar(ScriptContext scriptContext, String string) {
+        return PolyClassExperienceOrb.ofGuarded(scriptContext.getClassOrVar(string));
     }
 }

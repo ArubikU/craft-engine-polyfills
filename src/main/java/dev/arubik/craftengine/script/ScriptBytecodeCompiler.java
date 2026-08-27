@@ -559,6 +559,50 @@ final class ScriptBytecodeCompiler {
 
         private void emitAs(MethodVisitor mv, Ctx c, String javaName, String accessor, String returnDesc) {
             String desc = returnDesc != null ? returnDesc : "L" + VALUE + ";";
+            String member = javaName != null ? javaName : propJavaName;
+
+            // A first hop against a generated wrapper needs no raw ScriptValue of its own: ofVar
+            // does the read and the type guard in one call, so the fast path opens with the TYPED
+            // local and nothing else.
+            //
+            //     PolyClassMachine m = PolyClassMachine.ofVar(ctx, "Machine");
+            //
+            // The NULL receiver and the wrong-type receiver both leave m null, and they must still
+            // behave differently (NULL yields NULL; a wrong type dispatches generically), so the
+            // fallback arm re-reads the variable and keeps the NULL test. That re-read costs one map
+            // lookup, and only on the arm the type guard did not take.
+            if (base == null && propJavaName != null) {
+                Label fallbackL = new Label(), isNullL = new Label(), endL = new Label();
+                int pcSlot = c.allocRef();
+                mv.visitVarInsn(ALOAD, c.ctxSlot);
+                mv.visitLdcInsn(name);
+                mv.visitMethodInsn(INVOKESTATIC, wrapperName, "ofVar",
+                        "(L" + CTX + ";Ljava/lang/String;)L" + wrapperName + ";", false);
+                mv.visitVarInsn(ASTORE, pcSlot);
+                mv.visitVarInsn(ALOAD, pcSlot);
+                mv.visitJumpInsn(IFNULL, fallbackL);
+                mv.visitVarInsn(ALOAD, pcSlot);
+                mv.visitMethodInsn(INVOKEVIRTUAL, wrapperName, member, "()" + desc, false);
+                mv.visitJumpInsn(GOTO, endL);
+
+                mv.visitLabel(fallbackL);
+                int svSlot = c.allocRef();
+                P.emitResolveInstanceOrVar(mv, c, name, svSlot);
+                mv.visitVarInsn(ALOAD, svSlot);
+                P.emitGetNull(mv);
+                mv.visitJumpInsn(IF_ACMPEQ, isNullL);
+                mv.visitVarInsn(ALOAD, svSlot);
+                mv.visitVarInsn(ALOAD, c.ctxSlot);
+                P.emitDynamicGet(mv, prop);
+                emitCoerce(mv, accessor, desc);
+                mv.visitJumpInsn(GOTO, endL);
+                mv.visitLabel(isNullL);
+                P.emitGetNull(mv);
+                emitCoerce(mv, accessor, desc);
+                mv.visitLabel(endL);
+                return;
+            }
+
             int svSlot = c.allocRef();
             // A FIRST hop resolves a name and guards a NULL receiver, returning NULL for it. A
             // CHAINED hop evaluates its base expression and does NOT guard — that difference is the
@@ -588,8 +632,7 @@ final class ScriptBytecodeCompiler {
                 mv.visitVarInsn(ALOAD, pcSlot);
                 mv.visitJumpInsn(IFNULL, fallbackL);
                 mv.visitVarInsn(ALOAD, pcSlot);
-                mv.visitMethodInsn(INVOKEVIRTUAL, wrapperName,
-                        javaName != null ? javaName : propJavaName, "()" + desc, false);
+                mv.visitMethodInsn(INVOKEVIRTUAL, wrapperName, member, "()" + desc, false);
                 mv.visitJumpInsn(GOTO, fastL);
                 mv.visitLabel(fallbackL);
                 mv.visitVarInsn(ALOAD, svSlot);

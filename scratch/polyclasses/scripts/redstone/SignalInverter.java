@@ -36,9 +36,9 @@ public final class SignalInverter {
             ScriptValue.Obj obj;
             Object object;
             double d;
-            PolyClassMachine_v2 polyClassMachine_v2;
-            ScriptValue scriptValue2 = scriptContext.getClassOrVar("Machine");
-            Object object2 = scriptValue2 != ScriptValue.NULL ? ((polyClassMachine_v2 = PolyClassMachine_v2.ofGuarded((ScriptValue)scriptValue2)) != null ? polyClassMachine_v2.pg$171_redstone() : PolyDispatch.bootstrapGet("memberGet", "redstone", (ScriptValue)scriptValue2, (ScriptContext)scriptContext)) : ScriptValue.NULL;
+            ScriptValue scriptValue2;
+            PolyClassMachine_v2 polyClassMachine_v2 = PolyClassMachine_v2.ofVar((ScriptContext)scriptContext, (String)"Machine");
+            Object object2 = polyClassMachine_v2 != null ? polyClassMachine_v2.pg$171_redstone() : ((scriptValue2 = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "redstone", (ScriptValue)scriptValue2, (ScriptContext)scriptContext) : ScriptValue.NULL);
             double d2 = d = object2.asNum() > 0.0 ? 0.0 : 15.0;
             if (scriptValue instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Machine")) {
                 PolyClassMachine_v2 polyClassMachine_v22 = new PolyClassMachine_v2(object);

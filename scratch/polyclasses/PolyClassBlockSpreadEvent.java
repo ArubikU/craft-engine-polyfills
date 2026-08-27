@@ -5,6 +5,7 @@
  *  dev.arubik.craftengine.script.PolyClass
  *  dev.arubik.craftengine.script.PolyClassRuntime
  *  dev.arubik.craftengine.script.PolyType$PropertyHandler
+ *  dev.arubik.craftengine.script.ScriptContext
  *  dev.arubik.craftengine.script.ScriptValue
  *  dev.arubik.craftengine.script.ScriptValue$Obj
  */
@@ -14,6 +15,7 @@ import dev.arubik.craftengine.script.PolyClass;
 import dev.arubik.craftengine.script.PolyClassBlockFormEvent;
 import dev.arubik.craftengine.script.PolyClassRuntime;
 import dev.arubik.craftengine.script.PolyType;
+import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptValue;
 
 public class PolyClassBlockSpreadEvent
@@ -46,5 +48,9 @@ extends PolyClassBlockFormEvent {
             return new PolyClassBlockSpreadEvent(object);
         }
         return null;
+    }
+
+    public static PolyClassBlockSpreadEvent ofVar(ScriptContext scriptContext, String string) {
+        return PolyClassBlockSpreadEvent.ofGuarded(scriptContext.getClassOrVar(string));
     }
 }

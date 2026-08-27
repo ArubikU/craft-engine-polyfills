@@ -54,26 +54,26 @@ public final class ItemTrash {
                 CallSite callSite;
                 ScriptValue.Obj obj;
                 Object object2;
-                PolyClassMachine_v2 polyClassMachine_v2;
+                ScriptValue scriptValue3;
                 CallSite callSite2;
                 ScriptValue.Obj obj2;
                 Object object3;
-                PolyClassMachine_v2 polyClassMachine_v22;
+                ScriptValue scriptValue4;
                 builder.val("i", scriptValue2);
                 ArrayList<CallSite> arrayList2 = new ArrayList<CallSite>();
-                ScriptValue scriptValue3 = scriptContext.getClassOrVar("Machine");
-                ScriptValue scriptValue4 = scriptValue3 != ScriptValue.NULL ? ((polyClassMachine_v22 = PolyClassMachine_v2.ofGuarded((ScriptValue)scriptValue3)) != null ? polyClassMachine_v22.pg$120_container() : PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)scriptValue3, (ScriptContext)scriptContext)) : ScriptValue.NULL;
-                ScriptValue scriptValue5 = scriptContext.getClassOrVar("i");
-                if (scriptValue4 instanceof ScriptValue.Obj && (object3 = (obj2 = (ScriptValue.Obj)scriptValue4).instance()) != null && !(object3 instanceof PolyClass) && obj2.typeName().equals("Container")) {
+                PolyClassMachine_v2 polyClassMachine_v2 = PolyClassMachine_v2.ofVar((ScriptContext)scriptContext, (String)"Machine");
+                ScriptValue scriptValue5 = polyClassMachine_v2 != null ? polyClassMachine_v2.pg$120_container() : ((scriptValue4 = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)scriptValue4, (ScriptContext)scriptContext) : ScriptValue.NULL);
+                ScriptValue scriptValue6 = scriptContext.getClassOrVar("i");
+                if (scriptValue5 instanceof ScriptValue.Obj && (object3 = (obj2 = (ScriptValue.Obj)scriptValue5).instance()) != null && !(object3 instanceof PolyClass) && obj2.typeName().equals("Container")) {
                     PolyClassContainer polyClassContainer = new PolyClassContainer(object3);
-                    callSite2 = polyClassContainer.tm$0_get_item(scriptValue5.asNum());
+                    callSite2 = polyClassContainer.tm$0_get_item(scriptValue6.asNum());
                 } else {
-                    callSite2 = PolyDispatch.bootstrapCall("memberCall", "get_item", (ScriptValue)scriptValue4, (ScriptValue)scriptValue5, (ScriptContext)scriptContext);
+                    callSite2 = PolyDispatch.bootstrapCall("memberCall", "get_item", (ScriptValue)scriptValue5, (ScriptValue)scriptValue6, (ScriptContext)scriptContext);
                 }
                 arrayList2.add(callSite2);
                 if (!(ScriptFormula.callBuiltin((String)"is_empty", arrayList2, (ScriptContext)scriptContext).asBool() ^ true)) continue;
-                ScriptValue scriptValue6 = scriptContext.getClassOrVar("Machine");
-                ScriptValue scriptValue7 = scriptValue6 != ScriptValue.NULL ? ((polyClassMachine_v2 = PolyClassMachine_v2.ofGuarded((ScriptValue)scriptValue6)) != null ? polyClassMachine_v2.pg$120_container() : PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)scriptValue6, (ScriptContext)scriptContext)) : ScriptValue.NULL;
+                PolyClassMachine_v2 polyClassMachine_v22 = PolyClassMachine_v2.ofVar((ScriptContext)scriptContext, (String)"Machine");
+                ScriptValue scriptValue7 = polyClassMachine_v22 != null ? polyClassMachine_v22.pg$120_container() : ((scriptValue3 = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)scriptValue3, (ScriptContext)scriptContext) : ScriptValue.NULL);
                 ScriptValue scriptValue8 = scriptContext.getClassOrVar("i");
                 double d = 64.0;
                 if (scriptValue7 instanceof ScriptValue.Obj && (object2 = (obj = (ScriptValue.Obj)scriptValue7).instance()) != null && !(object2 instanceof PolyClass) && obj.typeName().equals("Container")) {

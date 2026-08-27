@@ -5,6 +5,7 @@
  *  dev.arubik.craftengine.script.PolyClass
  *  dev.arubik.craftengine.script.PolyClassRuntime
  *  dev.arubik.craftengine.script.PolyType$PropertyHandler
+ *  dev.arubik.craftengine.script.ScriptContext
  *  dev.arubik.craftengine.script.ScriptValue
  *  dev.arubik.craftengine.script.ScriptValue$Obj
  */
@@ -14,6 +15,7 @@ import dev.arubik.craftengine.script.PolyClass;
 import dev.arubik.craftengine.script.PolyClassEvent;
 import dev.arubik.craftengine.script.PolyClassRuntime;
 import dev.arubik.craftengine.script.PolyType;
+import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptValue;
 
 public class PolyClassItemMergeEvent
@@ -55,5 +57,9 @@ extends PolyClassEvent {
             return new PolyClassItemMergeEvent(object);
         }
         return null;
+    }
+
+    public static PolyClassItemMergeEvent ofVar(ScriptContext scriptContext, String string) {
+        return PolyClassItemMergeEvent.ofGuarded(scriptContext.getClassOrVar(string));
     }
 }

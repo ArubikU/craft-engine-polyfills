@@ -44,8 +44,8 @@ public final class SpeedSensor {
     public static void run(ScriptContext.Builder builder) {
         ScriptValue.Obj obj;
         Object object;
-        PolyClassMachine_v2 polyClassMachine_v2;
         ScriptValue scriptValue;
+        PolyClassMachine_v2 polyClassMachine_v2;
         Object object2;
         Object object3;
         Object object4;
@@ -218,7 +218,7 @@ public final class SpeedSensor {
             ScriptValue scriptValue32 = ScriptFormula.callBuiltin((String)"clamp", arrayList, (ScriptContext)scriptContext);
             builder.val("power", scriptValue32);
         }
-        ScriptValue scriptValue33 = (scriptValue = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? ((polyClassMachine_v2 = PolyClassMachine_v2.ofGuarded((ScriptValue)scriptValue)) != null ? polyClassMachine_v2.pg$171_redstone() : PolyDispatch.bootstrapGet("memberGet", "redstone", (ScriptValue)scriptValue, (ScriptContext)scriptContext)) : ScriptValue.NULL;
+        ScriptValue scriptValue33 = (polyClassMachine_v2 = PolyClassMachine_v2.ofVar((ScriptContext)scriptContext, (String)"Machine")) != null ? polyClassMachine_v2.pg$171_redstone() : ((scriptValue = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "redstone", (ScriptValue)scriptValue, (ScriptContext)scriptContext) : ScriptValue.NULL);
         ScriptValue scriptValue34 = scriptContext.getClassOrVar("power");
         if (scriptValue33 instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue33).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Redstone")) {
             PolyClassRedstone polyClassRedstone = new PolyClassRedstone(object);
