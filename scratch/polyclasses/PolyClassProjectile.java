@@ -1,0 +1,38 @@
+/*
+ * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  dev.arubik.craftengine.script.PolyClassRuntime
+ *  dev.arubik.craftengine.script.PolyType$PropertyHandler
+ *  dev.arubik.craftengine.script.ScriptValue
+ */
+package dev.arubik.craftengine.script;
+
+import dev.arubik.craftengine.script.PolyClassEntity;
+import dev.arubik.craftengine.script.PolyClassRuntime;
+import dev.arubik.craftengine.script.PolyType;
+import dev.arubik.craftengine.script.ScriptValue;
+
+public class PolyClassProjectile
+extends PolyClassEntity {
+    private static volatile PolyType.PropertyHandler p$0;
+
+    public static void refresh() {
+        p$0 = PolyClassRuntime.resolvePropertyHandler((String)"Projectile", (String)"owner_uuid");
+    }
+
+    public ScriptValue pg$0_owner_uuid() {
+        if (p$0 != null) {
+            return p$0.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Projectile", (String)"owner_uuid", (Object)this.instance);
+    }
+
+    public PolyClassProjectile(Object object) {
+        super(object);
+    }
+
+    public static PolyClassProjectile of(Object object) {
+        return new PolyClassProjectile(object);
+    }
+}

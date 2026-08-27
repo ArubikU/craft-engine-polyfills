@@ -1,0 +1,56 @@
+/*
+ * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  dev.arubik.craftengine.script.PolyClassRuntime
+ *  dev.arubik.craftengine.script.PolyType$PropertyHandler
+ *  dev.arubik.craftengine.script.ScriptValue
+ */
+package dev.arubik.craftengine.script;
+
+import dev.arubik.craftengine.script.PolyClassEvent;
+import dev.arubik.craftengine.script.PolyClassRuntime;
+import dev.arubik.craftengine.script.PolyType;
+import dev.arubik.craftengine.script.ScriptValue;
+
+public class PolyClassChunkUnloadEvent
+extends PolyClassEvent {
+    private static volatile PolyType.PropertyHandler p$0;
+    private static volatile PolyType.PropertyHandler p$1;
+    private static volatile PolyType.PropertyHandler p$2;
+
+    public static void refresh() {
+        p$0 = PolyClassRuntime.resolvePropertyHandler((String)"ChunkUnloadEvent", (String)"world");
+        p$1 = PolyClassRuntime.resolvePropertyHandler((String)"ChunkUnloadEvent", (String)"chunk_x");
+        p$2 = PolyClassRuntime.resolvePropertyHandler((String)"ChunkUnloadEvent", (String)"chunk_z");
+    }
+
+    public ScriptValue pg$0_world() {
+        if (p$0 != null) {
+            return p$0.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"ChunkUnloadEvent", (String)"world", (Object)this.instance);
+    }
+
+    public ScriptValue pg$1_chunk_x() {
+        if (p$1 != null) {
+            return p$1.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"ChunkUnloadEvent", (String)"chunk_x", (Object)this.instance);
+    }
+
+    public ScriptValue pg$2_chunk_z() {
+        if (p$2 != null) {
+            return p$2.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"ChunkUnloadEvent", (String)"chunk_z", (Object)this.instance);
+    }
+
+    public PolyClassChunkUnloadEvent(Object object) {
+        super(object);
+    }
+
+    public static PolyClassChunkUnloadEvent of(Object object) {
+        return new PolyClassChunkUnloadEvent(object);
+    }
+}

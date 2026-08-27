@@ -1,0 +1,38 @@
+/*
+ * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  dev.arubik.craftengine.script.PolyClassRuntime
+ *  dev.arubik.craftengine.script.PolyType$PropertyHandler
+ *  dev.arubik.craftengine.script.ScriptValue
+ */
+package dev.arubik.craftengine.script;
+
+import dev.arubik.craftengine.script.PolyClassEvent;
+import dev.arubik.craftengine.script.PolyClassRuntime;
+import dev.arubik.craftengine.script.PolyType;
+import dev.arubik.craftengine.script.ScriptValue;
+
+public class PolyClassPlayerToggleFlightEvent
+extends PolyClassEvent {
+    private static volatile PolyType.PropertyHandler p$0;
+
+    public static void refresh() {
+        p$0 = PolyClassRuntime.resolvePropertyHandler((String)"PlayerToggleFlightEvent", (String)"is_flying");
+    }
+
+    public ScriptValue pg$0_is_flying() {
+        if (p$0 != null) {
+            return p$0.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"PlayerToggleFlightEvent", (String)"is_flying", (Object)this.instance);
+    }
+
+    public PolyClassPlayerToggleFlightEvent(Object object) {
+        super(object);
+    }
+
+    public static PolyClassPlayerToggleFlightEvent of(Object object) {
+        return new PolyClassPlayerToggleFlightEvent(object);
+    }
+}
