@@ -403,6 +403,75 @@ class PolyTypeSpecializationTest {
     }
 
     @Test
+    void aChildPolyClassExtendsItsParentAndInheritsItsMethods() throws Exception {
+        PolyTypeRegistry.define("SpecParentType")
+                .method("from_parent", (o, a) -> ScriptValue.of("parent-method"))
+                .property("parent_prop", o -> ScriptValue.of("parent-prop"));
+        PolyTypeRegistry.define("SpecChildType", "SpecParentType")
+                .method("from_child", (o, a) -> ScriptValue.of("child-method"));
+
+        var parent = PolyClassGenerator.getOrGenerate("SpecParentType");
+        var child = PolyClassGenerator.getOrGenerate("SpecChildType");
+        assertNotNull(parent);
+        assertNotNull(child);
+
+        // The generated hierarchy mirrors the PolyType hierarchy.
+        Class<?> childClass = Class.forName(child.internalName().replace('/', '.'));
+        Class<?> parentClass = Class.forName(parent.internalName().replace('/', '.'));
+        assertEquals(parentClass, childClass.getSuperclass(),
+                "the child PolyClass must extend the parent PolyClass");
+
+        // The child DECLARES only its own member, and INHERITS the parent's rather than re-emitting
+        // it — that's the point of the hierarchy.
+        assertTrue(child.untypedMethods().containsKey("from_child"));
+        assertTrue(child.untypedMethods().containsKey("from_parent"),
+                "an inherited method must still be callable through the child");
+        assertTrue(child.properties().containsKey("parent_prop"),
+                "an inherited property must still be callable through the child");
+        assertEquals(parent.untypedMethods().get("from_parent"), child.untypedMethods().get("from_parent"),
+                "the inherited member should point at the PARENT's generated method, not a copy");
+        assertEquals(parent.instanceOwner(), child.instanceOwner(),
+                "only the root of the hierarchy declares the wrapped-instance field");
+
+        // And it all actually works end to end, through the child, for both.
+        ScriptContext ctx = ScriptContext.builder().typed("SpecChildType", new Object()).build();
+        ScriptFormula.Node own = ScriptBytecodeCompiler.tryCompile("SpecChildType.from_child()");
+        ScriptFormula.Node inherited = ScriptBytecodeCompiler.tryCompile("SpecChildType.from_parent()");
+        ScriptFormula.Node inheritedProp = ScriptBytecodeCompiler.tryCompile("SpecChildType.parent_prop");
+        assertNotNull(own);
+        assertNotNull(inherited);
+        assertNotNull(inheritedProp);
+        assertEquals("child-method", own.eval(ctx).asStr());
+        assertEquals("parent-method", inherited.eval(ctx).asStr());
+        assertEquals("parent-prop", inheritedProp.eval(ctx).asStr());
+    }
+
+    @Test
+    void aChildOverridingAParentMemberUsesItsOwnNotTheInheritedOne() throws Exception {
+        PolyTypeRegistry.define("SpecOvParentType")
+                .method("greet", (o, a) -> ScriptValue.of("from-parent"));
+        PolyTypeRegistry.define("SpecOvChildType", "SpecOvParentType")
+                .method("greet", (o, a) -> ScriptValue.of("from-child"));
+
+        var child = PolyClassGenerator.getOrGenerate("SpecOvChildType");
+        String javaName = child.untypedMethods().get("greet");
+        assertNotNull(javaName);
+
+        // The child must DECLARE its own method for the overridden member rather than only
+        // inheriting the parent's. (Its generated name may coincide with the parent's, in which case
+        // this is a real JVM override — also correct; what matters is that the child declares one.)
+        Class<?> childClass = Class.forName(child.internalName().replace('/', '.'));
+        assertNotNull(childClass.getDeclaredMethod(javaName, java.util.List.class),
+                "the child should declare its own generated method for the member it overrides");
+
+        ScriptContext ctx = ScriptContext.builder().typed("SpecOvChildType", new Object()).build();
+        ScriptFormula.Node node = ScriptBytecodeCompiler.tryCompile("SpecOvChildType.greet()");
+        assertNotNull(node);
+        assertEquals("from-child", node.eval(ctx).asStr(),
+                "the child's own handler must run, not the inherited one");
+    }
+
+    @Test
     void exactlyOnePolyClassIsEverGeneratedPerType() {
         // One PolyType => one generated class, for the life of the process. Classes are never
         // unloaded, so minting a fresh one per registration (which an invalidate-on-mutation cache

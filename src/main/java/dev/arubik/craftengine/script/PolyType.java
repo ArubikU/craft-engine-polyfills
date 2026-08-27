@@ -189,6 +189,90 @@ public final class PolyType {
         return this;
     }
 
+    // --- Optional-argument typed registration -------------------------------------------------
+    //
+    // methodTypedN's `onMissingArgs` SKIPS the handler entirely and returns a fixed value. That is
+    // wrong for the single most common shape in this codebase:
+    //
+    //     .method("foo", (o, args) -> { int n = args.isEmpty() ? 0 : (int) args.get(0).asNum();
+    //                                   ref(o).doTheThing(n); return ScriptValue.of(true); })
+    //
+    // Here a missing argument gets a DEFAULT and the body still runs its side effect — so
+    // onMissingArgs would silently drop that side effect. These methodTypedOptN overloads express
+    // it correctly: every argument is optional, each with its own default value, and the handler
+    // ALWAYS runs. That unblocks the large set of methods previously stuck on the untyped API.
+    //
+    // Extra trailing arguments are ignored, and missing ones take their default — matching what the
+    // hand-written bodies above already do.
+
+    public <I, A1, R> PolyType methodTypedOpt1(String name, TypeCodec<A1> a1, A1 def1, TypeCodec<R> ret,
+                                                TypedMethodHandler1<I, A1, R> handler) {
+        methods.put(name, (instance, args) -> ret.encode(handler.call(cast(instance),
+                args.size() > 0 ? a1.decode(args.get(0)) : def1)));
+        typedMethods.put(name, new TypedMethodDescriptor(name, List.of(a1), ret, handler,
+                java.util.Collections.singletonList(def1)));
+        PolyTypeRegistry.notifyMutation();
+        return this;
+    }
+
+    public <I, A1, A2, R> PolyType methodTypedOpt2(String name, TypeCodec<A1> a1, A1 def1,
+                                                    TypeCodec<A2> a2, A2 def2, TypeCodec<R> ret,
+                                                    TypedMethodHandler2<I, A1, A2, R> handler) {
+        methods.put(name, (instance, args) -> ret.encode(handler.call(cast(instance),
+                args.size() > 0 ? a1.decode(args.get(0)) : def1,
+                args.size() > 1 ? a2.decode(args.get(1)) : def2)));
+        typedMethods.put(name, new TypedMethodDescriptor(name, List.of(a1, a2), ret, handler,
+                java.util.Arrays.asList(def1, def2)));
+        PolyTypeRegistry.notifyMutation();
+        return this;
+    }
+
+    public <I, A1, A2, A3, R> PolyType methodTypedOpt3(String name, TypeCodec<A1> a1, A1 def1,
+                                                        TypeCodec<A2> a2, A2 def2, TypeCodec<A3> a3, A3 def3,
+                                                        TypeCodec<R> ret,
+                                                        TypedMethodHandler3<I, A1, A2, A3, R> handler) {
+        methods.put(name, (instance, args) -> ret.encode(handler.call(cast(instance),
+                args.size() > 0 ? a1.decode(args.get(0)) : def1,
+                args.size() > 1 ? a2.decode(args.get(1)) : def2,
+                args.size() > 2 ? a3.decode(args.get(2)) : def3)));
+        typedMethods.put(name, new TypedMethodDescriptor(name, List.of(a1, a2, a3), ret, handler,
+                java.util.Arrays.asList(def1, def2, def3)));
+        PolyTypeRegistry.notifyMutation();
+        return this;
+    }
+
+    public <I, A1, A2, A3, A4, R> PolyType methodTypedOpt4(String name, TypeCodec<A1> a1, A1 def1,
+                                                            TypeCodec<A2> a2, A2 def2, TypeCodec<A3> a3, A3 def3,
+                                                            TypeCodec<A4> a4, A4 def4, TypeCodec<R> ret,
+                                                            TypedMethodHandler4<I, A1, A2, A3, A4, R> handler) {
+        methods.put(name, (instance, args) -> ret.encode(handler.call(cast(instance),
+                args.size() > 0 ? a1.decode(args.get(0)) : def1,
+                args.size() > 1 ? a2.decode(args.get(1)) : def2,
+                args.size() > 2 ? a3.decode(args.get(2)) : def3,
+                args.size() > 3 ? a4.decode(args.get(3)) : def4)));
+        typedMethods.put(name, new TypedMethodDescriptor(name, List.of(a1, a2, a3, a4), ret, handler,
+                java.util.Arrays.asList(def1, def2, def3, def4)));
+        PolyTypeRegistry.notifyMutation();
+        return this;
+    }
+
+    public <I, A1, A2, A3, A4, A5, R> PolyType methodTypedOpt5(String name, TypeCodec<A1> a1, A1 def1,
+                                                                TypeCodec<A2> a2, A2 def2, TypeCodec<A3> a3, A3 def3,
+                                                                TypeCodec<A4> a4, A4 def4, TypeCodec<A5> a5, A5 def5,
+                                                                TypeCodec<R> ret,
+                                                                TypedMethodHandler5<I, A1, A2, A3, A4, A5, R> handler) {
+        methods.put(name, (instance, args) -> ret.encode(handler.call(cast(instance),
+                args.size() > 0 ? a1.decode(args.get(0)) : def1,
+                args.size() > 1 ? a2.decode(args.get(1)) : def2,
+                args.size() > 2 ? a3.decode(args.get(2)) : def3,
+                args.size() > 3 ? a4.decode(args.get(3)) : def4,
+                args.size() > 4 ? a5.decode(args.get(4)) : def5)));
+        typedMethods.put(name, new TypedMethodDescriptor(name, List.of(a1, a2, a3, a4, a5), ret, handler,
+                java.util.Arrays.asList(def1, def2, def3, def4, def5)));
+        PolyTypeRegistry.notifyMutation();
+        return this;
+    }
+
     @SuppressWarnings("unchecked")
     private static <I> I cast(Object instance) { return (I) instance; }
 
@@ -236,6 +320,18 @@ public final class PolyType {
         }
         if (parent != null) return parent.resolveMethod(method);
         return null;
+    }
+
+    /** This type's OWN methods, excluding anything inherited — what {@link PolyClassGenerator} needs
+     *  to decide which members a generated subclass must declare itself versus inherit from its
+     *  parent's generated class. */
+    public Set<String> ownMethodNames() {
+        return new LinkedHashSet<>(methods.keySet());
+    }
+
+    /** This type's OWN properties, excluding anything inherited — see {@link #ownMethodNames()}. */
+    public Set<String> ownPropertyNames() {
+        return new LinkedHashSet<>(properties.keySet());
     }
 
     public Set<String> allPropertyNames() {
@@ -337,7 +433,15 @@ public final class PolyType {
      * purely for a future JIT specialization to consume). Not used by any dispatch path today —
      * see resolveTypedMethod.
      */
-    public record TypedMethodDescriptor(String name, List<TypeCodec<?>> argTypes, TypeCodec<?> returnType, Object handler) {
+    public record TypedMethodDescriptor(String name, List<TypeCodec<?>> argTypes, TypeCodec<?> returnType,
+                                         Object handler, List<Object> defaults) {
+        /** A registration with no optional arguments — every argument required (methodTypedN). */
+        public TypedMethodDescriptor(String name, List<TypeCodec<?>> argTypes, TypeCodec<?> returnType, Object handler) {
+            this(name, argTypes, returnType, handler, List.of());
+        }
         public int arity() { return argTypes.size(); }
+        /** Whether every argument is optional with a default (methodTypedOptN), so a call site may
+         *  legally pass fewer than {@link #arity()} arguments. */
+        public boolean hasDefaults() { return !defaults.isEmpty(); }
     }
 }

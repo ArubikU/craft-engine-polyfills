@@ -177,9 +177,18 @@ final class PolyClassGenerator {
 
     /** The generated wrapper for one {@link PolyType}. The three maps are keyed by SCRIPT-level
      *  member name and give the generated Java method to call. */
+    /**
+     * The generated wrapper for one {@link PolyType}. The three member maps are keyed by
+     * SCRIPT-level name and give the generated Java method to call; they include INHERITED members
+     * (pointing at the parent class's generated method, reachable by ordinary virtual dispatch)
+     * as well as this type's own.
+     *
+     * <p>{@code instanceOwner} is the internal name of the class that actually DECLARES the
+     * {@code instance} field — the root of the generated hierarchy, since only it declares one.
+     */
     record GeneratedPolyClass(String internalName, Map<String, TypedMemberRef> typedMethods,
                                Map<String, String> untypedMethods, Map<String, String> properties,
-                               java.util.Set<String> memberSet) {}
+                               java.util.Set<String> memberSet, String instanceOwner) {}
 
     /**
      * The wrapper for {@code typeName}, generating it on first use, or null if the type isn't
@@ -227,22 +236,49 @@ final class PolyClassGenerator {
 
     private static GeneratedPolyClass generate(String typeName, PolyType type) {
         try {
+            // Mirror the PolyType hierarchy in the generated one: PC_Machine extends PC_Block, so a
+            // Machine wrapper simply INHERITS every method Block already generated instead of
+            // re-emitting it. The parent must exist first, so build it (recursively) up front; if
+            // that fails for any reason we fall back to a flat Object-rooted class carrying the
+            // FULL inherited member set, which is what this generator did before.
+            PolyType parentType = type.parent();
+            GeneratedPolyClass parent = parentType != null ? getOrGenerate(parentType.name()) : null;
+            String superName = parent != null ? parent.internalName() : OBJECT;
+
             String safeType = sanitize(typeName);
             String className = "dev/arubik/craftengine/script/PC_" + safeType + "_" + COUNTER.incrementAndGet();
 
             SafeClassWriter cw = new SafeClassWriter(ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS, className);
-            cw.visit(V21, ACC_PUBLIC | ACC_FINAL | ACC_SUPER, className, null, OBJECT, null);
-            cw.visitField(ACC_PRIVATE | ACC_FINAL, "instance", "Ljava/lang/Object;", null, null).visitEnd();
+            // Deliberately NOT ACC_FINAL: any type may later be declared a parent of another, and
+            // that child's generated class extends this one.
+            cw.visit(V21, ACC_PUBLIC | ACC_SUPER, className, null, superName, null);
+
+            // Only the ROOT of a generated hierarchy declares the field; subclasses inherit it.
+            String instanceOwner = parent != null ? parent.instanceOwner() : className;
+            if (parent == null) {
+                cw.visitField(ACC_PROTECTED | ACC_FINAL, "instance", "Ljava/lang/Object;", null, null).visitEnd();
+            }
 
             MethodVisitor refresh = cw.visitMethod(ACC_PUBLIC | ACC_STATIC, "refresh", "()V", null, null);
             refresh.visitCode();
 
+            // Start from the parent's members so inherited ones stay callable, then let this type's
+            // OWN registrations override them.
             Map<String, TypedMemberRef> typedRefs = new LinkedHashMap<>();
             Map<String, String> untypedRefs = new LinkedHashMap<>();
             Map<String, String> propRefs = new LinkedHashMap<>();
+            if (parent != null) {
+                typedRefs.putAll(parent.typedMethods());
+                untypedRefs.putAll(parent.untypedMethods());
+                propRefs.putAll(parent.properties());
+            }
             int[] counter = {0};
 
-            for (String methodName : new ArrayList<>(type.allMethodNames())) {
+            // With a parent, emit only what this type declares itself; everything else is inherited.
+            java.util.Collection<String> methodsToEmit = parent != null ? type.ownMethodNames() : type.allMethodNames();
+            java.util.Collection<String> propsToEmit = parent != null ? type.ownPropertyNames() : type.allPropertyNames();
+
+            for (String methodName : new ArrayList<>(methodsToEmit)) {
                 int idx = counter[0]++;
                 Kind[] argKinds = typedArgKinds(type, methodName);
                 Kind retKind = argKinds != null ? kindOf(type.resolveTypedMethod(methodName).returnType()) : Kind.UNKNOWN;
@@ -260,9 +296,12 @@ final class PolyClassGenerator {
                     refresh.visitFieldInsn(PUTSTATIC, className, field, "L" + iface + ";");
 
                     String javaName = "tm$" + idx + "_" + sanitize(methodName);
-                    String desc = emitTypedMethod(cw, className, javaName, typeName, methodName, field, iface,
-                            argKinds, retKind);
+                    String desc = emitTypedMethod(cw, className, instanceOwner, javaName, typeName, methodName,
+                            field, iface, argKinds, retKind);
                     typedRefs.put(methodName, new TypedMemberRef(javaName, desc, argKinds, retKind));
+                    // This type overrides an inherited member with a DIFFERENT shape — drop the
+                    // parent's untyped entry so the call site can't pick the wrong one.
+                    untypedRefs.remove(methodName);
                 } else {
                     String field = "m$" + idx;
                     cw.visitField(ACC_PRIVATE | ACC_STATIC | ACC_VOLATILE, field, "L" + METHOD_HANDLER + ";", null, null).visitEnd();
@@ -273,12 +312,13 @@ final class PolyClassGenerator {
                     refresh.visitFieldInsn(PUTSTATIC, className, field, "L" + METHOD_HANDLER + ";");
 
                     String javaName = "um$" + idx + "_" + sanitize(methodName);
-                    emitUntypedMethod(cw, className, javaName, typeName, methodName, field);
+                    emitUntypedMethod(cw, className, instanceOwner, javaName, typeName, methodName, field);
                     untypedRefs.put(methodName, javaName);
+                    typedRefs.remove(methodName); // see the typed branch — shape override
                 }
             }
 
-            for (String propName : new ArrayList<>(type.allPropertyNames())) {
+            for (String propName : new ArrayList<>(propsToEmit)) {
                 int idx = counter[0]++;
                 String field = "p$" + idx;
                 cw.visitField(ACC_PRIVATE | ACC_STATIC | ACC_VOLATILE, field, "L" + PROPERTY_HANDLER + ";", null, null).visitEnd();
@@ -289,7 +329,7 @@ final class PolyClassGenerator {
                 refresh.visitFieldInsn(PUTSTATIC, className, field, "L" + PROPERTY_HANDLER + ";");
 
                 String javaName = "pg$" + idx + "_" + sanitize(propName);
-                emitPropertyMethod(cw, className, javaName, typeName, propName, field);
+                emitPropertyMethod(cw, className, instanceOwner, javaName, typeName, propName, field);
                 propRefs.put(propName, javaName);
             }
 
@@ -300,10 +340,16 @@ final class PolyClassGenerator {
             MethodVisitor ctor = cw.visitMethod(ACC_PUBLIC, "<init>", "(Ljava/lang/Object;)V", null, null);
             ctor.visitCode();
             ctor.visitVarInsn(ALOAD, 0);
-            ctor.visitMethodInsn(INVOKESPECIAL, OBJECT, "<init>", "()V", false);
-            ctor.visitVarInsn(ALOAD, 0);
-            ctor.visitVarInsn(ALOAD, 1);
-            ctor.visitFieldInsn(PUTFIELD, className, "instance", "Ljava/lang/Object;");
+            if (parent != null) {
+                // The root already stores `instance`; just chain to it.
+                ctor.visitVarInsn(ALOAD, 1);
+                ctor.visitMethodInsn(INVOKESPECIAL, superName, "<init>", "(Ljava/lang/Object;)V", false);
+            } else {
+                ctor.visitMethodInsn(INVOKESPECIAL, OBJECT, "<init>", "()V", false);
+                ctor.visitVarInsn(ALOAD, 0);
+                ctor.visitVarInsn(ALOAD, 1);
+                ctor.visitFieldInsn(PUTFIELD, className, "instance", "Ljava/lang/Object;");
+            }
             ctor.visitInsn(RETURN);
             ctor.visitMaxs(0, 0);
             ctor.visitEnd();
@@ -335,7 +381,7 @@ final class PolyClassGenerator {
                     + " (" + typedRefs.size() + " typed, " + untypedRefs.size() + " untyped, "
                     + propRefs.size() + " properties)");
             return new GeneratedPolyClass(className, Map.copyOf(typedRefs), Map.copyOf(untypedRefs),
-                    Map.copyOf(propRefs), memberSetOf(type));
+                    Map.copyOf(propRefs), memberSetOf(type), instanceOwner);
         } catch (Throwable t) {
             LOG.log(Level.WARNING, t, () -> "[CEPolyfills] [JIT] failed to generate PolyClass for " + typeName
                     + " — falling back to generic dispatch");
@@ -372,8 +418,8 @@ final class PolyClassGenerator {
      *  cached typed handler directly. If that handler is null (member gone, or its registered shape
      *  no longer matches what this method was generated for — see the class doc), boxes its args
      *  back up and routes through {@link PolyClassRuntime#genericCall}. */
-    private static String emitTypedMethod(ClassWriter cw, String className, String javaName, String typeName,
-                                           String scriptName, String field, String iface,
+    private static String emitTypedMethod(ClassWriter cw, String className, String instanceOwner, String javaName,
+                                           String typeName, String scriptName, String field, String iface,
                                            Kind[] argKinds, Kind retKind) {
         StringBuilder desc = new StringBuilder("(");
         for (Kind k : argKinds) desc.append(jvmType(k));
@@ -387,7 +433,7 @@ final class PolyClassGenerator {
 
         mv.visitFieldInsn(GETSTATIC, className, field, "L" + iface + ";");
         mv.visitVarInsn(ALOAD, 0);
-        mv.visitFieldInsn(GETFIELD, className, "instance", "Ljava/lang/Object;");
+        mv.visitFieldInsn(GETFIELD, instanceOwner, "instance", "Ljava/lang/Object;");
         int slot = 1;
         for (Kind k : argKinds) {
             mv.visitVarInsn(loadOpcode(k), slot);
@@ -419,7 +465,7 @@ final class PolyClassGenerator {
         mv.visitLdcInsn(typeName);
         mv.visitLdcInsn(scriptName);
         mv.visitVarInsn(ALOAD, 0);
-        mv.visitFieldInsn(GETFIELD, className, "instance", "Ljava/lang/Object;");
+        mv.visitFieldInsn(GETFIELD, instanceOwner, "instance", "Ljava/lang/Object;");
         pushInt(mv, argKinds.length);
         mv.visitTypeInsn(ANEWARRAY, VALUE);
         slot = 1;
@@ -456,8 +502,8 @@ final class PolyClassGenerator {
     /** {@code ScriptValue name(List args)} — the erased {@code MethodHandler} shape, for any method
      *  without an eligible typed registration. Still worth generating: the registry lookup this call
      *  would otherwise redo every time is gone. */
-    private static void emitUntypedMethod(ClassWriter cw, String className, String javaName, String typeName,
-                                           String scriptName, String field) {
+    private static void emitUntypedMethod(ClassWriter cw, String className, String instanceOwner, String javaName,
+                                           String typeName, String scriptName, String field) {
         MethodVisitor mv = cw.visitMethod(ACC_PUBLIC, javaName, "(L" + LIST + ";)L" + VALUE + ";", null, null);
         mv.visitCode();
         Label slow = new Label();
@@ -465,7 +511,7 @@ final class PolyClassGenerator {
         mv.visitJumpInsn(IFNULL, slow);
         mv.visitFieldInsn(GETSTATIC, className, field, "L" + METHOD_HANDLER + ";");
         mv.visitVarInsn(ALOAD, 0);
-        mv.visitFieldInsn(GETFIELD, className, "instance", "Ljava/lang/Object;");
+        mv.visitFieldInsn(GETFIELD, instanceOwner, "instance", "Ljava/lang/Object;");
         mv.visitVarInsn(ALOAD, 1);
         mv.visitMethodInsn(INVOKEINTERFACE, METHOD_HANDLER, "call",
                 "(Ljava/lang/Object;L" + LIST + ";)L" + VALUE + ";", true);
@@ -474,7 +520,7 @@ final class PolyClassGenerator {
         mv.visitLdcInsn(typeName);
         mv.visitLdcInsn(scriptName);
         mv.visitVarInsn(ALOAD, 0);
-        mv.visitFieldInsn(GETFIELD, className, "instance", "Ljava/lang/Object;");
+        mv.visitFieldInsn(GETFIELD, instanceOwner, "instance", "Ljava/lang/Object;");
         mv.visitVarInsn(ALOAD, 1);
         mv.visitMethodInsn(INVOKESTATIC, RUNTIME, "genericCallList",
                 "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;L" + LIST + ";)L" + VALUE + ";", false);
@@ -484,8 +530,8 @@ final class PolyClassGenerator {
     }
 
     /** {@code ScriptValue name()} — a property read against the cached {@code PropertyHandler}. */
-    private static void emitPropertyMethod(ClassWriter cw, String className, String javaName, String typeName,
-                                            String scriptName, String field) {
+    private static void emitPropertyMethod(ClassWriter cw, String className, String instanceOwner, String javaName,
+                                            String typeName, String scriptName, String field) {
         MethodVisitor mv = cw.visitMethod(ACC_PUBLIC, javaName, "()L" + VALUE + ";", null, null);
         mv.visitCode();
         Label slow = new Label();
@@ -493,14 +539,14 @@ final class PolyClassGenerator {
         mv.visitJumpInsn(IFNULL, slow);
         mv.visitFieldInsn(GETSTATIC, className, field, "L" + PROPERTY_HANDLER + ";");
         mv.visitVarInsn(ALOAD, 0);
-        mv.visitFieldInsn(GETFIELD, className, "instance", "Ljava/lang/Object;");
+        mv.visitFieldInsn(GETFIELD, instanceOwner, "instance", "Ljava/lang/Object;");
         mv.visitMethodInsn(INVOKEINTERFACE, PROPERTY_HANDLER, "get", "(Ljava/lang/Object;)L" + VALUE + ";", true);
         mv.visitInsn(ARETURN);
         mv.visitLabel(slow);
         mv.visitLdcInsn(typeName);
         mv.visitLdcInsn(scriptName);
         mv.visitVarInsn(ALOAD, 0);
-        mv.visitFieldInsn(GETFIELD, className, "instance", "Ljava/lang/Object;");
+        mv.visitFieldInsn(GETFIELD, instanceOwner, "instance", "Ljava/lang/Object;");
         mv.visitMethodInsn(INVOKESTATIC, RUNTIME, "genericProperty",
                 "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;)L" + VALUE + ";", false);
         mv.visitInsn(ARETURN);
