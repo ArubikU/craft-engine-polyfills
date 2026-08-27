@@ -528,7 +528,7 @@ final class PolyClassGenerator {
             //     PolyClassMachine m = PolyClassMachine.ofGuarded(sv);
             //     if (m != null) m.recipes(); else <generic>;
             // instead of an inlined instanceof/typeName chain with a raw Object hanging out of it.
-            // The PolyClass check is the load-bearing part (see emitPolyTypeGuard's own doc): a
+            // The PolyClass check is the load-bearing part (see ScriptBytecodeCompiler#emitOfGuarded): a
             // PolyClass owns its dispatch and must never reach a same-named PolyType's handler.
             MethodVisitor guarded = cw.visitMethod(ACC_PUBLIC | ACC_STATIC, "ofGuarded",
                     "(L" + VALUE + ";)L" + className + ";", null, null);

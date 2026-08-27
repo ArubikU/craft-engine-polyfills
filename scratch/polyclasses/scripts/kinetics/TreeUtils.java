@@ -2,7 +2,6 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  dev.arubik.craftengine.script.PolyClass
  *  dev.arubik.craftengine.script.PolyClassMachine
  *  dev.arubik.craftengine.script.PolyClassWorld
  *  dev.arubik.craftengine.script.PolyDispatch
@@ -12,11 +11,9 @@
  *  dev.arubik.craftengine.script.ScriptProgram
  *  dev.arubik.craftengine.script.ScriptValue
  *  dev.arubik.craftengine.script.ScriptValue$Array
- *  dev.arubik.craftengine.script.ScriptValue$Obj
  */
 package dev.arubik.craftengine.script.gen.kinetics;
 
-import dev.arubik.craftengine.script.PolyClass;
 import dev.arubik.craftengine.script.PolyClassMachine;
 import dev.arubik.craftengine.script.PolyClassWorld;
 import dev.arubik.craftengine.script.PolyDispatch;
@@ -81,13 +78,12 @@ public final class TreeUtils {
         }
         ScriptValue scriptValue = scriptContext.getClassOrVar("World");
         if (scriptValue != ScriptValue.NULL) {
-            ScriptValue.Obj obj;
-            Object object2;
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
             arrayList.add(scriptContext.getClassOrVar("x"));
             arrayList.add(scriptContext.getClassOrVar("y"));
             arrayList.add(scriptContext.getClassOrVar("z"));
-            object = scriptValue instanceof ScriptValue.Obj && (object2 = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object2 instanceof PolyClass) && obj.typeName().equals("World") ? new PolyClassWorld(object2).um$1_get_block(arrayList) : PolyDispatch.bootstrapCall("memberCall", "get_block", (ScriptValue)scriptValue, arrayList, (ScriptContext)scriptContext);
+            PolyClassWorld polyClassWorld = PolyClassWorld.ofGuarded((ScriptValue)scriptValue);
+            object = polyClassWorld != null ? polyClassWorld.um$1_get_block(arrayList) : PolyDispatch.bootstrapCall("memberCall", "get_block", (ScriptValue)scriptValue, arrayList, (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
         }
@@ -416,16 +412,10 @@ public final class TreeUtils {
                 if (!(ScriptFormula.valuesEqual((ScriptValue)scriptValue4, (ScriptValue)scriptContext.getClassOrVar("null")) ^ true && (scriptValue4 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "is_air", (ScriptValue)scriptValue4, (ScriptContext)scriptContext) : ScriptValue.NULL).asBool() ^ true)) continue;
                 ScriptValue scriptValue10 = scriptContext.getClassOrVar("Machine");
                 if (scriptValue10 != ScriptValue.NULL) {
-                    ScriptValue.Obj obj;
-                    Object object2;
                     ScriptValue scriptValue11 = scriptValue4;
                     ScriptValue scriptValue12 = scriptContext.getClassOrVar("speed");
-                    if (scriptValue10 instanceof ScriptValue.Obj && (object2 = (obj = (ScriptValue.Obj)scriptValue10).instance()) != null && !(object2 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                        PolyClassMachine polyClassMachine = new PolyClassMachine(object2);
-                        object = polyClassMachine.tm$2_tick_break(scriptValue11, scriptValue12.asNum());
-                    } else {
-                        object = PolyDispatch.bootstrapCall("memberCall", "tick_break", (ScriptValue)scriptValue10, (ScriptValue)scriptValue11, (ScriptValue)scriptValue12, (ScriptContext)scriptContext);
-                    }
+                    PolyClassMachine polyClassMachine = PolyClassMachine.ofGuarded((ScriptValue)scriptValue10);
+                    object = polyClassMachine != null ? polyClassMachine.tm$2_tick_break(scriptValue11, scriptValue12.asNum()) : PolyDispatch.bootstrapCall("memberCall", "tick_break", (ScriptValue)scriptValue10, (ScriptValue)scriptValue11, (ScriptValue)scriptValue12, (ScriptContext)scriptContext);
                 } else {
                     object = ScriptValue.NULL;
                 }

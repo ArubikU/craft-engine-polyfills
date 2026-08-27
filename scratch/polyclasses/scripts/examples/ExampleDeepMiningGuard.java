@@ -2,18 +2,15 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  dev.arubik.craftengine.script.PolyClass
- *  dev.arubik.craftengine.script.PolyClassPlayer_v2
+ *  dev.arubik.craftengine.script.PolyClassPlayer
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
  *  dev.arubik.craftengine.script.ScriptContext$Builder
  *  dev.arubik.craftengine.script.ScriptValue
- *  dev.arubik.craftengine.script.ScriptValue$Obj
  */
 package dev.arubik.craftengine.script.gen.examples;
 
-import dev.arubik.craftengine.script.PolyClass;
-import dev.arubik.craftengine.script.PolyClassPlayer_v2;
+import dev.arubik.craftengine.script.PolyClassPlayer;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptValue;
@@ -38,22 +35,16 @@ public final class ExampleDeepMiningGuard {
             Object object2 = scriptValue2 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "cancel", (ScriptValue)scriptValue2, (ScriptContext)scriptContext) : ScriptValue.NULL;
             ScriptValue scriptValue3 = scriptContext.getClassOrVar("Player");
             if (scriptValue3 != ScriptValue.NULL) {
-                ScriptValue.Obj obj;
-                Object object3;
                 String string = "<red>Mining this deep is off-limits here.";
-                if (scriptValue3 instanceof ScriptValue.Obj && (object3 = (obj = (ScriptValue.Obj)scriptValue3).instance()) != null && !(object3 instanceof PolyClass) && obj.typeName().equals("Player")) {
-                    PolyClassPlayer_v2 polyClassPlayer_v2 = new PolyClassPlayer_v2(object3);
-                    v2 = ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(string));
-                } else {
-                    v2 = PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue3, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
-                }
+                PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue3);
+                v2 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue3, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
             } else {
                 v2 = ScriptValue.NULL;
             }
         } else {
             ScriptValue scriptValue4;
             ScriptValue scriptValue5 = scriptContext.getClassOrVar("event");
-            Object object4 = scriptValue5 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "set_exp_to_drop", (ScriptValue)scriptValue5, (ScriptValue)ScriptValue.of((double)(((scriptValue4 = scriptContext.getClassOrVar("event")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "exp_to_drop", (ScriptValue)scriptValue4, (ScriptContext)scriptContext) : ScriptValue.NULL).asNum() * 2.0)), (ScriptContext)scriptContext) : ScriptValue.NULL;
+            Object object3 = scriptValue5 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "set_exp_to_drop", (ScriptValue)scriptValue5, (ScriptValue)ScriptValue.of((double)(((scriptValue4 = scriptContext.getClassOrVar("event")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "exp_to_drop", (ScriptValue)scriptValue4, (ScriptContext)scriptContext) : ScriptValue.NULL).asNum() * 2.0)), (ScriptContext)scriptContext) : ScriptValue.NULL;
         }
         return ScriptValue.NULL;
     }

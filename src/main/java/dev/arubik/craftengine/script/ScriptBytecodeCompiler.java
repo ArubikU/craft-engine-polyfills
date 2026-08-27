@@ -2111,7 +2111,7 @@ final class ScriptBytecodeCompiler {
          *  handler reference — so a LATER {@code replaceProperty}/{@code extend} is picked up
          *  exactly like the generic path would), just with {@code ScriptFormula.memberGet}'s own
          *  switch-and-{@code PolyClass}-check layer skipped. Guarded by a runtime check that the
-         *  receiver genuinely IS that exact type (see {@link #emitPolyTypeGuard}'s own doc for why
+         *  receiver genuinely IS that exact type (see {@link #emitOfGuarded}'s own doc for why
          *  that guard is load-bearing, not optional) — any mismatch falls back to the exact same
          *  generic {@code memberGet} call as before, so this can never diverge from the always-
          *  correct path, only skip redundant work on the way to it. */
@@ -2315,19 +2315,14 @@ final class ScriptBytecodeCompiler {
                         }
 
                         Label fallbackL = new Label(), fastL = new Label();
-                        int objSlot = c.allocRef(), instSlot = c.allocRef();
-                        emitPolyTypeGuard(mv, c, svSlot, receiverType, objSlot, instSlot, fallbackL);
-
-                        // Unbox the receiver into its PolyClass and hold it in a NAMED local, so the
-                        // generated code reads as `PolyClassMachine m = new PolyClassMachine(inst);
-                        // m.foo(...)` instead of burying a `new` inside the call. One small,
-                        // escape-analysis-friendly allocation plus a monomorphic INVOKEVIRTUAL.
-                        mv.visitTypeInsn(NEW, wrapperName);
-                        mv.visitInsn(DUP);
-                        mv.visitVarInsn(ALOAD, instSlot);
-                        mv.visitMethodInsn(INVOKESPECIAL, wrapperName, "<init>", "(Ljava/lang/Object;)V", false);
+                        // The receiver check and the unboxing are ONE call — the wrapper's own
+                        // ofGuarded, which is exactly the guard this used to inline nineteen
+                        // instructions of at every call site. The local it lands in is the PolyClass
+                        // itself, so the generated code still reads as
+                        // `PolyClassMachine m = PolyClassMachine.ofGuarded(sv); m.foo(...)`, and the
+                        // allocation is the same small escape-analysis-friendly one as before.
                         int pcSlot = c.allocRef();
-                        mv.visitVarInsn(ASTORE, pcSlot);
+                        emitOfGuarded(mv, svSlot, wrapperName, pcSlot, fallbackL);
                         mv.visitVarInsn(ALOAD, pcSlot);
                         for (int i = 0; i < arity; i++) {
                             switch (finalArgSlotKinds[i]) {
@@ -2367,12 +2362,9 @@ final class ScriptBytecodeCompiler {
                         emitBuildArgsList(mv, c, args, listSlot);
 
                         Label fallbackL = new Label(), fastL = new Label();
-                        int objSlot = c.allocRef(), instSlot = c.allocRef();
-                        emitPolyTypeGuard(mv, c, svSlot, receiverType, objSlot, instSlot, fallbackL);
-                        mv.visitTypeInsn(NEW, wrapperName);
-                        mv.visitInsn(DUP);
-                        mv.visitVarInsn(ALOAD, instSlot);
-                        mv.visitMethodInsn(INVOKESPECIAL, wrapperName, "<init>", "(Ljava/lang/Object;)V", false);
+                        int pcSlot = c.allocRef();
+                        emitOfGuarded(mv, svSlot, wrapperName, pcSlot, fallbackL);
+                        mv.visitVarInsn(ALOAD, pcSlot);
                         mv.visitVarInsn(ALOAD, listSlot);
                         mv.visitMethodInsn(INVOKEVIRTUAL, wrapperName, untypedJavaName,
                                 "(L" + LIST + ";)L" + VALUE + ";", false);
@@ -2490,40 +2482,6 @@ final class ScriptBytecodeCompiler {
             }
         }
 
-        /** Emits: {@code sv instanceof ScriptValue.Obj o && o.instance() != null &&
-         *  !(o.instance() instanceof PolyClass) && expectedTypeName.equals(o.typeName())} — jumps
-         *  to {@code fallbackL} the instant any check fails, otherwise falls through with {@code
-         *  objSlot}/{@code instSlot} populated. This exact guard (not just an {@code instanceof
-         *  Obj} check) is load-bearing: {@link ScriptValue#callMethod}/{@code #getProperty} check
-         *  {@code instance() instanceof PolyClass} FIRST, unconditionally, before ever consulting
-         *  {@link PolyTypeRegistry} — a real, already-shipped precedent for why (see that method's
-         *  own comment): a script-visible name can be bound to an instance that does NOT match the
-         *  {@link PolyType} its OWN name would suggest (a {@code FormConditionClass} bound as
-         *  "World", handled by its own dispatch, not {@code WorldType}'s). Skipping this check
-         *  would silently call the WRONG handler with the wrong instance shape whenever that
-         *  happens, instead of falling back like the generic path correctly does. */
-        private static void emitPolyTypeGuard(MethodVisitor mv, Ctx c, int svSlot, String expectedTypeName,
-                                               int objSlot, int instSlot, Label fallbackL) {
-            mv.visitVarInsn(ALOAD, svSlot);
-            mv.visitTypeInsn(INSTANCEOF, OBJ_VALUE);
-            mv.visitJumpInsn(IFEQ, fallbackL);
-            mv.visitVarInsn(ALOAD, svSlot);
-            mv.visitTypeInsn(CHECKCAST, OBJ_VALUE);
-            mv.visitVarInsn(ASTORE, objSlot);
-            mv.visitVarInsn(ALOAD, objSlot);
-            mv.visitMethodInsn(INVOKEVIRTUAL, OBJ_VALUE, "instance", "()Ljava/lang/Object;", false);
-            mv.visitVarInsn(ASTORE, instSlot);
-            mv.visitVarInsn(ALOAD, instSlot);
-            mv.visitJumpInsn(IFNULL, fallbackL);
-            mv.visitVarInsn(ALOAD, instSlot);
-            mv.visitTypeInsn(INSTANCEOF, POLY_CLASS);
-            mv.visitJumpInsn(IFNE, fallbackL);
-            mv.visitVarInsn(ALOAD, objSlot);
-            mv.visitMethodInsn(INVOKEVIRTUAL, OBJ_VALUE, "typeName", "()Ljava/lang/String;", false);
-            mv.visitLdcInsn(expectedTypeName);
-            mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/String", "equals", "(Ljava/lang/Object;)Z", false);
-            mv.visitJumpInsn(IFEQ, fallbackL);
-        }
 
         /** A call to another {@code def} the SAME file's {@link ScriptClassCompiler} pass already
          *  compiled onto this generated class — real local dispatch, {@code INVOKESTATIC} straight
@@ -2602,6 +2560,33 @@ final class ScriptBytecodeCompiler {
                             "(Ljava/lang/String;L" + LIST + ";L" + CTX + ";)L" + VALUE + ";", false);
                 }
             };
+        }
+
+        /**
+         * {@code PolyClassX pc = PolyClassX.ofGuarded(sv); if (pc == null) goto fallback;} — the
+         * receiver check and the unboxing as one static call into the generated wrapper.
+         *
+         * <p>Identical in effect to the guard this replaced, which open-coded the same four tests at
+         * every single call site. Property reads already went through ofGuarded; method calls now do
+         * too, which is nineteen instructions less per site.
+         *
+         * <p>All four tests are load-bearing, not just the {@code instanceof Obj}: {@link
+         * ScriptValue#callMethod}/{@code #getProperty} check {@code instance() instanceof PolyClass}
+         * FIRST, unconditionally, before ever consulting {@link PolyTypeRegistry} — because a
+         * script-visible name can be bound to an instance that does NOT match the {@link PolyType}
+         * its own name would suggest (a {@code FormConditionClass} bound as "World", handled by its
+         * own dispatch rather than {@code WorldType}'s). Skipping that check would silently call the
+         * WRONG handler with the wrong instance shape instead of falling back the way the generic
+         * path correctly does. The generator emits all four inside ofGuarded for exactly this reason.
+         */
+        private static void emitOfGuarded(MethodVisitor mv, int svSlot, String wrapperName,
+                                           int pcSlot, Label fallbackL) {
+            mv.visitVarInsn(ALOAD, svSlot);
+            mv.visitMethodInsn(INVOKESTATIC, wrapperName, "ofGuarded",
+                    "(L" + VALUE + ";)L" + wrapperName + ";", false);
+            mv.visitVarInsn(ASTORE, pcSlot);
+            mv.visitVarInsn(ALOAD, pcSlot);
+            mv.visitJumpInsn(IFNULL, fallbackL);
         }
 
         /** {@code sv = ctx.getClassOrVar(name)} into {@code svSlot} — a single call. This used to be

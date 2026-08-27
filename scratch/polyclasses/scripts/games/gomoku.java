@@ -2,8 +2,7 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  dev.arubik.craftengine.script.PolyClass
- *  dev.arubik.craftengine.script.PolyClassPlayer_v2
+ *  dev.arubik.craftengine.script.PolyClassPlayer
  *  dev.arubik.craftengine.script.PolyClassServer
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
@@ -12,12 +11,10 @@
  *  dev.arubik.craftengine.script.ScriptProgram
  *  dev.arubik.craftengine.script.ScriptValue
  *  dev.arubik.craftengine.script.ScriptValue$Array
- *  dev.arubik.craftengine.script.ScriptValue$Obj
  */
 package dev.arubik.craftengine.script.gen.games;
 
-import dev.arubik.craftengine.script.PolyClass;
-import dev.arubik.craftengine.script.PolyClassPlayer_v2;
+import dev.arubik.craftengine.script.PolyClassPlayer;
 import dev.arubik.craftengine.script.PolyClassServer;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
@@ -255,18 +252,12 @@ public final class Gomoku {
         ScriptContext scriptContext = builder.peek();
         ScriptValue scriptValue = scriptContext.getClassOrVar("Server");
         if (scriptValue != ScriptValue.NULL) {
-            ScriptValue.Obj obj;
-            Object object2;
             ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
             builder2.val("gid", scriptContext.getClassOrVar("gid"));
             ScriptValue scriptValue2 = Gomoku.botKey(builder2);
             String string = "string";
-            if (scriptValue instanceof ScriptValue.Obj && (object2 = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object2 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                PolyClassServer polyClassServer = new PolyClassServer(object2);
-                object = polyClassServer.tm$6_get_typed(scriptValue2.asStr(), string);
-            } else {
-                object = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue, (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
-            }
+            PolyClassServer polyClassServer = PolyClassServer.ofGuarded((ScriptValue)scriptValue);
+            object = polyClassServer != null ? polyClassServer.tm$6_get_typed(scriptValue2.asStr(), string) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue, (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
         }
@@ -278,18 +269,12 @@ public final class Gomoku {
         ScriptContext scriptContext = builder.peek();
         ScriptValue scriptValue = scriptContext.getClassOrVar("Server");
         if (scriptValue != ScriptValue.NULL) {
-            ScriptValue.Obj obj;
-            Object object2;
             ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
             builder2.val("gid", scriptContext.getClassOrVar("gid"));
             ScriptValue scriptValue2 = Gomoku.difficultyKey(builder2);
             String string = "string";
-            if (scriptValue instanceof ScriptValue.Obj && (object2 = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object2 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                PolyClassServer polyClassServer = new PolyClassServer(object2);
-                object = polyClassServer.tm$6_get_typed(scriptValue2.asStr(), string);
-            } else {
-                object = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue, (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
-            }
+            PolyClassServer polyClassServer = PolyClassServer.ofGuarded((ScriptValue)scriptValue);
+            object = polyClassServer != null ? polyClassServer.tm$6_get_typed(scriptValue2.asStr(), string) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue, (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
         }
@@ -302,7 +287,7 @@ public final class Gomoku {
         ScriptValue scriptValue;
         ScriptValue scriptValue2;
         ScriptValue scriptValue3;
-        PolyClassPlayer_v2 polyClassPlayer_v2;
+        PolyClassPlayer polyClassPlayer;
         Object object;
         ScriptContext scriptContext = builder.peek();
         ScriptValue scriptValue4 = scriptContext.getClassOrVar("Cmd");
@@ -311,47 +296,35 @@ public final class Gomoku {
         if (ScriptFormula.callBuiltin1((String)"is_empty", (ScriptValue)scriptValue5, (ScriptContext)scriptContext).asBool() || ScriptFormula.valuesEqualStr((ScriptValue)scriptValue5, (String)"")) {
             ScriptValue scriptValue6 = scriptContext.getClassOrVar("Player");
             if (scriptValue6 != ScriptValue.NULL) {
-                ScriptValue.Obj obj;
-                Object object2;
                 String string = "<red>\u2718 <white>Usage: /games gomoku <player|bot>";
-                if (scriptValue6 instanceof ScriptValue.Obj && (object2 = (obj = (ScriptValue.Obj)scriptValue6).instance()) != null && !(object2 instanceof PolyClass) && obj.typeName().equals("Player")) {
-                    PolyClassPlayer_v2 polyClassPlayer_v22 = new PolyClassPlayer_v2(object2);
-                    v0 = ScriptValue.of((boolean)polyClassPlayer_v22.tm$42_send_message(string));
-                } else {
-                    v0 = PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue6, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
-                }
+                PolyClassPlayer polyClassPlayer2 = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue6);
+                v0 = polyClassPlayer2 != null ? ScriptValue.of((boolean)polyClassPlayer2.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue6, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
             } else {
                 v0 = ScriptValue.NULL;
             }
             return ScriptValue.NULL;
         }
         if (ScriptFormula.valuesEqualStr((ScriptValue)ScriptFormula.callBuiltin1((String)"lower", (ScriptValue)scriptValue5, (ScriptContext)scriptContext), (String)"bot")) {
-            Object object3;
+            Object object2;
             ScriptValue scriptValue7;
             ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
-            PolyClassPlayer_v2 polyClassPlayer_v23 = PolyClassPlayer_v2.ofVar((ScriptContext)scriptContext, (String)"Player");
-            builder2.val("name1", (ScriptValue)(polyClassPlayer_v23 != null ? polyClassPlayer_v23.pg$67_name() : ((scriptValue7 = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue7, (ScriptContext)scriptContext) : ScriptValue.NULL)));
+            PolyClassPlayer polyClassPlayer3 = PolyClassPlayer.ofVar((ScriptContext)scriptContext, (String)"Player");
+            builder2.val("name1", (ScriptValue)(polyClassPlayer3 != null ? polyClassPlayer3.pg$67_name() : ((scriptValue7 = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue7, (ScriptContext)scriptContext) : ScriptValue.NULL)));
             builder2.val("name2", scriptContext.getClassOrVar("BOT_NAME"));
             ScriptValue scriptValue8 = Gomoku.makeGameId(builder2);
             builder.val("gid", scriptValue8);
             ScriptValue scriptValue9 = scriptContext.getClassOrVar("Server");
             if (scriptValue9 != ScriptValue.NULL) {
-                ScriptValue.Obj obj;
-                Object object4;
                 ScriptContext.Builder builder3 = ScriptContext.builder().copyFrom(scriptContext);
                 builder3.val("gid", scriptValue8);
                 ScriptValue scriptValue10 = Gomoku.statusKey(builder3);
                 String string = "string";
-                if (scriptValue9 instanceof ScriptValue.Obj && (object4 = (obj = (ScriptValue.Obj)scriptValue9).instance()) != null && !(object4 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                    PolyClassServer polyClassServer = new PolyClassServer(object4);
-                    object3 = polyClassServer.tm$6_get_typed(scriptValue10.asStr(), string);
-                } else {
-                    object3 = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue9, (ScriptValue)scriptValue10, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
-                }
+                PolyClassServer polyClassServer = PolyClassServer.ofGuarded((ScriptValue)scriptValue9);
+                object2 = polyClassServer != null ? polyClassServer.tm$6_get_typed(scriptValue10.asStr(), string) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue9, (ScriptValue)scriptValue10, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
             } else {
-                object3 = ScriptValue.NULL;
+                object2 = ScriptValue.NULL;
             }
-            if (ScriptFormula.valuesEqualStr((ScriptValue)object3, (String)"active")) {
+            if (ScriptFormula.valuesEqualStr((ScriptValue)object2, (String)"active")) {
                 ScriptContext.Builder builder4 = ScriptContext.builder().copyFrom(scriptContext);
                 builder4.val("gid", scriptValue8);
                 builder4.val("viewer", scriptContext.getClassOrVar("Player"));
@@ -364,15 +337,9 @@ public final class Gomoku {
         }
         ScriptValue scriptValue11 = scriptContext.getClassOrVar("Server");
         if (scriptValue11 != ScriptValue.NULL) {
-            ScriptValue.Obj obj;
-            Object object5;
             ScriptValue scriptValue12 = scriptValue5;
-            if (scriptValue11 instanceof ScriptValue.Obj && (object5 = (obj = (ScriptValue.Obj)scriptValue11).instance()) != null && !(object5 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                PolyClassServer polyClassServer = new PolyClassServer(object5);
-                object = polyClassServer.tm$10_get_player(scriptValue12.asStr());
-            } else {
-                object = PolyDispatch.bootstrapCall("memberCall", "get_player", (ScriptValue)scriptValue11, (ScriptValue)scriptValue12, (ScriptContext)scriptContext);
-            }
+            PolyClassServer polyClassServer = PolyClassServer.ofGuarded((ScriptValue)scriptValue11);
+            object = polyClassServer != null ? polyClassServer.tm$10_get_player(scriptValue12.asStr()) : PolyDispatch.bootstrapCall("memberCall", "get_player", (ScriptValue)scriptValue11, (ScriptValue)scriptValue12, (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
         }
@@ -381,47 +348,35 @@ public final class Gomoku {
         if (ScriptFormula.callBuiltin1((String)"is_empty", (ScriptValue)scriptValue13, (ScriptContext)scriptContext).asBool()) {
             ScriptValue scriptValue14 = scriptContext.getClassOrVar("Player");
             if (scriptValue14 != ScriptValue.NULL) {
-                ScriptValue.Obj obj;
-                Object object6;
                 String string = "<red>\u2718 <white>Player not found or offline.";
-                if (scriptValue14 instanceof ScriptValue.Obj && (object6 = (obj = (ScriptValue.Obj)scriptValue14).instance()) != null && !(object6 instanceof PolyClass) && obj.typeName().equals("Player")) {
-                    PolyClassPlayer_v2 polyClassPlayer_v24 = new PolyClassPlayer_v2(object6);
-                    v3 = ScriptValue.of((boolean)polyClassPlayer_v24.tm$42_send_message(string));
-                } else {
-                    v3 = PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue14, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
-                }
+                PolyClassPlayer polyClassPlayer4 = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue14);
+                v3 = polyClassPlayer4 != null ? ScriptValue.of((boolean)polyClassPlayer4.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue14, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
             } else {
                 v3 = ScriptValue.NULL;
             }
             return ScriptValue.NULL;
         }
-        if (ScriptFormula.valuesEqual((ScriptValue)(scriptValue13 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue13, (ScriptContext)scriptContext) : ScriptValue.NULL), (ScriptValue)((polyClassPlayer_v2 = PolyClassPlayer_v2.ofVar((ScriptContext)scriptContext, (String)"Player")) != null ? polyClassPlayer_v2.pg$67_name() : ((scriptValue3 = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue3, (ScriptContext)scriptContext) : ScriptValue.NULL)))) {
+        if (ScriptFormula.valuesEqual((ScriptValue)(scriptValue13 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue13, (ScriptContext)scriptContext) : ScriptValue.NULL), (ScriptValue)((polyClassPlayer = PolyClassPlayer.ofVar((ScriptContext)scriptContext, (String)"Player")) != null ? polyClassPlayer.pg$67_name() : ((scriptValue3 = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue3, (ScriptContext)scriptContext) : ScriptValue.NULL)))) {
             ScriptValue scriptValue15 = scriptContext.getClassOrVar("Player");
             if (scriptValue15 != ScriptValue.NULL) {
-                ScriptValue.Obj obj;
-                Object object7;
                 String string = "<red>\u2718 <white>You can't play yourself - try '/games gomoku bot'.";
-                if (scriptValue15 instanceof ScriptValue.Obj && (object7 = (obj = (ScriptValue.Obj)scriptValue15).instance()) != null && !(object7 instanceof PolyClass) && obj.typeName().equals("Player")) {
-                    PolyClassPlayer_v2 polyClassPlayer_v25 = new PolyClassPlayer_v2(object7);
-                    v4 = ScriptValue.of((boolean)polyClassPlayer_v25.tm$42_send_message(string));
-                } else {
-                    v4 = PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue15, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
-                }
+                PolyClassPlayer polyClassPlayer5 = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue15);
+                v4 = polyClassPlayer5 != null ? ScriptValue.of((boolean)polyClassPlayer5.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue15, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
             } else {
                 v4 = ScriptValue.NULL;
             }
             return ScriptValue.NULL;
         }
         ScriptContext.Builder builder6 = ScriptContext.builder().copyFrom(scriptContext);
-        PolyClassPlayer_v2 polyClassPlayer_v26 = PolyClassPlayer_v2.ofVar((ScriptContext)scriptContext, (String)"Player");
-        builder6.val("name1", (ScriptValue)(polyClassPlayer_v26 != null ? polyClassPlayer_v26.pg$67_name() : ((scriptValue2 = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue2, (ScriptContext)scriptContext) : ScriptValue.NULL)));
+        PolyClassPlayer polyClassPlayer6 = PolyClassPlayer.ofVar((ScriptContext)scriptContext, (String)"Player");
+        builder6.val("name1", (ScriptValue)(polyClassPlayer6 != null ? polyClassPlayer6.pg$67_name() : ((scriptValue2 = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue2, (ScriptContext)scriptContext) : ScriptValue.NULL)));
         builder6.val("name2", (ScriptValue)(scriptValue13 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue13, (ScriptContext)scriptContext) : ScriptValue.NULL));
         ScriptValue scriptValue16 = Gomoku.makeGameId(builder6);
         builder.val("gid", scriptValue16);
         ScriptContext.Builder builder7 = ScriptContext.builder().copyFrom(scriptContext);
         builder7.val("gid", scriptValue16);
-        PolyClassPlayer_v2 polyClassPlayer_v27 = PolyClassPlayer_v2.ofVar((ScriptContext)scriptContext, (String)"Player");
-        builder7.val("starter", (ScriptValue)(polyClassPlayer_v27 != null ? polyClassPlayer_v27.pg$67_name() : ((scriptValue = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue, (ScriptContext)scriptContext) : ScriptValue.NULL)));
+        PolyClassPlayer polyClassPlayer7 = PolyClassPlayer.ofVar((ScriptContext)scriptContext, (String)"Player");
+        builder7.val("starter", (ScriptValue)(polyClassPlayer7 != null ? polyClassPlayer7.pg$67_name() : ((scriptValue = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue, (ScriptContext)scriptContext) : ScriptValue.NULL)));
         builder7.val("opponent", (ScriptValue)(scriptValue13 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue13, (ScriptContext)scriptContext) : ScriptValue.NULL));
         builder7.val("is_bot",  /* dynamic constant */ (ScriptValue)ScriptValue.constBool("b", MethodHandles.lookup(), "constBool", Gomoku.class, 0));
         builder7.val("difficulty", scriptContext.getClassOrVar("DIFF_DEFAULT"));
@@ -447,15 +402,15 @@ public final class Gomoku {
         ScriptValue scriptValue2;
         ScriptContext scriptContext = builder.peek();
         ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
-        PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofVar((ScriptContext)scriptContext, (String)"Player");
-        builder2.val("name1", (ScriptValue)(polyClassPlayer_v2 != null ? polyClassPlayer_v2.pg$67_name() : ((scriptValue2 = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue2, (ScriptContext)scriptContext) : ScriptValue.NULL)));
+        PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofVar((ScriptContext)scriptContext, (String)"Player");
+        builder2.val("name1", (ScriptValue)(polyClassPlayer != null ? polyClassPlayer.pg$67_name() : ((scriptValue2 = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue2, (ScriptContext)scriptContext) : ScriptValue.NULL)));
         builder2.val("name2", scriptContext.getClassOrVar("BOT_NAME"));
         ScriptValue scriptValue3 = Gomoku.makeGameId(builder2);
         builder.val("gid", scriptValue3);
         ScriptContext.Builder builder3 = ScriptContext.builder().copyFrom(scriptContext);
         builder3.val("gid", scriptValue3);
-        PolyClassPlayer_v2 polyClassPlayer_v22 = PolyClassPlayer_v2.ofVar((ScriptContext)scriptContext, (String)"Player");
-        builder3.val("starter", (ScriptValue)(polyClassPlayer_v22 != null ? polyClassPlayer_v22.pg$67_name() : ((scriptValue = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue, (ScriptContext)scriptContext) : ScriptValue.NULL)));
+        PolyClassPlayer polyClassPlayer2 = PolyClassPlayer.ofVar((ScriptContext)scriptContext, (String)"Player");
+        builder3.val("starter", (ScriptValue)(polyClassPlayer2 != null ? polyClassPlayer2.pg$67_name() : ((scriptValue = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue, (ScriptContext)scriptContext) : ScriptValue.NULL)));
         builder3.val("opponent", scriptContext.getClassOrVar("BOT_NAME"));
         builder3.val("is_bot",  /* dynamic constant */ (ScriptValue)ScriptValue.constBool("b", MethodHandles.lookup(), "constBool", Gomoku.class, 1));
         builder3.val("difficulty", scriptContext.getClassOrVar("difficulty"));
@@ -472,18 +427,12 @@ public final class Gomoku {
         ScriptContext scriptContext = builder.peek();
         ScriptValue scriptValue = scriptContext.getClassOrVar("Server");
         if (scriptValue != ScriptValue.NULL) {
-            ScriptValue.Obj obj;
-            Object object2;
             ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
             builder2.val("gid", scriptContext.getClassOrVar("gid"));
             ScriptValue scriptValue2 = Gomoku.statusKey(builder2);
             String string = "string";
-            if (scriptValue instanceof ScriptValue.Obj && (object2 = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object2 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                PolyClassServer polyClassServer = new PolyClassServer(object2);
-                object = polyClassServer.tm$6_get_typed(scriptValue2.asStr(), string);
-            } else {
-                object = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue, (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
-            }
+            PolyClassServer polyClassServer = PolyClassServer.ofGuarded((ScriptValue)scriptValue);
+            object = polyClassServer != null ? polyClassServer.tm$6_get_typed(scriptValue2.asStr(), string) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue, (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
         }
@@ -492,131 +441,88 @@ public final class Gomoku {
         }
         ScriptValue scriptValue3 = scriptContext.getClassOrVar("Server");
         if (scriptValue3 != ScriptValue.NULL) {
-            ScriptValue.Obj obj;
-            Object object3;
             ScriptContext.Builder builder3 = ScriptContext.builder().copyFrom(scriptContext);
             builder3.val("gid", scriptContext.getClassOrVar("gid"));
             ScriptValue scriptValue4 = Gomoku.boardKey(builder3);
             String string = "string";
             ScriptContext.Builder builder4 = ScriptContext.builder().copyFrom(scriptContext);
             ScriptValue scriptValue5 = Gomoku.emptyBoard(builder4);
-            if (scriptValue3 instanceof ScriptValue.Obj && (object3 = (obj = (ScriptValue.Obj)scriptValue3).instance()) != null && !(object3 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                PolyClassServer polyClassServer = new PolyClassServer(object3);
-                v1 = ScriptValue.of((boolean)polyClassServer.tm$0_set_typed(scriptValue4.asStr(), string, scriptValue5));
-            } else {
-                v1 = PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue3, (ScriptValue)scriptValue4, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)scriptValue5, (ScriptContext)scriptContext);
-            }
+            PolyClassServer polyClassServer = PolyClassServer.ofGuarded((ScriptValue)scriptValue3);
+            v1 = polyClassServer != null ? ScriptValue.of((boolean)polyClassServer.tm$0_set_typed(scriptValue4.asStr(), string, scriptValue5)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue3, (ScriptValue)scriptValue4, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)scriptValue5, (ScriptContext)scriptContext);
         } else {
             v1 = ScriptValue.NULL;
         }
         ScriptValue scriptValue6 = scriptContext.getClassOrVar("Server");
         if (scriptValue6 != ScriptValue.NULL) {
-            ScriptValue.Obj obj;
-            Object object4;
             ScriptContext.Builder builder5 = ScriptContext.builder().copyFrom(scriptContext);
             builder5.val("gid", scriptContext.getClassOrVar("gid"));
             ScriptValue scriptValue7 = Gomoku.turnKey(builder5);
             String string = "string";
             ScriptValue scriptValue8 = scriptContext.getClassOrVar("CELL_BLACK");
-            if (scriptValue6 instanceof ScriptValue.Obj && (object4 = (obj = (ScriptValue.Obj)scriptValue6).instance()) != null && !(object4 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                PolyClassServer polyClassServer = new PolyClassServer(object4);
-                v2 = ScriptValue.of((boolean)polyClassServer.tm$0_set_typed(scriptValue7.asStr(), string, scriptValue8));
-            } else {
-                v2 = PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue6, (ScriptValue)scriptValue7, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)scriptValue8, (ScriptContext)scriptContext);
-            }
+            PolyClassServer polyClassServer = PolyClassServer.ofGuarded((ScriptValue)scriptValue6);
+            v2 = polyClassServer != null ? ScriptValue.of((boolean)polyClassServer.tm$0_set_typed(scriptValue7.asStr(), string, scriptValue8)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue6, (ScriptValue)scriptValue7, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)scriptValue8, (ScriptContext)scriptContext);
         } else {
             v2 = ScriptValue.NULL;
         }
         ScriptValue scriptValue9 = scriptContext.getClassOrVar("Server");
         if (scriptValue9 != ScriptValue.NULL) {
-            ScriptValue.Obj obj;
-            Object object5;
             ScriptContext.Builder builder6 = ScriptContext.builder().copyFrom(scriptContext);
             builder6.val("gid", scriptContext.getClassOrVar("gid"));
             ScriptValue scriptValue10 = Gomoku.blackKey(builder6);
             String string = "string";
             ScriptValue scriptValue11 = scriptContext.getClassOrVar("starter");
-            if (scriptValue9 instanceof ScriptValue.Obj && (object5 = (obj = (ScriptValue.Obj)scriptValue9).instance()) != null && !(object5 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                PolyClassServer polyClassServer = new PolyClassServer(object5);
-                v3 = ScriptValue.of((boolean)polyClassServer.tm$0_set_typed(scriptValue10.asStr(), string, scriptValue11));
-            } else {
-                v3 = PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue9, (ScriptValue)scriptValue10, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)scriptValue11, (ScriptContext)scriptContext);
-            }
+            PolyClassServer polyClassServer = PolyClassServer.ofGuarded((ScriptValue)scriptValue9);
+            v3 = polyClassServer != null ? ScriptValue.of((boolean)polyClassServer.tm$0_set_typed(scriptValue10.asStr(), string, scriptValue11)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue9, (ScriptValue)scriptValue10, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)scriptValue11, (ScriptContext)scriptContext);
         } else {
             v3 = ScriptValue.NULL;
         }
         ScriptValue scriptValue12 = scriptContext.getClassOrVar("Server");
         if (scriptValue12 != ScriptValue.NULL) {
-            ScriptValue.Obj obj;
-            Object object6;
             ScriptContext.Builder builder7 = ScriptContext.builder().copyFrom(scriptContext);
             builder7.val("gid", scriptContext.getClassOrVar("gid"));
             ScriptValue scriptValue13 = Gomoku.whiteKey(builder7);
             String string = "string";
             ScriptValue scriptValue14 = scriptContext.getClassOrVar("opponent");
-            if (scriptValue12 instanceof ScriptValue.Obj && (object6 = (obj = (ScriptValue.Obj)scriptValue12).instance()) != null && !(object6 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                PolyClassServer polyClassServer = new PolyClassServer(object6);
-                v4 = ScriptValue.of((boolean)polyClassServer.tm$0_set_typed(scriptValue13.asStr(), string, scriptValue14));
-            } else {
-                v4 = PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue12, (ScriptValue)scriptValue13, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)scriptValue14, (ScriptContext)scriptContext);
-            }
+            PolyClassServer polyClassServer = PolyClassServer.ofGuarded((ScriptValue)scriptValue12);
+            v4 = polyClassServer != null ? ScriptValue.of((boolean)polyClassServer.tm$0_set_typed(scriptValue13.asStr(), string, scriptValue14)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue12, (ScriptValue)scriptValue13, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)scriptValue14, (ScriptContext)scriptContext);
         } else {
             v4 = ScriptValue.NULL;
         }
         ScriptValue scriptValue15 = scriptContext.getClassOrVar("Server");
         if (scriptValue15 != ScriptValue.NULL) {
-            ScriptValue.Obj obj;
-            Object object7;
-            ScriptValue scriptValue16;
             ScriptContext.Builder builder8 = ScriptContext.builder().copyFrom(scriptContext);
             builder8.val("gid", scriptContext.getClassOrVar("gid"));
-            ScriptValue scriptValue17 = Gomoku.botKey(builder8);
+            ScriptValue scriptValue16 = Gomoku.botKey(builder8);
             String string = "string";
-            ScriptValue scriptValue18 = scriptValue16 = scriptContext.getBool("is_bot") ? ( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Gomoku.class, "1")) : ( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Gomoku.class, "0"));
-            if (scriptValue15 instanceof ScriptValue.Obj && (object7 = (obj = (ScriptValue.Obj)scriptValue15).instance()) != null && !(object7 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                PolyClassServer polyClassServer = new PolyClassServer(object7);
-                v6 = ScriptValue.of((boolean)polyClassServer.tm$0_set_typed(scriptValue17.asStr(), string, scriptValue16));
-            } else {
-                v6 = PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue15, (ScriptValue)scriptValue17, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)scriptValue16, (ScriptContext)scriptContext);
-            }
+            ScriptValue scriptValue17 = scriptContext.getBool("is_bot") ? ( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Gomoku.class, "1")) : ( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Gomoku.class, "0"));
+            PolyClassServer polyClassServer = PolyClassServer.ofGuarded((ScriptValue)scriptValue15);
+            v5 = polyClassServer != null ? ScriptValue.of((boolean)polyClassServer.tm$0_set_typed(scriptValue16.asStr(), string, scriptValue17)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue15, (ScriptValue)scriptValue16, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)scriptValue17, (ScriptContext)scriptContext);
+        } else {
+            v5 = ScriptValue.NULL;
+        }
+        ScriptValue scriptValue18 = scriptContext.getClassOrVar("Server");
+        if (scriptValue18 != ScriptValue.NULL) {
+            ScriptContext.Builder builder9 = ScriptContext.builder().copyFrom(scriptContext);
+            builder9.val("gid", scriptContext.getClassOrVar("gid"));
+            ScriptValue scriptValue19 = Gomoku.difficultyKey(builder9);
+            String string = "string";
+            ScriptValue scriptValue20 = scriptContext.getClassOrVar("difficulty");
+            PolyClassServer polyClassServer = PolyClassServer.ofGuarded((ScriptValue)scriptValue18);
+            v6 = polyClassServer != null ? ScriptValue.of((boolean)polyClassServer.tm$0_set_typed(scriptValue19.asStr(), string, scriptValue20)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue18, (ScriptValue)scriptValue19, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)scriptValue20, (ScriptContext)scriptContext);
         } else {
             v6 = ScriptValue.NULL;
         }
-        ScriptValue scriptValue19 = scriptContext.getClassOrVar("Server");
-        if (scriptValue19 != ScriptValue.NULL) {
-            ScriptValue.Obj obj;
-            Object object8;
-            ScriptContext.Builder builder9 = ScriptContext.builder().copyFrom(scriptContext);
-            builder9.val("gid", scriptContext.getClassOrVar("gid"));
-            ScriptValue scriptValue20 = Gomoku.difficultyKey(builder9);
-            String string = "string";
-            ScriptValue scriptValue21 = scriptContext.getClassOrVar("difficulty");
-            if (scriptValue19 instanceof ScriptValue.Obj && (object8 = (obj = (ScriptValue.Obj)scriptValue19).instance()) != null && !(object8 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                PolyClassServer polyClassServer = new PolyClassServer(object8);
-                v7 = ScriptValue.of((boolean)polyClassServer.tm$0_set_typed(scriptValue20.asStr(), string, scriptValue21));
-            } else {
-                v7 = PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue19, (ScriptValue)scriptValue20, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)scriptValue21, (ScriptContext)scriptContext);
-            }
-        } else {
-            v7 = ScriptValue.NULL;
-        }
-        ScriptValue scriptValue22 = scriptContext.getClassOrVar("Server");
-        if (scriptValue22 != ScriptValue.NULL) {
-            ScriptValue.Obj obj;
-            Object object9;
+        ScriptValue scriptValue21 = scriptContext.getClassOrVar("Server");
+        if (scriptValue21 != ScriptValue.NULL) {
             ScriptContext.Builder builder10 = ScriptContext.builder().copyFrom(scriptContext);
             builder10.val("gid", scriptContext.getClassOrVar("gid"));
-            ScriptValue scriptValue23 = Gomoku.statusKey(builder10);
+            ScriptValue scriptValue22 = Gomoku.statusKey(builder10);
             String string = "string";
-            ScriptValue scriptValue24 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Gomoku.class, "active");
-            if (scriptValue22 instanceof ScriptValue.Obj && (object9 = (obj = (ScriptValue.Obj)scriptValue22).instance()) != null && !(object9 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                PolyClassServer polyClassServer = new PolyClassServer(object9);
-                v8 = ScriptValue.of((boolean)polyClassServer.tm$0_set_typed(scriptValue23.asStr(), string, scriptValue24));
-            } else {
-                v8 = PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue22, (ScriptValue)scriptValue23, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)scriptValue24, (ScriptContext)scriptContext);
-            }
+            ScriptValue scriptValue23 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Gomoku.class, "active");
+            PolyClassServer polyClassServer = PolyClassServer.ofGuarded((ScriptValue)scriptValue21);
+            v7 = polyClassServer != null ? ScriptValue.of((boolean)polyClassServer.tm$0_set_typed(scriptValue22.asStr(), string, scriptValue23)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue21, (ScriptValue)scriptValue22, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)scriptValue23, (ScriptContext)scriptContext);
         } else {
-            v8 = ScriptValue.NULL;
+            v7 = ScriptValue.NULL;
         }
         return ScriptValue.NULL;
     }
@@ -660,18 +566,12 @@ public final class Gomoku {
         ScriptContext scriptContext = builder.peek();
         ScriptValue scriptValue = scriptContext.getClassOrVar("Server");
         if (scriptValue != ScriptValue.NULL) {
-            ScriptValue.Obj obj;
-            Object object6;
             ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
             builder2.val("gid", scriptContext.getClassOrVar("gid"));
             ScriptValue scriptValue2 = Gomoku.boardKey(builder2);
             String string = "string";
-            if (scriptValue instanceof ScriptValue.Obj && (object6 = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object6 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                PolyClassServer polyClassServer = new PolyClassServer(object6);
-                object5 = polyClassServer.tm$6_get_typed(scriptValue2.asStr(), string);
-            } else {
-                object5 = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue, (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
-            }
+            PolyClassServer polyClassServer = PolyClassServer.ofGuarded((ScriptValue)scriptValue);
+            object5 = polyClassServer != null ? polyClassServer.tm$6_get_typed(scriptValue2.asStr(), string) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue, (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
         } else {
             object5 = ScriptValue.NULL;
         }
@@ -679,18 +579,12 @@ public final class Gomoku {
         builder.val("board", scriptValue3);
         ScriptValue scriptValue4 = scriptContext.getClassOrVar("Server");
         if (scriptValue4 != ScriptValue.NULL) {
-            ScriptValue.Obj obj;
-            Object object7;
             ScriptContext.Builder builder3 = ScriptContext.builder().copyFrom(scriptContext);
             builder3.val("gid", scriptContext.getClassOrVar("gid"));
             ScriptValue scriptValue5 = Gomoku.turnKey(builder3);
             String string = "string";
-            if (scriptValue4 instanceof ScriptValue.Obj && (object7 = (obj = (ScriptValue.Obj)scriptValue4).instance()) != null && !(object7 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                PolyClassServer polyClassServer = new PolyClassServer(object7);
-                object4 = polyClassServer.tm$6_get_typed(scriptValue5.asStr(), string);
-            } else {
-                object4 = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue4, (ScriptValue)scriptValue5, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
-            }
+            PolyClassServer polyClassServer = PolyClassServer.ofGuarded((ScriptValue)scriptValue4);
+            object4 = polyClassServer != null ? polyClassServer.tm$6_get_typed(scriptValue5.asStr(), string) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue4, (ScriptValue)scriptValue5, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
         } else {
             object4 = ScriptValue.NULL;
         }
@@ -698,18 +592,12 @@ public final class Gomoku {
         builder.val("turn", scriptValue6);
         ScriptValue scriptValue7 = scriptContext.getClassOrVar("Server");
         if (scriptValue7 != ScriptValue.NULL) {
-            ScriptValue.Obj obj;
-            Object object8;
             ScriptContext.Builder builder4 = ScriptContext.builder().copyFrom(scriptContext);
             builder4.val("gid", scriptContext.getClassOrVar("gid"));
             ScriptValue scriptValue8 = Gomoku.blackKey(builder4);
             String string = "string";
-            if (scriptValue7 instanceof ScriptValue.Obj && (object8 = (obj = (ScriptValue.Obj)scriptValue7).instance()) != null && !(object8 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                PolyClassServer polyClassServer = new PolyClassServer(object8);
-                object3 = polyClassServer.tm$6_get_typed(scriptValue8.asStr(), string);
-            } else {
-                object3 = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue7, (ScriptValue)scriptValue8, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
-            }
+            PolyClassServer polyClassServer = PolyClassServer.ofGuarded((ScriptValue)scriptValue7);
+            object3 = polyClassServer != null ? polyClassServer.tm$6_get_typed(scriptValue8.asStr(), string) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue7, (ScriptValue)scriptValue8, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
         } else {
             object3 = ScriptValue.NULL;
         }
@@ -717,18 +605,12 @@ public final class Gomoku {
         builder.val("black", scriptValue9);
         ScriptValue scriptValue10 = scriptContext.getClassOrVar("Server");
         if (scriptValue10 != ScriptValue.NULL) {
-            ScriptValue.Obj obj;
-            Object object9;
             ScriptContext.Builder builder5 = ScriptContext.builder().copyFrom(scriptContext);
             builder5.val("gid", scriptContext.getClassOrVar("gid"));
             ScriptValue scriptValue11 = Gomoku.whiteKey(builder5);
             String string = "string";
-            if (scriptValue10 instanceof ScriptValue.Obj && (object9 = (obj = (ScriptValue.Obj)scriptValue10).instance()) != null && !(object9 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                PolyClassServer polyClassServer = new PolyClassServer(object9);
-                object2 = polyClassServer.tm$6_get_typed(scriptValue11.asStr(), string);
-            } else {
-                object2 = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue10, (ScriptValue)scriptValue11, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
-            }
+            PolyClassServer polyClassServer = PolyClassServer.ofGuarded((ScriptValue)scriptValue10);
+            object2 = polyClassServer != null ? polyClassServer.tm$6_get_typed(scriptValue11.asStr(), string) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue10, (ScriptValue)scriptValue11, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
         } else {
             object2 = ScriptValue.NULL;
         }
@@ -736,18 +618,12 @@ public final class Gomoku {
         builder.val("white", scriptValue12);
         ScriptValue scriptValue13 = scriptContext.getClassOrVar("Server");
         if (scriptValue13 != ScriptValue.NULL) {
-            ScriptValue.Obj obj;
-            Object object10;
             ScriptContext.Builder builder6 = ScriptContext.builder().copyFrom(scriptContext);
             builder6.val("gid", scriptContext.getClassOrVar("gid"));
             ScriptValue scriptValue14 = Gomoku.statusKey(builder6);
             String string = "string";
-            if (scriptValue13 instanceof ScriptValue.Obj && (object10 = (obj = (ScriptValue.Obj)scriptValue13).instance()) != null && !(object10 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                PolyClassServer polyClassServer = new PolyClassServer(object10);
-                object = polyClassServer.tm$6_get_typed(scriptValue14.asStr(), string);
-            } else {
-                object = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue13, (ScriptValue)scriptValue14, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
-            }
+            PolyClassServer polyClassServer = PolyClassServer.ofGuarded((ScriptValue)scriptValue13);
+            object = polyClassServer != null ? polyClassServer.tm$6_get_typed(scriptValue14.asStr(), string) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue13, (ScriptValue)scriptValue14, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
         }
@@ -827,7 +703,7 @@ public final class Gomoku {
     }
 
     public static ScriptValue notifyOpponent(ScriptContext.Builder builder) {
-        block13: {
+        block7: {
             Object object;
             ScriptValue scriptValue;
             Object object2;
@@ -840,18 +716,12 @@ public final class Gomoku {
             }
             ScriptValue scriptValue2 = scriptContext.getClassOrVar("Server");
             if (scriptValue2 != ScriptValue.NULL) {
-                ScriptValue.Obj obj;
-                Object object4;
                 ScriptContext.Builder builder3 = ScriptContext.builder().copyFrom(scriptContext);
                 builder3.val("gid", scriptContext.getClassOrVar("gid"));
                 ScriptValue scriptValue3 = Gomoku.blackKey(builder3);
                 String string = "string";
-                if (scriptValue2 instanceof ScriptValue.Obj && (object4 = (obj = (ScriptValue.Obj)scriptValue2).instance()) != null && !(object4 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                    PolyClassServer polyClassServer = new PolyClassServer(object4);
-                    object3 = polyClassServer.tm$6_get_typed(scriptValue3.asStr(), string);
-                } else {
-                    object3 = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue2, (ScriptValue)scriptValue3, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
-                }
+                PolyClassServer polyClassServer = PolyClassServer.ofGuarded((ScriptValue)scriptValue2);
+                object3 = polyClassServer != null ? polyClassServer.tm$6_get_typed(scriptValue3.asStr(), string) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue2, (ScriptValue)scriptValue3, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
             } else {
                 object3 = ScriptValue.NULL;
             }
@@ -859,43 +729,31 @@ public final class Gomoku {
             builder.val("black", scriptValue4);
             ScriptValue scriptValue5 = scriptContext.getClassOrVar("Server");
             if (scriptValue5 != ScriptValue.NULL) {
-                ScriptValue.Obj obj;
-                Object object5;
                 ScriptContext.Builder builder4 = ScriptContext.builder().copyFrom(scriptContext);
                 builder4.val("gid", scriptContext.getClassOrVar("gid"));
                 ScriptValue scriptValue6 = Gomoku.whiteKey(builder4);
                 String string = "string";
-                if (scriptValue5 instanceof ScriptValue.Obj && (object5 = (obj = (ScriptValue.Obj)scriptValue5).instance()) != null && !(object5 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                    PolyClassServer polyClassServer = new PolyClassServer(object5);
-                    object2 = polyClassServer.tm$6_get_typed(scriptValue6.asStr(), string);
-                } else {
-                    object2 = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue5, (ScriptValue)scriptValue6, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
-                }
+                PolyClassServer polyClassServer = PolyClassServer.ofGuarded((ScriptValue)scriptValue5);
+                object2 = polyClassServer != null ? polyClassServer.tm$6_get_typed(scriptValue6.asStr(), string) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue5, (ScriptValue)scriptValue6, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
             } else {
                 object2 = ScriptValue.NULL;
             }
             ScriptValue scriptValue7 = object2;
             builder.val("white", scriptValue7);
-            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofVar((ScriptContext)scriptContext, (String)"Player");
-            ScriptValue scriptValue8 = ScriptFormula.valuesEqual((ScriptValue)(polyClassPlayer_v2 != null ? polyClassPlayer_v2.pg$67_name() : ((scriptValue = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue, (ScriptContext)scriptContext) : ScriptValue.NULL)), (ScriptValue)scriptValue4) ? scriptValue7 : scriptValue4;
+            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofVar((ScriptContext)scriptContext, (String)"Player");
+            ScriptValue scriptValue8 = ScriptFormula.valuesEqual((ScriptValue)(polyClassPlayer != null ? polyClassPlayer.pg$67_name() : ((scriptValue = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue, (ScriptContext)scriptContext) : ScriptValue.NULL)), (ScriptValue)scriptValue4) ? scriptValue7 : scriptValue4;
             builder.val("other_name", scriptValue8);
             ScriptValue scriptValue9 = scriptContext.getClassOrVar("Server");
             if (scriptValue9 != ScriptValue.NULL) {
-                ScriptValue.Obj obj;
-                Object object6;
                 ScriptValue scriptValue10 = scriptValue8;
-                if (scriptValue9 instanceof ScriptValue.Obj && (object6 = (obj = (ScriptValue.Obj)scriptValue9).instance()) != null && !(object6 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                    PolyClassServer polyClassServer = new PolyClassServer(object6);
-                    object = polyClassServer.tm$10_get_player(scriptValue10.asStr());
-                } else {
-                    object = PolyDispatch.bootstrapCall("memberCall", "get_player", (ScriptValue)scriptValue9, (ScriptValue)scriptValue10, (ScriptContext)scriptContext);
-                }
+                PolyClassServer polyClassServer = PolyClassServer.ofGuarded((ScriptValue)scriptValue9);
+                object = polyClassServer != null ? polyClassServer.tm$10_get_player(scriptValue10.asStr()) : PolyDispatch.bootstrapCall("memberCall", "get_player", (ScriptValue)scriptValue9, (ScriptValue)scriptValue10, (ScriptContext)scriptContext);
             } else {
                 object = ScriptValue.NULL;
             }
             ScriptValue scriptValue11 = object;
             builder.val("other", scriptValue11);
-            if (!(ScriptFormula.callBuiltin1((String)"is_empty", (ScriptValue)scriptValue11, (ScriptContext)scriptContext).asBool() ^ true)) break block13;
+            if (!(ScriptFormula.callBuiltin1((String)"is_empty", (ScriptValue)scriptValue11, (ScriptContext)scriptContext).asBool() ^ true)) break block7;
             ScriptContext.Builder builder5 = ScriptContext.builder().copyFrom(scriptContext);
             builder5.val("gid", scriptContext.getClassOrVar("gid"));
             builder5.val("viewer", scriptValue11);
@@ -905,7 +763,7 @@ public final class Gomoku {
     }
 
     public static ScriptValue notifyBothChat(ScriptContext.Builder builder) {
-        block18: {
+        block10: {
             Object object;
             Object object2;
             Object object3;
@@ -913,18 +771,12 @@ public final class Gomoku {
             ScriptContext scriptContext = builder.peek();
             ScriptValue scriptValue = scriptContext.getClassOrVar("Server");
             if (scriptValue != ScriptValue.NULL) {
-                ScriptValue.Obj obj;
-                Object object5;
                 ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
                 builder2.val("gid", scriptContext.getClassOrVar("gid"));
                 ScriptValue scriptValue2 = Gomoku.blackKey(builder2);
                 String string = "string";
-                if (scriptValue instanceof ScriptValue.Obj && (object5 = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object5 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                    PolyClassServer polyClassServer = new PolyClassServer(object5);
-                    object4 = polyClassServer.tm$6_get_typed(scriptValue2.asStr(), string);
-                } else {
-                    object4 = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue, (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
-                }
+                PolyClassServer polyClassServer = PolyClassServer.ofGuarded((ScriptValue)scriptValue);
+                object4 = polyClassServer != null ? polyClassServer.tm$6_get_typed(scriptValue2.asStr(), string) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue, (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
             } else {
                 object4 = ScriptValue.NULL;
             }
@@ -932,18 +784,12 @@ public final class Gomoku {
             builder.val("black", scriptValue3);
             ScriptValue scriptValue4 = scriptContext.getClassOrVar("Server");
             if (scriptValue4 != ScriptValue.NULL) {
-                ScriptValue.Obj obj;
-                Object object6;
                 ScriptContext.Builder builder3 = ScriptContext.builder().copyFrom(scriptContext);
                 builder3.val("gid", scriptContext.getClassOrVar("gid"));
                 ScriptValue scriptValue5 = Gomoku.whiteKey(builder3);
                 String string = "string";
-                if (scriptValue4 instanceof ScriptValue.Obj && (object6 = (obj = (ScriptValue.Obj)scriptValue4).instance()) != null && !(object6 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                    PolyClassServer polyClassServer = new PolyClassServer(object6);
-                    object3 = polyClassServer.tm$6_get_typed(scriptValue5.asStr(), string);
-                } else {
-                    object3 = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue4, (ScriptValue)scriptValue5, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
-                }
+                PolyClassServer polyClassServer = PolyClassServer.ofGuarded((ScriptValue)scriptValue4);
+                object3 = polyClassServer != null ? polyClassServer.tm$6_get_typed(scriptValue5.asStr(), string) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue4, (ScriptValue)scriptValue5, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
             } else {
                 object3 = ScriptValue.NULL;
             }
@@ -951,69 +797,51 @@ public final class Gomoku {
             builder.val("white", scriptValue6);
             ScriptValue scriptValue7 = scriptContext.getClassOrVar("Server");
             if (scriptValue7 != ScriptValue.NULL) {
-                ScriptValue.Obj obj;
-                Object object7;
                 ScriptValue scriptValue8 = scriptValue3;
-                if (scriptValue7 instanceof ScriptValue.Obj && (object7 = (obj = (ScriptValue.Obj)scriptValue7).instance()) != null && !(object7 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                    PolyClassServer polyClassServer = new PolyClassServer(object7);
-                    object2 = polyClassServer.tm$10_get_player(scriptValue8.asStr());
-                } else {
-                    object2 = PolyDispatch.bootstrapCall("memberCall", "get_player", (ScriptValue)scriptValue7, (ScriptValue)scriptValue8, (ScriptContext)scriptContext);
-                }
+                PolyClassServer polyClassServer = PolyClassServer.ofGuarded((ScriptValue)scriptValue7);
+                object2 = polyClassServer != null ? polyClassServer.tm$10_get_player(scriptValue8.asStr()) : PolyDispatch.bootstrapCall("memberCall", "get_player", (ScriptValue)scriptValue7, (ScriptValue)scriptValue8, (ScriptContext)scriptContext);
             } else {
                 object2 = ScriptValue.NULL;
             }
             ScriptValue scriptValue9 = object2;
             builder.val("b", scriptValue9);
             if (ScriptFormula.callBuiltin1((String)"is_empty", (ScriptValue)scriptValue9, (ScriptContext)scriptContext).asBool() ^ true) {
-                Object object8 = scriptValue9 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue9, (ScriptValue)scriptContext.getClassOrVar("message"), (ScriptContext)scriptContext) : ScriptValue.NULL;
+                Object object5 = scriptValue9 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue9, (ScriptValue)scriptContext.getClassOrVar("message"), (ScriptContext)scriptContext) : ScriptValue.NULL;
             }
             ScriptContext.Builder builder4 = ScriptContext.builder().copyFrom(scriptContext);
             builder4.val("gid", scriptContext.getClassOrVar("gid"));
-            if (!(Gomoku.isBotGame(builder4).asBool() ^ true)) break block18;
+            if (!(Gomoku.isBotGame(builder4).asBool() ^ true)) break block10;
             ScriptValue scriptValue10 = scriptContext.getClassOrVar("Server");
             if (scriptValue10 != ScriptValue.NULL) {
-                ScriptValue.Obj obj;
-                Object object9;
                 ScriptValue scriptValue11 = scriptValue6;
-                if (scriptValue10 instanceof ScriptValue.Obj && (object9 = (obj = (ScriptValue.Obj)scriptValue10).instance()) != null && !(object9 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                    PolyClassServer polyClassServer = new PolyClassServer(object9);
-                    object = polyClassServer.tm$10_get_player(scriptValue11.asStr());
-                } else {
-                    object = PolyDispatch.bootstrapCall("memberCall", "get_player", (ScriptValue)scriptValue10, (ScriptValue)scriptValue11, (ScriptContext)scriptContext);
-                }
+                PolyClassServer polyClassServer = PolyClassServer.ofGuarded((ScriptValue)scriptValue10);
+                object = polyClassServer != null ? polyClassServer.tm$10_get_player(scriptValue11.asStr()) : PolyDispatch.bootstrapCall("memberCall", "get_player", (ScriptValue)scriptValue10, (ScriptValue)scriptValue11, (ScriptContext)scriptContext);
             } else {
                 object = ScriptValue.NULL;
             }
             ScriptValue scriptValue12 = object;
             builder.val("w", scriptValue12);
             if (ScriptFormula.callBuiltin1((String)"is_empty", (ScriptValue)scriptValue12, (ScriptContext)scriptContext).asBool() ^ true) {
-                Object object10 = scriptValue12 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue12, (ScriptValue)scriptContext.getClassOrVar("message"), (ScriptContext)scriptContext) : ScriptValue.NULL;
+                Object object6 = scriptValue12 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue12, (ScriptValue)scriptContext.getClassOrVar("message"), (ScriptContext)scriptContext) : ScriptValue.NULL;
             }
         }
         return ScriptValue.NULL;
     }
 
     public static ScriptValue applyMove(ScriptContext.Builder builder) {
-        block30: {
+        block16: {
             Object object;
             Object object2;
             Object object3;
             ScriptContext scriptContext = builder.peek();
             ScriptValue scriptValue = scriptContext.getClassOrVar("Server");
             if (scriptValue != ScriptValue.NULL) {
-                ScriptValue.Obj obj;
-                Object object4;
                 ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
                 builder2.val("gid", scriptContext.getClassOrVar("gid"));
                 ScriptValue scriptValue2 = Gomoku.boardKey(builder2);
                 String string = "string";
-                if (scriptValue instanceof ScriptValue.Obj && (object4 = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object4 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                    PolyClassServer polyClassServer = new PolyClassServer(object4);
-                    object3 = polyClassServer.tm$6_get_typed(scriptValue2.asStr(), string);
-                } else {
-                    object3 = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue, (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
-                }
+                PolyClassServer polyClassServer = PolyClassServer.ofGuarded((ScriptValue)scriptValue);
+                object3 = polyClassServer != null ? polyClassServer.tm$6_get_typed(scriptValue2.asStr(), string) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue, (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
             } else {
                 object3 = ScriptValue.NULL;
             }
@@ -1028,36 +856,24 @@ public final class Gomoku {
             builder.val("board", scriptValue4);
             ScriptValue scriptValue5 = scriptContext.getClassOrVar("Server");
             if (scriptValue5 != ScriptValue.NULL) {
-                ScriptValue.Obj obj;
-                Object object5;
                 ScriptContext.Builder builder4 = ScriptContext.builder().copyFrom(scriptContext);
                 builder4.val("gid", scriptContext.getClassOrVar("gid"));
                 ScriptValue scriptValue6 = Gomoku.boardKey(builder4);
                 String string = "string";
                 ScriptValue scriptValue7 = scriptValue4;
-                if (scriptValue5 instanceof ScriptValue.Obj && (object5 = (obj = (ScriptValue.Obj)scriptValue5).instance()) != null && !(object5 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                    PolyClassServer polyClassServer = new PolyClassServer(object5);
-                    v1 = ScriptValue.of((boolean)polyClassServer.tm$0_set_typed(scriptValue6.asStr(), string, scriptValue7));
-                } else {
-                    v1 = PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue5, (ScriptValue)scriptValue6, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)scriptValue7, (ScriptContext)scriptContext);
-                }
+                PolyClassServer polyClassServer = PolyClassServer.ofGuarded((ScriptValue)scriptValue5);
+                v1 = polyClassServer != null ? ScriptValue.of((boolean)polyClassServer.tm$0_set_typed(scriptValue6.asStr(), string, scriptValue7)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue5, (ScriptValue)scriptValue6, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)scriptValue7, (ScriptContext)scriptContext);
             } else {
                 v1 = ScriptValue.NULL;
             }
             ScriptValue scriptValue8 = scriptContext.getClassOrVar("Server");
             if (scriptValue8 != ScriptValue.NULL) {
-                ScriptValue.Obj obj;
-                Object object6;
                 ScriptContext.Builder builder5 = ScriptContext.builder().copyFrom(scriptContext);
                 builder5.val("gid", scriptContext.getClassOrVar("gid"));
                 ScriptValue scriptValue9 = Gomoku.blackKey(builder5);
                 String string = "string";
-                if (scriptValue8 instanceof ScriptValue.Obj && (object6 = (obj = (ScriptValue.Obj)scriptValue8).instance()) != null && !(object6 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                    PolyClassServer polyClassServer = new PolyClassServer(object6);
-                    object2 = polyClassServer.tm$6_get_typed(scriptValue9.asStr(), string);
-                } else {
-                    object2 = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue8, (ScriptValue)scriptValue9, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
-                }
+                PolyClassServer polyClassServer = PolyClassServer.ofGuarded((ScriptValue)scriptValue8);
+                object2 = polyClassServer != null ? polyClassServer.tm$6_get_typed(scriptValue9.asStr(), string) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue8, (ScriptValue)scriptValue9, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
             } else {
                 object2 = ScriptValue.NULL;
             }
@@ -1065,18 +881,12 @@ public final class Gomoku {
             builder.val("black", scriptValue10);
             ScriptValue scriptValue11 = scriptContext.getClassOrVar("Server");
             if (scriptValue11 != ScriptValue.NULL) {
-                ScriptValue.Obj obj;
-                Object object7;
                 ScriptContext.Builder builder6 = ScriptContext.builder().copyFrom(scriptContext);
                 builder6.val("gid", scriptContext.getClassOrVar("gid"));
                 ScriptValue scriptValue12 = Gomoku.whiteKey(builder6);
                 String string = "string";
-                if (scriptValue11 instanceof ScriptValue.Obj && (object7 = (obj = (ScriptValue.Obj)scriptValue11).instance()) != null && !(object7 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                    PolyClassServer polyClassServer = new PolyClassServer(object7);
-                    object = polyClassServer.tm$6_get_typed(scriptValue12.asStr(), string);
-                } else {
-                    object = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue11, (ScriptValue)scriptValue12, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
-                }
+                PolyClassServer polyClassServer = PolyClassServer.ofGuarded((ScriptValue)scriptValue11);
+                object = polyClassServer != null ? polyClassServer.tm$6_get_typed(scriptValue12.asStr(), string) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue11, (ScriptValue)scriptValue12, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
             } else {
                 object = ScriptValue.NULL;
             }
@@ -1090,51 +900,38 @@ public final class Gomoku {
             if (Gomoku.hasFive(builder7).asBool()) {
                 ScriptValue scriptValue14 = scriptContext.getClassOrVar("Server");
                 if (scriptValue14 != ScriptValue.NULL) {
-                    ScriptValue.Obj obj;
-                    Object object8;
-                    ScriptValue scriptValue15;
                     ScriptContext.Builder builder8 = ScriptContext.builder().copyFrom(scriptContext);
                     builder8.val("gid", scriptContext.getClassOrVar("gid"));
-                    ScriptValue scriptValue16 = Gomoku.statusKey(builder8);
+                    ScriptValue scriptValue15 = Gomoku.statusKey(builder8);
                     String string = "string";
-                    ScriptValue scriptValue17 = scriptValue15 = ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("color"), (ScriptValue)scriptContext.getClassOrVar("CELL_BLACK")) ? ( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Gomoku.class, "black_win")) : ( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Gomoku.class, "white_win"));
-                    if (scriptValue14 instanceof ScriptValue.Obj && (object8 = (obj = (ScriptValue.Obj)scriptValue14).instance()) != null && !(object8 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                        PolyClassServer polyClassServer = new PolyClassServer(object8);
-                        v5 = ScriptValue.of((boolean)polyClassServer.tm$0_set_typed(scriptValue16.asStr(), string, scriptValue15));
-                    } else {
-                        v5 = PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue14, (ScriptValue)scriptValue16, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)scriptValue15, (ScriptContext)scriptContext);
-                    }
+                    ScriptValue scriptValue16 = ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("color"), (ScriptValue)scriptContext.getClassOrVar("CELL_BLACK")) ? ( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Gomoku.class, "black_win")) : ( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Gomoku.class, "white_win"));
+                    PolyClassServer polyClassServer = PolyClassServer.ofGuarded((ScriptValue)scriptValue14);
+                    v4 = polyClassServer != null ? ScriptValue.of((boolean)polyClassServer.tm$0_set_typed(scriptValue15.asStr(), string, scriptValue16)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue14, (ScriptValue)scriptValue15, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)scriptValue16, (ScriptContext)scriptContext);
                 } else {
-                    v5 = ScriptValue.NULL;
+                    v4 = ScriptValue.NULL;
                 }
-                ScriptValue scriptValue18 = ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("color"), (ScriptValue)scriptContext.getClassOrVar("CELL_BLACK")) ? scriptValue10 : scriptValue13;
-                builder.val("winner", scriptValue18);
+                ScriptValue scriptValue17 = ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("color"), (ScriptValue)scriptContext.getClassOrVar("CELL_BLACK")) ? scriptValue10 : scriptValue13;
+                builder.val("winner", scriptValue17);
                 ScriptContext.Builder builder9 = ScriptContext.builder().copyFrom(scriptContext);
                 builder9.val("gid", scriptContext.getClassOrVar("gid"));
-                builder9.val("message", ScriptValue.of((String)("<gold>\u2726 <white>" + scriptValue18.asStr() + " wins the Gomoku match!")));
+                builder9.val("message", ScriptValue.of((String)("<gold>\u2726 <white>" + scriptValue17.asStr() + " wins the Gomoku match!")));
                 Gomoku.notifyBothChat(builder9);
                 return ScriptValue.NULL;
             }
             ScriptContext.Builder builder10 = ScriptContext.builder().copyFrom(scriptContext);
             builder10.val("board", scriptValue4);
             if (Gomoku.isFull(builder10).asBool()) {
-                ScriptValue scriptValue19 = scriptContext.getClassOrVar("Server");
-                if (scriptValue19 != ScriptValue.NULL) {
-                    ScriptValue.Obj obj;
-                    Object object9;
+                ScriptValue scriptValue18 = scriptContext.getClassOrVar("Server");
+                if (scriptValue18 != ScriptValue.NULL) {
                     ScriptContext.Builder builder11 = ScriptContext.builder().copyFrom(scriptContext);
                     builder11.val("gid", scriptContext.getClassOrVar("gid"));
-                    ScriptValue scriptValue20 = Gomoku.statusKey(builder11);
+                    ScriptValue scriptValue19 = Gomoku.statusKey(builder11);
                     String string = "string";
-                    ScriptValue scriptValue21 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Gomoku.class, "draw");
-                    if (scriptValue19 instanceof ScriptValue.Obj && (object9 = (obj = (ScriptValue.Obj)scriptValue19).instance()) != null && !(object9 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                        PolyClassServer polyClassServer = new PolyClassServer(object9);
-                        v6 = ScriptValue.of((boolean)polyClassServer.tm$0_set_typed(scriptValue20.asStr(), string, scriptValue21));
-                    } else {
-                        v6 = PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue19, (ScriptValue)scriptValue20, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)scriptValue21, (ScriptContext)scriptContext);
-                    }
+                    ScriptValue scriptValue20 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Gomoku.class, "draw");
+                    PolyClassServer polyClassServer = PolyClassServer.ofGuarded((ScriptValue)scriptValue18);
+                    v5 = polyClassServer != null ? ScriptValue.of((boolean)polyClassServer.tm$0_set_typed(scriptValue19.asStr(), string, scriptValue20)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue18, (ScriptValue)scriptValue19, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)scriptValue20, (ScriptContext)scriptContext);
                 } else {
-                    v6 = ScriptValue.NULL;
+                    v5 = ScriptValue.NULL;
                 }
                 ScriptContext.Builder builder12 = ScriptContext.builder().copyFrom(scriptContext);
                 builder12.val("gid", scriptContext.getClassOrVar("gid"));
@@ -1142,56 +939,44 @@ public final class Gomoku {
                 Gomoku.notifyBothChat(builder12);
                 return ScriptValue.NULL;
             }
-            ScriptValue scriptValue22 = ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("color"), (ScriptValue)scriptContext.getClassOrVar("CELL_BLACK")) ? scriptContext.getClassOrVar("CELL_WHITE") : scriptContext.getClassOrVar("CELL_BLACK");
-            builder.val("next_turn", scriptValue22);
-            ScriptValue scriptValue23 = scriptContext.getClassOrVar("Server");
-            if (scriptValue23 != ScriptValue.NULL) {
-                ScriptValue.Obj obj;
-                Object object10;
+            ScriptValue scriptValue21 = ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("color"), (ScriptValue)scriptContext.getClassOrVar("CELL_BLACK")) ? scriptContext.getClassOrVar("CELL_WHITE") : scriptContext.getClassOrVar("CELL_BLACK");
+            builder.val("next_turn", scriptValue21);
+            ScriptValue scriptValue22 = scriptContext.getClassOrVar("Server");
+            if (scriptValue22 != ScriptValue.NULL) {
                 ScriptContext.Builder builder13 = ScriptContext.builder().copyFrom(scriptContext);
                 builder13.val("gid", scriptContext.getClassOrVar("gid"));
-                ScriptValue scriptValue24 = Gomoku.turnKey(builder13);
+                ScriptValue scriptValue23 = Gomoku.turnKey(builder13);
                 String string = "string";
-                ScriptValue scriptValue25 = scriptValue22;
-                if (scriptValue23 instanceof ScriptValue.Obj && (object10 = (obj = (ScriptValue.Obj)scriptValue23).instance()) != null && !(object10 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                    PolyClassServer polyClassServer = new PolyClassServer(object10);
-                    v7 = ScriptValue.of((boolean)polyClassServer.tm$0_set_typed(scriptValue24.asStr(), string, scriptValue25));
-                } else {
-                    v7 = PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue23, (ScriptValue)scriptValue24, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)scriptValue25, (ScriptContext)scriptContext);
-                }
+                ScriptValue scriptValue24 = scriptValue21;
+                PolyClassServer polyClassServer = PolyClassServer.ofGuarded((ScriptValue)scriptValue22);
+                v6 = polyClassServer != null ? ScriptValue.of((boolean)polyClassServer.tm$0_set_typed(scriptValue23.asStr(), string, scriptValue24)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue22, (ScriptValue)scriptValue23, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)scriptValue24, (ScriptContext)scriptContext);
             } else {
-                v7 = ScriptValue.NULL;
+                v6 = ScriptValue.NULL;
             }
             ScriptContext.Builder builder14 = ScriptContext.builder().copyFrom(scriptContext);
             builder14.val("gid", scriptContext.getClassOrVar("gid"));
-            if (!(Gomoku.isBotGame(builder14).asBool() && ScriptFormula.valuesEqual((ScriptValue)scriptValue22, (ScriptValue)scriptContext.getClassOrVar("CELL_WHITE")))) break block30;
-            ScriptValue scriptValue26 = scriptContext.getClassOrVar("TaskManager");
-            Object object11 = scriptValue26 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "schedule", (ScriptValue)scriptValue26, (ScriptValue)ScriptValue.of((String)("games/gomoku.pf:bot_move:" + scriptContext.getStr("gid"))), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 15.0)), (ScriptContext)scriptContext) : ScriptValue.NULL;
+            if (!(Gomoku.isBotGame(builder14).asBool() && ScriptFormula.valuesEqual((ScriptValue)scriptValue21, (ScriptValue)scriptContext.getClassOrVar("CELL_WHITE")))) break block16;
+            ScriptValue scriptValue25 = scriptContext.getClassOrVar("TaskManager");
+            Object object4 = scriptValue25 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "schedule", (ScriptValue)scriptValue25, (ScriptValue)ScriptValue.of((String)("games/gomoku.pf:bot_move:" + scriptContext.getStr("gid"))), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 15.0)), (ScriptContext)scriptContext) : ScriptValue.NULL;
         }
         return ScriptValue.NULL;
     }
 
     public static ScriptValue refreshBoard(ScriptContext.Builder builder) {
-        block4: {
+        block2: {
             Object object;
             ScriptContext scriptContext = builder.peek();
             ScriptValue scriptValue = scriptContext.getClassOrVar("Server");
             if (scriptValue != ScriptValue.NULL) {
-                ScriptValue.Obj obj;
-                Object object2;
                 ScriptValue scriptValue2 = scriptContext.getClassOrVar("player_name");
-                if (scriptValue instanceof ScriptValue.Obj && (object2 = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object2 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                    PolyClassServer polyClassServer = new PolyClassServer(object2);
-                    object = polyClassServer.tm$10_get_player(scriptValue2.asStr());
-                } else {
-                    object = PolyDispatch.bootstrapCall("memberCall", "get_player", (ScriptValue)scriptValue, (ScriptValue)scriptValue2, (ScriptContext)scriptContext);
-                }
+                PolyClassServer polyClassServer = PolyClassServer.ofGuarded((ScriptValue)scriptValue);
+                object = polyClassServer != null ? polyClassServer.tm$10_get_player(scriptValue2.asStr()) : PolyDispatch.bootstrapCall("memberCall", "get_player", (ScriptValue)scriptValue, (ScriptValue)scriptValue2, (ScriptContext)scriptContext);
             } else {
                 object = ScriptValue.NULL;
             }
             ScriptValue scriptValue3 = object;
             builder.val("p", scriptValue3);
-            if (!(ScriptFormula.callBuiltin1((String)"is_empty", (ScriptValue)scriptValue3, (ScriptContext)scriptContext).asBool() ^ true)) break block4;
+            if (!(ScriptFormula.callBuiltin1((String)"is_empty", (ScriptValue)scriptValue3, (ScriptContext)scriptContext).asBool() ^ true)) break block2;
             ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
             builder2.val("gid", scriptContext.getClassOrVar("gid"));
             builder2.val("viewer", scriptValue3);
@@ -1202,10 +987,10 @@ public final class Gomoku {
 
     public static ScriptValue onCellClick(ScriptContext.Builder builder) {
         ScriptValue scriptValue;
-        PolyClassPlayer_v2 polyClassPlayer_v2;
+        PolyClassPlayer polyClassPlayer;
         Object object;
         ScriptValue scriptValue2;
-        PolyClassPlayer_v2 polyClassPlayer_v22;
+        PolyClassPlayer polyClassPlayer2;
         ScriptValue scriptValue3;
         Object object2;
         Object object3;
@@ -1218,18 +1003,12 @@ public final class Gomoku {
         builder.val("col", scriptValue5);
         ScriptValue scriptValue6 = scriptContext.getClassOrVar("Server");
         if (scriptValue6 != ScriptValue.NULL) {
-            ScriptValue.Obj obj;
-            Object object6;
             ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
             builder2.val("gid", scriptContext.getClassOrVar("gid"));
             ScriptValue scriptValue7 = Gomoku.statusKey(builder2);
             String string = "string";
-            if (scriptValue6 instanceof ScriptValue.Obj && (object6 = (obj = (ScriptValue.Obj)scriptValue6).instance()) != null && !(object6 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                PolyClassServer polyClassServer = new PolyClassServer(object6);
-                object5 = polyClassServer.tm$6_get_typed(scriptValue7.asStr(), string);
-            } else {
-                object5 = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue6, (ScriptValue)scriptValue7, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
-            }
+            PolyClassServer polyClassServer = PolyClassServer.ofGuarded((ScriptValue)scriptValue6);
+            object5 = polyClassServer != null ? polyClassServer.tm$6_get_typed(scriptValue7.asStr(), string) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue6, (ScriptValue)scriptValue7, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
         } else {
             object5 = ScriptValue.NULL;
         }
@@ -1237,39 +1016,27 @@ public final class Gomoku {
         builder.val("status", scriptValue8);
         if (ScriptFormula.valuesEqualStr((ScriptValue)scriptValue8, (String)"active") ^ true) {
             ScriptValue scriptValue9;
-            PolyClassPlayer_v2 polyClassPlayer_v23;
+            PolyClassPlayer polyClassPlayer3;
             ScriptValue scriptValue10 = scriptContext.getClassOrVar("Player");
             if (scriptValue10 != ScriptValue.NULL) {
-                ScriptValue.Obj obj;
-                Object object7;
                 String string = "<red>\u2718 <white>This game has already ended - run the command again to start a new one.";
-                if (scriptValue10 instanceof ScriptValue.Obj && (object7 = (obj = (ScriptValue.Obj)scriptValue10).instance()) != null && !(object7 instanceof PolyClass) && obj.typeName().equals("Player")) {
-                    PolyClassPlayer_v2 polyClassPlayer_v24 = new PolyClassPlayer_v2(object7);
-                    v1 = ScriptValue.of((boolean)polyClassPlayer_v24.tm$42_send_message(string));
-                } else {
-                    v1 = PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue10, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
-                }
+                PolyClassPlayer polyClassPlayer4 = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue10);
+                v1 = polyClassPlayer4 != null ? ScriptValue.of((boolean)polyClassPlayer4.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue10, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
             } else {
                 v1 = ScriptValue.NULL;
             }
             ScriptValue scriptValue11 = scriptContext.getClassOrVar("TaskManager");
-            Object object8 = scriptValue11 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "schedule", (ScriptValue)scriptValue11, (ScriptValue)ScriptValue.of((String)("games/gomoku.pf:refresh_board:" + scriptContext.getStr("gid") + ":" + ((polyClassPlayer_v23 = PolyClassPlayer_v2.ofVar((ScriptContext)scriptContext, (String)"Player")) != null ? polyClassPlayer_v23.tg$68_name() : ((scriptValue9 = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue9, (ScriptContext)scriptContext).asStr() : ScriptValue.NULL.asStr())))), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 0.0)), (ScriptContext)scriptContext) : ScriptValue.NULL;
+            Object object6 = scriptValue11 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "schedule", (ScriptValue)scriptValue11, (ScriptValue)ScriptValue.of((String)("games/gomoku.pf:refresh_board:" + scriptContext.getStr("gid") + ":" + ((polyClassPlayer3 = PolyClassPlayer.ofVar((ScriptContext)scriptContext, (String)"Player")) != null ? polyClassPlayer3.tg$68_name() : ((scriptValue9 = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue9, (ScriptContext)scriptContext).asStr() : ScriptValue.NULL.asStr())))), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 0.0)), (ScriptContext)scriptContext) : ScriptValue.NULL;
             return ScriptValue.NULL;
         }
         ScriptValue scriptValue12 = scriptContext.getClassOrVar("Server");
         if (scriptValue12 != ScriptValue.NULL) {
-            ScriptValue.Obj obj;
-            Object object9;
             ScriptContext.Builder builder3 = ScriptContext.builder().copyFrom(scriptContext);
             builder3.val("gid", scriptContext.getClassOrVar("gid"));
             ScriptValue scriptValue13 = Gomoku.blackKey(builder3);
             String string = "string";
-            if (scriptValue12 instanceof ScriptValue.Obj && (object9 = (obj = (ScriptValue.Obj)scriptValue12).instance()) != null && !(object9 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                PolyClassServer polyClassServer = new PolyClassServer(object9);
-                object4 = polyClassServer.tm$6_get_typed(scriptValue13.asStr(), string);
-            } else {
-                object4 = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue12, (ScriptValue)scriptValue13, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
-            }
+            PolyClassServer polyClassServer = PolyClassServer.ofGuarded((ScriptValue)scriptValue12);
+            object4 = polyClassServer != null ? polyClassServer.tm$6_get_typed(scriptValue13.asStr(), string) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue12, (ScriptValue)scriptValue13, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
         } else {
             object4 = ScriptValue.NULL;
         }
@@ -1277,18 +1044,12 @@ public final class Gomoku {
         builder.val("black", scriptValue14);
         ScriptValue scriptValue15 = scriptContext.getClassOrVar("Server");
         if (scriptValue15 != ScriptValue.NULL) {
-            ScriptValue.Obj obj;
-            Object object10;
             ScriptContext.Builder builder4 = ScriptContext.builder().copyFrom(scriptContext);
             builder4.val("gid", scriptContext.getClassOrVar("gid"));
             ScriptValue scriptValue16 = Gomoku.whiteKey(builder4);
             String string = "string";
-            if (scriptValue15 instanceof ScriptValue.Obj && (object10 = (obj = (ScriptValue.Obj)scriptValue15).instance()) != null && !(object10 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                PolyClassServer polyClassServer = new PolyClassServer(object10);
-                object3 = polyClassServer.tm$6_get_typed(scriptValue16.asStr(), string);
-            } else {
-                object3 = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue15, (ScriptValue)scriptValue16, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
-            }
+            PolyClassServer polyClassServer = PolyClassServer.ofGuarded((ScriptValue)scriptValue15);
+            object3 = polyClassServer != null ? polyClassServer.tm$6_get_typed(scriptValue16.asStr(), string) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue15, (ScriptValue)scriptValue16, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
         } else {
             object3 = ScriptValue.NULL;
         }
@@ -1296,18 +1057,12 @@ public final class Gomoku {
         builder.val("white", scriptValue17);
         ScriptValue scriptValue18 = scriptContext.getClassOrVar("Server");
         if (scriptValue18 != ScriptValue.NULL) {
-            ScriptValue.Obj obj;
-            Object object11;
             ScriptContext.Builder builder5 = ScriptContext.builder().copyFrom(scriptContext);
             builder5.val("gid", scriptContext.getClassOrVar("gid"));
             ScriptValue scriptValue19 = Gomoku.turnKey(builder5);
             String string = "string";
-            if (scriptValue18 instanceof ScriptValue.Obj && (object11 = (obj = (ScriptValue.Obj)scriptValue18).instance()) != null && !(object11 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                PolyClassServer polyClassServer = new PolyClassServer(object11);
-                object2 = polyClassServer.tm$6_get_typed(scriptValue19.asStr(), string);
-            } else {
-                object2 = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue18, (ScriptValue)scriptValue19, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
-            }
+            PolyClassServer polyClassServer = PolyClassServer.ofGuarded((ScriptValue)scriptValue18);
+            object2 = polyClassServer != null ? polyClassServer.tm$6_get_typed(scriptValue19.asStr(), string) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue18, (ScriptValue)scriptValue19, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
         } else {
             object2 = ScriptValue.NULL;
         }
@@ -1315,27 +1070,21 @@ public final class Gomoku {
         builder.val("turn", scriptValue20);
         ScriptValue scriptValue21 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Gomoku.class, "");
         builder.val("my_color", scriptValue21);
-        PolyClassPlayer_v2 polyClassPlayer_v25 = PolyClassPlayer_v2.ofVar((ScriptContext)scriptContext, (String)"Player");
-        if (ScriptFormula.valuesEqual((ScriptValue)(polyClassPlayer_v25 != null ? polyClassPlayer_v25.pg$67_name() : ((scriptValue3 = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue3, (ScriptContext)scriptContext) : ScriptValue.NULL)), (ScriptValue)scriptValue14)) {
+        PolyClassPlayer polyClassPlayer5 = PolyClassPlayer.ofVar((ScriptContext)scriptContext, (String)"Player");
+        if (ScriptFormula.valuesEqual((ScriptValue)(polyClassPlayer5 != null ? polyClassPlayer5.pg$67_name() : ((scriptValue3 = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue3, (ScriptContext)scriptContext) : ScriptValue.NULL)), (ScriptValue)scriptValue14)) {
             ScriptValue scriptValue22 = scriptContext.getClassOrVar("CELL_BLACK");
             builder.val("my_color", scriptValue22);
         }
-        if (ScriptFormula.valuesEqual((ScriptValue)((polyClassPlayer_v22 = PolyClassPlayer_v2.ofVar((ScriptContext)scriptContext, (String)"Player")) != null ? polyClassPlayer_v22.pg$67_name() : ((scriptValue2 = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue2, (ScriptContext)scriptContext) : ScriptValue.NULL)), (ScriptValue)scriptValue17)) {
+        if (ScriptFormula.valuesEqual((ScriptValue)((polyClassPlayer2 = PolyClassPlayer.ofVar((ScriptContext)scriptContext, (String)"Player")) != null ? polyClassPlayer2.pg$67_name() : ((scriptValue2 = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue2, (ScriptContext)scriptContext) : ScriptValue.NULL)), (ScriptValue)scriptValue17)) {
             ScriptValue scriptValue23 = scriptContext.getClassOrVar("CELL_WHITE");
             builder.val("my_color", scriptValue23);
         }
         if (scriptContext.getStr("my_color").equals("")) {
             ScriptValue scriptValue24 = scriptContext.getClassOrVar("Player");
             if (scriptValue24 != ScriptValue.NULL) {
-                ScriptValue.Obj obj;
-                Object object12;
                 String string = "<red>\u2718 <white>You're not a player in this game.";
-                if (scriptValue24 instanceof ScriptValue.Obj && (object12 = (obj = (ScriptValue.Obj)scriptValue24).instance()) != null && !(object12 instanceof PolyClass) && obj.typeName().equals("Player")) {
-                    PolyClassPlayer_v2 polyClassPlayer_v26 = new PolyClassPlayer_v2(object12);
-                    v6 = ScriptValue.of((boolean)polyClassPlayer_v26.tm$42_send_message(string));
-                } else {
-                    v6 = PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue24, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
-                }
+                PolyClassPlayer polyClassPlayer6 = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue24);
+                v6 = polyClassPlayer6 != null ? ScriptValue.of((boolean)polyClassPlayer6.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue24, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
             } else {
                 v6 = ScriptValue.NULL;
             }
@@ -1343,39 +1092,27 @@ public final class Gomoku {
         }
         if (ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("my_color"), (ScriptValue)scriptValue20) ^ true) {
             ScriptValue scriptValue25;
-            PolyClassPlayer_v2 polyClassPlayer_v27;
+            PolyClassPlayer polyClassPlayer7;
             ScriptValue scriptValue26 = scriptContext.getClassOrVar("Player");
             if (scriptValue26 != ScriptValue.NULL) {
-                ScriptValue.Obj obj;
-                Object object13;
                 String string = "<red>\u2718 <white>It's not your turn.";
-                if (scriptValue26 instanceof ScriptValue.Obj && (object13 = (obj = (ScriptValue.Obj)scriptValue26).instance()) != null && !(object13 instanceof PolyClass) && obj.typeName().equals("Player")) {
-                    PolyClassPlayer_v2 polyClassPlayer_v28 = new PolyClassPlayer_v2(object13);
-                    v7 = ScriptValue.of((boolean)polyClassPlayer_v28.tm$42_send_message(string));
-                } else {
-                    v7 = PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue26, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
-                }
+                PolyClassPlayer polyClassPlayer8 = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue26);
+                v7 = polyClassPlayer8 != null ? ScriptValue.of((boolean)polyClassPlayer8.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue26, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
             } else {
                 v7 = ScriptValue.NULL;
             }
             ScriptValue scriptValue27 = scriptContext.getClassOrVar("TaskManager");
-            Object object14 = scriptValue27 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "schedule", (ScriptValue)scriptValue27, (ScriptValue)ScriptValue.of((String)("games/gomoku.pf:refresh_board:" + scriptContext.getStr("gid") + ":" + ((polyClassPlayer_v27 = PolyClassPlayer_v2.ofVar((ScriptContext)scriptContext, (String)"Player")) != null ? polyClassPlayer_v27.tg$68_name() : ((scriptValue25 = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue25, (ScriptContext)scriptContext).asStr() : ScriptValue.NULL.asStr())))), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 0.0)), (ScriptContext)scriptContext) : ScriptValue.NULL;
+            Object object7 = scriptValue27 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "schedule", (ScriptValue)scriptValue27, (ScriptValue)ScriptValue.of((String)("games/gomoku.pf:refresh_board:" + scriptContext.getStr("gid") + ":" + ((polyClassPlayer7 = PolyClassPlayer.ofVar((ScriptContext)scriptContext, (String)"Player")) != null ? polyClassPlayer7.tg$68_name() : ((scriptValue25 = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue25, (ScriptContext)scriptContext).asStr() : ScriptValue.NULL.asStr())))), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 0.0)), (ScriptContext)scriptContext) : ScriptValue.NULL;
             return ScriptValue.NULL;
         }
         ScriptValue scriptValue28 = scriptContext.getClassOrVar("Server");
         if (scriptValue28 != ScriptValue.NULL) {
-            ScriptValue.Obj obj;
-            Object object15;
             ScriptContext.Builder builder6 = ScriptContext.builder().copyFrom(scriptContext);
             builder6.val("gid", scriptContext.getClassOrVar("gid"));
             ScriptValue scriptValue29 = Gomoku.boardKey(builder6);
             String string = "string";
-            if (scriptValue28 instanceof ScriptValue.Obj && (object15 = (obj = (ScriptValue.Obj)scriptValue28).instance()) != null && !(object15 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                PolyClassServer polyClassServer = new PolyClassServer(object15);
-                object = polyClassServer.tm$6_get_typed(scriptValue29.asStr(), string);
-            } else {
-                object = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue28, (ScriptValue)scriptValue29, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
-            }
+            PolyClassServer polyClassServer = PolyClassServer.ofGuarded((ScriptValue)scriptValue28);
+            object = polyClassServer != null ? polyClassServer.tm$6_get_typed(scriptValue29.asStr(), string) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue28, (ScriptValue)scriptValue29, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
         }
@@ -1387,23 +1124,17 @@ public final class Gomoku {
         builder7.val("c", scriptValue5);
         if (ScriptFormula.valuesEqual((ScriptValue)Gomoku.cellAt(builder7), (ScriptValue)scriptContext.getClassOrVar("CELL_EMPTY")) ^ true) {
             ScriptValue scriptValue31;
-            PolyClassPlayer_v2 polyClassPlayer_v29;
+            PolyClassPlayer polyClassPlayer9;
             ScriptValue scriptValue32 = scriptContext.getClassOrVar("Player");
             if (scriptValue32 != ScriptValue.NULL) {
-                ScriptValue.Obj obj;
-                Object object16;
                 String string = "<red>\u2718 <white>That cell is already taken.";
-                if (scriptValue32 instanceof ScriptValue.Obj && (object16 = (obj = (ScriptValue.Obj)scriptValue32).instance()) != null && !(object16 instanceof PolyClass) && obj.typeName().equals("Player")) {
-                    PolyClassPlayer_v2 polyClassPlayer_v210 = new PolyClassPlayer_v2(object16);
-                    v10 = ScriptValue.of((boolean)polyClassPlayer_v210.tm$42_send_message(string));
-                } else {
-                    v10 = PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue32, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
-                }
+                PolyClassPlayer polyClassPlayer10 = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue32);
+                v10 = polyClassPlayer10 != null ? ScriptValue.of((boolean)polyClassPlayer10.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue32, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
             } else {
                 v10 = ScriptValue.NULL;
             }
             ScriptValue scriptValue33 = scriptContext.getClassOrVar("TaskManager");
-            Object object17 = scriptValue33 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "schedule", (ScriptValue)scriptValue33, (ScriptValue)ScriptValue.of((String)("games/gomoku.pf:refresh_board:" + scriptContext.getStr("gid") + ":" + ((polyClassPlayer_v29 = PolyClassPlayer_v2.ofVar((ScriptContext)scriptContext, (String)"Player")) != null ? polyClassPlayer_v29.tg$68_name() : ((scriptValue31 = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue31, (ScriptContext)scriptContext).asStr() : ScriptValue.NULL.asStr())))), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 0.0)), (ScriptContext)scriptContext) : ScriptValue.NULL;
+            Object object8 = scriptValue33 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "schedule", (ScriptValue)scriptValue33, (ScriptValue)ScriptValue.of((String)("games/gomoku.pf:refresh_board:" + scriptContext.getStr("gid") + ":" + ((polyClassPlayer9 = PolyClassPlayer.ofVar((ScriptContext)scriptContext, (String)"Player")) != null ? polyClassPlayer9.tg$68_name() : ((scriptValue31 = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue31, (ScriptContext)scriptContext).asStr() : ScriptValue.NULL.asStr())))), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 0.0)), (ScriptContext)scriptContext) : ScriptValue.NULL;
             return ScriptValue.NULL;
         }
         ScriptContext.Builder builder8 = ScriptContext.builder().copyFrom(scriptContext);
@@ -1413,7 +1144,7 @@ public final class Gomoku {
         builder8.val("color", scriptContext.getClassOrVar("my_color"));
         Gomoku.applyMove(builder8);
         ScriptValue scriptValue34 = scriptContext.getClassOrVar("TaskManager");
-        Object object18 = scriptValue34 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "schedule", (ScriptValue)scriptValue34, (ScriptValue)ScriptValue.of((String)("games/gomoku.pf:refresh_board:" + scriptContext.getStr("gid") + ":" + ((polyClassPlayer_v2 = PolyClassPlayer_v2.ofVar((ScriptContext)scriptContext, (String)"Player")) != null ? polyClassPlayer_v2.tg$68_name() : ((scriptValue = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue, (ScriptContext)scriptContext).asStr() : ScriptValue.NULL.asStr())))), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 0.0)), (ScriptContext)scriptContext) : ScriptValue.NULL;
+        Object object9 = scriptValue34 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "schedule", (ScriptValue)scriptValue34, (ScriptValue)ScriptValue.of((String)("games/gomoku.pf:refresh_board:" + scriptContext.getStr("gid") + ":" + ((polyClassPlayer = PolyClassPlayer.ofVar((ScriptContext)scriptContext, (String)"Player")) != null ? polyClassPlayer.tg$68_name() : ((scriptValue = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue, (ScriptContext)scriptContext).asStr() : ScriptValue.NULL.asStr())))), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 0.0)), (ScriptContext)scriptContext) : ScriptValue.NULL;
         ScriptContext.Builder builder9 = ScriptContext.builder().copyFrom(scriptContext);
         builder9.val("gid", scriptContext.getClassOrVar("gid"));
         Gomoku.notifyOpponent(builder9);
@@ -1424,7 +1155,7 @@ public final class Gomoku {
         ScriptValue scriptValue;
         ScriptValue scriptValue2;
         ScriptValue scriptValue3;
-        PolyClassPlayer_v2 polyClassPlayer_v2;
+        PolyClassPlayer polyClassPlayer;
         ScriptValue scriptValue4;
         Object object;
         Object object2;
@@ -1432,18 +1163,12 @@ public final class Gomoku {
         ScriptContext scriptContext = builder.peek();
         ScriptValue scriptValue5 = scriptContext.getClassOrVar("Server");
         if (scriptValue5 != ScriptValue.NULL) {
-            ScriptValue.Obj obj;
-            Object object4;
             ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
             builder2.val("gid", scriptContext.getClassOrVar("gid"));
             ScriptValue scriptValue6 = Gomoku.statusKey(builder2);
             String string = "string";
-            if (scriptValue5 instanceof ScriptValue.Obj && (object4 = (obj = (ScriptValue.Obj)scriptValue5).instance()) != null && !(object4 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                PolyClassServer polyClassServer = new PolyClassServer(object4);
-                object3 = polyClassServer.tm$6_get_typed(scriptValue6.asStr(), string);
-            } else {
-                object3 = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue5, (ScriptValue)scriptValue6, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
-            }
+            PolyClassServer polyClassServer = PolyClassServer.ofGuarded((ScriptValue)scriptValue5);
+            object3 = polyClassServer != null ? polyClassServer.tm$6_get_typed(scriptValue6.asStr(), string) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue5, (ScriptValue)scriptValue6, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
         } else {
             object3 = ScriptValue.NULL;
         }
@@ -1452,15 +1177,9 @@ public final class Gomoku {
         if (ScriptFormula.valuesEqualStr((ScriptValue)scriptValue7, (String)"active") ^ true) {
             ScriptValue scriptValue8 = scriptContext.getClassOrVar("Player");
             if (scriptValue8 != ScriptValue.NULL) {
-                ScriptValue.Obj obj;
-                Object object5;
                 String string = "<yellow>This game has already ended.";
-                if (scriptValue8 instanceof ScriptValue.Obj && (object5 = (obj = (ScriptValue.Obj)scriptValue8).instance()) != null && !(object5 instanceof PolyClass) && obj.typeName().equals("Player")) {
-                    PolyClassPlayer_v2 polyClassPlayer_v22 = new PolyClassPlayer_v2(object5);
-                    v1 = ScriptValue.of((boolean)polyClassPlayer_v22.tm$42_send_message(string));
-                } else {
-                    v1 = PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue8, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
-                }
+                PolyClassPlayer polyClassPlayer2 = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue8);
+                v1 = polyClassPlayer2 != null ? ScriptValue.of((boolean)polyClassPlayer2.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue8, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
             } else {
                 v1 = ScriptValue.NULL;
             }
@@ -1468,18 +1187,12 @@ public final class Gomoku {
         }
         ScriptValue scriptValue9 = scriptContext.getClassOrVar("Server");
         if (scriptValue9 != ScriptValue.NULL) {
-            ScriptValue.Obj obj;
-            Object object6;
             ScriptContext.Builder builder3 = ScriptContext.builder().copyFrom(scriptContext);
             builder3.val("gid", scriptContext.getClassOrVar("gid"));
             ScriptValue scriptValue10 = Gomoku.blackKey(builder3);
             String string = "string";
-            if (scriptValue9 instanceof ScriptValue.Obj && (object6 = (obj = (ScriptValue.Obj)scriptValue9).instance()) != null && !(object6 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                PolyClassServer polyClassServer = new PolyClassServer(object6);
-                object2 = polyClassServer.tm$6_get_typed(scriptValue10.asStr(), string);
-            } else {
-                object2 = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue9, (ScriptValue)scriptValue10, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
-            }
+            PolyClassServer polyClassServer = PolyClassServer.ofGuarded((ScriptValue)scriptValue9);
+            object2 = polyClassServer != null ? polyClassServer.tm$6_get_typed(scriptValue10.asStr(), string) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue9, (ScriptValue)scriptValue10, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
         } else {
             object2 = ScriptValue.NULL;
         }
@@ -1487,70 +1200,51 @@ public final class Gomoku {
         builder.val("black", scriptValue11);
         ScriptValue scriptValue12 = scriptContext.getClassOrVar("Server");
         if (scriptValue12 != ScriptValue.NULL) {
-            ScriptValue.Obj obj;
-            Object object7;
             ScriptContext.Builder builder4 = ScriptContext.builder().copyFrom(scriptContext);
             builder4.val("gid", scriptContext.getClassOrVar("gid"));
             ScriptValue scriptValue13 = Gomoku.whiteKey(builder4);
             String string = "string";
-            if (scriptValue12 instanceof ScriptValue.Obj && (object7 = (obj = (ScriptValue.Obj)scriptValue12).instance()) != null && !(object7 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                PolyClassServer polyClassServer = new PolyClassServer(object7);
-                object = polyClassServer.tm$6_get_typed(scriptValue13.asStr(), string);
-            } else {
-                object = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue12, (ScriptValue)scriptValue13, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
-            }
+            PolyClassServer polyClassServer = PolyClassServer.ofGuarded((ScriptValue)scriptValue12);
+            object = polyClassServer != null ? polyClassServer.tm$6_get_typed(scriptValue13.asStr(), string) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue12, (ScriptValue)scriptValue13, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
         }
         ScriptValue scriptValue14 = object;
         builder.val("white", scriptValue14);
-        PolyClassPlayer_v2 polyClassPlayer_v23 = PolyClassPlayer_v2.ofVar((ScriptContext)scriptContext, (String)"Player");
-        if (ScriptFormula.valuesEqual((ScriptValue)(polyClassPlayer_v23 != null ? polyClassPlayer_v23.pg$67_name() : ((scriptValue4 = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue4, (ScriptContext)scriptContext) : ScriptValue.NULL)), (ScriptValue)scriptValue11) ^ true && ScriptFormula.valuesEqual((ScriptValue)((polyClassPlayer_v2 = PolyClassPlayer_v2.ofVar((ScriptContext)scriptContext, (String)"Player")) != null ? polyClassPlayer_v2.pg$67_name() : ((scriptValue3 = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue3, (ScriptContext)scriptContext) : ScriptValue.NULL)), (ScriptValue)scriptValue14) ^ true) {
+        PolyClassPlayer polyClassPlayer3 = PolyClassPlayer.ofVar((ScriptContext)scriptContext, (String)"Player");
+        if (ScriptFormula.valuesEqual((ScriptValue)(polyClassPlayer3 != null ? polyClassPlayer3.pg$67_name() : ((scriptValue4 = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue4, (ScriptContext)scriptContext) : ScriptValue.NULL)), (ScriptValue)scriptValue11) ^ true && ScriptFormula.valuesEqual((ScriptValue)((polyClassPlayer = PolyClassPlayer.ofVar((ScriptContext)scriptContext, (String)"Player")) != null ? polyClassPlayer.pg$67_name() : ((scriptValue3 = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue3, (ScriptContext)scriptContext) : ScriptValue.NULL)), (ScriptValue)scriptValue14) ^ true) {
             ScriptValue scriptValue15 = scriptContext.getClassOrVar("Player");
             if (scriptValue15 != ScriptValue.NULL) {
-                ScriptValue.Obj obj;
-                Object object8;
                 String string = "<red>\u2718 <white>You're not a player in this game.";
-                if (scriptValue15 instanceof ScriptValue.Obj && (object8 = (obj = (ScriptValue.Obj)scriptValue15).instance()) != null && !(object8 instanceof PolyClass) && obj.typeName().equals("Player")) {
-                    PolyClassPlayer_v2 polyClassPlayer_v24 = new PolyClassPlayer_v2(object8);
-                    v4 = ScriptValue.of((boolean)polyClassPlayer_v24.tm$42_send_message(string));
-                } else {
-                    v4 = PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue15, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
-                }
+                PolyClassPlayer polyClassPlayer4 = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue15);
+                v4 = polyClassPlayer4 != null ? ScriptValue.of((boolean)polyClassPlayer4.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue15, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
             } else {
                 v4 = ScriptValue.NULL;
             }
             return ScriptValue.NULL;
         }
-        PolyClassPlayer_v2 polyClassPlayer_v25 = PolyClassPlayer_v2.ofVar((ScriptContext)scriptContext, (String)"Player");
-        boolean bl = ScriptFormula.valuesEqual((ScriptValue)(polyClassPlayer_v25 != null ? polyClassPlayer_v25.pg$67_name() : ((scriptValue2 = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue2, (ScriptContext)scriptContext) : ScriptValue.NULL)), (ScriptValue)scriptValue11);
+        PolyClassPlayer polyClassPlayer5 = PolyClassPlayer.ofVar((ScriptContext)scriptContext, (String)"Player");
+        boolean bl = ScriptFormula.valuesEqual((ScriptValue)(polyClassPlayer5 != null ? polyClassPlayer5.pg$67_name() : ((scriptValue2 = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue2, (ScriptContext)scriptContext) : ScriptValue.NULL)), (ScriptValue)scriptValue11);
         ScriptValue scriptValue16 = ScriptValue.of((boolean)bl);
         builder.val("resigner_is_black", scriptValue16);
         ScriptValue scriptValue17 = scriptContext.getClassOrVar("Server");
         if (scriptValue17 != ScriptValue.NULL) {
-            ScriptValue.Obj obj;
-            Object object9;
-            ScriptValue scriptValue18;
             ScriptContext.Builder builder5 = ScriptContext.builder().copyFrom(scriptContext);
             builder5.val("gid", scriptContext.getClassOrVar("gid"));
-            ScriptValue scriptValue19 = Gomoku.statusKey(builder5);
+            ScriptValue scriptValue18 = Gomoku.statusKey(builder5);
             String string = "string";
-            ScriptValue scriptValue20 = scriptValue18 = bl ? ( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Gomoku.class, "white_win")) : ( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Gomoku.class, "black_win"));
-            if (scriptValue17 instanceof ScriptValue.Obj && (object9 = (obj = (ScriptValue.Obj)scriptValue17).instance()) != null && !(object9 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                PolyClassServer polyClassServer = new PolyClassServer(object9);
-                v6 = ScriptValue.of((boolean)polyClassServer.tm$0_set_typed(scriptValue19.asStr(), string, scriptValue18));
-            } else {
-                v6 = PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue17, (ScriptValue)scriptValue19, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)scriptValue18, (ScriptContext)scriptContext);
-            }
+            ScriptValue scriptValue19 = bl ? ( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Gomoku.class, "white_win")) : ( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Gomoku.class, "black_win"));
+            PolyClassServer polyClassServer = PolyClassServer.ofGuarded((ScriptValue)scriptValue17);
+            v5 = polyClassServer != null ? ScriptValue.of((boolean)polyClassServer.tm$0_set_typed(scriptValue18.asStr(), string, scriptValue19)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue17, (ScriptValue)scriptValue18, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)scriptValue19, (ScriptContext)scriptContext);
         } else {
-            v6 = ScriptValue.NULL;
+            v5 = ScriptValue.NULL;
         }
-        ScriptValue scriptValue21 = bl ? scriptValue14 : scriptValue11;
-        builder.val("winner", scriptValue21);
+        ScriptValue scriptValue20 = bl ? scriptValue14 : scriptValue11;
+        builder.val("winner", scriptValue20);
         ScriptContext.Builder builder6 = ScriptContext.builder().copyFrom(scriptContext);
         builder6.val("gid", scriptContext.getClassOrVar("gid"));
-        PolyClassPlayer_v2 polyClassPlayer_v26 = PolyClassPlayer_v2.ofVar((ScriptContext)scriptContext, (String)"Player");
-        builder6.val("message", ScriptValue.of((String)("<yellow>" + (polyClassPlayer_v26 != null ? polyClassPlayer_v26.tg$68_name() : ((scriptValue = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue, (ScriptContext)scriptContext).asStr() : ScriptValue.NULL.asStr())) + " resigned. <gold>" + scriptValue21.asStr() + " wins!")));
+        PolyClassPlayer polyClassPlayer6 = PolyClassPlayer.ofVar((ScriptContext)scriptContext, (String)"Player");
+        builder6.val("message", ScriptValue.of((String)("<yellow>" + (polyClassPlayer6 != null ? polyClassPlayer6.tg$68_name() : ((scriptValue = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue, (ScriptContext)scriptContext).asStr() : ScriptValue.NULL.asStr())) + " resigned. <gold>" + scriptValue20.asStr() + " wins!")));
         Gomoku.notifyBothChat(builder6);
         ScriptContext.Builder builder7 = ScriptContext.builder().copyFrom(scriptContext);
         builder7.val("gid", scriptContext.getClassOrVar("gid"));
@@ -2226,18 +1920,12 @@ public final class Gomoku {
         ScriptContext scriptContext = builder.peek();
         ScriptValue scriptValue = scriptContext.getClassOrVar("Server");
         if (scriptValue != ScriptValue.NULL) {
-            ScriptValue.Obj obj;
-            Object object4;
             ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
             builder2.val("gid", scriptContext.getClassOrVar("gid"));
             ScriptValue scriptValue2 = Gomoku.statusKey(builder2);
             String string = "string";
-            if (scriptValue instanceof ScriptValue.Obj && (object4 = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object4 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                PolyClassServer polyClassServer = new PolyClassServer(object4);
-                object3 = polyClassServer.tm$6_get_typed(scriptValue2.asStr(), string);
-            } else {
-                object3 = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue, (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
-            }
+            PolyClassServer polyClassServer = PolyClassServer.ofGuarded((ScriptValue)scriptValue);
+            object3 = polyClassServer != null ? polyClassServer.tm$6_get_typed(scriptValue2.asStr(), string) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue, (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
         } else {
             object3 = ScriptValue.NULL;
         }
@@ -2246,18 +1934,12 @@ public final class Gomoku {
         }
         ScriptValue scriptValue3 = scriptContext.getClassOrVar("Server");
         if (scriptValue3 != ScriptValue.NULL) {
-            ScriptValue.Obj obj;
-            Object object5;
             ScriptContext.Builder builder3 = ScriptContext.builder().copyFrom(scriptContext);
             builder3.val("gid", scriptContext.getClassOrVar("gid"));
             ScriptValue scriptValue4 = Gomoku.turnKey(builder3);
             String string = "string";
-            if (scriptValue3 instanceof ScriptValue.Obj && (object5 = (obj = (ScriptValue.Obj)scriptValue3).instance()) != null && !(object5 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                PolyClassServer polyClassServer = new PolyClassServer(object5);
-                object2 = polyClassServer.tm$6_get_typed(scriptValue4.asStr(), string);
-            } else {
-                object2 = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue3, (ScriptValue)scriptValue4, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
-            }
+            PolyClassServer polyClassServer = PolyClassServer.ofGuarded((ScriptValue)scriptValue3);
+            object2 = polyClassServer != null ? polyClassServer.tm$6_get_typed(scriptValue4.asStr(), string) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue3, (ScriptValue)scriptValue4, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
         } else {
             object2 = ScriptValue.NULL;
         }
@@ -2266,18 +1948,12 @@ public final class Gomoku {
         }
         ScriptValue scriptValue5 = scriptContext.getClassOrVar("Server");
         if (scriptValue5 != ScriptValue.NULL) {
-            ScriptValue.Obj obj;
-            Object object6;
             ScriptContext.Builder builder4 = ScriptContext.builder().copyFrom(scriptContext);
             builder4.val("gid", scriptContext.getClassOrVar("gid"));
             ScriptValue scriptValue6 = Gomoku.boardKey(builder4);
             String string = "string";
-            if (scriptValue5 instanceof ScriptValue.Obj && (object6 = (obj = (ScriptValue.Obj)scriptValue5).instance()) != null && !(object6 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                PolyClassServer polyClassServer = new PolyClassServer(object6);
-                object = polyClassServer.tm$6_get_typed(scriptValue6.asStr(), string);
-            } else {
-                object = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue5, (ScriptValue)scriptValue6, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
-            }
+            PolyClassServer polyClassServer = PolyClassServer.ofGuarded((ScriptValue)scriptValue5);
+            object = polyClassServer != null ? polyClassServer.tm$6_get_typed(scriptValue6.asStr(), string) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue5, (ScriptValue)scriptValue6, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
         }
@@ -2288,7 +1964,7 @@ public final class Gomoku {
         ScriptValue scriptValue8 = Gomoku.botDifficulty(builder5);
         builder.val("difficulty", scriptValue8);
         ScriptValue scriptValue9 = scriptContext.getClassOrVar("TaskManager");
-        Object object7 = scriptValue9 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "schedule_async", (ScriptValue)scriptValue9, (ScriptValue)ScriptValue.of((String)("games/gomoku.pf:bot_compute_move:" + scriptContext.getStr("gid") + ":" + scriptValue7.asStr() + ":" + scriptValue8.asStr())), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 0.0)), (ScriptContext)scriptContext) : ScriptValue.NULL;
+        Object object4 = scriptValue9 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "schedule_async", (ScriptValue)scriptValue9, (ScriptValue)ScriptValue.of((String)("games/gomoku.pf:bot_compute_move:" + scriptContext.getStr("gid") + ":" + scriptValue7.asStr() + ":" + scriptValue8.asStr())), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Gomoku.class, 0.0)), (ScriptContext)scriptContext) : ScriptValue.NULL;
         return ScriptValue.NULL;
     }
 
@@ -2309,7 +1985,7 @@ public final class Gomoku {
     }
 
     public static ScriptValue botApplyMove(ScriptContext.Builder builder) {
-        block23: {
+        block13: {
             Object object;
             Object object2;
             Object object3;
@@ -2322,18 +1998,12 @@ public final class Gomoku {
             builder.val("col", scriptValue2);
             ScriptValue scriptValue3 = scriptContext.getClassOrVar("Server");
             if (scriptValue3 != ScriptValue.NULL) {
-                ScriptValue.Obj obj;
-                Object object6;
                 ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
                 builder2.val("gid", scriptContext.getClassOrVar("gid"));
                 ScriptValue scriptValue4 = Gomoku.statusKey(builder2);
                 String string = "string";
-                if (scriptValue3 instanceof ScriptValue.Obj && (object6 = (obj = (ScriptValue.Obj)scriptValue3).instance()) != null && !(object6 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                    PolyClassServer polyClassServer = new PolyClassServer(object6);
-                    object5 = polyClassServer.tm$6_get_typed(scriptValue4.asStr(), string);
-                } else {
-                    object5 = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue3, (ScriptValue)scriptValue4, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
-                }
+                PolyClassServer polyClassServer = PolyClassServer.ofGuarded((ScriptValue)scriptValue3);
+                object5 = polyClassServer != null ? polyClassServer.tm$6_get_typed(scriptValue4.asStr(), string) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue3, (ScriptValue)scriptValue4, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
             } else {
                 object5 = ScriptValue.NULL;
             }
@@ -2342,18 +2012,12 @@ public final class Gomoku {
             }
             ScriptValue scriptValue5 = scriptContext.getClassOrVar("Server");
             if (scriptValue5 != ScriptValue.NULL) {
-                ScriptValue.Obj obj;
-                Object object7;
                 ScriptContext.Builder builder3 = ScriptContext.builder().copyFrom(scriptContext);
                 builder3.val("gid", scriptContext.getClassOrVar("gid"));
                 ScriptValue scriptValue6 = Gomoku.turnKey(builder3);
                 String string = "string";
-                if (scriptValue5 instanceof ScriptValue.Obj && (object7 = (obj = (ScriptValue.Obj)scriptValue5).instance()) != null && !(object7 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                    PolyClassServer polyClassServer = new PolyClassServer(object7);
-                    object4 = polyClassServer.tm$6_get_typed(scriptValue6.asStr(), string);
-                } else {
-                    object4 = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue5, (ScriptValue)scriptValue6, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
-                }
+                PolyClassServer polyClassServer = PolyClassServer.ofGuarded((ScriptValue)scriptValue5);
+                object4 = polyClassServer != null ? polyClassServer.tm$6_get_typed(scriptValue6.asStr(), string) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue5, (ScriptValue)scriptValue6, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
             } else {
                 object4 = ScriptValue.NULL;
             }
@@ -2362,18 +2026,12 @@ public final class Gomoku {
             }
             ScriptValue scriptValue7 = scriptContext.getClassOrVar("Server");
             if (scriptValue7 != ScriptValue.NULL) {
-                ScriptValue.Obj obj;
-                Object object8;
                 ScriptContext.Builder builder4 = ScriptContext.builder().copyFrom(scriptContext);
                 builder4.val("gid", scriptContext.getClassOrVar("gid"));
                 ScriptValue scriptValue8 = Gomoku.boardKey(builder4);
                 String string = "string";
-                if (scriptValue7 instanceof ScriptValue.Obj && (object8 = (obj = (ScriptValue.Obj)scriptValue7).instance()) != null && !(object8 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                    PolyClassServer polyClassServer = new PolyClassServer(object8);
-                    object3 = polyClassServer.tm$6_get_typed(scriptValue8.asStr(), string);
-                } else {
-                    object3 = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue7, (ScriptValue)scriptValue8, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
-                }
+                PolyClassServer polyClassServer = PolyClassServer.ofGuarded((ScriptValue)scriptValue7);
+                object3 = polyClassServer != null ? polyClassServer.tm$6_get_typed(scriptValue8.asStr(), string) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue7, (ScriptValue)scriptValue8, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
             } else {
                 object3 = ScriptValue.NULL;
             }
@@ -2394,18 +2052,12 @@ public final class Gomoku {
             Gomoku.applyMove(builder6);
             ScriptValue scriptValue10 = scriptContext.getClassOrVar("Server");
             if (scriptValue10 != ScriptValue.NULL) {
-                ScriptValue.Obj obj;
-                Object object9;
                 ScriptContext.Builder builder7 = ScriptContext.builder().copyFrom(scriptContext);
                 builder7.val("gid", scriptContext.getClassOrVar("gid"));
                 ScriptValue scriptValue11 = Gomoku.blackKey(builder7);
                 String string = "string";
-                if (scriptValue10 instanceof ScriptValue.Obj && (object9 = (obj = (ScriptValue.Obj)scriptValue10).instance()) != null && !(object9 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                    PolyClassServer polyClassServer = new PolyClassServer(object9);
-                    object2 = polyClassServer.tm$6_get_typed(scriptValue11.asStr(), string);
-                } else {
-                    object2 = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue10, (ScriptValue)scriptValue11, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
-                }
+                PolyClassServer polyClassServer = PolyClassServer.ofGuarded((ScriptValue)scriptValue10);
+                object2 = polyClassServer != null ? polyClassServer.tm$6_get_typed(scriptValue11.asStr(), string) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue10, (ScriptValue)scriptValue11, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
             } else {
                 object2 = ScriptValue.NULL;
             }
@@ -2413,21 +2065,15 @@ public final class Gomoku {
             builder.val("black", scriptValue12);
             ScriptValue scriptValue13 = scriptContext.getClassOrVar("Server");
             if (scriptValue13 != ScriptValue.NULL) {
-                ScriptValue.Obj obj;
-                Object object10;
                 ScriptValue scriptValue14 = scriptValue12;
-                if (scriptValue13 instanceof ScriptValue.Obj && (object10 = (obj = (ScriptValue.Obj)scriptValue13).instance()) != null && !(object10 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                    PolyClassServer polyClassServer = new PolyClassServer(object10);
-                    object = polyClassServer.tm$10_get_player(scriptValue14.asStr());
-                } else {
-                    object = PolyDispatch.bootstrapCall("memberCall", "get_player", (ScriptValue)scriptValue13, (ScriptValue)scriptValue14, (ScriptContext)scriptContext);
-                }
+                PolyClassServer polyClassServer = PolyClassServer.ofGuarded((ScriptValue)scriptValue13);
+                object = polyClassServer != null ? polyClassServer.tm$10_get_player(scriptValue14.asStr()) : PolyDispatch.bootstrapCall("memberCall", "get_player", (ScriptValue)scriptValue13, (ScriptValue)scriptValue14, (ScriptContext)scriptContext);
             } else {
                 object = ScriptValue.NULL;
             }
             ScriptValue scriptValue15 = object;
             builder.val("human", scriptValue15);
-            if (!(ScriptFormula.callBuiltin1((String)"is_empty", (ScriptValue)scriptValue15, (ScriptContext)scriptContext).asBool() ^ true)) break block23;
+            if (!(ScriptFormula.callBuiltin1((String)"is_empty", (ScriptValue)scriptValue15, (ScriptContext)scriptContext).asBool() ^ true)) break block13;
             ScriptContext.Builder builder8 = ScriptContext.builder().copyFrom(scriptContext);
             builder8.val("gid", scriptContext.getClassOrVar("gid"));
             builder8.val("viewer", scriptValue15);

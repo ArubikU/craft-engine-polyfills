@@ -2,17 +2,14 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  dev.arubik.craftengine.script.PolyClass
  *  dev.arubik.craftengine.script.PolyClassMachine
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
  *  dev.arubik.craftengine.script.ScriptContext$Builder
  *  dev.arubik.craftengine.script.ScriptValue
- *  dev.arubik.craftengine.script.ScriptValue$Obj
  */
 package dev.arubik.craftengine.script.gen.storage;
 
-import dev.arubik.craftengine.script.PolyClass;
 import dev.arubik.craftengine.script.PolyClassMachine;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
@@ -39,18 +36,17 @@ public final class BackpackStorage {
         ScriptContext scriptContext = builder.peek();
         ScriptValue scriptValue = scriptContext.getClassOrVar("Machine");
         if (scriptValue != ScriptValue.NULL) {
-            ScriptValue.Obj obj;
-            Object object2;
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
             arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", BackpackStorage.class, "polyfills:backpack"));
-            object = scriptValue instanceof ScriptValue.Obj && (object2 = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object2 instanceof PolyClass) && obj.typeName().equals("Machine") ? new PolyClassMachine(object2).um$117_to_item(arrayList) : PolyDispatch.bootstrapCall("memberCall", "to_item", (ScriptValue)scriptValue, arrayList, (ScriptContext)scriptContext);
+            PolyClassMachine polyClassMachine = PolyClassMachine.ofGuarded((ScriptValue)scriptValue);
+            object = polyClassMachine != null ? polyClassMachine.um$117_to_item(arrayList) : PolyDispatch.bootstrapCall("memberCall", "to_item", (ScriptValue)scriptValue, arrayList, (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
         }
         ScriptValue scriptValue2 = object;
         builder.val("item", scriptValue2);
         ScriptValue scriptValue3 = scriptContext.getClassOrVar("event");
-        Object object3 = scriptValue3 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "set_drops", (ScriptValue)scriptValue3, (ScriptValue)scriptValue2, (ScriptContext)scriptContext) : ScriptValue.NULL;
+        Object object2 = scriptValue3 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "set_drops", (ScriptValue)scriptValue3, (ScriptValue)scriptValue2, (ScriptContext)scriptContext) : ScriptValue.NULL;
         return ScriptValue.NULL;
     }
 }

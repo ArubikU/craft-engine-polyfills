@@ -2,7 +2,6 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  dev.arubik.craftengine.script.PolyClass
  *  dev.arubik.craftengine.script.PolyClassContraption
  *  dev.arubik.craftengine.script.PolyClassContraptionWorld
  *  dev.arubik.craftengine.script.PolyClassMachine
@@ -12,12 +11,10 @@
  *  dev.arubik.craftengine.script.ScriptFormula
  *  dev.arubik.craftengine.script.ScriptProgram
  *  dev.arubik.craftengine.script.ScriptValue
- *  dev.arubik.craftengine.script.ScriptValue$Obj
  *  dev.arubik.craftengine.script.gen.Utils$1
  */
 package dev.arubik.craftengine.script.gen.kinetics.processors;
 
-import dev.arubik.craftengine.script.PolyClass;
 import dev.arubik.craftengine.script.PolyClassContraption;
 import dev.arubik.craftengine.script.PolyClassContraptionWorld;
 import dev.arubik.craftengine.script.PolyClassMachine;
@@ -203,32 +200,17 @@ public final class Harvester {
         ScriptValue scriptValue5 = ScriptValue.of((double)0.0);
         builder.val("is_now", scriptValue5);
         if (ScriptFormula.valuesEqual((ScriptValue)scriptValue4, (ScriptValue)scriptContext.getClassOrVar("null")) ^ true) {
-            Object object;
             PolyClassContraption polyClassContraption;
-            boolean bl = ScriptFormula.valuesEqual((ScriptValue)(scriptValue4 != ScriptValue.NULL ? ((polyClassContraption = PolyClassContraption.ofGuarded((ScriptValue)scriptValue4)) != null ? polyClassContraption.pg$70_rpm() : PolyDispatch.bootstrapGet("memberGet", "rpm", (ScriptValue)scriptValue4, (ScriptContext)scriptContext)) : ScriptValue.NULL), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Harvester.class, 0.0))) ^ true;
+            PolyClassContraption polyClassContraption2;
+            boolean bl = ScriptFormula.valuesEqual((ScriptValue)(scriptValue4 != ScriptValue.NULL ? ((polyClassContraption2 = PolyClassContraption.ofGuarded((ScriptValue)scriptValue4)) != null ? polyClassContraption2.pg$70_rpm() : PolyDispatch.bootstrapGet("memberGet", "rpm", (ScriptValue)scriptValue4, (ScriptContext)scriptContext)) : ScriptValue.NULL), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Harvester.class, 0.0))) ^ true;
             ScriptValue scriptValue6 = ScriptValue.of((boolean)bl);
             builder.val("is_rotational", scriptValue6);
-            if (scriptValue4 != ScriptValue.NULL) {
-                ScriptValue.Obj obj;
-                Object object2;
-                if (scriptValue4 instanceof ScriptValue.Obj && (object2 = (obj = (ScriptValue.Obj)scriptValue4).instance()) != null && !(object2 instanceof PolyClass) && obj.typeName().equals("Contraption")) {
-                    PolyClassContraption polyClassContraption2 = new PolyClassContraption(object2);
-                    object = ScriptValue.of((boolean)polyClassContraption2.tm$48_is_moving());
-                } else {
-                    object = PolyDispatch.bootstrapCall("memberCall", "is_moving", (ScriptValue)scriptValue4, (ScriptContext)scriptContext);
-                }
-            } else {
-                object = ScriptValue.NULL;
-            }
-            ScriptValue scriptValue7 = object;
+            ScriptValue scriptValue7 = scriptValue4 != ScriptValue.NULL ? ((polyClassContraption = PolyClassContraption.ofGuarded((ScriptValue)scriptValue4)) != null ? ScriptValue.of((boolean)polyClassContraption.tm$48_is_moving()) : PolyDispatch.bootstrapCall("memberCall", "is_moving", (ScriptValue)scriptValue4, (ScriptContext)scriptContext)) : ScriptValue.NULL;
             builder.val("is_linear", scriptValue7);
             double d2 = bl || scriptValue7.asBool() ? 1.0 : 0.0;
             ScriptValue scriptValue8 = ScriptValue.of((double)d2);
             builder.val("is_now", scriptValue8);
             if (d2 > 0.0) {
-                CallSite callSite;
-                ScriptValue.Obj obj;
-                Object object3;
                 ScriptValue scriptValue9;
                 ScriptValue scriptValue10;
                 ScriptValue scriptValue11;
@@ -246,16 +228,11 @@ public final class Harvester {
                 PolyClassMachine polyClassMachine6 = PolyClassMachine.ofVar((ScriptContext)scriptContext, (String)"Machine");
                 PolyClassMachine polyClassMachine7 = PolyClassMachine.ofVar((ScriptContext)scriptContext, (String)"Machine");
                 ScriptValue scriptValue18 = ScriptFormula.addPolymorphic((ScriptValue)(polyClassMachine6 != null ? polyClassMachine6.pg$206_z() : ((scriptValue10 = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "z", (ScriptValue)scriptValue10, (ScriptContext)scriptContext) : ScriptValue.NULL)), (ScriptValue)(polyClassMachine7 != null ? polyClassMachine7.pg$131_facing_dz() : ((scriptValue9 = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "facing_dz", (ScriptValue)scriptValue9, (ScriptContext)scriptContext) : ScriptValue.NULL)));
-                if (scriptValue15 instanceof ScriptValue.Obj && (object3 = (obj = (ScriptValue.Obj)scriptValue15).instance()) != null && !(object3 instanceof PolyClass) && obj.typeName().equals("ContraptionWorld")) {
-                    PolyClassContraptionWorld polyClassContraptionWorld = new PolyClassContraptionWorld(object3);
-                    callSite = polyClassContraptionWorld.tm$8_real_block(scriptValue16.asNum(), scriptValue17.asNum(), scriptValue18.asNum());
-                } else {
-                    callSite = PolyDispatch.bootstrapCall("memberCall", "real_block", (ScriptValue)scriptValue15, (ScriptValue)scriptValue16, (ScriptValue)scriptValue17, (ScriptValue)scriptValue18, (ScriptContext)scriptContext);
-                }
-                CallSite callSite2 = callSite;
-                builder.val("target", (ScriptValue)callSite2);
+                PolyClassContraptionWorld polyClassContraptionWorld = PolyClassContraptionWorld.ofGuarded((ScriptValue)scriptValue15);
+                CallSite callSite = polyClassContraptionWorld != null ? polyClassContraptionWorld.tm$8_real_block(scriptValue16.asNum(), scriptValue17.asNum(), scriptValue18.asNum()) : PolyDispatch.bootstrapCall("memberCall", "real_block", (ScriptValue)scriptValue15, (ScriptValue)scriptValue16, (ScriptValue)scriptValue17, (ScriptValue)scriptValue18, (ScriptContext)scriptContext);
+                builder.val("target", (ScriptValue)callSite);
                 ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
-                builder2.val("block", (ScriptValue)callSite2);
+                builder2.val("block", (ScriptValue)callSite);
                 Harvester._tryHarvest(builder2);
             }
         } else if (ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("rpm"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Harvester.class, 0.0))) ^ true) {

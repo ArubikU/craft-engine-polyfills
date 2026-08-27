@@ -2,7 +2,6 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  dev.arubik.craftengine.script.PolyClass
  *  dev.arubik.craftengine.script.PolyClassUpgrades
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
@@ -10,11 +9,9 @@
  *  dev.arubik.craftengine.script.ScriptFormula
  *  dev.arubik.craftengine.script.ScriptProgram
  *  dev.arubik.craftengine.script.ScriptValue
- *  dev.arubik.craftengine.script.ScriptValue$Obj
  */
 package dev.arubik.craftengine.script.gen.kinetics.processors;
 
-import dev.arubik.craftengine.script.PolyClass;
 import dev.arubik.craftengine.script.PolyClassUpgrades;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
@@ -74,15 +71,9 @@ public final class Crusher {
         builder.val("flash", scriptValue9);
         ScriptValue scriptValue10 = scriptContext.getClassOrVar("Upgrades");
         if (scriptValue10 != ScriptValue.NULL) {
-            ScriptValue.Obj obj;
-            Object object2;
             String string = "cml:upgrade_diamond";
-            if (scriptValue10 instanceof ScriptValue.Obj && (object2 = (obj = (ScriptValue.Obj)scriptValue10).instance()) != null && !(object2 instanceof PolyClass) && obj.typeName().equals("Upgrades")) {
-                PolyClassUpgrades polyClassUpgrades = new PolyClassUpgrades(object2);
-                object = ScriptValue.of((double)polyClassUpgrades.tm$2_count(string));
-            } else {
-                object = PolyDispatch.bootstrapCall("memberCall", "count", (ScriptValue)scriptValue10, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
-            }
+            PolyClassUpgrades polyClassUpgrades = PolyClassUpgrades.ofGuarded((ScriptValue)scriptValue10);
+            object = polyClassUpgrades != null ? ScriptValue.of((double)polyClassUpgrades.tm$2_count(string)) : PolyDispatch.bootstrapCall("memberCall", "count", (ScriptValue)scriptValue10, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
         }

@@ -2,7 +2,7 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  dev.arubik.craftengine.script.PolyClassPlayer_v2
+ *  dev.arubik.craftengine.script.PolyClassPlayer
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
  *  dev.arubik.craftengine.script.ScriptContext$Builder
@@ -13,7 +13,7 @@
  */
 package dev.arubik.craftengine.script.gen.storage;
 
-import dev.arubik.craftengine.script.PolyClassPlayer_v2;
+import dev.arubik.craftengine.script.PolyClassPlayer;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
@@ -43,13 +43,13 @@ public final class Chute {
     public static ScriptValue onRightClick(ScriptContext.Builder var0) {
         block3: {
             var1_1 = var0.peek();
-            var2_2 = PolyClassPlayer_v2.ofVar((ScriptContext)var1_1, (String)"Player");
+            var2_2 = PolyClassPlayer.ofVar((ScriptContext)var1_1, (String)"Player");
             if (var2_2 != null ? var2_2.tg$49_is_sneaking() : ((var3_3 = var1_1.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "is_sneaking", (ScriptValue)var3_3, (ScriptContext)var1_1).asBool() : ScriptValue.NULL.asBool())) {
                 var4_4 = ScriptContext.builder().copyFrom(ChuteUtils.fileScope()).copyFrom(var1_1);
                 ChuteUtils._chuteCycleFacing((ScriptContext.Builder)var4_4);
                 return ScriptValue.NULL;
             }
-            var5_5 = PolyClassPlayer_v2.ofVar((ScriptContext)var1_1, (String)"Player");
+            var5_5 = PolyClassPlayer.ofVar((ScriptContext)var1_1, (String)"Player");
             var7_7 = var5_5 != null ? var5_5.pg$48_main_hand() : ((var6_6 = var1_1.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "main_hand", (ScriptValue)var6_6, (ScriptContext)var1_1) : ScriptValue.NULL);
             var0.val("held", var7_7);
             if (!(ScriptFormula.callBuiltin1((String)"is_empty", (ScriptValue)var7_7, (ScriptContext)var1_1).asBool() ^ true)) ** GOTO lbl-1000
