@@ -14,7 +14,6 @@ import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
 import dev.arubik.craftengine.script.ScriptValue;
-import java.util.ArrayList;
 
 public final class ExamplePvpDamageMultiplier {
     private static volatile ScriptContext FILE_SCOPE;
@@ -27,31 +26,15 @@ public final class ExamplePvpDamageMultiplier {
         return scriptContext;
     }
 
-    /*
-     * Unable to fully structure code
-     * Could not resolve type clashes
-     */
-    public static ScriptValue onDamage(ScriptContext.Builder var0) {
-        block2: {
-            var1_1 = var0.peek();
-            var2_2 = new ArrayList<ScriptValue>();
-            var3_3 = var1_1.getClassOrVar("event");
-            var2_2.add((ScriptValue)(var3_3 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "damager", (ScriptValue)var3_3, (ScriptContext)var1_1) : ScriptValue.NULL));
-            if (!ScriptFormula.valuesEqualStr((ScriptValue)ScriptFormula.callBuiltin((String)"type_of", var2_2, (ScriptContext)var1_1), (String)"Player")) ** GOTO lbl-1000
-            var4_4 = new ArrayList<ScriptValue>();
-            var5_5 = var1_1.getClassOrVar("event");
-            var4_4.add((ScriptValue)(var5_5 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "entity", (ScriptValue)var5_5, (ScriptContext)var1_1) : ScriptValue.NULL));
-            if (ScriptFormula.valuesEqualStr((ScriptValue)ScriptFormula.callBuiltin((String)"type_of", var4_4, (ScriptContext)var1_1), (String)"Player")) {
-                v0 = true;
-            } else lbl-1000:
-            // 2 sources
-
-            {
-                v0 = false;
-            }
-            if (!v0) break block2;
-            var6_6 = var1_1.getClassOrVar("event");
-            v1 /* !! */  = var6_6 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "set_damage", (ScriptValue)var6_6, (ScriptValue)ScriptValue.of((double)(((var7_7 = var1_1.getClassOrVar("event")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "damage", (ScriptValue)var7_7, (ScriptContext)var1_1) : ScriptValue.NULL).asNum() * 2.0)), (ScriptContext)var1_1) : ScriptValue.NULL;
+    public static ScriptValue onDamage(ScriptContext.Builder builder) {
+        block0: {
+            ScriptValue scriptValue;
+            ScriptValue scriptValue2;
+            ScriptContext scriptContext = builder.peek();
+            ScriptValue scriptValue3 = scriptContext.getClassOrVar("event");
+            if (!(ScriptFormula.valuesEqualStr((ScriptValue)ScriptFormula.callBuiltin1((String)"type_of", (ScriptValue)(scriptValue3 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "damager", (ScriptValue)scriptValue3, (ScriptContext)scriptContext) : ScriptValue.NULL), (ScriptContext)scriptContext), (String)"Player") && ScriptFormula.valuesEqualStr((ScriptValue)ScriptFormula.callBuiltin1((String)"type_of", (ScriptValue)((scriptValue2 = scriptContext.getClassOrVar("event")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "entity", (ScriptValue)scriptValue2, (ScriptContext)scriptContext) : ScriptValue.NULL), (ScriptContext)scriptContext), (String)"Player"))) break block0;
+            ScriptValue scriptValue4 = scriptContext.getClassOrVar("event");
+            Object object = scriptValue4 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "set_damage", (ScriptValue)scriptValue4, (ScriptValue)ScriptValue.of((double)(((scriptValue = scriptContext.getClassOrVar("event")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "damage", (ScriptValue)scriptValue, (ScriptContext)scriptContext) : ScriptValue.NULL).asNum() * 2.0)), (ScriptContext)scriptContext) : ScriptValue.NULL;
         }
         return ScriptValue.NULL;
     }

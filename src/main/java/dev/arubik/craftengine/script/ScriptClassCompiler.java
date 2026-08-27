@@ -151,6 +151,16 @@ final class ScriptClassCompiler {
          *  while}, since a single static local slot can't represent "whichever branch/iteration
          *  actually ran" without real per-branch merging this compiler doesn't attempt. */
         final Map<String, ScriptBytecodeCompiler.CachedVarRef> cachedVars = new java.util.HashMap<>();
+        /**
+         * Names whose value is kept in ONE fixed JVM local for the whole of an enclosing loop, so a
+         * variable the loop accumulates into is read from that local rather than looked up in the
+         * ScriptContext on every iteration. See {@link #pinLoopCarriedVars}.
+         *
+         * <p>Only the READ side is pinned — {@link #emitAssign} still writes the Builder every time,
+         * so anything that observes the context (a callee, a nested def, the file's own return
+         * inspection) sees the same value it always did.
+         */
+        final Map<String, Integer> pinnedSlots = new java.util.HashMap<>();
         final ScriptBytecodeCompiler.VarTypeHint varHint = cachedVars::get;
         /** name -> a JVM local holding the ScriptValue that {@code getClassInstance}/{@code getVar}
          *  already resolved for that name earlier in this method. Same invalidation points as
@@ -766,6 +776,12 @@ final class ScriptClassCompiler {
         }
         mv.visitVarInsn(ASTORE, rowsSlot);
 
+        // Seeded BEFORE the loop-top label so each seed runs once, and before the null-list jump
+        // below: the pinned slot has to be definitely assigned on EVERY path reaching the code after
+        // the loop, including the one that skips it entirely.
+        Map<String, ScriptBytecodeCompiler.CachedVarRef> pins =
+                pinLoopCarriedVars(mv, mc, fs.body(), vars);
+
         Label skipAll = new Label();
         mv.visitVarInsn(ALOAD, rowsSlot);
         mv.visitJumpInsn(IFNULL, skipAll);
@@ -794,6 +810,10 @@ final class ScriptClassCompiler {
         // what makes this safe across the back edge.)
         Map<String, ScriptBytecodeCompiler.CachedVarRef> loopSurviving = survivingCache(mc.cachedVars, fs.body());
         loopSurviving.keySet().removeAll(vars); // the loop variables are rebound every iteration
+        // A pinned name survives the back edge after all: its assignments all write the one slot
+        // these entries point at, so the value read at the top of any iteration is the one the
+        // previous iteration left. If the loop never runs, the slot still holds the seed.
+        loopSurviving.putAll(pins);
         mc.cachedVars.clear();
         mc.cachedVars.putAll(loopSurviving);
 
@@ -805,6 +825,13 @@ final class ScriptClassCompiler {
             mv.visitMethodInsn(INVOKEVIRTUAL, BUILDER, "val",
                     "(Ljava/lang/String;L" + VALUE + ";)L" + BUILDER + ";", false);
             mv.visitInsn(POP);
+            // The element is already in a local, and we are the ones who just bound the name to it,
+            // so reading it back out of the ScriptContext is a map lookup for a value we are holding.
+            // Cached exactly like an assignment's value: same guarantee, same invalidation rules.
+            // (The Builder write above still happens — anything that observes the context by name,
+            // a callee or a nested def, keeps seeing the binding.)
+            mc.cachedVars.put(vars.get(0),
+                    new ScriptBytecodeCompiler.CachedVarRef(rowSlot, ScriptBytecodeCompiler.Type.ANY));
         }
         for (int i = 0; !elementsDirect && i < vars.size(); i++) {
             mv.visitVarInsn(ALOAD, 0);
@@ -840,7 +867,10 @@ final class ScriptClassCompiler {
         mv.visitLabel(breakLabel);
         mv.visitLabel(skipAll);
         // Exiting: the same set that was valid at the head is valid here — the body may have added
-        // entries during emission, and those belong to names it writes, so they go.
+        // entries during emission, and those belong to names it writes, so they go. The pins go too:
+        // their CACHE entries stay valid (the slot holds the last assigned value), but the name must
+        // stop being pinned, so a later loop pins a slot of its own rather than reusing this one.
+        mc.pinnedSlots.keySet().removeAll(pins.keySet());
         mc.cachedVars.clear();
         mc.cachedVars.putAll(loopSurviving);
         return true;
@@ -855,8 +885,13 @@ final class ScriptClassCompiler {
         emitIntConst(mv, 0);
         mv.visitVarInsn(ISTORE, iterSlot);
 
-        // Same reasoning as emitFor: keep only what the body provably cannot write.
+        // Seeded from the cache as it stands NOW, before survivingCache drops the written names.
+        Map<String, ScriptBytecodeCompiler.CachedVarRef> pins =
+                pinLoopCarriedVars(mv, mc, ws.body(), java.util.List.of());
+
+        // Same reasoning as emitFor: keep only what the body provably cannot write, plus the pins.
         Map<String, ScriptBytecodeCompiler.CachedVarRef> loopSurviving = survivingCache(mc.cachedVars, ws.body());
+        loopSurviving.putAll(pins);
         mc.cachedVars.clear();
         mc.cachedVars.putAll(loopSurviving);
 
@@ -879,7 +914,9 @@ final class ScriptClassCompiler {
         mv.visitJumpInsn(GOTO, continueLabel);
         mv.visitLabel(breakLabel);
         // Exiting: the same set that was valid at the head is valid here — the body may have added
-        // entries during emission, and those belong to names it writes, so they go.
+        // entries during emission, and those belong to names it writes, so they go. See emitFor for
+        // why the pins are released while their cache entries stay.
+        mc.pinnedSlots.keySet().removeAll(pins.keySet());
         mc.cachedVars.clear();
         mc.cachedVars.putAll(loopSurviving);
         return true;
@@ -998,7 +1035,11 @@ final class ScriptClassCompiler {
     }
 
     private static void emitAssign(MethodVisitor mv, MethodCtx mc, String name, String formula) {
-        mc.cachedVars.remove(name); // whatever was cached for this name is stale the instant it's reassigned
+        // A PINNED name keeps its entry: the pinned slot still holds the OLD value at this point
+        // (the new one is stored below, after the right-hand side has been emitted), so the RHS
+        // reads the correct value from the local instead of going back to the ScriptContext — which
+        // is the whole point of pinning `count = count + 1`.
+        if (!mc.pinnedSlots.containsKey(name)) mc.cachedVars.remove(name);
 
         ScriptBytecodeCompiler.Expr parsed = ScriptBytecodeCompiler.tryParse(formula, mc.resolver, mc.varHint);
         if (parsed == null) {
@@ -1053,7 +1094,69 @@ final class ScriptClassCompiler {
         mv.visitMethodInsn(INVOKEVIRTUAL, BUILDER, "val", "(Ljava/lang/String;L" + VALUE + ";)L" + BUILDER + ";", false);
         mv.visitInsn(POP);
 
+        Integer pinned = mc.pinnedSlots.get(name);
+        if (pinned != null) {
+            // Loop-carried: the ONE local the loop reads this name from has to hold the new value
+            // too, or the next iteration would read a stale one. Cached as ANY because the pinned
+            // slot is a ScriptValue reference — assignments in different branches of the loop need
+            // not agree on a narrower type.
+            mv.visitVarInsn(ALOAD, valueSlot);
+            mv.visitVarInsn(ASTORE, pinned);
+            mc.cachedVars.put(name, new ScriptBytecodeCompiler.CachedVarRef(pinned, ScriptBytecodeCompiler.Type.ANY));
+            return;
+        }
         mc.cachedVars.put(name, new ScriptBytecodeCompiler.CachedVarRef(primSlot, type));
+    }
+
+    /**
+     * Pins every name a loop body assigns to a fixed JVM local, seeded with the value the name holds
+     * on entry, and returns the cache entries that make the body read it from there.
+     *
+     * <p>Without this, a name the body writes is dropped from the cache across the back edge — it
+     * has to be, since a fresh {@code emitAssign} slot is not the slot the previous iteration wrote.
+     * So {@code count = count + 1} re-read {@code count} out of the ScriptContext map on every
+     * single iteration. Pinning gives all of a name's assignments one slot, which the loop top can
+     * then rely on.
+     *
+     * <p>Why this is sound. A cache entry can only ever be created by an {@code emitAssign}, and
+     * every {@code emitAssign} for a pinned name writes the pinned slot — so the slot tracks the
+     * variable exactly. A branch that does not run leaves the slot holding the previous value, which
+     * IS the current value. Nothing else can change a variable behind this compiler's back: a callee
+     * receives a COPIED Builder, and the {@code ScriptContext} it is handed is read-only. The one
+     * construct that can bind names this compiler cannot see is an import, which
+     * {@link #bindsUnknownNames} already refuses — so pinning is skipped entirely for such a body.
+     *
+     * <p>Only names that are read somewhere in the body are worth pinning; a write-only name would
+     * pay for the seed load and never use it.
+     */
+    private static Map<String, ScriptBytecodeCompiler.CachedVarRef> pinLoopCarriedVars(
+            MethodVisitor mv, MethodCtx mc, List<ScriptProgram.Statement> body,
+            java.util.Collection<String> excluded) {
+        Map<String, ScriptBytecodeCompiler.CachedVarRef> pins = new java.util.HashMap<>();
+        if (bindsUnknownNames(body)) return pins;
+        java.util.Set<String> assigned = new java.util.HashSet<>();
+        collectAssignedNames(body, assigned);
+        assigned.removeAll(excluded);
+        for (String name : assigned) {
+            if (mc.pinnedSlots.containsKey(name)) continue; // an outer loop already pinned it
+            if (!bodyMentionsAnyName(body, java.util.Set.of(name))) continue;
+            int slot = mc.alloc();
+            // Seed from the cache when the value is already in a local, otherwise read it once —
+            // one lookup before the loop in place of one per iteration.
+            ScriptBytecodeCompiler.CachedVarRef existing = mc.cachedVars.get(name);
+            if (existing != null) {
+                ScriptBytecodeCompiler.emitCachedAsValue(mv, existing);
+            } else {
+                mv.visitVarInsn(ALOAD, mc.sharedCtxSlot);
+                mv.visitLdcInsn(name);
+                mv.visitMethodInsn(INVOKEVIRTUAL, CTX, "getClassOrVar",
+                        "(Ljava/lang/String;)L" + VALUE + ";", false);
+            }
+            mv.visitVarInsn(ASTORE, slot);
+            mc.pinnedSlots.put(name, slot);
+            pins.put(name, new ScriptBytecodeCompiler.CachedVarRef(slot, ScriptBytecodeCompiler.Type.ANY));
+        }
+        return pins;
     }
 
     /** {@code "kinetics/generators/windmill"} -> {@code {"dev/arubik/craftengine/script/gen/kinetics/generators", "Windmill"}}. */

@@ -2,7 +2,7 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  dev.arubik.craftengine.script.PolyClassMachine_v2
+ *  dev.arubik.craftengine.script.PolyClassMachine
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
  *  dev.arubik.craftengine.script.ScriptContext$Builder
@@ -10,7 +10,7 @@
  */
 package dev.arubik.craftengine.script.gen.block_interaction;
 
-import dev.arubik.craftengine.script.PolyClassMachine_v2;
+import dev.arubik.craftengine.script.PolyClassMachine;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptValue;
@@ -33,20 +33,19 @@ public final class BlockRotater {
     public static void run(ScriptContext.Builder builder) {
         ScriptValue scriptValue;
         ScriptContext scriptContext = builder.peek();
-        PolyClassMachine_v2 polyClassMachine_v2 = PolyClassMachine_v2.ofVar((ScriptContext)scriptContext, (String)"Machine");
-        ScriptValue scriptValue2 = polyClassMachine_v2 != null ? polyClassMachine_v2.pg$137_facing_block() : ((scriptValue = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "facing_block", (ScriptValue)scriptValue, (ScriptContext)scriptContext) : ScriptValue.NULL);
+        PolyClassMachine polyClassMachine = PolyClassMachine.ofVar((ScriptContext)scriptContext, (String)"Machine");
+        ScriptValue scriptValue2 = polyClassMachine != null ? polyClassMachine.pg$137_facing_block() : ((scriptValue = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "facing_block", (ScriptValue)scriptValue, (ScriptContext)scriptContext) : ScriptValue.NULL);
         builder.val("block", scriptValue2);
-        ScriptValue scriptValue3 = scriptContext.getClassOrVar("block");
-        if ((scriptValue3 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "is_air", (ScriptValue)scriptValue3, (ScriptContext)scriptContext) : ScriptValue.NULL).asBool() ^ true) {
-            ScriptValue scriptValue4 = scriptContext.getClassOrVar("block");
-            if ((scriptValue4 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "has_property", (ScriptValue)scriptValue4, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", BlockRotater.class, "facing")), (ScriptContext)scriptContext) : ScriptValue.NULL).asBool()) {
-                ScriptValue scriptValue5 = scriptContext.getClassOrVar("block");
-                Object object = scriptValue5 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "cycle_prop", (ScriptValue)scriptValue5, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", BlockRotater.class, "facing")), (ScriptContext)scriptContext) : ScriptValue.NULL;
+        if ((scriptValue2 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "is_air", (ScriptValue)scriptValue2, (ScriptContext)scriptContext) : ScriptValue.NULL).asBool() ^ true) {
+            ScriptValue scriptValue3 = scriptContext.getClassOrVar("block");
+            if ((scriptValue3 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "has_property", (ScriptValue)scriptValue3, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", BlockRotater.class, "facing")), (ScriptContext)scriptContext) : ScriptValue.NULL).asBool()) {
+                ScriptValue scriptValue4 = scriptContext.getClassOrVar("block");
+                Object object = scriptValue4 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "cycle_prop", (ScriptValue)scriptValue4, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", BlockRotater.class, "facing")), (ScriptContext)scriptContext) : ScriptValue.NULL;
             } else {
-                ScriptValue scriptValue6 = scriptContext.getClassOrVar("block");
-                if ((scriptValue6 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "has_property", (ScriptValue)scriptValue6, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", BlockRotater.class, "horizontal_facing")), (ScriptContext)scriptContext) : ScriptValue.NULL).asBool()) {
-                    ScriptValue scriptValue7 = scriptContext.getClassOrVar("block");
-                    Object object = scriptValue7 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "cycle_prop", (ScriptValue)scriptValue7, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", BlockRotater.class, "horizontal_facing")), (ScriptContext)scriptContext) : ScriptValue.NULL;
+                ScriptValue scriptValue5 = scriptContext.getClassOrVar("block");
+                if ((scriptValue5 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "has_property", (ScriptValue)scriptValue5, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", BlockRotater.class, "horizontal_facing")), (ScriptContext)scriptContext) : ScriptValue.NULL).asBool()) {
+                    ScriptValue scriptValue6 = scriptContext.getClassOrVar("block");
+                    Object object = scriptValue6 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "cycle_prop", (ScriptValue)scriptValue6, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", BlockRotater.class, "horizontal_facing")), (ScriptContext)scriptContext) : ScriptValue.NULL;
                 }
             }
         }

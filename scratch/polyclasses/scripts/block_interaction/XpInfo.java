@@ -2,7 +2,7 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  dev.arubik.craftengine.script.PolyClassMachine_v2
+ *  dev.arubik.craftengine.script.PolyClassMachine
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
  *  dev.arubik.craftengine.script.ScriptContext$Builder
@@ -12,7 +12,7 @@
  */
 package dev.arubik.craftengine.script.gen.block_interaction;
 
-import dev.arubik.craftengine.script.PolyClassMachine_v2;
+import dev.arubik.craftengine.script.PolyClassMachine;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
@@ -37,16 +37,15 @@ public final class XpInfo {
     public static ScriptValue _tank(ScriptContext.Builder builder) {
         ScriptValue scriptValue;
         ScriptContext scriptContext = builder.peek();
-        PolyClassMachine_v2 polyClassMachine_v2 = PolyClassMachine_v2.ofVar((ScriptContext)scriptContext, (String)"Machine");
-        ScriptValue scriptValue2 = polyClassMachine_v2 != null ? polyClassMachine_v2.pg$178_fluid_tanks() : ((scriptValue = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "fluid_tanks", (ScriptValue)scriptValue, (ScriptContext)scriptContext) : ScriptValue.NULL);
+        PolyClassMachine polyClassMachine = PolyClassMachine.ofVar((ScriptContext)scriptContext, (String)"Machine");
+        ScriptValue scriptValue2 = polyClassMachine != null ? polyClassMachine.pg$178_fluid_tanks() : ((scriptValue = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "fluid_tanks", (ScriptValue)scriptValue, (ScriptContext)scriptContext) : ScriptValue.NULL);
         builder.val("tanks", scriptValue2);
-        ScriptValue scriptValue3 = scriptContext.getClassOrVar("tanks");
-        Object object = scriptValue3 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "length", (ScriptValue)scriptValue3, (ScriptContext)scriptContext) : ScriptValue.NULL;
+        Object object = scriptValue2 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "length", (ScriptValue)scriptValue2, (ScriptContext)scriptContext) : ScriptValue.NULL;
         if (object.asNum() <= 0.0) {
             return scriptContext.getClassOrVar("null");
         }
-        ScriptValue scriptValue4 = scriptContext.getClassOrVar("tanks");
-        return scriptValue4 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue4, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", XpInfo.class, 0.0)), (ScriptContext)scriptContext) : ScriptValue.NULL;
+        ScriptValue scriptValue3 = scriptContext.getClassOrVar("tanks");
+        return scriptValue3 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue3, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", XpInfo.class, 0.0)), (ScriptContext)scriptContext) : ScriptValue.NULL;
     }
 
     public static ScriptValue item(ScriptContext.Builder builder) {

@@ -182,6 +182,24 @@ final class ScriptBytecodeCompiler {
      *  object, whatever it evaluated to) — either way, {@code getClassInstance}/{@code getVar}'s
      *  {@code ScriptContext} round-trip is skipped, not just the primitive boxing. */
     record CachedVarRef(int slot, Type type) {}
+
+    /** Loads a cached variable and leaves it on the stack as a boxed {@code ScriptValue}, whatever
+     *  representation the cache holds. Used to seed a loop-carried pin, whose slot is always a
+     *  ScriptValue reference because assignments in different branches need not agree on a
+     *  narrower type. */
+    static void emitCachedAsValue(MethodVisitor mv, CachedVarRef cached) {
+        switch (cached.type()) {
+            case NUM -> {
+                mv.visitVarInsn(DLOAD, cached.slot());
+                mv.visitMethodInsn(INVOKESTATIC, VALUE, "of", "(D)L" + VALUE + ";", true);
+            }
+            case BOOL -> {
+                mv.visitVarInsn(ILOAD, cached.slot());
+                mv.visitMethodInsn(INVOKESTATIC, VALUE, "of", "(Z)L" + VALUE + ";", true);
+            }
+            case ANY -> mv.visitVarInsn(ALOAD, cached.slot());
+        }
+    }
     private static final String MATH = "java/lang/Math";
     private static final String LIST = "java/util/List";
     private static final String ARRAYLIST = "java/util/ArrayList";
@@ -501,6 +519,15 @@ final class ScriptBytecodeCompiler {
         /** The List-returning accessor for a list-typed property, or null. Only a `for` loop uses
          *  it — see {@link #emitAsList}. */
         final String listJavaName;
+        /**
+         * The JVM local the receiver is ALREADY in, when the enclosing method has it cached, or
+         * null. A cached receiver needs no read at all: the value is right there, and the fallback
+         * arm can reuse the very same local instead of going back to the ScriptContext.
+         *
+         * <p>This is what makes `for r in ...: r.inputs` stop looking `r` up on every iteration —
+         * the loop binds the element into a local and caches it, and the member access reads that.
+         */
+        final Integer receiverSlot;
 
         /**
          * A chained hop {@code base.prop} whose receiver PolyType is known at compile time — because
@@ -509,26 +536,33 @@ final class ScriptBytecodeCompiler {
          * {@code memberGet} that every chained hop used to fall back to.
          */
         static PropRead chained(Expr base, String receiverType, String prop) {
+            return chained(base, receiverType, prop, null);
+        }
+
+        static PropRead chained(Expr base, String receiverType, String prop, Integer receiverSlot) {
             PolyClassGenerator.GeneratedPolyClass g = PolyClassGenerator.getOrGenerate(receiverType);
             String propJavaName = g != null ? g.properties().get(prop) : null;
             return new PropRead(base, receiverType, prop,
                     propJavaName != null ? g.internalName() : null, propJavaName,
                     g != null ? g.typedProperties().get(prop) : null,
                     propertyResultPolyType(receiverType, prop),
-                    g != null ? g.listProperties().get(prop) : null);
+                    g != null ? g.listProperties().get(prop) : null, receiverSlot);
         }
 
         PropRead(String name, String prop, String wrapperName, String propJavaName,
-                 PolyClassGenerator.TypedMemberRef nativeRef, String resultPolyType, String listJavaName) {
-            this(null, name, prop, wrapperName, propJavaName, nativeRef, resultPolyType, listJavaName);
+                 PolyClassGenerator.TypedMemberRef nativeRef, String resultPolyType, String listJavaName,
+                 Integer receiverSlot) {
+            this(null, name, prop, wrapperName, propJavaName, nativeRef, resultPolyType, listJavaName,
+                    receiverSlot);
         }
 
         private PropRead(Expr base, String name, String prop, String wrapperName, String propJavaName,
                          PolyClassGenerator.TypedMemberRef nativeRef, String resultPolyType,
-                         String listJavaName) {
+                         String listJavaName, Integer receiverSlot) {
             super(Type.ANY);
             this.base = base;
             this.listJavaName = listJavaName;
+            this.receiverSlot = receiverSlot;
             this.name = name;
             this.prop = prop;
             this.wrapperName = wrapperName;
@@ -560,6 +594,13 @@ final class ScriptBytecodeCompiler {
         private void emitAs(MethodVisitor mv, Ctx c, String javaName, String accessor, String returnDesc) {
             String desc = returnDesc != null ? returnDesc : "L" + VALUE + ";";
             String member = javaName != null ? javaName : propJavaName;
+
+            // Receiver already in a local (the enclosing method cached this name): use it, and let
+            // the fallback arm reuse it too. No read, and nothing to re-read.
+            if (base == null && receiverSlot != null) {
+                emitFromSlot(mv, c, receiverSlot, member, accessor, desc);
+                return;
+            }
 
             // A first hop against a generated wrapper needs no raw ScriptValue of its own: ofVar
             // does the read and the type guard in one call, so the fast path opens with the TYPED
@@ -654,6 +695,45 @@ final class ScriptBytecodeCompiler {
                 emitCoerce(mv, accessor, desc);
                 mv.visitLabel(endL);
             }
+        }
+
+        /** The receiver is in {@code svSlot} already — guard it, dispatch, and fall back through the
+         *  same local. This is the original three-arm shape, minus the read that produced it. */
+        private void emitFromSlot(MethodVisitor mv, Ctx c, int svSlot, String member,
+                                   String accessor, String desc) {
+            Label isNullL = new Label(), endL = new Label();
+            mv.visitVarInsn(ALOAD, svSlot);
+            P.emitGetNull(mv);
+            mv.visitJumpInsn(IF_ACMPEQ, isNullL);
+            if (propJavaName != null) {
+                Label fallbackL = new Label(), fastL = new Label();
+                int pcSlot = c.allocRef();
+                mv.visitVarInsn(ALOAD, svSlot);
+                mv.visitMethodInsn(INVOKESTATIC, wrapperName, "ofGuarded",
+                        "(L" + VALUE + ";)L" + wrapperName + ";", false);
+                mv.visitVarInsn(ASTORE, pcSlot);
+                mv.visitVarInsn(ALOAD, pcSlot);
+                mv.visitJumpInsn(IFNULL, fallbackL);
+                mv.visitVarInsn(ALOAD, pcSlot);
+                mv.visitMethodInsn(INVOKEVIRTUAL, wrapperName, member, "()" + desc, false);
+                mv.visitJumpInsn(GOTO, fastL);
+                mv.visitLabel(fallbackL);
+                mv.visitVarInsn(ALOAD, svSlot);
+                mv.visitVarInsn(ALOAD, c.ctxSlot);
+                P.emitDynamicGet(mv, prop);
+                emitCoerce(mv, accessor, desc);
+                mv.visitLabel(fastL);
+            } else {
+                mv.visitVarInsn(ALOAD, svSlot);
+                mv.visitVarInsn(ALOAD, c.ctxSlot);
+                P.emitDynamicGet(mv, prop);
+                emitCoerce(mv, accessor, desc);
+            }
+            mv.visitJumpInsn(GOTO, endL);
+            mv.visitLabel(isNullL);
+            P.emitGetNull(mv);
+            emitCoerce(mv, accessor, desc);
+            mv.visitLabel(endL);
         }
 
         /** Converts a boxed slow-arm result to whatever the fast arm returns. "elementsOf" is the
@@ -1652,7 +1732,7 @@ final class ScriptBytecodeCompiler {
                         if (args == null) return null;
                         return dotMethodCall(name, member, args);
                     }
-                    return dotPropertyGet(name, member);
+                    return dotPropertyGet(varHint, name, member);
                 }
 
                 // Function call — a fast Math builtin compiles directly; anything else (a real
@@ -2010,7 +2090,7 @@ final class ScriptBytecodeCompiler {
          *  that guard is load-bearing, not optional) — any mismatch falls back to the exact same
          *  generic {@code memberGet} call as before, so this can never diverge from the always-
          *  correct path, only skip redundant work on the way to it. */
-        private static Expr dotPropertyGet(String name, String prop) {
+        private static Expr dotPropertyGet(VarTypeHint varHint, String name, String prop) {
             // Unbox the receiver into this type's generated PolyClass (see PolyClassGenerator) and
             // read the property through its own generated accessor — a plain INVOKEVIRTUAL against
             // an already-resolved handler, no PolyTypeRegistry lookup at this call site at all.
@@ -2024,7 +2104,17 @@ final class ScriptBytecodeCompiler {
                     generated != null ? generated.typedProperties().get(prop) : null;
             return new PropRead(name, prop, wrapperName, propJavaName, nativeRef,
                     propertyResultPolyType(name, prop),
-                    generated != null ? generated.listProperties().get(prop) : null);
+                    generated != null ? generated.listProperties().get(prop) : null,
+                    cachedReceiverSlot(varHint, name));
+        }
+
+        /** The local a receiver NAME is cached in, when it is cached as a boxed ScriptValue. NUM and
+         *  BOOL caches are not receivers — a number's members go through memberGet's own Num branch,
+         *  which the generic path already handles. */
+        private static Integer cachedReceiverSlot(VarTypeHint varHint, String name) {
+            if (varHint == null) return null;
+            CachedVarRef cached = varHint.get(name);
+            return cached != null && cached.type() == Type.ANY ? cached.slot() : null;
         }
 
         /** {@code Name.method(args)} — same resolve-then-null-guard shape as {@link
@@ -2427,8 +2517,21 @@ final class ScriptBytecodeCompiler {
          *  ScriptBuiltins}/the hand-written builtin switch, exactly as the interpreter does. */
         private static Expr genericCall(String name, List<Expr> rawArgs) {
             List<Expr> args = rawArgs.stream().map(ScriptBytecodeCompiler::toAny).toList();
+            // Up to three arguments go straight down the stack into an arity-specialized
+            // forwarder, so `size(ins)` stops allocating an ArrayList and its backing array on every
+            // evaluation just to carry one value. Wider calls keep the list.
+            boolean nativeArgs = args.size() <= 3;
             return new BaseExpr(Type.ANY) {
                 @Override public void emit(MethodVisitor mv, Ctx c) {
+                    if (nativeArgs) {
+                        mv.visitLdcInsn(name);
+                        for (Expr a : args) a.emit(mv, c);
+                        mv.visitVarInsn(ALOAD, c.ctxSlot);
+                        mv.visitMethodInsn(INVOKESTATIC, FORMULA, "callBuiltin" + args.size(),
+                                "(Ljava/lang/String;" + ("L" + VALUE + ";").repeat(args.size())
+                                        + "L" + CTX + ";)L" + VALUE + ";", false);
+                        return;
+                    }
                     int listSlot = c.allocRef();
                     emitBuildArgsList(mv, c, args, listSlot);
                     mv.visitLdcInsn(name);

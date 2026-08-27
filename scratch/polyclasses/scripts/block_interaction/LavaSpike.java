@@ -3,7 +3,7 @@
  * 
  * Could not load the following classes:
  *  dev.arubik.craftengine.script.PolyClass
- *  dev.arubik.craftengine.script.PolyClassMachine_v2
+ *  dev.arubik.craftengine.script.PolyClassMachine
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
  *  dev.arubik.craftengine.script.ScriptContext$Builder
@@ -15,14 +15,14 @@
 package dev.arubik.craftengine.script.gen.block_interaction;
 
 import dev.arubik.craftengine.script.PolyClass;
-import dev.arubik.craftengine.script.PolyClassMachine_v2;
+import dev.arubik.craftengine.script.PolyClassMachine;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
 import dev.arubik.craftengine.script.ScriptProgram;
 import dev.arubik.craftengine.script.ScriptValue;
 import java.lang.invoke.MethodHandles;
-import java.util.ArrayList;
+import java.util.List;
 
 /*
  * Uses jvm11+ dynamic constants - pseudocode provided - see https://www.benf.org/other/cfr/dynamic-constants.html
@@ -38,114 +38,108 @@ public final class LavaSpike {
         return scriptContext;
     }
 
-    /*
-     * Unable to fully structure code
-     * Could not resolve type clashes
-     */
-    public static void run(ScriptContext.Builder var0) {
-        block21: {
-            block22: {
-                block20: {
-                    var1_1 = var0.peek();
-                    var2_2 = var1_1.getClassOrVar("Machine");
-                    if (var2_2 != ScriptValue.NULL) {
-                        var3_3 = "atk_cd";
-                        var4_4 = "int";
-                        if (var2_2 instanceof ScriptValue.Obj && (var6_6 = (var5_5 = (ScriptValue.Obj)var2_2).instance()) != null && !(var6_6 instanceof PolyClass) && var5_5.typeName().equals("Machine")) {
-                            var7_7 = new PolyClassMachine_v2(var6_6);
-                            v0 /* !! */  = var7_7.tm$34_get_typed(var3_3, var4_4);
-                        } else {
-                            v0 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)var2_2, (ScriptValue)ScriptValue.of((String)var3_3), (ScriptValue)ScriptValue.of((String)var4_4), (ScriptContext)var1_1);
-                        }
-                    } else {
-                        v0 /* !! */  = ScriptValue.NULL;
-                    }
-                    var8_8 = v0 /* !! */ ;
-                    var0.val("cooldown", var8_8);
-                    if (!(var8_8.asNum() > 0.0)) break block20;
-                    var9_9 = var1_1.getClassOrVar("Machine");
-                    if (var9_9 != ScriptValue.NULL) {
-                        var10_10 = "atk_cd";
-                        var11_11 = "int";
-                        var12_12 = ScriptValue.of((double)(var8_8.asNum() - 1.0));
-                        if (var9_9 instanceof ScriptValue.Obj && (var14_14 = (var13_13 = (ScriptValue.Obj)var9_9).instance()) != null && !(var14_14 instanceof PolyClass) && var13_13.typeName().equals("Machine")) {
-                            var15_15 = new PolyClassMachine_v2(var14_14);
-                            v1 /* !! */  = ScriptValue.of((boolean)var15_15.tm$82_set_typed(var10_10, var11_11, var12_12));
-                        } else {
-                            v1 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)var9_9, (ScriptValue)ScriptValue.of((String)var10_10), (ScriptValue)ScriptValue.of((String)var11_11), (ScriptValue)var12_12, (ScriptContext)var1_1);
-                        }
-                    } else {
-                        v1 /* !! */  = ScriptValue.NULL;
-                    }
-                    break block21;
-                }
-                var16_16 = PolyClassMachine_v2.ofVar((ScriptContext)var1_1, (String)"Machine");
-                var18_18 = var16_16 != null ? var16_16.pg$210_owner_uuid() : ((var17_17 = var1_1.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "owner_uuid", (ScriptValue)var17_17, (ScriptContext)var1_1) : ScriptValue.NULL);
-                var0.val("owner_id", var18_18);
-                var19_19 = var1_1.getClassOrVar("Machine");
-                if (var19_19 != ScriptValue.NULL) {
-                    var20_20 = 0.8;
-                    if (var19_19 instanceof ScriptValue.Obj && (var23_22 = (var22_21 = (ScriptValue.Obj)var19_19).instance()) != null && !(var23_22 instanceof PolyClass) && var22_21.typeName().equals("Machine")) {
-                        var24_23 = new PolyClassMachine_v2(var23_22);
-                        v2 /* !! */  = var24_23.tm$94_nearby_entities(var20_20);
-                    } else {
-                        v2 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "nearby_entities", (ScriptValue)var19_19, (ScriptValue)ScriptValue.of((double)var20_20), (ScriptContext)var1_1);
-                    }
+    public static void run(ScriptContext.Builder builder) {
+        Object object;
+        ScriptContext scriptContext = builder.peek();
+        ScriptValue scriptValue = scriptContext.getClassOrVar("Machine");
+        if (scriptValue != ScriptValue.NULL) {
+            ScriptValue.Obj obj;
+            Object object2;
+            String string = "atk_cd";
+            String string2 = "int";
+            if (scriptValue instanceof ScriptValue.Obj && (object2 = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object2 instanceof PolyClass) && obj.typeName().equals("Machine")) {
+                PolyClassMachine polyClassMachine = new PolyClassMachine(object2);
+                object = polyClassMachine.tm$34_get_typed(string, string2);
+            } else {
+                object = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
+            }
+        } else {
+            object = ScriptValue.NULL;
+        }
+        ScriptValue scriptValue2 = object;
+        builder.val("cooldown", scriptValue2);
+        if (scriptValue2.asNum() > 0.0) {
+            ScriptValue scriptValue3 = scriptContext.getClassOrVar("Machine");
+            if (scriptValue3 != ScriptValue.NULL) {
+                ScriptValue.Obj obj;
+                Object object3;
+                String string = "atk_cd";
+                String string3 = "int";
+                ScriptValue scriptValue4 = ScriptValue.of((double)(scriptValue2.asNum() - 1.0));
+                if (scriptValue3 instanceof ScriptValue.Obj && (object3 = (obj = (ScriptValue.Obj)scriptValue3).instance()) != null && !(object3 instanceof PolyClass) && obj.typeName().equals("Machine")) {
+                    PolyClassMachine polyClassMachine = new PolyClassMachine(object3);
+                    v1 = ScriptValue.of((boolean)polyClassMachine.tm$82_set_typed(string, string3, scriptValue4));
                 } else {
-                    v2 /* !! */  = ScriptValue.NULL;
+                    v1 = PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue3, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string3), (ScriptValue)scriptValue4, (ScriptContext)scriptContext);
                 }
-                var25_24 = v2 /* !! */ ;
-                var0.val("entities", var25_24);
-                var26_25 = 0.0;
-                var28_26 = ScriptValue.of((double)0.0);
-                var0.val("hit_count", var28_26);
-                var29_27 = ScriptProgram.elementsOf((ScriptValue)var25_24);
-                if (var29_27 == null) break block22;
-                for (ScriptValue var31_29 : var29_27) {
-                    var0.val("entity", var31_29);
-                    var32_30 = var1_1.getClassOrVar("entity");
-                    if (!(var32_30 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "is_alive", (ScriptValue)var32_30, (ScriptContext)var1_1) : ScriptValue.NULL).asBool()) ** GOTO lbl-1000
-                    var33_31 = new ArrayList<ScriptValue>();
-                    var33_31.add(var1_1.getClassOrVar("entity"));
-                    var33_31.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", LavaSpike.class, "LivingEntity"));
-                    if (ScriptFormula.callBuiltin((String)"instanceof", var33_31, (ScriptContext)var1_1).asBool()) {
-                        v3 = true;
-                    } else lbl-1000:
-                    // 2 sources
-
-                    {
-                        v3 = false;
-                    }
-                    if (!v3) continue;
-                    var35_33 = (ScriptFormula.valuesEqual((ScriptValue)var18_18, (ScriptValue)var1_1.getClassOrVar("null")) ^ true) != false && ScriptFormula.valuesEqual((ScriptValue)((var34_32 = var1_1.getClassOrVar("entity")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)var34_32, (ScriptContext)var1_1) : ScriptValue.NULL), (ScriptValue)var18_18) != false;
-                    var36_34 = ScriptValue.of((boolean)var35_33);
-                    var0.val("is_owner", var36_34);
-                    if (!(var35_33 ^ true)) continue;
-                    var37_35 = var1_1.getClassOrVar("entity");
-                    v4 /* !! */  = var37_35 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "fire", (ScriptValue)var37_35, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", LavaSpike.class, 80.0)), (ScriptContext)var1_1) : ScriptValue.NULL;
-                    var38_36 = var1_1.getClassOrVar("entity");
-                    v5 /* !! */  = var38_36 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "damage", (ScriptValue)var38_36, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", LavaSpike.class, 2.0)), (ScriptContext)var1_1) : ScriptValue.NULL;
-                    var39_37 = ScriptFormula.addPolymorphic((ScriptValue)var1_1.getClassOrVar("hit_count"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", LavaSpike.class, 1.0)));
-                    var0.val("hit_count", var39_37);
+            } else {
+                v1 = ScriptValue.NULL;
+            }
+        } else {
+            Object object4;
+            ScriptValue scriptValue5;
+            PolyClassMachine polyClassMachine = PolyClassMachine.ofVar((ScriptContext)scriptContext, (String)"Machine");
+            ScriptValue scriptValue6 = polyClassMachine != null ? polyClassMachine.pg$210_owner_uuid() : ((scriptValue5 = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "owner_uuid", (ScriptValue)scriptValue5, (ScriptContext)scriptContext) : ScriptValue.NULL);
+            builder.val("owner_id", scriptValue6);
+            ScriptValue scriptValue7 = scriptContext.getClassOrVar("Machine");
+            if (scriptValue7 != ScriptValue.NULL) {
+                ScriptValue.Obj obj;
+                Object object5;
+                double d = 0.8;
+                if (scriptValue7 instanceof ScriptValue.Obj && (object5 = (obj = (ScriptValue.Obj)scriptValue7).instance()) != null && !(object5 instanceof PolyClass) && obj.typeName().equals("Machine")) {
+                    PolyClassMachine polyClassMachine2 = new PolyClassMachine(object5);
+                    object4 = polyClassMachine2.tm$94_nearby_entities(d);
+                } else {
+                    object4 = PolyDispatch.bootstrapCall("memberCall", "nearby_entities", (ScriptValue)scriptValue7, (ScriptValue)ScriptValue.of((double)d), (ScriptContext)scriptContext);
+                }
+            } else {
+                object4 = ScriptValue.NULL;
+            }
+            ScriptValue scriptValue8 = object4;
+            builder.val("entities", scriptValue8);
+            double d = 0.0;
+            ScriptValue scriptValue9 = ScriptValue.of((double)0.0);
+            builder.val("hit_count", scriptValue9);
+            List list = ScriptProgram.elementsOf((ScriptValue)scriptValue8);
+            ScriptValue scriptValue10 = scriptContext.getClassOrVar("is_owner");
+            ScriptValue scriptValue11 = ScriptValue.of((double)d);
+            if (list != null) {
+                for (ScriptValue scriptValue12 : list) {
+                    builder.val("entity", scriptValue12);
+                    if (!((scriptValue12 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "is_alive", (ScriptValue)scriptValue12, (ScriptContext)scriptContext) : ScriptValue.NULL).asBool() && ScriptFormula.callBuiltin2((String)"instanceof", (ScriptValue)scriptValue12, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", LavaSpike.class, "LivingEntity")), (ScriptContext)scriptContext).asBool())) continue;
+                    boolean bl = ScriptFormula.valuesEqual((ScriptValue)scriptValue6, (ScriptValue)scriptContext.getClassOrVar("null")) ^ true && ScriptFormula.valuesEqual((ScriptValue)(scriptValue12 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue12, (ScriptContext)scriptContext) : ScriptValue.NULL), (ScriptValue)scriptValue6);
+                    ScriptValue scriptValue13 = ScriptValue.of((boolean)bl);
+                    builder.val("is_owner", scriptValue13);
+                    scriptValue10 = scriptValue13;
+                    if (!(scriptValue10.asBool() ^ true)) continue;
+                    ScriptValue scriptValue14 = scriptContext.getClassOrVar("entity");
+                    Object object6 = scriptValue14 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "fire", (ScriptValue)scriptValue14, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", LavaSpike.class, 80.0)), (ScriptContext)scriptContext) : ScriptValue.NULL;
+                    ScriptValue scriptValue15 = scriptContext.getClassOrVar("entity");
+                    Object object7 = scriptValue15 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "damage", (ScriptValue)scriptValue15, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", LavaSpike.class, 2.0)), (ScriptContext)scriptContext) : ScriptValue.NULL;
+                    ScriptValue scriptValue16 = ScriptFormula.addPolymorphic((ScriptValue)scriptValue11, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", LavaSpike.class, 1.0)));
+                    builder.val("hit_count", scriptValue16);
+                    scriptValue11 = scriptValue16;
                 }
             }
-            if (var1_1.getNum("hit_count") > 0.0) {
-                var40_38 = var1_1.getClassOrVar("Machine");
-                if (var40_38 != ScriptValue.NULL) {
-                    var41_39 = "atk_cd";
-                    var42_40 = "int";
-                    var43_41 =  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", LavaSpike.class, 15.0);
-                    if (var40_38 instanceof ScriptValue.Obj && (var45_43 = (var44_42 = (ScriptValue.Obj)var40_38).instance()) != null && !(var45_43 instanceof PolyClass) && var44_42.typeName().equals("Machine")) {
-                        var46_44 = new PolyClassMachine_v2(var45_43);
-                        v6 /* !! */  = ScriptValue.of((boolean)var46_44.tm$82_set_typed(var41_39, var42_40, var43_41));
+            if (scriptValue11.asNum() > 0.0) {
+                ScriptValue scriptValue17 = scriptContext.getClassOrVar("Machine");
+                if (scriptValue17 != ScriptValue.NULL) {
+                    ScriptValue.Obj obj;
+                    Object object8;
+                    String string = "atk_cd";
+                    String string4 = "int";
+                    ScriptValue scriptValue18 =  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", LavaSpike.class, 15.0);
+                    if (scriptValue17 instanceof ScriptValue.Obj && (object8 = (obj = (ScriptValue.Obj)scriptValue17).instance()) != null && !(object8 instanceof PolyClass) && obj.typeName().equals("Machine")) {
+                        PolyClassMachine polyClassMachine3 = new PolyClassMachine(object8);
+                        v5 = ScriptValue.of((boolean)polyClassMachine3.tm$82_set_typed(string, string4, scriptValue18));
                     } else {
-                        v6 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)var40_38, (ScriptValue)ScriptValue.of((String)var41_39), (ScriptValue)ScriptValue.of((String)var42_40), (ScriptValue)var43_41, (ScriptContext)var1_1);
+                        v5 = PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue17, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string4), (ScriptValue)scriptValue18, (ScriptContext)scriptContext);
                     }
                 } else {
-                    v6 /* !! */  = ScriptValue.NULL;
+                    v5 = ScriptValue.NULL;
                 }
             }
         }
-        LavaSpike.FILE_SCOPE = var0.build();
+        FILE_SCOPE = builder.build();
     }
 }

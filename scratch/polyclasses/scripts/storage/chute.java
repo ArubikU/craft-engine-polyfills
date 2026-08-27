@@ -52,13 +52,10 @@ public final class Chute {
             var5_5 = PolyClassPlayer.ofVar((ScriptContext)var1_1, (String)"Player");
             var7_7 = var5_5 != null ? var5_5.pg$48_main_hand() : ((var6_6 = var1_1.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "main_hand", (ScriptValue)var6_6, (ScriptContext)var1_1) : ScriptValue.NULL);
             var0.val("held", var7_7);
-            var8_8 = new ArrayList<ScriptValue>();
-            var8_8.add(var7_7);
-            if (!(ScriptFormula.callBuiltin((String)"is_empty", var8_8, (ScriptContext)var1_1).asBool() ^ true)) ** GOTO lbl-1000
-            var9_9 = ScriptContext.builder().copyFrom(ChuteUtils.fileScope()).copyFrom(var1_1);
-            var10_10 = var1_1.getClassOrVar("held");
-            var9_9.val("id", (ScriptValue)(var10_10 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "id", (ScriptValue)var10_10, (ScriptContext)var1_1) : ScriptValue.NULL));
-            if (ChuteUtils._isGlassItem((ScriptContext.Builder)var9_9).asBool()) {
+            if (!(ScriptFormula.callBuiltin1((String)"is_empty", (ScriptValue)var7_7, (ScriptContext)var1_1).asBool() ^ true)) ** GOTO lbl-1000
+            var8_8 = ScriptContext.builder().copyFrom(ChuteUtils.fileScope()).copyFrom(var1_1);
+            var8_8.val("id", (ScriptValue)(var7_7 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "id", (ScriptValue)var7_7, (ScriptContext)var1_1) : ScriptValue.NULL));
+            if (ChuteUtils._isGlassItem((ScriptContext.Builder)var8_8).asBool()) {
                 v0 = true;
             } else lbl-1000:
             // 2 sources
@@ -67,8 +64,8 @@ public final class Chute {
                 v0 = false;
             }
             if (!v0) break block3;
-            var11_11 = ScriptContext.builder().copyFrom(ChuteUtils.fileScope()).copyFrom(var1_1);
-            ChuteUtils._chuteToggleWindow((ScriptContext.Builder)var11_11);
+            var9_9 = ScriptContext.builder().copyFrom(ChuteUtils.fileScope()).copyFrom(var1_1);
+            ChuteUtils._chuteToggleWindow((ScriptContext.Builder)var9_9);
         }
         return ScriptValue.NULL;
     }

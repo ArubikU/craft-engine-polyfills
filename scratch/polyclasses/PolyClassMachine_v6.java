@@ -27,7 +27,7 @@ import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptValue;
 import java.util.List;
 
-public class PolyClassMachine_v2
+public class PolyClassMachine_v6
 extends PolyClassBlock_v3 {
     private static volatile PolyType.TypedMethodHandler3 h$0;
     private static volatile PolyType.MethodHandler m$1;
@@ -1945,24 +1945,24 @@ extends PolyClassBlock_v3 {
         return PolyClassRuntime.genericProperty((String)"Machine", (String)"owner_uuid", (Object)this.instance).asStr();
     }
 
-    public PolyClassMachine_v2(Object object) {
+    public PolyClassMachine_v6(Object object) {
         super(object);
     }
 
-    public static PolyClassMachine_v2 of(Object object) {
-        return new PolyClassMachine_v2(object);
+    public static PolyClassMachine_v6 of(Object object) {
+        return new PolyClassMachine_v6(object);
     }
 
-    public static PolyClassMachine_v2 ofGuarded(ScriptValue scriptValue) {
+    public static PolyClassMachine_v6 ofGuarded(ScriptValue scriptValue) {
         ScriptValue.Obj obj;
         Object object;
         if (scriptValue instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Machine")) {
-            return new PolyClassMachine_v2(object);
+            return new PolyClassMachine_v6(object);
         }
         return null;
     }
 
-    public static PolyClassMachine_v2 ofVar(ScriptContext scriptContext, String string) {
-        return PolyClassMachine_v2.ofGuarded(scriptContext.getClassOrVar(string));
+    public static PolyClassMachine_v6 ofVar(ScriptContext scriptContext, String string) {
+        return PolyClassMachine_v6.ofGuarded(scriptContext.getClassOrVar(string));
     }
 }

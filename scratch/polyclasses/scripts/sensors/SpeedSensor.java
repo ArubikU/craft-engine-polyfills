@@ -3,7 +3,7 @@
  * 
  * Could not load the following classes:
  *  dev.arubik.craftengine.script.PolyClass
- *  dev.arubik.craftengine.script.PolyClassMachine_v2
+ *  dev.arubik.craftengine.script.PolyClassMachine
  *  dev.arubik.craftengine.script.PolyClassRedstone
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
@@ -16,7 +16,7 @@
 package dev.arubik.craftengine.script.gen.sensors;
 
 import dev.arubik.craftengine.script.PolyClass;
-import dev.arubik.craftengine.script.PolyClassMachine_v2;
+import dev.arubik.craftengine.script.PolyClassMachine;
 import dev.arubik.craftengine.script.PolyClassRedstone;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
@@ -24,7 +24,6 @@ import dev.arubik.craftengine.script.ScriptFormula;
 import dev.arubik.craftengine.script.ScriptProgram;
 import dev.arubik.craftengine.script.ScriptValue;
 import java.lang.invoke.MethodHandles;
-import java.util.ArrayList;
 import java.util.List;
 
 /*
@@ -45,7 +44,7 @@ public final class SpeedSensor {
         ScriptValue.Obj obj;
         Object object;
         ScriptValue scriptValue;
-        PolyClassMachine_v2 polyClassMachine_v2;
+        PolyClassMachine polyClassMachine;
         Object object2;
         Object object3;
         Object object4;
@@ -61,8 +60,8 @@ public final class SpeedSensor {
             String string = "scan_range";
             String string2 = "int";
             if (scriptValue3 instanceof ScriptValue.Obj && (object8 = (obj2 = (ScriptValue.Obj)scriptValue3).instance()) != null && !(object8 instanceof PolyClass) && obj2.typeName().equals("Machine")) {
-                PolyClassMachine_v2 polyClassMachine_v22 = new PolyClassMachine_v2(object8);
-                object7 = polyClassMachine_v22.tm$34_get_typed(string, string2);
+                PolyClassMachine polyClassMachine2 = new PolyClassMachine(object8);
+                object7 = polyClassMachine2.tm$34_get_typed(string, string2);
             } else {
                 object7 = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue3, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
             }
@@ -82,8 +81,8 @@ public final class SpeedSensor {
             String string = "full_speed";
             String string3 = "int";
             if (scriptValue2 instanceof ScriptValue.Obj && (object9 = (obj3 = (ScriptValue.Obj)scriptValue2).instance()) != null && !(object9 instanceof PolyClass) && obj3.typeName().equals("Machine")) {
-                PolyClassMachine_v2 polyClassMachine_v23 = new PolyClassMachine_v2(object9);
-                object6 = polyClassMachine_v23.tm$34_get_typed(string, string3);
+                PolyClassMachine polyClassMachine3 = new PolyClassMachine(object9);
+                object6 = polyClassMachine3.tm$34_get_typed(string, string3);
             } else {
                 object6 = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string3), (ScriptContext)scriptContext);
             }
@@ -108,8 +107,8 @@ public final class SpeedSensor {
             String string = "deadzone";
             String string4 = "int";
             if (scriptValue9 instanceof ScriptValue.Obj && (object10 = (obj4 = (ScriptValue.Obj)scriptValue9).instance()) != null && !(object10 instanceof PolyClass) && obj4.typeName().equals("Machine")) {
-                PolyClassMachine_v2 polyClassMachine_v24 = new PolyClassMachine_v2(object10);
-                object5 = polyClassMachine_v24.tm$34_get_typed(string, string4);
+                PolyClassMachine polyClassMachine4 = new PolyClassMachine(object10);
+                object5 = polyClassMachine4.tm$34_get_typed(string, string4);
             } else {
                 object5 = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue9, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string4), (ScriptContext)scriptContext);
             }
@@ -134,8 +133,8 @@ public final class SpeedSensor {
             String string = "living_only";
             String string5 = "int";
             if (scriptValue13 instanceof ScriptValue.Obj && (object11 = (obj5 = (ScriptValue.Obj)scriptValue13).instance()) != null && !(object11 instanceof PolyClass) && obj5.typeName().equals("Machine")) {
-                PolyClassMachine_v2 polyClassMachine_v25 = new PolyClassMachine_v2(object11);
-                object4 = polyClassMachine_v25.tm$34_get_typed(string, string5);
+                PolyClassMachine polyClassMachine5 = new PolyClassMachine(object11);
+                object4 = polyClassMachine5.tm$34_get_typed(string, string5);
             } else {
                 object4 = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue13, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string5), (ScriptContext)scriptContext);
             }
@@ -151,8 +150,8 @@ public final class SpeedSensor {
             String string = "count_y";
             String string6 = "int";
             if (scriptValue15 instanceof ScriptValue.Obj && (object12 = (obj6 = (ScriptValue.Obj)scriptValue15).instance()) != null && !(object12 instanceof PolyClass) && obj6.typeName().equals("Machine")) {
-                PolyClassMachine_v2 polyClassMachine_v26 = new PolyClassMachine_v2(object12);
-                object3 = polyClassMachine_v26.tm$34_get_typed(string, string6);
+                PolyClassMachine polyClassMachine6 = new PolyClassMachine(object12);
+                object3 = polyClassMachine6.tm$34_get_typed(string, string6);
             } else {
                 object3 = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue15, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string6), (ScriptContext)scriptContext);
             }
@@ -167,8 +166,8 @@ public final class SpeedSensor {
             Object object13;
             ScriptValue scriptValue18 = scriptContext.getClassOrVar("scan_range");
             if (scriptValue17 instanceof ScriptValue.Obj && (object13 = (obj7 = (ScriptValue.Obj)scriptValue17).instance()) != null && !(object13 instanceof PolyClass) && obj7.typeName().equals("Machine")) {
-                PolyClassMachine_v2 polyClassMachine_v27 = new PolyClassMachine_v2(object13);
-                object2 = polyClassMachine_v27.tm$94_nearby_entities(scriptValue18.asNum());
+                PolyClassMachine polyClassMachine7 = new PolyClassMachine(object13);
+                object2 = polyClassMachine7.tm$94_nearby_entities(scriptValue18.asNum());
             } else {
                 object2 = PolyDispatch.bootstrapCall("memberCall", "nearby_entities", (ScriptValue)scriptValue17, (ScriptValue)scriptValue18, (ScriptContext)scriptContext);
             }
@@ -181,50 +180,49 @@ public final class SpeedSensor {
         ScriptValue scriptValue20 = ScriptValue.of((double)0.0);
         builder.val("max_speed", scriptValue20);
         List list = ScriptProgram.elementsOf((ScriptValue)scriptValue19);
+        ScriptValue scriptValue21 = scriptContext.getClassOrVar("vx");
+        ScriptValue scriptValue22 = scriptContext.getClassOrVar("vy");
+        ScriptValue scriptValue23 = scriptContext.getClassOrVar("vz");
+        ScriptValue scriptValue24 = ScriptValue.of((double)d6);
+        ScriptValue scriptValue25 = scriptContext.getClassOrVar("speed");
         if (list != null) {
-            for (ScriptValue scriptValue21 : list) {
-                ScriptValue scriptValue22;
-                ScriptValue scriptValue23;
-                builder.val("entity", scriptValue21);
-                if (scriptValue14.asNum() > 0.0 && ((scriptValue23 = scriptContext.getClassOrVar("entity")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "is_living", (ScriptValue)scriptValue23, (ScriptContext)scriptContext) : ScriptValue.NULL).asBool() ^ true) continue;
-                ScriptValue scriptValue24 = scriptContext.getClassOrVar("entity");
-                ScriptValue scriptValue25 = scriptValue24 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "velocity_x", (ScriptValue)scriptValue24, (ScriptContext)scriptContext) : ScriptValue.NULL;
-                builder.val("vx", scriptValue25);
-                ScriptValue scriptValue26 = scriptValue16.asNum() > 0.0 ? ((scriptValue22 = scriptContext.getClassOrVar("entity")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "velocity_y", (ScriptValue)scriptValue22, (ScriptContext)scriptContext) : ScriptValue.NULL) : ( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", SpeedSensor.class, 0.0));
-                builder.val("vy", scriptValue26);
-                ScriptValue scriptValue27 = scriptContext.getClassOrVar("entity");
-                ScriptValue scriptValue28 = scriptValue27 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "velocity_z", (ScriptValue)scriptValue27, (ScriptContext)scriptContext) : ScriptValue.NULL;
-                builder.val("vz", scriptValue28);
-                double d7 = Math.sqrt(scriptValue25.asNum() * scriptValue25.asNum() + scriptValue26.asNum() * scriptValue26.asNum() + scriptValue28.asNum() * scriptValue28.asNum());
-                ScriptValue scriptValue29 = ScriptValue.of((double)d7);
-                builder.val("speed", scriptValue29);
-                if (!(d7 > scriptContext.getNum("max_speed"))) continue;
-                double d8 = d7;
-                ScriptValue scriptValue30 = ScriptValue.of((double)d8);
-                builder.val("max_speed", scriptValue30);
+            for (ScriptValue scriptValue26 : list) {
+                builder.val("entity", scriptValue26);
+                if (scriptValue14.asNum() > 0.0 && (scriptValue26 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "is_living", (ScriptValue)scriptValue26, (ScriptContext)scriptContext) : ScriptValue.NULL).asBool() ^ true) continue;
+                ScriptValue scriptValue27 = scriptValue26 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "velocity_x", (ScriptValue)scriptValue26, (ScriptContext)scriptContext) : ScriptValue.NULL;
+                builder.val("vx", scriptValue27);
+                scriptValue21 = scriptValue27;
+                ScriptValue scriptValue28 = scriptValue16.asNum() > 0.0 ? (scriptValue26 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "velocity_y", (ScriptValue)scriptValue26, (ScriptContext)scriptContext) : ScriptValue.NULL) : ( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", SpeedSensor.class, 0.0));
+                builder.val("vy", scriptValue28);
+                scriptValue22 = scriptValue28;
+                ScriptValue scriptValue29 = scriptValue26 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "velocity_z", (ScriptValue)scriptValue26, (ScriptContext)scriptContext) : ScriptValue.NULL;
+                builder.val("vz", scriptValue29);
+                scriptValue23 = scriptValue29;
+                double d7 = Math.sqrt(scriptValue21.asNum() * scriptValue21.asNum() + scriptValue22.asNum() * scriptValue22.asNum() + scriptValue23.asNum() * scriptValue23.asNum());
+                ScriptValue scriptValue30 = ScriptValue.of((double)d7);
+                builder.val("speed", scriptValue30);
+                scriptValue25 = scriptValue30;
+                if (!(scriptValue25.asNum() > scriptValue24.asNum())) continue;
+                ScriptValue scriptValue31 = scriptValue25;
+                builder.val("max_speed", scriptValue31);
+                scriptValue24 = scriptValue31;
             }
         }
-        double d9 = 0.0;
-        ScriptValue scriptValue31 = ScriptValue.of((double)0.0);
-        builder.val("power", scriptValue31);
-        if (scriptContext.getNum("max_speed") > d5) {
-            ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
-            double d10 = Math.max(d2 - d5, 0.01);
-            arrayList2.add(ScriptValue.of((double)((d10 == 0.0 ? 0.0 : (scriptContext.getNum("max_speed") - d5) / d10) * 15.0)));
-            arrayList.add(ScriptFormula.callBuiltin((String)"round", arrayList2, (ScriptContext)scriptContext));
-            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", SpeedSensor.class, 1.0));
-            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", SpeedSensor.class, 15.0));
-            ScriptValue scriptValue32 = ScriptFormula.callBuiltin((String)"clamp", arrayList, (ScriptContext)scriptContext);
-            builder.val("power", scriptValue32);
+        double d8 = 0.0;
+        ScriptValue scriptValue32 = ScriptValue.of((double)0.0);
+        builder.val("power", scriptValue32);
+        if (scriptValue24.asNum() > d5) {
+            double d9 = Math.max(d2 - d5, 0.01);
+            ScriptValue scriptValue33 = ScriptFormula.callBuiltin3((String)"clamp", (ScriptValue)ScriptFormula.callBuiltin1((String)"round", (ScriptValue)ScriptValue.of((double)((d9 == 0.0 ? 0.0 : (scriptValue24.asNum() - d5) / d9) * 15.0)), (ScriptContext)scriptContext), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", SpeedSensor.class, 1.0)), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", SpeedSensor.class, 15.0)), (ScriptContext)scriptContext);
+            builder.val("power", scriptValue33);
         }
-        ScriptValue scriptValue33 = (polyClassMachine_v2 = PolyClassMachine_v2.ofVar((ScriptContext)scriptContext, (String)"Machine")) != null ? polyClassMachine_v2.pg$171_redstone() : ((scriptValue = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "redstone", (ScriptValue)scriptValue, (ScriptContext)scriptContext) : ScriptValue.NULL);
-        ScriptValue scriptValue34 = scriptContext.getClassOrVar("power");
-        if (scriptValue33 instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue33).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Redstone")) {
+        ScriptValue scriptValue34 = (polyClassMachine = PolyClassMachine.ofVar((ScriptContext)scriptContext, (String)"Machine")) != null ? polyClassMachine.pg$171_redstone() : ((scriptValue = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "redstone", (ScriptValue)scriptValue, (ScriptContext)scriptContext) : ScriptValue.NULL);
+        ScriptValue scriptValue35 = scriptContext.getClassOrVar("power");
+        if (scriptValue34 instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue34).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Redstone")) {
             PolyClassRedstone polyClassRedstone = new PolyClassRedstone(object);
-            v6 = ScriptValue.of((boolean)polyClassRedstone.tm$0_set(scriptValue34.asNum()));
+            v6 = ScriptValue.of((boolean)polyClassRedstone.tm$0_set(scriptValue35.asNum()));
         } else {
-            v6 = PolyDispatch.bootstrapCall("memberCall", "set", (ScriptValue)scriptValue33, (ScriptValue)scriptValue34, (ScriptContext)scriptContext);
+            v6 = PolyDispatch.bootstrapCall("memberCall", "set", (ScriptValue)scriptValue34, (ScriptValue)scriptValue35, (ScriptContext)scriptContext);
         }
         FILE_SCOPE = builder.build();
     }

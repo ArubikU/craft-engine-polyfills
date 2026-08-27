@@ -3,7 +3,7 @@
  * 
  * Could not load the following classes:
  *  dev.arubik.craftengine.script.PolyClass
- *  dev.arubik.craftengine.script.PolyClassMachine_v2
+ *  dev.arubik.craftengine.script.PolyClassMachine
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
  *  dev.arubik.craftengine.script.ScriptContext$Builder
@@ -15,7 +15,7 @@
 package dev.arubik.craftengine.script.gen.block_interaction;
 
 import dev.arubik.craftengine.script.PolyClass;
-import dev.arubik.craftengine.script.PolyClassMachine_v2;
+import dev.arubik.craftengine.script.PolyClassMachine;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
@@ -43,8 +43,8 @@ public final class XpCollector {
             Object object2;
             double d = 6.0;
             if (scriptValue instanceof ScriptValue.Obj && (object2 = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object2 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                PolyClassMachine_v2 polyClassMachine_v2 = new PolyClassMachine_v2(object2);
-                object = polyClassMachine_v2.tm$94_nearby_entities(d);
+                PolyClassMachine polyClassMachine = new PolyClassMachine(object2);
+                object = polyClassMachine.tm$94_nearby_entities(d);
             } else {
                 object = PolyDispatch.bootstrapCall("memberCall", "nearby_entities", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((double)d), (ScriptContext)scriptContext);
             }
@@ -57,30 +57,30 @@ public final class XpCollector {
         ScriptValue scriptValue3 = ScriptValue.of((double)0.0);
         builder.val("total_xp", scriptValue3);
         List list = ScriptProgram.elementsOf((ScriptValue)scriptValue2);
+        ScriptValue scriptValue4 = ScriptValue.of((double)d);
         if (list != null) {
-            for (ScriptValue scriptValue4 : list) {
-                ScriptValue scriptValue5;
-                builder.val("entity", scriptValue4);
-                ScriptValue scriptValue6 = scriptContext.getClassOrVar("entity");
-                if (!ScriptFormula.valuesEqualStr((ScriptValue)(scriptValue6 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "type", (ScriptValue)scriptValue6, (ScriptContext)scriptContext) : ScriptValue.NULL), (String)"minecraft:experience_orb")) continue;
-                ScriptValue scriptValue7 = ScriptFormula.addPolymorphic((ScriptValue)scriptContext.getClassOrVar("total_xp"), (ScriptValue)((scriptValue5 = scriptContext.getClassOrVar("entity")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "xp_value", (ScriptValue)scriptValue5, (ScriptContext)scriptContext) : ScriptValue.NULL));
-                builder.val("total_xp", scriptValue7);
-                ScriptValue scriptValue8 = scriptContext.getClassOrVar("entity");
-                Object object3 = scriptValue8 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "remove", (ScriptValue)scriptValue8, (ScriptContext)scriptContext) : ScriptValue.NULL;
+            for (ScriptValue scriptValue5 : list) {
+                builder.val("entity", scriptValue5);
+                if (!ScriptFormula.valuesEqualStr((ScriptValue)(scriptValue5 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "type", (ScriptValue)scriptValue5, (ScriptContext)scriptContext) : ScriptValue.NULL), (String)"minecraft:experience_orb")) continue;
+                ScriptValue scriptValue6 = ScriptFormula.addPolymorphic((ScriptValue)scriptValue4, (ScriptValue)(scriptValue5 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "xp_value", (ScriptValue)scriptValue5, (ScriptContext)scriptContext) : ScriptValue.NULL));
+                builder.val("total_xp", scriptValue6);
+                scriptValue4 = scriptValue6;
+                ScriptValue scriptValue7 = scriptContext.getClassOrVar("entity");
+                Object object3 = scriptValue7 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "remove", (ScriptValue)scriptValue7, (ScriptContext)scriptContext) : ScriptValue.NULL;
             }
         }
-        if (scriptContext.getNum("total_xp") > 0.0) {
-            ScriptValue scriptValue9 = scriptContext.getClassOrVar("Machine");
-            if (scriptValue9 != ScriptValue.NULL) {
+        if (scriptValue4.asNum() > 0.0) {
+            ScriptValue scriptValue8 = scriptContext.getClassOrVar("Machine");
+            if (scriptValue8 != ScriptValue.NULL) {
                 ScriptValue.Obj obj;
                 Object object4;
                 String string = "experience";
-                ScriptValue scriptValue10 = scriptContext.getClassOrVar("total_xp");
-                if (scriptValue9 instanceof ScriptValue.Obj && (object4 = (obj = (ScriptValue.Obj)scriptValue9).instance()) != null && !(object4 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                    PolyClassMachine_v2 polyClassMachine_v2 = new PolyClassMachine_v2(object4);
-                    v2 = ScriptValue.of((boolean)polyClassMachine_v2.tm$98_fill_fluid(string, scriptValue10.asNum()));
+                ScriptValue scriptValue9 = scriptValue4;
+                if (scriptValue8 instanceof ScriptValue.Obj && (object4 = (obj = (ScriptValue.Obj)scriptValue8).instance()) != null && !(object4 instanceof PolyClass) && obj.typeName().equals("Machine")) {
+                    PolyClassMachine polyClassMachine = new PolyClassMachine(object4);
+                    v2 = ScriptValue.of((boolean)polyClassMachine.tm$98_fill_fluid(string, scriptValue9.asNum()));
                 } else {
-                    v2 = PolyDispatch.bootstrapCall("memberCall", "fill_fluid", (ScriptValue)scriptValue9, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)scriptValue10, (ScriptContext)scriptContext);
+                    v2 = PolyDispatch.bootstrapCall("memberCall", "fill_fluid", (ScriptValue)scriptValue8, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)scriptValue9, (ScriptContext)scriptContext);
                 }
             } else {
                 v2 = ScriptValue.NULL;

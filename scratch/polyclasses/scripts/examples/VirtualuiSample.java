@@ -321,18 +321,15 @@ public final class VirtualuiSample {
         if (scriptValue != ScriptValue.NULL) {
             ScriptValue.Obj obj;
             Object object;
-            StringBuilder stringBuilder = new StringBuilder().append("<aqua>Volume: <white>");
-            ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptValue.of((double)(scriptContext.getNum("value") * 100.0)));
-            ScriptValue scriptValue2 = ScriptValue.of((String)stringBuilder.append(ScriptFormula.callBuiltin((String)"round", arrayList, (ScriptContext)scriptContext).asStr()).append("%").toString());
+            ScriptValue scriptValue2 = ScriptValue.of((String)("<aqua>Volume: <white>" + ScriptFormula.callBuiltin1((String)"round", (ScriptValue)ScriptValue.of((double)(scriptContext.getNum("value") * 100.0)), (ScriptContext)scriptContext).asStr() + "%"));
             if (scriptValue instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Player")) {
                 PolyClassPlayer polyClassPlayer = new PolyClassPlayer(object);
-                v1 = ScriptValue.of((boolean)polyClassPlayer.tm$36_send_actionbar(scriptValue2.asStr()));
+                v0 = ScriptValue.of((boolean)polyClassPlayer.tm$36_send_actionbar(scriptValue2.asStr()));
             } else {
-                v1 = PolyDispatch.bootstrapCall("memberCall", "send_actionbar", (ScriptValue)scriptValue, (ScriptValue)scriptValue2, (ScriptContext)scriptContext);
+                v0 = PolyDispatch.bootstrapCall("memberCall", "send_actionbar", (ScriptValue)scriptValue, (ScriptValue)scriptValue2, (ScriptContext)scriptContext);
             }
         } else {
-            v1 = ScriptValue.NULL;
+            v0 = ScriptValue.NULL;
         }
         return ScriptValue.NULL;
     }

@@ -22,7 +22,6 @@ import dev.arubik.craftengine.script.ScriptFormula;
 import dev.arubik.craftengine.script.ScriptProgram;
 import dev.arubik.craftengine.script.ScriptValue;
 import java.lang.invoke.MethodHandles;
-import java.util.ArrayList;
 import java.util.List;
 
 /*
@@ -43,29 +42,24 @@ public final class Crusher {
         ScriptValue scriptValue;
         Object object;
         double d;
-        double d2;
         ScriptValue scriptValue2;
         ScriptContext scriptContext = builder.peek();
-        double d3 = Math.max(0.05, scriptContext.getNum("overclock"));
-        ScriptValue scriptValue3 = ScriptValue.of((double)d3);
+        double d2 = Math.max(0.05, scriptContext.getNum("overclock"));
+        ScriptValue scriptValue3 = ScriptValue.of((double)d2);
         builder.val("speed_mult", scriptValue3);
         boolean bl = scriptContext.getBool("processing") && scriptContext.getNum("rpm") > 0.0;
         ScriptValue scriptValue4 = ScriptValue.of((boolean)bl);
         builder.val("running", scriptValue4);
         if (bl) {
-            ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            double d4 = 10.0;
-            arrayList.add(ScriptValue.of((double)Math.floor(10.0 == 0.0 ? 0.0 : scriptContext.getNum("rpm") / d4)));
-            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Crusher.class, 1.0));
-            arrayList.add( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Crusher.class, 6.0));
-            scriptValue2 = ScriptFormula.callBuiltin((String)"clamp", arrayList, (ScriptContext)scriptContext);
+            double d3 = 10.0;
+            scriptValue2 = ScriptFormula.callBuiltin3((String)"clamp", (ScriptValue)ScriptValue.of((double)Math.floor(10.0 == 0.0 ? 0.0 : scriptContext.getNum("rpm") / d3)), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Crusher.class, 1.0)), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Crusher.class, 6.0)), (ScriptContext)scriptContext);
         } else {
             scriptValue2 =  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Crusher.class, 0.0);
         }
         ScriptValue scriptValue5 = scriptValue2;
         builder.val("smoke_count", scriptValue5);
-        double d5 = scriptContext.getNum("max_progress") > 0.0 ? Math.sin(((d2 = scriptContext.getNum("max_progress")) == 0.0 ? 0.0 : scriptContext.getNum("progress") / d2) * (Math.PI * 2)) * 0.1 : 0.0;
-        ScriptValue scriptValue6 = ScriptValue.of((double)d5);
+        double d4 = scriptContext.getNum("max_progress") > 0.0 ? Math.sin(((d = scriptContext.getNum("max_progress")) == 0.0 ? 0.0 : scriptContext.getNum("progress") / d) * (Math.PI * 2)) * 0.1 : 0.0;
+        ScriptValue scriptValue6 = ScriptValue.of((double)d4);
         builder.val("pulse_y", scriptValue6);
         boolean bl2 = scriptContext.getNum("overclock") > 1.5;
         ScriptValue scriptValue7 = ScriptValue.of((boolean)bl2);
@@ -73,14 +67,9 @@ public final class Crusher {
         boolean bl3 = scriptContext.getNum("overclock") > 2.5;
         ScriptValue scriptValue8 = ScriptValue.of((boolean)bl3);
         builder.val("turbo", scriptValue8);
-        double d6 = 10.0;
-        if (10.0 == 0.0) {
-            d = 0.0;
-        } else {
-            ArrayList arrayList = new ArrayList();
-            d = ScriptFormula.callBuiltin((String)"tick", arrayList, (ScriptContext)scriptContext).asNum() % d6;
-        }
-        boolean bl4 = d < 2.0;
+        double d5 = 10.0;
+        double d6 = 10.0 == 0.0 ? 0.0 : ScriptFormula.callBuiltin0((String)"tick", (ScriptContext)scriptContext).asNum() % d5;
+        boolean bl4 = d6 < 2.0;
         ScriptValue scriptValue9 = ScriptValue.of((boolean)bl4);
         builder.val("flash", scriptValue9);
         ScriptValue scriptValue10 = scriptContext.getClassOrVar("Upgrades");
@@ -105,14 +94,13 @@ public final class Crusher {
         builder.val("upgrade_bonus", scriptValue12);
         PolyClassUpgrades polyClassUpgrades = PolyClassUpgrades.ofVar((ScriptContext)scriptContext, (String)"Upgrades");
         List list = ScriptProgram.elementsOf((ScriptValue)(polyClassUpgrades != null ? polyClassUpgrades.pg$10_inventory() : ((scriptValue = scriptContext.getClassOrVar("Upgrades")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "inventory", (ScriptValue)scriptValue, (ScriptContext)scriptContext) : ScriptValue.NULL)));
+        ScriptValue scriptValue13 = ScriptValue.of((double)d7);
         if (list != null) {
-            for (ScriptValue scriptValue13 : list) {
-                builder.val("item", scriptValue13);
-                ScriptValue scriptValue14 = scriptContext.getClassOrVar("upgrade_bonus");
-                ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-                arrayList.add(scriptContext.getClassOrVar("item"));
-                ScriptValue scriptValue15 = ScriptFormula.addPolymorphic((ScriptValue)scriptValue14, (ScriptValue)ScriptFormula.callBuiltin((String)"item_count", arrayList, (ScriptContext)scriptContext));
+            for (ScriptValue scriptValue14 : list) {
+                builder.val("item", scriptValue14);
+                ScriptValue scriptValue15 = ScriptFormula.addPolymorphic((ScriptValue)scriptValue13, (ScriptValue)ScriptFormula.callBuiltin1((String)"item_count", (ScriptValue)scriptValue14, (ScriptContext)scriptContext));
                 builder.val("upgrade_bonus", scriptValue15);
+                scriptValue13 = scriptValue15;
             }
         }
         FILE_SCOPE = builder.build();

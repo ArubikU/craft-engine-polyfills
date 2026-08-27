@@ -3,10 +3,10 @@
  * 
  * Could not load the following classes:
  *  dev.arubik.craftengine.script.PolyClass
- *  dev.arubik.craftengine.script.PolyClassBlock_v4
+ *  dev.arubik.craftengine.script.PolyClassBlock_v3
  *  dev.arubik.craftengine.script.PolyClassContraptionManager
  *  dev.arubik.craftengine.script.PolyClassGlue
- *  dev.arubik.craftengine.script.PolyClassMachine_v2
+ *  dev.arubik.craftengine.script.PolyClassMachine
  *  dev.arubik.craftengine.script.PolyClassPlayer
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
@@ -18,10 +18,10 @@
 package dev.arubik.craftengine.script.gen.kinetics.generators;
 
 import dev.arubik.craftengine.script.PolyClass;
-import dev.arubik.craftengine.script.PolyClassBlock_v4;
+import dev.arubik.craftengine.script.PolyClassBlock_v3;
 import dev.arubik.craftengine.script.PolyClassContraptionManager;
 import dev.arubik.craftengine.script.PolyClassGlue;
-import dev.arubik.craftengine.script.PolyClassMachine_v2;
+import dev.arubik.craftengine.script.PolyClassMachine;
 import dev.arubik.craftengine.script.PolyClassPlayer;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
@@ -58,8 +58,8 @@ public final class WindmillInteract {
             double d2 = 0.0;
             double d3 = 0.0;
             if (scriptValue instanceof ScriptValue.Obj && (object4 = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object4 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                PolyClassMachine_v2 polyClassMachine_v2 = new PolyClassMachine_v2(object4);
-                object3 = polyClassMachine_v2.tm$68_block_at(d, d2, d3);
+                PolyClassMachine polyClassMachine = new PolyClassMachine(object4);
+                object3 = polyClassMachine.tm$68_block_at(d, d2, d3);
             } else {
                 object3 = PolyDispatch.bootstrapCall("memberCall", "block_at", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((double)d), (ScriptValue)ScriptValue.of((double)d2), (ScriptValue)ScriptValue.of((double)d3), (ScriptContext)scriptContext);
             }
@@ -93,15 +93,15 @@ public final class WindmillInteract {
             ScriptValue scriptValue7;
             ScriptValue scriptValue8;
             ScriptValue scriptValue9;
-            PolyClassMachine_v2 polyClassMachine_v2 = PolyClassMachine_v2.ofVar((ScriptContext)scriptContext, (String)"Machine");
-            ScriptValue scriptValue10 = polyClassMachine_v2 != null ? polyClassMachine_v2.pg$133_facing_dx() : ((scriptValue9 = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "facing_dx", (ScriptValue)scriptValue9, (ScriptContext)scriptContext) : ScriptValue.NULL);
-            PolyClassMachine_v2 polyClassMachine_v22 = PolyClassMachine_v2.ofVar((ScriptContext)scriptContext, (String)"Machine");
-            ScriptValue scriptValue11 = polyClassMachine_v22 != null ? polyClassMachine_v22.pg$129_facing_dy() : ((scriptValue8 = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "facing_dy", (ScriptValue)scriptValue8, (ScriptContext)scriptContext) : ScriptValue.NULL);
-            PolyClassMachine_v2 polyClassMachine_v23 = PolyClassMachine_v2.ofVar((ScriptContext)scriptContext, (String)"Machine");
-            Object object7 = polyClassMachine_v23 != null ? polyClassMachine_v23.pg$131_facing_dz() : (scriptValue7 = (scriptValue6 = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "facing_dz", (ScriptValue)scriptValue6, (ScriptContext)scriptContext) : ScriptValue.NULL);
+            PolyClassMachine polyClassMachine = PolyClassMachine.ofVar((ScriptContext)scriptContext, (String)"Machine");
+            ScriptValue scriptValue10 = polyClassMachine != null ? polyClassMachine.pg$133_facing_dx() : ((scriptValue9 = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "facing_dx", (ScriptValue)scriptValue9, (ScriptContext)scriptContext) : ScriptValue.NULL);
+            PolyClassMachine polyClassMachine2 = PolyClassMachine.ofVar((ScriptContext)scriptContext, (String)"Machine");
+            ScriptValue scriptValue11 = polyClassMachine2 != null ? polyClassMachine2.pg$129_facing_dy() : ((scriptValue8 = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "facing_dy", (ScriptValue)scriptValue8, (ScriptContext)scriptContext) : ScriptValue.NULL);
+            PolyClassMachine polyClassMachine3 = PolyClassMachine.ofVar((ScriptContext)scriptContext, (String)"Machine");
+            Object object7 = polyClassMachine3 != null ? polyClassMachine3.pg$131_facing_dz() : (scriptValue7 = (scriptValue6 = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "facing_dz", (ScriptValue)scriptValue6, (ScriptContext)scriptContext) : ScriptValue.NULL);
             if (scriptValue5 instanceof ScriptValue.Obj && (object6 = (obj = (ScriptValue.Obj)scriptValue5).instance()) != null && !(object6 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                PolyClassMachine_v2 polyClassMachine_v24 = new PolyClassMachine_v2(object6);
-                object = polyClassMachine_v24.tm$68_block_at(scriptValue10.asNum(), scriptValue11.asNum(), scriptValue7.asNum());
+                PolyClassMachine polyClassMachine4 = new PolyClassMachine(object6);
+                object = polyClassMachine4.tm$68_block_at(scriptValue10.asNum(), scriptValue11.asNum(), scriptValue7.asNum());
             } else {
                 object = PolyDispatch.bootstrapCall("memberCall", "block_at", (ScriptValue)scriptValue5, (ScriptValue)scriptValue10, (ScriptValue)scriptValue11, (ScriptValue)scriptValue7, (ScriptContext)scriptContext);
             }
@@ -125,8 +125,8 @@ public final class WindmillInteract {
             String string = "assembled";
             String string2 = "int";
             if (scriptValue3 instanceof ScriptValue.Obj && (object2 = (obj = (ScriptValue.Obj)scriptValue3).instance()) != null && !(object2 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                PolyClassMachine_v2 polyClassMachine_v2 = new PolyClassMachine_v2(object2);
-                object = polyClassMachine_v2.tm$34_get_typed(string, string2);
+                PolyClassMachine polyClassMachine = new PolyClassMachine(object2);
+                object = polyClassMachine.tm$34_get_typed(string, string2);
             } else {
                 object = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue3, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
             }
@@ -148,8 +148,8 @@ public final class WindmillInteract {
                     String string = "contraption_uuid";
                     String string3 = "string";
                     if (scriptValue6 instanceof ScriptValue.Obj && (object5 = (obj = (ScriptValue.Obj)scriptValue6).instance()) != null && !(object5 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                        PolyClassMachine_v2 polyClassMachine_v2 = new PolyClassMachine_v2(object5);
-                        object4 = polyClassMachine_v2.tm$34_get_typed(string, string3);
+                        PolyClassMachine polyClassMachine = new PolyClassMachine(object5);
+                        object4 = polyClassMachine.tm$34_get_typed(string, string3);
                     } else {
                         object4 = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue6, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string3), (ScriptContext)scriptContext);
                     }
@@ -185,8 +185,8 @@ public final class WindmillInteract {
                     String string4 = "int";
                     ScriptValue scriptValue12 =  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", WindmillInteract.class, 0.0);
                     if (scriptValue5 instanceof ScriptValue.Obj && (object8 = (obj = (ScriptValue.Obj)scriptValue5).instance()) != null && !(object8 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                        PolyClassMachine_v2 polyClassMachine_v2 = new PolyClassMachine_v2(object8);
-                        v4 = ScriptValue.of((boolean)polyClassMachine_v2.tm$82_set_typed(string, string4, scriptValue12));
+                        PolyClassMachine polyClassMachine = new PolyClassMachine(object8);
+                        v4 = ScriptValue.of((boolean)polyClassMachine.tm$82_set_typed(string, string4, scriptValue12));
                     } else {
                         v4 = PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue5, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string4), (ScriptValue)scriptValue12, (ScriptContext)scriptContext);
                     }
@@ -201,8 +201,8 @@ public final class WindmillInteract {
                     String string5 = "string";
                     ScriptValue scriptValue14 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", WindmillInteract.class, "");
                     if (scriptValue13 instanceof ScriptValue.Obj && (object9 = (obj = (ScriptValue.Obj)scriptValue13).instance()) != null && !(object9 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                        PolyClassMachine_v2 polyClassMachine_v2 = new PolyClassMachine_v2(object9);
-                        v5 = ScriptValue.of((boolean)polyClassMachine_v2.tm$82_set_typed(string, string5, scriptValue14));
+                        PolyClassMachine polyClassMachine = new PolyClassMachine(object9);
+                        v5 = ScriptValue.of((boolean)polyClassMachine.tm$82_set_typed(string, string5, scriptValue14));
                     } else {
                         v5 = PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue13, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string5), (ScriptValue)scriptValue14, (ScriptContext)scriptContext);
                     }
@@ -215,8 +215,8 @@ public final class WindmillInteract {
                     Object object10;
                     double d2 = 0.0;
                     if (scriptValue15 instanceof ScriptValue.Obj && (object10 = (obj = (ScriptValue.Obj)scriptValue15).instance()) != null && !(object10 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                        PolyClassMachine_v2 polyClassMachine_v2 = new PolyClassMachine_v2(object10);
-                        v6 = ScriptValue.of((boolean)polyClassMachine_v2.tm$106_set_rpm_output(d2));
+                        PolyClassMachine polyClassMachine = new PolyClassMachine(object10);
+                        v6 = ScriptValue.of((boolean)polyClassMachine.tm$106_set_rpm_output(d2));
                     } else {
                         v6 = PolyDispatch.bootstrapCall("memberCall", "set_rpm_output", (ScriptValue)scriptValue15, (ScriptValue)ScriptValue.of((double)d2), (ScriptContext)scriptContext);
                     }
@@ -229,8 +229,8 @@ public final class WindmillInteract {
                     Object object11;
                     double d3 = 0.0;
                     if (scriptValue16 instanceof ScriptValue.Obj && (object11 = (obj = (ScriptValue.Obj)scriptValue16).instance()) != null && !(object11 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                        PolyClassMachine_v2 polyClassMachine_v2 = new PolyClassMachine_v2(object11);
-                        v7 = ScriptValue.of((boolean)polyClassMachine_v2.tm$56_report_su(d3));
+                        PolyClassMachine polyClassMachine = new PolyClassMachine(object11);
+                        v7 = ScriptValue.of((boolean)polyClassMachine.tm$56_report_su(d3));
                     } else {
                         v7 = PolyDispatch.bootstrapCall("memberCall", "report_su", (ScriptValue)scriptValue16, (ScriptValue)ScriptValue.of((double)d3), (ScriptContext)scriptContext);
                     }
@@ -261,8 +261,8 @@ public final class WindmillInteract {
                 String string = "windmill_dir";
                 String string6 = "int";
                 if (scriptValue18 instanceof ScriptValue.Obj && (object14 = (obj = (ScriptValue.Obj)scriptValue18).instance()) != null && !(object14 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                    PolyClassMachine_v2 polyClassMachine_v2 = new PolyClassMachine_v2(object14);
-                    object13 = polyClassMachine_v2.tm$34_get_typed(string, string6);
+                    PolyClassMachine polyClassMachine = new PolyClassMachine(object14);
+                    object13 = polyClassMachine.tm$34_get_typed(string, string6);
                 } else {
                     object13 = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue18, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string6), (ScriptContext)scriptContext);
                 }
@@ -287,8 +287,8 @@ public final class WindmillInteract {
                 String string7 = "int";
                 ScriptValue scriptValue23 = ScriptValue.of((double)d5);
                 if (scriptValue22 instanceof ScriptValue.Obj && (object15 = (obj = (ScriptValue.Obj)scriptValue22).instance()) != null && !(object15 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                    PolyClassMachine_v2 polyClassMachine_v2 = new PolyClassMachine_v2(object15);
-                    v10 = ScriptValue.of((boolean)polyClassMachine_v2.tm$82_set_typed(string, string7, scriptValue23));
+                    PolyClassMachine polyClassMachine = new PolyClassMachine(object15);
+                    v10 = ScriptValue.of((boolean)polyClassMachine.tm$82_set_typed(string, string7, scriptValue23));
                 } else {
                     v10 = PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue22, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string7), (ScriptValue)scriptValue23, (ScriptContext)scriptContext);
                 }
@@ -311,274 +311,266 @@ public final class WindmillInteract {
                 v12 = ScriptValue.NULL;
             }
         } else {
-            ScriptValue scriptValue27;
             ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
-            ScriptValue scriptValue28 = WindmillInteract._seedBlock(builder2);
-            builder.val("seed", scriptValue28);
-            ScriptValue scriptValue29 = scriptContext.getClassOrVar("Player");
-            if (scriptValue29 != ScriptValue.NULL) {
+            ScriptValue scriptValue27 = WindmillInteract._seedBlock(builder2);
+            builder.val("seed", scriptValue27);
+            ScriptValue scriptValue28 = scriptContext.getClassOrVar("Player");
+            if (scriptValue28 != ScriptValue.NULL) {
                 ScriptValue.Obj obj;
                 Object object17;
                 Object object18;
+                ScriptValue scriptValue29;
                 ScriptValue scriptValue30;
                 ScriptValue scriptValue31;
-                ScriptValue scriptValue32;
                 CallSite callSite;
                 ScriptValue.Obj obj2;
                 Object object19;
-                ScriptValue scriptValue33;
+                ScriptValue scriptValue32;
                 StringBuilder stringBuilder = new StringBuilder().append("<dark_gray>[debug] facing=");
-                PolyClassMachine_v2 polyClassMachine_v2 = PolyClassMachine_v2.ofVar((ScriptContext)scriptContext, (String)"Machine");
-                ScriptValue scriptValue34 = polyClassMachine_v2 != null ? polyClassMachine_v2.pg$139_block() : ((scriptValue33 = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "block", (ScriptValue)scriptValue33, (ScriptContext)scriptContext) : ScriptValue.NULL);
+                PolyClassMachine polyClassMachine = PolyClassMachine.ofVar((ScriptContext)scriptContext, (String)"Machine");
+                ScriptValue scriptValue33 = polyClassMachine != null ? polyClassMachine.pg$139_block() : ((scriptValue32 = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "block", (ScriptValue)scriptValue32, (ScriptContext)scriptContext) : ScriptValue.NULL);
                 String string = "facing";
-                if (scriptValue34 instanceof ScriptValue.Obj && (object19 = (obj2 = (ScriptValue.Obj)scriptValue34).instance()) != null && !(object19 instanceof PolyClass) && obj2.typeName().equals("Block")) {
-                    PolyClassBlock_v4 polyClassBlock_v4 = new PolyClassBlock_v4(object19);
-                    callSite = polyClassBlock_v4.tm$24_property(string);
+                if (scriptValue33 instanceof ScriptValue.Obj && (object19 = (obj2 = (ScriptValue.Obj)scriptValue33).instance()) != null && !(object19 instanceof PolyClass) && obj2.typeName().equals("Block")) {
+                    PolyClassBlock_v3 polyClassBlock_v3 = new PolyClassBlock_v3(object19);
+                    callSite = polyClassBlock_v3.tm$24_property(string);
                 } else {
-                    callSite = PolyDispatch.bootstrapCall("memberCall", "property", (ScriptValue)scriptValue34, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
+                    callSite = PolyDispatch.bootstrapCall("memberCall", "property", (ScriptValue)scriptValue33, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
                 }
-                PolyClassMachine_v2 polyClassMachine_v22 = PolyClassMachine_v2.ofVar((ScriptContext)scriptContext, (String)"Machine");
-                PolyClassMachine_v2 polyClassMachine_v23 = PolyClassMachine_v2.ofVar((ScriptContext)scriptContext, (String)"Machine");
-                PolyClassMachine_v2 polyClassMachine_v24 = PolyClassMachine_v2.ofVar((ScriptContext)scriptContext, (String)"Machine");
-                StringBuilder stringBuilder2 = stringBuilder.append(callSite.asStr()).append(" seed=(").append((polyClassMachine_v22 != null ? polyClassMachine_v22.pg$133_facing_dx() : ((scriptValue32 = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "facing_dx", (ScriptValue)scriptValue32, (ScriptContext)scriptContext) : ScriptValue.NULL)).asStr()).append(",").append((polyClassMachine_v23 != null ? polyClassMachine_v23.pg$129_facing_dy() : ((scriptValue31 = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "facing_dy", (ScriptValue)scriptValue31, (ScriptContext)scriptContext) : ScriptValue.NULL)).asStr()).append(",").append((polyClassMachine_v24 != null ? polyClassMachine_v24.pg$131_facing_dz() : ((scriptValue30 = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "facing_dz", (ScriptValue)scriptValue30, (ScriptContext)scriptContext) : ScriptValue.NULL)).asStr()).append(")").append(" self_glued=");
-                ScriptValue scriptValue35 = scriptContext.getClassOrVar("Glue");
-                if (scriptValue35 != ScriptValue.NULL) {
+                PolyClassMachine polyClassMachine2 = PolyClassMachine.ofVar((ScriptContext)scriptContext, (String)"Machine");
+                PolyClassMachine polyClassMachine3 = PolyClassMachine.ofVar((ScriptContext)scriptContext, (String)"Machine");
+                PolyClassMachine polyClassMachine4 = PolyClassMachine.ofVar((ScriptContext)scriptContext, (String)"Machine");
+                StringBuilder stringBuilder2 = stringBuilder.append(callSite.asStr()).append(" seed=(").append((polyClassMachine2 != null ? polyClassMachine2.pg$133_facing_dx() : ((scriptValue31 = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "facing_dx", (ScriptValue)scriptValue31, (ScriptContext)scriptContext) : ScriptValue.NULL)).asStr()).append(",").append((polyClassMachine3 != null ? polyClassMachine3.pg$129_facing_dy() : ((scriptValue30 = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "facing_dy", (ScriptValue)scriptValue30, (ScriptContext)scriptContext) : ScriptValue.NULL)).asStr()).append(",").append((polyClassMachine4 != null ? polyClassMachine4.pg$131_facing_dz() : ((scriptValue29 = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "facing_dz", (ScriptValue)scriptValue29, (ScriptContext)scriptContext) : ScriptValue.NULL)).asStr()).append(")").append(" self_glued=");
+                ScriptValue scriptValue34 = scriptContext.getClassOrVar("Glue");
+                if (scriptValue34 != ScriptValue.NULL) {
                     ScriptValue.Obj obj3;
                     Object object20;
-                    ScriptValue scriptValue36;
-                    ScriptValue scriptValue37 = scriptContext.getClassOrVar("Machine");
-                    if (scriptValue37 != ScriptValue.NULL) {
+                    ScriptValue scriptValue35;
+                    ScriptValue scriptValue36 = scriptContext.getClassOrVar("Machine");
+                    if (scriptValue36 != ScriptValue.NULL) {
                         ScriptValue.Obj obj4;
                         Object object21;
                         double d6 = 0.0;
                         double d7 = 0.0;
                         double d8 = 0.0;
-                        if (scriptValue37 instanceof ScriptValue.Obj && (object21 = (obj4 = (ScriptValue.Obj)scriptValue37).instance()) != null && !(object21 instanceof PolyClass) && obj4.typeName().equals("Machine")) {
-                            PolyClassMachine_v2 polyClassMachine_v25 = new PolyClassMachine_v2(object21);
-                            v16 = polyClassMachine_v25.tm$68_block_at(d6, d7, d8);
+                        if (scriptValue36 instanceof ScriptValue.Obj && (object21 = (obj4 = (ScriptValue.Obj)scriptValue36).instance()) != null && !(object21 instanceof PolyClass) && obj4.typeName().equals("Machine")) {
+                            PolyClassMachine polyClassMachine5 = new PolyClassMachine(object21);
+                            v16 = polyClassMachine5.tm$68_block_at(d6, d7, d8);
                         } else {
-                            v16 = PolyDispatch.bootstrapCall("memberCall", "block_at", (ScriptValue)scriptValue37, (ScriptValue)ScriptValue.of((double)d6), (ScriptValue)ScriptValue.of((double)d7), (ScriptValue)ScriptValue.of((double)d8), (ScriptContext)scriptContext);
+                            v16 = PolyDispatch.bootstrapCall("memberCall", "block_at", (ScriptValue)scriptValue36, (ScriptValue)ScriptValue.of((double)d6), (ScriptValue)ScriptValue.of((double)d7), (ScriptValue)ScriptValue.of((double)d8), (ScriptContext)scriptContext);
                         }
                     } else {
-                        v16 = scriptValue36 = ScriptValue.NULL;
+                        v16 = scriptValue35 = ScriptValue.NULL;
                     }
-                    if (scriptValue35 instanceof ScriptValue.Obj && (object20 = (obj3 = (ScriptValue.Obj)scriptValue35).instance()) != null && !(object20 instanceof PolyClass) && obj3.typeName().equals("Glue")) {
+                    if (scriptValue34 instanceof ScriptValue.Obj && (object20 = (obj3 = (ScriptValue.Obj)scriptValue34).instance()) != null && !(object20 instanceof PolyClass) && obj3.typeName().equals("Glue")) {
                         PolyClassGlue polyClassGlue = new PolyClassGlue(object20);
-                        object18 = ScriptValue.of((boolean)polyClassGlue.tm$2_is_glued(scriptValue36));
+                        object18 = ScriptValue.of((boolean)polyClassGlue.tm$2_is_glued(scriptValue35));
                     } else {
-                        object18 = PolyDispatch.bootstrapCall("memberCall", "is_glued", (ScriptValue)scriptValue35, (ScriptValue)scriptValue36, (ScriptContext)scriptContext);
+                        object18 = PolyDispatch.bootstrapCall("memberCall", "is_glued", (ScriptValue)scriptValue34, (ScriptValue)scriptValue35, (ScriptContext)scriptContext);
                     }
                 } else {
                     object18 = ScriptValue.NULL;
                 }
-                ScriptValue scriptValue38 = ScriptValue.of((String)stringBuilder2.append(object18.asStr()).toString());
-                if (scriptValue29 instanceof ScriptValue.Obj && (object17 = (obj = (ScriptValue.Obj)scriptValue29).instance()) != null && !(object17 instanceof PolyClass) && obj.typeName().equals("Player")) {
+                ScriptValue scriptValue37 = ScriptValue.of((String)stringBuilder2.append(object18.asStr()).toString());
+                if (scriptValue28 instanceof ScriptValue.Obj && (object17 = (obj = (ScriptValue.Obj)scriptValue28).instance()) != null && !(object17 instanceof PolyClass) && obj.typeName().equals("Player")) {
                     PolyClassPlayer polyClassPlayer4 = new PolyClassPlayer(object17);
-                    v18 = ScriptValue.of((boolean)polyClassPlayer4.tm$42_send_message(scriptValue38.asStr()));
+                    v18 = ScriptValue.of((boolean)polyClassPlayer4.tm$42_send_message(scriptValue37.asStr()));
                 } else {
-                    v18 = PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue29, (ScriptValue)scriptValue38, (ScriptContext)scriptContext);
+                    v18 = PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue28, (ScriptValue)scriptValue37, (ScriptContext)scriptContext);
                 }
             } else {
                 v18 = ScriptValue.NULL;
             }
-            if (ScriptFormula.valuesEqual((ScriptValue)scriptValue28, (ScriptValue)scriptContext.getClassOrVar("null")) || ((scriptValue27 = scriptContext.getClassOrVar("seed")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "is_air", (ScriptValue)scriptValue27, (ScriptContext)scriptContext) : ScriptValue.NULL).asBool()) {
-                ScriptValue scriptValue39 = scriptContext.getClassOrVar("Player");
-                if (scriptValue39 != ScriptValue.NULL) {
+            if (ScriptFormula.valuesEqual((ScriptValue)scriptValue27, (ScriptValue)scriptContext.getClassOrVar("null")) || (scriptValue27 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "is_air", (ScriptValue)scriptValue27, (ScriptContext)scriptContext) : ScriptValue.NULL).asBool()) {
+                ScriptValue scriptValue38 = scriptContext.getClassOrVar("Player");
+                if (scriptValue38 != ScriptValue.NULL) {
                     ScriptValue.Obj obj;
                     Object object22;
                     String string = "<red>Nothing attached to the bearing's face to assemble.";
-                    if (scriptValue39 instanceof ScriptValue.Obj && (object22 = (obj = (ScriptValue.Obj)scriptValue39).instance()) != null && !(object22 instanceof PolyClass) && obj.typeName().equals("Player")) {
+                    if (scriptValue38 instanceof ScriptValue.Obj && (object22 = (obj = (ScriptValue.Obj)scriptValue38).instance()) != null && !(object22 instanceof PolyClass) && obj.typeName().equals("Player")) {
                         PolyClassPlayer polyClassPlayer5 = new PolyClassPlayer(object22);
                         v19 = ScriptValue.of((boolean)polyClassPlayer5.tm$42_send_message(string));
                     } else {
-                        v19 = PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue39, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
+                        v19 = PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue38, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
                     }
                 } else {
                     v19 = ScriptValue.NULL;
                 }
             } else {
                 Object object23;
-                ScriptValue scriptValue40 = scriptContext.getClassOrVar("Glue");
-                if (scriptValue40 != ScriptValue.NULL) {
+                ScriptValue scriptValue39 = scriptContext.getClassOrVar("Glue");
+                if (scriptValue39 != ScriptValue.NULL) {
                     ScriptValue.Obj obj;
                     Object object24;
-                    ScriptValue scriptValue41 = scriptValue28;
-                    if (scriptValue40 instanceof ScriptValue.Obj && (object24 = (obj = (ScriptValue.Obj)scriptValue40).instance()) != null && !(object24 instanceof PolyClass) && obj.typeName().equals("Glue")) {
+                    ScriptValue scriptValue40 = scriptValue27;
+                    if (scriptValue39 instanceof ScriptValue.Obj && (object24 = (obj = (ScriptValue.Obj)scriptValue39).instance()) != null && !(object24 instanceof PolyClass) && obj.typeName().equals("Glue")) {
                         PolyClassGlue polyClassGlue = new PolyClassGlue(object24);
-                        object23 = ScriptValue.of((boolean)polyClassGlue.tm$2_is_glued(scriptValue41));
+                        object23 = ScriptValue.of((boolean)polyClassGlue.tm$2_is_glued(scriptValue40));
                     } else {
-                        object23 = PolyDispatch.bootstrapCall("memberCall", "is_glued", (ScriptValue)scriptValue40, (ScriptValue)scriptValue41, (ScriptContext)scriptContext);
+                        object23 = PolyDispatch.bootstrapCall("memberCall", "is_glued", (ScriptValue)scriptValue39, (ScriptValue)scriptValue40, (ScriptContext)scriptContext);
                     }
                 } else {
                     object23 = ScriptValue.NULL;
                 }
                 if (object23.asBool() ^ true) {
-                    ScriptValue scriptValue42 = scriptContext.getClassOrVar("Player");
-                    if (scriptValue42 != ScriptValue.NULL) {
+                    ScriptValue scriptValue41 = scriptContext.getClassOrVar("Player");
+                    if (scriptValue41 != ScriptValue.NULL) {
                         ScriptValue.Obj obj;
                         Object object25;
                         String string = "<red>That structure is not glued together - glue the sails to each other and to the bearing.";
-                        if (scriptValue42 instanceof ScriptValue.Obj && (object25 = (obj = (ScriptValue.Obj)scriptValue42).instance()) != null && !(object25 instanceof PolyClass) && obj.typeName().equals("Player")) {
+                        if (scriptValue41 instanceof ScriptValue.Obj && (object25 = (obj = (ScriptValue.Obj)scriptValue41).instance()) != null && !(object25 instanceof PolyClass) && obj.typeName().equals("Player")) {
                             PolyClassPlayer polyClassPlayer6 = new PolyClassPlayer(object25);
                             v21 = ScriptValue.of((boolean)polyClassPlayer6.tm$42_send_message(string));
                         } else {
-                            v21 = PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue42, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
+                            v21 = PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue41, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
                         }
                     } else {
                         v21 = ScriptValue.NULL;
                     }
                 } else {
                     Object object26;
-                    ScriptValue scriptValue43 = scriptContext.getClassOrVar("Glue");
-                    if (scriptValue43 != ScriptValue.NULL) {
+                    ScriptValue scriptValue42 = scriptContext.getClassOrVar("Glue");
+                    if (scriptValue42 != ScriptValue.NULL) {
                         ScriptValue.Obj obj;
                         Object object27;
-                        ScriptValue scriptValue44 = scriptValue28;
+                        ScriptValue scriptValue43 = scriptValue27;
                         String string = "sail";
-                        if (scriptValue43 instanceof ScriptValue.Obj && (object27 = (obj = (ScriptValue.Obj)scriptValue43).instance()) != null && !(object27 instanceof PolyClass) && obj.typeName().equals("Glue")) {
+                        if (scriptValue42 instanceof ScriptValue.Obj && (object27 = (obj = (ScriptValue.Obj)scriptValue42).instance()) != null && !(object27 instanceof PolyClass) && obj.typeName().equals("Glue")) {
                             PolyClassGlue polyClassGlue = new PolyClassGlue(object27);
-                            object26 = ScriptValue.of((double)polyClassGlue.tm$4_count(scriptValue44, string));
+                            object26 = ScriptValue.of((double)polyClassGlue.tm$4_count(scriptValue43, string));
                         } else {
-                            object26 = PolyDispatch.bootstrapCall("memberCall", "count", (ScriptValue)scriptValue43, (ScriptValue)scriptValue44, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
+                            object26 = PolyDispatch.bootstrapCall("memberCall", "count", (ScriptValue)scriptValue42, (ScriptValue)scriptValue43, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
                         }
                     } else {
                         object26 = ScriptValue.NULL;
                     }
-                    ScriptValue scriptValue45 = object26;
-                    builder.val("sails", scriptValue45);
-                    if (scriptValue45.asNum() < d) {
-                        ScriptValue scriptValue46 = scriptContext.getClassOrVar("Player");
-                        if (scriptValue46 != ScriptValue.NULL) {
+                    ScriptValue scriptValue44 = object26;
+                    builder.val("sails", scriptValue44);
+                    if (scriptValue44.asNum() < d) {
+                        ScriptValue scriptValue45 = scriptContext.getClassOrVar("Player");
+                        if (scriptValue45 != ScriptValue.NULL) {
                             ScriptValue.Obj obj;
                             Object object28;
-                            ScriptValue scriptValue47 = ScriptValue.of((String)("<red>Not enough sails: <white>" + scriptValue45.asStr() + "<red> of <white>" + ScriptFormula.numToStr((double)d) + "<red> needed."));
-                            if (scriptValue46 instanceof ScriptValue.Obj && (object28 = (obj = (ScriptValue.Obj)scriptValue46).instance()) != null && !(object28 instanceof PolyClass) && obj.typeName().equals("Player")) {
+                            ScriptValue scriptValue46 = ScriptValue.of((String)("<red>Not enough sails: <white>" + scriptValue44.asStr() + "<red> of <white>" + ScriptFormula.numToStr((double)d) + "<red> needed."));
+                            if (scriptValue45 instanceof ScriptValue.Obj && (object28 = (obj = (ScriptValue.Obj)scriptValue45).instance()) != null && !(object28 instanceof PolyClass) && obj.typeName().equals("Player")) {
                                 PolyClassPlayer polyClassPlayer7 = new PolyClassPlayer(object28);
-                                v23 = ScriptValue.of((boolean)polyClassPlayer7.tm$42_send_message(scriptValue47.asStr()));
+                                v23 = ScriptValue.of((boolean)polyClassPlayer7.tm$42_send_message(scriptValue46.asStr()));
                             } else {
-                                v23 = PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue46, (ScriptValue)scriptValue47, (ScriptContext)scriptContext);
+                                v23 = PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue45, (ScriptValue)scriptValue46, (ScriptContext)scriptContext);
                             }
                         } else {
                             v23 = ScriptValue.NULL;
                         }
                     } else {
                         Object object29;
-                        ScriptValue scriptValue48 = scriptContext.getClassOrVar("ContraptionManager");
-                        if (scriptValue48 != ScriptValue.NULL) {
+                        ScriptValue scriptValue47 = scriptContext.getClassOrVar("ContraptionManager");
+                        if (scriptValue47 != ScriptValue.NULL) {
                             ScriptValue.Obj obj;
                             Object object30;
                             Object object31;
                             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-                            arrayList.add(scriptValue28);
-                            ScriptValue scriptValue49 = scriptContext.getClassOrVar("Machine");
-                            if (scriptValue49 != ScriptValue.NULL) {
+                            arrayList.add(scriptValue27);
+                            ScriptValue scriptValue48 = scriptContext.getClassOrVar("Machine");
+                            if (scriptValue48 != ScriptValue.NULL) {
                                 ScriptValue.Obj obj5;
                                 Object object32;
                                 double d9 = 0.0;
                                 double d10 = 0.0;
                                 double d11 = 0.0;
-                                if (scriptValue49 instanceof ScriptValue.Obj && (object32 = (obj5 = (ScriptValue.Obj)scriptValue49).instance()) != null && !(object32 instanceof PolyClass) && obj5.typeName().equals("Machine")) {
-                                    PolyClassMachine_v2 polyClassMachine_v2 = new PolyClassMachine_v2(object32);
-                                    object31 = polyClassMachine_v2.tm$68_block_at(d9, d10, d11);
+                                if (scriptValue48 instanceof ScriptValue.Obj && (object32 = (obj5 = (ScriptValue.Obj)scriptValue48).instance()) != null && !(object32 instanceof PolyClass) && obj5.typeName().equals("Machine")) {
+                                    PolyClassMachine polyClassMachine = new PolyClassMachine(object32);
+                                    object31 = polyClassMachine.tm$68_block_at(d9, d10, d11);
                                 } else {
-                                    object31 = PolyDispatch.bootstrapCall("memberCall", "block_at", (ScriptValue)scriptValue49, (ScriptValue)ScriptValue.of((double)d9), (ScriptValue)ScriptValue.of((double)d10), (ScriptValue)ScriptValue.of((double)d11), (ScriptContext)scriptContext);
+                                    object31 = PolyDispatch.bootstrapCall("memberCall", "block_at", (ScriptValue)scriptValue48, (ScriptValue)ScriptValue.of((double)d9), (ScriptValue)ScriptValue.of((double)d10), (ScriptValue)ScriptValue.of((double)d11), (ScriptContext)scriptContext);
                                 }
                             } else {
                                 object31 = ScriptValue.NULL;
                             }
                             arrayList.add((ScriptValue)object31);
-                            object29 = scriptValue48 instanceof ScriptValue.Obj && (object30 = (obj = (ScriptValue.Obj)scriptValue48).instance()) != null && !(object30 instanceof PolyClass) && obj.typeName().equals("ContraptionManager") ? new PolyClassContraptionManager(object30).um$1_create_bearing(arrayList) : PolyDispatch.bootstrapCall("memberCall", "create_bearing", (ScriptValue)scriptValue48, arrayList, (ScriptContext)scriptContext);
+                            object29 = scriptValue47 instanceof ScriptValue.Obj && (object30 = (obj = (ScriptValue.Obj)scriptValue47).instance()) != null && !(object30 instanceof PolyClass) && obj.typeName().equals("ContraptionManager") ? new PolyClassContraptionManager(object30).um$1_create_bearing(arrayList) : PolyDispatch.bootstrapCall("memberCall", "create_bearing", (ScriptValue)scriptValue47, arrayList, (ScriptContext)scriptContext);
                         } else {
                             object29 = ScriptValue.NULL;
                         }
-                        ScriptValue scriptValue50 = object29;
-                        builder.val("contraption", scriptValue50);
-                        if (ScriptFormula.valuesEqual((ScriptValue)scriptValue50, (ScriptValue)scriptContext.getClassOrVar("null"))) {
-                            ScriptValue scriptValue51 = scriptContext.getClassOrVar("Player");
-                            if (scriptValue51 != ScriptValue.NULL) {
+                        ScriptValue scriptValue49 = object29;
+                        builder.val("contraption", scriptValue49);
+                        if (ScriptFormula.valuesEqual((ScriptValue)scriptValue49, (ScriptValue)scriptContext.getClassOrVar("null"))) {
+                            ScriptValue scriptValue50 = scriptContext.getClassOrVar("Player");
+                            if (scriptValue50 != ScriptValue.NULL) {
                                 ScriptValue.Obj obj;
                                 Object object33;
                                 String string = "<red>Could not assemble that structure.";
-                                if (scriptValue51 instanceof ScriptValue.Obj && (object33 = (obj = (ScriptValue.Obj)scriptValue51).instance()) != null && !(object33 instanceof PolyClass) && obj.typeName().equals("Player")) {
+                                if (scriptValue50 instanceof ScriptValue.Obj && (object33 = (obj = (ScriptValue.Obj)scriptValue50).instance()) != null && !(object33 instanceof PolyClass) && obj.typeName().equals("Player")) {
                                     PolyClassPlayer polyClassPlayer8 = new PolyClassPlayer(object33);
                                     v26 = ScriptValue.of((boolean)polyClassPlayer8.tm$42_send_message(string));
                                 } else {
-                                    v26 = PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue51, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
+                                    v26 = PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue50, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
                                 }
                             } else {
                                 v26 = ScriptValue.NULL;
                             }
                         } else {
-                            ScriptValue scriptValue52;
-                            ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-                            StringBuilder stringBuilder = new StringBuilder().append("[windmill] assembled uuid=").append(((scriptValue52 = scriptContext.getClassOrVar("contraption")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue52, (ScriptContext)scriptContext) : ScriptValue.NULL).asStr()).append(" block_count=");
-                            ScriptValue scriptValue53 = scriptContext.getClassOrVar("contraption");
-                            arrayList.add(ScriptValue.of((String)stringBuilder.append((scriptValue53 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "block_count", (ScriptValue)scriptValue53, (ScriptContext)scriptContext) : ScriptValue.NULL).asStr()).toString()));
-                            ScriptFormula.callBuiltin((String)"print", arrayList, (ScriptContext)scriptContext);
-                            ScriptValue scriptValue54 = scriptContext.getClassOrVar("Machine");
-                            if (scriptValue54 != ScriptValue.NULL) {
+                            ScriptFormula.callBuiltin1((String)"print", (ScriptValue)ScriptValue.of((String)("[windmill] assembled uuid=" + (scriptValue49 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue49, (ScriptContext)scriptContext) : ScriptValue.NULL).asStr() + " block_count=" + (scriptValue49 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "block_count", (ScriptValue)scriptValue49, (ScriptContext)scriptContext) : ScriptValue.NULL).asStr())), (ScriptContext)scriptContext);
+                            ScriptValue scriptValue51 = scriptContext.getClassOrVar("Machine");
+                            if (scriptValue51 != ScriptValue.NULL) {
                                 ScriptValue.Obj obj;
                                 Object object34;
-                                ScriptValue scriptValue55;
+                                ScriptValue scriptValue52;
                                 String string = "contraption_uuid";
                                 String string8 = "string";
-                                ScriptValue scriptValue56 = scriptContext.getClassOrVar("contraption");
-                                Object object35 = scriptValue55 = scriptValue56 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue56, (ScriptContext)scriptContext) : ScriptValue.NULL;
-                                if (scriptValue54 instanceof ScriptValue.Obj && (object34 = (obj = (ScriptValue.Obj)scriptValue54).instance()) != null && !(object34 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                                    PolyClassMachine_v2 polyClassMachine_v2 = new PolyClassMachine_v2(object34);
-                                    v29 = ScriptValue.of((boolean)polyClassMachine_v2.tm$82_set_typed(string, string8, scriptValue55));
+                                Object object35 = scriptValue52 = scriptValue49 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue49, (ScriptContext)scriptContext) : ScriptValue.NULL;
+                                if (scriptValue51 instanceof ScriptValue.Obj && (object34 = (obj = (ScriptValue.Obj)scriptValue51).instance()) != null && !(object34 instanceof PolyClass) && obj.typeName().equals("Machine")) {
+                                    PolyClassMachine polyClassMachine = new PolyClassMachine(object34);
+                                    v28 = ScriptValue.of((boolean)polyClassMachine.tm$82_set_typed(string, string8, scriptValue52));
                                 } else {
-                                    v29 = PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue54, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string8), (ScriptValue)scriptValue55, (ScriptContext)scriptContext);
+                                    v28 = PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue51, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string8), (ScriptValue)scriptValue52, (ScriptContext)scriptContext);
                                 }
                             } else {
-                                v29 = ScriptValue.NULL;
+                                v28 = ScriptValue.NULL;
                             }
-                            ScriptValue scriptValue57 = scriptContext.getClassOrVar("Machine");
-                            if (scriptValue57 != ScriptValue.NULL) {
+                            ScriptValue scriptValue53 = scriptContext.getClassOrVar("Machine");
+                            if (scriptValue53 != ScriptValue.NULL) {
                                 ScriptValue.Obj obj;
                                 Object object36;
                                 String string = "assembled";
                                 String string9 = "int";
-                                ScriptValue scriptValue58 =  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", WindmillInteract.class, 1.0);
-                                if (scriptValue57 instanceof ScriptValue.Obj && (object36 = (obj = (ScriptValue.Obj)scriptValue57).instance()) != null && !(object36 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                                    PolyClassMachine_v2 polyClassMachine_v2 = new PolyClassMachine_v2(object36);
-                                    v30 = ScriptValue.of((boolean)polyClassMachine_v2.tm$82_set_typed(string, string9, scriptValue58));
+                                ScriptValue scriptValue54 =  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", WindmillInteract.class, 1.0);
+                                if (scriptValue53 instanceof ScriptValue.Obj && (object36 = (obj = (ScriptValue.Obj)scriptValue53).instance()) != null && !(object36 instanceof PolyClass) && obj.typeName().equals("Machine")) {
+                                    PolyClassMachine polyClassMachine = new PolyClassMachine(object36);
+                                    v29 = ScriptValue.of((boolean)polyClassMachine.tm$82_set_typed(string, string9, scriptValue54));
                                 } else {
-                                    v30 = PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue57, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string9), (ScriptValue)scriptValue58, (ScriptContext)scriptContext);
+                                    v29 = PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue53, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string9), (ScriptValue)scriptValue54, (ScriptContext)scriptContext);
                                 }
                             } else {
-                                v30 = ScriptValue.NULL;
+                                v29 = ScriptValue.NULL;
                             }
-                            ScriptValue scriptValue59 = scriptContext.getClassOrVar("Machine");
-                            if (scriptValue59 != ScriptValue.NULL) {
+                            ScriptValue scriptValue55 = scriptContext.getClassOrVar("Machine");
+                            if (scriptValue55 != ScriptValue.NULL) {
                                 ScriptValue.Obj obj;
                                 Object object37;
                                 String string = "assembled_tick";
                                 String string10 = "int";
-                                ArrayList arrayList2 = new ArrayList();
-                                ScriptValue scriptValue60 = ScriptFormula.callBuiltin((String)"tick", arrayList2, (ScriptContext)scriptContext);
-                                if (scriptValue59 instanceof ScriptValue.Obj && (object37 = (obj = (ScriptValue.Obj)scriptValue59).instance()) != null && !(object37 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                                    PolyClassMachine_v2 polyClassMachine_v2 = new PolyClassMachine_v2(object37);
-                                    v31 = ScriptValue.of((boolean)polyClassMachine_v2.tm$82_set_typed(string, string10, scriptValue60));
+                                ScriptValue scriptValue56 = ScriptFormula.callBuiltin0((String)"tick", (ScriptContext)scriptContext);
+                                if (scriptValue55 instanceof ScriptValue.Obj && (object37 = (obj = (ScriptValue.Obj)scriptValue55).instance()) != null && !(object37 instanceof PolyClass) && obj.typeName().equals("Machine")) {
+                                    PolyClassMachine polyClassMachine = new PolyClassMachine(object37);
+                                    v30 = ScriptValue.of((boolean)polyClassMachine.tm$82_set_typed(string, string10, scriptValue56));
                                 } else {
-                                    v31 = PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue59, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string10), (ScriptValue)scriptValue60, (ScriptContext)scriptContext);
+                                    v30 = PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue55, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string10), (ScriptValue)scriptValue56, (ScriptContext)scriptContext);
+                                }
+                            } else {
+                                v30 = ScriptValue.NULL;
+                            }
+                            ScriptValue scriptValue57 = scriptContext.getClassOrVar("Player");
+                            if (scriptValue57 != ScriptValue.NULL) {
+                                ScriptValue.Obj obj;
+                                Object object38;
+                                ScriptValue scriptValue58 = ScriptValue.of((String)("<green>Windmill assembled <gray>(" + scriptValue44.asStr() + " sails)."));
+                                if (scriptValue57 instanceof ScriptValue.Obj && (object38 = (obj = (ScriptValue.Obj)scriptValue57).instance()) != null && !(object38 instanceof PolyClass) && obj.typeName().equals("Player")) {
+                                    PolyClassPlayer polyClassPlayer9 = new PolyClassPlayer(object38);
+                                    v31 = ScriptValue.of((boolean)polyClassPlayer9.tm$42_send_message(scriptValue58.asStr()));
+                                } else {
+                                    v31 = PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue57, (ScriptValue)scriptValue58, (ScriptContext)scriptContext);
                                 }
                             } else {
                                 v31 = ScriptValue.NULL;
-                            }
-                            ScriptValue scriptValue61 = scriptContext.getClassOrVar("Player");
-                            if (scriptValue61 != ScriptValue.NULL) {
-                                ScriptValue.Obj obj;
-                                Object object38;
-                                ScriptValue scriptValue62 = ScriptValue.of((String)("<green>Windmill assembled <gray>(" + scriptValue45.asStr() + " sails)."));
-                                if (scriptValue61 instanceof ScriptValue.Obj && (object38 = (obj = (ScriptValue.Obj)scriptValue61).instance()) != null && !(object38 instanceof PolyClass) && obj.typeName().equals("Player")) {
-                                    PolyClassPlayer polyClassPlayer9 = new PolyClassPlayer(object38);
-                                    v32 = ScriptValue.of((boolean)polyClassPlayer9.tm$42_send_message(scriptValue62.asStr()));
-                                } else {
-                                    v32 = PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue61, (ScriptValue)scriptValue62, (ScriptContext)scriptContext);
-                                }
-                            } else {
-                                v32 = ScriptValue.NULL;
                             }
                         }
                     }
