@@ -3,7 +3,7 @@
  * 
  * Could not load the following classes:
  *  dev.arubik.craftengine.script.PolyClass
- *  dev.arubik.craftengine.script.PolyClassMachine
+ *  dev.arubik.craftengine.script.PolyClassMachine_v4
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
  *  dev.arubik.craftengine.script.ScriptContext$Builder
@@ -14,7 +14,7 @@
 package dev.arubik.craftengine.script.gen.redstone;
 
 import dev.arubik.craftengine.script.PolyClass;
-import dev.arubik.craftengine.script.PolyClassMachine;
+import dev.arubik.craftengine.script.PolyClassMachine_v4;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
@@ -39,8 +39,8 @@ public final class RedstoneCounter {
         Object object;
         ScriptValue scriptValue;
         ScriptContext scriptContext = builder.peek();
-        PolyClassMachine polyClassMachine = PolyClassMachine.ofVar((ScriptContext)scriptContext, (String)"Machine");
-        Object object2 = polyClassMachine != null ? polyClassMachine.pg$171_redstone() : ((scriptValue = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "redstone", (ScriptValue)scriptValue, (ScriptContext)scriptContext) : ScriptValue.NULL);
+        PolyClassMachine_v4 polyClassMachine_v4 = PolyClassMachine_v4.ofVar((ScriptContext)scriptContext, (String)"Machine");
+        Object object2 = polyClassMachine_v4 != null ? polyClassMachine_v4.pg$171_redstone() : ((scriptValue = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "redstone", (ScriptValue)scriptValue, (ScriptContext)scriptContext) : ScriptValue.NULL);
         double d = object2.asNum() > 0.0 ? 1.0 : 0.0;
         ScriptValue scriptValue2 = ScriptValue.of((double)d);
         builder.val("cur_power", scriptValue2);
@@ -51,8 +51,8 @@ public final class RedstoneCounter {
             String string = "prev_power";
             String string2 = "int";
             if (scriptValue3 instanceof ScriptValue.Obj && (object3 = (obj = (ScriptValue.Obj)scriptValue3).instance()) != null && !(object3 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                PolyClassMachine polyClassMachine2 = new PolyClassMachine(object3);
-                object = polyClassMachine2.tm$34_get_typed(string, string2);
+                PolyClassMachine_v4 polyClassMachine_v42 = new PolyClassMachine_v4(object3);
+                object = polyClassMachine_v42.tm$34_get_typed(string, string2);
             } else {
                 object = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue3, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
             }
@@ -69,8 +69,8 @@ public final class RedstoneCounter {
             String string3 = "int";
             ScriptValue scriptValue6 = ScriptValue.of((double)d);
             if (scriptValue5 instanceof ScriptValue.Obj && (object4 = (obj = (ScriptValue.Obj)scriptValue5).instance()) != null && !(object4 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                PolyClassMachine polyClassMachine3 = new PolyClassMachine(object4);
-                v2 = ScriptValue.of((boolean)polyClassMachine3.tm$82_set_typed(string, string3, scriptValue6));
+                PolyClassMachine_v4 polyClassMachine_v43 = new PolyClassMachine_v4(object4);
+                v2 = ScriptValue.of((boolean)polyClassMachine_v43.tm$82_set_typed(string, string3, scriptValue6));
             } else {
                 v2 = PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue5, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string3), (ScriptValue)scriptValue6, (ScriptContext)scriptContext);
             }
@@ -88,8 +88,8 @@ public final class RedstoneCounter {
                 String string = "max_count";
                 String string4 = "int";
                 if (scriptValue8 instanceof ScriptValue.Obj && (object7 = (obj = (ScriptValue.Obj)scriptValue8).instance()) != null && !(object7 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                    PolyClassMachine polyClassMachine4 = new PolyClassMachine(object7);
-                    object6 = polyClassMachine4.tm$34_get_typed(string, string4);
+                    PolyClassMachine_v4 polyClassMachine_v44 = new PolyClassMachine_v4(object7);
+                    object6 = polyClassMachine_v44.tm$34_get_typed(string, string4);
                 } else {
                     object6 = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue8, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string4), (ScriptContext)scriptContext);
                 }
@@ -109,8 +109,8 @@ public final class RedstoneCounter {
                 String string = "count";
                 String string5 = "int";
                 if (scriptValue7 instanceof ScriptValue.Obj && (object8 = (obj = (ScriptValue.Obj)scriptValue7).instance()) != null && !(object8 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                    PolyClassMachine polyClassMachine5 = new PolyClassMachine(object8);
-                    object5 = polyClassMachine5.tm$34_get_typed(string, string5);
+                    PolyClassMachine_v4 polyClassMachine_v45 = new PolyClassMachine_v4(object8);
+                    object5 = polyClassMachine_v45.tm$34_get_typed(string, string5);
                 } else {
                     object5 = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue7, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string5), (ScriptContext)scriptContext);
                 }
@@ -128,8 +128,8 @@ public final class RedstoneCounter {
                     String string6 = "int";
                     ScriptValue scriptValue13 =  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", RedstoneCounter.class, 0.0);
                     if (scriptValue12 instanceof ScriptValue.Obj && (object9 = (obj = (ScriptValue.Obj)scriptValue12).instance()) != null && !(object9 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                        PolyClassMachine polyClassMachine6 = new PolyClassMachine(object9);
-                        v5 = ScriptValue.of((boolean)polyClassMachine6.tm$82_set_typed(string, string6, scriptValue13));
+                        PolyClassMachine_v4 polyClassMachine_v46 = new PolyClassMachine_v4(object9);
+                        v5 = ScriptValue.of((boolean)polyClassMachine_v46.tm$82_set_typed(string, string6, scriptValue13));
                     } else {
                         v5 = PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue12, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string6), (ScriptValue)scriptValue13, (ScriptContext)scriptContext);
                     }
@@ -142,8 +142,8 @@ public final class RedstoneCounter {
                     Object object10;
                     double d3 = 15.0;
                     if (scriptValue14 instanceof ScriptValue.Obj && (object10 = (obj = (ScriptValue.Obj)scriptValue14).instance()) != null && !(object10 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                        PolyClassMachine polyClassMachine7 = new PolyClassMachine(object10);
-                        v6 = ScriptValue.of((boolean)polyClassMachine7.tm$108_emit_redstone(d3));
+                        PolyClassMachine_v4 polyClassMachine_v47 = new PolyClassMachine_v4(object10);
+                        v6 = ScriptValue.of((boolean)polyClassMachine_v47.tm$108_emit_redstone(d3));
                     } else {
                         v6 = PolyDispatch.bootstrapCall("memberCall", "emit_redstone", (ScriptValue)scriptValue14, (ScriptValue)ScriptValue.of((double)d3), (ScriptContext)scriptContext);
                     }
@@ -159,8 +159,8 @@ public final class RedstoneCounter {
                     String string7 = "int";
                     ScriptValue scriptValue16 = scriptValue11;
                     if (scriptValue15 instanceof ScriptValue.Obj && (object11 = (obj = (ScriptValue.Obj)scriptValue15).instance()) != null && !(object11 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                        PolyClassMachine polyClassMachine8 = new PolyClassMachine(object11);
-                        v7 = ScriptValue.of((boolean)polyClassMachine8.tm$82_set_typed(string, string7, scriptValue16));
+                        PolyClassMachine_v4 polyClassMachine_v48 = new PolyClassMachine_v4(object11);
+                        v7 = ScriptValue.of((boolean)polyClassMachine_v48.tm$82_set_typed(string, string7, scriptValue16));
                     } else {
                         v7 = PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue15, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string7), (ScriptValue)scriptValue16, (ScriptContext)scriptContext);
                     }
@@ -173,8 +173,8 @@ public final class RedstoneCounter {
                     Object object12;
                     double d4 = 0.0;
                     if (scriptValue17 instanceof ScriptValue.Obj && (object12 = (obj = (ScriptValue.Obj)scriptValue17).instance()) != null && !(object12 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                        PolyClassMachine polyClassMachine9 = new PolyClassMachine(object12);
-                        v8 = ScriptValue.of((boolean)polyClassMachine9.tm$108_emit_redstone(d4));
+                        PolyClassMachine_v4 polyClassMachine_v49 = new PolyClassMachine_v4(object12);
+                        v8 = ScriptValue.of((boolean)polyClassMachine_v49.tm$108_emit_redstone(d4));
                     } else {
                         v8 = PolyDispatch.bootstrapCall("memberCall", "emit_redstone", (ScriptValue)scriptValue17, (ScriptValue)ScriptValue.of((double)d4), (ScriptContext)scriptContext);
                     }

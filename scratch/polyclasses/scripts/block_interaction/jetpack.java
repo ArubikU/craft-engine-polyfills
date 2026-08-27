@@ -3,7 +3,7 @@
  * 
  * Could not load the following classes:
  *  dev.arubik.craftengine.script.PolyClass
- *  dev.arubik.craftengine.script.PolyClassEntity
+ *  dev.arubik.craftengine.script.PolyClassEntity_v3
  *  dev.arubik.craftengine.script.PolyClassItem
  *  dev.arubik.craftengine.script.PolyClassPlayer
  *  dev.arubik.craftengine.script.PolyClassWorld
@@ -17,7 +17,7 @@
 package dev.arubik.craftengine.script.gen.block_interaction;
 
 import dev.arubik.craftengine.script.PolyClass;
-import dev.arubik.craftengine.script.PolyClassEntity;
+import dev.arubik.craftengine.script.PolyClassEntity_v3;
 import dev.arubik.craftengine.script.PolyClassItem;
 import dev.arubik.craftengine.script.PolyClassPlayer;
 import dev.arubik.craftengine.script.PolyClassWorld;
@@ -239,8 +239,8 @@ public final class Jetpack {
                 ScriptValue.Obj obj;
                 Object object13;
                 if (scriptValue24 instanceof ScriptValue.Obj && (object13 = (obj = (ScriptValue.Obj)scriptValue24).instance()) != null && !(object13 instanceof PolyClass) && obj.typeName().equals("Entity")) {
-                    PolyClassEntity polyClassEntity = new PolyClassEntity(object13);
-                    v11 = ScriptValue.of((boolean)polyClassEntity.tm$22_reset_fall_distance());
+                    PolyClassEntity_v3 polyClassEntity_v3 = new PolyClassEntity_v3(object13);
+                    v11 = ScriptValue.of((boolean)polyClassEntity_v3.tm$22_reset_fall_distance());
                 } else {
                     v11 = PolyDispatch.bootstrapCall("memberCall", "reset_fall_distance", (ScriptValue)scriptValue24, (ScriptContext)scriptContext);
                 }
@@ -360,8 +360,8 @@ public final class Jetpack {
                 double d17 = 60.0;
                 double d18 = 0.0;
                 if (scriptValue38 instanceof ScriptValue.Obj && (object18 = (obj = (ScriptValue.Obj)scriptValue38).instance()) != null && !(object18 instanceof PolyClass) && obj.typeName().equals("Entity")) {
-                    PolyClassEntity polyClassEntity = new PolyClassEntity(object18);
-                    v16 = ScriptValue.of((boolean)polyClassEntity.tm$2_add_potion_effect(string, d17, d18));
+                    PolyClassEntity_v3 polyClassEntity_v3 = new PolyClassEntity_v3(object18);
+                    v16 = ScriptValue.of((boolean)polyClassEntity_v3.tm$2_add_potion_effect(string, d17, d18));
                 } else {
                     v16 = PolyDispatch.bootstrapCall("memberCall", "add_potion_effect", (ScriptValue)scriptValue38, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((double)d17), (ScriptValue)ScriptValue.of((double)d18), (ScriptContext)scriptContext);
                 }

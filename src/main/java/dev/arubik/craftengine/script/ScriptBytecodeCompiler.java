@@ -181,7 +181,18 @@ final class ScriptBytecodeCompiler {
      *  primitive, ANY holds the already-boxed {@code ScriptValue} reference (a string, array, map,
      *  object, whatever it evaluated to) — either way, {@code getClassInstance}/{@code getVar}'s
      *  {@code ScriptContext} round-trip is skipped, not just the primitive boxing. */
-    record CachedVarRef(int slot, Type type) {}
+    /**
+     * A variable currently held in a JVM local.
+     *
+     * <p>{@code polyType} is set when the value is additionally known to be an instance of that
+     * PolyType — a loop variable bound from a {@code listOf(name, …)} member, whose element type the
+     * registration already declares. It is what lets {@code r.inputs} specialize against
+     * {@code PolyClassRecipe} even though {@code r} is an ordinary name no registry could resolve.
+     * Null everywhere else, which simply means "no compile-time type, dispatch generically".
+     */
+    record CachedVarRef(int slot, Type type, String polyType) {
+        CachedVarRef(int slot, Type type) { this(slot, type, null); }
+    }
 
     /** Loads a cached variable and leaves it on the stack as a boxed {@code ScriptValue}, whatever
      *  representation the cache holds. Used to seed a loop-carried pin, whose slot is always a
@@ -514,6 +525,9 @@ final class ScriptBytecodeCompiler {
         final PolyClassGenerator.TypedMemberRef nativeRef;
         /** The PolyType this read PRODUCES, when its codec says so — see {@link #polyTypeOf}. */
         final String resultPolyType;
+        /** For a list-typed property, the PolyType of its ELEMENTS — what a `for` binds its variable
+         *  to. Null for everything else. */
+        final String elementPolyType;
         /** Non-null for a CHAINED hop, whose receiver is this expression rather than a name. */
         private final Expr base;
         /** The List-returning accessor for a list-typed property, or null. Only a `for` loop uses
@@ -546,23 +560,25 @@ final class ScriptBytecodeCompiler {
                     propJavaName != null ? g.internalName() : null, propJavaName,
                     g != null ? g.typedProperties().get(prop) : null,
                     propertyResultPolyType(receiverType, prop),
-                    g != null ? g.listProperties().get(prop) : null, receiverSlot);
+                    g != null ? g.listProperties().get(prop) : null, receiverSlot,
+                    propertyElementPolyType(receiverType, prop));
         }
 
         PropRead(String name, String prop, String wrapperName, String propJavaName,
                  PolyClassGenerator.TypedMemberRef nativeRef, String resultPolyType, String listJavaName,
-                 Integer receiverSlot) {
+                 Integer receiverSlot, String elementPolyType) {
             this(null, name, prop, wrapperName, propJavaName, nativeRef, resultPolyType, listJavaName,
-                    receiverSlot);
+                    receiverSlot, elementPolyType);
         }
 
         private PropRead(Expr base, String name, String prop, String wrapperName, String propJavaName,
                          PolyClassGenerator.TypedMemberRef nativeRef, String resultPolyType,
-                         String listJavaName, Integer receiverSlot) {
+                         String listJavaName, Integer receiverSlot, String elementPolyType) {
             super(Type.ANY);
             this.base = base;
             this.listJavaName = listJavaName;
             this.receiverSlot = receiverSlot;
+            this.elementPolyType = elementPolyType;
             this.name = name;
             this.prop = prop;
             this.wrapperName = wrapperName;
@@ -862,10 +878,19 @@ final class ScriptBytecodeCompiler {
     }
 
     static String propertyResultPolyType(String typeName, String prop) {
-        PolyType t = typeName == null ? null : PolyTypeRegistry.get(typeName);
-        if (t == null) return null;
-        PolyType.TypedPropertyDescriptor d = t.resolveTypedProperty(prop);
+        PolyType.TypedPropertyDescriptor d = typedProperty(typeName, prop);
         return d == null ? null : TypeCodecs.singlePolyTypeNameOf(d.returnType());
+    }
+
+    /** The PolyType of one element of {@code type.prop}, when that property is list-typed. */
+    static String propertyElementPolyType(String typeName, String prop) {
+        PolyType.TypedPropertyDescriptor d = typedProperty(typeName, prop);
+        return d == null ? null : TypeCodecs.elementPolyTypeNameOf(d.returnType());
+    }
+
+    private static PolyType.TypedPropertyDescriptor typedProperty(String typeName, String prop) {
+        PolyType t = typeName == null ? null : PolyTypeRegistry.get(typeName);
+        return t == null ? null : t.resolveTypedProperty(prop);
     }
 
     static Expr toNum(Expr e) {
@@ -2094,7 +2119,15 @@ final class ScriptBytecodeCompiler {
             // Unbox the receiver into this type's generated PolyClass (see PolyClassGenerator) and
             // read the property through its own generated accessor — a plain INVOKEVIRTUAL against
             // an already-resolved handler, no PolyTypeRegistry lookup at this call site at all.
-            PolyClassGenerator.GeneratedPolyClass generated = PolyClassGenerator.getOrGenerate(name);
+            // The receiver's type is normally the NAME itself (`Machine.recipes`). For an ordinary
+            // variable it can still be known, when a loop bound it from a list whose element type
+            // the registration declares — that arrives as the cache entry's polyType.
+            String receiverType = name;
+            if (PolyTypeRegistry.get(name) == null && varHint != null) {
+                CachedVarRef hinted = varHint.get(name);
+                if (hinted != null && hinted.polyType() != null) receiverType = hinted.polyType();
+            }
+            PolyClassGenerator.GeneratedPolyClass generated = PolyClassGenerator.getOrGenerate(receiverType);
             String propJavaName = generated != null ? generated.properties().get(prop) : null;
             String wrapperName = propJavaName != null ? generated.internalName() : null;
             // A propertyTyped registration with a scalar codec also generated a native-returning
@@ -2102,10 +2135,19 @@ final class ScriptBytecodeCompiler {
             // toNum/toBool/toStr fuse into it, which is where the boxing actually disappears.
             PolyClassGenerator.TypedMemberRef nativeRef =
                     generated != null ? generated.typedProperties().get(prop) : null;
+            // A wrapper resolved through a HINT can only be reached from the cached local the hint
+            // describes — ofVar reads by name and the name is not the type, so that path is out.
+            if (!receiverType.equals(name) && cachedReceiverSlot(varHint, name) == null) {
+                generated = null;
+                propJavaName = null;
+                wrapperName = null;
+                nativeRef = null;
+            }
             return new PropRead(name, prop, wrapperName, propJavaName, nativeRef,
-                    propertyResultPolyType(name, prop),
+                    propertyResultPolyType(receiverType, prop),
                     generated != null ? generated.listProperties().get(prop) : null,
-                    cachedReceiverSlot(varHint, name));
+                    cachedReceiverSlot(varHint, name),
+                    propertyElementPolyType(receiverType, prop));
         }
 
         /** The local a receiver NAME is cached in, when it is cached as a boxed ScriptValue. NUM and

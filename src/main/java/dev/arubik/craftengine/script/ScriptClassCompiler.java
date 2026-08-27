@@ -737,6 +737,7 @@ final class ScriptClassCompiler {
         // every single execution of the loop.
         ScriptBytecodeCompiler.Expr iter =
                 ScriptBytecodeCompiler.tryParse(fs.iterExpr(), mc.resolver, mc.varHint);
+        String elementType = null;
         // Only the inline path can hand back bare elements; the text fallback goes through
         // resolveForRows, which always produces rows.
         boolean elementsDirect = singleVar && iter != null;
@@ -748,6 +749,8 @@ final class ScriptClassCompiler {
             // ScriptValue.Array that elementsOf immediately takes apart again on every execution.
             boolean listDirect = singleVar
                     && iter instanceof ScriptBytecodeCompiler.PropRead pr && pr.listJavaName != null;
+            elementType = singleVar && iter instanceof ScriptBytecodeCompiler.PropRead pr2
+                    ? pr2.elementPolyType : null;
             if (listDirect) {
                 ((ScriptBytecodeCompiler.PropRead) iter).emitAsList(mv, ic);
                 mc.nextSlot = ic.next;
@@ -830,8 +833,12 @@ final class ScriptClassCompiler {
             // Cached exactly like an assignment's value: same guarantee, same invalidation rules.
             // (The Builder write above still happens — anything that observes the context by name,
             // a callee or a nested def, keeps seeing the binding.)
+            // When the iterable was a list-typed member, its registration already declares what one
+            // element IS — so the loop variable carries that PolyType and the body's member accesses
+            // on it specialize, instead of dispatching generically once per element per tick.
             mc.cachedVars.put(vars.get(0),
-                    new ScriptBytecodeCompiler.CachedVarRef(rowSlot, ScriptBytecodeCompiler.Type.ANY));
+                    new ScriptBytecodeCompiler.CachedVarRef(rowSlot, ScriptBytecodeCompiler.Type.ANY,
+                            elementType));
         }
         for (int i = 0; !elementsDirect && i < vars.size(); i++) {
             mv.visitVarInsn(ALOAD, 0);

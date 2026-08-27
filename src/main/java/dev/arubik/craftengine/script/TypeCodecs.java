@@ -131,6 +131,19 @@ public final class TypeCodecs {
         return codec instanceof PolyCodec<?> p ? p.polyTypeName : null;
     }
 
+    /**
+     * The PolyType name each ELEMENT of a list-typed slot is boxed under, or null for any other
+     * codec.
+     *
+     * <p>{@code for r in Machine.recipes} binds {@code r} to one element of a
+     * {@code listOf("Recipe", …)}, so {@code r}'s type is known at compile time even though {@code r}
+     * is an ordinary variable name that no registry lookup could resolve. That is what lets the loop
+     * body's {@code r.inputs} specialize instead of dispatching generically on every iteration.
+     */
+    public static String elementPolyTypeNameOf(PolyType.TypeCodec<?> codec) {
+        return codec instanceof ListCodec<?> l ? l.polyTypeName : null;
+    }
+
     public static final class ListCodec<T> implements PolyType.TypeCodec<List<T>>, WrappedCodec {
         private final String polyTypeName;
         private final Class<T> elementType;

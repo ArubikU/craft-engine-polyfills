@@ -3,7 +3,7 @@
  * 
  * Could not load the following classes:
  *  dev.arubik.craftengine.script.PolyClass
- *  dev.arubik.craftengine.script.PolyClassMachine
+ *  dev.arubik.craftengine.script.PolyClassMachine_v4
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
  *  dev.arubik.craftengine.script.ScriptContext$Builder
@@ -16,7 +16,7 @@
 package dev.arubik.craftengine.script.gen.kinetics.generators;
 
 import dev.arubik.craftengine.script.PolyClass;
-import dev.arubik.craftengine.script.PolyClassMachine;
+import dev.arubik.craftengine.script.PolyClassMachine_v4;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
@@ -428,8 +428,8 @@ public final class WaterWheel {
                     ScriptValue scriptValue29 = scriptValue17;
                     ScriptValue scriptValue30 = scriptValue18;
                     if (scriptValue27 instanceof ScriptValue.Obj && (object2 = (obj = (ScriptValue.Obj)scriptValue27).instance()) != null && !(object2 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                        PolyClassMachine polyClassMachine = new PolyClassMachine(object2);
-                        object = polyClassMachine.tm$68_block_at(scriptValue28.asNum(), scriptValue29.asNum(), scriptValue30.asNum());
+                        PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object2);
+                        object = polyClassMachine_v4.tm$68_block_at(scriptValue28.asNum(), scriptValue29.asNum(), scriptValue30.asNum());
                     } else {
                         object = PolyDispatch.bootstrapCall("memberCall", "block_at", (ScriptValue)scriptValue27, (ScriptValue)scriptValue28, (ScriptValue)scriptValue29, (ScriptValue)scriptValue30, (ScriptContext)scriptContext);
                     }
@@ -549,8 +549,8 @@ public final class WaterWheel {
         ScriptValue scriptValue;
         ScriptValue scriptValue2;
         ScriptContext scriptContext = builder.peek();
-        PolyClassMachine polyClassMachine = PolyClassMachine.ofVar((ScriptContext)scriptContext, (String)"Machine");
-        ScriptValue scriptValue3 = polyClassMachine != null ? polyClassMachine.pg$127_axis() : ((scriptValue2 = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "axis", (ScriptValue)scriptValue2, (ScriptContext)scriptContext) : ScriptValue.NULL);
+        PolyClassMachine_v4 polyClassMachine_v4 = PolyClassMachine_v4.ofVar((ScriptContext)scriptContext, (String)"Machine");
+        ScriptValue scriptValue3 = polyClassMachine_v4 != null ? polyClassMachine_v4.pg$127_axis() : ((scriptValue2 = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "axis", (ScriptValue)scriptValue2, (ScriptContext)scriptContext) : ScriptValue.NULL);
         builder.val("axis", scriptValue3);
         if (ScriptFormula.valuesEqual((ScriptValue)scriptValue3, (ScriptValue)scriptContext.getClassOrVar("null"))) {
             ScriptValue scriptValue4 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", WaterWheel.class, "z");
@@ -585,8 +585,8 @@ public final class WaterWheel {
             Object object;
             double d2 = d;
             if (scriptValue10 instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue10).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                PolyClassMachine polyClassMachine2 = new PolyClassMachine(object);
-                v1 = ScriptValue.of((boolean)polyClassMachine2.tm$106_set_rpm_output(d2));
+                PolyClassMachine_v4 polyClassMachine_v42 = new PolyClassMachine_v4(object);
+                v1 = ScriptValue.of((boolean)polyClassMachine_v42.tm$106_set_rpm_output(d2));
             } else {
                 v1 = PolyDispatch.bootstrapCall("memberCall", "set_rpm_output", (ScriptValue)scriptValue10, (ScriptValue)ScriptValue.of((double)d2), (ScriptContext)scriptContext);
             }
@@ -600,8 +600,8 @@ public final class WaterWheel {
                 Object object;
                 double d3 = 0.0;
                 if (scriptValue11 instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue11).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                    PolyClassMachine polyClassMachine3 = new PolyClassMachine(object);
-                    v2 = ScriptValue.of((boolean)polyClassMachine3.tm$56_report_su(d3));
+                    PolyClassMachine_v4 polyClassMachine_v43 = new PolyClassMachine_v4(object);
+                    v2 = ScriptValue.of((boolean)polyClassMachine_v43.tm$56_report_su(d3));
                 } else {
                     v2 = PolyDispatch.bootstrapCall("memberCall", "report_su", (ScriptValue)scriptValue11, (ScriptValue)ScriptValue.of((double)d3), (ScriptContext)scriptContext);
                 }
@@ -615,8 +615,8 @@ public final class WaterWheel {
                 Object object;
                 double d4 = -scriptValue8.asNum();
                 if (scriptValue12 instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue12).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                    PolyClassMachine polyClassMachine4 = new PolyClassMachine(object);
-                    v3 = ScriptValue.of((boolean)polyClassMachine4.tm$56_report_su(d4));
+                    PolyClassMachine_v4 polyClassMachine_v44 = new PolyClassMachine_v4(object);
+                    v3 = ScriptValue.of((boolean)polyClassMachine_v44.tm$56_report_su(d4));
                 } else {
                     v3 = PolyDispatch.bootstrapCall("memberCall", "report_su", (ScriptValue)scriptValue12, (ScriptValue)ScriptValue.of((double)d4), (ScriptContext)scriptContext);
                 }
@@ -656,8 +656,8 @@ public final class WaterWheel {
             Object object;
             double d = 0.0;
             if (scriptValue instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                PolyClassMachine polyClassMachine = new PolyClassMachine(object);
-                v0 = ScriptValue.of((boolean)polyClassMachine.tm$106_set_rpm_output(d));
+                PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object);
+                v0 = ScriptValue.of((boolean)polyClassMachine_v4.tm$106_set_rpm_output(d));
             } else {
                 v0 = PolyDispatch.bootstrapCall("memberCall", "set_rpm_output", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((double)d), (ScriptContext)scriptContext);
             }
@@ -670,8 +670,8 @@ public final class WaterWheel {
             Object object;
             double d = 0.0;
             if (scriptValue2 instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue2).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                PolyClassMachine polyClassMachine = new PolyClassMachine(object);
-                v1 = ScriptValue.of((boolean)polyClassMachine.tm$56_report_su(d));
+                PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object);
+                v1 = ScriptValue.of((boolean)polyClassMachine_v4.tm$56_report_su(d));
             } else {
                 v1 = PolyDispatch.bootstrapCall("memberCall", "report_su", (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((double)d), (ScriptContext)scriptContext);
             }
