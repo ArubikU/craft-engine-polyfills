@@ -185,6 +185,41 @@ class ScriptClassCompilerTest {
     }
 
     @Test
+    @DisplayName("recompiling the SAME originPath (a script reload) gets a fresh class instead of permanently failing")
+    void recompileAfterReloadGetsAFreshClass() throws Exception {
+        // Simulates ScriptRegistry.loadAll's real reload flow: a brand-new ScriptProgram parsed
+        // for the SAME file, tryCompile called again with the SAME originPath. Before this was
+        // fixed, GenLoader's second define() of the same binary name threw a LinkageError,
+        // swallowed by tryCompile's own catch-all — silently and PERMANENTLY degrading this file
+        // to the interpreter for the rest of the plugin's lifetime, not just this one reload.
+        Path p = Path.of("src/main/resources/scripts/kinetics/generators/windmill.pf");
+        String src = Files.readString(p);
+        ScriptProgram reloaded = ScriptProgram.parse("windmill-reload-sim", src, LOG);
+        ScriptClassCompiler.Compiled first = ScriptClassCompiler.tryCompile(
+                "reload-sim/windmill", reloaded.statementsForCompiler());
+        ScriptProgram reloadedAgain = ScriptProgram.parse("windmill-reload-sim-2", src, LOG);
+        ScriptClassCompiler.Compiled second = ScriptClassCompiler.tryCompile(
+                "reload-sim/windmill", reloadedAgain.statementsForCompiler());
+
+        assertNotNull(first, "first compile of this originPath should succeed");
+        assertNotNull(second, "recompiling the SAME originPath (simulated reload) should ALSO succeed, not silently degrade");
+        assertNotSame(first.generatedClass(), second.generatedClass(), "the reload must get its own distinct class");
+
+        // And the fresh (reload) class must still actually WORK — not just exist.
+        Method spinAxis = second.methodsByDefName().get("_spin_axis");
+        assertNotNull(spinAxis);
+        record FakeMachine(double dx, double dy, double dz) {}
+        if (!PolyTypeRegistry.has("FakeMachineForReloadTest")) {
+            PolyTypeRegistry.define("FakeMachineForReloadTest")
+                    .property("facing_dy", o -> ScriptValue.of(((FakeMachine) o).dy()));
+        }
+        ScriptContext.Builder b = ScriptContext.builder()
+                .val("Machine", ScriptValue.ofObj("FakeMachineForReloadTest", new FakeMachine(0, 1, 0)));
+        ScriptValue result = (ScriptValue) spinAxis.invoke(null, b);
+        assertEquals("y", result.asStr());
+    }
+
+    @Test
     @DisplayName("a compiled def with a for-loop (_sail_count) matches the interpreter across several block lists")
     void compiledForLoopAgreesWithInterpreter() throws Exception {
         assertNotNull(compiled);

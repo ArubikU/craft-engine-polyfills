@@ -136,6 +136,12 @@ final class ScriptBytecodeCompiler {
     private static final String ARRAYLIST = "java/util/ArrayList";
     private static final String ARRAY_VALUE = "dev/arubik/craftengine/script/ScriptValue$Array";
     private static final String SCRIPT_CALL = "dev/arubik/craftengine/script/ScriptCall";
+    private static final String OBJ_VALUE = "dev/arubik/craftengine/script/ScriptValue$Obj";
+    private static final String POLY_CLASS = "dev/arubik/craftengine/script/PolyClass";
+    private static final String POLY_TYPE_REGISTRY = "dev/arubik/craftengine/script/PolyTypeRegistry";
+    private static final String POLY_TYPE = "dev/arubik/craftengine/script/PolyType";
+    private static final String METHOD_HANDLER = "dev/arubik/craftengine/script/PolyType$MethodHandler";
+    private static final String PROPERTY_HANDLER = "dev/arubik/craftengine/script/PolyType$PropertyHandler";
 
     /** name -> java.lang.Math method of the same (double)->double shape. Only pure, total (no
      *  exceptions) single-argument math functions — everything else falls through to {@code
@@ -151,6 +157,19 @@ final class ScriptBytecodeCompiler {
     /** name -> java.lang.Math method of the (double,double)->double shape. */
     private static final Map<String, String> BINARY_MATH = Map.of(
             "min", "min", "max", "max", "atan2", "atan2", "pow", "pow");
+
+    /** name -> java.lang.String instance method of the same (no-arg)->String shape — a
+     *  DELIBERATE hand-ported duplicate of {@code ScriptBuiltins}' own one-line registrations
+     *  ({@code register("upper", (args,ctx) -> ScriptValue.of(args.get(0).asStr().toUpperCase(...
+     *  ))}), same trade-off {@link #UNARY_MATH} already accepts for {@code java.lang.Math}: these
+     *  three are simple enough, and stable enough (they wrap a JDK method, not this codebase's own
+     *  logic that could get extended later), to be worth a second, faster implementation here
+     *  rather than routing every call through {@code ScriptFormula.callBuiltin}'s name-keyed
+     *  registry lookup. Anything NOT in this set still falls through to {@code callBuiltin}
+     *  exactly as before — this is a narrow, deliberately small allowlist, not an attempt to
+     *  hand-port the whole builtin registry. */
+    private static final Map<String, String> STRING_UNARY = Map.of(
+            "upper", "toUpperCase", "lower", "toLowerCase", "trim", "trim");
 
     // ---- Entry point -----------------------------------------------------
 
@@ -976,6 +995,49 @@ final class ScriptBytecodeCompiler {
                             }
                         };
                     }
+                    // Guarded by ScriptBuiltins.get(name) != null — NOT just the name string alone.
+                    // Caught live: in an environment where ScriptBuiltins' registrations haven't
+                    // run yet (they're populated by an explicit init call, same timing story as
+                    // PolyTypeRegistry — see ScriptProgram#ensureCompiled's own doc), "lower" isn't
+                    // actually registered at all, and the real callBuiltin falls through to NULL —
+                    // but this fast path, checking only the NAME, specialized it into a real
+                    // toLowerCase() call regardless, diverging from the interpreter for that
+                    // shape. Same registry-presence discipline as the PolyType specialization
+                    // above: skip the check, and BOTH a not-yet-initialized environment AND a
+                    // future rename/removal of the registered builtin can silently diverge.
+                    String strMethod = STRING_UNARY.get(name);
+                    if (strMethod != null && args.size() == 1 && ScriptBuiltins.get(name) != null) {
+                        Expr a = toAny(args.get(0));
+                        boolean needsLocale = !"trim".equals(strMethod);
+                        return new BaseExpr(Type.ANY) {
+                            @Override public void emit(MethodVisitor mv, Ctx c) {
+                                a.emit(mv, c);
+                                mv.visitMethodInsn(INVOKEINTERFACE, VALUE, "asStr", "()Ljava/lang/String;", true);
+                                if (needsLocale) {
+                                    mv.visitFieldInsn(GETSTATIC, "java/util/Locale", "ROOT", "Ljava/util/Locale;");
+                                    mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/String", strMethod,
+                                            "(Ljava/util/Locale;)Ljava/lang/String;", false);
+                                } else {
+                                    mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/String", strMethod,
+                                            "()Ljava/lang/String;", false);
+                                }
+                                mv.visitMethodInsn(INVOKESTATIC, VALUE, "of", "(Ljava/lang/String;)L" + VALUE + ";", true);
+                            }
+                        };
+                    }
+                    if ("contains".equals(name) && args.size() == 2 && ScriptBuiltins.get("contains") != null) {
+                        Expr a = toAny(args.get(0)), b = toAny(args.get(1));
+                        return new BaseExpr(Type.BOOL) {
+                            @Override public void emit(MethodVisitor mv, Ctx c) {
+                                a.emit(mv, c);
+                                mv.visitMethodInsn(INVOKEINTERFACE, VALUE, "asStr", "()Ljava/lang/String;", true);
+                                b.emit(mv, c);
+                                mv.visitMethodInsn(INVOKEINTERFACE, VALUE, "asStr", "()Ljava/lang/String;", true);
+                                mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/String", "contains",
+                                        "(Ljava/lang/CharSequence;)Z", false);
+                            }
+                        };
+                    }
                     if (resolver != null) {
                         LocalTarget lt = resolver.resolve(name);
                         if (lt != null) return localCall(lt, args);
@@ -1171,8 +1233,25 @@ final class ScriptBytecodeCompiler {
 
         /** {@code Name.prop} — mirrors the interpreter's dot-access property branch exactly:
          *  {@code sv = ctx.getClassInstance(name); if (sv==NULL) sv = ctx.getVar(name); return
-         *  sv!=NULL ? memberGet(sv, prop, ctx) : NULL;} */
+         *  sv!=NULL ? memberGet(sv, prop, ctx) : NULL;}
+         *
+         *  <p>When {@code name} resolves (at COMPILE time — {@link PolyTypeRegistry} is already
+         *  fully populated by the time any real script ever gets compiled, see {@code
+         *  ScriptProgram#ensureCompiled}'s own doc for why that timing is safe) to a REGISTERED
+         *  {@link PolyType} with this property, emits a DIRECT call to that type's resolved {@link
+         *  PolyType.PropertyHandler} instead — no {@link ScriptFormula#memberGet} in that path at
+         *  all. Still real, generic dispatch underneath (a fresh {@code PolyTypeRegistry.get}/
+         *  {@code resolveMethod} lookup by the compile-time-known constant strings, not a cached
+         *  handler reference — so a LATER {@code replaceProperty}/{@code extend} is picked up
+         *  exactly like the generic path would), just with {@code ScriptFormula.memberGet}'s own
+         *  switch-and-{@code PolyClass}-check layer skipped. Guarded by a runtime check that the
+         *  receiver genuinely IS that exact type (see {@link #emitPolyTypeGuard}'s own doc for why
+         *  that guard is load-bearing, not optional) — any mismatch falls back to the exact same
+         *  generic {@code memberGet} call as before, so this can never diverge from the always-
+         *  correct path, only skip redundant work on the way to it. */
         private static Expr dotPropertyGet(String name, String prop) {
+            PolyType type = PolyTypeRegistry.get(name);
+            PolyType.PropertyHandler resolved = type != null ? type.resolveProperty(prop) : null;
             return new BaseExpr(Type.ANY) {
                 @Override public void emit(MethodVisitor mv, Ctx c) {
                     int svSlot = c.allocRef();
@@ -1181,11 +1260,46 @@ final class ScriptBytecodeCompiler {
                     emitGetNull(mv);
                     Label isNullL = new Label(), endL = new Label();
                     mv.visitJumpInsn(IF_ACMPEQ, isNullL);
-                    mv.visitVarInsn(ALOAD, svSlot);
-                    mv.visitLdcInsn(prop);
-                    mv.visitVarInsn(ALOAD, c.ctxSlot);
-                    mv.visitMethodInsn(INVOKESTATIC, FORMULA, "memberGet",
-                            "(L" + VALUE + ";Ljava/lang/String;L" + CTX + ";)L" + VALUE + ";", false);
+
+                    if (resolved != null) {
+                        Label fallbackL = new Label(), fastL = new Label();
+                        int objSlot = c.allocRef(), instSlot = c.allocRef();
+                        emitPolyTypeGuard(mv, c, svSlot, name, objSlot, instSlot, fallbackL);
+                        mv.visitLdcInsn(name);
+                        mv.visitMethodInsn(INVOKESTATIC, POLY_TYPE_REGISTRY, "get",
+                                "(Ljava/lang/String;)L" + POLY_TYPE + ";", false);
+                        int typeSlot = c.allocRef();
+                        mv.visitVarInsn(ASTORE, typeSlot);
+                        mv.visitVarInsn(ALOAD, typeSlot);
+                        mv.visitJumpInsn(IFNULL, fallbackL);
+                        mv.visitVarInsn(ALOAD, typeSlot);
+                        mv.visitLdcInsn(prop);
+                        mv.visitMethodInsn(INVOKEVIRTUAL, POLY_TYPE, "resolveProperty",
+                                "(Ljava/lang/String;)L" + PROPERTY_HANDLER + ";", false);
+                        int handlerSlot = c.allocRef();
+                        mv.visitVarInsn(ASTORE, handlerSlot);
+                        mv.visitVarInsn(ALOAD, handlerSlot);
+                        mv.visitJumpInsn(IFNULL, fallbackL);
+                        mv.visitVarInsn(ALOAD, handlerSlot);
+                        mv.visitVarInsn(ALOAD, instSlot);
+                        mv.visitMethodInsn(INVOKEINTERFACE, PROPERTY_HANDLER, "get",
+                                "(Ljava/lang/Object;)L" + VALUE + ";", true);
+                        mv.visitJumpInsn(GOTO, fastL);
+                        mv.visitLabel(fallbackL);
+                        mv.visitVarInsn(ALOAD, svSlot);
+                        mv.visitLdcInsn(prop);
+                        mv.visitVarInsn(ALOAD, c.ctxSlot);
+                        mv.visitMethodInsn(INVOKESTATIC, FORMULA, "memberGet",
+                                "(L" + VALUE + ";Ljava/lang/String;L" + CTX + ";)L" + VALUE + ";", false);
+                        mv.visitLabel(fastL);
+                    } else {
+                        mv.visitVarInsn(ALOAD, svSlot);
+                        mv.visitLdcInsn(prop);
+                        mv.visitVarInsn(ALOAD, c.ctxSlot);
+                        mv.visitMethodInsn(INVOKESTATIC, FORMULA, "memberGet",
+                                "(L" + VALUE + ";Ljava/lang/String;L" + CTX + ";)L" + VALUE + ";", false);
+                    }
+
                     mv.visitJumpInsn(GOTO, endL);
                     mv.visitLabel(isNullL);
                     emitGetNull(mv);
@@ -1197,9 +1311,12 @@ final class ScriptBytecodeCompiler {
         /** {@code Name.method(args)} — same resolve-then-null-guard shape as {@link
          *  #dotPropertyGet}, but via {@code memberCall} with an evaluated arg list; args are only
          *  evaluated once {@code sv} is confirmed non-null, matching the interpreter's own
-         *  short-circuit order. */
+         *  short-circuit order. Same compile-time {@link PolyType} specialization as {@link
+         *  #dotPropertyGet} — see that method's own doc. */
         private static Expr dotMethodCall(String name, String method, List<Expr> rawArgs) {
             List<Expr> args = rawArgs.stream().map(ScriptBytecodeCompiler::toAny).toList();
+            PolyType type = PolyTypeRegistry.get(name);
+            PolyType.MethodHandler resolved = type != null ? type.resolveMethod(method) : null;
             return new BaseExpr(Type.ANY) {
                 @Override public void emit(MethodVisitor mv, Ctx c) {
                     int svSlot = c.allocRef();
@@ -1208,20 +1325,93 @@ final class ScriptBytecodeCompiler {
                     emitGetNull(mv);
                     Label isNullL = new Label(), endL = new Label();
                     mv.visitJumpInsn(IF_ACMPEQ, isNullL);
-                    mv.visitVarInsn(ALOAD, svSlot);
-                    mv.visitLdcInsn(method);
+
                     int listSlot = c.allocRef();
                     emitBuildArgsList(mv, c, args, listSlot);
-                    mv.visitVarInsn(ALOAD, listSlot);
-                    mv.visitVarInsn(ALOAD, c.ctxSlot);
-                    mv.visitMethodInsn(INVOKESTATIC, FORMULA, "memberCall",
-                            "(L" + VALUE + ";Ljava/lang/String;L" + LIST + ";L" + CTX + ";)L" + VALUE + ";", false);
+
+                    if (resolved != null) {
+                        Label fallbackL = new Label(), fastL = new Label();
+                        int objSlot = c.allocRef(), instSlot = c.allocRef();
+                        emitPolyTypeGuard(mv, c, svSlot, name, objSlot, instSlot, fallbackL);
+                        mv.visitLdcInsn(name);
+                        mv.visitMethodInsn(INVOKESTATIC, POLY_TYPE_REGISTRY, "get",
+                                "(Ljava/lang/String;)L" + POLY_TYPE + ";", false);
+                        int typeSlot = c.allocRef();
+                        mv.visitVarInsn(ASTORE, typeSlot);
+                        mv.visitVarInsn(ALOAD, typeSlot);
+                        mv.visitJumpInsn(IFNULL, fallbackL);
+                        mv.visitVarInsn(ALOAD, typeSlot);
+                        mv.visitLdcInsn(method);
+                        mv.visitMethodInsn(INVOKEVIRTUAL, POLY_TYPE, "resolveMethod",
+                                "(Ljava/lang/String;)L" + METHOD_HANDLER + ";", false);
+                        int handlerSlot = c.allocRef();
+                        mv.visitVarInsn(ASTORE, handlerSlot);
+                        mv.visitVarInsn(ALOAD, handlerSlot);
+                        mv.visitJumpInsn(IFNULL, fallbackL);
+                        mv.visitVarInsn(ALOAD, handlerSlot);
+                        mv.visitVarInsn(ALOAD, instSlot);
+                        mv.visitVarInsn(ALOAD, listSlot);
+                        mv.visitMethodInsn(INVOKEINTERFACE, METHOD_HANDLER, "call",
+                                "(Ljava/lang/Object;L" + LIST + ";)L" + VALUE + ";", true);
+                        mv.visitJumpInsn(GOTO, fastL);
+                        mv.visitLabel(fallbackL);
+                        mv.visitVarInsn(ALOAD, svSlot);
+                        mv.visitLdcInsn(method);
+                        mv.visitVarInsn(ALOAD, listSlot);
+                        mv.visitVarInsn(ALOAD, c.ctxSlot);
+                        mv.visitMethodInsn(INVOKESTATIC, FORMULA, "memberCall",
+                                "(L" + VALUE + ";Ljava/lang/String;L" + LIST + ";L" + CTX + ";)L" + VALUE + ";", false);
+                        mv.visitLabel(fastL);
+                    } else {
+                        mv.visitVarInsn(ALOAD, svSlot);
+                        mv.visitLdcInsn(method);
+                        mv.visitVarInsn(ALOAD, listSlot);
+                        mv.visitVarInsn(ALOAD, c.ctxSlot);
+                        mv.visitMethodInsn(INVOKESTATIC, FORMULA, "memberCall",
+                                "(L" + VALUE + ";Ljava/lang/String;L" + LIST + ";L" + CTX + ";)L" + VALUE + ";", false);
+                    }
+
                     mv.visitJumpInsn(GOTO, endL);
                     mv.visitLabel(isNullL);
                     emitGetNull(mv);
                     mv.visitLabel(endL);
                 }
             };
+        }
+
+        /** Emits: {@code sv instanceof ScriptValue.Obj o && o.instance() != null &&
+         *  !(o.instance() instanceof PolyClass) && expectedTypeName.equals(o.typeName())} — jumps
+         *  to {@code fallbackL} the instant any check fails, otherwise falls through with {@code
+         *  objSlot}/{@code instSlot} populated. This exact guard (not just an {@code instanceof
+         *  Obj} check) is load-bearing: {@link ScriptValue#callMethod}/{@code #getProperty} check
+         *  {@code instance() instanceof PolyClass} FIRST, unconditionally, before ever consulting
+         *  {@link PolyTypeRegistry} — a real, already-shipped precedent for why (see that method's
+         *  own comment): a script-visible name can be bound to an instance that does NOT match the
+         *  {@link PolyType} its OWN name would suggest (a {@code FormConditionClass} bound as
+         *  "World", handled by its own dispatch, not {@code WorldType}'s). Skipping this check
+         *  would silently call the WRONG handler with the wrong instance shape whenever that
+         *  happens, instead of falling back like the generic path correctly does. */
+        private static void emitPolyTypeGuard(MethodVisitor mv, Ctx c, int svSlot, String expectedTypeName,
+                                               int objSlot, int instSlot, Label fallbackL) {
+            mv.visitVarInsn(ALOAD, svSlot);
+            mv.visitTypeInsn(INSTANCEOF, OBJ_VALUE);
+            mv.visitJumpInsn(IFEQ, fallbackL);
+            mv.visitVarInsn(ALOAD, svSlot);
+            mv.visitTypeInsn(CHECKCAST, OBJ_VALUE);
+            mv.visitVarInsn(ASTORE, objSlot);
+            mv.visitVarInsn(ALOAD, objSlot);
+            mv.visitMethodInsn(INVOKEVIRTUAL, OBJ_VALUE, "instance", "()Ljava/lang/Object;", false);
+            mv.visitVarInsn(ASTORE, instSlot);
+            mv.visitVarInsn(ALOAD, instSlot);
+            mv.visitJumpInsn(IFNULL, fallbackL);
+            mv.visitVarInsn(ALOAD, instSlot);
+            mv.visitTypeInsn(INSTANCEOF, POLY_CLASS);
+            mv.visitJumpInsn(IFNE, fallbackL);
+            mv.visitVarInsn(ALOAD, objSlot);
+            mv.visitMethodInsn(INVOKEVIRTUAL, OBJ_VALUE, "typeName", "()Ljava/lang/String;", false);
+            mv.visitLdcInsn(expectedTypeName);
+            mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/String", "equals", "(Ljava/lang/Object;)Z", false);
+            mv.visitJumpInsn(IFEQ, fallbackL);
         }
 
         /** A call to another {@code def} the SAME file's {@link ScriptClassCompiler} pass already

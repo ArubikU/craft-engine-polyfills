@@ -98,6 +98,16 @@ final class ScriptClassCompiler {
     }
     private static final GenLoader LOADER = new GenLoader();
 
+    /** Disambiguates a reload's binary-name collision — see {@code tryCompile}'s own comment at
+     *  its call site for why this exists at all. */
+    private static final java.util.concurrent.atomic.AtomicInteger RELOAD_COUNTER =
+            new java.util.concurrent.atomic.AtomicInteger();
+
+    private static boolean isAlreadyDefined(String binaryName) {
+        try { Class.forName(binaryName, false, LOADER); return true; }
+        catch (Throwable notDefined) { return false; }
+    }
+
     /** {@code classBytes} is the exact raw bytecode {@link #tryCompile} generated and handed to
      *  the {@link GenLoader} — kept here (not just discarded after {@code define}) specifically so
      *  a test can disassemble it directly; a dynamically-defined class has no {@code .class}
@@ -197,6 +207,25 @@ final class ScriptClassCompiler {
             String simpleClassName = pkgAndClass[1];
             String internalName = pkgPath.isEmpty() ? simpleClassName : pkgPath + "/" + simpleClassName;
             String binaryName = internalName.replace('/', '.');
+            // A reload (ScriptRegistry.loadAll/reloadOne) builds a BRAND NEW ScriptProgram for the
+            // SAME file and calls tryCompile with the SAME originPath again — but LOADER is a
+            // plugin-lifetime singleton whose already-defined classes never unload (the OLD
+            // ScriptProgram instance is garbage, its generated CLASS isn't), so defining the exact
+            // same binary name twice throws. Left unhandled, that LinkageError would be swallowed
+            // by this method's own outer catch-all and silently, PERMANENTLY degrade this file back
+            // to the interpreter after the very first reload, for the rest of the plugin's
+            // lifetime — never a crash, but a real, silent loss of the JIT. Detecting the
+            // collision up front and suffixing the name instead keeps every reload getting its own
+            // fresh class. (Safe to do unconditionally: every real path in this codebase that can
+            // change a PolyType handler — ScriptBootstrap.reload() — is always immediately followed
+            // by ScriptRegistry.loadAll, so there's never a live window where an OLD compiled class
+            // observes a handler that's since changed without also being recompiled itself.)
+            if (isAlreadyDefined(binaryName)) {
+                String suffix = "$" + RELOAD_COUNTER.incrementAndGet();
+                simpleClassName += suffix;
+                internalName += suffix;
+                binaryName += suffix;
+            }
 
             ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS);
             cw.visit(V21, ACC_PUBLIC | ACC_FINAL | ACC_SUPER, internalName, null, "java/lang/Object", null);
