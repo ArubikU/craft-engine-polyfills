@@ -69,6 +69,7 @@
         "title": "Pressurizer Well",
         "menu_size": 54,
         "flags": {
+          "fuel": true,
           "continuous_fuel": true
         },
         "slots": {

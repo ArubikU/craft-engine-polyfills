@@ -113,7 +113,7 @@ public class GasMotorScriptTest {
 
     @Test
     void gasMotorScriptParses() throws Exception {
-        Path scriptPath = Path.of("src/main/resources/scripts/gas_motor.pf");
+        Path scriptPath = Path.of("src/main/resources/scripts/kinetics/generators/gas_motor.pf");
         assertTrue(Files.exists(scriptPath), "gas_motor.pf must exist");
         String src = Files.readString(scriptPath);
         ScriptProgram prog = ScriptProgram.parse("gas_motor", src, LOG);
@@ -126,7 +126,7 @@ public class GasMotorScriptTest {
 
     @Test
     void functionDefsRegisteredBeforeBodyReturn() throws Exception {
-        Path scriptPath = Path.of("src/main/resources/scripts/gas_motor.pf");
+        Path scriptPath = Path.of("src/main/resources/scripts/kinetics/generators/gas_motor.pf");
         String src = Files.readString(scriptPath);
         ScriptProgram prog = ScriptProgram.parse("gas_motor", src, LOG);
 
@@ -147,7 +147,7 @@ public class GasMotorScriptTest {
 
     @Test
     void functionDefsRegisteredWhenGasPresent() throws Exception {
-        Path scriptPath = Path.of("src/main/resources/scripts/gas_motor.pf");
+        Path scriptPath = Path.of("src/main/resources/scripts/kinetics/generators/gas_motor.pf");
         String src = Files.readString(scriptPath);
         ScriptProgram prog = ScriptProgram.parse("gas_motor", src, LOG);
 
@@ -170,7 +170,7 @@ public class GasMotorScriptTest {
 
     @Test
     void statusReturnsFalseWhenNoGas() throws Exception {
-        Path scriptPath = Path.of("src/main/resources/scripts/gas_motor.pf");
+        Path scriptPath = Path.of("src/main/resources/scripts/kinetics/generators/gas_motor.pf");
         String src = Files.readString(scriptPath);
         ScriptProgram prog = ScriptProgram.parse("gas_motor", src, LOG);
 
@@ -184,7 +184,7 @@ public class GasMotorScriptTest {
 
     @Test
     void statusReturnsFalseWhenTankEmpty() throws Exception {
-        Path scriptPath = Path.of("src/main/resources/scripts/gas_motor.pf");
+        Path scriptPath = Path.of("src/main/resources/scripts/kinetics/generators/gas_motor.pf");
         String src = Files.readString(scriptPath);
         ScriptProgram prog = ScriptProgram.parse("gas_motor", src, LOG);
 
@@ -198,7 +198,7 @@ public class GasMotorScriptTest {
 
     @Test
     void statusReturnsTrueWhenGasAndRpm() throws Exception {
-        Path scriptPath = Path.of("src/main/resources/scripts/gas_motor.pf");
+        Path scriptPath = Path.of("src/main/resources/scripts/kinetics/generators/gas_motor.pf");
         String src = Files.readString(scriptPath);
         ScriptProgram prog = ScriptProgram.parse("gas_motor", src, LOG);
 
@@ -217,7 +217,7 @@ public class GasMotorScriptTest {
 
     @Test
     void increaseRpmFromDefault() throws Exception {
-        Path scriptPath = Path.of("src/main/resources/scripts/gas_motor.pf");
+        Path scriptPath = Path.of("src/main/resources/scripts/kinetics/generators/gas_motor.pf");
         String src = Files.readString(scriptPath);
         ScriptProgram prog = ScriptProgram.parse("gas_motor", src, LOG);
 
@@ -235,7 +235,7 @@ public class GasMotorScriptTest {
 
     @Test
     void decreaseRpmToZero() throws Exception {
-        Path scriptPath = Path.of("src/main/resources/scripts/gas_motor.pf");
+        Path scriptPath = Path.of("src/main/resources/scripts/kinetics/generators/gas_motor.pf");
         String src = Files.readString(scriptPath);
         ScriptProgram prog = ScriptProgram.parse("gas_motor", src, LOG);
 
@@ -252,7 +252,7 @@ public class GasMotorScriptTest {
 
     @Test
     void increaseSuCapsAt1024() throws Exception {
-        Path scriptPath = Path.of("src/main/resources/scripts/gas_motor.pf");
+        Path scriptPath = Path.of("src/main/resources/scripts/kinetics/generators/gas_motor.pf");
         String src = Files.readString(scriptPath);
         ScriptProgram prog = ScriptProgram.parse("gas_motor", src, LOG);
 
@@ -269,7 +269,7 @@ public class GasMotorScriptTest {
 
     @Test
     void decreaseSuFloorsAtZero() throws Exception {
-        Path scriptPath = Path.of("src/main/resources/scripts/gas_motor.pf");
+        Path scriptPath = Path.of("src/main/resources/scripts/kinetics/generators/gas_motor.pf");
         String src = Files.readString(scriptPath);
         ScriptProgram prog = ScriptProgram.parse("gas_motor", src, LOG);
 
@@ -289,7 +289,7 @@ public class GasMotorScriptTest {
 
     @Test
     void gasConsumedWhenMotorRunning() throws Exception {
-        Path scriptPath = Path.of("src/main/resources/scripts/gas_motor.pf");
+        Path scriptPath = Path.of("src/main/resources/scripts/kinetics/generators/gas_motor.pf");
         String src = Files.readString(scriptPath);
         ScriptProgram prog = ScriptProgram.parse("gas_motor", src, LOG);
 
@@ -305,7 +305,7 @@ public class GasMotorScriptTest {
 
     @Test
     void rpmOutputSetWhenGasPresent() throws Exception {
-        Path scriptPath = Path.of("src/main/resources/scripts/gas_motor.pf");
+        Path scriptPath = Path.of("src/main/resources/scripts/kinetics/generators/gas_motor.pf");
         String src = Files.readString(scriptPath);
         ScriptProgram prog = ScriptProgram.parse("gas_motor", src, LOG);
 
@@ -321,7 +321,7 @@ public class GasMotorScriptTest {
 
     @Test
     void noOutputWhenNoGas() throws Exception {
-        Path scriptPath = Path.of("src/main/resources/scripts/gas_motor.pf");
+        Path scriptPath = Path.of("src/main/resources/scripts/kinetics/generators/gas_motor.pf");
         String src = Files.readString(scriptPath);
         ScriptProgram prog = ScriptProgram.parse("gas_motor", src, LOG);
 
@@ -337,7 +337,7 @@ public class GasMotorScriptTest {
 
     @Test
     void overclockAmplifiesOutput() throws Exception {
-        Path scriptPath = Path.of("src/main/resources/scripts/gas_motor.pf");
+        Path scriptPath = Path.of("src/main/resources/scripts/kinetics/generators/gas_motor.pf");
         String src = Files.readString(scriptPath);
         ScriptProgram prog = ScriptProgram.parse("gas_motor", src, LOG);
 

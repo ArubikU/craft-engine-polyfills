@@ -50,17 +50,25 @@ public final class ScriptContext {
     }
 
     public ScriptValue getVar(String name) {
-        ScriptValue v = vars.getOrDefault(name, ScriptValue.NULL);
         java.util.Set<String> tracked = TRACKED_VARS.get();
-        // Only counts as a real dependency if the name actually resolved to something — every
-        // builtin-function CALL (sin(...), CraftEngineItem(...), tick(), ...) does a getVar(name)
-        // first to check for a user-defined override (see ScriptFormula#callBuiltin), which would
-        // otherwise pollute tracking with the FUNCTION's own name for every formula that calls any
-        // builtin at all, even a pure-literal one like CraftEngineItem("cml:foo") that has NO real
-        // context dependency. A not-found lookup can't have influenced the result, so it's not
-        // tracked — this is what lets a formula like that be recognized as fully shareable.
-        if (tracked != null && v != ScriptValue.NULL) tracked.add(name);
-        return v;
+        if (tracked != null) tracked.add(name);
+        return vars.getOrDefault(name, ScriptValue.NULL);
+    }
+
+    /** Same lookup as {@link #getVar}, but never recorded by an active {@link #beginTracking}
+     *  window. Used ONLY for {@code ScriptFormula#callBuiltin}'s user-function-override check,
+     *  which does a getVar(functionName) on EVERY builtin call (sin(...), CraftEngineItem(...),
+     *  tick(), ...) purely to see whether a script-defined function shadows it — that probe isn't
+     *  a real data dependency and must not pollute dependency tracking with the function's own
+     *  name, or a pure-literal call like {@code CraftEngineItem("cml:foo")} would wrongly look
+     *  ctx-dependent. A genuine variable read (identifiers, not call targets) must still go
+     *  through {@link #getVar} and be tracked EVEN when it resolves to NULL — a top-level Assign
+     *  probed against an empty context (see {@code ScriptProgram#isTopLevelCacheable}) needs an
+     *  unresolved name to still register as a real dependency, or the probe can't tell "this
+     *  formula truly reads nothing new" apart from "this formula reads a real ctx var that just
+     *  happened to miss during the probe" — the latter was a real caching-correctness bug. */
+    public ScriptValue peekVar(String name) {
+        return vars.getOrDefault(name, ScriptValue.NULL);
     }
 
     public ScriptValue getClassInstance(String name) {

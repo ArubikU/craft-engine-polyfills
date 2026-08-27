@@ -58,8 +58,16 @@ class SensorScriptTest {
             .method("set", (o, a) -> { emitted.add((int) a.get(0).asNum()); return ScriptValue.of(true); })
             .method("off", (o, a) -> { emitted.add(0); return ScriptValue.of(true); });
 
+        // Mocks Machine.container — the real MachineType#container property (see
+        // MachineType.java) wraps ItemTransferHelper.getContainer as a ContainerType exposing
+        // absolute-slot get_item/set_item. block_sensor.pf reads its filter via
+        // Machine.container.get_item(4), not the old Machine.get_item_in_slot.
+        PolyTypeRegistry.define("Container")
+            .method("get_item", (o, a) -> slots.getOrDefault((int) a.get(0).asNum(), ScriptValue.NULL));
+
         PolyTypeRegistry.define("Machine")
             .property("redstone", o -> ScriptValue.ofObj("Redstone", new Object()))
+            .property("container", o -> ScriptValue.ofObj("Container", new Object()))
             .property("facing_dx", o -> ScriptValue.of(facingDx))
             .property("facing_dy", o -> ScriptValue.of(facingDy))
             .property("facing_dz", o -> ScriptValue.of(facingDz))
@@ -84,7 +92,7 @@ class SensorScriptTest {
     }
 
     private void runScript(String name) throws Exception {
-        String src = Files.readString(Path.of("src/main/resources/scripts/" + name + ".pf"));
+        String src = Files.readString(Path.of("src/main/resources/scripts/sensors/" + name + ".pf"));
         ScriptProgram prog = ScriptProgram.parse(name, src, LOG);
         prog.evaluate(ScriptContext.builder().typed("Machine", new Object()).build());
     }

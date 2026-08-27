@@ -2,10 +2,7 @@
   "id": "polyfills:gas_motor_mk1",
   "title": "Gas Motor Mk1",
   "flags": {
-    "recipes": false,
-    "fuel": false,
     "kinetics": true,
-    "continuous_fuel": false,
     "ui": true,
     "ui_tick": true,
     "io_pull": true,

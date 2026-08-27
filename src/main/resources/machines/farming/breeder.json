@@ -2,9 +2,7 @@
   "id": "polyfills:breeder",
   "title": "Auto Breeder",
   "flags": {
-    "fuel": false,
     "recipes": true,
-    "continuous_fuel": false,
     "ui": true,
     "ui_tick": true,
     "io_pull": true,

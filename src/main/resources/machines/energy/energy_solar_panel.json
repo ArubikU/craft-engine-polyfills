@@ -2,9 +2,6 @@
   "id": "polyfills:energy_solar_panel",
   "title": "Solar Panel",
   "flags": {
-    "recipes": false,
-    "fuel": false,
-    "continuous_fuel": false,
     "ui": true,
     "ui_tick": true,
     "io_pull": true,

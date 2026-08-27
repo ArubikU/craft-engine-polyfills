@@ -3,9 +3,6 @@
   "title": "Teleporter",
   "on_break": "teleport/teleporter.pf:on_break",
   "flags": {
-    "recipes": false,
-    "fuel": false,
-    "continuous_fuel": false,
     "ui": true,
     "ui_tick": true,
     "io_pull": true,

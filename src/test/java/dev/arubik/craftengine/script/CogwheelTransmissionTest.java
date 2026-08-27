@@ -24,7 +24,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class CogwheelTransmissionTest {
 
     private static final Logger LOG = Logger.getLogger("test");
-    private static final Path SCRIPT = Path.of("src/main/resources/scripts/cogwheel.pf");
+    private static final Path SCRIPT = Path.of("src/main/resources/scripts/kinetics/shafts/cogwheel.pf");
 
     /** One recorded Machine.relay_to(block, rpm) call. */
     record Relay(String neighborId, double rpm) {}

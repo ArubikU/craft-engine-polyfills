@@ -103,8 +103,11 @@ public final class ScriptFormula {
     // ---- Built-in functions ------------------------------------------------
 
     private static ScriptValue callBuiltin(String name, List<ScriptValue> args, ScriptContext ctx) {
-        // Check user-defined functions first (stored as ScriptValue.Obj with type "__func__")
-        ScriptValue userFuncVal = ctx.getVar(name);
+        // Check user-defined functions first (stored as ScriptValue.Obj with type "__func__").
+        // peekVar, not getVar — this is an override PROBE, not a real read of `name` as data; see
+        // ScriptContext#peekVar's javadoc for why routing it through getVar corrupts dependency
+        // tracking.
+        ScriptValue userFuncVal = ctx.peekVar(name);
         if (userFuncVal instanceof ScriptValue.Obj uo && UserFunction.TYPE.equals(uo.typeName())
                 && uo.instance() instanceof UserFunction fn) {
             return fn.call(args, ctx);

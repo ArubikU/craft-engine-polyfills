@@ -117,10 +117,12 @@ class MultiblockConfigTest {
         assertNotNull(flags, "its fuel behaviour must survive the migration");
         assertTrue(flags.get("continuous_fuel").getAsBoolean(),
                 "continuous_fuel was a legacy key here and must have become a flag");
-        // fuel defaults to true, so the migration must NOT have spelled it out.
-        assertFalse(flags.has("fuel") && !flags.get("fuel").getAsBoolean(),
+        // MachineFlags.DEFAULT is all-false (every machine spells out its full flag set
+        // explicitly now — see MachineFlags's javadoc), so "requires fuel" must be spelled out
+        // rather than relied upon as a default.
+        assertFalse(MachineFlags.DEFAULT.fuel(), "fuel is opt-in, not a default");
+        assertTrue(flags.has("fuel") && flags.get("fuel").getAsBoolean(),
                 "the well still requires fuel");
-        assertTrue(MachineFlags.DEFAULT.fuel(), "…which is the default");
     }
 
     @Test

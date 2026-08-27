@@ -2,9 +2,6 @@
   "id": "polyfills:item_filter",
   "title": "Item Filter",
   "flags": {
-    "recipes": false,
-    "fuel": false,
-    "continuous_fuel": false,
     "ui": true,
     "ui_tick": true,
     "io_pull": true,

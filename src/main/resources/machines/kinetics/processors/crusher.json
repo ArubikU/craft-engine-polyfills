@@ -3,10 +3,8 @@
   "recipe_type": "crusher",
   "title": "Crusher",
   "flags": {
-    "fuel": false,
     "kinetics": true,
     "recipes": true,
-    "continuous_fuel": false,
     "ui": true,
     "ui_tick": true,
     "io_pull": true,

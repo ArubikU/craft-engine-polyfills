@@ -2,10 +2,8 @@
   "id": "polyfills:backpack_storage",
   "title": "<gold>Backpack Storage",
   "flags": {
-    "recipes": false,
     "kinetics": false,
     "fuel": true,
-    "continuous_fuel": false,
     "ui": true,
     "ui_tick": true,
     "io_pull": true,

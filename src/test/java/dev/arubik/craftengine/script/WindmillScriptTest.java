@@ -28,7 +28,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class WindmillScriptTest {
 
     private static final Logger LOG = Logger.getLogger("test");
-    private static final Path SCRIPT = Path.of("src/main/resources/scripts/windmill.pf");
+    private static final Path SCRIPT = Path.of("src/main/resources/scripts/kinetics/generators/windmill.pf");
 
     record FakeBlock(String id) {}
 

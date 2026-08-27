@@ -2,11 +2,6 @@
   "id": "polyfills:bucket_refiller",
   "title": "Bucket Refiller",
   "flags": {
-    "recipes": false,
-    "fuel": false,
-    "ui": false,
-    "ui_tick": false,
-    "continuous_fuel": false,
     "io_pull": true,
     "renderers": true,
     "scripts": true,

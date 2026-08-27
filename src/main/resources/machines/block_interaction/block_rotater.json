@@ -2,9 +2,7 @@
   "id": "polyfills:block_rotater",
   "title": "Block Rotater",
   "flags": {
-    "fuel": false,
     "recipes": true,
-    "continuous_fuel": false,
     "ui": true,
     "ui_tick": true,
     "io_pull": true,

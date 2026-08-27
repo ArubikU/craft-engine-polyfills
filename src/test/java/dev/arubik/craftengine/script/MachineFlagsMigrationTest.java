@@ -36,9 +36,16 @@ class MachineFlagsMigrationTest {
             "io_pull", "renderers", "scripts", "animations", "redstone");
 
     private static Stream<Path> machineFiles() throws IOException {
-        try (var s = Files.list(MACHINES)) {
+        try (var s = Files.walk(MACHINES)) {
             return s.filter(p -> p.toString().endsWith(".json")).toList().stream();
         }
+    }
+
+    private static Path resolveMachine(String fileName) throws IOException {
+        return machineFiles()
+                .filter(p -> p.getFileName().toString().equals(fileName))
+                .findFirst()
+                .orElseThrow(() -> new IOException("no machine json named " + fileName));
     }
 
     private static JsonObject read(Path p) throws IOException {
@@ -138,9 +145,12 @@ class MachineFlagsMigrationTest {
     @Test
     @DisplayName("gas_motor_mk1 is a recipe-less kinetic source with a live UI")
     void gasMotorFlags() throws IOException {
-        JsonObject flags = read(MACHINES.resolve("gas_motor_mk1.json")).getAsJsonObject("flags");
+        JsonObject flags = read(resolveMachine("gas_motor_mk1.json")).getAsJsonObject("flags");
         assertNotNull(flags, "gas_motor_mk1 must declare flags");
-        assertFalse(flags.get("recipes").getAsBoolean(), "the motor has no recipes");
+        // recipes=false is now the record default (see MachineFlags.DEFAULT), so a fully-migrated
+        // file omits it entirely rather than spelling out a redundant value — an absent key still
+        // means "no recipes".
+        assertFalse(flags.has("recipes") && flags.get("recipes").getAsBoolean(), "the motor has no recipes");
         assertTrue(flags.get("kinetics").getAsBoolean(), "the motor drives the RPM network");
         // ui / ui_tick must stay at their true defaults: the frozen-GUI bug was exactly this.
         assertFalse(flags.has("ui") && !flags.get("ui").getAsBoolean(), "the motor's GUI must open");
@@ -151,8 +161,9 @@ class MachineFlagsMigrationTest {
     @Test
     @DisplayName("xp_collector no longer runs the recipe pipeline")
     void xpCollectorHasNoRecipes() throws IOException {
-        JsonObject o = read(MACHINES.resolve("xp_collector.json"));
-        assertFalse(o.getAsJsonObject("flags").get("recipes").getAsBoolean(),
+        JsonObject o = read(resolveMachine("xp_collector.json"));
+        JsonObject flags = o.getAsJsonObject("flags");
+        assertFalse(flags.has("recipes") && flags.get("recipes").getAsBoolean(),
                 "xp_collector has no recipes registered, so the pipeline is pure overhead");
 
         String layout = o.getAsJsonArray("pages").get(0).getAsJsonObject().get("layout").toString();

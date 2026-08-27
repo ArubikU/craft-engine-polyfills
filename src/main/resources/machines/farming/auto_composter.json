@@ -2,9 +2,7 @@
   "id": "polyfills:auto_composter",
   "title": "Auto Composter",
   "flags": {
-    "fuel": false,
     "recipes": true,
-    "continuous_fuel": false,
     "ui": true,
     "ui_tick": true,
     "io_pull": true,

@@ -2,11 +2,6 @@
   "id": "polyfills:chute",
   "title": "Chute",
   "flags": {
-    "recipes": false,
-    "fuel": false,
-    "ui": false,
-    "ui_tick": false,
-    "continuous_fuel": false,
     "io_pull": true,
     "renderers": true,
     "scripts": true,

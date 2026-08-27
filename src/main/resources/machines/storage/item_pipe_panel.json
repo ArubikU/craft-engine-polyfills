@@ -2,10 +2,7 @@
   "id": "polyfills:item_pipe_panel",
   "title": "Item Pipe",
   "flags": {
-    "recipes": false,
-    "fuel": false,
     "redstone": true,
-    "continuous_fuel": false,
     "ui": true,
     "ui_tick": true,
     "io_pull": true,

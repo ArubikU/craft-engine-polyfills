@@ -4,9 +4,7 @@
   "title": "Energy Furnace",
   "menu_size": 54,
   "flags": {
-    "fuel": false,
     "recipes": true,
-    "continuous_fuel": false,
     "ui": true,
     "ui_tick": true,
     "io_pull": true,

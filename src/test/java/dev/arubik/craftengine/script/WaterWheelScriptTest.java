@@ -26,7 +26,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class WaterWheelScriptTest {
 
     private static final Logger LOG = Logger.getLogger("test");
-    private static final Path SCRIPT = Path.of("src/main/resources/scripts/water_wheel.pf");
+    private static final Path SCRIPT = Path.of("src/main/resources/scripts/kinetics/generators/water_wheel.pf");
 
     /** A fluid at some offset: flow vector, or null for "no fluid here". */
     record Fluid(double x, double y, double z) {}

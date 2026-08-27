@@ -4,9 +4,7 @@
   "title": "Gear Press",
   "menu_size": 36,
   "flags": {
-    "fuel": false,
     "recipes": true,
-    "continuous_fuel": false,
     "ui": true,
     "ui_tick": true,
     "io_pull": true,

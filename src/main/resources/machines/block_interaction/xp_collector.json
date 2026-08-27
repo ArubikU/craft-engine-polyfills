@@ -2,9 +2,6 @@
   "id": "polyfills:xp_collector",
   "title": "XP Collector",
   "flags": {
-    "recipes": false,
-    "fuel": false,
-    "continuous_fuel": false,
     "ui": true,
     "ui_tick": true,
     "io_pull": true,

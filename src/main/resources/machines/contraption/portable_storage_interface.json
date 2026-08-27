@@ -2,10 +2,7 @@
   "id": "polyfills:portable_storage_interface",
   "title": "Portable Storage Interface",
   "flags": {
-    "recipes": false,
-    "fuel": false,
     "redstone": true,
-    "continuous_fuel": false,
     "ui": true,
     "ui_tick": true,
     "io_pull": true,

@@ -5,10 +5,7 @@
   "on_right_click": "teleport/specialized_teleporter.pf:on_right_click",
   "on_redstone_actuator": "teleport/specialized_teleporter.pf:on_redstone_actuator",
   "flags": {
-    "recipes": false,
-    "fuel": false,
     "redstone": true,
-    "continuous_fuel": false,
     "ui": true,
     "ui_tick": true,
     "io_pull": true,
