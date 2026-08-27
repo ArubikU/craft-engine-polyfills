@@ -117,6 +117,11 @@ dependencies {
     // Redis client for RedisDriver ("Redis.*" scripting API) — a small, dependency-light client
     // (no separate connection-pool library needed beyond what Jedis itself ships).
     implementation("redis.clients:jedis:5.1.5")
+    // JIT backend for ScriptBytecodeCompiler (see that class) — generates real JVM bytecode for the
+    // pure-numeric/boolean subset of the .pf expression grammar instead of walking a lambda-closure
+    // tree. Tiny (~120KB), so bundled directly rather than reaching for Paper's own internal/shaded
+    // copy (a different, version-coupled ASM we don't want a compile-time dependency on).
+    implementation("org.ow2.asm:asm:9.7")
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.0")
     testImplementation("org.mockito:mockito-core:5.11.0")
     testImplementation("io.papermc.paper:paper-api:${rootProject.properties["paper_version"]}-R0.1-SNAPSHOT")
@@ -199,6 +204,7 @@ tasks {
         include { true }
     }
     relocate("net.bytebuddy", "dev.arubik.libs.bytebuddy")
+    relocate("org.objectweb.asm", "dev.arubik.libs.asm")
     // NOT relocating org.sqlite: sqlite-jdbc's native library is a platform .dll/.so compiled with
     // JNI method symbols baked in for the ORIGINAL package name (Java_org_sqlite_core_NativeDB_...).
     // Relocating the Java class breaks that binding at runtime (UnsatisfiedLinkError — observed
