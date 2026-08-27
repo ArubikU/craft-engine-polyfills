@@ -7,6 +7,7 @@ import dev.arubik.craftengine.chainery.ChainRegistry;
 import dev.arubik.craftengine.chainery.ChaineryBlockBehavior;
 import dev.arubik.craftengine.script.PolyTypeRegistry;
 import dev.arubik.craftengine.script.ScriptValue;
+import dev.arubik.craftengine.script.TypeCodecs;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.momirealms.craftengine.bukkit.api.CraftEngineBlocks;
@@ -38,6 +39,10 @@ public final class ChainManagerType {
             // click-two-points flow minus the inventory/item cost. link_item_id only affects what the
             // rope renders as / drops on break — pass it whenever anchor_block_id is a real, configured
             // id (the hardcoded ChainMaterial.DEFAULT ids aren't configured in every pack).
+            // Not migrated: up to 9 args (2 genuinely optional trailing: anchor_block_id?,
+            // link_item_id?, each individually checked via args.size() > 7 / > 8) — exceeds the
+            // fixed-arity methodTyped0..7 API and has optional-trailing-arg shape besides. Left
+            // untyped.
             .method("create_chain", (obj, args) -> {
                 ServerLevel level = worldArg(args, 0);
                 if (level == null || args.size() < 7) return ScriptValue.NULL;
@@ -55,6 +60,9 @@ public final class ChainManagerType {
                 return ChainType.wrap(chain);
             })
             // break_chain(id, drop_items?) -> bool
+            // Not migrated to methodTyped2: drop_items has a default-if-missing shape
+            // (args.size() > 1 && args.get(1).asBool()) — the default applies to the ARGUMENT when
+            // absent, not to the return value, which onMissingArgs can't express. Left untyped.
             .method("break_chain", (obj, args) -> {
                 if (args.isEmpty()) return ScriptValue.of(false);
                 Chain chain = lookup(args.get(0).asStr());
@@ -64,37 +72,48 @@ public final class ChainManagerType {
                 return ScriptValue.of(true);
             })
             // get(id) -> Chain or null
-            .method("get", (obj, args) ->
-                args.isEmpty() ? ScriptValue.NULL : ChainType.wrap(lookup(args.get(0).asStr())))
-            // chain_at(World, x, y, z) -> Chain or null (any one chain anchored there)
-            .method("chain_at", (obj, args) -> {
-                ServerLevel level = worldArg(args, 0);
-                if (level == null || args.size() < 4) return ScriptValue.NULL;
-                BlockPos pos = new BlockPos((int) args.get(1).asNum(), (int) args.get(2).asNum(), (int) args.get(3).asNum());
-                return ChainType.wrap(ChainRegistry.at(level.getWorld().getUID(), pos));
-            })
+            .methodTyped1("get", TypeCodecs.STRING, TypeCodecs.RAW, ScriptValue.NULL,
+                (Object obj, String id) -> ChainType.wrap(lookup(id)))
+            // chain_at(World, x, y, z) -> Chain or null (any one chain anchored there). The World
+            // arg stays TypeCodecs.RAW and is decoded the same way worldArg(args, i) does — a plain
+            // STRING/DOUBLE/BOOL codec can't express "unwrap a ScriptValue.Obj holding a
+            // ServerLevel, or null" — decode logic is inlined below rather than kept as a
+            // List<ScriptValue>-based helper, since a typed handler no longer has the raw args list.
+            .methodTyped4("chain_at", TypeCodecs.RAW, TypeCodecs.DOUBLE, TypeCodecs.DOUBLE, TypeCodecs.DOUBLE,
+                TypeCodecs.RAW, ScriptValue.NULL,
+                (Object obj, ScriptValue worldVal, Double x, Double y, Double z) -> {
+                    ServerLevel level = worldOf(worldVal);
+                    if (level == null) return ScriptValue.NULL;
+                    BlockPos pos = new BlockPos((int) (double) x, (int) (double) y, (int) (double) z);
+                    return ChainType.wrap(ChainRegistry.at(level.getWorld().getUID(), pos));
+                })
             // chains_at(World, x, y, z) -> Array<Chain> (every chain anchored there — an anchor can host several)
-            .method("chains_at", (obj, args) -> {
-                ServerLevel level = worldArg(args, 0);
-                if (level == null || args.size() < 4) return new ScriptValue.Array(List.of());
-                BlockPos pos = new BlockPos((int) args.get(1).asNum(), (int) args.get(2).asNum(), (int) args.get(3).asNum());
-                List<ScriptValue> out = new ArrayList<>();
-                for (Chain c : ChainRegistry.chainsAt(level.getWorld().getUID(), pos)) out.add(ChainType.wrap(c));
-                return new ScriptValue.Array(out);
-            })
+            .methodTyped4("chains_at", TypeCodecs.RAW, TypeCodecs.DOUBLE, TypeCodecs.DOUBLE, TypeCodecs.DOUBLE,
+                TypeCodecs.RAW, new ScriptValue.Array(List.of()),
+                (Object obj, ScriptValue worldVal, Double x, Double y, Double z) -> {
+                    ServerLevel level = worldOf(worldVal);
+                    if (level == null) return new ScriptValue.Array(List.of());
+                    BlockPos pos = new BlockPos((int) (double) x, (int) (double) y, (int) (double) z);
+                    List<ScriptValue> out = new ArrayList<>();
+                    for (Chain c : ChainRegistry.chainsAt(level.getWorld().getUID(), pos)) out.add(ChainType.wrap(c));
+                    return new ScriptValue.Array(out);
+                })
             // count_at(World, x, y, z) -> int
-            .method("count_at", (obj, args) -> {
-                ServerLevel level = worldArg(args, 0);
-                if (level == null || args.size() < 4) return ScriptValue.of(0);
-                BlockPos pos = new BlockPos((int) args.get(1).asNum(), (int) args.get(2).asNum(), (int) args.get(3).asNum());
-                return ScriptValue.of(ChainRegistry.countAt(level.getWorld().getUID(), pos));
-            })
+            .methodTyped4("count_at", TypeCodecs.RAW, TypeCodecs.DOUBLE, TypeCodecs.DOUBLE, TypeCodecs.DOUBLE,
+                TypeCodecs.DOUBLE, 0.0,
+                (Object obj, ScriptValue worldVal, Double x, Double y, Double z) -> {
+                    ServerLevel level = worldOf(worldVal);
+                    if (level == null) return 0.0;
+                    BlockPos pos = new BlockPos((int) (double) x, (int) (double) y, (int) (double) z);
+                    return (double) ChainRegistry.countAt(level.getWorld().getUID(), pos);
+                })
             // all() -> Array<Chain> — every live chain, any world
-            .method("all", (obj, args) -> {
-                List<ScriptValue> out = new ArrayList<>();
-                for (Chain c : ChainRegistry.all()) out.add(ChainType.wrap(c));
-                return new ScriptValue.Array(out);
-            });
+            .methodTyped0("all", TypeCodecs.RAW,
+                (Object obj) -> {
+                    List<ScriptValue> out = new ArrayList<>();
+                    for (Chain c : ChainRegistry.all()) out.add(ChainType.wrap(c));
+                    return new ScriptValue.Array(out);
+                });
     }
 
     private static Chain lookup(String idStr) {
@@ -107,7 +126,14 @@ public final class ChainManagerType {
 
     private static ServerLevel worldArg(List<ScriptValue> args, int i) {
         if (i >= args.size()) return null;
-        return args.get(i) instanceof ScriptValue.Obj o && o.instance() instanceof ServerLevel lvl ? lvl : null;
+        return worldOf(args.get(i));
+    }
+
+    /** Same decode worldArg(args, i) performs on a single already-fetched arg — split out so the
+     *  methodTyped4 handlers above (chain_at/chains_at/count_at), which no longer have the raw args
+     *  list, can apply it to their TypeCodecs.RAW World argument. */
+    private static ServerLevel worldOf(ScriptValue value) {
+        return value instanceof ScriptValue.Obj o && o.instance() instanceof ServerLevel lvl ? lvl : null;
     }
 
     /** Places {@code mat}'s anchor block at {@code pos} unless one is already there. */

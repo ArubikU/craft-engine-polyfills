@@ -3,6 +3,7 @@ package dev.arubik.craftengine.script.types.util;
 import dev.arubik.craftengine.script.PolyTypeRegistry;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptValue;
+import dev.arubik.craftengine.script.TypeCodecs;
 import dev.arubik.craftengine.script.TypedKeyBridge;
 import dev.arubik.craftengine.script.UserFunction;
 import dev.arubik.craftengine.util.NbtType;
@@ -39,29 +40,33 @@ public final class TypedKeyManagerType {
     public static void register() {
         PolyTypeRegistry.define("TypedKey")
             // define(name, inner_type, serialize_fn, deserialize_fn) -> bool
-            .method("define", (obj, args) -> {
-                if (args.size() < 4) return ScriptValue.of(false);
-                String name = args.get(0).asStr();
-                TypedKeyBridge.Codec inner = TypedKeyBridge.resolve(args.get(1).asStr());
-                UserFunction serialize = asFunction(args.get(2));
-                UserFunction deserialize = asFunction(args.get(3));
-                if (inner == null || serialize == null || deserialize == null) return ScriptValue.of(false);
-                TypedKeyBridge.registerCustom(name, new TypedKeyBridge.Codec() {
-                    public NbtType storage() { return inner.storage(); }
-                    public Object toStorage(ScriptValue value) {
-                        ScriptValue shaped = serialize.call(List.of(value), EMPTY_CTX);
-                        return inner.toStorage(shaped);
-                    }
-                    public ScriptValue fromStorage(Object raw) {
-                        ScriptValue shaped = inner.fromStorage(raw);
-                        return deserialize.call(List.of(shaped), EMPTY_CTX);
-                    }
-                });
-                return ScriptValue.of(true);
-            })
+            // serialize_fn/deserialize_fn decoded as TypeCodecs.RAW rather than a specific type —
+            // asFunction(ScriptValue) does more than a plain cast (checks it's a ScriptValue.Obj of
+            // UserFunction.TYPE before narrowing), so per the migration rules it's kept as an
+            // explicit in-body call rather than a codec.
+            .methodTyped4("define", TypeCodecs.STRING, TypeCodecs.STRING, TypeCodecs.RAW, TypeCodecs.RAW,
+                TypeCodecs.BOOL, false,
+                (Object obj, String name, String innerType, ScriptValue serializeArg, ScriptValue deserializeArg) -> {
+                    TypedKeyBridge.Codec inner = TypedKeyBridge.resolve(innerType);
+                    UserFunction serialize = asFunction(serializeArg);
+                    UserFunction deserialize = asFunction(deserializeArg);
+                    if (inner == null || serialize == null || deserialize == null) return false;
+                    TypedKeyBridge.registerCustom(name, new TypedKeyBridge.Codec() {
+                        public NbtType storage() { return inner.storage(); }
+                        public Object toStorage(ScriptValue value) {
+                            ScriptValue shaped = serialize.call(List.of(value), EMPTY_CTX);
+                            return inner.toStorage(shaped);
+                        }
+                        public ScriptValue fromStorage(Object raw) {
+                            ScriptValue shaped = inner.fromStorage(raw);
+                            return deserialize.call(List.of(shaped), EMPTY_CTX);
+                        }
+                    });
+                    return true;
+                })
             // exists(name) -> bool — whether a type name (built-in or custom) is currently defined
-            .method("exists", (obj, args) ->
-                ScriptValue.of(!args.isEmpty() && TypedKeyBridge.resolve(args.get(0).asStr()) != null));
+            .methodTyped1("exists", TypeCodecs.STRING, TypeCodecs.BOOL, false,
+                (Object obj, String name) -> TypedKeyBridge.resolve(name) != null);
     }
 
     private static UserFunction asFunction(ScriptValue v) {

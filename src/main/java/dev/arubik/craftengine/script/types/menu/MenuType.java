@@ -17,6 +17,7 @@ import dev.arubik.craftengine.menu.ScriptMenu;
 import dev.arubik.craftengine.menu.ScriptMenuRegistry;
 import dev.arubik.craftengine.script.PolyTypeRegistry;
 import dev.arubik.craftengine.script.ScriptValue;
+import dev.arubik.craftengine.script.TypeCodecs;
 
 /**
  * {@code Menu}/{@code MenuBuilder} — the script-facing API for a standalone, one-shot GUI that
@@ -40,6 +41,11 @@ public final class MenuType {
             // Menu.create(size, title) — size is rounded up to the next multiple of 9 and clamped
             // to a legal chest inventory (9..54). A future nicety could accept an InventoryType
             // name instead of a bare size; skipped for now since a chest grid covers the main case.
+            // NOT migrated to methodTyped: `title` is an optional trailing argument with a default
+            // ("Menu") that only applies when present alongside a REQUIRED size arg — a typed
+            // handler's onMissingArgs fallback would trigger on args.size()<2 too, which changes
+            // behavior for a caller passing just size (currently valid: title defaults to "Menu").
+            // Left untyped.
             .method("create", (obj, args) -> {
                 if (args.isEmpty()) return ScriptValue.NULL;
                 int size = normalizeSize((int) args.get(0).asNum());
@@ -52,6 +58,9 @@ public final class MenuType {
             // set_item(slot, item, click_script?, click_data?) — click_script is an optional
             // "file.pf:function" ref (omit for a purely decorative item); click_data is an optional
             // make_map(...) value handed back as MenuClick.get(...) when that slot is clicked.
+            // NOT migrated to methodTyped: click_script/click_data are optional trailing arguments
+            // (args.size() checks decide whether to apply them) — not expressible with a typed
+            // handler's fixed-arity decoded arguments. Left untyped.
             .method("set_item", (obj, args) -> {
                 ScriptMenu menu = menu(obj);
                 if (args.size() < 2 || !(args.get(1) instanceof ScriptValue.Item itemVal) || itemVal.stack() == null) {
@@ -64,6 +73,10 @@ public final class MenuType {
                 menu.setItem(slot, bukkitItem, clickScript, data);
                 return ScriptValue.ofObj("MenuBuilder", menu);
             })
+            // NOT migrated to methodTyped: on a missing arg this still returns the live
+            // ScriptValue.ofObj("MenuBuilder", menu) wrapping THIS call's own instance — an
+            // instance-dependent fallback a typed handler's onMissingArgs (a fixed value chosen at
+            // registration time) cannot express. Left untyped.
             .method("set_close_script", (obj, args) -> {
                 ScriptMenu menu = menu(obj);
                 if (!args.isEmpty()) menu.setCloseScript(args.get(0).asStr());
@@ -71,19 +84,22 @@ public final class MenuType {
             })
             // open(player) — shows the inventory THEN tracks it, so a failed openInventory (closed
             // world, invalid state, whatever) never leaves a tracked-but-never-shown menu behind.
-            .method("open", (obj, args) -> {
-                ScriptMenu menu = menu(obj);
-                if (args.isEmpty()) return ScriptValue.of(false);
-                Player bukkitPlayer = extractBukkitPlayer(args.get(0));
-                if (bukkitPlayer == null) return ScriptValue.of(false);
-                try {
-                    bukkitPlayer.openInventory(menu.getInventory());
-                    ScriptMenuRegistry.track(menu.getInventory(), menu);
-                    return ScriptValue.of(true);
-                } catch (Throwable ignored) {
-                    return ScriptValue.of(false);
-                }
-            });
+            // Argument decoded as TypeCodecs.RAW (not a plain asStr()/asNum()/asBool() coercion) —
+            // extractBukkitPlayer(ScriptValue) does more than a cast (unwraps a ScriptValue.Obj,
+            // checks its instance is an NMS Entity, then narrows to its Bukkit Player), so per the
+            // migration rules it's kept as an explicit in-body call rather than a codec.
+            .methodTyped1("open", TypeCodecs.RAW, TypeCodecs.BOOL, false,
+                (ScriptMenu menu, ScriptValue playerArg) -> {
+                    Player bukkitPlayer = extractBukkitPlayer(playerArg);
+                    if (bukkitPlayer == null) return false;
+                    try {
+                        bukkitPlayer.openInventory(menu.getInventory());
+                        ScriptMenuRegistry.track(menu.getInventory(), menu);
+                        return true;
+                    } catch (Throwable ignored) {
+                        return false;
+                    }
+                });
     }
 
     private static int normalizeSize(int requested) {

@@ -2,6 +2,7 @@ package dev.arubik.craftengine.script.types.world;
 
 import dev.arubik.craftengine.script.PolyTypeRegistry;
 import dev.arubik.craftengine.script.ScriptValue;
+import dev.arubik.craftengine.script.TypeCodecs;
 import dev.arubik.craftengine.script.types.primitive.VectorType;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -90,12 +91,17 @@ public final class BlockMetadataType {
                 }
                 return new ScriptValue.Array(items);
             })
-            .method("get_item", (obj, args) -> {
-                Container c = container(obj);
-                if (c == null || args.isEmpty()) return ScriptValue.NULL;
-                int i = (int) args.get(0).asNum();
-                return (i >= 0 && i < c.getContainerSize()) ? ScriptValue.ofItem(c.getItem(i)) : ScriptValue.NULL;
-            });
+            // container(obj) does more than a plain cast (it re-derives the Container view from the
+            // block entity each call, see below), so `obj` stays Object here and the helper is
+            // called explicitly inside the body rather than becoming the typed handler's instance
+            // parameter type.
+            .methodTyped1("get_item", TypeCodecs.DOUBLE, TypeCodecs.RAW, ScriptValue.NULL,
+                (Object obj, Double idxArg) -> {
+                    Container c = container(obj);
+                    if (c == null) return ScriptValue.NULL;
+                    int i = idxArg.intValue();
+                    return (i >= 0 && i < c.getContainerSize()) ? ScriptValue.ofItem(c.getItem(i)) : ScriptValue.NULL;
+                });
 
         PolyTypeRegistry.define("SkullMetadata", "BlockMetadata")
             .property("owner_name", obj -> {

@@ -37,6 +37,9 @@ public final class ChainType {
             // convenience getters/setters (see Chain#getInt/getString) rather than a second store.
             // break(drop_items?) — severs this chain. drop_items defaults to false: a script-triggered
             // break didn't necessarily come with items consumed on creation, so refunding is opt-in.
+            // Not migrated to methodTyped1: drop_items has a default-if-missing shape
+            // (!args.isEmpty() && args.get(0).asBool()) — the default applies to the ARGUMENT when
+            // absent, not to the return value, which onMissingArgs can't express. Left untyped.
             .method("break", (obj, args) -> {
                 boolean drop = !args.isEmpty() && args.get(0).asBool();
                 ChainEngine.breakChain(chain(obj), drop);

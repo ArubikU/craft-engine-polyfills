@@ -7,6 +7,7 @@ import dev.arubik.craftengine.machine.recipe.RecipeInput;
 import dev.arubik.craftengine.machine.recipe.RecipeOutput;
 import dev.arubik.craftengine.script.PolyTypeRegistry;
 import dev.arubik.craftengine.script.ScriptValue;
+import dev.arubik.craftengine.script.TypeCodecs;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -99,7 +100,14 @@ public final class RecipeType {
             // placement — belt/depot/toss — but fluid/gas/xp are just numbers to hand to whatever
             // it has, if anything). Always just the single item output, no fluid/gas/xp, for a
             // vanilla-backed recipe (stonecutting/cooking never have those or a <1.0 chance).
-            .method("outputs", (obj, args) -> {
+            // outputs() takes no args at all (the body never reads `args`), so this is a genuine
+            // 0-arg method — migrated to methodTyped0. Return codec is TypeCodecs.RAW since the
+            // result is a complex object (RecipeOutputsType.wrap(...)), not a primitive. `obj`
+            // stays Object (not AbstractProcessingRecipe) because the body itself does the
+            // instanceof VanillaRecipeRef check as its very first line, exactly like every other
+            // property/method on this type — the recipe(obj) cast helper is only called in the
+            // non-vanilla branch.
+            .methodTyped0("outputs", TypeCodecs.RAW, (Object obj) -> {
                 if (obj instanceof VanillaRecipeRef v) {
                     List<ScriptValue> items = v.output().isEmpty()
                             ? List.of() : List.of(ScriptValue.ofItem(v.output()));

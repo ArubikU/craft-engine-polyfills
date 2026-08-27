@@ -3,6 +3,7 @@ package dev.arubik.craftengine.script.types.event;
 import dev.arubik.craftengine.events.DynamicEventRegistry;
 import dev.arubik.craftengine.script.PolyTypeRegistry;
 import dev.arubik.craftengine.script.ScriptValue;
+import dev.arubik.craftengine.script.TypeCodecs;
 
 /**
  * {@code EventManager} — the script-driven counterpart to the static {@code events/*.json} bridge
@@ -21,13 +22,17 @@ public final class EventManagerType {
 
     public static void register() {
         PolyTypeRegistry.define("EventManager")
+            // NOT migrated to methodTyped: `timeout_ticks` is an optional trailing argument with a
+            // default (0) that only applies when present alongside the 2 required args — a typed
+            // handler forced to arity 3 would treat a legitimate 2-arg call as "missing args" and
+            // return the fixed onMissingArgs fallback instead of actually registering. Left untyped.
             .method("register", (obj, args) -> {
                 if (args.size() < 2) return ScriptValue.of("");
                 int timeout = args.size() > 2 ? (int) args.get(2).asNum() : 0;
                 String id = DynamicEventRegistry.register(args.get(0).asStr(), args.get(1).asStr(), timeout);
                 return ScriptValue.of(id == null ? "" : id);
             })
-            .method("unregister", (obj, args) ->
-                ScriptValue.of(!args.isEmpty() && DynamicEventRegistry.unregister(args.get(0).asStr())));
+            .methodTyped1("unregister", TypeCodecs.STRING, TypeCodecs.BOOL, false,
+                (Object obj, String handle) -> DynamicEventRegistry.unregister(handle));
     }
 }

@@ -2,6 +2,7 @@ package dev.arubik.craftengine.script.types.world;
 
 import dev.arubik.craftengine.script.PolyTypeRegistry;
 import dev.arubik.craftengine.script.ScriptValue;
+import dev.arubik.craftengine.script.TypeCodecs;
 import net.minecraft.core.Registry;
 import net.minecraft.resources.Identifier;
 
@@ -39,28 +40,31 @@ public final class RegistryCollectionType {
                 catch (Throwable ignored) { return ScriptValue.of(0); }
             })
             // all() -> Array<Str> — every id currently registered.
-            .method("all", (obj, args) -> {
-                try {
-                    List<ScriptValue> out = new ArrayList<>();
-                    for (Identifier id : ref(obj).get().keySet()) out.add(ScriptValue.of(id.toString()));
-                    return new ScriptValue.Array(out);
-                } catch (Throwable ignored) { return new ScriptValue.Array(List.of()); }
-            })
+            .methodTyped0("all", TypeCodecs.RAW,
+                (Ref r) -> {
+                    try {
+                        List<ScriptValue> out = new ArrayList<>();
+                        for (Identifier id : r.get().keySet()) out.add(ScriptValue.of(id.toString()));
+                        return new ScriptValue.Array(out);
+                    } catch (Throwable ignored) { return new ScriptValue.Array(List.of()); }
+                })
             // exists(id) -> bool
-            .method("exists", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of(false);
-                try { return ScriptValue.of(ref(obj).get().containsKey(Identifier.parse(args.get(0).asStr()))); }
-                catch (Throwable ignored) { return ScriptValue.of(false); }
-            })
+            .methodTyped1("exists", TypeCodecs.STRING, TypeCodecs.BOOL, false,
+                (Ref r, String id) -> {
+                    try { return r.get().containsKey(Identifier.parse(id)); }
+                    catch (Throwable ignored) { return false; }
+                })
             // random() -> Str — a uniformly random id from this registry, NULL if it's empty or
             // not yet resolvable (e.g. a datapack registry queried before the server has loaded).
-            .method("random", (obj, args) -> {
-                try {
-                    List<Identifier> ids = List.copyOf(ref(obj).get().keySet());
-                    if (ids.isEmpty()) return ScriptValue.NULL;
-                    return ScriptValue.of(ids.get(java.util.concurrent.ThreadLocalRandom.current().nextInt(ids.size())).toString());
-                } catch (Throwable ignored) { return ScriptValue.NULL; }
-            });
+            // Return codec is RAW — dynamic NULL-or-string return, matching the original behavior.
+            .methodTyped0("random", TypeCodecs.RAW,
+                (Ref r) -> {
+                    try {
+                        List<Identifier> ids = List.copyOf(r.get().keySet());
+                        if (ids.isEmpty()) return ScriptValue.NULL;
+                        return ScriptValue.of(ids.get(java.util.concurrent.ThreadLocalRandom.current().nextInt(ids.size())).toString());
+                    } catch (Throwable ignored) { return ScriptValue.NULL; }
+                });
     }
 
     public static ScriptValue wrap(Supplier<Registry<?>> supplier) {

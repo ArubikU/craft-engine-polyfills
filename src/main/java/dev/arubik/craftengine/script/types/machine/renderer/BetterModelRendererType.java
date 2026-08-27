@@ -3,6 +3,7 @@ package dev.arubik.craftengine.script.types.machine.renderer;
 import dev.arubik.craftengine.machine.render.renderer.BetterModelRenderer;
 import dev.arubik.craftengine.script.PolyTypeRegistry;
 import dev.arubik.craftengine.script.ScriptValue;
+import dev.arubik.craftengine.script.TypeCodecs;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -19,43 +20,45 @@ public final class BetterModelRendererType {
 
     public static void register() {
         PolyTypeRegistry.define("BetterModelRenderer")
-            .method("play_anim", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of(false);
-                r(obj).playLoop(args.get(0).asStr());
-                return ScriptValue.of(true);
-            })
-            .method("stop_anim", (obj, args) -> {
-                r(obj).stopAnim();
-                return ScriptValue.of(true);
-            })
+            .methodTyped1("play_anim", TypeCodecs.STRING, TypeCodecs.BOOL, false,
+                (BetterModelRenderer obj, String anim) -> {
+                    obj.playLoop(anim);
+                    return true;
+                })
+            .methodTyped0("stop_anim", TypeCodecs.BOOL,
+                (BetterModelRenderer obj) -> {
+                    obj.stopAnim();
+                    return true;
+                })
             // bone_location(bone_name) -> Vector (absolute world position) or NULL — object-based
             // counterpart of the "{rendererid}:bm:{bone_name}" string shorthand (see RendererManager
             // #resolveBoneLocation), usable directly inside another renderer's own "location" script
             // expression, e.g. "Machine.get_renderer('arm').bone_location('hand')".
-            .method("bone_location", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.NULL;
-                double[] pos = r(obj).boneWorldPosition(args.get(0).asStr());
-                return pos == null ? ScriptValue.NULL
-                        : dev.arubik.craftengine.script.types.primitive.VectorType.wrap(pos[0], pos[1], pos[2]);
-            })
+            .methodTyped1("bone_location", TypeCodecs.STRING, TypeCodecs.RAW, ScriptValue.NULL,
+                (BetterModelRenderer obj, String bone) -> {
+                    double[] pos = obj.boneWorldPosition(bone);
+                    return pos == null ? ScriptValue.NULL
+                            : dev.arubik.craftengine.script.types.primitive.VectorType.wrap(pos[0], pos[1], pos[2]);
+                })
             // set_bone_yaw_pitch(bone_name, yaw_degrees, pitch_degrees) -> bool.
-            .method("set_bone_yaw_pitch", (obj, args) -> {
-                if (args.size() < 3) return ScriptValue.of(false);
-                return ScriptValue.of(r(obj).setBoneYawPitch(
-                    args.get(0).asStr(), (float) args.get(1).asNum(), (float) args.get(2).asNum()));
-            })
+            .methodTyped3("set_bone_yaw_pitch", TypeCodecs.STRING, TypeCodecs.DOUBLE, TypeCodecs.DOUBLE,
+                TypeCodecs.BOOL, false,
+                (BetterModelRenderer obj, String bone, Double yaw, Double pitch) ->
+                    obj.setBoneYawPitch(bone, (float) (double) yaw, (float) (double) pitch))
             // set_bone_tint(bone_name, rgb) -> bool. rgb is a packed 0xRRGGBB int.
-            .method("set_bone_tint", (obj, args) -> {
-                if (args.size() < 2) return ScriptValue.of(false);
-                return ScriptValue.of(r(obj).setBoneTint(args.get(0).asStr(), (int) args.get(1).asNum()));
-            })
-            .method("clear_bone_tint", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of(false);
-                return ScriptValue.of(r(obj).clearBoneTint(args.get(0).asStr()));
-            })
+            .methodTyped2("set_bone_tint", TypeCodecs.STRING, TypeCodecs.DOUBLE, TypeCodecs.BOOL, false,
+                (BetterModelRenderer obj, String bone, Double rgb) ->
+                    obj.setBoneTint(bone, (int) (double) rgb))
+            .methodTyped1("clear_bone_tint", TypeCodecs.STRING, TypeCodecs.BOOL, false,
+                (BetterModelRenderer obj, String bone) -> obj.clearBoneTint(bone))
             // play_ik(chain, target_x, target_y, target_z, time_to_arrive_seconds) -> bones applied.
             // chain is an Array of [bone_name, min_yaw, max_yaw, min_pitch, max_pitch] Arrays, base
             // bone first. time_to_arrive_seconds <= 0 snaps instantly instead of easing.
+            // Not migrated to methodTyped5: time_to_arrive_seconds is a genuinely optional trailing
+            // argument, read via args.size() > 4 with a 0f default — a typed handler only receives
+            // its fixed-arity decoded arguments, not the original args list/size, so that
+            // conditional read can't be expressed (same reasoning as ContraptionType#teleport).
+            // Left untyped.
             .method("play_ik", (obj, args) -> {
                 if (args.size() < 4) return ScriptValue.of(0);
                 List<BetterModelRenderer.BoneRange> chain = parseChain(args.get(0));

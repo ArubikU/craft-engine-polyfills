@@ -17,6 +17,10 @@ public final class WorkbenchType {
             .property("height",        obj -> ScriptValue.of(ref(obj).def().layout().gridHeight()))
             .property("total_inputs",  obj -> ScriptValue.of(ref(obj).def().layout().inputSlots().length))
             .property("total_outputs", obj -> ScriptValue.of(ref(obj).def().layout().outputSlots().size()))
+            // Not migrated to methodTyped1: idx defaults to 0 when the arg is omitted
+            // (args.isEmpty() ? 0 : ...) — a "default-if-missing" shape a typed handler's
+            // onMissingArgs (a single fixed fallback RETURN value) can't express, since here the
+            // default applies to an ARGUMENT, not the return. Left untyped.
             .method("input", (obj, args) -> {
                 WorkbenchRef r = ref(obj);
                 int idx = args.isEmpty() ? 0 : (int) args.get(0).asNum();
@@ -24,6 +28,7 @@ public final class WorkbenchType {
                 if (idx < 0 || idx >= inputSlots.length) return ScriptValue.NULL;
                 return getSlot(r.slots(), inputSlots[idx]);
             })
+            // Not migrated: same default-if-missing idx shape as input() above.
             .method("output", (obj, args) -> {
                 WorkbenchRef r = ref(obj);
                 int idx = args.isEmpty() ? 0 : (int) args.get(0).asNum();
@@ -31,6 +36,7 @@ public final class WorkbenchType {
                 if (idx < 0 || idx >= outputSlots.size()) return ScriptValue.NULL;
                 return getSlot(r.slots(), outputSlots.get(idx));
             })
+            // Not migrated: same default-if-missing idx shape as input() above.
             .method("tool", (obj, args) -> {
                 WorkbenchRef r = ref(obj);
                 int idx = args.isEmpty() ? 0 : (int) args.get(0).asNum();

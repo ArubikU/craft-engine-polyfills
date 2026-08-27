@@ -21,6 +21,13 @@ public final class FluidTanksType {
             .property("total_level", obj -> ScriptValue.of(tanks(obj).values().stream().mapToDouble(t -> t[0]).sum()))
             .property("total_capacity", obj -> ScriptValue.of(tanks(obj).values().stream().mapToDouble(t -> t[1]).sum()))
             .property("count", obj -> ScriptValue.of(tanks(obj).size()))
+            // NOT migrated to methodTypedN — every method below takes an OPTIONAL tank-name arg via
+            // resolve(obj, args): when the arg is missing, resolve() doesn't short-circuit to a
+            // fixed fallback value, it still runs real logic (falls back to the map's first entry,
+            // `m.values().iterator().next()`). A typed handler's onMissingArgs can only supply a
+            // fixed R value for "not enough args" — it never invokes the handler body at all in
+            // that case — so this "default-if-missing" shape (see task instructions) can't be
+            // expressed without changing behavior. Left untyped, matching every method here.
             .method("level",    (obj, args) -> ScriptValue.of(resolve(obj, args)[0]))
             .method("capacity", (obj, args) -> ScriptValue.of(resolve(obj, args)[1]))
             .method("fraction", (obj, args) -> { double[] d = resolve(obj, args); return ScriptValue.of(d[1] > 0 ? d[0] / d[1] : 0); })

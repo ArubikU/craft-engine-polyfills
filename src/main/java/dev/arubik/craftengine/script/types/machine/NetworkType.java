@@ -4,6 +4,7 @@ import dev.arubik.craftengine.network.NetworkPacket;
 import dev.arubik.craftengine.network.NetworkRegistry;
 import dev.arubik.craftengine.script.PolyTypeRegistry;
 import dev.arubik.craftengine.script.ScriptValue;
+import dev.arubik.craftengine.script.TypeCodecs;
 import dev.arubik.craftengine.script.types.world.BlockType;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -43,6 +44,10 @@ public final class NetworkType {
     public static void register() {
         PolyTypeRegistry.define("Network")
             // register(channel) / register(channel, type)
+            // Not migrated: type is a default-if-missing trailing argument (args.size() >= 2 ?
+            // args.get(1).asStr() : NetworkRegistry.TYPE_SIGNAL) — the default applies to the
+            // ARGUMENT when absent, not to the return value, which onMissingArgs can't express.
+            // Left untyped (applies to every method in this file — all share this shape).
             .method("register", (obj, args) -> {
                 if (args.isEmpty()) return ScriptValue.of(false);
                 int channel = (int) args.get(0).asNum();
@@ -57,6 +62,9 @@ public final class NetworkType {
                 return ScriptValue.of(true);
             })
             // unregister(channel) / unregister(channel, type)
+            // Not migrated: multi-shape dynamic dispatch — args.isEmpty() takes an entirely
+            // different code path (unsubscribe-all) than the channel+type path below it, plus the
+            // same default-if-missing type argument as register() above. Left untyped.
             .method("unregister", (obj, args) -> {
                 NetworkRef r = ref(obj);
                 if (args.isEmpty()) {
@@ -75,6 +83,7 @@ public final class NetworkType {
                 return ScriptValue.of(true);
             })
             // broadcast(channel, value) / broadcast(channel, value, type)
+            // Not migrated: same default-if-missing trailing type argument as register() above.
             .method("broadcast", (obj, args) -> {
                 if (args.size() < 2) return ScriptValue.of(false);
                 int channel = (int) args.get(0).asNum();
@@ -90,6 +99,7 @@ public final class NetworkType {
                 return ScriptValue.of(true);
             })
             // listen(channel) / listen(channel, type) → ScriptValue payload or NULL
+            // Not migrated: same default-if-missing trailing type argument as register() above.
             .method("listen", (obj, args) -> {
                 if (args.isEmpty()) return ScriptValue.of(0.0);
                 int channel = (int) args.get(0).asNum();
@@ -104,25 +114,29 @@ public final class NetworkType {
                 return ScriptValue.NULL;
             })
             // has_packet(channel) / has_packet(channel, type) → bool
+            // Not migrated: same default-if-missing trailing type argument as register() above.
             .method("has_packet", (obj, args) -> {
                 if (args.isEmpty()) return ScriptValue.of(false);
                 int channel = (int) args.get(0).asNum();
                 String type = args.size() >= 2 ? args.get(1).asStr() : NetworkRegistry.TYPE_SIGNAL;
                 return ScriptValue.of(NetworkRegistry.hasPacket(type, channel, ref(obj).nodeId()));
             })
-            // packet_type(channel) → string type of last received packet or ""
-            .method("packet_type", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of("");
-                int channel = (int) args.get(0).asNum();
-                NetworkRef r = ref(obj);
-                // Check all types for a packet on this channel
-                for (String t : new String[]{NetworkRegistry.TYPE_SIGNAL, NetworkRegistry.TYPE_REDSTONE,
-                        NetworkRegistry.TYPE_ITEM, NetworkRegistry.TYPE_FLUID, NetworkRegistry.TYPE_CUSTOM}) {
-                    if (NetworkRegistry.hasPacket(t, channel, r.nodeId())) return ScriptValue.of(t);
-                }
-                return ScriptValue.of("");
-            })
+            // packet_type(channel) → string type of last received packet or "". Unlike its siblings
+            // above, this one has no optional type argument — fixed 1-arg shape, migrated.
+            .methodTyped1("packet_type", TypeCodecs.DOUBLE, TypeCodecs.STRING, "",
+                (NetworkRef r, Double channelArg) -> {
+                    int channel = (int) (double) channelArg;
+                    // Check all types for a packet on this channel
+                    for (String t : new String[]{NetworkRegistry.TYPE_SIGNAL, NetworkRegistry.TYPE_REDSTONE,
+                            NetworkRegistry.TYPE_ITEM, NetworkRegistry.TYPE_FLUID, NetworkRegistry.TYPE_CUSTOM}) {
+                        if (NetworkRegistry.hasPacket(t, channel, r.nodeId())) return t;
+                    }
+                    return "";
+                })
             // query(channel) / query(channel, type) → Array of subscriber node UUIDs as strings
+            // Not migrated: same default-if-missing trailing type argument as register() above, plus
+            // multi-shape dispatch (args.size() < 2 branches to a completely different legacy-block
+            // return shape than the "other types" branch).
             .method("query", (obj, args) -> {
                 if (args.isEmpty()) return new ScriptValue.Array(List.of());
                 int channel = (int) args.get(0).asNum();

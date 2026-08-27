@@ -4,6 +4,7 @@ import dev.arubik.craftengine.script.PolyTypeRegistry;
 import dev.arubik.craftengine.script.ScriptCall;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptValue;
+import dev.arubik.craftengine.script.TypeCodecs;
 import dev.arubik.craftengine.script.types.machine.MachineType;
 import io.papermc.paper.dialog.Dialog;
 import io.papermc.paper.registry.data.dialog.ActionButton;
@@ -97,6 +98,11 @@ public final class DialogManagerType {
 
     public static void register() {
         PolyTypeRegistry.define("Dialog")
+            // base(title) — NOT migrated to methodTyped1: the DialogSupport.isAvailable() warning log
+            // must fire even when called with zero args (it's checked BEFORE the args.isEmpty() check,
+            // independent of arg count), but methodTypedN's onMissingArgs shortcut returns immediately
+            // for a too-short args list WITHOUT ever entering the handler body — so that log line would
+            // silently stop firing for a 0-arg call on an unavailable server. Left untyped.
             .method("base", (obj, args) -> {
                 if (!DialogSupport.isAvailable()) {
                     LOG.warning("[Dialog] Dialog.base() called but DialogSupport.isAvailable() is false — "
@@ -109,7 +115,9 @@ public final class DialogManagerType {
             });
 
         PolyTypeRegistry.define("DialogBuilder")
-            // can_close_with_escape(bool)
+            // can_close_with_escape(bool) — NOT migrated to methodTyped1: a missing arg still runs
+            // the handler with a default of true ("default-if-missing" shape) rather than short-
+            // circuiting, which methodTypedN's onMissingArgs can't express. Left untyped.
             .method("can_close_with_escape", (obj, args) -> {
                 Builder b = builder(obj);
                 b.canCloseWithEscape = args.isEmpty() || args.get(0).asBool();
@@ -123,6 +131,8 @@ public final class DialogManagerType {
             // ui:false pull-amount slider) should set this instead of relying on flags.ui to suppress
             // the reopen — flags.ui only happens to be false for every dialog-outside-a-menu case so
             // far, not because it's actually what determines this.
+            // NOT migrated to methodTyped1: a missing arg still runs the handler and just skips the
+            // assignment ("default-if-missing" shape) rather than short-circuiting. Left untyped.
             .method("on_close", (obj, args) -> {
                 Builder b = builder(obj);
                 if (!args.isEmpty()) b.onCloseRef = args.get(0).asStr();
@@ -132,12 +142,17 @@ public final class DialogManagerType {
             // Images.from(id)/Images.shift(n) parts (same convention a machine's title uses — see
             // DataMachineBlockEntity#scriptValueToTitleComponent) for a line that embeds a
             // CraftEngine font glyph. Call multiple times for multiple paragraphs.
+            // NOT migrated to methodTyped1: a missing arg still runs the handler and just skips the
+            // append ("default-if-missing" shape) rather than short-circuiting. Left untyped.
             .method("body", (obj, args) -> {
                 Builder b = builder(obj);
                 if (!args.isEmpty()) b.body.add(DialogBody.plainMessage(partsToComponent(args.get(0))));
                 return ScriptValue.ofObj("DialogBuilder", b);
             })
             // body_item(item, show_tooltip?) — shows an ItemStack in the dialog body.
+            // NOT migrated to methodTyped: "default-if-missing" shape (missing/wrong-shape args just
+            // skip the append instead of short-circuiting) plus a dynamic instanceof-typed arg. Left
+            // untyped.
             .method("body_item", (obj, args) -> {
                 Builder b = builder(obj);
                 if (!args.isEmpty() && args.get(0) instanceof ScriptValue.Item it) {
@@ -150,6 +165,9 @@ public final class DialogManagerType {
             })
             // body_head(owner_name_or_uuid, show_tooltip?) — shows a player-head ItemStack, owned by
             // that name/UUID, in the dialog body (Bukkit#getOfflinePlayer, no texture support).
+            // NOT migrated to methodTyped: "default-if-missing" shape (a missing arg just skips the
+            // append instead of short-circuiting), plus an optional trailing show_tooltip arg. Left
+            // untyped.
             .method("body_head", (obj, args) -> {
                 Builder b = builder(obj);
                 if (!args.isEmpty()) {
@@ -172,6 +190,9 @@ public final class DialogManagerType {
                 return ScriptValue.ofObj("DialogBuilder", b);
             })
             // input_text(key, label, initial?, width?, multiline?, max_lines?)
+            // NOT migrated to methodTyped: "default-if-missing" shape (missing args just skip the
+            // append instead of short-circuiting) with several optional trailing args (initial, width,
+            // multiline, max_lines). Left untyped.
             .method("input_text", (obj, args) -> {
                 Builder b = builder(obj);
                 if (args.size() >= 2) {
@@ -189,6 +210,8 @@ public final class DialogManagerType {
                 return ScriptValue.ofObj("DialogBuilder", b);
             })
             // input_bool(key, label, initial?)
+            // NOT migrated to methodTyped: "default-if-missing" shape (missing args just skip the
+            // append instead of short-circuiting) with an optional trailing initial arg. Left untyped.
             .method("input_bool", (obj, args) -> {
                 Builder b = builder(obj);
                 if (args.size() >= 2) {
@@ -201,6 +224,9 @@ public final class DialogManagerType {
                 return ScriptValue.ofObj("DialogBuilder", b);
             })
             // input_number(key, label, min, max, step?, initial?)
+            // NOT migrated to methodTyped: "default-if-missing" shape (missing args just skip the
+            // append instead of short-circuiting) with optional trailing step/initial args. Left
+            // untyped.
             .method("input_number", (obj, args) -> {
                 Builder b = builder(obj);
                 if (args.size() >= 4) {
@@ -216,6 +242,9 @@ public final class DialogManagerType {
             })
             // input_single_option(key, label, options) — options is an Array of maps built with
             // make_map("id", "...", "label", "...", "initial", true/false) (initial optional).
+            // NOT migrated to methodTyped: "default-if-missing" shape (missing/wrong-shape args just
+            // skip the append instead of short-circuiting), plus a dynamic Array-of-maps arg. Left
+            // untyped.
             .method("input_single_option", (obj, args) -> {
                 Builder b = builder(obj);
                 if (args.size() >= 3 && args.get(2) instanceof ScriptValue.Array arr) {
@@ -238,6 +267,10 @@ public final class DialogManagerType {
             })
             // as_notice(machine, button_label, action_ref, tooltip?, width?) — single-button dialog.
             // Accept calls action_ref with every declared input's value appended, in declaration order.
+            // NOT migrated to methodTyped3: has genuinely optional 4th/5th args (tooltip, width) past
+            // the required 3, same reasoning as ContraptionType's teleport()/play_sound() — a typed
+            // handler only receives its fixed-arity decoded arguments, not the original args
+            // list/size, so that conditional read can't be expressed. Left untyped.
             .method("as_notice", (obj, args) -> {
                 if (args.size() < 3) return ScriptValue.NULL;
                 Builder b = builder(obj);
@@ -251,6 +284,9 @@ public final class DialogManagerType {
             })
             // as_confirmation(owner, accept_label, cancel_label, accept_action_ref, cancel_action_ref?,
             // accept_tooltip?, cancel_tooltip?, accept_width?, cancel_width?)
+            // NOT migrated to methodTyped: has multiple genuinely optional args past the required 4
+            // (cancel_action_ref, tooltips, widths), same reasoning as as_notice() above. Also 9 total
+            // args, past methodTypedN's arity-7 ceiling. Left untyped.
             .method("as_confirmation", (obj, args) -> {
                 if (args.size() < 4) return ScriptValue.NULL;
                 Builder b = builder(obj);
@@ -277,6 +313,8 @@ public final class DialogManagerType {
             // integer, Paper's own MultiActionType#columns()) wraps buttons into rows of that width
             // instead of Paper's default 2 — the ONLY way to lay out a fixed grid (e.g. a game
             // board) that isn't just "however many buttons fit at their declared per-button width".
+            // NOT migrated to methodTyped2: has a genuinely optional 3rd arg (columns), same reasoning
+            // as as_notice() above. Left untyped.
             .method("as_multi_action", (obj, args) -> {
                 if (args.size() < 2 || !(args.get(1) instanceof ScriptValue.Array arr)) return ScriptValue.NULL;
                 Builder b = builder(obj);
@@ -303,28 +341,31 @@ public final class DialogManagerType {
                 return wrapDialog(base, type);
             })
             // as_link(owner, button_label, url) — single-button dialog whose click opens a URL.
-            // Skips the .pf script engine entirely (no action_ref).
-            .method("as_link", (obj, args) -> {
-                if (args.size() < 3) return ScriptValue.NULL;
-                Builder b = builder(obj);
-                DialogAction action = DialogAction.staticAction(ClickEvent.openUrl(args.get(2).asStr()));
-                DialogBase base = base(b);
-                DialogType type = DialogType.notice(ActionButton.builder(mm(args.get(1).asStr())).action(action).build());
-                return wrapDialog(base, type);
-            })
+            // Skips the .pf script engine entirely (no action_ref). owner (arg0) is decoded but
+            // intentionally unused, exactly like the original — kept as a reserved positional arg.
+            .methodTyped3("as_link", TypeCodecs.RAW, TypeCodecs.STRING, TypeCodecs.STRING, TypeCodecs.RAW, ScriptValue.NULL,
+                (Builder b, ScriptValue owner, String buttonLabel, String url) -> {
+                    DialogAction action = DialogAction.staticAction(ClickEvent.openUrl(url));
+                    DialogBase base = base(b);
+                    DialogType type = DialogType.notice(ActionButton.builder(mm(buttonLabel)).action(action).build());
+                    return wrapDialog(base, type);
+                })
             // as_run_command(owner, button_label, command) — single-button dialog whose click runs a
-            // vanilla command. Skips the .pf script engine entirely (no action_ref).
-            .method("as_run_command", (obj, args) -> {
-                if (args.size() < 3) return ScriptValue.NULL;
-                Builder b = builder(obj);
-                DialogAction action = DialogAction.staticAction(ClickEvent.runCommand(args.get(2).asStr()));
-                DialogBase base = base(b);
-                DialogType type = DialogType.notice(ActionButton.builder(mm(args.get(1).asStr())).action(action).build());
-                return wrapDialog(base, type);
-            });
+            // vanilla command. Skips the .pf script engine entirely (no action_ref). owner (arg0) is
+            // decoded but intentionally unused, exactly like the original.
+            .methodTyped3("as_run_command", TypeCodecs.RAW, TypeCodecs.STRING, TypeCodecs.STRING, TypeCodecs.RAW, ScriptValue.NULL,
+                (Builder b, ScriptValue owner, String buttonLabel, String command) -> {
+                    DialogAction action = DialogAction.staticAction(ClickEvent.runCommand(command));
+                    DialogBase base = base(b);
+                    DialogType type = DialogType.notice(ActionButton.builder(mm(buttonLabel)).action(action).build());
+                    return wrapDialog(base, type);
+                });
 
         PolyTypeRegistry.define("BuiltDialog")
             // show(player) — display to that player.
+            // NOT migrated to methodTyped1: the missing-arg branch logs a warning before returning
+            // false, but methodTypedN's onMissingArgs shortcut returns immediately without ever
+            // entering the handler body, so that log line would silently stop firing. Left untyped.
             .method("show", (obj, args) -> {
                 if (args.isEmpty()) {
                     LOG.warning("[Dialog] BuiltDialog.show() called with no player argument.");
@@ -353,6 +394,8 @@ public final class DialogManagerType {
             })
             // show_many(players) — display to every resolvable Player in that Array, skipping nulls.
             // Returns the count of players actually shown.
+            // NOT migrated to methodTyped1: the missing/wrong-type-arg branch logs a warning before
+            // returning 0, same log-loss issue as show() above. Left untyped.
             .method("show_many", (obj, args) -> {
                 if (args.isEmpty() || !(args.get(0) instanceof ScriptValue.Array arr)) {
                     LOG.warning("[Dialog] BuiltDialog.show_many() called with no players array argument.");

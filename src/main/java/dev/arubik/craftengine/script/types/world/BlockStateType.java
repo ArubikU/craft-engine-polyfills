@@ -2,6 +2,7 @@ package dev.arubik.craftengine.script.types.world;
 
 import dev.arubik.craftengine.script.PolyTypeRegistry;
 import dev.arubik.craftengine.script.ScriptValue;
+import dev.arubik.craftengine.script.TypeCodecs;
 import dev.arubik.craftengine.script.types.primitive.MapType;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.level.block.state.BlockState;
@@ -63,24 +64,21 @@ public final class BlockStateType {
                 return new ScriptValue.Array(names);
             })
             // get(name) — get single property value (CE priority)
-            .method("get", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.NULL;
-                String name = args.get(0).asStr();
-                String val = BlockType.readProperty(ref(obj).nms(), name);
-                return val != null ? ScriptValue.of(val) : ScriptValue.NULL;
-            })
+            // ScriptValue.of(String) already maps null -> NULL, so encoding a null String here
+            // reproduces the original val != null ? ScriptValue.of(val) : ScriptValue.NULL exactly.
+            .methodTyped1("get", TypeCodecs.STRING, TypeCodecs.STRING, null,
+                (BlockStateRef r, String name) -> BlockType.readProperty(r.nms(), name))
             // has(name) — check property exists
-            .method("has", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of(false);
-                return ScriptValue.of(BlockType.hasProperty(ref(obj).nms(), args.get(0).asStr()));
-            })
-            // equals(other) — compare two BlockState wrappers
-            .method("equals", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of(false);
-                ScriptValue other = args.get(0);
-                if (!(other instanceof ScriptValue.Obj o) || !(o.instance() instanceof BlockStateRef r2)) return ScriptValue.of(false);
-                return ScriptValue.of(ref(obj).nms().equals(r2.nms()));
-            });
+            .methodTyped1("has", TypeCodecs.STRING, TypeCodecs.BOOL, false,
+                (BlockStateRef r, String name) -> BlockType.hasProperty(r.nms(), name))
+            // equals(other) — compare two BlockState wrappers. Argument stays RAW (TypeCodecs.RAW
+            // is an identity passthrough) since the "other" value's real type is only known after
+            // an instanceof check inside the body, exactly like the original untyped handler.
+            .methodTyped1("equals", TypeCodecs.RAW, TypeCodecs.BOOL, false,
+                (BlockStateRef r, ScriptValue other) -> {
+                    if (!(other instanceof ScriptValue.Obj o) || !(o.instance() instanceof BlockStateRef r2)) return false;
+                    return r.nms().equals(r2.nms());
+                });
     }
 
     /** Wrap a NMS BlockState — resolves CE ImmutableBlockState automatically. */

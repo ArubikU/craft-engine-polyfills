@@ -4,6 +4,7 @@ import dev.arubik.craftengine.machine.block.entity.AbstractMachineBlockEntity;
 import dev.arubik.craftengine.machine.menu.bar.MachineBar;
 import dev.arubik.craftengine.script.PolyTypeRegistry;
 import dev.arubik.craftengine.script.ScriptValue;
+import dev.arubik.craftengine.script.TypeCodecs;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -19,51 +20,48 @@ public final class BarsType {
     public static void register() {
         PolyTypeRegistry.define("Bars")
             // Bars.get("water") → fraction 0.0-1.0 for that bar
-            .method("get", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of(0.0);
-                AbstractMachineBlockEntity m = be(obj);
-                String id = args.get(0).asStr();
-                try {
-                    double[] stat = m.barStat(id);
-                    double val = stat[0], max = stat[1];
-                    return ScriptValue.of(max > 0 ? val / max : 0.0);
-                } catch (Throwable ignored) { return ScriptValue.of(0.0); }
-            })
+            .methodTyped1("get", TypeCodecs.STRING, TypeCodecs.DOUBLE, 0.0,
+                (AbstractMachineBlockEntity m, String id) -> {
+                    try {
+                        double[] stat = m.barStat(id);
+                        double val = stat[0], max = stat[1];
+                        return max > 0 ? val / max : 0.0;
+                    } catch (Throwable ignored) { return 0.0; }
+                })
             // Bars.value("water") → current raw value
-            .method("value", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of(0.0);
-                AbstractMachineBlockEntity m = be(obj);
-                try { return ScriptValue.of(m.barStat(args.get(0).asStr())[0]); }
-                catch (Throwable ignored) { return ScriptValue.of(0.0); }
-            })
+            .methodTyped1("value", TypeCodecs.STRING, TypeCodecs.DOUBLE, 0.0,
+                (AbstractMachineBlockEntity m, String id) -> {
+                    try { return m.barStat(id)[0]; }
+                    catch (Throwable ignored) { return 0.0; }
+                })
             // Bars.max("water") → max raw value
-            .method("max", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of(0.0);
-                AbstractMachineBlockEntity m = be(obj);
-                try { return ScriptValue.of(m.barStat(args.get(0).asStr())[1]); }
-                catch (Throwable ignored) { return ScriptValue.of(0.0); }
-            })
+            .methodTyped1("max", TypeCodecs.STRING, TypeCodecs.DOUBLE, 0.0,
+                (AbstractMachineBlockEntity m, String id) -> {
+                    try { return m.barStat(id)[1]; }
+                    catch (Throwable ignored) { return 0.0; }
+                })
             // Bars.subtype("water") → type string (e.g. "water", "steam")
-            .method("subtype", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.NULL;
-                AbstractMachineBlockEntity m = be(obj);
-                try {
-                    String sub = m.barSubtype(args.get(0).asStr());
-                    return sub != null ? ScriptValue.of(sub) : ScriptValue.NULL;
-                } catch (Throwable ignored) { return ScriptValue.NULL; }
-            })
+            // Return codec is RAW (identity) — the original returns ScriptValue.NULL on a null
+            // subtype rather than a plain STRING codec's own coercion, so this keeps behavior exact.
+            .methodTyped1("subtype", TypeCodecs.STRING, TypeCodecs.RAW, ScriptValue.NULL,
+                (AbstractMachineBlockEntity m, String id) -> {
+                    try {
+                        String sub = m.barSubtype(id);
+                        return sub != null ? ScriptValue.of(sub) : ScriptValue.NULL;
+                    } catch (Throwable ignored) { return ScriptValue.NULL; }
+                })
             // Bars.list() → Array of bar id strings
-            .method("list", (obj, args) -> {
-                AbstractMachineBlockEntity m = be(obj);
-                try {
-                    List<ScriptValue> ids = new ArrayList<>();
-                    // DataMachineBlockEntity exposes bars via getBars() — use reflection-safe cast
-                    if (m instanceof dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity dm) {
-                        for (MachineBar bar : dm.getBars()) ids.add(ScriptValue.of(bar.id));
-                    }
-                    return new ScriptValue.Array(ids);
-                } catch (Throwable ignored) { return new ScriptValue.Array(List.of()); }
-            });
+            .methodTyped0("list", TypeCodecs.RAW,
+                (AbstractMachineBlockEntity m) -> {
+                    try {
+                        List<ScriptValue> ids = new ArrayList<>();
+                        // DataMachineBlockEntity exposes bars via getBars() — use reflection-safe cast
+                        if (m instanceof dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity dm) {
+                            for (MachineBar bar : dm.getBars()) ids.add(ScriptValue.of(bar.id));
+                        }
+                        return new ScriptValue.Array(ids);
+                    } catch (Throwable ignored) { return new ScriptValue.Array(List.of()); }
+                });
     }
 
     public static ScriptValue wrap(AbstractMachineBlockEntity machine) {

@@ -2,6 +2,7 @@ package dev.arubik.craftengine.script.types.util;
 
 import dev.arubik.craftengine.script.PolyTypeRegistry;
 import dev.arubik.craftengine.script.ScriptValue;
+import dev.arubik.craftengine.script.TypeCodecs;
 import dev.arubik.craftengine.virtualui.model.WidgetRenderContext;
 
 /**
@@ -27,13 +28,17 @@ public final class VirtualUIWidgetContextTypes {
     private VirtualUIWidgetContextTypes() {}
 
     public static void register() {
+        // ctx(obj) is more than a plain cast (it falls back to a default WidgetRenderContext for a
+        // non-WidgetRenderContext instance) — per the migration rules, the typed handler's first
+        // parameter stays Object and ctx(obj) is still called explicitly inside each body, rather
+        // than declaring WidgetRenderContext as the handler's instance type directly.
         PolyTypeRegistry.define("VUIWidget")
-                .method("id", (obj, args) -> ScriptValue.of(ctx(obj).widgetId()))
-                .method("is_hover", (obj, args) -> ScriptValue.of(ctx(obj).hovered()))
+                .methodTyped0("id", TypeCodecs.STRING, (Object obj) -> ctx(obj).widgetId())
+                .methodTyped0("is_hover", TypeCodecs.BOOL, (Object obj) -> ctx(obj).hovered())
                 // Server ticks since the screen opened — a time axis every widget kind inherits for
                 // script-driven animation, e.g. a pulsing scale:
                 // "<yellow>" + round((sin(VUIWidget.ticks_open() * 0.1) + 1) * 50) + "%"
-                .method("ticks_open", (obj, args) -> ScriptValue.of(ctx(obj).ticksOpen()));
+                .methodTyped0("ticks_open", TypeCodecs.DOUBLE, (Object obj) -> (double) ctx(obj).ticksOpen());
 
         PolyTypeRegistry.define("VUIButton", "VUIWidget");
         PolyTypeRegistry.define("VUIText", "VUIWidget");
@@ -44,21 +49,21 @@ public final class VirtualUIWidgetContextTypes {
         PolyTypeRegistry.define("VUIPlayerRender", "VUIWidget");
 
         PolyTypeRegistry.define("VUISlot", "VUIWidget")
-                .method("slot_index", (obj, args) -> ScriptValue.of(ctx(obj).slotIndex()));
+                .methodTyped0("slot_index", TypeCodecs.DOUBLE, (Object obj) -> (double) ctx(obj).slotIndex());
 
         PolyTypeRegistry.define("VUIScrollbar", "VUIWidget")
-                .method("value", (obj, args) -> ScriptValue.of(ctx(obj).value()))
-                .method("is_dragging", (obj, args) -> ScriptValue.of(ctx(obj).dragging()));
+                .methodTyped0("value", TypeCodecs.DOUBLE, (Object obj) -> ctx(obj).value())
+                .methodTyped0("is_dragging", TypeCodecs.BOOL, (Object obj) -> ctx(obj).dragging());
 
         PolyTypeRegistry.define("VUIToggle", "VUIWidget")
-                .method("is_on", (obj, args) -> ScriptValue.of(ctx(obj).value() > 0.5));
+                .methodTyped0("is_on", TypeCodecs.BOOL, (Object obj) -> ctx(obj).value() > 0.5);
 
         PolyTypeRegistry.define("VUISelect", "VUIWidget")
-                .method("index", (obj, args) -> ScriptValue.of(ctx(obj).value()))
-                .method("value", (obj, args) -> ScriptValue.of(ctx(obj).stringValue()));
+                .methodTyped0("index", TypeCodecs.DOUBLE, (Object obj) -> ctx(obj).value())
+                .methodTyped0("value", TypeCodecs.STRING, (Object obj) -> ctx(obj).stringValue());
 
         PolyTypeRegistry.define("VUIProgress", "VUIWidget")
-                .method("value", (obj, args) -> ScriptValue.of(ctx(obj).value()));
+                .methodTyped0("value", TypeCodecs.DOUBLE, (Object obj) -> ctx(obj).value());
     }
 
     /** Maps a {@link dev.arubik.craftengine.virtualui.model.Widget} class to the script type name

@@ -2,6 +2,7 @@ package dev.arubik.craftengine.script.types.machine;
 
 import dev.arubik.craftengine.script.PolyTypeRegistry;
 import dev.arubik.craftengine.script.ScriptValue;
+import dev.arubik.craftengine.script.TypeCodecs;
 import dev.arubik.craftengine.script.types.world.BlockType;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -36,11 +37,13 @@ public final class MultiBlockType {
                 MultiBlockRef r = ref(obj);
                 return (r.level() != null && r.corePos() != null) ? BlockType.wrap(r.level(), r.corePos()) : ScriptValue.NULL;
             })
-            .method("is_at", (obj, args) -> {
-                if (args.size() < 3) return ScriptValue.of(false);
-                MultiBlockRef r = ref(obj);
-                return ScriptValue.of((int)args.get(0).asNum() == r.relX() && (int)args.get(1).asNum() == r.relY() && (int)args.get(2).asNum() == r.relZ());
-            })
+            .methodTyped3("is_at", TypeCodecs.DOUBLE, TypeCodecs.DOUBLE, TypeCodecs.DOUBLE, TypeCodecs.BOOL, false,
+                (MultiBlockRef r, Double x, Double y, Double z) ->
+                    (int) (double) x == r.relX() && (int) (double) y == r.relY() && (int) (double) z == r.relZ())
+            // side(side_name) — NOT migrated to methodTyped1: a missing arg still runs the handler
+            // with a default of "" ("default-if-missing" shape) rather than short-circuiting, which
+            // methodTypedN's onMissingArgs can't express (it skips the handler body entirely). Left
+            // untyped.
             .method("side", (obj, args) -> {
                 String side = args.isEmpty() ? "" : args.get(0).asStr().toLowerCase();
                 MultiBlockRef r = ref(obj);
@@ -59,37 +62,35 @@ public final class MultiBlockType {
             // Returns the world-space block at the given schema-relative offset,
             // rotated according to the core's facing direction.
             // Schema is defined with NORTH as identity (relX=left, relZ=front).
-            .method("get_part_block", (obj, args) -> {
-                if (args.size() < 3) return ScriptValue.NULL;
-                MultiBlockRef r = ref(obj);
-                if (r.level() == null || r.corePos() == null) return ScriptValue.NULL;
-                int sx = (int) args.get(0).asNum(), sy = (int) args.get(1).asNum(), sz = (int) args.get(2).asNum();
-                BlockPos schemaOffset = new BlockPos(sx, sy, sz);
-                Direction facing = Direction.byName(r.coreFacing() != null ? r.coreFacing() : "north");
-                BlockPos rotated = rotateOffset(schemaOffset, facing);
-                return BlockType.wrap(r.level(), r.corePos().offset(rotated));
-            })
+            .methodTyped3("get_part_block", TypeCodecs.DOUBLE, TypeCodecs.DOUBLE, TypeCodecs.DOUBLE, TypeCodecs.RAW, ScriptValue.NULL,
+                (MultiBlockRef r, Double sxD, Double syD, Double szD) -> {
+                    if (r.level() == null || r.corePos() == null) return ScriptValue.NULL;
+                    int sx = (int) (double) sxD, sy = (int) (double) syD, sz = (int) (double) szD;
+                    BlockPos schemaOffset = new BlockPos(sx, sy, sz);
+                    Direction facing = Direction.byName(r.coreFacing() != null ? r.coreFacing() : "north");
+                    BlockPos rotated = rotateOffset(schemaOffset, facing);
+                    return BlockType.wrap(r.level(), r.corePos().offset(rotated));
+                })
             // get_side_block(side) — "left","right","front","back","top","bottom"
             // Returns the block adjacent to the core in the given facing-relative direction
-            .method("get_side_block", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.NULL;
-                MultiBlockRef r = ref(obj);
-                if (r.level() == null || r.corePos() == null) return ScriptValue.NULL;
-                String side = args.get(0).asStr().toLowerCase();
-                Direction facing = Direction.byName(r.coreFacing() != null ? r.coreFacing() : "north");
-                if (facing == null) facing = Direction.NORTH;
-                Direction worldDir = switch (side) {
-                    case "front"  -> facing;
-                    case "back"   -> facing.getOpposite();
-                    case "left"   -> facing.getCounterClockWise(Direction.Axis.Y);
-                    case "right"  -> facing.getClockWise(Direction.Axis.Y);
-                    case "top"    -> Direction.UP;
-                    case "bottom" -> Direction.DOWN;
-                    default       -> Direction.byName(side);
-                };
-                if (worldDir == null) return ScriptValue.NULL;
-                return BlockType.wrap(r.level(), r.corePos().relative(worldDir));
-            });
+            .methodTyped1("get_side_block", TypeCodecs.STRING, TypeCodecs.RAW, ScriptValue.NULL,
+                (MultiBlockRef r, String sideArg) -> {
+                    if (r.level() == null || r.corePos() == null) return ScriptValue.NULL;
+                    String side = sideArg.toLowerCase();
+                    Direction facing = Direction.byName(r.coreFacing() != null ? r.coreFacing() : "north");
+                    if (facing == null) facing = Direction.NORTH;
+                    Direction worldDir = switch (side) {
+                        case "front"  -> facing;
+                        case "back"   -> facing.getOpposite();
+                        case "left"   -> facing.getCounterClockWise(Direction.Axis.Y);
+                        case "right"  -> facing.getClockWise(Direction.Axis.Y);
+                        case "top"    -> Direction.UP;
+                        case "bottom" -> Direction.DOWN;
+                        default       -> Direction.byName(side);
+                    };
+                    if (worldDir == null) return ScriptValue.NULL;
+                    return BlockType.wrap(r.level(), r.corePos().relative(worldDir));
+                });
     }
 
     /** Rotate a schema offset by the core's facing. NORTH = identity. Mirrors MultiBlockBehavior. */

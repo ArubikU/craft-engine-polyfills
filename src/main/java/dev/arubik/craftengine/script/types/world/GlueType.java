@@ -3,6 +3,7 @@ package dev.arubik.craftengine.script.types.world;
 import dev.arubik.craftengine.contraption.glue.GlueRegistry;
 import dev.arubik.craftengine.script.PolyTypeRegistry;
 import dev.arubik.craftengine.script.ScriptValue;
+import dev.arubik.craftengine.script.TypeCodecs;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
@@ -58,46 +59,57 @@ public final class GlueType {
 
     public static void register() {
         PolyTypeRegistry.define("Glue")
+            // The instance (obj/Object below) is the Glue singleton sentinel and is never read —
+            // every method resolves its real target from the block argument instead (see class
+            // javadoc). Argument codec is RAW: blockRef(...) does more than a plain asXxx()
+            // coercion (it type-checks/unwraps a ScriptValue.Obj into a BlockType.BlockRef), so the
+            // helper is still called explicitly inside each body per rule 2. The "missing arg ->
+            // null" branch each body used to hand-check is now the framework's own onMissingArgs
+            // short-circuit (arity 1, false/empty-Array/0.0 respectively) — a wrong-TYPE argument
+            // (present but not a BlockRef) still falls through to blockRef(...) returning null
+            // exactly as before.
             /** Is anything glued to this block? A lone block is not a structure. */
-            .method("is_glued", (obj, args) -> {
-                BlockType.BlockRef r = args.isEmpty() ? null : blockRef(args.get(0));
-                return ScriptValue.of(r != null && glued(r));
-            })
+            .methodTyped1("is_glued", TypeCodecs.RAW, TypeCodecs.BOOL, false,
+                (Object obj, ScriptValue arg) -> {
+                    BlockType.BlockRef r = blockRef(arg);
+                    return r != null && glued(r);
+                })
             /**
              * Every block glued to this one, transitively — the exact set a bearing would carry.
              * An unglued block yields just itself, matching GlueRegistry.structureAt.
              */
-            .method("structure", (obj, args) -> {
-                BlockType.BlockRef r = args.isEmpty() ? null : blockRef(args.get(0));
-                List<ScriptValue> out = new ArrayList<>();
-                if (r == null) return new ScriptValue.Array(out);
-                for (BlockPos p : structure(r)) out.add(BlockType.wrap(r.level(), p));
-                return new ScriptValue.Array(out);
-            })
+            .methodTyped1("structure", TypeCodecs.RAW, TypeCodecs.RAW, new ScriptValue.Array(List.of()),
+                (Object obj, ScriptValue arg) -> {
+                    BlockType.BlockRef r = blockRef(arg);
+                    List<ScriptValue> out = new ArrayList<>();
+                    if (r == null) return new ScriptValue.Array(out);
+                    for (BlockPos p : structure(r)) out.add(BlockType.wrap(r.level(), p));
+                    return new ScriptValue.Array(out);
+                })
             /** How many blocks that structure holds. Cheaper than materialising it. */
-            .method("size", (obj, args) -> {
-                BlockType.BlockRef r = args.isEmpty() ? null : blockRef(args.get(0));
-                return ScriptValue.of(r == null ? 0 : structure(r).size());
-            })
+            .methodTyped1("size", TypeCodecs.RAW, TypeCodecs.DOUBLE, 0.0,
+                (Object obj, ScriptValue arg) -> {
+                    BlockType.BlockRef r = blockRef(arg);
+                    return r == null ? 0.0 : (double) structure(r).size();
+                })
             /**
              * How many blocks in the structure have an id containing {@code needle} — the count a
              * bearing needs before deciding whether assembling is worth it.
              */
-            .method("count", (obj, args) -> {
-                if (args.size() < 2) return ScriptValue.of(0);
-                BlockType.BlockRef r = blockRef(args.get(0));
-                if (r == null) return ScriptValue.of(0);
-                String needle = args.get(1).asStr();
-                int n = 0;
-                for (BlockPos p : structure(r)) {
-                    String id = BlockType.customBlockId(r.level().getBlockState(p));
-                    if (id == null) {
-                        id = net.minecraft.core.registries.BuiltInRegistries.BLOCK
-                                .getKey(r.level().getBlockState(p).getBlock()).toString();
+            .methodTyped2("count", TypeCodecs.RAW, TypeCodecs.STRING, TypeCodecs.DOUBLE, 0.0,
+                (Object obj, ScriptValue blockArg, String needle) -> {
+                    BlockType.BlockRef r = blockRef(blockArg);
+                    if (r == null) return 0.0;
+                    int n = 0;
+                    for (BlockPos p : structure(r)) {
+                        String id = BlockType.customBlockId(r.level().getBlockState(p));
+                        if (id == null) {
+                            id = net.minecraft.core.registries.BuiltInRegistries.BLOCK
+                                    .getKey(r.level().getBlockState(p).getBlock()).toString();
+                        }
+                        if (id.contains(needle)) n++;
                     }
-                    if (id.contains(needle)) n++;
-                }
-                return ScriptValue.of(n);
-            });
+                    return (double) n;
+                });
     }
 }

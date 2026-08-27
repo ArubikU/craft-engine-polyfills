@@ -8,6 +8,7 @@ import dev.arubik.craftengine.contraption.core.ContraptionManager;
 import dev.arubik.craftengine.contraption.type.MachineContraptionType;
 import dev.arubik.craftengine.script.PolyTypeRegistry;
 import dev.arubik.craftengine.script.ScriptValue;
+import dev.arubik.craftengine.script.TypeCodecs;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.momirealms.craftengine.core.util.Key;
@@ -42,18 +43,22 @@ public final class ContraptionManagerType {
                 return new ScriptValue.Array(result);
             })
             .property("count", obj -> ScriptValue.of(ContraptionManager.all().size()))
-            .method("get", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.NULL;
-                try {
-                    UUID id = UUID.fromString(args.get(0).asStr());
-                    ContraptionEntity entity = ContraptionManager.get(id);
-                    if (entity != null && entity.state().level() instanceof dev.arubik.craftengine.contraption.core.ContraptionLevel cl)
-                        return ContraptionType.wrap(cl);
-                } catch (Throwable ignored) {}
-                return ScriptValue.NULL;
-            })
+            .methodTyped1("get", TypeCodecs.STRING, TypeCodecs.RAW, ScriptValue.NULL,
+                (Object obj, String idStr) -> {
+                    try {
+                        UUID id = UUID.fromString(idStr);
+                        ContraptionEntity entity = ContraptionManager.get(id);
+                        if (entity != null && entity.state().level() instanceof dev.arubik.craftengine.contraption.core.ContraptionLevel cl)
+                            return ContraptionType.wrap(cl);
+                    } catch (Throwable ignored) {}
+                    return ScriptValue.NULL;
+                })
             // --- Creation ---
-            // create(world, x, y, z) — assemble a MachineContraptionType at given block pos
+            // create(world, x, y, z[, type]) — NOT migrated: the trailing `type` argument is
+            // genuinely optional, checked via args.size() >= 5 inside the body — a typed handler
+            // only receives its fixed-arity decoded arguments, not the original args list/size, so
+            // that conditional read can't be expressed (same reasoning as ContraptionType's
+            // teleport()/play_sound() NOT-migrated notes). Left untyped.
             .method("create", (obj, args) -> {
                 if (args.size() < 4) return ScriptValue.NULL;
                 try {
@@ -79,6 +84,8 @@ public final class ContraptionManagerType {
             // graph, gluing a windmill to its bearing pulled the bearing into the contraption —
             // the block was then removed from the world, so the contraption was anchored to air,
             // never moved, and left the build looking like it had simply vanished.
+            // NOT migrated: trailing `type` argument is optional (args.size() >= 3) — same reason
+            // as create() above. Left untyped.
             .method("create_bearing", (obj, args) -> {
                 if (args.size() < 2) return ScriptValue.NULL;
                 try {
@@ -97,6 +104,8 @@ public final class ContraptionManagerType {
                             ? ContraptionType.wrap(cl) : ScriptValue.NULL;
                 } catch (Throwable e) { return ScriptValue.NULL; }
             })
+            // NOT migrated: trailing `type` argument is optional (args.size() >= 2) — same reason
+            // as create() above. Left untyped.
             .method("create_at", (obj, args) -> {
                 if (args.isEmpty()) return ScriptValue.NULL;
                 try {
@@ -115,22 +124,26 @@ public final class ContraptionManagerType {
             // disposes the contraption level. Does NOT put its blocks back anywhere — for a
             // structure you genuinely want gone (an exploit cleanup, an admin command), not the
             // normal "player disassembles their machine" case, which wants disassemble() below.
-            .method("kill", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of(false);
-                try {
-                    ScriptValue cv = args.get(0);
-                    if (cv instanceof ScriptValue.Obj co && co.instance() instanceof dev.arubik.craftengine.contraption.core.ContraptionLevel cl) {
-                        var entity = ContraptionWorlds.entityOf(cl).orElse(null);
-                        if (entity != null) { ContraptionKill.kill(entity); return ScriptValue.of(true); }
-                    } else if (cv instanceof ScriptValue.Str s) {
-                        UUID id = UUID.fromString(s.value());
-                        ContraptionEntity e = ContraptionManager.get(id);
-                        if (e != null) { ContraptionKill.kill(e); return ScriptValue.of(true); }
-                    }
-                } catch (Throwable ignored) {}
-                return ScriptValue.of(false);
-            })
-            .method("kill_all", (obj, args) -> ScriptValue.of(ContraptionKill.killAll()))
+            // `id` arg stays TypeCodecs.RAW: the body itself dispatches dynamically on whether the
+            // passed ScriptValue is an Obj (a Contraption instance) or a Str (a uuid string) — same
+            // reasoning as EntityType#teleport_to's RAW arg.
+            .methodTyped1("kill", TypeCodecs.RAW, TypeCodecs.BOOL, false,
+                (Object obj, ScriptValue cv) -> {
+                    try {
+                        if (cv instanceof ScriptValue.Obj co && co.instance() instanceof dev.arubik.craftengine.contraption.core.ContraptionLevel cl) {
+                            var entity = ContraptionWorlds.entityOf(cl).orElse(null);
+                            if (entity != null) { ContraptionKill.kill(entity); return true; }
+                        } else if (cv instanceof ScriptValue.Str s) {
+                            UUID id = UUID.fromString(s.value());
+                            ContraptionEntity e = ContraptionManager.get(id);
+                            if (e != null) { ContraptionKill.kill(e); return true; }
+                        }
+                    } catch (Throwable ignored) {}
+                    return false;
+                })
+            // killAll() returns an int (count killed) — ScriptValue.of(int) widens to a Num
+            // (double), not a Bool, so the return codec is TypeCodecs.DOUBLE, not BOOL.
+            .methodTyped0("kill_all", TypeCodecs.DOUBLE, (Object obj) -> (double) ContraptionKill.killAll())
             // disassemble(id) — the REAL "return this structure to the world" operation Create-style
             // bearings use (same primitive the hammer-disassemble listener calls): restores every
             // block (rotation-snapped to the nearest quarter turn), glue edges, and furniture back
@@ -138,27 +151,27 @@ public final class ContraptionManagerType {
             // contraption. `kill()` alone (what windmill_interact.pf used to call) only does the
             // despawn/dispose half — the blocks were never coming back, which is why disassembling
             // looked like nothing happened.
-            .method("disassemble", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of(false);
-                try {
-                    ScriptValue cv = args.get(0);
-                    ContraptionEntity entity = null;
-                    ServerLevel level = null;
-                    if (cv instanceof ScriptValue.Obj co && co.instance() instanceof dev.arubik.craftengine.contraption.core.ContraptionLevel cl) {
-                        entity = ContraptionWorlds.entityOf(cl).orElse(null);
-                        if (entity != null && cl.realLevel() instanceof ServerLevel rl) level = rl;
-                    } else if (cv instanceof ScriptValue.Str s) {
-                        UUID id = UUID.fromString(s.value());
-                        entity = ContraptionManager.get(id);
-                        if (entity != null && entity.state().level() != null
-                                && entity.state().level().realLevel() instanceof ServerLevel rl) level = rl;
-                    }
-                    if (entity == null || level == null) return ScriptValue.of(false);
-                    ContraptionAssembler.disassemble(level.getWorld(), entity);
-                    return ScriptValue.of(true);
-                } catch (Throwable ignored) {}
-                return ScriptValue.of(false);
-            });
+            // `id` arg stays TypeCodecs.RAW: same Obj-vs-Str dynamic dispatch as kill() above.
+            .methodTyped1("disassemble", TypeCodecs.RAW, TypeCodecs.BOOL, false,
+                (Object obj, ScriptValue cv) -> {
+                    try {
+                        ContraptionEntity entity = null;
+                        ServerLevel level = null;
+                        if (cv instanceof ScriptValue.Obj co && co.instance() instanceof dev.arubik.craftengine.contraption.core.ContraptionLevel cl) {
+                            entity = ContraptionWorlds.entityOf(cl).orElse(null);
+                            if (entity != null && cl.realLevel() instanceof ServerLevel rl) level = rl;
+                        } else if (cv instanceof ScriptValue.Str s) {
+                            UUID id = UUID.fromString(s.value());
+                            entity = ContraptionManager.get(id);
+                            if (entity != null && entity.state().level() != null
+                                    && entity.state().level().realLevel() instanceof ServerLevel rl) level = rl;
+                        }
+                        if (entity == null || level == null) return false;
+                        ContraptionAssembler.disassemble(level.getWorld(), entity);
+                        return true;
+                    } catch (Throwable ignored) {}
+                    return false;
+                });
     }
 
     public static ScriptValue wrap() {

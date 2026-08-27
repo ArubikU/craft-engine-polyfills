@@ -3,6 +3,7 @@ package dev.arubik.craftengine.script.types.machine;
 import dev.arubik.craftengine.conveyor.belt.ConveyorBlockEntity;
 import dev.arubik.craftengine.script.PolyTypeRegistry;
 import dev.arubik.craftengine.script.ScriptValue;
+import dev.arubik.craftengine.script.TypeCodecs;
 import org.bukkit.craftbukkit.inventory.CraftItemStack;
 
 /**
@@ -53,13 +54,14 @@ public final class BeltItemType {
             // take() -> Item. Removes and returns whatever is in THIS slot specifically (unlike
             // Belt.take(), which always targets the front/furthest-advanced slot regardless of
             // which BeltItem the caller actually looked at).
-            .method("take", (obj, args) -> {
-                ConveyorBlockEntity belt = conveyor(obj);
-                if (belt == null) return ScriptValue.ofItem(net.minecraft.world.item.ItemStack.EMPTY);
-                org.bukkit.inventory.ItemStack taken = belt.takeSlotAt(ref(obj).index());
-                if (taken == null) return ScriptValue.ofItem(net.minecraft.world.item.ItemStack.EMPTY);
-                return ScriptValue.ofItem(CraftItemStack.asNMSCopy(taken));
-            });
+            .methodTyped0("take", TypeCodecs.RAW,
+                (BeltItemRef obj) -> {
+                    ConveyorBlockEntity belt = conveyor(obj);
+                    if (belt == null) return ScriptValue.ofItem(net.minecraft.world.item.ItemStack.EMPTY);
+                    org.bukkit.inventory.ItemStack taken = belt.takeSlotAt(obj.index());
+                    if (taken == null) return ScriptValue.ofItem(net.minecraft.world.item.ItemStack.EMPTY);
+                    return ScriptValue.ofItem(CraftItemStack.asNMSCopy(taken));
+                });
     }
 
     public static ScriptValue wrap(BeltItemRef ref) {

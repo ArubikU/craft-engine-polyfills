@@ -5,6 +5,7 @@ import java.util.Map;
 
 import dev.arubik.craftengine.script.PolyTypeRegistry;
 import dev.arubik.craftengine.script.ScriptValue;
+import dev.arubik.craftengine.script.TypeCodecs;
 import dev.arubik.craftengine.tasks.TaskManagerRegistry;
 
 /**
@@ -25,6 +26,10 @@ public final class TaskManagerType {
 
     public static void register() {
         PolyTypeRegistry.define("TaskManager")
+            // NOT migrated to methodTyped: `data` is a genuinely optional trailing make_map(...)
+            // argument (dataMap checks args.size()/index itself) — a typed handler only receives
+            // its fixed-arity decoded arguments, not the original args list/size, so that
+            // conditional read can't be expressed. Left untyped (schedule/repeat/schedule_async).
             .method("schedule", (obj, args) -> {
                 if (args.size() < 2) return ScriptValue.of("");
                 String id = TaskManagerRegistry.schedule(args.get(0).asStr(), (long) args.get(1).asNum(), dataMap(args, 2));
@@ -52,8 +57,8 @@ public final class TaskManagerType {
                 String id = TaskManagerRegistry.scheduleAsync(args.get(0).asStr(), (long) args.get(1).asNum(), dataMap(args, 2));
                 return ScriptValue.of(id);
             })
-            .method("cancel", (obj, args) ->
-                ScriptValue.of(!args.isEmpty() && TaskManagerRegistry.cancel(args.get(0).asStr())));
+            .methodTyped1("cancel", TypeCodecs.STRING, TypeCodecs.BOOL, false,
+                (Object obj, String handle) -> TaskManagerRegistry.cancel(handle));
     }
 
     @SuppressWarnings("unchecked")

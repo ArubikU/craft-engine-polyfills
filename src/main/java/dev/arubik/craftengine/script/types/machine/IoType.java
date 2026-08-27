@@ -4,6 +4,7 @@ import dev.arubik.craftengine.machine.block.entity.AbstractMachineBlockEntity;
 import dev.arubik.craftengine.multiblock.IOConfiguration;
 import dev.arubik.craftengine.script.PolyTypeRegistry;
 import dev.arubik.craftengine.script.ScriptValue;
+import dev.arubik.craftengine.script.TypeCodecs;
 import net.minecraft.core.Direction;
 
 import java.util.ArrayList;
@@ -101,55 +102,69 @@ public final class IoType {
             })
             .property("configured", obj -> ScriptValue.of(ref(obj).read() != null))
 
-            .method("accepts_input", (obj, a) -> {
-                if (a.size() < 2) return ScriptValue.of(false);
-                IoRef r = ref(obj);
-                IOConfiguration cfg = r.read();
-                IOConfiguration.IOType t = type(a.get(0));
-                if (cfg == null || t == null) return ScriptValue.of(false);
-                for (Direction d : faces(r.machine(), a.get(1).asStr()))
-                    if (cfg.acceptsInput(t, d)) return ScriptValue.of(true);
-                return ScriptValue.of(false);
-            })
-            .method("provides_output", (obj, a) -> {
-                if (a.size() < 2) return ScriptValue.of(false);
-                IoRef r = ref(obj);
-                IOConfiguration cfg = r.read();
-                IOConfiguration.IOType t = type(a.get(0));
-                if (cfg == null || t == null) return ScriptValue.of(false);
-                for (Direction d : faces(r.machine(), a.get(1).asStr()))
-                    if (cfg.providesOutput(t, d)) return ScriptValue.of(true);
-                return ScriptValue.of(false);
-            })
+            // Arg0 (the IO type name) is decoded with TypeCodecs.RAW rather than STRING: the
+            // type(ScriptValue) helper below does more than a plain asStr() — it also
+            // trim/uppercase/IOType.valueOf's the string, returning null on a bad name — so the
+            // raw ScriptValue is passed straight through unchanged and handed to type() exactly as
+            // the untyped body did, rather than re-wrapping a decoded String back into one.
+            .methodTyped2("accepts_input", TypeCodecs.RAW, TypeCodecs.STRING, TypeCodecs.BOOL, false,
+                (IoRef r, ScriptValue typeArg, String face) -> {
+                    IOConfiguration cfg = r.read();
+                    IOConfiguration.IOType t = type(typeArg);
+                    if (cfg == null || t == null) return false;
+                    for (Direction d : faces(r.machine(), face))
+                        if (cfg.acceptsInput(t, d)) return true;
+                    return false;
+                })
+            .methodTyped2("provides_output", TypeCodecs.RAW, TypeCodecs.STRING, TypeCodecs.BOOL, false,
+                (IoRef r, ScriptValue typeArg, String face) -> {
+                    IOConfiguration cfg = r.read();
+                    IOConfiguration.IOType t = type(typeArg);
+                    if (cfg == null || t == null) return false;
+                    for (Direction d : faces(r.machine(), face))
+                        if (cfg.providesOutput(t, d)) return true;
+                    return false;
+                })
 
-            .method("allow_input", (obj, a) -> edit(obj, a, true, true))
-            .method("deny_input", (obj, a) -> edit(obj, a, true, false))
-            .method("allow_output", (obj, a) -> edit(obj, a, false, true))
-            .method("deny_output", (obj, a) -> edit(obj, a, false, false))
+            .methodTyped2("allow_input", TypeCodecs.RAW, TypeCodecs.STRING, TypeCodecs.BOOL, false,
+                (IoRef r, ScriptValue typeArg, String face) -> editTyped(r, typeArg, face, true, true))
+            .methodTyped2("deny_input", TypeCodecs.RAW, TypeCodecs.STRING, TypeCodecs.BOOL, false,
+                (IoRef r, ScriptValue typeArg, String face) -> editTyped(r, typeArg, face, true, false))
+            .methodTyped2("allow_output", TypeCodecs.RAW, TypeCodecs.STRING, TypeCodecs.BOOL, false,
+                (IoRef r, ScriptValue typeArg, String face) -> editTyped(r, typeArg, face, false, true))
+            .methodTyped2("deny_output", TypeCodecs.RAW, TypeCodecs.STRING, TypeCodecs.BOOL, false,
+                (IoRef r, ScriptValue typeArg, String face) -> editTyped(r, typeArg, face, false, false))
 
             /** Opens a face both ways in one call. */
-            .method("allow", (obj, a) -> {
-                boolean in = edit(obj, a, true, true).asBool();
-                boolean out = edit(obj, a, false, true).asBool();
-                return ScriptValue.of(in || out);
-            })
-            .method("deny", (obj, a) -> {
-                boolean in = edit(obj, a, true, false).asBool();
-                boolean out = edit(obj, a, false, false).asBool();
-                return ScriptValue.of(in || out);
-            })
+            .methodTyped2("allow", TypeCodecs.RAW, TypeCodecs.STRING, TypeCodecs.BOOL, false,
+                (IoRef r, ScriptValue typeArg, String face) -> {
+                    boolean in = editTyped(r, typeArg, face, true, true);
+                    boolean out = editTyped(r, typeArg, face, false, true);
+                    return in || out;
+                })
+            .methodTyped2("deny", TypeCodecs.RAW, TypeCodecs.STRING, TypeCodecs.BOOL, false,
+                (IoRef r, ScriptValue typeArg, String face) -> {
+                    boolean in = editTyped(r, typeArg, face, true, false);
+                    boolean out = editTyped(r, typeArg, face, false, false);
+                    return in || out;
+                })
 
             /** Closes every face for every type — a blank slate to build on. */
-            .method("clear", (obj, a) -> {
-                IoRef r = ref(obj);
-                IOConfiguration.Simple cfg = r.write();
-                if (cfg == null) return ScriptValue.of(false);
-                for (IOConfiguration.IOType t : IOConfiguration.IOType.values())
-                    for (Direction d : Direction.values())
-                        cfg.removeInput(t, d).removeOutput(t, d);
-                return ScriptValue.of(true);
-            })
+            .methodTyped0("clear", TypeCodecs.BOOL,
+                (IoRef r) -> {
+                    IOConfiguration.Simple cfg = r.write();
+                    if (cfg == null) return false;
+                    for (IOConfiguration.IOType t : IOConfiguration.IOType.values())
+                        for (Direction d : Direction.values())
+                            cfg.removeInput(t, d).removeOutput(t, d);
+                    return true;
+                })
 
+            // NOT migrated to a typed method: describe()'s single argument is genuinely optional —
+            // `a.isEmpty() ? null : type(a.get(0))` is a default-if-missing read, not a hard
+            // "missing args -> short-circuit" fail-fast a typed handler's onMissingArgs can express
+            // (that fires only below the declared arity, not in place of a per-call presence check
+            // whose absence is a valid, still-processed call). Left untyped.
             /** Every face currently open for a type, as "input"/"output"/"both" per direction. */
             .method("describe", (obj, a) -> {
                 IoRef r = ref(obj);
@@ -168,15 +183,16 @@ public final class IoType {
             });
     }
 
-    /** Shared body of allow_/deny_ input/output. */
-    private static ScriptValue edit(Object obj, List<ScriptValue> a, boolean input, boolean grant) {
-        if (a.size() < 2) return ScriptValue.of(false);
-        IoRef r = ref(obj);
-        IOConfiguration.IOType t = type(a.get(0));
+    /** Shared body of allow_/deny_ input/output — the typed-registration form of the old
+     *  edit(Object, List&lt;ScriptValue&gt;, boolean, boolean) helper, taking already-decoded
+     *  arguments instead of the raw args list (the "&lt; 2 args" short-circuit it used to open with
+     *  is now each caller's methodTyped2 onMissingArgs). */
+    private static boolean editTyped(IoRef r, ScriptValue typeArg, String face, boolean input, boolean grant) {
+        IOConfiguration.IOType t = type(typeArg);
         IOConfiguration.Simple cfg = r.write();
-        if (cfg == null || t == null) return ScriptValue.of(false);
-        List<Direction> dirs = faces(r.machine(), a.get(1).asStr());
-        if (dirs.isEmpty()) return ScriptValue.of(false);
+        if (cfg == null || t == null) return false;
+        List<Direction> dirs = faces(r.machine(), face);
+        if (dirs.isEmpty()) return false;
         for (Direction d : dirs) {
             if (input) {
                 if (grant) cfg.addInput(t, d); else cfg.removeInput(t, d);
@@ -184,7 +200,7 @@ public final class IoType {
                 if (grant) cfg.addOutput(t, d); else cfg.removeOutput(t, d);
             }
         }
-        return ScriptValue.of(true);
+        return true;
     }
 
     public static ScriptValue wrap(MachineType.MachineRef machine) {

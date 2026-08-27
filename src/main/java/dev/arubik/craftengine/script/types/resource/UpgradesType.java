@@ -2,6 +2,7 @@ package dev.arubik.craftengine.script.types.resource;
 
 import dev.arubik.craftengine.script.PolyTypeRegistry;
 import dev.arubik.craftengine.script.ScriptValue;
+import dev.arubik.craftengine.script.TypeCodecs;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.ArrayList;
@@ -29,28 +30,29 @@ public final class UpgradesType {
                 for (ItemStack s : inv) if (s != null && !s.isEmpty()) items.add(ScriptValue.ofItem(s));
                 return new ScriptValue.Array(items);
             })
-            .method("count", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of(0);
-                Integer c = ref(obj).byType().get(args.get(0).asStr());
-                return ScriptValue.of(c != null ? c : 0);
-            })
-            .method("slot", (obj, args) -> {
-                ItemStack[] inv = ref(obj).inventory();
-                if (inv == null || args.isEmpty()) return ScriptValue.NULL;
-                int n = (int) args.get(0).asNum();
-                return (n >= 0 && n < inv.length) ? ScriptValue.ofItem(inv[n]) : ScriptValue.NULL;
-            })
-            .method("has", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of(false);
-                Integer c = ref(obj).byType().get(args.get(0).asStr());
-                return ScriptValue.of(c != null && c > 0);
-            })
+            .methodTyped1("count", TypeCodecs.STRING, TypeCodecs.DOUBLE, 0.0,
+                (UpgradesRef obj, String type) -> {
+                    Integer c = obj.byType().get(type);
+                    return (double) (c != null ? c : 0);
+                })
+            .methodTyped1("slot", TypeCodecs.DOUBLE, TypeCodecs.RAW, ScriptValue.NULL,
+                (UpgradesRef obj, Double nArg) -> {
+                    ItemStack[] inv = obj.inventory();
+                    if (inv == null) return ScriptValue.NULL;
+                    int n = nArg.intValue();
+                    return (n >= 0 && n < inv.length) ? ScriptValue.ofItem(inv[n]) : ScriptValue.NULL;
+                })
+            .methodTyped1("has", TypeCodecs.STRING, TypeCodecs.BOOL, false,
+                (UpgradesRef obj, String type) -> {
+                    Integer c = obj.byType().get(type);
+                    return c != null && c > 0;
+                })
             // Upgrades.get("overclock") — explicit method
-            .method("get", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of(0);
-                Integer c = ref(obj).byType().get(args.get(0).asStr());
-                return ScriptValue.of(c != null ? c : 0);
-            })
+            .methodTyped1("get", TypeCodecs.STRING, TypeCodecs.DOUBLE, 0.0,
+                (UpgradesRef obj, String type) -> {
+                    Integer c = obj.byType().get(type);
+                    return (double) (c != null ? c : 0);
+                })
             // Upgrades.overclock / Upgrades.anyType — default property fallback
             .defaultProperty((obj, prop) -> {
                 Integer c = ref(obj).byType().get(prop);

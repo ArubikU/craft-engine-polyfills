@@ -2,6 +2,7 @@ package dev.arubik.craftengine.script.types.primitive;
 
 import dev.arubik.craftengine.script.PolyTypeRegistry;
 import dev.arubik.craftengine.script.ScriptValue;
+import dev.arubik.craftengine.script.TypeCodecs;
 import net.minecraft.nbt.*;
 
 import java.util.ArrayList;
@@ -17,29 +18,19 @@ public final class NbtDataType {
 
     public static void register() {
         PolyTypeRegistry.define("NbtData")
-            .method("get", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.NULL;
-                return resolvePath(tag(obj), args.get(0).asStr());
-            })
-            .method("has", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of(false);
-                return ScriptValue.of(pathExists(tag(obj), args.get(0).asStr()));
-            })
-            .method("get_int", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of(0);
-                ScriptValue v = resolvePath(tag(obj), args.get(0).asStr());
-                return ScriptValue.of(v.asNum());
-            })
-            .method("get_string", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of("");
-                ScriptValue v = resolvePath(tag(obj), args.get(0).asStr());
-                return ScriptValue.of(v.asStr());
-            })
-            .method("get_double", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of(0.0);
-                ScriptValue v = resolvePath(tag(obj), args.get(0).asStr());
-                return ScriptValue.of(v.asNum());
-            })
+            // Return is genuinely dynamic (resolvePath can yield NULL, a number, a string, an Array,
+            // or a nested NbtData wrapper) — kept as TypeCodecs.RAW so the original ScriptValue is
+            // passed through unchanged.
+            .methodTyped1("get", TypeCodecs.STRING, TypeCodecs.RAW, ScriptValue.NULL,
+                (CompoundTag tag, String path) -> resolvePath(tag, path))
+            .methodTyped1("has", TypeCodecs.STRING, TypeCodecs.BOOL, false,
+                (CompoundTag tag, String path) -> pathExists(tag, path))
+            .methodTyped1("get_int", TypeCodecs.STRING, TypeCodecs.DOUBLE, 0.0,
+                (CompoundTag tag, String path) -> resolvePath(tag, path).asNum())
+            .methodTyped1("get_string", TypeCodecs.STRING, TypeCodecs.STRING, "",
+                (CompoundTag tag, String path) -> resolvePath(tag, path).asStr())
+            .methodTyped1("get_double", TypeCodecs.STRING, TypeCodecs.DOUBLE, 0.0,
+                (CompoundTag tag, String path) -> resolvePath(tag, path).asNum())
             ;
     }
 

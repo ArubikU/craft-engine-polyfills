@@ -12,6 +12,7 @@ import dev.arubik.craftengine.script.PolyTypeRegistry;
 import dev.arubik.craftengine.script.ScriptCall;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptValue;
+import dev.arubik.craftengine.script.TypeCodecs;
 import dev.arubik.craftengine.script.TypedKeyBridge;
 import dev.arubik.craftengine.script.types.event.EventManagerType;
 import dev.arubik.craftengine.script.types.primitive.ItemType;
@@ -42,11 +43,13 @@ public final class SQLDriverType {
 
     public static void register() {
         PolyTypeRegistry.define("SQL")
-            .method("is_ready", (obj, args) -> ScriptValue.of(SQLDriver.isReady()))
-            .method("last_error", (obj, args) -> ScriptValue.of(SQLDriver.lastError() == null ? "" : SQLDriver.lastError()))
-            .method("backend", (obj, args) -> ScriptValue.of(SQLDriver.backend().name().toLowerCase(Locale.ROOT)))
+            .methodTyped0("is_ready", TypeCodecs.BOOL, (Object obj) -> SQLDriver.isReady())
+            .methodTyped0("last_error", TypeCodecs.STRING, (Object obj) -> SQLDriver.lastError() == null ? "" : SQLDriver.lastError())
+            .methodTyped0("backend", TypeCodecs.STRING, (Object obj) -> SQLDriver.backend().name().toLowerCase(Locale.ROOT))
 
             // SQL.query("SELECT * FROM t WHERE id = ?", id) -> Array<Map<column, value>>
+            // NOT migrated to methodTyped: params are a trailing VARIADIC tail (jdbcParams(args, 1))
+            // of unbounded length — no fixed arity for methodTypedN to decode. Left untyped.
             .method("query", (obj, args) -> {
                 if (args.isEmpty()) return new ScriptValue.Array(List.of());
                 try {
@@ -65,22 +68,24 @@ public final class SQLDriverType {
             // has no way to know a BLOB column is really an Item). Params is a real Array here
             // (same reason query_async's is) since the column-types map is a third fixed argument.
             // Any column not listed in the map still decodes the normal generic way.
-            .method("query_typed", (obj, args) -> {
-                if (args.size() < 3) return new ScriptValue.Array(List.of());
-                String sql = args.get(0).asStr();
-                List<Object> params = arrayToJdbcParams(args.get(1));
-                Map<String, String> columnTypes = mapArg(args.get(2));
-                try {
-                    List<Map<String, Object>> rows = SQLDriver.query(sql, params);
-                    List<ScriptValue> out = new ArrayList<>(rows.size());
-                    for (Map<String, Object> row : rows) out.add(rowToMap(row, columnTypes));
-                    return new ScriptValue.Array(out);
-                } catch (Throwable t) {
-                    CraftEnginePolyfills.instance().getLogger().log(Level.WARNING, "[SQL] query_typed threw", t);
-                    return new ScriptValue.Array(List.of());
-                }
-            })
+            .methodTyped3("query_typed", TypeCodecs.STRING, TypeCodecs.RAW, TypeCodecs.RAW, TypeCodecs.RAW,
+                    new ScriptValue.Array(List.of()),
+                    (Object obj, String sql, ScriptValue paramsArg, ScriptValue columnTypesArg) -> {
+                        List<Object> params = arrayToJdbcParams(paramsArg);
+                        Map<String, String> columnTypes = mapArg(columnTypesArg);
+                        try {
+                            List<Map<String, Object>> rows = SQLDriver.query(sql, params);
+                            List<ScriptValue> out = new ArrayList<>(rows.size());
+                            for (Map<String, Object> row : rows) out.add(rowToMap(row, columnTypes));
+                            return new ScriptValue.Array(out);
+                        } catch (Throwable t) {
+                            CraftEnginePolyfills.instance().getLogger().log(Level.WARNING, "[SQL] query_typed threw", t);
+                            return new ScriptValue.Array(List.of());
+                        }
+                    })
             // SQL.execute("UPDATE t SET x = ? WHERE id = ?", x, id) -> affected row count
+            // NOT migrated to methodTyped: params are a trailing VARIADIC tail (jdbcParams(args, 1))
+            // of unbounded length — no fixed arity for methodTypedN to decode. Left untyped.
             .method("execute", (obj, args) -> {
                 if (args.isEmpty()) return ScriptValue.of(0);
                 try {
@@ -97,16 +102,18 @@ public final class SQLDriverType {
             // as "uuid_array"/"int_array" rather than left as-is, or forcing a specific encoding
             // where auto-detection would guess wrong. types[i] == "" (or the types array shorter
             // than params) falls back to scriptToJdbc's normal auto-detect/passthrough for that slot.
-            .method("execute_typed", (obj, args) -> {
-                if (args.size() < 3) return ScriptValue.of(0);
-                try {
-                    return ScriptValue.of(SQLDriver.execute(args.get(0).asStr(), typedJdbcParams(args.get(1), args.get(2))));
-                } catch (Throwable t) {
-                    CraftEnginePolyfills.instance().getLogger().log(Level.WARNING, "[SQL] execute_typed threw", t);
-                    return ScriptValue.of(0);
-                }
-            })
+            .methodTyped3("execute_typed", TypeCodecs.STRING, TypeCodecs.RAW, TypeCodecs.RAW, TypeCodecs.DOUBLE, 0.0,
+                    (Object obj, String sql, ScriptValue paramsArg, ScriptValue typesArg) -> {
+                        try {
+                            return (double) SQLDriver.execute(sql, typedJdbcParams(paramsArg, typesArg));
+                        } catch (Throwable t) {
+                            CraftEnginePolyfills.instance().getLogger().log(Level.WARNING, "[SQL] execute_typed threw", t);
+                            return 0.0;
+                        }
+                    })
             // SQL.execute_id("INSERT INTO t (x) VALUES (?)", x) -> the new row's auto-generated id, -1 on failure
+            // NOT migrated to methodTyped: params are a trailing VARIADIC tail (jdbcParams(args, 1))
+            // of unbounded length — no fixed arity for methodTypedN to decode. Left untyped.
             .method("execute_id", (obj, args) -> {
                 if (args.isEmpty()) return ScriptValue.of(-1);
                 try {
@@ -121,101 +128,96 @@ public final class SQLDriverType {
             // main thread once the query completes. Params MUST be a real Array (make_array/[...]),
             // even a single-element or empty one — unlike query()/execute() this can't be variadic
             // since the callback ref is a THIRD fixed argument after it.
-            .method("query_async", (obj, args) -> {
-                if (args.size() < 3) return ScriptValue.of(false);
-                String sql = args.get(0).asStr();
-                List<Object> params = arrayToJdbcParams(args.get(1));
-                String callbackRef = args.get(2).asStr();
-                SQLDriver.queryAsync(sql, params).whenComplete((rows, err) ->
-                    runOnMainThread(() -> {
-                        if (err != null) {
-                            CraftEnginePolyfills.instance().getLogger().log(Level.WARNING, "[SQL] query_async threw", err);
-                            return;
-                        }
-                        List<ScriptValue> out = new ArrayList<>(rows.size());
-                        for (Map<String, Object> row : rows) out.add(rowToMap(row));
-                        invokeCallback(callbackRef, new ScriptValue.Array(out));
-                    }));
-                return ScriptValue.of(true);
-            })
+            .methodTyped3("query_async", TypeCodecs.STRING, TypeCodecs.RAW, TypeCodecs.STRING, TypeCodecs.BOOL, false,
+                    (Object obj, String sql, ScriptValue paramsArg, String callbackRef) -> {
+                        List<Object> params = arrayToJdbcParams(paramsArg);
+                        SQLDriver.queryAsync(sql, params).whenComplete((rows, err) ->
+                            runOnMainThread(() -> {
+                                if (err != null) {
+                                    CraftEnginePolyfills.instance().getLogger().log(Level.WARNING, "[SQL] query_async threw", err);
+                                    return;
+                                }
+                                List<ScriptValue> out = new ArrayList<>(rows.size());
+                                for (Map<String, Object> row : rows) out.add(rowToMap(row));
+                                invokeCallback(callbackRef, new ScriptValue.Array(out));
+                            }));
+                        return true;
+                    })
             // SQL.execute_async(sql, [params...], "file.pf:on_done") — on_done(affected_rows)
-            .method("execute_async", (obj, args) -> {
-                if (args.size() < 3) return ScriptValue.of(false);
-                String sql = args.get(0).asStr();
-                List<Object> params = arrayToJdbcParams(args.get(1));
-                String callbackRef = args.get(2).asStr();
-                SQLDriver.executeAsync(sql, params).whenComplete((count, err) ->
-                    runOnMainThread(() -> {
-                        if (err != null) {
-                            CraftEnginePolyfills.instance().getLogger().log(Level.WARNING, "[SQL] execute_async threw", err);
-                            return;
-                        }
-                        invokeCallback(callbackRef, ScriptValue.of(count));
-                    }));
-                return ScriptValue.of(true);
-            })
+            .methodTyped3("execute_async", TypeCodecs.STRING, TypeCodecs.RAW, TypeCodecs.STRING, TypeCodecs.BOOL, false,
+                    (Object obj, String sql, ScriptValue paramsArg, String callbackRef) -> {
+                        List<Object> params = arrayToJdbcParams(paramsArg);
+                        SQLDriver.executeAsync(sql, params).whenComplete((count, err) ->
+                            runOnMainThread(() -> {
+                                if (err != null) {
+                                    CraftEnginePolyfills.instance().getLogger().log(Level.WARNING, "[SQL] execute_async threw", err);
+                                    return;
+                                }
+                                invokeCallback(callbackRef, ScriptValue.of(count));
+                            }));
+                        return true;
+                    })
 
             // --- TypedKey-backed key/value table — see class javadoc. `table` is validated to
             // [A-Za-z0-9_] since it's interpolated as an identifier (JDBC can't parameterize those).
-            .method("set_typed", (obj, args) -> {
-                if (args.size() < 4) return ScriptValue.of(false);
-                String table = safeTableName(args.get(0).asStr());
-                if (table == null) return ScriptValue.of(false);
-                String key = args.get(1).asStr();
-                TypedKeyBridge.Codec codec = TypedKeyBridge.resolve(args.get(2).asStr());
-                if (codec == null) return ScriptValue.of(false);
-                try {
-                    ensureTypedTable(table);
-                    Object raw = codec.toStorage(args.get(3));
-                    String stored = rawToText(raw);
-                    SQLDriver.execute("DELETE FROM " + table + " WHERE k = ?", List.of(key));
-                    SQLDriver.execute("INSERT INTO " + table + " (k, type, v) VALUES (?, ?, ?)",
-                            List.of(key, args.get(2).asStr().toLowerCase(Locale.ROOT), stored));
-                    return ScriptValue.of(true);
-                } catch (Throwable t) {
-                    CraftEnginePolyfills.instance().getLogger().log(Level.WARNING, "[SQL] set_typed threw", t);
-                    return ScriptValue.of(false);
-                }
-            })
-            .method("get_typed", (obj, args) -> {
-                if (args.size() < 3) return ScriptValue.NULL;
-                String table = safeTableName(args.get(0).asStr());
-                if (table == null) return ScriptValue.NULL;
-                String key = args.get(1).asStr();
-                TypedKeyBridge.Codec codec = TypedKeyBridge.resolve(args.get(2).asStr());
-                if (codec == null) return ScriptValue.NULL;
-                try {
-                    ensureTypedTable(table);
-                    List<Map<String, Object>> rows = SQLDriver.query("SELECT v FROM " + table + " WHERE k = ?", List.of(key));
-                    if (rows.isEmpty()) return codec.fromStorage(null);
-                    return codec.fromStorage(textToRaw(codec, rows.get(0).get("v")));
-                } catch (Throwable t) {
-                    CraftEnginePolyfills.instance().getLogger().log(Level.WARNING, "[SQL] get_typed threw", t);
-                    return codec.fromStorage(null);
-                }
-            })
-            .method("has_typed", (obj, args) -> {
-                if (args.size() < 2) return ScriptValue.of(false);
-                String table = safeTableName(args.get(0).asStr());
-                if (table == null) return ScriptValue.of(false);
-                try {
-                    ensureTypedTable(table);
-                    return ScriptValue.of(!SQLDriver.query("SELECT 1 FROM " + table + " WHERE k = ?", List.of(args.get(1).asStr())).isEmpty());
-                } catch (Throwable t) {
-                    return ScriptValue.of(false);
-                }
-            })
-            .method("delete_typed", (obj, args) -> {
-                if (args.size() < 2) return ScriptValue.of(false);
-                String table = safeTableName(args.get(0).asStr());
-                if (table == null) return ScriptValue.of(false);
-                try {
-                    ensureTypedTable(table);
-                    return ScriptValue.of(SQLDriver.execute("DELETE FROM " + table + " WHERE k = ?", List.of(args.get(1).asStr())) > 0);
-                } catch (Throwable t) {
-                    return ScriptValue.of(false);
-                }
-            });
+            .methodTyped4("set_typed", TypeCodecs.STRING, TypeCodecs.STRING, TypeCodecs.STRING, TypeCodecs.RAW,
+                    TypeCodecs.BOOL, false,
+                    (Object obj, String tableArg, String key, String typeName, ScriptValue value) -> {
+                        String table = safeTableName(tableArg);
+                        if (table == null) return false;
+                        TypedKeyBridge.Codec codec = TypedKeyBridge.resolve(typeName);
+                        if (codec == null) return false;
+                        try {
+                            ensureTypedTable(table);
+                            Object raw = codec.toStorage(value);
+                            String stored = rawToText(raw);
+                            SQLDriver.execute("DELETE FROM " + table + " WHERE k = ?", List.of(key));
+                            SQLDriver.execute("INSERT INTO " + table + " (k, type, v) VALUES (?, ?, ?)",
+                                    List.of(key, typeName.toLowerCase(Locale.ROOT), stored));
+                            return true;
+                        } catch (Throwable t) {
+                            CraftEnginePolyfills.instance().getLogger().log(Level.WARNING, "[SQL] set_typed threw", t);
+                            return false;
+                        }
+                    })
+            .methodTyped3("get_typed", TypeCodecs.STRING, TypeCodecs.STRING, TypeCodecs.STRING, TypeCodecs.RAW, ScriptValue.NULL,
+                    (Object obj, String tableArg, String key, String typeName) -> {
+                        String table = safeTableName(tableArg);
+                        if (table == null) return ScriptValue.NULL;
+                        TypedKeyBridge.Codec codec = TypedKeyBridge.resolve(typeName);
+                        if (codec == null) return ScriptValue.NULL;
+                        try {
+                            ensureTypedTable(table);
+                            List<Map<String, Object>> rows = SQLDriver.query("SELECT v FROM " + table + " WHERE k = ?", List.of(key));
+                            if (rows.isEmpty()) return codec.fromStorage(null);
+                            return codec.fromStorage(textToRaw(codec, rows.get(0).get("v")));
+                        } catch (Throwable t) {
+                            CraftEnginePolyfills.instance().getLogger().log(Level.WARNING, "[SQL] get_typed threw", t);
+                            return codec.fromStorage(null);
+                        }
+                    })
+            .methodTyped2("has_typed", TypeCodecs.STRING, TypeCodecs.STRING, TypeCodecs.BOOL, false,
+                    (Object obj, String tableArg, String key) -> {
+                        String table = safeTableName(tableArg);
+                        if (table == null) return false;
+                        try {
+                            ensureTypedTable(table);
+                            return !SQLDriver.query("SELECT 1 FROM " + table + " WHERE k = ?", List.of(key)).isEmpty();
+                        } catch (Throwable t) {
+                            return false;
+                        }
+                    })
+            .methodTyped2("delete_typed", TypeCodecs.STRING, TypeCodecs.STRING, TypeCodecs.BOOL, false,
+                    (Object obj, String tableArg, String key) -> {
+                        String table = safeTableName(tableArg);
+                        if (table == null) return false;
+                        try {
+                            ensureTypedTable(table);
+                            return SQLDriver.execute("DELETE FROM " + table + " WHERE k = ?", List.of(key)) > 0;
+                        } catch (Throwable t) {
+                            return false;
+                        }
+                    });
     }
 
     private static final java.util.Set<String> ENSURED_TABLES = java.util.concurrent.ConcurrentHashMap.newKeySet();

@@ -2,6 +2,7 @@ package dev.arubik.craftengine.script.types.resource;
 
 import dev.arubik.craftengine.script.PolyTypeRegistry;
 import dev.arubik.craftengine.script.ScriptValue;
+import dev.arubik.craftengine.script.TypeCodecs;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
@@ -24,12 +25,13 @@ public final class InventoryType {
                 for (ItemStack s : slots(obj)) if (!s.isEmpty()) list.add(ScriptValue.ofItem(s));
                 return new ScriptValue.Array(list);
             })
-            .method("slot", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.NULL;
-                int n = (int) args.get(0).asNum();
-                ItemStack[] s = slots(obj);
-                return (n >= 0 && n < s.length) ? ScriptValue.ofItem(s[n]) : ScriptValue.NULL;
-            })
+            .methodTyped1("slot", TypeCodecs.DOUBLE, TypeCodecs.RAW, ScriptValue.NULL,
+                (ItemStack[] obj, Double nArg) -> {
+                    int n = nArg.intValue();
+                    return (n >= 0 && n < obj.length) ? ScriptValue.ofItem(obj[n]) : ScriptValue.NULL;
+                })
+            // slots(...) — variadic (accepts any number of index args), doesn't fit the fixed-arity
+            // methodTypedN shape.
             .method("slots", (obj, args) -> {
                 ItemStack[] s = slots(obj);
                 List<ScriptValue> result = new ArrayList<>();
@@ -39,22 +41,20 @@ public final class InventoryType {
                 }
                 return new ScriptValue.Array(result);
             })
-            .method("count_of", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of(0);
-                String id = args.get(0).asStr();
-                int total = 0;
-                for (ItemStack s : slots(obj)) {
-                    if (!s.isEmpty() && matchesId(s, id)) total += s.getCount();
-                }
-                return ScriptValue.of(total);
-            })
-            .method("has", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of(false);
-                String id = args.get(0).asStr();
-                for (ItemStack s : slots(obj))
-                    if (!s.isEmpty() && matchesId(s, id)) return ScriptValue.of(true);
-                return ScriptValue.of(false);
-            });
+            .methodTyped1("count_of", TypeCodecs.STRING, TypeCodecs.DOUBLE, 0.0,
+                (ItemStack[] obj, String id) -> {
+                    int total = 0;
+                    for (ItemStack s : obj) {
+                        if (!s.isEmpty() && matchesId(s, id)) total += s.getCount();
+                    }
+                    return (double) total;
+                })
+            .methodTyped1("has", TypeCodecs.STRING, TypeCodecs.BOOL, false,
+                (ItemStack[] obj, String id) -> {
+                    for (ItemStack s : obj)
+                        if (!s.isEmpty() && matchesId(s, id)) return true;
+                    return false;
+                });
     }
 
     public static ScriptValue wrap(ItemStack[] slots) {

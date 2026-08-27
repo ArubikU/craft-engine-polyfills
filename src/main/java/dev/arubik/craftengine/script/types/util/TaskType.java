@@ -2,6 +2,7 @@ package dev.arubik.craftengine.script.types.util;
 
 import dev.arubik.craftengine.script.PolyTypeRegistry;
 import dev.arubik.craftengine.script.ScriptValue;
+import dev.arubik.craftengine.script.TypeCodecs;
 import dev.arubik.craftengine.tasks.TaskInvocation;
 
 /**
@@ -18,8 +19,10 @@ public final class TaskType {
     public static void register() {
         PolyTypeRegistry.define("Task")
             .property("id", obj -> ScriptValue.of(inv(obj).id()))
-            .method("get", (obj, args) -> args.isEmpty() ? ScriptValue.NULL : inv(obj).get(args.get(0).asStr()))
-            .method("has", (obj, args) -> ScriptValue.of(!args.isEmpty() && inv(obj).data().containsKey(args.get(0).asStr())));
+            .methodTyped1("get", TypeCodecs.STRING, TypeCodecs.RAW, ScriptValue.NULL,
+                (TaskInvocation inv, String key) -> inv.get(key))
+            .methodTyped1("has", TypeCodecs.STRING, TypeCodecs.BOOL, false,
+                (TaskInvocation inv, String key) -> inv.data().containsKey(key));
     }
 
     public static ScriptValue wrap(TaskInvocation invocation) {

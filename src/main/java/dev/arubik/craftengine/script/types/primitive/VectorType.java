@@ -3,6 +3,7 @@ package dev.arubik.craftengine.script.types.primitive;
 import dev.arubik.craftengine.script.PolyType;
 import dev.arubik.craftengine.script.PolyTypeRegistry;
 import dev.arubik.craftengine.script.ScriptValue;
+import dev.arubik.craftengine.script.TypeCodecs;
 import org.joml.Vector3d;
 
 public final class VectorType {
@@ -16,6 +17,9 @@ public final class VectorType {
             .property("z", obj -> ScriptValue.of(vec(obj).z))
             .property("length", obj -> ScriptValue.of(vec(obj).length()))
             .property("length_sq", obj -> ScriptValue.of(vec(obj).lengthSquared()))
+            // add(x,y,z) OR add(otherVector) — NOT migrated to methodTyped: two genuinely different
+            // arg-count shapes dispatched dynamically off args.size() (3 numbers vs. 1 object), which
+            // methodTypedN's single fixed arity/codec list per registration can't express. Left untyped.
             .method("add", (obj, args) -> {
                 Vector3d v = vec(obj);
                 if (args.size() >= 3) return wrap(new Vector3d(v.x + args.get(0).asNum(), v.y + args.get(1).asNum(), v.z + args.get(2).asNum()));
@@ -25,6 +29,7 @@ public final class VectorType {
                 }
                 return ScriptValue.NULL;
             })
+            // sub(x,y,z) OR sub(otherVector) — same multi-shape dispatch as add() above. Left untyped.
             .method("sub", (obj, args) -> {
                 Vector3d v = vec(obj);
                 if (args.size() >= 3) return wrap(new Vector3d(v.x - args.get(0).asNum(), v.y - args.get(1).asNum(), v.z - args.get(2).asNum()));
@@ -34,17 +39,26 @@ public final class VectorType {
                 }
                 return ScriptValue.NULL;
             })
+            // scale(factor?) — NOT migrated to methodTyped1: a missing arg still runs the handler
+            // with a default factor of 1 ("default-if-missing" shape) rather than short-circuiting,
+            // which methodTypedN's onMissingArgs can't express (it skips the handler body entirely).
+            // Left untyped.
             .method("scale", (obj, args) -> {
                 Vector3d v = vec(obj);
                 double s = args.isEmpty() ? 1 : args.get(0).asNum();
                 return wrap(new Vector3d(v.x * s, v.y * s, v.z * s));
             })
-            .method("normalize", (obj, args) -> {
-                Vector3d v = vec(obj);
+            .methodTyped0("normalize", TypeCodecs.RAW, (Vector3d v) -> {
                 double len = v.length();
                 if (len == 0) return wrap(new Vector3d(0, 0, 0));
                 return wrap(new Vector3d(v.x / len, v.y / len, v.z / len));
             })
+            // distance/distance_sq/dot/cross(otherVector) — NOT migrated to methodTyped1: each checks
+            // args.size() == 1 EXACTLY (not just "at least 1") before accepting the Vector argument,
+            // falling back to a default (0.0/NULL) for any other arg count including MORE than one.
+            // methodTypedN's onMissingArgs only expresses a "fewer than N args" floor, not an exact-
+            // arity match, so a call with extra args would behave differently (compute a real result
+            // instead of the original's default) — a real behavior change. Left untyped.
             .method("distance", (obj, args) -> {
                 Vector3d v = vec(obj);
                 if (args.size() == 1 && args.get(0) instanceof ScriptValue.Obj o) {

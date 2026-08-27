@@ -4,6 +4,7 @@ import java.util.UUID;
 
 import dev.arubik.craftengine.script.PolyTypeRegistry;
 import dev.arubik.craftengine.script.ScriptValue;
+import dev.arubik.craftengine.script.TypeCodecs;
 
 /**
  * {@code Uuid} — every UUID elsewhere in this codebase ({@code Player.uuid}, {@code Entity.uuid},
@@ -29,52 +30,53 @@ public final class UuidType {
 
     public static void register() {
         PolyTypeRegistry.define("Uuid")
-            .method("random", (obj, args) -> ScriptValue.of(UUID.randomUUID().toString()))
-            .method("is_valid", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of(false);
-                try { UUID.fromString(args.get(0).asStr()); return ScriptValue.of(true); }
-                catch (IllegalArgumentException e) { return ScriptValue.of(false); }
-            })
+            .methodTyped0("random", TypeCodecs.STRING,
+                (Object obj) -> UUID.randomUUID().toString())
+            .methodTyped1("is_valid", TypeCodecs.STRING, TypeCodecs.BOOL, false,
+                (Object obj, String str) -> {
+                    try { UUID.fromString(str); return true; }
+                    catch (IllegalArgumentException e) { return false; }
+                })
             // Uuid.to_bytes(uuid) -> base64 string of the 16 raw bytes (same encoding TypedKeyBridge
             // uses for "byte_array" everywhere, so this composes with get_typed/set_typed for free).
-            .method("to_bytes", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of("");
-                try {
-                    UUID u = UUID.fromString(args.get(0).asStr());
-                    java.nio.ByteBuffer buf = java.nio.ByteBuffer.allocate(16);
-                    buf.putLong(u.getMostSignificantBits());
-                    buf.putLong(u.getLeastSignificantBits());
-                    return ScriptValue.of(java.util.Base64.getEncoder().encodeToString(buf.array()));
-                } catch (Throwable t) { return ScriptValue.of(""); }
-            })
-            .method("from_bytes", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of("");
-                try {
-                    byte[] bytes = java.util.Base64.getDecoder().decode(args.get(0).asStr());
-                    if (bytes.length != 16) return ScriptValue.of("");
-                    java.nio.ByteBuffer buf = java.nio.ByteBuffer.wrap(bytes);
-                    return ScriptValue.of(new UUID(buf.getLong(), buf.getLong()).toString());
-                } catch (Throwable t) { return ScriptValue.of(""); }
-            })
+            .methodTyped1("to_bytes", TypeCodecs.STRING, TypeCodecs.STRING, "",
+                (Object obj, String str) -> {
+                    try {
+                        UUID u = UUID.fromString(str);
+                        java.nio.ByteBuffer buf = java.nio.ByteBuffer.allocate(16);
+                        buf.putLong(u.getMostSignificantBits());
+                        buf.putLong(u.getLeastSignificantBits());
+                        return java.util.Base64.getEncoder().encodeToString(buf.array());
+                    } catch (Throwable t) { return ""; }
+                })
+            .methodTyped1("from_bytes", TypeCodecs.STRING, TypeCodecs.STRING, "",
+                (Object obj, String str) -> {
+                    try {
+                        byte[] bytes = java.util.Base64.getDecoder().decode(str);
+                        if (bytes.length != 16) return "";
+                        java.nio.ByteBuffer buf = java.nio.ByteBuffer.wrap(bytes);
+                        return new UUID(buf.getLong(), buf.getLong()).toString();
+                    } catch (Throwable t) { return ""; }
+                })
             // Uuid.most_bits(uuid)/least_bits(uuid) -> the two signed 64-bit halves, each exact as a
             // Num for any value that matters in practice (a script comparing/storing these, not
             // doing further bitwise math on them) — use both together with from_bits for a lossless
             // "two BIGINT columns" storage shape instead of a 36-char string column.
-            .method("most_bits", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of(0);
-                try { return ScriptValue.of((double) UUID.fromString(args.get(0).asStr()).getMostSignificantBits()); }
-                catch (Throwable t) { return ScriptValue.of(0); }
-            })
-            .method("least_bits", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of(0);
-                try { return ScriptValue.of((double) UUID.fromString(args.get(0).asStr()).getLeastSignificantBits()); }
-                catch (Throwable t) { return ScriptValue.of(0); }
-            })
-            .method("from_bits", (obj, args) -> {
-                if (args.size() < 2) return ScriptValue.of("");
-                long most = (long) args.get(0).asNum();
-                long least = (long) args.get(1).asNum();
-                return ScriptValue.of(new UUID(most, least).toString());
-            });
+            .methodTyped1("most_bits", TypeCodecs.STRING, TypeCodecs.DOUBLE, 0.0,
+                (Object obj, String str) -> {
+                    try { return (double) UUID.fromString(str).getMostSignificantBits(); }
+                    catch (Throwable t) { return 0.0; }
+                })
+            .methodTyped1("least_bits", TypeCodecs.STRING, TypeCodecs.DOUBLE, 0.0,
+                (Object obj, String str) -> {
+                    try { return (double) UUID.fromString(str).getLeastSignificantBits(); }
+                    catch (Throwable t) { return 0.0; }
+                })
+            .methodTyped2("from_bits", TypeCodecs.DOUBLE, TypeCodecs.DOUBLE, TypeCodecs.STRING, "",
+                (Object obj, Double mostD, Double leastD) -> {
+                    long most = mostD.longValue();
+                    long least = leastD.longValue();
+                    return new UUID(most, least).toString();
+                });
     }
 }

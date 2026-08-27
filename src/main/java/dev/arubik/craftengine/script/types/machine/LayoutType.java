@@ -6,6 +6,7 @@ import dev.arubik.craftengine.machine.menu.layout.MachineLayout;
 import dev.arubik.craftengine.machine.menu.layout.MenuSlotType;
 import dev.arubik.craftengine.script.PolyTypeRegistry;
 import dev.arubik.craftengine.script.ScriptValue;
+import dev.arubik.craftengine.script.TypeCodecs;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -68,44 +69,68 @@ public final class LayoutType {
                 return new ScriptValue.Array(out);
             })
 
+            // NOT migrated: "lock"/"unlock" accept EITHER a single slot number OR an Array of them
+            // (see setLock's `a.get(0) instanceof ScriptValue.Array` branch) — a multi-shape dynamic
+            // dispatch on the argument's own runtime type, which a typed handler (one fixed TypeCodec
+            // per argument) can't express. Left untyped.
             .method("lock", (obj, a) -> setLock(obj, a, true))
             .method("unlock", (obj, a) -> setLock(obj, a, false))
 
-            .method("is_locked", (obj, a) -> {
-                MachineLayout l = ref(obj).layout();
-                if (l == null || a.isEmpty()) return ScriptValue.of(false);
-                return ScriptValue.of(l.isLocked((int) a.get(0).asNum()));
-            })
+            .methodTyped1("is_locked", TypeCodecs.DOUBLE, TypeCodecs.BOOL, false,
+                (LayoutRef ref, Double slot) -> {
+                    MachineLayout l = ref.layout();
+                    if (l == null) return false;
+                    return l.isLocked(slot.intValue());
+                })
 
             /** Locks every slot of a kind: "input", "output", "fuel", "upgrade", ... */
-            .method("lock_type", (obj, a) -> setLockByType(obj, a, true))
-            .method("unlock_type", (obj, a) -> setLockByType(obj, a, false))
+            .methodTyped1("lock_type", TypeCodecs.STRING, TypeCodecs.BOOL, false,
+                (LayoutRef ref, String name) -> {
+                    MachineLayout l = ref.layout();
+                    if (l == null) return false;
+                    MenuSlotType t = slotType(name);
+                    if (t == null) return false;
+                    for (int s : l.getSlotsOfType(t)) l.setLocked(s, true);
+                    return true;
+                })
+            .methodTyped1("unlock_type", TypeCodecs.STRING, TypeCodecs.BOOL, false,
+                (LayoutRef ref, String name) -> {
+                    MachineLayout l = ref.layout();
+                    if (l == null) return false;
+                    MenuSlotType t = slotType(name);
+                    if (t == null) return false;
+                    for (int s : l.getSlotsOfType(t)) l.setLocked(s, false);
+                    return true;
+                })
 
-            .method("unlock_all", (obj, a) -> {
-                MachineLayout l = ref(obj).layout();
-                if (l == null) return ScriptValue.of(false);
-                for (int s : l.getLockedSlots()) l.setLocked(s, false);
-                return ScriptValue.of(true);
-            })
+            .methodTyped0("unlock_all", TypeCodecs.BOOL,
+                (LayoutRef ref) -> {
+                    MachineLayout l = ref.layout();
+                    if (l == null) return false;
+                    for (int s : l.getLockedSlots()) l.setLocked(s, false);
+                    return true;
+                })
 
             /** The kind of a slot, as a lowercase name; empty when nothing is open. */
-            .method("slot_type", (obj, a) -> {
-                MachineLayout l = ref(obj).layout();
-                if (l == null || a.isEmpty()) return ScriptValue.of("");
-                MenuSlotType t = l.getSlotType((int) a.get(0).asNum());
-                return ScriptValue.of(t == null ? "" : t.name().toLowerCase(Locale.ROOT));
-            })
+            .methodTyped1("slot_type", TypeCodecs.DOUBLE, TypeCodecs.STRING, "",
+                (LayoutRef ref, Double slot) -> {
+                    MachineLayout l = ref.layout();
+                    if (l == null) return "";
+                    MenuSlotType t = l.getSlotType(slot.intValue());
+                    return t == null ? "" : t.name().toLowerCase(Locale.ROOT);
+                })
 
             /** Every slot of a kind. */
-            .method("slots_of_type", (obj, a) -> {
-                MachineLayout l = ref(obj).layout();
-                List<ScriptValue> out = new ArrayList<>();
-                if (l == null || a.isEmpty()) return new ScriptValue.Array(out);
-                MenuSlotType t = slotType(a.get(0).asStr());
-                if (t == null) return new ScriptValue.Array(out);
-                for (int s : l.getSlotsOfType(t)) out.add(ScriptValue.of(s));
-                return new ScriptValue.Array(out);
-            });
+            .methodTyped1("slots_of_type", TypeCodecs.STRING, TypeCodecs.RAW, new ScriptValue.Array(new ArrayList<>()),
+                (LayoutRef ref, String name) -> {
+                    MachineLayout l = ref.layout();
+                    List<ScriptValue> out = new ArrayList<>();
+                    if (l == null) return new ScriptValue.Array(out);
+                    MenuSlotType t = slotType(name);
+                    if (t == null) return new ScriptValue.Array(out);
+                    for (int s : l.getSlotsOfType(t)) out.add(ScriptValue.of(s));
+                    return new ScriptValue.Array(out);
+                });
     }
 
     private static ScriptValue setLock(Object obj, List<ScriptValue> a, boolean lock) {
@@ -120,14 +145,11 @@ public final class LayoutType {
         return ScriptValue.of(true);
     }
 
-    private static ScriptValue setLockByType(Object obj, List<ScriptValue> a, boolean lock) {
-        MachineLayout l = ref(obj).layout();
-        if (l == null || a.isEmpty()) return ScriptValue.of(false);
-        MenuSlotType t = slotType(a.get(0).asStr());
-        if (t == null) return ScriptValue.of(false);
-        for (int s : l.getSlotsOfType(t)) l.setLocked(s, lock);
-        return ScriptValue.of(true);
-    }
+    // setLockByType(Object, List<ScriptValue>, boolean) — the old lock_type/unlock_type helper —
+    // was removed: both methods are now methodTyped1 with TypeCodecs.STRING, whose decode() already
+    // performs the exact same asStr() coercion, and the a.isEmpty() short-circuit is now handled by
+    // onMissingArgs, so the helper became dead code (same reasoning as ContraptionType's removed
+    // holderKey() helper).
 
     public static ScriptValue wrap(MachineType.MachineRef machine) {
         return machine == null ? ScriptValue.NULL : ScriptValue.ofObj("Layout", new LayoutRef(machine));

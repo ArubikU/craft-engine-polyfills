@@ -3,6 +3,7 @@ package dev.arubik.craftengine.script.types.machine.renderer;
 import dev.arubik.craftengine.machine.render.renderer.MegRenderer;
 import dev.arubik.craftengine.script.PolyTypeRegistry;
 import dev.arubik.craftengine.script.ScriptValue;
+import dev.arubik.craftengine.script.TypeCodecs;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -20,36 +21,40 @@ public final class MegRendererType {
 
     public static void register() {
         PolyTypeRegistry.define("MegRenderer")
-            .method("play_anim", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of(false);
-                r(obj).playLoop(args.get(0).asStr());
-                return ScriptValue.of(true);
-            })
-            .method("stop_anim", (obj, args) -> {
-                r(obj).stopAnim();
-                return ScriptValue.of(true);
-            })
+            .methodTyped1("play_anim", TypeCodecs.STRING, TypeCodecs.BOOL, false,
+                (MegRenderer r, String name) -> {
+                    r.playLoop(name);
+                    return true;
+                })
+            .methodTyped0("stop_anim", TypeCodecs.BOOL,
+                (MegRenderer r) -> {
+                    r.stopAnim();
+                    return true;
+                })
             // bone_location(bone_name) -> Vector (absolute world position) or NULL. Meant to be used
             // directly inside another renderer's own "location" script expression — e.g.
             // "Machine.get_renderer('arm').bone_location('hand')" — as the object-based counterpart
             // of the "{rendererid}:meg:{bone_name}" string shorthand (see RendererManager
             // #resolveBoneLocation): same live bone tracking, usable anywhere a script expression is
             // already evaluated instead of only in a bare location string.
-            .method("bone_location", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.NULL;
-                double[] pos = r(obj).boneWorldPosition(args.get(0).asStr());
-                return pos == null ? ScriptValue.NULL
-                        : dev.arubik.craftengine.script.types.primitive.VectorType.wrap(pos[0], pos[1], pos[2]);
-            })
+            // Return is dynamic (Vector or NULL) -> TypeCodecs.RAW.
+            .methodTyped1("bone_location", TypeCodecs.STRING, TypeCodecs.RAW, ScriptValue.NULL,
+                (MegRenderer r, String bone) -> {
+                    double[] pos = r.boneWorldPosition(bone);
+                    return pos == null ? ScriptValue.NULL
+                            : dev.arubik.craftengine.script.types.primitive.VectorType.wrap(pos[0], pos[1], pos[2]);
+                })
             // set_bone_yaw(bone_name, yaw_degrees) -> bool. MEG's public API has no setPitch
             // (confirmed via javap against the real ModelEngine-R4.0.7 jar), so only yaw applies.
-            .method("set_bone_yaw", (obj, args) -> {
-                if (args.size() < 2) return ScriptValue.of(false);
-                return ScriptValue.of(r(obj).setBoneYaw(args.get(0).asStr(), (float) args.get(1).asNum()));
-            })
+            .methodTyped2("set_bone_yaw", TypeCodecs.STRING, TypeCodecs.DOUBLE, TypeCodecs.BOOL, false,
+                (MegRenderer r, String bone, Double yawDeg) -> r.setBoneYaw(bone, yawDeg.floatValue()))
             // play_ik(chain, target_x, target_y, target_z, time_to_arrive_seconds) -> bones applied.
             // chain is an Array of [bone_name, min_yaw, max_yaw, min_pitch, max_pitch] Arrays, base
             // bone first. time_to_arrive_seconds <= 0 snaps instantly instead of easing.
+            // NOT migrated: 5th arg (time_to_arrive_seconds) is genuinely optional, checked via
+            // args.size() > 4 inside the body — a typed handler only receives fixed-arity decoded
+            // arguments, so that conditional read can't be expressed (same reasoning as
+            // ContraptionType#teleport's un-migrated 4th-arg yaw). Left untyped.
             .method("play_ik", (obj, args) -> {
                 if (args.size() < 4) return ScriptValue.of(0);
                 List<MegRenderer.BoneRange> chain = parseChain(args.get(0));

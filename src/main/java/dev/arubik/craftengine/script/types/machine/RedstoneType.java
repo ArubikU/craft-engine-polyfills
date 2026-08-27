@@ -3,6 +3,7 @@ package dev.arubik.craftengine.script.types.machine;
 import dev.arubik.craftengine.machine.MachineRedstone;
 import dev.arubik.craftengine.script.PolyTypeRegistry;
 import dev.arubik.craftengine.script.ScriptValue;
+import dev.arubik.craftengine.script.TypeCodecs;
 
 /**
  * "Redstone" type — a machine's redstone port, reachable from scripts as {@code Machine.redstone}.
@@ -62,26 +63,29 @@ public final class RedstoneType {
             .property("max", obj -> ScriptValue.of(MachineRedstone.MAX_POWER))
 
             // --- Methods ---
-            .method("set", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of(false);
-                return ScriptValue.of(ref(obj).set((int) args.get(0).asNum()));
-            })
+            .methodTyped1("set", TypeCodecs.DOUBLE, TypeCodecs.BOOL, false,
+                (RedstoneRef r, Double power) -> r.set(power.intValue()))
+            // NOT migrated: "on" defaults its power argument to MAX_POWER when omitted
+            // (args.isEmpty() ? MAX_POWER : asNum()) — a "default-if-missing" shape a typed handler
+            // can't express (methodTypedN's onMissingArgs short-circuits the WHOLE call, it can't
+            // supply a default for just one argument while still running the body). Left untyped.
             .method("on", (obj, args) -> {
                 int power = args.isEmpty() ? MachineRedstone.MAX_POWER : (int) args.get(0).asNum();
                 return ScriptValue.of(ref(obj).set(power));
             })
-            .method("off", (obj, args) -> ScriptValue.of(ref(obj).set(0)))
-            .method("clear", (obj, args) -> ScriptValue.of(ref(obj).set(0)))
+            .methodTyped0("off", TypeCodecs.BOOL, (RedstoneRef r) -> r.set(0))
+            .methodTyped0("clear", TypeCodecs.BOOL, (RedstoneRef r) -> r.set(0))
+            // NOT migrated: "toggle" defaults `on` to the instance's own current state
+            // (!args.isEmpty() ? asBool() : output() == 0) when the argument is omitted — the same
+            // instance-dependent-fallback shape as "on" above, not expressible via onMissingArgs
+            // (which is a single fixed R value, not something computed from the instance). Left untyped.
             /** Emit full power when {@code cond} is truthy, nothing otherwise. */
             .method("toggle", (obj, args) -> {
                 boolean on = !args.isEmpty() ? args.get(0).asBool() : ref(obj).output() == 0;
                 return ScriptValue.of(ref(obj).set(on ? MachineRedstone.MAX_POWER : 0));
             })
             /** Mirror the incoming signal — a repeater in one call. */
-            .method("relay", (obj, args) -> {
-                RedstoneRef r = ref(obj);
-                return ScriptValue.of(r.set(r.input()));
-            });
+            .methodTyped0("relay", TypeCodecs.BOOL, (RedstoneRef r) -> r.set(r.input()));
     }
 
     public static ScriptValue wrap(MachineType.MachineRef machine) {

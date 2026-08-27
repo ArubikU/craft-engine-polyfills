@@ -2,6 +2,7 @@ package dev.arubik.craftengine.script.types.machine;
 
 import dev.arubik.craftengine.script.PolyTypeRegistry;
 import dev.arubik.craftengine.script.ScriptValue;
+import dev.arubik.craftengine.script.TypeCodecs;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
@@ -41,44 +42,49 @@ public final class RecipeCollectionType {
             // full unfiltered getRecipes() — no getRecipesFor(type, input, level) plural lookup —
             // so multiple candidates (e.g. stone -> several stonecutting outputs) means filtering
             // getRecipes() by type + a manual matches() check ourselves.
-            .method("for_input", (obj, args) -> {
-                if (!(obj instanceof Ref ref) || args.isEmpty()) return new ScriptValue.Array(List.of());
-                try {
-                    MinecraftServer server = MinecraftServer.getServer();
-                    if (server == null) return new ScriptValue.Array(List.of());
-                    Item item = BuiltInRegistries.ITEM.getValue(Identifier.parse(args.get(0).asStr()));
-                    if (item == null) return new ScriptValue.Array(List.of());
-                    ItemStack single = new ItemStack(item, 1);
-                    SingleRecipeInput input = new SingleRecipeInput(single);
-                    ServerLevel level = server.overworld();
-                    if (level == null) return new ScriptValue.Array(List.of());
-                    RecipeManager rm = server.getRecipeManager();
+            // obj cast: original used `obj instanceof Ref ref` — treated the same as the plain-cast
+            // helpers other migrated types use (e.g. ContraptionType#cl), since every instance of
+            // this PolyType is always created via RecipeCollectionType#wrap. Return codec is
+            // TypeCodecs.RAW (identity passthrough) since this returns a ScriptValue.Array, not a
+            // primitive.
+            .methodTyped1("for_input", TypeCodecs.STRING, TypeCodecs.RAW, new ScriptValue.Array(List.of()),
+                (Ref ref, String itemId) -> {
+                    try {
+                        MinecraftServer server = MinecraftServer.getServer();
+                        if (server == null) return new ScriptValue.Array(List.of());
+                        Item item = BuiltInRegistries.ITEM.getValue(Identifier.parse(itemId));
+                        if (item == null) return new ScriptValue.Array(List.of());
+                        ItemStack single = new ItemStack(item, 1);
+                        SingleRecipeInput input = new SingleRecipeInput(single);
+                        ServerLevel level = server.overworld();
+                        if (level == null) return new ScriptValue.Array(List.of());
+                        RecipeManager rm = server.getRecipeManager();
 
-                    List<ScriptValue> out = new ArrayList<>();
-                    for (RecipeHolder<?> holder : rm.getRecipes()) {
-                        Recipe<?> recipe = holder.value();
-                        if (recipe.getType() != ref.nmsType()) continue;
-                        boolean matches;
-                        ItemStack result;
-                        try {
-                            @SuppressWarnings("unchecked")
-                            Recipe<net.minecraft.world.item.crafting.RecipeInput> raw =
-                                    (Recipe<net.minecraft.world.item.crafting.RecipeInput>) recipe;
-                            matches = raw.matches(input, level);
-                            if (!matches) continue;
-                            result = raw.assemble(input, level.registryAccess());
-                        } catch (Throwable ignored) { continue; }
-                        if (result == null || result.isEmpty()) continue;
-                        int time = recipe instanceof AbstractCookingRecipe cooking ? cooking.cookingTime() : 0;
-                        RecipeType.VanillaRecipeRef vref = new RecipeType.VanillaRecipeRef(
-                                holder.id().identifier().toString(), single.copy(), result, time);
-                        out.add(RecipeType.wrapVanilla(vref));
+                        List<ScriptValue> out = new ArrayList<>();
+                        for (RecipeHolder<?> holder : rm.getRecipes()) {
+                            Recipe<?> recipe = holder.value();
+                            if (recipe.getType() != ref.nmsType()) continue;
+                            boolean matches;
+                            ItemStack result;
+                            try {
+                                @SuppressWarnings("unchecked")
+                                Recipe<net.minecraft.world.item.crafting.RecipeInput> raw =
+                                        (Recipe<net.minecraft.world.item.crafting.RecipeInput>) recipe;
+                                matches = raw.matches(input, level);
+                                if (!matches) continue;
+                                result = raw.assemble(input, level.registryAccess());
+                            } catch (Throwable ignored) { continue; }
+                            if (result == null || result.isEmpty()) continue;
+                            int time = recipe instanceof AbstractCookingRecipe cooking ? cooking.cookingTime() : 0;
+                            RecipeType.VanillaRecipeRef vref = new RecipeType.VanillaRecipeRef(
+                                    holder.id().identifier().toString(), single.copy(), result, time);
+                            out.add(RecipeType.wrapVanilla(vref));
+                        }
+                        return new ScriptValue.Array(out);
+                    } catch (Throwable ignored) {
+                        return new ScriptValue.Array(List.of());
                     }
-                    return new ScriptValue.Array(out);
-                } catch (Throwable ignored) {
-                    return new ScriptValue.Array(List.of());
-                }
-            });
+                });
     }
 
     public static ScriptValue wrap(net.minecraft.world.item.crafting.RecipeType<?> nmsType) {

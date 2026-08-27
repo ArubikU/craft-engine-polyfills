@@ -2,6 +2,7 @@ package dev.arubik.craftengine.script.types.util;
 
 import dev.arubik.craftengine.script.PolyTypeRegistry;
 import dev.arubik.craftengine.script.ScriptValue;
+import dev.arubik.craftengine.script.TypeCodecs;
 import net.minecraft.world.Container;
 import net.minecraft.world.item.ItemStack;
 
@@ -26,51 +27,59 @@ public final class ContainerType {
         PolyTypeRegistry.define("Container")
             .property("size", obj -> ScriptValue.of(c(obj).getContainerSize()))
             .property("is_empty", obj -> ScriptValue.of(c(obj).isEmpty()))
-            .method("get_item", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.NULL;
-                int i = (int) args.get(0).asNum();
-                if (i < 0 || i >= c(obj).getContainerSize()) return ScriptValue.NULL;
-                return ScriptValue.ofItem(c(obj).getItem(i));
-            })
-            .method("set_item", (obj, args) -> {
-                if (args.size() < 2) return ScriptValue.of(false);
-                int i = (int) args.get(0).asNum();
-                Container container = c(obj);
-                if (i < 0 || i >= container.getContainerSize()) return ScriptValue.of(false);
-                ItemStack stack = stackArg(args.get(1));
-                container.setItem(i, stack == null ? ItemStack.EMPTY : stack.copy());
-                container.setChanged();
-                return ScriptValue.of(true);
-            })
-            .method("remove_item", (obj, args) -> {
-                if (args.size() < 2) return ScriptValue.NULL;
-                int i = (int) args.get(0).asNum();
-                Container container = c(obj);
-                if (i < 0 || i >= container.getContainerSize()) return ScriptValue.NULL;
-                ItemStack removed = container.removeItem(i, (int) args.get(1).asNum());
-                container.setChanged();
-                return ScriptValue.ofItem(removed);
-            })
-            // has_room(item) -> bool, without mutating anything.
-            .method("has_room", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of(false);
-                ItemStack stack = stackArg(args.get(0));
-                if (stack == null || stack.isEmpty()) return ScriptValue.of(false);
-                return ScriptValue.of(hasRoom(c(obj), stack));
-            })
+            .methodTyped1("get_item", TypeCodecs.DOUBLE, TypeCodecs.RAW, ScriptValue.NULL,
+                (Container container, Double iArg) -> {
+                    int i = iArg.intValue();
+                    if (i < 0 || i >= container.getContainerSize()) return ScriptValue.NULL;
+                    return ScriptValue.ofItem(container.getItem(i));
+                })
+            // Item argument decoded with TypeCodecs.RAW (identity passthrough) since stackArg()
+            // accepts either shape a script might pass (an Item value or a raw ItemStack Obj) —
+            // dynamic dispatch on the argument's own runtime type, so it's decoded with RAW and
+            // resolved via stackArg() inside the body exactly as before.
+            .methodTyped2("set_item", TypeCodecs.DOUBLE, TypeCodecs.RAW, TypeCodecs.BOOL, false,
+                (Container container, Double iArg, ScriptValue itemArg) -> {
+                    int i = iArg.intValue();
+                    if (i < 0 || i >= container.getContainerSize()) return false;
+                    ItemStack stack = stackArg(itemArg);
+                    container.setItem(i, stack == null ? ItemStack.EMPTY : stack.copy());
+                    container.setChanged();
+                    return true;
+                })
+            .methodTyped2("remove_item", TypeCodecs.DOUBLE, TypeCodecs.DOUBLE, TypeCodecs.RAW, ScriptValue.NULL,
+                (Container container, Double iArg, Double countArg) -> {
+                    int i = iArg.intValue();
+                    if (i < 0 || i >= container.getContainerSize()) return ScriptValue.NULL;
+                    ItemStack removed = container.removeItem(i, countArg.intValue());
+                    container.setChanged();
+                    return ScriptValue.ofItem(removed);
+                })
+            // has_room(item) -> bool, without mutating anything. Item argument via RAW — see set_item's
+            // note above on stackArg()'s dynamic dispatch.
+            .methodTyped1("has_room", TypeCodecs.RAW, TypeCodecs.BOOL, false,
+                (Container container, ScriptValue itemArg) -> {
+                    ItemStack stack = stackArg(itemArg);
+                    if (stack == null || stack.isEmpty()) return false;
+                    return hasRoom(container, stack);
+                })
             // push(item) -> leftover Item that didn't fit (empty Item if it all went in). Merges
             // into existing partial stacks first, then fills empty slots — same strategy as
-            // Machine.push_item_to_inventory, generalized to any Container.
-            .method("push", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.NULL;
-                ItemStack stack = stackArg(args.get(0));
-                if (stack == null) return ScriptValue.NULL;
-                return ScriptValue.ofItem(push(c(obj), stack.copy()));
-            })
-            .method("clear", (obj, args) -> {
-                c(obj).clearContent();
-                return ScriptValue.of(true);
-            })
+            // Machine.push_item_to_inventory, generalized to any Container. Item argument via RAW —
+            // see set_item's note above on stackArg()'s dynamic dispatch.
+            .methodTyped1("push", TypeCodecs.RAW, TypeCodecs.RAW, ScriptValue.NULL,
+                (Container container, ScriptValue itemArg) -> {
+                    ItemStack stack = stackArg(itemArg);
+                    if (stack == null) return ScriptValue.NULL;
+                    return ScriptValue.ofItem(push(container, stack.copy()));
+                })
+            .methodTyped0("clear", TypeCodecs.BOOL,
+                (Container container) -> {
+                    container.clearContent();
+                    return true;
+                })
+            // NOT migrated: "pull" defaults its count argument to 64 when omitted
+            // (args.isEmpty() ? 64 : asNum()) — a "default-if-missing" shape a typed handler can't
+            // express (see RedstoneType.on()'s identical note). Left untyped.
             // pull(count) -> takes up to `count` (default a full stack) from the FIRST non-empty
             // slot found, whatever item it is — the untargeted "just give me something" pull a
             // hopper-alike would do. Returns an empty Item if the container had nothing at all.
@@ -88,6 +97,11 @@ public final class ContainerType {
             //                                 own "tags" config
             // Useful e.g. for a Portable Storage Interface only pulling logs, or a sawmill only
             // pulling planks back out of contraption storage.
+            // NOT migrated: `count` is an optional trailing argument defaulted via
+            // args.size() > 1 ? asNum() : 64 — the same optional-trailing-argument shape as
+            // ContraptionType's teleport()/play_sound() notes (a typed handler only receives its
+            // fixed-arity decoded arguments, not the original args list/size, so that conditional
+            // read can't be expressed). Left untyped.
             .method("pull_item", (obj, args) -> {
                 if (args.isEmpty()) return ScriptValue.NULL;
                 java.util.function.Predicate<ItemStack> filter = ItemMatch.predicateFor(args.get(0));

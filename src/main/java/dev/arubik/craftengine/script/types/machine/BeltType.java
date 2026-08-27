@@ -5,6 +5,7 @@ import dev.arubik.craftengine.script.types.primitive.VectorType;
 import dev.arubik.craftengine.script.types.world.BlockType;
 import dev.arubik.craftengine.script.PolyTypeRegistry;
 import dev.arubik.craftengine.script.ScriptValue;
+import dev.arubik.craftengine.script.TypeCodecs;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import org.bukkit.craftbukkit.inventory.CraftItemStack;
@@ -22,7 +23,7 @@ public final class BeltType {
             .property("z",   obj -> ScriptValue.of(ref(obj).pos().getZ()))
             .property("pos", obj -> VectorType.wrap(ref(obj).pos().getX(), ref(obj).pos().getY(), ref(obj).pos().getZ()))
             .property("block", obj -> BlockType.wrap(ref(obj).level(), ref(obj).pos()))
-            .method("get_block", (obj, args) -> BlockType.wrap(ref(obj).level(), ref(obj).pos()))
+            .methodTyped0("get_block", TypeCodecs.RAW, (BeltRef obj) -> BlockType.wrap(obj.level(), obj.pos()))
             // exists — whether a REAL conveyor is actually at this position. Machine.belt_at(...)
             // (unlike container_at) always returns a non-null Belt wrapper for any loaded position,
             // even open air — every OTHER property here (is_full, speed, ...) silently falls back to
@@ -83,7 +84,7 @@ public final class BeltType {
             })
             // peek() — the item currently at this segment's front slot, WITHOUT removing it (an
             // empty Item if none). Use with replace()/take() to intercept it.
-            .method("peek", (obj, args) -> {
+            .methodTyped0("peek", TypeCodecs.RAW, (Object obj) -> {
                 ConveyorBlockEntity belt = conveyor(obj);
                 if (belt == null) return ScriptValue.NULL;
                 org.bukkit.inventory.ItemStack carried = belt.peekCarried();
@@ -96,6 +97,9 @@ public final class BeltType {
             // they pass underneath without ever leaving the belt. Pass an empty/NULL item to just
             // remove whatever was there (same as take()). False if this segment isn't carrying
             // anything to replace.
+            // NOT migrated to a typed method: a missing arg maps to `bukkit = null` and the handler
+            // STILL RUNS belt.replaceCarried(null) — an in-body default, not an onMissingArgs
+            // short-circuit — so forcing this into methodTyped1 would change behavior. Left untyped.
             .method("replace", (obj, args) -> {
                 ConveyorBlockEntity belt = conveyor(obj);
                 if (belt == null) return ScriptValue.of(false);
@@ -105,7 +109,7 @@ public final class BeltType {
             // take() -> Item. Removes and returns whatever this segment is carrying (an empty Item
             // if nothing was there) — for a machine that wants to pull the item off the belt
             // entirely (e.g. into Contraption.container) rather than transform it in place.
-            .method("take", (obj, args) -> {
+            .methodTyped0("take", TypeCodecs.RAW, (Object obj) -> {
                 ConveyorBlockEntity belt = conveyor(obj);
                 if (belt == null) return ScriptValue.ofItem(net.minecraft.world.item.ItemStack.EMPTY);
                 org.bukkit.inventory.ItemStack taken = belt.takeSlot();
@@ -114,16 +118,18 @@ public final class BeltType {
             })
             // put(item) -> leftover Item that didn't fit (empty if it all went on). Places `item`
             // onto this belt segment as a new carried item — for a machine ejecting a result onto a
-            // belt in front of it.
-            .method("put", (obj, args) -> {
-                ConveyorBlockEntity belt = conveyor(obj);
-                if (args.isEmpty()) return ScriptValue.NULL;
-                org.bukkit.inventory.ItemStack bukkit = bukkitStack(args.get(0));
-                if (bukkit == null) return ScriptValue.NULL;
-                if (belt == null) return ScriptValue.ofItem(CraftItemStack.asNMSCopy(bukkit));
-                org.bukkit.inventory.ItemStack leftover = belt.putSlot(bukkit);
-                return ScriptValue.ofItem(leftover == null ? net.minecraft.world.item.ItemStack.EMPTY : CraftItemStack.asNMSCopy(leftover));
-            })
+            // belt in front of it. Argument is decoded with TypeCodecs.RAW (identity passthrough) —
+            // bukkitStack(ScriptValue) itself does the real coercion (Item value or raw ItemStack
+            // Obj), which isn't expressible as a single native TypeCodec.
+            .methodTyped1("put", TypeCodecs.RAW, TypeCodecs.RAW, ScriptValue.NULL,
+                (Object obj, ScriptValue itemArg) -> {
+                    ConveyorBlockEntity belt = conveyor(obj);
+                    org.bukkit.inventory.ItemStack bukkit = bukkitStack(itemArg);
+                    if (bukkit == null) return ScriptValue.NULL;
+                    if (belt == null) return ScriptValue.ofItem(CraftItemStack.asNMSCopy(bukkit));
+                    org.bukkit.inventory.ItemStack leftover = belt.putSlot(bukkit);
+                    return ScriptValue.ofItem(leftover == null ? net.minecraft.world.item.ItemStack.EMPTY : CraftItemStack.asNMSCopy(leftover));
+                })
             // slot_count — how many items this segment can carry in transit at once.
             .property("slot_count", obj -> {
                 ConveyorBlockEntity belt = conveyor(obj);
@@ -133,9 +139,8 @@ public final class BeltType {
             // segment, not just the front) — for a caller that needs to see everything in transit,
             // not just whatever's nearest the exit. Empty array if nothing's carried or the block
             // isn't (or is no longer) a conveyor.
-            .method("get_belt_items", (obj, args) -> {
-                BeltRef r = ref(obj);
-                ConveyorBlockEntity belt = conveyor(obj);
+            .methodTyped0("get_belt_items", TypeCodecs.RAW, (BeltRef r) -> {
+                ConveyorBlockEntity belt = conveyor(r);
                 if (belt == null) return new ScriptValue.Array(java.util.List.of());
                 java.util.List<ScriptValue> result = new java.util.ArrayList<>();
                 for (int i = 0; i < belt.slotCount(); i++) {
@@ -144,14 +149,13 @@ public final class BeltType {
                 return new ScriptValue.Array(result);
             })
             // get_belt_item(index) -> BeltItem at that specific slot, NULL if out of range or empty.
-            .method("get_belt_item", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.NULL;
-                BeltRef r = ref(obj);
-                ConveyorBlockEntity belt = conveyor(obj);
-                int idx = (int) args.get(0).asNum();
-                if (belt == null || belt.isSlotEmpty(idx)) return ScriptValue.NULL;
-                return BeltItemType.wrap(new BeltItemType.BeltItemRef(r, idx));
-            });
+            .methodTyped1("get_belt_item", TypeCodecs.DOUBLE, TypeCodecs.RAW, ScriptValue.NULL,
+                (BeltRef r, Double idxArg) -> {
+                    ConveyorBlockEntity belt = conveyor(r);
+                    int idx = idxArg.intValue();
+                    if (belt == null || belt.isSlotEmpty(idx)) return ScriptValue.NULL;
+                    return BeltItemType.wrap(new BeltItemType.BeltItemRef(r, idx));
+                });
     }
 
     public static ScriptValue wrap(ServerLevel level, BlockPos pos) {

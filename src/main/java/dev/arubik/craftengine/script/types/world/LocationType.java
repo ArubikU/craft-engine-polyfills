@@ -3,6 +3,7 @@ package dev.arubik.craftengine.script.types.world;
 import dev.arubik.craftengine.contraption.core.ContraptionLevel;
 import dev.arubik.craftengine.script.PolyTypeRegistry;
 import dev.arubik.craftengine.script.ScriptValue;
+import dev.arubik.craftengine.script.TypeCodecs;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
@@ -35,6 +36,11 @@ public final class LocationType {
                     return ScriptValue.of(biome.unwrapKey().map(Object::toString).orElse("unknown"));
                 } catch (Throwable ignored) { return ScriptValue.NULL; }
             })
+            // NOT migrated to a typed method: block()'s three args are genuinely optional as a
+            // GROUP — `args.size() >= 3 ? args.get(n).asNum() : Math.floor(r.<n>())` is a
+            // default-if-missing read (falling back to this Location's own rounded coords), not a
+            // hard "missing args -> short-circuit" fail-fast a typed handler's onMissingArgs can
+            // express. Left untyped.
             .method("block",       (obj, args) -> {
                 LocationRef r = ref(obj);
                 if (r.level() == null) return ScriptValue.NULL;
@@ -43,18 +49,20 @@ public final class LocationType {
                 int bz = args.size() >= 3 ? (int)args.get(2).asNum() : (int)Math.floor(r.z());
                 return BlockType.wrap(r.level(), new BlockPos(bx, by, bz));
             })
-            .method("distance",    (obj, args) -> {
-                if (args.size() < 3) return ScriptValue.NULL;
-                LocationRef r = ref(obj);
-                double dx = r.x() - args.get(0).asNum(), dy = r.y() - args.get(1).asNum(), dz = r.z() - args.get(2).asNum();
-                return ScriptValue.of(Math.sqrt(dx*dx + dy*dy + dz*dz));
-            })
-            .method("distance_sq", (obj, args) -> {
-                if (args.size() < 3) return ScriptValue.NULL;
-                LocationRef r = ref(obj);
-                double dx = r.x() - args.get(0).asNum(), dy = r.y() - args.get(1).asNum(), dz = r.z() - args.get(2).asNum();
-                return ScriptValue.of(dx*dx + dy*dy + dz*dz);
-            });
+            // Return codec is TypeCodecs.RAW (identity passthrough) rather than DOUBLE: the
+            // original returns ScriptValue.NULL on missing args and ScriptValue.of(number)
+            // otherwise — RAW keeps both paths byte-for-byte identical (onMissingArgs =
+            // ScriptValue.NULL, body still calls ScriptValue.of(...) itself).
+            .methodTyped3("distance", TypeCodecs.DOUBLE, TypeCodecs.DOUBLE, TypeCodecs.DOUBLE, TypeCodecs.RAW, ScriptValue.NULL,
+                (LocationRef r, Double xArg, Double yArg, Double zArg) -> {
+                    double dx = r.x() - xArg, dy = r.y() - yArg, dz = r.z() - zArg;
+                    return ScriptValue.of(Math.sqrt(dx*dx + dy*dy + dz*dz));
+                })
+            .methodTyped3("distance_sq", TypeCodecs.DOUBLE, TypeCodecs.DOUBLE, TypeCodecs.DOUBLE, TypeCodecs.RAW, ScriptValue.NULL,
+                (LocationRef r, Double xArg, Double yArg, Double zArg) -> {
+                    double dx = r.x() - xArg, dy = r.y() - yArg, dz = r.z() - zArg;
+                    return ScriptValue.of(dx*dx + dy*dy + dz*dz);
+                });
     }
 
     /** Handles contraption sub-levels: projects to real-world coordinates. */
