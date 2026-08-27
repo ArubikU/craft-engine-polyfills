@@ -165,46 +165,15 @@ final class ScriptBytecodeCompiler {
     private static final String POLY_TYPE = "dev/arubik/craftengine/script/PolyType";
     private static final String METHOD_HANDLER = "dev/arubik/craftengine/script/PolyType$MethodHandler";
     private static final String PROPERTY_HANDLER = "dev/arubik/craftengine/script/PolyType$PropertyHandler";
-    private static final String TYPED_METHOD_DESCRIPTOR = "dev/arubik/craftengine/script/PolyType$TypedMethodDescriptor";
-    /** {@code TypedMethodHandlerN}'s internal name, indexed by arity (0..7) — every arity is a
-     *  DISTINCT interface (generics erase to the same {@code (Object...)Object} shape, but the JVM
-     *  still needs the real interface name for {@code INVOKEINTERFACE}/{@code CHECKCAST}). */
-    private static final String[] TYPED_HANDLER_IFACE = {
-            "dev/arubik/craftengine/script/PolyType$TypedMethodHandler0",
-            "dev/arubik/craftengine/script/PolyType$TypedMethodHandler1",
-            "dev/arubik/craftengine/script/PolyType$TypedMethodHandler2",
-            "dev/arubik/craftengine/script/PolyType$TypedMethodHandler3",
-            "dev/arubik/craftengine/script/PolyType$TypedMethodHandler4",
-            "dev/arubik/craftengine/script/PolyType$TypedMethodHandler5",
-            "dev/arubik/craftengine/script/PolyType$TypedMethodHandler6",
-            "dev/arubik/craftengine/script/PolyType$TypedMethodHandler7",
-    };
-
-    /** The only {@link PolyType.TypeCodec} shapes the JIT knows how to decode/encode WITHOUT an
-     *  interface dispatch through {@code codec.decode}/{@code codec.encode} — matched by identity
-     *  against the singletons in {@link TypeCodecs}, since a {@code methodTypedN} registration
-     *  always passes one of those four (see the "hand-ported builtins" precedent: specialize only
-     *  what's provably known at compile time, fall back to the untyped path for everything else,
-     *  same discipline as {@code STRING_UNARY}/{@code ScriptBuiltins.get(name) != null} below). */
-    private enum CodecKind { DOUBLE, BOOL, STRING, RAW, UNKNOWN }
-
-    private static CodecKind codecKind(PolyType.TypeCodec<?> codec) {
-        if (codec == TypeCodecs.DOUBLE) return CodecKind.DOUBLE;
-        if (codec == TypeCodecs.BOOL) return CodecKind.BOOL;
-        if (codec == TypeCodecs.STRING) return CodecKind.STRING;
-        if (codec == TypeCodecs.RAW) return CodecKind.RAW;
-        return CodecKind.UNKNOWN;
-    }
-
-    /** How one arg of a typed-dispatch call site is cached in a local, per {@link #dotMethodCall}'s
-     *  typed tier. {@code NUM_RAW}/{@code BOOL_RAW}: the raw (pre-{@code toAny}) arg expression is
-     *  ALREADY exactly the native shape its {@link CodecKind} wants (a NUM expr into a DOUBLE
-     *  codec, a BOOL expr into a BOOL codec) — cached as a genuinely unboxed JVM primitive local, so
-     *  the typed handler call boxes it directly ({@code Double.valueOf}/{@code Boolean.valueOf}),
-     *  with NO {@code ScriptValue.of(...)} box followed by an immediate {@code asNum}/{@code asBool}
-     *  unbox in between. {@code ANY_BOXED}: everything else — a STRING/RAW codec, or a type mismatch
-     *  (e.g. a STRING expr feeding a DOUBLE-codec'd slot) — cached as the boxed {@code ScriptValue}
-     *  {@code toAny} already produces, decoded via {@link #emitCodecDecodeInline} same as before. */
+    /** How one arg of a PolyClass-dispatch call site is held in a local, per {@link
+     *  #dotMethodCall}'s typed path. {@code NUM_RAW}/{@code BOOL_RAW}: the raw (pre-{@code toAny})
+     *  arg expression is ALREADY exactly the native shape the generated method's parameter wants (a
+     *  NUM expr into a {@code double} param, a BOOL expr into a {@code boolean} param) — kept as a
+     *  genuinely unboxed JVM primitive, so no {@code ScriptValue.of(...)} box followed by an
+     *  immediate {@code asNum}/{@code asBool} unbox ever happens. {@code ANY_BOXED}: everything else
+     *  — a String/ScriptValue parameter, or a type mismatch (e.g. a STRING expr feeding a
+     *  {@code double} param) — held as the boxed {@code ScriptValue} {@code toAny} already produces,
+     *  decoded to native via {@link #emitDecodeToNative} on the way in. */
     private enum ArgSlotKind { NUM_RAW, BOOL_RAW, ANY_BOXED }
 
     /** name -> java.lang.Math method of the same (double)->double shape. Only pure, total (no
@@ -1473,8 +1442,12 @@ final class ScriptBytecodeCompiler {
          *  generic {@code memberGet} call as before, so this can never diverge from the always-
          *  correct path, only skip redundant work on the way to it. */
         private static Expr dotPropertyGet(String name, String prop) {
-            PolyType type = PolyTypeRegistry.get(name);
-            PolyType.PropertyHandler resolved = type != null ? type.resolveProperty(prop) : null;
+            // Unbox the receiver into this type's generated PolyClass (see PolyClassGenerator) and
+            // read the property through its own generated accessor — a plain INVOKEVIRTUAL against
+            // an already-resolved handler, no PolyTypeRegistry lookup at this call site at all.
+            PolyClassGenerator.GeneratedPolyClass generated = PolyClassGenerator.getOrGenerate(name);
+            String propJavaName = generated != null ? generated.properties().get(prop) : null;
+            String wrapperName = propJavaName != null ? generated.internalName() : null;
             return new BaseExpr(Type.ANY) {
                 @Override public void emit(MethodVisitor mv, Ctx c) {
                     int svSlot = c.allocRef();
@@ -1484,29 +1457,15 @@ final class ScriptBytecodeCompiler {
                     Label isNullL = new Label(), endL = new Label();
                     mv.visitJumpInsn(IF_ACMPEQ, isNullL);
 
-                    if (resolved != null) {
+                    if (propJavaName != null) {
                         Label fallbackL = new Label(), fastL = new Label();
                         int objSlot = c.allocRef(), instSlot = c.allocRef();
                         emitPolyTypeGuard(mv, c, svSlot, name, objSlot, instSlot, fallbackL);
-                        mv.visitLdcInsn(name);
-                        mv.visitMethodInsn(INVOKESTATIC, POLY_TYPE_REGISTRY, "get",
-                                "(Ljava/lang/String;)L" + POLY_TYPE + ";", false);
-                        int typeSlot = c.allocRef();
-                        mv.visitVarInsn(ASTORE, typeSlot);
-                        mv.visitVarInsn(ALOAD, typeSlot);
-                        mv.visitJumpInsn(IFNULL, fallbackL);
-                        mv.visitVarInsn(ALOAD, typeSlot);
-                        mv.visitLdcInsn(prop);
-                        mv.visitMethodInsn(INVOKEVIRTUAL, POLY_TYPE, "resolveProperty",
-                                "(Ljava/lang/String;)L" + PROPERTY_HANDLER + ";", false);
-                        int handlerSlot = c.allocRef();
-                        mv.visitVarInsn(ASTORE, handlerSlot);
-                        mv.visitVarInsn(ALOAD, handlerSlot);
-                        mv.visitJumpInsn(IFNULL, fallbackL);
-                        mv.visitVarInsn(ALOAD, handlerSlot);
+                        mv.visitTypeInsn(NEW, wrapperName);
+                        mv.visitInsn(DUP);
                         mv.visitVarInsn(ALOAD, instSlot);
-                        mv.visitMethodInsn(INVOKEINTERFACE, PROPERTY_HANDLER, "get",
-                                "(Ljava/lang/Object;)L" + VALUE + ";", true);
+                        mv.visitMethodInsn(INVOKESPECIAL, wrapperName, "<init>", "(Ljava/lang/Object;)V", false);
+                        mv.visitMethodInsn(INVOKEVIRTUAL, wrapperName, propJavaName, "()L" + VALUE + ";", false);
                         mv.visitJumpInsn(GOTO, fastL);
                         mv.visitLabel(fallbackL);
                         mv.visitVarInsn(ALOAD, svSlot);
@@ -1557,40 +1516,48 @@ final class ScriptBytecodeCompiler {
          *  not a silent wrong-value shortcut. */
         private static Expr dotMethodCall(String name, String method, List<Expr> rawArgs) {
             List<Expr> args = rawArgs.stream().map(ScriptBytecodeCompiler::toAny).toList();
-            PolyType type = PolyTypeRegistry.get(name);
-            PolyType.MethodHandler resolved = type != null ? type.resolveMethod(method) : null;
-            PolyType.TypedMethodDescriptor typedResolved = type != null ? type.resolveTypedMethod(method) : null;
             int arity = args.size();
-            CodecKind[] argKinds = null;
-            CodecKind retKind = CodecKind.UNKNOWN;
-            if (typedResolved != null && typedResolved.arity() == arity) {
-                argKinds = new CodecKind[arity];
-                boolean allKnown = true;
-                for (int i = 0; i < arity; i++) {
-                    argKinds[i] = codecKind(typedResolved.argTypes().get(i));
-                    if (argKinds[i] == CodecKind.UNKNOWN) { allKnown = false; break; }
-                }
-                retKind = allKnown ? codecKind(typedResolved.returnType()) : CodecKind.UNKNOWN;
-            }
-            boolean specializeTyped = argKinds != null && retKind != CodecKind.UNKNOWN;
-            CodecKind[] finalArgKinds = argKinds;
-            CodecKind finalRetKind = retKind;
-            String handlerIface = specializeTyped ? TYPED_HANDLER_IFACE[arity] : null;
 
-            // Per-arg slot representation for the typed tier: when the RAW (pre-toAny) arg
-            // expression is ALREADY the exact native shape the codec wants (a NUM expr feeding a
-            // DOUBLE codec, a BOOL expr feeding a BOOL codec), cache it as a genuinely raw JVM
-            // primitive local — no box-to-ScriptValue-then-immediately-unbox round trip. Anything
-            // else evaluates as ANY (a boxed ScriptValue), decoded via asNum/asBool/asStr same as
-            // before. Never never-mind toAny for the OTHER tiers below (args/emitBuildArgsList) —
-            // those still need every arg pre-boxed, unchanged.
+            // Unbox the receiver into this type's generated PolyClass (see PolyClassGenerator) and
+            // call the member's own generated Java method. EVERY registered method has one: a
+            // genuinely native-signatured method when its methodTypedN codecs/arity are all known,
+            // otherwise the erased ScriptValue(List) shape. Either way the PolyTypeRegistry lookup
+            // this call would otherwise redo on EVERY invocation is gone — the wrapper holds the
+            // resolved handler in a static field, kept current by PolyClassGenerator's refresh on
+            // every registry mutation. Falls straight through to memberCall (exactly as if none of
+            // this existed) when the type isn't registered, generation failed, or this method isn't
+            // one of its members.
+            PolyClassGenerator.GeneratedPolyClass generated = PolyClassGenerator.getOrGenerate(name);
+            PolyClassGenerator.TypedMemberRef typedCandidate = null;
+            String untypedCandidate = null;
+            if (generated != null) {
+                PolyClassGenerator.TypedMemberRef t = generated.typedMethods().get(method);
+                // Arity must match the generated native signature exactly — a call site passing
+                // fewer args still needs the untyped wrapper's onMissingArgs handling, which only
+                // the erased MethodHandler knows how to apply.
+                if (t != null && t.argKinds().length == arity) typedCandidate = t;
+                else if (t == null) untypedCandidate = generated.untypedMethods().get(method);
+            }
+            PolyClassGenerator.TypedMemberRef typedRef = typedCandidate;
+            String untypedJavaName = untypedCandidate;
+            boolean specializeTyped = typedRef != null;
+            boolean specializeUntyped = untypedJavaName != null;
+            String wrapperName = (specializeTyped || specializeUntyped) ? generated.internalName() : null;
+
+            // Per-arg slot representation for the typed path: when the RAW (pre-toAny) arg
+            // expression is ALREADY the exact native shape the generated method's parameter wants
+            // (a NUM expr into a double param, a BOOL expr into a boolean param), keep it as a
+            // genuinely unboxed JVM primitive — no ScriptValue box/unbox round trip at all, since
+            // the wrapper's parameter IS that primitive type. Anything else evaluates as a boxed
+            // ScriptValue and is decoded to the native shape on the way in.
             ArgSlotKind[] argSlotKinds = null;
             if (specializeTyped) {
                 argSlotKinds = new ArgSlotKind[arity];
                 for (int i = 0; i < arity; i++) {
+                    PolyClassGenerator.Kind k = typedRef.argKinds()[i];
                     Type rawType = rawArgs.get(i).type();
-                    if (finalArgKinds[i] == CodecKind.DOUBLE && rawType == Type.NUM) argSlotKinds[i] = ArgSlotKind.NUM_RAW;
-                    else if (finalArgKinds[i] == CodecKind.BOOL && rawType == Type.BOOL) argSlotKinds[i] = ArgSlotKind.BOOL_RAW;
+                    if (k == PolyClassGenerator.Kind.DOUBLE && rawType == Type.NUM) argSlotKinds[i] = ArgSlotKind.NUM_RAW;
+                    else if (k == PolyClassGenerator.Kind.BOOL && rawType == Type.BOOL) argSlotKinds[i] = ArgSlotKind.BOOL_RAW;
                     else argSlotKinds[i] = ArgSlotKind.ANY_BOXED;
                 }
             }
@@ -1607,12 +1574,9 @@ final class ScriptBytecodeCompiler {
 
                     if (specializeTyped) {
                         // Evaluate each arg EXACTLY ONCE into its own local — never re-run an arg
-                        // expression to serve a second tier (a real side-effect hazard if an arg is
-                        // itself a call). The boxed ArrayList<ScriptValue> memberCall/the untyped
-                        // MethodHandler both need is then only ever actually BUILT inside whichever
-                        // of their two tiers' bodies runs — never on the typed tier's own path,
-                        // which is the expected common case (see dotMethodCall's own doc: a
-                        // resolveTypedMethod miss here is structurally unreachable today).
+                        // expression to serve the fallback path too (a real side-effect hazard if an
+                        // arg is itself a call). The boxed ArrayList the memberCall fallback needs is
+                        // built only on that (type-guard-mismatch-only) path, never here.
                         int[] argSlots = new int[arity];
                         for (int i = 0; i < arity; i++) {
                             switch (finalArgSlotKinds[i]) {
@@ -1634,88 +1598,62 @@ final class ScriptBytecodeCompiler {
                             }
                         }
 
-                        Label fallbackL = new Label(), fastL = new Label(), typedMissL = new Label();
+                        Label fallbackL = new Label(), fastL = new Label();
                         int objSlot = c.allocRef(), instSlot = c.allocRef();
                         emitPolyTypeGuard(mv, c, svSlot, name, objSlot, instSlot, fallbackL);
-                        mv.visitLdcInsn(name);
-                        mv.visitMethodInsn(INVOKESTATIC, POLY_TYPE_REGISTRY, "get",
-                                "(Ljava/lang/String;)L" + POLY_TYPE + ";", false);
-                        int typeSlot = c.allocRef();
-                        mv.visitVarInsn(ASTORE, typeSlot);
-                        mv.visitVarInsn(ALOAD, typeSlot);
-                        mv.visitJumpInsn(IFNULL, fallbackL);
 
-                        mv.visitVarInsn(ALOAD, typeSlot);
-                        mv.visitLdcInsn(method);
-                        mv.visitMethodInsn(INVOKEVIRTUAL, POLY_TYPE, "resolveTypedMethod",
-                                "(Ljava/lang/String;)L" + TYPED_METHOD_DESCRIPTOR + ";", false);
-                        int descSlot = c.allocRef();
-                        mv.visitVarInsn(ASTORE, descSlot);
-                        mv.visitVarInsn(ALOAD, descSlot);
-                        mv.visitJumpInsn(IFNULL, typedMissL);
-                        mv.visitVarInsn(ALOAD, descSlot);
-                        mv.visitMethodInsn(INVOKEVIRTUAL, TYPED_METHOD_DESCRIPTOR, "handler",
-                                "()Ljava/lang/Object;", false);
-                        mv.visitTypeInsn(CHECKCAST, handlerIface);
-                        int typedHandlerSlot = c.allocRef();
-                        mv.visitVarInsn(ASTORE, typedHandlerSlot);
-
-                        mv.visitVarInsn(ALOAD, typedHandlerSlot);
+                        // new <PolyClass>(instance).<member>(nativeArgs) — one small, escape-
+                        // analysis-friendly allocation plus a monomorphic INVOKEVIRTUAL.
+                        mv.visitTypeInsn(NEW, wrapperName);
+                        mv.visitInsn(DUP);
                         mv.visitVarInsn(ALOAD, instSlot);
+                        mv.visitMethodInsn(INVOKESPECIAL, wrapperName, "<init>", "(Ljava/lang/Object;)V", false);
                         for (int i = 0; i < arity; i++) {
                             switch (finalArgSlotKinds[i]) {
-                                case NUM_RAW -> {
-                                    mv.visitVarInsn(DLOAD, argSlots[i]);
-                                    mv.visitMethodInsn(INVOKESTATIC, "java/lang/Double", "valueOf",
-                                            "(D)Ljava/lang/Double;", false);
-                                }
-                                case BOOL_RAW -> {
-                                    mv.visitVarInsn(ILOAD, argSlots[i]);
-                                    mv.visitMethodInsn(INVOKESTATIC, "java/lang/Boolean", "valueOf",
-                                            "(Z)Ljava/lang/Boolean;", false);
-                                }
+                                case NUM_RAW -> mv.visitVarInsn(DLOAD, argSlots[i]);
+                                case BOOL_RAW -> mv.visitVarInsn(ILOAD, argSlots[i]);
                                 case ANY_BOXED -> {
                                     mv.visitVarInsn(ALOAD, argSlots[i]);
-                                    emitCodecDecodeInline(mv, finalArgKinds[i]);
+                                    emitDecodeToNative(mv, typedRef.argKinds()[i]);
                                 }
                             }
                         }
-                        StringBuilder desc = new StringBuilder("(");
-                        desc.append("Ljava/lang/Object;".repeat(arity + 1));
-                        desc.append(")Ljava/lang/Object;");
-                        mv.visitMethodInsn(INVOKEINTERFACE, handlerIface, "call", desc.toString(), true);
-                        emitCodecEncodeInline(mv, finalRetKind);
-                        mv.visitJumpInsn(GOTO, fastL);
-                        mv.visitLabel(typedMissL);
-
-                        // Untyped tier — the boxed List is only built HERE, on this (structurally
-                        // unreachable) miss path, from the SAME already-evaluated argSlots.
-                        int listSlot = c.allocRef();
-                        emitListFromSlots(mv, argSlots, finalArgSlotKinds, listSlot);
-                        mv.visitVarInsn(ALOAD, typeSlot);
-                        mv.visitLdcInsn(method);
-                        mv.visitMethodInsn(INVOKEVIRTUAL, POLY_TYPE, "resolveMethod",
-                                "(Ljava/lang/String;)L" + METHOD_HANDLER + ";", false);
-                        int handlerSlot = c.allocRef();
-                        mv.visitVarInsn(ASTORE, handlerSlot);
-                        mv.visitVarInsn(ALOAD, handlerSlot);
-                        mv.visitJumpInsn(IFNULL, fallbackL);
-                        mv.visitVarInsn(ALOAD, handlerSlot);
-                        mv.visitVarInsn(ALOAD, instSlot);
-                        mv.visitVarInsn(ALOAD, listSlot);
-                        mv.visitMethodInsn(INVOKEINTERFACE, METHOD_HANDLER, "call",
-                                "(Ljava/lang/Object;L" + LIST + ";)L" + VALUE + ";", true);
+                        mv.visitMethodInsn(INVOKEVIRTUAL, wrapperName, typedRef.javaName(),
+                                typedRef.descriptor(), false);
+                        emitBoxNativeToScriptValue(mv, typedRef.retKind());
                         mv.visitJumpInsn(GOTO, fastL);
 
                         mv.visitLabel(fallbackL);
-                        // memberCall fallback — reachable via jumps that predate listSlot above, so
-                        // it builds its OWN list from the same argSlots rather than assuming that
-                        // one exists yet.
-                        int listSlot2 = c.allocRef();
-                        emitListFromSlots(mv, argSlots, finalArgSlotKinds, listSlot2);
+                        int listSlot = c.allocRef();
+                        emitListFromSlots(mv, argSlots, finalArgSlotKinds, listSlot);
                         mv.visitVarInsn(ALOAD, svSlot);
                         mv.visitLdcInsn(method);
-                        mv.visitVarInsn(ALOAD, listSlot2);
+                        mv.visitVarInsn(ALOAD, listSlot);
+                        mv.visitVarInsn(ALOAD, c.ctxSlot);
+                        mv.visitMethodInsn(INVOKESTATIC, FORMULA, "memberCall",
+                                "(L" + VALUE + ";Ljava/lang/String;L" + LIST + ";L" + CTX + ";)L" + VALUE + ";", false);
+                        mv.visitLabel(fastL);
+                    } else if (specializeUntyped) {
+                        // The wrapper's erased shim still takes List<ScriptValue>, so the list IS
+                        // built here — but the registry lookup is still gone.
+                        int listSlot = c.allocRef();
+                        emitBuildArgsList(mv, c, args, listSlot);
+
+                        Label fallbackL = new Label(), fastL = new Label();
+                        int objSlot = c.allocRef(), instSlot = c.allocRef();
+                        emitPolyTypeGuard(mv, c, svSlot, name, objSlot, instSlot, fallbackL);
+                        mv.visitTypeInsn(NEW, wrapperName);
+                        mv.visitInsn(DUP);
+                        mv.visitVarInsn(ALOAD, instSlot);
+                        mv.visitMethodInsn(INVOKESPECIAL, wrapperName, "<init>", "(Ljava/lang/Object;)V", false);
+                        mv.visitVarInsn(ALOAD, listSlot);
+                        mv.visitMethodInsn(INVOKEVIRTUAL, wrapperName, untypedJavaName,
+                                "(L" + LIST + ";)L" + VALUE + ";", false);
+                        mv.visitJumpInsn(GOTO, fastL);
+                        mv.visitLabel(fallbackL);
+                        mv.visitVarInsn(ALOAD, svSlot);
+                        mv.visitLdcInsn(method);
+                        mv.visitVarInsn(ALOAD, listSlot);
                         mv.visitVarInsn(ALOAD, c.ctxSlot);
                         mv.visitMethodInsn(INVOKESTATIC, FORMULA, "memberCall",
                                 "(L" + VALUE + ";Ljava/lang/String;L" + LIST + ";L" + CTX + ";)L" + VALUE + ";", false);
@@ -1723,48 +1661,12 @@ final class ScriptBytecodeCompiler {
                     } else {
                         int listSlot = c.allocRef();
                         emitBuildArgsList(mv, c, args, listSlot);
-
-                        if (resolved != null) {
-                            Label fallbackL = new Label(), fastL = new Label();
-                            int objSlot = c.allocRef(), instSlot = c.allocRef();
-                            emitPolyTypeGuard(mv, c, svSlot, name, objSlot, instSlot, fallbackL);
-                            mv.visitLdcInsn(name);
-                            mv.visitMethodInsn(INVOKESTATIC, POLY_TYPE_REGISTRY, "get",
-                                    "(Ljava/lang/String;)L" + POLY_TYPE + ";", false);
-                            int typeSlot = c.allocRef();
-                            mv.visitVarInsn(ASTORE, typeSlot);
-                            mv.visitVarInsn(ALOAD, typeSlot);
-                            mv.visitJumpInsn(IFNULL, fallbackL);
-                            mv.visitVarInsn(ALOAD, typeSlot);
-                            mv.visitLdcInsn(method);
-                            mv.visitMethodInsn(INVOKEVIRTUAL, POLY_TYPE, "resolveMethod",
-                                    "(Ljava/lang/String;)L" + METHOD_HANDLER + ";", false);
-                            int handlerSlot = c.allocRef();
-                            mv.visitVarInsn(ASTORE, handlerSlot);
-                            mv.visitVarInsn(ALOAD, handlerSlot);
-                            mv.visitJumpInsn(IFNULL, fallbackL);
-                            mv.visitVarInsn(ALOAD, handlerSlot);
-                            mv.visitVarInsn(ALOAD, instSlot);
-                            mv.visitVarInsn(ALOAD, listSlot);
-                            mv.visitMethodInsn(INVOKEINTERFACE, METHOD_HANDLER, "call",
-                                    "(Ljava/lang/Object;L" + LIST + ";)L" + VALUE + ";", true);
-                            mv.visitJumpInsn(GOTO, fastL);
-                            mv.visitLabel(fallbackL);
-                            mv.visitVarInsn(ALOAD, svSlot);
-                            mv.visitLdcInsn(method);
-                            mv.visitVarInsn(ALOAD, listSlot);
-                            mv.visitVarInsn(ALOAD, c.ctxSlot);
-                            mv.visitMethodInsn(INVOKESTATIC, FORMULA, "memberCall",
-                                    "(L" + VALUE + ";Ljava/lang/String;L" + LIST + ";L" + CTX + ";)L" + VALUE + ";", false);
-                            mv.visitLabel(fastL);
-                        } else {
-                            mv.visitVarInsn(ALOAD, svSlot);
-                            mv.visitLdcInsn(method);
-                            mv.visitVarInsn(ALOAD, listSlot);
-                            mv.visitVarInsn(ALOAD, c.ctxSlot);
-                            mv.visitMethodInsn(INVOKESTATIC, FORMULA, "memberCall",
-                                    "(L" + VALUE + ";Ljava/lang/String;L" + LIST + ";L" + CTX + ";)L" + VALUE + ";", false);
-                        }
+                        mv.visitVarInsn(ALOAD, svSlot);
+                        mv.visitLdcInsn(method);
+                        mv.visitVarInsn(ALOAD, listSlot);
+                        mv.visitVarInsn(ALOAD, c.ctxSlot);
+                        mv.visitMethodInsn(INVOKESTATIC, FORMULA, "memberCall",
+                                "(L" + VALUE + ";Ljava/lang/String;L" + LIST + ";L" + CTX + ";)L" + VALUE + ";", false);
                     }
 
                     mv.visitJumpInsn(GOTO, endL);
@@ -1809,43 +1711,26 @@ final class ScriptBytecodeCompiler {
          *  never pays for the {@code TypeCodec.decode} interface dispatch itself. The boxing
          *  (Double/Boolean) is required because {@code TypedMethodHandlerN.call}'s parameters erase
          *  to {@code Object} — a raw primitive can't be passed there directly. */
-        private static void emitCodecDecodeInline(MethodVisitor mv, CodecKind kind) {
+        private static void emitDecodeToNative(MethodVisitor mv, PolyClassGenerator.Kind kind) {
             switch (kind) {
-                case DOUBLE -> {
-                    mv.visitMethodInsn(INVOKEINTERFACE, VALUE, "asNum", "()D", true);
-                    mv.visitMethodInsn(INVOKESTATIC, "java/lang/Double", "valueOf", "(D)Ljava/lang/Double;", false);
-                }
-                case BOOL -> {
-                    mv.visitMethodInsn(INVOKEINTERFACE, VALUE, "asBool", "()Z", true);
-                    mv.visitMethodInsn(INVOKESTATIC, "java/lang/Boolean", "valueOf", "(Z)Ljava/lang/Boolean;", false);
-                }
+                case DOUBLE -> mv.visitMethodInsn(INVOKEINTERFACE, VALUE, "asNum", "()D", true);
+                case BOOL -> mv.visitMethodInsn(INVOKEINTERFACE, VALUE, "asBool", "()Z", true);
                 case STRING -> mv.visitMethodInsn(INVOKEINTERFACE, VALUE, "asStr", "()Ljava/lang/String;", true);
                 case RAW -> { /* already a ScriptValue reference, pass through untouched */ }
-                case UNKNOWN -> throw new IllegalStateException("emitCodecDecodeInline called with UNKNOWN");
+                case UNKNOWN -> throw new IllegalStateException("emitDecodeToNative called with UNKNOWN");
             }
         }
 
         /** Stack: {@code ..., Object} (the typed handler's raw, erased return) -&gt;
          *  {@code ..., ScriptValue} — mirrors {@link TypeCodecs}' {@code encode(...)}, inlined for
          *  the same reason as {@link #emitCodecDecodeInline}. */
-        private static void emitCodecEncodeInline(MethodVisitor mv, CodecKind kind) {
+        private static void emitBoxNativeToScriptValue(MethodVisitor mv, PolyClassGenerator.Kind kind) {
             switch (kind) {
-                case DOUBLE -> {
-                    mv.visitTypeInsn(CHECKCAST, "java/lang/Double");
-                    mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Double", "doubleValue", "()D", false);
-                    mv.visitMethodInsn(INVOKESTATIC, VALUE, "of", "(D)L" + VALUE + ";", true);
-                }
-                case BOOL -> {
-                    mv.visitTypeInsn(CHECKCAST, "java/lang/Boolean");
-                    mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Boolean", "booleanValue", "()Z", false);
-                    mv.visitMethodInsn(INVOKESTATIC, VALUE, "of", "(Z)L" + VALUE + ";", true);
-                }
-                case STRING -> {
-                    mv.visitTypeInsn(CHECKCAST, "java/lang/String");
-                    mv.visitMethodInsn(INVOKESTATIC, VALUE, "of", "(Ljava/lang/String;)L" + VALUE + ";", true);
-                }
-                case RAW -> mv.visitTypeInsn(CHECKCAST, VALUE);
-                case UNKNOWN -> throw new IllegalStateException("emitCodecEncodeInline called with UNKNOWN");
+                case DOUBLE -> mv.visitMethodInsn(INVOKESTATIC, VALUE, "of", "(D)L" + VALUE + ";", true);
+                case BOOL -> mv.visitMethodInsn(INVOKESTATIC, VALUE, "of", "(Z)L" + VALUE + ";", true);
+                case STRING -> mv.visitMethodInsn(INVOKESTATIC, VALUE, "of", "(Ljava/lang/String;)L" + VALUE + ";", true);
+                case RAW -> { /* the wrapper already returns a ScriptValue */ }
+                case UNKNOWN -> throw new IllegalStateException("emitBoxNativeToScriptValue called with UNKNOWN");
             }
         }
 

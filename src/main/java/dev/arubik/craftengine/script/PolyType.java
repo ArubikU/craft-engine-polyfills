@@ -37,21 +37,32 @@ public final class PolyType {
 
     public PolyType property(String name, PropertyHandler handler) {
         properties.put(name, handler);
+        PolyTypeRegistry.notifyMutation();
         return this;
     }
 
     public PolyType method(String name, MethodHandler handler) {
         methods.put(name, handler);
+        // Drop any typed descriptor this name had: `methods` is now an UNTYPED handler, and a
+        // leftover typedMethods entry would still advertise the old native signature to
+        // resolveTypedMethod — so anything reading that map (PolyClassGenerator) would keep
+        // calling the replaced handler while the interpreter, which only ever reads `methods`,
+        // correctly used the new one. The two maps must never disagree about what's registered.
+        typedMethods.remove(name);
+        PolyTypeRegistry.notifyMutation();
         return this;
     }
 
     public PolyType replaceMethod(String name, MethodHandler handler) {
         methods.put(name, handler);
+        typedMethods.remove(name); // see method(...) — keeps the two maps consistent
+        PolyTypeRegistry.notifyMutation();
         return this;
     }
 
     public PolyType replaceProperty(String name, PropertyHandler handler) {
         properties.put(name, handler);
+        PolyTypeRegistry.notifyMutation();
         return this;
     }
 
@@ -85,6 +96,7 @@ public final class PolyType {
     public <I, R> PolyType methodTyped0(String name, TypeCodec<R> ret, TypedMethodHandler0<I, R> handler) {
         methods.put(name, (instance, args) -> ret.encode(handler.call(cast(instance))));
         typedMethods.put(name, new TypedMethodDescriptor(name, List.of(), ret, handler));
+        PolyTypeRegistry.notifyMutation();
         return this;
     }
 
@@ -95,6 +107,7 @@ public final class PolyType {
             return ret.encode(handler.call(cast(instance), a1.decode(args.get(0))));
         });
         typedMethods.put(name, new TypedMethodDescriptor(name, List.of(a1), ret, handler));
+        PolyTypeRegistry.notifyMutation();
         return this;
     }
 
@@ -105,6 +118,7 @@ public final class PolyType {
             return ret.encode(handler.call(cast(instance), a1.decode(args.get(0)), a2.decode(args.get(1))));
         });
         typedMethods.put(name, new TypedMethodDescriptor(name, List.of(a1, a2), ret, handler));
+        PolyTypeRegistry.notifyMutation();
         return this;
     }
 
@@ -116,6 +130,7 @@ public final class PolyType {
             return ret.encode(handler.call(cast(instance), a1.decode(args.get(0)), a2.decode(args.get(1)), a3.decode(args.get(2))));
         });
         typedMethods.put(name, new TypedMethodDescriptor(name, List.of(a1, a2, a3), ret, handler));
+        PolyTypeRegistry.notifyMutation();
         return this;
     }
 
@@ -128,6 +143,7 @@ public final class PolyType {
                     a3.decode(args.get(2)), a4.decode(args.get(3))));
         });
         typedMethods.put(name, new TypedMethodDescriptor(name, List.of(a1, a2, a3, a4), ret, handler));
+        PolyTypeRegistry.notifyMutation();
         return this;
     }
 
@@ -140,6 +156,7 @@ public final class PolyType {
                     a3.decode(args.get(2)), a4.decode(args.get(3)), a5.decode(args.get(4))));
         });
         typedMethods.put(name, new TypedMethodDescriptor(name, List.of(a1, a2, a3, a4, a5), ret, handler));
+        PolyTypeRegistry.notifyMutation();
         return this;
     }
 
@@ -153,6 +170,7 @@ public final class PolyType {
                     a3.decode(args.get(2)), a4.decode(args.get(3)), a5.decode(args.get(4)), a6.decode(args.get(5))));
         });
         typedMethods.put(name, new TypedMethodDescriptor(name, List.of(a1, a2, a3, a4, a5, a6), ret, handler));
+        PolyTypeRegistry.notifyMutation();
         return this;
     }
 
@@ -167,6 +185,7 @@ public final class PolyType {
                     a7.decode(args.get(6))));
         });
         typedMethods.put(name, new TypedMethodDescriptor(name, List.of(a1, a2, a3, a4, a5, a6, a7), ret, handler));
+        PolyTypeRegistry.notifyMutation();
         return this;
     }
 
@@ -186,12 +205,14 @@ public final class PolyType {
     /** Fallback handler called when no named property matches. */
     public PolyType defaultProperty(DefaultPropertyHandler handler) {
         this.defaultProperty = handler;
+        PolyTypeRegistry.notifyMutation();
         return this;
     }
 
     /** Fallback handler called when no named method matches. */
     public PolyType defaultMethod(DefaultMethodHandler handler) {
         this.defaultMethod = handler;
+        PolyTypeRegistry.notifyMutation();
         return this;
     }
 

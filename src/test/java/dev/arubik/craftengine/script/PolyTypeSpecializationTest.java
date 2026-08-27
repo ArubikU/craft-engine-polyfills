@@ -144,13 +144,18 @@ class PolyTypeSpecializationTest {
         cr.accept(new TraceClassVisitor(new PrintWriter(sw)), 0);
         String disassembly = sw.toString();
 
-        int resolveMethodIdx = disassembly.indexOf("resolveMethod");
+        // An untyped .method() registration still gets a generated PolyClass shim (um$...), so the
+        // receiver unboxes into that class and dispatches through it — no PolyTypeRegistry lookup
+        // in the formula's own bytecode at all.
+        int wrapperIdx = disassembly.indexOf("PC_SpecDisasmType");
         int memberCallIdx = disassembly.indexOf("memberCall");
-        assertTrue(disassembly.contains("PolyTypeRegistry"), "should call PolyTypeRegistry.get directly");
-        assertTrue(resolveMethodIdx >= 0, "should call PolyType.resolveMethod directly");
+        assertTrue(wrapperIdx >= 0, "receiver should unbox into the generated PolyClass:\n" + disassembly);
+        assertTrue(disassembly.contains(".um$"), "should call the generated untyped shim:\n" + disassembly);
+        assertFalse(disassembly.contains("PolyTypeRegistry"),
+                "the registry lookup must be GONE from the call site — it lives in the PolyClass now:\n" + disassembly);
         assertTrue(memberCallIdx >= 0, "the narrow fallback should still exist, for a genuine type mismatch");
-        assertTrue(resolveMethodIdx < memberCallIdx,
-                "the direct-dispatch fast path must be reachable BEFORE the fallback, not the other way around:\n" + disassembly);
+        assertTrue(wrapperIdx < memberCallIdx,
+                "PolyClass dispatch must be reachable BEFORE the fallback:\n" + disassembly);
     }
 
     @Test
@@ -250,17 +255,18 @@ class PolyTypeSpecializationTest {
         cr.accept(new TraceClassVisitor(new PrintWriter(sw)), 0);
         String disassembly = sw.toString();
 
-        int resolveTypedIdx = disassembly.indexOf("resolveTypedMethod");
-        int resolveMethodIdx = disassembly.indexOf("resolveMethod");
+        int wrapperIdx = disassembly.indexOf("PC_SpecTypedDisasmType");
         int memberCallIdx = disassembly.indexOf("memberCall");
-        assertTrue(resolveTypedIdx >= 0, "should call PolyType.resolveTypedMethod directly:\n" + disassembly);
-        assertTrue(resolveMethodIdx >= 0, "the untyped fallback tier should still exist");
+        assertTrue(wrapperIdx >= 0, "receiver should unbox into the generated PolyClass:\n" + disassembly);
+        assertTrue(disassembly.contains(".tm$"),
+                "should call the generated NATIVE-signatured method, not an erased shim:\n" + disassembly);
+        assertTrue(disassembly.contains("tm$0_greet (Ljava/lang/String;)Ljava/lang/String;"),
+                "the generated method's signature should be genuinely native (String -> String):\n" + disassembly);
+        assertFalse(disassembly.contains("resolveTypedMethod"),
+                "the typed-descriptor lookup must be GONE from the call site:\n" + disassembly);
         assertTrue(memberCallIdx >= 0, "the narrow memberCall fallback should still exist");
-        assertTrue(resolveTypedIdx < resolveMethodIdx && resolveMethodIdx < memberCallIdx,
-                "typed tier must be reachable before the untyped tier, which must be reachable before memberCall:\n"
-                        + disassembly);
-        assertTrue(disassembly.contains("TypedMethodHandler1"),
-                "should CHECKCAST/INVOKEINTERFACE against the specific arity-1 typed handler interface:\n" + disassembly);
+        assertTrue(wrapperIdx < memberCallIdx,
+                "PolyClass dispatch must be reachable before memberCall:\n" + disassembly);
     }
 
     @Test
@@ -289,12 +295,12 @@ class PolyTypeSpecializationTest {
         cr.accept(new TraceClassVisitor(new PrintWriter(sw)), 0);
         String disassembly = sw.toString();
 
-        int typedHandlerCallIdx = disassembly.indexOf("TypedMethodHandler1.call");
+        int typedCallIdx = disassembly.indexOf(".tm$");
         int newArrayListIdx = disassembly.indexOf("NEW java/util/ArrayList");
-        assertTrue(typedHandlerCallIdx >= 0, "should call the typed handler directly:\n" + disassembly);
-        assertTrue(newArrayListIdx >= 0, "the miss/fallback tiers still need the list somewhere:\n" + disassembly);
-        assertTrue(typedHandlerCallIdx < newArrayListIdx,
-                "the typed tier's own call must be reachable BEFORE any ArrayList allocation:\n" + disassembly);
+        assertTrue(typedCallIdx >= 0, "should call the generated native method:\n" + disassembly);
+        assertTrue(newArrayListIdx >= 0, "the fallback path still needs the list somewhere:\n" + disassembly);
+        assertTrue(typedCallIdx < newArrayListIdx,
+                "the PolyClass call must be reachable BEFORE any ArrayList allocation:\n" + disassembly);
     }
 
     @Test
@@ -322,15 +328,91 @@ class PolyTypeSpecializationTest {
         cr.accept(new TraceClassVisitor(new PrintWriter(sw)), 0);
         String disassembly = sw.toString();
 
-        int typedHandlerCallIdx = disassembly.indexOf("TypedMethodHandler1.call");
-        assertTrue(typedHandlerCallIdx >= 0);
-        String beforeCall = disassembly.substring(0, typedHandlerCallIdx);
+        int typedCallIdx = disassembly.indexOf(".tm$");
+        assertTrue(typedCallIdx >= 0, "should call the generated native method:\n" + disassembly);
+        assertTrue(disassembly.contains("tm$0_scale (D)D"),
+                "the generated method should take and return a raw double:\n" + disassembly);
+        String beforeCall = disassembly.substring(0, typedCallIdx);
         assertFalse(beforeCall.contains("ScriptValue.of"),
-                "a NUM arg feeding a DOUBLE codec must never be boxed via ScriptValue.of before the typed call:\n"
-                        + disassembly);
+                "a NUM arg feeding a double param must never be boxed via ScriptValue.of first:\n" + disassembly);
         assertFalse(beforeCall.contains("asNum"),
                 "must never immediately un-box what it never boxed:\n" + disassembly);
         assertTrue(beforeCall.contains("DSTORE") && beforeCall.contains("DLOAD"),
-                "should cache the arg as a genuinely raw double local:\n" + disassembly);
+                "should hold the arg as a genuinely raw double local:\n" + disassembly);
+    }
+
+    // --- Staleness: the invariant the whole PolyClass design has to preserve -------------------
+    //
+    // A compiled formula is cached forever by ScriptFormula.CACHE and keeps calling the SAME
+    // generated PolyClass. If that class pinned the handlers it was generated with, a later
+    // re-registration would be silently ignored — running the OLD handler forever. These pin the
+    // eager-refresh behavior that prevents exactly that.
+
+    @Test
+    void redefiningATypeAfterAFormulaWasCompiledIsPickedUpNotStale() {
+        PolyTypeRegistry.define("SpecRedefType")
+                .method("greet", (o, a) -> ScriptValue.of("v1"));
+
+        ScriptFormula.Node node = ScriptBytecodeCompiler.tryCompile("SpecRedefType.greet(\"x\")");
+        assertNotNull(node);
+        ScriptContext ctx = ScriptContext.builder().typed("SpecRedefType", new Object()).build();
+        assertEquals("v1", node.eval(ctx).asStr());
+
+        // A brand-new PolyType object under the SAME name — the exact case that silently broke
+        // before PolyTypeRegistry started notifying PolyClassGenerator on every mutation.
+        PolyTypeRegistry.define("SpecRedefType")
+                .method("greet", (o, a) -> ScriptValue.of("v2"));
+
+        assertEquals("v2", node.eval(ctx).asStr(),
+                "the ALREADY-COMPILED formula must see the new registration, not the pinned old one");
+    }
+
+    @Test
+    void replacingAMethodOnALiveTypeIsPickedUpByAnAlreadyCompiledFormula() {
+        PolyType type = PolyTypeRegistry.define("SpecReplaceType")
+                .method("greet", (o, a) -> ScriptValue.of("before"));
+
+        ScriptFormula.Node node = ScriptBytecodeCompiler.tryCompile("SpecReplaceType.greet(\"x\")");
+        assertNotNull(node);
+        ScriptContext ctx = ScriptContext.builder().typed("SpecReplaceType", new Object()).build();
+        assertEquals("before", node.eval(ctx).asStr());
+
+        type.replaceMethod("greet", (o, a) -> ScriptValue.of("after"));
+        assertEquals("after", node.eval(ctx).asStr());
+    }
+
+    @Test
+    void aTypedMethodReplacedByADifferentShapeDegradesToGenericDispatchNotWrongAnswers() {
+        // The generated native signature (String -> String) is fixed forever, but the registration
+        // it was generated from can be swapped for one with a COMPLETELY different shape. The
+        // wrapper must detect that (its refresh() validates the signature) and route through
+        // generic dispatch rather than reinterpreting the new handler through the old signature.
+        PolyType type = PolyTypeRegistry.define("SpecShapeType")
+                .methodTyped1("thing", TypeCodecs.STRING, TypeCodecs.STRING, "",
+                        (Object o, String s) -> "typed:" + s);
+
+        ScriptFormula.Node node = ScriptBytecodeCompiler.tryCompile("SpecShapeType.thing(\"x\")");
+        assertNotNull(node);
+        ScriptContext ctx = ScriptContext.builder().typed("SpecShapeType", new Object()).build();
+        assertEquals("typed:x", node.eval(ctx).asStr());
+
+        // Now an UNTYPED registration under the same name — no typed descriptor at all anymore.
+        type.replaceMethod("thing", (o, a) -> ScriptValue.of("untyped:" + a.get(0).asStr()));
+        assertEquals("untyped:x", node.eval(ctx).asStr(),
+                "a shape change must fall back to generic dispatch, never reinterpret the new handler");
+    }
+
+    @Test
+    void aPropertyReplacedAfterCompileIsAlsoPickedUp() {
+        PolyType type = PolyTypeRegistry.define("SpecPropRefreshType")
+                .property("value", o -> ScriptValue.of(1.0));
+
+        ScriptFormula.Node node = ScriptBytecodeCompiler.tryCompile("SpecPropRefreshType.value + 0");
+        assertNotNull(node);
+        ScriptContext ctx = ScriptContext.builder().typed("SpecPropRefreshType", new Object()).build();
+        assertEquals(1.0, node.eval(ctx).asNum());
+
+        type.replaceProperty("value", o -> ScriptValue.of(99.0));
+        assertEquals(99.0, node.eval(ctx).asNum());
     }
 }

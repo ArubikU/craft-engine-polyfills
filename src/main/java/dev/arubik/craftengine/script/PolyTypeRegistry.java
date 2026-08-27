@@ -19,6 +19,33 @@ public final class PolyTypeRegistry {
 
     private static final Map<String, PolyType> TYPES = new ConcurrentHashMap<>();
 
+    /**
+     * Called after ANY mutation to the registry or to a registered {@link PolyType} — a new
+     * {@code define}, an {@code extend}, or any single {@code method}/{@code property}/{@code
+     * replaceMethod}/{@code methodTypedN}/... call on a type.
+     *
+     * <p>This exists for {@link PolyClassGenerator}: its generated wrapper classes hold RESOLVED
+     * handler references in static fields (that's the entire point — no per-call registry lookup),
+     * which would otherwise go stale the instant anything re-registers. A compiled {@code .pf}
+     * formula is cached forever by {@code ScriptFormula.CACHE} and keeps calling the SAME wrapper
+     * class, so "stale" here means silently running the OLD handler forever, not merely a missed
+     * optimization. Every mutation eagerly re-resolves those fields by NAME, so a wrapper always
+     * dispatches to whatever is registered right now.
+     *
+     * <p>Kept as a settable listener rather than a direct call so this class stays independent of
+     * the JIT — nothing here needs {@code PolyClassGenerator} to exist.
+     */
+    private static volatile Runnable mutationListener = null;
+
+    static void setMutationListener(Runnable listener) { mutationListener = listener; }
+
+    /** Notifies the mutation listener, if any. Package-private — called by {@link PolyType} on
+     *  every one of its own mutators as well as by this class's define/extend. */
+    static void notifyMutation() {
+        Runnable l = mutationListener;
+        if (l != null) l.run();
+    }
+
     private PolyTypeRegistry() {}
 
     /**
@@ -27,6 +54,7 @@ public final class PolyTypeRegistry {
     public static PolyType define(String name) {
         PolyType type = new PolyType(name, null);
         TYPES.put(name, type);
+        notifyMutation();
         return type;
     }
 
@@ -41,6 +69,7 @@ public final class PolyTypeRegistry {
         }
         PolyType type = new PolyType(name, parent);
         TYPES.put(name, type);
+        notifyMutation();
         return type;
     }
 
@@ -53,6 +82,7 @@ public final class PolyTypeRegistry {
             throw new IllegalStateException("Type '" + name + "' not registered.");
         }
         configurator.accept(type);
+        notifyMutation();
     }
 
     /**

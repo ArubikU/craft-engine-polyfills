@@ -1,0 +1,483 @@
+package dev.arubik.craftengine.script;
+
+import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.Label;
+import org.objectweb.asm.MethodVisitor;
+
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+import static org.objectweb.asm.Opcodes.*;
+
+/**
+ * Generates a REAL Java class — a "PolyClass" — per registered {@link PolyType}: the thing a script
+ * value of that type UNBOXES into. A "Machine" script value becomes an instance of a generated
+ * class wrapping the real underlying object (the {@code MachineRef}), exposing a genuinely
+ * native-signatured Java method per registered member.
+ *
+ * <p>Shape of a generated class:
+ * <ul>
+ *   <li>a {@code public} constructor taking the wrapped instance, plus a static {@code of(Object)}
+ *       factory;
+ *   <li>a private final {@code instance} field holding the real wrapped object;
+ *   <li>one {@code private static volatile} field per member, holding its RESOLVED handler — this
+ *       is the whole point: no {@code PolyTypeRegistry.get}/{@code resolveMethod} lookup on any
+ *       call, ever;
+ *   <li>one real instance method per member. A {@code methodTypedN} registration whose codecs are
+ *       all known {@link TypeCodecs} singletons gets a genuinely native signature ({@code double
+ *       get_x()}, {@code boolean set_typed(String, double)}); every OTHER method gets the erased
+ *       {@code ScriptValue name(List)} shape; every property gets {@code ScriptValue name()};
+ *   <li>a static {@code refresh()} that re-resolves every one of those handler fields BY NAME.
+ * </ul>
+ *
+ * <h2>Staleness — the hard part, and why {@code refresh()} exists</h2>
+ * A compiled {@code .pf} formula is cached forever by {@code ScriptFormula.CACHE}, keyed on the
+ * expression TEXT. Its bytecode references one specific generated class by name. So if a wrapper
+ * baked its handlers in permanently, the FIRST registration ever seen would be pinned for the life
+ * of the process, and any later {@code define}/{@code extend}/{@code replaceMethod} would be
+ * silently ignored — running the old handler forever, which is wrong behavior, not merely a missed
+ * optimization. (Every other dispatch tier in {@link ScriptBytecodeCompiler} deliberately
+ * re-resolves at runtime for exactly this reason.)
+ *
+ * <p>Instead: {@link PolyTypeRegistry} notifies this class after EVERY mutation, and every live
+ * generated class re-runs {@code refresh()}, re-resolving each handler BY NAME. A wrapper therefore
+ * always dispatches to whatever is registered right now, while still costing zero lookups per call.
+ * The per-name cache is also cleared, so the next compile regenerates against the current member
+ * set (a member added after a wrapper was generated simply isn't specialized until then).
+ *
+ * <p>A member can also change SHAPE, not just handler — a typed method re-registered with different
+ * codecs or arity, or replaced by an untyped one, while a generated native signature is fixed
+ * forever. {@code refresh()} passes the exact signature it was generated for to {@link
+ * PolyClassRuntime#resolveTypedHandler}, which returns null on ANY mismatch; the generated method
+ * then routes through {@link PolyClassRuntime#genericCall} instead. A shape change degrades to
+ * correct-but-slower, never to wrong.
+ *
+ * <p>Classes are defined via {@link MethodHandles.Lookup#defineClass}, NOT {@code
+ * defineHiddenClass}: a hidden class is deliberately unresolvable by ordinary symbolic references
+ * from other classes, so the {@code NEW}/{@code INVOKEVIRTUAL} that {@link ScriptBytecodeCompiler}
+ * emits against it by name would fail to link. They are also {@code ACC_PUBLIC} because those
+ * calling classes live in a different package AND a different class loader.
+ */
+final class PolyClassGenerator {
+    private PolyClassGenerator() {}
+
+    private static final Logger LOG = Logger.getLogger(PolyClassGenerator.class.getName());
+    private static final AtomicInteger COUNTER = new AtomicInteger();
+
+    /** name -> the wrapper generated for it. Cleared on any registry mutation so the next compile
+     *  regenerates against the current member set. */
+    private static final ConcurrentHashMap<String, GeneratedPolyClass> CACHE = new ConcurrentHashMap<>();
+    /** Every wrapper ever generated (they outlive CACHE clears — already-compiled formulas keep
+     *  calling them), each with a handle to its own static refresh(). */
+    private static final CopyOnWriteArrayList<MethodHandle> LIVE_REFRESHERS = new CopyOnWriteArrayList<>();
+
+    static {
+        PolyTypeRegistry.setMutationListener(PolyClassGenerator::onRegistryMutation);
+    }
+
+    /** Ensures the static initializer above has run, so mutations are observed even if nothing has
+     *  asked for a wrapper yet. Called by {@link ScriptBytecodeCompiler} before it consults us. */
+    static void init() { /* triggers <clinit> */ }
+
+    private static void onRegistryMutation() {
+        CACHE.clear();
+        for (MethodHandle refresher : LIVE_REFRESHERS) {
+            try {
+                refresher.invokeExact();
+            } catch (Throwable t) {
+                LOG.log(Level.WARNING, t, () -> "[CEPolyfills] [JIT] PolyClass refresh failed; that wrapper's"
+                        + " members will fall back to generic dispatch");
+            }
+        }
+    }
+
+    private static final String OBJECT = "java/lang/Object";
+    private static final String STRING = "java/lang/String";
+    private static final String LIST = "java/util/List";
+    private static final String VALUE = "dev/arubik/craftengine/script/ScriptValue";
+    private static final String RUNTIME = "dev/arubik/craftengine/script/PolyClassRuntime";
+    private static final String METHOD_HANDLER = "dev/arubik/craftengine/script/PolyType$MethodHandler";
+    private static final String PROPERTY_HANDLER = "dev/arubik/craftengine/script/PolyType$PropertyHandler";
+    private static final String[] TYPED_HANDLER_IFACE = {
+            "dev/arubik/craftengine/script/PolyType$TypedMethodHandler0",
+            "dev/arubik/craftengine/script/PolyType$TypedMethodHandler1",
+            "dev/arubik/craftengine/script/PolyType$TypedMethodHandler2",
+            "dev/arubik/craftengine/script/PolyType$TypedMethodHandler3",
+            "dev/arubik/craftengine/script/PolyType$TypedMethodHandler4",
+            "dev/arubik/craftengine/script/PolyType$TypedMethodHandler5",
+            "dev/arubik/craftengine/script/PolyType$TypedMethodHandler6",
+            "dev/arubik/craftengine/script/PolyType$TypedMethodHandler7",
+    };
+
+    enum Kind { DOUBLE, BOOL, STRING, RAW, UNKNOWN }
+
+    static Kind kindOf(PolyType.TypeCodec<?> codec) {
+        if (codec == TypeCodecs.DOUBLE) return Kind.DOUBLE;
+        if (codec == TypeCodecs.BOOL) return Kind.BOOL;
+        if (codec == TypeCodecs.STRING) return Kind.STRING;
+        if (codec == TypeCodecs.RAW) return Kind.RAW;
+        return Kind.UNKNOWN;
+    }
+
+    private static String jvmType(Kind k) {
+        return switch (k) {
+            case DOUBLE -> "D";
+            case BOOL -> "Z";
+            case STRING -> "L" + STRING + ";";
+            case RAW -> "L" + VALUE + ";";
+            case UNKNOWN -> throw new IllegalStateException("jvmType(UNKNOWN)");
+        };
+    }
+
+    private static int loadOpcode(Kind k) { return k == Kind.DOUBLE ? DLOAD : k == Kind.BOOL ? ILOAD : ALOAD; }
+    private static int slotWidth(Kind k) { return k == Kind.DOUBLE ? 2 : 1; }
+    private static int returnOpcode(Kind k) { return k == Kind.DOUBLE ? DRETURN : k == Kind.BOOL ? IRETURN : ARETURN; }
+
+    /** A typed method's generated shape. {@code javaName} is what to {@code INVOKEVIRTUAL} — a
+     *  mangled, collision-free name, NOT the script-level name (which could clash with the
+     *  wrapper's own {@code instance}/{@code refresh}/{@code of} members, or with a same-named
+     *  property). */
+    record TypedMemberRef(String javaName, String descriptor, Kind[] argKinds, Kind retKind) {}
+
+    /** The generated wrapper for one {@link PolyType}. The three maps are keyed by SCRIPT-level
+     *  member name and give the generated Java method to call. */
+    record GeneratedPolyClass(String internalName, Map<String, TypedMemberRef> typedMethods,
+                               Map<String, String> untypedMethods, Map<String, String> properties) {}
+
+    /** The wrapper for {@code typeName}, generating it on first use, or null if the type isn't
+     *  registered or generation failed — either way the caller must fall back to fully generic
+     *  dispatch, never to a silent shortcut. */
+    static GeneratedPolyClass getOrGenerate(String typeName) {
+        GeneratedPolyClass cached = CACHE.get(typeName);
+        if (cached != null) return cached;
+        PolyType type = PolyTypeRegistry.get(typeName);
+        if (type == null) return null;
+        GeneratedPolyClass generated = generate(typeName, type);
+        if (generated == null) return null;
+        GeneratedPolyClass existing = CACHE.putIfAbsent(typeName, generated);
+        return existing != null ? existing : generated;
+    }
+
+    /** ASM needs a common-superclass oracle for frame computation, and its default implementation
+     *  LOADS both classes — which would fail (or recurse) for the class currently being generated.
+     *  Everything we emit is either {@code Object}-rooted or our own class, so answering {@code
+     *  Object} whenever our own name is involved is both safe and sufficient. */
+    private static final class SafeClassWriter extends ClassWriter {
+        private final String selfInternalName;
+        SafeClassWriter(int flags, String selfInternalName) {
+            super(flags);
+            this.selfInternalName = selfInternalName;
+        }
+        @Override protected String getCommonSuperClass(String a, String b) {
+            if (selfInternalName.equals(a) || selfInternalName.equals(b)) return OBJECT;
+            try {
+                return super.getCommonSuperClass(a, b);
+            } catch (Throwable t) {
+                return OBJECT;
+            }
+        }
+    }
+
+    private static GeneratedPolyClass generate(String typeName, PolyType type) {
+        try {
+            String safeType = sanitize(typeName);
+            String className = "dev/arubik/craftengine/script/PC_" + safeType + "_" + COUNTER.incrementAndGet();
+
+            SafeClassWriter cw = new SafeClassWriter(ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS, className);
+            cw.visit(V21, ACC_PUBLIC | ACC_FINAL | ACC_SUPER, className, null, OBJECT, null);
+            cw.visitField(ACC_PRIVATE | ACC_FINAL, "instance", "Ljava/lang/Object;", null, null).visitEnd();
+
+            MethodVisitor refresh = cw.visitMethod(ACC_PUBLIC | ACC_STATIC, "refresh", "()V", null, null);
+            refresh.visitCode();
+
+            Map<String, TypedMemberRef> typedRefs = new LinkedHashMap<>();
+            Map<String, String> untypedRefs = new LinkedHashMap<>();
+            Map<String, String> propRefs = new LinkedHashMap<>();
+            int[] counter = {0};
+
+            for (String methodName : new ArrayList<>(type.allMethodNames())) {
+                int idx = counter[0]++;
+                Kind[] argKinds = typedArgKinds(type, methodName);
+                Kind retKind = argKinds != null ? kindOf(type.resolveTypedMethod(methodName).returnType()) : Kind.UNKNOWN;
+                if (argKinds != null && retKind != Kind.UNKNOWN) {
+                    String field = "h$" + idx;
+                    String iface = TYPED_HANDLER_IFACE[argKinds.length];
+                    String sig = signatureOf(argKinds, retKind);
+                    cw.visitField(ACC_PRIVATE | ACC_STATIC | ACC_VOLATILE, field, "L" + iface + ";", null, null).visitEnd();
+                    refresh.visitLdcInsn(typeName);
+                    refresh.visitLdcInsn(methodName);
+                    refresh.visitLdcInsn(sig);
+                    refresh.visitMethodInsn(INVOKESTATIC, RUNTIME, "resolveTypedHandler",
+                            "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/Object;", false);
+                    refresh.visitTypeInsn(CHECKCAST, iface);
+                    refresh.visitFieldInsn(PUTSTATIC, className, field, "L" + iface + ";");
+
+                    String javaName = "tm$" + idx + "_" + sanitize(methodName);
+                    String desc = emitTypedMethod(cw, className, javaName, typeName, methodName, field, iface,
+                            argKinds, retKind);
+                    typedRefs.put(methodName, new TypedMemberRef(javaName, desc, argKinds, retKind));
+                } else {
+                    String field = "m$" + idx;
+                    cw.visitField(ACC_PRIVATE | ACC_STATIC | ACC_VOLATILE, field, "L" + METHOD_HANDLER + ";", null, null).visitEnd();
+                    refresh.visitLdcInsn(typeName);
+                    refresh.visitLdcInsn(methodName);
+                    refresh.visitMethodInsn(INVOKESTATIC, RUNTIME, "resolveMethodHandler",
+                            "(Ljava/lang/String;Ljava/lang/String;)L" + METHOD_HANDLER + ";", false);
+                    refresh.visitFieldInsn(PUTSTATIC, className, field, "L" + METHOD_HANDLER + ";");
+
+                    String javaName = "um$" + idx + "_" + sanitize(methodName);
+                    emitUntypedMethod(cw, className, javaName, typeName, methodName, field);
+                    untypedRefs.put(methodName, javaName);
+                }
+            }
+
+            for (String propName : new ArrayList<>(type.allPropertyNames())) {
+                int idx = counter[0]++;
+                String field = "p$" + idx;
+                cw.visitField(ACC_PRIVATE | ACC_STATIC | ACC_VOLATILE, field, "L" + PROPERTY_HANDLER + ";", null, null).visitEnd();
+                refresh.visitLdcInsn(typeName);
+                refresh.visitLdcInsn(propName);
+                refresh.visitMethodInsn(INVOKESTATIC, RUNTIME, "resolvePropertyHandler",
+                        "(Ljava/lang/String;Ljava/lang/String;)L" + PROPERTY_HANDLER + ";", false);
+                refresh.visitFieldInsn(PUTSTATIC, className, field, "L" + PROPERTY_HANDLER + ";");
+
+                String javaName = "pg$" + idx + "_" + sanitize(propName);
+                emitPropertyMethod(cw, className, javaName, typeName, propName, field);
+                propRefs.put(propName, javaName);
+            }
+
+            refresh.visitInsn(RETURN);
+            refresh.visitMaxs(0, 0);
+            refresh.visitEnd();
+
+            MethodVisitor ctor = cw.visitMethod(ACC_PUBLIC, "<init>", "(Ljava/lang/Object;)V", null, null);
+            ctor.visitCode();
+            ctor.visitVarInsn(ALOAD, 0);
+            ctor.visitMethodInsn(INVOKESPECIAL, OBJECT, "<init>", "()V", false);
+            ctor.visitVarInsn(ALOAD, 0);
+            ctor.visitVarInsn(ALOAD, 1);
+            ctor.visitFieldInsn(PUTFIELD, className, "instance", "Ljava/lang/Object;");
+            ctor.visitInsn(RETURN);
+            ctor.visitMaxs(0, 0);
+            ctor.visitEnd();
+
+            MethodVisitor factory = cw.visitMethod(ACC_PUBLIC | ACC_STATIC, "of",
+                    "(Ljava/lang/Object;)L" + className + ";", null, null);
+            factory.visitCode();
+            factory.visitTypeInsn(NEW, className);
+            factory.visitInsn(DUP);
+            factory.visitVarInsn(ALOAD, 0);
+            factory.visitMethodInsn(INVOKESPECIAL, className, "<init>", "(Ljava/lang/Object;)V", false);
+            factory.visitInsn(ARETURN);
+            factory.visitMaxs(0, 0);
+            factory.visitEnd();
+
+            cw.visitEnd();
+            Class<?> defined = MethodHandles.lookup().defineClass(cw.toByteArray());
+
+            // Resolve every handler field NOW, and keep a handle so every future registry mutation
+            // can re-resolve them (see this class's own doc — the whole staleness story).
+            MethodHandle refresher = MethodHandles.lookup()
+                    .findStatic(defined, "refresh", MethodType.methodType(void.class));
+            refresher.invokeExact();
+            LIVE_REFRESHERS.add(refresher);
+
+            LOG.log(Level.FINE, () -> "[CEPolyfills] [JIT] generated PolyClass " + className + " for " + typeName
+                    + " (" + typedRefs.size() + " typed, " + untypedRefs.size() + " untyped, "
+                    + propRefs.size() + " properties)");
+            return new GeneratedPolyClass(className, Map.copyOf(typedRefs), Map.copyOf(untypedRefs),
+                    Map.copyOf(propRefs));
+        } catch (Throwable t) {
+            LOG.log(Level.WARNING, t, () -> "[CEPolyfills] [JIT] failed to generate PolyClass for " + typeName
+                    + " — falling back to generic dispatch");
+            return null;
+        }
+    }
+
+    /** The arg kinds of {@code method}'s typed registration, or null when it has none, its arity
+     *  exceeds the 7 the {@code TypedMethodHandlerN} family covers, or any codec isn't one of the
+     *  four known {@link TypeCodecs} singletons. */
+    private static Kind[] typedArgKinds(PolyType type, String method) {
+        PolyType.TypedMethodDescriptor d = type.resolveTypedMethod(method);
+        if (d == null || d.arity() > 7) return null;
+        Kind[] kinds = new Kind[d.arity()];
+        for (int i = 0; i < d.arity(); i++) {
+            kinds[i] = kindOf(d.argTypes().get(i));
+            if (kinds[i] == Kind.UNKNOWN) return null;
+        }
+        return kindOf(d.returnType()) == Kind.UNKNOWN ? null : kinds;
+    }
+
+    private static String signatureOf(Kind[] argKinds, Kind retKind) {
+        StringBuilder sb = new StringBuilder();
+        for (Kind k : argKinds) sb.append(PolyClassRuntime.kindChar(k));
+        return sb.append(':').append(PolyClassRuntime.kindChar(retKind)).toString();
+    }
+
+    private static String sanitize(String raw) {
+        String s = raw.replaceAll("[^A-Za-z0-9_]", "_");
+        return s.isEmpty() ? "_" : s;
+    }
+
+    /** A genuinely native-signatured method: {@code <nativeRet> name(<nativeArgs>)}, calling the
+     *  cached typed handler directly. If that handler is null (member gone, or its registered shape
+     *  no longer matches what this method was generated for — see the class doc), boxes its args
+     *  back up and routes through {@link PolyClassRuntime#genericCall}. */
+    private static String emitTypedMethod(ClassWriter cw, String className, String javaName, String typeName,
+                                           String scriptName, String field, String iface,
+                                           Kind[] argKinds, Kind retKind) {
+        StringBuilder desc = new StringBuilder("(");
+        for (Kind k : argKinds) desc.append(jvmType(k));
+        desc.append(")").append(jvmType(retKind));
+
+        MethodVisitor mv = cw.visitMethod(ACC_PUBLIC, javaName, desc.toString(), null, null);
+        mv.visitCode();
+        Label slow = new Label();
+        mv.visitFieldInsn(GETSTATIC, className, field, "L" + iface + ";");
+        mv.visitJumpInsn(IFNULL, slow);
+
+        mv.visitFieldInsn(GETSTATIC, className, field, "L" + iface + ";");
+        mv.visitVarInsn(ALOAD, 0);
+        mv.visitFieldInsn(GETFIELD, className, "instance", "Ljava/lang/Object;");
+        int slot = 1;
+        for (Kind k : argKinds) {
+            mv.visitVarInsn(loadOpcode(k), slot);
+            switch (k) {
+                case DOUBLE -> mv.visitMethodInsn(INVOKESTATIC, "java/lang/Double", "valueOf", "(D)Ljava/lang/Double;", false);
+                case BOOL -> mv.visitMethodInsn(INVOKESTATIC, "java/lang/Boolean", "valueOf", "(Z)Ljava/lang/Boolean;", false);
+                default -> { /* String/ScriptValue are already references */ }
+            }
+            slot += slotWidth(k);
+        }
+        mv.visitMethodInsn(INVOKEINTERFACE, iface, "call",
+                "(" + "Ljava/lang/Object;".repeat(argKinds.length + 1) + ")Ljava/lang/Object;", true);
+        switch (retKind) {
+            case DOUBLE -> {
+                mv.visitTypeInsn(CHECKCAST, "java/lang/Double");
+                mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Double", "doubleValue", "()D", false);
+            }
+            case BOOL -> {
+                mv.visitTypeInsn(CHECKCAST, "java/lang/Boolean");
+                mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Boolean", "booleanValue", "()Z", false);
+            }
+            case STRING -> mv.visitTypeInsn(CHECKCAST, STRING);
+            case RAW -> mv.visitTypeInsn(CHECKCAST, VALUE);
+            case UNKNOWN -> throw new IllegalStateException("emitTypedMethod(UNKNOWN ret)");
+        }
+        mv.visitInsn(returnOpcode(retKind));
+
+        mv.visitLabel(slow);
+        mv.visitLdcInsn(typeName);
+        mv.visitLdcInsn(scriptName);
+        mv.visitVarInsn(ALOAD, 0);
+        mv.visitFieldInsn(GETFIELD, className, "instance", "Ljava/lang/Object;");
+        pushInt(mv, argKinds.length);
+        mv.visitTypeInsn(ANEWARRAY, VALUE);
+        slot = 1;
+        for (int i = 0; i < argKinds.length; i++) {
+            Kind k = argKinds[i];
+            mv.visitInsn(DUP);
+            pushInt(mv, i);
+            mv.visitVarInsn(loadOpcode(k), slot);
+            switch (k) {
+                case DOUBLE -> mv.visitMethodInsn(INVOKESTATIC, VALUE, "of", "(D)L" + VALUE + ";", true);
+                case BOOL -> mv.visitMethodInsn(INVOKESTATIC, VALUE, "of", "(Z)L" + VALUE + ";", true);
+                case STRING -> mv.visitMethodInsn(INVOKESTATIC, VALUE, "of", "(Ljava/lang/String;)L" + VALUE + ";", true);
+                case RAW -> { /* already a ScriptValue */ }
+                case UNKNOWN -> throw new IllegalStateException("emitTypedMethod(UNKNOWN arg)");
+            }
+            mv.visitInsn(AASTORE);
+            slot += slotWidth(k);
+        }
+        mv.visitMethodInsn(INVOKESTATIC, RUNTIME, "genericCall",
+                "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;[L" + VALUE + ";)L" + VALUE + ";", false);
+        switch (retKind) {
+            case DOUBLE -> mv.visitMethodInsn(INVOKEINTERFACE, VALUE, "asNum", "()D", true);
+            case BOOL -> mv.visitMethodInsn(INVOKEINTERFACE, VALUE, "asBool", "()Z", true);
+            case STRING -> mv.visitMethodInsn(INVOKEINTERFACE, VALUE, "asStr", "()Ljava/lang/String;", true);
+            case RAW -> { /* genericCall already returns a ScriptValue */ }
+            case UNKNOWN -> throw new IllegalStateException("emitTypedMethod(UNKNOWN ret)");
+        }
+        mv.visitInsn(returnOpcode(retKind));
+        mv.visitMaxs(0, 0);
+        mv.visitEnd();
+        return desc.toString();
+    }
+
+    /** {@code ScriptValue name(List args)} — the erased {@code MethodHandler} shape, for any method
+     *  without an eligible typed registration. Still worth generating: the registry lookup this call
+     *  would otherwise redo every time is gone. */
+    private static void emitUntypedMethod(ClassWriter cw, String className, String javaName, String typeName,
+                                           String scriptName, String field) {
+        MethodVisitor mv = cw.visitMethod(ACC_PUBLIC, javaName, "(L" + LIST + ";)L" + VALUE + ";", null, null);
+        mv.visitCode();
+        Label slow = new Label();
+        mv.visitFieldInsn(GETSTATIC, className, field, "L" + METHOD_HANDLER + ";");
+        mv.visitJumpInsn(IFNULL, slow);
+        mv.visitFieldInsn(GETSTATIC, className, field, "L" + METHOD_HANDLER + ";");
+        mv.visitVarInsn(ALOAD, 0);
+        mv.visitFieldInsn(GETFIELD, className, "instance", "Ljava/lang/Object;");
+        mv.visitVarInsn(ALOAD, 1);
+        mv.visitMethodInsn(INVOKEINTERFACE, METHOD_HANDLER, "call",
+                "(Ljava/lang/Object;L" + LIST + ";)L" + VALUE + ";", true);
+        mv.visitInsn(ARETURN);
+        mv.visitLabel(slow);
+        mv.visitLdcInsn(typeName);
+        mv.visitLdcInsn(scriptName);
+        mv.visitVarInsn(ALOAD, 0);
+        mv.visitFieldInsn(GETFIELD, className, "instance", "Ljava/lang/Object;");
+        mv.visitVarInsn(ALOAD, 1);
+        mv.visitMethodInsn(INVOKESTATIC, RUNTIME, "genericCallList",
+                "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;L" + LIST + ";)L" + VALUE + ";", false);
+        mv.visitInsn(ARETURN);
+        mv.visitMaxs(0, 0);
+        mv.visitEnd();
+    }
+
+    /** {@code ScriptValue name()} — a property read against the cached {@code PropertyHandler}. */
+    private static void emitPropertyMethod(ClassWriter cw, String className, String javaName, String typeName,
+                                            String scriptName, String field) {
+        MethodVisitor mv = cw.visitMethod(ACC_PUBLIC, javaName, "()L" + VALUE + ";", null, null);
+        mv.visitCode();
+        Label slow = new Label();
+        mv.visitFieldInsn(GETSTATIC, className, field, "L" + PROPERTY_HANDLER + ";");
+        mv.visitJumpInsn(IFNULL, slow);
+        mv.visitFieldInsn(GETSTATIC, className, field, "L" + PROPERTY_HANDLER + ";");
+        mv.visitVarInsn(ALOAD, 0);
+        mv.visitFieldInsn(GETFIELD, className, "instance", "Ljava/lang/Object;");
+        mv.visitMethodInsn(INVOKEINTERFACE, PROPERTY_HANDLER, "get", "(Ljava/lang/Object;)L" + VALUE + ";", true);
+        mv.visitInsn(ARETURN);
+        mv.visitLabel(slow);
+        mv.visitLdcInsn(typeName);
+        mv.visitLdcInsn(scriptName);
+        mv.visitVarInsn(ALOAD, 0);
+        mv.visitFieldInsn(GETFIELD, className, "instance", "Ljava/lang/Object;");
+        mv.visitMethodInsn(INVOKESTATIC, RUNTIME, "genericProperty",
+                "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;)L" + VALUE + ";", false);
+        mv.visitInsn(ARETURN);
+        mv.visitMaxs(0, 0);
+        mv.visitEnd();
+    }
+
+    private static void pushInt(MethodVisitor mv, int i) {
+        switch (i) {
+            case 0 -> mv.visitInsn(ICONST_0);
+            case 1 -> mv.visitInsn(ICONST_1);
+            case 2 -> mv.visitInsn(ICONST_2);
+            case 3 -> mv.visitInsn(ICONST_3);
+            case 4 -> mv.visitInsn(ICONST_4);
+            case 5 -> mv.visitInsn(ICONST_5);
+            default -> mv.visitIntInsn(BIPUSH, i);
+        }
+    }
+}
