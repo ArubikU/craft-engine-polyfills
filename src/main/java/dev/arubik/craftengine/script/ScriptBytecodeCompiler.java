@@ -76,16 +76,21 @@ import static org.objectweb.asm.Opcodes.*;
  * The compiled method's TOP-level result is boxed via {@code ScriptValue.of(...)} only when it's
  * NUM/BOOL; an ANY result is returned as-is, unboxed and untouched.
  *
- * <h3>Why {@code ==}/{@code !=} and {@code +} bail on an ANY operand</h3>
+ * <h3>Why {@code ==}/{@code !=} and {@code +} need a SEPARATE codegen path for an ANY operand</h3>
  * Both are type-polymorphic in the real interpreter: {@code ==}/{@code !=} special-case a
  * {@code Null} operand (reference-style null equality) and a {@code Str} operand (string
  * equality) before falling back to numeric; {@code +} does string concatenation whenever either
  * side is a {@code Str}. An ANY-typed operand could be exactly those types at runtime, so blindly
  * coercing both sides to {@code double} for these two operators would silently diverge from the
- * interpreter (e.g. {@code name == null} or {@code "a" + b}). Every OTHER comparison ({@code
- * >}/{@code <}/{@code >=}/{@code <=}) and the other arithmetic operators ({@code -}/{@code *}/
- * {@code /}/{@code %}) are unconditionally numeric in the real interpreter regardless of operand
- * type, so those stay safe to compile with an ANY operand via {@link #toNum} coercion.
+ * interpreter (e.g. {@code name == null} or {@code "a" + b}) — so when either operand IS ANY,
+ * {@link P#parseCompare}/{@link P#parseAdd} route through {@link ScriptFormula#valuesEqual}/
+ * {@link ScriptFormula#addPolymorphic} instead: the SAME polymorphic logic the interpreter's own
+ * {@code Node} lambdas call, shared rather than re-derived, so the two can never drift apart.
+ * When NEITHER operand is ANY the value can never actually be a Null/Str at runtime, so both stay
+ * on the plain numeric fast path. Every OTHER comparison ({@code >}/{@code <}/{@code >=}/{@code
+ * <=}) and the other arithmetic operators ({@code -}/{@code *}/{@code /}/{@code %}) are
+ * unconditionally numeric in the real interpreter regardless of operand type, so those stay on
+ * the numeric path unconditionally via {@link #toNum} coercion.
  */
 final class ScriptBytecodeCompiler {
 
@@ -536,11 +541,13 @@ final class ScriptBytecodeCompiler {
         /** Exactly ONE optional relational operator — chained compares aren't part of the real
          *  grammar either (ScriptFormula.Parser#parseCompare never loops).
          *
-         *  <p>{@code ==}/{@code !=} bail whenever either operand is ANY-typed — see class doc for
-         *  why (Null/Str special-casing in the interpreter this compiler can't safely predict
-         *  statically). {@code >}/{@code <}/{@code >=}/{@code <=} are unconditionally numeric in
-         *  the interpreter regardless of operand type, so they stay safe with an ANY operand via
-         *  {@link #toNum}. */
+         *  <p>{@code ==}/{@code !=} route through {@link ScriptFormula#valuesEqual} whenever
+         *  either operand is ANY-typed — real Null/Str-aware equality, not eagerly coerced to
+         *  double, matching the interpreter exactly (see that method's own doc) instead of
+         *  bailing the whole formula the way this used to. When NEITHER operand is ANY, the value
+         *  can never actually BE a Null/Str at runtime, so the plain numeric fast path below stays
+         *  available — same as {@code >}/{@code <}/{@code >=}/{@code <=}, which are
+         *  unconditionally numeric in the interpreter regardless of operand type. */
         Expr parseCompare() {
             Expr left = parseAdd();
             if (left == null) return null;
@@ -557,7 +564,22 @@ final class ScriptBytecodeCompiler {
             if (right == null) return null;
 
             boolean equality = op.equals("==") || op.equals("!=");
-            if (equality && (left.type() == Type.ANY || right.type() == Type.ANY)) return null;
+            if (equality && (left.type() == Type.ANY || right.type() == Type.ANY)) {
+                Expr l = toAny(left), r = toAny(right);
+                boolean negate = op.equals("!=");
+                return new BaseExpr(Type.BOOL) {
+                    @Override public void emit(MethodVisitor mv, Ctx c) {
+                        l.emit(mv, c);
+                        r.emit(mv, c);
+                        mv.visitMethodInsn(INVOKESTATIC, FORMULA, "valuesEqual",
+                                "(L" + VALUE + ";L" + VALUE + ";)Z", false);
+                        if (negate) {
+                            mv.visitInsn(ICONST_1);
+                            mv.visitInsn(IXOR);
+                        }
+                    }
+                };
+            }
 
             Expr l = toNum(left), r = toNum(right);
             return new BaseExpr(Type.BOOL) {
@@ -588,9 +610,12 @@ final class ScriptBytecodeCompiler {
             };
         }
 
-        /** {@code +} bails on an ANY operand (string-concat special case — see class doc);
-         *  {@code -} is unconditionally numeric in the interpreter, safe with ANY via
-         *  {@link #toNum} either way. */
+        /** {@code +} routes through {@link ScriptFormula#addPolymorphic} whenever either operand
+         *  is ANY-typed — real string-concat-or-numeric-addition semantics, matching the
+         *  interpreter exactly, instead of bailing the whole formula the way this used to. When
+         *  NEITHER operand is ANY, the fast all-NUM path (plain {@code DADD}) stays available, same
+         *  reasoning as {@link #parseCompare}'s own ANY-vs-not split. {@code -} is unconditionally
+         *  numeric in the interpreter, safe with ANY via {@link #toNum} either way. */
         Expr parseAdd() {
             Expr left = parseMul();
             if (left == null) return null;
@@ -601,14 +626,34 @@ final class ScriptBytecodeCompiler {
                 pos++;
                 Expr right = parseMul();
                 if (right == null) return null;
-                if (c == '+' && (left.type() == Type.ANY || right.type() == Type.ANY)) return null;
-                Expr l = toNum(left), r = toNum(right);
-                int insn = c == '+' ? DADD : DSUB;
-                left = new BaseExpr(Type.NUM) {
-                    @Override public void emit(MethodVisitor mv, Ctx c2) { l.emit(mv, c2); r.emit(mv, c2); mv.visitInsn(insn); }
-                };
+                if (c == '+') {
+                    left = addExpr(left, right);
+                } else {
+                    Expr l = toNum(left), r = toNum(right);
+                    left = new BaseExpr(Type.NUM) {
+                        @Override public void emit(MethodVisitor mv, Ctx c2) { l.emit(mv, c2); r.emit(mv, c2); mv.visitInsn(DSUB); }
+                    };
+                }
             }
             return left;
+        }
+
+        private static Expr addExpr(Expr left, Expr right) {
+            if (left.type() != Type.ANY && right.type() != Type.ANY) {
+                Expr l = toNum(left), r = toNum(right);
+                return new BaseExpr(Type.NUM) {
+                    @Override public void emit(MethodVisitor mv, Ctx c) { l.emit(mv, c); r.emit(mv, c); mv.visitInsn(DADD); }
+                };
+            }
+            Expr l = toAny(left), r = toAny(right);
+            return new BaseExpr(Type.ANY) {
+                @Override public void emit(MethodVisitor mv, Ctx c) {
+                    l.emit(mv, c);
+                    r.emit(mv, c);
+                    mv.visitMethodInsn(INVOKESTATIC, FORMULA, "addPolymorphic",
+                            "(L" + VALUE + ";L" + VALUE + ";)L" + VALUE + ";", false);
+                }
+            };
         }
 
         /** {@code *} is a plain DMUL. {@code /} and {@code %} replicate the interpreter's

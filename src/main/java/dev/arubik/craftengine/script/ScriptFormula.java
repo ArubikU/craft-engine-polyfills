@@ -700,6 +700,40 @@ public final class ScriptFormula {
         return Character.isLetterOrDigit(c) || c == '_' || c == ':' || c == '.' || c == '-';
     }
 
+    // ---- Polymorphic operator helpers ----
+    //
+    // Both of these used to be inlined separately as the Parser's own '+'/'=='/'!=' lambdas AND
+    // (for '+') duplicated again as ScriptBytecodeCompiler's justification for bailing on an ANY
+    // operand entirely. Extracted here as the single shared implementation BOTH the interpreter
+    // (below) and the JIT (ScriptBytecodeCompiler's addExpr/equalityExpr) call, so a compiled
+    // formula's '+'/'=='/'!=' on an ANY-typed operand no longer has to bail to the interpreter at
+    // all — it emits a direct call to these same methods instead, never re-deriving the logic in
+    // bytecode where it could silently drift from this one.
+
+    /** {@code +}'s real polymorphic semantics: string concatenation if EITHER side is a {@link
+     *  ScriptValue.Str}, numeric addition otherwise. */
+    public static ScriptValue addPolymorphic(ScriptValue lv, ScriptValue rv) {
+        if (lv instanceof ScriptValue.Str || rv instanceof ScriptValue.Str) {
+            return ScriptValue.of(lv.asStr() + rv.asStr());
+        }
+        return ScriptValue.of(lv.asNum() + rv.asNum());
+    }
+
+    /** {@code ==}/{@code !=}'s real polymorphic semantics, checked in order: if EITHER side is
+     *  {@link ScriptValue.Null}, true only when BOTH are Null (reference-style null equality,
+     *  never numeric/string coercion of a null); else if EITHER side is a {@link ScriptValue.Str},
+     *  string equality; otherwise numeric equality. Returns the {@code ==} answer — a {@code !=}
+     *  caller just negates it. */
+    public static boolean valuesEqual(ScriptValue lv, ScriptValue rv) {
+        if (lv instanceof ScriptValue.Null || rv instanceof ScriptValue.Null) {
+            return lv instanceof ScriptValue.Null && rv instanceof ScriptValue.Null;
+        }
+        if (lv instanceof ScriptValue.Str || rv instanceof ScriptValue.Str) {
+            return lv.asStr().equals(rv.asStr());
+        }
+        return lv.asNum() == rv.asNum();
+    }
+
     // ---- Member access helpers ----
 
     public static ScriptValue memberGet(ScriptValue obj, String prop, ScriptContext ctx) {
@@ -939,17 +973,8 @@ public final class ScriptFormula {
                 ScriptValue lv = l.eval(ctx), rv = r.eval(ctx);
                 boolean b;
                 if (fop.equals("==") || fop.equals("!=")) {
-                    // null comparisons: if either side is Null, treat null==null as true, non-null==null as false
-                    if (lv instanceof ScriptValue.Null || rv instanceof ScriptValue.Null) {
-                        b = fop.equals("==") ? (lv instanceof ScriptValue.Null && rv instanceof ScriptValue.Null)
-                                             : !(lv instanceof ScriptValue.Null && rv instanceof ScriptValue.Null);
-                    } else if (lv instanceof ScriptValue.Str || rv instanceof ScriptValue.Str) {
-                        b = fop.equals("==") ? lv.asStr().equals(rv.asStr())
-                                              : !lv.asStr().equals(rv.asStr());
-                    } else {
-                        double dl = lv.asNum(), dr = rv.asNum();
-                        b = fop.equals("==") ? dl == dr : dl != dr;
-                    }
+                    boolean eq = valuesEqual(lv, rv);
+                    b = fop.equals("==") ? eq : !eq;
                 } else {
                     double dl = lv.asNum(), dr = rv.asNum();
                     b = switch (fop) {
@@ -985,13 +1010,7 @@ public final class ScriptFormula {
                     pos++;
                     Node r = parseMul();
                     Node l = left;
-                    left = ctx -> {
-                        ScriptValue lv = l.eval(ctx), rv = r.eval(ctx);
-                        if (lv instanceof ScriptValue.Str || rv instanceof ScriptValue.Str) {
-                            return ScriptValue.of(lv.asStr() + rv.asStr());
-                        }
-                        return ScriptValue.of(lv.asNum() + rv.asNum());
-                    };
+                    left = ctx -> addPolymorphic(l.eval(ctx), r.eval(ctx));
                 } else if (matchAt("-")) {
                     pos++;
                     Node r = parseMul();
