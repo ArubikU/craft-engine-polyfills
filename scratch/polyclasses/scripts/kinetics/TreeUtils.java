@@ -2,7 +2,7 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  dev.arubik.craftengine.script.PolyClassMachine
+ *  dev.arubik.craftengine.script.PolyClassMachine_v3
  *  dev.arubik.craftengine.script.PolyClassWorld
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
@@ -14,7 +14,7 @@
  */
 package dev.arubik.craftengine.script.gen.kinetics;
 
-import dev.arubik.craftengine.script.PolyClassMachine;
+import dev.arubik.craftengine.script.PolyClassMachine_v3;
 import dev.arubik.craftengine.script.PolyClassWorld;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
@@ -414,8 +414,8 @@ public final class TreeUtils {
                 if (scriptValue10 != ScriptValue.NULL) {
                     ScriptValue scriptValue11 = scriptValue4;
                     ScriptValue scriptValue12 = scriptContext.getClassOrVar("speed");
-                    PolyClassMachine polyClassMachine = PolyClassMachine.ofGuarded((ScriptValue)scriptValue10);
-                    object = polyClassMachine != null ? polyClassMachine.tm$2_tick_break(scriptValue11, scriptValue12.asNum()) : PolyDispatch.bootstrapCall("memberCall", "tick_break", (ScriptValue)scriptValue10, (ScriptValue)scriptValue11, (ScriptValue)scriptValue12, (ScriptContext)scriptContext);
+                    PolyClassMachine_v3 polyClassMachine_v3 = PolyClassMachine_v3.ofGuarded((ScriptValue)scriptValue10);
+                    object = polyClassMachine_v3 != null ? polyClassMachine_v3.tm$2_tick_break(scriptValue11, scriptValue12.asNum()) : PolyDispatch.bootstrapCall("memberCall", "tick_break", (ScriptValue)scriptValue10, (ScriptValue)scriptValue11, (ScriptValue)scriptValue12, (ScriptContext)scriptContext);
                 } else {
                     object = ScriptValue.NULL;
                 }

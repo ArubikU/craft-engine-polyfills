@@ -2,7 +2,7 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  dev.arubik.craftengine.script.PolyClassPlayer
+ *  dev.arubik.craftengine.script.PolyClassPlayer_v2
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
  *  dev.arubik.craftengine.script.ScriptContext$Builder
@@ -10,7 +10,7 @@
  */
 package dev.arubik.craftengine.script.gen.examples;
 
-import dev.arubik.craftengine.script.PolyClassPlayer;
+import dev.arubik.craftengine.script.PolyClassPlayer_v2;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptValue;
@@ -37,8 +37,8 @@ public final class VirtualuiCursorGallery {
             ScriptValue scriptValue2 = scriptContext.getClassOrVar("Player");
             if (scriptValue2 != ScriptValue.NULL) {
                 String string = "<red>You already have a VirtualUI open - <white>/virtualui close</white> first.";
-                PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue2);
-                v0 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
+                PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue2);
+                v0 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
             } else {
                 v0 = ScriptValue.NULL;
             }
@@ -80,8 +80,8 @@ public final class VirtualuiCursorGallery {
         ScriptValue scriptValue6 = scriptContext.getClassOrVar("Player");
         if (scriptValue6 != ScriptValue.NULL) {
             String string = "<aqua>Cursor gallery opened. <white>/virtualui close</white> to exit.";
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue6);
-            v29 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue6, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue6);
+            v29 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue6, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
         } else {
             v29 = ScriptValue.NULL;
         }
@@ -93,8 +93,8 @@ public final class VirtualuiCursorGallery {
         ScriptValue scriptValue = scriptContext.getClassOrVar("Player");
         if (scriptValue != ScriptValue.NULL) {
             String string = "<gray>Cursor gallery closed.";
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue);
-            v0 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue);
+            v0 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
         } else {
             v0 = ScriptValue.NULL;
         }
@@ -106,8 +106,8 @@ public final class VirtualuiCursorGallery {
         ScriptValue scriptValue = scriptContext.getClassOrVar("Player");
         if (scriptValue != ScriptValue.NULL) {
             String string = "<yellow>Scrollbar armed - drag arms the 'hold' cursor automatically.";
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue);
-            v0 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$36_send_actionbar(string)) : PolyDispatch.bootstrapCall("memberCall", "send_actionbar", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue);
+            v0 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$36_send_actionbar(string)) : PolyDispatch.bootstrapCall("memberCall", "send_actionbar", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
         } else {
             v0 = ScriptValue.NULL;
         }
@@ -119,8 +119,8 @@ public final class VirtualuiCursorGallery {
         ScriptValue scriptValue = scriptContext.getClassOrVar("Player");
         if (scriptValue != ScriptValue.NULL) {
             String string = "<gray>Scrollbar released.";
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue);
-            v0 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$36_send_actionbar(string)) : PolyDispatch.bootstrapCall("memberCall", "send_actionbar", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue);
+            v0 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$36_send_actionbar(string)) : PolyDispatch.bootstrapCall("memberCall", "send_actionbar", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
         } else {
             v0 = ScriptValue.NULL;
         }

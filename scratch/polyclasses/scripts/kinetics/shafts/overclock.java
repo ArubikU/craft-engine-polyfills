@@ -2,7 +2,7 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  dev.arubik.craftengine.script.PolyClassMachine
+ *  dev.arubik.craftengine.script.PolyClassMachine_v3
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
  *  dev.arubik.craftengine.script.ScriptContext$Builder
@@ -10,7 +10,7 @@
  */
 package dev.arubik.craftengine.script.gen.kinetics.shafts;
 
-import dev.arubik.craftengine.script.PolyClassMachine;
+import dev.arubik.craftengine.script.PolyClassMachine_v3;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptValue;
@@ -53,8 +53,8 @@ public final class Overclock {
         if (scriptValue != ScriptValue.NULL) {
             ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
             ScriptValue scriptValue2 = Overclock._step(builder2);
-            PolyClassMachine polyClassMachine = PolyClassMachine.ofGuarded((ScriptValue)scriptValue);
-            v0 = polyClassMachine != null ? ScriptValue.of((boolean)polyClassMachine.tm$70_bump_overclock(scriptValue2.asNum())) : PolyDispatch.bootstrapCall("memberCall", "bump_overclock", (ScriptValue)scriptValue, (ScriptValue)scriptValue2, (ScriptContext)scriptContext);
+            PolyClassMachine_v3 polyClassMachine_v3 = PolyClassMachine_v3.ofGuarded((ScriptValue)scriptValue);
+            v0 = polyClassMachine_v3 != null ? ScriptValue.of((boolean)polyClassMachine_v3.tm$70_bump_overclock(scriptValue2.asNum())) : PolyDispatch.bootstrapCall("memberCall", "bump_overclock", (ScriptValue)scriptValue, (ScriptValue)scriptValue2, (ScriptContext)scriptContext);
         } else {
             v0 = ScriptValue.NULL;
         }
@@ -67,8 +67,8 @@ public final class Overclock {
         if (scriptValue != ScriptValue.NULL) {
             ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
             double d = -Overclock._step(builder2).asNum();
-            PolyClassMachine polyClassMachine = PolyClassMachine.ofGuarded((ScriptValue)scriptValue);
-            v0 = polyClassMachine != null ? ScriptValue.of((boolean)polyClassMachine.tm$70_bump_overclock(d)) : PolyDispatch.bootstrapCall("memberCall", "bump_overclock", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((double)d), (ScriptContext)scriptContext);
+            PolyClassMachine_v3 polyClassMachine_v3 = PolyClassMachine_v3.ofGuarded((ScriptValue)scriptValue);
+            v0 = polyClassMachine_v3 != null ? ScriptValue.of((boolean)polyClassMachine_v3.tm$70_bump_overclock(d)) : PolyDispatch.bootstrapCall("memberCall", "bump_overclock", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((double)d), (ScriptContext)scriptContext);
         } else {
             v0 = ScriptValue.NULL;
         }

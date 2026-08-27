@@ -2,7 +2,7 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  dev.arubik.craftengine.script.PolyClassMachine
+ *  dev.arubik.craftengine.script.PolyClassMachine_v3
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
  *  dev.arubik.craftengine.script.ScriptContext$Builder
@@ -12,7 +12,7 @@
  */
 package dev.arubik.craftengine.script.gen.block_interaction;
 
-import dev.arubik.craftengine.script.PolyClassMachine;
+import dev.arubik.craftengine.script.PolyClassMachine_v3;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
@@ -37,8 +37,8 @@ public final class XpCollector {
         ScriptValue scriptValue = scriptContext.getClassOrVar("Machine");
         if (scriptValue != ScriptValue.NULL) {
             double d = 6.0;
-            PolyClassMachine polyClassMachine = PolyClassMachine.ofGuarded((ScriptValue)scriptValue);
-            object = polyClassMachine != null ? polyClassMachine.tm$94_nearby_entities(d) : PolyDispatch.bootstrapCall("memberCall", "nearby_entities", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((double)d), (ScriptContext)scriptContext);
+            PolyClassMachine_v3 polyClassMachine_v3 = PolyClassMachine_v3.ofGuarded((ScriptValue)scriptValue);
+            object = polyClassMachine_v3 != null ? polyClassMachine_v3.tm$94_nearby_entities(d) : PolyDispatch.bootstrapCall("memberCall", "nearby_entities", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((double)d), (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
         }
@@ -60,12 +60,11 @@ public final class XpCollector {
             }
         }
         if (scriptValue4.asNum() > 0.0) {
-            ScriptValue scriptValue7 = scriptContext.getClassOrVar("Machine");
-            if (scriptValue7 != ScriptValue.NULL) {
+            if (scriptValue != ScriptValue.NULL) {
                 String string = "experience";
-                ScriptValue scriptValue8 = scriptValue4;
-                PolyClassMachine polyClassMachine = PolyClassMachine.ofGuarded((ScriptValue)scriptValue7);
-                v2 = polyClassMachine != null ? ScriptValue.of((boolean)polyClassMachine.tm$98_fill_fluid(string, scriptValue8.asNum())) : PolyDispatch.bootstrapCall("memberCall", "fill_fluid", (ScriptValue)scriptValue7, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)scriptValue8, (ScriptContext)scriptContext);
+                ScriptValue scriptValue7 = scriptValue4;
+                PolyClassMachine_v3 polyClassMachine_v3 = PolyClassMachine_v3.ofGuarded((ScriptValue)scriptValue);
+                v2 = polyClassMachine_v3 != null ? ScriptValue.of((boolean)polyClassMachine_v3.tm$98_fill_fluid(string, scriptValue7.asNum())) : PolyDispatch.bootstrapCall("memberCall", "fill_fluid", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)scriptValue7, (ScriptContext)scriptContext);
             } else {
                 v2 = ScriptValue.NULL;
             }

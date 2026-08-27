@@ -2,7 +2,7 @@
  * Decompiled with CFR 0.152.
  * 
  * Could not load the following classes:
- *  dev.arubik.craftengine.script.PolyClassMachine
+ *  dev.arubik.craftengine.script.PolyClassMachine_v3
  *  dev.arubik.craftengine.script.PolyClassWorld
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
@@ -11,7 +11,7 @@
  */
 package dev.arubik.craftengine.script.gen.kinetics.generators;
 
-import dev.arubik.craftengine.script.PolyClassMachine;
+import dev.arubik.craftengine.script.PolyClassMachine_v3;
 import dev.arubik.craftengine.script.PolyClassWorld;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
@@ -42,8 +42,8 @@ public final class EnergyWindmill {
             ScriptValue scriptValue4 = scriptContext.getClassOrVar("Machine");
             if (scriptValue4 != ScriptValue.NULL) {
                 double d3 = d + d2;
-                PolyClassMachine polyClassMachine = PolyClassMachine.ofGuarded((ScriptValue)scriptValue4);
-                v0 = polyClassMachine != null ? ScriptValue.of((boolean)polyClassMachine.tm$48_set_energy_per_tick(d3)) : PolyDispatch.bootstrapCall("memberCall", "set_energy_per_tick", (ScriptValue)scriptValue4, (ScriptValue)ScriptValue.of((double)d3), (ScriptContext)scriptContext);
+                PolyClassMachine_v3 polyClassMachine_v3 = PolyClassMachine_v3.ofGuarded((ScriptValue)scriptValue4);
+                v0 = polyClassMachine_v3 != null ? ScriptValue.of((boolean)polyClassMachine_v3.tm$48_set_energy_per_tick(d3)) : PolyDispatch.bootstrapCall("memberCall", "set_energy_per_tick", (ScriptValue)scriptValue4, (ScriptValue)ScriptValue.of((double)d3), (ScriptContext)scriptContext);
             } else {
                 v0 = ScriptValue.NULL;
             }
@@ -55,8 +55,8 @@ public final class EnergyWindmill {
                 if (scriptValue6 != ScriptValue.NULL) {
                     double d4 = 2.0;
                     double d5 = d + (2.0 == 0.0 ? 0.0 : d2 / d4);
-                    PolyClassMachine polyClassMachine = PolyClassMachine.ofGuarded((ScriptValue)scriptValue6);
-                    v1 = polyClassMachine != null ? ScriptValue.of((boolean)polyClassMachine.tm$48_set_energy_per_tick(d5)) : PolyDispatch.bootstrapCall("memberCall", "set_energy_per_tick", (ScriptValue)scriptValue6, (ScriptValue)ScriptValue.of((double)d5), (ScriptContext)scriptContext);
+                    PolyClassMachine_v3 polyClassMachine_v3 = PolyClassMachine_v3.ofGuarded((ScriptValue)scriptValue6);
+                    v1 = polyClassMachine_v3 != null ? ScriptValue.of((boolean)polyClassMachine_v3.tm$48_set_energy_per_tick(d5)) : PolyDispatch.bootstrapCall("memberCall", "set_energy_per_tick", (ScriptValue)scriptValue6, (ScriptValue)ScriptValue.of((double)d5), (ScriptContext)scriptContext);
                 } else {
                     v1 = ScriptValue.NULL;
                 }
@@ -64,8 +64,8 @@ public final class EnergyWindmill {
                 ScriptValue scriptValue7 = scriptContext.getClassOrVar("Machine");
                 if (scriptValue7 != ScriptValue.NULL) {
                     double d6 = d;
-                    PolyClassMachine polyClassMachine = PolyClassMachine.ofGuarded((ScriptValue)scriptValue7);
-                    v2 = polyClassMachine != null ? ScriptValue.of((boolean)polyClassMachine.tm$48_set_energy_per_tick(d6)) : PolyDispatch.bootstrapCall("memberCall", "set_energy_per_tick", (ScriptValue)scriptValue7, (ScriptValue)ScriptValue.of((double)d6), (ScriptContext)scriptContext);
+                    PolyClassMachine_v3 polyClassMachine_v3 = PolyClassMachine_v3.ofGuarded((ScriptValue)scriptValue7);
+                    v2 = polyClassMachine_v3 != null ? ScriptValue.of((boolean)polyClassMachine_v3.tm$48_set_energy_per_tick(d6)) : PolyDispatch.bootstrapCall("memberCall", "set_energy_per_tick", (ScriptValue)scriptValue7, (ScriptValue)ScriptValue.of((double)d6), (ScriptContext)scriptContext);
                 } else {
                     v2 = ScriptValue.NULL;
                 }

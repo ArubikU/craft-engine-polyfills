@@ -190,6 +190,25 @@ final class ScriptBytecodeCompiler {
      * {@code PolyClassRecipe} even though {@code r} is an ordinary name no registry could resolve.
      * Null everywhere else, which simply means "no compile-time type, dispatch generically".
      */
+    /**
+     * An expression whose FIRST action is resolving a named receiver — {@code Player.send_message(…)}
+     * and nothing before it.
+     *
+     * <p>That is what makes the receiver read unconditional, and therefore what makes it safe to
+     * keep: a statement whose root is one of these definitely performs the read, so a store of it
+     * dominates every use in every later statement of the same body. The previous attempt at
+     * receiver caching cached from ANYWHERE in an expression — including inside a {@code &&} or a
+     * ternary arm — where the store does not dominate, which the JVM verifier rejected on a third of
+     * the real corpus while every test still passed.
+     *
+     * <p>It also means no read is performed that would not have happened anyway, so the
+     * {@code TRACKED_VARS} dependency set {@link ScriptContext#getVar} maintains is unchanged.
+     */
+    interface FirstHopCall {
+        /** The receiver name this expression resolves first, or null if it does not. */
+        String receiverName();
+    }
+
     record CachedVarRef(int slot, Type type, String polyType) {
         CachedVarRef(int slot, Type type) { this(slot, type, null); }
     }
@@ -388,6 +407,14 @@ final class ScriptBytecodeCompiler {
     static final class Ctx {
         final int ctxSlot;
         int next;
+        /**
+         * Receiver name -> the JVM local its resolved value must be STORED in, when the enclosing
+         * statement has arranged to keep it. Empty for every expression that has not.
+         *
+         * <p>See {@link FirstHopCall}: the statement emitter fills this only for a receiver whose
+         * read is unconditional, so the store dominates every later use.
+         */
+        java.util.Map<String, Integer> receiverStores = java.util.Map.of();
         Ctx(int ctxSlot, int firstScratchSlot) { this.ctxSlot = ctxSlot; this.next = firstScratchSlot; }
         int allocRef() { int s = next; next += 1; return s; }
         int allocD()   { int s = next; next += 2; return s; }
@@ -848,6 +875,11 @@ final class ScriptBytecodeCompiler {
      * which returns null for a receiver that is not that type and falls back — but it would be
      * pointless, so the promise is taken from the registration rather than guessed.
      */
+    /** The receiver name {@code e} resolves before doing anything else, or null. */
+    static String firstHopReceiver(Expr e) {
+        return e instanceof FirstHopCall f ? f.receiverName() : null;
+    }
+
     static String polyTypeOf(Expr e) {
         if (e instanceof PropRead p) return p.resultPolyType;
         if (e instanceof TypedResult t) return t.resultPolyType;
@@ -857,7 +889,7 @@ final class ScriptBytecodeCompiler {
     /** An expression that evaluates exactly as {@code inner} does, but additionally carries the
      *  PolyType its value is known to be — the shape a method call needs, since its emission is
      *  built from a dozen captured locals and is not worth restructuring just to hold one field. */
-    static final class TypedResult extends BaseExpr {
+    static final class TypedResult extends BaseExpr implements FirstHopCall {
         private final Expr inner;
         final String resultPolyType;
         TypedResult(Expr inner, String resultPolyType) {
@@ -866,6 +898,11 @@ final class ScriptBytecodeCompiler {
             this.resultPolyType = resultPolyType;
         }
         @Override public void emit(MethodVisitor mv, Ctx c) { inner.emit(mv, c); }
+        /** Delegates, so wrapping a call to carry its result type does not hide that it still
+         *  resolves a receiver first. */
+        @Override public String receiverName() {
+            return inner instanceof FirstHopCall f ? f.receiverName() : null;
+        }
     }
 
     /** The declared return codec of {@code type.prop}, resolved through the same registry the rest
@@ -891,6 +928,13 @@ final class ScriptBytecodeCompiler {
     private static PolyType.TypedPropertyDescriptor typedProperty(String typeName, String prop) {
         PolyType t = typeName == null ? null : PolyTypeRegistry.get(typeName);
         return t == null ? null : t.resolveTypedProperty(prop);
+    }
+
+    /** A member call, tagged with the receiver name it resolves first (see {@link FirstHopCall}). */
+    abstract static class CallExpr extends BaseExpr implements FirstHopCall {
+        private final String receiverName;
+        CallExpr(String receiverName) { super(Type.ANY); this.receiverName = receiverName; }
+        @Override public String receiverName() { return receiverName; }
     }
 
     static Expr toNum(Expr e) {
@@ -2267,9 +2311,12 @@ final class ScriptBytecodeCompiler {
             // nothing to read: the call site loads it, which is both one map lookup and several
             // instructions less than resolving the name again.
             Integer cachedSlot = base == null ? cachedReceiverSlot(varHint, name) : null;
-            Expr call = new BaseExpr(Type.ANY) {
+            String firstHopName = base == null ? name : null;
+            Expr call = new CallExpr(firstHopName) {
                 @Override public void emit(MethodVisitor mv, Ctx c) {
-                    int svSlot = cachedSlot != null ? cachedSlot : c.allocRef();
+                    Integer requested = firstHopName == null ? null : c.receiverStores.get(firstHopName);
+                    int svSlot = cachedSlot != null ? cachedSlot
+                            : requested != null ? requested : c.allocRef();
                     // First hop: resolve the name, and return NULL for a NULL receiver. Chained
                     // hop: evaluate the base, no guard — see PropRead#emitAs for why they differ.
                     Label isNullL = new Label(), endL = new Label();

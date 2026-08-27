@@ -4,7 +4,7 @@
  * Could not load the following classes:
  *  dev.arubik.craftengine.script.PolyClassItem
  *  dev.arubik.craftengine.script.PolyClassLocation
- *  dev.arubik.craftengine.script.PolyClassPlayer
+ *  dev.arubik.craftengine.script.PolyClassPlayer_v2
  *  dev.arubik.craftengine.script.PolyClassServer
  *  dev.arubik.craftengine.script.PolyClassWorld
  *  dev.arubik.craftengine.script.PolyDispatch
@@ -19,7 +19,7 @@ package dev.arubik.craftengine.script.gen.teleport;
 
 import dev.arubik.craftengine.script.PolyClassItem;
 import dev.arubik.craftengine.script.PolyClassLocation;
-import dev.arubik.craftengine.script.PolyClassPlayer;
+import dev.arubik.craftengine.script.PolyClassPlayer_v2;
 import dev.arubik.craftengine.script.PolyClassServer;
 import dev.arubik.craftengine.script.PolyClassWorld;
 import dev.arubik.craftengine.script.PolyDispatch;
@@ -58,8 +58,8 @@ public final class Warps {
             ScriptValue scriptValue = scriptContext.getClassOrVar("Player");
             if (scriptValue != ScriptValue.NULL) {
                 ScriptValue scriptValue2 = scriptContext.getClassOrVar("PERM_ADMIN_BYPASS");
-                PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue);
-                object = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$4_has_permission(scriptValue2.asStr())) : PolyDispatch.bootstrapCall("memberCall", "has_permission", (ScriptValue)scriptValue, (ScriptValue)scriptValue2, (ScriptContext)scriptContext);
+                PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue);
+                object = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$4_has_permission(scriptValue2.asStr())) : PolyDispatch.bootstrapCall("memberCall", "has_permission", (ScriptValue)scriptValue, (ScriptValue)scriptValue2, (ScriptContext)scriptContext);
             } else {
                 object = ScriptValue.NULL;
             }
@@ -73,10 +73,10 @@ public final class Warps {
     }
 
     public static ScriptValue quit(ScriptContext.Builder builder) {
-        PolyClassPlayer polyClassPlayer;
+        PolyClassPlayer_v2 polyClassPlayer_v2;
         ScriptContext scriptContext = builder.peek();
         ScriptValue scriptValue = scriptContext.getClassOrVar("Player");
-        Object object = scriptValue != ScriptValue.NULL ? ((polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue)) != null ? ScriptValue.of((boolean)polyClassPlayer.tm$8_close_inventory()) : PolyDispatch.bootstrapCall("memberCall", "close_inventory", (ScriptValue)scriptValue, (ScriptContext)scriptContext)) : ScriptValue.NULL;
+        Object object = scriptValue != ScriptValue.NULL ? ((polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue)) != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$8_close_inventory()) : PolyDispatch.bootstrapCall("memberCall", "close_inventory", (ScriptValue)scriptValue, (ScriptContext)scriptContext)) : ScriptValue.NULL;
         return ScriptValue.NULL;
     }
 
@@ -187,13 +187,13 @@ public final class Warps {
 
     public static ScriptValue ownedWarpNames(ScriptContext.Builder builder) {
         ScriptValue scriptValue;
-        PolyClassPlayer polyClassPlayer;
+        PolyClassPlayer_v2 polyClassPlayer_v2;
         ScriptContext scriptContext = builder.peek();
         ArrayList arrayList = new ArrayList();
         ScriptValue.Array array = new ScriptValue.Array(arrayList);
         builder.val("out", (ScriptValue)array);
         ScriptValue scriptValue2 = scriptContext.getClassOrVar("SQL");
-        List list = ScriptProgram.elementsOf((ScriptValue)(scriptValue2 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "query", (ScriptValue)scriptValue2, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "SELECT name FROM warps WHERE owner_uuid = ? ORDER BY created_at ASC")), (ScriptValue)((polyClassPlayer = PolyClassPlayer.ofVar((ScriptContext)scriptContext, (String)"Player")) != null ? polyClassPlayer.pg$34_uuid() : ((scriptValue = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue, (ScriptContext)scriptContext) : ScriptValue.NULL)), (ScriptContext)scriptContext) : ScriptValue.NULL));
+        List list = ScriptProgram.elementsOf((ScriptValue)(scriptValue2 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "query", (ScriptValue)scriptValue2, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "SELECT name FROM warps WHERE owner_uuid = ? ORDER BY created_at ASC")), (ScriptValue)((polyClassPlayer_v2 = PolyClassPlayer_v2.ofVar((ScriptContext)scriptContext, (String)"Player")) != null ? polyClassPlayer_v2.pg$34_uuid() : ((scriptValue = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue, (ScriptContext)scriptContext) : ScriptValue.NULL)), (ScriptContext)scriptContext) : ScriptValue.NULL));
         ScriptValue.Array array2 = array;
         if (list != null) {
             for (ScriptValue scriptValue3 : list) {
@@ -211,8 +211,8 @@ public final class Warps {
         ScriptContext scriptContext = builder.peek();
         ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
         builder2.val("name", scriptContext.getClassOrVar("name"));
-        PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofVar((ScriptContext)scriptContext, (String)"Player");
-        return ScriptValue.of((boolean)ScriptFormula.valuesEqual((ScriptValue)PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)Warps.warpRow(builder2), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "owner_uuid")), (ScriptContext)scriptContext), (ScriptValue)(polyClassPlayer != null ? polyClassPlayer.pg$34_uuid() : ((scriptValue = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue, (ScriptContext)scriptContext) : ScriptValue.NULL))));
+        PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofVar((ScriptContext)scriptContext, (String)"Player");
+        return ScriptValue.of((boolean)ScriptFormula.valuesEqual((ScriptValue)PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)Warps.warpRow(builder2), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "owner_uuid")), (ScriptContext)scriptContext), (ScriptValue)(polyClassPlayer_v2 != null ? polyClassPlayer_v2.pg$34_uuid() : ((scriptValue = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue, (ScriptContext)scriptContext) : ScriptValue.NULL))));
     }
 
     /*
@@ -235,7 +235,7 @@ public final class Warps {
         if (v0) {
             return  /* dynamic constant */ (ScriptValue)ScriptValue.constBool("b", MethodHandles.lookup(), "constBool", Warps.class, 0);
         }
-        var3_3 = PolyClassPlayer.ofVar((ScriptContext)var1_1, (String)"Player");
+        var3_3 = PolyClassPlayer_v2.ofVar((ScriptContext)var1_1, (String)"Player");
         var5_5 = var3_3 != null ? var3_3.pg$73_location() : ((var4_4 = var1_1.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "location", (ScriptValue)var4_4, (ScriptContext)var1_1) : ScriptValue.NULL);
         var0.val("loc", var5_5);
         var6_6 = var1_1.getClassOrVar("SQL");
@@ -245,9 +245,9 @@ public final class Warps {
             var8_8 = var1_1.getClassOrVar("Uuid");
             var7_7.add((ScriptValue)(var8_8 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "random", (ScriptValue)var8_8, (ScriptContext)var1_1) : ScriptValue.NULL));
             var7_7.add(var1_1.getClassOrVar("name"));
-            var9_9 = PolyClassPlayer.ofVar((ScriptContext)var1_1, (String)"Player");
+            var9_9 = PolyClassPlayer_v2.ofVar((ScriptContext)var1_1, (String)"Player");
             var7_7.add((ScriptValue)(var9_9 != null ? var9_9.pg$34_uuid() : ((var10_10 = var1_1.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)var10_10, (ScriptContext)var1_1) : ScriptValue.NULL)));
-            var11_11 = PolyClassPlayer.ofVar((ScriptContext)var1_1, (String)"Player");
+            var11_11 = PolyClassPlayer_v2.ofVar((ScriptContext)var1_1, (String)"Player");
             var7_7.add((ScriptValue)(var11_11 != null ? var11_11.pg$67_name() : ((var12_12 = var1_1.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)var12_12, (ScriptContext)var1_1) : ScriptValue.NULL)));
             var13_14 = var5_5 != ScriptValue.NULL ? ((var14_13 = PolyClassLocation.ofGuarded((ScriptValue)var5_5)) != null ? var14_13.pg$8_world() : PolyDispatch.bootstrapGet("memberGet", "world", (ScriptValue)var5_5, (ScriptContext)var1_1)) : ScriptValue.NULL;
             var15_15 = PolyClassWorld.ofGuarded((ScriptValue)var13_14);
@@ -292,8 +292,8 @@ public final class Warps {
             ScriptValue scriptValue3 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "SELECT 1 FROM warp_bans WHERE warp_id = ? AND uuid = ?");
             ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
             builder2.val("name", scriptContext.getClassOrVar("name"));
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofVar((ScriptContext)scriptContext, (String)"Player");
-            object = PolyDispatch.bootstrapCall("memberCall", "query", (ScriptValue)scriptValue, (ScriptValue)scriptValue3, (ScriptValue)Warps.warpId(builder2), (ScriptValue)(polyClassPlayer != null ? polyClassPlayer.pg$34_uuid() : ((scriptValue2 = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue2, (ScriptContext)scriptContext) : ScriptValue.NULL)), (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofVar((ScriptContext)scriptContext, (String)"Player");
+            object = PolyDispatch.bootstrapCall("memberCall", "query", (ScriptValue)scriptValue, (ScriptValue)scriptValue3, (ScriptValue)Warps.warpId(builder2), (ScriptValue)(polyClassPlayer_v2 != null ? polyClassPlayer_v2.pg$34_uuid() : ((scriptValue2 = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue2, (ScriptContext)scriptContext) : ScriptValue.NULL)), (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
         }
@@ -309,8 +309,8 @@ public final class Warps {
             ScriptValue scriptValue3 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "SELECT 1 FROM warp_favourites WHERE warp_id = ? AND player_uuid = ?");
             ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
             builder2.val("name", scriptContext.getClassOrVar("name"));
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofVar((ScriptContext)scriptContext, (String)"Player");
-            object = PolyDispatch.bootstrapCall("memberCall", "query", (ScriptValue)scriptValue, (ScriptValue)scriptValue3, (ScriptValue)Warps.warpId(builder2), (ScriptValue)(polyClassPlayer != null ? polyClassPlayer.pg$34_uuid() : ((scriptValue2 = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue2, (ScriptContext)scriptContext) : ScriptValue.NULL)), (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofVar((ScriptContext)scriptContext, (String)"Player");
+            object = PolyDispatch.bootstrapCall("memberCall", "query", (ScriptValue)scriptValue, (ScriptValue)scriptValue3, (ScriptValue)Warps.warpId(builder2), (ScriptValue)(polyClassPlayer_v2 != null ? polyClassPlayer_v2.pg$34_uuid() : ((scriptValue2 = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue2, (ScriptContext)scriptContext) : ScriptValue.NULL)), (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
         }
@@ -319,13 +319,13 @@ public final class Warps {
 
     public static ScriptValue playerFavouriteIds(ScriptContext.Builder builder) {
         ScriptValue scriptValue;
-        PolyClassPlayer polyClassPlayer;
+        PolyClassPlayer_v2 polyClassPlayer_v2;
         ScriptContext scriptContext = builder.peek();
         ArrayList arrayList = new ArrayList();
         ScriptValue.Array array = new ScriptValue.Array(arrayList);
         builder.val("out", (ScriptValue)array);
         ScriptValue scriptValue2 = scriptContext.getClassOrVar("SQL");
-        List list = ScriptProgram.elementsOf((ScriptValue)(scriptValue2 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "query", (ScriptValue)scriptValue2, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "SELECT warp_id FROM warp_favourites WHERE player_uuid = ?")), (ScriptValue)((polyClassPlayer = PolyClassPlayer.ofVar((ScriptContext)scriptContext, (String)"Player")) != null ? polyClassPlayer.pg$34_uuid() : ((scriptValue = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue, (ScriptContext)scriptContext) : ScriptValue.NULL)), (ScriptContext)scriptContext) : ScriptValue.NULL));
+        List list = ScriptProgram.elementsOf((ScriptValue)(scriptValue2 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "query", (ScriptValue)scriptValue2, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "SELECT warp_id FROM warp_favourites WHERE player_uuid = ?")), (ScriptValue)((polyClassPlayer_v2 = PolyClassPlayer_v2.ofVar((ScriptContext)scriptContext, (String)"Player")) != null ? polyClassPlayer_v2.pg$34_uuid() : ((scriptValue = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue, (ScriptContext)scriptContext) : ScriptValue.NULL)), (ScriptContext)scriptContext) : ScriptValue.NULL));
         ScriptValue.Array array2 = array;
         if (list != null) {
             for (ScriptValue scriptValue3 : list) {
@@ -340,13 +340,13 @@ public final class Warps {
 
     public static ScriptValue playerBannedIds(ScriptContext.Builder builder) {
         ScriptValue scriptValue;
-        PolyClassPlayer polyClassPlayer;
+        PolyClassPlayer_v2 polyClassPlayer_v2;
         ScriptContext scriptContext = builder.peek();
         ArrayList arrayList = new ArrayList();
         ScriptValue.Array array = new ScriptValue.Array(arrayList);
         builder.val("out", (ScriptValue)array);
         ScriptValue scriptValue2 = scriptContext.getClassOrVar("SQL");
-        List list = ScriptProgram.elementsOf((ScriptValue)(scriptValue2 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "query", (ScriptValue)scriptValue2, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "SELECT warp_id FROM warp_bans WHERE uuid = ?")), (ScriptValue)((polyClassPlayer = PolyClassPlayer.ofVar((ScriptContext)scriptContext, (String)"Player")) != null ? polyClassPlayer.pg$34_uuid() : ((scriptValue = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue, (ScriptContext)scriptContext) : ScriptValue.NULL)), (ScriptContext)scriptContext) : ScriptValue.NULL));
+        List list = ScriptProgram.elementsOf((ScriptValue)(scriptValue2 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "query", (ScriptValue)scriptValue2, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "SELECT warp_id FROM warp_bans WHERE uuid = ?")), (ScriptValue)((polyClassPlayer_v2 = PolyClassPlayer_v2.ofVar((ScriptContext)scriptContext, (String)"Player")) != null ? polyClassPlayer_v2.pg$34_uuid() : ((scriptValue = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue, (ScriptContext)scriptContext) : ScriptValue.NULL)), (ScriptContext)scriptContext) : ScriptValue.NULL));
         ScriptValue.Array array2 = array;
         if (list != null) {
             for (ScriptValue scriptValue3 : list) {
@@ -361,39 +361,35 @@ public final class Warps {
 
     public static ScriptValue recordVisit(ScriptContext.Builder builder) {
         ScriptValue scriptValue;
-        PolyClassPlayer polyClassPlayer;
+        PolyClassPlayer_v2 polyClassPlayer_v2;
         ScriptContext scriptContext = builder.peek();
         ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
         builder2.val("name", scriptContext.getClassOrVar("name"));
         ScriptValue scriptValue2 = Warps.warpId(builder2);
         builder.val("wid", scriptValue2);
         ScriptValue scriptValue3 = scriptContext.getClassOrVar("SQL");
-        ScriptValue scriptValue4 = scriptValue3 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "query", (ScriptValue)scriptValue3, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "SELECT count FROM warp_visitors WHERE warp_id = ? AND uuid = ?")), (ScriptValue)scriptValue2, (ScriptValue)((polyClassPlayer = PolyClassPlayer.ofVar((ScriptContext)scriptContext, (String)"Player")) != null ? polyClassPlayer.pg$34_uuid() : ((scriptValue = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue, (ScriptContext)scriptContext) : ScriptValue.NULL)), (ScriptContext)scriptContext) : ScriptValue.NULL;
+        ScriptValue scriptValue4 = scriptValue3 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "query", (ScriptValue)scriptValue3, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "SELECT count FROM warp_visitors WHERE warp_id = ? AND uuid = ?")), (ScriptValue)scriptValue2, (ScriptValue)((polyClassPlayer_v2 = PolyClassPlayer_v2.ofVar((ScriptContext)scriptContext, (String)"Player")) != null ? polyClassPlayer_v2.pg$34_uuid() : ((scriptValue = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue, (ScriptContext)scriptContext) : ScriptValue.NULL)), (ScriptContext)scriptContext) : ScriptValue.NULL;
         builder.val("existing", scriptValue4);
         if (ScriptFormula.callBuiltin1((String)"len", (ScriptValue)scriptValue4, (ScriptContext)scriptContext).asNum() > 0.0) {
-            ScriptValue scriptValue5 = scriptContext.getClassOrVar("SQL");
-            if (scriptValue5 != ScriptValue.NULL) {
+            if (scriptValue3 != ScriptValue.NULL) {
+                ScriptValue scriptValue5;
                 ScriptValue scriptValue6;
-                ScriptValue scriptValue7;
-                PolyClassPlayer polyClassPlayer2 = PolyClassPlayer.ofVar((ScriptContext)scriptContext, (String)"Player");
-                Object object = polyClassPlayer2 != null ? polyClassPlayer2.pg$67_name() : ((scriptValue7 = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue7, (ScriptContext)scriptContext) : ScriptValue.NULL);
-                PolyClassPlayer polyClassPlayer3 = PolyClassPlayer.ofVar((ScriptContext)scriptContext, (String)"Player");
-                v1 = PolyDispatch.bootstrapCall("memberCall", "execute", (ScriptValue)scriptValue5, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "UPDATE warp_visitors SET count = count + 1, name = ? WHERE warp_id = ? AND uuid = ?")), (ScriptValue)object, (ScriptValue)scriptValue2, (ScriptValue)(polyClassPlayer3 != null ? polyClassPlayer3.pg$34_uuid() : ((scriptValue6 = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue6, (ScriptContext)scriptContext) : ScriptValue.NULL)), (ScriptContext)scriptContext);
+                PolyClassPlayer_v2 polyClassPlayer_v22 = PolyClassPlayer_v2.ofVar((ScriptContext)scriptContext, (String)"Player");
+                Object object = polyClassPlayer_v22 != null ? polyClassPlayer_v22.pg$67_name() : ((scriptValue6 = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue6, (ScriptContext)scriptContext) : ScriptValue.NULL);
+                PolyClassPlayer_v2 polyClassPlayer_v23 = PolyClassPlayer_v2.ofVar((ScriptContext)scriptContext, (String)"Player");
+                v1 = PolyDispatch.bootstrapCall("memberCall", "execute", (ScriptValue)scriptValue3, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "UPDATE warp_visitors SET count = count + 1, name = ? WHERE warp_id = ? AND uuid = ?")), (ScriptValue)object, (ScriptValue)scriptValue2, (ScriptValue)(polyClassPlayer_v23 != null ? polyClassPlayer_v23.pg$34_uuid() : ((scriptValue5 = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue5, (ScriptContext)scriptContext) : ScriptValue.NULL)), (ScriptContext)scriptContext);
             } else {
                 v1 = ScriptValue.NULL;
             }
+        } else if (scriptValue3 != ScriptValue.NULL) {
+            ScriptValue scriptValue7;
+            ScriptValue scriptValue8;
+            PolyClassPlayer_v2 polyClassPlayer_v24 = PolyClassPlayer_v2.ofVar((ScriptContext)scriptContext, (String)"Player");
+            Object object = polyClassPlayer_v24 != null ? polyClassPlayer_v24.pg$34_uuid() : ((scriptValue8 = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue8, (ScriptContext)scriptContext) : ScriptValue.NULL);
+            PolyClassPlayer_v2 polyClassPlayer_v25 = PolyClassPlayer_v2.ofVar((ScriptContext)scriptContext, (String)"Player");
+            v3 = PolyDispatch.bootstrapCall("memberCall", "execute", (ScriptValue)scriptValue3, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "INSERT INTO warp_visitors (warp_id, uuid, name, count) VALUES (?, ?, ?, 1)")), (ScriptValue)scriptValue2, (ScriptValue)object, (ScriptValue)(polyClassPlayer_v25 != null ? polyClassPlayer_v25.pg$67_name() : ((scriptValue7 = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue7, (ScriptContext)scriptContext) : ScriptValue.NULL)), (ScriptContext)scriptContext);
         } else {
-            ScriptValue scriptValue8 = scriptContext.getClassOrVar("SQL");
-            if (scriptValue8 != ScriptValue.NULL) {
-                ScriptValue scriptValue9;
-                ScriptValue scriptValue10;
-                PolyClassPlayer polyClassPlayer4 = PolyClassPlayer.ofVar((ScriptContext)scriptContext, (String)"Player");
-                Object object = polyClassPlayer4 != null ? polyClassPlayer4.pg$34_uuid() : ((scriptValue10 = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue10, (ScriptContext)scriptContext) : ScriptValue.NULL);
-                PolyClassPlayer polyClassPlayer5 = PolyClassPlayer.ofVar((ScriptContext)scriptContext, (String)"Player");
-                v3 = PolyDispatch.bootstrapCall("memberCall", "execute", (ScriptValue)scriptValue8, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "INSERT INTO warp_visitors (warp_id, uuid, name, count) VALUES (?, ?, ?, 1)")), (ScriptValue)scriptValue2, (ScriptValue)object, (ScriptValue)(polyClassPlayer5 != null ? polyClassPlayer5.pg$67_name() : ((scriptValue9 = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue9, (ScriptContext)scriptContext) : ScriptValue.NULL)), (ScriptContext)scriptContext);
-            } else {
-                v3 = ScriptValue.NULL;
-            }
+            v3 = ScriptValue.NULL;
         }
         return ScriptValue.NULL;
     }
@@ -412,7 +408,7 @@ public final class Warps {
             var4_4 = var1_1.getClassOrVar("Player");
             if (var4_4 != ScriptValue.NULL) {
                 var5_5 = "<red>\u2718 <white>That warp no longer exists.";
-                var6_6 = PolyClassPlayer.ofGuarded((ScriptValue)var4_4);
+                var6_6 = PolyClassPlayer_v2.ofGuarded((ScriptValue)var4_4);
                 v0 /* !! */  = var6_6 != null ? ScriptValue.of((boolean)var6_6.tm$42_send_message(var5_5)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)var4_4, (ScriptValue)ScriptValue.of((String)var5_5), (ScriptContext)var1_1);
             } else {
                 v0 /* !! */  = ScriptValue.NULL;
@@ -420,12 +416,12 @@ public final class Warps {
             return ScriptValue.NULL;
         }
         var7_7 = var1_1.getClassOrVar("SQL");
-        v1 /* !! */  = var7_7 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "query", (ScriptValue)var7_7, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "SELECT 1 FROM warp_bans WHERE warp_id = ? AND uuid = ?")), (ScriptValue)(var3_3 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)var3_3, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "id")), (ScriptContext)var1_1) : ScriptValue.NULL), (ScriptValue)((var8_8 = PolyClassPlayer.ofVar((ScriptContext)var1_1, (String)"Player")) != null ? var8_8.pg$34_uuid() : ((var9_9 = var1_1.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)var9_9, (ScriptContext)var1_1) : ScriptValue.NULL)), (ScriptContext)var1_1) : ScriptValue.NULL;
+        v1 /* !! */  = var7_7 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "query", (ScriptValue)var7_7, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "SELECT 1 FROM warp_bans WHERE warp_id = ? AND uuid = ?")), (ScriptValue)(var3_3 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)var3_3, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "id")), (ScriptContext)var1_1) : ScriptValue.NULL), (ScriptValue)((var8_8 = PolyClassPlayer_v2.ofVar((ScriptContext)var1_1, (String)"Player")) != null ? var8_8.pg$34_uuid() : ((var9_9 = var1_1.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)var9_9, (ScriptContext)var1_1) : ScriptValue.NULL)), (ScriptContext)var1_1) : ScriptValue.NULL;
         if (ScriptFormula.callBuiltin1((String)"len", (ScriptValue)v1 /* !! */ , (ScriptContext)var1_1).asNum() > 0.0) {
             var10_10 = var1_1.getClassOrVar("Player");
             if (var10_10 != ScriptValue.NULL) {
                 var11_11 = "<red>\u2718 <white>You are banned from that warp.";
-                var12_12 = PolyClassPlayer.ofGuarded((ScriptValue)var10_10);
+                var12_12 = PolyClassPlayer_v2.ofGuarded((ScriptValue)var10_10);
                 v2 /* !! */  = var12_12 != null ? ScriptValue.of((boolean)var12_12.tm$42_send_message(var11_11)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)var10_10, (ScriptValue)ScriptValue.of((String)var11_11), (ScriptContext)var1_1);
             } else {
                 v2 /* !! */  = ScriptValue.NULL;
@@ -438,21 +434,21 @@ public final class Warps {
             var14_14 = var1_1.getClassOrVar("Player");
             if (var14_14 != ScriptValue.NULL) {
                 var15_15 = "<red>\u2718 <white>That warp's world is not currently loaded.";
-                var16_16 = PolyClassPlayer.ofGuarded((ScriptValue)var14_14);
+                var16_16 = PolyClassPlayer_v2.ofGuarded((ScriptValue)var14_14);
                 v3 /* !! */  = var16_16 != null ? ScriptValue.of((boolean)var16_16.tm$42_send_message(var15_15)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)var14_14, (ScriptValue)ScriptValue.of((String)var15_15), (ScriptContext)var1_1);
             } else {
                 v3 /* !! */  = ScriptValue.NULL;
             }
             return ScriptValue.NULL;
         }
-        var19_19 = ScriptFormula.valuesEqual((ScriptValue)(var3_3 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)var3_3, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "owner_uuid")), (ScriptContext)var1_1) : ScriptValue.NULL), (ScriptValue)((var17_17 = PolyClassPlayer.ofVar((ScriptContext)var1_1, (String)"Player")) != null ? var17_17.pg$34_uuid() : ((var18_18 = var1_1.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)var18_18, (ScriptContext)var1_1) : ScriptValue.NULL)));
+        var19_19 = ScriptFormula.valuesEqual((ScriptValue)(var3_3 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)var3_3, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "owner_uuid")), (ScriptContext)var1_1) : ScriptValue.NULL), (ScriptValue)((var17_17 = PolyClassPlayer_v2.ofVar((ScriptContext)var1_1, (String)"Player")) != null ? var17_17.pg$34_uuid() : ((var18_18 = var1_1.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)var18_18, (ScriptContext)var1_1) : ScriptValue.NULL)));
         var20_20 = ScriptValue.of((boolean)var19_19);
         var0.val("is_own_warp", var20_20);
         if (!(var19_19 ^ true)) ** GOTO lbl-1000
         var21_21 = var1_1.getClassOrVar("Player");
         if (var21_21 != ScriptValue.NULL) {
             var22_22 = var1_1.getClassOrVar("WARP_TELEPORT_COST");
-            var23_23 = PolyClassPlayer.ofGuarded((ScriptValue)var21_21);
+            var23_23 = PolyClassPlayer_v2.ofGuarded((ScriptValue)var21_21);
             v4 /* !! */  = var23_23 != null ? ScriptValue.of((boolean)var23_23.tm$28_take_exp(var22_22.asNum())) : PolyDispatch.bootstrapCall("memberCall", "take_exp", (ScriptValue)var21_21, (ScriptValue)var22_22, (ScriptContext)var1_1);
         } else {
             v4 /* !! */  = ScriptValue.NULL;
@@ -469,7 +465,7 @@ public final class Warps {
             var24_24 = var1_1.getClassOrVar("Player");
             if (var24_24 != ScriptValue.NULL) {
                 var25_25 = ScriptValue.of((String)("<red>\u2718 <white>You need " + var1_1.getStr("WARP_TELEPORT_COST") + " XP points to use a warp."));
-                var26_26 = PolyClassPlayer.ofGuarded((ScriptValue)var24_24);
+                var26_26 = PolyClassPlayer_v2.ofGuarded((ScriptValue)var24_24);
                 v6 /* !! */  = var26_26 != null ? ScriptValue.of((boolean)var26_26.tm$42_send_message(var25_25.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)var24_24, (ScriptValue)var25_25, (ScriptContext)var1_1);
             } else {
                 v6 /* !! */  = ScriptValue.NULL;
@@ -481,7 +477,7 @@ public final class Warps {
         var28_28 = var1_1.getClassOrVar("Player");
         if (var28_28 != ScriptValue.NULL) {
             var29_29 = var27_27;
-            var30_30 = PolyClassPlayer.ofGuarded((ScriptValue)var28_28);
+            var30_30 = PolyClassPlayer_v2.ofGuarded((ScriptValue)var28_28);
             v7 /* !! */  = var30_30 != null ? ScriptValue.of((boolean)var30_30.tm$24_teleport_to(var29_29)) : PolyDispatch.bootstrapCall("memberCall", "teleport_to", (ScriptValue)var28_28, (ScriptValue)var29_29, (ScriptContext)var1_1);
         } else {
             v7 /* !! */  = ScriptValue.NULL;
@@ -491,11 +487,10 @@ public final class Warps {
         var32_32 = ScriptContext.builder().copyFrom(var1_1);
         var32_32.val("name", var1_1.getClassOrVar("name"));
         Warps.recordVisit(var32_32);
-        var33_33 = var1_1.getClassOrVar("Player");
-        if (var33_33 != ScriptValue.NULL) {
-            var34_34 = ScriptValue.of((String)("<green>\u2714 <white>Welcome to <yellow>" + var1_1.getStr("name") + "<white>!"));
-            var35_35 = PolyClassPlayer.ofGuarded((ScriptValue)var33_33);
-            v9 /* !! */  = var35_35 != null ? ScriptValue.of((boolean)var35_35.tm$42_send_message(var34_34.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)var33_33, (ScriptValue)var34_34, (ScriptContext)var1_1);
+        if (var28_28 != ScriptValue.NULL) {
+            var33_33 = ScriptValue.of((String)("<green>\u2714 <white>Welcome to <yellow>" + var1_1.getStr("name") + "<white>!"));
+            var34_34 = PolyClassPlayer_v2.ofGuarded((ScriptValue)var28_28);
+            v9 /* !! */  = var34_34 != null ? ScriptValue.of((boolean)var34_34.tm$42_send_message(var33_33.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)var28_28, (ScriptValue)var33_33, (ScriptContext)var1_1);
         } else {
             v9 /* !! */  = ScriptValue.NULL;
         }
@@ -521,37 +516,33 @@ public final class Warps {
         ArrayList arrayList = new ArrayList();
         ScriptValue.Array array = new ScriptValue.Array(arrayList);
         builder.val("lore", (ScriptValue)array);
-        ScriptValue scriptValue3 = scriptContext.getClassOrVar("row");
-        ScriptValue scriptValue4 = ScriptFormula.callBuiltin2((String)"push", (ScriptValue)scriptContext.getClassOrVar("lore"), (ScriptValue)ScriptValue.of((String)("<gray>Owner: <white>" + (scriptValue3 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue3, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "owner_name")), (ScriptContext)scriptContext) : ScriptValue.NULL).asStr())), (ScriptContext)scriptContext);
+        ScriptValue scriptValue3 = ScriptFormula.callBuiltin2((String)"push", (ScriptValue)scriptContext.getClassOrVar("lore"), (ScriptValue)ScriptValue.of((String)("<gray>Owner: <white>" + (scriptValue != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "owner_name")), (ScriptContext)scriptContext) : ScriptValue.NULL).asStr())), (ScriptContext)scriptContext);
+        builder.val("lore", scriptValue3);
+        ScriptValue scriptValue4 = ScriptFormula.callBuiltin2((String)"push", (ScriptValue)scriptContext.getClassOrVar("lore"), (ScriptValue)ScriptValue.of((String)("<gray>World: <white>" + (scriptValue != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "world")), (ScriptContext)scriptContext) : ScriptValue.NULL).asStr())), (ScriptContext)scriptContext);
         builder.val("lore", scriptValue4);
-        ScriptValue scriptValue5 = scriptContext.getClassOrVar("row");
-        ScriptValue scriptValue6 = ScriptFormula.callBuiltin2((String)"push", (ScriptValue)scriptContext.getClassOrVar("lore"), (ScriptValue)ScriptValue.of((String)("<gray>World: <white>" + (scriptValue5 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue5, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "world")), (ScriptContext)scriptContext) : ScriptValue.NULL).asStr())), (ScriptContext)scriptContext);
+        ScriptValue scriptValue5 = ScriptFormula.callBuiltin2((String)"push", (ScriptValue)scriptContext.getClassOrVar("lore"), (ScriptValue)ScriptValue.of((String)("<gray>Visits: <white>" + (scriptValue != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "visits")), (ScriptContext)scriptContext) : ScriptValue.NULL).asStr())), (ScriptContext)scriptContext);
+        builder.val("lore", scriptValue5);
+        ScriptValue scriptValue6 = ScriptFormula.callBuiltin2((String)"push", (ScriptValue)scriptContext.getClassOrVar("lore"), (ScriptValue)ScriptValue.of((String)("<gray>Category: <white>" + (scriptValue != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "category")), (ScriptContext)scriptContext) : ScriptValue.NULL).asStr())), (ScriptContext)scriptContext);
         builder.val("lore", scriptValue6);
-        ScriptValue scriptValue7 = scriptContext.getClassOrVar("row");
-        ScriptValue scriptValue8 = ScriptFormula.callBuiltin2((String)"push", (ScriptValue)scriptContext.getClassOrVar("lore"), (ScriptValue)ScriptValue.of((String)("<gray>Visits: <white>" + (scriptValue7 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue7, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "visits")), (ScriptContext)scriptContext) : ScriptValue.NULL).asStr())), (ScriptContext)scriptContext);
-        builder.val("lore", scriptValue8);
-        ScriptValue scriptValue9 = scriptContext.getClassOrVar("row");
-        ScriptValue scriptValue10 = ScriptFormula.callBuiltin2((String)"push", (ScriptValue)scriptContext.getClassOrVar("lore"), (ScriptValue)ScriptValue.of((String)("<gray>Category: <white>" + (scriptValue9 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue9, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "category")), (ScriptContext)scriptContext) : ScriptValue.NULL).asStr())), (ScriptContext)scriptContext);
-        builder.val("lore", scriptValue10);
         if (ScriptFormula.callBuiltin1((String)"is_null", (ScriptValue)scriptValue2, (ScriptContext)scriptContext).asBool() ^ true && ScriptFormula.valuesEqualStr((ScriptValue)scriptValue2, (String)"") ^ true) {
-            ScriptValue scriptValue11 = ScriptFormula.callBuiltin2((String)"push", (ScriptValue)scriptContext.getClassOrVar("lore"), (ScriptValue)ScriptValue.of((String)("<gray>Description: <white>" + scriptValue2.asStr())), (ScriptContext)scriptContext);
-            builder.val("lore", scriptValue11);
+            ScriptValue scriptValue7 = ScriptFormula.callBuiltin2((String)"push", (ScriptValue)scriptContext.getClassOrVar("lore"), (ScriptValue)ScriptValue.of((String)("<gray>Description: <white>" + scriptValue2.asStr())), (ScriptContext)scriptContext);
+            builder.val("lore", scriptValue7);
         }
         if (scriptContext.getBool("is_fav")) {
-            ScriptValue scriptValue12 = ScriptFormula.callBuiltin2((String)"push", (ScriptValue)scriptContext.getClassOrVar("lore"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "<gold>\u2605 Favourited")), (ScriptContext)scriptContext);
-            builder.val("lore", scriptValue12);
+            ScriptValue scriptValue8 = ScriptFormula.callBuiltin2((String)"push", (ScriptValue)scriptContext.getClassOrVar("lore"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "<gold>\u2605 Favourited")), (ScriptContext)scriptContext);
+            builder.val("lore", scriptValue8);
         }
         if (scriptContext.getBool("is_ban")) {
-            ScriptValue scriptValue13 = ScriptFormula.callBuiltin2((String)"push", (ScriptValue)scriptContext.getClassOrVar("lore"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "<red>You are banned from this warp")), (ScriptContext)scriptContext);
-            builder.val("lore", scriptValue13);
+            ScriptValue scriptValue9 = ScriptFormula.callBuiltin2((String)"push", (ScriptValue)scriptContext.getClassOrVar("lore"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "<red>You are banned from this warp")), (ScriptContext)scriptContext);
+            builder.val("lore", scriptValue9);
         }
-        ScriptValue scriptValue14 = ScriptFormula.callBuiltin2((String)"push", (ScriptValue)scriptContext.getClassOrVar("lore"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "")), (ScriptContext)scriptContext);
-        builder.val("lore", scriptValue14);
-        ScriptValue scriptValue15 = ScriptFormula.callBuiltin2((String)"push", (ScriptValue)scriptContext.getClassOrVar("lore"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "<green>Left-click <gray>to teleport")), (ScriptContext)scriptContext);
-        builder.val("lore", scriptValue15);
-        ScriptValue scriptValue16 = ScriptFormula.callBuiltin2((String)"push", (ScriptValue)scriptContext.getClassOrVar("lore"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "<yellow>Right-click <gray>for more options")), (ScriptContext)scriptContext);
-        builder.val("lore", scriptValue16);
-        return scriptValue16;
+        ScriptValue scriptValue10 = ScriptFormula.callBuiltin2((String)"push", (ScriptValue)scriptContext.getClassOrVar("lore"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "")), (ScriptContext)scriptContext);
+        builder.val("lore", scriptValue10);
+        ScriptValue scriptValue11 = ScriptFormula.callBuiltin2((String)"push", (ScriptValue)scriptContext.getClassOrVar("lore"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "<green>Left-click <gray>to teleport")), (ScriptContext)scriptContext);
+        builder.val("lore", scriptValue11);
+        ScriptValue scriptValue12 = ScriptFormula.callBuiltin2((String)"push", (ScriptValue)scriptContext.getClassOrVar("lore"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "<yellow>Right-click <gray>for more options")), (ScriptContext)scriptContext);
+        builder.val("lore", scriptValue12);
+        return scriptValue12;
     }
 
     public static ScriptValue warpIcon(ScriptContext.Builder builder) {
@@ -585,8 +576,8 @@ public final class Warps {
         if (scriptValue != ScriptValue.NULL) {
             String string = "warps_sort";
             String string2 = "string";
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue);
-            object = polyClassPlayer != null ? polyClassPlayer.tm$12_get_typed(string, string2) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue);
+            object = polyClassPlayer_v2 != null ? polyClassPlayer_v2.tm$12_get_typed(string, string2) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
         }
@@ -608,8 +599,8 @@ public final class Warps {
         if (scriptValue != ScriptValue.NULL) {
             String string = "warps_sort";
             String string2 = "string";
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue);
-            object = polyClassPlayer != null ? polyClassPlayer.tm$12_get_typed(string, string2) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue);
+            object = polyClassPlayer_v2 != null ? polyClassPlayer_v2.tm$12_get_typed(string, string2) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
         }
@@ -632,8 +623,8 @@ public final class Warps {
         if (scriptValue != ScriptValue.NULL) {
             String string = "warps_sort";
             String string2 = "string";
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue);
-            object = polyClassPlayer != null ? polyClassPlayer.tm$12_get_typed(string, string2) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue);
+            object = polyClassPlayer_v2 != null ? polyClassPlayer_v2.tm$12_get_typed(string, string2) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
         }
@@ -655,19 +646,18 @@ public final class Warps {
         double d3 = (d = ScriptFormula.callBuiltin1((String)"len", (ScriptValue)scriptContext.getClassOrVar("SORT_MODES"), (ScriptContext)scriptContext).asNum()) == 0.0 ? 0.0 : ScriptFormula.addPolymorphic((ScriptValue)scriptContext.getClassOrVar("idx"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 1.0))).asNum() % d;
         ScriptValue scriptValue7 = ScriptValue.of((double)d3);
         builder.val("next_idx", scriptValue7);
-        ScriptValue scriptValue8 = scriptContext.getClassOrVar("Player");
-        if (scriptValue8 != ScriptValue.NULL) {
+        if (scriptValue != ScriptValue.NULL) {
             String string = "warps_sort";
             String string3 = "string";
-            ScriptValue scriptValue9 = scriptContext.getClassOrVar("SORT_MODES");
-            ScriptValue scriptValue10 = scriptValue9 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue9, (ScriptValue)ScriptValue.of((double)d3), (ScriptContext)scriptContext) : ScriptValue.NULL;
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue8);
-            v1 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$30_set_typed(string, string3, scriptValue10)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue8, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string3), (ScriptValue)scriptValue10, (ScriptContext)scriptContext);
+            ScriptValue scriptValue8 = scriptContext.getClassOrVar("SORT_MODES");
+            ScriptValue scriptValue9 = scriptValue8 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue8, (ScriptValue)ScriptValue.of((double)d3), (ScriptContext)scriptContext) : ScriptValue.NULL;
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue);
+            v1 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$30_set_typed(string, string3, scriptValue9)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string3), (ScriptValue)scriptValue9, (ScriptContext)scriptContext);
         } else {
             v1 = ScriptValue.NULL;
         }
-        ScriptValue scriptValue11 = scriptContext.getClassOrVar("Cmd");
-        Object object2 = scriptValue11 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "open_page", (ScriptValue)scriptValue11, (ScriptValue)scriptContext.getClassOrVar("page_name"), (ScriptContext)scriptContext) : ScriptValue.NULL;
+        ScriptValue scriptValue10 = scriptContext.getClassOrVar("Cmd");
+        Object object2 = scriptValue10 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "open_page", (ScriptValue)scriptValue10, (ScriptValue)scriptContext.getClassOrVar("page_name"), (ScriptContext)scriptContext) : ScriptValue.NULL;
         return ScriptValue.NULL;
     }
 
@@ -682,8 +672,8 @@ public final class Warps {
         if (scriptValue4 != ScriptValue.NULL) {
             String string = "warps_search";
             String string2 = "string";
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue4);
-            object = polyClassPlayer != null ? polyClassPlayer.tm$12_get_typed(string, string2) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue4, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue4);
+            object = polyClassPlayer_v2 != null ? polyClassPlayer_v2.tm$12_get_typed(string, string2) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue4, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
         }
@@ -700,43 +690,40 @@ public final class Warps {
             ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
             builder2.val("s", scriptContext.getClassOrVar("value"));
             ScriptValue scriptValue2 = Warps.sanitize(builder2);
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue);
-            v0 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$30_set_typed(string, string2, scriptValue2)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptValue)scriptValue2, (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue);
+            v0 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$30_set_typed(string, string2, scriptValue2)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptValue)scriptValue2, (ScriptContext)scriptContext);
         } else {
             v0 = ScriptValue.NULL;
         }
-        ScriptValue scriptValue3 = scriptContext.getClassOrVar("Player");
-        if (scriptValue3 != ScriptValue.NULL) {
+        if (scriptValue != ScriptValue.NULL) {
             String string = "warps_browse_offset";
             String string3 = "int";
-            ScriptValue scriptValue4 =  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 0.0);
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue3);
-            v1 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$30_set_typed(string, string3, scriptValue4)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue3, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string3), (ScriptValue)scriptValue4, (ScriptContext)scriptContext);
+            ScriptValue scriptValue3 =  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 0.0);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue);
+            v1 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$30_set_typed(string, string3, scriptValue3)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string3), (ScriptValue)scriptValue3, (ScriptContext)scriptContext);
         } else {
             v1 = ScriptValue.NULL;
         }
-        ScriptValue scriptValue5 = scriptContext.getClassOrVar("Player");
-        if (scriptValue5 != ScriptValue.NULL) {
+        if (scriptValue != ScriptValue.NULL) {
             String string = "warps_manage_offset";
             String string4 = "int";
-            ScriptValue scriptValue6 =  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 0.0);
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue5);
-            v2 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$30_set_typed(string, string4, scriptValue6)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue5, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string4), (ScriptValue)scriptValue6, (ScriptContext)scriptContext);
+            ScriptValue scriptValue4 =  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 0.0);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue);
+            v2 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$30_set_typed(string, string4, scriptValue4)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string4), (ScriptValue)scriptValue4, (ScriptContext)scriptContext);
         } else {
             v2 = ScriptValue.NULL;
         }
-        ScriptValue scriptValue7 = scriptContext.getClassOrVar("Player");
-        if (scriptValue7 != ScriptValue.NULL) {
+        if (scriptValue != ScriptValue.NULL) {
             String string = "warps_favourite_offset";
             String string5 = "int";
-            ScriptValue scriptValue8 =  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 0.0);
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue7);
-            v3 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$30_set_typed(string, string5, scriptValue8)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue7, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string5), (ScriptValue)scriptValue8, (ScriptContext)scriptContext);
+            ScriptValue scriptValue5 =  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 0.0);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue);
+            v3 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$30_set_typed(string, string5, scriptValue5)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string5), (ScriptValue)scriptValue5, (ScriptContext)scriptContext);
         } else {
             v3 = ScriptValue.NULL;
         }
-        ScriptValue scriptValue9 = scriptContext.getClassOrVar("Cmd");
-        Object object = scriptValue9 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "open_page", (ScriptValue)scriptValue9, (ScriptValue)scriptContext.getClassOrVar("page_name"), (ScriptContext)scriptContext) : ScriptValue.NULL;
+        ScriptValue scriptValue6 = scriptContext.getClassOrVar("Cmd");
+        Object object = scriptValue6 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "open_page", (ScriptValue)scriptValue6, (ScriptValue)scriptContext.getClassOrVar("page_name"), (ScriptContext)scriptContext) : ScriptValue.NULL;
         return ScriptValue.NULL;
     }
 
@@ -747,8 +734,8 @@ public final class Warps {
             String string = "warps_search";
             String string2 = "string";
             ScriptValue scriptValue2 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "");
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue);
-            v0 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$30_set_typed(string, string2, scriptValue2)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptValue)scriptValue2, (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue);
+            v0 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$30_set_typed(string, string2, scriptValue2)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptValue)scriptValue2, (ScriptContext)scriptContext);
         } else {
             v0 = ScriptValue.NULL;
         }
@@ -764,23 +751,22 @@ public final class Warps {
             String string = "warps_category_filter";
             String string2 = "string";
             ScriptValue scriptValue2 = scriptContext.getClassOrVar("cat");
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue);
-            v0 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$30_set_typed(string, string2, scriptValue2)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptValue)scriptValue2, (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue);
+            v0 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$30_set_typed(string, string2, scriptValue2)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptValue)scriptValue2, (ScriptContext)scriptContext);
         } else {
             v0 = ScriptValue.NULL;
         }
-        ScriptValue scriptValue3 = scriptContext.getClassOrVar("Player");
-        if (scriptValue3 != ScriptValue.NULL) {
+        if (scriptValue != ScriptValue.NULL) {
             String string = "warps_browse_offset";
             String string3 = "int";
-            ScriptValue scriptValue4 =  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 0.0);
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue3);
-            v1 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$30_set_typed(string, string3, scriptValue4)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue3, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string3), (ScriptValue)scriptValue4, (ScriptContext)scriptContext);
+            ScriptValue scriptValue3 =  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 0.0);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue);
+            v1 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$30_set_typed(string, string3, scriptValue3)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string3), (ScriptValue)scriptValue3, (ScriptContext)scriptContext);
         } else {
             v1 = ScriptValue.NULL;
         }
-        ScriptValue scriptValue5 = scriptContext.getClassOrVar("Cmd");
-        Object object = scriptValue5 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "open_page", (ScriptValue)scriptValue5, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "warps")), (ScriptContext)scriptContext) : ScriptValue.NULL;
+        ScriptValue scriptValue4 = scriptContext.getClassOrVar("Cmd");
+        Object object = scriptValue4 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "open_page", (ScriptValue)scriptValue4, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "warps")), (ScriptContext)scriptContext) : ScriptValue.NULL;
         return ScriptValue.NULL;
     }
 
@@ -792,8 +778,8 @@ public final class Warps {
         if (scriptValue != ScriptValue.NULL) {
             String string = "warps_category_filter";
             String string2 = "string";
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue);
-            object = polyClassPlayer != null ? polyClassPlayer.tm$12_get_typed(string, string2) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue);
+            object = polyClassPlayer_v2 != null ? polyClassPlayer_v2.tm$12_get_typed(string, string2) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
         }
@@ -819,29 +805,27 @@ public final class Warps {
         double d3 = (d = ScriptFormula.callBuiltin1((String)"len", (ScriptValue)scriptContext.getClassOrVar("CATEGORIES"), (ScriptContext)scriptContext).asNum()) == 0.0 ? 0.0 : ScriptFormula.addPolymorphic((ScriptValue)scriptContext.getClassOrVar("idx"), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 1.0))).asNum() % d;
         ScriptValue scriptValue8 = ScriptValue.of((double)d3);
         builder.val("next_idx", scriptValue8);
-        ScriptValue scriptValue9 = scriptContext.getClassOrVar("Player");
-        if (scriptValue9 != ScriptValue.NULL) {
+        if (scriptValue != ScriptValue.NULL) {
             String string = "warps_category_filter";
             String string3 = "string";
-            ScriptValue scriptValue10 = scriptContext.getClassOrVar("CATEGORIES");
-            ScriptValue scriptValue11 = scriptValue10 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue10, (ScriptValue)ScriptValue.of((double)d3), (ScriptContext)scriptContext) : ScriptValue.NULL;
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue9);
-            v1 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$30_set_typed(string, string3, scriptValue11)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue9, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string3), (ScriptValue)scriptValue11, (ScriptContext)scriptContext);
+            ScriptValue scriptValue9 = scriptContext.getClassOrVar("CATEGORIES");
+            ScriptValue scriptValue10 = scriptValue9 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue9, (ScriptValue)ScriptValue.of((double)d3), (ScriptContext)scriptContext) : ScriptValue.NULL;
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue);
+            v1 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$30_set_typed(string, string3, scriptValue10)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string3), (ScriptValue)scriptValue10, (ScriptContext)scriptContext);
         } else {
             v1 = ScriptValue.NULL;
         }
-        ScriptValue scriptValue12 = scriptContext.getClassOrVar("Player");
-        if (scriptValue12 != ScriptValue.NULL) {
+        if (scriptValue != ScriptValue.NULL) {
             String string = "warps_browse_offset";
             String string4 = "int";
-            ScriptValue scriptValue13 =  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 0.0);
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue12);
-            v2 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$30_set_typed(string, string4, scriptValue13)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue12, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string4), (ScriptValue)scriptValue13, (ScriptContext)scriptContext);
+            ScriptValue scriptValue11 =  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 0.0);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue);
+            v2 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$30_set_typed(string, string4, scriptValue11)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string4), (ScriptValue)scriptValue11, (ScriptContext)scriptContext);
         } else {
             v2 = ScriptValue.NULL;
         }
-        ScriptValue scriptValue14 = scriptContext.getClassOrVar("Cmd");
-        Object object2 = scriptValue14 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "open_page", (ScriptValue)scriptValue14, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "warps")), (ScriptContext)scriptContext) : ScriptValue.NULL;
+        ScriptValue scriptValue12 = scriptContext.getClassOrVar("Cmd");
+        Object object2 = scriptValue12 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "open_page", (ScriptValue)scriptValue12, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "warps")), (ScriptContext)scriptContext) : ScriptValue.NULL;
         return ScriptValue.NULL;
     }
 
@@ -852,8 +836,8 @@ public final class Warps {
         if (scriptValue != ScriptValue.NULL) {
             String string = "warps_category_filter";
             String string2 = "string";
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue);
-            object = polyClassPlayer != null ? polyClassPlayer.tm$12_get_typed(string, string2) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue);
+            object = polyClassPlayer_v2 != null ? polyClassPlayer_v2.tm$12_get_typed(string, string2) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
         }
@@ -887,8 +871,8 @@ public final class Warps {
         if (scriptValue != ScriptValue.NULL) {
             String string = "warps_browse_offset";
             String string2 = "int";
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue);
-            object = polyClassPlayer != null ? polyClassPlayer.tm$12_get_typed(string, string2) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue);
+            object = polyClassPlayer_v2 != null ? polyClassPlayer_v2.tm$12_get_typed(string, string2) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
         }
@@ -906,34 +890,33 @@ public final class Warps {
         if (scriptValue != ScriptValue.NULL) {
             String string = "warps_category_filter";
             String string2 = "string";
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue);
-            object2 = polyClassPlayer != null ? polyClassPlayer.tm$12_get_typed(string, string2) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue);
+            object2 = polyClassPlayer_v2 != null ? polyClassPlayer_v2.tm$12_get_typed(string, string2) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
         } else {
             object2 = ScriptValue.NULL;
         }
         ScriptValue scriptValue2 = object2;
         builder.val("filter", scriptValue2);
         StringBuilder stringBuilder = new StringBuilder().append("%");
-        ScriptValue scriptValue3 = scriptContext.getClassOrVar("Player");
-        if (scriptValue3 != ScriptValue.NULL) {
+        if (scriptValue != ScriptValue.NULL) {
             String string = "warps_search";
             String string3 = "string";
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue3);
-            object = polyClassPlayer != null ? polyClassPlayer.tm$12_get_typed(string, string3) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue3, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string3), (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue);
+            object = polyClassPlayer_v2 != null ? polyClassPlayer_v2.tm$12_get_typed(string, string3) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string3), (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
         }
-        ScriptValue scriptValue4 = ScriptValue.of((String)stringBuilder.append(ScriptFormula.callBuiltin1((String)"lower", (ScriptValue)object, (ScriptContext)scriptContext).asStr()).append("%").toString());
-        builder.val("like", scriptValue4);
+        ScriptValue scriptValue3 = ScriptValue.of((String)stringBuilder.append(ScriptFormula.callBuiltin1((String)"lower", (ScriptValue)object, (ScriptContext)scriptContext).asStr()).append("%").toString());
+        builder.val("like", scriptValue3);
         ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
-        ScriptValue scriptValue5 = Warps.sortOrderClause(builder2);
-        builder.val("order", scriptValue5);
+        ScriptValue scriptValue4 = Warps.sortOrderClause(builder2);
+        builder.val("order", scriptValue4);
         if (ScriptFormula.valuesEqualStr((ScriptValue)scriptValue2, (String)"") || ScriptFormula.valuesEqualStr((ScriptValue)scriptValue2, (String)"all")) {
-            ScriptValue scriptValue6 = scriptContext.getClassOrVar("SQL");
-            return scriptValue6 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "query", (ScriptValue)scriptValue6, (ScriptValue)ScriptValue.of((String)("SELECT * FROM warps WHERE locked = 0 AND (lower(name) LIKE ? OR lower(owner_name) LIKE ?) ORDER BY " + scriptValue5.asStr())), (ScriptValue)scriptValue4, (ScriptValue)scriptValue4, (ScriptContext)scriptContext) : ScriptValue.NULL;
+            ScriptValue scriptValue5 = scriptContext.getClassOrVar("SQL");
+            return scriptValue5 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "query", (ScriptValue)scriptValue5, (ScriptValue)ScriptValue.of((String)("SELECT * FROM warps WHERE locked = 0 AND (lower(name) LIKE ? OR lower(owner_name) LIKE ?) ORDER BY " + scriptValue4.asStr())), (ScriptValue)scriptValue3, (ScriptValue)scriptValue3, (ScriptContext)scriptContext) : ScriptValue.NULL;
         }
-        ScriptValue scriptValue7 = scriptContext.getClassOrVar("SQL");
-        return scriptValue7 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "query", (ScriptValue)scriptValue7, (ScriptValue)ScriptValue.of((String)("SELECT * FROM warps WHERE locked = 0 AND category = ? AND (lower(name) LIKE ? OR lower(owner_name) LIKE ?) ORDER BY " + scriptValue5.asStr())), (ScriptValue)scriptValue2, (ScriptValue)scriptValue4, (ScriptValue)scriptValue4, (ScriptContext)scriptContext) : ScriptValue.NULL;
+        ScriptValue scriptValue6 = scriptContext.getClassOrVar("SQL");
+        return scriptValue6 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "query", (ScriptValue)scriptValue6, (ScriptValue)ScriptValue.of((String)("SELECT * FROM warps WHERE locked = 0 AND category = ? AND (lower(name) LIKE ? OR lower(owner_name) LIKE ?) ORDER BY " + scriptValue4.asStr())), (ScriptValue)scriptValue2, (ScriptValue)scriptValue3, (ScriptValue)scriptValue3, (ScriptContext)scriptContext) : ScriptValue.NULL;
     }
 
     public static ScriptValue maxBrowseOffset(ScriptContext.Builder builder) {
@@ -958,8 +941,8 @@ public final class Warps {
         if (scriptValue != ScriptValue.NULL) {
             String string = "warps_browse_offset";
             String string2 = "int";
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue);
-            object = polyClassPlayer != null ? polyClassPlayer.tm$12_get_typed(string, string2) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue);
+            object = polyClassPlayer_v2 != null ? polyClassPlayer_v2.tm$12_get_typed(string, string2) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
         }
@@ -1036,23 +1019,22 @@ public final class Warps {
                 String string = "warps_current_warp";
                 String string2 = "string";
                 ScriptValue scriptValue3 = scriptContext.getClassOrVar("name");
-                PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue2);
-                v0 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$30_set_typed(string, string2, scriptValue3)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptValue)scriptValue3, (ScriptContext)scriptContext);
+                PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue2);
+                v0 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$30_set_typed(string, string2, scriptValue3)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptValue)scriptValue3, (ScriptContext)scriptContext);
             } else {
                 v0 = ScriptValue.NULL;
             }
-            ScriptValue scriptValue4 = scriptContext.getClassOrVar("Player");
-            if (scriptValue4 != ScriptValue.NULL) {
+            if (scriptValue2 != ScriptValue.NULL) {
                 String string = "warps_return_page";
                 String string3 = "string";
-                ScriptValue scriptValue5 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "warps");
-                PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue4);
-                v1 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$30_set_typed(string, string3, scriptValue5)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue4, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string3), (ScriptValue)scriptValue5, (ScriptContext)scriptContext);
+                ScriptValue scriptValue4 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "warps");
+                PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue2);
+                v1 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$30_set_typed(string, string3, scriptValue4)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string3), (ScriptValue)scriptValue4, (ScriptContext)scriptContext);
             } else {
                 v1 = ScriptValue.NULL;
             }
-            ScriptValue scriptValue6 = scriptContext.getClassOrVar("Cmd");
-            Object object = scriptValue6 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "open_page", (ScriptValue)scriptValue6, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "visitedit")), (ScriptContext)scriptContext) : ScriptValue.NULL;
+            ScriptValue scriptValue5 = scriptContext.getClassOrVar("Cmd");
+            Object object = scriptValue5 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "open_page", (ScriptValue)scriptValue5, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "visitedit")), (ScriptContext)scriptContext) : ScriptValue.NULL;
         } else {
             ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
             builder2.val("name", scriptContext.getClassOrVar("name"));
@@ -1069,21 +1051,20 @@ public final class Warps {
         if (scriptValue2 != ScriptValue.NULL) {
             String string = "warps_browse_offset";
             String string2 = "int";
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue2);
-            object = polyClassPlayer != null ? polyClassPlayer.tm$12_get_typed(string, string2) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue2);
+            object = polyClassPlayer_v2 != null ? polyClassPlayer_v2.tm$12_get_typed(string, string2) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
         }
         ScriptValue scriptValue3 = object;
         builder.val("offset", scriptValue3);
         if (scriptValue3.asNum() > 0.0) {
-            ScriptValue scriptValue4 = scriptContext.getClassOrVar("Player");
-            if (scriptValue4 != ScriptValue.NULL) {
+            if (scriptValue2 != ScriptValue.NULL) {
                 String string = "warps_browse_offset";
                 String string3 = "int";
-                ScriptValue scriptValue5 = ScriptValue.of((double)(scriptValue3.asNum() - 1.0));
-                PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue4);
-                v1 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$30_set_typed(string, string3, scriptValue5)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue4, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string3), (ScriptValue)scriptValue5, (ScriptContext)scriptContext);
+                ScriptValue scriptValue4 = ScriptValue.of((double)(scriptValue3.asNum() - 1.0));
+                PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue2);
+                v1 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$30_set_typed(string, string3, scriptValue4)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string3), (ScriptValue)scriptValue4, (ScriptContext)scriptContext);
             } else {
                 v1 = ScriptValue.NULL;
             }
@@ -1100,8 +1081,8 @@ public final class Warps {
         if (scriptValue2 != ScriptValue.NULL) {
             String string = "warps_browse_offset";
             String string2 = "int";
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue2);
-            object = polyClassPlayer != null ? polyClassPlayer.tm$12_get_typed(string, string2) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue2);
+            object = polyClassPlayer_v2 != null ? polyClassPlayer_v2.tm$12_get_typed(string, string2) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
         }
@@ -1109,13 +1090,12 @@ public final class Warps {
         builder.val("offset", scriptValue3);
         ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
         if (scriptValue3.asNum() < Warps.maxBrowseOffset(builder2).asNum()) {
-            ScriptValue scriptValue4 = scriptContext.getClassOrVar("Player");
-            if (scriptValue4 != ScriptValue.NULL) {
+            if (scriptValue2 != ScriptValue.NULL) {
                 String string = "warps_browse_offset";
                 String string3 = "int";
-                ScriptValue scriptValue5 = ScriptFormula.addPolymorphic((ScriptValue)scriptValue3, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 1.0)));
-                PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue4);
-                v1 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$30_set_typed(string, string3, scriptValue5)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue4, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string3), (ScriptValue)scriptValue5, (ScriptContext)scriptContext);
+                ScriptValue scriptValue4 = ScriptFormula.addPolymorphic((ScriptValue)scriptValue3, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 1.0)));
+                PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue2);
+                v1 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$30_set_typed(string, string3, scriptValue4)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string3), (ScriptValue)scriptValue4, (ScriptContext)scriptContext);
             } else {
                 v1 = ScriptValue.NULL;
             }
@@ -1131,8 +1111,8 @@ public final class Warps {
         ScriptValue scriptValue = scriptContext.getClassOrVar("Player");
         if (scriptValue != ScriptValue.NULL) {
             ScriptValue scriptValue2 = scriptContext.getClassOrVar("WARP_SPONSOR_PERMISSION");
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue);
-            object2 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$4_has_permission(scriptValue2.asStr())) : PolyDispatch.bootstrapCall("memberCall", "has_permission", (ScriptValue)scriptValue, (ScriptValue)scriptValue2, (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue);
+            object2 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$4_has_permission(scriptValue2.asStr())) : PolyDispatch.bootstrapCall("memberCall", "has_permission", (ScriptValue)scriptValue, (ScriptValue)scriptValue2, (ScriptContext)scriptContext);
         } else {
             object2 = ScriptValue.NULL;
         }
@@ -1144,8 +1124,8 @@ public final class Warps {
         if (scriptValue4 != ScriptValue.NULL) {
             String string = "warps_extra_slots";
             String string2 = "int";
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue4);
-            object = polyClassPlayer != null ? polyClassPlayer.tm$12_get_typed(string, string2) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue4, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue4);
+            object = polyClassPlayer_v2 != null ? polyClassPlayer_v2.tm$12_get_typed(string, string2) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue4, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
         }
@@ -1158,8 +1138,8 @@ public final class Warps {
         ScriptValue scriptValue = scriptContext.getClassOrVar("Player");
         if (scriptValue != ScriptValue.NULL) {
             ScriptValue scriptValue2 = scriptContext.getClassOrVar("WARP_SPONSOR_PERMISSION");
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue);
-            object = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$4_has_permission(scriptValue2.asStr())) : PolyDispatch.bootstrapCall("memberCall", "has_permission", (ScriptValue)scriptValue, (ScriptValue)scriptValue2, (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue);
+            object = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$4_has_permission(scriptValue2.asStr())) : PolyDispatch.bootstrapCall("memberCall", "has_permission", (ScriptValue)scriptValue, (ScriptValue)scriptValue2, (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
         }
@@ -1176,8 +1156,8 @@ public final class Warps {
         ScriptValue scriptValue = scriptContext.getClassOrVar("Player");
         if (scriptValue != ScriptValue.NULL) {
             ScriptValue scriptValue2 = scriptContext.getClassOrVar("WARP_EXTRA_SLOT_COST");
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue);
-            object = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$28_take_exp(scriptValue2.asNum())) : PolyDispatch.bootstrapCall("memberCall", "take_exp", (ScriptValue)scriptValue, (ScriptValue)scriptValue2, (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue);
+            object = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$28_take_exp(scriptValue2.asNum())) : PolyDispatch.bootstrapCall("memberCall", "take_exp", (ScriptValue)scriptValue, (ScriptValue)scriptValue2, (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
         }
@@ -1185,8 +1165,8 @@ public final class Warps {
             ScriptValue scriptValue3 = scriptContext.getClassOrVar("Player");
             if (scriptValue3 != ScriptValue.NULL) {
                 ScriptValue scriptValue4 = ScriptValue.of((String)("<red>\u2718 <white>You need " + scriptContext.getStr("WARP_EXTRA_SLOT_COST") + " XP points to buy an extra warp slot."));
-                PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue3);
-                v1 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(scriptValue4.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue3, (ScriptValue)scriptValue4, (ScriptContext)scriptContext);
+                PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue3);
+                v1 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(scriptValue4.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue3, (ScriptValue)scriptValue4, (ScriptContext)scriptContext);
             } else {
                 v1 = ScriptValue.NULL;
             }
@@ -1197,28 +1177,27 @@ public final class Warps {
             Object object2;
             String string = "warps_extra_slots";
             String string2 = "int";
-            ScriptValue scriptValue6 = scriptContext.getClassOrVar("Player");
-            if (scriptValue6 != ScriptValue.NULL) {
+            scriptValue5 = scriptContext.getClassOrVar("Player");
+            if (scriptValue5 != ScriptValue.NULL) {
                 String string3 = "warps_extra_slots";
                 String string4 = "int";
-                PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue6);
-                object2 = polyClassPlayer != null ? polyClassPlayer.tm$12_get_typed(string3, string4) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue6, (ScriptValue)ScriptValue.of((String)string3), (ScriptValue)ScriptValue.of((String)string4), (ScriptContext)scriptContext);
+                PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue5);
+                object2 = polyClassPlayer_v2 != null ? polyClassPlayer_v2.tm$12_get_typed(string3, string4) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue5, (ScriptValue)ScriptValue.of((String)string3), (ScriptValue)ScriptValue.of((String)string4), (ScriptContext)scriptContext);
             } else {
                 object2 = ScriptValue.NULL;
             }
-            ScriptValue scriptValue7 = ScriptFormula.addPolymorphic((ScriptValue)object2, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 1.0)));
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue5);
-            v3 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$30_set_typed(string, string2, scriptValue7)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue5, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptValue)scriptValue7, (ScriptContext)scriptContext);
+            ScriptValue scriptValue6 = ScriptFormula.addPolymorphic((ScriptValue)object2, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 1.0)));
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue5);
+            v3 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$30_set_typed(string, string2, scriptValue6)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue5, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptValue)scriptValue6, (ScriptContext)scriptContext);
         } else {
             v3 = ScriptValue.NULL;
         }
-        ScriptValue scriptValue8 = scriptContext.getClassOrVar("Player");
-        if (scriptValue8 != ScriptValue.NULL) {
+        if (scriptValue5 != ScriptValue.NULL) {
             ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
             ScriptContext.Builder builder3 = ScriptContext.builder().copyFrom(scriptContext);
-            ScriptValue scriptValue9 = ScriptValue.of((String)("<green>\u2714 <white>Unlocked an extra warp slot! (" + ScriptFormula.callBuiltin1((String)"len", (ScriptValue)Warps.ownedWarpNames(builder2), (ScriptContext)scriptContext).asStr() + "/" + Warps.effectiveLimit(builder3).asStr() + " used)"));
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue8);
-            v4 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(scriptValue9.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue8, (ScriptValue)scriptValue9, (ScriptContext)scriptContext);
+            ScriptValue scriptValue7 = ScriptValue.of((String)("<green>\u2714 <white>Unlocked an extra warp slot! (" + ScriptFormula.callBuiltin1((String)"len", (ScriptValue)Warps.ownedWarpNames(builder2), (ScriptContext)scriptContext).asStr() + "/" + Warps.effectiveLimit(builder3).asStr() + " used)"));
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue5);
+            v4 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(scriptValue7.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue5, (ScriptValue)scriptValue7, (ScriptContext)scriptContext);
         } else {
             v4 = ScriptValue.NULL;
         }
@@ -1264,8 +1243,8 @@ public final class Warps {
             ScriptValue scriptValue3 = scriptContext.getClassOrVar("Player");
             if (scriptValue3 != ScriptValue.NULL) {
                 String string = "<red>\u2718 <white>Warp name cannot be empty.";
-                PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue3);
-                v0 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue3, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
+                PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue3);
+                v0 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue3, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
             } else {
                 v0 = ScriptValue.NULL;
             }
@@ -1281,15 +1260,15 @@ public final class Warps {
                 ScriptValue scriptValue5 = scriptContext.getClassOrVar("Player");
                 if (scriptValue5 != ScriptValue.NULL) {
                     ScriptValue scriptValue6 = ScriptValue.of((String)("<red>\u2718 <white>A warp named '" + scriptValue2.asStr() + "' already exists."));
-                    PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue5);
-                    v1 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(scriptValue6.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue5, (ScriptValue)scriptValue6, (ScriptContext)scriptContext);
+                    PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue5);
+                    v1 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(scriptValue6.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue5, (ScriptValue)scriptValue6, (ScriptContext)scriptContext);
                 } else {
                     v1 = ScriptValue.NULL;
                 }
                 return ScriptValue.NULL;
             }
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofVar((ScriptContext)scriptContext, (String)"Player");
-            ScriptValue scriptValue7 = polyClassPlayer != null ? polyClassPlayer.pg$73_location() : ((scriptValue4 = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "location", (ScriptValue)scriptValue4, (ScriptContext)scriptContext) : ScriptValue.NULL);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofVar((ScriptContext)scriptContext, (String)"Player");
+            ScriptValue scriptValue7 = polyClassPlayer_v2 != null ? polyClassPlayer_v2.pg$73_location() : ((scriptValue4 = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "location", (ScriptValue)scriptValue4, (ScriptContext)scriptContext) : ScriptValue.NULL);
             builder.val("loc", scriptValue7);
             ScriptValue scriptValue8 = scriptContext.getClassOrVar("SQL");
             if (scriptValue8 != ScriptValue.NULL) {
@@ -1313,8 +1292,8 @@ public final class Warps {
             ScriptValue scriptValue11 = scriptContext.getClassOrVar("Player");
             if (scriptValue11 != ScriptValue.NULL) {
                 ScriptValue scriptValue12 = ScriptValue.of((String)("<green>\u2714 <white>Moved '" + scriptValue2.asStr() + "' to your current location."));
-                PolyClassPlayer polyClassPlayer2 = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue11);
-                v8 = polyClassPlayer2 != null ? ScriptValue.of((boolean)polyClassPlayer2.tm$42_send_message(scriptValue12.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue11, (ScriptValue)scriptValue12, (ScriptContext)scriptContext);
+                PolyClassPlayer_v2 polyClassPlayer_v22 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue11);
+                v8 = polyClassPlayer_v22 != null ? ScriptValue.of((boolean)polyClassPlayer_v22.tm$42_send_message(scriptValue12.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue11, (ScriptValue)scriptValue12, (ScriptContext)scriptContext);
             } else {
                 v8 = ScriptValue.NULL;
             }
@@ -1337,8 +1316,8 @@ public final class Warps {
             ScriptValue scriptValue2 = scriptContext.getClassOrVar("Player");
             if (scriptValue2 != ScriptValue.NULL) {
                 String string = "<red>\u2718 <white>Warp name cannot be empty.";
-                PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue2);
-                v0 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
+                PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue2);
+                v0 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
             } else {
                 v0 = ScriptValue.NULL;
             }
@@ -1350,8 +1329,8 @@ public final class Warps {
             ScriptValue scriptValue3 = scriptContext.getClassOrVar("Player");
             if (scriptValue3 != ScriptValue.NULL) {
                 ScriptValue scriptValue4 = ScriptValue.of((String)("<red>\u2718 <white>A warp named '" + scriptValue.asStr() + "' already exists."));
-                PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue3);
-                v1 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(scriptValue4.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue3, (ScriptValue)scriptValue4, (ScriptContext)scriptContext);
+                PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue3);
+                v1 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(scriptValue4.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue3, (ScriptValue)scriptValue4, (ScriptContext)scriptContext);
             } else {
                 v1 = ScriptValue.NULL;
             }
@@ -1364,8 +1343,8 @@ public final class Warps {
             ScriptValue scriptValue5 = scriptContext.getClassOrVar("Player");
             if (scriptValue5 != ScriptValue.NULL) {
                 ScriptValue scriptValue6 = scriptContext.getClassOrVar("WARP_EXTRA_SLOT_COST");
-                PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue5);
-                object2 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$38_has_exp(scriptValue6.asNum())) : PolyDispatch.bootstrapCall("memberCall", "has_exp", (ScriptValue)scriptValue5, (ScriptValue)scriptValue6, (ScriptContext)scriptContext);
+                PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue5);
+                object2 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$38_has_exp(scriptValue6.asNum())) : PolyDispatch.bootstrapCall("memberCall", "has_exp", (ScriptValue)scriptValue5, (ScriptValue)scriptValue6, (ScriptContext)scriptContext);
             } else {
                 object2 = ScriptValue.NULL;
             }
@@ -1373,8 +1352,8 @@ public final class Warps {
                 ScriptValue scriptValue7 = scriptContext.getClassOrVar("Player");
                 if (scriptValue7 != ScriptValue.NULL) {
                     ScriptValue scriptValue8 = ScriptValue.of((String)("<red>\u2718 <white>You've reached your warp limit. <yellow>You have enough XP to unlock another - try <white>/warps buyslot<yellow>, then create '" + scriptValue.asStr() + "' again."));
-                    PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue7);
-                    v3 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(scriptValue8.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue7, (ScriptValue)scriptValue8, (ScriptContext)scriptContext);
+                    PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue7);
+                    v3 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(scriptValue8.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue7, (ScriptValue)scriptValue8, (ScriptContext)scriptContext);
                 } else {
                     v3 = ScriptValue.NULL;
                 }
@@ -1382,8 +1361,8 @@ public final class Warps {
                 ScriptValue scriptValue9 = scriptContext.getClassOrVar("Player");
                 if (scriptValue9 != ScriptValue.NULL) {
                     String string = "<red>\u2718 <white>You've reached your warp limit.";
-                    PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue9);
-                    v4 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue9, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
+                    PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue9);
+                    v4 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue9, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
                 } else {
                     v4 = ScriptValue.NULL;
                 }
@@ -1393,8 +1372,8 @@ public final class Warps {
         ScriptValue scriptValue10 = scriptContext.getClassOrVar("Player");
         if (scriptValue10 != ScriptValue.NULL) {
             ScriptValue scriptValue11 = scriptContext.getClassOrVar("WARP_CREATE_COST");
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue10);
-            object = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$38_has_exp(scriptValue11.asNum())) : PolyDispatch.bootstrapCall("memberCall", "has_exp", (ScriptValue)scriptValue10, (ScriptValue)scriptValue11, (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue10);
+            object = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$38_has_exp(scriptValue11.asNum())) : PolyDispatch.bootstrapCall("memberCall", "has_exp", (ScriptValue)scriptValue10, (ScriptValue)scriptValue11, (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
         }
@@ -1402,8 +1381,8 @@ public final class Warps {
             ScriptValue scriptValue12 = scriptContext.getClassOrVar("Player");
             if (scriptValue12 != ScriptValue.NULL) {
                 ScriptValue scriptValue13 = ScriptValue.of((String)("<red>\u2718 <white>You need " + scriptContext.getStr("WARP_CREATE_COST") + " XP points to create a warp."));
-                PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue12);
-                v6 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(scriptValue13.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue12, (ScriptValue)scriptValue13, (ScriptContext)scriptContext);
+                PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue12);
+                v6 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(scriptValue13.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue12, (ScriptValue)scriptValue13, (ScriptContext)scriptContext);
             } else {
                 v6 = ScriptValue.NULL;
             }
@@ -1415,25 +1394,24 @@ public final class Warps {
             ScriptValue scriptValue14 = scriptContext.getClassOrVar("Player");
             if (scriptValue14 != ScriptValue.NULL) {
                 ScriptValue scriptValue15 = scriptContext.getClassOrVar("WARP_CREATE_COST");
-                PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue14);
-                v7 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$28_take_exp(scriptValue15.asNum())) : PolyDispatch.bootstrapCall("memberCall", "take_exp", (ScriptValue)scriptValue14, (ScriptValue)scriptValue15, (ScriptContext)scriptContext);
+                PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue14);
+                v7 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$28_take_exp(scriptValue15.asNum())) : PolyDispatch.bootstrapCall("memberCall", "take_exp", (ScriptValue)scriptValue14, (ScriptValue)scriptValue15, (ScriptContext)scriptContext);
             } else {
                 v7 = ScriptValue.NULL;
             }
-            ScriptValue scriptValue16 = scriptContext.getClassOrVar("Player");
-            if (scriptValue16 != ScriptValue.NULL) {
-                ScriptValue scriptValue17 = ScriptValue.of((String)("<green>\u2714 <white>Warp '" + scriptValue.asStr() + "' created for " + scriptContext.getStr("WARP_CREATE_COST") + " XP!"));
-                PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue16);
-                v8 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(scriptValue17.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue16, (ScriptValue)scriptValue17, (ScriptContext)scriptContext);
+            if (scriptValue14 != ScriptValue.NULL) {
+                ScriptValue scriptValue16 = ScriptValue.of((String)("<green>\u2714 <white>Warp '" + scriptValue.asStr() + "' created for " + scriptContext.getStr("WARP_CREATE_COST") + " XP!"));
+                PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue14);
+                v8 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(scriptValue16.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue14, (ScriptValue)scriptValue16, (ScriptContext)scriptContext);
             } else {
                 v8 = ScriptValue.NULL;
             }
         } else {
-            ScriptValue scriptValue18 = scriptContext.getClassOrVar("Player");
-            if (scriptValue18 != ScriptValue.NULL) {
+            ScriptValue scriptValue17 = scriptContext.getClassOrVar("Player");
+            if (scriptValue17 != ScriptValue.NULL) {
                 String string = "<red>\u2718 <white>Could not create that warp.";
-                PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue18);
-                v9 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue18, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
+                PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue17);
+                v9 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue17, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
             } else {
                 v9 = ScriptValue.NULL;
             }
@@ -1535,8 +1513,8 @@ public final class Warps {
                 ScriptValue scriptValue20 = Warps.warpLore(builder3);
                 builder.val("lore", scriptValue20);
                 scriptValue3 = scriptValue20;
-                PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofVar((ScriptContext)scriptContext, (String)"Player");
-                if (ScriptFormula.valuesEqual((ScriptValue)(scriptValue7 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue7, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "buyer_uuid")), (ScriptContext)scriptContext) : ScriptValue.NULL), (ScriptValue)(polyClassPlayer != null ? polyClassPlayer.pg$34_uuid() : ((scriptValue9 = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue9, (ScriptContext)scriptContext) : ScriptValue.NULL)))) {
+                PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofVar((ScriptContext)scriptContext, (String)"Player");
+                if (ScriptFormula.valuesEqual((ScriptValue)(scriptValue7 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue7, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "buyer_uuid")), (ScriptContext)scriptContext) : ScriptValue.NULL), (ScriptValue)(polyClassPlayer_v2 != null ? polyClassPlayer_v2.pg$34_uuid() : ((scriptValue9 = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue9, (ScriptContext)scriptContext) : ScriptValue.NULL)))) {
                     ScriptValue scriptValue21 = ScriptFormula.callBuiltin2((String)"push", (ScriptValue)scriptValue3, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "")), (ScriptContext)scriptContext);
                     builder.val("lore", scriptValue21);
                     scriptValue3 = scriptValue21;
@@ -1585,8 +1563,8 @@ public final class Warps {
             ScriptValue scriptValue2 = scriptContext.getClassOrVar("Player");
             if (scriptValue2 != ScriptValue.NULL) {
                 ScriptValue scriptValue3 = ScriptValue.of((String)("<red>\u2718 <white>You don't own a warp named '" + scriptValue.asStr() + "'."));
-                PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue2);
-                v0 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(scriptValue3.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue2, (ScriptValue)scriptValue3, (ScriptContext)scriptContext);
+                PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue2);
+                v0 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(scriptValue3.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue2, (ScriptValue)scriptValue3, (ScriptContext)scriptContext);
             } else {
                 v0 = ScriptValue.NULL;
             }
@@ -1601,8 +1579,8 @@ public final class Warps {
             ScriptValue scriptValue5 = scriptContext.getClassOrVar("Player");
             if (scriptValue5 != ScriptValue.NULL) {
                 String string = "<red>\u2718 <white>That sponsor slot is already taken.";
-                PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue5);
-                v1 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue5, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
+                PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue5);
+                v1 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue5, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
             } else {
                 v1 = ScriptValue.NULL;
             }
@@ -1614,8 +1592,8 @@ public final class Warps {
         ScriptValue scriptValue8 = scriptContext.getClassOrVar("Player");
         if (scriptValue8 != ScriptValue.NULL) {
             ScriptValue scriptValue9 = scriptValue7;
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue8);
-            object = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$38_has_exp(scriptValue9.asNum())) : PolyDispatch.bootstrapCall("memberCall", "has_exp", (ScriptValue)scriptValue8, (ScriptValue)scriptValue9, (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue8);
+            object = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$38_has_exp(scriptValue9.asNum())) : PolyDispatch.bootstrapCall("memberCall", "has_exp", (ScriptValue)scriptValue8, (ScriptValue)scriptValue9, (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
         }
@@ -1623,8 +1601,8 @@ public final class Warps {
             ScriptValue scriptValue10 = scriptContext.getClassOrVar("Player");
             if (scriptValue10 != ScriptValue.NULL) {
                 ScriptValue scriptValue11 = ScriptValue.of((String)("<red>\u2718 <white>You need " + scriptValue7.asStr() + " XP to sponsor slot #" + scriptContext.getStr("slot_num") + "."));
-                PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue10);
-                v3 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(scriptValue11.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue10, (ScriptValue)scriptValue11, (ScriptContext)scriptContext);
+                PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue10);
+                v3 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(scriptValue11.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue10, (ScriptValue)scriptValue11, (ScriptContext)scriptContext);
             } else {
                 v3 = ScriptValue.NULL;
             }
@@ -1633,44 +1611,41 @@ public final class Warps {
         ScriptValue scriptValue12 = scriptContext.getClassOrVar("Player");
         if (scriptValue12 != ScriptValue.NULL) {
             ScriptValue scriptValue13 = scriptValue7;
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue12);
-            v4 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$28_take_exp(scriptValue13.asNum())) : PolyDispatch.bootstrapCall("memberCall", "take_exp", (ScriptValue)scriptValue12, (ScriptValue)scriptValue13, (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue12);
+            v4 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$28_take_exp(scriptValue13.asNum())) : PolyDispatch.bootstrapCall("memberCall", "take_exp", (ScriptValue)scriptValue12, (ScriptValue)scriptValue13, (ScriptContext)scriptContext);
         } else {
             v4 = ScriptValue.NULL;
         }
         ScriptValue scriptValue14 = scriptContext.getClassOrVar("SQL");
         Object object2 = scriptValue14 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "execute", (ScriptValue)scriptValue14, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "DELETE FROM warp_sponsors WHERE slot_num = ?")), (ScriptValue)ScriptFormula.callBuiltin1((String)"int", (ScriptValue)scriptContext.getClassOrVar("slot_num"), (ScriptContext)scriptContext), (ScriptContext)scriptContext) : ScriptValue.NULL;
-        ScriptValue scriptValue15 = scriptContext.getClassOrVar("SQL");
-        if (scriptValue15 != ScriptValue.NULL) {
-            ScriptValue scriptValue16;
-            ScriptValue scriptValue17;
-            ScriptValue scriptValue18 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "INSERT INTO warp_sponsors (slot_num, warp_id, buyer_uuid, expires_at) VALUES (?, ?, ?, ?)");
-            ScriptValue scriptValue19 = ScriptFormula.callBuiltin1((String)"int", (ScriptValue)scriptContext.getClassOrVar("slot_num"), (ScriptContext)scriptContext);
+        if (scriptValue14 != ScriptValue.NULL) {
+            ScriptValue scriptValue15;
+            PolyClassPlayer_v2 polyClassPlayer_v2;
+            ScriptValue scriptValue16 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "INSERT INTO warp_sponsors (slot_num, warp_id, buyer_uuid, expires_at) VALUES (?, ?, ?, ?)");
+            ScriptValue scriptValue17 = ScriptFormula.callBuiltin1((String)"int", (ScriptValue)scriptContext.getClassOrVar("slot_num"), (ScriptContext)scriptContext);
             ScriptContext.Builder builder5 = ScriptContext.builder().copyFrom(scriptContext);
             builder5.val("name", scriptValue);
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofVar((ScriptContext)scriptContext, (String)"Player");
             PolyClassServer polyClassServer = PolyClassServer.ofVar((ScriptContext)scriptContext, (String)"Server");
-            ScriptValue scriptValue20 = scriptContext.getClassOrVar("SPONSOR_DURATIONS");
-            v8 = PolyDispatch.bootstrapCall("memberCall", "execute", (ScriptValue)scriptValue15, (ScriptValue)scriptValue18, (ScriptValue)scriptValue19, (ScriptValue)Warps.warpId(builder5), (ScriptValue)(polyClassPlayer != null ? polyClassPlayer.pg$34_uuid() : ((scriptValue17 = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue17, (ScriptContext)scriptContext) : ScriptValue.NULL)), (ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)(polyClassServer != null ? polyClassServer.pg$16_time() : ((scriptValue16 = scriptContext.getClassOrVar("Server")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "time", (ScriptValue)scriptValue16, (ScriptContext)scriptContext) : ScriptValue.NULL)), (ScriptValue)(scriptValue20 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue20, (ScriptValue)ScriptValue.of((double)d), (ScriptContext)scriptContext) : ScriptValue.NULL)), (ScriptContext)scriptContext);
+            ScriptValue scriptValue18 = scriptContext.getClassOrVar("SPONSOR_DURATIONS");
+            v8 = PolyDispatch.bootstrapCall("memberCall", "execute", (ScriptValue)scriptValue14, (ScriptValue)scriptValue16, (ScriptValue)scriptValue17, (ScriptValue)Warps.warpId(builder5), (ScriptValue)(scriptValue12 != ScriptValue.NULL ? ((polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue12)) != null ? polyClassPlayer_v2.pg$34_uuid() : PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue12, (ScriptContext)scriptContext)) : ScriptValue.NULL), (ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)(polyClassServer != null ? polyClassServer.pg$16_time() : ((scriptValue15 = scriptContext.getClassOrVar("Server")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "time", (ScriptValue)scriptValue15, (ScriptContext)scriptContext) : ScriptValue.NULL)), (ScriptValue)(scriptValue18 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue18, (ScriptValue)ScriptValue.of((double)d), (ScriptContext)scriptContext) : ScriptValue.NULL)), (ScriptContext)scriptContext);
         } else {
             v8 = ScriptValue.NULL;
         }
-        ScriptValue scriptValue21 = scriptContext.getClassOrVar("Player");
-        if (scriptValue21 != ScriptValue.NULL) {
-            ScriptValue scriptValue22 = ScriptValue.of((String)("<green>\u2714 <white>Sponsored '" + scriptValue.asStr() + "' on slot #" + scriptContext.getStr("slot_num") + "!"));
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue21);
-            v9 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(scriptValue22.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue21, (ScriptValue)scriptValue22, (ScriptContext)scriptContext);
+        if (scriptValue12 != ScriptValue.NULL) {
+            ScriptValue scriptValue19 = ScriptValue.of((String)("<green>\u2714 <white>Sponsored '" + scriptValue.asStr() + "' on slot #" + scriptContext.getStr("slot_num") + "!"));
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue12);
+            v9 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(scriptValue19.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue12, (ScriptValue)scriptValue19, (ScriptContext)scriptContext);
         } else {
             v9 = ScriptValue.NULL;
         }
-        ScriptValue scriptValue23 = scriptContext.getClassOrVar("Cmd");
-        Object object3 = scriptValue23 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "open_page", (ScriptValue)scriptValue23, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "main")), (ScriptContext)scriptContext) : ScriptValue.NULL;
+        ScriptValue scriptValue20 = scriptContext.getClassOrVar("Cmd");
+        Object object3 = scriptValue20 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "open_page", (ScriptValue)scriptValue20, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "main")), (ScriptContext)scriptContext) : ScriptValue.NULL;
         return ScriptValue.NULL;
     }
 
     public static ScriptValue onSponsorClick(ScriptContext.Builder builder) {
         ScriptValue scriptValue;
-        PolyClassPlayer polyClassPlayer;
+        PolyClassPlayer_v2 polyClassPlayer_v2;
         ScriptContext scriptContext = builder.peek();
         ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
         builder2.val("slot_num", ScriptFormula.callBuiltin1((String)"int", (ScriptValue)scriptContext.getClassOrVar("slot_num"), (ScriptContext)scriptContext));
@@ -1682,14 +1657,14 @@ public final class Warps {
             return ScriptValue.NULL;
         }
         ScriptValue scriptValue4 = scriptContext.getClassOrVar("MenuClick");
-        if (ScriptFormula.valuesEqualStr((ScriptValue)(scriptValue4 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "click_type", (ScriptValue)scriptValue4, (ScriptContext)scriptContext) : ScriptValue.NULL), (String)"shift_right") && ScriptFormula.valuesEqual((ScriptValue)(scriptValue2 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue2, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "buyer_uuid")), (ScriptContext)scriptContext) : ScriptValue.NULL), (ScriptValue)((polyClassPlayer = PolyClassPlayer.ofVar((ScriptContext)scriptContext, (String)"Player")) != null ? polyClassPlayer.pg$34_uuid() : ((scriptValue = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue, (ScriptContext)scriptContext) : ScriptValue.NULL)))) {
+        if (ScriptFormula.valuesEqualStr((ScriptValue)(scriptValue4 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "click_type", (ScriptValue)scriptValue4, (ScriptContext)scriptContext) : ScriptValue.NULL), (String)"shift_right") && ScriptFormula.valuesEqual((ScriptValue)(scriptValue2 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue2, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "buyer_uuid")), (ScriptContext)scriptContext) : ScriptValue.NULL), (ScriptValue)((polyClassPlayer_v2 = PolyClassPlayer_v2.ofVar((ScriptContext)scriptContext, (String)"Player")) != null ? polyClassPlayer_v2.pg$34_uuid() : ((scriptValue = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue, (ScriptContext)scriptContext) : ScriptValue.NULL)))) {
             ScriptValue scriptValue5 = scriptContext.getClassOrVar("SQL");
             Object object = scriptValue5 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "execute", (ScriptValue)scriptValue5, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "DELETE FROM warp_sponsors WHERE slot_num = ?")), (ScriptValue)ScriptFormula.callBuiltin1((String)"int", (ScriptValue)scriptContext.getClassOrVar("slot_num"), (ScriptContext)scriptContext), (ScriptContext)scriptContext) : ScriptValue.NULL;
             ScriptValue scriptValue6 = scriptContext.getClassOrVar("Player");
             if (scriptValue6 != ScriptValue.NULL) {
                 ScriptValue scriptValue7 = ScriptValue.of((String)("<yellow>Removed your sponsor from slot #" + scriptContext.getStr("slot_num") + "."));
-                PolyClassPlayer polyClassPlayer2 = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue6);
-                v1 = polyClassPlayer2 != null ? ScriptValue.of((boolean)polyClassPlayer2.tm$42_send_message(scriptValue7.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue6, (ScriptValue)scriptValue7, (ScriptContext)scriptContext);
+                PolyClassPlayer_v2 polyClassPlayer_v22 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue6);
+                v1 = polyClassPlayer_v22 != null ? ScriptValue.of((boolean)polyClassPlayer_v22.tm$42_send_message(scriptValue7.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue6, (ScriptValue)scriptValue7, (ScriptContext)scriptContext);
             } else {
                 v1 = ScriptValue.NULL;
             }
@@ -1704,22 +1679,21 @@ public final class Warps {
     }
 
     public static ScriptValue manageTitle(ScriptContext.Builder builder) {
-        ScriptValue scriptValue;
+        PolyClassPlayer_v2 polyClassPlayer_v2;
         Object object;
         ScriptContext scriptContext = builder.peek();
-        ScriptValue scriptValue2 = scriptContext.getClassOrVar("Player");
-        if (scriptValue2 != ScriptValue.NULL) {
+        ScriptValue scriptValue = scriptContext.getClassOrVar("Player");
+        if (scriptValue != ScriptValue.NULL) {
             String string = "warps_manage_offset";
             String string2 = "int";
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue2);
-            object = polyClassPlayer != null ? polyClassPlayer.tm$12_get_typed(string, string2) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v22 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue);
+            object = polyClassPlayer_v22 != null ? polyClassPlayer_v22.tm$12_get_typed(string, string2) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
         }
-        ScriptValue scriptValue3 = object;
-        builder.val("offset", scriptValue3);
-        PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofVar((ScriptContext)scriptContext, (String)"Player");
-        return ScriptValue.of((String)("{Images.from('cml:player_warps_submenu_1')}{Images.shift(-170)}<black> " + (polyClassPlayer != null ? polyClassPlayer.tg$68_name() : ((scriptValue = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue, (ScriptContext)scriptContext).asStr() : ScriptValue.NULL.asStr())) + "'s Warps"));
+        ScriptValue scriptValue2 = object;
+        builder.val("offset", scriptValue2);
+        return ScriptValue.of((String)("{Images.from('cml:player_warps_submenu_1')}{Images.shift(-170)}<black> " + (scriptValue != ScriptValue.NULL ? ((polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue)) != null ? polyClassPlayer_v2.tg$68_name() : PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue, (ScriptContext)scriptContext).asStr()) : ScriptValue.NULL.asStr()) + "'s Warps"));
     }
 
     public static ScriptValue generateManageButtons(ScriptContext.Builder builder) {
@@ -1735,8 +1709,8 @@ public final class Warps {
         if (scriptValue != ScriptValue.NULL) {
             String string = "warps_search";
             String string2 = "string";
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue);
-            object3 = polyClassPlayer != null ? polyClassPlayer.tm$12_get_typed(string, string2) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue);
+            object3 = polyClassPlayer_v2 != null ? polyClassPlayer_v2.tm$12_get_typed(string, string2) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
         } else {
             object3 = ScriptValue.NULL;
         }
@@ -1745,9 +1719,9 @@ public final class Warps {
         ScriptValue scriptValue3 = scriptContext.getClassOrVar("SQL");
         if (scriptValue3 != ScriptValue.NULL) {
             ScriptValue scriptValue4;
-            PolyClassPlayer polyClassPlayer;
+            PolyClassPlayer_v2 polyClassPlayer_v2;
             ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
-            object2 = PolyDispatch.bootstrapCall("memberCall", "query", (ScriptValue)scriptValue3, (ScriptValue)ScriptValue.of((String)("SELECT * FROM warps WHERE owner_uuid = ? AND (lower(name) LIKE ? OR lower(owner_name) LIKE ?) ORDER BY " + Warps.sortOrderClause(builder2).asStr())), (ScriptValue)((polyClassPlayer = PolyClassPlayer.ofVar((ScriptContext)scriptContext, (String)"Player")) != null ? polyClassPlayer.pg$34_uuid() : ((scriptValue4 = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue4, (ScriptContext)scriptContext) : ScriptValue.NULL)), (ScriptValue)scriptValue2, (ScriptValue)scriptValue2, (ScriptContext)scriptContext);
+            object2 = PolyDispatch.bootstrapCall("memberCall", "query", (ScriptValue)scriptValue3, (ScriptValue)ScriptValue.of((String)("SELECT * FROM warps WHERE owner_uuid = ? AND (lower(name) LIKE ? OR lower(owner_name) LIKE ?) ORDER BY " + Warps.sortOrderClause(builder2).asStr())), (ScriptValue)((polyClassPlayer_v2 = PolyClassPlayer_v2.ofVar((ScriptContext)scriptContext, (String)"Player")) != null ? polyClassPlayer_v2.pg$34_uuid() : ((scriptValue4 = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue4, (ScriptContext)scriptContext) : ScriptValue.NULL)), (ScriptValue)scriptValue2, (ScriptValue)scriptValue2, (ScriptContext)scriptContext);
         } else {
             object2 = ScriptValue.NULL;
         }
@@ -1763,8 +1737,8 @@ public final class Warps {
         if (scriptValue8 != ScriptValue.NULL) {
             String string = "warps_manage_offset";
             String string3 = "int";
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue8);
-            object = polyClassPlayer != null ? polyClassPlayer.tm$12_get_typed(string, string3) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue8, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string3), (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue8);
+            object = polyClassPlayer_v2 != null ? polyClassPlayer_v2.tm$12_get_typed(string, string3) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue8, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string3), (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
         }
@@ -1830,28 +1804,27 @@ public final class Warps {
             String string = "warps_current_warp";
             String string2 = "string";
             ScriptValue scriptValue2 = scriptContext.getClassOrVar("name");
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue);
-            v0 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$30_set_typed(string, string2, scriptValue2)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptValue)scriptValue2, (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue);
+            v0 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$30_set_typed(string, string2, scriptValue2)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptValue)scriptValue2, (ScriptContext)scriptContext);
         } else {
             v0 = ScriptValue.NULL;
         }
         ScriptValue scriptValue3 = scriptContext.getClassOrVar("MenuClick");
         if (ScriptFormula.valuesEqualStr((ScriptValue)(scriptValue3 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "click_type", (ScriptValue)scriptValue3, (ScriptContext)scriptContext) : ScriptValue.NULL), (String)"right")) {
-            ScriptValue scriptValue4 = scriptContext.getClassOrVar("Player");
-            if (scriptValue4 != ScriptValue.NULL) {
+            if (scriptValue != ScriptValue.NULL) {
                 String string = "warps_return_page";
                 String string3 = "string";
-                ScriptValue scriptValue5 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "manage");
-                PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue4);
-                v1 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$30_set_typed(string, string3, scriptValue5)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue4, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string3), (ScriptValue)scriptValue5, (ScriptContext)scriptContext);
+                ScriptValue scriptValue4 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "manage");
+                PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue);
+                v1 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$30_set_typed(string, string3, scriptValue4)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string3), (ScriptValue)scriptValue4, (ScriptContext)scriptContext);
             } else {
                 v1 = ScriptValue.NULL;
             }
-            ScriptValue scriptValue6 = scriptContext.getClassOrVar("Cmd");
-            Object object = scriptValue6 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "open_page", (ScriptValue)scriptValue6, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "visitedit")), (ScriptContext)scriptContext) : ScriptValue.NULL;
+            ScriptValue scriptValue5 = scriptContext.getClassOrVar("Cmd");
+            Object object = scriptValue5 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "open_page", (ScriptValue)scriptValue5, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "visitedit")), (ScriptContext)scriptContext) : ScriptValue.NULL;
         } else {
-            ScriptValue scriptValue7 = scriptContext.getClassOrVar("Cmd");
-            Object object = scriptValue7 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "open_page", (ScriptValue)scriptValue7, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "managewarp")), (ScriptContext)scriptContext) : ScriptValue.NULL;
+            ScriptValue scriptValue6 = scriptContext.getClassOrVar("Cmd");
+            Object object = scriptValue6 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "open_page", (ScriptValue)scriptValue6, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "managewarp")), (ScriptContext)scriptContext) : ScriptValue.NULL;
         }
         return ScriptValue.NULL;
     }
@@ -1876,21 +1849,20 @@ public final class Warps {
         if (scriptValue2 != ScriptValue.NULL) {
             String string = "warps_manage_offset";
             String string2 = "int";
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue2);
-            object = polyClassPlayer != null ? polyClassPlayer.tm$12_get_typed(string, string2) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue2);
+            object = polyClassPlayer_v2 != null ? polyClassPlayer_v2.tm$12_get_typed(string, string2) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
         }
         ScriptValue scriptValue3 = object;
         builder.val("offset", scriptValue3);
         if (scriptValue3.asNum() > 0.0) {
-            ScriptValue scriptValue4 = scriptContext.getClassOrVar("Player");
-            if (scriptValue4 != ScriptValue.NULL) {
+            if (scriptValue2 != ScriptValue.NULL) {
                 String string = "warps_manage_offset";
                 String string3 = "int";
-                ScriptValue scriptValue5 = ScriptValue.of((double)(scriptValue3.asNum() - 1.0));
-                PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue4);
-                v1 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$30_set_typed(string, string3, scriptValue5)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue4, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string3), (ScriptValue)scriptValue5, (ScriptContext)scriptContext);
+                ScriptValue scriptValue4 = ScriptValue.of((double)(scriptValue3.asNum() - 1.0));
+                PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue2);
+                v1 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$30_set_typed(string, string3, scriptValue4)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string3), (ScriptValue)scriptValue4, (ScriptContext)scriptContext);
             } else {
                 v1 = ScriptValue.NULL;
             }
@@ -1907,8 +1879,8 @@ public final class Warps {
         if (scriptValue2 != ScriptValue.NULL) {
             String string = "warps_manage_offset";
             String string2 = "int";
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue2);
-            object = polyClassPlayer != null ? polyClassPlayer.tm$12_get_typed(string, string2) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue2);
+            object = polyClassPlayer_v2 != null ? polyClassPlayer_v2.tm$12_get_typed(string, string2) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
         }
@@ -1916,13 +1888,12 @@ public final class Warps {
         builder.val("offset", scriptValue3);
         ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
         if (scriptValue3.asNum() < Warps.maxManageOffset(builder2).asNum()) {
-            ScriptValue scriptValue4 = scriptContext.getClassOrVar("Player");
-            if (scriptValue4 != ScriptValue.NULL) {
+            if (scriptValue2 != ScriptValue.NULL) {
                 String string = "warps_manage_offset";
                 String string3 = "int";
-                ScriptValue scriptValue5 = ScriptFormula.addPolymorphic((ScriptValue)scriptValue3, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 1.0)));
-                PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue4);
-                v1 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$30_set_typed(string, string3, scriptValue5)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue4, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string3), (ScriptValue)scriptValue5, (ScriptContext)scriptContext);
+                ScriptValue scriptValue4 = ScriptFormula.addPolymorphic((ScriptValue)scriptValue3, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 1.0)));
+                PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue2);
+                v1 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$30_set_typed(string, string3, scriptValue4)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string3), (ScriptValue)scriptValue4, (ScriptContext)scriptContext);
             } else {
                 v1 = ScriptValue.NULL;
             }
@@ -1938,7 +1909,7 @@ public final class Warps {
 
     public static ScriptValue favouriteRows(ScriptContext.Builder builder) {
         ScriptValue scriptValue;
-        PolyClassPlayer polyClassPlayer;
+        PolyClassPlayer_v2 polyClassPlayer_v2;
         Object object;
         ScriptContext scriptContext = builder.peek();
         StringBuilder stringBuilder = new StringBuilder().append("%");
@@ -1946,15 +1917,15 @@ public final class Warps {
         if (scriptValue2 != ScriptValue.NULL) {
             String string = "warps_search";
             String string2 = "string";
-            PolyClassPlayer polyClassPlayer2 = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue2);
-            object = polyClassPlayer2 != null ? polyClassPlayer2.tm$12_get_typed(string, string2) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v22 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue2);
+            object = polyClassPlayer_v22 != null ? polyClassPlayer_v22.tm$12_get_typed(string, string2) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
         }
         ScriptValue scriptValue3 = ScriptValue.of((String)stringBuilder.append(ScriptFormula.callBuiltin1((String)"lower", (ScriptValue)object, (ScriptContext)scriptContext).asStr()).append("%").toString());
         builder.val("like", scriptValue3);
         ScriptValue scriptValue4 = scriptContext.getClassOrVar("SQL");
-        return scriptValue4 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "query", (ScriptValue)scriptValue4, (ScriptValue)ScriptValue.of((String)("SELECT w.* FROM warp_favourites f JOIN warps w ON w.id = f.warp_id " + "WHERE f.player_uuid = ? AND (lower(w.name) LIKE ? OR lower(w.owner_name) LIKE ?) ORDER BY w.name ASC")), (ScriptValue)((polyClassPlayer = PolyClassPlayer.ofVar((ScriptContext)scriptContext, (String)"Player")) != null ? polyClassPlayer.pg$34_uuid() : ((scriptValue = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue, (ScriptContext)scriptContext) : ScriptValue.NULL)), (ScriptValue)scriptValue3, (ScriptValue)scriptValue3, (ScriptContext)scriptContext) : ScriptValue.NULL;
+        return scriptValue4 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "query", (ScriptValue)scriptValue4, (ScriptValue)ScriptValue.of((String)("SELECT w.* FROM warp_favourites f JOIN warps w ON w.id = f.warp_id " + "WHERE f.player_uuid = ? AND (lower(w.name) LIKE ? OR lower(w.owner_name) LIKE ?) ORDER BY w.name ASC")), (ScriptValue)((polyClassPlayer_v2 = PolyClassPlayer_v2.ofVar((ScriptContext)scriptContext, (String)"Player")) != null ? polyClassPlayer_v2.pg$34_uuid() : ((scriptValue = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue, (ScriptContext)scriptContext) : ScriptValue.NULL)), (ScriptValue)scriptValue3, (ScriptValue)scriptValue3, (ScriptContext)scriptContext) : ScriptValue.NULL;
     }
 
     public static ScriptValue generateFavouriteButtons(ScriptContext.Builder builder) {
@@ -1973,8 +1944,8 @@ public final class Warps {
         if (scriptValue3 != ScriptValue.NULL) {
             String string = "warps_favourite_offset";
             String string2 = "int";
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue3);
-            object = polyClassPlayer != null ? polyClassPlayer.tm$12_get_typed(string, string2) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue3, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue3);
+            object = polyClassPlayer_v2 != null ? polyClassPlayer_v2.tm$12_get_typed(string, string2) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue3, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
         }
@@ -2039,23 +2010,22 @@ public final class Warps {
                 String string = "warps_current_warp";
                 String string2 = "string";
                 ScriptValue scriptValue3 = scriptContext.getClassOrVar("name");
-                PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue2);
-                v0 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$30_set_typed(string, string2, scriptValue3)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptValue)scriptValue3, (ScriptContext)scriptContext);
+                PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue2);
+                v0 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$30_set_typed(string, string2, scriptValue3)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptValue)scriptValue3, (ScriptContext)scriptContext);
             } else {
                 v0 = ScriptValue.NULL;
             }
-            ScriptValue scriptValue4 = scriptContext.getClassOrVar("Player");
-            if (scriptValue4 != ScriptValue.NULL) {
+            if (scriptValue2 != ScriptValue.NULL) {
                 String string = "warps_return_page";
                 String string3 = "string";
-                ScriptValue scriptValue5 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "favourite");
-                PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue4);
-                v1 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$30_set_typed(string, string3, scriptValue5)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue4, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string3), (ScriptValue)scriptValue5, (ScriptContext)scriptContext);
+                ScriptValue scriptValue4 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "favourite");
+                PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue2);
+                v1 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$30_set_typed(string, string3, scriptValue4)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string3), (ScriptValue)scriptValue4, (ScriptContext)scriptContext);
             } else {
                 v1 = ScriptValue.NULL;
             }
-            ScriptValue scriptValue6 = scriptContext.getClassOrVar("Cmd");
-            Object object = scriptValue6 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "open_page", (ScriptValue)scriptValue6, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "visitedit")), (ScriptContext)scriptContext) : ScriptValue.NULL;
+            ScriptValue scriptValue5 = scriptContext.getClassOrVar("Cmd");
+            Object object = scriptValue5 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "open_page", (ScriptValue)scriptValue5, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "visitedit")), (ScriptContext)scriptContext) : ScriptValue.NULL;
         } else {
             ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
             builder2.val("name", scriptContext.getClassOrVar("name"));
@@ -2084,21 +2054,20 @@ public final class Warps {
         if (scriptValue2 != ScriptValue.NULL) {
             String string = "warps_favourite_offset";
             String string2 = "int";
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue2);
-            object = polyClassPlayer != null ? polyClassPlayer.tm$12_get_typed(string, string2) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue2);
+            object = polyClassPlayer_v2 != null ? polyClassPlayer_v2.tm$12_get_typed(string, string2) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
         }
         ScriptValue scriptValue3 = object;
         builder.val("offset", scriptValue3);
         if (scriptValue3.asNum() > 0.0) {
-            ScriptValue scriptValue4 = scriptContext.getClassOrVar("Player");
-            if (scriptValue4 != ScriptValue.NULL) {
+            if (scriptValue2 != ScriptValue.NULL) {
                 String string = "warps_favourite_offset";
                 String string3 = "int";
-                ScriptValue scriptValue5 = ScriptValue.of((double)(scriptValue3.asNum() - 1.0));
-                PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue4);
-                v1 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$30_set_typed(string, string3, scriptValue5)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue4, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string3), (ScriptValue)scriptValue5, (ScriptContext)scriptContext);
+                ScriptValue scriptValue4 = ScriptValue.of((double)(scriptValue3.asNum() - 1.0));
+                PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue2);
+                v1 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$30_set_typed(string, string3, scriptValue4)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string3), (ScriptValue)scriptValue4, (ScriptContext)scriptContext);
             } else {
                 v1 = ScriptValue.NULL;
             }
@@ -2115,8 +2084,8 @@ public final class Warps {
         if (scriptValue2 != ScriptValue.NULL) {
             String string = "warps_favourite_offset";
             String string2 = "int";
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue2);
-            object = polyClassPlayer != null ? polyClassPlayer.tm$12_get_typed(string, string2) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue2);
+            object = polyClassPlayer_v2 != null ? polyClassPlayer_v2.tm$12_get_typed(string, string2) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
         }
@@ -2124,13 +2093,12 @@ public final class Warps {
         builder.val("offset", scriptValue3);
         ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
         if (scriptValue3.asNum() < Warps.maxFavouriteOffset(builder2).asNum()) {
-            ScriptValue scriptValue4 = scriptContext.getClassOrVar("Player");
-            if (scriptValue4 != ScriptValue.NULL) {
+            if (scriptValue2 != ScriptValue.NULL) {
                 String string = "warps_favourite_offset";
                 String string3 = "int";
-                ScriptValue scriptValue5 = ScriptFormula.addPolymorphic((ScriptValue)scriptValue3, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 1.0)));
-                PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue4);
-                v1 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$30_set_typed(string, string3, scriptValue5)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue4, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string3), (ScriptValue)scriptValue5, (ScriptContext)scriptContext);
+                ScriptValue scriptValue4 = ScriptFormula.addPolymorphic((ScriptValue)scriptValue3, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 1.0)));
+                PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue2);
+                v1 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$30_set_typed(string, string3, scriptValue4)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string3), (ScriptValue)scriptValue4, (ScriptContext)scriptContext);
             } else {
                 v1 = ScriptValue.NULL;
             }
@@ -2151,27 +2119,27 @@ public final class Warps {
         builder.val("was_fav", scriptValue2);
         if (scriptValue2.asBool()) {
             ScriptValue scriptValue3;
-            PolyClassPlayer polyClassPlayer;
+            PolyClassPlayer_v2 polyClassPlayer_v2;
             ScriptValue scriptValue4 = scriptContext.getClassOrVar("SQL");
-            Object object = scriptValue4 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "execute", (ScriptValue)scriptValue4, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "DELETE FROM warp_favourites WHERE warp_id = ? AND player_uuid = ?")), (ScriptValue)scriptValue, (ScriptValue)((polyClassPlayer = PolyClassPlayer.ofVar((ScriptContext)scriptContext, (String)"Player")) != null ? polyClassPlayer.pg$34_uuid() : ((scriptValue3 = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue3, (ScriptContext)scriptContext) : ScriptValue.NULL)), (ScriptContext)scriptContext) : ScriptValue.NULL;
+            Object object = scriptValue4 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "execute", (ScriptValue)scriptValue4, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "DELETE FROM warp_favourites WHERE warp_id = ? AND player_uuid = ?")), (ScriptValue)scriptValue, (ScriptValue)((polyClassPlayer_v2 = PolyClassPlayer_v2.ofVar((ScriptContext)scriptContext, (String)"Player")) != null ? polyClassPlayer_v2.pg$34_uuid() : ((scriptValue3 = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue3, (ScriptContext)scriptContext) : ScriptValue.NULL)), (ScriptContext)scriptContext) : ScriptValue.NULL;
             ScriptValue scriptValue5 = scriptContext.getClassOrVar("Player");
             if (scriptValue5 != ScriptValue.NULL) {
                 ScriptValue scriptValue6 = ScriptValue.of((String)("<yellow>Removed <white>" + scriptContext.getStr("name") + " <yellow>from favourites."));
-                PolyClassPlayer polyClassPlayer2 = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue5);
-                v1 = polyClassPlayer2 != null ? ScriptValue.of((boolean)polyClassPlayer2.tm$42_send_message(scriptValue6.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue5, (ScriptValue)scriptValue6, (ScriptContext)scriptContext);
+                PolyClassPlayer_v2 polyClassPlayer_v22 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue5);
+                v1 = polyClassPlayer_v22 != null ? ScriptValue.of((boolean)polyClassPlayer_v22.tm$42_send_message(scriptValue6.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue5, (ScriptValue)scriptValue6, (ScriptContext)scriptContext);
             } else {
                 v1 = ScriptValue.NULL;
             }
         } else {
             ScriptValue scriptValue7;
-            PolyClassPlayer polyClassPlayer;
+            PolyClassPlayer_v2 polyClassPlayer_v2;
             ScriptValue scriptValue8 = scriptContext.getClassOrVar("SQL");
-            Object object = scriptValue8 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "execute", (ScriptValue)scriptValue8, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "INSERT INTO warp_favourites (warp_id, player_uuid) VALUES (?, ?)")), (ScriptValue)scriptValue, (ScriptValue)((polyClassPlayer = PolyClassPlayer.ofVar((ScriptContext)scriptContext, (String)"Player")) != null ? polyClassPlayer.pg$34_uuid() : ((scriptValue7 = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue7, (ScriptContext)scriptContext) : ScriptValue.NULL)), (ScriptContext)scriptContext) : ScriptValue.NULL;
+            Object object = scriptValue8 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "execute", (ScriptValue)scriptValue8, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "INSERT INTO warp_favourites (warp_id, player_uuid) VALUES (?, ?)")), (ScriptValue)scriptValue, (ScriptValue)((polyClassPlayer_v2 = PolyClassPlayer_v2.ofVar((ScriptContext)scriptContext, (String)"Player")) != null ? polyClassPlayer_v2.pg$34_uuid() : ((scriptValue7 = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue7, (ScriptContext)scriptContext) : ScriptValue.NULL)), (ScriptContext)scriptContext) : ScriptValue.NULL;
             ScriptValue scriptValue9 = scriptContext.getClassOrVar("Player");
             if (scriptValue9 != ScriptValue.NULL) {
                 ScriptValue scriptValue10 = ScriptValue.of((String)("<green>Added <white>" + scriptContext.getStr("name") + " <green>to favourites."));
-                PolyClassPlayer polyClassPlayer3 = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue9);
-                v3 = polyClassPlayer3 != null ? ScriptValue.of((boolean)polyClassPlayer3.tm$42_send_message(scriptValue10.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue9, (ScriptValue)scriptValue10, (ScriptContext)scriptContext);
+                PolyClassPlayer_v2 polyClassPlayer_v23 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue9);
+                v3 = polyClassPlayer_v23 != null ? ScriptValue.of((boolean)polyClassPlayer_v23.tm$42_send_message(scriptValue10.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue9, (ScriptValue)scriptValue10, (ScriptContext)scriptContext);
             } else {
                 v3 = ScriptValue.NULL;
             }
@@ -2186,8 +2154,8 @@ public final class Warps {
         if (scriptValue != ScriptValue.NULL) {
             String string = "warps_current_warp";
             String string2 = "string";
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue);
-            object = polyClassPlayer != null ? polyClassPlayer.tm$12_get_typed(string, string2) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue);
+            object = polyClassPlayer_v2 != null ? polyClassPlayer_v2.tm$12_get_typed(string, string2) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
         }
@@ -2262,8 +2230,8 @@ public final class Warps {
         ScriptValue scriptValue5 = scriptContext.getClassOrVar("Player");
         if (scriptValue5 != ScriptValue.NULL) {
             String string = "<green>\u2714 <white>Description updated.";
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue5);
-            v3 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue5, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue5);
+            v3 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue5, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
         } else {
             v3 = ScriptValue.NULL;
         }
@@ -2290,8 +2258,8 @@ public final class Warps {
             ScriptValue scriptValue4 = scriptContext.getClassOrVar("Player");
             if (scriptValue4 != ScriptValue.NULL) {
                 ScriptValue scriptValue5 = ScriptValue.of((String)("<green>\u2714 <white>" + scriptValue.asStr() + " is now public."));
-                PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue4);
-                v1 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(scriptValue5.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue4, (ScriptValue)scriptValue5, (ScriptContext)scriptContext);
+                PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue4);
+                v1 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(scriptValue5.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue4, (ScriptValue)scriptValue5, (ScriptContext)scriptContext);
             } else {
                 v1 = ScriptValue.NULL;
             }
@@ -2301,8 +2269,8 @@ public final class Warps {
             ScriptValue scriptValue7 = scriptContext.getClassOrVar("Player");
             if (scriptValue7 != ScriptValue.NULL) {
                 ScriptValue scriptValue8 = ScriptValue.of((String)("<yellow>" + scriptValue.asStr() + " is now locked (hidden from the browser)."));
-                PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue7);
-                v3 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(scriptValue8.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue7, (ScriptValue)scriptValue8, (ScriptContext)scriptContext);
+                PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue7);
+                v3 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(scriptValue8.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue7, (ScriptValue)scriptValue8, (ScriptContext)scriptContext);
             } else {
                 v3 = ScriptValue.NULL;
             }
@@ -2331,8 +2299,8 @@ public final class Warps {
             ScriptValue scriptValue5 = scriptContext.getClassOrVar("Player");
             if (scriptValue5 != ScriptValue.NULL) {
                 String string = "<yellow>Category removed (reset to 'other').";
-                PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue5);
-                v2 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue5, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
+                PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue5);
+                v2 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue5, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
             } else {
                 v2 = ScriptValue.NULL;
             }
@@ -2379,8 +2347,8 @@ public final class Warps {
         ScriptValue scriptValue7 = scriptContext.getClassOrVar("Player");
         if (scriptValue7 != ScriptValue.NULL) {
             ScriptValue scriptValue8 = ScriptValue.of((String)("<green>\u2714 <white>Category set to '" + scriptContext.getStr("cat") + "'."));
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue7);
-            v3 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(scriptValue8.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue7, (ScriptValue)scriptValue8, (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue7);
+            v3 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(scriptValue8.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue7, (ScriptValue)scriptValue8, (ScriptContext)scriptContext);
         } else {
             v3 = ScriptValue.NULL;
         }
@@ -2423,8 +2391,8 @@ public final class Warps {
             ScriptValue scriptValue6 = scriptContext.getClassOrVar("Player");
             if (scriptValue6 != ScriptValue.NULL) {
                 ScriptValue scriptValue7 = ScriptValue.of((String)("<red>\u2718 <white>" + scriptValue2.asStr() + " is not online."));
-                PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue6);
-                v1 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(scriptValue7.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue6, (ScriptValue)scriptValue7, (ScriptContext)scriptContext);
+                PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue6);
+                v1 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(scriptValue7.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue6, (ScriptValue)scriptValue7, (ScriptContext)scriptContext);
             } else {
                 v1 = ScriptValue.NULL;
             }
@@ -2436,13 +2404,12 @@ public final class Warps {
         builder.val("wid", scriptValue8);
         ScriptValue scriptValue9 = scriptContext.getClassOrVar("SQL");
         Object object2 = scriptValue9 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "execute", (ScriptValue)scriptValue9, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "DELETE FROM warp_bans WHERE warp_id = ? AND uuid = ?")), (ScriptValue)scriptValue8, (ScriptValue)(scriptValue5 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue5, (ScriptContext)scriptContext) : ScriptValue.NULL), (ScriptContext)scriptContext) : ScriptValue.NULL;
-        ScriptValue scriptValue10 = scriptContext.getClassOrVar("SQL");
-        Object object3 = scriptValue10 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "execute", (ScriptValue)scriptValue10, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "INSERT INTO warp_bans (warp_id, uuid, name) VALUES (?, ?, ?)")), (ScriptValue)scriptValue8, (ScriptValue)(scriptValue5 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue5, (ScriptContext)scriptContext) : ScriptValue.NULL), (ScriptValue)(scriptValue5 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue5, (ScriptContext)scriptContext) : ScriptValue.NULL), (ScriptContext)scriptContext) : ScriptValue.NULL;
-        ScriptValue scriptValue11 = scriptContext.getClassOrVar("Player");
-        if (scriptValue11 != ScriptValue.NULL) {
-            ScriptValue scriptValue12 = ScriptValue.of((String)("<green>\u2714 <white>Banned " + (scriptValue5 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue5, (ScriptContext)scriptContext) : ScriptValue.NULL).asStr() + " from " + scriptValue.asStr() + "."));
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue11);
-            v4 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(scriptValue12.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue11, (ScriptValue)scriptValue12, (ScriptContext)scriptContext);
+        Object object3 = scriptValue9 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "execute", (ScriptValue)scriptValue9, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "INSERT INTO warp_bans (warp_id, uuid, name) VALUES (?, ?, ?)")), (ScriptValue)scriptValue8, (ScriptValue)(scriptValue5 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue5, (ScriptContext)scriptContext) : ScriptValue.NULL), (ScriptValue)(scriptValue5 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue5, (ScriptContext)scriptContext) : ScriptValue.NULL), (ScriptContext)scriptContext) : ScriptValue.NULL;
+        ScriptValue scriptValue10 = scriptContext.getClassOrVar("Player");
+        if (scriptValue10 != ScriptValue.NULL) {
+            ScriptValue scriptValue11 = ScriptValue.of((String)("<green>\u2714 <white>Banned " + (scriptValue5 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue5, (ScriptContext)scriptContext) : ScriptValue.NULL).asStr() + " from " + scriptValue.asStr() + "."));
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue10);
+            v4 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(scriptValue11.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue10, (ScriptValue)scriptValue11, (ScriptContext)scriptContext);
         } else {
             v4 = ScriptValue.NULL;
         }
@@ -2460,15 +2427,15 @@ public final class Warps {
         if (Warps.isOwner(builder3).asBool() ^ true) {
             return ScriptValue.NULL;
         }
-        PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofVar((ScriptContext)scriptContext, (String)"Player");
-        ScriptValue scriptValue3 = polyClassPlayer != null ? polyClassPlayer.pg$48_main_hand() : ((scriptValue = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "main_hand", (ScriptValue)scriptValue, (ScriptContext)scriptContext) : ScriptValue.NULL);
+        PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofVar((ScriptContext)scriptContext, (String)"Player");
+        ScriptValue scriptValue3 = polyClassPlayer_v2 != null ? polyClassPlayer_v2.pg$48_main_hand() : ((scriptValue = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "main_hand", (ScriptValue)scriptValue, (ScriptContext)scriptContext) : ScriptValue.NULL);
         builder.val("held", scriptValue3);
         if (ScriptFormula.callBuiltin1((String)"is_empty", (ScriptValue)scriptValue3, (ScriptContext)scriptContext).asBool()) {
             ScriptValue scriptValue4 = scriptContext.getClassOrVar("Player");
             if (scriptValue4 != ScriptValue.NULL) {
                 String string = "<red>\u2718 <white>Hold an item first.";
-                PolyClassPlayer polyClassPlayer2 = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue4);
-                v0 = polyClassPlayer2 != null ? ScriptValue.of((boolean)polyClassPlayer2.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue4, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
+                PolyClassPlayer_v2 polyClassPlayer_v22 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue4);
+                v0 = polyClassPlayer_v22 != null ? ScriptValue.of((boolean)polyClassPlayer_v22.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue4, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
             } else {
                 v0 = ScriptValue.NULL;
             }
@@ -2487,8 +2454,8 @@ public final class Warps {
         ScriptValue scriptValue7 = scriptContext.getClassOrVar("Player");
         if (scriptValue7 != ScriptValue.NULL) {
             String string = "<green>\u2714 <white>Icon updated.";
-            PolyClassPlayer polyClassPlayer3 = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue7);
-            v4 = polyClassPlayer3 != null ? ScriptValue.of((boolean)polyClassPlayer3.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue7, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v23 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue7);
+            v4 = polyClassPlayer_v23 != null ? ScriptValue.of((boolean)polyClassPlayer_v23.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue7, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
         } else {
             v4 = ScriptValue.NULL;
         }
@@ -2502,8 +2469,8 @@ public final class Warps {
             String string = "warps_visited_offset";
             String string2 = "int";
             ScriptValue scriptValue2 =  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 0.0);
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue);
-            v0 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$30_set_typed(string, string2, scriptValue2)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptValue)scriptValue2, (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue);
+            v0 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$30_set_typed(string, string2, scriptValue2)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptValue)scriptValue2, (ScriptContext)scriptContext);
         } else {
             v0 = ScriptValue.NULL;
         }
@@ -2519,8 +2486,8 @@ public final class Warps {
             String string = "warps_banned_offset";
             String string2 = "int";
             ScriptValue scriptValue2 =  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 0.0);
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue);
-            v0 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$30_set_typed(string, string2, scriptValue2)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptValue)scriptValue2, (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue);
+            v0 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$30_set_typed(string, string2, scriptValue2)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptValue)scriptValue2, (ScriptContext)scriptContext);
         } else {
             v0 = ScriptValue.NULL;
         }
@@ -2568,7 +2535,7 @@ public final class Warps {
             var8_8 = var1_1.getClassOrVar("Player");
             if (var8_8 != ScriptValue.NULL) {
                 var9_9 = "<red>\u2718 <white>Could not rename that warp.";
-                var10_10 = PolyClassPlayer.ofGuarded((ScriptValue)var8_8);
+                var10_10 = PolyClassPlayer_v2.ofGuarded((ScriptValue)var8_8);
                 v1 /* !! */  = var10_10 != null ? ScriptValue.of((boolean)var10_10.tm$42_send_message(var9_9)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)var8_8, (ScriptValue)ScriptValue.of((String)var9_9), (ScriptContext)var1_1);
             } else {
                 v1 /* !! */  = ScriptValue.NULL;
@@ -2589,16 +2556,15 @@ public final class Warps {
             var14_14 = "warps_current_warp";
             var15_15 = "string";
             var16_16 = var5_5;
-            var17_17 = PolyClassPlayer.ofGuarded((ScriptValue)var13_13);
+            var17_17 = PolyClassPlayer_v2.ofGuarded((ScriptValue)var13_13);
             v4 /* !! */  = var17_17 != null ? ScriptValue.of((boolean)var17_17.tm$30_set_typed(var14_14, var15_15, var16_16)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)var13_13, (ScriptValue)ScriptValue.of((String)var14_14), (ScriptValue)ScriptValue.of((String)var15_15), (ScriptValue)var16_16, (ScriptContext)var1_1);
         } else {
             v4 /* !! */  = ScriptValue.NULL;
         }
-        var18_18 = var1_1.getClassOrVar("Player");
-        if (var18_18 != ScriptValue.NULL) {
-            var19_19 = ScriptValue.of((String)("<green>\u2714 <white>Renamed to '" + var5_5.asStr() + "'."));
-            var20_20 = PolyClassPlayer.ofGuarded((ScriptValue)var18_18);
-            v5 /* !! */  = var20_20 != null ? ScriptValue.of((boolean)var20_20.tm$42_send_message(var19_19.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)var18_18, (ScriptValue)var19_19, (ScriptContext)var1_1);
+        if (var13_13 != ScriptValue.NULL) {
+            var18_18 = ScriptValue.of((String)("<green>\u2714 <white>Renamed to '" + var5_5.asStr() + "'."));
+            var19_19 = PolyClassPlayer_v2.ofGuarded((ScriptValue)var13_13);
+            v5 /* !! */  = var19_19 != null ? ScriptValue.of((boolean)var19_19.tm$42_send_message(var18_18.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)var13_13, (ScriptValue)var18_18, (ScriptContext)var1_1);
         } else {
             v5 /* !! */  = ScriptValue.NULL;
         }
@@ -2616,8 +2582,8 @@ public final class Warps {
             ScriptValue scriptValue2 = scriptContext.getClassOrVar("Player");
             if (scriptValue2 != ScriptValue.NULL) {
                 ScriptValue scriptValue3 = ScriptValue.of((String)("<green>\u2714 <white>Deleted warp '" + scriptValue.asStr() + "'."));
-                PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue2);
-                v0 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(scriptValue3.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue2, (ScriptValue)scriptValue3, (ScriptContext)scriptContext);
+                PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue2);
+                v0 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(scriptValue3.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue2, (ScriptValue)scriptValue3, (ScriptContext)scriptContext);
             } else {
                 v0 = ScriptValue.NULL;
             }
@@ -2627,8 +2593,8 @@ public final class Warps {
             ScriptValue scriptValue5 = scriptContext.getClassOrVar("Player");
             if (scriptValue5 != ScriptValue.NULL) {
                 String string = "<red>\u2718 <white>You don't own that warp.";
-                PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue5);
-                v2 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue5, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
+                PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue5);
+                v2 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue5, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
             } else {
                 v2 = ScriptValue.NULL;
             }
@@ -2672,8 +2638,8 @@ public final class Warps {
             ScriptValue scriptValue6 = scriptContext.getClassOrVar("Player");
             if (scriptValue6 != ScriptValue.NULL) {
                 ScriptValue scriptValue7 = ScriptValue.of((String)("<red>\u2718 <white>" + scriptValue2.asStr() + " is not online."));
-                PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue6);
-                v1 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(scriptValue7.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue6, (ScriptValue)scriptValue7, (ScriptContext)scriptContext);
+                PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue6);
+                v1 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(scriptValue7.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue6, (ScriptValue)scriptValue7, (ScriptContext)scriptContext);
             } else {
                 v1 = ScriptValue.NULL;
             }
@@ -2693,8 +2659,8 @@ public final class Warps {
         ScriptValue scriptValue10 = scriptContext.getClassOrVar("Player");
         if (scriptValue10 != ScriptValue.NULL) {
             ScriptValue scriptValue11 = ScriptValue.of((String)("<green>\u2714 <white>Transferred " + scriptValue.asStr() + " to " + (scriptValue5 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue5, (ScriptContext)scriptContext) : ScriptValue.NULL).asStr() + "."));
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue10);
-            v6 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(scriptValue11.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue10, (ScriptValue)scriptValue11, (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue10);
+            v6 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(scriptValue11.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue10, (ScriptValue)scriptValue11, (ScriptContext)scriptContext);
         } else {
             v6 = ScriptValue.NULL;
         }
@@ -2716,8 +2682,8 @@ public final class Warps {
         if (scriptValue != ScriptValue.NULL) {
             String string = "warps_banned_search";
             String string2 = "string";
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue);
-            object = polyClassPlayer != null ? polyClassPlayer.tm$12_get_typed(string, string2) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue);
+            object = polyClassPlayer_v2 != null ? polyClassPlayer_v2.tm$12_get_typed(string, string2) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
         }
@@ -2769,8 +2735,8 @@ public final class Warps {
         if (scriptValue4 != ScriptValue.NULL) {
             String string = "warps_banned_search";
             String string2 = "string";
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue4);
-            object = polyClassPlayer != null ? polyClassPlayer.tm$12_get_typed(string, string2) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue4, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue4);
+            object = polyClassPlayer_v2 != null ? polyClassPlayer_v2.tm$12_get_typed(string, string2) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue4, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
         }
@@ -2787,23 +2753,22 @@ public final class Warps {
             ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
             builder2.val("s", scriptContext.getClassOrVar("value"));
             ScriptValue scriptValue2 = Warps.sanitize(builder2);
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue);
-            v0 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$30_set_typed(string, string2, scriptValue2)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptValue)scriptValue2, (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue);
+            v0 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$30_set_typed(string, string2, scriptValue2)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptValue)scriptValue2, (ScriptContext)scriptContext);
         } else {
             v0 = ScriptValue.NULL;
         }
-        ScriptValue scriptValue3 = scriptContext.getClassOrVar("Player");
-        if (scriptValue3 != ScriptValue.NULL) {
+        if (scriptValue != ScriptValue.NULL) {
             String string = "warps_banned_offset";
             String string3 = "int";
-            ScriptValue scriptValue4 =  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 0.0);
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue3);
-            v1 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$30_set_typed(string, string3, scriptValue4)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue3, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string3), (ScriptValue)scriptValue4, (ScriptContext)scriptContext);
+            ScriptValue scriptValue3 =  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 0.0);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue);
+            v1 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$30_set_typed(string, string3, scriptValue3)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string3), (ScriptValue)scriptValue3, (ScriptContext)scriptContext);
         } else {
             v1 = ScriptValue.NULL;
         }
-        ScriptValue scriptValue5 = scriptContext.getClassOrVar("Cmd");
-        Object object = scriptValue5 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "open_page", (ScriptValue)scriptValue5, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "banned")), (ScriptContext)scriptContext) : ScriptValue.NULL;
+        ScriptValue scriptValue4 = scriptContext.getClassOrVar("Cmd");
+        Object object = scriptValue4 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "open_page", (ScriptValue)scriptValue4, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "banned")), (ScriptContext)scriptContext) : ScriptValue.NULL;
         return ScriptValue.NULL;
     }
 
@@ -2820,8 +2785,8 @@ public final class Warps {
         if (scriptValue2 != ScriptValue.NULL) {
             String string = "warps_banned_offset";
             String string2 = "int";
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue2);
-            object = polyClassPlayer != null ? polyClassPlayer.tm$12_get_typed(string, string2) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue2);
+            object = polyClassPlayer_v2 != null ? polyClassPlayer_v2.tm$12_get_typed(string, string2) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
         }
@@ -2901,8 +2866,8 @@ public final class Warps {
         ScriptValue scriptValue4 = scriptContext.getClassOrVar("Player");
         if (scriptValue4 != ScriptValue.NULL) {
             String string = "<green>\u2714 <white>Unbanned.";
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue4);
-            v2 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue4, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue4);
+            v2 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue4, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
         } else {
             v2 = ScriptValue.NULL;
         }
@@ -2931,21 +2896,20 @@ public final class Warps {
         if (scriptValue2 != ScriptValue.NULL) {
             String string = "warps_banned_offset";
             String string2 = "int";
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue2);
-            object = polyClassPlayer != null ? polyClassPlayer.tm$12_get_typed(string, string2) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue2);
+            object = polyClassPlayer_v2 != null ? polyClassPlayer_v2.tm$12_get_typed(string, string2) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
         }
         ScriptValue scriptValue3 = object;
         builder.val("offset", scriptValue3);
         if (scriptValue3.asNum() > 0.0) {
-            ScriptValue scriptValue4 = scriptContext.getClassOrVar("Player");
-            if (scriptValue4 != ScriptValue.NULL) {
+            if (scriptValue2 != ScriptValue.NULL) {
                 String string = "warps_banned_offset";
                 String string3 = "int";
-                ScriptValue scriptValue5 = ScriptValue.of((double)(scriptValue3.asNum() - 1.0));
-                PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue4);
-                v1 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$30_set_typed(string, string3, scriptValue5)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue4, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string3), (ScriptValue)scriptValue5, (ScriptContext)scriptContext);
+                ScriptValue scriptValue4 = ScriptValue.of((double)(scriptValue3.asNum() - 1.0));
+                PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue2);
+                v1 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$30_set_typed(string, string3, scriptValue4)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string3), (ScriptValue)scriptValue4, (ScriptContext)scriptContext);
             } else {
                 v1 = ScriptValue.NULL;
             }
@@ -2962,8 +2926,8 @@ public final class Warps {
         if (scriptValue2 != ScriptValue.NULL) {
             String string = "warps_banned_offset";
             String string2 = "int";
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue2);
-            object = polyClassPlayer != null ? polyClassPlayer.tm$12_get_typed(string, string2) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue2);
+            object = polyClassPlayer_v2 != null ? polyClassPlayer_v2.tm$12_get_typed(string, string2) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
         }
@@ -2971,13 +2935,12 @@ public final class Warps {
         builder.val("offset", scriptValue3);
         ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
         if (scriptValue3.asNum() < Warps.maxBannedOffset(builder2).asNum()) {
-            ScriptValue scriptValue4 = scriptContext.getClassOrVar("Player");
-            if (scriptValue4 != ScriptValue.NULL) {
+            if (scriptValue2 != ScriptValue.NULL) {
                 String string = "warps_banned_offset";
                 String string3 = "int";
-                ScriptValue scriptValue5 = ScriptFormula.addPolymorphic((ScriptValue)scriptValue3, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 1.0)));
-                PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue4);
-                v1 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$30_set_typed(string, string3, scriptValue5)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue4, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string3), (ScriptValue)scriptValue5, (ScriptContext)scriptContext);
+                ScriptValue scriptValue4 = ScriptFormula.addPolymorphic((ScriptValue)scriptValue3, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 1.0)));
+                PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue2);
+                v1 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$30_set_typed(string, string3, scriptValue4)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string3), (ScriptValue)scriptValue4, (ScriptContext)scriptContext);
             } else {
                 v1 = ScriptValue.NULL;
             }
@@ -2999,8 +2962,8 @@ public final class Warps {
         if (scriptValue != ScriptValue.NULL) {
             String string = "warps_visited_search";
             String string2 = "string";
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue);
-            object = polyClassPlayer != null ? polyClassPlayer.tm$12_get_typed(string, string2) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue);
+            object = polyClassPlayer_v2 != null ? polyClassPlayer_v2.tm$12_get_typed(string, string2) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
         }
@@ -3054,8 +3017,8 @@ public final class Warps {
         if (scriptValue4 != ScriptValue.NULL) {
             String string = "warps_visited_search";
             String string2 = "string";
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue4);
-            object = polyClassPlayer != null ? polyClassPlayer.tm$12_get_typed(string, string2) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue4, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue4);
+            object = polyClassPlayer_v2 != null ? polyClassPlayer_v2.tm$12_get_typed(string, string2) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue4, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
         }
@@ -3072,23 +3035,22 @@ public final class Warps {
             ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
             builder2.val("s", scriptContext.getClassOrVar("value"));
             ScriptValue scriptValue2 = Warps.sanitize(builder2);
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue);
-            v0 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$30_set_typed(string, string2, scriptValue2)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptValue)scriptValue2, (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue);
+            v0 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$30_set_typed(string, string2, scriptValue2)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptValue)scriptValue2, (ScriptContext)scriptContext);
         } else {
             v0 = ScriptValue.NULL;
         }
-        ScriptValue scriptValue3 = scriptContext.getClassOrVar("Player");
-        if (scriptValue3 != ScriptValue.NULL) {
+        if (scriptValue != ScriptValue.NULL) {
             String string = "warps_visited_offset";
             String string3 = "int";
-            ScriptValue scriptValue4 =  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 0.0);
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue3);
-            v1 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$30_set_typed(string, string3, scriptValue4)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue3, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string3), (ScriptValue)scriptValue4, (ScriptContext)scriptContext);
+            ScriptValue scriptValue3 =  /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 0.0);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue);
+            v1 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$30_set_typed(string, string3, scriptValue3)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string3), (ScriptValue)scriptValue3, (ScriptContext)scriptContext);
         } else {
             v1 = ScriptValue.NULL;
         }
-        ScriptValue scriptValue5 = scriptContext.getClassOrVar("Cmd");
-        Object object = scriptValue5 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "open_page", (ScriptValue)scriptValue5, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "visited")), (ScriptContext)scriptContext) : ScriptValue.NULL;
+        ScriptValue scriptValue4 = scriptContext.getClassOrVar("Cmd");
+        Object object = scriptValue4 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "open_page", (ScriptValue)scriptValue4, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "visited")), (ScriptContext)scriptContext) : ScriptValue.NULL;
         return ScriptValue.NULL;
     }
 
@@ -3105,8 +3067,8 @@ public final class Warps {
         if (scriptValue2 != ScriptValue.NULL) {
             String string = "warps_visited_offset";
             String string2 = "int";
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue2);
-            object = polyClassPlayer != null ? polyClassPlayer.tm$12_get_typed(string, string2) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue2);
+            object = polyClassPlayer_v2 != null ? polyClassPlayer_v2.tm$12_get_typed(string, string2) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
         }
@@ -3175,21 +3137,20 @@ public final class Warps {
         if (scriptValue2 != ScriptValue.NULL) {
             String string = "warps_visited_offset";
             String string2 = "int";
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue2);
-            object = polyClassPlayer != null ? polyClassPlayer.tm$12_get_typed(string, string2) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue2);
+            object = polyClassPlayer_v2 != null ? polyClassPlayer_v2.tm$12_get_typed(string, string2) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
         }
         ScriptValue scriptValue3 = object;
         builder.val("offset", scriptValue3);
         if (scriptValue3.asNum() > 0.0) {
-            ScriptValue scriptValue4 = scriptContext.getClassOrVar("Player");
-            if (scriptValue4 != ScriptValue.NULL) {
+            if (scriptValue2 != ScriptValue.NULL) {
                 String string = "warps_visited_offset";
                 String string3 = "int";
-                ScriptValue scriptValue5 = ScriptValue.of((double)(scriptValue3.asNum() - 1.0));
-                PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue4);
-                v1 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$30_set_typed(string, string3, scriptValue5)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue4, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string3), (ScriptValue)scriptValue5, (ScriptContext)scriptContext);
+                ScriptValue scriptValue4 = ScriptValue.of((double)(scriptValue3.asNum() - 1.0));
+                PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue2);
+                v1 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$30_set_typed(string, string3, scriptValue4)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string3), (ScriptValue)scriptValue4, (ScriptContext)scriptContext);
             } else {
                 v1 = ScriptValue.NULL;
             }
@@ -3206,8 +3167,8 @@ public final class Warps {
         if (scriptValue2 != ScriptValue.NULL) {
             String string = "warps_visited_offset";
             String string2 = "int";
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue2);
-            object = polyClassPlayer != null ? polyClassPlayer.tm$12_get_typed(string, string2) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue2);
+            object = polyClassPlayer_v2 != null ? polyClassPlayer_v2.tm$12_get_typed(string, string2) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
         }
@@ -3215,13 +3176,12 @@ public final class Warps {
         builder.val("offset", scriptValue3);
         ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
         if (scriptValue3.asNum() < Warps.maxVisitedOffset(builder2).asNum()) {
-            ScriptValue scriptValue4 = scriptContext.getClassOrVar("Player");
-            if (scriptValue4 != ScriptValue.NULL) {
+            if (scriptValue2 != ScriptValue.NULL) {
                 String string = "warps_visited_offset";
                 String string3 = "int";
-                ScriptValue scriptValue5 = ScriptFormula.addPolymorphic((ScriptValue)scriptValue3, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 1.0)));
-                PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue4);
-                v1 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$30_set_typed(string, string3, scriptValue5)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue4, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string3), (ScriptValue)scriptValue5, (ScriptContext)scriptContext);
+                ScriptValue scriptValue4 = ScriptFormula.addPolymorphic((ScriptValue)scriptValue3, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 1.0)));
+                PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue2);
+                v1 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$30_set_typed(string, string3, scriptValue4)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string3), (ScriptValue)scriptValue4, (ScriptContext)scriptContext);
             } else {
                 v1 = ScriptValue.NULL;
             }
@@ -3244,8 +3204,8 @@ public final class Warps {
         if (scriptValue2 != ScriptValue.NULL) {
             String string = "warps_return_page";
             String string2 = "string";
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue2);
-            object = polyClassPlayer != null ? polyClassPlayer.tm$12_get_typed(string, string2) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue2);
+            object = polyClassPlayer_v2 != null ? polyClassPlayer_v2.tm$12_get_typed(string, string2) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
         }
@@ -3286,7 +3246,7 @@ public final class Warps {
 
     public static ScriptValue onRateSubmit(ScriptContext.Builder builder) {
         ScriptValue scriptValue;
-        PolyClassPlayer polyClassPlayer;
+        PolyClassPlayer_v2 polyClassPlayer_v2;
         ScriptContext scriptContext = builder.peek();
         ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
         ScriptValue scriptValue2 = Warps.currentWarp(builder2);
@@ -3297,8 +3257,8 @@ public final class Warps {
             ScriptValue scriptValue3 = scriptContext.getClassOrVar("Player");
             if (scriptValue3 != ScriptValue.NULL) {
                 String string = "<red>\u2718 <white>You can't rate your own warp.";
-                PolyClassPlayer polyClassPlayer2 = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue3);
-                v0 = polyClassPlayer2 != null ? ScriptValue.of((boolean)polyClassPlayer2.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue3, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
+                PolyClassPlayer_v2 polyClassPlayer_v22 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue3);
+                v0 = polyClassPlayer_v22 != null ? ScriptValue.of((boolean)polyClassPlayer_v22.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue3, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
             } else {
                 v0 = ScriptValue.NULL;
             }
@@ -3321,23 +3281,22 @@ public final class Warps {
         ScriptValue scriptValue7 = Warps.warpId(builder4);
         builder.val("wid", scriptValue7);
         ScriptValue scriptValue8 = scriptContext.getClassOrVar("SQL");
-        Object object = scriptValue8 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "execute", (ScriptValue)scriptValue8, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "DELETE FROM warp_ratings WHERE warp_id = ? AND uuid = ?")), (ScriptValue)scriptValue7, (ScriptValue)((polyClassPlayer = PolyClassPlayer.ofVar((ScriptContext)scriptContext, (String)"Player")) != null ? polyClassPlayer.pg$34_uuid() : ((scriptValue = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue, (ScriptContext)scriptContext) : ScriptValue.NULL)), (ScriptContext)scriptContext) : ScriptValue.NULL;
-        ScriptValue scriptValue9 = scriptContext.getClassOrVar("SQL");
-        if (scriptValue9 != ScriptValue.NULL) {
+        Object object = scriptValue8 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "execute", (ScriptValue)scriptValue8, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "DELETE FROM warp_ratings WHERE warp_id = ? AND uuid = ?")), (ScriptValue)scriptValue7, (ScriptValue)((polyClassPlayer_v2 = PolyClassPlayer_v2.ofVar((ScriptContext)scriptContext, (String)"Player")) != null ? polyClassPlayer_v2.pg$34_uuid() : ((scriptValue = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue, (ScriptContext)scriptContext) : ScriptValue.NULL)), (ScriptContext)scriptContext) : ScriptValue.NULL;
+        if (scriptValue8 != ScriptValue.NULL) {
+            ScriptValue scriptValue9;
             ScriptValue scriptValue10;
-            ScriptValue scriptValue11;
-            PolyClassPlayer polyClassPlayer3 = PolyClassPlayer.ofVar((ScriptContext)scriptContext, (String)"Player");
-            Object object2 = polyClassPlayer3 != null ? polyClassPlayer3.pg$34_uuid() : ((scriptValue11 = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue11, (ScriptContext)scriptContext) : ScriptValue.NULL);
-            PolyClassPlayer polyClassPlayer4 = PolyClassPlayer.ofVar((ScriptContext)scriptContext, (String)"Player");
-            v3 = PolyDispatch.bootstrapCall("memberCall", "execute", (ScriptValue)scriptValue9, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "INSERT INTO warp_ratings (warp_id, uuid, name, stars) VALUES (?, ?, ?, ?)")), (ScriptValue)scriptValue7, (ScriptValue)object2, (ScriptValue)(polyClassPlayer4 != null ? polyClassPlayer4.pg$67_name() : ((scriptValue10 = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue10, (ScriptContext)scriptContext) : ScriptValue.NULL)), (ScriptValue)scriptContext.getClassOrVar("n"), (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v23 = PolyClassPlayer_v2.ofVar((ScriptContext)scriptContext, (String)"Player");
+            Object object2 = polyClassPlayer_v23 != null ? polyClassPlayer_v23.pg$34_uuid() : ((scriptValue10 = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue10, (ScriptContext)scriptContext) : ScriptValue.NULL);
+            PolyClassPlayer_v2 polyClassPlayer_v24 = PolyClassPlayer_v2.ofVar((ScriptContext)scriptContext, (String)"Player");
+            v3 = PolyDispatch.bootstrapCall("memberCall", "execute", (ScriptValue)scriptValue8, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "INSERT INTO warp_ratings (warp_id, uuid, name, stars) VALUES (?, ?, ?, ?)")), (ScriptValue)scriptValue7, (ScriptValue)object2, (ScriptValue)(polyClassPlayer_v24 != null ? polyClassPlayer_v24.pg$67_name() : ((scriptValue9 = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue9, (ScriptContext)scriptContext) : ScriptValue.NULL)), (ScriptValue)scriptContext.getClassOrVar("n"), (ScriptContext)scriptContext);
         } else {
             v3 = ScriptValue.NULL;
         }
-        ScriptValue scriptValue12 = scriptContext.getClassOrVar("Player");
-        if (scriptValue12 != ScriptValue.NULL) {
-            ScriptValue scriptValue13 = ScriptValue.of((String)("<green>\u2714 <white>Rated " + scriptValue2.asStr() + " " + scriptContext.getStr("n") + " star(s)."));
-            PolyClassPlayer polyClassPlayer5 = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue12);
-            v4 = polyClassPlayer5 != null ? ScriptValue.of((boolean)polyClassPlayer5.tm$42_send_message(scriptValue13.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue12, (ScriptValue)scriptValue13, (ScriptContext)scriptContext);
+        ScriptValue scriptValue11 = scriptContext.getClassOrVar("Player");
+        if (scriptValue11 != ScriptValue.NULL) {
+            ScriptValue scriptValue12 = ScriptValue.of((String)("<green>\u2714 <white>Rated " + scriptValue2.asStr() + " " + scriptContext.getStr("n") + " star(s)."));
+            PolyClassPlayer_v2 polyClassPlayer_v25 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue11);
+            v4 = polyClassPlayer_v25 != null ? ScriptValue.of((boolean)polyClassPlayer_v25.tm$42_send_message(scriptValue12.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue11, (ScriptValue)scriptValue12, (ScriptContext)scriptContext);
         } else {
             v4 = ScriptValue.NULL;
         }
@@ -3401,8 +3360,8 @@ public final class Warps {
         if (scriptValue2 != ScriptValue.NULL) {
             String string = "warps_rate_offset";
             String string2 = "int";
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue2);
-            object = polyClassPlayer != null ? polyClassPlayer.tm$12_get_typed(string, string2) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue2);
+            object = polyClassPlayer_v2 != null ? polyClassPlayer_v2.tm$12_get_typed(string, string2) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
         }
@@ -3421,42 +3380,42 @@ public final class Warps {
         ScriptValue.Array array2 = array;
         if (list != null) {
             for (ScriptValue scriptValue11 : list) {
-                ScriptValue scriptValue12;
+                PolyClassPlayer_v2 polyClassPlayer_v2;
                 builder.val("i", scriptValue11);
-                ScriptValue scriptValue13 = ScriptFormula.addPolymorphic((ScriptValue)ScriptValue.of((double)d), (ScriptValue)scriptValue11);
-                builder.val("global_idx", scriptValue13);
-                scriptValue7 = scriptValue13;
+                ScriptValue scriptValue12 = ScriptFormula.addPolymorphic((ScriptValue)ScriptValue.of((double)d), (ScriptValue)scriptValue11);
+                builder.val("global_idx", scriptValue12);
+                scriptValue7 = scriptValue12;
                 if (scriptValue7.asNum() >= ScriptFormula.callBuiltin1((String)"len", (ScriptValue)scriptValue, (ScriptContext)scriptContext).asNum()) break;
-                ScriptValue scriptValue14 = scriptValue != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue, (ScriptValue)scriptValue7, (ScriptContext)scriptContext) : ScriptValue.NULL;
-                builder.val("entry", scriptValue14);
-                scriptValue5 = scriptValue14;
-                ScriptValue scriptValue15 = scriptValue5 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue5, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "uuid")), (ScriptContext)scriptContext) : ScriptValue.NULL;
-                builder.val("rater_uuid", scriptValue15);
-                scriptValue6 = scriptValue15;
-                ScriptValue scriptValue16 = scriptValue5 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue5, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "name")), (ScriptContext)scriptContext) : ScriptValue.NULL;
-                builder.val("rater_name", scriptValue16);
-                scriptValue10 = scriptValue16;
-                ScriptValue scriptValue17 = scriptValue5 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue5, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "stars")), (ScriptContext)scriptContext) : ScriptValue.NULL;
-                builder.val("stars", scriptValue17);
-                scriptValue9 = scriptValue17;
+                ScriptValue scriptValue13 = scriptValue != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue, (ScriptValue)scriptValue7, (ScriptContext)scriptContext) : ScriptValue.NULL;
+                builder.val("entry", scriptValue13);
+                scriptValue5 = scriptValue13;
+                ScriptValue scriptValue14 = scriptValue5 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue5, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "uuid")), (ScriptContext)scriptContext) : ScriptValue.NULL;
+                builder.val("rater_uuid", scriptValue14);
+                scriptValue6 = scriptValue14;
+                ScriptValue scriptValue15 = scriptValue5 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue5, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "name")), (ScriptContext)scriptContext) : ScriptValue.NULL;
+                builder.val("rater_name", scriptValue15);
+                scriptValue10 = scriptValue15;
+                ScriptValue scriptValue16 = scriptValue5 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue5, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "stars")), (ScriptContext)scriptContext) : ScriptValue.NULL;
+                builder.val("stars", scriptValue16);
+                scriptValue9 = scriptValue16;
                 ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
                 arrayList2.add(ScriptValue.of((String)("<gray>Rating: <yellow>" + scriptValue9.asStr() + "/5")));
                 ScriptValue.Array array3 = new ScriptValue.Array(arrayList2);
                 builder.val("lore", (ScriptValue)array3);
                 scriptValue8 = array3;
-                PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofVar((ScriptContext)scriptContext, (String)"Player");
-                if (ScriptFormula.valuesEqual((ScriptValue)scriptValue6, (ScriptValue)(polyClassPlayer != null ? polyClassPlayer.pg$34_uuid() : ((scriptValue12 = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue12, (ScriptContext)scriptContext) : ScriptValue.NULL)))) {
-                    ScriptValue scriptValue18 = ScriptFormula.callBuiltin2((String)"push", (ScriptValue)scriptValue8, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "")), (ScriptContext)scriptContext);
+                Object object2 = scriptValue2 != ScriptValue.NULL ? ((polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue2)) != null ? polyClassPlayer_v2.pg$34_uuid() : PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue2, (ScriptContext)scriptContext)) : ScriptValue.NULL;
+                if (ScriptFormula.valuesEqual((ScriptValue)scriptValue6, (ScriptValue)object2)) {
+                    ScriptValue scriptValue17 = ScriptFormula.callBuiltin2((String)"push", (ScriptValue)scriptValue8, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "")), (ScriptContext)scriptContext);
+                    builder.val("lore", scriptValue17);
+                    scriptValue8 = scriptValue17;
+                    ScriptValue scriptValue18 = ScriptFormula.callBuiltin2((String)"push", (ScriptValue)scriptValue8, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "<red>Left-click to remove your rating")), (ScriptContext)scriptContext);
                     builder.val("lore", scriptValue18);
                     scriptValue8 = scriptValue18;
-                    ScriptValue scriptValue19 = ScriptFormula.callBuiltin2((String)"push", (ScriptValue)scriptValue8, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "<red>Left-click to remove your rating")), (ScriptContext)scriptContext);
-                    builder.val("lore", scriptValue19);
-                    scriptValue8 = scriptValue19;
                 }
                 ArrayList<ScriptValue> arrayList3 = new ArrayList<ScriptValue>();
                 arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "slot"));
-                ScriptValue scriptValue20 = scriptContext.getClassOrVar("WARP_SLOTS_LIST");
-                arrayList3.add((ScriptValue)(scriptValue20 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue20, (ScriptValue)scriptValue11, (ScriptContext)scriptContext) : ScriptValue.NULL));
+                ScriptValue scriptValue19 = scriptContext.getClassOrVar("WARP_SLOTS_LIST");
+                arrayList3.add((ScriptValue)(scriptValue19 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue19, (ScriptValue)scriptValue11, (ScriptContext)scriptContext) : ScriptValue.NULL));
                 arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "icon"));
                 ScriptContext.Builder builder3 = ScriptContext.builder().copyFrom(scriptContext);
                 builder3.val("name", scriptValue10);
@@ -3467,9 +3426,9 @@ public final class Warps {
                 arrayList3.add(scriptContext.getClassOrVar("lore"));
                 arrayList3.add( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "action"));
                 arrayList3.add(ScriptValue.of((String)("warps.pf:on_unrate_click:" + scriptValue6.asStr())));
-                ScriptValue scriptValue21 = ScriptFormula.callBuiltin2((String)"push", (ScriptValue)array2, (ScriptValue)ScriptFormula.callBuiltin((String)"make_map", arrayList3, (ScriptContext)scriptContext), (ScriptContext)scriptContext);
-                builder.val("out", scriptValue21);
-                array2 = scriptValue21;
+                ScriptValue scriptValue20 = ScriptFormula.callBuiltin2((String)"push", (ScriptValue)array2, (ScriptValue)ScriptFormula.callBuiltin((String)"make_map", arrayList3, (ScriptContext)scriptContext), (ScriptContext)scriptContext);
+                builder.val("out", scriptValue20);
+                array2 = scriptValue20;
             }
         }
         return array2;
@@ -3477,9 +3436,9 @@ public final class Warps {
 
     public static ScriptValue onUnrateClick(ScriptContext.Builder builder) {
         ScriptValue scriptValue;
-        PolyClassPlayer polyClassPlayer;
+        PolyClassPlayer_v2 polyClassPlayer_v2;
         ScriptContext scriptContext = builder.peek();
-        if (ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("rater_uuid"), (ScriptValue)((polyClassPlayer = PolyClassPlayer.ofVar((ScriptContext)scriptContext, (String)"Player")) != null ? polyClassPlayer.pg$34_uuid() : ((scriptValue = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue, (ScriptContext)scriptContext) : ScriptValue.NULL))) ^ true) {
+        if (ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("rater_uuid"), (ScriptValue)((polyClassPlayer_v2 = PolyClassPlayer_v2.ofVar((ScriptContext)scriptContext, (String)"Player")) != null ? polyClassPlayer_v2.pg$34_uuid() : ((scriptValue = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue, (ScriptContext)scriptContext) : ScriptValue.NULL))) ^ true) {
             return ScriptValue.NULL;
         }
         ScriptValue scriptValue2 = scriptContext.getClassOrVar("SQL");
@@ -3517,21 +3476,20 @@ public final class Warps {
         if (scriptValue2 != ScriptValue.NULL) {
             String string = "warps_rate_offset";
             String string2 = "int";
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue2);
-            object = polyClassPlayer != null ? polyClassPlayer.tm$12_get_typed(string, string2) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue2);
+            object = polyClassPlayer_v2 != null ? polyClassPlayer_v2.tm$12_get_typed(string, string2) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
         }
         ScriptValue scriptValue3 = object;
         builder.val("offset", scriptValue3);
         if (scriptValue3.asNum() > 0.0) {
-            ScriptValue scriptValue4 = scriptContext.getClassOrVar("Player");
-            if (scriptValue4 != ScriptValue.NULL) {
+            if (scriptValue2 != ScriptValue.NULL) {
                 String string = "warps_rate_offset";
                 String string3 = "int";
-                ScriptValue scriptValue5 = ScriptValue.of((double)(scriptValue3.asNum() - 1.0));
-                PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue4);
-                v1 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$30_set_typed(string, string3, scriptValue5)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue4, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string3), (ScriptValue)scriptValue5, (ScriptContext)scriptContext);
+                ScriptValue scriptValue4 = ScriptValue.of((double)(scriptValue3.asNum() - 1.0));
+                PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue2);
+                v1 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$30_set_typed(string, string3, scriptValue4)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string3), (ScriptValue)scriptValue4, (ScriptContext)scriptContext);
             } else {
                 v1 = ScriptValue.NULL;
             }
@@ -3548,8 +3506,8 @@ public final class Warps {
         if (scriptValue2 != ScriptValue.NULL) {
             String string = "warps_rate_offset";
             String string2 = "int";
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue2);
-            object = polyClassPlayer != null ? polyClassPlayer.tm$12_get_typed(string, string2) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue2);
+            object = polyClassPlayer_v2 != null ? polyClassPlayer_v2.tm$12_get_typed(string, string2) : PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
         }
@@ -3557,13 +3515,12 @@ public final class Warps {
         builder.val("offset", scriptValue3);
         ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
         if (scriptValue3.asNum() < Warps.maxRateOffset(builder2).asNum()) {
-            ScriptValue scriptValue4 = scriptContext.getClassOrVar("Player");
-            if (scriptValue4 != ScriptValue.NULL) {
+            if (scriptValue2 != ScriptValue.NULL) {
                 String string = "warps_rate_offset";
                 String string3 = "int";
-                ScriptValue scriptValue5 = ScriptFormula.addPolymorphic((ScriptValue)scriptValue3, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 1.0)));
-                PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue4);
-                v1 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$30_set_typed(string, string3, scriptValue5)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue4, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string3), (ScriptValue)scriptValue5, (ScriptContext)scriptContext);
+                ScriptValue scriptValue4 = ScriptFormula.addPolymorphic((ScriptValue)scriptValue3, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 1.0)));
+                PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue2);
+                v1 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$30_set_typed(string, string3, scriptValue4)) : PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string3), (ScriptValue)scriptValue4, (ScriptContext)scriptContext);
             } else {
                 v1 = ScriptValue.NULL;
             }
@@ -3577,136 +3534,120 @@ public final class Warps {
         ScriptValue scriptValue = scriptContext.getClassOrVar("Player");
         if (scriptValue != ScriptValue.NULL) {
             String string = "<yellow>--- /warps commands ---";
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue);
-            v0 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue);
+            v0 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
         } else {
             v0 = ScriptValue.NULL;
         }
-        ScriptValue scriptValue2 = scriptContext.getClassOrVar("Player");
-        if (scriptValue2 != ScriptValue.NULL) {
+        if (scriptValue != ScriptValue.NULL) {
             String string = "<white>/warps <gray>- open the warps menu";
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue2);
-            v1 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue);
+            v1 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
         } else {
             v1 = ScriptValue.NULL;
         }
-        ScriptValue scriptValue3 = scriptContext.getClassOrVar("Player");
-        if (scriptValue3 != ScriptValue.NULL) {
+        if (scriptValue != ScriptValue.NULL) {
             String string = "<white>/warps create|set <name> <gray>- create a warp (set also repositions your own)";
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue3);
-            v2 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue3, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue);
+            v2 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
         } else {
             v2 = ScriptValue.NULL;
         }
-        ScriptValue scriptValue4 = scriptContext.getClassOrVar("Player");
-        if (scriptValue4 != ScriptValue.NULL) {
+        if (scriptValue != ScriptValue.NULL) {
             String string = "<white>/warps remove <warp> <gray>- delete a warp you own";
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue4);
-            v3 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue4, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue);
+            v3 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
         } else {
             v3 = ScriptValue.NULL;
         }
-        ScriptValue scriptValue5 = scriptContext.getClassOrVar("Player");
-        if (scriptValue5 != ScriptValue.NULL) {
+        if (scriptValue != ScriptValue.NULL) {
             String string = "<white>/warps desc set <warp> <text> <gray>|<white> desc remove <warp>";
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue5);
-            v4 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue5, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue);
+            v4 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
         } else {
             v4 = ScriptValue.NULL;
         }
-        ScriptValue scriptValue6 = scriptContext.getClassOrVar("Player");
-        if (scriptValue6 != ScriptValue.NULL) {
+        if (scriptValue != ScriptValue.NULL) {
             String string = "<white>/warps list <gray>|<white> listof <player>";
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue6);
-            v5 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue6, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue);
+            v5 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
         } else {
             v5 = ScriptValue.NULL;
         }
-        ScriptValue scriptValue7 = scriptContext.getClassOrVar("Player");
-        if (scriptValue7 != ScriptValue.NULL) {
+        if (scriptValue != ScriptValue.NULL) {
             String string = "<white>/warps amount <gray>|<white> amountof <player>";
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue7);
-            v6 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue7, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue);
+            v6 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
         } else {
             v6 = ScriptValue.NULL;
         }
-        ScriptValue scriptValue8 = scriptContext.getClassOrVar("Player");
-        if (scriptValue8 != ScriptValue.NULL) {
+        if (scriptValue != ScriptValue.NULL) {
             String string = "<white>/warps icon set <warp> <gray>(uses held item) <white>|<gray> icon remove <warp>";
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue8);
-            v7 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue8, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue);
+            v7 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
         } else {
             v7 = ScriptValue.NULL;
         }
-        ScriptValue scriptValue9 = scriptContext.getClassOrVar("Player");
-        if (scriptValue9 != ScriptValue.NULL) {
+        if (scriptValue != ScriptValue.NULL) {
             String string = "<white>/warps category set <warp> <category> <gray>|<white> category remove <warp>";
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue9);
-            v8 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue9, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue);
+            v8 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
         } else {
             v8 = ScriptValue.NULL;
         }
-        ScriptValue scriptValue10 = scriptContext.getClassOrVar("Player");
-        if (scriptValue10 != ScriptValue.NULL) {
+        if (scriptValue != ScriptValue.NULL) {
             String string = "<white>/warps rate <warp> <0-5>";
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue10);
-            v9 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue10, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue);
+            v9 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
         } else {
             v9 = ScriptValue.NULL;
         }
-        ScriptValue scriptValue11 = scriptContext.getClassOrVar("Player");
-        if (scriptValue11 != ScriptValue.NULL) {
+        if (scriptValue != ScriptValue.NULL) {
             String string = "<white>/warps lock <warp> <gray>- toggle public/hidden";
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue11);
-            v10 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue11, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue);
+            v10 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
         } else {
             v10 = ScriptValue.NULL;
         }
-        ScriptValue scriptValue12 = scriptContext.getClassOrVar("Player");
-        if (scriptValue12 != ScriptValue.NULL) {
+        if (scriptValue != ScriptValue.NULL) {
             String string = "<white>/warps reset <warp> <gray>- move it to your location";
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue12);
-            v11 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue12, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue);
+            v11 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
         } else {
             v11 = ScriptValue.NULL;
         }
-        ScriptValue scriptValue13 = scriptContext.getClassOrVar("Player");
-        if (scriptValue13 != ScriptValue.NULL) {
+        if (scriptValue != ScriptValue.NULL) {
             String string = "<white>/warps rename <warp> <new name>";
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue13);
-            v12 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue13, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue);
+            v12 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
         } else {
             v12 = ScriptValue.NULL;
         }
-        ScriptValue scriptValue14 = scriptContext.getClassOrVar("Player");
-        if (scriptValue14 != ScriptValue.NULL) {
+        if (scriptValue != ScriptValue.NULL) {
             String string = "<white>/warps setowner <warp> <player>";
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue14);
-            v13 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue14, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue);
+            v13 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
         } else {
             v13 = ScriptValue.NULL;
         }
-        ScriptValue scriptValue15 = scriptContext.getClassOrVar("Player");
-        if (scriptValue15 != ScriptValue.NULL) {
+        if (scriptValue != ScriptValue.NULL) {
             String string = "<white>/warps ban set <warp> <player> <gray>|<white> ban remove <warp> <player>";
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue15);
-            v14 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue15, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue);
+            v14 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
         } else {
             v14 = ScriptValue.NULL;
         }
-        ScriptValue scriptValue16 = scriptContext.getClassOrVar("Player");
-        if (scriptValue16 != ScriptValue.NULL) {
+        if (scriptValue != ScriptValue.NULL) {
             String string = "<white>/warps favourite <warp> <gray>- toggle favourite";
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue16);
-            v15 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue16, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue);
+            v15 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
         } else {
             v15 = ScriptValue.NULL;
         }
-        ScriptValue scriptValue17 = scriptContext.getClassOrVar("Player");
-        if (scriptValue17 != ScriptValue.NULL) {
+        if (scriptValue != ScriptValue.NULL) {
             String string = "<white>/warps buyslot <gray>- spend XP for an extra warp slot";
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue17);
-            v16 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue17, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue);
+            v16 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
         } else {
             v16 = ScriptValue.NULL;
         }
@@ -3724,8 +3665,8 @@ public final class Warps {
             ScriptValue scriptValue3 = scriptContext.getClassOrVar("Player");
             if (scriptValue3 != ScriptValue.NULL) {
                 ScriptValue scriptValue4 = ScriptValue.of((String)("<red>\u2718 <white>No warp named '" + scriptValue2.asStr() + "'."));
-                PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue3);
-                v0 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(scriptValue4.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue3, (ScriptValue)scriptValue4, (ScriptContext)scriptContext);
+                PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue3);
+                v0 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(scriptValue4.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue3, (ScriptValue)scriptValue4, (ScriptContext)scriptContext);
             } else {
                 v0 = ScriptValue.NULL;
             }
@@ -3737,8 +3678,8 @@ public final class Warps {
             ScriptValue scriptValue5 = scriptContext.getClassOrVar("Player");
             if (scriptValue5 != ScriptValue.NULL) {
                 String string = "<red>\u2718 <white>You don't own that warp.";
-                PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue5);
-                v1 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue5, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
+                PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue5);
+                v1 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue5, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
             } else {
                 v1 = ScriptValue.NULL;
             }
@@ -3756,8 +3697,8 @@ public final class Warps {
         ScriptValue scriptValue8 = scriptContext.getClassOrVar("Player");
         if (scriptValue8 != ScriptValue.NULL) {
             ScriptValue scriptValue9 = ScriptValue.of((String)("<green>\u2714 <white>Deleted warp '" + scriptValue2.asStr() + "'."));
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue8);
-            v4 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(scriptValue9.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue8, (ScriptValue)scriptValue9, (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue8);
+            v4 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(scriptValue9.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue8, (ScriptValue)scriptValue9, (ScriptContext)scriptContext);
         } else {
             v4 = ScriptValue.NULL;
         }
@@ -3775,8 +3716,8 @@ public final class Warps {
             ScriptValue scriptValue3 = scriptContext.getClassOrVar("Player");
             if (scriptValue3 != ScriptValue.NULL) {
                 ScriptValue scriptValue4 = ScriptValue.of((String)("<red>\u2718 <white>No warp named '" + scriptValue2.asStr() + "'."));
-                PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue3);
-                v0 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(scriptValue4.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue3, (ScriptValue)scriptValue4, (ScriptContext)scriptContext);
+                PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue3);
+                v0 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(scriptValue4.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue3, (ScriptValue)scriptValue4, (ScriptContext)scriptContext);
             } else {
                 v0 = ScriptValue.NULL;
             }
@@ -3788,8 +3729,8 @@ public final class Warps {
             ScriptValue scriptValue5 = scriptContext.getClassOrVar("Player");
             if (scriptValue5 != ScriptValue.NULL) {
                 String string = "<red>\u2718 <white>You don't own that warp.";
-                PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue5);
-                v1 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue5, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
+                PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue5);
+                v1 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue5, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
             } else {
                 v1 = ScriptValue.NULL;
             }
@@ -3799,20 +3740,19 @@ public final class Warps {
         if (scriptValue6 != ScriptValue.NULL) {
             ScriptValue scriptValue7 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "UPDATE warps SET desc = ? WHERE id = ?");
             ScriptContext.Builder builder4 = ScriptContext.builder().copyFrom(scriptContext);
-            ScriptValue scriptValue8 = scriptContext.getClassOrVar("Cmd");
-            builder4.val("s", (ScriptValue)(scriptValue8 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "arg", (ScriptValue)scriptValue8, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "text")), (ScriptContext)scriptContext) : ScriptValue.NULL));
-            ScriptValue scriptValue9 = Warps.sanitize(builder4);
+            builder4.val("s", (ScriptValue)(scriptValue != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "arg", (ScriptValue)scriptValue, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "text")), (ScriptContext)scriptContext) : ScriptValue.NULL));
+            ScriptValue scriptValue8 = Warps.sanitize(builder4);
             ScriptContext.Builder builder5 = ScriptContext.builder().copyFrom(scriptContext);
             builder5.val("name", scriptValue2);
-            v4 = PolyDispatch.bootstrapCall("memberCall", "execute", (ScriptValue)scriptValue6, (ScriptValue)scriptValue7, (ScriptValue)scriptValue9, (ScriptValue)Warps.warpId(builder5), (ScriptContext)scriptContext);
+            v4 = PolyDispatch.bootstrapCall("memberCall", "execute", (ScriptValue)scriptValue6, (ScriptValue)scriptValue7, (ScriptValue)scriptValue8, (ScriptValue)Warps.warpId(builder5), (ScriptContext)scriptContext);
         } else {
             v4 = ScriptValue.NULL;
         }
-        ScriptValue scriptValue10 = scriptContext.getClassOrVar("Player");
-        if (scriptValue10 != ScriptValue.NULL) {
+        ScriptValue scriptValue9 = scriptContext.getClassOrVar("Player");
+        if (scriptValue9 != ScriptValue.NULL) {
             String string = "<green>\u2714 <white>Description updated.";
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue10);
-            v5 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue10, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue9);
+            v5 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue9, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
         } else {
             v5 = ScriptValue.NULL;
         }
@@ -3830,8 +3770,8 @@ public final class Warps {
             ScriptValue scriptValue3 = scriptContext.getClassOrVar("Player");
             if (scriptValue3 != ScriptValue.NULL) {
                 ScriptValue scriptValue4 = ScriptValue.of((String)("<red>\u2718 <white>No warp named '" + scriptValue2.asStr() + "'."));
-                PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue3);
-                v0 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(scriptValue4.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue3, (ScriptValue)scriptValue4, (ScriptContext)scriptContext);
+                PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue3);
+                v0 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(scriptValue4.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue3, (ScriptValue)scriptValue4, (ScriptContext)scriptContext);
             } else {
                 v0 = ScriptValue.NULL;
             }
@@ -3843,8 +3783,8 @@ public final class Warps {
             ScriptValue scriptValue5 = scriptContext.getClassOrVar("Player");
             if (scriptValue5 != ScriptValue.NULL) {
                 String string = "<red>\u2718 <white>You don't own that warp.";
-                PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue5);
-                v1 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue5, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
+                PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue5);
+                v1 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue5, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
             } else {
                 v1 = ScriptValue.NULL;
             }
@@ -3862,8 +3802,8 @@ public final class Warps {
         ScriptValue scriptValue8 = scriptContext.getClassOrVar("Player");
         if (scriptValue8 != ScriptValue.NULL) {
             String string = "<green>\u2714 <white>Description cleared.";
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue8);
-            v4 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue8, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue8);
+            v4 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue8, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
         } else {
             v4 = ScriptValue.NULL;
         }
@@ -3905,8 +3845,8 @@ public final class Warps {
         ScriptValue scriptValue;
         ScriptContext scriptContext = builder.peek();
         ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
-        PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofVar((ScriptContext)scriptContext, (String)"Player");
-        builder2.val("owner_uuid", (ScriptValue)(polyClassPlayer != null ? polyClassPlayer.pg$34_uuid() : ((scriptValue = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue, (ScriptContext)scriptContext) : ScriptValue.NULL)));
+        PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofVar((ScriptContext)scriptContext, (String)"Player");
+        builder2.val("owner_uuid", (ScriptValue)(polyClassPlayer_v2 != null ? polyClassPlayer_v2.pg$34_uuid() : ((scriptValue = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue, (ScriptContext)scriptContext) : ScriptValue.NULL)));
         ScriptValue scriptValue2 = Warps.warpNamesSummary(builder2);
         builder.val("info", scriptValue2);
         Object object = scriptValue2 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue2, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "count")), (ScriptContext)scriptContext) : ScriptValue.NULL;
@@ -3914,8 +3854,8 @@ public final class Warps {
             ScriptValue scriptValue3 = scriptContext.getClassOrVar("Player");
             if (scriptValue3 != ScriptValue.NULL) {
                 String string = "<yellow>You have no warps.";
-                PolyClassPlayer polyClassPlayer2 = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue3);
-                v1 = polyClassPlayer2 != null ? ScriptValue.of((boolean)polyClassPlayer2.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue3, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
+                PolyClassPlayer_v2 polyClassPlayer_v22 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue3);
+                v1 = polyClassPlayer_v22 != null ? ScriptValue.of((boolean)polyClassPlayer_v22.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue3, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
             } else {
                 v1 = ScriptValue.NULL;
             }
@@ -3924,8 +3864,8 @@ public final class Warps {
         ScriptValue scriptValue4 = scriptContext.getClassOrVar("Player");
         if (scriptValue4 != ScriptValue.NULL) {
             ScriptValue scriptValue5 = ScriptValue.of((String)("<yellow>Your warps (" + (scriptValue2 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue2, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "count")), (ScriptContext)scriptContext) : ScriptValue.NULL).asStr() + "): <white>" + (scriptValue2 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue2, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "names")), (ScriptContext)scriptContext) : ScriptValue.NULL).asStr()));
-            PolyClassPlayer polyClassPlayer3 = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue4);
-            v2 = polyClassPlayer3 != null ? ScriptValue.of((boolean)polyClassPlayer3.tm$42_send_message(scriptValue5.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue4, (ScriptValue)scriptValue5, (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v23 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue4);
+            v2 = polyClassPlayer_v23 != null ? ScriptValue.of((boolean)polyClassPlayer_v23.tm$42_send_message(scriptValue5.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue4, (ScriptValue)scriptValue5, (ScriptContext)scriptContext);
         } else {
             v2 = ScriptValue.NULL;
         }
@@ -3946,8 +3886,8 @@ public final class Warps {
             ScriptValue scriptValue4 = scriptContext.getClassOrVar("Player");
             if (scriptValue4 != ScriptValue.NULL) {
                 ScriptValue scriptValue5 = ScriptValue.of((String)("<yellow>" + (scriptValue2 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue2, (ScriptContext)scriptContext) : ScriptValue.NULL).asStr() + " has no warps."));
-                PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue4);
-                v1 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(scriptValue5.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue4, (ScriptValue)scriptValue5, (ScriptContext)scriptContext);
+                PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue4);
+                v1 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(scriptValue5.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue4, (ScriptValue)scriptValue5, (ScriptContext)scriptContext);
             } else {
                 v1 = ScriptValue.NULL;
             }
@@ -3956,8 +3896,8 @@ public final class Warps {
         ScriptValue scriptValue6 = scriptContext.getClassOrVar("Player");
         if (scriptValue6 != ScriptValue.NULL) {
             ScriptValue scriptValue7 = ScriptValue.of((String)("<yellow>" + (scriptValue2 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue2, (ScriptContext)scriptContext) : ScriptValue.NULL).asStr() + "'s warps (" + (scriptValue3 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue3, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "count")), (ScriptContext)scriptContext) : ScriptValue.NULL).asStr() + "): <white>" + (scriptValue3 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue3, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "names")), (ScriptContext)scriptContext) : ScriptValue.NULL).asStr()));
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue6);
-            v2 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(scriptValue7.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue6, (ScriptValue)scriptValue7, (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue6);
+            v2 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(scriptValue7.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue6, (ScriptValue)scriptValue7, (ScriptContext)scriptContext);
         } else {
             v2 = ScriptValue.NULL;
         }
@@ -3971,8 +3911,8 @@ public final class Warps {
             ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
             ScriptContext.Builder builder3 = ScriptContext.builder().copyFrom(scriptContext);
             ScriptValue scriptValue2 = ScriptValue.of((String)("<yellow>You have <white>" + ScriptFormula.callBuiltin1((String)"len", (ScriptValue)Warps.ownedWarpNames(builder2), (ScriptContext)scriptContext).asStr() + "/" + Warps.effectiveLimit(builder3).asStr() + "<yellow> warps."));
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue);
-            v0 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(scriptValue2.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue, (ScriptValue)scriptValue2, (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue);
+            v0 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(scriptValue2.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue, (ScriptValue)scriptValue2, (ScriptContext)scriptContext);
         } else {
             v0 = ScriptValue.NULL;
         }
@@ -3990,8 +3930,8 @@ public final class Warps {
         ScriptValue scriptValue5 = scriptContext.getClassOrVar("Player");
         if (scriptValue5 != ScriptValue.NULL) {
             ScriptValue scriptValue6 = ScriptValue.of((String)("<yellow>" + (scriptValue2 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue2, (ScriptContext)scriptContext) : ScriptValue.NULL).asStr() + " has <white>" + scriptValue4.asStr() + "<yellow> warp(s)."));
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue5);
-            v0 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(scriptValue6.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue5, (ScriptValue)scriptValue6, (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue5);
+            v0 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(scriptValue6.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue5, (ScriptValue)scriptValue6, (ScriptContext)scriptContext);
         } else {
             v0 = ScriptValue.NULL;
         }
@@ -4010,8 +3950,8 @@ public final class Warps {
             ScriptValue scriptValue4 = scriptContext.getClassOrVar("Player");
             if (scriptValue4 != ScriptValue.NULL) {
                 ScriptValue scriptValue5 = ScriptValue.of((String)("<red>\u2718 <white>No warp named '" + scriptValue3.asStr() + "'."));
-                PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue4);
-                v0 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(scriptValue5.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue4, (ScriptValue)scriptValue5, (ScriptContext)scriptContext);
+                PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue4);
+                v0 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(scriptValue5.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue4, (ScriptValue)scriptValue5, (ScriptContext)scriptContext);
             } else {
                 v0 = ScriptValue.NULL;
             }
@@ -4023,22 +3963,22 @@ public final class Warps {
             ScriptValue scriptValue6 = scriptContext.getClassOrVar("Player");
             if (scriptValue6 != ScriptValue.NULL) {
                 String string = "<red>\u2718 <white>You don't own that warp.";
-                PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue6);
-                v1 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue6, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
+                PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue6);
+                v1 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue6, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
             } else {
                 v1 = ScriptValue.NULL;
             }
             return ScriptValue.NULL;
         }
-        PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofVar((ScriptContext)scriptContext, (String)"Player");
-        ScriptValue scriptValue7 = polyClassPlayer != null ? polyClassPlayer.pg$48_main_hand() : ((scriptValue = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "main_hand", (ScriptValue)scriptValue, (ScriptContext)scriptContext) : ScriptValue.NULL);
+        PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofVar((ScriptContext)scriptContext, (String)"Player");
+        ScriptValue scriptValue7 = polyClassPlayer_v2 != null ? polyClassPlayer_v2.pg$48_main_hand() : ((scriptValue = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "main_hand", (ScriptValue)scriptValue, (ScriptContext)scriptContext) : ScriptValue.NULL);
         builder.val("held", scriptValue7);
         if (ScriptFormula.callBuiltin1((String)"is_empty", (ScriptValue)scriptValue7, (ScriptContext)scriptContext).asBool()) {
             ScriptValue scriptValue8 = scriptContext.getClassOrVar("Player");
             if (scriptValue8 != ScriptValue.NULL) {
                 String string = "<red>\u2718 <white>Hold an item first.";
-                PolyClassPlayer polyClassPlayer2 = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue8);
-                v2 = polyClassPlayer2 != null ? ScriptValue.of((boolean)polyClassPlayer2.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue8, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
+                PolyClassPlayer_v2 polyClassPlayer_v22 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue8);
+                v2 = polyClassPlayer_v22 != null ? ScriptValue.of((boolean)polyClassPlayer_v22.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue8, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
             } else {
                 v2 = ScriptValue.NULL;
             }
@@ -4057,8 +3997,8 @@ public final class Warps {
         ScriptValue scriptValue11 = scriptContext.getClassOrVar("Player");
         if (scriptValue11 != ScriptValue.NULL) {
             String string = "<green>\u2714 <white>Icon updated.";
-            PolyClassPlayer polyClassPlayer3 = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue11);
-            v6 = polyClassPlayer3 != null ? ScriptValue.of((boolean)polyClassPlayer3.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue11, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v23 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue11);
+            v6 = polyClassPlayer_v23 != null ? ScriptValue.of((boolean)polyClassPlayer_v23.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue11, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
         } else {
             v6 = ScriptValue.NULL;
         }
@@ -4076,8 +4016,8 @@ public final class Warps {
             ScriptValue scriptValue3 = scriptContext.getClassOrVar("Player");
             if (scriptValue3 != ScriptValue.NULL) {
                 ScriptValue scriptValue4 = ScriptValue.of((String)("<red>\u2718 <white>No warp named '" + scriptValue2.asStr() + "'."));
-                PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue3);
-                v0 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(scriptValue4.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue3, (ScriptValue)scriptValue4, (ScriptContext)scriptContext);
+                PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue3);
+                v0 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(scriptValue4.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue3, (ScriptValue)scriptValue4, (ScriptContext)scriptContext);
             } else {
                 v0 = ScriptValue.NULL;
             }
@@ -4089,8 +4029,8 @@ public final class Warps {
             ScriptValue scriptValue5 = scriptContext.getClassOrVar("Player");
             if (scriptValue5 != ScriptValue.NULL) {
                 String string = "<red>\u2718 <white>You don't own that warp.";
-                PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue5);
-                v1 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue5, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
+                PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue5);
+                v1 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue5, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
             } else {
                 v1 = ScriptValue.NULL;
             }
@@ -4108,8 +4048,8 @@ public final class Warps {
         ScriptValue scriptValue8 = scriptContext.getClassOrVar("Player");
         if (scriptValue8 != ScriptValue.NULL) {
             String string = "<green>\u2714 <white>Icon reset to default.";
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue8);
-            v4 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue8, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue8);
+            v4 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue8, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
         } else {
             v4 = ScriptValue.NULL;
         }
@@ -4128,8 +4068,8 @@ public final class Warps {
             ScriptValue scriptValue4 = scriptContext.getClassOrVar("Player");
             if (scriptValue4 != ScriptValue.NULL) {
                 ScriptValue scriptValue5 = ScriptValue.of((String)("<red>\u2718 <white>No warp named '" + scriptValue3.asStr() + "'."));
-                PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue4);
-                v0 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(scriptValue5.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue4, (ScriptValue)scriptValue5, (ScriptContext)scriptContext);
+                PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue4);
+                v0 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(scriptValue5.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue4, (ScriptValue)scriptValue5, (ScriptContext)scriptContext);
             } else {
                 v0 = ScriptValue.NULL;
             }
@@ -4141,36 +4081,35 @@ public final class Warps {
             ScriptValue scriptValue6 = scriptContext.getClassOrVar("Player");
             if (scriptValue6 != ScriptValue.NULL) {
                 String string = "<red>\u2718 <white>You don't own that warp.";
-                PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue6);
-                v1 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue6, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
+                PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue6);
+                v1 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue6, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
             } else {
                 v1 = ScriptValue.NULL;
             }
             return ScriptValue.NULL;
         }
         ScriptContext.Builder builder4 = ScriptContext.builder().copyFrom(scriptContext);
-        ScriptValue scriptValue7 = scriptContext.getClassOrVar("Cmd");
-        builder4.val("s", (ScriptValue)(scriptValue7 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "arg", (ScriptValue)scriptValue7, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "category")), (ScriptContext)scriptContext) : ScriptValue.NULL));
-        ScriptValue scriptValue8 = Warps.sanitize(builder4);
-        builder.val("cat", scriptValue8);
-        if (ScriptFormula.valuesEqualStr((ScriptValue)scriptValue8, (String)"")) {
-            ScriptValue scriptValue9 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "other");
-            builder.val("cat", scriptValue9);
+        builder4.val("s", (ScriptValue)(scriptValue2 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "arg", (ScriptValue)scriptValue2, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "category")), (ScriptContext)scriptContext) : ScriptValue.NULL));
+        ScriptValue scriptValue7 = Warps.sanitize(builder4);
+        builder.val("cat", scriptValue7);
+        if (ScriptFormula.valuesEqualStr((ScriptValue)scriptValue7, (String)"")) {
+            ScriptValue scriptValue8 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "other");
+            builder.val("cat", scriptValue8);
         }
         if ((scriptValue = scriptContext.getClassOrVar("SQL")) != ScriptValue.NULL) {
-            ScriptValue scriptValue10 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "UPDATE warps SET category = ? WHERE id = ?");
-            ScriptValue scriptValue11 = ScriptFormula.callBuiltin1((String)"lower", (ScriptValue)scriptContext.getClassOrVar("cat"), (ScriptContext)scriptContext);
+            ScriptValue scriptValue9 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "UPDATE warps SET category = ? WHERE id = ?");
+            ScriptValue scriptValue10 = ScriptFormula.callBuiltin1((String)"lower", (ScriptValue)scriptContext.getClassOrVar("cat"), (ScriptContext)scriptContext);
             ScriptContext.Builder builder5 = ScriptContext.builder().copyFrom(scriptContext);
             builder5.val("name", scriptValue3);
-            v4 = PolyDispatch.bootstrapCall("memberCall", "execute", (ScriptValue)scriptValue, (ScriptValue)scriptValue10, (ScriptValue)scriptValue11, (ScriptValue)Warps.warpId(builder5), (ScriptContext)scriptContext);
+            v4 = PolyDispatch.bootstrapCall("memberCall", "execute", (ScriptValue)scriptValue, (ScriptValue)scriptValue9, (ScriptValue)scriptValue10, (ScriptValue)Warps.warpId(builder5), (ScriptContext)scriptContext);
         } else {
             v4 = ScriptValue.NULL;
         }
-        ScriptValue scriptValue12 = scriptContext.getClassOrVar("Player");
-        if (scriptValue12 != ScriptValue.NULL) {
-            ScriptValue scriptValue13 = ScriptValue.of((String)("<green>\u2714 <white>Category set to '" + scriptContext.getStr("cat") + "'."));
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue12);
-            v5 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(scriptValue13.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue12, (ScriptValue)scriptValue13, (ScriptContext)scriptContext);
+        ScriptValue scriptValue11 = scriptContext.getClassOrVar("Player");
+        if (scriptValue11 != ScriptValue.NULL) {
+            ScriptValue scriptValue12 = ScriptValue.of((String)("<green>\u2714 <white>Category set to '" + scriptContext.getStr("cat") + "'."));
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue11);
+            v5 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(scriptValue12.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue11, (ScriptValue)scriptValue12, (ScriptContext)scriptContext);
         } else {
             v5 = ScriptValue.NULL;
         }
@@ -4188,8 +4127,8 @@ public final class Warps {
             ScriptValue scriptValue3 = scriptContext.getClassOrVar("Player");
             if (scriptValue3 != ScriptValue.NULL) {
                 ScriptValue scriptValue4 = ScriptValue.of((String)("<red>\u2718 <white>No warp named '" + scriptValue2.asStr() + "'."));
-                PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue3);
-                v0 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(scriptValue4.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue3, (ScriptValue)scriptValue4, (ScriptContext)scriptContext);
+                PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue3);
+                v0 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(scriptValue4.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue3, (ScriptValue)scriptValue4, (ScriptContext)scriptContext);
             } else {
                 v0 = ScriptValue.NULL;
             }
@@ -4201,8 +4140,8 @@ public final class Warps {
             ScriptValue scriptValue5 = scriptContext.getClassOrVar("Player");
             if (scriptValue5 != ScriptValue.NULL) {
                 String string = "<red>\u2718 <white>You don't own that warp.";
-                PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue5);
-                v1 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue5, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
+                PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue5);
+                v1 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue5, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
             } else {
                 v1 = ScriptValue.NULL;
             }
@@ -4220,8 +4159,8 @@ public final class Warps {
         ScriptValue scriptValue8 = scriptContext.getClassOrVar("Player");
         if (scriptValue8 != ScriptValue.NULL) {
             String string = "<yellow>Category reset to 'other'.";
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue8);
-            v4 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue8, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue8);
+            v4 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue8, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
         } else {
             v4 = ScriptValue.NULL;
         }
@@ -4230,7 +4169,7 @@ public final class Warps {
 
     public static ScriptValue cmdRate(ScriptContext.Builder builder) {
         ScriptValue scriptValue;
-        PolyClassPlayer polyClassPlayer;
+        PolyClassPlayer_v2 polyClassPlayer_v2;
         ScriptContext scriptContext = builder.peek();
         ScriptValue scriptValue2 = scriptContext.getClassOrVar("Cmd");
         ScriptValue scriptValue3 = scriptValue2 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "arg", (ScriptValue)scriptValue2, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "name")), (ScriptContext)scriptContext) : ScriptValue.NULL;
@@ -4241,8 +4180,8 @@ public final class Warps {
             ScriptValue scriptValue4 = scriptContext.getClassOrVar("Player");
             if (scriptValue4 != ScriptValue.NULL) {
                 ScriptValue scriptValue5 = ScriptValue.of((String)("<red>\u2718 <white>No warp named '" + scriptValue3.asStr() + "'."));
-                PolyClassPlayer polyClassPlayer2 = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue4);
-                v0 = polyClassPlayer2 != null ? ScriptValue.of((boolean)polyClassPlayer2.tm$42_send_message(scriptValue5.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue4, (ScriptValue)scriptValue5, (ScriptContext)scriptContext);
+                PolyClassPlayer_v2 polyClassPlayer_v22 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue4);
+                v0 = polyClassPlayer_v22 != null ? ScriptValue.of((boolean)polyClassPlayer_v22.tm$42_send_message(scriptValue5.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue4, (ScriptValue)scriptValue5, (ScriptContext)scriptContext);
             } else {
                 v0 = ScriptValue.NULL;
             }
@@ -4254,48 +4193,46 @@ public final class Warps {
             ScriptValue scriptValue6 = scriptContext.getClassOrVar("Player");
             if (scriptValue6 != ScriptValue.NULL) {
                 String string = "<red>\u2718 <white>You can't rate your own warp.";
-                PolyClassPlayer polyClassPlayer3 = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue6);
-                v1 = polyClassPlayer3 != null ? ScriptValue.of((boolean)polyClassPlayer3.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue6, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
+                PolyClassPlayer_v2 polyClassPlayer_v23 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue6);
+                v1 = polyClassPlayer_v23 != null ? ScriptValue.of((boolean)polyClassPlayer_v23.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue6, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
             } else {
                 v1 = ScriptValue.NULL;
             }
             return ScriptValue.NULL;
         }
-        ScriptValue scriptValue7 = scriptContext.getClassOrVar("Cmd");
-        ScriptValue scriptValue8 = ScriptFormula.callBuiltin1((String)"int", (ScriptValue)(scriptValue7 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "arg", (ScriptValue)scriptValue7, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "stars")), (ScriptContext)scriptContext) : ScriptValue.NULL), (ScriptContext)scriptContext);
-        builder.val("n", scriptValue8);
-        if (scriptValue8.asNum() < 0.0) {
+        ScriptValue scriptValue7 = ScriptFormula.callBuiltin1((String)"int", (ScriptValue)(scriptValue2 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "arg", (ScriptValue)scriptValue2, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "stars")), (ScriptContext)scriptContext) : ScriptValue.NULL), (ScriptContext)scriptContext);
+        builder.val("n", scriptValue7);
+        if (scriptValue7.asNum() < 0.0) {
             double d = 0.0;
-            ScriptValue scriptValue9 = ScriptValue.of((double)0.0);
-            builder.val("n", scriptValue9);
+            ScriptValue scriptValue8 = ScriptValue.of((double)0.0);
+            builder.val("n", scriptValue8);
         }
         if (scriptContext.getNum("n") > 5.0) {
             double d = 5.0;
-            ScriptValue scriptValue10 = ScriptValue.of((double)5.0);
-            builder.val("n", scriptValue10);
+            ScriptValue scriptValue9 = ScriptValue.of((double)5.0);
+            builder.val("n", scriptValue9);
         }
         ScriptContext.Builder builder4 = ScriptContext.builder().copyFrom(scriptContext);
         builder4.val("name", scriptValue3);
-        ScriptValue scriptValue11 = Warps.warpId(builder4);
-        builder.val("wid", scriptValue11);
-        ScriptValue scriptValue12 = scriptContext.getClassOrVar("SQL");
-        Object object = scriptValue12 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "execute", (ScriptValue)scriptValue12, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "DELETE FROM warp_ratings WHERE warp_id = ? AND uuid = ?")), (ScriptValue)scriptValue11, (ScriptValue)((polyClassPlayer = PolyClassPlayer.ofVar((ScriptContext)scriptContext, (String)"Player")) != null ? polyClassPlayer.pg$34_uuid() : ((scriptValue = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue, (ScriptContext)scriptContext) : ScriptValue.NULL)), (ScriptContext)scriptContext) : ScriptValue.NULL;
-        ScriptValue scriptValue13 = scriptContext.getClassOrVar("SQL");
-        if (scriptValue13 != ScriptValue.NULL) {
-            ScriptValue scriptValue14;
-            ScriptValue scriptValue15;
-            PolyClassPlayer polyClassPlayer4 = PolyClassPlayer.ofVar((ScriptContext)scriptContext, (String)"Player");
-            Object object2 = polyClassPlayer4 != null ? polyClassPlayer4.pg$34_uuid() : ((scriptValue15 = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue15, (ScriptContext)scriptContext) : ScriptValue.NULL);
-            PolyClassPlayer polyClassPlayer5 = PolyClassPlayer.ofVar((ScriptContext)scriptContext, (String)"Player");
-            v4 = PolyDispatch.bootstrapCall("memberCall", "execute", (ScriptValue)scriptValue13, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "INSERT INTO warp_ratings (warp_id, uuid, name, stars) VALUES (?, ?, ?, ?)")), (ScriptValue)scriptValue11, (ScriptValue)object2, (ScriptValue)(polyClassPlayer5 != null ? polyClassPlayer5.pg$67_name() : ((scriptValue14 = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue14, (ScriptContext)scriptContext) : ScriptValue.NULL)), (ScriptValue)scriptContext.getClassOrVar("n"), (ScriptContext)scriptContext);
+        ScriptValue scriptValue10 = Warps.warpId(builder4);
+        builder.val("wid", scriptValue10);
+        ScriptValue scriptValue11 = scriptContext.getClassOrVar("SQL");
+        Object object = scriptValue11 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "execute", (ScriptValue)scriptValue11, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "DELETE FROM warp_ratings WHERE warp_id = ? AND uuid = ?")), (ScriptValue)scriptValue10, (ScriptValue)((polyClassPlayer_v2 = PolyClassPlayer_v2.ofVar((ScriptContext)scriptContext, (String)"Player")) != null ? polyClassPlayer_v2.pg$34_uuid() : ((scriptValue = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue, (ScriptContext)scriptContext) : ScriptValue.NULL)), (ScriptContext)scriptContext) : ScriptValue.NULL;
+        if (scriptValue11 != ScriptValue.NULL) {
+            ScriptValue scriptValue12;
+            ScriptValue scriptValue13;
+            PolyClassPlayer_v2 polyClassPlayer_v24 = PolyClassPlayer_v2.ofVar((ScriptContext)scriptContext, (String)"Player");
+            Object object2 = polyClassPlayer_v24 != null ? polyClassPlayer_v24.pg$34_uuid() : ((scriptValue13 = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue13, (ScriptContext)scriptContext) : ScriptValue.NULL);
+            PolyClassPlayer_v2 polyClassPlayer_v25 = PolyClassPlayer_v2.ofVar((ScriptContext)scriptContext, (String)"Player");
+            v4 = PolyDispatch.bootstrapCall("memberCall", "execute", (ScriptValue)scriptValue11, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "INSERT INTO warp_ratings (warp_id, uuid, name, stars) VALUES (?, ?, ?, ?)")), (ScriptValue)scriptValue10, (ScriptValue)object2, (ScriptValue)(polyClassPlayer_v25 != null ? polyClassPlayer_v25.pg$67_name() : ((scriptValue12 = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue12, (ScriptContext)scriptContext) : ScriptValue.NULL)), (ScriptValue)scriptContext.getClassOrVar("n"), (ScriptContext)scriptContext);
         } else {
             v4 = ScriptValue.NULL;
         }
-        ScriptValue scriptValue16 = scriptContext.getClassOrVar("Player");
-        if (scriptValue16 != ScriptValue.NULL) {
-            ScriptValue scriptValue17 = ScriptValue.of((String)("<green>\u2714 <white>Rated " + scriptValue3.asStr() + " " + scriptContext.getStr("n") + " star(s)."));
-            PolyClassPlayer polyClassPlayer6 = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue16);
-            v5 = polyClassPlayer6 != null ? ScriptValue.of((boolean)polyClassPlayer6.tm$42_send_message(scriptValue17.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue16, (ScriptValue)scriptValue17, (ScriptContext)scriptContext);
+        ScriptValue scriptValue14 = scriptContext.getClassOrVar("Player");
+        if (scriptValue14 != ScriptValue.NULL) {
+            ScriptValue scriptValue15 = ScriptValue.of((String)("<green>\u2714 <white>Rated " + scriptValue3.asStr() + " " + scriptContext.getStr("n") + " star(s)."));
+            PolyClassPlayer_v2 polyClassPlayer_v26 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue14);
+            v5 = polyClassPlayer_v26 != null ? ScriptValue.of((boolean)polyClassPlayer_v26.tm$42_send_message(scriptValue15.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue14, (ScriptValue)scriptValue15, (ScriptContext)scriptContext);
         } else {
             v5 = ScriptValue.NULL;
         }
@@ -4313,8 +4250,8 @@ public final class Warps {
             ScriptValue scriptValue3 = scriptContext.getClassOrVar("Player");
             if (scriptValue3 != ScriptValue.NULL) {
                 ScriptValue scriptValue4 = ScriptValue.of((String)("<red>\u2718 <white>No warp named '" + scriptValue2.asStr() + "'."));
-                PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue3);
-                v0 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(scriptValue4.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue3, (ScriptValue)scriptValue4, (ScriptContext)scriptContext);
+                PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue3);
+                v0 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(scriptValue4.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue3, (ScriptValue)scriptValue4, (ScriptContext)scriptContext);
             } else {
                 v0 = ScriptValue.NULL;
             }
@@ -4326,8 +4263,8 @@ public final class Warps {
             ScriptValue scriptValue5 = scriptContext.getClassOrVar("Player");
             if (scriptValue5 != ScriptValue.NULL) {
                 String string = "<red>\u2718 <white>You don't own that warp.";
-                PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue5);
-                v1 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue5, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
+                PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue5);
+                v1 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue5, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
             } else {
                 v1 = ScriptValue.NULL;
             }
@@ -4343,8 +4280,8 @@ public final class Warps {
             ScriptValue scriptValue8 = scriptContext.getClassOrVar("Player");
             if (scriptValue8 != ScriptValue.NULL) {
                 ScriptValue scriptValue9 = ScriptValue.of((String)("<green>\u2714 <white>" + scriptValue2.asStr() + " is now public."));
-                PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue8);
-                v3 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(scriptValue9.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue8, (ScriptValue)scriptValue9, (ScriptContext)scriptContext);
+                PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue8);
+                v3 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(scriptValue9.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue8, (ScriptValue)scriptValue9, (ScriptContext)scriptContext);
             } else {
                 v3 = ScriptValue.NULL;
             }
@@ -4354,8 +4291,8 @@ public final class Warps {
             ScriptValue scriptValue11 = scriptContext.getClassOrVar("Player");
             if (scriptValue11 != ScriptValue.NULL) {
                 ScriptValue scriptValue12 = ScriptValue.of((String)("<yellow>" + scriptValue2.asStr() + " is now locked (hidden from the browser)."));
-                PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue11);
-                v5 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(scriptValue12.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue11, (ScriptValue)scriptValue12, (ScriptContext)scriptContext);
+                PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue11);
+                v5 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(scriptValue12.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue11, (ScriptValue)scriptValue12, (ScriptContext)scriptContext);
             } else {
                 v5 = ScriptValue.NULL;
             }
@@ -4375,8 +4312,8 @@ public final class Warps {
             ScriptValue scriptValue4 = scriptContext.getClassOrVar("Player");
             if (scriptValue4 != ScriptValue.NULL) {
                 ScriptValue scriptValue5 = ScriptValue.of((String)("<red>\u2718 <white>No warp named '" + scriptValue3.asStr() + "'."));
-                PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue4);
-                v0 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(scriptValue5.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue4, (ScriptValue)scriptValue5, (ScriptContext)scriptContext);
+                PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue4);
+                v0 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(scriptValue5.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue4, (ScriptValue)scriptValue5, (ScriptContext)scriptContext);
             } else {
                 v0 = ScriptValue.NULL;
             }
@@ -4388,15 +4325,15 @@ public final class Warps {
             ScriptValue scriptValue6 = scriptContext.getClassOrVar("Player");
             if (scriptValue6 != ScriptValue.NULL) {
                 String string = "<red>\u2718 <white>You don't own that warp.";
-                PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue6);
-                v1 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue6, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
+                PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue6);
+                v1 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue6, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
             } else {
                 v1 = ScriptValue.NULL;
             }
             return ScriptValue.NULL;
         }
-        PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofVar((ScriptContext)scriptContext, (String)"Player");
-        ScriptValue scriptValue7 = polyClassPlayer != null ? polyClassPlayer.pg$73_location() : ((scriptValue = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "location", (ScriptValue)scriptValue, (ScriptContext)scriptContext) : ScriptValue.NULL);
+        PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofVar((ScriptContext)scriptContext, (String)"Player");
+        ScriptValue scriptValue7 = polyClassPlayer_v2 != null ? polyClassPlayer_v2.pg$73_location() : ((scriptValue = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "location", (ScriptValue)scriptValue, (ScriptContext)scriptContext) : ScriptValue.NULL);
         builder.val("loc", scriptValue7);
         ScriptValue scriptValue8 = scriptContext.getClassOrVar("SQL");
         if (scriptValue8 != ScriptValue.NULL) {
@@ -4420,8 +4357,8 @@ public final class Warps {
         ScriptValue scriptValue11 = scriptContext.getClassOrVar("Player");
         if (scriptValue11 != ScriptValue.NULL) {
             ScriptValue scriptValue12 = ScriptValue.of((String)("<green>\u2714 <white>Moved '" + scriptValue3.asStr() + "' to your current location."));
-            PolyClassPlayer polyClassPlayer2 = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue11);
-            v8 = polyClassPlayer2 != null ? ScriptValue.of((boolean)polyClassPlayer2.tm$42_send_message(scriptValue12.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue11, (ScriptValue)scriptValue12, (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v22 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue11);
+            v8 = polyClassPlayer_v22 != null ? ScriptValue.of((boolean)polyClassPlayer_v22.tm$42_send_message(scriptValue12.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue11, (ScriptValue)scriptValue12, (ScriptContext)scriptContext);
         } else {
             v8 = ScriptValue.NULL;
         }
@@ -4443,7 +4380,7 @@ public final class Warps {
             var5_5 = var1_1.getClassOrVar("Player");
             if (var5_5 != ScriptValue.NULL) {
                 var6_6 = ScriptValue.of((String)("<red>\u2718 <white>No warp named '" + var3_3.asStr() + "'."));
-                var7_7 = PolyClassPlayer.ofGuarded((ScriptValue)var5_5);
+                var7_7 = PolyClassPlayer_v2.ofGuarded((ScriptValue)var5_5);
                 v0 /* !! */  = var7_7 != null ? ScriptValue.of((boolean)var7_7.tm$42_send_message(var6_6.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)var5_5, (ScriptValue)var6_6, (ScriptContext)var1_1);
             } else {
                 v0 /* !! */  = ScriptValue.NULL;
@@ -4456,7 +4393,7 @@ public final class Warps {
             var9_9 = var1_1.getClassOrVar("Player");
             if (var9_9 != ScriptValue.NULL) {
                 var10_10 = "<red>\u2718 <white>You don't own that warp.";
-                var11_11 = PolyClassPlayer.ofGuarded((ScriptValue)var9_9);
+                var11_11 = PolyClassPlayer_v2.ofGuarded((ScriptValue)var9_9);
                 v1 /* !! */  = var11_11 != null ? ScriptValue.of((boolean)var11_11.tm$42_send_message(var10_10)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)var9_9, (ScriptValue)ScriptValue.of((String)var10_10), (ScriptContext)var1_1);
             } else {
                 v1 /* !! */  = ScriptValue.NULL;
@@ -4464,14 +4401,13 @@ public final class Warps {
             return ScriptValue.NULL;
         }
         var12_12 = ScriptContext.builder().copyFrom(var1_1);
-        var13_13 = var1_1.getClassOrVar("Cmd");
-        var12_12.val("s", (ScriptValue)(var13_13 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "arg", (ScriptValue)var13_13, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "new_name")), (ScriptContext)var1_1) : ScriptValue.NULL));
-        var14_14 = Warps.sanitize(var12_12);
-        var0.val("new_name", var14_14);
-        if (ScriptFormula.valuesEqualStr((ScriptValue)var14_14, (String)"")) ** GOTO lbl-1000
-        var15_15 = ScriptContext.builder().copyFrom(var1_1);
-        var15_15.val("name", var14_14);
-        if (!Warps.warpExists(var15_15).asBool()) {
+        var12_12.val("s", (ScriptValue)(var2_2 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "arg", (ScriptValue)var2_2, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "new_name")), (ScriptContext)var1_1) : ScriptValue.NULL));
+        var13_13 = Warps.sanitize(var12_12);
+        var0.val("new_name", var13_13);
+        if (ScriptFormula.valuesEqualStr((ScriptValue)var13_13, (String)"")) ** GOTO lbl-1000
+        var14_14 = ScriptContext.builder().copyFrom(var1_1);
+        var14_14.val("name", var13_13);
+        if (!Warps.warpExists(var14_14).asBool()) {
             v2 = false;
         } else lbl-1000:
         // 2 sources
@@ -4480,30 +4416,30 @@ public final class Warps {
             v2 = true;
         }
         if (v2) {
-            var16_16 = var1_1.getClassOrVar("Player");
-            if (var16_16 != ScriptValue.NULL) {
-                var17_17 = "<red>\u2718 <white>Could not rename that warp.";
-                var18_18 = PolyClassPlayer.ofGuarded((ScriptValue)var16_16);
-                v3 /* !! */  = var18_18 != null ? ScriptValue.of((boolean)var18_18.tm$42_send_message(var17_17)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)var16_16, (ScriptValue)ScriptValue.of((String)var17_17), (ScriptContext)var1_1);
+            var15_15 = var1_1.getClassOrVar("Player");
+            if (var15_15 != ScriptValue.NULL) {
+                var16_16 = "<red>\u2718 <white>Could not rename that warp.";
+                var17_17 = PolyClassPlayer_v2.ofGuarded((ScriptValue)var15_15);
+                v3 /* !! */  = var17_17 != null ? ScriptValue.of((boolean)var17_17.tm$42_send_message(var16_16)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)var15_15, (ScriptValue)ScriptValue.of((String)var16_16), (ScriptContext)var1_1);
             } else {
                 v3 /* !! */  = ScriptValue.NULL;
             }
             return ScriptValue.NULL;
         }
-        var19_19 = var1_1.getClassOrVar("SQL");
-        if (var19_19 != ScriptValue.NULL) {
+        var18_18 = var1_1.getClassOrVar("SQL");
+        if (var18_18 != ScriptValue.NULL) {
             v4 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "UPDATE warps SET name = ? WHERE id = ?");
-            var20_20 = ScriptContext.builder().copyFrom(var1_1);
-            var20_20.val("name", var3_3);
-            v5 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "execute", (ScriptValue)var19_19, (ScriptValue)v4, (ScriptValue)var14_14, (ScriptValue)Warps.warpId(var20_20), (ScriptContext)var1_1);
+            var19_19 = ScriptContext.builder().copyFrom(var1_1);
+            var19_19.val("name", var3_3);
+            v5 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "execute", (ScriptValue)var18_18, (ScriptValue)v4, (ScriptValue)var13_13, (ScriptValue)Warps.warpId(var19_19), (ScriptContext)var1_1);
         } else {
             v5 /* !! */  = ScriptValue.NULL;
         }
-        var21_21 = var1_1.getClassOrVar("Player");
-        if (var21_21 != ScriptValue.NULL) {
-            var22_22 = ScriptValue.of((String)("<green>\u2714 <white>Renamed to '" + var14_14.asStr() + "'."));
-            var23_23 = PolyClassPlayer.ofGuarded((ScriptValue)var21_21);
-            v6 /* !! */  = var23_23 != null ? ScriptValue.of((boolean)var23_23.tm$42_send_message(var22_22.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)var21_21, (ScriptValue)var22_22, (ScriptContext)var1_1);
+        var20_20 = var1_1.getClassOrVar("Player");
+        if (var20_20 != ScriptValue.NULL) {
+            var21_21 = ScriptValue.of((String)("<green>\u2714 <white>Renamed to '" + var13_13.asStr() + "'."));
+            var22_22 = PolyClassPlayer_v2.ofGuarded((ScriptValue)var20_20);
+            v6 /* !! */  = var22_22 != null ? ScriptValue.of((boolean)var22_22.tm$42_send_message(var21_21.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)var20_20, (ScriptValue)var21_21, (ScriptContext)var1_1);
         } else {
             v6 /* !! */  = ScriptValue.NULL;
         }
@@ -4521,8 +4457,8 @@ public final class Warps {
             ScriptValue scriptValue3 = scriptContext.getClassOrVar("Player");
             if (scriptValue3 != ScriptValue.NULL) {
                 ScriptValue scriptValue4 = ScriptValue.of((String)("<red>\u2718 <white>No warp named '" + scriptValue2.asStr() + "'."));
-                PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue3);
-                v0 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(scriptValue4.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue3, (ScriptValue)scriptValue4, (ScriptContext)scriptContext);
+                PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue3);
+                v0 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(scriptValue4.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue3, (ScriptValue)scriptValue4, (ScriptContext)scriptContext);
             } else {
                 v0 = ScriptValue.NULL;
             }
@@ -4534,32 +4470,31 @@ public final class Warps {
             ScriptValue scriptValue5 = scriptContext.getClassOrVar("Player");
             if (scriptValue5 != ScriptValue.NULL) {
                 String string = "<red>\u2718 <white>You don't own that warp.";
-                PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue5);
-                v1 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue5, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
+                PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue5);
+                v1 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue5, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
             } else {
                 v1 = ScriptValue.NULL;
             }
             return ScriptValue.NULL;
         }
-        ScriptValue scriptValue6 = scriptContext.getClassOrVar("Cmd");
-        ScriptValue scriptValue7 = scriptValue6 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "arg", (ScriptValue)scriptValue6, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "player")), (ScriptContext)scriptContext) : ScriptValue.NULL;
-        builder.val("target", scriptValue7);
-        ScriptValue scriptValue8 = scriptContext.getClassOrVar("SQL");
-        if (scriptValue8 != ScriptValue.NULL) {
-            ScriptValue scriptValue9 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "UPDATE warps SET owner_uuid = ?, owner_name = ? WHERE id = ?");
-            Object object = scriptValue7 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue7, (ScriptContext)scriptContext) : ScriptValue.NULL;
-            Object object2 = scriptValue7 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue7, (ScriptContext)scriptContext) : ScriptValue.NULL;
+        ScriptValue scriptValue6 = scriptValue != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "arg", (ScriptValue)scriptValue, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "player")), (ScriptContext)scriptContext) : ScriptValue.NULL;
+        builder.val("target", scriptValue6);
+        ScriptValue scriptValue7 = scriptContext.getClassOrVar("SQL");
+        if (scriptValue7 != ScriptValue.NULL) {
+            ScriptValue scriptValue8 =  /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "UPDATE warps SET owner_uuid = ?, owner_name = ? WHERE id = ?");
+            Object object = scriptValue6 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue6, (ScriptContext)scriptContext) : ScriptValue.NULL;
+            Object object2 = scriptValue6 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue6, (ScriptContext)scriptContext) : ScriptValue.NULL;
             ScriptContext.Builder builder4 = ScriptContext.builder().copyFrom(scriptContext);
             builder4.val("name", scriptValue2);
-            v5 = PolyDispatch.bootstrapCall("memberCall", "execute", (ScriptValue)scriptValue8, (ScriptValue)scriptValue9, (ScriptValue)object, (ScriptValue)object2, (ScriptValue)Warps.warpId(builder4), (ScriptContext)scriptContext);
+            v5 = PolyDispatch.bootstrapCall("memberCall", "execute", (ScriptValue)scriptValue7, (ScriptValue)scriptValue8, (ScriptValue)object, (ScriptValue)object2, (ScriptValue)Warps.warpId(builder4), (ScriptContext)scriptContext);
         } else {
             v5 = ScriptValue.NULL;
         }
-        ScriptValue scriptValue10 = scriptContext.getClassOrVar("Player");
-        if (scriptValue10 != ScriptValue.NULL) {
-            ScriptValue scriptValue11 = ScriptValue.of((String)("<green>\u2714 <white>Transferred " + scriptValue2.asStr() + " to " + (scriptValue7 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue7, (ScriptContext)scriptContext) : ScriptValue.NULL).asStr() + "."));
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue10);
-            v6 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(scriptValue11.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue10, (ScriptValue)scriptValue11, (ScriptContext)scriptContext);
+        ScriptValue scriptValue9 = scriptContext.getClassOrVar("Player");
+        if (scriptValue9 != ScriptValue.NULL) {
+            ScriptValue scriptValue10 = ScriptValue.of((String)("<green>\u2714 <white>Transferred " + scriptValue2.asStr() + " to " + (scriptValue6 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue6, (ScriptContext)scriptContext) : ScriptValue.NULL).asStr() + "."));
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue9);
+            v6 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(scriptValue10.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue9, (ScriptValue)scriptValue10, (ScriptContext)scriptContext);
         } else {
             v6 = ScriptValue.NULL;
         }
@@ -4577,8 +4512,8 @@ public final class Warps {
             ScriptValue scriptValue3 = scriptContext.getClassOrVar("Player");
             if (scriptValue3 != ScriptValue.NULL) {
                 ScriptValue scriptValue4 = ScriptValue.of((String)("<red>\u2718 <white>No warp named '" + scriptValue2.asStr() + "'."));
-                PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue3);
-                v0 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(scriptValue4.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue3, (ScriptValue)scriptValue4, (ScriptContext)scriptContext);
+                PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue3);
+                v0 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(scriptValue4.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue3, (ScriptValue)scriptValue4, (ScriptContext)scriptContext);
             } else {
                 v0 = ScriptValue.NULL;
             }
@@ -4590,29 +4525,27 @@ public final class Warps {
             ScriptValue scriptValue5 = scriptContext.getClassOrVar("Player");
             if (scriptValue5 != ScriptValue.NULL) {
                 String string = "<red>\u2718 <white>You don't own that warp.";
-                PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue5);
-                v1 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue5, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
+                PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue5);
+                v1 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue5, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
             } else {
                 v1 = ScriptValue.NULL;
             }
             return ScriptValue.NULL;
         }
-        ScriptValue scriptValue6 = scriptContext.getClassOrVar("Cmd");
-        ScriptValue scriptValue7 = scriptValue6 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "arg", (ScriptValue)scriptValue6, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "player")), (ScriptContext)scriptContext) : ScriptValue.NULL;
-        builder.val("target", scriptValue7);
+        ScriptValue scriptValue6 = scriptValue != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "arg", (ScriptValue)scriptValue, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "player")), (ScriptContext)scriptContext) : ScriptValue.NULL;
+        builder.val("target", scriptValue6);
         ScriptContext.Builder builder4 = ScriptContext.builder().copyFrom(scriptContext);
         builder4.val("name", scriptValue2);
-        ScriptValue scriptValue8 = Warps.warpId(builder4);
-        builder.val("wid", scriptValue8);
-        ScriptValue scriptValue9 = scriptContext.getClassOrVar("SQL");
-        Object object = scriptValue9 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "execute", (ScriptValue)scriptValue9, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "DELETE FROM warp_bans WHERE warp_id = ? AND uuid = ?")), (ScriptValue)scriptValue8, (ScriptValue)(scriptValue7 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue7, (ScriptContext)scriptContext) : ScriptValue.NULL), (ScriptContext)scriptContext) : ScriptValue.NULL;
-        ScriptValue scriptValue10 = scriptContext.getClassOrVar("SQL");
-        Object object2 = scriptValue10 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "execute", (ScriptValue)scriptValue10, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "INSERT INTO warp_bans (warp_id, uuid, name) VALUES (?, ?, ?)")), (ScriptValue)scriptValue8, (ScriptValue)(scriptValue7 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue7, (ScriptContext)scriptContext) : ScriptValue.NULL), (ScriptValue)(scriptValue7 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue7, (ScriptContext)scriptContext) : ScriptValue.NULL), (ScriptContext)scriptContext) : ScriptValue.NULL;
-        ScriptValue scriptValue11 = scriptContext.getClassOrVar("Player");
-        if (scriptValue11 != ScriptValue.NULL) {
-            ScriptValue scriptValue12 = ScriptValue.of((String)("<green>\u2714 <white>Banned " + (scriptValue7 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue7, (ScriptContext)scriptContext) : ScriptValue.NULL).asStr() + " from " + scriptValue2.asStr() + "."));
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue11);
-            v4 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(scriptValue12.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue11, (ScriptValue)scriptValue12, (ScriptContext)scriptContext);
+        ScriptValue scriptValue7 = Warps.warpId(builder4);
+        builder.val("wid", scriptValue7);
+        ScriptValue scriptValue8 = scriptContext.getClassOrVar("SQL");
+        Object object = scriptValue8 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "execute", (ScriptValue)scriptValue8, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "DELETE FROM warp_bans WHERE warp_id = ? AND uuid = ?")), (ScriptValue)scriptValue7, (ScriptValue)(scriptValue6 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue6, (ScriptContext)scriptContext) : ScriptValue.NULL), (ScriptContext)scriptContext) : ScriptValue.NULL;
+        Object object2 = scriptValue8 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "execute", (ScriptValue)scriptValue8, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "INSERT INTO warp_bans (warp_id, uuid, name) VALUES (?, ?, ?)")), (ScriptValue)scriptValue7, (ScriptValue)(scriptValue6 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue6, (ScriptContext)scriptContext) : ScriptValue.NULL), (ScriptValue)(scriptValue6 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue6, (ScriptContext)scriptContext) : ScriptValue.NULL), (ScriptContext)scriptContext) : ScriptValue.NULL;
+        ScriptValue scriptValue9 = scriptContext.getClassOrVar("Player");
+        if (scriptValue9 != ScriptValue.NULL) {
+            ScriptValue scriptValue10 = ScriptValue.of((String)("<green>\u2714 <white>Banned " + (scriptValue6 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue6, (ScriptContext)scriptContext) : ScriptValue.NULL).asStr() + " from " + scriptValue2.asStr() + "."));
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue9);
+            v4 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(scriptValue10.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue9, (ScriptValue)scriptValue10, (ScriptContext)scriptContext);
         } else {
             v4 = ScriptValue.NULL;
         }
@@ -4630,8 +4563,8 @@ public final class Warps {
             ScriptValue scriptValue3 = scriptContext.getClassOrVar("Player");
             if (scriptValue3 != ScriptValue.NULL) {
                 ScriptValue scriptValue4 = ScriptValue.of((String)("<red>\u2718 <white>No warp named '" + scriptValue2.asStr() + "'."));
-                PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue3);
-                v0 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(scriptValue4.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue3, (ScriptValue)scriptValue4, (ScriptContext)scriptContext);
+                PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue3);
+                v0 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(scriptValue4.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue3, (ScriptValue)scriptValue4, (ScriptContext)scriptContext);
             } else {
                 v0 = ScriptValue.NULL;
             }
@@ -4643,41 +4576,39 @@ public final class Warps {
             ScriptValue scriptValue5 = scriptContext.getClassOrVar("Player");
             if (scriptValue5 != ScriptValue.NULL) {
                 String string = "<red>\u2718 <white>You don't own that warp.";
-                PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue5);
-                v1 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue5, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
+                PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue5);
+                v1 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue5, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
             } else {
                 v1 = ScriptValue.NULL;
             }
             return ScriptValue.NULL;
         }
-        ScriptValue scriptValue6 = scriptContext.getClassOrVar("Cmd");
-        ScriptValue scriptValue7 = scriptValue6 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "arg", (ScriptValue)scriptValue6, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "player")), (ScriptContext)scriptContext) : ScriptValue.NULL;
-        builder.val("player_name", scriptValue7);
+        ScriptValue scriptValue6 = scriptValue != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "arg", (ScriptValue)scriptValue, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "player")), (ScriptContext)scriptContext) : ScriptValue.NULL;
+        builder.val("player_name", scriptValue6);
         ScriptContext.Builder builder4 = ScriptContext.builder().copyFrom(scriptContext);
         builder4.val("name", scriptValue2);
-        ScriptValue scriptValue8 = Warps.warpId(builder4);
-        builder.val("wid", scriptValue8);
-        ScriptValue scriptValue9 = scriptContext.getClassOrVar("SQL");
-        ScriptValue scriptValue10 = scriptValue9 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "query", (ScriptValue)scriptValue9, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "SELECT uuid, name FROM warp_bans WHERE warp_id = ? AND lower(name) = ?")), (ScriptValue)scriptValue8, (ScriptValue)ScriptFormula.callBuiltin1((String)"lower", (ScriptValue)scriptValue7, (ScriptContext)scriptContext), (ScriptContext)scriptContext) : ScriptValue.NULL;
-        builder.val("rows", scriptValue10);
-        if (ScriptFormula.callBuiltin1((String)"len", (ScriptValue)scriptValue10, (ScriptContext)scriptContext).asNum() <= 0.0) {
-            ScriptValue scriptValue11 = scriptContext.getClassOrVar("Player");
-            if (scriptValue11 != ScriptValue.NULL) {
-                ScriptValue scriptValue12 = ScriptValue.of((String)("<red>\u2718 <white>" + scriptValue7.asStr() + " isn't banned from that warp."));
-                PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue11);
-                v2 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(scriptValue12.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue11, (ScriptValue)scriptValue12, (ScriptContext)scriptContext);
+        ScriptValue scriptValue7 = Warps.warpId(builder4);
+        builder.val("wid", scriptValue7);
+        ScriptValue scriptValue8 = scriptContext.getClassOrVar("SQL");
+        ScriptValue scriptValue9 = scriptValue8 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "query", (ScriptValue)scriptValue8, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "SELECT uuid, name FROM warp_bans WHERE warp_id = ? AND lower(name) = ?")), (ScriptValue)scriptValue7, (ScriptValue)ScriptFormula.callBuiltin1((String)"lower", (ScriptValue)scriptValue6, (ScriptContext)scriptContext), (ScriptContext)scriptContext) : ScriptValue.NULL;
+        builder.val("rows", scriptValue9);
+        if (ScriptFormula.callBuiltin1((String)"len", (ScriptValue)scriptValue9, (ScriptContext)scriptContext).asNum() <= 0.0) {
+            ScriptValue scriptValue10 = scriptContext.getClassOrVar("Player");
+            if (scriptValue10 != ScriptValue.NULL) {
+                ScriptValue scriptValue11 = ScriptValue.of((String)("<red>\u2718 <white>" + scriptValue6.asStr() + " isn't banned from that warp."));
+                PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue10);
+                v2 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(scriptValue11.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue10, (ScriptValue)scriptValue11, (ScriptContext)scriptContext);
             } else {
                 v2 = ScriptValue.NULL;
             }
             return ScriptValue.NULL;
         }
-        ScriptValue scriptValue13 = scriptContext.getClassOrVar("SQL");
-        Object object = scriptValue13 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "execute", (ScriptValue)scriptValue13, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "DELETE FROM warp_bans WHERE warp_id = ? AND uuid = ?")), (ScriptValue)scriptValue8, (ScriptValue)PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)(scriptValue10 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue10, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 0.0)), (ScriptContext)scriptContext) : ScriptValue.NULL), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "uuid")), (ScriptContext)scriptContext), (ScriptContext)scriptContext) : ScriptValue.NULL;
-        ScriptValue scriptValue14 = scriptContext.getClassOrVar("Player");
-        if (scriptValue14 != ScriptValue.NULL) {
-            ScriptValue scriptValue15 = ScriptValue.of((String)("<green>\u2714 <white>Unbanned " + PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)(scriptValue10 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue10, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 0.0)), (ScriptContext)scriptContext) : ScriptValue.NULL), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "name")), (ScriptContext)scriptContext).asStr() + "."));
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue14);
-            v4 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(scriptValue15.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue14, (ScriptValue)scriptValue15, (ScriptContext)scriptContext);
+        Object object = scriptValue8 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "execute", (ScriptValue)scriptValue8, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "DELETE FROM warp_bans WHERE warp_id = ? AND uuid = ?")), (ScriptValue)scriptValue7, (ScriptValue)PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)(scriptValue9 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue9, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 0.0)), (ScriptContext)scriptContext) : ScriptValue.NULL), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "uuid")), (ScriptContext)scriptContext), (ScriptContext)scriptContext) : ScriptValue.NULL;
+        ScriptValue scriptValue12 = scriptContext.getClassOrVar("Player");
+        if (scriptValue12 != ScriptValue.NULL) {
+            ScriptValue scriptValue13 = ScriptValue.of((String)("<green>\u2714 <white>Unbanned " + PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)(scriptValue9 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue9, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constNum("n", MethodHandles.lookup(), "constNum", Warps.class, 0.0)), (ScriptContext)scriptContext) : ScriptValue.NULL), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "name")), (ScriptContext)scriptContext).asStr() + "."));
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue12);
+            v4 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(scriptValue13.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue12, (ScriptValue)scriptValue13, (ScriptContext)scriptContext);
         } else {
             v4 = ScriptValue.NULL;
         }
@@ -4695,8 +4626,8 @@ public final class Warps {
             ScriptValue scriptValue3 = scriptContext.getClassOrVar("Player");
             if (scriptValue3 != ScriptValue.NULL) {
                 ScriptValue scriptValue4 = ScriptValue.of((String)("<red>\u2718 <white>No warp named '" + scriptValue2.asStr() + "'."));
-                PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue3);
-                v0 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(scriptValue4.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue3, (ScriptValue)scriptValue4, (ScriptContext)scriptContext);
+                PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue3);
+                v0 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(scriptValue4.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue3, (ScriptValue)scriptValue4, (ScriptContext)scriptContext);
             } else {
                 v0 = ScriptValue.NULL;
             }
@@ -4715,8 +4646,8 @@ public final class Warps {
         ScriptValue scriptValue = scriptContext.getClassOrVar("Player");
         if (scriptValue != ScriptValue.NULL) {
             ScriptValue scriptValue2 = scriptContext.getClassOrVar("PERM_ADMIN_REMOVEALL");
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue);
-            object2 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$4_has_permission(scriptValue2.asStr())) : PolyDispatch.bootstrapCall("memberCall", "has_permission", (ScriptValue)scriptValue, (ScriptValue)scriptValue2, (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue);
+            object2 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$4_has_permission(scriptValue2.asStr())) : PolyDispatch.bootstrapCall("memberCall", "has_permission", (ScriptValue)scriptValue, (ScriptValue)scriptValue2, (ScriptContext)scriptContext);
         } else {
             object2 = ScriptValue.NULL;
         }
@@ -4724,8 +4655,8 @@ public final class Warps {
             ScriptValue scriptValue3 = scriptContext.getClassOrVar("Player");
             if (scriptValue3 != ScriptValue.NULL) {
                 String string = "<red>\u2718 <white>You don't have permission to do that.";
-                PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue3);
-                v1 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue3, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
+                PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue3);
+                v1 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue3, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
             } else {
                 v1 = ScriptValue.NULL;
             }
@@ -4760,8 +4691,8 @@ public final class Warps {
         ScriptValue scriptValue15 = scriptContext.getClassOrVar("Player");
         if (scriptValue15 != ScriptValue.NULL) {
             ScriptValue scriptValue16 = ScriptValue.of((String)("<green>\u2714 <white>Removed " + scriptContext.getStr("n") + " warp(s) owned by " + scriptValue5.asStr() + "."));
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue15);
-            v5 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(scriptValue16.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue15, (ScriptValue)scriptValue16, (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue15);
+            v5 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(scriptValue16.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue15, (ScriptValue)scriptValue16, (ScriptContext)scriptContext);
         } else {
             v5 = ScriptValue.NULL;
         }
@@ -4774,8 +4705,8 @@ public final class Warps {
         ScriptValue scriptValue = scriptContext.getClassOrVar("Player");
         if (scriptValue != ScriptValue.NULL) {
             ScriptValue scriptValue2 = scriptContext.getClassOrVar("PERM_ADMIN_RELOAD");
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue);
-            object = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$4_has_permission(scriptValue2.asStr())) : PolyDispatch.bootstrapCall("memberCall", "has_permission", (ScriptValue)scriptValue, (ScriptValue)scriptValue2, (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue);
+            object = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$4_has_permission(scriptValue2.asStr())) : PolyDispatch.bootstrapCall("memberCall", "has_permission", (ScriptValue)scriptValue, (ScriptValue)scriptValue2, (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
         }
@@ -4783,8 +4714,8 @@ public final class Warps {
             ScriptValue scriptValue3 = scriptContext.getClassOrVar("Player");
             if (scriptValue3 != ScriptValue.NULL) {
                 String string = "<red>\u2718 <white>You don't have permission to do that.";
-                PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue3);
-                v1 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue3, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
+                PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue3);
+                v1 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue3, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
             } else {
                 v1 = ScriptValue.NULL;
             }
@@ -4798,19 +4729,18 @@ public final class Warps {
         } else {
             v2 = ScriptValue.NULL;
         }
-        ScriptValue scriptValue5 = scriptContext.getClassOrVar("Server");
-        if (scriptValue5 != ScriptValue.NULL) {
+        if (scriptValue4 != ScriptValue.NULL) {
             String string = "cepolyfill reload cmds";
-            PolyClassServer polyClassServer = PolyClassServer.ofGuarded((ScriptValue)scriptValue5);
-            v3 = polyClassServer != null ? ScriptValue.of((boolean)polyClassServer.tm$14_exec_command(string)) : PolyDispatch.bootstrapCall("memberCall", "exec_command", (ScriptValue)scriptValue5, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
+            PolyClassServer polyClassServer = PolyClassServer.ofGuarded((ScriptValue)scriptValue4);
+            v3 = polyClassServer != null ? ScriptValue.of((boolean)polyClassServer.tm$14_exec_command(string)) : PolyDispatch.bootstrapCall("memberCall", "exec_command", (ScriptValue)scriptValue4, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
         } else {
             v3 = ScriptValue.NULL;
         }
-        ScriptValue scriptValue6 = scriptContext.getClassOrVar("Player");
-        if (scriptValue6 != ScriptValue.NULL) {
+        ScriptValue scriptValue5 = scriptContext.getClassOrVar("Player");
+        if (scriptValue5 != ScriptValue.NULL) {
             String string = "<green>\u2714 <white>Reloaded warps scripts/commands.";
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue6);
-            v4 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue6, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue5);
+            v4 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue5, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
         } else {
             v4 = ScriptValue.NULL;
         }
@@ -4823,8 +4753,8 @@ public final class Warps {
         ScriptValue scriptValue = scriptContext.getClassOrVar("Player");
         if (scriptValue != ScriptValue.NULL) {
             ScriptValue scriptValue2 = scriptContext.getClassOrVar("PERM_ADMIN_ADDWARPS");
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue);
-            object = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$4_has_permission(scriptValue2.asStr())) : PolyDispatch.bootstrapCall("memberCall", "has_permission", (ScriptValue)scriptValue, (ScriptValue)scriptValue2, (ScriptContext)scriptContext);
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue);
+            object = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$4_has_permission(scriptValue2.asStr())) : PolyDispatch.bootstrapCall("memberCall", "has_permission", (ScriptValue)scriptValue, (ScriptValue)scriptValue2, (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
         }
@@ -4832,8 +4762,8 @@ public final class Warps {
             ScriptValue scriptValue3 = scriptContext.getClassOrVar("Player");
             if (scriptValue3 != ScriptValue.NULL) {
                 String string = "<red>\u2718 <white>You don't have permission to do that.";
-                PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue3);
-                v1 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue3, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
+                PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue3);
+                v1 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(string)) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue3, (ScriptValue)ScriptValue.of((String)string), (ScriptContext)scriptContext);
             } else {
                 v1 = ScriptValue.NULL;
             }
@@ -4842,15 +4772,14 @@ public final class Warps {
         ScriptValue scriptValue4 = scriptContext.getClassOrVar("Cmd");
         ScriptValue scriptValue5 = scriptValue4 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "arg", (ScriptValue)scriptValue4, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "player")), (ScriptContext)scriptContext) : ScriptValue.NULL;
         builder.val("target", scriptValue5);
-        ScriptValue scriptValue6 = scriptContext.getClassOrVar("Cmd");
-        ScriptValue scriptValue7 = ScriptFormula.callBuiltin1((String)"int", (ScriptValue)(scriptValue6 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "arg", (ScriptValue)scriptValue6, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "amount")), (ScriptContext)scriptContext) : ScriptValue.NULL), (ScriptContext)scriptContext);
-        builder.val("n", scriptValue7);
-        Object object2 = scriptValue5 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue5, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "warps_extra_slots")), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "int")), (ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)(scriptValue5 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue5, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "warps_extra_slots")), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "int")), (ScriptContext)scriptContext) : ScriptValue.NULL), (ScriptValue)scriptValue7), (ScriptContext)scriptContext) : ScriptValue.NULL;
-        ScriptValue scriptValue8 = scriptContext.getClassOrVar("Player");
-        if (scriptValue8 != ScriptValue.NULL) {
-            ScriptValue scriptValue9 = ScriptValue.of((String)("<green>\u2714 <white>Gave " + (scriptValue5 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue5, (ScriptContext)scriptContext) : ScriptValue.NULL).asStr() + " " + scriptValue7.asStr() + " extra warp slot(s)."));
-            PolyClassPlayer polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue8);
-            v3 = polyClassPlayer != null ? ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(scriptValue9.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue8, (ScriptValue)scriptValue9, (ScriptContext)scriptContext);
+        ScriptValue scriptValue6 = ScriptFormula.callBuiltin1((String)"int", (ScriptValue)(scriptValue4 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "arg", (ScriptValue)scriptValue4, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "amount")), (ScriptContext)scriptContext) : ScriptValue.NULL), (ScriptContext)scriptContext);
+        builder.val("n", scriptValue6);
+        Object object2 = scriptValue5 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue5, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "warps_extra_slots")), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "int")), (ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)(scriptValue5 != ScriptValue.NULL ? PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue5, (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "warps_extra_slots")), (ScriptValue)( /* dynamic constant */ (ScriptValue)ScriptValue.constStr("s", MethodHandles.lookup(), "constStr", Warps.class, "int")), (ScriptContext)scriptContext) : ScriptValue.NULL), (ScriptValue)scriptValue6), (ScriptContext)scriptContext) : ScriptValue.NULL;
+        ScriptValue scriptValue7 = scriptContext.getClassOrVar("Player");
+        if (scriptValue7 != ScriptValue.NULL) {
+            ScriptValue scriptValue8 = ScriptValue.of((String)("<green>\u2714 <white>Gave " + (scriptValue5 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue5, (ScriptContext)scriptContext) : ScriptValue.NULL).asStr() + " " + scriptValue6.asStr() + " extra warp slot(s)."));
+            PolyClassPlayer_v2 polyClassPlayer_v2 = PolyClassPlayer_v2.ofGuarded((ScriptValue)scriptValue7);
+            v3 = polyClassPlayer_v2 != null ? ScriptValue.of((boolean)polyClassPlayer_v2.tm$42_send_message(scriptValue8.asStr())) : PolyDispatch.bootstrapCall("memberCall", "send_message", (ScriptValue)scriptValue7, (ScriptValue)scriptValue8, (ScriptContext)scriptContext);
         } else {
             v3 = ScriptValue.NULL;
         }

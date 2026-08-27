@@ -161,6 +161,10 @@ final class ScriptClassCompiler {
          * inspection) sees the same value it always did.
          */
         final Map<String, Integer> pinnedSlots = new java.util.HashMap<>();
+        /** Set between arranging a first-hop receiver's store and publishing it — see
+         *  {@link #keepFirstHopReceiver}. */
+        String pendingReceiver;
+        int pendingReceiverSlot;
         final ScriptBytecodeCompiler.VarTypeHint varHint = cachedVars::get;
         /** name -> a JVM local holding the ScriptValue that {@code getClassInstance}/{@code getVar}
          *  already resolved for that name earlier in this method. Same invalidation points as
@@ -960,6 +964,50 @@ final class ScriptClassCompiler {
      * statement, per tick, immediately thrown away. Now the raw expression is emitted and popped at
      * its own width, so a NUM/BOOL statement never allocates at all.
      */
+    /**
+     * Arranges for a statement's FIRST-HOP receiver to be kept in a JVM local, and caches it, so the
+     * statements after it stop re-reading the same name out of the ScriptContext.
+     *
+     * <p>`cmd_help` in the real corpus is fifteen consecutive `Player.send_message(...)` statements,
+     * and each one re-resolved `Player` and re-guarded it. The read is now done once.
+     *
+     * <p>Safe because of exactly one property, which is why this lives at the STATEMENT level and
+     * not inside expression emission: the root of this statement resolves that receiver before doing
+     * anything else, so the store happens unconditionally and dominates every later use. An earlier
+     * attempt cached receivers from anywhere inside an expression — including a {@code &&} arm that
+     * may not run — and the JVM verifier rejected a third of the real corpus while every unit test
+     * still passed.
+     *
+     * <p>Nothing is read that would not have been read anyway, so {@link ScriptContext#getVar}'s
+     * tracked-dependency set is unchanged. And the name is a receiver, never an assignment target,
+     * so the cache entry stays valid until the ordinary invalidation rules drop it.
+     */
+    private static void keepFirstHopReceiver(MethodCtx mc, ScriptBytecodeCompiler.Expr parsed) {
+        mc.pendingReceiver = null;
+        String receiver = ScriptBytecodeCompiler.firstHopReceiver(parsed);
+        if (receiver == null || mc.cachedVars.containsKey(receiver)) return;
+        // Allocated BEFORE the expression's Ctx is created — a Ctx hands out scratch slots starting
+        // at mc.nextSlot, so reserving after it would give the expression this very slot to reuse.
+        mc.pendingReceiverSlot = mc.alloc();
+        mc.pendingReceiver = receiver;
+    }
+
+    /** The store request to hand the expression's Ctx, once that Ctx exists. */
+    private static java.util.Map<String, Integer> receiverStoreOf(MethodCtx mc) {
+        return mc.pendingReceiver == null
+                ? java.util.Map.of() : java.util.Map.of(mc.pendingReceiver, mc.pendingReceiverSlot);
+    }
+
+    /** Publishes the receiver {@link #keepFirstHopReceiver} arranged, once its store has been
+     *  emitted — never before, or a later statement would read an unassigned local. */
+    private static void publishFirstHopReceiver(MethodCtx mc) {
+        if (mc.pendingReceiver == null) return;
+        mc.cachedVars.put(mc.pendingReceiver,
+                new ScriptBytecodeCompiler.CachedVarRef(mc.pendingReceiverSlot,
+                        ScriptBytecodeCompiler.Type.ANY));
+        mc.pendingReceiver = null;
+    }
+
     private static void emitEvaluateDiscarding(MethodVisitor mv, MethodCtx mc, String expr) {
         ScriptBytecodeCompiler.Expr parsed = ScriptBytecodeCompiler.tryParse(expr, mc.resolver, mc.varHint);
         if (parsed == null) {
@@ -969,9 +1017,12 @@ final class ScriptClassCompiler {
             return;
         }
         int ctxSlot = mc.sharedCtxSlot;
+        keepFirstHopReceiver(mc, parsed);
         ScriptBytecodeCompiler.Ctx ec = new ScriptBytecodeCompiler.Ctx(ctxSlot, mc.nextSlot);
+        ec.receiverStores = receiverStoreOf(mc);
         parsed.emit(mv, ec); // NOT toAny — that box is exactly what we're avoiding
         mc.nextSlot = ec.next;
+        publishFirstHopReceiver(mc);
         // A double occupies two stack words; a boolean (int) and a ScriptValue reference occupy one.
         mv.visitInsn(parsed.type() == ScriptBytecodeCompiler.Type.NUM ? POP2 : POP);
     }
@@ -980,12 +1031,15 @@ final class ScriptClassCompiler {
         ScriptBytecodeCompiler.Expr parsed = ScriptBytecodeCompiler.tryParse(expr, mc.resolver, mc.varHint);
         if (parsed != null) {
             int ctxSlot = mc.sharedCtxSlot;
+            keepFirstHopReceiver(mc, parsed);
             ScriptBytecodeCompiler.Ctx ec = new ScriptBytecodeCompiler.Ctx(ctxSlot, mc.nextSlot);
+            ec.receiverStores = receiverStoreOf(mc);
             ScriptBytecodeCompiler.Expr finalExpr = asBool
                     ? ScriptBytecodeCompiler.toBool(parsed)
                     : ScriptBytecodeCompiler.toAny(parsed);
             finalExpr.emit(mv, ec);
             mc.nextSlot = ec.next; // don't let this expression's scratch slots collide with later statements'
+            publishFirstHopReceiver(mc);
             return;
         }
         mv.visitLdcInsn(expr);
@@ -1065,9 +1119,12 @@ final class ScriptClassCompiler {
 
         ScriptBytecodeCompiler.Type type = parsed.type();
         int ctxSlot = mc.sharedCtxSlot;
+        keepFirstHopReceiver(mc, parsed);
         ScriptBytecodeCompiler.Ctx ec = new ScriptBytecodeCompiler.Ctx(ctxSlot, mc.nextSlot);
+        ec.receiverStores = receiverStoreOf(mc);
         parsed.emit(mv, ec); // raw NUM double / raw BOOL int / already-boxed ANY reference
         mc.nextSlot = ec.next;
+        publishFirstHopReceiver(mc);
 
         int primSlot;
         int valueSlot;
