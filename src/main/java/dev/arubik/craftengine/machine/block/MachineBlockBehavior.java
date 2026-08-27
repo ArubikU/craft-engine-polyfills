@@ -160,27 +160,42 @@ WorldlyContainerHolder {
             ServerLevel level = ((CraftWorld)((BukkitWorld)context.getLevel()).platformWorld()).getHandle();
             BlockPos pos = (BlockPos)LocationUtils.toBlockPos((net.momirealms.craftengine.core.world.BlockPos)context.getClickedPos());
             BlockEntity be = BukkitBlockEntityTypes.getIfLoaded((Level)level, pos);
-            if (be != null && (blockEntityController = be.controller) instanceof AbstractMachineBlockEntity) {
+            if (be == null) {
+                logUseWithoutItemFallthrough("no block entity loaded at " + pos.toShortString());
+                return InteractionResult.PASS;
+            }
+            if (!((blockEntityController = be.controller) instanceof AbstractMachineBlockEntity)) {
+                logUseWithoutItemFallthrough("controller at " + pos.toShortString() + " is "
+                    + (blockEntityController == null ? "null" : blockEntityController.getClass().getSimpleName())
+                    + ", not an AbstractMachineBlockEntity");
+                return InteractionResult.PASS;
+            }
+            {
                 BukkitServerPlayer cePlayer;
                 AbstractMachineBlockEntity machine = (AbstractMachineBlockEntity)blockEntityController;
                 net.momirealms.craftengine.core.entity.player.Player cePlayerRaw = context.getPlayer();
-                if (cePlayerRaw instanceof BukkitServerPlayer && (cePlayer = (BukkitServerPlayer)cePlayerRaw).platformPlayer() instanceof Player) {
-                    DataMachineBlockEntity dm;
-                    Player bukkit = (Player) cePlayer.platformPlayer();
-                    boolean canOpen = true;
-                    if (machine instanceof DataMachineBlockEntity && (dm = (DataMachineBlockEntity)machine).definition() != null) {
-                        canOpen = dm.definition().openUi();
-                    }
-                    if (machine instanceof DataMachineBlockEntity && (dm = (DataMachineBlockEntity)machine).definition() != null && dm.definition().interactScript() != null) {
-                        ServerPlayer nmsPlayer = ((CraftPlayer)bukkit).getHandle();
-                        dm.runInteractScript(dm.definition().interactScript(), nmsPlayer);
-                        return InteractionResult.SUCCESS_AND_CANCEL;
-                    }
-                    if (canOpen) {
-                        machine.getMenu().open(bukkit);
-                        return InteractionResult.SUCCESS_AND_CANCEL;
-                    }
+                if (!(cePlayerRaw instanceof BukkitServerPlayer && (cePlayer = (BukkitServerPlayer)cePlayerRaw).platformPlayer() instanceof Player)) {
+                    logUseWithoutItemFallthrough("context.getPlayer() at " + pos.toShortString()
+                        + " did not resolve to a Bukkit Player (type=" + (cePlayerRaw == null ? "null" : cePlayerRaw.getClass().getSimpleName()) + ")");
+                    return InteractionResult.PASS;
                 }
+                DataMachineBlockEntity dm;
+                Player bukkit = (Player) cePlayer.platformPlayer();
+                boolean canOpen = true;
+                if (machine instanceof DataMachineBlockEntity && (dm = (DataMachineBlockEntity)machine).definition() != null) {
+                    canOpen = dm.definition().openUi();
+                }
+                if (machine instanceof DataMachineBlockEntity && (dm = (DataMachineBlockEntity)machine).definition() != null && dm.definition().interactScript() != null) {
+                    ServerPlayer nmsPlayer = ((CraftPlayer)bukkit).getHandle();
+                    dm.runInteractScript(dm.definition().interactScript(), nmsPlayer);
+                    return InteractionResult.SUCCESS_AND_CANCEL;
+                }
+                if (canOpen) {
+                    machine.getMenu().open(bukkit);
+                    return InteractionResult.SUCCESS_AND_CANCEL;
+                }
+                logUseWithoutItemFallthrough("machine at " + pos.toShortString() + " (class="
+                    + machine.getClass().getSimpleName() + ") has openUi()=false and no interactScript — nothing to do on right-click");
             }
         }
         catch (Throwable throwable) {
@@ -198,6 +213,20 @@ WorldlyContainerHolder {
     }
 
     private static final java.util.Set<String> LOGGED_USE_WITHOUT_ITEM_FAIL = java.util.concurrent.ConcurrentHashMap.newKeySet();
+
+    /** Every distinct reason string already logged for a non-exceptional "did nothing" right-click
+     *  — a right-click on the SAME broken/misconfigured block would otherwise spam this per click.
+     *  This is the diagnostic ScriptBytecodeCompiler-style catch could never surface: no exception
+     *  is thrown when useWithoutItem simply falls through one of its own if-gates, so a WARNING
+     *  here is the only way to see which gate actually stopped a right-click from opening anything. */
+    private static final java.util.Set<String> LOGGED_USE_WITHOUT_ITEM_FALLTHROUGH = java.util.concurrent.ConcurrentHashMap.newKeySet();
+
+    private static void logUseWithoutItemFallthrough(String reason) {
+        if (LOGGED_USE_WITHOUT_ITEM_FALLTHROUGH.add(reason)) {
+            dev.arubik.craftengine.CraftEnginePolyfills.instance().getLogger().log(
+                java.util.logging.Level.INFO, "[Cep] right-click did nothing: " + reason);
+        }
+    }
 
     public int getSignal(Object thisBlock, Object[] args) {
         if (args == null || args.length < 3) {
