@@ -28,6 +28,16 @@ import dev.arubik.craftengine.script.ScriptValue;
 import java.util.ArrayList;
 
 public final class Jetpack {
+    private static volatile ScriptContext FILE_SCOPE;
+
+    public static ScriptContext fileScope() {
+        ScriptContext scriptContext = FILE_SCOPE;
+        if (scriptContext == null) {
+            scriptContext = ScriptContext.builder().build();
+        }
+        return scriptContext;
+    }
+
     public static ScriptValue onEquip(ScriptContext.Builder builder) {
         Object object;
         Object object2;
@@ -454,5 +464,6 @@ public final class Jetpack {
         double d2 = 24.0;
         ScriptValue scriptValue2 = ScriptValue.of((double)24.0);
         builder.val("CONSUMPTION_PER_CALL", scriptValue2);
+        FILE_SCOPE = builder.build();
     }
 }

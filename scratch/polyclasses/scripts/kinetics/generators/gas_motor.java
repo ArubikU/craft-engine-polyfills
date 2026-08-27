@@ -3,7 +3,7 @@
  * 
  * Could not load the following classes:
  *  dev.arubik.craftengine.script.PolyClass
- *  dev.arubik.craftengine.script.PolyClassMachine_v4
+ *  dev.arubik.craftengine.script.PolyClassMachine_v3
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
  *  dev.arubik.craftengine.script.ScriptContext$Builder
@@ -14,7 +14,7 @@
 package dev.arubik.craftengine.script.gen.kinetics.generators;
 
 import dev.arubik.craftengine.script.PolyClass;
-import dev.arubik.craftengine.script.PolyClassMachine_v4;
+import dev.arubik.craftengine.script.PolyClassMachine_v3;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
@@ -22,6 +22,16 @@ import dev.arubik.craftengine.script.ScriptValue;
 import java.util.ArrayList;
 
 public final class GasMotor {
+    private static volatile ScriptContext FILE_SCOPE;
+
+    public static ScriptContext fileScope() {
+        ScriptContext scriptContext = FILE_SCOPE;
+        if (scriptContext == null) {
+            scriptContext = ScriptContext.builder().build();
+        }
+        return scriptContext;
+    }
+
     public static ScriptValue increaseRpm(ScriptContext.Builder builder) {
         ScriptValue scriptValue;
         Object object;
@@ -34,8 +44,8 @@ public final class GasMotor {
             String string = "target_rpm";
             String string2 = "int";
             if (scriptValue2 instanceof ScriptValue.Obj && (object3 = (obj = (ScriptValue.Obj)scriptValue2).instance()) != null && !(object3 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object3);
-                object2 = polyClassMachine_v4.tm$34_get_typed(string, string2);
+                PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object3);
+                object2 = polyClassMachine_v3.tm$34_get_typed(string, string2);
             } else {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 arrayList.add(ScriptValue.of((String)string));
@@ -66,8 +76,8 @@ public final class GasMotor {
             String string3 = "int";
             ScriptValue scriptValue8 = ScriptValue.of((double)d);
             if (scriptValue7 instanceof ScriptValue.Obj && (object4 = (obj = (ScriptValue.Obj)scriptValue7).instance()) != null && !(object4 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object4);
-                v2 = ScriptValue.of((boolean)polyClassMachine_v4.tm$82_set_typed(string, string3, scriptValue8));
+                PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object4);
+                v2 = ScriptValue.of((boolean)polyClassMachine_v3.tm$82_set_typed(string, string3, scriptValue8));
             } else {
                 ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
                 arrayList2.add(ScriptValue.of((String)string));
@@ -85,8 +95,8 @@ public final class GasMotor {
             String string = "target_su";
             String string4 = "int";
             if (scriptValue9 instanceof ScriptValue.Obj && (object5 = (obj = (ScriptValue.Obj)scriptValue9).instance()) != null && !(object5 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object5);
-                object = polyClassMachine_v4.tm$34_get_typed(string, string4);
+                PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object5);
+                object = polyClassMachine_v3.tm$34_get_typed(string, string4);
             } else {
                 ArrayList<ScriptValue> arrayList3 = new ArrayList<ScriptValue>();
                 arrayList3.add(ScriptValue.of((String)string));
@@ -111,8 +121,8 @@ public final class GasMotor {
             double d3 = scriptContext.getNum("cur");
             ScriptValue scriptValue12 = ScriptValue.of((double)Math.floor(d3 == 0.0 ? 0.0 : scriptContext.getNum("cur_su") * d / d3));
             if (scriptValue instanceof ScriptValue.Obj && (object6 = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object6 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object6);
-                v4 = ScriptValue.of((boolean)polyClassMachine_v4.tm$82_set_typed(string, string5, scriptValue12));
+                PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object6);
+                v4 = ScriptValue.of((boolean)polyClassMachine_v3.tm$82_set_typed(string, string5, scriptValue12));
             } else {
                 ArrayList<ScriptValue> arrayList4 = new ArrayList<ScriptValue>();
                 arrayList4.add(ScriptValue.of((String)string));
@@ -136,8 +146,8 @@ public final class GasMotor {
             String string = "target_rpm";
             String string2 = "int";
             if (scriptValue instanceof ScriptValue.Obj && (object2 = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object2 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object2);
-                object = polyClassMachine_v4.tm$34_get_typed(string, string2);
+                PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object2);
+                object = polyClassMachine_v3.tm$34_get_typed(string, string2);
             } else {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 arrayList.add(ScriptValue.of((String)string));
@@ -168,8 +178,8 @@ public final class GasMotor {
             String string3 = "int";
             ScriptValue scriptValue6 = ScriptValue.of((double)d2);
             if (scriptValue5 instanceof ScriptValue.Obj && (object3 = (obj = (ScriptValue.Obj)scriptValue5).instance()) != null && !(object3 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object3);
-                v2 = ScriptValue.of((boolean)polyClassMachine_v4.tm$82_set_typed(string, string3, scriptValue6));
+                PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object3);
+                v2 = ScriptValue.of((boolean)polyClassMachine_v3.tm$82_set_typed(string, string3, scriptValue6));
             } else {
                 ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
                 arrayList2.add(ScriptValue.of((String)string));
@@ -189,8 +199,8 @@ public final class GasMotor {
                 String string4 = "int";
                 ScriptValue scriptValue8 = ScriptValue.of((double)0.0);
                 if (scriptValue7 instanceof ScriptValue.Obj && (object4 = (obj = (ScriptValue.Obj)scriptValue7).instance()) != null && !(object4 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                    PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object4);
-                    v3 = ScriptValue.of((boolean)polyClassMachine_v4.tm$82_set_typed(string, string4, scriptValue8));
+                    PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object4);
+                    v3 = ScriptValue.of((boolean)polyClassMachine_v3.tm$82_set_typed(string, string4, scriptValue8));
                 } else {
                     ArrayList<ScriptValue> arrayList3 = new ArrayList<ScriptValue>();
                     arrayList3.add(ScriptValue.of((String)string));
@@ -211,8 +221,8 @@ public final class GasMotor {
                 String string = "target_su";
                 String string5 = "int";
                 if (scriptValue10 instanceof ScriptValue.Obj && (object6 = (obj = (ScriptValue.Obj)scriptValue10).instance()) != null && !(object6 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                    PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object6);
-                    object5 = polyClassMachine_v4.tm$34_get_typed(string, string5);
+                    PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object6);
+                    object5 = polyClassMachine_v3.tm$34_get_typed(string, string5);
                 } else {
                     ArrayList<ScriptValue> arrayList4 = new ArrayList<ScriptValue>();
                     arrayList4.add(ScriptValue.of((String)string));
@@ -237,8 +247,8 @@ public final class GasMotor {
                 double d4 = scriptContext.getNum("cur");
                 ScriptValue scriptValue13 = ScriptValue.of((double)Math.floor(d4 == 0.0 ? 0.0 : scriptContext.getNum("cur_su") * d2 / d4));
                 if (scriptValue9 instanceof ScriptValue.Obj && (object7 = (obj = (ScriptValue.Obj)scriptValue9).instance()) != null && !(object7 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                    PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object7);
-                    v5 = ScriptValue.of((boolean)polyClassMachine_v4.tm$82_set_typed(string, string6, scriptValue13));
+                    PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object7);
+                    v5 = ScriptValue.of((boolean)polyClassMachine_v3.tm$82_set_typed(string, string6, scriptValue13));
                 } else {
                     ArrayList<ScriptValue> arrayList5 = new ArrayList<ScriptValue>();
                     arrayList5.add(ScriptValue.of((String)string));
@@ -263,8 +273,8 @@ public final class GasMotor {
             String string = "target_su";
             String string2 = "int";
             if (scriptValue instanceof ScriptValue.Obj && (object2 = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object2 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object2);
-                object = polyClassMachine_v4.tm$34_get_typed(string, string2);
+                PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object2);
+                object = polyClassMachine_v3.tm$34_get_typed(string, string2);
             } else {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 arrayList.add(ScriptValue.of((String)string));
@@ -295,8 +305,8 @@ public final class GasMotor {
             String string3 = "int";
             ScriptValue scriptValue7 = ScriptValue.of((double)d);
             if (scriptValue6 instanceof ScriptValue.Obj && (object3 = (obj = (ScriptValue.Obj)scriptValue6).instance()) != null && !(object3 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object3);
-                v2 = ScriptValue.of((boolean)polyClassMachine_v4.tm$82_set_typed(string, string3, scriptValue7));
+                PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object3);
+                v2 = ScriptValue.of((boolean)polyClassMachine_v3.tm$82_set_typed(string, string3, scriptValue7));
             } else {
                 ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
                 arrayList2.add(ScriptValue.of((String)string));
@@ -320,8 +330,8 @@ public final class GasMotor {
             String string = "target_su";
             String string2 = "int";
             if (scriptValue instanceof ScriptValue.Obj && (object2 = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object2 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object2);
-                object = polyClassMachine_v4.tm$34_get_typed(string, string2);
+                PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object2);
+                object = polyClassMachine_v3.tm$34_get_typed(string, string2);
             } else {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 arrayList.add(ScriptValue.of((String)string));
@@ -352,8 +362,8 @@ public final class GasMotor {
             String string3 = "int";
             ScriptValue scriptValue6 = ScriptValue.of((double)d2);
             if (scriptValue5 instanceof ScriptValue.Obj && (object3 = (obj = (ScriptValue.Obj)scriptValue5).instance()) != null && !(object3 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object3);
-                v2 = ScriptValue.of((boolean)polyClassMachine_v4.tm$82_set_typed(string, string3, scriptValue6));
+                PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object3);
+                v2 = ScriptValue.of((boolean)polyClassMachine_v3.tm$82_set_typed(string, string3, scriptValue6));
             } else {
                 ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
                 arrayList2.add(ScriptValue.of((String)string));
@@ -375,7 +385,7 @@ public final class GasMotor {
         Object object4;
         ScriptContext scriptContext = builder.peek();
         ScriptValue scriptValue = scriptContext.getClassOrVar("Machine");
-        ScriptValue scriptValue2 = scriptValue != ScriptValue.NULL ? (scriptValue instanceof ScriptValue.Obj && (object4 = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object4 instanceof PolyClass) && obj.typeName().equals("Machine") ? new PolyClassMachine_v4(object4).pg$129_gas_tanks() : PolyDispatch.bootstrapGet("memberGet", "gas_tanks", (ScriptValue)scriptValue, (ScriptContext)scriptContext)) : ScriptValue.NULL;
+        ScriptValue scriptValue2 = scriptValue != ScriptValue.NULL ? (scriptValue instanceof ScriptValue.Obj && (object4 = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object4 instanceof PolyClass) && obj.typeName().equals("Machine") ? new PolyClassMachine_v3(object4).pg$129_gas_tanks() : PolyDispatch.bootstrapGet("memberGet", "gas_tanks", (ScriptValue)scriptValue, (ScriptContext)scriptContext)) : ScriptValue.NULL;
         builder.val("tanks", scriptValue2);
         ScriptValue scriptValue3 = scriptContext.getClassOrVar("tanks");
         Object object5 = scriptValue3 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "length", (ScriptValue)scriptValue3, (ScriptContext)scriptContext) : ScriptValue.NULL;
@@ -410,8 +420,8 @@ public final class GasMotor {
             String string = "target_rpm";
             String string2 = "int";
             if (scriptValue7 instanceof ScriptValue.Obj && (object6 = (obj2 = (ScriptValue.Obj)scriptValue7).instance()) != null && !(object6 instanceof PolyClass) && obj2.typeName().equals("Machine")) {
-                PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object6);
-                object = polyClassMachine_v4.tm$34_get_typed(string, string2);
+                PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object6);
+                object = polyClassMachine_v3.tm$34_get_typed(string, string2);
             } else {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 arrayList.add(ScriptValue.of((String)string));
@@ -437,8 +447,8 @@ public final class GasMotor {
             Object object;
             double d = 0.0;
             if (scriptValue instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object);
-                v0 = ScriptValue.of((boolean)polyClassMachine_v4.tm$106_set_rpm_output(d));
+                PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object);
+                v0 = ScriptValue.of((boolean)polyClassMachine_v3.tm$106_set_rpm_output(d));
             } else {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 arrayList.add(ScriptValue.of((double)d));
@@ -453,8 +463,8 @@ public final class GasMotor {
             Object object;
             double d = 0.0;
             if (scriptValue2 instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue2).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object);
-                v1 = ScriptValue.of((boolean)polyClassMachine_v4.tm$56_report_su(d));
+                PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object);
+                v1 = ScriptValue.of((boolean)polyClassMachine_v3.tm$56_report_su(d));
             } else {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 arrayList.add(ScriptValue.of((double)d));
@@ -513,8 +523,8 @@ public final class GasMotor {
             String string = "target_rpm";
             String string2 = "int";
             if (scriptValue3 instanceof ScriptValue.Obj && (object13 = (obj5 = (ScriptValue.Obj)scriptValue3).instance()) != null && !(object13 instanceof PolyClass) && obj5.typeName().equals("Machine")) {
-                PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object13);
-                object12 = polyClassMachine_v4.tm$34_get_typed(string, string2);
+                PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object13);
+                object12 = polyClassMachine_v3.tm$34_get_typed(string, string2);
             } else {
                 ArrayList<ScriptValue> arrayList4 = new ArrayList<ScriptValue>();
                 arrayList4.add(ScriptValue.of((String)string));
@@ -533,8 +543,8 @@ public final class GasMotor {
             String string = "target_su";
             String string3 = "int";
             if (scriptValue5 instanceof ScriptValue.Obj && (object14 = (obj6 = (ScriptValue.Obj)scriptValue5).instance()) != null && !(object14 instanceof PolyClass) && obj6.typeName().equals("Machine")) {
-                PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object14);
-                object11 = polyClassMachine_v4.tm$34_get_typed(string, string3);
+                PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object14);
+                object11 = polyClassMachine_v3.tm$34_get_typed(string, string3);
             } else {
                 ArrayList<ScriptValue> arrayList5 = new ArrayList<ScriptValue>();
                 arrayList5.add(ScriptValue.of((String)string));
@@ -547,7 +557,7 @@ public final class GasMotor {
         ScriptValue scriptValue6 = object11;
         builder.val("target_su", scriptValue6);
         ScriptValue scriptValue7 = scriptContext.getClassOrVar("Machine");
-        ScriptValue scriptValue8 = scriptValue7 != ScriptValue.NULL ? (scriptValue7 instanceof ScriptValue.Obj && (object10 = (obj4 = (ScriptValue.Obj)scriptValue7).instance()) != null && !(object10 instanceof PolyClass) && obj4.typeName().equals("Machine") ? new PolyClassMachine_v4(object10).pg$129_gas_tanks() : PolyDispatch.bootstrapGet("memberGet", "gas_tanks", (ScriptValue)scriptValue7, (ScriptContext)scriptContext)) : ScriptValue.NULL;
+        ScriptValue scriptValue8 = scriptValue7 != ScriptValue.NULL ? (scriptValue7 instanceof ScriptValue.Obj && (object10 = (obj4 = (ScriptValue.Obj)scriptValue7).instance()) != null && !(object10 instanceof PolyClass) && obj4.typeName().equals("Machine") ? new PolyClassMachine_v3(object10).pg$129_gas_tanks() : PolyDispatch.bootstrapGet("memberGet", "gas_tanks", (ScriptValue)scriptValue7, (ScriptContext)scriptContext)) : ScriptValue.NULL;
         builder.val("gas_tanks", scriptValue8);
         ScriptValue scriptValue9 = scriptContext.getClassOrVar("gas_tanks");
         Object object15 = scriptValue9 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "length", (ScriptValue)scriptValue9, (ScriptContext)scriptContext) : ScriptValue.NULL;
@@ -558,8 +568,8 @@ public final class GasMotor {
                 Object object16;
                 double d = 0.0;
                 if (scriptValue10 instanceof ScriptValue.Obj && (object16 = (obj7 = (ScriptValue.Obj)scriptValue10).instance()) != null && !(object16 instanceof PolyClass) && obj7.typeName().equals("Machine")) {
-                    PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object16);
-                    v3 = ScriptValue.of((boolean)polyClassMachine_v4.tm$106_set_rpm_output(d));
+                    PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object16);
+                    v3 = ScriptValue.of((boolean)polyClassMachine_v3.tm$106_set_rpm_output(d));
                 } else {
                     ArrayList<ScriptValue> arrayList6 = new ArrayList<ScriptValue>();
                     arrayList6.add(ScriptValue.of((double)d));
@@ -574,8 +584,8 @@ public final class GasMotor {
                 Object object17;
                 double d = 0.0;
                 if (scriptValue11 instanceof ScriptValue.Obj && (object17 = (obj8 = (ScriptValue.Obj)scriptValue11).instance()) != null && !(object17 instanceof PolyClass) && obj8.typeName().equals("Machine")) {
-                    PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object17);
-                    v4 = ScriptValue.of((boolean)polyClassMachine_v4.tm$56_report_su(d));
+                    PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object17);
+                    v4 = ScriptValue.of((boolean)polyClassMachine_v3.tm$56_report_su(d));
                 } else {
                     ArrayList<ScriptValue> arrayList7 = new ArrayList<ScriptValue>();
                     arrayList7.add(ScriptValue.of((double)d));
@@ -650,8 +660,8 @@ public final class GasMotor {
                 Object object20;
                 double d = 0.0;
                 if (scriptValue23 instanceof ScriptValue.Obj && (object20 = (obj9 = (ScriptValue.Obj)scriptValue23).instance()) != null && !(object20 instanceof PolyClass) && obj9.typeName().equals("Machine")) {
-                    PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object20);
-                    v10 = ScriptValue.of((boolean)polyClassMachine_v4.tm$106_set_rpm_output(d));
+                    PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object20);
+                    v10 = ScriptValue.of((boolean)polyClassMachine_v3.tm$106_set_rpm_output(d));
                 } else {
                     ArrayList<ScriptValue> arrayList13 = new ArrayList<ScriptValue>();
                     arrayList13.add(ScriptValue.of((double)d));
@@ -666,8 +676,8 @@ public final class GasMotor {
                 Object object21;
                 double d = 0.0;
                 if (scriptValue24 instanceof ScriptValue.Obj && (object21 = (obj10 = (ScriptValue.Obj)scriptValue24).instance()) != null && !(object21 instanceof PolyClass) && obj10.typeName().equals("Machine")) {
-                    PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object21);
-                    v11 = ScriptValue.of((boolean)polyClassMachine_v4.tm$56_report_su(d));
+                    PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object21);
+                    v11 = ScriptValue.of((boolean)polyClassMachine_v3.tm$56_report_su(d));
                 } else {
                     ArrayList<ScriptValue> arrayList14 = new ArrayList<ScriptValue>();
                     arrayList14.add(ScriptValue.of((double)d));
@@ -720,8 +730,8 @@ public final class GasMotor {
                 String string4 = "int";
                 ScriptValue scriptValue33 = scriptValue31;
                 if (scriptValue32 instanceof ScriptValue.Obj && (object22 = (obj11 = (ScriptValue.Obj)scriptValue32).instance()) != null && !(object22 instanceof PolyClass) && obj11.typeName().equals("Machine")) {
-                    PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object22);
-                    v15 = ScriptValue.of((boolean)polyClassMachine_v4.tm$82_set_typed(string, string4, scriptValue33));
+                    PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object22);
+                    v15 = ScriptValue.of((boolean)polyClassMachine_v3.tm$82_set_typed(string, string4, scriptValue33));
                 } else {
                     ArrayList<ScriptValue> arrayList18 = new ArrayList<ScriptValue>();
                     arrayList18.add(ScriptValue.of((String)string));
@@ -744,8 +754,8 @@ public final class GasMotor {
                 String string5 = "int";
                 ScriptValue scriptValue36 = scriptValue34;
                 if (scriptValue35 instanceof ScriptValue.Obj && (object23 = (obj12 = (ScriptValue.Obj)scriptValue35).instance()) != null && !(object23 instanceof PolyClass) && obj12.typeName().equals("Machine")) {
-                    PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object23);
-                    v16 = ScriptValue.of((boolean)polyClassMachine_v4.tm$82_set_typed(string, string5, scriptValue36));
+                    PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object23);
+                    v16 = ScriptValue.of((boolean)polyClassMachine_v3.tm$82_set_typed(string, string5, scriptValue36));
                 } else {
                     ArrayList<ScriptValue> arrayList19 = new ArrayList<ScriptValue>();
                     arrayList19.add(ScriptValue.of((String)string));
@@ -757,7 +767,7 @@ public final class GasMotor {
                 v16 = ScriptValue.NULL;
             }
         }
-        ScriptValue scriptValue37 = ScriptFormula.addPolymorphic((ScriptValue)ScriptValue.of((double)1.0), (ScriptValue)((scriptValue = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? (scriptValue instanceof ScriptValue.Obj && (object3 = (obj3 = (ScriptValue.Obj)scriptValue).instance()) != null && !(object3 instanceof PolyClass) && obj3.typeName().equals("Machine") ? new PolyClassMachine_v4(object3).pg$149_overclock() : PolyDispatch.bootstrapGet("memberGet", "overclock", (ScriptValue)scriptValue, (ScriptContext)scriptContext)) : ScriptValue.NULL));
+        ScriptValue scriptValue37 = ScriptFormula.addPolymorphic((ScriptValue)ScriptValue.of((double)1.0), (ScriptValue)((scriptValue = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? (scriptValue instanceof ScriptValue.Obj && (object3 = (obj3 = (ScriptValue.Obj)scriptValue).instance()) != null && !(object3 instanceof PolyClass) && obj3.typeName().equals("Machine") ? new PolyClassMachine_v3(object3).pg$149_overclock() : PolyDispatch.bootstrapGet("memberGet", "overclock", (ScriptValue)scriptValue, (ScriptContext)scriptContext)) : ScriptValue.NULL));
         builder.val("oc_factor", scriptValue37);
         double d = scriptContext.getNum("target_rpm") * scriptValue37.asNum();
         ScriptValue scriptValue38 = ScriptValue.of((double)d);
@@ -770,14 +780,14 @@ public final class GasMotor {
         ScriptValue scriptValue40 = ScriptValue.of((double)d4);
         builder.val("rpm_ratio", scriptValue40);
         ScriptValue scriptValue41 = scriptContext.getClassOrVar("Machine");
-        double d5 = Math.floor(scriptValue30.asNum() * d4 * scriptValue37.asNum() * (1.0 - (scriptValue41 != ScriptValue.NULL ? (scriptValue41 instanceof ScriptValue.Obj && (object2 = (obj2 = (ScriptValue.Obj)scriptValue41).instance()) != null && !(object2 instanceof PolyClass) && obj2.typeName().equals("Machine") ? new PolyClassMachine_v4(object2).pg$136_efficiency() : PolyDispatch.bootstrapGet("memberGet", "efficiency", (ScriptValue)scriptValue41, (ScriptContext)scriptContext)) : ScriptValue.NULL).asNum()));
+        double d5 = Math.floor(scriptValue30.asNum() * d4 * scriptValue37.asNum() * (1.0 - (scriptValue41 != ScriptValue.NULL ? (scriptValue41 instanceof ScriptValue.Obj && (object2 = (obj2 = (ScriptValue.Obj)scriptValue41).instance()) != null && !(object2 instanceof PolyClass) && obj2.typeName().equals("Machine") ? new PolyClassMachine_v3(object2).pg$136_efficiency() : PolyDispatch.bootstrapGet("memberGet", "efficiency", (ScriptValue)scriptValue41, (ScriptContext)scriptContext)) : ScriptValue.NULL).asNum()));
         ScriptValue scriptValue42 = ScriptValue.of((double)d5);
         builder.val("consume_per_tick", scriptValue42);
         double d6 = Math.max(1.0, scriptContext.getNum("consume_per_tick"));
         ScriptValue scriptValue43 = ScriptValue.of((double)d6);
         builder.val("consume_per_tick", scriptValue43);
         ScriptValue scriptValue44 = scriptContext.getClassOrVar("Machine");
-        Object object24 = scriptValue44 != ScriptValue.NULL ? (scriptValue44 instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue44).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Machine") ? new PolyClassMachine_v4(object).pg$165_is_overstressed() : PolyDispatch.bootstrapGet("memberGet", "is_overstressed", (ScriptValue)scriptValue44, (ScriptContext)scriptContext)) : ScriptValue.NULL;
+        Object object24 = scriptValue44 != ScriptValue.NULL ? (scriptValue44 instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue44).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Machine") ? new PolyClassMachine_v3(object).pg$165_is_overstressed() : PolyDispatch.bootstrapGet("memberGet", "is_overstressed", (ScriptValue)scriptValue44, (ScriptContext)scriptContext)) : ScriptValue.NULL;
         if (object24.asBool()) {
             ScriptValue scriptValue45 = scriptContext.getClassOrVar("Machine");
             if (scriptValue45 != ScriptValue.NULL) {
@@ -785,8 +795,8 @@ public final class GasMotor {
                 Object object25;
                 double d7 = 0.0;
                 if (scriptValue45 instanceof ScriptValue.Obj && (object25 = (obj13 = (ScriptValue.Obj)scriptValue45).instance()) != null && !(object25 instanceof PolyClass) && obj13.typeName().equals("Machine")) {
-                    PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object25);
-                    v18 = ScriptValue.of((boolean)polyClassMachine_v4.tm$106_set_rpm_output(d7));
+                    PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object25);
+                    v18 = ScriptValue.of((boolean)polyClassMachine_v3.tm$106_set_rpm_output(d7));
                 } else {
                     ArrayList<ScriptValue> arrayList20 = new ArrayList<ScriptValue>();
                     arrayList20.add(ScriptValue.of((double)d7));
@@ -801,8 +811,8 @@ public final class GasMotor {
                 Object object26;
                 double d8 = -d2;
                 if (scriptValue46 instanceof ScriptValue.Obj && (object26 = (obj14 = (ScriptValue.Obj)scriptValue46).instance()) != null && !(object26 instanceof PolyClass) && obj14.typeName().equals("Machine")) {
-                    PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object26);
-                    v19 = ScriptValue.of((boolean)polyClassMachine_v4.tm$56_report_su(d8));
+                    PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object26);
+                    v19 = ScriptValue.of((boolean)polyClassMachine_v3.tm$56_report_su(d8));
                 } else {
                     ArrayList<ScriptValue> arrayList21 = new ArrayList<ScriptValue>();
                     arrayList21.add(ScriptValue.of((double)d8));
@@ -818,8 +828,8 @@ public final class GasMotor {
                 Object object27;
                 double d9 = d;
                 if (scriptValue47 instanceof ScriptValue.Obj && (object27 = (obj15 = (ScriptValue.Obj)scriptValue47).instance()) != null && !(object27 instanceof PolyClass) && obj15.typeName().equals("Machine")) {
-                    PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object27);
-                    v20 = ScriptValue.of((boolean)polyClassMachine_v4.tm$106_set_rpm_output(d9));
+                    PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object27);
+                    v20 = ScriptValue.of((boolean)polyClassMachine_v3.tm$106_set_rpm_output(d9));
                 } else {
                     ArrayList<ScriptValue> arrayList22 = new ArrayList<ScriptValue>();
                     arrayList22.add(ScriptValue.of((double)d9));
@@ -834,8 +844,8 @@ public final class GasMotor {
                 Object object28;
                 double d10 = -d2;
                 if (scriptValue48 instanceof ScriptValue.Obj && (object28 = (obj16 = (ScriptValue.Obj)scriptValue48).instance()) != null && !(object28 instanceof PolyClass) && obj16.typeName().equals("Machine")) {
-                    PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object28);
-                    v21 = ScriptValue.of((boolean)polyClassMachine_v4.tm$56_report_su(d10));
+                    PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object28);
+                    v21 = ScriptValue.of((boolean)polyClassMachine_v3.tm$56_report_su(d10));
                 } else {
                     ArrayList<ScriptValue> arrayList23 = new ArrayList<ScriptValue>();
                     arrayList23.add(ScriptValue.of((double)d10));
@@ -851,8 +861,8 @@ public final class GasMotor {
                 String string = "vapor";
                 double d11 = d6;
                 if (scriptValue49 instanceof ScriptValue.Obj && (object29 = (obj17 = (ScriptValue.Obj)scriptValue49).instance()) != null && !(object29 instanceof PolyClass) && obj17.typeName().equals("Machine")) {
-                    PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object29);
-                    v22 = ScriptValue.of((boolean)polyClassMachine_v4.tm$88_consume_gas(string, d11));
+                    PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object29);
+                    v22 = ScriptValue.of((boolean)polyClassMachine_v3.tm$88_consume_gas(string, d11));
                 } else {
                     ArrayList<ScriptValue> arrayList24 = new ArrayList<ScriptValue>();
                     arrayList24.add(ScriptValue.of((String)string));
@@ -863,5 +873,6 @@ public final class GasMotor {
                 v22 = ScriptValue.NULL;
             }
         }
+        FILE_SCOPE = builder.build();
     }
 }

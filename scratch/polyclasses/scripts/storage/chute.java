@@ -26,6 +26,16 @@ import dev.arubik.craftengine.script.gen.ChuteUtils;
 import java.util.ArrayList;
 
 public final class Chute {
+    private static volatile ScriptContext FILE_SCOPE;
+
+    public static ScriptContext fileScope() {
+        ScriptContext scriptContext = FILE_SCOPE;
+        if (scriptContext == null) {
+            scriptContext = ScriptContext.builder().build();
+        }
+        return scriptContext;
+    }
+
     /*
      * Unable to fully structure code
      * Could not resolve type clashes
@@ -36,8 +46,8 @@ public final class Chute {
             var2_2 = var1_1.getClassOrVar("Player");
             v0 /* !! */  = var2_2 != ScriptValue.NULL ? (var2_2 instanceof ScriptValue.Obj && (var4_4 = (var3_3 = (ScriptValue.Obj)var2_2).instance()) != null && !(var4_4 instanceof PolyClass) && var3_3.typeName().equals("Player") ? new PolyClassPlayer(var4_4).pg$38_is_sneaking() : PolyDispatch.bootstrapGet("memberGet", "is_sneaking", (ScriptValue)var2_2, (ScriptContext)var1_1)) : ScriptValue.NULL;
             if (v0 /* !! */ .asBool()) {
-                var5_5 = new ArrayList<E>();
-                ScriptFormula.callBuiltin((String)"_chute_cycle_facing", var5_5, (ScriptContext)var1_1);
+                var5_5 = ScriptContext.builder().copyFrom(ChuteUtils.fileScope()).copyFrom(var1_1);
+                ChuteUtils._chuteCycleFacing((ScriptContext.Builder)var5_5);
                 return ScriptValue.NULL;
             }
             var6_6 = var1_1.getClassOrVar("Player");
@@ -46,7 +56,7 @@ public final class Chute {
             var10_10 = new ArrayList<ScriptValue>();
             var10_10.add(var9_9);
             if (!(ScriptFormula.callBuiltin((String)"is_empty", var10_10, (ScriptContext)var1_1).asBool() ^ true)) ** GOTO lbl-1000
-            var11_11 = ScriptContext.builder().copyFrom(var1_1);
+            var11_11 = ScriptContext.builder().copyFrom(ChuteUtils.fileScope()).copyFrom(var1_1);
             var12_12 = var1_1.getClassOrVar("held");
             var11_11.val("id", (ScriptValue)(var12_12 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "id", (ScriptValue)var12_12, (ScriptContext)var1_1) : ScriptValue.NULL));
             if (ChuteUtils._isGlassItem((ScriptContext.Builder)var11_11).asBool()) {
@@ -58,7 +68,7 @@ public final class Chute {
                 v1 = false;
             }
             if (!v1) break block3;
-            var13_13 = ScriptContext.builder().copyFrom(var1_1);
+            var13_13 = ScriptContext.builder().copyFrom(ChuteUtils.fileScope()).copyFrom(var1_1);
             ChuteUtils._chuteToggleWindow((ScriptContext.Builder)var13_13);
         }
         return ScriptValue.NULL;
@@ -66,7 +76,7 @@ public final class Chute {
 
     public static ScriptValue onBreak(ScriptContext.Builder builder) {
         ScriptContext scriptContext = builder.peek();
-        ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
+        ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(ChuteUtils.fileScope()).copyFrom(scriptContext);
         ChuteUtils._chuteDropHeld((ScriptContext.Builder)builder2);
         return ScriptValue.NULL;
     }
@@ -80,8 +90,9 @@ public final class Chute {
         arrayList.add("_is_glass_item");
         arrayList.add("_chute_drop_held");
         ScriptProgram.applyImport((ScriptContext.Builder)builder, (String)"storage/chute_utils.pf", null, arrayList);
-        ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
-        arrayList2.add(ScriptValue.of((boolean)false));
-        ScriptFormula.callBuiltin((String)"_chute_tick", arrayList2, (ScriptContext)scriptContext);
+        ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(ChuteUtils.fileScope()).copyFrom(scriptContext);
+        builder2.val("smart", ScriptValue.of((boolean)false));
+        ChuteUtils._chuteTick((ScriptContext.Builder)builder2);
+        FILE_SCOPE = builder.build();
     }
 }

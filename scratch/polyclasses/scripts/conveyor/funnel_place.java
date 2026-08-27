@@ -22,6 +22,16 @@ import dev.arubik.craftengine.script.ScriptValue;
 import java.util.ArrayList;
 
 public final class FunnelPlace {
+    private static volatile ScriptContext FILE_SCOPE;
+
+    public static ScriptContext fileScope() {
+        ScriptContext scriptContext = FILE_SCOPE;
+        if (scriptContext == null) {
+            scriptContext = ScriptContext.builder().build();
+        }
+        return scriptContext;
+    }
+
     public static ScriptValue onRightClick(ScriptContext.Builder builder) {
         ScriptValue scriptValue;
         ScriptValue.Obj obj;

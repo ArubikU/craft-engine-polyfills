@@ -128,22 +128,14 @@ public final class ScriptProgram {
         if (m == null) return null;
 
         Statement.FunctionDef def = null;
-        java.util.Set<String> fileLevelNames = new java.util.HashSet<>();
         for (Statement s : statements) {
-            if (s instanceof Statement.FunctionDef fd) {
-                if (fd.name().equals(defName)) def = fd;
-            } else if (s instanceof Statement.Assign a) {
-                fileLevelNames.add(a.name());
-            } else if (s instanceof Statement.StaticDecl sd) {
-                fileLevelNames.add(sd.name());
-            }
+            if (s instanceof Statement.FunctionDef fd && fd.name().equals(defName)) { def = fd; break; }
         }
         if (def == null) return null;
-        if (!fileLevelNames.isEmpty() && ScriptClassCompiler.bodyMentionsAnyName(def.body(), fileLevelNames)) {
-            return null;
-        }
+        // crossFile=true: the call site layers this file's own fileScope() under the caller's, so a
+        // def that reads its file's top-level values still finds them.
         return new ScriptBytecodeCompiler.LocalTarget(
-                m.getDeclaringClass().getName().replace('.', '/'), m.getName(), def.params());
+                m.getDeclaringClass().getName().replace('.', '/'), m.getName(), def.params(), true);
     }
 
     /** The compiled static method for {@code defName}, or {@code null} when the JIT kill switch

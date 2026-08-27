@@ -4,7 +4,7 @@
  * Could not load the following classes:
  *  dev.arubik.craftengine.script.PolyClass
  *  dev.arubik.craftengine.script.PolyClassPlayer
- *  dev.arubik.craftengine.script.PolyClassServer
+ *  dev.arubik.craftengine.script.PolyClassServer_v2
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
  *  dev.arubik.craftengine.script.ScriptContext$Builder
@@ -18,7 +18,7 @@ package dev.arubik.craftengine.script.gen.games;
 
 import dev.arubik.craftengine.script.PolyClass;
 import dev.arubik.craftengine.script.PolyClassPlayer;
-import dev.arubik.craftengine.script.PolyClassServer;
+import dev.arubik.craftengine.script.PolyClassServer_v2;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
@@ -28,6 +28,16 @@ import java.util.ArrayList;
 import java.util.List;
 
 public final class Gomoku {
+    private static volatile ScriptContext FILE_SCOPE;
+
+    public static ScriptContext fileScope() {
+        ScriptContext scriptContext = FILE_SCOPE;
+        if (scriptContext == null) {
+            scriptContext = ScriptContext.builder().build();
+        }
+        return scriptContext;
+    }
+
     public static ScriptValue makeGameId(ScriptContext.Builder builder) {
         Object object;
         Object object2;
@@ -299,8 +309,8 @@ public final class Gomoku {
             ScriptValue scriptValue2 = Gomoku.botKey(builder2);
             String string = "string";
             if (scriptValue instanceof ScriptValue.Obj && (object2 = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object2 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                PolyClassServer polyClassServer = new PolyClassServer(object2);
-                object = polyClassServer.tm$6_get_typed(scriptValue2.asStr(), string);
+                PolyClassServer_v2 polyClassServer_v2 = new PolyClassServer_v2(object2);
+                object = polyClassServer_v2.tm$6_get_typed(scriptValue2.asStr(), string);
             } else {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 arrayList.add(scriptValue2);
@@ -325,8 +335,8 @@ public final class Gomoku {
             ScriptValue scriptValue2 = Gomoku.difficultyKey(builder2);
             String string = "string";
             if (scriptValue instanceof ScriptValue.Obj && (object2 = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object2 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                PolyClassServer polyClassServer = new PolyClassServer(object2);
-                object = polyClassServer.tm$6_get_typed(scriptValue2.asStr(), string);
+                PolyClassServer_v2 polyClassServer_v2 = new PolyClassServer_v2(object2);
+                object = polyClassServer_v2.tm$6_get_typed(scriptValue2.asStr(), string);
             } else {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 arrayList.add(scriptValue2);
@@ -403,8 +413,8 @@ public final class Gomoku {
                 ScriptValue scriptValue7 = Gomoku.statusKey(builder3);
                 String string = "string";
                 if (scriptValue6 instanceof ScriptValue.Obj && (object9 = (obj6 = (ScriptValue.Obj)scriptValue6).instance()) != null && !(object9 instanceof PolyClass) && obj6.typeName().equals("Server")) {
-                    PolyClassServer polyClassServer = new PolyClassServer(object9);
-                    object7 = polyClassServer.tm$6_get_typed(scriptValue7.asStr(), string);
+                    PolyClassServer_v2 polyClassServer_v2 = new PolyClassServer_v2(object9);
+                    object7 = polyClassServer_v2.tm$6_get_typed(scriptValue7.asStr(), string);
                 } else {
                     ArrayList<ScriptValue> arrayList4 = new ArrayList<ScriptValue>();
                     arrayList4.add(scriptValue7);
@@ -431,8 +441,8 @@ public final class Gomoku {
             Object object10;
             ScriptValue scriptValue9 = scriptValue2;
             if (scriptValue8 instanceof ScriptValue.Obj && (object10 = (obj7 = (ScriptValue.Obj)scriptValue8).instance()) != null && !(object10 instanceof PolyClass) && obj7.typeName().equals("Server")) {
-                PolyClassServer polyClassServer = new PolyClassServer(object10);
-                object4 = polyClassServer.tm$10_get_player(scriptValue9.asStr());
+                PolyClassServer_v2 polyClassServer_v2 = new PolyClassServer_v2(object10);
+                object4 = polyClassServer_v2.tm$10_get_player(scriptValue9.asStr());
             } else {
                 ArrayList<ScriptValue> arrayList5 = new ArrayList<ScriptValue>();
                 arrayList5.add(scriptValue9);
@@ -576,8 +586,8 @@ public final class Gomoku {
             ScriptValue scriptValue2 = Gomoku.statusKey(builder2);
             String string = "string";
             if (scriptValue instanceof ScriptValue.Obj && (object2 = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object2 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                PolyClassServer polyClassServer = new PolyClassServer(object2);
-                object = polyClassServer.tm$6_get_typed(scriptValue2.asStr(), string);
+                PolyClassServer_v2 polyClassServer_v2 = new PolyClassServer_v2(object2);
+                object = polyClassServer_v2.tm$6_get_typed(scriptValue2.asStr(), string);
             } else {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 arrayList.add(scriptValue2);
@@ -601,8 +611,8 @@ public final class Gomoku {
             ScriptContext.Builder builder4 = ScriptContext.builder().copyFrom(scriptContext);
             ScriptValue scriptValue5 = Gomoku.emptyBoard(builder4);
             if (scriptValue3 instanceof ScriptValue.Obj && (object3 = (obj = (ScriptValue.Obj)scriptValue3).instance()) != null && !(object3 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                PolyClassServer polyClassServer = new PolyClassServer(object3);
-                v1 = ScriptValue.of((boolean)polyClassServer.tm$0_set_typed(scriptValue4.asStr(), string, scriptValue5));
+                PolyClassServer_v2 polyClassServer_v2 = new PolyClassServer_v2(object3);
+                v1 = ScriptValue.of((boolean)polyClassServer_v2.tm$0_set_typed(scriptValue4.asStr(), string, scriptValue5));
             } else {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 arrayList.add(scriptValue4);
@@ -623,8 +633,8 @@ public final class Gomoku {
             String string = "string";
             ScriptValue scriptValue8 = scriptContext.getClassOrVar("CELL_BLACK");
             if (scriptValue6 instanceof ScriptValue.Obj && (object4 = (obj = (ScriptValue.Obj)scriptValue6).instance()) != null && !(object4 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                PolyClassServer polyClassServer = new PolyClassServer(object4);
-                v2 = ScriptValue.of((boolean)polyClassServer.tm$0_set_typed(scriptValue7.asStr(), string, scriptValue8));
+                PolyClassServer_v2 polyClassServer_v2 = new PolyClassServer_v2(object4);
+                v2 = ScriptValue.of((boolean)polyClassServer_v2.tm$0_set_typed(scriptValue7.asStr(), string, scriptValue8));
             } else {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 arrayList.add(scriptValue7);
@@ -645,8 +655,8 @@ public final class Gomoku {
             String string = "string";
             ScriptValue scriptValue11 = scriptContext.getClassOrVar("starter");
             if (scriptValue9 instanceof ScriptValue.Obj && (object5 = (obj = (ScriptValue.Obj)scriptValue9).instance()) != null && !(object5 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                PolyClassServer polyClassServer = new PolyClassServer(object5);
-                v3 = ScriptValue.of((boolean)polyClassServer.tm$0_set_typed(scriptValue10.asStr(), string, scriptValue11));
+                PolyClassServer_v2 polyClassServer_v2 = new PolyClassServer_v2(object5);
+                v3 = ScriptValue.of((boolean)polyClassServer_v2.tm$0_set_typed(scriptValue10.asStr(), string, scriptValue11));
             } else {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 arrayList.add(scriptValue10);
@@ -667,8 +677,8 @@ public final class Gomoku {
             String string = "string";
             ScriptValue scriptValue14 = scriptContext.getClassOrVar("opponent");
             if (scriptValue12 instanceof ScriptValue.Obj && (object6 = (obj = (ScriptValue.Obj)scriptValue12).instance()) != null && !(object6 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                PolyClassServer polyClassServer = new PolyClassServer(object6);
-                v4 = ScriptValue.of((boolean)polyClassServer.tm$0_set_typed(scriptValue13.asStr(), string, scriptValue14));
+                PolyClassServer_v2 polyClassServer_v2 = new PolyClassServer_v2(object6);
+                v4 = ScriptValue.of((boolean)polyClassServer_v2.tm$0_set_typed(scriptValue13.asStr(), string, scriptValue14));
             } else {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 arrayList.add(scriptValue13);
@@ -690,8 +700,8 @@ public final class Gomoku {
             String string = "string";
             ScriptValue scriptValue18 = scriptValue16 = scriptContext.getBool("is_bot") ? ScriptValue.of((String)"1") : ScriptValue.of((String)"0");
             if (scriptValue15 instanceof ScriptValue.Obj && (object7 = (obj = (ScriptValue.Obj)scriptValue15).instance()) != null && !(object7 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                PolyClassServer polyClassServer = new PolyClassServer(object7);
-                v6 = ScriptValue.of((boolean)polyClassServer.tm$0_set_typed(scriptValue17.asStr(), string, scriptValue16));
+                PolyClassServer_v2 polyClassServer_v2 = new PolyClassServer_v2(object7);
+                v6 = ScriptValue.of((boolean)polyClassServer_v2.tm$0_set_typed(scriptValue17.asStr(), string, scriptValue16));
             } else {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 arrayList.add(scriptValue17);
@@ -712,8 +722,8 @@ public final class Gomoku {
             String string = "string";
             ScriptValue scriptValue21 = scriptContext.getClassOrVar("difficulty");
             if (scriptValue19 instanceof ScriptValue.Obj && (object8 = (obj = (ScriptValue.Obj)scriptValue19).instance()) != null && !(object8 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                PolyClassServer polyClassServer = new PolyClassServer(object8);
-                v7 = ScriptValue.of((boolean)polyClassServer.tm$0_set_typed(scriptValue20.asStr(), string, scriptValue21));
+                PolyClassServer_v2 polyClassServer_v2 = new PolyClassServer_v2(object8);
+                v7 = ScriptValue.of((boolean)polyClassServer_v2.tm$0_set_typed(scriptValue20.asStr(), string, scriptValue21));
             } else {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 arrayList.add(scriptValue20);
@@ -734,8 +744,8 @@ public final class Gomoku {
             String string = "string";
             ScriptValue scriptValue24 = ScriptValue.of((String)"active");
             if (scriptValue22 instanceof ScriptValue.Obj && (object9 = (obj = (ScriptValue.Obj)scriptValue22).instance()) != null && !(object9 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                PolyClassServer polyClassServer = new PolyClassServer(object9);
-                v8 = ScriptValue.of((boolean)polyClassServer.tm$0_set_typed(scriptValue23.asStr(), string, scriptValue24));
+                PolyClassServer_v2 polyClassServer_v2 = new PolyClassServer_v2(object9);
+                v8 = ScriptValue.of((boolean)polyClassServer_v2.tm$0_set_typed(scriptValue23.asStr(), string, scriptValue24));
             } else {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 arrayList.add(scriptValue23);
@@ -821,8 +831,8 @@ public final class Gomoku {
             ScriptValue scriptValue2 = Gomoku.boardKey(builder2);
             String string = "string";
             if (scriptValue instanceof ScriptValue.Obj && (object8 = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object8 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                PolyClassServer polyClassServer = new PolyClassServer(object8);
-                object7 = polyClassServer.tm$6_get_typed(scriptValue2.asStr(), string);
+                PolyClassServer_v2 polyClassServer_v2 = new PolyClassServer_v2(object8);
+                object7 = polyClassServer_v2.tm$6_get_typed(scriptValue2.asStr(), string);
             } else {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 arrayList.add(scriptValue2);
@@ -843,8 +853,8 @@ public final class Gomoku {
             ScriptValue scriptValue5 = Gomoku.turnKey(builder3);
             String string = "string";
             if (scriptValue4 instanceof ScriptValue.Obj && (object9 = (obj = (ScriptValue.Obj)scriptValue4).instance()) != null && !(object9 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                PolyClassServer polyClassServer = new PolyClassServer(object9);
-                object6 = polyClassServer.tm$6_get_typed(scriptValue5.asStr(), string);
+                PolyClassServer_v2 polyClassServer_v2 = new PolyClassServer_v2(object9);
+                object6 = polyClassServer_v2.tm$6_get_typed(scriptValue5.asStr(), string);
             } else {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 arrayList.add(scriptValue5);
@@ -865,8 +875,8 @@ public final class Gomoku {
             ScriptValue scriptValue8 = Gomoku.blackKey(builder4);
             String string = "string";
             if (scriptValue7 instanceof ScriptValue.Obj && (object10 = (obj = (ScriptValue.Obj)scriptValue7).instance()) != null && !(object10 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                PolyClassServer polyClassServer = new PolyClassServer(object10);
-                object5 = polyClassServer.tm$6_get_typed(scriptValue8.asStr(), string);
+                PolyClassServer_v2 polyClassServer_v2 = new PolyClassServer_v2(object10);
+                object5 = polyClassServer_v2.tm$6_get_typed(scriptValue8.asStr(), string);
             } else {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 arrayList.add(scriptValue8);
@@ -887,8 +897,8 @@ public final class Gomoku {
             ScriptValue scriptValue11 = Gomoku.whiteKey(builder5);
             String string = "string";
             if (scriptValue10 instanceof ScriptValue.Obj && (object11 = (obj = (ScriptValue.Obj)scriptValue10).instance()) != null && !(object11 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                PolyClassServer polyClassServer = new PolyClassServer(object11);
-                object4 = polyClassServer.tm$6_get_typed(scriptValue11.asStr(), string);
+                PolyClassServer_v2 polyClassServer_v2 = new PolyClassServer_v2(object11);
+                object4 = polyClassServer_v2.tm$6_get_typed(scriptValue11.asStr(), string);
             } else {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 arrayList.add(scriptValue11);
@@ -909,8 +919,8 @@ public final class Gomoku {
             ScriptValue scriptValue14 = Gomoku.statusKey(builder6);
             String string = "string";
             if (scriptValue13 instanceof ScriptValue.Obj && (object12 = (obj = (ScriptValue.Obj)scriptValue13).instance()) != null && !(object12 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                PolyClassServer polyClassServer = new PolyClassServer(object12);
-                object3 = polyClassServer.tm$6_get_typed(scriptValue14.asStr(), string);
+                PolyClassServer_v2 polyClassServer_v2 = new PolyClassServer_v2(object12);
+                object3 = polyClassServer_v2.tm$6_get_typed(scriptValue14.asStr(), string);
             } else {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 arrayList.add(scriptValue14);
@@ -1044,8 +1054,8 @@ public final class Gomoku {
                 ScriptValue scriptValue2 = Gomoku.blackKey(builder3);
                 String string = "string";
                 if (scriptValue instanceof ScriptValue.Obj && (object5 = (obj2 = (ScriptValue.Obj)scriptValue).instance()) != null && !(object5 instanceof PolyClass) && obj2.typeName().equals("Server")) {
-                    PolyClassServer polyClassServer = new PolyClassServer(object5);
-                    object4 = polyClassServer.tm$6_get_typed(scriptValue2.asStr(), string);
+                    PolyClassServer_v2 polyClassServer_v2 = new PolyClassServer_v2(object5);
+                    object4 = polyClassServer_v2.tm$6_get_typed(scriptValue2.asStr(), string);
                 } else {
                     ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                     arrayList.add(scriptValue2);
@@ -1066,8 +1076,8 @@ public final class Gomoku {
                 ScriptValue scriptValue5 = Gomoku.whiteKey(builder4);
                 String string = "string";
                 if (scriptValue4 instanceof ScriptValue.Obj && (object6 = (obj3 = (ScriptValue.Obj)scriptValue4).instance()) != null && !(object6 instanceof PolyClass) && obj3.typeName().equals("Server")) {
-                    PolyClassServer polyClassServer = new PolyClassServer(object6);
-                    object3 = polyClassServer.tm$6_get_typed(scriptValue5.asStr(), string);
+                    PolyClassServer_v2 polyClassServer_v2 = new PolyClassServer_v2(object6);
+                    object3 = polyClassServer_v2.tm$6_get_typed(scriptValue5.asStr(), string);
                 } else {
                     ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                     arrayList.add(scriptValue5);
@@ -1088,8 +1098,8 @@ public final class Gomoku {
                 Object object7;
                 ScriptValue scriptValue10 = scriptValue8;
                 if (scriptValue9 instanceof ScriptValue.Obj && (object7 = (obj4 = (ScriptValue.Obj)scriptValue9).instance()) != null && !(object7 instanceof PolyClass) && obj4.typeName().equals("Server")) {
-                    PolyClassServer polyClassServer = new PolyClassServer(object7);
-                    object = polyClassServer.tm$10_get_player(scriptValue10.asStr());
+                    PolyClassServer_v2 polyClassServer_v2 = new PolyClassServer_v2(object7);
+                    object = polyClassServer_v2.tm$10_get_player(scriptValue10.asStr());
                 } else {
                     ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                     arrayList.add(scriptValue10);
@@ -1127,8 +1137,8 @@ public final class Gomoku {
                 ScriptValue scriptValue2 = Gomoku.blackKey(builder2);
                 String string = "string";
                 if (scriptValue instanceof ScriptValue.Obj && (object5 = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object5 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                    PolyClassServer polyClassServer = new PolyClassServer(object5);
-                    object4 = polyClassServer.tm$6_get_typed(scriptValue2.asStr(), string);
+                    PolyClassServer_v2 polyClassServer_v2 = new PolyClassServer_v2(object5);
+                    object4 = polyClassServer_v2.tm$6_get_typed(scriptValue2.asStr(), string);
                 } else {
                     ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                     arrayList.add(scriptValue2);
@@ -1149,8 +1159,8 @@ public final class Gomoku {
                 ScriptValue scriptValue5 = Gomoku.whiteKey(builder3);
                 String string = "string";
                 if (scriptValue4 instanceof ScriptValue.Obj && (object6 = (obj = (ScriptValue.Obj)scriptValue4).instance()) != null && !(object6 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                    PolyClassServer polyClassServer = new PolyClassServer(object6);
-                    object3 = polyClassServer.tm$6_get_typed(scriptValue5.asStr(), string);
+                    PolyClassServer_v2 polyClassServer_v2 = new PolyClassServer_v2(object6);
+                    object3 = polyClassServer_v2.tm$6_get_typed(scriptValue5.asStr(), string);
                 } else {
                     ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                     arrayList.add(scriptValue5);
@@ -1168,8 +1178,8 @@ public final class Gomoku {
                 Object object7;
                 ScriptValue scriptValue8 = scriptValue3;
                 if (scriptValue7 instanceof ScriptValue.Obj && (object7 = (obj = (ScriptValue.Obj)scriptValue7).instance()) != null && !(object7 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                    PolyClassServer polyClassServer = new PolyClassServer(object7);
-                    object2 = polyClassServer.tm$10_get_player(scriptValue8.asStr());
+                    PolyClassServer_v2 polyClassServer_v2 = new PolyClassServer_v2(object7);
+                    object2 = polyClassServer_v2.tm$10_get_player(scriptValue8.asStr());
                 } else {
                     ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                     arrayList.add(scriptValue8);
@@ -1201,8 +1211,8 @@ public final class Gomoku {
                 Object object8;
                 ScriptValue scriptValue12 = scriptValue6;
                 if (scriptValue11 instanceof ScriptValue.Obj && (object8 = (obj = (ScriptValue.Obj)scriptValue11).instance()) != null && !(object8 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                    PolyClassServer polyClassServer = new PolyClassServer(object8);
-                    object = polyClassServer.tm$10_get_player(scriptValue12.asStr());
+                    PolyClassServer_v2 polyClassServer_v2 = new PolyClassServer_v2(object8);
+                    object = polyClassServer_v2.tm$10_get_player(scriptValue12.asStr());
                 } else {
                     ArrayList<ScriptValue> arrayList3 = new ArrayList<ScriptValue>();
                     arrayList3.add(scriptValue12);
@@ -1244,8 +1254,8 @@ public final class Gomoku {
                 ScriptValue scriptValue2 = Gomoku.boardKey(builder2);
                 String string = "string";
                 if (scriptValue instanceof ScriptValue.Obj && (object4 = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object4 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                    PolyClassServer polyClassServer = new PolyClassServer(object4);
-                    object3 = polyClassServer.tm$6_get_typed(scriptValue2.asStr(), string);
+                    PolyClassServer_v2 polyClassServer_v2 = new PolyClassServer_v2(object4);
+                    object3 = polyClassServer_v2.tm$6_get_typed(scriptValue2.asStr(), string);
                 } else {
                     ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                     arrayList.add(scriptValue2);
@@ -1274,8 +1284,8 @@ public final class Gomoku {
                 String string = "string";
                 ScriptValue scriptValue7 = scriptValue4;
                 if (scriptValue5 instanceof ScriptValue.Obj && (object5 = (obj = (ScriptValue.Obj)scriptValue5).instance()) != null && !(object5 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                    PolyClassServer polyClassServer = new PolyClassServer(object5);
-                    v1 = ScriptValue.of((boolean)polyClassServer.tm$0_set_typed(scriptValue6.asStr(), string, scriptValue7));
+                    PolyClassServer_v2 polyClassServer_v2 = new PolyClassServer_v2(object5);
+                    v1 = ScriptValue.of((boolean)polyClassServer_v2.tm$0_set_typed(scriptValue6.asStr(), string, scriptValue7));
                 } else {
                     ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                     arrayList.add(scriptValue6);
@@ -1295,8 +1305,8 @@ public final class Gomoku {
                 ScriptValue scriptValue9 = Gomoku.blackKey(builder5);
                 String string = "string";
                 if (scriptValue8 instanceof ScriptValue.Obj && (object6 = (obj = (ScriptValue.Obj)scriptValue8).instance()) != null && !(object6 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                    PolyClassServer polyClassServer = new PolyClassServer(object6);
-                    object2 = polyClassServer.tm$6_get_typed(scriptValue9.asStr(), string);
+                    PolyClassServer_v2 polyClassServer_v2 = new PolyClassServer_v2(object6);
+                    object2 = polyClassServer_v2.tm$6_get_typed(scriptValue9.asStr(), string);
                 } else {
                     ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                     arrayList.add(scriptValue9);
@@ -1317,8 +1327,8 @@ public final class Gomoku {
                 ScriptValue scriptValue12 = Gomoku.whiteKey(builder6);
                 String string = "string";
                 if (scriptValue11 instanceof ScriptValue.Obj && (object7 = (obj = (ScriptValue.Obj)scriptValue11).instance()) != null && !(object7 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                    PolyClassServer polyClassServer = new PolyClassServer(object7);
-                    object = polyClassServer.tm$6_get_typed(scriptValue12.asStr(), string);
+                    PolyClassServer_v2 polyClassServer_v2 = new PolyClassServer_v2(object7);
+                    object = polyClassServer_v2.tm$6_get_typed(scriptValue12.asStr(), string);
                 } else {
                     ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                     arrayList.add(scriptValue12);
@@ -1347,8 +1357,8 @@ public final class Gomoku {
                     String string = "string";
                     ScriptValue scriptValue17 = scriptValue15 = ScriptFormula.valuesEqual((ScriptValue)scriptContext.getClassOrVar("color"), (ScriptValue)scriptContext.getClassOrVar("CELL_BLACK")) ? ScriptValue.of((String)"black_win") : ScriptValue.of((String)"white_win");
                     if (scriptValue14 instanceof ScriptValue.Obj && (object8 = (obj = (ScriptValue.Obj)scriptValue14).instance()) != null && !(object8 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                        PolyClassServer polyClassServer = new PolyClassServer(object8);
-                        v5 = ScriptValue.of((boolean)polyClassServer.tm$0_set_typed(scriptValue16.asStr(), string, scriptValue15));
+                        PolyClassServer_v2 polyClassServer_v2 = new PolyClassServer_v2(object8);
+                        v5 = ScriptValue.of((boolean)polyClassServer_v2.tm$0_set_typed(scriptValue16.asStr(), string, scriptValue15));
                     } else {
                         ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                         arrayList.add(scriptValue16);
@@ -1380,8 +1390,8 @@ public final class Gomoku {
                     String string = "string";
                     ScriptValue scriptValue21 = ScriptValue.of((String)"draw");
                     if (scriptValue19 instanceof ScriptValue.Obj && (object9 = (obj = (ScriptValue.Obj)scriptValue19).instance()) != null && !(object9 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                        PolyClassServer polyClassServer = new PolyClassServer(object9);
-                        v6 = ScriptValue.of((boolean)polyClassServer.tm$0_set_typed(scriptValue20.asStr(), string, scriptValue21));
+                        PolyClassServer_v2 polyClassServer_v2 = new PolyClassServer_v2(object9);
+                        v6 = ScriptValue.of((boolean)polyClassServer_v2.tm$0_set_typed(scriptValue20.asStr(), string, scriptValue21));
                     } else {
                         ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                         arrayList.add(scriptValue20);
@@ -1410,8 +1420,8 @@ public final class Gomoku {
                 String string = "string";
                 ScriptValue scriptValue25 = scriptValue22;
                 if (scriptValue23 instanceof ScriptValue.Obj && (object10 = (obj = (ScriptValue.Obj)scriptValue23).instance()) != null && !(object10 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                    PolyClassServer polyClassServer = new PolyClassServer(object10);
-                    v7 = ScriptValue.of((boolean)polyClassServer.tm$0_set_typed(scriptValue24.asStr(), string, scriptValue25));
+                    PolyClassServer_v2 polyClassServer_v2 = new PolyClassServer_v2(object10);
+                    v7 = ScriptValue.of((boolean)polyClassServer_v2.tm$0_set_typed(scriptValue24.asStr(), string, scriptValue25));
                 } else {
                     ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                     arrayList.add(scriptValue24);
@@ -1448,8 +1458,8 @@ public final class Gomoku {
                 Object object2;
                 ScriptValue scriptValue2 = scriptContext.getClassOrVar("player_name");
                 if (scriptValue instanceof ScriptValue.Obj && (object2 = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object2 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                    PolyClassServer polyClassServer = new PolyClassServer(object2);
-                    object = polyClassServer.tm$10_get_player(scriptValue2.asStr());
+                    PolyClassServer_v2 polyClassServer_v2 = new PolyClassServer_v2(object2);
+                    object = polyClassServer_v2.tm$10_get_player(scriptValue2.asStr());
                 } else {
                     ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                     arrayList.add(scriptValue2);
@@ -1500,8 +1510,8 @@ public final class Gomoku {
             ScriptValue scriptValue5 = Gomoku.statusKey(builder2);
             String string = "string";
             if (scriptValue4 instanceof ScriptValue.Obj && (object8 = (obj3 = (ScriptValue.Obj)scriptValue4).instance()) != null && !(object8 instanceof PolyClass) && obj3.typeName().equals("Server")) {
-                PolyClassServer polyClassServer = new PolyClassServer(object8);
-                object7 = polyClassServer.tm$6_get_typed(scriptValue5.asStr(), string);
+                PolyClassServer_v2 polyClassServer_v2 = new PolyClassServer_v2(object8);
+                object7 = polyClassServer_v2.tm$6_get_typed(scriptValue5.asStr(), string);
             } else {
                 ArrayList<ScriptValue> arrayList3 = new ArrayList<ScriptValue>();
                 arrayList3.add(scriptValue5);
@@ -1553,8 +1563,8 @@ public final class Gomoku {
             ScriptValue scriptValue11 = Gomoku.blackKey(builder3);
             String string = "string";
             if (scriptValue10 instanceof ScriptValue.Obj && (object11 = (obj6 = (ScriptValue.Obj)scriptValue10).instance()) != null && !(object11 instanceof PolyClass) && obj6.typeName().equals("Server")) {
-                PolyClassServer polyClassServer = new PolyClassServer(object11);
-                object6 = polyClassServer.tm$6_get_typed(scriptValue11.asStr(), string);
+                PolyClassServer_v2 polyClassServer_v2 = new PolyClassServer_v2(object11);
+                object6 = polyClassServer_v2.tm$6_get_typed(scriptValue11.asStr(), string);
             } else {
                 ArrayList<ScriptValue> arrayList6 = new ArrayList<ScriptValue>();
                 arrayList6.add(scriptValue11);
@@ -1575,8 +1585,8 @@ public final class Gomoku {
             ScriptValue scriptValue14 = Gomoku.whiteKey(builder4);
             String string = "string";
             if (scriptValue13 instanceof ScriptValue.Obj && (object12 = (obj7 = (ScriptValue.Obj)scriptValue13).instance()) != null && !(object12 instanceof PolyClass) && obj7.typeName().equals("Server")) {
-                PolyClassServer polyClassServer = new PolyClassServer(object12);
-                object5 = polyClassServer.tm$6_get_typed(scriptValue14.asStr(), string);
+                PolyClassServer_v2 polyClassServer_v2 = new PolyClassServer_v2(object12);
+                object5 = polyClassServer_v2.tm$6_get_typed(scriptValue14.asStr(), string);
             } else {
                 ArrayList<ScriptValue> arrayList7 = new ArrayList<ScriptValue>();
                 arrayList7.add(scriptValue14);
@@ -1597,8 +1607,8 @@ public final class Gomoku {
             ScriptValue scriptValue17 = Gomoku.turnKey(builder5);
             String string = "string";
             if (scriptValue16 instanceof ScriptValue.Obj && (object13 = (obj8 = (ScriptValue.Obj)scriptValue16).instance()) != null && !(object13 instanceof PolyClass) && obj8.typeName().equals("Server")) {
-                PolyClassServer polyClassServer = new PolyClassServer(object13);
-                object4 = polyClassServer.tm$6_get_typed(scriptValue17.asStr(), string);
+                PolyClassServer_v2 polyClassServer_v2 = new PolyClassServer_v2(object13);
+                object4 = polyClassServer_v2.tm$6_get_typed(scriptValue17.asStr(), string);
             } else {
                 ArrayList<ScriptValue> arrayList8 = new ArrayList<ScriptValue>();
                 arrayList8.add(scriptValue17);
@@ -1682,8 +1692,8 @@ public final class Gomoku {
             ScriptValue scriptValue28 = Gomoku.boardKey(builder6);
             String string = "string";
             if (scriptValue27 instanceof ScriptValue.Obj && (object19 = (obj12 = (ScriptValue.Obj)scriptValue27).instance()) != null && !(object19 instanceof PolyClass) && obj12.typeName().equals("Server")) {
-                PolyClassServer polyClassServer = new PolyClassServer(object19);
-                object = polyClassServer.tm$6_get_typed(scriptValue28.asStr(), string);
+                PolyClassServer_v2 polyClassServer_v2 = new PolyClassServer_v2(object19);
+                object = polyClassServer_v2.tm$6_get_typed(scriptValue28.asStr(), string);
             } else {
                 ArrayList<ScriptValue> arrayList12 = new ArrayList<ScriptValue>();
                 arrayList12.add(scriptValue28);
@@ -1767,7 +1777,7 @@ public final class Gomoku {
             var3_4 = Gomoku.statusKey(var4_3);
             var5_5 = "string";
             if (var2_2 instanceof ScriptValue.Obj && (var7_7 = (var6_6 = (ScriptValue.Obj)var2_2).instance()) != null && !(var7_7 instanceof PolyClass) && var6_6.typeName().equals("Server")) {
-                var8_8 = new PolyClassServer(var7_7);
+                var8_8 = new PolyClassServer_v2(var7_7);
                 v0 /* !! */  = var8_8.tm$6_get_typed(var3_4.asStr(), var5_5);
             } else {
                 var9_9 = new ArrayList<ScriptValue>();
@@ -1804,7 +1814,7 @@ public final class Gomoku {
             var18_19 = Gomoku.blackKey(var19_18);
             var20_20 = "string";
             if (var17_17 instanceof ScriptValue.Obj && (var22_22 = (var21_21 = (ScriptValue.Obj)var17_17).instance()) != null && !(var22_22 instanceof PolyClass) && var21_21.typeName().equals("Server")) {
-                var23_23 = new PolyClassServer(var22_22);
+                var23_23 = new PolyClassServer_v2(var22_22);
                 v2 /* !! */  = var23_23.tm$6_get_typed(var18_19.asStr(), var20_20);
             } else {
                 var24_24 = new ArrayList<ScriptValue>();
@@ -1824,7 +1834,7 @@ public final class Gomoku {
             var27_28 = Gomoku.whiteKey(var28_27);
             var29_29 = "string";
             if (var26_26 instanceof ScriptValue.Obj && (var31_31 = (var30_30 = (ScriptValue.Obj)var26_26).instance()) != null && !(var31_31 instanceof PolyClass) && var30_30.typeName().equals("Server")) {
-                var32_32 = new PolyClassServer(var31_31);
+                var32_32 = new PolyClassServer_v2(var31_31);
                 v3 /* !! */  = var32_32.tm$6_get_typed(var27_28.asStr(), var29_29);
             } else {
                 var33_33 = new ArrayList<ScriptValue>();
@@ -1879,7 +1889,7 @@ public final class Gomoku {
             var55_55 = "string";
             v8 = var56_56 = var50_50 != false ? ScriptValue.of((String)"white_win") : ScriptValue.of((String)"black_win");
             if (var52_52 instanceof ScriptValue.Obj && (var58_58 = (var57_57 = (ScriptValue.Obj)var52_52).instance()) != null && !(var58_58 instanceof PolyClass) && var57_57.typeName().equals("Server")) {
-                var59_59 = new PolyClassServer(var58_58);
+                var59_59 = new PolyClassServer_v2(var58_58);
                 v9 /* !! */  = ScriptValue.of((boolean)var59_59.tm$0_set_typed(var53_54.asStr(), var55_55, var56_56));
             } else {
                 var60_60 = new ArrayList<ScriptValue>();
@@ -2625,8 +2635,8 @@ public final class Gomoku {
             ScriptValue scriptValue2 = Gomoku.statusKey(builder2);
             String string = "string";
             if (scriptValue instanceof ScriptValue.Obj && (object4 = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object4 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                PolyClassServer polyClassServer = new PolyClassServer(object4);
-                object3 = polyClassServer.tm$6_get_typed(scriptValue2.asStr(), string);
+                PolyClassServer_v2 polyClassServer_v2 = new PolyClassServer_v2(object4);
+                object3 = polyClassServer_v2.tm$6_get_typed(scriptValue2.asStr(), string);
             } else {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 arrayList.add(scriptValue2);
@@ -2648,8 +2658,8 @@ public final class Gomoku {
             ScriptValue scriptValue4 = Gomoku.turnKey(builder3);
             String string = "string";
             if (scriptValue3 instanceof ScriptValue.Obj && (object5 = (obj = (ScriptValue.Obj)scriptValue3).instance()) != null && !(object5 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                PolyClassServer polyClassServer = new PolyClassServer(object5);
-                object2 = polyClassServer.tm$6_get_typed(scriptValue4.asStr(), string);
+                PolyClassServer_v2 polyClassServer_v2 = new PolyClassServer_v2(object5);
+                object2 = polyClassServer_v2.tm$6_get_typed(scriptValue4.asStr(), string);
             } else {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 arrayList.add(scriptValue4);
@@ -2671,8 +2681,8 @@ public final class Gomoku {
             ScriptValue scriptValue6 = Gomoku.boardKey(builder4);
             String string = "string";
             if (scriptValue5 instanceof ScriptValue.Obj && (object6 = (obj = (ScriptValue.Obj)scriptValue5).instance()) != null && !(object6 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                PolyClassServer polyClassServer = new PolyClassServer(object6);
-                object = polyClassServer.tm$6_get_typed(scriptValue6.asStr(), string);
+                PolyClassServer_v2 polyClassServer_v2 = new PolyClassServer_v2(object6);
+                object = polyClassServer_v2.tm$6_get_typed(scriptValue6.asStr(), string);
             } else {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 arrayList.add(scriptValue6);
@@ -2770,8 +2780,8 @@ public final class Gomoku {
                 ScriptValue scriptValue4 = Gomoku.statusKey(builder2);
                 String string = "string";
                 if (scriptValue3 instanceof ScriptValue.Obj && (object6 = (obj = (ScriptValue.Obj)scriptValue3).instance()) != null && !(object6 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                    PolyClassServer polyClassServer = new PolyClassServer(object6);
-                    object5 = polyClassServer.tm$6_get_typed(scriptValue4.asStr(), string);
+                    PolyClassServer_v2 polyClassServer_v2 = new PolyClassServer_v2(object6);
+                    object5 = polyClassServer_v2.tm$6_get_typed(scriptValue4.asStr(), string);
                 } else {
                     ArrayList<ScriptValue> arrayList3 = new ArrayList<ScriptValue>();
                     arrayList3.add(scriptValue4);
@@ -2793,8 +2803,8 @@ public final class Gomoku {
                 ScriptValue scriptValue6 = Gomoku.turnKey(builder3);
                 String string = "string";
                 if (scriptValue5 instanceof ScriptValue.Obj && (object7 = (obj = (ScriptValue.Obj)scriptValue5).instance()) != null && !(object7 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                    PolyClassServer polyClassServer = new PolyClassServer(object7);
-                    object4 = polyClassServer.tm$6_get_typed(scriptValue6.asStr(), string);
+                    PolyClassServer_v2 polyClassServer_v2 = new PolyClassServer_v2(object7);
+                    object4 = polyClassServer_v2.tm$6_get_typed(scriptValue6.asStr(), string);
                 } else {
                     ArrayList<ScriptValue> arrayList4 = new ArrayList<ScriptValue>();
                     arrayList4.add(scriptValue6);
@@ -2816,8 +2826,8 @@ public final class Gomoku {
                 ScriptValue scriptValue8 = Gomoku.boardKey(builder4);
                 String string = "string";
                 if (scriptValue7 instanceof ScriptValue.Obj && (object8 = (obj = (ScriptValue.Obj)scriptValue7).instance()) != null && !(object8 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                    PolyClassServer polyClassServer = new PolyClassServer(object8);
-                    object3 = polyClassServer.tm$6_get_typed(scriptValue8.asStr(), string);
+                    PolyClassServer_v2 polyClassServer_v2 = new PolyClassServer_v2(object8);
+                    object3 = polyClassServer_v2.tm$6_get_typed(scriptValue8.asStr(), string);
                 } else {
                     ArrayList<ScriptValue> arrayList5 = new ArrayList<ScriptValue>();
                     arrayList5.add(scriptValue8);
@@ -2851,8 +2861,8 @@ public final class Gomoku {
                 ScriptValue scriptValue11 = Gomoku.blackKey(builder7);
                 String string = "string";
                 if (scriptValue10 instanceof ScriptValue.Obj && (object9 = (obj = (ScriptValue.Obj)scriptValue10).instance()) != null && !(object9 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                    PolyClassServer polyClassServer = new PolyClassServer(object9);
-                    object2 = polyClassServer.tm$6_get_typed(scriptValue11.asStr(), string);
+                    PolyClassServer_v2 polyClassServer_v2 = new PolyClassServer_v2(object9);
+                    object2 = polyClassServer_v2.tm$6_get_typed(scriptValue11.asStr(), string);
                 } else {
                     ArrayList<ScriptValue> arrayList6 = new ArrayList<ScriptValue>();
                     arrayList6.add(scriptValue11);
@@ -2870,8 +2880,8 @@ public final class Gomoku {
                 Object object10;
                 ScriptValue scriptValue14 = scriptValue12;
                 if (scriptValue13 instanceof ScriptValue.Obj && (object10 = (obj = (ScriptValue.Obj)scriptValue13).instance()) != null && !(object10 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                    PolyClassServer polyClassServer = new PolyClassServer(object10);
-                    object = polyClassServer.tm$10_get_player(scriptValue14.asStr());
+                    PolyClassServer_v2 polyClassServer_v2 = new PolyClassServer_v2(object10);
+                    object = polyClassServer_v2.tm$10_get_player(scriptValue14.asStr());
                 } else {
                     ArrayList<ScriptValue> arrayList7 = new ArrayList<ScriptValue>();
                     arrayList7.add(scriptValue14);
@@ -2920,5 +2930,6 @@ public final class Gomoku {
         double d3 = 20.0;
         ScriptValue scriptValue11 = ScriptValue.of((double)20.0);
         builder.val("CELL_WIDTH", scriptValue11);
+        FILE_SCOPE = builder.build();
     }
 }

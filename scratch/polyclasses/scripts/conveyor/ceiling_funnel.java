@@ -17,16 +17,26 @@ import dev.arubik.craftengine.script.gen.FloorFunnelUtils;
 import java.util.ArrayList;
 
 public final class CeilingFunnel {
+    private static volatile ScriptContext FILE_SCOPE;
+
+    public static ScriptContext fileScope() {
+        ScriptContext scriptContext = FILE_SCOPE;
+        if (scriptContext == null) {
+            scriptContext = ScriptContext.builder().build();
+        }
+        return scriptContext;
+    }
+
     public static ScriptValue onRightClick(ScriptContext.Builder builder) {
         ScriptContext scriptContext = builder.peek();
-        ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
+        ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(FloorFunnelUtils.fileScope()).copyFrom(scriptContext);
         FloorFunnelUtils._floorFunnelOnRightClick((ScriptContext.Builder)builder2);
         return ScriptValue.NULL;
     }
 
     public static ScriptValue onBreak(ScriptContext.Builder builder) {
         ScriptContext scriptContext = builder.peek();
-        ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
+        ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(FloorFunnelUtils.fileScope()).copyFrom(scriptContext);
         FloorFunnelUtils._floorFunnelDropHeld((ScriptContext.Builder)builder2);
         return ScriptValue.NULL;
     }
@@ -38,8 +48,9 @@ public final class CeilingFunnel {
         arrayList.add("_floor_funnel_on_right_click");
         arrayList.add("_floor_funnel_drop_held");
         ScriptProgram.applyImport((ScriptContext.Builder)builder, (String)"conveyor/floor_funnel_utils.pf", null, arrayList);
-        ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
+        ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(FloorFunnelUtils.fileScope()).copyFrom(scriptContext);
         builder2.val("pull_above", ScriptValue.of((boolean)true));
         FloorFunnelUtils._floorFunnelTick((ScriptContext.Builder)builder2);
+        FILE_SCOPE = builder.build();
     }
 }

@@ -17,6 +17,16 @@ import dev.arubik.craftengine.script.ScriptValue;
 import java.util.ArrayList;
 
 public final class ExamplePvpDamageMultiplier {
+    private static volatile ScriptContext FILE_SCOPE;
+
+    public static ScriptContext fileScope() {
+        ScriptContext scriptContext = FILE_SCOPE;
+        if (scriptContext == null) {
+            scriptContext = ScriptContext.builder().build();
+        }
+        return scriptContext;
+    }
+
     /*
      * Unable to fully structure code
      * Could not resolve type clashes

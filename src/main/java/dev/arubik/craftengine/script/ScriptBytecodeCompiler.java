@@ -131,7 +131,19 @@ final class ScriptBytecodeCompiler {
      *  call should invoke directly. {@code paramNames}: the def's own parameter names, in order —
      *  needed to bind each argument into the ISOLATED per-call {@code Builder} (see {@link
      *  P#localCall}) the same way {@link UserFunction#call} binds them for an interpreted call. */
-    record LocalTarget(String internalClassName, String methodName, List<String> paramNames) {}
+    /**
+     * {@code crossFile}: this target lives in ANOTHER file's generated class, reached by an
+     * ordinary {@code INVOKESTATIC}. Such a call must first layer that file's OWN scope under the
+     * caller's, because the callee can read its file's top-level values — {@code tree_utils}'
+     * {@code _find_tree} reads the top-level {@code OFFSETS6}, which the importing file has never
+     * heard of. That mirrors what {@code UserFunction.call} does (definingCtx first, caller on top),
+     * and the generated class exposes it as a static {@code fileScope()}.
+     */
+    record LocalTarget(String internalClassName, String methodName, List<String> paramNames, boolean crossFile) {
+        LocalTarget(String internalClassName, String methodName, List<String> paramNames) {
+            this(internalClassName, methodName, paramNames, false);
+        }
+    }
 
     /** Resolves a bare variable name to a JVM local slot ALREADY holding its raw (unboxed)
      *  {@code double}/{@code boolean} value, when {@link ScriptClassCompiler} knows one is
@@ -1895,6 +1907,15 @@ final class ScriptBytecodeCompiler {
                 @Override public void emit(MethodVisitor mv, Ctx c) {
                     int nbSlot = c.allocRef();
                     mv.visitMethodInsn(INVOKESTATIC, CTX, "builder", "()L" + BUILDER + ";", false);
+                    if (lt.crossFile()) {
+                        // The callee's own file scope goes UNDER the caller's, exactly as
+                        // UserFunction.call layers definingCtx — that is what lets a compiled
+                        // cross-file call read its own file's top-level values (tree_utils'
+                        // OFFSETS6) which the caller has never heard of.
+                        mv.visitMethodInsn(INVOKESTATIC, lt.internalClassName(), "fileScope",
+                                "()L" + CTX + ";", false);
+                        mv.visitMethodInsn(INVOKEVIRTUAL, BUILDER, "copyFrom", "(L" + CTX + ";)L" + BUILDER + ";", false);
+                    }
                     mv.visitVarInsn(ALOAD, c.ctxSlot);
                     mv.visitMethodInsn(INVOKEVIRTUAL, BUILDER, "copyFrom", "(L" + CTX + ";)L" + BUILDER + ";", false);
                     mv.visitVarInsn(ASTORE, nbSlot);

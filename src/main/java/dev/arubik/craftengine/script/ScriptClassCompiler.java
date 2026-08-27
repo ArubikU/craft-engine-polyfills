@@ -282,6 +282,26 @@ final class ScriptClassCompiler {
             ctor.visitMaxs(0, 0);
             ctor.visitEnd();
 
+            // This file's own scope, as a static on its generated class, so a compiled call from
+            // ANOTHER file can layer it the way UserFunction.call layers definingCtx. Populated by
+            // run() below when the file's top-level executes (that is where a top-level constant
+            // like tree_utils' OFFSETS6 gets its value). Empty until then, which is why a caller
+            // layers it UNDER its own context rather than trusting it.
+            cw.visitField(ACC_PRIVATE | ACC_STATIC | ACC_VOLATILE, "FILE_SCOPE", "L" + CTX + ";", null, null).visitEnd();
+            MethodVisitor fsm = cw.visitMethod(ACC_PUBLIC | ACC_STATIC, "fileScope", "()L" + CTX + ";", null, null);
+            fsm.visitCode();
+            fsm.visitFieldInsn(GETSTATIC, internalName, "FILE_SCOPE", "L" + CTX + ";");
+            Label haveScope = new Label();
+            fsm.visitInsn(DUP);
+            fsm.visitJumpInsn(IFNONNULL, haveScope);
+            fsm.visitInsn(POP);
+            fsm.visitMethodInsn(INVOKESTATIC, CTX, "builder", "()L" + BUILDER + ";", false);
+            fsm.visitMethodInsn(INVOKEVIRTUAL, BUILDER, "build", "()L" + CTX + ";", false);
+            fsm.visitLabel(haveScope);
+            fsm.visitInsn(ARETURN);
+            fsm.visitMaxs(0, 0);
+            fsm.visitEnd();
+
             Map<String, String> methodNames = new LinkedHashMap<>(); // defName -> generated method name
             int anon = 0;
             for (ScriptProgram.Statement.FunctionDef fd : defs) {
@@ -383,6 +403,12 @@ final class ScriptClassCompiler {
                 MethodCtx mc = new MethodCtx(true, resolver);
                 emitCtxPrologue(mv, mc);
                 if (!emitBody(mv, mainBody, mc)) return null; // isSupported/emitBody drifted — bail defensively
+                // Publish this file's scope for cross-file callers (see FILE_SCOPE above). build(),
+                // not peek(): this is retained indefinitely, so it needs a real copy rather than a
+                // live view of a builder that keeps mutating.
+                mv.visitVarInsn(ALOAD, 0);
+                mv.visitMethodInsn(INVOKEVIRTUAL, BUILDER, "build", "()L" + CTX + ";", false);
+                mv.visitFieldInsn(PUTSTATIC, internalName, "FILE_SCOPE", "L" + CTX + ";");
                 mv.visitInsn(RETURN);
                 mv.visitMaxs(0, 0);
                 mv.visitEnd();

@@ -3,7 +3,7 @@
  * 
  * Could not load the following classes:
  *  dev.arubik.craftengine.script.PolyClass
- *  dev.arubik.craftengine.script.PolyClassMachine_v4
+ *  dev.arubik.craftengine.script.PolyClassMachine_v3
  *  dev.arubik.craftengine.script.PolyClassWorld
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
@@ -14,7 +14,7 @@
 package dev.arubik.craftengine.script.gen.kinetics.generators;
 
 import dev.arubik.craftengine.script.PolyClass;
-import dev.arubik.craftengine.script.PolyClassMachine_v4;
+import dev.arubik.craftengine.script.PolyClassMachine_v3;
 import dev.arubik.craftengine.script.PolyClassWorld;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
@@ -22,6 +22,16 @@ import dev.arubik.craftengine.script.ScriptValue;
 import java.util.ArrayList;
 
 public final class EnergyWindmill {
+    private static volatile ScriptContext FILE_SCOPE;
+
+    public static ScriptContext fileScope() {
+        ScriptContext scriptContext = FILE_SCOPE;
+        if (scriptContext == null) {
+            scriptContext = ScriptContext.builder().build();
+        }
+        return scriptContext;
+    }
+
     public static void run(ScriptContext.Builder builder) {
         ScriptValue.Obj obj;
         Object object;
@@ -41,8 +51,8 @@ public final class EnergyWindmill {
                 Object object3;
                 double d3 = d + d2;
                 if (scriptValue4 instanceof ScriptValue.Obj && (object3 = (obj2 = (ScriptValue.Obj)scriptValue4).instance()) != null && !(object3 instanceof PolyClass) && obj2.typeName().equals("Machine")) {
-                    PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object3);
-                    v1 = ScriptValue.of((boolean)polyClassMachine_v4.tm$48_set_energy_per_tick(d3));
+                    PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object3);
+                    v1 = ScriptValue.of((boolean)polyClassMachine_v3.tm$48_set_energy_per_tick(d3));
                 } else {
                     ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                     arrayList.add(ScriptValue.of((double)d3));
@@ -64,8 +74,8 @@ public final class EnergyWindmill {
                     double d4 = 2.0;
                     double d5 = d + (2.0 == 0.0 ? 0.0 : d2 / d4);
                     if (scriptValue6 instanceof ScriptValue.Obj && (object6 = (obj4 = (ScriptValue.Obj)scriptValue6).instance()) != null && !(object6 instanceof PolyClass) && obj4.typeName().equals("Machine")) {
-                        PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object6);
-                        v3 = ScriptValue.of((boolean)polyClassMachine_v4.tm$48_set_energy_per_tick(d5));
+                        PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object6);
+                        v3 = ScriptValue.of((boolean)polyClassMachine_v3.tm$48_set_energy_per_tick(d5));
                     } else {
                         ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                         arrayList.add(ScriptValue.of((double)d5));
@@ -81,8 +91,8 @@ public final class EnergyWindmill {
                     Object object7;
                     double d6 = d;
                     if (scriptValue7 instanceof ScriptValue.Obj && (object7 = (obj5 = (ScriptValue.Obj)scriptValue7).instance()) != null && !(object7 instanceof PolyClass) && obj5.typeName().equals("Machine")) {
-                        PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object7);
-                        v4 = ScriptValue.of((boolean)polyClassMachine_v4.tm$48_set_energy_per_tick(d6));
+                        PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object7);
+                        v4 = ScriptValue.of((boolean)polyClassMachine_v3.tm$48_set_energy_per_tick(d6));
                     } else {
                         ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                         arrayList.add(ScriptValue.of((double)d6));
@@ -93,5 +103,6 @@ public final class EnergyWindmill {
                 }
             }
         }
+        FILE_SCOPE = builder.build();
     }
 }

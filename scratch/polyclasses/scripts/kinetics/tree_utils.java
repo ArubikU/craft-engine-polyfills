@@ -3,7 +3,7 @@
  * 
  * Could not load the following classes:
  *  dev.arubik.craftengine.script.PolyClass
- *  dev.arubik.craftengine.script.PolyClassMachine_v4
+ *  dev.arubik.craftengine.script.PolyClassMachine_v3
  *  dev.arubik.craftengine.script.PolyClassWorld
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
@@ -17,7 +17,7 @@
 package dev.arubik.craftengine.script.gen.kinetics;
 
 import dev.arubik.craftengine.script.PolyClass;
-import dev.arubik.craftengine.script.PolyClassMachine_v4;
+import dev.arubik.craftengine.script.PolyClassMachine_v3;
 import dev.arubik.craftengine.script.PolyClassWorld;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
@@ -28,6 +28,16 @@ import java.util.ArrayList;
 import java.util.List;
 
 public final class TreeUtils {
+    private static volatile ScriptContext FILE_SCOPE;
+
+    public static ScriptContext fileScope() {
+        ScriptContext scriptContext = FILE_SCOPE;
+        if (scriptContext == null) {
+            scriptContext = ScriptContext.builder().build();
+        }
+        return scriptContext;
+    }
+
     public static ScriptValue _isLog(ScriptContext.Builder builder) {
         ScriptContext scriptContext = builder.peek();
         return ScriptValue.of((ScriptFormula.valuesEqualStr((ScriptValue)scriptContext.getClassOrVar("id"), (String)"minecraft:oak_log") || ScriptFormula.valuesEqualStr((ScriptValue)scriptContext.getClassOrVar("id"), (String)"minecraft:spruce_log") || ScriptFormula.valuesEqualStr((ScriptValue)scriptContext.getClassOrVar("id"), (String)"minecraft:birch_log") || ScriptFormula.valuesEqualStr((ScriptValue)scriptContext.getClassOrVar("id"), (String)"minecraft:jungle_log") || ScriptFormula.valuesEqualStr((ScriptValue)scriptContext.getClassOrVar("id"), (String)"minecraft:acacia_log") || ScriptFormula.valuesEqualStr((ScriptValue)scriptContext.getClassOrVar("id"), (String)"minecraft:dark_oak_log") || ScriptFormula.valuesEqualStr((ScriptValue)scriptContext.getClassOrVar("id"), (String)"minecraft:cherry_log") || ScriptFormula.valuesEqualStr((ScriptValue)scriptContext.getClassOrVar("id"), (String)"minecraft:mangrove_log") || ScriptFormula.valuesEqualStr((ScriptValue)scriptContext.getClassOrVar("id"), (String)"minecraft:crimson_stem") || ScriptFormula.valuesEqualStr((ScriptValue)scriptContext.getClassOrVar("id"), (String)"minecraft:warped_stem") || ScriptFormula.valuesEqualStr((ScriptValue)scriptContext.getClassOrVar("id"), (String)"minecraft:stripped_oak_log") || ScriptFormula.valuesEqualStr((ScriptValue)scriptContext.getClassOrVar("id"), (String)"minecraft:stripped_spruce_log") || ScriptFormula.valuesEqualStr((ScriptValue)scriptContext.getClassOrVar("id"), (String)"minecraft:stripped_birch_log") || ScriptFormula.valuesEqualStr((ScriptValue)scriptContext.getClassOrVar("id"), (String)"minecraft:stripped_jungle_log") || ScriptFormula.valuesEqualStr((ScriptValue)scriptContext.getClassOrVar("id"), (String)"minecraft:stripped_acacia_log") || ScriptFormula.valuesEqualStr((ScriptValue)scriptContext.getClassOrVar("id"), (String)"minecraft:stripped_dark_oak_log") || ScriptFormula.valuesEqualStr((ScriptValue)scriptContext.getClassOrVar("id"), (String)"minecraft:mushroom_stem") ? 1 : 0) != 0);
@@ -424,8 +434,8 @@ public final class TreeUtils {
                     ScriptValue scriptValue10 = scriptValue8;
                     ScriptValue scriptValue11 = scriptContext.getClassOrVar("speed");
                     if (scriptValue9 instanceof ScriptValue.Obj && (object2 = (obj = (ScriptValue.Obj)scriptValue9).instance()) != null && !(object2 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                        PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object2);
-                        object = polyClassMachine_v4.tm$2_tick_break(scriptValue10, scriptValue11.asNum());
+                        PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object2);
+                        object = polyClassMachine_v3.tm$2_tick_break(scriptValue10, scriptValue11.asNum());
                     } else {
                         ArrayList<ScriptValue> arrayList6 = new ArrayList<ScriptValue>();
                         arrayList6.add(scriptValue10);
@@ -490,5 +500,6 @@ public final class TreeUtils {
         arrayList.add(new ScriptValue.Array(arrayList7));
         ScriptValue.Array array = new ScriptValue.Array(arrayList);
         builder.val("OFFSETS6", (ScriptValue)array);
+        FILE_SCOPE = builder.build();
     }
 }

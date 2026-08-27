@@ -3,7 +3,7 @@
  * 
  * Could not load the following classes:
  *  dev.arubik.craftengine.script.PolyClass
- *  dev.arubik.craftengine.script.PolyClassMachine_v4
+ *  dev.arubik.craftengine.script.PolyClassMachine_v3
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
  *  dev.arubik.craftengine.script.ScriptContext$Builder
@@ -16,7 +16,7 @@
 package dev.arubik.craftengine.script.gen.block_interaction;
 
 import dev.arubik.craftengine.script.PolyClass;
-import dev.arubik.craftengine.script.PolyClassMachine_v4;
+import dev.arubik.craftengine.script.PolyClassMachine_v3;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
@@ -25,6 +25,16 @@ import dev.arubik.craftengine.script.ScriptValue;
 import java.util.ArrayList;
 
 public final class RecipeInfo {
+    private static volatile ScriptContext FILE_SCOPE;
+
+    public static ScriptContext fileScope() {
+        ScriptContext scriptContext = FILE_SCOPE;
+        if (scriptContext == null) {
+            scriptContext = ScriptContext.builder().build();
+        }
+        return scriptContext;
+    }
+
     public static ScriptValue _recipe(ScriptContext.Builder builder) {
         ScriptContext scriptContext;
         block0: {
@@ -34,11 +44,11 @@ public final class RecipeInfo {
             Object object2;
             scriptContext = builder.peek();
             ScriptValue scriptValue = scriptContext.getClassOrVar("Machine");
-            ScriptValue scriptValue2 = scriptValue != ScriptValue.NULL ? (scriptValue instanceof ScriptValue.Obj && (object2 = (obj2 = (ScriptValue.Obj)scriptValue).instance()) != null && !(object2 instanceof PolyClass) && obj2.typeName().equals("Machine") ? new PolyClassMachine_v4(object2).pg$143_working_recipe() : PolyDispatch.bootstrapGet("memberGet", "working_recipe", (ScriptValue)scriptValue, (ScriptContext)scriptContext)) : ScriptValue.NULL;
+            ScriptValue scriptValue2 = scriptValue != ScriptValue.NULL ? (scriptValue instanceof ScriptValue.Obj && (object2 = (obj2 = (ScriptValue.Obj)scriptValue).instance()) != null && !(object2 instanceof PolyClass) && obj2.typeName().equals("Machine") ? new PolyClassMachine_v3(object2).pg$143_working_recipe() : PolyDispatch.bootstrapGet("memberGet", "working_recipe", (ScriptValue)scriptValue, (ScriptContext)scriptContext)) : ScriptValue.NULL;
             builder.val("recipe", scriptValue2);
             if (!ScriptFormula.valuesEqual((ScriptValue)scriptValue2, (ScriptValue)scriptContext.getClassOrVar("null"))) break block0;
             ScriptValue scriptValue3 = scriptContext.getClassOrVar("Machine");
-            ScriptValue scriptValue4 = scriptValue3 != ScriptValue.NULL ? (scriptValue3 instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue3).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Machine") ? new PolyClassMachine_v4(object).pg$157_matching_recipe() : PolyDispatch.bootstrapGet("memberGet", "matching_recipe", (ScriptValue)scriptValue3, (ScriptContext)scriptContext)) : ScriptValue.NULL;
+            ScriptValue scriptValue4 = scriptValue3 != ScriptValue.NULL ? (scriptValue3 instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue3).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Machine") ? new PolyClassMachine_v3(object).pg$157_matching_recipe() : PolyDispatch.bootstrapGet("memberGet", "matching_recipe", (ScriptValue)scriptValue3, (ScriptContext)scriptContext)) : ScriptValue.NULL;
             builder.val("recipe", scriptValue4);
         }
         return scriptContext.getClassOrVar("recipe");
@@ -134,12 +144,12 @@ public final class RecipeInfo {
         ScriptValue scriptValue6 = ScriptFormula.addPolymorphic((ScriptValue)ScriptValue.of((String)"<gold><b>"), (ScriptValue)((scriptValue = scriptContext.getClassOrVar("first_item")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue, (ScriptContext)scriptContext) : ScriptValue.NULL));
         builder.val("label", scriptValue6);
         ScriptValue scriptValue7 = scriptContext.getClassOrVar("Machine");
-        Object object2 = scriptValue7 != ScriptValue.NULL ? (scriptValue7 instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue7).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Machine") ? new PolyClassMachine_v4(object).pg$143_working_recipe() : PolyDispatch.bootstrapGet("memberGet", "working_recipe", (ScriptValue)scriptValue7, (ScriptContext)scriptContext)) : ScriptValue.NULL;
+        Object object2 = scriptValue7 != ScriptValue.NULL ? (scriptValue7 instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue7).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Machine") ? new PolyClassMachine_v3(object).pg$143_working_recipe() : PolyDispatch.bootstrapGet("memberGet", "working_recipe", (ScriptValue)scriptValue7, (ScriptContext)scriptContext)) : ScriptValue.NULL;
         if (ScriptFormula.valuesEqual((ScriptValue)object2, (ScriptValue)scriptContext.getClassOrVar("null")) ^ true) {
             ScriptValue.Obj obj2;
             Object object3;
             ScriptValue scriptValue8;
-            return ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)scriptValue6, (ScriptValue)ScriptValue.of((String)" <yellow>")), (ScriptValue)ScriptValue.of((double)Math.floor(((scriptValue8 = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? (scriptValue8 instanceof ScriptValue.Obj && (object3 = (obj2 = (ScriptValue.Obj)scriptValue8).instance()) != null && !(object3 instanceof PolyClass) && obj2.typeName().equals("Machine") ? new PolyClassMachine_v4(object3).pg$135_progress_percent() : PolyDispatch.bootstrapGet("memberGet", "progress_percent", (ScriptValue)scriptValue8, (ScriptContext)scriptContext)) : ScriptValue.NULL).asNum()))), (ScriptValue)ScriptValue.of((String)"%"));
+            return ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)scriptValue6, (ScriptValue)ScriptValue.of((String)" <yellow>")), (ScriptValue)ScriptValue.of((double)Math.floor(((scriptValue8 = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? (scriptValue8 instanceof ScriptValue.Obj && (object3 = (obj2 = (ScriptValue.Obj)scriptValue8).instance()) != null && !(object3 instanceof PolyClass) && obj2.typeName().equals("Machine") ? new PolyClassMachine_v3(object3).pg$135_progress_percent() : PolyDispatch.bootstrapGet("memberGet", "progress_percent", (ScriptValue)scriptValue8, (ScriptContext)scriptContext)) : ScriptValue.NULL).asNum()))), (ScriptValue)ScriptValue.of((String)"%"));
         }
         return ScriptFormula.addPolymorphic((ScriptValue)scriptValue6, (ScriptValue)ScriptValue.of((String)" <dark_gray>(idle)"));
     }
@@ -168,7 +178,7 @@ public final class RecipeInfo {
             var13_10 = ScriptValue.of((double)var11_9);
             var0.val("crafts_per_min", var13_10);
             var14_11 = var1_1.getClassOrVar("Machine");
-            var17_14 = ScriptFormula.valuesEqual((ScriptValue)(var14_11 != ScriptValue.NULL ? (var14_11 instanceof ScriptValue.Obj && (var16_13 = (var15_12 = (ScriptValue.Obj)var14_11).instance()) != null && !(var16_13 instanceof PolyClass) && var15_12.typeName().equals("Machine") ? new PolyClassMachine_v4(var16_13).pg$143_working_recipe() : PolyDispatch.bootstrapGet("memberGet", "working_recipe", (ScriptValue)var14_11, (ScriptContext)var1_1)) : ScriptValue.NULL), (ScriptValue)var1_1.getClassOrVar("null")) ^ true;
+            var17_14 = ScriptFormula.valuesEqual((ScriptValue)(var14_11 != ScriptValue.NULL ? (var14_11 instanceof ScriptValue.Obj && (var16_13 = (var15_12 = (ScriptValue.Obj)var14_11).instance()) != null && !(var16_13 instanceof PolyClass) && var15_12.typeName().equals("Machine") ? new PolyClassMachine_v3(var16_13).pg$143_working_recipe() : PolyDispatch.bootstrapGet("memberGet", "working_recipe", (ScriptValue)var14_11, (ScriptContext)var1_1)) : ScriptValue.NULL), (ScriptValue)var1_1.getClassOrVar("null")) ^ true;
             var18_15 = ScriptValue.of((boolean)var17_14);
             var0.val("working", var18_15);
             var19_16 = new ArrayList<E>();
@@ -179,12 +189,12 @@ public final class RecipeInfo {
                 var21_18.add(var1_1.getClassOrVar("lines"));
                 var22_19 = ScriptContext.builder().copyFrom(var1_1);
                 var23_20 = var1_1.getClassOrVar("Machine");
-                var22_19.val("percent", (ScriptValue)(var23_20 != ScriptValue.NULL ? (var23_20 instanceof ScriptValue.Obj && (var25_22 = (var24_21 = (ScriptValue.Obj)var23_20).instance()) != null && !(var25_22 instanceof PolyClass) && var24_21.typeName().equals("Machine") ? new PolyClassMachine_v4(var25_22).pg$135_progress_percent() : PolyDispatch.bootstrapGet("memberGet", "progress_percent", (ScriptValue)var23_20, (ScriptContext)var1_1)) : ScriptValue.NULL));
+                var22_19.val("percent", (ScriptValue)(var23_20 != ScriptValue.NULL ? (var23_20 instanceof ScriptValue.Obj && (var25_22 = (var24_21 = (ScriptValue.Obj)var23_20).instance()) != null && !(var25_22 instanceof PolyClass) && var24_21.typeName().equals("Machine") ? new PolyClassMachine_v3(var25_22).pg$135_progress_percent() : PolyDispatch.bootstrapGet("memberGet", "progress_percent", (ScriptValue)var23_20, (ScriptContext)var1_1)) : ScriptValue.NULL));
                 var22_19.val("width", ScriptValue.of((double)14.0));
                 var22_19.val("full_color", ScriptValue.of((String)"<green>"));
                 var22_19.val("empty_color", ScriptValue.of((String)"<dark_gray>"));
                 var26_23 = var1_1.getClassOrVar("Machine");
-                var21_18.add(ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)RecipeInfo._bar(var22_19), (ScriptValue)ScriptValue.of((String)" <white>")), (ScriptValue)ScriptValue.of((double)Math.floor((var26_23 != ScriptValue.NULL ? (var26_23 instanceof ScriptValue.Obj && (var28_25 = (var27_24 = (ScriptValue.Obj)var26_23).instance()) != null && !(var28_25 instanceof PolyClass) && var27_24.typeName().equals("Machine") ? new PolyClassMachine_v4(var28_25).pg$135_progress_percent() : PolyDispatch.bootstrapGet("memberGet", "progress_percent", (ScriptValue)var26_23, (ScriptContext)var1_1)) : ScriptValue.NULL).asNum()))), (ScriptValue)ScriptValue.of((String)"%")));
+                var21_18.add(ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)RecipeInfo._bar(var22_19), (ScriptValue)ScriptValue.of((String)" <white>")), (ScriptValue)ScriptValue.of((double)Math.floor((var26_23 != ScriptValue.NULL ? (var26_23 instanceof ScriptValue.Obj && (var28_25 = (var27_24 = (ScriptValue.Obj)var26_23).instance()) != null && !(var28_25 instanceof PolyClass) && var27_24.typeName().equals("Machine") ? new PolyClassMachine_v3(var28_25).pg$135_progress_percent() : PolyDispatch.bootstrapGet("memberGet", "progress_percent", (ScriptValue)var26_23, (ScriptContext)var1_1)) : ScriptValue.NULL).asNum()))), (ScriptValue)ScriptValue.of((String)"%")));
                 var29_26 = ScriptFormula.callBuiltin((String)"push", var21_18, (ScriptContext)var1_1);
                 var0.val("lines", var29_26);
             } else {
@@ -362,11 +372,11 @@ public final class RecipeInfo {
             }
             if (((var105_97 = var1_1.getClassOrVar("recipe")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "fuel_required", (ScriptValue)var105_97, (ScriptContext)var1_1) : ScriptValue.NULL).asBool()) {
                 var106_98 = var1_1.getClassOrVar("Machine");
-                v11 /* !! */  = var106_98 != ScriptValue.NULL ? (var106_98 instanceof ScriptValue.Obj && (var108_100 = (var107_99 = (ScriptValue.Obj)var106_98).instance()) != null && !(var108_100 instanceof PolyClass) && var107_99.typeName().equals("Machine") ? new PolyClassMachine_v4(var108_100).pg$164_burn_time() : PolyDispatch.bootstrapGet("memberGet", "burn_time", (ScriptValue)var106_98, (ScriptContext)var1_1)) : ScriptValue.NULL;
+                v11 /* !! */  = var106_98 != ScriptValue.NULL ? (var106_98 instanceof ScriptValue.Obj && (var108_100 = (var107_99 = (ScriptValue.Obj)var106_98).instance()) != null && !(var108_100 instanceof PolyClass) && var107_99.typeName().equals("Machine") ? new PolyClassMachine_v3(var108_100).pg$164_burn_time() : PolyDispatch.bootstrapGet("memberGet", "burn_time", (ScriptValue)var106_98, (ScriptContext)var1_1)) : ScriptValue.NULL;
                 if (v11 /* !! */ .asNum() > 0.0) {
                     var111_101 = var1_1.getClassOrVar("Machine");
-                    var109_104 = Math.max(1.0, (var111_101 != ScriptValue.NULL ? (var111_101 instanceof ScriptValue.Obj && (var113_103 = (var112_102 = (ScriptValue.Obj)var111_101).instance()) != null && !(var113_103 instanceof PolyClass) && var112_102.typeName().equals("Machine") ? new PolyClassMachine_v4(var113_103).pg$163_max_burn_time() : PolyDispatch.bootstrapGet("memberGet", "max_burn_time", (ScriptValue)var111_101, (ScriptContext)var1_1)) : ScriptValue.NULL).asNum());
-                    v12 = var109_104 == 0.0 ? 0.0 : ((var114_105 = var1_1.getClassOrVar("Machine")) != ScriptValue.NULL ? (var114_105 instanceof ScriptValue.Obj && (var116_107 = (var115_106 = (ScriptValue.Obj)var114_105).instance()) != null && !(var116_107 instanceof PolyClass) && var115_106.typeName().equals("Machine") ? new PolyClassMachine_v4(var116_107).pg$164_burn_time() : PolyDispatch.bootstrapGet("memberGet", "burn_time", (ScriptValue)var114_105, (ScriptContext)var1_1)) : ScriptValue.NULL).asNum() / var109_104;
+                    var109_104 = Math.max(1.0, (var111_101 != ScriptValue.NULL ? (var111_101 instanceof ScriptValue.Obj && (var113_103 = (var112_102 = (ScriptValue.Obj)var111_101).instance()) != null && !(var113_103 instanceof PolyClass) && var112_102.typeName().equals("Machine") ? new PolyClassMachine_v3(var113_103).pg$163_max_burn_time() : PolyDispatch.bootstrapGet("memberGet", "max_burn_time", (ScriptValue)var111_101, (ScriptContext)var1_1)) : ScriptValue.NULL).asNum());
+                    v12 = var109_104 == 0.0 ? 0.0 : ((var114_105 = var1_1.getClassOrVar("Machine")) != ScriptValue.NULL ? (var114_105 instanceof ScriptValue.Obj && (var116_107 = (var115_106 = (ScriptValue.Obj)var114_105).instance()) != null && !(var116_107 instanceof PolyClass) && var115_106.typeName().equals("Machine") ? new PolyClassMachine_v3(var116_107).pg$164_burn_time() : PolyDispatch.bootstrapGet("memberGet", "burn_time", (ScriptValue)var114_105, (ScriptContext)var1_1)) : ScriptValue.NULL).asNum() / var109_104;
                     var117_108 = Math.floor(v12 * 100.0);
                     var119_109 = ScriptValue.of((double)var117_108);
                     var0.val("fuel_pct", var119_109);
@@ -390,7 +400,7 @@ public final class RecipeInfo {
             var126_116 = var1_1.getClassOrVar("Machine");
             var129_119 = var1_1.getClassOrVar("Machine");
             var132_122 = var1_1.getClassOrVar("recipe");
-            var125_115.add(ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)ScriptValue.of((String)"<gray>\u26a1 Energy: <white>"), (ScriptValue)(var126_116 != ScriptValue.NULL ? (var126_116 instanceof ScriptValue.Obj && (var128_118 = (var127_117 = (ScriptValue.Obj)var126_116).instance()) != null && !(var128_118 instanceof PolyClass) && var127_117.typeName().equals("Machine") ? new PolyClassMachine_v4(var128_118).pg$122_energy_stored() : PolyDispatch.bootstrapGet("memberGet", "energy_stored", (ScriptValue)var126_116, (ScriptContext)var1_1)) : ScriptValue.NULL)), (ScriptValue)ScriptValue.of((String)"<dark_gray>/<white>")), (ScriptValue)(var129_119 != ScriptValue.NULL ? (var129_119 instanceof ScriptValue.Obj && (var131_121 = (var130_120 = (ScriptValue.Obj)var129_119).instance()) != null && !(var131_121 instanceof PolyClass) && var130_120.typeName().equals("Machine") ? new PolyClassMachine_v4(var131_121).pg$144_energy_capacity() : PolyDispatch.bootstrapGet("memberGet", "energy_capacity", (ScriptValue)var129_119, (ScriptContext)var1_1)) : ScriptValue.NULL)), (ScriptValue)ScriptValue.of((String)" <gray>(-")), (ScriptValue)(var132_122 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "energy_cost", (ScriptValue)var132_122, (ScriptContext)var1_1) : ScriptValue.NULL)), (ScriptValue)ScriptValue.of((String)"/t)")));
+            var125_115.add(ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)ScriptValue.of((String)"<gray>\u26a1 Energy: <white>"), (ScriptValue)(var126_116 != ScriptValue.NULL ? (var126_116 instanceof ScriptValue.Obj && (var128_118 = (var127_117 = (ScriptValue.Obj)var126_116).instance()) != null && !(var128_118 instanceof PolyClass) && var127_117.typeName().equals("Machine") ? new PolyClassMachine_v3(var128_118).pg$122_energy_stored() : PolyDispatch.bootstrapGet("memberGet", "energy_stored", (ScriptValue)var126_116, (ScriptContext)var1_1)) : ScriptValue.NULL)), (ScriptValue)ScriptValue.of((String)"<dark_gray>/<white>")), (ScriptValue)(var129_119 != ScriptValue.NULL ? (var129_119 instanceof ScriptValue.Obj && (var131_121 = (var130_120 = (ScriptValue.Obj)var129_119).instance()) != null && !(var131_121 instanceof PolyClass) && var130_120.typeName().equals("Machine") ? new PolyClassMachine_v3(var131_121).pg$144_energy_capacity() : PolyDispatch.bootstrapGet("memberGet", "energy_capacity", (ScriptValue)var129_119, (ScriptContext)var1_1)) : ScriptValue.NULL)), (ScriptValue)ScriptValue.of((String)" <gray>(-")), (ScriptValue)(var132_122 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "energy_cost", (ScriptValue)var132_122, (ScriptContext)var1_1) : ScriptValue.NULL)), (ScriptValue)ScriptValue.of((String)"/t)")));
             var133_123 = ScriptFormula.callBuiltin((String)"push", var125_115, (ScriptContext)var1_1);
             var0.val("lines", var133_123);
         }

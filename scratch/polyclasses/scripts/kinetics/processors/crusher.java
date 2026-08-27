@@ -25,6 +25,16 @@ import java.util.ArrayList;
 import java.util.List;
 
 public final class Crusher {
+    private static volatile ScriptContext FILE_SCOPE;
+
+    public static ScriptContext fileScope() {
+        ScriptContext scriptContext = FILE_SCOPE;
+        if (scriptContext == null) {
+            scriptContext = ScriptContext.builder().build();
+        }
+        return scriptContext;
+    }
+
     public static void run(ScriptContext.Builder builder) {
         ScriptValue.Obj obj;
         Object object;
@@ -104,5 +114,6 @@ public final class Crusher {
                 builder.val("upgrade_bonus", scriptValue14);
             }
         }
+        FILE_SCOPE = builder.build();
     }
 }

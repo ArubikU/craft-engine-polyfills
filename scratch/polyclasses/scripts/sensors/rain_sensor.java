@@ -3,7 +3,7 @@
  * 
  * Could not load the following classes:
  *  dev.arubik.craftengine.script.PolyClass
- *  dev.arubik.craftengine.script.PolyClassMachine_v4
+ *  dev.arubik.craftengine.script.PolyClassMachine_v3
  *  dev.arubik.craftengine.script.PolyClassWorld
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
@@ -14,7 +14,7 @@
 package dev.arubik.craftengine.script.gen.sensors;
 
 import dev.arubik.craftengine.script.PolyClass;
-import dev.arubik.craftengine.script.PolyClassMachine_v4;
+import dev.arubik.craftengine.script.PolyClassMachine_v3;
 import dev.arubik.craftengine.script.PolyClassWorld;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
@@ -22,6 +22,16 @@ import dev.arubik.craftengine.script.ScriptValue;
 import java.util.ArrayList;
 
 public final class RainSensor {
+    private static volatile ScriptContext FILE_SCOPE;
+
+    public static ScriptContext fileScope() {
+        ScriptContext scriptContext = FILE_SCOPE;
+        if (scriptContext == null) {
+            scriptContext = ScriptContext.builder().build();
+        }
+        return scriptContext;
+    }
+
     /*
      * Unable to fully structure code
      * Could not resolve type clashes
@@ -44,7 +54,7 @@ public final class RainSensor {
             if (var8_8 != ScriptValue.NULL) {
                 var9_9 = 15.0;
                 if (var8_8 instanceof ScriptValue.Obj && (var12_11 = (var11_10 = (ScriptValue.Obj)var8_8).instance()) != null && !(var12_11 instanceof PolyClass) && var11_10.typeName().equals("Machine")) {
-                    var13_12 = new PolyClassMachine_v4(var12_11);
+                    var13_12 = new PolyClassMachine_v3(var12_11);
                     v1 /* !! */  = ScriptValue.of((boolean)var13_12.tm$108_emit_redstone(var9_9));
                 } else {
                     var14_13 = new ArrayList<ScriptValue>();
@@ -59,7 +69,7 @@ public final class RainSensor {
             if (var15_14 != ScriptValue.NULL) {
                 var16_15 = 0.0;
                 if (var15_14 instanceof ScriptValue.Obj && (var19_17 = (var18_16 = (ScriptValue.Obj)var15_14).instance()) != null && !(var19_17 instanceof PolyClass) && var18_16.typeName().equals("Machine")) {
-                    var20_18 = new PolyClassMachine_v4(var19_17);
+                    var20_18 = new PolyClassMachine_v3(var19_17);
                     v2 /* !! */  = ScriptValue.of((boolean)var20_18.tm$108_emit_redstone(var16_15));
                 } else {
                     var21_19 = new ArrayList<ScriptValue>();
@@ -70,5 +80,6 @@ public final class RainSensor {
                 v2 /* !! */  = ScriptValue.NULL;
             }
         }
+        RainSensor.FILE_SCOPE = var0.build();
     }
 }

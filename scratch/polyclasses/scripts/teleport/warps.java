@@ -5,7 +5,7 @@
  *  dev.arubik.craftengine.script.PolyClass
  *  dev.arubik.craftengine.script.PolyClassItem
  *  dev.arubik.craftengine.script.PolyClassPlayer
- *  dev.arubik.craftengine.script.PolyClassServer
+ *  dev.arubik.craftengine.script.PolyClassServer_v2
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
  *  dev.arubik.craftengine.script.ScriptContext$Builder
@@ -20,7 +20,7 @@ package dev.arubik.craftengine.script.gen.teleport;
 import dev.arubik.craftengine.script.PolyClass;
 import dev.arubik.craftengine.script.PolyClassItem;
 import dev.arubik.craftengine.script.PolyClassPlayer;
-import dev.arubik.craftengine.script.PolyClassServer;
+import dev.arubik.craftengine.script.PolyClassServer_v2;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
@@ -31,6 +31,16 @@ import java.util.ArrayList;
 import java.util.List;
 
 public final class Warps {
+    private static volatile ScriptContext FILE_SCOPE;
+
+    public static ScriptContext fileScope() {
+        ScriptContext scriptContext = FILE_SCOPE;
+        if (scriptContext == null) {
+            scriptContext = ScriptContext.builder().build();
+        }
+        return scriptContext;
+    }
+
     /*
      * Enabled aggressive block sorting
      */
@@ -115,8 +125,8 @@ public final class Warps {
             Object object3;
             ScriptValue scriptValue2 = scriptContext.getClassOrVar("name");
             if (scriptValue instanceof ScriptValue.Obj && (object3 = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object3 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                PolyClassServer polyClassServer = new PolyClassServer(object3);
-                object2 = polyClassServer.tm$10_get_player(scriptValue2.asStr());
+                PolyClassServer_v2 polyClassServer_v2 = new PolyClassServer_v2(object3);
+                object2 = polyClassServer_v2.tm$10_get_player(scriptValue2.asStr());
             } else {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 arrayList.add(scriptValue2);
@@ -397,7 +407,7 @@ public final class Warps {
             var20_20 = var1_1.getClassOrVar("loc");
             var8_8.add(var20_20 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "z", (ScriptValue)var20_20, (ScriptContext)var1_1) : ScriptValue.NULL);
             var21_21 = var1_1.getClassOrVar("Server");
-            var8_8.add(var21_21 != ScriptValue.NULL ? (var21_21 instanceof ScriptValue.Obj && (var23_23 = (var22_22 = (ScriptValue.Obj)var21_21).instance()) != null && !(var23_23 instanceof PolyClass) && var22_22.typeName().equals("Server") ? new PolyClassServer(var23_23).pg$16_time() : PolyDispatch.bootstrapGet("memberGet", "time", (ScriptValue)var21_21, (ScriptContext)var1_1)) : ScriptValue.NULL);
+            var8_8.add(var21_21 != ScriptValue.NULL ? (var21_21 instanceof ScriptValue.Obj && (var23_23 = (var22_22 = (ScriptValue.Obj)var21_21).instance()) != null && !(var23_23 instanceof PolyClass) && var22_22.typeName().equals("Server") ? new PolyClassServer_v2(var23_23).pg$16_time() : PolyDispatch.bootstrapGet("memberGet", "time", (ScriptValue)var21_21, (ScriptContext)var1_1)) : ScriptValue.NULL);
             v2 /* !! */  = PolyDispatch.bootstrapCall("memberCall", "execute", (ScriptValue)var7_7, var8_8, (ScriptContext)var1_1);
         } else {
             v2 /* !! */  = ScriptValue.NULL;
@@ -2521,7 +2531,7 @@ public final class Warps {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
             arrayList.add(ScriptValue.of((String)"DELETE FROM warp_sponsors WHERE expires_at < ?"));
             ScriptValue scriptValue2 = scriptContext.getClassOrVar("Server");
-            arrayList.add((ScriptValue)(scriptValue2 != ScriptValue.NULL ? (scriptValue2 instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue2).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Server") ? new PolyClassServer(object).pg$16_time() : PolyDispatch.bootstrapGet("memberGet", "time", (ScriptValue)scriptValue2, (ScriptContext)scriptContext)) : ScriptValue.NULL));
+            arrayList.add((ScriptValue)(scriptValue2 != ScriptValue.NULL ? (scriptValue2 instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue2).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Server") ? new PolyClassServer_v2(object).pg$16_time() : PolyDispatch.bootstrapGet("memberGet", "time", (ScriptValue)scriptValue2, (ScriptContext)scriptContext)) : ScriptValue.NULL));
             v0 = PolyDispatch.bootstrapCall("memberCall", "execute", (ScriptValue)scriptValue, arrayList, (ScriptContext)scriptContext);
         } else {
             v0 = ScriptValue.NULL;
@@ -2891,7 +2901,7 @@ public final class Warps {
             ScriptValue scriptValue16 = scriptContext.getClassOrVar("Player");
             arrayList12.add((ScriptValue)(scriptValue16 != ScriptValue.NULL ? (scriptValue16 instanceof ScriptValue.Obj && (object10 = (obj2 = (ScriptValue.Obj)scriptValue16).instance()) != null && !(object10 instanceof PolyClass) && obj2.typeName().equals("Player") ? new PolyClassPlayer(object10).pg$30_uuid() : PolyDispatch.bootstrapGet("memberGet", "uuid", (ScriptValue)scriptValue16, (ScriptContext)scriptContext)) : ScriptValue.NULL));
             ScriptValue scriptValue17 = scriptContext.getClassOrVar("Server");
-            Object object11 = scriptValue17 != ScriptValue.NULL ? (scriptValue17 instanceof ScriptValue.Obj && (object9 = (obj = (ScriptValue.Obj)scriptValue17).instance()) != null && !(object9 instanceof PolyClass) && obj.typeName().equals("Server") ? new PolyClassServer(object9).pg$16_time() : PolyDispatch.bootstrapGet("memberGet", "time", (ScriptValue)scriptValue17, (ScriptContext)scriptContext)) : ScriptValue.NULL;
+            Object object11 = scriptValue17 != ScriptValue.NULL ? (scriptValue17 instanceof ScriptValue.Obj && (object9 = (obj = (ScriptValue.Obj)scriptValue17).instance()) != null && !(object9 instanceof PolyClass) && obj.typeName().equals("Server") ? new PolyClassServer_v2(object9).pg$16_time() : PolyDispatch.bootstrapGet("memberGet", "time", (ScriptValue)scriptValue17, (ScriptContext)scriptContext)) : ScriptValue.NULL;
             ScriptValue scriptValue18 = scriptContext.getClassOrVar("SPONSOR_DURATIONS");
             if (scriptValue18 != ScriptValue.NULL) {
                 ArrayList<ScriptValue> arrayList14 = new ArrayList<ScriptValue>();
@@ -4247,8 +4257,8 @@ public final class Warps {
             Object object2;
             ScriptValue scriptValue4 = scriptValue2;
             if (scriptValue3 instanceof ScriptValue.Obj && (object2 = (obj = (ScriptValue.Obj)scriptValue3).instance()) != null && !(object2 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                PolyClassServer polyClassServer = new PolyClassServer(object2);
-                object = polyClassServer.tm$10_get_player(scriptValue4.asStr());
+                PolyClassServer_v2 polyClassServer_v2 = new PolyClassServer_v2(object2);
+                object = polyClassServer_v2.tm$10_get_player(scriptValue4.asStr());
             } else {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 arrayList.add(scriptValue4);
@@ -4677,8 +4687,8 @@ public final class Warps {
             Object object2;
             ScriptValue scriptValue4 = scriptValue2;
             if (scriptValue3 instanceof ScriptValue.Obj && (object2 = (obj = (ScriptValue.Obj)scriptValue3).instance()) != null && !(object2 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                PolyClassServer polyClassServer = new PolyClassServer(object2);
-                object = polyClassServer.tm$10_get_player(scriptValue4.asStr());
+                PolyClassServer_v2 polyClassServer_v2 = new PolyClassServer_v2(object2);
+                object = polyClassServer_v2.tm$10_get_player(scriptValue4.asStr());
             } else {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 arrayList.add(scriptValue4);
@@ -8462,8 +8472,8 @@ public final class Warps {
             Object object6;
             ScriptValue scriptValue7 = scriptValue5;
             if (scriptValue6 instanceof ScriptValue.Obj && (object6 = (obj = (ScriptValue.Obj)scriptValue6).instance()) != null && !(object6 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                PolyClassServer polyClassServer = new PolyClassServer(object6);
-                object = polyClassServer.tm$10_get_player(scriptValue7.asStr());
+                PolyClassServer_v2 polyClassServer_v2 = new PolyClassServer_v2(object6);
+                object = polyClassServer_v2.tm$10_get_player(scriptValue7.asStr());
             } else {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 arrayList.add(scriptValue7);
@@ -8594,8 +8604,8 @@ public final class Warps {
             Object object4;
             String string = "cepolyfill reload scripts";
             if (scriptValue4 instanceof ScriptValue.Obj && (object4 = (obj = (ScriptValue.Obj)scriptValue4).instance()) != null && !(object4 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                PolyClassServer polyClassServer = new PolyClassServer(object4);
-                v2 = ScriptValue.of((boolean)polyClassServer.tm$14_exec_command(string));
+                PolyClassServer_v2 polyClassServer_v2 = new PolyClassServer_v2(object4);
+                v2 = ScriptValue.of((boolean)polyClassServer_v2.tm$14_exec_command(string));
             } else {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 arrayList.add(ScriptValue.of((String)string));
@@ -8610,8 +8620,8 @@ public final class Warps {
             Object object5;
             String string = "cepolyfill reload cmds";
             if (scriptValue5 instanceof ScriptValue.Obj && (object5 = (obj = (ScriptValue.Obj)scriptValue5).instance()) != null && !(object5 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                PolyClassServer polyClassServer = new PolyClassServer(object5);
-                v3 = ScriptValue.of((boolean)polyClassServer.tm$14_exec_command(string));
+                PolyClassServer_v2 polyClassServer_v2 = new PolyClassServer_v2(object5);
+                v3 = ScriptValue.of((boolean)polyClassServer_v2.tm$14_exec_command(string));
             } else {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 arrayList.add(ScriptValue.of((String)string));
@@ -8833,5 +8843,6 @@ public final class Warps {
         arrayList7.add(ScriptValue.of((double)3600.0));
         ScriptValue.Array array6 = new ScriptValue.Array(arrayList7);
         builder.val("SPONSOR_DURATIONS", (ScriptValue)array6);
+        FILE_SCOPE = builder.build();
     }
 }

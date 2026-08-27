@@ -5,7 +5,7 @@
  *  dev.arubik.craftengine.script.PolyClass
  *  dev.arubik.craftengine.script.PolyClassItem
  *  dev.arubik.craftengine.script.PolyClassPlayer
- *  dev.arubik.craftengine.script.PolyClassServer
+ *  dev.arubik.craftengine.script.PolyClassServer_v2
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
  *  dev.arubik.craftengine.script.ScriptContext$Builder
@@ -19,7 +19,7 @@ package dev.arubik.craftengine.script.gen.teleport;
 import dev.arubik.craftengine.script.PolyClass;
 import dev.arubik.craftengine.script.PolyClassItem;
 import dev.arubik.craftengine.script.PolyClassPlayer;
-import dev.arubik.craftengine.script.PolyClassServer;
+import dev.arubik.craftengine.script.PolyClassServer_v2;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
@@ -28,6 +28,16 @@ import java.lang.invoke.CallSite;
 import java.util.ArrayList;
 
 public final class Tpa {
+    private static volatile ScriptContext FILE_SCOPE;
+
+    public static ScriptContext fileScope() {
+        ScriptContext scriptContext = FILE_SCOPE;
+        if (scriptContext == null) {
+            scriptContext = ScriptContext.builder().build();
+        }
+        return scriptContext;
+    }
+
     public static ScriptValue onRequest(ScriptContext.Builder builder) {
         ScriptValue.Obj obj;
         Object object;
@@ -109,7 +119,7 @@ public final class Tpa {
             arrayList5.add(ScriptValue.of((String)"int"));
             ArrayList<ScriptValue> arrayList6 = new ArrayList<ScriptValue>();
             ScriptValue scriptValue10 = scriptContext.getClassOrVar("Server");
-            arrayList6.add((ScriptValue)(scriptValue10 != ScriptValue.NULL ? (scriptValue10 instanceof ScriptValue.Obj && (object8 = (obj5 = (ScriptValue.Obj)scriptValue10).instance()) != null && !(object8 instanceof PolyClass) && obj5.typeName().equals("Server") ? new PolyClassServer(object8).pg$16_time() : PolyDispatch.bootstrapGet("memberGet", "time", (ScriptValue)scriptValue10, (ScriptContext)scriptContext)) : ScriptValue.NULL));
+            arrayList6.add((ScriptValue)(scriptValue10 != ScriptValue.NULL ? (scriptValue10 instanceof ScriptValue.Obj && (object8 = (obj5 = (ScriptValue.Obj)scriptValue10).instance()) != null && !(object8 instanceof PolyClass) && obj5.typeName().equals("Server") ? new PolyClassServer_v2(object8).pg$16_time() : PolyDispatch.bootstrapGet("memberGet", "time", (ScriptValue)scriptValue10, (ScriptContext)scriptContext)) : ScriptValue.NULL));
             arrayList5.add(ScriptFormula.callBuiltin((String)"int", arrayList6, (ScriptContext)scriptContext));
             v6 = PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue9, arrayList5, (ScriptContext)scriptContext);
         } else {
@@ -243,7 +253,7 @@ public final class Tpa {
         }
         ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
         ScriptValue scriptValue8 = scriptContext.getClassOrVar("Server");
-        arrayList.add((ScriptValue)(scriptValue8 != ScriptValue.NULL ? (scriptValue8 instanceof ScriptValue.Obj && (object3 = (obj = (ScriptValue.Obj)scriptValue8).instance()) != null && !(object3 instanceof PolyClass) && obj.typeName().equals("Server") ? new PolyClassServer(object3).pg$16_time() : PolyDispatch.bootstrapGet("memberGet", "time", (ScriptValue)scriptValue8, (ScriptContext)scriptContext)) : ScriptValue.NULL));
+        arrayList.add((ScriptValue)(scriptValue8 != ScriptValue.NULL ? (scriptValue8 instanceof ScriptValue.Obj && (object3 = (obj = (ScriptValue.Obj)scriptValue8).instance()) != null && !(object3 instanceof PolyClass) && obj.typeName().equals("Server") ? new PolyClassServer_v2(object3).pg$16_time() : PolyDispatch.bootstrapGet("memberGet", "time", (ScriptValue)scriptValue8, (ScriptContext)scriptContext)) : ScriptValue.NULL));
         if (ScriptFormula.callBuiltin((String)"int", arrayList, (ScriptContext)scriptContext).asNum() - scriptValue5.asNum() > scriptContext.getNum("TPA_EXPIRE_SECONDS")) {
             ScriptValue scriptValue9 = scriptContext.getClassOrVar("Player");
             if (scriptValue9 != ScriptValue.NULL) {
@@ -269,8 +279,8 @@ public final class Tpa {
             Object object11;
             ScriptValue scriptValue11 = scriptValue2;
             if (scriptValue10 instanceof ScriptValue.Obj && (object11 = (obj7 = (ScriptValue.Obj)scriptValue10).instance()) != null && !(object11 instanceof PolyClass) && obj7.typeName().equals("Server")) {
-                PolyClassServer polyClassServer = new PolyClassServer(object11);
-                object2 = polyClassServer.tm$10_get_player(scriptValue11.asStr());
+                PolyClassServer_v2 polyClassServer_v2 = new PolyClassServer_v2(object11);
+                object2 = polyClassServer_v2.tm$10_get_player(scriptValue11.asStr());
             } else {
                 ArrayList<ScriptValue> arrayList3 = new ArrayList<ScriptValue>();
                 arrayList3.add(scriptValue11);
@@ -453,8 +463,8 @@ public final class Tpa {
             Object object6;
             ScriptValue scriptValue8 = scriptValue3;
             if (scriptValue7 instanceof ScriptValue.Obj && (object6 = (obj = (ScriptValue.Obj)scriptValue7).instance()) != null && !(object6 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                PolyClassServer polyClassServer = new PolyClassServer(object6);
-                object = polyClassServer.tm$10_get_player(scriptValue8.asStr());
+                PolyClassServer_v2 polyClassServer_v2 = new PolyClassServer_v2(object6);
+                object = polyClassServer_v2.tm$10_get_player(scriptValue8.asStr());
             } else {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 arrayList.add(scriptValue8);
@@ -615,8 +625,8 @@ public final class Tpa {
             Object object6;
             ScriptValue scriptValue3 = scriptContext.getClassOrVar("name");
             if (scriptValue2 instanceof ScriptValue.Obj && (object6 = (obj = (ScriptValue.Obj)scriptValue2).instance()) != null && !(object6 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                PolyClassServer polyClassServer = new PolyClassServer(object6);
-                object5 = polyClassServer.tm$10_get_player(scriptValue3.asStr());
+                PolyClassServer_v2 polyClassServer_v2 = new PolyClassServer_v2(object6);
+                object5 = polyClassServer_v2.tm$10_get_player(scriptValue3.asStr());
             } else {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 arrayList.add(scriptValue3);
@@ -704,8 +714,8 @@ public final class Tpa {
             Object object7;
             ScriptValue scriptValue13 = scriptValue7;
             if (scriptValue instanceof ScriptValue.Obj && (object7 = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object7 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                PolyClassServer polyClassServer = new PolyClassServer(object7);
-                object = polyClassServer.tm$10_get_player(scriptValue13.asStr());
+                PolyClassServer_v2 polyClassServer_v2 = new PolyClassServer_v2(object7);
+                object = polyClassServer_v2.tm$10_get_player(scriptValue13.asStr());
             } else {
                 ArrayList<ScriptValue> arrayList8 = new ArrayList<ScriptValue>();
                 arrayList8.add(scriptValue13);
@@ -801,8 +811,8 @@ public final class Tpa {
                 Object object5;
                 ScriptValue scriptValue7 = scriptValue5;
                 if (scriptValue6 instanceof ScriptValue.Obj && (object5 = (obj = (ScriptValue.Obj)scriptValue6).instance()) != null && !(object5 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                    PolyClassServer polyClassServer = new PolyClassServer(object5);
-                    object4 = polyClassServer.tm$10_get_player(scriptValue7.asStr());
+                    PolyClassServer_v2 polyClassServer_v2 = new PolyClassServer_v2(object5);
+                    object4 = polyClassServer_v2.tm$10_get_player(scriptValue7.asStr());
                 } else {
                     ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                     arrayList.add(scriptValue7);
@@ -895,5 +905,6 @@ public final class Tpa {
         double d2 = 300.0;
         ScriptValue scriptValue2 = ScriptValue.of((double)300.0);
         builder.val("TPA_EXPIRE_SECONDS", scriptValue2);
+        FILE_SCOPE = builder.build();
     }
 }

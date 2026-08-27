@@ -17,16 +17,26 @@ import dev.arubik.craftengine.script.gen.FunnelUtils;
 import java.util.ArrayList;
 
 public final class Funnel {
+    private static volatile ScriptContext FILE_SCOPE;
+
+    public static ScriptContext fileScope() {
+        ScriptContext scriptContext = FILE_SCOPE;
+        if (scriptContext == null) {
+            scriptContext = ScriptContext.builder().build();
+        }
+        return scriptContext;
+    }
+
     public static ScriptValue onRightClick(ScriptContext.Builder builder) {
         ScriptContext scriptContext = builder.peek();
-        ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
+        ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(FunnelUtils.fileScope()).copyFrom(scriptContext);
         FunnelUtils._funnelToggleMode((ScriptContext.Builder)builder2);
         return ScriptValue.NULL;
     }
 
     public static ScriptValue onBreak(ScriptContext.Builder builder) {
         ScriptContext scriptContext = builder.peek();
-        ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
+        ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(FunnelUtils.fileScope()).copyFrom(scriptContext);
         FunnelUtils._funnelDropHeld((ScriptContext.Builder)builder2);
         return ScriptValue.NULL;
     }
@@ -38,7 +48,8 @@ public final class Funnel {
         arrayList.add("_funnel_toggle_mode");
         arrayList.add("_funnel_drop_held");
         ScriptProgram.applyImport((ScriptContext.Builder)builder, (String)"conveyor/funnel_utils.pf", null, arrayList);
-        ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
+        ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(FunnelUtils.fileScope()).copyFrom(scriptContext);
         FunnelUtils._funnelTick((ScriptContext.Builder)builder2);
+        FILE_SCOPE = builder.build();
     }
 }

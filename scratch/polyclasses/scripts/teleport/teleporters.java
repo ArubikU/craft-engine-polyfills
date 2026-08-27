@@ -4,7 +4,7 @@
  * Could not load the following classes:
  *  dev.arubik.craftengine.script.PolyClass
  *  dev.arubik.craftengine.script.PolyClassPlayer
- *  dev.arubik.craftengine.script.PolyClassServer
+ *  dev.arubik.craftengine.script.PolyClassServer_v2
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
  *  dev.arubik.craftengine.script.ScriptContext$Builder
@@ -18,7 +18,7 @@ package dev.arubik.craftengine.script.gen.teleport;
 
 import dev.arubik.craftengine.script.PolyClass;
 import dev.arubik.craftengine.script.PolyClassPlayer;
-import dev.arubik.craftengine.script.PolyClassServer;
+import dev.arubik.craftengine.script.PolyClassServer_v2;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
@@ -29,6 +29,16 @@ import java.util.ArrayList;
 import java.util.List;
 
 public final class Teleporters {
+    private static volatile ScriptContext FILE_SCOPE;
+
+    public static ScriptContext fileScope() {
+        ScriptContext scriptContext = FILE_SCOPE;
+        if (scriptContext == null) {
+            scriptContext = ScriptContext.builder().build();
+        }
+        return scriptContext;
+    }
+
     public static ScriptValue freqKey(ScriptContext.Builder builder) {
         ScriptContext scriptContext = builder.peek();
         return ScriptFormula.addPolymorphic((ScriptValue)ScriptValue.of((String)"teleporter_freq_"), (ScriptValue)scriptContext.getClassOrVar("freq"));
@@ -240,8 +250,8 @@ public final class Teleporters {
             ScriptValue scriptValue7 = Teleporters.freqKey(builder2);
             String string = "string";
             if (scriptValue6 instanceof ScriptValue.Obj && (object5 = (obj = (ScriptValue.Obj)scriptValue6).instance()) != null && !(object5 instanceof PolyClass) && obj.typeName().equals("Server")) {
-                PolyClassServer polyClassServer = new PolyClassServer(object5);
-                object = polyClassServer.tm$6_get_typed(scriptValue7.asStr(), string);
+                PolyClassServer_v2 polyClassServer_v2 = new PolyClassServer_v2(object5);
+                object = polyClassServer_v2.tm$6_get_typed(scriptValue7.asStr(), string);
             } else {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 arrayList.add(scriptValue7);
@@ -477,7 +487,7 @@ public final class Teleporters {
             var11_12 = Teleporters.freqKey(var12_11);
             var13_13 = "string";
             if (var10_10 instanceof ScriptValue.Obj && (var15_15 = (var14_14 = (ScriptValue.Obj)var10_10).instance()) != null && !(var15_15 instanceof PolyClass) && var14_14.typeName().equals("Server")) {
-                var16_16 = new PolyClassServer(var15_15);
+                var16_16 = new PolyClassServer_v2(var15_15);
                 v1 /* !! */  = var16_16.tm$6_get_typed(var11_12.asStr(), var13_13);
             } else {
                 var17_17 = new ArrayList<ScriptValue>();
@@ -752,5 +762,6 @@ public final class Teleporters {
         arrayList.add(ScriptValue.of((double)34.0));
         ScriptValue.Array array = new ScriptValue.Array(arrayList);
         builder.val("DEST_SLOTS", (ScriptValue)array);
+        FILE_SCOPE = builder.build();
     }
 }

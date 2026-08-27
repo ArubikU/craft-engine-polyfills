@@ -3,7 +3,7 @@
  * 
  * Could not load the following classes:
  *  dev.arubik.craftengine.script.PolyClass
- *  dev.arubik.craftengine.script.PolyClassMachine_v4
+ *  dev.arubik.craftengine.script.PolyClassMachine_v3
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
  *  dev.arubik.craftengine.script.ScriptContext$Builder
@@ -15,7 +15,7 @@
 package dev.arubik.craftengine.script.gen.farming;
 
 import dev.arubik.craftengine.script.PolyClass;
-import dev.arubik.craftengine.script.PolyClassMachine_v4;
+import dev.arubik.craftengine.script.PolyClassMachine_v3;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
@@ -25,6 +25,16 @@ import java.lang.invoke.CallSite;
 import java.util.ArrayList;
 
 public final class Fertilizer {
+    private static volatile ScriptContext FILE_SCOPE;
+
+    public static ScriptContext fileScope() {
+        ScriptContext scriptContext = FILE_SCOPE;
+        if (scriptContext == null) {
+            scriptContext = ScriptContext.builder().build();
+        }
+        return scriptContext;
+    }
+
     /*
      * Unable to fully structure code
      * Could not resolve type clashes
@@ -37,7 +47,7 @@ public final class Fertilizer {
                 var3_3 = "level";
                 var4_4 = "int";
                 if (var2_2 instanceof ScriptValue.Obj && (var6_6 = (var5_5 = (ScriptValue.Obj)var2_2).instance()) != null && !(var6_6 instanceof PolyClass) && var5_5.typeName().equals("Machine")) {
-                    var7_7 = new PolyClassMachine_v4(var6_6);
+                    var7_7 = new PolyClassMachine_v3(var6_6);
                     v0 /* !! */  = var7_7.tm$34_get_typed(var3_3, var4_4);
                 } else {
                     var8_8 = new ArrayList<ScriptValue>();
@@ -61,13 +71,13 @@ public final class Fertilizer {
             var15_14 = new ArrayList<ScriptValue>();
             var15_14.add(ScriptValue.of((double)0.0));
             var16_15 = var1_1.getClassOrVar("Machine");
-            var14_13.add(PolyDispatch.bootstrapCall("memberCall", "get_item", (ScriptValue)(var16_15 != ScriptValue.NULL ? (var16_15 instanceof ScriptValue.Obj && (var18_17 = (var17_16 = (ScriptValue.Obj)var16_15).instance()) != null && !(var18_17 instanceof PolyClass) && var17_16.typeName().equals("Machine") ? new PolyClassMachine_v4(var18_17).pg$119_container() : PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)var16_15, (ScriptContext)var1_1)) : ScriptValue.NULL), var15_14, (ScriptContext)var1_1));
+            var14_13.add(PolyDispatch.bootstrapCall("memberCall", "get_item", (ScriptValue)(var16_15 != ScriptValue.NULL ? (var16_15 instanceof ScriptValue.Obj && (var18_17 = (var17_16 = (ScriptValue.Obj)var16_15).instance()) != null && !(var18_17 instanceof PolyClass) && var17_16.typeName().equals("Machine") ? new PolyClassMachine_v3(var18_17).pg$119_container() : PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)var16_15, (ScriptContext)var1_1)) : ScriptValue.NULL), var15_14, (ScriptContext)var1_1));
             if (!(ScriptFormula.callBuiltin((String)"is_empty", var14_13, (ScriptContext)var1_1).asBool() ^ true)) break block18;
             var19_18 = var1_1.getClassOrVar("Machine");
             if (var19_18 != ScriptValue.NULL) {
                 var20_19 = var13_12;
                 if (var19_18 instanceof ScriptValue.Obj && (var22_21 = (var21_20 = (ScriptValue.Obj)var19_18).instance()) != null && !(var22_21 instanceof PolyClass) && var21_20.typeName().equals("Machine")) {
-                    var23_22 = new PolyClassMachine_v4(var22_21);
+                    var23_22 = new PolyClassMachine_v3(var22_21);
                     v1 /* !! */  = var23_22.tm$86_blocks_in_range(var20_19.asNum());
                 } else {
                     var24_23 = new ArrayList<ScriptValue>();
@@ -123,9 +133,10 @@ public final class Fertilizer {
                 var36_35.add(ScriptValue.of((double)0.0));
                 var36_35.add(ScriptValue.of((double)1.0));
                 var37_36 = var1_1.getClassOrVar("Machine");
-                PolyDispatch.bootstrapCall("memberCall", "remove_item", (ScriptValue)(var37_36 != ScriptValue.NULL ? (var37_36 instanceof ScriptValue.Obj && (var39_38 = (var38_37 = (ScriptValue.Obj)var37_36).instance()) != null && !(var39_38 instanceof PolyClass) && var38_37.typeName().equals("Machine") ? new PolyClassMachine_v4(var39_38).pg$119_container() : PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)var37_36, (ScriptContext)var1_1)) : ScriptValue.NULL), var36_35, (ScriptContext)var1_1);
+                PolyDispatch.bootstrapCall("memberCall", "remove_item", (ScriptValue)(var37_36 != ScriptValue.NULL ? (var37_36 instanceof ScriptValue.Obj && (var39_38 = (var38_37 = (ScriptValue.Obj)var37_36).instance()) != null && !(var39_38 instanceof PolyClass) && var38_37.typeName().equals("Machine") ? new PolyClassMachine_v3(var39_38).pg$119_container() : PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)var37_36, (ScriptContext)var1_1)) : ScriptValue.NULL), var36_35, (ScriptContext)var1_1);
                 break;
             }
         }
+        Fertilizer.FILE_SCOPE = var0.build();
     }
 }

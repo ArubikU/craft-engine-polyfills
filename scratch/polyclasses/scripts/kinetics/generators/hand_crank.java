@@ -3,7 +3,7 @@
  * 
  * Could not load the following classes:
  *  dev.arubik.craftengine.script.PolyClass
- *  dev.arubik.craftengine.script.PolyClassMachine_v4
+ *  dev.arubik.craftengine.script.PolyClassMachine_v3
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
  *  dev.arubik.craftengine.script.ScriptContext$Builder
@@ -15,7 +15,7 @@
 package dev.arubik.craftengine.script.gen.kinetics.generators;
 
 import dev.arubik.craftengine.script.PolyClass;
-import dev.arubik.craftengine.script.PolyClassMachine_v4;
+import dev.arubik.craftengine.script.PolyClassMachine_v3;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptProgram;
@@ -24,6 +24,16 @@ import dev.arubik.craftengine.script.gen.Utils;
 import java.util.ArrayList;
 
 public final class HandCrank {
+    private static volatile ScriptContext FILE_SCOPE;
+
+    public static ScriptContext fileScope() {
+        ScriptContext scriptContext = FILE_SCOPE;
+        if (scriptContext == null) {
+            scriptContext = ScriptContext.builder().build();
+        }
+        return scriptContext;
+    }
+
     public static void run(ScriptContext.Builder builder) {
         Object object;
         ScriptContext scriptContext = builder.peek();
@@ -37,8 +47,8 @@ public final class HandCrank {
             String string = "crank_energy";
             String string2 = "int";
             if (scriptValue instanceof ScriptValue.Obj && (object2 = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object2 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object2);
-                object = polyClassMachine_v4.tm$34_get_typed(string, string2);
+                PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object2);
+                object = polyClassMachine_v3.tm$34_get_typed(string, string2);
             } else {
                 ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
                 arrayList2.add(ScriptValue.of((String)string));
@@ -59,8 +69,8 @@ public final class HandCrank {
                 String string3 = "int";
                 ScriptValue scriptValue4 = ScriptValue.of((double)(scriptValue2.asNum() - 1.0));
                 if (scriptValue3 instanceof ScriptValue.Obj && (object3 = (obj = (ScriptValue.Obj)scriptValue3).instance()) != null && !(object3 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                    PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object3);
-                    v2 = ScriptValue.of((boolean)polyClassMachine_v4.tm$82_set_typed(string, string3, scriptValue4));
+                    PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object3);
+                    v2 = ScriptValue.of((boolean)polyClassMachine_v3.tm$82_set_typed(string, string3, scriptValue4));
                 } else {
                     ArrayList<ScriptValue> arrayList3 = new ArrayList<ScriptValue>();
                     arrayList3.add(ScriptValue.of((String)string));
@@ -77,8 +87,8 @@ public final class HandCrank {
                 Object object4;
                 double d = 16.0;
                 if (scriptValue5 instanceof ScriptValue.Obj && (object4 = (obj = (ScriptValue.Obj)scriptValue5).instance()) != null && !(object4 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                    PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object4);
-                    v3 = ScriptValue.of((boolean)polyClassMachine_v4.tm$106_set_rpm_output(d));
+                    PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object4);
+                    v3 = ScriptValue.of((boolean)polyClassMachine_v3.tm$106_set_rpm_output(d));
                 } else {
                     ArrayList<ScriptValue> arrayList4 = new ArrayList<ScriptValue>();
                     arrayList4.add(ScriptValue.of((double)d));
@@ -94,8 +104,8 @@ public final class HandCrank {
                 Object object5;
                 double d = 0.0;
                 if (scriptValue6 instanceof ScriptValue.Obj && (object5 = (obj = (ScriptValue.Obj)scriptValue6).instance()) != null && !(object5 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                    PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object5);
-                    v4 = ScriptValue.of((boolean)polyClassMachine_v4.tm$106_set_rpm_output(d));
+                    PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object5);
+                    v4 = ScriptValue.of((boolean)polyClassMachine_v3.tm$106_set_rpm_output(d));
                 } else {
                     ArrayList<ScriptValue> arrayList5 = new ArrayList<ScriptValue>();
                     arrayList5.add(ScriptValue.of((double)d));
@@ -108,9 +118,10 @@ public final class HandCrank {
         double d = scriptValue2.asNum() > 0.0 ? 1.0 : 0.0;
         ScriptValue scriptValue7 = ScriptValue.of((double)d);
         builder.val("is_now", scriptValue7);
-        ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
+        ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(Utils.1.fileScope()).copyFrom(scriptContext);
         builder2.val("act_key", ScriptValue.of((String)"_hc_act"));
         builder2.val("is_now", ScriptValue.of((double)d));
         Utils.1._updateActivated((ScriptContext.Builder)builder2);
+        FILE_SCOPE = builder.build();
     }
 }

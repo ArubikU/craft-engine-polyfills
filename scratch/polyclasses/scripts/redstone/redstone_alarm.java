@@ -3,7 +3,7 @@
  * 
  * Could not load the following classes:
  *  dev.arubik.craftengine.script.PolyClass
- *  dev.arubik.craftengine.script.PolyClassMachine_v4
+ *  dev.arubik.craftengine.script.PolyClassMachine_v3
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
  *  dev.arubik.craftengine.script.ScriptContext$Builder
@@ -13,21 +13,30 @@
 package dev.arubik.craftengine.script.gen.redstone;
 
 import dev.arubik.craftengine.script.PolyClass;
-import dev.arubik.craftengine.script.PolyClassMachine_v4;
+import dev.arubik.craftengine.script.PolyClassMachine_v3;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptValue;
 import java.util.ArrayList;
 
 public final class RedstoneAlarm {
+    private static volatile ScriptContext FILE_SCOPE;
+
+    public static ScriptContext fileScope() {
+        ScriptContext scriptContext = FILE_SCOPE;
+        if (scriptContext == null) {
+            scriptContext = ScriptContext.builder().build();
+        }
+        return scriptContext;
+    }
+
     public static void run(ScriptContext.Builder builder) {
-        block4: {
-            ScriptValue.Obj obj;
-            Object object;
-            ScriptContext scriptContext = builder.peek();
-            ScriptValue scriptValue = scriptContext.getClassOrVar("Machine");
-            Object object2 = scriptValue != ScriptValue.NULL ? (scriptValue instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Machine") ? new PolyClassMachine_v4(object).pg$148_redstone() : PolyDispatch.bootstrapGet("memberGet", "redstone", (ScriptValue)scriptValue, (ScriptContext)scriptContext)) : ScriptValue.NULL;
-            if (!(object2.asNum() > 0.0)) break block4;
+        ScriptValue.Obj obj;
+        Object object;
+        ScriptContext scriptContext = builder.peek();
+        ScriptValue scriptValue = scriptContext.getClassOrVar("Machine");
+        Object object2 = scriptValue != ScriptValue.NULL ? (scriptValue instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Machine") ? new PolyClassMachine_v3(object).pg$148_redstone() : PolyDispatch.bootstrapGet("memberGet", "redstone", (ScriptValue)scriptValue, (ScriptContext)scriptContext)) : ScriptValue.NULL;
+        if (object2.asNum() > 0.0) {
             ScriptValue scriptValue2 = scriptContext.getClassOrVar("Machine");
             if (scriptValue2 != ScriptValue.NULL) {
                 ScriptValue.Obj obj2;
@@ -36,8 +45,8 @@ public final class RedstoneAlarm {
                 double d = 2.0;
                 double d2 = 1.0;
                 if (scriptValue2 instanceof ScriptValue.Obj && (object3 = (obj2 = (ScriptValue.Obj)scriptValue2).instance()) != null && !(object3 instanceof PolyClass) && obj2.typeName().equals("Machine")) {
-                    PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object3);
-                    v1 = ScriptValue.of((boolean)polyClassMachine_v4.tm$14_play_sound(string, d, d2));
+                    PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object3);
+                    v1 = ScriptValue.of((boolean)polyClassMachine_v3.tm$14_play_sound(string, d, d2));
                 } else {
                     ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                     arrayList.add(ScriptValue.of((String)string));
@@ -49,5 +58,6 @@ public final class RedstoneAlarm {
                 v1 = ScriptValue.NULL;
             }
         }
+        FILE_SCOPE = builder.build();
     }
 }

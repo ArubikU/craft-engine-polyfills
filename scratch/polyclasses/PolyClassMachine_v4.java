@@ -14,14 +14,14 @@
  */
 package dev.arubik.craftengine.script;
 
-import dev.arubik.craftengine.script.PolyClassBlock_v3;
+import dev.arubik.craftengine.script.PolyClassBlock;
 import dev.arubik.craftengine.script.PolyClassRuntime;
 import dev.arubik.craftengine.script.PolyType;
 import dev.arubik.craftengine.script.ScriptValue;
 import java.util.List;
 
 public class PolyClassMachine_v4
-extends PolyClassBlock_v3 {
+extends PolyClassBlock {
     private static volatile PolyType.TypedMethodHandler3 h$0;
     private static volatile PolyType.MethodHandler m$1;
     private static volatile PolyType.TypedMethodHandler2 h$2;

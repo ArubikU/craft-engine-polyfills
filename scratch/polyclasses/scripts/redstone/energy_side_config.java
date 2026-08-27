@@ -3,7 +3,7 @@
  * 
  * Could not load the following classes:
  *  dev.arubik.craftengine.script.PolyClass
- *  dev.arubik.craftengine.script.PolyClassMachine_v4
+ *  dev.arubik.craftengine.script.PolyClassMachine_v3
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
  *  dev.arubik.craftengine.script.ScriptContext$Builder
@@ -13,13 +13,23 @@
 package dev.arubik.craftengine.script.gen.redstone;
 
 import dev.arubik.craftengine.script.PolyClass;
-import dev.arubik.craftengine.script.PolyClassMachine_v4;
+import dev.arubik.craftengine.script.PolyClassMachine_v3;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptValue;
 import java.util.ArrayList;
 
 public final class EnergySideConfig {
+    private static volatile ScriptContext FILE_SCOPE;
+
+    public static ScriptContext fileScope() {
+        ScriptContext scriptContext = FILE_SCOPE;
+        if (scriptContext == null) {
+            scriptContext = ScriptContext.builder().build();
+        }
+        return scriptContext;
+    }
+
     public static ScriptValue cycleEnergy(ScriptContext.Builder builder) {
         Object object;
         Object object2;
@@ -32,8 +42,8 @@ public final class EnergySideConfig {
             String string2 = "input";
             ScriptValue scriptValue2 = scriptContext.getClassOrVar("dir");
             if (scriptValue instanceof ScriptValue.Obj && (object3 = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object3 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object3);
-                object2 = ScriptValue.of((boolean)polyClassMachine_v4.tm$72_io_get(string, string2, scriptValue2.asStr()));
+                PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object3);
+                object2 = ScriptValue.of((boolean)polyClassMachine_v3.tm$72_io_get(string, string2, scriptValue2.asStr()));
             } else {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 arrayList.add(ScriptValue.of((String)string));
@@ -54,8 +64,8 @@ public final class EnergySideConfig {
             String string3 = "output";
             ScriptValue scriptValue5 = scriptContext.getClassOrVar("dir");
             if (scriptValue4 instanceof ScriptValue.Obj && (object4 = (obj = (ScriptValue.Obj)scriptValue4).instance()) != null && !(object4 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object4);
-                object = ScriptValue.of((boolean)polyClassMachine_v4.tm$72_io_get(string, string3, scriptValue5.asStr()));
+                PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object4);
+                object = ScriptValue.of((boolean)polyClassMachine_v3.tm$72_io_get(string, string3, scriptValue5.asStr()));
             } else {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 arrayList.add(ScriptValue.of((String)string));
@@ -78,8 +88,8 @@ public final class EnergySideConfig {
                 ScriptValue scriptValue8 = scriptContext.getClassOrVar("dir");
                 boolean bl = true;
                 if (scriptValue7 instanceof ScriptValue.Obj && (object5 = (obj = (ScriptValue.Obj)scriptValue7).instance()) != null && !(object5 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                    PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object5);
-                    v2 = ScriptValue.of((boolean)polyClassMachine_v4.tm$54_io_set(string, string4, scriptValue8.asStr(), bl));
+                    PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object5);
+                    v2 = ScriptValue.of((boolean)polyClassMachine_v3.tm$54_io_set(string, string4, scriptValue8.asStr(), bl));
                 } else {
                     ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                     arrayList.add(ScriptValue.of((String)string));
@@ -101,8 +111,8 @@ public final class EnergySideConfig {
                 ScriptValue scriptValue10 = scriptContext.getClassOrVar("dir");
                 boolean bl = false;
                 if (scriptValue9 instanceof ScriptValue.Obj && (object6 = (obj = (ScriptValue.Obj)scriptValue9).instance()) != null && !(object6 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                    PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object6);
-                    v3 = ScriptValue.of((boolean)polyClassMachine_v4.tm$54_io_set(string, string5, scriptValue10.asStr(), bl));
+                    PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object6);
+                    v3 = ScriptValue.of((boolean)polyClassMachine_v3.tm$54_io_set(string, string5, scriptValue10.asStr(), bl));
                 } else {
                     ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                     arrayList.add(ScriptValue.of((String)string));
@@ -123,8 +133,8 @@ public final class EnergySideConfig {
                 ScriptValue scriptValue12 = scriptContext.getClassOrVar("dir");
                 boolean bl = true;
                 if (scriptValue11 instanceof ScriptValue.Obj && (object7 = (obj = (ScriptValue.Obj)scriptValue11).instance()) != null && !(object7 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                    PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object7);
-                    v4 = ScriptValue.of((boolean)polyClassMachine_v4.tm$54_io_set(string, string6, scriptValue12.asStr(), bl));
+                    PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object7);
+                    v4 = ScriptValue.of((boolean)polyClassMachine_v3.tm$54_io_set(string, string6, scriptValue12.asStr(), bl));
                 } else {
                     ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                     arrayList.add(ScriptValue.of((String)string));
@@ -146,8 +156,8 @@ public final class EnergySideConfig {
                 ScriptValue scriptValue14 = scriptContext.getClassOrVar("dir");
                 boolean bl = true;
                 if (scriptValue13 instanceof ScriptValue.Obj && (object8 = (obj = (ScriptValue.Obj)scriptValue13).instance()) != null && !(object8 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                    PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object8);
-                    v5 = ScriptValue.of((boolean)polyClassMachine_v4.tm$54_io_set(string, string7, scriptValue14.asStr(), bl));
+                    PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object8);
+                    v5 = ScriptValue.of((boolean)polyClassMachine_v3.tm$54_io_set(string, string7, scriptValue14.asStr(), bl));
                 } else {
                     ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                     arrayList.add(ScriptValue.of((String)string));
@@ -169,8 +179,8 @@ public final class EnergySideConfig {
                 ScriptValue scriptValue16 = scriptContext.getClassOrVar("dir");
                 boolean bl = false;
                 if (scriptValue15 instanceof ScriptValue.Obj && (object9 = (obj = (ScriptValue.Obj)scriptValue15).instance()) != null && !(object9 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                    PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object9);
-                    v6 = ScriptValue.of((boolean)polyClassMachine_v4.tm$54_io_set(string, string8, scriptValue16.asStr(), bl));
+                    PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object9);
+                    v6 = ScriptValue.of((boolean)polyClassMachine_v3.tm$54_io_set(string, string8, scriptValue16.asStr(), bl));
                 } else {
                     ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                     arrayList.add(ScriptValue.of((String)string));
@@ -191,8 +201,8 @@ public final class EnergySideConfig {
                 ScriptValue scriptValue18 = scriptContext.getClassOrVar("dir");
                 boolean bl = false;
                 if (scriptValue17 instanceof ScriptValue.Obj && (object10 = (obj = (ScriptValue.Obj)scriptValue17).instance()) != null && !(object10 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                    PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object10);
-                    v7 = ScriptValue.of((boolean)polyClassMachine_v4.tm$54_io_set(string, string9, scriptValue18.asStr(), bl));
+                    PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object10);
+                    v7 = ScriptValue.of((boolean)polyClassMachine_v3.tm$54_io_set(string, string9, scriptValue18.asStr(), bl));
                 } else {
                     ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                     arrayList.add(ScriptValue.of((String)string));

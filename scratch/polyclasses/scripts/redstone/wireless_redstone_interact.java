@@ -3,7 +3,7 @@
  * 
  * Could not load the following classes:
  *  dev.arubik.craftengine.script.PolyClass
- *  dev.arubik.craftengine.script.PolyClassMachine_v4
+ *  dev.arubik.craftengine.script.PolyClassMachine_v3
  *  dev.arubik.craftengine.script.PolyClassPlayer
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
@@ -15,7 +15,7 @@
 package dev.arubik.craftengine.script.gen.redstone;
 
 import dev.arubik.craftengine.script.PolyClass;
-import dev.arubik.craftengine.script.PolyClassMachine_v4;
+import dev.arubik.craftengine.script.PolyClassMachine_v3;
 import dev.arubik.craftengine.script.PolyClassPlayer;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
@@ -24,6 +24,16 @@ import dev.arubik.craftengine.script.ScriptValue;
 import java.util.ArrayList;
 
 public final class WirelessRedstoneInteract {
+    private static volatile ScriptContext FILE_SCOPE;
+
+    public static ScriptContext fileScope() {
+        ScriptContext scriptContext = FILE_SCOPE;
+        if (scriptContext == null) {
+            scriptContext = ScriptContext.builder().build();
+        }
+        return scriptContext;
+    }
+
     public static void run(ScriptContext.Builder builder) {
         ScriptValue.Obj obj;
         Object object;
@@ -39,8 +49,8 @@ public final class WirelessRedstoneInteract {
                 String string = "_wr_mode";
                 String string2 = "int";
                 if (scriptValue2 instanceof ScriptValue.Obj && (object4 = (obj2 = (ScriptValue.Obj)scriptValue2).instance()) != null && !(object4 instanceof PolyClass) && obj2.typeName().equals("Machine")) {
-                    PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object4);
-                    object3 = polyClassMachine_v4.tm$34_get_typed(string, string2);
+                    PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object4);
+                    object3 = polyClassMachine_v3.tm$34_get_typed(string, string2);
                 } else {
                     ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                     arrayList.add(ScriptValue.of((String)string));
@@ -63,8 +73,8 @@ public final class WirelessRedstoneInteract {
                 String string3 = "int";
                 ScriptValue scriptValue6 = ScriptValue.of((double)d);
                 if (scriptValue5 instanceof ScriptValue.Obj && (object5 = (obj3 = (ScriptValue.Obj)scriptValue5).instance()) != null && !(object5 instanceof PolyClass) && obj3.typeName().equals("Machine")) {
-                    PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object5);
-                    v2 = ScriptValue.of((boolean)polyClassMachine_v4.tm$82_set_typed(string, string3, scriptValue6));
+                    PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object5);
+                    v2 = ScriptValue.of((boolean)polyClassMachine_v3.tm$82_set_typed(string, string3, scriptValue6));
                 } else {
                     ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                     arrayList.add(ScriptValue.of((String)string));
@@ -119,8 +129,8 @@ public final class WirelessRedstoneInteract {
                 String string = "_wr_ch";
                 String string4 = "int";
                 if (scriptValue9 instanceof ScriptValue.Obj && (object9 = (obj6 = (ScriptValue.Obj)scriptValue9).instance()) != null && !(object9 instanceof PolyClass) && obj6.typeName().equals("Machine")) {
-                    PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object9);
-                    object8 = polyClassMachine_v4.tm$34_get_typed(string, string4);
+                    PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object9);
+                    object8 = polyClassMachine_v3.tm$34_get_typed(string, string4);
                 } else {
                     ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                     arrayList.add(ScriptValue.of((String)string));
@@ -144,8 +154,8 @@ public final class WirelessRedstoneInteract {
                 String string5 = "int";
                 ScriptValue scriptValue13 = ScriptValue.of((double)d2);
                 if (scriptValue12 instanceof ScriptValue.Obj && (object10 = (obj7 = (ScriptValue.Obj)scriptValue12).instance()) != null && !(object10 instanceof PolyClass) && obj7.typeName().equals("Machine")) {
-                    PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object10);
-                    v6 = ScriptValue.of((boolean)polyClassMachine_v4.tm$82_set_typed(string, string5, scriptValue13));
+                    PolyClassMachine_v3 polyClassMachine_v3 = new PolyClassMachine_v3(object10);
+                    v6 = ScriptValue.of((boolean)polyClassMachine_v3.tm$82_set_typed(string, string5, scriptValue13));
                 } else {
                     ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                     arrayList.add(ScriptValue.of((String)string));
@@ -173,5 +183,6 @@ public final class WirelessRedstoneInteract {
                 v7 = ScriptValue.NULL;
             }
         }
+        FILE_SCOPE = builder.build();
     }
 }
