@@ -176,31 +176,33 @@ public final class ContraptionType {
             // lift) has no physics body either, so without this, hold() would have zero effect on
             // it too and a drill riding along would sail straight through its target the same way
             // it did for a rotating one before this fix.
-            // NOT migrated to methodTyped3: teleport(x,y,z[,yaw]) has a genuinely optional 4th
-            // argument (yaw) whose presence is checked via args.size() >= 4 inside the body — a
-            // typed handler only receives its fixed-arity decoded arguments, not the original args
-            // list/size, so that conditional read can't be expressed. Left untyped.
-            .method("teleport", (obj, args) -> {
-                if (args.size() < 3) return ScriptValue.of(false);
+            // Typed with null sentinels: no codec decodes a PRESENT argument to Java null (asNum()
+            // is primitive-backed, boxed only on return), so `zArg == null` is exactly the old
+            // `args.size() < 3` early return, and `yawArg == null` is exactly "no 4th argument" —
+            // letting the instance-derived yaw default be computed inside the body as before.
+            .methodTypedOpt4("teleport", TypeCodecs.DOUBLE, null, TypeCodecs.DOUBLE, null,
+                TypeCodecs.DOUBLE, null, TypeCodecs.DOUBLE, null, TypeCodecs.BOOL,
+                (ContraptionLevel obj, Double xArg, Double yArg, Double zArg, Double yawArg) -> {
+                if (zArg == null) return false;
                 try {
-                    var entity = ContraptionWorlds.entityOf(cl(obj)).orElse(null);
-                    if (entity == null) return ScriptValue.of(false);
-                    if (PhysicsWorld.isHeld(entity.state().id())) return ScriptValue.of(true);
+                    var entity = ContraptionWorlds.entityOf(obj).orElse(null);
+                    if (entity == null) return false;
+                    if (PhysicsWorld.isHeld(entity.state().id())) return true;
                     var state = entity.state();
                     double oldX = state.x(), oldY = state.y(), oldZ = state.z();
-                    double x = args.get(0).asNum(), y = args.get(1).asNum(), z = args.get(2).asNum();
-                    double yaw = args.size() >= 4 ? Math.toRadians(args.get(3).asNum()) : cl(obj).realYawRadians();
-                    if (cl(obj).realLevel() instanceof net.minecraft.server.level.ServerLevel rl) {
+                    double x = xArg, y = yArg, z = zArg;
+                    double yaw = yawArg != null ? Math.toRadians(yawArg) : obj.realYawRadians();
+                    if (obj.realLevel() instanceof net.minecraft.server.level.ServerLevel rl) {
                         entity.teleport(rl.getWorld(), x, y, z, yaw);
                         // See Contraption.speed/is_moving() below — this is what lets those detect
                         // a script-driven (no physics body) contraption sliding via repeated
                         // teleport() calls, not just a real PhysicsWorld body's velocity.
                         state.reportScriptMove(net.minecraft.server.MinecraftServer.getServer().getTickCount(),
                                 x - oldX, y - oldY, z - oldZ);
-                        return ScriptValue.of(true);
+                        return true;
                     }
                 } catch (Throwable ignored) {}
-                return ScriptValue.of(false);
+                return false;
             })
             .methodTyped3("move", TypeCodecs.DOUBLE, TypeCodecs.DOUBLE, TypeCodecs.DOUBLE, TypeCodecs.BOOL, false,
                 (ContraptionLevel obj, Double dxArg, Double dyArg, Double dzArg) -> {
@@ -689,26 +691,29 @@ public final class ContraptionType {
                     } catch (Throwable ignored) { return new ScriptValue.Array(java.util.List.of()); }
                 })
             // play_sound — forwards to real world at projected position
-            // NOT migrated to a typed method: 4 required args plus 2 optional trailing (vol, pitch)
-            // checked via args.size() >= 5 / >= 6 — a typed handler has no access to the raw args
-            // list/size to express that, only its fixed decoded arguments (see move()/teleport()'s
-            // NOT-migrated notes above for the same reasoning). Left untyped.
-            .method("play_sound", (obj, args) -> {
-                if (args.size() < 4) return ScriptValue.of(false);
+            // Typed with a null sentinel on the LAST required slot (the sound name): no codec
+            // decodes a PRESENT argument to Java null (asStr() is total, asNum() primitive-backed),
+            // and arguments are positional, so `sound == null` is exactly the old `args.size() < 4`
+            // early return. vol/pitch keep their 1.0 defaults.
+            .methodTypedOpt6("play_sound", TypeCodecs.DOUBLE, null, TypeCodecs.DOUBLE, null,
+                TypeCodecs.DOUBLE, null, TypeCodecs.STRING, null, TypeCodecs.DOUBLE, 1.0,
+                TypeCodecs.DOUBLE, 1.0, TypeCodecs.BOOL,
+                (ContraptionLevel obj, Double xArg, Double yArg, Double zArg, String sound,
+                 Double volArg, Double pitchArg) -> {
+                if (sound == null) return false;
                 try {
-                    net.minecraft.world.phys.Vec3 rp = cl(obj).realWorldPositionOf(
-                        new net.minecraft.world.phys.Vec3(args.get(0).asNum(), args.get(1).asNum(), args.get(2).asNum()));
-                    String sound = args.get(3).asStr();
-                    float vol = args.size() >= 5 ? (float)args.get(4).asNum() : 1.0f;
-                    float pitch = args.size() >= 6 ? (float)args.get(5).asNum() : 1.0f;
-                    if (cl(obj).realLevel() instanceof net.minecraft.server.level.ServerLevel rl) {
+                    net.minecraft.world.phys.Vec3 rp = obj.realWorldPositionOf(
+                        new net.minecraft.world.phys.Vec3(xArg, yArg, zArg));
+                    float vol = (float) (double) volArg;
+                    float pitch = (float) (double) pitchArg;
+                    if (obj.realLevel() instanceof net.minecraft.server.level.ServerLevel rl) {
                         var event = net.minecraft.sounds.SoundEvent.createVariableRangeEvent(net.minecraft.resources.Identifier.parse(sound));
                         rl.playSeededSound(null, rp.x, rp.y, rp.z, net.minecraft.core.Holder.direct(event),
                             net.minecraft.sounds.SoundSource.BLOCKS, vol, pitch, 0L);
-                        return ScriptValue.of(true);
+                        return true;
                     }
                 } catch (Throwable ignored) {}
-                return ScriptValue.of(false);
+                return false;
             });
 
         // ContraptionContainer — the combined pushable STORAGE+OUTPUT view returned by

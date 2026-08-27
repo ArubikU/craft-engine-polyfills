@@ -71,16 +71,16 @@ public final class RedstoneType {
                 (RedstoneRef r, Double power) -> r.set(power.intValue()))
             .methodTyped0("off", TypeCodecs.BOOL, (RedstoneRef r) -> r.set(0))
             .methodTyped0("clear", TypeCodecs.BOOL, (RedstoneRef r) -> r.set(0))
-            // NOT migrated: "toggle" defaults `on` to the instance's own current state
-            // (!args.isEmpty() ? asBool() : output() == 0) when the argument is omitted — the same
-            // instance-dependent fallback that neither onMissingArgs (a single fixed R value) nor
-            // methodTypedOpt1 (a single fixed default value, fixed at registration time) can supply
-            // — the default here has to be recomputed per call from the live instance. Left untyped.
+            // Typed with a null sentinel: BOOL decodes a PRESENT argument via the primitive-backed
+            // asBool(), so it can never yield Java null — `onArg == null` is exactly "no argument",
+            // which lets the instance-dependent fallback (output() == 0) still be recomputed per
+            // call from the live instance inside the body.
             /** Emit full power when {@code cond} is truthy, nothing otherwise. */
-            .method("toggle", (obj, args) -> {
-                boolean on = !args.isEmpty() ? args.get(0).asBool() : ref(obj).output() == 0;
-                return ScriptValue.of(ref(obj).set(on ? MachineRedstone.MAX_POWER : 0));
-            })
+            .methodTypedOpt1("toggle", TypeCodecs.BOOL, null, TypeCodecs.BOOL,
+                (RedstoneRef r, Boolean onArg) -> {
+                    boolean on = onArg != null ? onArg : r.output() == 0;
+                    return r.set(on ? MachineRedstone.MAX_POWER : 0);
+                })
             /** Mirror the incoming signal — a repeater in one call. */
             .methodTyped0("relay", TypeCodecs.BOOL, (RedstoneRef r) -> r.set(r.input()));
     }

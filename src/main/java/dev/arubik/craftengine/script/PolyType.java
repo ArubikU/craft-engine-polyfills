@@ -327,6 +327,70 @@ public final class PolyType {
         return this;
     }
 
+    public <I, A1, A2, A3, A4, A5, A6, A7, A8, R> PolyType methodTypedOpt8(String name,
+            TypeCodec<A1> a1, A1 def1, TypeCodec<A2> a2, A2 def2, TypeCodec<A3> a3, A3 def3,
+            TypeCodec<A4> a4, A4 def4, TypeCodec<A5> a5, A5 def5, TypeCodec<A6> a6, A6 def6,
+            TypeCodec<A7> a7, A7 def7, TypeCodec<A8> a8, A8 def8, TypeCodec<R> ret,
+            TypedMethodHandler8<I, A1, A2, A3, A4, A5, A6, A7, A8, R> handler) {
+        methods.put(name, (instance, args) -> ret.encode(handler.call(cast(instance),
+                args.size() > 0 ? a1.decode(args.get(0)) : def1,
+                args.size() > 1 ? a2.decode(args.get(1)) : def2,
+                args.size() > 2 ? a3.decode(args.get(2)) : def3,
+                args.size() > 3 ? a4.decode(args.get(3)) : def4,
+                args.size() > 4 ? a5.decode(args.get(4)) : def5,
+                args.size() > 5 ? a6.decode(args.get(5)) : def6,
+                args.size() > 6 ? a7.decode(args.get(6)) : def7,
+                args.size() > 7 ? a8.decode(args.get(7)) : def8)));
+        typedMethods.put(name, new TypedMethodDescriptor(name, List.of(a1, a2, a3, a4, a5, a6, a7, a8), ret, handler,
+                java.util.Arrays.asList(def1, def2, def3, def4, def5, def6, def7, def8)));
+        PolyTypeRegistry.notifyMutation();
+        return this;
+    }
+
+    public <I, A1, A2, A3, A4, A5, A6, A7, A8, A9, R> PolyType methodTypedOpt9(String name,
+            TypeCodec<A1> a1, A1 def1, TypeCodec<A2> a2, A2 def2, TypeCodec<A3> a3, A3 def3,
+            TypeCodec<A4> a4, A4 def4, TypeCodec<A5> a5, A5 def5, TypeCodec<A6> a6, A6 def6,
+            TypeCodec<A7> a7, A7 def7, TypeCodec<A8> a8, A8 def8, TypeCodec<A9> a9, A9 def9,
+            TypeCodec<R> ret, TypedMethodHandler9<I, A1, A2, A3, A4, A5, A6, A7, A8, A9, R> handler) {
+        methods.put(name, (instance, args) -> ret.encode(handler.call(cast(instance),
+                args.size() > 0 ? a1.decode(args.get(0)) : def1,
+                args.size() > 1 ? a2.decode(args.get(1)) : def2,
+                args.size() > 2 ? a3.decode(args.get(2)) : def3,
+                args.size() > 3 ? a4.decode(args.get(3)) : def4,
+                args.size() > 4 ? a5.decode(args.get(4)) : def5,
+                args.size() > 5 ? a6.decode(args.get(5)) : def6,
+                args.size() > 6 ? a7.decode(args.get(6)) : def7,
+                args.size() > 7 ? a8.decode(args.get(7)) : def8,
+                args.size() > 8 ? a9.decode(args.get(8)) : def9)));
+        typedMethods.put(name, new TypedMethodDescriptor(name, List.of(a1, a2, a3, a4, a5, a6, a7, a8, a9), ret,
+                handler, java.util.Arrays.asList(def1, def2, def3, def4, def5, def6, def7, def8, def9)));
+        PolyTypeRegistry.notifyMutation();
+        return this;
+    }
+
+    public <I, A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, R> PolyType methodTypedOpt10(String name,
+            TypeCodec<A1> a1, A1 def1, TypeCodec<A2> a2, A2 def2, TypeCodec<A3> a3, A3 def3,
+            TypeCodec<A4> a4, A4 def4, TypeCodec<A5> a5, A5 def5, TypeCodec<A6> a6, A6 def6,
+            TypeCodec<A7> a7, A7 def7, TypeCodec<A8> a8, A8 def8, TypeCodec<A9> a9, A9 def9,
+            TypeCodec<A10> a10, A10 def10, TypeCodec<R> ret,
+            TypedMethodHandler10<I, A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, R> handler) {
+        methods.put(name, (instance, args) -> ret.encode(handler.call(cast(instance),
+                args.size() > 0 ? a1.decode(args.get(0)) : def1,
+                args.size() > 1 ? a2.decode(args.get(1)) : def2,
+                args.size() > 2 ? a3.decode(args.get(2)) : def3,
+                args.size() > 3 ? a4.decode(args.get(3)) : def4,
+                args.size() > 4 ? a5.decode(args.get(4)) : def5,
+                args.size() > 5 ? a6.decode(args.get(5)) : def6,
+                args.size() > 6 ? a7.decode(args.get(6)) : def7,
+                args.size() > 7 ? a8.decode(args.get(7)) : def8,
+                args.size() > 8 ? a9.decode(args.get(8)) : def9,
+                args.size() > 9 ? a10.decode(args.get(9)) : def10)));
+        typedMethods.put(name, new TypedMethodDescriptor(name, List.of(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10), ret,
+                handler, java.util.Arrays.asList(def1, def2, def3, def4, def5, def6, def7, def8, def9, def10)));
+        PolyTypeRegistry.notifyMutation();
+        return this;
+    }
+
     @SuppressWarnings("unchecked")
     private static <I> I cast(Object instance) { return (I) instance; }
 
@@ -462,6 +526,27 @@ public final class PolyType {
     @FunctionalInterface
     public interface TypedMethodHandler7<I, A1, A2, A3, A4, A5, A6, A7, R> {
         R call(I instance, A1 arg1, A2 arg2, A3 arg3, A4 arg4, A5 arg5, A6 arg6, A7 arg7);
+    }
+
+    // Arities 8-10 exist only in the optional-argument (methodTypedOptN) family. Nothing in this
+    // codebase registers a REQUIRED-argument method that wide; what does go this wide is builder-
+    // style calls (UI widgets, map markers, particles) where every slot past the first few is
+    // optional. Adding the required variants too would be dead code.
+
+    @FunctionalInterface
+    public interface TypedMethodHandler8<I, A1, A2, A3, A4, A5, A6, A7, A8, R> {
+        R call(I instance, A1 arg1, A2 arg2, A3 arg3, A4 arg4, A5 arg5, A6 arg6, A7 arg7, A8 arg8);
+    }
+
+    @FunctionalInterface
+    public interface TypedMethodHandler9<I, A1, A2, A3, A4, A5, A6, A7, A8, A9, R> {
+        R call(I instance, A1 arg1, A2 arg2, A3 arg3, A4 arg4, A5 arg5, A6 arg6, A7 arg7, A8 arg8, A9 arg9);
+    }
+
+    @FunctionalInterface
+    public interface TypedMethodHandler10<I, A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, R> {
+        R call(I instance, A1 arg1, A2 arg2, A3 arg3, A4 arg4, A5 arg5, A6 arg6, A7 arg7, A8 arg8, A9 arg9,
+               A10 arg10);
     }
 
     /**

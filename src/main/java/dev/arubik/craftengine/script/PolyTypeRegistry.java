@@ -35,15 +35,16 @@ public final class PolyTypeRegistry {
      * <p>Kept as a settable listener rather than a direct call so this class stays independent of
      * the JIT — nothing here needs {@code PolyClassGenerator} to exist.
      */
-    private static volatile Runnable mutationListener = null;
+    private static final java.util.List<Runnable> MUTATION_LISTENERS = new java.util.concurrent.CopyOnWriteArrayList<>();
 
-    static void setMutationListener(Runnable listener) { mutationListener = listener; }
+    static void addMutationListener(Runnable listener) { MUTATION_LISTENERS.add(listener); }
 
-    /** Notifies the mutation listener, if any. Package-private — called by {@link PolyType} on
-     *  every one of its own mutators as well as by this class's define/extend. */
+    /** Notifies every mutation listener. Package-private — called by {@link PolyType} on every one
+     *  of its own mutators as well as by this class's define/extend. Two listeners exist today:
+     *  {@link PolyClassGenerator} re-resolves its generated classes' handler fields, and
+     *  {@link PolyDispatch} invalidates its inline caches. */
     static void notifyMutation() {
-        Runnable l = mutationListener;
-        if (l != null) l.run();
+        for (Runnable l : MUTATION_LISTENERS) l.run();
     }
 
     private PolyTypeRegistry() {}

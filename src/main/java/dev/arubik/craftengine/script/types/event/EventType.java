@@ -171,7 +171,10 @@ public final class EventType {
             // contents) with exactly the given items. Every arg is treated as one drop, so both
             // event.set_drops(one_item) and event.set_drops(a, b, c) work with no array-literal
             // syntax required.
-            // Left untyped: variadic — loops over the whole args list, so it has no fixed arity.
+            // Left untyped: IRREDUCIBLY variadic. Both documented shapes are reachable — the
+            // one-array form set_drops([a, b]) AND the flat form set_drops(a, b, c) — and every
+            // arg past the first contributes drops. A single methodTypedOpt1(RAW, ...) slot binds
+            // only args[0], so the flat multi-arg form would silently lose b and c: not exact.
             .method("set_drops", (obj, args) -> {
                 List<ItemStack> drops = new ArrayList<>();
                 for (ScriptValue v : args) {
@@ -284,7 +287,9 @@ public final class EventType {
                 for (ItemStack s : ((PlayerDeathWrapper) obj).drops()) out.add(ScriptValue.ofItem(s));
                 return new ScriptValue.Array(out);
             })
-            // Left untyped: variadic — loops over the whole args list, so it has no fixed arity.
+            // Left untyped: IRREDUCIBLY variadic — same "one array OR a flat series of items"
+            // shape as BreakEvent.set_drops above. A single methodTypedOpt1(RAW, ...) slot binds
+            // only args[0] and would silently drop every further item of the flat form.
             .method("set_drops", (obj, args) -> {
                 List<ItemStack> drops = new ArrayList<>();
                 for (ScriptValue v : args) {
@@ -410,7 +415,9 @@ public final class EventType {
                 for (ItemStack s : ((EntityDeathWrapper) obj).drops()) out.add(ScriptValue.ofItem(s));
                 return new ScriptValue.Array(out);
             })
-            // Left untyped: variadic — loops over the whole args list, so it has no fixed arity.
+            // Left untyped: IRREDUCIBLY variadic — same "one array OR a flat series of items"
+            // shape as BreakEvent.set_drops above. A single methodTypedOpt1(RAW, ...) slot binds
+            // only args[0] and would silently drop every further item of the flat form.
             .method("set_drops", (obj, args) -> {
                 List<ItemStack> drops = new ArrayList<>();
                 for (ScriptValue v : args) {
@@ -825,7 +832,11 @@ public final class EventType {
         PolyTypeRegistry.define("TabCompleteEvent", "Event")
             .property("buffer", obj -> ScriptValue.of(((TabCompleteEventWrapper) obj).buffer()))
             .property("completions", obj -> ((TabCompleteEventWrapper) obj).completions())
-            // Left untyped: variadic — the whole args list IS the completion list, no fixed arity.
+            // Left untyped: IRREDUCIBLY variadic — the whole args list IS the completion list, and
+            // TabCompleteEventWrapper.setCompletions accepts both set_completions([a, b]) and the
+            // flat set_completions(a, b, c). A single methodTypedOpt1(RAW, ...) slot binds only
+            // args[0], so the flat multi-arg form would silently lose every suggestion but the
+            // first: not exact. Handing setCompletions the raw List<ScriptValue> is the contract.
             .method("set_completions", (obj, args) -> {
                 ((TabCompleteEventWrapper) obj).setCompletions(args);
                 return ScriptValue.of(true);

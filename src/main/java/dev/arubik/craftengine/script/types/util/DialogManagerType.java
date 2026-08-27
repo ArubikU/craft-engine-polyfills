@@ -98,24 +98,28 @@ public final class DialogManagerType {
 
     public static void register() {
         PolyTypeRegistry.define("Dialog")
-            // base(title) — NOT migrated. methodTyped1 is out: the DialogSupport.isAvailable()
+            // base(title) — methodTypedOpt1, NOT methodTyped1: the DialogSupport.isAvailable()
             // warning log must fire even for a 0-arg call (it is checked BEFORE the args.isEmpty()
-            // check), but onMissingArgs returns without ever entering the handler body, so that log
-            // line would silently stop firing. methodTypedOpt1 doesn't fit either: the only sentinel
-            // it could use for "no title given" is null, and the title slot must stay TypeCodecs.RAW
-            // (it accepts an Array of glyph parts), where an explicitly passed ScriptValue.NULL is a
-            // legal value that today builds a Builder — a null default could not tell the two apart.
-            // Left untyped.
-            .method("base", (obj, args) -> {
-                if (!DialogSupport.isAvailable()) {
-                    LOG.warning("[Dialog] Dialog.base() called but DialogSupport.isAvailable() is false — "
-                        + "io.papermc.paper.dialog.Dialog / DialogAction couldn't be loaded on this server's "
-                        + "Paper implementation. Every Dialog.* call from a script silently no-ops as a result.");
-                    return ScriptValue.NULL;
-                }
-                if (args.isEmpty()) return ScriptValue.NULL;
-                return ScriptValue.ofObj("DialogBuilder", new Builder(args.get(0)));
-            });
+            // check), and onMissingArgs would return without ever entering the handler body, so that
+            // log line would silently stop firing. Opt1 always runs the body, so it still fires.
+            // The title slot stays TypeCodecs.RAW (it accepts an Array of glyph parts) with a Java
+            // null default used purely as the "argument was absent" sentinel — that is EXACT here
+            // even though an explicitly passed ScriptValue.NULL is itself a legal title: RAW is the
+            // identity codec and ScriptValue.NULL is a real (non-null) ScriptValue instance, so a
+            // PRESENT null-valued argument decodes to that instance, never to Java null. Only a
+            // genuinely absent argument reaches the default, so "title == null" is exactly the
+            // original's args.isEmpty(), and an explicit NULL still builds a Builder as before.
+            .methodTypedOpt1("base", TypeCodecs.RAW, (ScriptValue) null, TypeCodecs.RAW,
+                (Object obj, ScriptValue title) -> {
+                    if (!DialogSupport.isAvailable()) {
+                        LOG.warning("[Dialog] Dialog.base() called but DialogSupport.isAvailable() is false — "
+                            + "io.papermc.paper.dialog.Dialog / DialogAction couldn't be loaded on this server's "
+                            + "Paper implementation. Every Dialog.* call from a script silently no-ops as a result.");
+                        return ScriptValue.NULL;
+                    }
+                    if (title == null) return ScriptValue.NULL;
+                    return ScriptValue.ofObj("DialogBuilder", new Builder(title));
+                });
 
         PolyTypeRegistry.define("DialogBuilder")
             // can_close_with_escape(bool) — methodTypedOpt1 with default TRUE reproduces the
@@ -194,24 +198,30 @@ public final class DialogManagerType {
                     return ScriptValue.ofObj("DialogBuilder", b);
                 })
             // input_text(key, label, initial?, width?, multiline?, max_lines?)
-            // NOT migrated: 6 argument slots, past methodTypedOpt5's ceiling (methodTyped6 doesn't
-            // help — it would force all six required and reject the legal 2-arg call). Left untyped.
-            .method("input_text", (obj, args) -> {
-                Builder b = builder(obj);
-                if (args.size() >= 2) {
-                    String key = args.get(0).asStr();
-                    var tb = DialogInput.text(key, mm(args.get(1).asStr()));
-                    if (args.size() >= 3) tb.initial(args.get(2).asStr());
-                    if (args.size() >= 4) tb.width((int) args.get(3).asNum());
-                    if (args.size() >= 5 && args.get(4).asBool()) {
-                        Integer maxLines = args.size() >= 6 ? (int) args.get(5).asNum() : null;
-                        tb.multiline(io.papermc.paper.registry.data.dialog.input.TextDialogInput.MultilineOptions.create(maxLines, null));
+            // methodTypedOpt6 with null defaults on every slot that the original read conditionally.
+            // Arguments are positional, so "label != null" is exactly the original's args.size() >= 2,
+            // and each later "!= null" is its matching args.size() >= N. The multiline slot keeps a
+            // false default so an absent 5th arg reads exactly like the original's skipped asBool(),
+            // and max_lines stays a null Double so an absent one is still the `null` MultilineOptions
+            // .create() already expects.
+            .methodTypedOpt6("input_text", TypeCodecs.STRING, (String) null, TypeCodecs.STRING, (String) null,
+                    TypeCodecs.STRING, (String) null, TypeCodecs.DOUBLE, (Double) null,
+                    TypeCodecs.BOOL, false, TypeCodecs.DOUBLE, (Double) null, TypeCodecs.RAW,
+                (Builder b, String key, String label, String initial, Double width,
+                 Boolean multiline, Double maxLinesArg) -> {
+                    if (label != null) {
+                        var tb = DialogInput.text(key, mm(label));
+                        if (initial != null) tb.initial(initial);
+                        if (width != null) tb.width(width.intValue());
+                        if (multiline) {
+                            Integer maxLines = maxLinesArg != null ? maxLinesArg.intValue() : null;
+                            tb.multiline(io.papermc.paper.registry.data.dialog.input.TextDialogInput.MultilineOptions.create(maxLines, null));
+                        }
+                        b.inputs.add(tb.build());
+                        b.specs.add(new InputSpec(key, Kind.TEXT));
                     }
-                    b.inputs.add(tb.build());
-                    b.specs.add(new InputSpec(key, Kind.TEXT));
-                }
-                return ScriptValue.ofObj("DialogBuilder", b);
-            })
+                    return ScriptValue.ofObj("DialogBuilder", b);
+                })
             // input_bool(key, label, initial?)
             // methodTypedOpt3 with null defaults throughout. Arguments are positional, so
             // "label != null" is exactly the original's args.size() >= 2, and "initial != null" is
@@ -228,21 +238,22 @@ public final class DialogManagerType {
                     return ScriptValue.ofObj("DialogBuilder", b);
                 })
             // input_number(key, label, min, max, step?, initial?)
-            // NOT migrated: 6 argument slots, past methodTypedOpt5's ceiling (methodTyped6 would
-            // force all six required and reject the legal 4-arg call). Left untyped.
-            .method("input_number", (obj, args) -> {
-                Builder b = builder(obj);
-                if (args.size() >= 4) {
-                    String key = args.get(0).asStr();
-                    var nb = DialogInput.numberRange(key, mm(args.get(1).asStr()),
-                            (float) args.get(2).asNum(), (float) args.get(3).asNum());
-                    if (args.size() >= 5) nb.step((float) args.get(4).asNum());
-                    if (args.size() >= 6) nb.initial((float) args.get(5).asNum());
-                    b.inputs.add(nb.build());
-                    b.specs.add(new InputSpec(key, Kind.NUMBER));
-                }
-                return ScriptValue.ofObj("DialogBuilder", b);
-            })
+            // methodTypedOpt6 with null defaults throughout. Arguments are positional, so
+            // "max != null" (the LAST required slot) is exactly the original's args.size() >= 4, and
+            // the optional step/initial reads become plain null checks.
+            .methodTypedOpt6("input_number", TypeCodecs.STRING, (String) null, TypeCodecs.STRING, (String) null,
+                    TypeCodecs.DOUBLE, (Double) null, TypeCodecs.DOUBLE, (Double) null,
+                    TypeCodecs.DOUBLE, (Double) null, TypeCodecs.DOUBLE, (Double) null, TypeCodecs.RAW,
+                (Builder b, String key, String label, Double min, Double max, Double step, Double initial) -> {
+                    if (max != null) {
+                        var nb = DialogInput.numberRange(key, mm(label), min.floatValue(), max.floatValue());
+                        if (step != null) nb.step(step.floatValue());
+                        if (initial != null) nb.initial(initial.floatValue());
+                        b.inputs.add(nb.build());
+                        b.specs.add(new InputSpec(key, Kind.NUMBER));
+                    }
+                    return ScriptValue.ofObj("DialogBuilder", b);
+                })
             // input_single_option(key, label, options) — options is an Array of maps built with
             // make_map("id", "...", "label", "...", "initial", true/false) (initial optional).
             // methodTypedOpt3 with null defaults: the options slot stays RAW (an Array of maps), and
@@ -290,28 +301,36 @@ public final class DialogManagerType {
                 })
             // as_confirmation(owner, accept_label, cancel_label, accept_action_ref, cancel_action_ref?,
             // accept_tooltip?, cancel_tooltip?, accept_width?, cancel_width?)
-            // NOT migrated: 9 argument slots — past methodTypedN's arity-7 ceiling AND past
-            // methodTypedOpt5's, so neither the all-required nor the all-optional family can carry
-            // this signature. Left untyped.
-            .method("as_confirmation", (obj, args) -> {
-                if (args.size() < 4) return ScriptValue.NULL;
-                Builder b = builder(obj);
-                ScriptValue owner = args.get(0);
-                DialogAction yes = buildAction(owner, args.get(3).asStr(), b);
-                DialogAction no = args.size() >= 5 && !args.get(4).asStr().isBlank()
-                        ? buildAction(owner, args.get(4).asStr(), b)
-                        : DialogAction.customClick((view, audience) -> { if (audience instanceof Player p) p.closeDialog(); },
-                            ClickCallback.Options.builder().uses(1).build());
-                var acceptB = ActionButton.builder(mm(args.get(1).asStr())).action(yes);
-                var cancelB = ActionButton.builder(mm(args.get(2).asStr())).action(no);
-                if (args.size() >= 6 && !args.get(5).asStr().isBlank()) acceptB.tooltip(mm(args.get(5).asStr()));
-                if (args.size() >= 7 && !args.get(6).asStr().isBlank()) cancelB.tooltip(mm(args.get(6).asStr()));
-                if (args.size() >= 8) acceptB.width((int) args.get(7).asNum());
-                if (args.size() >= 9) cancelB.width((int) args.get(8).asNum());
-                DialogBase base = base(b);
-                DialogType type = DialogType.confirmation(acceptB.build(), cancelB.build());
-                return wrapDialog(base, type);
-            })
+            // methodTypedOpt9 with null defaults everywhere: the required prefix is
+            // owner/accept_label/cancel_label/accept_action_ref, and since args are positional
+            // "acceptRef == null" (the LAST required slot) is exactly the original's args.size() < 4
+            // — the same NULL comes back with nothing built and no side effect. Every optional
+            // trailing read (args.size() >= 5 .. >= 9) becomes the matching plain null check, with
+            // the isBlank() tests kept exactly where the original had them.
+            .methodTypedOpt9("as_confirmation", TypeCodecs.RAW, (ScriptValue) null,
+                    TypeCodecs.STRING, (String) null, TypeCodecs.STRING, (String) null,
+                    TypeCodecs.STRING, (String) null, TypeCodecs.STRING, (String) null,
+                    TypeCodecs.STRING, (String) null, TypeCodecs.STRING, (String) null,
+                    TypeCodecs.DOUBLE, (Double) null, TypeCodecs.DOUBLE, (Double) null, TypeCodecs.RAW,
+                (Builder b, ScriptValue owner, String acceptLabel, String cancelLabel, String acceptRef,
+                 String cancelRef, String acceptTooltip, String cancelTooltip,
+                 Double acceptWidth, Double cancelWidth) -> {
+                    if (acceptRef == null) return ScriptValue.NULL;
+                    DialogAction yes = buildAction(owner, acceptRef, b);
+                    DialogAction no = cancelRef != null && !cancelRef.isBlank()
+                            ? buildAction(owner, cancelRef, b)
+                            : DialogAction.customClick((view, audience) -> { if (audience instanceof Player p) p.closeDialog(); },
+                                ClickCallback.Options.builder().uses(1).build());
+                    var acceptB = ActionButton.builder(mm(acceptLabel)).action(yes);
+                    var cancelB = ActionButton.builder(mm(cancelLabel)).action(no);
+                    if (acceptTooltip != null && !acceptTooltip.isBlank()) acceptB.tooltip(mm(acceptTooltip));
+                    if (cancelTooltip != null && !cancelTooltip.isBlank()) cancelB.tooltip(mm(cancelTooltip));
+                    if (acceptWidth != null) acceptB.width(acceptWidth.intValue());
+                    if (cancelWidth != null) cancelB.width(cancelWidth.intValue());
+                    DialogBase base = base(b);
+                    DialogType type = DialogType.confirmation(acceptB.build(), cancelB.build());
+                    return wrapDialog(base, type);
+                })
             // as_multi_action(owner, buttons, columns?) — buttons is an Array of maps built with
             // make_map("label", "...", "action", "file.pf:func", "tooltip", "...", "width", 100).
             // "tooltip"/"width" are optional. Every button gets whatever inputs were declared
@@ -492,7 +511,8 @@ public final class DialogManagerType {
         b.body.add(ib.build());
     }
 
-    private static Builder builder(Object obj) { return (Builder) obj; }
+    // (the former `builder(Object)` cast helper is gone — every DialogBuilder method is now a typed
+    // registration whose handler already receives a Builder, so nothing hand-casts the receiver.)
 
     private static DialogBase base(Builder b) {
         var bb = DialogBase.builder(b.title).canCloseWithEscape(b.canCloseWithEscape);

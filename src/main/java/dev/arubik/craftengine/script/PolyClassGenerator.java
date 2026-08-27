@@ -93,7 +93,7 @@ final class PolyClassGenerator {
     private static final CopyOnWriteArrayList<MethodHandle> LIVE_REFRESHERS = new CopyOnWriteArrayList<>();
 
     static {
-        PolyTypeRegistry.setMutationListener(PolyClassGenerator::onRegistryMutation);
+        PolyTypeRegistry.addMutationListener(PolyClassGenerator::onRegistryMutation);
     }
 
     /** Ensures the static initializer above has run, so mutations are observed even if nothing has
@@ -164,6 +164,9 @@ final class PolyClassGenerator {
             "dev/arubik/craftengine/script/PolyType$TypedMethodHandler5",
             "dev/arubik/craftengine/script/PolyType$TypedMethodHandler6",
             "dev/arubik/craftengine/script/PolyType$TypedMethodHandler7",
+    "dev/arubik/craftengine/script/PolyType$TypedMethodHandler8",
+    "dev/arubik/craftengine/script/PolyType$TypedMethodHandler9",
+    "dev/arubik/craftengine/script/PolyType$TypedMethodHandler10",
     };
 
     enum Kind { DOUBLE, BOOL, STRING, RAW, UNKNOWN }
@@ -431,7 +434,7 @@ final class PolyClassGenerator {
      *  four known {@link TypeCodecs} singletons. */
     private static Kind[] typedArgKinds(PolyType type, String method) {
         PolyType.TypedMethodDescriptor d = type.resolveTypedMethod(method);
-        if (d == null || d.arity() > 7) return null;
+        if (d == null || d.arity() > 10) return null;
         Kind[] kinds = new Kind[d.arity()];
         for (int i = 0; i < d.arity(); i++) {
             kinds[i] = kindOf(d.argTypes().get(i));

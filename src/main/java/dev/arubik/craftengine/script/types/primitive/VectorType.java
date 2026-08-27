@@ -56,6 +56,13 @@ public final class VectorType {
             // arity match, so a call with extra args would behave differently (compute a real result
             // instead of the original's default) — a real behavior change. methodTypedOptN is no
             // help either: it explicitly IGNORES extra trailing args. Left untyped.
+            //   (A methodTypedOpt2 registration whose SECOND slot is a RAW null-sentinel used purely
+            //   as an "extra argument was supplied" flag would in fact be exact — but it buys
+            //   nothing: the JIT's typed fast path only fires when the CALL SITE's argument count
+            //   equals the declared arity (see ScriptBytecodeCompiler's `argKinds().length ==
+            //   arity` test), so every real 1-arg call would fall back to generic dispatch anyway,
+            //   exactly as it does today — while the descriptor would advertise a phantom second
+            //   parameter this method does not have. Not worth the dishonest signature.)
             .method("distance", (obj, args) -> {
                 Vector3d v = vec(obj);
                 if (args.size() == 1 && args.get(0) instanceof ScriptValue.Obj o) {

@@ -54,20 +54,19 @@ public final class BetterModelRendererType {
             // play_ik(chain, target_x, target_y, target_z, time_to_arrive_seconds) -> bones applied.
             // chain is an Array of [bone_name, min_yaw, max_yaw, min_pitch, max_pitch] Arrays, base
             // bone first. time_to_arrive_seconds <= 0 snaps instantly instead of easing.
-            // NOT migrated: mixed required/optional arity — the first 4 args are REQUIRED (a shorter
-            // call returns 0 without touching the renderer) while the 5th (time_to_arrive_seconds)
-            // is optional, read via args.size() > 4 with a 0f default. methodTyped5's onMissingArgs
-            // can't supply that per-argument default, and methodTypedOpt5 would make all five
-            // optional and still run the body — firing a real playIk() with an empty chain at
-            // (0,0,0) on a call that today does nothing at all. Left untyped.
-            .method("play_ik", (obj, args) -> {
-                if (args.size() < 4) return ScriptValue.of(0);
-                List<BetterModelRenderer.BoneRange> chain = parseChain(args.get(0));
-                double tx = args.get(1).asNum();
-                double ty = args.get(2).asNum();
-                double tz = args.get(3).asNum();
-                float timeToArrive = args.size() > 4 ? (float) args.get(4).asNum() : 0f;
-                return ScriptValue.of(r(obj).playIk(chain, tx, ty, tz, timeToArrive));
+            // Typed with a null sentinel on the LAST required slot (target_z): no codec decodes a
+            // PRESENT argument to Java null (asNum() is primitive-backed, boxed only on return) and
+            // arguments are positional, so `tzArg == null` is exactly the old `args.size() < 4`
+            // early return, taken before the renderer is touched. The 5th keeps its 0 default.
+            // Return codec is RAW so the ScriptValue.of(...) encoding of both paths is unchanged.
+            .methodTypedOpt5("play_ik", TypeCodecs.RAW, null, TypeCodecs.DOUBLE, null,
+                TypeCodecs.DOUBLE, null, TypeCodecs.DOUBLE, null, TypeCodecs.DOUBLE, 0.0, TypeCodecs.RAW,
+                (BetterModelRenderer r, ScriptValue chainArg, Double txArg, Double tyArg, Double tzArg,
+                 Double timeArg) -> {
+                if (tzArg == null) return ScriptValue.of(0);
+                List<BetterModelRenderer.BoneRange> chain = parseChain(chainArg);
+                float timeToArrive = (float) (double) timeArg;
+                return ScriptValue.of(r.playIk(chain, txArg, tyArg, tzArg, timeToArrive));
             });
     }
 
@@ -88,6 +87,4 @@ public final class BetterModelRendererType {
     public static ScriptValue wrap(BetterModelRenderer renderer) {
         return renderer == null ? ScriptValue.NULL : ScriptValue.ofObj("BetterModelRenderer", renderer);
     }
-
-    private static BetterModelRenderer r(Object obj) { return (BetterModelRenderer) obj; }
 }

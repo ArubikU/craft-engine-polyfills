@@ -105,54 +105,63 @@ public final class WorldType {
                     for (var e : entities) result.add(EntityType.wrap(e));
                     return new ScriptValue.Array(result);
                 })
-            // NOT migrated: volume/pitch are optional trailing args checked via args.size() >= 5 /
-            // >= 6, and the handler still runs (with in-body defaults 1.0f/1.0f) when they're
-            // omitted rather than being skipped entirely — the methodTypedOptN shape, but this
-            // method needs SIX slots and that family only goes up to methodTypedOpt5 (methodTyped6
-            // exists but its onMissingArgs would wrongly skip the whole body for the valid 4-arg
-            // call). Left untyped.
             // play_sound(x, y, z, soundId, volume?, pitch?)
-            .method("play_sound", (obj, args) -> {
-                if (args.size() < 4) return ScriptValue.of(false);
-                try {
-                    double x = args.get(0).asNum(), y = args.get(1).asNum(), z = args.get(2).asNum();
-                    String sound = args.get(3).asStr();
-                    float vol   = args.size() >= 5 ? (float) args.get(4).asNum() : 1.0f;
-                    float pitch = args.size() >= 6 ? (float) args.get(5).asNum() : 1.0f;
-                    Identifier id = Identifier.tryParse(sound.contains(":") ? sound : "minecraft:" + sound);
-                    if (id == null) return ScriptValue.of(false);
-                    SoundEvent event = SoundEvent.createVariableRangeEvent(id);
-                    level(obj).playSeededSound(null, x, y, z, Holder.direct(event),
-                        SoundSource.BLOCKS, vol, pitch, 0L);
-                    return ScriptValue.of(true);
-                } catch (Throwable ignored) { return ScriptValue.of(false); }
-            })
+            // Migrated to methodTypedOpt6: volume/pitch are genuinely optional trailing args
+            // (defaults 1.0/1.0) and the handler still runs — and still plays the sound — when
+            // they're omitted, which is exactly methodTypedOptN's shape (methodTyped6's
+            // onMissingArgs would instead skip the whole body for the valid 4-arg call). The
+            // `soundId` slot takes a Java `null` default used purely as an "argument was absent"
+            // sentinel: arguments are positional, so it is the LAST required slot and
+            // `sound == null` reproduces the original's `args.size() < 4` early return EXACTLY (a
+            // decoded STRING is never null — asStr() always yields a real string).
+            .methodTypedOpt6("play_sound", TypeCodecs.DOUBLE, 0.0, TypeCodecs.DOUBLE, 0.0,
+                TypeCodecs.DOUBLE, 0.0, TypeCodecs.STRING, (String) null,
+                TypeCodecs.DOUBLE, 1.0, TypeCodecs.DOUBLE, 1.0, TypeCodecs.RAW,
+                (ServerLevel obj, Double xArg, Double yArg, Double zArg, String sound,
+                 Double volArg, Double pitchArg) -> {
+                    if (sound == null) return ScriptValue.of(false);
+                    try {
+                        double x = xArg, y = yArg, z = zArg;
+                        float vol   = volArg.floatValue();
+                        float pitch = pitchArg.floatValue();
+                        Identifier id = Identifier.tryParse(sound.contains(":") ? sound : "minecraft:" + sound);
+                        if (id == null) return ScriptValue.of(false);
+                        SoundEvent event = SoundEvent.createVariableRangeEvent(id);
+                        obj.playSeededSound(null, x, y, z, Holder.direct(event),
+                            SoundSource.BLOCKS, vol, pitch, 0L);
+                        return ScriptValue.of(true);
+                    } catch (Throwable ignored) { return ScriptValue.of(false); }
+                })
             // spawn_particle(name, x, y, z, count?, offset_x?, offset_y?, offset_z?, speed?) — vanilla
             // particle ids only (FLAME, CLOUD, SMOKE, ...); a CraftEngine custom particle isn't a
             // vanilla ParticleType and isn't resolvable here.
-            // NOT migrated: 9 argument slots — beyond BOTH typed families (methodTypedN stops at 7,
-            // methodTypedOptN at 5). Its 5 optional trailing args (count, offset_x/y/z, speed) each
-            // have an in-body default with the handler still running when they're omitted, so even
-            // at a smaller arity only the methodTypedOptN shape would fit. Left untyped.
-            .method("spawn_particle", (obj, args) -> {
-                if (args.size() < 4) return ScriptValue.of(false);
-                try {
-                    String name = args.get(0).asStr();
-                    double x = args.get(1).asNum(), y = args.get(2).asNum(), z = args.get(3).asNum();
-                    int count = args.size() >= 5 ? (int) args.get(4).asNum() : 1;
-                    double ox = args.size() >= 6 ? args.get(5).asNum() : 0.0;
-                    double oy = args.size() >= 7 ? args.get(6).asNum() : 0.0;
-                    double oz = args.size() >= 8 ? args.get(7).asNum() : 0.0;
-                    double speed = args.size() >= 9 ? args.get(8).asNum() : 0.0;
-                    Identifier id = Identifier.tryParse(name.contains(":") ? name : "minecraft:" + name);
-                    if (id == null) return ScriptValue.of(false);
-                    var particleType = BuiltInRegistries.PARTICLE_TYPE.getValue(id);
-                    if (!(particleType instanceof net.minecraft.core.particles.SimpleParticleType simple))
-                        return ScriptValue.of(false);
-                    level(obj).sendParticles(simple, x, y, z, count, ox, oy, oz, speed);
-                    return ScriptValue.of(true);
-                } catch (Throwable ignored) { return ScriptValue.of(false); }
-            })
+            // Migrated to methodTypedOpt9: its 5 optional trailing args (count, offset_x/y/z, speed)
+            // each carry the same in-body default they had, with the handler still running when
+            // they're omitted — exactly methodTypedOptN's shape. The `z` slot takes a Java `null`
+            // default used purely as an "argument was absent" sentinel: arguments are positional, so
+            // it is the LAST required slot and `zArg == null` reproduces the original's
+            // `args.size() < 4` early return EXACTLY (a decoded DOUBLE is never null — asNum()
+            // always yields a real double).
+            .methodTypedOpt9("spawn_particle", TypeCodecs.STRING, (String) null,
+                TypeCodecs.DOUBLE, 0.0, TypeCodecs.DOUBLE, 0.0, TypeCodecs.DOUBLE, (Double) null,
+                TypeCodecs.DOUBLE, 1.0, TypeCodecs.DOUBLE, 0.0, TypeCodecs.DOUBLE, 0.0,
+                TypeCodecs.DOUBLE, 0.0, TypeCodecs.DOUBLE, 0.0, TypeCodecs.RAW,
+                (ServerLevel obj, String name, Double xArg, Double yArg, Double zArg,
+                 Double countArg, Double oxArg, Double oyArg, Double ozArg, Double speedArg) -> {
+                    if (zArg == null) return ScriptValue.of(false);
+                    try {
+                        double x = xArg, y = yArg, z = zArg;
+                        int count = countArg.intValue();
+                        double ox = oxArg, oy = oyArg, oz = ozArg, speed = speedArg;
+                        Identifier id = Identifier.tryParse(name.contains(":") ? name : "minecraft:" + name);
+                        if (id == null) return ScriptValue.of(false);
+                        var particleType = BuiltInRegistries.PARTICLE_TYPE.getValue(id);
+                        if (!(particleType instanceof net.minecraft.core.particles.SimpleParticleType simple))
+                            return ScriptValue.of(false);
+                        obj.sendParticles(simple, x, y, z, count, ox, oy, oz, speed);
+                        return ScriptValue.of(true);
+                    } catch (Throwable ignored) { return ScriptValue.of(false); }
+                })
             // --- Generic TypedKey storage — backed by the SAME generic global store as
             // Server.get_typed (see ServerFlags) with the dimension id folded into the key, rather
             // than Bukkit's per-World PersistentDataContainer — this addon's persistence stays on

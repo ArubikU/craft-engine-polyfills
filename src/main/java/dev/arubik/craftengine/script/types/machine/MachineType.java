@@ -446,19 +446,17 @@ public final class MachineType {
             // both defaulting to true so a bare to_item("id") keeps its old full-copy behavior; pass
             // false to leave that part of the built item untouched (e.g. a "peek" item with no live
             // storage).
-            // Left untyped: arg0 is REQUIRED (0 args -> NULL without running the body) while args 1-2
-            // are optional-with-default-true — a mixed required/optional arity neither methodTypedN
-            // (which would skip the body) nor methodTypedOptN (which has no "was it passed" notion)
-            // can express exactly.
-            .method("to_item", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.NULL;
+            // Typed with a null sentinel on arg0: no codec can decode a PRESENT argument to Java
+            // null (asStr() is total), so `itemId == null` is exactly the old `args.isEmpty()`
+            // early return, checked before any side effect. args 1-2 keep their default-true.
+            .methodTypedOpt3("to_item", TypeCodecs.STRING, null, TypeCodecs.BOOL, true,
+                TypeCodecs.BOOL, true, TypeCodecs.RAW,
+                (MachineRef m, String itemId, Boolean includeStorage, Boolean includeTyped) -> {
+                if (itemId == null) return ScriptValue.NULL;
                 dev.arubik.craftengine.item.ItemDefinition itemDef =
                         dev.arubik.craftengine.item.ItemDefinition.byId(
-                                net.momirealms.craftengine.core.util.Key.of(args.get(0).asStr()));
+                                net.momirealms.craftengine.core.util.Key.of(itemId));
                 if (itemDef == null) return ScriptValue.NULL;
-                boolean includeStorage = args.size() < 2 || args.get(1).asBool();
-                boolean includeTyped = args.size() < 3 || args.get(2).asBool();
-                MachineRef m = ref(obj);
                 PersistentBlockEntity be = m.blockEntity();
                 if (!(be instanceof PersistentWorldlyBlockEntity worldly)) return ScriptValue.NULL;
                 ItemStack built = includeStorage
@@ -1215,19 +1213,19 @@ public final class MachineType {
             })
             // --- Programmatic renderer methods (ephemeral item_display entities) ---
             // spawn_display(item, vec_pos, options_map?) → uuid string
-            // Left untyped: arg0 is REQUIRED (0 args -> NULL without running the body) while args 1-2
-            // are optional-with-default — a mixed required/optional arity the typed API can't express
-            // exactly (see to_item).
-            .method("spawn_display", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.NULL;
-                MachineRef m = ref(obj);
-                String itemId = args.get(0).asStr();
+            // Typed with a null sentinel on arg0 (see to_item): `itemId == null` is exactly the old
+            // `args.isEmpty()` early return. arg1 defaults to null, which fails the instanceof
+            // exactly as an absent/non-Vector argument did; arg2 keeps its 1.0 default.
+            .methodTypedOpt3("spawn_display", TypeCodecs.STRING, null, TypeCodecs.RAW, null,
+                TypeCodecs.DOUBLE, 1.0, TypeCodecs.RAW,
+                (MachineRef m, String itemId, ScriptValue posArg, Double scaleArg) -> {
+                if (itemId == null) return ScriptValue.NULL;
                 // pos offset relative to machine center
                 double ox = 0, oy = 0.5, oz = 0;
-                if (args.size() >= 2 && args.get(1) instanceof ScriptValue.Obj vo && vo.instance() instanceof org.joml.Vector3d v) {
+                if (posArg instanceof ScriptValue.Obj vo && vo.instance() instanceof org.joml.Vector3d v) {
                     ox = v.x; oy = v.y; oz = v.z;
                 }
-                float scale = args.size() >= 3 ? (float) args.get(2).asNum() : 1.0f;
+                float scale = (float) (double) scaleArg;
                 try {
                     net.minecraft.world.phys.Vec3 wpos = new net.minecraft.world.phys.Vec3(
                         m.pos().getX() + 0.5 + ox, m.pos().getY() + oy, m.pos().getZ() + 0.5 + oz);

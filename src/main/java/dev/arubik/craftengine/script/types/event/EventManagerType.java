@@ -2,7 +2,6 @@ package dev.arubik.craftengine.script.types.event;
 
 import dev.arubik.craftengine.events.DynamicEventRegistry;
 import dev.arubik.craftengine.script.PolyTypeRegistry;
-import dev.arubik.craftengine.script.ScriptValue;
 import dev.arubik.craftengine.script.TypeCodecs;
 
 /**
@@ -22,19 +21,18 @@ public final class EventManagerType {
 
     public static void register() {
         PolyTypeRegistry.define("EventManager")
-            // NOT migrated to methodTyped: `timeout_ticks` is an optional trailing argument with a
-            // default (0) that only applies when present alongside the 2 required args — a typed
-            // handler forced to arity 3 would treat a legitimate 2-arg call as "missing args" and
-            // return the fixed onMissingArgs fallback instead of actually registering.
-            // methodTypedOpt3 is wrong too, in the other direction: it would run the body on a 0- or
-            // 1-arg call and really subscribe a listener for the defaulted event/handler names,
-            // where today such a call returns "" having registered nothing. Left untyped.
-            .method("register", (obj, args) -> {
-                if (args.size() < 2) return ScriptValue.of("");
-                int timeout = args.size() > 2 ? (int) args.get(2).asNum() : 0;
-                String id = DynamicEventRegistry.register(args.get(0).asStr(), args.get(1).asStr(), timeout);
-                return ScriptValue.of(id == null ? "" : id);
-            })
+            // Typed with a null sentinel on the LAST required slot (the handler name): STRING
+            // decodes a PRESENT argument via the total asStr() (a NULL ScriptValue yields the
+            // literal "null"), so it can never yield Java null — `handlerName == null` is exactly
+            // the old `args.size() < 2` early return, taken before anything is subscribed.
+            // `timeout_ticks` keeps its optional 0 default.
+            .methodTypedOpt3("register", TypeCodecs.STRING, null, TypeCodecs.STRING, null,
+                TypeCodecs.DOUBLE, 0.0, TypeCodecs.STRING,
+                (Object obj, String eventName, String handlerName, Double timeoutArg) -> {
+                    if (handlerName == null) return "";
+                    String id = DynamicEventRegistry.register(eventName, handlerName, timeoutArg.intValue());
+                    return id == null ? "" : id;
+                })
             .methodTyped1("unregister", TypeCodecs.STRING, TypeCodecs.BOOL, false,
                 (Object obj, String handle) -> DynamicEventRegistry.unregister(handle));
     }

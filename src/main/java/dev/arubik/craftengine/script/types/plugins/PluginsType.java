@@ -224,40 +224,64 @@ public final class PluginsType {
 
         PolyTypeRegistry.define("DynmapBridge")
             .property("is_available", obj -> ScriptValue.of(DynmapSupport.isAvailable()))
-            // add_marker(...) — 8 required args plus an optional 9th: 9 slots, past methodTyped7's
-            // 7-arg max and past methodTypedOpt5's 5-arg max. Left untyped.
-            .method("add_marker", (obj, args) -> args.size() < 8 ? ScriptValue.of(false)
-                : ScriptValue.of(DynmapSupport.addMarker(args.get(0).asStr(), args.get(1).asStr(),
-                    args.get(2).asStr(), args.get(3).asStr(), args.get(4).asStr(),
-                    args.get(5).asNum(), args.get(6).asNum(), args.get(7).asNum(),
-                    args.size() > 8 ? args.get(8).asStr() : null)))
+            // add_marker(setId, setLabel, markerId, label, world, x, y, z, icon?) — 8 required args
+            // plus an optional 9th, so methodTypedOpt9. The `z` slot's null Double default is the
+            // "fewer than 8 args" sentinel (arguments are positional, so it is the LAST required
+            // slot, and a present arg always decodes to a non-null Double — asNum() never returns
+            // null). The 9th slot's null String default is literally the same `null` the original
+            // passed through for an absent icon.
+            .methodTypedOpt9("add_marker", TypeCodecs.STRING, "", TypeCodecs.STRING, "",
+                TypeCodecs.STRING, "", TypeCodecs.STRING, "", TypeCodecs.STRING, "",
+                TypeCodecs.DOUBLE, 0.0, TypeCodecs.DOUBLE, 0.0, TypeCodecs.DOUBLE, (Double) null,
+                TypeCodecs.STRING, (String) null, TypeCodecs.BOOL,
+                (Object obj, String setId, String setLabel, String markerId, String label, String world,
+                 Double x, Double y, Double z, String icon) -> {
+                    if (z == null) return false;
+                    return DynmapSupport.addMarker(setId, setLabel, markerId, label, world, x, y, z, icon);
+                })
             .methodTyped2("remove_marker", TypeCodecs.STRING, TypeCodecs.STRING, TypeCodecs.BOOL, false,
                 (Object obj, String setId, String markerId) -> DynmapSupport.removeMarker(setId, markerId));
 
         PolyTypeRegistry.define("BlueMapBridge")
             .property("is_available", obj -> ScriptValue.of(BlueMapSupport.isAvailable()))
-            // add_marker(...) — 8 args, past methodTyped7's 7-arg max; left untyped.
-            .method("add_marker", (obj, args) -> args.size() < 8 ? ScriptValue.of(false)
-                : ScriptValue.of(BlueMapSupport.addMarker(args.get(0).asStr(), args.get(1).asStr(),
-                    args.get(2).asStr(), args.get(3).asStr(), args.get(4).asStr(),
-                    args.get(5).asNum(), args.get(6).asNum(), args.get(7).asNum())))
+            // add_marker(mapId, setId, setLabel, markerId, label, x, y, z) — 8 required args, past
+            // methodTyped7's 7-arg max, so methodTypedOpt8 with the `z` slot's null Double default
+            // as the "fewer than 8 args" sentinel (arguments are positional, so it is the LAST
+            // required slot; a present arg always decodes to a non-null Double).
+            .methodTypedOpt8("add_marker", TypeCodecs.STRING, "", TypeCodecs.STRING, "",
+                TypeCodecs.STRING, "", TypeCodecs.STRING, "", TypeCodecs.STRING, "",
+                TypeCodecs.DOUBLE, 0.0, TypeCodecs.DOUBLE, 0.0, TypeCodecs.DOUBLE, (Double) null,
+                TypeCodecs.BOOL,
+                (Object obj, String mapId, String setId, String setLabel, String markerId, String label,
+                 Double x, Double y, Double z) -> {
+                    if (z == null) return false;
+                    return BlueMapSupport.addMarker(mapId, setId, setLabel, markerId, label, x, y, z);
+                })
             .methodTyped3("remove_marker", TypeCodecs.STRING, TypeCodecs.STRING, TypeCodecs.STRING, TypeCodecs.BOOL, false,
                 (Object obj, String mapId, String setId, String markerId) -> BlueMapSupport.removeMarker(mapId, setId, markerId));
 
         PolyTypeRegistry.define("MythicMobsBridge")
             .property("is_available", obj -> ScriptValue.of(MythicMobsSupport.isAvailable()))
-            // spawn_mob(mobType, world, x, y, z, level?) — 5 args (via locationArg's list-slicing
-            // helper) plus an optional 6th. The optional tail rules out the fixed-arity
-            // methodTyped6, and 6 slots is one past methodTypedOpt5's 5-arg max. Left untyped.
-            .method("spawn_mob", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.NULL;
-                org.bukkit.Location loc = locationArg(args, 1);
-                if (loc == null) return ScriptValue.NULL;
-                org.bukkit.entity.Entity entity = args.size() >= 6
-                        ? MythicMobsSupport.spawnMob(args.get(0).asStr(), loc, (int) args.get(5).asNum())
-                        : MythicMobsSupport.spawnMob(args.get(0).asStr(), loc);
-                return entity == null ? ScriptValue.NULL : EntityType.wrap(((org.bukkit.craftbukkit.entity.CraftEntity) entity).getHandle());
-            })
+            // spawn_mob(mobType, world, x, y, z, level?) — 5 required args plus an optional 6th, so
+            // methodTypedOpt6. The `z` slot's null Double default replaces locationArg(args, 1)'s
+            // own "args.size() < 5" test exactly (arguments are positional, so z is the LAST slot
+            // locationArg needed, and a present arg always decodes to a non-null Double); the
+            // world-doesn't-resolve half of locationArg's null return is kept as the explicit
+            // `world == null` check below. `level == null` is exactly the original's
+            // `args.size() >= 6` being false, picking the 2-arg spawnMob overload as before.
+            .methodTypedOpt6("spawn_mob", TypeCodecs.STRING, "", TypeCodecs.RAW, ScriptValue.NULL,
+                TypeCodecs.DOUBLE, 0.0, TypeCodecs.DOUBLE, 0.0, TypeCodecs.DOUBLE, (Double) null,
+                TypeCodecs.DOUBLE, (Double) null, TypeCodecs.RAW,
+                (Object obj, String mobType, ScriptValue worldVal, Double x, Double y, Double z, Double level) -> {
+                    if (z == null) return ScriptValue.NULL;
+                    org.bukkit.World world = bukkitWorld(worldVal);
+                    if (world == null) return ScriptValue.NULL;
+                    org.bukkit.Location loc = new org.bukkit.Location(world, x, y, z);
+                    org.bukkit.entity.Entity entity = level != null
+                            ? MythicMobsSupport.spawnMob(mobType, loc, level.intValue())
+                            : MythicMobsSupport.spawnMob(mobType, loc);
+                    return entity == null ? ScriptValue.NULL : EntityType.wrap(((org.bukkit.craftbukkit.entity.CraftEntity) entity).getHandle());
+                })
             .methodTyped1("is_mythic_mob", TypeCodecs.RAW, TypeCodecs.BOOL, false,
                 (Object obj, ScriptValue e) -> MythicMobsSupport.isMythicMob(bukkitEntity(e)))
             .methodTyped1("mob_type", TypeCodecs.RAW, TypeCodecs.STRING, "",
@@ -346,15 +370,18 @@ public final class PluginsType {
         PolyTypeRegistry.define("DecentHologramsBridge")
             .property("is_available", obj -> ScriptValue.of(DecentHologramsSupport.isAvailable()))
             // create(id, world, x, y, z, ...lines) — trailing lore lines are collected via
-            // stringArgList's unbounded "rest of the args, arrays flattened" scan; no fixed arity
-            // (0-7) can represent that variadic tail. Left untyped.
+            // stringArgList's unbounded "rest of the args, arrays flattened" scan. Arity is NOT the
+            // blocker (methodTypedOpt now reaches 10 slots): no FIXED slot count, however large, can
+            // represent an unbounded variadic tail, and stringArgList also flattens an Array
+            // argument in any of those positions. Left untyped.
             .method("create", (obj, args) -> {
                 if (args.size() < 2) return ScriptValue.of(false);
                 org.bukkit.Location loc = locationArg(args, 1);
                 return ScriptValue.of(loc != null
                         && DecentHologramsSupport.createHologram(args.get(0).asStr(), loc, stringArgList(args, 2)));
             })
-            // set_lines(id, ...lines) — same unbounded variadic tail via stringArgList; left untyped.
+            // set_lines(id, ...lines) — same unbounded variadic tail via stringArgList, unrepresentable
+            // at any fixed arity; left untyped.
             .method("set_lines", (obj, args) -> args.size() < 2 ? ScriptValue.of(false)
                 : ScriptValue.of(DecentHologramsSupport.setLines(args.get(0).asStr(), stringArgList(args, 1))))
             .methodTyped1("remove", TypeCodecs.STRING, TypeCodecs.BOOL, false,

@@ -1,6 +1,7 @@
 package dev.arubik.craftengine.script;
 
 import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.Handle;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Label;
 
@@ -165,6 +166,21 @@ final class ScriptBytecodeCompiler {
     private static final String POLY_TYPE = "dev/arubik/craftengine/script/PolyType";
     private static final String METHOD_HANDLER = "dev/arubik/craftengine/script/PolyType$MethodHandler";
     private static final String PROPERTY_HANDLER = "dev/arubik/craftengine/script/PolyType$PropertyHandler";
+    /** {@link PolyDispatch}'s bootstraps. Every member access whose receiver type ISN'T known at
+     *  compile time — a plain variable, or any chained hop — becomes an {@code invokedynamic}
+     *  against one of these instead of a direct {@code ScriptFormula.memberCall}/{@code memberGet}.
+     *  The call site then links itself into a guarded direct call on the receiver type it actually
+     *  observes, so the registry lookup happens once per site rather than once per evaluation. See
+     *  {@link PolyDispatch} for the guard, the invalidation, and the megamorphic cutoff. */
+    private static final String POLY_DISPATCH = "dev/arubik/craftengine/script/PolyDispatch";
+    private static final String BSM_DESC =
+            "(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;"
+                    + "Ljava/lang/String;)Ljava/lang/invoke/CallSite;";
+    private static final Handle BSM_CALL =
+            new Handle(H_INVOKESTATIC, POLY_DISPATCH, "bootstrapCall", BSM_DESC, false);
+    private static final Handle BSM_GET =
+            new Handle(H_INVOKESTATIC, POLY_DISPATCH, "bootstrapGet", BSM_DESC, false);
+
     /** How one arg of a PolyClass-dispatch call site is held in a local, per {@link
      *  #dotMethodCall}'s typed path. {@code NUM_RAW}/{@code BOOL_RAW}: the raw (pre-{@code toAny})
      *  arg expression is ALREADY exactly the native shape the generated method's parameter wants (a
@@ -912,10 +928,8 @@ final class ScriptBytecodeCompiler {
             return new BaseExpr(Type.ANY) {
                 @Override public void emit(MethodVisitor mv, Ctx c) {
                     base.emit(mv, c);
-                    mv.visitLdcInsn(prop);
                     mv.visitVarInsn(ALOAD, c.ctxSlot);
-                    mv.visitMethodInsn(INVOKESTATIC, FORMULA, "memberGet",
-                            "(L" + VALUE + ";Ljava/lang/String;L" + CTX + ";)L" + VALUE + ";", false);
+                    emitDynamicGet(mv, prop);
                 }
             };
         }
@@ -930,14 +944,12 @@ final class ScriptBytecodeCompiler {
             List<Expr> args = rawArgs.stream().map(ScriptBytecodeCompiler::toAny).toList();
             return new BaseExpr(Type.ANY) {
                 @Override public void emit(MethodVisitor mv, Ctx c) {
-                    base.emit(mv, c);
-                    mv.visitLdcInsn(method);
                     int listSlot = c.allocRef();
                     emitBuildArgsList(mv, c, args, listSlot);
+                    base.emit(mv, c);
                     mv.visitVarInsn(ALOAD, listSlot);
                     mv.visitVarInsn(ALOAD, c.ctxSlot);
-                    mv.visitMethodInsn(INVOKESTATIC, FORMULA, "memberCall",
-                            "(L" + VALUE + ";Ljava/lang/String;L" + LIST + ";L" + CTX + ";)L" + VALUE + ";", false);
+                    emitDynamicCall(mv, method);
                 }
             };
         }
@@ -1469,17 +1481,13 @@ final class ScriptBytecodeCompiler {
                         mv.visitJumpInsn(GOTO, fastL);
                         mv.visitLabel(fallbackL);
                         mv.visitVarInsn(ALOAD, svSlot);
-                        mv.visitLdcInsn(prop);
                         mv.visitVarInsn(ALOAD, c.ctxSlot);
-                        mv.visitMethodInsn(INVOKESTATIC, FORMULA, "memberGet",
-                                "(L" + VALUE + ";Ljava/lang/String;L" + CTX + ";)L" + VALUE + ";", false);
+                        emitDynamicGet(mv, prop);
                         mv.visitLabel(fastL);
                     } else {
                         mv.visitVarInsn(ALOAD, svSlot);
-                        mv.visitLdcInsn(prop);
                         mv.visitVarInsn(ALOAD, c.ctxSlot);
-                        mv.visitMethodInsn(INVOKESTATIC, FORMULA, "memberGet",
-                                "(L" + VALUE + ";Ljava/lang/String;L" + CTX + ";)L" + VALUE + ";", false);
+                        emitDynamicGet(mv, prop);
                     }
 
                     mv.visitJumpInsn(GOTO, endL);
@@ -1629,11 +1637,9 @@ final class ScriptBytecodeCompiler {
                         int listSlot = c.allocRef();
                         emitListFromSlots(mv, argSlots, finalArgSlotKinds, listSlot);
                         mv.visitVarInsn(ALOAD, svSlot);
-                        mv.visitLdcInsn(method);
                         mv.visitVarInsn(ALOAD, listSlot);
                         mv.visitVarInsn(ALOAD, c.ctxSlot);
-                        mv.visitMethodInsn(INVOKESTATIC, FORMULA, "memberCall",
-                                "(L" + VALUE + ";Ljava/lang/String;L" + LIST + ";L" + CTX + ";)L" + VALUE + ";", false);
+                        emitDynamicCall(mv, method);
                         mv.visitLabel(fastL);
                     } else if (specializeUntyped) {
                         // The wrapper's erased shim still takes List<ScriptValue>, so the list IS
@@ -1654,21 +1660,17 @@ final class ScriptBytecodeCompiler {
                         mv.visitJumpInsn(GOTO, fastL);
                         mv.visitLabel(fallbackL);
                         mv.visitVarInsn(ALOAD, svSlot);
-                        mv.visitLdcInsn(method);
                         mv.visitVarInsn(ALOAD, listSlot);
                         mv.visitVarInsn(ALOAD, c.ctxSlot);
-                        mv.visitMethodInsn(INVOKESTATIC, FORMULA, "memberCall",
-                                "(L" + VALUE + ";Ljava/lang/String;L" + LIST + ";L" + CTX + ";)L" + VALUE + ";", false);
+                        emitDynamicCall(mv, method);
                         mv.visitLabel(fastL);
                     } else {
                         int listSlot = c.allocRef();
                         emitBuildArgsList(mv, c, args, listSlot);
                         mv.visitVarInsn(ALOAD, svSlot);
-                        mv.visitLdcInsn(method);
                         mv.visitVarInsn(ALOAD, listSlot);
                         mv.visitVarInsn(ALOAD, c.ctxSlot);
-                        mv.visitMethodInsn(INVOKESTATIC, FORMULA, "memberCall",
-                                "(L" + VALUE + ";Ljava/lang/String;L" + LIST + ";L" + CTX + ";)L" + VALUE + ";", false);
+                        emitDynamicCall(mv, method);
                     }
 
                     mv.visitJumpInsn(GOTO, endL);
@@ -1859,6 +1861,24 @@ final class ScriptBytecodeCompiler {
                 mv.visitMethodInsn(INVOKEINTERFACE, LIST, "add", "(Ljava/lang/Object;)Z", true);
                 mv.visitInsn(POP);
             }
+        }
+
+        /** Stack: {@code ..., ScriptValue receiver, List args, ScriptContext} -&gt;
+         *  {@code ..., ScriptValue}. An {@code invokedynamic} that links itself, on first execution,
+         *  into a guarded direct call for the receiver type it observes — see {@link PolyDispatch}.
+         *  Replaces what was an unconditional {@code ScriptFormula.memberCall} on every evaluation.
+         *  The method NAME travels as a bootstrap constant, not a stack operand, which is what lets
+         *  the call site specialise on it. */
+        private static void emitDynamicCall(MethodVisitor mv, String method) {
+            mv.visitInvokeDynamicInsn("memberCall",
+                    "(L" + VALUE + ";L" + LIST + ";L" + CTX + ";)L" + VALUE + ";", BSM_CALL, method);
+        }
+
+        /** Stack: {@code ..., ScriptValue receiver, ScriptContext} -&gt; {@code ..., ScriptValue}.
+         *  The property counterpart of {@link #emitDynamicCall}. */
+        private static void emitDynamicGet(MethodVisitor mv, String prop) {
+            mv.visitInvokeDynamicInsn("memberGet",
+                    "(L" + VALUE + ";L" + CTX + ";)L" + VALUE + ";", BSM_GET, prop);
         }
 
         private static void emitGetNull(MethodVisitor mv) {

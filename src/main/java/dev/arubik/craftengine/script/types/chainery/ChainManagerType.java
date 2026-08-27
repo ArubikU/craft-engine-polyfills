@@ -39,18 +39,35 @@ public final class ChainManagerType {
             // click-two-points flow minus the inventory/item cost. link_item_id only affects what the
             // rope renders as / drops on break — pass it whenever anchor_block_id is a real, configured
             // id (the hardcoded ChainMaterial.DEFAULT ids aren't configured in every pack).
-            // Not migrated: up to 9 args (2 genuinely optional trailing: anchor_block_id?,
-            // link_item_id?, each individually checked via args.size() > 7 / > 8) — exceeds the
-            // fixed-arity methodTyped0..7 API and has optional-trailing-arg shape besides. Left
-            // untyped.
-            .method("create_chain", (obj, args) -> {
-                ServerLevel level = worldArg(args, 0);
-                if (level == null || args.size() < 7) return ScriptValue.NULL;
-                BlockPos a = new BlockPos((int) args.get(1).asNum(), (int) args.get(2).asNum(), (int) args.get(3).asNum());
-                BlockPos b = new BlockPos((int) args.get(4).asNum(), (int) args.get(5).asNum(), (int) args.get(6).asNum());
+            // Migrated to methodTypedOpt9 (9 slots: World + 6 coords + 2 optional trailing ids).
+            // Every slot defaults to null, which is the "argument absent" sentinel — no codec used
+            // here can decode a PRESENT argument to Java null (DOUBLE is primitive-backed, RAW is
+            // identity over an args element). Since arguments are positional, null-checking the LAST
+            // required slot (bz, index 6) is exactly the original's `args.size() < 7`, and it is
+            // re-checked at the top of the body before any block is placed.
+            //   * The World slot stays RAW and is decoded by worldOf(...) inside the body — that
+            //     helper does real unwrapping (ScriptValue.Obj -> ServerLevel), not a cast, and no
+            //     scalar codec can express it. Replaces the old worldArg(args, 0), now removed.
+            //   * The two trailing id slots also stay RAW, NOT STRING: the original tested
+            //     `args.get(i) != ScriptValue.NULL` before taking .asStr(), and asStr() on a NULL
+            //     ScriptValue yields the literal string "null" (non-blank!) — a STRING slot would
+            //     therefore accept an explicitly-passed null as a real anchor/link id. `arg != null`
+            //     reproduces args.size() > i; the ScriptValue.NULL/isBlank tests are kept verbatim.
+            .methodTypedOpt9("create_chain",
+                TypeCodecs.RAW, (ScriptValue) null,
+                TypeCodecs.DOUBLE, (Double) null, TypeCodecs.DOUBLE, (Double) null, TypeCodecs.DOUBLE, (Double) null,
+                TypeCodecs.DOUBLE, (Double) null, TypeCodecs.DOUBLE, (Double) null, TypeCodecs.DOUBLE, (Double) null,
+                TypeCodecs.RAW, (ScriptValue) null, TypeCodecs.RAW, (ScriptValue) null,
+                TypeCodecs.RAW,
+                (Object obj, ScriptValue worldVal, Double ax, Double ay, Double az,
+                 Double bx, Double by, Double bz, ScriptValue anchorArg, ScriptValue linkArg) -> {
+                ServerLevel level = worldOf(worldVal);
+                if (level == null || bz == null) return ScriptValue.NULL;
+                BlockPos a = new BlockPos((int) (double) ax, (int) (double) ay, (int) (double) az);
+                BlockPos b = new BlockPos((int) (double) bx, (int) (double) by, (int) (double) bz);
                 org.bukkit.World world = level.getWorld();
-                String anchorId = args.size() > 7 && args.get(7) != ScriptValue.NULL && !args.get(7).asStr().isBlank() ? args.get(7).asStr() : ChainMaterial.DEFAULT.anchorBlock();
-                String linkId = args.size() > 8 && args.get(8) != ScriptValue.NULL && !args.get(8).asStr().isBlank() ? args.get(8).asStr() : ChainMaterial.DEFAULT.linkItem();
+                String anchorId = anchorArg != null && anchorArg != ScriptValue.NULL && !anchorArg.asStr().isBlank() ? anchorArg.asStr() : ChainMaterial.DEFAULT.anchorBlock();
+                String linkId = linkArg != null && linkArg != ScriptValue.NULL && !linkArg.asStr().isBlank() ? linkArg.asStr() : ChainMaterial.DEFAULT.linkItem();
                 ChainMaterial mat = new ChainMaterial(anchorId, linkId, ChainMaterial.DEFAULT.maxBlocks(),
                     ChainMaterial.DEFAULT.stretch(), ChainMaterial.DEFAULT.maxTension(), ChainMaterial.DEFAULT.pull());
                 if (!ensureAnchor(world, level, a, mat) || !ensureAnchor(world, level, b, mat)) return ScriptValue.NULL;
@@ -58,7 +75,7 @@ public final class ChainManagerType {
                 if (blocks > mat.maxBlocks()) return ScriptValue.NULL;
                 Chain chain = ChainEngine.create(world, a, b, null, null, mat, blocks);
                 return ChainType.wrap(chain);
-            })
+                })
             // break_chain(id, drop_items?) -> bool
             // methodTypedOpt2: drop_items defaults to false when absent (exactly what
             // `args.size() > 1 && args.get(1).asBool()` meant). `id` gets an "" default rather than
@@ -125,14 +142,10 @@ public final class ChainManagerType {
         }
     }
 
-    private static ServerLevel worldArg(List<ScriptValue> args, int i) {
-        if (i >= args.size()) return null;
-        return worldOf(args.get(i));
-    }
-
-    /** Same decode worldArg(args, i) performs on a single already-fetched arg — split out so the
-     *  methodTyped4 handlers above (chain_at/chains_at/count_at), which no longer have the raw args
-     *  list, can apply it to their TypeCodecs.RAW World argument. */
+    /** Decodes a wrapped World script value to a ServerLevel — real unwrapping, not a cast, which
+     *  is why every World argument above stays a TypeCodecs.RAW slot and passes through here inside
+     *  the handler rather than being decoded by a codec. (Replaced the old List-based
+     *  worldArg(args, i), which had no raw args list left to read once create_chain became typed.) */
     private static ServerLevel worldOf(ScriptValue value) {
         return value instanceof ScriptValue.Obj o && o.instance() instanceof ServerLevel lvl ? lvl : null;
     }

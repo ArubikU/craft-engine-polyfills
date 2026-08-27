@@ -95,19 +95,17 @@ public final class ContainerType {
             //                                 own "tags" config
             // Useful e.g. for a Portable Storage Interface only pulling logs, or a sawmill only
             // pulling planks back out of contraption storage.
-            // NOT migrated: `spec` is REQUIRED (no args at all returns NULL without touching the
-            // container) while `count` is optional-with-default — a mixed required/optional shape
-            // neither methodTypedN (which would skip the body entirely) nor methodTypedOptN (which
-            // would run the body with a defaulted `spec`; ScriptValue.NULL.asStr() is the literal
-            // "null", so ItemMatch.predicateFor would build a real never-matching id predicate and
-            // return an empty Item instead of NULL) can reproduce exactly. Left untyped.
-            .method("pull_item", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.NULL;
-                java.util.function.Predicate<ItemStack> filter = ItemMatch.predicateFor(args.get(0));
-                if (filter == null) return ScriptValue.NULL;
-                int count = args.size() > 1 ? (int) args.get(1).asNum() : 64;
-                return ScriptValue.ofItem(pullMatching(c(obj), filter, count));
-            });
+            // Typed with a NULL-SENTINEL default on the required `spec` slot: RAW is identity over
+            // a (never-null) args element, so `spec == null` can only mean "no argument was passed"
+            // — exactly the old `args.isEmpty()` early return, taken before the container is
+            // touched. `count` keeps its optional 64 default.
+            .methodTypedOpt2("pull_item", TypeCodecs.RAW, null, TypeCodecs.DOUBLE, 64.0, TypeCodecs.RAW,
+                (Container container, ScriptValue spec, Double countArg) -> {
+                    if (spec == null) return ScriptValue.NULL;
+                    java.util.function.Predicate<ItemStack> filter = ItemMatch.predicateFor(spec);
+                    if (filter == null) return ScriptValue.NULL;
+                    return ScriptValue.ofItem(pullMatching(container, filter, countArg.intValue()));
+                });
     }
 
     /** Removes up to {@code count} items from the first non-empty slot, regardless of what it is. */

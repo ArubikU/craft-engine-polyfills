@@ -48,8 +48,12 @@ public final class SQLDriverType {
             .methodTyped0("backend", TypeCodecs.STRING, (Object obj) -> SQLDriver.backend().name().toLowerCase(Locale.ROOT))
 
             // SQL.query("SELECT * FROM t WHERE id = ?", id) -> Array<Map<column, value>>
-            // NOT migrated to methodTyped: params are a trailing VARIADIC tail (jdbcParams(args, 1))
-            // of unbounded length — no fixed arity for methodTypedN to decode. Left untyped.
+            // NOT migrated to methodTyped: IRREDUCIBLY variadic. Every arg from index 1 on is one
+            // JDBC bind value (jdbcParams(args, 1)), matching one `?` in the caller's SQL — the
+            // tail length is whatever the query needs, so there is no arity to declare. The tail
+            // can't collapse into a single RAW slot either: an Array arg is itself a legal bind
+            // value here (scriptToJdbc stringifies it), so it can't be reinterpreted as the
+            // param list. query_typed/query_async take a real Array instead, and are typed.
             .method("query", (obj, args) -> {
                 if (args.isEmpty()) return new ScriptValue.Array(List.of());
                 try {
@@ -84,8 +88,10 @@ public final class SQLDriverType {
                         }
                     })
             // SQL.execute("UPDATE t SET x = ? WHERE id = ?", x, id) -> affected row count
-            // NOT migrated to methodTyped: params are a trailing VARIADIC tail (jdbcParams(args, 1))
-            // of unbounded length — no fixed arity for methodTypedN to decode. Left untyped.
+            // NOT migrated to methodTyped: IRREDUCIBLY variadic, exactly as query() above — one arg
+            // per `?` from index 1 on, unbounded, and an Array arg is a legal bind value rather
+            // than a param list, so it can't collapse into one RAW slot. execute_typed/
+            // execute_async take a real Array for their params and are typed.
             .method("execute", (obj, args) -> {
                 if (args.isEmpty()) return ScriptValue.of(0);
                 try {
@@ -112,8 +118,10 @@ public final class SQLDriverType {
                         }
                     })
             // SQL.execute_id("INSERT INTO t (x) VALUES (?)", x) -> the new row's auto-generated id, -1 on failure
-            // NOT migrated to methodTyped: params are a trailing VARIADIC tail (jdbcParams(args, 1))
-            // of unbounded length — no fixed arity for methodTypedN to decode. Left untyped.
+            // NOT migrated to methodTyped: IRREDUCIBLY variadic, exactly as query()/execute() above
+            // — one arg per `?` from index 1 on, unbounded, and an Array arg is a legal bind value
+            // rather than a param list, so it can't collapse into one RAW slot. There is no
+            // Array-taking execute_id_typed counterpart, so this is the only shape available.
             .method("execute_id", (obj, args) -> {
                 if (args.isEmpty()) return ScriptValue.of(-1);
                 try {

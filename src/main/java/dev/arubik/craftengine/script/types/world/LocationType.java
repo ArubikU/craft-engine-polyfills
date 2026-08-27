@@ -36,20 +36,20 @@ public final class LocationType {
                     return ScriptValue.of(biome.unwrapKey().map(Object::toString).orElse("unknown"));
                 } catch (Throwable ignored) { return ScriptValue.NULL; }
             })
-            // NOT migrated to a typed method: block()'s three args are genuinely optional as a
-            // GROUP — `args.size() >= 3 ? args.get(n).asNum() : Math.floor(r.<n>())` is a
-            // default-if-missing read (falling back to this Location's own rounded coords), not a
-            // hard "missing args -> short-circuit" fail-fast a typed handler's onMissingArgs can
-            // express. methodTypedOpt3 doesn't fit either, on two counts: it defaults each argument
-            // INDEPENDENTLY (so a 1- or 2-arg call would mix a passed coord with defaulted ones,
-            // where today anything short of 3 falls back on all three), and its defaults are fixed
-            // at registration time while these are read per call off the live instance. Left untyped.
-            .method("block",       (obj, args) -> {
-                LocationRef r = ref(obj);
+            // Typed via null sentinels on all three slots: no codec decodes a PRESENT argument to
+            // Java null (asNum() is primitive-backed, boxed only on return), and arguments are
+            // positional, so `zArg == null` is exactly the old `args.size() < 3`. The group fallback
+            // is preserved by branching on that ONE check — a short call ignores whatever it passed
+            // and falls back on all three of this Location's own rounded coords, computed per call
+            // off the live instance inside the body.
+            .methodTypedOpt3("block", TypeCodecs.DOUBLE, null, TypeCodecs.DOUBLE, null,
+                TypeCodecs.DOUBLE, null, TypeCodecs.RAW,
+                (LocationRef r, Double xArg, Double yArg, Double zArg) -> {
                 if (r.level() == null) return ScriptValue.NULL;
-                int bx = args.size() >= 3 ? (int)args.get(0).asNum() : (int)Math.floor(r.x());
-                int by = args.size() >= 3 ? (int)args.get(1).asNum() : (int)Math.floor(r.y());
-                int bz = args.size() >= 3 ? (int)args.get(2).asNum() : (int)Math.floor(r.z());
+                boolean given = zArg != null;
+                int bx = given ? (int)(double) xArg : (int)Math.floor(r.x());
+                int by = given ? (int)(double) yArg : (int)Math.floor(r.y());
+                int bz = given ? (int)(double) zArg : (int)Math.floor(r.z());
                 return BlockType.wrap(r.level(), new BlockPos(bx, by, bz));
             })
             // Return codec is TypeCodecs.RAW (identity passthrough) rather than DOUBLE: the

@@ -227,25 +227,29 @@ public final class PlayerType {
             // send_title(title, subtitle?, fade_in_ticks?, stay_ticks?, fade_out_ticks?) — a full
             // title/subtitle pair in one call (Adventure sends both together as one packet-level
             // Title anyway; there's no separate "set subtitle only" server->client action to expose).
-            // Left untyped: mixed arity — the first argument is REQUIRED (no args => false, nothing
-            // sent) while the other four are optional-with-defaults, and neither methodTypedN nor
-            // methodTypedOptN expresses that combination (Opt5 would send an empty title instead).
-            .method("send_title", (obj, args) -> {
-                if (args.isEmpty() || !(player(obj) instanceof ServerPlayer sp)) return ScriptValue.of(false);
+            // Typed with a null sentinel on the required first argument: no codec decodes a PRESENT
+            // argument to Java null (asStr() is total), so `titleText == null` is exactly the old
+            // `args.isEmpty()` early return, checked before anything is sent. The subtitle keeps a
+            // null default too so an absent one stays Component.empty() rather than parsed "".
+            .methodTypedOpt5("send_title", TypeCodecs.STRING, null, TypeCodecs.STRING, null,
+                TypeCodecs.DOUBLE, 10.0, TypeCodecs.DOUBLE, 70.0, TypeCodecs.DOUBLE, 20.0,
+                TypeCodecs.BOOL, (Player p, String titleText, String subText,
+                                  Double fadeInArg, Double stayArg, Double fadeOutArg) -> {
+                if (titleText == null || !(p instanceof ServerPlayer sp)) return false;
                 try {
-                    Component title = parseComponent(args.get(0).asStr());
-                    Component subtitle = args.size() > 1 ? parseComponent(args.get(1).asStr()) : Component.empty();
-                    int fadeIn  = args.size() > 2 ? (int) args.get(2).asNum() : 10;
-                    int stay    = args.size() > 3 ? (int) args.get(3).asNum() : 70;
-                    int fadeOut = args.size() > 4 ? (int) args.get(4).asNum() : 20;
+                    Component title = parseComponent(titleText);
+                    Component subtitle = subText != null ? parseComponent(subText) : Component.empty();
+                    int fadeIn  = (int) (double) fadeInArg;
+                    int stay    = (int) (double) stayArg;
+                    int fadeOut = (int) (double) fadeOutArg;
                     net.kyori.adventure.title.Title t = net.kyori.adventure.title.Title.title(title, subtitle,
                         net.kyori.adventure.title.Title.Times.times(
                             java.time.Duration.ofMillis(fadeIn * 50L),
                             java.time.Duration.ofMillis(stay * 50L),
                             java.time.Duration.ofMillis(fadeOut * 50L)));
                     sp.getBukkitEntity().showTitle(t);
-                    return ScriptValue.of(true);
-                } catch (Throwable t) { return ScriptValue.of(false); }
+                    return true;
+                } catch (Throwable t) { return false; }
             })
             .methodTyped1("send_actionbar", TypeCodecs.STRING, TypeCodecs.BOOL, false,
                 (Player player, String text) -> {
@@ -259,19 +263,22 @@ public final class PlayerType {
             // boss bar on first call, or updates it in place on later calls (a fresh BossBar
             // instance per call would show a SECOND bar stacked on the first instead of replacing
             // it — Adventure identifies a shown bar by instance, not by player+any-other-key).
-            // Left untyped: same mixed arity as send_title — text is required (no args => false and
-            // NO bar is created), the other three are optional-with-defaults.
-            .method("show_bossbar", (obj, args) -> {
-                if (args.isEmpty() || !(player(obj) instanceof ServerPlayer sp)) return ScriptValue.of(false);
+            // Typed with the same null sentinel as send_title — `textArg == null` is exactly the old
+            // `args.isEmpty()` early return, checked before any bar is created. color/overlay keep
+            // null defaults so an absent one uses the WHITE/PROGRESS constant, not a parsed "".
+            .methodTypedOpt4("show_bossbar", TypeCodecs.STRING, null, TypeCodecs.DOUBLE, 1.0,
+                TypeCodecs.STRING, null, TypeCodecs.STRING, null, TypeCodecs.BOOL,
+                (Player p, String textArg, Double progressArg, String colorArg, String overlayArg) -> {
+                if (textArg == null || !(p instanceof ServerPlayer sp)) return false;
                 try {
                     ensureQuitCleanup();
                     org.bukkit.entity.Player bp = sp.getBukkitEntity();
-                    Component text = parseComponent(args.get(0).asStr());
-                    float progress = args.size() > 1 ? (float) Math.max(0.0, Math.min(1.0, args.get(1).asNum())) : 1.0f;
-                    net.kyori.adventure.bossbar.BossBar.Color color = args.size() > 2
-                        ? parseBossBarColor(args.get(2).asStr()) : net.kyori.adventure.bossbar.BossBar.Color.WHITE;
-                    net.kyori.adventure.bossbar.BossBar.Overlay overlay = args.size() > 3
-                        ? parseBossBarOverlay(args.get(3).asStr()) : net.kyori.adventure.bossbar.BossBar.Overlay.PROGRESS;
+                    Component text = parseComponent(textArg);
+                    float progress = (float) Math.max(0.0, Math.min(1.0, progressArg));
+                    net.kyori.adventure.bossbar.BossBar.Color color = colorArg != null
+                        ? parseBossBarColor(colorArg) : net.kyori.adventure.bossbar.BossBar.Color.WHITE;
+                    net.kyori.adventure.bossbar.BossBar.Overlay overlay = overlayArg != null
+                        ? parseBossBarOverlay(overlayArg) : net.kyori.adventure.bossbar.BossBar.Overlay.PROGRESS;
                     net.kyori.adventure.bossbar.BossBar bar = BOSSBARS.get(bp.getUniqueId());
                     if (bar == null) {
                         bar = net.kyori.adventure.bossbar.BossBar.bossBar(text, progress, color, overlay);
@@ -283,8 +290,8 @@ public final class PlayerType {
                         bar.color(color);
                         bar.overlay(overlay);
                     }
-                    return ScriptValue.of(true);
-                } catch (Throwable t) { return ScriptValue.of(false); }
+                    return true;
+                } catch (Throwable t) { return false; }
             })
             .methodTyped0("hide_bossbar", TypeCodecs.BOOL,
                 (Player player) -> {

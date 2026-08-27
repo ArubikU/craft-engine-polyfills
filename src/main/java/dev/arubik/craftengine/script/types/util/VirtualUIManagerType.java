@@ -236,10 +236,11 @@ public final class VirtualUIManagerType {
         //    args mean "arg k present" implies every earlier one is too, so that single check is
         //    equivalent to the original's args.size() < k test.
         //
-        // Still left untyped below: button/image/icon/item/slot/block/scrollbar/toggle/select/
-        // progress — every one has MORE than 5 optional slots, and methodTypedOpt only goes up to
-        // methodTypedOpt5 (methodTyped4..7 don't help: they'd force ALL args required and reject
-        // the legal short call shapes).
+        // Every method in the chain below is now typed: the wide widget builders
+        // (button/image/icon/item/slot/block/scrollbar/toggle/select/progress) have 6-10 argument
+        // slots and use methodTypedOpt6..10 with the same two conventions. Note the fixed-arity
+        // methodTypedN family is NOT usable here: it would force ALL args required and reject the
+        // legal short call shapes these accept.
         PolyTypeRegistry.define("VirtualUIBuilder")
                 .methodTypedOpt1("camera_distance", TypeCodecs.DOUBLE, (Double) null, TypeCodecs.RAW,
                     (Builder b, Double distance) -> {
@@ -283,19 +284,23 @@ public final class VirtualUIManagerType {
                         return ScriptValue.ofObj("VirtualUIBuilder", b);
                     })
                 // button(id, text_or_hologram, x, y, on_click?, width?, height?)
-                // Left untyped: 7 optional slots, past methodTypedOpt5's maximum arity.
-                .method("button", (obj, args) -> {
-                    Builder b = builder(obj);
-                    if (args.size() < 3) return ScriptValue.ofObj("VirtualUIBuilder", b);
-                    String id = args.get(0).asStr();
-                    HologramLineConfig hologram = hologramOf(args.get(1), args.get(2).asNum(),
-                            args.size() > 3 ? args.get(3).asNum() : 0.0);
-                    String onClick = args.size() > 4 ? nullIfBlank(args.get(4).asStr()) : null;
-                    double width = args.size() > 5 ? args.get(5).asNum() : 1.2;
-                    double height = args.size() > 6 ? args.get(6).asNum() : 0.5;
-                    b.widgets.add(new Widget.ButtonWidget(id, hologram, width, height, onClick, null, null, b.autoPriority++));
-                    return ScriptValue.ofObj("VirtualUIBuilder", b);
-                })
+                // Migrated with methodTypedOpt7. id/text/x are the required prefix (null defaults;
+                // "x == null" is exactly the original's args.size() < 3 — positional args mean a
+                // present arg 2 implies args 0 and 1 are present too); y/on_click/width/height are
+                // the optional tail, each carrying the same default the original's per-arg
+                // "args.size() > N ? ... : default" read used. nullIfBlank(null) is null, so the
+                // on_click slot's null default reproduces "absent -> null" verbatim.
+                .methodTypedOpt7("button", TypeCodecs.STRING, (String) null, TypeCodecs.RAW, (ScriptValue) null,
+                    TypeCodecs.DOUBLE, (Double) null, TypeCodecs.DOUBLE, 0.0, TypeCodecs.STRING, (String) null,
+                    TypeCodecs.DOUBLE, 1.2, TypeCodecs.DOUBLE, 0.5, TypeCodecs.RAW,
+                    (Builder b, String id, ScriptValue text, Double x, Double y, String onClickArg,
+                     Double width, Double height) -> {
+                        if (x == null) return ScriptValue.ofObj("VirtualUIBuilder", b);
+                        HologramLineConfig hologram = hologramOf(text, x, y);
+                        b.widgets.add(new Widget.ButtonWidget(id, hologram, width, height,
+                                nullIfBlank(onClickArg), null, null, b.autoPriority++));
+                        return ScriptValue.ofObj("VirtualUIBuilder", b);
+                    })
                 .methodTypedOpt1("on_hover", TypeCodecs.STRING, (String) null, TypeCodecs.RAW,
                     (Builder b, String ref) -> replaceLastWidgetCallback(b, ref, 1));
         PolyTypeRegistry.extend("VirtualUIBuilder", t -> t
@@ -346,17 +351,20 @@ public final class VirtualUIManagerType {
                 // Trailing "z" (default 0.0) offsets this image's DEPTH like .icon(...)'s own z param
                 // — a large background/panel image (e.g. a ported Create GUI backdrop) typically wants
                 // a negative z so every other widget renders visually in front of it.
-                // Left untyped: 8 optional slots, past methodTypedOpt5's maximum arity.
-                .method("image", (obj, args) -> {
-                    Builder b = builder(obj);
-                    if (args.size() < 6) return ScriptValue.ofObj("VirtualUIBuilder", b);
-                    b.widgets.add(new Widget.ImageWidget(args.get(0).asStr(), itemSourceOf(args.get(1)),
-                            args.get(2).asNum(), args.get(3).asNum(),
-                            args.size() > 7 ? args.get(7).asNum() : 0.0,
-                            args.get(4).asNum(), args.get(5).asNum(), 0f,
-                            args.size() > 6 ? nullIfBlank(args.get(6).asStr()) : null, null, null, b.autoPriority++));
-                    return ScriptValue.ofObj("VirtualUIBuilder", b);
-                })
+                // Migrated with methodTypedOpt8: id/item/x/y/width/height are the required prefix
+                // (null defaults; "height == null" is exactly the original's args.size() < 6),
+                // on_click/z the optional tail with their own defaults (null / 0.0).
+                .methodTypedOpt8("image", TypeCodecs.STRING, (String) null, TypeCodecs.RAW, (ScriptValue) null,
+                    TypeCodecs.DOUBLE, (Double) null, TypeCodecs.DOUBLE, (Double) null,
+                    TypeCodecs.DOUBLE, (Double) null, TypeCodecs.DOUBLE, (Double) null,
+                    TypeCodecs.STRING, (String) null, TypeCodecs.DOUBLE, 0.0, TypeCodecs.RAW,
+                    (Builder b, String id, ScriptValue item, Double x, Double y, Double width, Double height,
+                     String onClickArg, Double z) -> {
+                        if (height == null) return ScriptValue.ofObj("VirtualUIBuilder", b);
+                        b.widgets.add(new Widget.ImageWidget(id, itemSourceOf(item), x, y, z,
+                                width, height, 0f, nullIfBlank(onClickArg), null, null, b.autoPriority++));
+                        return ScriptValue.ofObj("VirtualUIBuilder", b);
+                    })
                 // icon(id, item, x, y, scale?, on_click?) — "item" per itemSourceOf(...): a bare
                 // id, a directly-built ScriptValue.Item (same convention Menu.set_item/Dialog.
                 // body_item use), or a dynamic ".pf:"/"${...}" ref.
@@ -365,40 +373,52 @@ public final class VirtualUIManagerType {
                 // away/behind) — the same axis screenPlaneZ already applies uniformly, just
                 // per-widget now, so e.g. a plain background/frame icon can sit visually BEHIND
                 // another widget placed at the same x/y with z=0, no new rendering concept needed.
-                // Left untyped: 7 optional slots, past methodTypedOpt5's maximum arity.
-                .method("icon", (obj, args) -> {
-                    Builder b = builder(obj);
-                    if (args.size() < 4) return ScriptValue.ofObj("VirtualUIBuilder", b);
-                    b.widgets.add(new Widget.IconWidget(args.get(0).asStr(), itemSourceOf(args.get(1)),
-                            args.get(2).asNum(), args.get(3).asNum(), args.size() > 6 ? args.get(6).asNum() : 0.0,
-                            args.size() > 4 ? (float) args.get(4).asNum() : 0.5f,
-                            args.size() > 5 ? nullIfBlank(args.get(5).asStr()) : null, null, null, b.autoPriority++));
-                    return ScriptValue.ofObj("VirtualUIBuilder", b);
-                })
+                // Migrated with methodTypedOpt7: id/item/x/y are the required prefix (null defaults;
+                // "y == null" is exactly the original's args.size() < 4), scale/on_click/z the
+                // optional tail (0.5 / null / 0.0 — the same defaults the original's per-arg reads
+                // used; 0.5 narrowed to float here exactly as the original's 0.5f).
+                .methodTypedOpt7("icon", TypeCodecs.STRING, (String) null, TypeCodecs.RAW, (ScriptValue) null,
+                    TypeCodecs.DOUBLE, (Double) null, TypeCodecs.DOUBLE, (Double) null,
+                    TypeCodecs.DOUBLE, 0.5, TypeCodecs.STRING, (String) null, TypeCodecs.DOUBLE, 0.0,
+                    TypeCodecs.RAW,
+                    (Builder b, String id, ScriptValue item, Double x, Double y, Double scale,
+                     String onClickArg, Double z) -> {
+                        if (y == null) return ScriptValue.ofObj("VirtualUIBuilder", b);
+                        b.widgets.add(new Widget.IconWidget(id, itemSourceOf(item), x, y, z,
+                                (float) scale.doubleValue(), nullIfBlank(onClickArg), null, null, b.autoPriority++));
+                        return ScriptValue.ofObj("VirtualUIBuilder", b);
+                    })
                 // item(id, item, x, y, scale?, on_click?) — same rendering as icon(), distinct
                 // script-facing name (see Widget.ItemWidget's doc).
-                // Left untyped: 6 optional slots, past methodTypedOpt5's maximum arity.
-                .method("item", (obj, args) -> {
-                    Builder b = builder(obj);
-                    if (args.size() < 4) return ScriptValue.ofObj("VirtualUIBuilder", b);
-                    b.widgets.add(new Widget.ItemWidget(args.get(0).asStr(), itemSourceOf(args.get(1)),
-                            args.get(2).asNum(), args.get(3).asNum(), 0.0,
-                            args.size() > 4 ? (float) args.get(4).asNum() : 0.6f,
-                            args.size() > 5 ? nullIfBlank(args.get(5).asStr()) : null, null, null, b.autoPriority++));
-                    return ScriptValue.ofObj("VirtualUIBuilder", b);
-                })
+                // Migrated with methodTypedOpt6: same shape as .icon(...) minus the z slot —
+                // id/item/x/y required ("y == null" is the original's args.size() < 4), scale
+                // (0.6f) and on_click optional.
+                .methodTypedOpt6("item", TypeCodecs.STRING, (String) null, TypeCodecs.RAW, (ScriptValue) null,
+                    TypeCodecs.DOUBLE, (Double) null, TypeCodecs.DOUBLE, (Double) null,
+                    TypeCodecs.DOUBLE, 0.6, TypeCodecs.STRING, (String) null, TypeCodecs.RAW,
+                    (Builder b, String id, ScriptValue item, Double x, Double y, Double scale, String onClickArg) -> {
+                        if (y == null) return ScriptValue.ofObj("VirtualUIBuilder", b);
+                        b.widgets.add(new Widget.ItemWidget(id, itemSourceOf(item), x, y, 0.0,
+                                (float) scale.doubleValue(), nullIfBlank(onClickArg), null, null, b.autoPriority++));
+                        return ScriptValue.ofObj("VirtualUIBuilder", b);
+                    })
                 // slot(id, slot_index, item, x, y, width?, height?, on_click?) — an interactive
                 // inventory-like slot; on_click's script receives the slot index as a trailing arg.
-                // Left untyped: 8 optional slots, past methodTypedOpt5's maximum arity.
-                .method("slot", (obj, args) -> {
-                    Builder b = builder(obj);
-                    if (args.size() < 5) return ScriptValue.ofObj("VirtualUIBuilder", b);
-                    b.widgets.add(new Widget.SlotWidget(args.get(0).asStr(), (int) args.get(1).asNum(), itemSourceOf(args.get(2)),
-                            args.get(3).asNum(), args.get(4).asNum(), 0.0,
-                            args.size() > 5 ? args.get(5).asNum() : 0.7, args.size() > 6 ? args.get(6).asNum() : 0.7,
-                            args.size() > 7 ? nullIfBlank(args.get(7).asStr()) : null, null, null, b.autoPriority++));
-                    return ScriptValue.ofObj("VirtualUIBuilder", b);
-                })
+                // Migrated with methodTypedOpt8: id/slot_index/item/x/y are the required prefix
+                // (null defaults; "y == null" is exactly the original's args.size() < 5),
+                // width/height/on_click the optional tail (0.7 / 0.7 / null).
+                .methodTypedOpt8("slot", TypeCodecs.STRING, (String) null, TypeCodecs.DOUBLE, (Double) null,
+                    TypeCodecs.RAW, (ScriptValue) null, TypeCodecs.DOUBLE, (Double) null,
+                    TypeCodecs.DOUBLE, (Double) null, TypeCodecs.DOUBLE, 0.7, TypeCodecs.DOUBLE, 0.7,
+                    TypeCodecs.STRING, (String) null, TypeCodecs.RAW,
+                    (Builder b, String id, Double slotIndex, ScriptValue item, Double x, Double y,
+                     Double width, Double height, String onClickArg) -> {
+                        if (y == null) return ScriptValue.ofObj("VirtualUIBuilder", b);
+                        b.widgets.add(new Widget.SlotWidget(id, (int) slotIndex.doubleValue(), itemSourceOf(item),
+                                x, y, 0.0, width, height,
+                                nullIfBlank(onClickArg), null, null, b.autoPriority++));
+                        return ScriptValue.ofObj("VirtualUIBuilder", b);
+                    })
                 // player_render(id, x, y, scale?, target_player?) — target_player omitted/NULL
                 // renders the VIEWER's own face (resolved per-session, see CameraSession).
                 // Migrated: exactly 5 slots — id/x/y required (null defaults; "y == null" is the
@@ -417,54 +437,69 @@ public final class VirtualUIManagerType {
                         return ScriptValue.ofObj("VirtualUIBuilder", b);
                     })
                 // block(id, block_id, x, y, scale?, on_click?) — a 3D block icon (see Widget.BlockWidget).
-                // Left untyped: 6 optional slots, past methodTypedOpt5's maximum arity.
-                .method("block", (obj, args) -> {
-                    Builder b = builder(obj);
-                    if (args.size() < 4) return ScriptValue.ofObj("VirtualUIBuilder", b);
-                    b.widgets.add(new Widget.BlockWidget(args.get(0).asStr(), args.get(1).asStr(),
-                            args.get(2).asNum(), args.get(3).asNum(), 0.0,
-                            args.size() > 4 ? (float) args.get(4).asNum() : 0.6f,
-                            args.size() > 5 ? nullIfBlank(args.get(5).asStr()) : null, null, null, b.autoPriority++));
-                    return ScriptValue.ofObj("VirtualUIBuilder", b);
-                })
+                // Migrated with methodTypedOpt6: id/block_id/x/y required ("y == null" is the
+                // original's args.size() < 4), scale (0.6f) and on_click optional. block_id is a
+                // plain string here (the original read args.get(1).asStr()), not an ItemSource.
+                .methodTypedOpt6("block", TypeCodecs.STRING, (String) null, TypeCodecs.STRING, (String) null,
+                    TypeCodecs.DOUBLE, (Double) null, TypeCodecs.DOUBLE, (Double) null,
+                    TypeCodecs.DOUBLE, 0.6, TypeCodecs.STRING, (String) null, TypeCodecs.RAW,
+                    (Builder b, String id, String blockId, Double x, Double y, Double scale, String onClickArg) -> {
+                        if (y == null) return ScriptValue.ofObj("VirtualUIBuilder", b);
+                        b.widgets.add(new Widget.BlockWidget(id, blockId, x, y, 0.0,
+                                (float) scale.doubleValue(), nullIfBlank(onClickArg), null, null, b.autoPriority++));
+                        return ScriptValue.ofObj("VirtualUIBuilder", b);
+                    })
                 // scrollbar(id, vertical, x, y, width, height, initial_value?, on_change?,
                 // tracker_item?, thumb_text?) — a draggable 0.0-1.0 control (see
                 // Widget.ScrollbarWidget's doc for the click-to-arm/move/click-to-release gesture,
                 // and for the tracker-item/font-image/generated-bar thumb rendering preference).
                 // "tracker_item" is anything itemSourceOf(...) accepts. on_change(widget_id, value)
                 // fires as the value moves while armed.
-                // Left untyped: 10 optional slots, past methodTypedOpt5's maximum arity.
-                .method("scrollbar", (obj, args) -> {
-                    Builder b = builder(obj);
-                    if (args.size() < 6) return ScriptValue.ofObj("VirtualUIBuilder", b);
-                    b.widgets.add(new Widget.ScrollbarWidget(args.get(0).asStr(), args.get(1).asBool(),
-                            args.size() > 6 ? Math.max(0.0, Math.min(1.0, args.get(6).asNum())) : 0.0,
-                            args.get(2).asNum(), args.get(3).asNum(), 0.0, args.get(4).asNum(), args.get(5).asNum(),
-                            args.size() > 8 ? itemSourceOf(args.get(8)) : ItemSource.EMPTY,
-                            args.size() > 9 ? nullIfBlank(args.get(9).asStr()) : null,
-                            args.size() > 7 ? nullIfBlank(args.get(7).asStr()) : null, null, null, b.autoPriority++));
-                    return ScriptValue.ofObj("VirtualUIBuilder", b);
-                })
+                // Migrated with methodTypedOpt10: id/vertical/x/y/width/height are the required
+                // prefix (null defaults; "height == null" is exactly the original's args.size() < 6),
+                // the rest optional. initial_value's default 0.0 is clamp-stable
+                // (Math.max(0, Math.min(1, 0.0)) == 0.0), so clamping unconditionally in the body is
+                // identical to the original's "clamp only when present". The tracker slot stays RAW
+                // (itemSourceOf needs the raw ScriptValue) with an explicit ItemSource.EMPTY on
+                // absence, matching the original's "args.size() > 8 ? ... : ItemSource.EMPTY".
+                .methodTypedOpt10("scrollbar", TypeCodecs.STRING, (String) null, TypeCodecs.BOOL, (Boolean) null,
+                    TypeCodecs.DOUBLE, (Double) null, TypeCodecs.DOUBLE, (Double) null,
+                    TypeCodecs.DOUBLE, (Double) null, TypeCodecs.DOUBLE, (Double) null,
+                    TypeCodecs.DOUBLE, 0.0, TypeCodecs.STRING, (String) null,
+                    TypeCodecs.RAW, (ScriptValue) null, TypeCodecs.STRING, (String) null, TypeCodecs.RAW,
+                    (Builder b, String id, Boolean vertical, Double x, Double y, Double width, Double height,
+                     Double initialValue, String onChangeArg, ScriptValue trackerArg, String thumbTextArg) -> {
+                        if (height == null) return ScriptValue.ofObj("VirtualUIBuilder", b);
+                        b.widgets.add(new Widget.ScrollbarWidget(id, vertical,
+                                Math.max(0.0, Math.min(1.0, initialValue)),
+                                x, y, 0.0, width, height,
+                                trackerArg == null ? ItemSource.EMPTY : itemSourceOf(trackerArg),
+                                nullIfBlank(thumbTextArg),
+                                nullIfBlank(onChangeArg), null, null, b.autoPriority++));
+                        return ScriptValue.ofObj("VirtualUIBuilder", b);
+                    })
                 // toggle(id, on_text_or_hologram, off_text_or_hologram, x, y, initial_on?,
                 // on_change?, width?, height?) — a stateful on/off control (see
                 // Widget.ToggleWidget's doc): click flips state internally (no on_click), firing
                 // on_change(widget_id, is_on). Pair with .icon_of(...) right after, same as .button.
-                // Left untyped: 9 optional slots, past methodTypedOpt5's maximum arity.
-                .method("toggle", (obj, args) -> {
-                    Builder b = builder(obj);
-                    if (args.size() < 5) return ScriptValue.ofObj("VirtualUIBuilder", b);
-                    String id = args.get(0).asStr();
-                    double x = args.get(3).asNum(), y = args.get(4).asNum();
-                    HologramLineConfig onLabel = hologramOf(args.get(1), x, y);
-                    HologramLineConfig offLabel = hologramOf(args.get(2), x, y);
-                    boolean initialOn = args.size() > 5 && args.get(5).asBool();
-                    String onChange = args.size() > 6 ? nullIfBlank(args.get(6).asStr()) : null;
-                    double width = args.size() > 7 ? args.get(7).asNum() : 1.2;
-                    double height = args.size() > 8 ? args.get(8).asNum() : 0.5;
-                    b.widgets.add(new Widget.ToggleWidget(id, initialOn, onLabel, offLabel, width, height,
-                            ItemSource.EMPTY, ItemSource.EMPTY, 0, 0, 0.5f, onChange, null, null, b.autoPriority++));
-                    return ScriptValue.ofObj("VirtualUIBuilder", b);
-                })
+                // Migrated with methodTypedOpt9: id/on_text/off_text/x/y are the required prefix
+                // (null defaults; "y == null" is exactly the original's args.size() < 5), and
+                // initial_on/on_change/width/height the optional tail. initial_on's default FALSE
+                // reproduces "args.size() > 5 && args.get(5).asBool()" exactly.
+                .methodTypedOpt9("toggle", TypeCodecs.STRING, (String) null, TypeCodecs.RAW, (ScriptValue) null,
+                    TypeCodecs.RAW, (ScriptValue) null, TypeCodecs.DOUBLE, (Double) null,
+                    TypeCodecs.DOUBLE, (Double) null, TypeCodecs.BOOL, false, TypeCodecs.STRING, (String) null,
+                    TypeCodecs.DOUBLE, 1.2, TypeCodecs.DOUBLE, 0.5, TypeCodecs.RAW,
+                    (Builder b, String id, ScriptValue onText, ScriptValue offText, Double x, Double y,
+                     Boolean initialOn, String onChangeArg, Double width, Double height) -> {
+                        if (y == null) return ScriptValue.ofObj("VirtualUIBuilder", b);
+                        HologramLineConfig onLabel = hologramOf(onText, x, y);
+                        HologramLineConfig offLabel = hologramOf(offText, x, y);
+                        b.widgets.add(new Widget.ToggleWidget(id, initialOn, onLabel, offLabel, width, height,
+                                ItemSource.EMPTY, ItemSource.EMPTY, 0, 0, 0.5f,
+                                nullIfBlank(onChangeArg), null, null, b.autoPriority++));
+                        return ScriptValue.ofObj("VirtualUIBuilder", b);
+                    })
                 // select(id, options_array, text_template, x, y, initial_index?, on_change?,
                 // width?, height?) — a discrete option cycler (see Widget.SelectWidget's doc):
                 // click OR scroll-wheel (hover, no click needed) advances through "options" (an
@@ -473,26 +508,28 @@ public final class VirtualUIManagerType {
                 // any other widget takes, evaluated against this widget's own VUISelect context —
                 // nothing about the visual format is baked in, e.g.
                 // "<white>◀ <yellow>${VUISelect.value()}</yellow> ▶".
-                // Left untyped: 9 optional slots (past methodTypedOpt5's maximum arity), and arg 1
-                // must additionally be shape-checked as a ScriptValue.Array.
-                .method("select", (obj, args) -> {
-                    Builder b = builder(obj);
-                    if (args.size() < 5 || !(args.get(1) instanceof ScriptValue.Array arr)) {
+                // Migrated with methodTypedOpt9: id/options/text_template/x/y are the required
+                // prefix (null defaults; "y == null" is exactly the original's args.size() < 5),
+                // initial_index/on_change/width/height the optional tail (0 / null / 1.4 / 0.5).
+                // The options slot stays RAW so its ScriptValue.Array shape check survives verbatim
+                // inside the body — combined with the same short-circuit ordering as the original
+                // (both branches return the unchanged builder with no side effect).
+                .methodTypedOpt9("select", TypeCodecs.STRING, (String) null, TypeCodecs.RAW, (ScriptValue) null,
+                    TypeCodecs.RAW, (ScriptValue) null, TypeCodecs.DOUBLE, (Double) null,
+                    TypeCodecs.DOUBLE, (Double) null, TypeCodecs.DOUBLE, 0.0, TypeCodecs.STRING, (String) null,
+                    TypeCodecs.DOUBLE, 1.4, TypeCodecs.DOUBLE, 0.5, TypeCodecs.RAW,
+                    (Builder b, String id, ScriptValue optionsArg, ScriptValue templateArg, Double x, Double y,
+                     Double initialIndexArg, String onChangeArg, Double width, Double height) -> {
+                        if (y == null || !(optionsArg instanceof ScriptValue.Array arr)) {
+                            return ScriptValue.ofObj("VirtualUIBuilder", b);
+                        }
+                        java.util.List<String> options = new java.util.ArrayList<>();
+                        for (ScriptValue v : arr.elements()) options.add(v.asStr());
+                        HologramLineConfig template = hologramOf(templateArg, x, y);
+                        b.widgets.add(new Widget.SelectWidget(id, options, (int) initialIndexArg.doubleValue(),
+                                template, width, height, nullIfBlank(onChangeArg), null, null, b.autoPriority++));
                         return ScriptValue.ofObj("VirtualUIBuilder", b);
-                    }
-                    String id = args.get(0).asStr();
-                    java.util.List<String> options = new java.util.ArrayList<>();
-                    for (ScriptValue v : arr.elements()) options.add(v.asStr());
-                    double x = args.get(3).asNum(), y = args.get(4).asNum();
-                    HologramLineConfig template = hologramOf(args.get(2), x, y);
-                    int initialIndex = args.size() > 5 ? (int) args.get(5).asNum() : 0;
-                    String onChange = args.size() > 6 ? nullIfBlank(args.get(6).asStr()) : null;
-                    double width = args.size() > 7 ? args.get(7).asNum() : 1.4;
-                    double height = args.size() > 8 ? args.get(8).asNum() : 0.5;
-                    b.widgets.add(new Widget.SelectWidget(id, options, initialIndex, template,
-                            width, height, onChange, null, null, b.autoPriority++));
-                    return ScriptValue.ofObj("VirtualUIBuilder", b);
-                })
+                    })
                 // progress(id, vertical, x, y, width, height, initial_value?, tracker_item?) — a
                 // non-interactive fill gauge (see Widget.ProgressWidget's doc): no click/drag at
                 // all, "value" (0.0-1.0) is pushed later from a script via
@@ -500,18 +537,24 @@ public final class VirtualUIManagerType {
                 // (a machine's processing progress, a speed reading, ...). "tracker_item" is
                 // anything itemSourceOf(...) accepts, rendered centered as a static needle/indicator
                 // instead of the generated fill bar — same convention as scrollbar's own tracker.
-                // Left untyped: 8 optional slots, past methodTypedOpt5's maximum arity.
-                .method("progress", (obj, args) -> {
-                    Builder b = builder(obj);
-                    if (args.size() < 6) return ScriptValue.ofObj("VirtualUIBuilder", b);
-                    b.widgets.add(new Widget.ProgressWidget(args.get(0).asStr(),
-                            args.size() > 6 ? Math.max(0.0, Math.min(1.0, args.get(6).asNum())) : 0.0,
-                            args.get(2).asNum(), args.get(3).asNum(), 0.0, args.get(4).asNum(), args.get(5).asNum(),
-                            args.get(1).asBool(),
-                            args.size() > 7 ? itemSourceOf(args.get(7)) : ItemSource.EMPTY,
-                            null, null, b.autoPriority++));
-                    return ScriptValue.ofObj("VirtualUIBuilder", b);
-                })
+                // Migrated with methodTypedOpt8: id/vertical/x/y/width/height are the required
+                // prefix (null defaults; "height == null" is exactly the original's
+                // args.size() < 6), initial_value/tracker_item the optional tail. Same
+                // clamp-stable-0.0 and explicit-ItemSource.EMPTY reasoning as .scrollbar(...) above.
+                .methodTypedOpt8("progress", TypeCodecs.STRING, (String) null, TypeCodecs.BOOL, (Boolean) null,
+                    TypeCodecs.DOUBLE, (Double) null, TypeCodecs.DOUBLE, (Double) null,
+                    TypeCodecs.DOUBLE, (Double) null, TypeCodecs.DOUBLE, (Double) null,
+                    TypeCodecs.DOUBLE, 0.0, TypeCodecs.RAW, (ScriptValue) null, TypeCodecs.RAW,
+                    (Builder b, String id, Boolean vertical, Double x, Double y, Double width, Double height,
+                     Double initialValue, ScriptValue trackerArg) -> {
+                        if (height == null) return ScriptValue.ofObj("VirtualUIBuilder", b);
+                        b.widgets.add(new Widget.ProgressWidget(id,
+                                Math.max(0.0, Math.min(1.0, initialValue)),
+                                x, y, 0.0, width, height, vertical,
+                                trackerArg == null ? ItemSource.EMPTY : itemSourceOf(trackerArg),
+                                null, null, b.autoPriority++));
+                        return ScriptValue.ofObj("VirtualUIBuilder", b);
+                    })
                 // Migrated: "newPriority != null" is exactly the original's args.size() >= 2.
                 .methodTypedOpt2("priority", TypeCodecs.STRING, (String) null,
                     TypeCodecs.DOUBLE, (Double) null, TypeCodecs.RAW,
@@ -833,7 +876,9 @@ public final class VirtualUIManagerType {
 
     private static String nullIfBlank(String s) { return s == null || s.isBlank() ? null : s; }
 
-    private static Builder builder(Object obj) { return (Builder) obj; }
+    // The old builder(obj) cast helper is gone: every VirtualUIBuilder method is now a typed
+    // registration whose handler receives a Builder instance directly (PolyType.cast does the
+    // one cast, in one place).
     private static Object screenOf(Object obj) { return obj; }
 
     private static Player playerOf(ScriptValue v) {

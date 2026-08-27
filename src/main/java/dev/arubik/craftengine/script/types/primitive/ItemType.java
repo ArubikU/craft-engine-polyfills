@@ -289,22 +289,28 @@ public final class ItemType {
 
             // item.with_component(comp) → item copy with component set
             // Also accepts: item.with_component("name", value_or_map_of_primitives)
-            // Left untyped: two DIFFERENT call shapes dispatched on arg COUNT (1 arg = a typed
-            // component object, 2 args = name+value), which no fixed-arity typed registration
-            // (whose arg slots have one fixed meaning each) can represent.
-            .method("with_component", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.ofItem(stack(obj));
-                if (args.size() == 1) {
+            // Two DIFFERENT call shapes dispatched on arg COUNT (1 arg = a typed component object,
+            // 2 args = name+value) — expressible after all, because both RAW slots carry a null
+            // "argument absent" default and RAW is identity over an args element (never null), so
+            // `comp == null` is exactly args.isEmpty() and `val == null` is exactly args.size() < 2.
+            // The two shapes are told apart by which sentinel is set, not by an argument count. The
+            // first slot stays RAW rather than STRING because the 1-arg shape needs the whole
+            // ScriptValue (a component object), and the 2-arg shape only wants .asStr() off it —
+            // exactly what the original did with args.get(0). Extra trailing args are ignored by
+            // methodTypedOpt2 just as the original's args.get(0)/get(1) reads ignored them.
+            .methodTypedOpt2("with_component", TypeCodecs.RAW, (ScriptValue) null,
+                TypeCodecs.RAW, (ScriptValue) null, TypeCodecs.RAW,
+                (ItemStack obj, ScriptValue comp, ScriptValue val) -> {
+                if (comp == null) return ScriptValue.ofItem(obj);
+                if (val == null) {
                     // Pass typed component object
-                    return ScriptValue.ofItem(DataComponentTypes.setComponent(stack(obj), args.get(0)));
+                    return ScriptValue.ofItem(DataComponentTypes.setComponent(obj, comp));
                 }
                 // Two-arg form: with_component("name", value) — build a simple component
-                String name = args.get(0).asStr();
-                ScriptValue val = args.get(1);
                 java.util.Map<String, Object> map = new java.util.LinkedHashMap<>();
-                map.put(name, toPrimitive(val));
-                return ScriptValue.ofItem(DataComponentTypes.applyJsonComponents(stack(obj), map));
-            })
+                map.put(comp.asStr(), toPrimitive(val));
+                return ScriptValue.ofItem(DataComponentTypes.applyJsonComponents(obj, map));
+                })
 
             // item.remove_component("name") → item copy without that component
             // Null String default = "argument absent" (see with_count) -> item returned unchanged.

@@ -44,80 +44,78 @@ public final class NetworkType {
     public static void register() {
         PolyTypeRegistry.define("Network")
             // register(channel) / register(channel, type)
-            // Not migrated — MIXED arity, which neither typed form covers (this reasoning applies to
-            // every untyped method in this file; they all share the shape):
-            //   * `channel` is REQUIRED: args.isEmpty() short-circuits to false having done nothing,
-            //     so methodTypedOptN is wrong — it makes every argument optional and ALWAYS runs the
-            //     handler, so a no-arg call would subscribe to whatever default channel we picked.
-            //     That's a real side effect the original explicitly refuses to perform.
-            //   * `type` is a default-if-missing trailing ARGUMENT (args.size() >= 2 ?
-            //     args.get(1).asStr() : NetworkRegistry.TYPE_SIGNAL), so methodTyped2's
-            //     onMissingArgs is wrong too — it would reject the valid 1-arg call form outright.
-            // There is no "first N required, rest optional" typed overload, so this stays untyped.
-            .method("register", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of(false);
-                int channel = (int) args.get(0).asNum();
-                String type = args.size() >= 2 ? args.get(1).asStr() : NetworkRegistry.TYPE_SIGNAL;
-                NetworkRef r = ref(obj);
+            // MIXED arity — a REQUIRED leading `channel` plus a default-if-missing trailing `type`
+            // — expressed with methodTypedOpt2 and the NULL-SENTINEL idiom (this reasoning applies
+            // to every typed method in this file; they all share the shape):
+            //   * `channel`'s default is null, which can only ever mean "argument absent": a PRESENT
+            //     argument decodes through TypeCodecs.DOUBLE, whose asNum() is primitive-backed and
+            //     so never yields Java null. So `channel == null` is EXACTLY the original's
+            //     `args.isEmpty()`, and re-checking it at the very top of the body — before any
+            //     registry call — reproduces the original's "short-circuit having done nothing"
+            //     exactly, side effect included (i.e. none).
+            //   * `type` keeps its real default (NetworkRegistry.TYPE_SIGNAL) so the 1-arg call form
+            //     behaves as before. (methodTyped2's onMissingArgs could not express this: it would
+            //     reject the valid 1-arg form outright.)
+            .methodTypedOpt2("register", TypeCodecs.DOUBLE, (Double) null,
+                TypeCodecs.STRING, NetworkRegistry.TYPE_SIGNAL, TypeCodecs.BOOL,
+                (NetworkRef r, Double channelArg, String type) -> {
+                if (channelArg == null) return false;
+                int channel = (int) (double) channelArg;
                 NetworkRegistry.subscribe(type, channel, r.nodeId());
                 // Legacy compat: also register in GlobalBlockNetwork for "signal"
                 if (NetworkRegistry.TYPE_SIGNAL.equals(type)) {
                     dev.arubik.craftengine.network.GlobalBlockNetwork.instance()
                         .register(channel, r.worldId(), r.x(), r.y(), r.z());
                 }
-                return ScriptValue.of(true);
-            })
-            // unregister(channel) / unregister(channel, type)
-            // Not migrated: multi-shape dynamic dispatch — args.isEmpty() takes an entirely
-            // different code path (unsubscribe-all) than the channel+type path below it, plus the
-            // same default-if-missing type argument as register() above. methodTypedOptN can't help:
-            // it never tells the handler how many arguments were actually supplied, so the
-            // unsubscribe-all branch is unreachable from a typed registration. Left untyped.
-            .method("unregister", (obj, args) -> {
-                NetworkRef r = ref(obj);
-                if (args.isEmpty()) {
+                return true;
+                })
+            // unregister(channel) / unregister(channel, type) — no-arg form unsubscribes from
+            // EVERYTHING. That second shape survives the migration because the branch it hangs off,
+            // `args.isEmpty()`, is precisely the null sentinel on the required `channel` slot (see
+            // register above) — the handler doesn't need an argument COUNT to distinguish them.
+            .methodTypedOpt2("unregister", TypeCodecs.DOUBLE, (Double) null,
+                TypeCodecs.STRING, NetworkRegistry.TYPE_SIGNAL, TypeCodecs.BOOL,
+                (NetworkRef r, Double channelArg, String type) -> {
+                if (channelArg == null) {
                     NetworkRegistry.unsubscribeAll(r.nodeId());
                     dev.arubik.craftengine.network.GlobalBlockNetwork.instance()
                         .unregisterAll(r.worldId(), r.x(), r.y(), r.z());
                 } else {
-                    int channel = (int) args.get(0).asNum();
-                    String type = args.size() >= 2 ? args.get(1).asStr() : NetworkRegistry.TYPE_SIGNAL;
+                    int channel = (int) (double) channelArg;
                     NetworkRegistry.unsubscribe(type, channel, r.nodeId());
                     if (NetworkRegistry.TYPE_SIGNAL.equals(type)) {
                         dev.arubik.craftengine.network.GlobalBlockNetwork.instance()
                             .unregister(channel, r.worldId(), r.x(), r.y(), r.z());
                     }
                 }
-                return ScriptValue.of(true);
-            })
+                return true;
+                })
             // broadcast(channel, value) / broadcast(channel, value, type)
-            // Not migrated: same mixed arity as register() above — channel+value are required (a
-            // short call returns false and broadcasts nothing, which methodTypedOpt3 would turn into
-            // a real broadcast), while the trailing type is default-if-missing.
-            .method("broadcast", (obj, args) -> {
-                if (args.size() < 2) return ScriptValue.of(false);
-                int channel = (int) args.get(0).asNum();
-                ScriptValue payload = args.get(1);
-                String type = args.size() >= 3 ? args.get(2).asStr() : NetworkRegistry.TYPE_SIGNAL;
-                NetworkRef r = ref(obj);
+            // Two required slots this time, so the null sentinel goes on the LAST of them
+            // (`payload`): arguments are positional, so `payload == null` is exactly
+            // `args.size() < 2`. Its RAW codec is identity over an args element, which is never
+            // null, so a present argument can't be mistaken for an absent one either.
+            .methodTypedOpt3("broadcast", TypeCodecs.DOUBLE, (Double) null, TypeCodecs.RAW, (ScriptValue) null,
+                TypeCodecs.STRING, NetworkRegistry.TYPE_SIGNAL, TypeCodecs.BOOL,
+                (NetworkRef r, Double channelArg, ScriptValue payload, String type) -> {
+                if (payload == null) return false;
+                int channel = (int) (double) channelArg;
                 NetworkRegistry.broadcast(type, channel, r.nodeId(), payload);
                 // Legacy compat for signal type
                 if (NetworkRegistry.TYPE_SIGNAL.equals(type)) {
                     dev.arubik.craftengine.network.GlobalBlockNetwork.instance()
                         .broadcast(channel, payload.asNum());
                 }
-                return ScriptValue.of(true);
-            })
+                return true;
+                })
             // listen(channel) / listen(channel, type) → ScriptValue payload or NULL
-            // Not migrated: same mixed arity as register() above — a no-arg call must return the
-            // literal 0.0 without consulting the registry at all, whereas methodTypedOpt2 would run
-            // a real lookup against whatever default channel we picked and return that channel's
-            // payload instead. The trailing type is default-if-missing.
-            .method("listen", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of(0.0);
-                int channel = (int) args.get(0).asNum();
-                String type = args.size() >= 2 ? args.get(1).asStr() : NetworkRegistry.TYPE_SIGNAL;
-                NetworkRef r = ref(obj);
+            // RAW return — the payload is a dynamic ScriptValue. The null sentinel returns the
+            // literal 0.0 before any registry lookup happens, exactly as the original did.
+            .methodTypedOpt2("listen", TypeCodecs.DOUBLE, (Double) null,
+                TypeCodecs.STRING, NetworkRegistry.TYPE_SIGNAL, TypeCodecs.RAW,
+                (NetworkRef r, Double channelArg, String type) -> {
+                if (channelArg == null) return ScriptValue.of(0.0);
+                int channel = (int) (double) channelArg;
                 ScriptValue val = NetworkRegistry.receiveValue(type, channel, r.nodeId());
                 if (val != ScriptValue.NULL) return val;
                 // Fallback to legacy for signal
@@ -125,17 +123,14 @@ public final class NetworkType {
                     return ScriptValue.of(dev.arubik.craftengine.network.GlobalBlockNetwork.instance().listen(channel));
                 }
                 return ScriptValue.NULL;
-            })
+                })
             // has_packet(channel) / has_packet(channel, type) → bool
-            // Not migrated: same mixed arity as register() above — a no-arg call must answer false
-            // flatly, not report on some default channel, while the trailing type is
-            // default-if-missing.
-            .method("has_packet", (obj, args) -> {
-                if (args.isEmpty()) return ScriptValue.of(false);
-                int channel = (int) args.get(0).asNum();
-                String type = args.size() >= 2 ? args.get(1).asStr() : NetworkRegistry.TYPE_SIGNAL;
-                return ScriptValue.of(NetworkRegistry.hasPacket(type, channel, ref(obj).nodeId()));
-            })
+            .methodTypedOpt2("has_packet", TypeCodecs.DOUBLE, (Double) null,
+                TypeCodecs.STRING, NetworkRegistry.TYPE_SIGNAL, TypeCodecs.BOOL,
+                (NetworkRef r, Double channelArg, String type) -> {
+                if (channelArg == null) return false;
+                return NetworkRegistry.hasPacket(type, (int) (double) channelArg, r.nodeId());
+                })
             // packet_type(channel) → string type of last received packet or "". Unlike its siblings
             // above, this one has no optional type argument — fixed 1-arg shape, migrated.
             .methodTyped1("packet_type", TypeCodecs.DOUBLE, TypeCodecs.STRING, "",
@@ -149,17 +144,18 @@ public final class NetworkType {
                     return "";
                 })
             // query(channel) / query(channel, type) → Array of subscriber node UUIDs as strings
-            // Not migrated: same mixed arity as register() above, plus genuine multi-shape dispatch
-            // that reads args.size() DIRECTLY (args.size() < 2 branches to a completely different
-            // legacy-block return shape than the "other types" branch) — no typed form hands the
-            // handler an argument count at all, so that branch is inexpressible either way.
-            .method("query", (obj, args) -> {
-                if (args.isEmpty()) return new ScriptValue.Array(List.of());
-                int channel = (int) args.get(0).asNum();
-                String type = args.size() >= 2 ? args.get(1).asStr() : NetworkRegistry.TYPE_SIGNAL;
+            // The original's legacy-block branch read `TYPE_SIGNAL.equals(type) || args.size() < 2`,
+            // but that second disjunct was REDUNDANT: args.size() < 2 is exactly the case where
+            // `type` took its TYPE_SIGNAL default, so the first disjunct already covered it. Dropping
+            // it changes nothing and leaves a condition that needs no argument count — so the null
+            // sentinel on `channel` (see register above) is all this needs. RAW return: an Array.
+            .methodTypedOpt2("query", TypeCodecs.DOUBLE, (Double) null,
+                TypeCodecs.STRING, NetworkRegistry.TYPE_SIGNAL, TypeCodecs.RAW,
+                (NetworkRef r, Double channelArg, String type) -> {
+                if (channelArg == null) return new ScriptValue.Array(List.of());
+                int channel = (int) (double) channelArg;
                 // For "signal", also return legacy block entries as BlockType
-                if (NetworkRegistry.TYPE_SIGNAL.equals(type) || args.size() < 2) {
-                    NetworkRef r = ref(obj);
+                if (NetworkRegistry.TYPE_SIGNAL.equals(type)) {
                     if (r.level() == null) return new ScriptValue.Array(List.of());
                     List<dev.arubik.craftengine.network.GlobalBlockNetwork.Entry> entries =
                         dev.arubik.craftengine.network.GlobalBlockNetwork.instance().query(channel);
@@ -176,7 +172,7 @@ public final class NetworkType {
                 for (UUID id : NetworkRegistry.subscribers(type, channel))
                     uuids.add(ScriptValue.of(id.toString()));
                 return new ScriptValue.Array(uuids);
-            });
+                });
     }
 
     public static ScriptValue wrap(ServerLevel level, int x, int y, int z) {
@@ -184,6 +180,4 @@ public final class NetworkType {
         UUID worldId = level.getWorld().getUID();
         return ScriptValue.ofObj("Network", new NetworkRef(level, worldId, x, y, z));
     }
-
-    private static NetworkRef ref(Object obj) { return (NetworkRef) obj; }
 }

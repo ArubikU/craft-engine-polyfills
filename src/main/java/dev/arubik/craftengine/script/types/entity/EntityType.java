@@ -136,21 +136,22 @@ public final class EntityType {
             // Generic potion-effect application — usable by any script (a jetpack softening its
             // own landing with slow-falling, a trap item poisoning whoever picks it up, etc).
             // add_potion_effect(name, duration_ticks, amplifier?)
-            // Left untyped: MIXED arity — args 0-1 are REQUIRED (fewer than 2 returns false without
-            // touching the entity) while arg 2 (amplifier) is optional with a default of 0. Neither
-            // typed form covers that: methodTyped3's onMissingArgs short-circuits the whole call
-            // below size 3 (wrongly rejecting the valid 2-arg form), and methodTypedOpt3 makes ALL
-            // three optional, so a 0- or 1-arg call would apply a real effect the original refused.
-            .method("add_potion_effect", (obj, args) -> {
-                if (args.size() < 2 || !(entity(obj) instanceof LivingEntity living)) return ScriptValue.of(false);
+            // Typed with a null sentinel on the LAST required slot (duration): no codec decodes a
+            // PRESENT argument to Java null (asNum() is primitive-backed, boxed only on return), and
+            // arguments are positional, so `durationArg == null` is exactly the old `args.size() < 2`
+            // early return — checked before the entity is touched. amplifier keeps its 0 default.
+            .methodTypedOpt3("add_potion_effect", TypeCodecs.STRING, null, TypeCodecs.DOUBLE, null,
+                TypeCodecs.DOUBLE, 0.0, TypeCodecs.BOOL,
+                (Entity e, String effectName, Double durationArg, Double amplifierArg) -> {
+                if (durationArg == null || !(e instanceof LivingEntity living)) return false;
                 try {
-                    var holder = mobEffectHolder(args.get(0).asStr());
-                    if (holder == null) return ScriptValue.of(false);
-                    int duration = (int) args.get(1).asNum();
-                    int amplifier = args.size() >= 3 ? (int) args.get(2).asNum() : 0;
+                    var holder = mobEffectHolder(effectName);
+                    if (holder == null) return false;
+                    int duration = (int) (double) durationArg;
+                    int amplifier = (int) (double) amplifierArg;
                     living.addEffect(new net.minecraft.world.effect.MobEffectInstance(holder, duration, amplifier));
-                    return ScriptValue.of(true);
-                } catch (Throwable ignored) { return ScriptValue.of(false); }
+                    return true;
+                } catch (Throwable ignored) { return false; }
             })
             .methodTyped1("remove_potion_effect", TypeCodecs.STRING, TypeCodecs.BOOL, false,
                 (Entity e, String effectName) -> {
