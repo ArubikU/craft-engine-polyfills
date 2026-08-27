@@ -32,8 +32,41 @@ public sealed interface ScriptValue {
         double numericValue();
     }
 
-    static ScriptValue of(double v) { return new Num(v); }
-    static ScriptValue of(boolean v) { return new Bool(v); }
+    /**
+     * Interned {@link Num}s for small integral values, and the two {@link Bool}s.
+     *
+     * <p>The compiled scripts deal almost entirely in small integers — redstone levels 0-15, mode
+     * flags, booleans-as-numbers, loop counters. Across eight decompiled generated scripts there
+     * were 387 {@code ScriptValue.of(double)} sites and 258 of them were literally 0, 1 or 2. Most
+     * of those allocations cannot be removed by any compiler transformation, because the value
+     * genuinely escapes into the context's {@code Map<String, ScriptValue>} — but they can be made
+     * free.
+     *
+     * <p>Safe because {@code Num}/{@code Bool} are immutable records with value-based equality, and
+     * nothing in this codebase compares a {@code ScriptValue} by reference except against
+     * {@code NULL}, which is already a singleton.
+     */
+    final class Cache {
+        private Cache() {}
+        static final int LOW = -128, HIGH = 1024;
+        static final Num[] NUMS = new Num[HIGH - LOW + 1];
+        static final Bool TRUE = new Bool(true), FALSE = new Bool(false);
+        static {
+            for (int i = 0; i < NUMS.length; i++) NUMS[i] = new Num(LOW + i);
+        }
+    }
+
+    static ScriptValue of(double v) {
+        int i = (int) v;
+        // Bit-exact comparison, not `i == v`: that would also match -0.0 (whose record equality and
+        // reciprocal sign differ from 0.0) and would need a separate NaN guard.
+        if (i >= Cache.LOW && i <= Cache.HIGH
+                && Double.doubleToRawLongBits(v) == Double.doubleToRawLongBits((double) i)) {
+            return Cache.NUMS[i - Cache.LOW];
+        }
+        return new Num(v);
+    }
+    static ScriptValue of(boolean v) { return v ? Cache.TRUE : Cache.FALSE; }
     static ScriptValue of(String v) { return v == null ? NULL : new Str(v); }
     static ScriptValue ofItem(ItemStack s) { return s == null || s.isEmpty() ? NULL : new Item(s); }
     static ScriptValue ofObj(String typeName, Object instance) { return instance == null ? NULL : new Obj(typeName, instance); }
