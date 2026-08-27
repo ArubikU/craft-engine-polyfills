@@ -30,8 +30,8 @@ import static org.objectweb.asm.Opcodes.*;
  *
  * <p>Deliberately fail-soft: {@link #tryCompile} runs its own small recursive-descent parser
  * SEPARATELY from {@link ScriptFormula}'s real one, and bails (returns {@code null}) the instant
- * it sees a construct it doesn't model at all — {@code $var}, {@code ??}, the
- * {@code "file.pf:func"} cross-file call form — OR whenever it recognizes a construct but can't
+ * it sees a construct it doesn't model at all — {@code $var}, {@code ??} — OR whenever it
+ * recognizes a construct but can't
  * PROVE its narrow (numeric/boolean) codegen would match the interpreter's actual runtime
  * dispatch for that specific operand shape (see the {@code ==}/{@code !=}/{@code +} bail rules
  * below). {@link ScriptFormula#doCompile} tries this first and falls straight through to the
@@ -130,6 +130,7 @@ final class ScriptBytecodeCompiler {
     private static final String LIST = "java/util/List";
     private static final String ARRAYLIST = "java/util/ArrayList";
     private static final String ARRAY_VALUE = "dev/arubik/craftengine/script/ScriptValue$Array";
+    private static final String SCRIPT_CALL = "dev/arubik/craftengine/script/ScriptCall";
 
     /** name -> java.lang.Math method of the same (double)->double shape. Only pure, total (no
      *  exceptions) single-argument math functions — everything else falls through to {@code
@@ -223,8 +224,8 @@ final class ScriptBytecodeCompiler {
      *  DADD}/{@code DMUL}/...), with NO runtime {@code ScriptFormula.compile}/{@code evaluate}
      *  round-trip at all for anything this grammar covers. Returns {@code null} (caller falls back
      *  to the {@code ScriptFormula.compile(expr).evaluate(ctx)} pattern for just that one
-     *  expression) for anything outside the grammar — {@code $var}, {@code ??},
-     *  the {@code "file.pf:func"} form. The caller supplies its OWN {@link
+     *  expression) for anything outside the grammar — {@code $var}, {@code ??}. The caller
+     *  supplies its OWN {@link
      *  Ctx} (its own ctx-holding slot and scratch-slot allocator) rather than this class's
      *  fixed-slot-1 standalone convention — see {@link Ctx}'s own doc. */
     static Expr tryParse(String expr, LocalCallResolver resolver) {
@@ -862,8 +863,20 @@ final class ScriptBytecodeCompiler {
                 String name = src.substring(start, pos);
                 skipSpaces();
 
-                // Cross-file ".pf:" call reference — not modeled here, bail.
-                if (src.startsWith(".pf:", pos)) return null;
+                // Cross-file "file.pf:func[:arg1:arg2...]" reference — mirrors ScriptFormula
+                // .Parser's own ".pf:" branch exactly: same narrow arg-tail char class (identifier
+                // chars, ':', '.', '-' — stops at whitespace/parens/operators), same whole-ref
+                // string handed to ScriptCall.parse/evaluate rather than re-derived here. See
+                // crossFileCall's own doc for the runtime behavior.
+                if (src.startsWith(".pf:", pos)) {
+                    int refStart = start;
+                    int p = pos + 4; // past ".pf:"
+                    while (p < src.length() && isScriptCallArgChar(src.charAt(p))) p++;
+                    String ref = src.substring(refStart, p);
+                    pos = p;
+                    skipSpaces();
+                    return crossFileCall(ref);
+                }
 
                 // Name.property / Name.method(args) — mirrors ScriptFormula.Parser's dot-access:
                 // try as a class instance first, fall back to a plain variable, same as the
@@ -1047,6 +1060,50 @@ final class ScriptBytecodeCompiler {
                     mv.visitInsn(DUP);
                     mv.visitVarInsn(ALOAD, listSlot);
                     mv.visitMethodInsn(INVOKESPECIAL, ARRAY_VALUE, "<init>", "(L" + LIST + ";)V", false);
+                }
+            };
+        }
+
+        /** Same narrow char class as {@code ScriptFormula#isScriptCallArgChar} — kept as its own
+         *  copy rather than a shared/public helper since it's one line and this compiler's parser
+         *  is deliberately a separate, self-contained implementation (see class doc). */
+        private static boolean isScriptCallArgChar(char c) {
+            return Character.isLetterOrDigit(c) || c == '_' || c == ':' || c == '.' || c == '-';
+        }
+
+        /** {@code "file.pf:func[:arg1:arg2...]"} — routes through the real {@link ScriptCall#parse}
+         *  / {@link ScriptCall#evaluate(ScriptContext)}, the SAME two calls the interpreter's own
+         *  inline ".pf:" primary makes ({@code ScriptCall.parse(ref)} is re-run on every evaluation
+         *  rather than cached — matching that existing cost/behavior exactly rather than optimizing
+         *  it here, since this compiler's whole contract is "compiles to the SAME behavior", not
+         *  "compiles to different, faster behavior"). Wrapped in a real {@code try/catch
+         *  (Throwable)} — via {@code visitTryCatchBlock}, not a Java {@code try} block, since this
+         *  emits raw bytecode — mirroring the interpreter's own {@code catch (Throwable ignored) {
+         *  return ScriptValue.NULL; }} around this exact call: a target script that fails to load,
+         *  a missing function, a NullPointerException from {@code ScriptCall.parse} returning
+         *  {@code null} for a malformed ref (blank after trimming — can't actually happen here,
+         *  since the {@code ".pf:"} match already guarantees a non-blank {@code ref}, but the catch
+         *  covers it anyway) — every failure mode degrades to NULL, never propagates out of the
+         *  compiled method and crashes the whole call chain the way an uncaught exception here
+         *  would. */
+        private static Expr crossFileCall(String ref) {
+            return new BaseExpr(Type.ANY) {
+                @Override public void emit(MethodVisitor mv, Ctx c) {
+                    Label start = new Label(), end = new Label(), handler = new Label(), done = new Label();
+                    mv.visitTryCatchBlock(start, end, handler, "java/lang/Throwable");
+                    mv.visitLabel(start);
+                    mv.visitLdcInsn(ref);
+                    mv.visitMethodInsn(INVOKESTATIC, SCRIPT_CALL, "parse",
+                            "(Ljava/lang/String;)L" + SCRIPT_CALL + ";", false);
+                    mv.visitVarInsn(ALOAD, c.ctxSlot);
+                    mv.visitMethodInsn(INVOKEVIRTUAL, SCRIPT_CALL, "evaluate",
+                            "(L" + CTX + ";)L" + VALUE + ";", false);
+                    mv.visitLabel(end);
+                    mv.visitJumpInsn(GOTO, done);
+                    mv.visitLabel(handler);
+                    mv.visitInsn(POP); // discard the caught Throwable
+                    emitGetNull(mv);
+                    mv.visitLabel(done);
                 }
             };
         }
