@@ -187,7 +187,9 @@ final class PolyClassGenerator {
         if (codec == TypeCodecs.RAW) return Kind.RAW;
         // By TYPE, not identity: TypeCodecs.listOf(...) mints a fresh codec per call (it carries the
         // element class), so the identity checks above could never match one.
-        if (codec instanceof TypeCodecs.ListCodec<?>) return Kind.LIST;
+        // Both list and single-PolyType codecs decode INSIDE the wrapper (see TypeCodecs
+        // .WrappedCodec) — same generated shape, so they share one Kind.
+        if (codec instanceof TypeCodecs.WrappedCodec) return Kind.LIST;
         return Kind.UNKNOWN;
     }
 

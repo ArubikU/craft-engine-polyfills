@@ -54,7 +54,68 @@ public final class TypeCodecs {
      * instanceof} instead. Without that it would see an unrecognized codec, refuse to specialize the
      * whole method, and silently drop it to the erased shim.
      */
-    public static final class ListCodec<T> implements PolyType.TypeCodec<List<T>> {
+    /**
+     * A codec whose decode is real work rather than a coercion, so it cannot be inlined at the call
+     * site and is instead invoked INSIDE the generated wrapper. Both {@link ListCodec} and
+     * {@link PolyCodec} are this shape: at the generated method's signature their slot stays a
+     * {@code ScriptValue} (exactly like {@link #RAW}), and the wrapper decodes it before handing the
+     * real Java value to the typed handler. That is what lets them exist with no change at all to
+     * {@link ScriptBytecodeCompiler} — the call site already knows how to pass a {@code ScriptValue}.
+     */
+    public sealed interface WrappedCodec permits ListCodec, PolyCodec {}
+
+    /**
+     * A single PolyType instance, unwrapped to its real Java type: a handler can declare
+     * {@code (MachineRef m, BlockRef target) -> ...} and receive the {@code BlockRef} directly
+     * instead of picking it out of a {@code ScriptValue.Obj} by hand.
+     *
+     * <p>{@code decode} yields null for anything that isn't an {@code Obj} holding an
+     * {@code instanceType} — degrade, don't throw, matching how every untyped handler here treats a
+     * wrong-shaped argument. A null return from the handler encodes back to {@code NULL}.
+     */
+    public static final class PolyCodec<T> implements PolyType.TypeCodec<T>, WrappedCodec {
+        private final String polyTypeName;
+        private final Class<T> instanceType;
+
+        PolyCodec(String polyTypeName, Class<T> instanceType) {
+            this.polyTypeName = polyTypeName;
+            this.instanceType = instanceType;
+        }
+
+        /** The PolyType name {@link #encode} re-boxes under. */
+        public String polyTypeName() { return polyTypeName; }
+        /** The Java type a value must be for {@link #decode} to keep it. */
+        public Class<T> instanceType() { return instanceType; }
+
+        @Override public Class<T> type() { return instanceType; }
+
+        @Override public T decode(ScriptValue value) {
+            if (!(value instanceof ScriptValue.Obj o)) return null;
+            Object inst = o.instance();
+            return instanceType.isInstance(inst) ? instanceType.cast(inst) : null;
+        }
+
+        @Override public ScriptValue encode(T value) {
+            return value == null ? ScriptValue.NULL : ScriptValue.ofObj(polyTypeName, value);
+        }
+    }
+
+    /**
+     * A codec for one instance of {@code polyTypeName}, decoded to {@code instanceType}.
+     *
+     * <p>This is what most {@link #RAW} slots actually are: a slot that always holds one object of a
+     * known PolyType, currently typed as "some ScriptValue" only because there was no way to say
+     * otherwise. Declaring it lets the handler take the real type.
+     *
+     * <p>Only use it where the slot is genuinely always that one type. A slot that legitimately
+     * accepts several shapes (an Array here, a number there) must stay {@link #RAW} — this codec
+     * would decode those to null.
+     */
+    public static <T> PolyType.TypeCodec<T> polyType(String polyTypeName, Class<T> instanceType) {
+        return new PolyCodec<>(polyTypeName, instanceType);
+    }
+
+    public static final class ListCodec<T> implements PolyType.TypeCodec<List<T>>, WrappedCodec {
         private final String polyTypeName;
         private final Class<T> elementType;
 

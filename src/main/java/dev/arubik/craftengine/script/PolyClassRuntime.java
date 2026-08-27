@@ -94,7 +94,7 @@ public final class PolyClassRuntime {
             if (argIndex >= d.argTypes().size()) return null;
             codec = d.argTypes().get(argIndex);
         }
-        return codec instanceof TypeCodecs.ListCodec<?> ? codec : null;
+        return codec instanceof TypeCodecs.WrappedCodec ? codec : null;
     }
 
     /** Resolves the plain (erased) method handler for {@code typeName.method}, or null. */
