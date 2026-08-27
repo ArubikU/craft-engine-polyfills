@@ -1755,7 +1755,7 @@ final class ScriptBytecodeCompiler {
                         pos++;
                         List<Expr> args = parseArgList();
                         if (args == null) return null;
-                        return dotMethodCall(name, member, args);
+                        return dotMethodCall(varHint, name, member, args);
                     }
                     return dotPropertyGet(varHint, name, member);
                 }
@@ -2189,11 +2189,26 @@ final class ScriptBytecodeCompiler {
          * call passes its arguments as native JVM values, so the {@code ArrayList} the generic path
          * builds for every call disappears along with one {@code ScriptValue} per argument.
          */
-        private static Expr dotMethodCall(String name, String method, List<Expr> rawArgs) {
-            return dotMethodCall(null, name, method, rawArgs);
+        private static Expr dotMethodCall(VarTypeHint varHint, String name, String method,
+                                           List<Expr> rawArgs) {
+            // Same receiver-type resolution as dotPropertyGet: the NAME is normally the type, but an
+            // ordinary variable can still have a known type when an assignment or a loop binding
+            // recorded one. The receiver is still READ by name — only what it is guarded against
+            // changes.
+            String receiverType = name;
+            if (PolyTypeRegistry.get(name) == null && varHint != null) {
+                CachedVarRef hinted = varHint.get(name);
+                if (hinted != null && hinted.polyType() != null) receiverType = hinted.polyType();
+            }
+            return dotMethodCall(null, name, receiverType, method, rawArgs);
         }
 
         private static Expr dotMethodCall(Expr base, String name, String method, List<Expr> rawArgs) {
+            return dotMethodCall(base, name, name, method, rawArgs);
+        }
+
+        private static Expr dotMethodCall(Expr base, String name, String receiverType, String method,
+                                           List<Expr> rawArgs) {
             List<Expr> args = rawArgs.stream().map(ScriptBytecodeCompiler::toAny).toList();
             int arity = args.size();
 
@@ -2206,7 +2221,7 @@ final class ScriptBytecodeCompiler {
             // every registry mutation. Falls straight through to memberCall (exactly as if none of
             // this existed) when the type isn't registered, generation failed, or this method isn't
             // one of its members.
-            PolyClassGenerator.GeneratedPolyClass generated = PolyClassGenerator.getOrGenerate(name);
+            PolyClassGenerator.GeneratedPolyClass generated = PolyClassGenerator.getOrGenerate(receiverType);
             PolyClassGenerator.TypedMemberRef typedCandidate = null;
             String untypedCandidate = null;
             if (generated != null) {
@@ -2297,7 +2312,7 @@ final class ScriptBytecodeCompiler {
 
                         Label fallbackL = new Label(), fastL = new Label();
                         int objSlot = c.allocRef(), instSlot = c.allocRef();
-                        emitPolyTypeGuard(mv, c, svSlot, name, objSlot, instSlot, fallbackL);
+                        emitPolyTypeGuard(mv, c, svSlot, receiverType, objSlot, instSlot, fallbackL);
 
                         // Unbox the receiver into its PolyClass and hold it in a NAMED local, so the
                         // generated code reads as `PolyClassMachine m = new PolyClassMachine(inst);
@@ -2349,7 +2364,7 @@ final class ScriptBytecodeCompiler {
 
                         Label fallbackL = new Label(), fastL = new Label();
                         int objSlot = c.allocRef(), instSlot = c.allocRef();
-                        emitPolyTypeGuard(mv, c, svSlot, name, objSlot, instSlot, fallbackL);
+                        emitPolyTypeGuard(mv, c, svSlot, receiverType, objSlot, instSlot, fallbackL);
                         mv.visitTypeInsn(NEW, wrapperName);
                         mv.visitInsn(DUP);
                         mv.visitVarInsn(ALOAD, instSlot);
@@ -2391,7 +2406,7 @@ final class ScriptBytecodeCompiler {
             // A method whose return codec names one PolyType lets the NEXT hop specialize too, so
             // `Machine.contraption.origin.x` stays typed the whole way down instead of falling back
             // to generic dispatch at the first link.
-            String resultType = methodResultPolyType(name, method);
+            String resultType = methodResultPolyType(receiverType, method);
             return resultType == null ? call : new TypedResult(call, resultType);
         }
 

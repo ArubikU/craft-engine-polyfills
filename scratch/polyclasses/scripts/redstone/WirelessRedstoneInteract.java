@@ -3,7 +3,7 @@
  * 
  * Could not load the following classes:
  *  dev.arubik.craftengine.script.PolyClass
- *  dev.arubik.craftengine.script.PolyClassMachine_v4
+ *  dev.arubik.craftengine.script.PolyClassMachine_v2
  *  dev.arubik.craftengine.script.PolyClassPlayer
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
@@ -15,7 +15,7 @@
 package dev.arubik.craftengine.script.gen.redstone;
 
 import dev.arubik.craftengine.script.PolyClass;
-import dev.arubik.craftengine.script.PolyClassMachine_v4;
+import dev.arubik.craftengine.script.PolyClassMachine_v2;
 import dev.arubik.craftengine.script.PolyClassPlayer;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
@@ -50,8 +50,8 @@ public final class WirelessRedstoneInteract {
                 String string = "_wr_mode";
                 String string2 = "int";
                 if (scriptValue2 instanceof ScriptValue.Obj && (object2 = (obj = (ScriptValue.Obj)scriptValue2).instance()) != null && !(object2 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                    PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object2);
-                    object = polyClassMachine_v4.tm$34_get_typed(string, string2);
+                    PolyClassMachine_v2 polyClassMachine_v2 = new PolyClassMachine_v2(object2);
+                    object = polyClassMachine_v2.tm$34_get_typed(string, string2);
                 } else {
                     object = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue2, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string2), (ScriptContext)scriptContext);
                 }
@@ -71,8 +71,8 @@ public final class WirelessRedstoneInteract {
                 String string3 = "int";
                 ScriptValue scriptValue6 = ScriptValue.of((double)d);
                 if (scriptValue5 instanceof ScriptValue.Obj && (object3 = (obj = (ScriptValue.Obj)scriptValue5).instance()) != null && !(object3 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                    PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object3);
-                    v1 = ScriptValue.of((boolean)polyClassMachine_v4.tm$82_set_typed(string, string3, scriptValue6));
+                    PolyClassMachine_v2 polyClassMachine_v2 = new PolyClassMachine_v2(object3);
+                    v1 = ScriptValue.of((boolean)polyClassMachine_v2.tm$82_set_typed(string, string3, scriptValue6));
                 } else {
                     v1 = PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue5, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string3), (ScriptValue)scriptValue6, (ScriptContext)scriptContext);
                 }
@@ -119,8 +119,8 @@ public final class WirelessRedstoneInteract {
                 String string = "_wr_ch";
                 String string4 = "int";
                 if (scriptValue9 instanceof ScriptValue.Obj && (object6 = (obj = (ScriptValue.Obj)scriptValue9).instance()) != null && !(object6 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                    PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object6);
-                    object = polyClassMachine_v4.tm$34_get_typed(string, string4);
+                    PolyClassMachine_v2 polyClassMachine_v2 = new PolyClassMachine_v2(object6);
+                    object = polyClassMachine_v2.tm$34_get_typed(string, string4);
                 } else {
                     object = PolyDispatch.bootstrapCall("memberCall", "get_typed", (ScriptValue)scriptValue9, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string4), (ScriptContext)scriptContext);
                 }
@@ -141,8 +141,8 @@ public final class WirelessRedstoneInteract {
                 String string5 = "int";
                 ScriptValue scriptValue13 = ScriptValue.of((double)d2);
                 if (scriptValue12 instanceof ScriptValue.Obj && (object7 = (obj = (ScriptValue.Obj)scriptValue12).instance()) != null && !(object7 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                    PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object7);
-                    v5 = ScriptValue.of((boolean)polyClassMachine_v4.tm$82_set_typed(string, string5, scriptValue13));
+                    PolyClassMachine_v2 polyClassMachine_v2 = new PolyClassMachine_v2(object7);
+                    v5 = ScriptValue.of((boolean)polyClassMachine_v2.tm$82_set_typed(string, string5, scriptValue13));
                 } else {
                     v5 = PolyDispatch.bootstrapCall("memberCall", "set_typed", (ScriptValue)scriptValue12, (ScriptValue)ScriptValue.of((String)string), (ScriptValue)ScriptValue.of((String)string5), (ScriptValue)scriptValue13, (ScriptContext)scriptContext);
                 }

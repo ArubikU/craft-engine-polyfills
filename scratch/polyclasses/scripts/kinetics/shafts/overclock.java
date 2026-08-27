@@ -3,7 +3,7 @@
  * 
  * Could not load the following classes:
  *  dev.arubik.craftengine.script.PolyClass
- *  dev.arubik.craftengine.script.PolyClassMachine_v4
+ *  dev.arubik.craftengine.script.PolyClassMachine_v2
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
  *  dev.arubik.craftengine.script.ScriptContext$Builder
@@ -13,7 +13,7 @@
 package dev.arubik.craftengine.script.gen.kinetics.shafts;
 
 import dev.arubik.craftengine.script.PolyClass;
-import dev.arubik.craftengine.script.PolyClassMachine_v4;
+import dev.arubik.craftengine.script.PolyClassMachine_v2;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptValue;
@@ -59,8 +59,8 @@ public final class Overclock {
             ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
             ScriptValue scriptValue2 = Overclock._step(builder2);
             if (scriptValue instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object);
-                v0 = ScriptValue.of((boolean)polyClassMachine_v4.tm$70_bump_overclock(scriptValue2.asNum()));
+                PolyClassMachine_v2 polyClassMachine_v2 = new PolyClassMachine_v2(object);
+                v0 = ScriptValue.of((boolean)polyClassMachine_v2.tm$70_bump_overclock(scriptValue2.asNum()));
             } else {
                 v0 = PolyDispatch.bootstrapCall("memberCall", "bump_overclock", (ScriptValue)scriptValue, (ScriptValue)scriptValue2, (ScriptContext)scriptContext);
             }
@@ -79,8 +79,8 @@ public final class Overclock {
             ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
             double d = -Overclock._step(builder2).asNum();
             if (scriptValue instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object);
-                v0 = ScriptValue.of((boolean)polyClassMachine_v4.tm$70_bump_overclock(d));
+                PolyClassMachine_v2 polyClassMachine_v2 = new PolyClassMachine_v2(object);
+                v0 = ScriptValue.of((boolean)polyClassMachine_v2.tm$70_bump_overclock(d));
             } else {
                 v0 = PolyDispatch.bootstrapCall("memberCall", "bump_overclock", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((double)d), (ScriptContext)scriptContext);
             }

@@ -4,7 +4,7 @@
  * Could not load the following classes:
  *  dev.arubik.craftengine.script.PolyClass
  *  dev.arubik.craftengine.script.PolyClassContainer
- *  dev.arubik.craftengine.script.PolyClassMachine_v4
+ *  dev.arubik.craftengine.script.PolyClassMachine_v2
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
  *  dev.arubik.craftengine.script.ScriptContext$Builder
@@ -17,7 +17,7 @@ package dev.arubik.craftengine.script.gen.storage;
 
 import dev.arubik.craftengine.script.PolyClass;
 import dev.arubik.craftengine.script.PolyClassContainer;
-import dev.arubik.craftengine.script.PolyClassMachine_v4;
+import dev.arubik.craftengine.script.PolyClassMachine_v2;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
@@ -57,8 +57,8 @@ public final class ItemTrash {
                 Object object3;
                 ScriptValue scriptValue4;
                 builder.val("i", scriptValue2);
-                PolyClassMachine_v4 polyClassMachine_v4 = PolyClassMachine_v4.ofVar((ScriptContext)scriptContext, (String)"Machine");
-                ScriptValue scriptValue5 = polyClassMachine_v4 != null ? polyClassMachine_v4.pg$120_container() : ((scriptValue4 = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)scriptValue4, (ScriptContext)scriptContext) : ScriptValue.NULL);
+                PolyClassMachine_v2 polyClassMachine_v2 = PolyClassMachine_v2.ofVar((ScriptContext)scriptContext, (String)"Machine");
+                ScriptValue scriptValue5 = polyClassMachine_v2 != null ? polyClassMachine_v2.pg$120_container() : ((scriptValue4 = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)scriptValue4, (ScriptContext)scriptContext) : ScriptValue.NULL);
                 ScriptValue scriptValue6 = scriptValue2;
                 if (scriptValue5 instanceof ScriptValue.Obj && (object3 = (obj2 = (ScriptValue.Obj)scriptValue5).instance()) != null && !(object3 instanceof PolyClass) && obj2.typeName().equals("Container")) {
                     PolyClassContainer polyClassContainer = new PolyClassContainer(object3);
@@ -67,8 +67,8 @@ public final class ItemTrash {
                     callSite2 = PolyDispatch.bootstrapCall("memberCall", "get_item", (ScriptValue)scriptValue5, (ScriptValue)scriptValue6, (ScriptContext)scriptContext);
                 }
                 if (!(ScriptFormula.callBuiltin1((String)"is_empty", (ScriptValue)callSite2, (ScriptContext)scriptContext).asBool() ^ true)) continue;
-                PolyClassMachine_v4 polyClassMachine_v42 = PolyClassMachine_v4.ofVar((ScriptContext)scriptContext, (String)"Machine");
-                ScriptValue scriptValue7 = polyClassMachine_v42 != null ? polyClassMachine_v42.pg$120_container() : ((scriptValue3 = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)scriptValue3, (ScriptContext)scriptContext) : ScriptValue.NULL);
+                PolyClassMachine_v2 polyClassMachine_v22 = PolyClassMachine_v2.ofVar((ScriptContext)scriptContext, (String)"Machine");
+                ScriptValue scriptValue7 = polyClassMachine_v22 != null ? polyClassMachine_v22.pg$120_container() : ((scriptValue3 = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)scriptValue3, (ScriptContext)scriptContext) : ScriptValue.NULL);
                 ScriptValue scriptValue8 = scriptValue2;
                 double d = 64.0;
                 if (scriptValue7 instanceof ScriptValue.Obj && (object2 = (obj = (ScriptValue.Obj)scriptValue7).instance()) != null && !(object2 instanceof PolyClass) && obj.typeName().equals("Container")) {
@@ -84,8 +84,8 @@ public final class ItemTrash {
             Object object4;
             double d = 1.0;
             if (scriptValue instanceof ScriptValue.Obj && (object4 = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object4 instanceof PolyClass) && obj.typeName().equals("Machine")) {
-                PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object4);
-                object = polyClassMachine_v4.tm$94_nearby_entities(d);
+                PolyClassMachine_v2 polyClassMachine_v2 = new PolyClassMachine_v2(object4);
+                object = polyClassMachine_v2.tm$94_nearby_entities(d);
             } else {
                 object = PolyDispatch.bootstrapCall("memberCall", "nearby_entities", (ScriptValue)scriptValue, (ScriptValue)ScriptValue.of((double)d), (ScriptContext)scriptContext);
             }

@@ -1101,6 +1101,13 @@ final class ScriptClassCompiler {
         mv.visitMethodInsn(INVOKEVIRTUAL, BUILDER, "val", "(Ljava/lang/String;L" + VALUE + ";)L" + BUILDER + ";", false);
         mv.visitInsn(POP);
 
+        // What the right-hand side is KNOWN to evaluate to, when its registration declares it —
+        // `target = Machine.block` makes `target` a Block, so `target.property(...)` in a later
+        // statement compiles to PolyClass dispatch instead of a generic memberGet. Nothing is
+        // assumed: a hint only ever selects a guarded fast path, and a receiver that turns out not
+        // to be that type takes the same generic arm it would have taken anyway.
+        String rhsPolyType = ScriptBytecodeCompiler.polyTypeOf(parsed);
+
         Integer pinned = mc.pinnedSlots.get(name);
         if (pinned != null) {
             // Loop-carried: the ONE local the loop reads this name from has to hold the new value
@@ -1109,10 +1116,11 @@ final class ScriptClassCompiler {
             // not agree on a narrower type.
             mv.visitVarInsn(ALOAD, valueSlot);
             mv.visitVarInsn(ASTORE, pinned);
-            mc.cachedVars.put(name, new ScriptBytecodeCompiler.CachedVarRef(pinned, ScriptBytecodeCompiler.Type.ANY));
+            mc.cachedVars.put(name, new ScriptBytecodeCompiler.CachedVarRef(
+                    pinned, ScriptBytecodeCompiler.Type.ANY, rhsPolyType));
             return;
         }
-        mc.cachedVars.put(name, new ScriptBytecodeCompiler.CachedVarRef(primSlot, type));
+        mc.cachedVars.put(name, new ScriptBytecodeCompiler.CachedVarRef(primSlot, type, rhsPolyType));
     }
 
     /**
