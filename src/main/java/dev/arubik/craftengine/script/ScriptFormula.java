@@ -1316,8 +1316,13 @@ public final class ScriptFormula {
                         int to = Integer.parseInt(src.substring(toStart, pos));
                         int step = from <= to ? 1 : -1;
                         for (int i = from; i != to + step; i += step) {
-                            final double v = i;
-                            args.add(ctx -> ScriptValue.of(v));
+                            // Each range element is a compile-time constant (from/to/step are all
+                            // parsed integers) — box it ONCE here rather than re-allocating a fresh
+                            // ScriptValue.Num on every single call this formula is evaluated. The
+                            // record is immutable, so sharing one instance across every future call
+                            // is exactly as safe as re-boxing it each time.
+                            final ScriptValue boxed = ScriptValue.of((double) i);
+                            args.add(ctx -> boxed);
                         }
                     } else {
                         pos = savedPos;

@@ -39,6 +39,18 @@ public final class ScriptProgram {
     private final boolean pureDefs;
     private volatile ScriptContext cachedDefsResult;
 
+    /** Backing storage for {@code static}/{@code final} top-level declarations (see {@link
+     *  Statement.StaticDecl}) — one entry per declared name, computed the first time its {@code
+     *  StaticDecl} statement runs and shared by every future {@link #evaluate} call against THIS
+     *  {@code ScriptProgram} instance (which is itself already the single shared object for every
+     *  machine/instance referencing this file — see {@code ScriptRegistry}). A plain {@code NAME =
+     *  expr} reassignment elsewhere in the file targets this store instead of the caller's local
+     *  context whenever {@code NAME} is a known static name (see {@code runStatements}' {@code
+     *  Assign} case) — that's what makes it genuinely mutable shared state, not a one-shot
+     *  constant. {@code ConcurrentHashMap} since a shared script can run on multiple machine
+     *  instances within the same tick. */
+    private final java.util.concurrent.ConcurrentHashMap<String, ScriptValue> staticStore = new java.util.concurrent.ConcurrentHashMap<>();
+
     /** Null until the first {@link #evaluate} call determines it (needs a real {@link ScriptContext}
      *  to test top-level {@code Assign} formulas against — see {@link #determineTopLevelCacheable}).
      *  TRUE means the ENTIRE top level (defs, imports, AND any top-level Assigns) is safe to
@@ -78,6 +90,17 @@ public final class ScriptProgram {
          *  the importing script's own scope, no namespace object at all). {@code path} is resolved
          *  relative to the scripts/ folder — see {@link ScriptRegistry#getOrLoadByPath}. */
         record Import(String path, String alias, List<String> symbols) implements Statement {}
+        /** {@code static NAME = expr} / {@code final NAME = expr} — a value computed ONCE (the
+         *  first time this exact statement runs, ever) and shared by EVERY future evaluation of
+         *  this {@code ScriptProgram} — not per-call, and not per-block-instance either: since
+         *  {@code ScriptRegistry} loads one {@code ScriptProgram} per {@code .pf} file and reuses
+         *  it for every machine/renderer/script-call that references that file, a static var here
+         *  is genuinely global across every instance running this script. {@code isFinal} only
+         *  affects {@link ScriptLinter} (flags a later plain reassignment of the same name as a
+         *  lint warning) — both kinds are equally shared/write-once-computed at runtime; the
+         *  distinction is purely "should reassigning this ever be considered a mistake". See
+         *  {@link #staticStore}. */
+        record StaticDecl(String name, ScriptFormula formula, boolean isFinal) implements Statement {}
     }
 
     record Clause(ScriptFormula condition, List<Statement> body) {
@@ -225,15 +248,11 @@ public final class ScriptProgram {
         return result.getVar(varName);
     }
 
-    /**
-     * Public accessor so ScriptFormula can execute user-defined function bodies.
-     * Propagates ReturnSignal upward.
-     */
-    public static void executeStatements(List<Statement> stmts, ScriptContext.Builder b) {
-        runStatements(stmts, b);
-    }
-
-    private static void runStatements(List<Statement> stmts, ScriptContext.Builder b) {
+    // Instance method (not static) specifically so a FunctionDef's captured executor closure and
+    // every nested block below keep resolving to THIS ScriptProgram's own staticStore — a `def`
+    // declared in file A that reads/writes a `static` var must always hit file A's shared slot,
+    // never some other file's, even when called indirectly (imported, or invoked as a callback).
+    private void runStatements(List<Statement> stmts, ScriptContext.Builder b) {
         for (Statement stmt : stmts) {
             switch (stmt) {
                 case Statement.Assign a -> {
@@ -241,8 +260,27 @@ public final class ScriptProgram {
                     // away before the next mutation (b.val below). A real defensive copy is wasted
                     // work for something never held past this one synchronous read.
                     ScriptContext snap = b.peek();
-                    try { b.val(a.name(), a.formula().evaluate(snap)); }
-                    catch (Throwable ignored) {}
+                    try {
+                        ScriptValue v = a.formula().evaluate(snap);
+                        // A plain reassignment of a name already claimed by a `static`/`final`
+                        // top-level declaration (see Statement.StaticDecl below) writes THROUGH to
+                        // the shared store, not just this call's local context — that's what makes
+                        // `static` genuinely mutable shared state instead of a one-shot constant.
+                        if (staticStore.containsKey(a.name())) staticStore.put(a.name(), v);
+                        b.val(a.name(), v);
+                    } catch (Throwable ignored) {}
+                }
+                case Statement.StaticDecl sd -> {
+                    // Computed once per ScriptProgram (ever) via computeIfAbsent's atomicity, then
+                    // just re-bound into the local context on every later run — see staticStore's
+                    // own doc for why this is the right scope (shared across every instance running
+                    // this file, not per-call and not per-block).
+                    ScriptValue v = staticStore.computeIfAbsent(sd.name(), n -> {
+                        ScriptContext snap = b.peek();
+                        try { return sd.formula().evaluate(snap); }
+                        catch (Throwable ignored) { return ScriptValue.NULL; }
+                    });
+                    b.val(sd.name(), v);
                 }
                 case Statement.ExprStatement es -> {
                     ScriptContext snap = b.peek();
@@ -566,6 +604,8 @@ public final class ScriptProgram {
                 }
                 case "def" -> { return parseFunctionDef(); }
                 case "import" -> { return parseImport(); }
+                case "static" -> { return parseStaticDecl(false); }
+                case "final"  -> { return parseStaticDecl(true); }
             }
 
             String name = t.text();
@@ -826,6 +866,40 @@ public final class ScriptProgram {
                 if (!pn.isEmpty()) params.add(pn);
             }
             return new Statement.FunctionDef(funcName, params, body);
+        }
+
+        /** Parses {@code static NAME = expr} / {@code final NAME = expr} — same {@code NAME =
+         *  expr} shape a plain assignment uses, just with the leading keyword already consumed
+         *  and tagged onto the resulting {@link Statement.StaticDecl}. */
+        private Statement parseStaticDecl(boolean isFinal) {
+            consume(); // "static" / "final"
+            skipEOLs();
+            Tokenizer.Token nameTok = peek();
+            if (nameTok.type() != Tokenizer.TT.IDENT) {
+                log.warning("[CEPolyfills] '" + (isFinal ? "final" : "static") + "' missing a name in " + scriptName + ".pf");
+                skipLine();
+                return null;
+            }
+            String declName = nameTok.text();
+            consume();
+            Tokenizer.Token op = peek();
+            if (op.type() != Tokenizer.TT.ASSIGN) {
+                log.warning("[CEPolyfills] '" + (isFinal ? "final" : "static") + " " + declName
+                        + "' must be initialized with '=' in " + scriptName + ".pf");
+                skipLine();
+                return null;
+            }
+            int exprStart = op.pos() + 1;
+            consume(); // "="
+            tok.reset(exprStart);
+            String expr = tok.readExprToEOL();
+            lookahead = tok.next();
+            if (expr.isEmpty()) return null;
+            try { return new Statement.StaticDecl(declName, ScriptFormula.compile(expr), isFinal); }
+            catch (IllegalArgumentException ex) {
+                log.warning("[CEPolyfills] Bad expr for '" + declName + "' in " + scriptName + ".pf: " + ex.getMessage());
+                return null;
+            }
         }
 
         /**

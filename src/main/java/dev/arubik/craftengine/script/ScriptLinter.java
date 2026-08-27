@@ -68,6 +68,7 @@ public final class ScriptLinter {
     public static void lint(String scriptName, String src, Logger log) {
         if (src == null || src.isEmpty()) return;
         String cleaned = stripCommentsAndStrings(src);
+        lintFinalReassignment(scriptName, cleaned, log);
         Matcher m = GLOBAL_MEMBER.matcher(cleaned);
         int found = 0;
         while (m.find()) {
@@ -88,6 +89,40 @@ public final class ScriptLinter {
             log.warning("[CEPolyfills lint] " + scriptName + ": " + found
                 + " unresolved global reference(s) — see above. This is a load-time HINT, not a"
                 + " failure; the script still loaded normally.");
+        }
+    }
+
+    /** {@code final NAME = ...} declares NAME (see {@code ScriptProgram.Statement.StaticDecl})
+     *  write-once/shared — a later plain {@code NAME = ...} anywhere else in the file overwrites
+     *  {@code ScriptProgram}'s shared store just like it would for a {@code static} var (see
+     *  {@code runStatements}' {@code Assign} case), which is almost certainly not what "final" was
+     *  meant to promise. Flags every such reassignment as a WARNING — same heuristic, text-based
+     *  approach as the rest of this pass: line-scan {@code cleaned} (comments/strings already
+     *  blanked) for {@code final NAME =}/{@code static NAME =} declarations first, then for a bare
+     *  {@code NAME =} (not {@code ==}, {@code !=}, or a compound {@code +=}/{@code -=}/... — none
+     *  of those have a bare {@code =} immediately after the name) on any OTHER line. */
+    private static final Pattern DECL = Pattern.compile("^\\s*(final|static)\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*=");
+    private static final Pattern BARE_ASSIGN = Pattern.compile("^\\s*([A-Za-z_][A-Za-z0-9_]*)\\s*=(?!=)");
+
+    private static void lintFinalReassignment(String scriptName, String cleaned, Logger log) {
+        String[] lines = cleaned.split("\n", -1);
+        Set<String> finalNames = new LinkedHashSet<>();
+        int[] declLine = new int[lines.length]; // unused slots stay 0
+        for (int i = 0; i < lines.length; i++) {
+            Matcher d = DECL.matcher(lines[i]);
+            if (d.find() && "final".equals(d.group(1))) {
+                finalNames.add(d.group(2));
+                declLine[i] = 1; // marks this line as the declaration itself — never a reassignment
+            }
+        }
+        for (int i = 0; i < lines.length; i++) {
+            if (declLine[i] == 1) continue;
+            Matcher a = BARE_ASSIGN.matcher(lines[i]);
+            if (!a.find()) continue;
+            String name = a.group(1);
+            if (!finalNames.contains(name)) continue;
+            log.warning("[CEPolyfills lint] " + scriptName + ":" + (i + 1)
+                + " — reassigns 'final " + name + "', declared elsewhere in this file as write-once.");
         }
     }
 
