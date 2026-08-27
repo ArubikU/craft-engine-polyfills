@@ -106,6 +106,26 @@ final class ScriptBytecodeCompiler {
     private static final String FORMULA = "dev/arubik/craftengine/script/ScriptFormula";
     private static final String CTX = "dev/arubik/craftengine/script/ScriptContext";
     private static final String VALUE = "dev/arubik/craftengine/script/ScriptValue";
+    private static final String BUILDER = "dev/arubik/craftengine/script/ScriptContext$Builder";
+
+    /** Resolves a bare call name to a LOCALLY COMPILED {@code def} on the SAME generated class, so
+     *  {@link P#genericCall} can emit a direct {@code INVOKESTATIC} to it instead of routing
+     *  through {@link ScriptFormula#callBuiltin} (which can never find a compiled def — nothing
+     *  binds it as a {@code UserFunction} anywhere). {@code null} for anything else (a builtin, an
+     *  interpreted sibling, an unrelated name) — {@link P#genericCall} falls back to the ordinary
+     *  {@code callBuiltin} path for those, unchanged. Supplied only by {@link ScriptClassCompiler},
+     *  which is the only caller that ever knows a whole file's def set at once; {@link #tryCompile}
+     *  (single standalone expressions, no file context) always passes {@code null}. */
+    interface LocalCallResolver {
+        LocalTarget resolve(String name);
+    }
+
+    /** {@code internalClassName}/{@code methodName}: the generated class (JVM internal name, e.g.
+     *  {@code "dev/arubik/craftengine/script/gen/kinetics/generators/Windmill"}) and method a local
+     *  call should invoke directly. {@code paramNames}: the def's own parameter names, in order —
+     *  needed to bind each argument into the ISOLATED per-call {@code Builder} (see {@link
+     *  P#localCall}) the same way {@link UserFunction#call} binds them for an interpreted call. */
+    record LocalTarget(String internalClassName, String methodName, List<String> paramNames) {}
     private static final String MATH = "java/lang/Math";
     private static final String LIST = "java/util/List";
     private static final String ARRAYLIST = "java/util/ArrayList";
@@ -156,7 +176,7 @@ final class ScriptBytecodeCompiler {
 
             MethodVisitor mv = cw.visitMethod(ACC_PUBLIC, "eval", "(L" + CTX + ";)L" + VALUE + ";", null, null);
             mv.visitCode();
-            Ctx c = new Ctx();
+            Ctx c = new Ctx(1, 2); // ctx param at slot 1 (standalone eval(ScriptContext) classes), scratch from 2
             root.emit(mv, c);
             switch (root.type()) {
                 case NUM  -> mv.visitMethodInsn(INVOKESTATIC, VALUE, "of", "(D)L" + VALUE + ";", true);
@@ -190,27 +210,64 @@ final class ScriptBytecodeCompiler {
         }
     }
 
+    /** Parses {@code expr} for INLINE reuse by {@link ScriptClassCompiler} — same grammar, same
+     *  bail rules as {@link #tryCompile}, but returns the parsed {@link Expr} tree directly
+     *  instead of wrapping it in a standalone {@code eval(ScriptContext)} class. This is the
+     *  actual fix for the "why does the compiled Windmill class still call {@code
+     *  ScriptFormula.compile("0").evaluate(...)} for a bare literal" problem: {@code
+     *  ScriptClassCompiler} calls this for every statement's embedded expression and, on success,
+     *  emits the returned {@code Expr} straight into its OWN method body via {@link
+     *  Expr#emit(MethodVisitor, Ctx)} — real inline bytecode (a literal becomes a bare {@code
+     *  LDC}, a dot-access becomes a real {@code memberGet} call, arithmetic becomes real {@code
+     *  DADD}/{@code DMUL}/...), with NO runtime {@code ScriptFormula.compile}/{@code evaluate}
+     *  round-trip at all for anything this grammar covers. Returns {@code null} (caller falls back
+     *  to the {@code ScriptFormula.compile(expr).evaluate(ctx)} pattern for just that one
+     *  expression) for anything outside the grammar — a string literal, {@code $var}, {@code ??},
+     *  array/range literals, the {@code "file.pf:func"} form. The caller supplies its OWN {@link
+     *  Ctx} (its own ctx-holding slot and scratch-slot allocator) rather than this class's
+     *  fixed-slot-1 standalone convention — see {@link Ctx}'s own doc. */
+    static Expr tryParse(String expr, LocalCallResolver resolver) {
+        try {
+            P p = new P(expr, resolver);
+            Expr root = p.parseTernary();
+            p.skipSpaces();
+            if (root == null || p.pos != expr.length()) return null;
+            return root;
+        } catch (Throwable ignored) {
+            return null;
+        }
+    }
+
     // ---- Typed micro-AST + codegen ----------------------------------------
 
-    private enum Type { NUM, BOOL, ANY }
+    enum Type { NUM, BOOL, ANY }
 
-    /** Per-formula codegen state — just a local-variable-slot allocator. Slot 0 is {@code this},
-     *  slot 1 is the {@code ctx} parameter; every dot-access/function-call/div-by-zero-guard needs
-     *  its own scratch slot(s) for intermediate values, allocated fresh (and never reused) per
-     *  compiled formula — formulas are short, so a little slot waste is a non-issue and far
-     *  simpler than trying to free/reuse slots correctly. */
-    private static final class Ctx {
-        int next = 2;
+    /** Per-formula codegen state — a local-variable-slot allocator PLUS which slot holds the
+     *  {@code ScriptContext} every emitted {@code getVar}/{@code getClassInstance} call reads
+     *  from. When this class generates its own standalone {@code eval(ScriptContext)} classes,
+     *  that's always slot 1 (0 is {@code this}) — but {@link ScriptClassCompiler} reuses this
+     *  SAME expression codegen inline inside its own generated methods (a {@code static
+     *  ScriptValue.Builder -> ScriptValue} method with no {@code this} at all), where the ctx has
+     *  to be whatever slot IT freshly computed via {@code Builder.peek()} for that one statement —
+     *  see that class's own doc for why a stale/cached ctx would be wrong there. Every dot-access/
+     *  function-call/div-by-zero-guard needs its own scratch slot(s) for intermediate values,
+     *  allocated fresh (and never reused) per compiled expression — expressions are short, so a
+     *  little slot waste is a non-issue and far simpler than trying to free/reuse slots
+     *  correctly. */
+    static final class Ctx {
+        final int ctxSlot;
+        int next;
+        Ctx(int ctxSlot, int firstScratchSlot) { this.ctxSlot = ctxSlot; this.next = firstScratchSlot; }
         int allocRef() { int s = next; next += 1; return s; }
         int allocD()   { int s = next; next += 2; return s; }
     }
 
-    private interface Expr {
+    interface Expr {
         Type type();
         void emit(MethodVisitor mv, Ctx c);
     }
 
-    private abstract static class BaseExpr implements Expr {
+    abstract static class BaseExpr implements Expr {
         final Type type;
         BaseExpr(Type type) { this.type = type; }
         @Override public Type type() { return type; }
@@ -224,13 +281,13 @@ final class ScriptBytecodeCompiler {
      *  .pf} file is FULL of bare-literal sub-expressions (array/range bounds, plain numeric
      *  constants used as-is), so this was generating one throwaway class per distinct literal
      *  value used ANYWHERE in the whole script set. */
-    private abstract static class Literal extends BaseExpr {
+    abstract static class Literal extends BaseExpr {
         Literal(Type type) { super(type); }
     }
 
     // ---- Coercions — mirror ScriptValue#asNum()/#asBool() exactly ----
 
-    private static Expr toNum(Expr e) {
+    static Expr toNum(Expr e) {
         if (e.type() == Type.NUM) return e;
         if (e.type() == Type.BOOL) {
             return new BaseExpr(Type.NUM) {
@@ -247,7 +304,7 @@ final class ScriptBytecodeCompiler {
         };
     }
 
-    private static Expr toBool(Expr e) {
+    static Expr toBool(Expr e) {
         if (e.type() == Type.BOOL) return e;
         if (e.type() == Type.NUM) {
             return new BaseExpr(Type.BOOL) {
@@ -273,7 +330,7 @@ final class ScriptBytecodeCompiler {
         };
     }
 
-    private static Expr toAny(Expr e) {
+    static Expr toAny(Expr e) {
         if (e.type() == Type.ANY) return e;
         if (e.type() == Type.NUM) {
             return new BaseExpr(Type.ANY) {
@@ -302,10 +359,12 @@ final class ScriptBytecodeCompiler {
     // primary (bitwise/shift, null-coalesce, and **//^  are omitted layers — see class doc for
     // why that's always safe). ----------------------------------------------
 
-    private static final class P {
+    static final class P {
         final String src;
         int pos;
-        P(String src) { this.src = src; this.pos = 0; }
+        final LocalCallResolver resolver;
+        P(String src) { this(src, null); }
+        P(String src, LocalCallResolver resolver) { this.src = src; this.pos = 0; this.resolver = resolver; }
 
         void skipSpaces() { while (pos < src.length() && src.charAt(pos) == ' ') pos++; }
 
@@ -652,6 +711,10 @@ final class ScriptBytecodeCompiler {
                             }
                         };
                     }
+                    if (resolver != null) {
+                        LocalTarget lt = resolver.resolve(name);
+                        if (lt != null) return localCall(lt, args);
+                    }
                     return genericCall(name, args);
                 }
 
@@ -683,7 +746,7 @@ final class ScriptBytecodeCompiler {
                 return new BaseExpr(Type.ANY) {
                     @Override public void emit(MethodVisitor mv, Ctx c) {
                         int svSlot = c.allocRef();
-                        emitResolveInstanceOrVar(mv, varName, svSlot);
+                        emitResolveInstanceOrVar(mv, c, varName, svSlot);
                         mv.visitVarInsn(ALOAD, svSlot);
                     }
                 };
@@ -731,14 +794,14 @@ final class ScriptBytecodeCompiler {
             return new BaseExpr(Type.ANY) {
                 @Override public void emit(MethodVisitor mv, Ctx c) {
                     int svSlot = c.allocRef();
-                    emitResolveInstanceOrVar(mv, name, svSlot);
+                    emitResolveInstanceOrVar(mv, c, name, svSlot);
                     mv.visitVarInsn(ALOAD, svSlot);
                     emitGetNull(mv);
                     Label isNullL = new Label(), endL = new Label();
                     mv.visitJumpInsn(IF_ACMPEQ, isNullL);
                     mv.visitVarInsn(ALOAD, svSlot);
                     mv.visitLdcInsn(prop);
-                    mv.visitVarInsn(ALOAD, 1);
+                    mv.visitVarInsn(ALOAD, c.ctxSlot);
                     mv.visitMethodInsn(INVOKESTATIC, FORMULA, "memberGet",
                             "(L" + VALUE + ";Ljava/lang/String;L" + CTX + ";)L" + VALUE + ";", false);
                     mv.visitJumpInsn(GOTO, endL);
@@ -758,7 +821,7 @@ final class ScriptBytecodeCompiler {
             return new BaseExpr(Type.ANY) {
                 @Override public void emit(MethodVisitor mv, Ctx c) {
                     int svSlot = c.allocRef();
-                    emitResolveInstanceOrVar(mv, name, svSlot);
+                    emitResolveInstanceOrVar(mv, c, name, svSlot);
                     mv.visitVarInsn(ALOAD, svSlot);
                     emitGetNull(mv);
                     Label isNullL = new Label(), endL = new Label();
@@ -768,13 +831,51 @@ final class ScriptBytecodeCompiler {
                     int listSlot = c.allocRef();
                     emitBuildArgsList(mv, c, args, listSlot);
                     mv.visitVarInsn(ALOAD, listSlot);
-                    mv.visitVarInsn(ALOAD, 1);
+                    mv.visitVarInsn(ALOAD, c.ctxSlot);
                     mv.visitMethodInsn(INVOKESTATIC, FORMULA, "memberCall",
                             "(L" + VALUE + ";Ljava/lang/String;L" + LIST + ";L" + CTX + ";)L" + VALUE + ";", false);
                     mv.visitJumpInsn(GOTO, endL);
                     mv.visitLabel(isNullL);
                     emitGetNull(mv);
                     mv.visitLabel(endL);
+                }
+            };
+        }
+
+        /** A call to another {@code def} the SAME file's {@link ScriptClassCompiler} pass already
+         *  compiled onto this generated class — real local dispatch, {@code INVOKESTATIC} straight
+         *  to the target method, with an ISOLATED per-call {@code ScriptContext.Builder} built
+         *  fresh for this one call (never the caller's own shared builder — mutating that would
+         *  leak the callee's params back into the caller, which the interpreter's own {@link
+         *  UserFunction#call} never does either). Mirrors {@code UserFunction.call}'s own binding
+         *  exactly: start from a copy of the CURRENT live context (matching its {@code
+         *  fb.copyFrom(callerCtx)} — every def visible at this call site is already bound as a var
+         *  by the time compiled code runs, same as the interpreter), then overwrite each parameter
+         *  name with its argument (missing trailing arguments bind to {@code ScriptValue.NULL},
+         *  extra trailing arguments are simply never read — identical to {@code UserFunction.call}'s
+         *  own {@code i < args.size() ? args.get(i) : ScriptValue.NULL} loop). */
+        private static Expr localCall(LocalTarget lt, List<Expr> rawArgs) {
+            List<Expr> args = rawArgs.stream().map(ScriptBytecodeCompiler::toAny).toList();
+            List<String> params = lt.paramNames();
+            return new BaseExpr(Type.ANY) {
+                @Override public void emit(MethodVisitor mv, Ctx c) {
+                    int nbSlot = c.allocRef();
+                    mv.visitMethodInsn(INVOKESTATIC, CTX, "builder", "()L" + BUILDER + ";", false);
+                    mv.visitVarInsn(ALOAD, c.ctxSlot);
+                    mv.visitMethodInsn(INVOKEVIRTUAL, BUILDER, "copyFrom", "(L" + CTX + ";)L" + BUILDER + ";", false);
+                    mv.visitVarInsn(ASTORE, nbSlot);
+                    for (int i = 0; i < params.size(); i++) {
+                        mv.visitVarInsn(ALOAD, nbSlot);
+                        mv.visitLdcInsn(params.get(i));
+                        if (i < args.size()) args.get(i).emit(mv, c);
+                        else emitGetNull(mv);
+                        mv.visitMethodInsn(INVOKEVIRTUAL, BUILDER, "val",
+                                "(Ljava/lang/String;L" + VALUE + ";)L" + BUILDER + ";", false);
+                        mv.visitInsn(POP);
+                    }
+                    mv.visitVarInsn(ALOAD, nbSlot);
+                    mv.visitMethodInsn(INVOKESTATIC, lt.internalClassName(), lt.methodName(),
+                            "(L" + BUILDER + ";)L" + VALUE + ";", false);
                 }
             };
         }
@@ -791,7 +892,7 @@ final class ScriptBytecodeCompiler {
                     emitBuildArgsList(mv, c, args, listSlot);
                     mv.visitLdcInsn(name);
                     mv.visitVarInsn(ALOAD, listSlot);
-                    mv.visitVarInsn(ALOAD, 1);
+                    mv.visitVarInsn(ALOAD, c.ctxSlot);
                     mv.visitMethodInsn(INVOKESTATIC, FORMULA, "callBuiltin",
                             "(Ljava/lang/String;L" + LIST + ";L" + CTX + ";)L" + VALUE + ";", false);
                 }
@@ -800,8 +901,8 @@ final class ScriptBytecodeCompiler {
 
         /** {@code sv = ctx.getClassInstance(name); if (sv==NULL) sv = ctx.getVar(name);} — stores
          *  the result in {@code svSlot}. */
-        private static void emitResolveInstanceOrVar(MethodVisitor mv, String name, int svSlot) {
-            mv.visitVarInsn(ALOAD, 1);
+        private static void emitResolveInstanceOrVar(MethodVisitor mv, Ctx c, String name, int svSlot) {
+            mv.visitVarInsn(ALOAD, c.ctxSlot);
             mv.visitLdcInsn(name);
             mv.visitMethodInsn(INVOKEVIRTUAL, CTX, "getClassInstance", "(Ljava/lang/String;)L" + VALUE + ";", false);
             mv.visitVarInsn(ASTORE, svSlot);
@@ -809,7 +910,7 @@ final class ScriptBytecodeCompiler {
             emitGetNull(mv);
             Label haveInstanceL = new Label();
             mv.visitJumpInsn(IF_ACMPNE, haveInstanceL);
-            mv.visitVarInsn(ALOAD, 1);
+            mv.visitVarInsn(ALOAD, c.ctxSlot);
             mv.visitLdcInsn(name);
             mv.visitMethodInsn(INVOKEVIRTUAL, CTX, "getVar", "(Ljava/lang/String;)L" + VALUE + ";", false);
             mv.visitVarInsn(ASTORE, svSlot);
