@@ -132,4 +132,34 @@ class LocalVarCachingTest {
                 "a straight-line chain of NUM assigns/reads should need ZERO getClassInstance/getVar calls:\n" + disassembly);
         assertTrue(disassembly.contains("DLOAD"), "should actually load cached doubles from JVM locals:\n" + disassembly);
     }
+
+    @Test
+    void stringVariableCachingAlsoSkipsTheScriptContextRoundTrip() throws Exception {
+        // Same fast path as the NUM case, but for a string (ANY-typed) value — the value is
+        // already a boxed ScriptValue by the time it's computed, so caching it is a plain
+        // ALOAD/ASTORE of that SAME reference (no re-boxing on the reads, only the one box at
+        // the literal's own construction, unavoidable since the Builder always needs a
+        // ScriptValue either way).
+        String src = """
+                def greet():
+                    a = "hello"
+                    b = a
+                    return b + "!"
+                end
+                """;
+        ScriptClassCompiler.Compiled compiled = compile(src, "strchain");
+        assertNotNull(compiled);
+        var m = compiled.methodsByDefName().get("greet");
+        assertNotNull(m);
+        assertEquals("hello!", ((ScriptValue) m.invoke(null, ScriptContext.builder())).asStr());
+
+        ClassReader cr = new ClassReader(compiled.classBytes());
+        StringWriter sw = new StringWriter();
+        cr.accept(new TraceClassVisitor(new PrintWriter(sw)), 0);
+        String disassembly = sw.toString();
+
+        long getVarCalls = disassembly.lines().filter(l -> l.contains("getVar") || l.contains("getClassInstance")).count();
+        assertEquals(0, getVarCalls,
+                "a straight-line chain of string assigns/reads should ALSO need zero getClassInstance/getVar calls:\n" + disassembly);
+    }
 }

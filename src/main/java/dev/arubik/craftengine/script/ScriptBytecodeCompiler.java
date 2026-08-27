@@ -148,10 +148,11 @@ final class ScriptBytecodeCompiler {
         CachedVarRef get(String name);
     }
 
-    /** {@code slot}: the JVM local holding the raw value ({@code DLOAD}/{@code ILOAD} depending on
-     *  {@code type}). {@code type} is always {@code NUM} or {@code BOOL} — never {@code ANY} (an
-     *  ANY-typed assignment is never cacheable this way; see {@code emitAssign}'s own doc for why:
-     *  there'd be nothing narrower than the boxed {@code ScriptValue} itself to cache). */
+    /** {@code slot}: the JVM local holding the value — {@code DLOAD}/{@code ILOAD}/{@code ALOAD}
+     *  depending on {@code type}. Every {@link Type} is cacheable: NUM/BOOL hold a raw unboxed
+     *  primitive, ANY holds the already-boxed {@code ScriptValue} reference (a string, array, map,
+     *  object, whatever it evaluated to) — either way, {@code getClassInstance}/{@code getVar}'s
+     *  {@code ScriptContext} round-trip is skipped, not just the primitive boxing. */
     record CachedVarRef(int slot, Type type) {}
     private static final String MATH = "java/lang/Math";
     private static final String LIST = "java/util/List";
@@ -1226,9 +1227,13 @@ final class ScriptBytecodeCompiler {
                 // toNum()/toBool() same as the interpreter's implicit asNum()/asBool().
                 String varName = name;
 
-                // A currently-valid cached raw local (see VarTypeHint's own doc) skips
-                // getClassInstance/getVar/boxing entirely — a plain DLOAD/ILOAD. Only offered when
-                // ScriptClassCompiler knows one, and only for the EXACT statement immediately
+                // A currently-valid cached local (see VarTypeHint's own doc) skips
+                // getClassInstance/getVar entirely — a plain DLOAD/ILOAD/ALOAD. Applies to EVERY
+                // type, not just NUM/BOOL: a Str/Array/Obj/Map-valued assignment is already a
+                // boxed ScriptValue reference by the time it's computed, so caching it is just
+                // ASTORE/ALOAD — no boxing to skip, but the getClassInstance/getVar round-trip is
+                // just as real a cost for a string/array/map as it is for a number. Only offered
+                // when ScriptClassCompiler knows one, and only for the EXACT statement immediately
                 // following the assignment that produced it (see ScriptClassCompiler#emitAssign
                 // and its invalidation rule) — never stale by construction, not by trust.
                 if (varHint != null) {
@@ -1236,7 +1241,12 @@ final class ScriptBytecodeCompiler {
                     if (cached != null) {
                         return new BaseExpr(cached.type()) {
                             @Override public void emit(MethodVisitor mv, Ctx c) {
-                                mv.visitVarInsn(cached.type() == Type.BOOL ? ILOAD : DLOAD, cached.slot());
+                                int op = switch (cached.type()) {
+                                    case BOOL -> ILOAD;
+                                    case NUM -> DLOAD;
+                                    case ANY -> ALOAD;
+                                };
+                                mv.visitVarInsn(op, cached.slot());
                             }
                         };
                     }

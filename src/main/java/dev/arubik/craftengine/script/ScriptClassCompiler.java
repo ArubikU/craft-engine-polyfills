@@ -672,14 +672,14 @@ final class ScriptClassCompiler {
         }
     }
 
-    /** Emits an {@code Assign}'s full effect. When the RHS's INFERRED type ({@link
-     *  ScriptBytecodeCompiler.Expr#type()} — the same NUM/BOOL/ANY tracking {@link #emitEvaluate}
-     *  already carries expression-internally, now surfaced at the STATEMENT level) is provably
-     *  NUM or BOOL, the raw unboxed value is ALSO cached in a fresh JVM local (see {@link
-     *  MethodCtx#cachedVars}'s own doc) — the direct fix for "why is {@code n} boxed into a
-     *  ScriptValue and read back out via getVar every single time it's referenced inside a def
-     *  that only ever uses it as a number": the very NEXT statement's bare read of this SAME name
-     *  becomes a plain {@code DLOAD}/{@code ILOAD}, no map round-trip, no boxing, as long as
+    /** Emits an {@code Assign}'s full effect, caching the value in a fresh JVM local (see {@link
+     *  MethodCtx#cachedVars}'s own doc) regardless of its inferred {@link
+     *  ScriptBytecodeCompiler.Type} — NUM/BOOL cache a raw unboxed primitive, ANY (a string, array,
+     *  map, object — whatever a dot-call/subscript/function-call/literal evaluated to) caches the
+     *  already-boxed {@code ScriptValue} reference directly, since there's nothing narrower to
+     *  unbox in the first place. Either way, the very NEXT statement's bare read of this SAME name
+     *  becomes a plain {@code DLOAD}/{@code ILOAD}/{@code ALOAD} — no {@code
+     *  getClassInstance}/{@code getVar} round-trip through the {@code ScriptContext} — as long as
      *  nothing invalidated it in between (see the {@code cachedVars.clear()} call sites in {@link
      *  #emitBody}/{@link #emitFor}/{@link #emitWhile} for exactly when that happens).
      *
@@ -694,23 +694,10 @@ final class ScriptClassCompiler {
         mc.cachedVars.remove(name); // whatever was cached for this name is stale the instant it's reassigned
 
         ScriptBytecodeCompiler.Expr parsed = ScriptBytecodeCompiler.tryParse(formula, mc.resolver, mc.varHint);
-        ScriptBytecodeCompiler.Type type = parsed != null ? parsed.type() : null;
-
-        if (parsed != null && type != ScriptBytecodeCompiler.Type.ANY) {
-            int ctxSlot = mc.alloc();
-            mv.visitVarInsn(ALOAD, 0);
-            mv.visitMethodInsn(INVOKEVIRTUAL, BUILDER, "peek", "()L" + CTX + ";", false);
-            mv.visitVarInsn(ASTORE, ctxSlot);
-            ScriptBytecodeCompiler.Ctx ec = new ScriptBytecodeCompiler.Ctx(ctxSlot, mc.nextSlot);
-            parsed.emit(mv, ec); // raw NUM double or raw BOOL int — NOT boxed yet, unlike emitEvaluate
-            mc.nextSlot = ec.next;
-
-            boolean isNum = type == ScriptBytecodeCompiler.Type.NUM;
-            int primSlot = isNum ? mc.allocD() : mc.alloc();
-            mv.visitInsn(isNum ? DUP2 : DUP);
-            mv.visitVarInsn(isNum ? DSTORE : ISTORE, primSlot);
-            mv.visitMethodInsn(INVOKESTATIC, VALUE, "of", isNum ? "(D)L" + VALUE + ";" : "(Z)L" + VALUE + ";", true);
-
+        if (parsed == null) {
+            // tryParse itself failed, falling all the way to ScriptFormula.compile — the value
+            // isn't known until a REAL evaluate() call happens, nothing to cache from here.
+            emitEvaluate(mv, mc, formula, false);
             int valueSlot = mc.alloc();
             mv.visitVarInsn(ASTORE, valueSlot);
             mv.visitVarInsn(ALOAD, 0);
@@ -718,22 +705,51 @@ final class ScriptClassCompiler {
             mv.visitVarInsn(ALOAD, valueSlot);
             mv.visitMethodInsn(INVOKEVIRTUAL, BUILDER, "val", "(Ljava/lang/String;L" + VALUE + ";)L" + BUILDER + ";", false);
             mv.visitInsn(POP);
-
-            mc.cachedVars.put(name, new ScriptBytecodeCompiler.CachedVarRef(primSlot, type));
             return;
         }
 
-        // ANY-typed (or tryParse itself failed, falling all the way to ScriptFormula.compile) —
-        // nothing narrower than the boxed ScriptValue to cache; unchanged from before this
-        // optimization existed.
-        emitEvaluate(mv, mc, formula, false);
-        int valueSlot = mc.alloc();
-        mv.visitVarInsn(ASTORE, valueSlot);
+        ScriptBytecodeCompiler.Type type = parsed.type();
+        int ctxSlot = mc.alloc();
+        mv.visitVarInsn(ALOAD, 0);
+        mv.visitMethodInsn(INVOKEVIRTUAL, BUILDER, "peek", "()L" + CTX + ";", false);
+        mv.visitVarInsn(ASTORE, ctxSlot);
+        ScriptBytecodeCompiler.Ctx ec = new ScriptBytecodeCompiler.Ctx(ctxSlot, mc.nextSlot);
+        parsed.emit(mv, ec); // raw NUM double / raw BOOL int / already-boxed ANY reference
+        mc.nextSlot = ec.next;
+
+        int primSlot;
+        int valueSlot;
+        switch (type) {
+            case NUM -> {
+                primSlot = mc.allocD();
+                mv.visitInsn(DUP2);
+                mv.visitVarInsn(DSTORE, primSlot);
+                mv.visitMethodInsn(INVOKESTATIC, VALUE, "of", "(D)L" + VALUE + ";", true);
+                valueSlot = mc.alloc();
+                mv.visitVarInsn(ASTORE, valueSlot);
+            }
+            case BOOL -> {
+                primSlot = mc.alloc();
+                mv.visitInsn(DUP);
+                mv.visitVarInsn(ISTORE, primSlot);
+                mv.visitMethodInsn(INVOKESTATIC, VALUE, "of", "(Z)L" + VALUE + ";", true);
+                valueSlot = mc.alloc();
+                mv.visitVarInsn(ASTORE, valueSlot);
+            }
+            default -> { // ANY — already a boxed ScriptValue; one slot serves both the cache AND the builder write
+                primSlot = mc.alloc();
+                mv.visitVarInsn(ASTORE, primSlot);
+                valueSlot = primSlot;
+            }
+        }
+
         mv.visitVarInsn(ALOAD, 0);
         mv.visitLdcInsn(name);
         mv.visitVarInsn(ALOAD, valueSlot);
         mv.visitMethodInsn(INVOKEVIRTUAL, BUILDER, "val", "(Ljava/lang/String;L" + VALUE + ";)L" + BUILDER + ";", false);
         mv.visitInsn(POP);
+
+        mc.cachedVars.put(name, new ScriptBytecodeCompiler.CachedVarRef(primSlot, type));
     }
 
     /** {@code "kinetics/generators/windmill"} -> {@code {"dev/arubik/craftengine/script/gen/kinetics/generators", "Windmill"}}. */
