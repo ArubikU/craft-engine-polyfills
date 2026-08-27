@@ -131,6 +131,28 @@ final class ScriptBytecodeCompiler {
      *  needed to bind each argument into the ISOLATED per-call {@code Builder} (see {@link
      *  P#localCall}) the same way {@link UserFunction#call} binds them for an interpreted call. */
     record LocalTarget(String internalClassName, String methodName, List<String> paramNames) {}
+
+    /** Resolves a bare variable name to a JVM local slot ALREADY holding its raw (unboxed)
+     *  {@code double}/{@code boolean} value, when {@link ScriptClassCompiler} knows one is
+     *  currently valid — the direct answer to "why does reading {@code n} inside a loop go through
+     *  {@code ScriptContext.getVar} every single time instead of just being a local variable":
+     *  when the assignment that produced this value was itself provably NUM/BOOL (see {@code
+     *  ScriptClassCompiler#emitAssign}), a plain bare-identifier read of that SAME name — as long
+     *  as nothing has invalidated the cache since (a branch, a loop, anything not statically
+     *  provable to preserve it — see that method's own doc for the exact invalidation rule) — skips
+     *  {@code getClassInstance}/{@code getVar}/boxing ENTIRELY and just loads the local. Supplied
+     *  only by {@link ScriptClassCompiler}; {@link #tryCompile}'s standalone expressions (no
+     *  enclosing method, no notion of "the previous statement just assigned this") always pass
+     *  {@code null}. */
+    interface VarTypeHint {
+        CachedVarRef get(String name);
+    }
+
+    /** {@code slot}: the JVM local holding the raw value ({@code DLOAD}/{@code ILOAD} depending on
+     *  {@code type}). {@code type} is always {@code NUM} or {@code BOOL} — never {@code ANY} (an
+     *  ANY-typed assignment is never cacheable this way; see {@code emitAssign}'s own doc for why:
+     *  there'd be nothing narrower than the boxed {@code ScriptValue} itself to cache). */
+    record CachedVarRef(int slot, Type type) {}
     private static final String MATH = "java/lang/Math";
     private static final String LIST = "java/util/List";
     private static final String ARRAYLIST = "java/util/ArrayList";
@@ -252,9 +274,9 @@ final class ScriptBytecodeCompiler {
      *  supplies its OWN {@link
      *  Ctx} (its own ctx-holding slot and scratch-slot allocator) rather than this class's
      *  fixed-slot-1 standalone convention — see {@link Ctx}'s own doc. */
-    static Expr tryParse(String expr, LocalCallResolver resolver) {
+    static Expr tryParse(String expr, LocalCallResolver resolver, VarTypeHint varHint) {
         try {
-            P p = new P(expr, resolver);
+            P p = new P(expr, resolver, varHint);
             Expr root = p.parseTernary();
             p.skipSpaces();
             if (root == null || p.pos != expr.length()) return null;
@@ -389,8 +411,11 @@ final class ScriptBytecodeCompiler {
         final String src;
         int pos;
         final LocalCallResolver resolver;
-        P(String src) { this(src, null); }
-        P(String src, LocalCallResolver resolver) { this.src = src; this.pos = 0; this.resolver = resolver; }
+        final VarTypeHint varHint;
+        P(String src) { this(src, null, null); }
+        P(String src, LocalCallResolver resolver, VarTypeHint varHint) {
+            this.src = src; this.pos = 0; this.resolver = resolver; this.varHint = varHint;
+        }
 
         void skipSpaces() { while (pos < src.length() && src.charAt(pos) == ' ') pos++; }
 
@@ -1200,6 +1225,23 @@ final class ScriptBytecodeCompiler {
                 // coerced number) keeps its actual type; NUM/BOOL contexts coerce it via
                 // toNum()/toBool() same as the interpreter's implicit asNum()/asBool().
                 String varName = name;
+
+                // A currently-valid cached raw local (see VarTypeHint's own doc) skips
+                // getClassInstance/getVar/boxing entirely — a plain DLOAD/ILOAD. Only offered when
+                // ScriptClassCompiler knows one, and only for the EXACT statement immediately
+                // following the assignment that produced it (see ScriptClassCompiler#emitAssign
+                // and its invalidation rule) — never stale by construction, not by trust.
+                if (varHint != null) {
+                    CachedVarRef cached = varHint.get(varName);
+                    if (cached != null) {
+                        return new BaseExpr(cached.type()) {
+                            @Override public void emit(MethodVisitor mv, Ctx c) {
+                                mv.visitVarInsn(cached.type() == Type.BOOL ? ILOAD : DLOAD, cached.slot());
+                            }
+                        };
+                    }
+                }
+
                 return new BaseExpr(Type.ANY) {
                     @Override public void emit(MethodVisitor mv, Ctx c) {
                         int svSlot = c.allocRef();

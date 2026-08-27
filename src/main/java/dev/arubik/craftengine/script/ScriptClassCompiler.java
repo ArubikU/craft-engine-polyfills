@@ -137,11 +137,23 @@ final class ScriptClassCompiler {
         final Deque<Loop> loops = new ArrayDeque<>();
         final boolean isMain;
         final ScriptBytecodeCompiler.LocalCallResolver resolver;
+        /** name -> a JVM local currently holding that variable's raw (unboxed) NUM/BOOL value —
+         *  see {@link #emitAssign}'s own doc for how it's populated and {@link
+         *  ScriptBytecodeCompiler.VarTypeHint}'s doc for how a bare-identifier read consumes it.
+         *  Cleared (never selectively — see the invalidation comment at every clear() call site)
+         *  the instant execution crosses into or back out of any {@code if}/{@code for}/{@code
+         *  while}, since a single static local slot can't represent "whichever branch/iteration
+         *  actually ran" without real per-branch merging this compiler doesn't attempt. */
+        final Map<String, ScriptBytecodeCompiler.CachedVarRef> cachedVars = new java.util.HashMap<>();
+        final ScriptBytecodeCompiler.VarTypeHint varHint = cachedVars::get;
         MethodCtx(boolean isMain, ScriptBytecodeCompiler.LocalCallResolver resolver) {
             this.isMain = isMain;
             this.resolver = resolver;
         }
         int alloc() { return nextSlot++; }
+        /** Doubles occupy 2 consecutive local slots on the JVM — a plain {@link #alloc()} would
+         *  hand out a slot some OTHER value could still overlap into. */
+        int allocD() { int s = nextSlot; nextSlot += 2; return s; }
     }
     private record Loop(Label continueLabel, Label breakLabel) {}
 
@@ -415,17 +427,7 @@ final class ScriptClassCompiler {
     private static boolean emitBody(MethodVisitor mv, List<ScriptProgram.Statement> stmts, MethodCtx mc) {
         for (ScriptProgram.Statement stmt : stmts) {
             switch (stmt) {
-                case ScriptProgram.Statement.Assign a -> {
-                    emitEvaluate(mv, mc, a.formula().toString(), false);
-                    int valueSlot = mc.alloc();
-                    mv.visitVarInsn(ASTORE, valueSlot);
-                    mv.visitVarInsn(ALOAD, 0);
-                    mv.visitLdcInsn(a.name());
-                    mv.visitVarInsn(ALOAD, valueSlot);
-                    mv.visitMethodInsn(INVOKEVIRTUAL, BUILDER, "val",
-                            "(Ljava/lang/String;L" + VALUE + ";)L" + BUILDER + ";", false);
-                    mv.visitInsn(POP);
-                }
+                case ScriptProgram.Statement.Assign a -> emitAssign(mv, mc, a.name(), a.formula().toString());
                 case ScriptProgram.Statement.ExprStatement es -> {
                     emitEvaluate(mv, mc, es.formula().toString(), false);
                     mv.visitInsn(POP);
@@ -470,14 +472,22 @@ final class ScriptClassCompiler {
                     for (ScriptProgram.Clause clause : chain.clauses()) {
                         Label nextLabel = new Label();
                         if (!clause.isElse()) {
+                            // The condition itself still sees whatever was cached BEFORE this
+                            // if-chain (nothing has branched yet) — only entering a clause BODY
+                            // needs the clear below, since sibling clauses could assign the same
+                            // name to something a single static slot can't merge.
                             emitEvaluate(mv, mc, clause.condition().toString(), true);
                             mv.visitJumpInsn(IFEQ, nextLabel);
                         }
+                        mc.cachedVars.clear();
                         if (!emitBody(mv, clause.body(), mc)) return false;
                         mv.visitJumpInsn(GOTO, endLabel);
                         mv.visitLabel(nextLabel);
                         if (clause.isElse()) break; // an else arm is always last; nothing follows it
                     }
+                    // Merge point — whichever clause ran (or none), a single static slot can't
+                    // represent "the value from whichever branch actually executed".
+                    mc.cachedVars.clear();
                     mv.visitLabel(endLabel);
                 }
                 case ScriptProgram.Statement.ForStatement fs -> {
@@ -536,6 +546,11 @@ final class ScriptClassCompiler {
         mv.visitTypeInsn(CHECKCAST, "[L" + VALUE + ";");
         mv.visitVarInsn(ASTORE, rowSlot);
 
+        // The loop runs a dynamic number of times (0 or more) — nothing cached from BEFORE this
+        // loop, or from a PREVIOUS iteration's own body, can be assumed valid for the guard/body
+        // compiled below (a single static slot can't represent "whichever iteration last ran").
+        mc.cachedVars.clear();
+
         for (int i = 0; i < vars.size(); i++) {
             mv.visitVarInsn(ALOAD, 0);
             mv.visitLdcInsn(vars.get(i));
@@ -569,6 +584,7 @@ final class ScriptClassCompiler {
         mv.visitJumpInsn(GOTO, continueLabel);
         mv.visitLabel(breakLabel);
         mv.visitLabel(skipAll);
+        mc.cachedVars.clear(); // exiting — statements after the loop can't assume anything from inside it
         return true;
     }
 
@@ -580,6 +596,11 @@ final class ScriptClassCompiler {
         int iterSlot = mc.alloc();
         emitIntConst(mv, 0);
         mv.visitVarInsn(ISTORE, iterSlot);
+
+        // Same reasoning as emitFor's own clear — a dynamic iteration count means nothing cached
+        // from before this loop (or a previous pass through it) can be trusted for the condition
+        // or body compiled below.
+        mc.cachedVars.clear();
 
         Label continueLabel = new Label();
         Label breakLabel = new Label();
@@ -599,6 +620,7 @@ final class ScriptClassCompiler {
 
         mv.visitJumpInsn(GOTO, continueLabel);
         mv.visitLabel(breakLabel);
+        mc.cachedVars.clear(); // exiting — statements after the loop can't assume anything from inside it
         return true;
     }
 
@@ -625,7 +647,7 @@ final class ScriptClassCompiler {
      *  never cached across statements, since an earlier statement's {@code Assign} may have just
      *  mutated the builder and the next expression must see that. */
     private static void emitEvaluate(MethodVisitor mv, MethodCtx mc, String expr, boolean asBool) {
-        ScriptBytecodeCompiler.Expr parsed = ScriptBytecodeCompiler.tryParse(expr, mc.resolver);
+        ScriptBytecodeCompiler.Expr parsed = ScriptBytecodeCompiler.tryParse(expr, mc.resolver, mc.varHint);
         if (parsed != null) {
             int ctxSlot = mc.alloc();
             mv.visitVarInsn(ALOAD, 0);
@@ -648,6 +670,70 @@ final class ScriptClassCompiler {
         } else {
             mv.visitMethodInsn(INVOKEVIRTUAL, FORMULA, "evaluate", "(L" + CTX + ";)L" + VALUE + ";", false);
         }
+    }
+
+    /** Emits an {@code Assign}'s full effect. When the RHS's INFERRED type ({@link
+     *  ScriptBytecodeCompiler.Expr#type()} — the same NUM/BOOL/ANY tracking {@link #emitEvaluate}
+     *  already carries expression-internally, now surfaced at the STATEMENT level) is provably
+     *  NUM or BOOL, the raw unboxed value is ALSO cached in a fresh JVM local (see {@link
+     *  MethodCtx#cachedVars}'s own doc) — the direct fix for "why is {@code n} boxed into a
+     *  ScriptValue and read back out via getVar every single time it's referenced inside a def
+     *  that only ever uses it as a number": the very NEXT statement's bare read of this SAME name
+     *  becomes a plain {@code DLOAD}/{@code ILOAD}, no map round-trip, no boxing, as long as
+     *  nothing invalidated it in between (see the {@code cachedVars.clear()} call sites in {@link
+     *  #emitBody}/{@link #emitFor}/{@link #emitWhile} for exactly when that happens).
+     *
+     *  <p>The boxed {@code ScriptValue} is ALWAYS ALSO written to the {@code Builder} regardless —
+     *  this is a READ-side optimization only, never a write-side omission. Anything this compiler
+     *  doesn't statically see through — a {@code for}-loop this variable feeds via {@code
+     *  resolveForRows}, a call to another compiled or interpreted {@code def}, the file's own
+     *  {@code __return__} inspection, {@code ScriptCall}'s cross-file dispatch — only ever
+     *  observes the {@code Builder}'s copy, never this method's own JVM locals, so that write can
+     *  never be the thing that gets skipped. */
+    private static void emitAssign(MethodVisitor mv, MethodCtx mc, String name, String formula) {
+        mc.cachedVars.remove(name); // whatever was cached for this name is stale the instant it's reassigned
+
+        ScriptBytecodeCompiler.Expr parsed = ScriptBytecodeCompiler.tryParse(formula, mc.resolver, mc.varHint);
+        ScriptBytecodeCompiler.Type type = parsed != null ? parsed.type() : null;
+
+        if (parsed != null && type != ScriptBytecodeCompiler.Type.ANY) {
+            int ctxSlot = mc.alloc();
+            mv.visitVarInsn(ALOAD, 0);
+            mv.visitMethodInsn(INVOKEVIRTUAL, BUILDER, "peek", "()L" + CTX + ";", false);
+            mv.visitVarInsn(ASTORE, ctxSlot);
+            ScriptBytecodeCompiler.Ctx ec = new ScriptBytecodeCompiler.Ctx(ctxSlot, mc.nextSlot);
+            parsed.emit(mv, ec); // raw NUM double or raw BOOL int — NOT boxed yet, unlike emitEvaluate
+            mc.nextSlot = ec.next;
+
+            boolean isNum = type == ScriptBytecodeCompiler.Type.NUM;
+            int primSlot = isNum ? mc.allocD() : mc.alloc();
+            mv.visitInsn(isNum ? DUP2 : DUP);
+            mv.visitVarInsn(isNum ? DSTORE : ISTORE, primSlot);
+            mv.visitMethodInsn(INVOKESTATIC, VALUE, "of", isNum ? "(D)L" + VALUE + ";" : "(Z)L" + VALUE + ";", true);
+
+            int valueSlot = mc.alloc();
+            mv.visitVarInsn(ASTORE, valueSlot);
+            mv.visitVarInsn(ALOAD, 0);
+            mv.visitLdcInsn(name);
+            mv.visitVarInsn(ALOAD, valueSlot);
+            mv.visitMethodInsn(INVOKEVIRTUAL, BUILDER, "val", "(Ljava/lang/String;L" + VALUE + ";)L" + BUILDER + ";", false);
+            mv.visitInsn(POP);
+
+            mc.cachedVars.put(name, new ScriptBytecodeCompiler.CachedVarRef(primSlot, type));
+            return;
+        }
+
+        // ANY-typed (or tryParse itself failed, falling all the way to ScriptFormula.compile) —
+        // nothing narrower than the boxed ScriptValue to cache; unchanged from before this
+        // optimization existed.
+        emitEvaluate(mv, mc, formula, false);
+        int valueSlot = mc.alloc();
+        mv.visitVarInsn(ASTORE, valueSlot);
+        mv.visitVarInsn(ALOAD, 0);
+        mv.visitLdcInsn(name);
+        mv.visitVarInsn(ALOAD, valueSlot);
+        mv.visitMethodInsn(INVOKEVIRTUAL, BUILDER, "val", "(Ljava/lang/String;L" + VALUE + ";)L" + BUILDER + ";", false);
+        mv.visitInsn(POP);
     }
 
     /** {@code "kinetics/generators/windmill"} -> {@code {"dev/arubik/craftengine/script/gen/kinetics/generators", "Windmill"}}. */
