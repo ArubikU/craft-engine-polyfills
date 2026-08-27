@@ -117,7 +117,13 @@ final class ScriptClassCompiler {
      *  (a top-level {@code import}/{@code static}/{@code final}, or an unsupported construct
      *  somewhere in it) — a file can still have compiled {@code def}s with no compiled main body,
      *  or vice versa; the two are independent. */
-    record Compiled(Class<?> generatedClass, Map<String, Method> methodsByDefName, Method mainMethod, byte[] classBytes) {}
+    /** {@code mainSkipReason} is null when the top-level body DID compile, and otherwise a short
+     *  tag naming why it didn't. The top-level body is the per-tick hot path for every machine
+     *  script, so "did main compile" is the single most important coverage number this compiler
+     *  has — and without a reason recorded, a file that silently falls back to the interpreter is
+     *  indistinguishable from one that had nothing to compile. */
+    record Compiled(Class<?> generatedClass, Map<String, Method> methodsByDefName, Method mainMethod,
+                     byte[] classBytes, String mainSkipReason) {}
 
     /** Per-method codegen state: the next free local-variable slot (0 is always the {@code
      *  ScriptContext.Builder} parameter), the stack of enclosing loops' continue/break targets
@@ -296,19 +302,31 @@ final class ScriptClassCompiler {
             // Statement.StaticDecl's own doc for why that sharing has to go through the instance.
             List<ScriptProgram.Statement> mainBody = new ArrayList<>();
             boolean mainEligible = true;
+            String mainSkipReason = null;
             for (ScriptProgram.Statement s : statements) {
                 if (s instanceof ScriptProgram.Statement.FunctionDef) continue;
-                if (s instanceof ScriptProgram.Statement.Import || s instanceof ScriptProgram.Statement.StaticDecl) {
+                // A top-level `import` used to disqualify the whole body. That was costly out of
+                // proportion: the top-level body is a machine script's PER-TICK path, so one import
+                // anywhere in the file left the entire tick path interpreted. Its runtime effect is
+                // self-contained (see ScriptProgram.applyImport) and is now emitted as a call.
+                // StaticDecl still bails — it needs the owning ScriptProgram instance's staticStore,
+                // which a static generated method has no reference to.
+                if (s instanceof ScriptProgram.Statement.StaticDecl) {
                     mainEligible = false;
+                    mainSkipReason = "top-level static";
                     break;
                 }
                 mainBody.add(s);
             }
             java.util.Set<String> uncompilableForMain = new java.util.HashSet<>(allDefNames);
             uncompilableForMain.removeAll(compilable);
+            if (mainEligible) {
+                if (mainBody.isEmpty()) mainSkipReason = "no top-level body";
+                else if (!isSupported(mainBody, 0)) mainSkipReason = "unsupported construct in body";
+                else if (callsAnyOf(mainBody, uncompilableForMain)) mainSkipReason = "calls an uncompiled def";
+            }
             String mainMethodName = null;
-            if (mainEligible && !mainBody.isEmpty() && isSupported(mainBody, 0)
-                    && !callsAnyOf(mainBody, uncompilableForMain)) {
+            if (mainSkipReason == null && mainEligible && !mainBody.isEmpty()) {
                 mainMethodName = "run";
                 MethodVisitor mv = cw.visitMethod(ACC_PUBLIC | ACC_STATIC, mainMethodName, "(L" + BUILDER + ";)V", null, null);
                 mv.visitCode();
@@ -331,7 +349,7 @@ final class ScriptClassCompiler {
             }
             Method mainMethod = mainMethodName != null
                     ? generated.getMethod(mainMethodName, ScriptContext.Builder.class) : null;
-            return new Compiled(generated, byDefName, mainMethod, bytes);
+            return new Compiled(generated, byDefName, mainMethod, bytes, mainSkipReason);
         } catch (Throwable ignored) {
             // Anything at all — an unsupported shape that slipped past a bail check, a verifier
             // rejection, a real bug — degrades to the interpreter for the WHOLE file, never a
@@ -414,7 +432,10 @@ final class ScriptClassCompiler {
                 case ScriptProgram.Statement.WhileStatement ws -> {
                     if (!isSupported(ws.body(), loopDepth + 1)) return false;
                 }
-                default -> { return false; } // nested FunctionDef, Import, StaticDecl (top-level only)
+                // An import's runtime effect only ever touches the builder (see
+                // ScriptProgram.applyImport), so it is representable wherever a builder is in scope.
+                case ScriptProgram.Statement.Import ignored -> { }
+                default -> { return false; } // nested FunctionDef, StaticDecl (needs the owning instance)
             }
         }
         return true;
@@ -427,6 +448,7 @@ final class ScriptClassCompiler {
     private static boolean emitBody(MethodVisitor mv, List<ScriptProgram.Statement> stmts, MethodCtx mc) {
         for (ScriptProgram.Statement stmt : stmts) {
             switch (stmt) {
+                case ScriptProgram.Statement.Import imp -> emitImport(mv, imp);
                 case ScriptProgram.Statement.Assign a -> emitAssign(mv, mc, a.name(), a.formula().toString());
                 case ScriptProgram.Statement.ExprStatement es -> {
                     emitEvaluate(mv, mc, es.formula().toString(), false);
@@ -690,6 +712,31 @@ final class ScriptClassCompiler {
      *  {@code __return__} inspection, {@code ScriptCall}'s cross-file dispatch — only ever
      *  observes the {@code Builder}'s copy, never this method's own JVM locals, so that write can
      *  never be the thing that gets skipped. */
+    /** {@code import "path" { a, b }} — a direct call to {@link ScriptProgram#applyImport}, the same
+     *  routine the interpreter's own Import case runs. Emitting this (rather than bailing the whole
+     *  body) is what lets a file with imports compile its top-level, per-tick path at all. */
+    private static void emitImport(MethodVisitor mv, ScriptProgram.Statement.Import imp) {
+        mv.visitVarInsn(ALOAD, 0); // the Builder
+        mv.visitLdcInsn(imp.path());
+        if (imp.alias() != null) mv.visitLdcInsn(imp.alias()); else mv.visitInsn(ACONST_NULL);
+        List<String> symbols = imp.symbols();
+        if (symbols == null || symbols.isEmpty()) {
+            mv.visitMethodInsn(INVOKESTATIC, LIST, "of", "()L" + LIST + ";", true);
+        } else {
+            mv.visitTypeInsn(NEW, "java/util/ArrayList");
+            mv.visitInsn(DUP);
+            mv.visitMethodInsn(INVOKESPECIAL, "java/util/ArrayList", "<init>", "()V", false);
+            for (String sym : symbols) {
+                mv.visitInsn(DUP);
+                mv.visitLdcInsn(sym);
+                mv.visitMethodInsn(INVOKEINTERFACE, LIST, "add", "(Ljava/lang/Object;)Z", true);
+                mv.visitInsn(POP);
+            }
+        }
+        mv.visitMethodInsn(INVOKESTATIC, PROGRAM, "applyImport",
+                "(L" + BUILDER + ";Ljava/lang/String;Ljava/lang/String;L" + LIST + ";)V", false);
+    }
+
     private static void emitAssign(MethodVisitor mv, MethodCtx mc, String name, String formula) {
         mc.cachedVars.remove(name); // whatever was cached for this name is stale the instant it's reassigned
 

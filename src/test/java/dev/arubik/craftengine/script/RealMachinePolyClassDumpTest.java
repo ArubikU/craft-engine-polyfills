@@ -121,7 +121,8 @@ class RealMachinePolyClassDumpTest {
         }
         Files.createDirectories(outRoot);
 
-        int compiled = 0, declined = 0, failed = 0, defs = 0;
+        int compiled = 0, declined = 0, failed = 0, defs = 0, mainCompiled = 0;
+        java.util.Map<String, Integer> mainSkips = new java.util.TreeMap<>();
         List<String> declinedNames = new ArrayList<>();
         for (Path p : scripts) {
             String rel = SCRIPTS.relativize(p).toString().replace('\\', '/');
@@ -140,6 +141,8 @@ class RealMachinePolyClassDumpTest {
                 Files.write(out, c.classBytes());
                 compiled++;
                 defs += c.methodsByDefName().size();
+                if (c.mainMethod() != null) mainCompiled++;
+                else mainSkips.merge(String.valueOf(c.mainSkipReason()), 1, Integer::sum);
             } catch (Throwable t) {
                 failed++;
                 System.out.println("[dump] " + origin + " FAILED: " + t);
@@ -147,6 +150,8 @@ class RealMachinePolyClassDumpTest {
         }
         System.out.println("[dump] scripts: " + scripts.size() + " total, " + compiled + " compiled ("
                 + defs + " defs), " + declined + " declined by the JIT, " + failed + " errored");
+        System.out.println("[dump] top-level (per-tick) bodies compiled: " + mainCompiled + "/" + compiled);
+        mainSkips.forEach((r, n) -> System.out.println("[dump]   main skipped x" + n + ": " + r));
         declinedNames.sort(Comparator.naturalOrder());
         for (String n : declinedNames) System.out.println("[dump]   declined: " + n);
     }
