@@ -469,6 +469,72 @@ final class ScriptClassCompiler {
         return true;
     }
 
+    /**
+     * Every variable name a statement list could write, searched recursively.
+     *
+     * <p>This is what lets a branch or loop invalidate the variable cache PRECISELY instead of
+     * wiping it. Entries are only ever added by {@link #emitAssign}, so an entry created inside a
+     * construct always belongs to a name this returns — removing exactly these names at the merge
+     * point removes exactly the entries the construct could have added or made stale, and leaves
+     * untouched the ones that provably still hold.
+     *
+     * <p>Soundness rests on this being the complete set of writers reachable from inside: an
+     * {@code Assign}, and a {@code for}'s own loop variables. Everything else that could write is
+     * excluded elsewhere — an {@code import} binds names not visible here, so
+     * {@link #bindsUnknownNames} forces a full clear instead; a {@code return} in a main body
+     * writes {@code __return__} and then terminates; and a call cannot write back, because a local
+     * {@code def} call {@code copyFrom}s a FRESH builder and a builtin only ever receives the
+     * read-only {@code ScriptContext}.
+     */
+    private static void collectAssignedNames(List<ScriptProgram.Statement> stmts, java.util.Set<String> out) {
+        for (ScriptProgram.Statement s : stmts) {
+            switch (s) {
+                case ScriptProgram.Statement.Assign a -> out.add(a.name());
+                case ScriptProgram.Statement.IfChain chain -> {
+                    for (ScriptProgram.Clause clause : chain.clauses()) collectAssignedNames(clause.body(), out);
+                }
+                case ScriptProgram.Statement.ForStatement fs -> {
+                    out.addAll(fs.vars());
+                    collectAssignedNames(fs.body(), out);
+                }
+                case ScriptProgram.Statement.WhileStatement ws -> collectAssignedNames(ws.body(), out);
+                default -> { }
+            }
+        }
+    }
+
+    /** Whether this statement list contains an {@code import} at any depth. An import binds names
+     *  that aren't syntactically visible, so {@link #collectAssignedNames} can't see them and the
+     *  cache has to be dropped wholesale. */
+    private static boolean bindsUnknownNames(List<ScriptProgram.Statement> stmts) {
+        for (ScriptProgram.Statement s : stmts) {
+            switch (s) {
+                case ScriptProgram.Statement.Import ignored -> { return true; }
+                case ScriptProgram.Statement.IfChain chain -> {
+                    for (ScriptProgram.Clause clause : chain.clauses()) {
+                        if (bindsUnknownNames(clause.body())) return true;
+                    }
+                }
+                case ScriptProgram.Statement.ForStatement fs -> { if (bindsUnknownNames(fs.body())) return true; }
+                case ScriptProgram.Statement.WhileStatement ws -> { if (bindsUnknownNames(ws.body())) return true; }
+                default -> { }
+            }
+        }
+        return false;
+    }
+
+    /** The cache state that survives a construct: everything cached before it, minus every name the
+     *  construct could write. A full clear when an import makes the written set unknowable. */
+    private static Map<String, ScriptBytecodeCompiler.CachedVarRef> survivingCache(
+            Map<String, ScriptBytecodeCompiler.CachedVarRef> before, List<ScriptProgram.Statement> body) {
+        if (bindsUnknownNames(body)) return new java.util.HashMap<>();
+        java.util.Set<String> assigned = new java.util.HashSet<>();
+        collectAssignedNames(body, assigned);
+        Map<String, ScriptBytecodeCompiler.CachedVarRef> out = new java.util.HashMap<>(before);
+        out.keySet().removeAll(assigned);
+        return out;
+    }
+
     /** Emits the single Builder.peek() this method will reuse — see MethodCtx#sharedCtxSlot.
      *  Must run in the PROLOGUE, before any branch, so every use is dominated by the store. */
     private static void emitCtxPrologue(MethodVisitor mv, MethodCtx mc) {
@@ -527,25 +593,36 @@ final class ScriptClassCompiler {
                 }
                 case ScriptProgram.Statement.IfChain chain -> {
                     Label endLabel = new Label();
+                    // Everything cached before the chain. Conditions still see it (nothing has
+                    // branched yet), and each clause body RESTORES it rather than starting empty —
+                    // restoring is what keeps sibling clauses from seeing each other's entries,
+                    // which is the only thing the old blanket clear was actually protecting.
+                    Map<String, ScriptBytecodeCompiler.CachedVarRef> before =
+                            new java.util.HashMap<>(mc.cachedVars);
+                    java.util.List<ScriptProgram.Statement> allBodies = new ArrayList<>();
+                    for (ScriptProgram.Clause clause : chain.clauses()) allBodies.addAll(clause.body());
+
                     for (ScriptProgram.Clause clause : chain.clauses()) {
                         Label nextLabel = new Label();
                         if (!clause.isElse()) {
-                            // The condition itself still sees whatever was cached BEFORE this
-                            // if-chain (nothing has branched yet) — only entering a clause BODY
-                            // needs the clear below, since sibling clauses could assign the same
-                            // name to something a single static slot can't merge.
+                            mc.cachedVars.clear();
+                            mc.cachedVars.putAll(before);
                             emitEvaluate(mv, mc, clause.condition().toString(), true);
                             mv.visitJumpInsn(IFEQ, nextLabel);
                         }
                         mc.cachedVars.clear();
+                        mc.cachedVars.putAll(before);
                         if (!emitBody(mv, clause.body(), mc)) return false;
                         mv.visitJumpInsn(GOTO, endLabel);
                         mv.visitLabel(nextLabel);
                         if (clause.isElse()) break; // an else arm is always last; nothing follows it
                     }
-                    // Merge point — whichever clause ran (or none), a single static slot can't
-                    // represent "the value from whichever branch actually executed".
+                    // Merge point: keep only what NO clause could have written. A name any clause
+                    // assigns is dropped — its pre-chain slot still holds the pre-chain value, and
+                    // a clause that ran has since allocated a different slot for it.
+                    Map<String, ScriptBytecodeCompiler.CachedVarRef> surviving = survivingCache(before, allBodies);
                     mc.cachedVars.clear();
+                    mc.cachedVars.putAll(surviving);
                     mv.visitLabel(endLabel);
                 }
                 case ScriptProgram.Statement.ForStatement fs -> {
@@ -603,10 +680,15 @@ final class ScriptClassCompiler {
         mv.visitTypeInsn(CHECKCAST, "[L" + VALUE + ";");
         mv.visitVarInsn(ASTORE, rowSlot);
 
-        // The loop runs a dynamic number of times (0 or more) — nothing cached from BEFORE this
-        // loop, or from a PREVIOUS iteration's own body, can be assumed valid for the guard/body
-        // compiled below (a single static slot can't represent "whichever iteration last ran").
+        // The loop runs a dynamic number of times, so the body's own writes can't be assumed — but
+        // a name the body NEVER writes still holds whatever it held before the loop, on every
+        // iteration and after it. Keep exactly those. (A cache entry can only be created by an
+        // emitAssign, so anything the body adds is in the removed set by construction, which is
+        // what makes this safe across the back edge.)
+        Map<String, ScriptBytecodeCompiler.CachedVarRef> loopSurviving = survivingCache(mc.cachedVars, fs.body());
+        loopSurviving.keySet().removeAll(vars); // the loop variables are rebound every iteration
         mc.cachedVars.clear();
+        mc.cachedVars.putAll(loopSurviving);
 
         for (int i = 0; i < vars.size(); i++) {
             mv.visitVarInsn(ALOAD, 0);
@@ -641,7 +723,10 @@ final class ScriptClassCompiler {
         mv.visitJumpInsn(GOTO, continueLabel);
         mv.visitLabel(breakLabel);
         mv.visitLabel(skipAll);
-        mc.cachedVars.clear(); // exiting — statements after the loop can't assume anything from inside it
+        // Exiting: the same set that was valid at the head is valid here — the body may have added
+        // entries during emission, and those belong to names it writes, so they go.
+        mc.cachedVars.clear();
+        mc.cachedVars.putAll(loopSurviving);
         return true;
     }
 
@@ -654,10 +739,10 @@ final class ScriptClassCompiler {
         emitIntConst(mv, 0);
         mv.visitVarInsn(ISTORE, iterSlot);
 
-        // Same reasoning as emitFor's own clear — a dynamic iteration count means nothing cached
-        // from before this loop (or a previous pass through it) can be trusted for the condition
-        // or body compiled below.
+        // Same reasoning as emitFor: keep only what the body provably cannot write.
+        Map<String, ScriptBytecodeCompiler.CachedVarRef> loopSurviving = survivingCache(mc.cachedVars, ws.body());
         mc.cachedVars.clear();
+        mc.cachedVars.putAll(loopSurviving);
 
         Label continueLabel = new Label();
         Label breakLabel = new Label();
@@ -677,7 +762,10 @@ final class ScriptClassCompiler {
 
         mv.visitJumpInsn(GOTO, continueLabel);
         mv.visitLabel(breakLabel);
-        mc.cachedVars.clear(); // exiting — statements after the loop can't assume anything from inside it
+        // Exiting: the same set that was valid at the head is valid here — the body may have added
+        // entries during emission, and those belong to names it writes, so they go.
+        mc.cachedVars.clear();
+        mc.cachedVars.putAll(loopSurviving);
         return true;
     }
 
