@@ -30,8 +30,7 @@ import static org.objectweb.asm.Opcodes.*;
  *
  * <p>Deliberately fail-soft: {@link #tryCompile} runs its own small recursive-descent parser
  * SEPARATELY from {@link ScriptFormula}'s real one, and bails (returns {@code null}) the instant
- * it sees a construct it doesn't model at all — {@code $var}, {@code ??},
- * bitwise/shift operators, {@code **}/{@code //}/{@code ^}, the
+ * it sees a construct it doesn't model at all — {@code $var}, {@code ??}, the
  * {@code "file.pf:func"} cross-file call form — OR whenever it recognizes a construct but can't
  * PROVE its narrow (numeric/boolean) codegen would match the interpreter's actual runtime
  * dispatch for that specific operand shape (see the {@code ==}/{@code !=}/{@code +} bail rules
@@ -43,13 +42,14 @@ import static org.objectweb.asm.Opcodes.*;
  *
  * <p>Grammar precedence deliberately mirrors {@code ScriptFormula.Parser} EXACTLY for every level
  * both recognize (confirmed by reading that Parser's actual method chain, not assumed):
- * {@code ternary > || > && > ! > compare > + - > * / % > unary- > primary}. The real chain also
- * has a bitwise/shift layer (between {@code !} and compare) and a null-coalesce layer (between
- * compare and {@code + -}) and a {@code **}/{@code //}/{@code ^} pow layer (inside {@code * / %})
- * that this compiler omits entirely — omitting a layer is always SAFE here (not a silent
- * misparse): any operator from an omitted layer is simply left unconsumed, which either aborts
- * that operand's own bail chain or trips {@link #tryCompile}'s final "did we consume the whole
- * string" check, never gets miscompiled as something else.
+ * {@code ternary > || > && > ! > bitwise/shift > compare > + - > * / % (incl. ** //) > ^ (pow) >
+ * unary- > primary}. The real chain also has a null-coalesce layer (between compare and
+ * {@code + -}) that this compiler still omits entirely — {@code ??} has zero real usage across
+ * the shipped {@code .pf} scripts as of this writing, so it isn't worth the grammar weight yet.
+ * Omitting a layer is always SAFE here (not a silent misparse): any operator from an omitted
+ * layer is simply left unconsumed, which either aborts that operand's own bail chain or trips
+ * {@link #tryCompile}'s final "did we consume the whole string" check, never gets miscompiled as
+ * something else.
  *
  * <h3>Typed micro-AST</h3>
  * Every {@link Expr} carries one of three {@link Type}s:
@@ -459,11 +459,10 @@ final class ScriptBytecodeCompiler {
             return left;
         }
 
-        /** {@code '!' parseNot | parseCompare} — matches ScriptFormula.Parser#parseNot exactly
-         *  (right-recursive so {@code !!x} works), sitting ABOVE compare, not near primary: real
-         *  grammar precedence means {@code !a == b} parses as {@code !(a == b)}, not {@code (!a)
-         *  == b}. The omitted bitwise/shift layer sits between this and compare in the real
-         *  grammar; skipping it is safe (see class doc). */
+        /** {@code '!' parseNot | parseBitwise} — matches ScriptFormula.Parser#parseNot exactly
+         *  (right-recursive so {@code !!x} works), sitting ABOVE bitwise/compare, not near primary:
+         *  real grammar precedence means {@code !a == b} parses as {@code !(a == b)}, not
+         *  {@code (!a) == b}. */
         Expr parseNot() {
             if (match("!")) {
                 Expr inner = parseNot();
@@ -477,7 +476,60 @@ final class ScriptBytecodeCompiler {
                     }
                 };
             }
-            return parseCompare();
+            return parseBitwise();
+        }
+
+        /** {@code <<}/{@code >>}/{@code &}/{@code |} — matches ScriptFormula.Parser#parseBitwise
+         *  exactly: left-associative chain, operand at each step is {@link #parseCompare}, so
+         *  (perhaps counterintuitively) a bitwise op binds LOOSER than a comparison right below it
+         *  in the chain — {@code a < b & c} parses as {@code (a < b) & c}, matching the real
+         *  parser's own precedence rather than the "usual" C-family ordering. Every operand is
+         *  coerced to a real JVM {@code long} (matching the interpreter's own {@code (long)
+         *  asNum()} truncation) before the bitwise op, then back to {@code double} for the result —
+         *  shift COUNTS additionally narrow {@code long -> int} first, since the JVM's own
+         *  {@code lshl}/{@code lshr} opcodes require an int shift distance on the stack (this is
+         *  exactly what {@code javac} itself emits for a Java {@code long << long} expression). */
+        Expr parseBitwise() {
+            Expr left = parseCompare();
+            if (left == null) return null;
+            while (true) {
+                skipSpaces();
+                String op;
+                if (matchAt("<<") && (pos + 2 >= src.length() || src.charAt(pos + 2) != '<')) {
+                    op = "<<"; pos += 2;
+                } else if (matchAt(">>") && (pos + 2 >= src.length() || src.charAt(pos + 2) != '>')) {
+                    op = ">>"; pos += 2;
+                } else if (matchAt("&") && (pos + 1 >= src.length() || src.charAt(pos + 1) != '&')) {
+                    op = "&"; pos += 1;
+                } else if (matchAt("|") && (pos + 1 >= src.length() || src.charAt(pos + 1) != '|')) {
+                    op = "|"; pos += 1;
+                } else break;
+                Expr right = parseCompare();
+                if (right == null) return null;
+                left = bitOp(left, right, op);
+            }
+            return left;
+        }
+
+        private static Expr bitOp(Expr leftD, Expr rightD, String op) {
+            Expr l = toNum(leftD), r = toNum(rightD);
+            boolean isShift = op.equals("<<") || op.equals(">>");
+            return new BaseExpr(Type.NUM) {
+                @Override public void emit(MethodVisitor mv, Ctx c) {
+                    l.emit(mv, c);
+                    mv.visitInsn(D2L);
+                    r.emit(mv, c);
+                    mv.visitInsn(D2L);
+                    if (isShift) mv.visitInsn(L2I);
+                    mv.visitInsn(switch (op) {
+                        case "<<" -> LSHL;
+                        case ">>" -> LSHR;
+                        case "&"  -> LAND;
+                        default   -> LOR; // "|"
+                    });
+                    mv.visitInsn(L2D);
+                }
+            };
         }
 
         /** Exactly ONE optional relational operator — chained compares aren't part of the real
@@ -560,16 +612,42 @@ final class ScriptBytecodeCompiler {
 
         /** {@code *} is a plain DMUL. {@code /} and {@code %} replicate the interpreter's
          *  divide-by-zero guard EXACTLY (returns {@code 0.0} instead of the raw IEEE
-         *  Infinity/NaN a bare DDIV/DREM would produce) — see {@link #divOrMod}. */
+         *  Infinity/NaN a bare DDIV/DREM would produce) — see {@link #divOrMod}. {@code **} (power)
+         *  and {@code //} (floor division, same zero-guard as {@code /} plus a floor) sit at this
+         *  SAME precedence tier in the real grammar (both checked inside {@code
+         *  ScriptFormula.Parser#parseMul}'s own loop, operand from {@code parsePow} same as every
+         *  other operator here) — {@code **} is NOT the same layer as the separate {@code ^} power
+         *  operator {@link #parsePow} handles; the real parser has both spellings, at two different
+         *  precedence tiers, and this mirrors that exactly rather than unifying them. */
         Expr parseMul() {
-            Expr left = parseUnary();
+            Expr left = parsePow();
             if (left == null) return null;
             while (true) {
                 skipSpaces();
+                if (matchAt("**")) {
+                    pos += 2;
+                    Expr right = parsePow();
+                    if (right == null) return null;
+                    Expr l = toNum(left), r = toNum(right);
+                    left = new BaseExpr(Type.NUM) {
+                        @Override public void emit(MethodVisitor mv, Ctx c) {
+                            l.emit(mv, c); r.emit(mv, c);
+                            mv.visitMethodInsn(INVOKESTATIC, MATH, "pow", "(DD)D", false);
+                        }
+                    };
+                    continue;
+                }
+                if (matchAt("//")) {
+                    pos += 2;
+                    Expr right = parsePow();
+                    if (right == null) return null;
+                    left = floorDiv(toNum(left), toNum(right));
+                    continue;
+                }
                 char c = pos < src.length() ? src.charAt(pos) : 0;
                 if (c != '*' && c != '/' && c != '%') break;
                 pos++;
-                Expr right = parseUnary();
+                Expr right = parsePow();
                 if (right == null) return null;
                 Expr l = toNum(left), r = toNum(right);
                 if (c == '*') {
@@ -608,6 +686,55 @@ final class ScriptBytecodeCompiler {
                     mv.visitLabel(endL);
                 }
             };
+        }
+
+        /** {@code //} — same zero-divisor guard as {@link #divOrMod}, plus {@code Math.floor} on
+         *  the quotient, matching {@code ScriptFormula.Parser#parseMul}'s own {@code "//"} case
+         *  exactly ({@code d == 0.0 ? 0.0 : Math.floor(left / d)}). */
+        private static Expr floorDiv(Expr left, Expr right) {
+            return new BaseExpr(Type.NUM) {
+                @Override public void emit(MethodVisitor mv, Ctx c) {
+                    int rSlot = c.allocD();
+                    right.emit(mv, c);
+                    mv.visitInsn(DUP2);
+                    mv.visitVarInsn(DSTORE, rSlot);
+                    mv.visitInsn(DCONST_0);
+                    mv.visitInsn(DCMPL);
+                    Label nonZeroL = new Label(), endL = new Label();
+                    mv.visitJumpInsn(IFNE, nonZeroL);
+                    mv.visitInsn(DCONST_0);
+                    mv.visitJumpInsn(GOTO, endL);
+                    mv.visitLabel(nonZeroL);
+                    left.emit(mv, c);
+                    mv.visitVarInsn(DLOAD, rSlot);
+                    mv.visitInsn(DDIV);
+                    mv.visitMethodInsn(INVOKESTATIC, MATH, "floor", "(D)D", false);
+                    mv.visitLabel(endL);
+                }
+            };
+        }
+
+        /** {@code base ('^' parsePow)?} — right-associative power operator, matching {@code
+         *  ScriptFormula.Parser#parsePow} exactly. A DIFFERENT spelling of exponentiation from
+         *  {@code **} (see {@link #parseMul}'s own doc for why both exist at different precedence
+         *  tiers in the real grammar rather than being unified here). */
+        Expr parsePow() {
+            Expr base = parseUnary();
+            if (base == null) return null;
+            skipSpaces();
+            if (matchAt("^")) {
+                pos++;
+                Expr exp = parsePow();
+                if (exp == null) return null;
+                Expr b = toNum(base), e = toNum(exp);
+                return new BaseExpr(Type.NUM) {
+                    @Override public void emit(MethodVisitor mv, Ctx c) {
+                        b.emit(mv, c); e.emit(mv, c);
+                        mv.visitMethodInsn(INVOKESTATIC, MATH, "pow", "(DD)D", false);
+                    }
+                };
+            }
+            return base;
         }
 
         Expr parseUnary() {
