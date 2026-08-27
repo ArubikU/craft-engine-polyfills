@@ -451,8 +451,7 @@ final class ScriptClassCompiler {
                 case ScriptProgram.Statement.Import imp -> emitImport(mv, imp);
                 case ScriptProgram.Statement.Assign a -> emitAssign(mv, mc, a.name(), a.formula().toString());
                 case ScriptProgram.Statement.ExprStatement es -> {
-                    emitEvaluate(mv, mc, es.formula().toString(), false);
-                    mv.visitInsn(POP);
+                    emitEvaluateDiscarding(mv, mc, es.formula().toString());
                 }
                 case ScriptProgram.Statement.ReturnStatement rs -> {
                     // See MethodCtx#isMain's own doc: a def's `return` propagates a real value to
@@ -668,6 +667,34 @@ final class ScriptClassCompiler {
      *  (from {@code Builder.peek()}) is taken right before EVERY expression, inline path or not —
      *  never cached across statements, since an earlier statement's {@code Assign} may have just
      *  mutated the builder and the next expression must see that. */
+    /**
+     * Emits {@code expr} for its SIDE EFFECT only, leaving nothing on the stack.
+     *
+     * <p>A bare expression statement — {@code Machine.set_rpm_output(rpm)} — discards its value, so
+     * boxing that value first is pure waste. The old path went through {@link #emitEvaluate}, which
+     * coerces to ANY, and then {@code POP}'d: a {@code ScriptValue.of(boolean)} allocation per
+     * statement, per tick, immediately thrown away. Now the raw expression is emitted and popped at
+     * its own width, so a NUM/BOOL statement never allocates at all.
+     */
+    private static void emitEvaluateDiscarding(MethodVisitor mv, MethodCtx mc, String expr) {
+        ScriptBytecodeCompiler.Expr parsed = ScriptBytecodeCompiler.tryParse(expr, mc.resolver, mc.varHint);
+        if (parsed == null) {
+            // No parse: the ScriptFormula.compile path always yields a ScriptValue reference.
+            emitEvaluate(mv, mc, expr, false);
+            mv.visitInsn(POP);
+            return;
+        }
+        int ctxSlot = mc.alloc();
+        mv.visitVarInsn(ALOAD, 0);
+        mv.visitMethodInsn(INVOKEVIRTUAL, BUILDER, "peek", "()L" + CTX + ";", false);
+        mv.visitVarInsn(ASTORE, ctxSlot);
+        ScriptBytecodeCompiler.Ctx ec = new ScriptBytecodeCompiler.Ctx(ctxSlot, mc.nextSlot);
+        parsed.emit(mv, ec); // NOT toAny — that box is exactly what we're avoiding
+        mc.nextSlot = ec.next;
+        // A double occupies two stack words; a boolean (int) and a ScriptValue reference occupy one.
+        mv.visitInsn(parsed.type() == ScriptBytecodeCompiler.Type.NUM ? POP2 : POP);
+    }
+
     private static void emitEvaluate(MethodVisitor mv, MethodCtx mc, String expr, boolean asBool) {
         ScriptBytecodeCompiler.Expr parsed = ScriptBytecodeCompiler.tryParse(expr, mc.resolver, mc.varHint);
         if (parsed != null) {

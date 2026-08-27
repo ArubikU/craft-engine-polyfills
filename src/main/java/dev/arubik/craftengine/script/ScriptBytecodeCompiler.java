@@ -655,8 +655,32 @@ final class ScriptBytecodeCompiler {
 
             boolean equality = op.equals("==") || op.equals("!=");
             if (equality && (left.type() == Type.ANY || right.type() == Type.ANY)) {
-                Expr l = toAny(left), r = toAny(right);
                 boolean negate = op.equals("!=");
+
+                // Comparing against a string LITERAL — `id == "minecraft:warped_stem"`, which runs
+                // per block per tick — does not need a ScriptValue allocated for the constant just
+                // to hand it to valuesEqual. valuesEqualStr is exactly equivalent for this case (a
+                // literal is always a Str, never Null, so only valuesEqual's Str branch can apply)
+                // and takes the raw Java String, so the constant lives in the constant pool.
+                StrLiteral lit = left instanceof StrLiteral sl ? sl
+                        : right instanceof StrLiteral sr ? sr : null;
+                if (lit != null) {
+                    Expr other = toAny(left instanceof StrLiteral ? right : left);
+                    return new BaseExpr(Type.BOOL) {
+                        @Override public void emit(MethodVisitor mv, Ctx c) {
+                            other.emit(mv, c);
+                            mv.visitLdcInsn(lit.value);
+                            mv.visitMethodInsn(INVOKESTATIC, FORMULA, "valuesEqualStr",
+                                    "(L" + VALUE + ";Ljava/lang/String;)Z", false);
+                            if (negate) {
+                                mv.visitInsn(ICONST_1);
+                                mv.visitInsn(IXOR);
+                            }
+                        }
+                    };
+                }
+
+                Expr l = toAny(left), r = toAny(right);
                 return new BaseExpr(Type.BOOL) {
                     @Override public void emit(MethodVisitor mv, Ctx c) {
                         l.emit(mv, c);

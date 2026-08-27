@@ -734,6 +734,20 @@ public final class ScriptFormula {
         return lv.asNum() == rv.asNum();
     }
 
+    /**
+     * {@link #valuesEqual} specialised for a right-hand side that is a STRING LITERAL, so the
+     * compiler doesn't have to allocate a {@code ScriptValue} wrapper just to compare against a
+     * constant ({@code id == "minecraft:warped_stem"} runs per block, per tick).
+     *
+     * <p>Exactly equivalent, by construction: a string literal is always a {@code Str}, never
+     * {@code Null}, so {@code valuesEqual}'s null branch can only return false, and its
+     * either-side-is-Str branch is the one that always applies.
+     */
+    public static boolean valuesEqualStr(ScriptValue lv, String literal) {
+        if (lv instanceof ScriptValue.Null) return false;
+        return lv.asStr().equals(literal);
+    }
+
     // ---- Member access helpers ----
 
     public static ScriptValue memberGet(ScriptValue obj, String prop, ScriptContext ctx) {
