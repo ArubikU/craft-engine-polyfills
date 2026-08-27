@@ -797,7 +797,7 @@ public final class ScriptFormula {
         };
     }
 
-    static ScriptValue subscriptGet(ScriptValue obj, ScriptValue idx) {
+    public static ScriptValue subscriptGet(ScriptValue obj, ScriptValue idx) {
         int n = (int) idx.asNum();
         return switch (obj) {
             case ScriptValue.Array a -> (n >= 0 && n < a.elements().size())

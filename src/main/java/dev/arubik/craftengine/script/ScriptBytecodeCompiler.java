@@ -31,7 +31,7 @@ import static org.objectweb.asm.Opcodes.*;
  * <p>Deliberately fail-soft: {@link #tryCompile} runs its own small recursive-descent parser
  * SEPARATELY from {@link ScriptFormula}'s real one, and bails (returns {@code null}) the instant
  * it sees a construct it doesn't model at all — {@code $var}, {@code ??},
- * ranges/array literals, bitwise/shift operators, {@code **}/{@code //}/{@code ^}, the
+ * bitwise/shift operators, {@code **}/{@code //}/{@code ^}, the
  * {@code "file.pf:func"} cross-file call form — OR whenever it recognizes a construct but can't
  * PROVE its narrow (numeric/boolean) codegen would match the interpreter's actual runtime
  * dispatch for that specific operand shape (see the {@code ==}/{@code !=}/{@code +} bail rules
@@ -129,6 +129,7 @@ final class ScriptBytecodeCompiler {
     private static final String MATH = "java/lang/Math";
     private static final String LIST = "java/util/List";
     private static final String ARRAYLIST = "java/util/ArrayList";
+    private static final String ARRAY_VALUE = "dev/arubik/craftengine/script/ScriptValue$Array";
 
     /** name -> java.lang.Math method of the same (double)->double shape. Only pure, total (no
      *  exceptions) single-argument math functions — everything else falls through to {@code
@@ -223,7 +224,7 @@ final class ScriptBytecodeCompiler {
      *  round-trip at all for anything this grammar covers. Returns {@code null} (caller falls back
      *  to the {@code ScriptFormula.compile(expr).evaluate(ctx)} pattern for just that one
      *  expression) for anything outside the grammar — {@code $var}, {@code ??},
-     *  array/range literals, the {@code "file.pf:func"} form. The caller supplies its OWN {@link
+     *  the {@code "file.pf:func"} form. The caller supplies its OWN {@link
      *  Ctx} (its own ctx-holding slot and scratch-slot allocator) rather than this class's
      *  fixed-slot-1 standalone convention — see {@link Ctx}'s own doc. */
     static Expr tryParse(String expr, LocalCallResolver resolver) {
@@ -623,10 +624,56 @@ final class ScriptBytecodeCompiler {
             return parsePrimary();
         }
 
+        /** {@code primary} followed by zero or more {@code [index]} subscript suffixes — mirrors
+         *  {@code ScriptFormula.Parser#parseSuffixChain}'s own {@code '['} case (its {@code '.'}
+         *  case is NOT replicated generally here: dot-access stays scoped to a bare-identifier
+         *  primary only, see that branch's own doc — chaining dot-access off an ARBITRARY
+         *  expression is a bigger grammar generalization, out of scope for now; subscripting is
+         *  narrower and common enough on its own — {@code v[0]}, {@code behind_vec[1]} — to be
+         *  worth supporting without it). */
         Expr parsePrimary() {
+            Expr base = parsePrimaryCore();
+            if (base == null) return null;
+            while (true) {
+                skipSpaces();
+                if (pos >= src.length() || src.charAt(pos) != '[') break;
+                pos++;
+                Expr idx = parseTernary();
+                if (idx == null) return null;
+                skipSpaces();
+                if (pos >= src.length() || src.charAt(pos) != ']') return null;
+                pos++;
+                base = subscriptExpr(base, idx);
+            }
+            return base;
+        }
+
+        Expr parsePrimaryCore() {
             skipSpaces();
             if (pos >= src.length()) return null;
             char c = src.charAt(pos);
+
+            // Array literal: [elem, elem, ...] — mirrors ScriptFormula.Parser#parsePrimary's own
+            // '[' branch exactly (each element is a full expression, comma-separated).
+            if (c == '[') {
+                pos++;
+                List<Expr> elems = new ArrayList<>();
+                skipSpaces();
+                if (pos < src.length() && src.charAt(pos) == ']') {
+                    pos++;
+                } else {
+                    while (true) {
+                        Expr e = parseTernary();
+                        if (e == null) return null;
+                        elems.add(toAny(e));
+                        skipSpaces();
+                        if (pos < src.length() && src.charAt(pos) == ',') { pos++; continue; }
+                        if (pos < src.length() && src.charAt(pos) == ']') { pos++; break; }
+                        return null;
+                    }
+                }
+                return arrayLit(elems);
+            }
 
             if (c == '(') {
                 pos++;
@@ -637,13 +684,11 @@ final class ScriptBytecodeCompiler {
 
             // String literal — mirrors ScriptFormula.Parser's own string-literal branch exactly:
             // both ' and " as quote chars, \n \t \r \\ as recognized escapes, any OTHER escaped
-            // char passes through as itself (so "\x" -> "x", not a bail). Deliberately does NOT
-            // support a suffix chain after the literal (the real parser's parseSuffixChain, e.g.
-            // "abc"[0] or "abc".upper() chained straight off a literal) — this compiler's dot-
+            // char passes through as itself (so "\x" -> "x", not a bail). A [index] subscript
+            // suffix after it ("abc"[0]) IS supported — see parsePrimary's own wrapper — but a
+            // .method(...)/.property chain straight off a literal is NOT: this compiler's dot-
             // access grammar only ever recognizes Name.member on a bare IDENTIFIER primary (see
-            // the identifier branch below), so a suffixed string literal simply isn't in this
-            // compiler's grammar and correctly bails to the interpreter, same as before this
-            // literal was supported at all.
+            // the identifier branch below), so "abc".upper() still bails to the interpreter.
             if (c == '"' || c == '\'') {
                 char quote = c;
                 pos++;
@@ -787,21 +832,47 @@ final class ScriptBytecodeCompiler {
                 };
             }
 
-            return null; // '$var', '[', or anything else unsupported
+            return null; // '$var' or anything else unsupported
         }
 
         /** Parses a parenthesized, comma-separated arg list whose opening '(' has already been
-         *  consumed. Returns null (bail) on any malformed arg — matches ScriptFormula.Parser's
-         *  own parseArgs shape, minus its ".." range-literal sugar (unsupported here; a range arg
-         *  just bails the whole formula to the interpreter). */
+         *  consumed. Returns null (bail) on any malformed arg. Replicates ScriptFormula.Parser
+         *  #parseArgs' ".." range sugar EXACTLY: a bare {@code N..M} argument (both sides literal,
+         *  non-negative integers — nothing else is recognized as this sugar, matching the real
+         *  parser's own digit-only lookahead) expands to MULTIPLE literal args at PARSE time
+         *  ({@code slots(9..12)} parses as if it were written {@code slots(9,10,11,12)}), not a
+         *  single Array value — same semantics, so a formula using it compiles identically to one
+         *  that spells the numbers out by hand. */
         List<Expr> parseArgList() {
             List<Expr> args = new ArrayList<>();
             skipSpaces();
             if (pos < src.length() && src.charAt(pos) == ')') { pos++; return args; }
             while (true) {
-                Expr a = parseTernary();
-                if (a == null) return null;
-                args.add(a);
+                skipSpaces();
+                boolean handledRange = false;
+                if (pos < src.length() && Character.isDigit(src.charAt(pos))) {
+                    int saved = pos;
+                    int numStart = pos;
+                    while (pos < src.length() && Character.isDigit(src.charAt(pos))) pos++;
+                    if (pos + 1 < src.length() && src.charAt(pos) == '.' && src.charAt(pos + 1) == '.') {
+                        int from = Integer.parseInt(src.substring(numStart, pos));
+                        pos += 2;
+                        int toStart = pos;
+                        while (pos < src.length() && Character.isDigit(src.charAt(pos))) pos++;
+                        if (pos == toStart) return null; // "N.." with nothing after — malformed, bail
+                        int to = Integer.parseInt(src.substring(toStart, pos));
+                        int step = from <= to ? 1 : -1;
+                        for (int i = from; i != to + step; i += step) args.add(numLit(i));
+                        handledRange = true;
+                    } else {
+                        pos = saved;
+                    }
+                }
+                if (!handledRange) {
+                    Expr a = parseTernary();
+                    if (a == null) return null;
+                    args.add(a);
+                }
                 skipSpaces();
                 if (pos < src.length() && src.charAt(pos) == ',') { pos++; continue; }
                 if (pos < src.length() && src.charAt(pos) == ')') { pos++; break; }
@@ -832,6 +903,39 @@ final class ScriptBytecodeCompiler {
                 @Override public void emit(MethodVisitor mv, Ctx c) {
                     mv.visitLdcInsn(v);
                     mv.visitMethodInsn(INVOKESTATIC, VALUE, "of", "(Ljava/lang/String;)L" + VALUE + ";", true);
+                }
+            };
+        }
+
+        /** {@code [e1, e2, ...]} — builds a real {@code ScriptValue.Array} at runtime (each element
+         *  already coerced to ANY, same as every other arg-list builder here). Not a {@link
+         *  Literal} even when every element happens to itself be one — constructing the
+         *  {@code ArrayList}/{@code Array} is still real per-call work, unlike a bare constant. */
+        private static Expr arrayLit(List<Expr> elems) {
+            return new BaseExpr(Type.ANY) {
+                @Override public void emit(MethodVisitor mv, Ctx c) {
+                    int listSlot = c.allocRef();
+                    emitBuildArgsList(mv, c, elems, listSlot);
+                    mv.visitTypeInsn(NEW, ARRAY_VALUE);
+                    mv.visitInsn(DUP);
+                    mv.visitVarInsn(ALOAD, listSlot);
+                    mv.visitMethodInsn(INVOKESPECIAL, ARRAY_VALUE, "<init>", "(L" + LIST + ";)V", false);
+                }
+            };
+        }
+
+        /** {@code obj[idx]} — routes through the real {@link ScriptFormula#subscriptGet}, exactly
+         *  what {@code ScriptFormula.Parser#parseSuffixChain}'s own {@code '['} case does, so array/
+         *  Map/String indexing semantics (bounds handling, non-Array fallback, ...) come from that
+         *  single already-tested implementation rather than being re-derived here. */
+        private static Expr subscriptExpr(Expr obj0, Expr idx0) {
+            Expr obj = toAny(obj0), idx = toAny(idx0);
+            return new BaseExpr(Type.ANY) {
+                @Override public void emit(MethodVisitor mv, Ctx c) {
+                    obj.emit(mv, c);
+                    idx.emit(mv, c);
+                    mv.visitMethodInsn(INVOKESTATIC, FORMULA, "subscriptGet",
+                            "(L" + VALUE + ";L" + VALUE + ";)L" + VALUE + ";", false);
                 }
             };
         }
