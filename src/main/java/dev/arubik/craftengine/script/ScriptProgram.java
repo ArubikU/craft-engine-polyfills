@@ -396,7 +396,24 @@ public final class ScriptProgram {
      *  with a real {@code IllegalAccessError} at the first actual for-loop call. */
     public static List<ScriptValue[]> resolveForRows(String iterExpr, ScriptContext ctx, int varCount) {
         try {
-            ScriptValue iterable = ScriptFormula.compile(iterExpr).evaluate(ctx);
+            return rowsOf(ScriptFormula.compile(iterExpr).evaluate(ctx), varCount);
+        } catch (Throwable ignored) {
+            return null;
+        }
+    }
+
+    /**
+     * The row-splitting half of {@link #resolveForRows}, taking an ALREADY-EVALUATED iterable.
+     *
+     * <p>Split out so a compiled {@code for} can emit its iterable expression inline — through the
+     * PolyClass/inline-cache paths like any other expression — instead of handing the raw source
+     * TEXT to {@code resolveForRows} and having it re-enter {@code ScriptFormula.compile} +
+     * {@code evaluate} on every execution. For {@code for r in Machine.recipes} that is the
+     * difference between a string-keyed formula lookup per loop and a direct call on
+     * {@code PolyClassMachine}.
+     */
+    public static List<ScriptValue[]> rowsOf(ScriptValue iterable, int varCount) {
+        try {
             if (iterable instanceof ScriptValue.Obj o && "Map".equals(o.typeName())
                     && o.instance() instanceof Map<?, ?> rawMap) {
                 List<ScriptValue[]> rows = new ArrayList<>();

@@ -691,11 +691,28 @@ final class ScriptClassCompiler {
         int iterSlot = mc.alloc();
         int rowSlot = mc.alloc();
 
-        mv.visitLdcInsn(fs.iterExpr());
-        mv.visitVarInsn(ALOAD, mc.sharedCtxSlot);
-        emitIntConst(mv, vars.size());
-        mv.visitMethodInsn(INVOKESTATIC, PROGRAM, "resolveForRows",
-                "(Ljava/lang/String;L" + CTX + ";I)L" + LIST + ";", false);
+        // Compile the iterable expression INLINE where we can, so `for r in Machine.recipes` goes
+        // through the PolyClass / inline-cache paths like any other expression, instead of handing
+        // the raw source text to resolveForRows and re-entering ScriptFormula.compile + evaluate on
+        // every single execution of the loop.
+        ScriptBytecodeCompiler.Expr iter =
+                ScriptBytecodeCompiler.tryParse(fs.iterExpr(), mc.resolver, mc.varHint);
+        if (iter != null) {
+            ScriptBytecodeCompiler.Ctx ic = new ScriptBytecodeCompiler.Ctx(mc.sharedCtxSlot, mc.nextSlot);
+            ScriptBytecodeCompiler.toAny(iter).emit(mv, ic);
+            mc.nextSlot = ic.next;
+            emitIntConst(mv, vars.size());
+            mv.visitMethodInsn(INVOKESTATIC, PROGRAM, "rowsOf",
+                    "(L" + VALUE + ";I)L" + LIST + ";", false);
+        } else {
+            // The compiler can't represent this iterable expression — hand the source text to the
+            // interpreter's own resolver, exactly as before.
+            mv.visitLdcInsn(fs.iterExpr());
+            mv.visitVarInsn(ALOAD, mc.sharedCtxSlot);
+            emitIntConst(mv, vars.size());
+            mv.visitMethodInsn(INVOKESTATIC, PROGRAM, "resolveForRows",
+                    "(Ljava/lang/String;L" + CTX + ";I)L" + LIST + ";", false);
+        }
         mv.visitVarInsn(ASTORE, rowsSlot);
 
         Label skipAll = new Label();

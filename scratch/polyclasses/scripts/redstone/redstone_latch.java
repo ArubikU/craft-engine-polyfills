@@ -3,7 +3,7 @@
  * 
  * Could not load the following classes:
  *  dev.arubik.craftengine.script.PolyClass
- *  dev.arubik.craftengine.script.PolyClassMachine_v2
+ *  dev.arubik.craftengine.script.PolyClassMachine_v4
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
  *  dev.arubik.craftengine.script.ScriptContext$Builder
@@ -14,7 +14,7 @@
 package dev.arubik.craftengine.script.gen.redstone;
 
 import dev.arubik.craftengine.script.PolyClass;
-import dev.arubik.craftengine.script.PolyClassMachine_v2;
+import dev.arubik.craftengine.script.PolyClassMachine_v4;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
@@ -30,7 +30,7 @@ public final class RedstoneLatch {
             Object object3;
             ScriptContext scriptContext = builder.peek();
             ScriptValue scriptValue = scriptContext.getClassOrVar("Machine");
-            Object object4 = scriptValue != ScriptValue.NULL ? (scriptValue instanceof ScriptValue.Obj && (object3 = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object3 instanceof PolyClass) && obj.typeName().equals("Machine") ? new PolyClassMachine_v2(object3).pg$148_redstone() : PolyDispatch.bootstrapGet("memberGet", "redstone", (ScriptValue)scriptValue, (ScriptContext)scriptContext)) : ScriptValue.NULL;
+            Object object4 = scriptValue != ScriptValue.NULL ? (scriptValue instanceof ScriptValue.Obj && (object3 = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object3 instanceof PolyClass) && obj.typeName().equals("Machine") ? new PolyClassMachine_v4(object3).pg$148_redstone() : PolyDispatch.bootstrapGet("memberGet", "redstone", (ScriptValue)scriptValue, (ScriptContext)scriptContext)) : ScriptValue.NULL;
             double d = object4.asNum() > 0.0 ? 1.0 : 0.0;
             ScriptValue scriptValue2 = ScriptValue.of((double)d);
             builder.val("cur_power", scriptValue2);
@@ -41,8 +41,8 @@ public final class RedstoneLatch {
                 String string = "prev_power";
                 String string2 = "int";
                 if (scriptValue3 instanceof ScriptValue.Obj && (object5 = (obj2 = (ScriptValue.Obj)scriptValue3).instance()) != null && !(object5 instanceof PolyClass) && obj2.typeName().equals("Machine")) {
-                    PolyClassMachine_v2 polyClassMachine_v2 = new PolyClassMachine_v2(object5);
-                    object2 = polyClassMachine_v2.tm$34_get_typed(string, string2);
+                    PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object5);
+                    object2 = polyClassMachine_v4.tm$34_get_typed(string, string2);
                 } else {
                     ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                     arrayList.add(ScriptValue.of((String)string));
@@ -62,8 +62,8 @@ public final class RedstoneLatch {
                 String string3 = "int";
                 ScriptValue scriptValue6 = ScriptValue.of((double)d);
                 if (scriptValue5 instanceof ScriptValue.Obj && (object6 = (obj3 = (ScriptValue.Obj)scriptValue5).instance()) != null && !(object6 instanceof PolyClass) && obj3.typeName().equals("Machine")) {
-                    PolyClassMachine_v2 polyClassMachine_v2 = new PolyClassMachine_v2(object6);
-                    v2 = ScriptValue.of((boolean)polyClassMachine_v2.tm$82_set_typed(string, string3, scriptValue6));
+                    PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object6);
+                    v2 = ScriptValue.of((boolean)polyClassMachine_v4.tm$82_set_typed(string, string3, scriptValue6));
                 } else {
                     ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                     arrayList.add(ScriptValue.of((String)string));
@@ -82,8 +82,8 @@ public final class RedstoneLatch {
                 String string = "latched";
                 String string4 = "int";
                 if (scriptValue7 instanceof ScriptValue.Obj && (object7 = (obj4 = (ScriptValue.Obj)scriptValue7).instance()) != null && !(object7 instanceof PolyClass) && obj4.typeName().equals("Machine")) {
-                    PolyClassMachine_v2 polyClassMachine_v2 = new PolyClassMachine_v2(object7);
-                    object = polyClassMachine_v2.tm$34_get_typed(string, string4);
+                    PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object7);
+                    object = polyClassMachine_v4.tm$34_get_typed(string, string4);
                 } else {
                     ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                     arrayList.add(ScriptValue.of((String)string));
@@ -106,8 +106,8 @@ public final class RedstoneLatch {
                 String string5 = "int";
                 ScriptValue scriptValue11 = ScriptValue.of((double)d2);
                 if (scriptValue10 instanceof ScriptValue.Obj && (object8 = (obj5 = (ScriptValue.Obj)scriptValue10).instance()) != null && !(object8 instanceof PolyClass) && obj5.typeName().equals("Machine")) {
-                    PolyClassMachine_v2 polyClassMachine_v2 = new PolyClassMachine_v2(object8);
-                    v4 = ScriptValue.of((boolean)polyClassMachine_v2.tm$82_set_typed(string, string5, scriptValue11));
+                    PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object8);
+                    v4 = ScriptValue.of((boolean)polyClassMachine_v4.tm$82_set_typed(string, string5, scriptValue11));
                 } else {
                     ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                     arrayList.add(ScriptValue.of((String)string));
@@ -125,8 +125,8 @@ public final class RedstoneLatch {
                 double d3;
                 double d4 = d3 = d2 > 0.0 ? 15.0 : 0.0;
                 if (scriptValue12 instanceof ScriptValue.Obj && (object9 = (obj6 = (ScriptValue.Obj)scriptValue12).instance()) != null && !(object9 instanceof PolyClass) && obj6.typeName().equals("Machine")) {
-                    PolyClassMachine_v2 polyClassMachine_v2 = new PolyClassMachine_v2(object9);
-                    v6 = ScriptValue.of((boolean)polyClassMachine_v2.tm$108_emit_redstone(d3));
+                    PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object9);
+                    v6 = ScriptValue.of((boolean)polyClassMachine_v4.tm$108_emit_redstone(d3));
                 } else {
                     ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                     arrayList.add(ScriptValue.of((double)d3));

@@ -3,7 +3,7 @@
  * 
  * Could not load the following classes:
  *  dev.arubik.craftengine.script.PolyClass
- *  dev.arubik.craftengine.script.PolyClassMachine_v2
+ *  dev.arubik.craftengine.script.PolyClassMachine_v4
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
  *  dev.arubik.craftengine.script.ScriptContext$Builder
@@ -15,7 +15,7 @@
 package dev.arubik.craftengine.script.gen.farming;
 
 import dev.arubik.craftengine.script.PolyClass;
-import dev.arubik.craftengine.script.PolyClassMachine_v2;
+import dev.arubik.craftengine.script.PolyClassMachine_v4;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
@@ -41,7 +41,7 @@ public final class Freezer {
             if (var4_4 != ScriptValue.NULL) {
                 var5_5 = 4.0;
                 if (var4_4 instanceof ScriptValue.Obj && (var8_7 = (var7_6 = (ScriptValue.Obj)var4_4).instance()) != null && !(var8_7 instanceof PolyClass) && var7_6.typeName().equals("Machine")) {
-                    var9_8 = new PolyClassMachine_v2(var8_7);
+                    var9_8 = new PolyClassMachine_v4(var8_7);
                     v0 /* !! */  = var9_8.tm$86_blocks_in_range(var5_5);
                 } else {
                     var10_9 = new ArrayList<ScriptValue>();
@@ -53,7 +53,7 @@ public final class Freezer {
             }
             var11_10 = v0 /* !! */ ;
             var0.val("blocks", var11_10);
-            var12_11 = ScriptProgram.resolveForRows((String)"blocks", (ScriptContext)var1_1, (int)1);
+            var12_11 = ScriptProgram.rowsOf((ScriptValue)var11_10, (int)1);
             if (var12_11 != null) {
                 for (ScriptValue[] var14_13 : var12_11) {
                     var0.val("block", var14_13.length > 0 ? var14_13[0] : ScriptValue.NULL);
@@ -85,7 +85,7 @@ public final class Freezer {
             if ((var24_23 = var1_1.getClassOrVar("Machine")) != ScriptValue.NULL) {
                 var25_24 = 4.0;
                 if (var24_23 instanceof ScriptValue.Obj && (var28_26 = (var27_25 = (ScriptValue.Obj)var24_23).instance()) != null && !(var28_26 instanceof PolyClass) && var27_25.typeName().equals("Machine")) {
-                    var29_27 = new PolyClassMachine_v2(var28_26);
+                    var29_27 = new PolyClassMachine_v4(var28_26);
                     v2 /* !! */  = var29_27.tm$94_nearby_entities(var25_24);
                 } else {
                     var30_28 = new ArrayList<ScriptValue>();
@@ -97,7 +97,7 @@ public final class Freezer {
             }
             var31_29 = v2 /* !! */ ;
             var0.val("entities", var31_29);
-            var32_30 = ScriptProgram.resolveForRows((String)"entities", (ScriptContext)var1_1, (int)1);
+            var32_30 = ScriptProgram.rowsOf((ScriptValue)var31_29, (int)1);
             if (var32_30 == null) break block16;
             for (ScriptValue[] var34_32 : var32_30) {
                 var0.val("entity", var34_32.length > 0 ? var34_32[0] : ScriptValue.NULL);

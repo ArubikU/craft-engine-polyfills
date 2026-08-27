@@ -26,7 +26,9 @@ import java.util.List;
 
 public final class Crusher {
     public static void run(ScriptContext.Builder builder) {
+        ScriptValue.Obj obj;
         Object object;
+        Object object2;
         double d;
         double d2;
         ScriptValue scriptValue;
@@ -70,35 +72,36 @@ public final class Crusher {
         builder.val("flash", scriptValue8);
         ScriptValue scriptValue9 = scriptContext.getClassOrVar("Upgrades");
         if (scriptValue9 != ScriptValue.NULL) {
-            ScriptValue.Obj obj;
-            Object object2;
+            ScriptValue.Obj obj2;
+            Object object3;
             String string = "cml:upgrade_diamond";
-            if (scriptValue9 instanceof ScriptValue.Obj && (object2 = (obj = (ScriptValue.Obj)scriptValue9).instance()) != null && !(object2 instanceof PolyClass) && obj.typeName().equals("Upgrades")) {
-                PolyClassUpgrades polyClassUpgrades = new PolyClassUpgrades(object2);
-                object = ScriptValue.of((double)polyClassUpgrades.tm$2_count(string));
+            if (scriptValue9 instanceof ScriptValue.Obj && (object3 = (obj2 = (ScriptValue.Obj)scriptValue9).instance()) != null && !(object3 instanceof PolyClass) && obj2.typeName().equals("Upgrades")) {
+                PolyClassUpgrades polyClassUpgrades = new PolyClassUpgrades(object3);
+                object2 = ScriptValue.of((double)polyClassUpgrades.tm$2_count(string));
             } else {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 arrayList.add(ScriptValue.of((String)string));
-                object = PolyDispatch.bootstrapCall("memberCall", "count", (ScriptValue)scriptValue9, arrayList, (ScriptContext)scriptContext);
+                object2 = PolyDispatch.bootstrapCall("memberCall", "count", (ScriptValue)scriptValue9, arrayList, (ScriptContext)scriptContext);
             }
         } else {
-            object = ScriptValue.NULL;
+            object2 = ScriptValue.NULL;
         }
-        boolean bl5 = object.asNum() > 0.0;
+        boolean bl5 = object2.asNum() > 0.0;
         ScriptValue scriptValue10 = ScriptValue.of((boolean)bl5);
         builder.val("has_diamond", scriptValue10);
         double d7 = 0.0;
         ScriptValue scriptValue11 = ScriptValue.of((double)0.0);
         builder.val("upgrade_bonus", scriptValue11);
-        List list = ScriptProgram.resolveForRows((String)"Upgrades.inventory", (ScriptContext)scriptContext, (int)1);
+        ScriptValue scriptValue12 = scriptContext.getClassOrVar("Upgrades");
+        List list = ScriptProgram.rowsOf((ScriptValue)(scriptValue12 != ScriptValue.NULL ? (scriptValue12 instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue12).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Upgrades") ? new PolyClassUpgrades(object).pg$9_inventory() : PolyDispatch.bootstrapGet("memberGet", "inventory", (ScriptValue)scriptValue12, (ScriptContext)scriptContext)) : ScriptValue.NULL), (int)1);
         if (list != null) {
             for (ScriptValue[] scriptValueArray : list) {
                 builder.val("item", scriptValueArray.length > 0 ? scriptValueArray[0] : ScriptValue.NULL);
-                ScriptValue scriptValue12 = scriptContext.getClassOrVar("upgrade_bonus");
+                ScriptValue scriptValue13 = scriptContext.getClassOrVar("upgrade_bonus");
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 arrayList.add(scriptContext.getClassOrVar("item"));
-                ScriptValue scriptValue13 = ScriptFormula.addPolymorphic((ScriptValue)scriptValue12, (ScriptValue)ScriptFormula.callBuiltin((String)"item_count", arrayList, (ScriptContext)scriptContext));
-                builder.val("upgrade_bonus", scriptValue13);
+                ScriptValue scriptValue14 = ScriptFormula.addPolymorphic((ScriptValue)scriptValue13, (ScriptValue)ScriptFormula.callBuiltin((String)"item_count", arrayList, (ScriptContext)scriptContext));
+                builder.val("upgrade_bonus", scriptValue14);
             }
         }
     }

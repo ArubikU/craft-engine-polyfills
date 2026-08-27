@@ -3,7 +3,7 @@
  * 
  * Could not load the following classes:
  *  dev.arubik.craftengine.script.PolyClass
- *  dev.arubik.craftengine.script.PolyClassMachine_v2
+ *  dev.arubik.craftengine.script.PolyClassMachine_v4
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
  *  dev.arubik.craftengine.script.ScriptContext$Builder
@@ -15,7 +15,7 @@
 package dev.arubik.craftengine.script.gen.block_interaction;
 
 import dev.arubik.craftengine.script.PolyClass;
-import dev.arubik.craftengine.script.PolyClassMachine_v2;
+import dev.arubik.craftengine.script.PolyClassMachine_v4;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
@@ -32,7 +32,7 @@ public final class Fan {
         Object object3;
         ScriptContext scriptContext = builder.peek();
         ScriptValue scriptValue = scriptContext.getClassOrVar("Machine");
-        ScriptValue scriptValue2 = scriptValue != ScriptValue.NULL ? (scriptValue instanceof ScriptValue.Obj && (object3 = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object3 instanceof PolyClass) && obj.typeName().equals("Machine") ? new PolyClassMachine_v2(object3).pg$148_redstone() : PolyDispatch.bootstrapGet("memberGet", "redstone", (ScriptValue)scriptValue, (ScriptContext)scriptContext)) : ScriptValue.NULL;
+        ScriptValue scriptValue2 = scriptValue != ScriptValue.NULL ? (scriptValue instanceof ScriptValue.Obj && (object3 = (obj = (ScriptValue.Obj)scriptValue).instance()) != null && !(object3 instanceof PolyClass) && obj.typeName().equals("Machine") ? new PolyClassMachine_v4(object3).pg$148_redstone() : PolyDispatch.bootstrapGet("memberGet", "redstone", (ScriptValue)scriptValue, (ScriptContext)scriptContext)) : ScriptValue.NULL;
         builder.val("power", scriptValue2);
         if (scriptValue2.asNum() <= 0.0) {
             builder.val("__return__", ScriptValue.NULL);
@@ -49,8 +49,8 @@ public final class Fan {
             String string = "inversed";
             String string2 = "int";
             if (scriptValue4 instanceof ScriptValue.Obj && (object4 = (obj2 = (ScriptValue.Obj)scriptValue4).instance()) != null && !(object4 instanceof PolyClass) && obj2.typeName().equals("Machine")) {
-                PolyClassMachine_v2 polyClassMachine_v2 = new PolyClassMachine_v2(object4);
-                object2 = polyClassMachine_v2.tm$34_get_typed(string, string2);
+                PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object4);
+                object2 = polyClassMachine_v4.tm$34_get_typed(string, string2);
             } else {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 arrayList.add(ScriptValue.of((String)string));
@@ -68,8 +68,8 @@ public final class Fan {
             Object object5;
             double d3 = 5.0;
             if (scriptValue6 instanceof ScriptValue.Obj && (object5 = (obj3 = (ScriptValue.Obj)scriptValue6).instance()) != null && !(object5 instanceof PolyClass) && obj3.typeName().equals("Machine")) {
-                PolyClassMachine_v2 polyClassMachine_v2 = new PolyClassMachine_v2(object5);
-                object = polyClassMachine_v2.tm$94_nearby_entities(d3);
+                PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object5);
+                object = polyClassMachine_v4.tm$94_nearby_entities(d3);
             } else {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 arrayList.add(ScriptValue.of((double)d3));
@@ -80,7 +80,7 @@ public final class Fan {
         }
         ScriptValue scriptValue7 = object;
         builder.val("entities", scriptValue7);
-        List list = ScriptProgram.resolveForRows((String)"entities", (ScriptContext)scriptContext, (int)1);
+        List list = ScriptProgram.rowsOf((ScriptValue)scriptValue7, (int)1);
         if (list != null) {
             for (ScriptValue[] scriptValueArray : list) {
                 Object object6;
@@ -103,17 +103,17 @@ public final class Fan {
                 ScriptValue scriptValue10 = scriptContext.getClassOrVar("entity");
                 if (!(scriptValue10 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "is_alive", (ScriptValue)scriptValue10, (ScriptContext)scriptContext) : ScriptValue.NULL).asBool()) continue;
                 ScriptValue scriptValue11 = scriptContext.getClassOrVar("entity");
-                double d4 = (scriptValue11 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "x", (ScriptValue)scriptValue11, (ScriptContext)scriptContext) : ScriptValue.NULL).asNum() - ((scriptValue9 = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? (scriptValue9 instanceof ScriptValue.Obj && (object13 = (obj9 = (ScriptValue.Obj)scriptValue9).instance()) != null && !(object13 instanceof PolyClass) && obj9.typeName().equals("Machine") ? new PolyClassMachine_v2(object13).pg$166_x() : PolyDispatch.bootstrapGet("memberGet", "x", (ScriptValue)scriptValue9, (ScriptContext)scriptContext)) : ScriptValue.NULL).asNum();
+                double d4 = (scriptValue11 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "x", (ScriptValue)scriptValue11, (ScriptContext)scriptContext) : ScriptValue.NULL).asNum() - ((scriptValue9 = scriptContext.getClassOrVar("Machine")) != ScriptValue.NULL ? (scriptValue9 instanceof ScriptValue.Obj && (object13 = (obj9 = (ScriptValue.Obj)scriptValue9).instance()) != null && !(object13 instanceof PolyClass) && obj9.typeName().equals("Machine") ? new PolyClassMachine_v4(object13).pg$166_x() : PolyDispatch.bootstrapGet("memberGet", "x", (ScriptValue)scriptValue9, (ScriptContext)scriptContext)) : ScriptValue.NULL).asNum();
                 ScriptValue scriptValue12 = ScriptValue.of((double)d4);
                 builder.val("dx", scriptValue12);
                 ScriptValue scriptValue13 = scriptContext.getClassOrVar("entity");
                 ScriptValue scriptValue14 = scriptContext.getClassOrVar("Machine");
-                double d5 = (scriptValue13 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "y", (ScriptValue)scriptValue13, (ScriptContext)scriptContext) : ScriptValue.NULL).asNum() - (scriptValue14 != ScriptValue.NULL ? (scriptValue14 instanceof ScriptValue.Obj && (object12 = (obj8 = (ScriptValue.Obj)scriptValue14).instance()) != null && !(object12 instanceof PolyClass) && obj8.typeName().equals("Machine") ? new PolyClassMachine_v2(object12).pg$167_y() : PolyDispatch.bootstrapGet("memberGet", "y", (ScriptValue)scriptValue14, (ScriptContext)scriptContext)) : ScriptValue.NULL).asNum();
+                double d5 = (scriptValue13 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "y", (ScriptValue)scriptValue13, (ScriptContext)scriptContext) : ScriptValue.NULL).asNum() - (scriptValue14 != ScriptValue.NULL ? (scriptValue14 instanceof ScriptValue.Obj && (object12 = (obj8 = (ScriptValue.Obj)scriptValue14).instance()) != null && !(object12 instanceof PolyClass) && obj8.typeName().equals("Machine") ? new PolyClassMachine_v4(object12).pg$167_y() : PolyDispatch.bootstrapGet("memberGet", "y", (ScriptValue)scriptValue14, (ScriptContext)scriptContext)) : ScriptValue.NULL).asNum();
                 ScriptValue scriptValue15 = ScriptValue.of((double)d5);
                 builder.val("dy", scriptValue15);
                 ScriptValue scriptValue16 = scriptContext.getClassOrVar("entity");
                 ScriptValue scriptValue17 = scriptContext.getClassOrVar("Machine");
-                double d6 = (scriptValue16 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "z", (ScriptValue)scriptValue16, (ScriptContext)scriptContext) : ScriptValue.NULL).asNum() - (scriptValue17 != ScriptValue.NULL ? (scriptValue17 instanceof ScriptValue.Obj && (object11 = (obj7 = (ScriptValue.Obj)scriptValue17).instance()) != null && !(object11 instanceof PolyClass) && obj7.typeName().equals("Machine") ? new PolyClassMachine_v2(object11).pg$169_z() : PolyDispatch.bootstrapGet("memberGet", "z", (ScriptValue)scriptValue17, (ScriptContext)scriptContext)) : ScriptValue.NULL).asNum();
+                double d6 = (scriptValue16 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "z", (ScriptValue)scriptValue16, (ScriptContext)scriptContext) : ScriptValue.NULL).asNum() - (scriptValue17 != ScriptValue.NULL ? (scriptValue17 instanceof ScriptValue.Obj && (object11 = (obj7 = (ScriptValue.Obj)scriptValue17).instance()) != null && !(object11 instanceof PolyClass) && obj7.typeName().equals("Machine") ? new PolyClassMachine_v4(object11).pg$169_z() : PolyDispatch.bootstrapGet("memberGet", "z", (ScriptValue)scriptValue17, (ScriptContext)scriptContext)) : ScriptValue.NULL).asNum();
                 ScriptValue scriptValue18 = ScriptValue.of((double)d6);
                 builder.val("dz", scriptValue18);
                 double d7 = d4 * d4 + d5 * d5 + d6 * d6;
@@ -129,11 +129,11 @@ public final class Fan {
                 builder.val("force", scriptValue21);
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 ScriptValue scriptValue22 = scriptContext.getClassOrVar("Machine");
-                arrayList.add((ScriptValue)(scriptValue22 != ScriptValue.NULL ? (scriptValue22 instanceof ScriptValue.Obj && (object10 = (obj6 = (ScriptValue.Obj)scriptValue22).instance()) != null && !(object10 instanceof PolyClass) && obj6.typeName().equals("Machine") ? new PolyClassMachine_v2(object10).pg$126_facing_dx() : PolyDispatch.bootstrapGet("memberGet", "facing_dx", (ScriptValue)scriptValue22, (ScriptContext)scriptContext)) : ScriptValue.NULL));
+                arrayList.add((ScriptValue)(scriptValue22 != ScriptValue.NULL ? (scriptValue22 instanceof ScriptValue.Obj && (object10 = (obj6 = (ScriptValue.Obj)scriptValue22).instance()) != null && !(object10 instanceof PolyClass) && obj6.typeName().equals("Machine") ? new PolyClassMachine_v4(object10).pg$126_facing_dx() : PolyDispatch.bootstrapGet("memberGet", "facing_dx", (ScriptValue)scriptValue22, (ScriptContext)scriptContext)) : ScriptValue.NULL));
                 ScriptValue scriptValue23 = scriptContext.getClassOrVar("Machine");
-                arrayList.add((ScriptValue)(scriptValue23 != ScriptValue.NULL ? (scriptValue23 instanceof ScriptValue.Obj && (object9 = (obj5 = (ScriptValue.Obj)scriptValue23).instance()) != null && !(object9 instanceof PolyClass) && obj5.typeName().equals("Machine") ? new PolyClassMachine_v2(object9).pg$124_facing_dy() : PolyDispatch.bootstrapGet("memberGet", "facing_dy", (ScriptValue)scriptValue23, (ScriptContext)scriptContext)) : ScriptValue.NULL));
+                arrayList.add((ScriptValue)(scriptValue23 != ScriptValue.NULL ? (scriptValue23 instanceof ScriptValue.Obj && (object9 = (obj5 = (ScriptValue.Obj)scriptValue23).instance()) != null && !(object9 instanceof PolyClass) && obj5.typeName().equals("Machine") ? new PolyClassMachine_v4(object9).pg$124_facing_dy() : PolyDispatch.bootstrapGet("memberGet", "facing_dy", (ScriptValue)scriptValue23, (ScriptContext)scriptContext)) : ScriptValue.NULL));
                 ScriptValue scriptValue24 = scriptContext.getClassOrVar("Machine");
-                arrayList.add((ScriptValue)(scriptValue24 != ScriptValue.NULL ? (scriptValue24 instanceof ScriptValue.Obj && (object8 = (obj4 = (ScriptValue.Obj)scriptValue24).instance()) != null && !(object8 instanceof PolyClass) && obj4.typeName().equals("Machine") ? new PolyClassMachine_v2(object8).pg$125_facing_dz() : PolyDispatch.bootstrapGet("memberGet", "facing_dz", (ScriptValue)scriptValue24, (ScriptContext)scriptContext)) : ScriptValue.NULL));
+                arrayList.add((ScriptValue)(scriptValue24 != ScriptValue.NULL ? (scriptValue24 instanceof ScriptValue.Obj && (object8 = (obj4 = (ScriptValue.Obj)scriptValue24).instance()) != null && !(object8 instanceof PolyClass) && obj4.typeName().equals("Machine") ? new PolyClassMachine_v4(object8).pg$125_facing_dz() : PolyDispatch.bootstrapGet("memberGet", "facing_dz", (ScriptValue)scriptValue24, (ScriptContext)scriptContext)) : ScriptValue.NULL));
                 ScriptValue scriptValue25 = ScriptFormula.callBuiltin((String)"vec", arrayList, (ScriptContext)scriptContext);
                 builder.val("dir", scriptValue25);
                 if (scriptValue5.asNum() > 0.0) {

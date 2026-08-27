@@ -3,7 +3,7 @@
  * 
  * Could not load the following classes:
  *  dev.arubik.craftengine.script.PolyClass
- *  dev.arubik.craftengine.script.PolyClassMachine_v2
+ *  dev.arubik.craftengine.script.PolyClassMachine_v4
  *  dev.arubik.craftengine.script.PolyDispatch
  *  dev.arubik.craftengine.script.ScriptContext
  *  dev.arubik.craftengine.script.ScriptContext$Builder
@@ -15,7 +15,7 @@
 package dev.arubik.craftengine.script.gen.sensors;
 
 import dev.arubik.craftengine.script.PolyClass;
-import dev.arubik.craftengine.script.PolyClassMachine_v2;
+import dev.arubik.craftengine.script.PolyClassMachine_v4;
 import dev.arubik.craftengine.script.PolyDispatch;
 import dev.arubik.craftengine.script.ScriptContext;
 import dev.arubik.craftengine.script.ScriptFormula;
@@ -41,8 +41,8 @@ public final class EntitySensor {
             String string = "scan_range";
             String string2 = "int";
             if (scriptValue2 instanceof ScriptValue.Obj && (object5 = (obj2 = (ScriptValue.Obj)scriptValue2).instance()) != null && !(object5 instanceof PolyClass) && obj2.typeName().equals("Machine")) {
-                PolyClassMachine_v2 polyClassMachine_v2 = new PolyClassMachine_v2(object5);
-                object4 = polyClassMachine_v2.tm$34_get_typed(string, string2);
+                PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object5);
+                object4 = polyClassMachine_v4.tm$34_get_typed(string, string2);
             } else {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 arrayList.add(ScriptValue.of((String)string));
@@ -65,8 +65,8 @@ public final class EntitySensor {
             String string = "mode";
             String string3 = "int";
             if (scriptValue instanceof ScriptValue.Obj && (object6 = (obj3 = (ScriptValue.Obj)scriptValue).instance()) != null && !(object6 instanceof PolyClass) && obj3.typeName().equals("Machine")) {
-                PolyClassMachine_v2 polyClassMachine_v2 = new PolyClassMachine_v2(object6);
-                object3 = polyClassMachine_v2.tm$34_get_typed(string, string3);
+                PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object6);
+                object3 = polyClassMachine_v4.tm$34_get_typed(string, string3);
             } else {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 arrayList.add(ScriptValue.of((String)string));
@@ -84,8 +84,8 @@ public final class EntitySensor {
             Object object7;
             ScriptValue scriptValue7 = scriptContext.getClassOrVar("scan_range");
             if (scriptValue6 instanceof ScriptValue.Obj && (object7 = (obj4 = (ScriptValue.Obj)scriptValue6).instance()) != null && !(object7 instanceof PolyClass) && obj4.typeName().equals("Machine")) {
-                PolyClassMachine_v2 polyClassMachine_v2 = new PolyClassMachine_v2(object7);
-                object2 = polyClassMachine_v2.tm$94_nearby_entities(scriptValue7.asNum());
+                PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object7);
+                object2 = polyClassMachine_v4.tm$94_nearby_entities(scriptValue7.asNum());
             } else {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 arrayList.add(scriptValue7);
@@ -103,9 +103,9 @@ public final class EntitySensor {
         ScriptValue scriptValue10 = ScriptValue.of((double)9999.0);
         builder.val("min_dist_sq", scriptValue10);
         ScriptValue scriptValue11 = scriptContext.getClassOrVar("Machine");
-        ScriptValue scriptValue12 = scriptValue11 != ScriptValue.NULL ? (scriptValue11 instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue11).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Machine") ? new PolyClassMachine_v2(object).pg$156_pos() : PolyDispatch.bootstrapGet("memberGet", "pos", (ScriptValue)scriptValue11, (ScriptContext)scriptContext)) : ScriptValue.NULL;
+        ScriptValue scriptValue12 = scriptValue11 != ScriptValue.NULL ? (scriptValue11 instanceof ScriptValue.Obj && (object = (obj = (ScriptValue.Obj)scriptValue11).instance()) != null && !(object instanceof PolyClass) && obj.typeName().equals("Machine") ? new PolyClassMachine_v4(object).pg$156_pos() : PolyDispatch.bootstrapGet("memberGet", "pos", (ScriptValue)scriptValue11, (ScriptContext)scriptContext)) : ScriptValue.NULL;
         builder.val("machine", scriptValue12);
-        List list = ScriptProgram.resolveForRows((String)"entities", (ScriptContext)scriptContext, (int)1);
+        List list = ScriptProgram.rowsOf((ScriptValue)scriptValue8, (int)1);
         if (list != null) {
             for (ScriptValue[] scriptValueArray : list) {
                 ScriptValue scriptValue13;
@@ -140,8 +140,8 @@ public final class EntitySensor {
                 String string = "threshold";
                 String string4 = "int";
                 if (scriptValue19 instanceof ScriptValue.Obj && (object9 = (obj5 = (ScriptValue.Obj)scriptValue19).instance()) != null && !(object9 instanceof PolyClass) && obj5.typeName().equals("Machine")) {
-                    PolyClassMachine_v2 polyClassMachine_v2 = new PolyClassMachine_v2(object9);
-                    object8 = polyClassMachine_v2.tm$34_get_typed(string, string4);
+                    PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object9);
+                    object8 = polyClassMachine_v4.tm$34_get_typed(string, string4);
                 } else {
                     ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                     arrayList.add(ScriptValue.of((String)string));
@@ -183,8 +183,8 @@ public final class EntitySensor {
             Object object10;
             ScriptValue scriptValue26 = scriptContext.getClassOrVar("power");
             if (scriptValue25 instanceof ScriptValue.Obj && (object10 = (obj6 = (ScriptValue.Obj)scriptValue25).instance()) != null && !(object10 instanceof PolyClass) && obj6.typeName().equals("Machine")) {
-                PolyClassMachine_v2 polyClassMachine_v2 = new PolyClassMachine_v2(object10);
-                v4 = ScriptValue.of((boolean)polyClassMachine_v2.tm$108_emit_redstone(scriptValue26.asNum()));
+                PolyClassMachine_v4 polyClassMachine_v4 = new PolyClassMachine_v4(object10);
+                v4 = ScriptValue.of((boolean)polyClassMachine_v4.tm$108_emit_redstone(scriptValue26.asNum()));
             } else {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 arrayList.add(scriptValue26);

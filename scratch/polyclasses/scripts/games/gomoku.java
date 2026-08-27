@@ -69,7 +69,10 @@ public final class Gomoku {
         ScriptContext scriptContext = builder.peek();
         ScriptValue scriptValue = ScriptValue.of((String)"");
         builder.val("row", scriptValue);
-        List list = ScriptProgram.resolveForRows((String)"range(0, BOARD_SIZE)", (ScriptContext)scriptContext, (int)1);
+        ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
+        arrayList.add(ScriptValue.of((double)0.0));
+        arrayList.add(scriptContext.getClassOrVar("BOARD_SIZE"));
+        List list = ScriptProgram.rowsOf((ScriptValue)ScriptFormula.callBuiltin((String)"range", arrayList, (ScriptContext)scriptContext), (int)1);
         if (list != null) {
             for (ScriptValue[] scriptValueArray : list) {
                 builder.val("i", scriptValueArray.length > 0 ? scriptValueArray[0] : ScriptValue.NULL);
@@ -79,7 +82,10 @@ public final class Gomoku {
         }
         ScriptValue scriptValue3 = ScriptValue.of((String)"");
         builder.val("board", scriptValue3);
-        List list2 = ScriptProgram.resolveForRows((String)"range(0, BOARD_SIZE)", (ScriptContext)scriptContext, (int)1);
+        ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
+        arrayList2.add(ScriptValue.of((double)0.0));
+        arrayList2.add(scriptContext.getClassOrVar("BOARD_SIZE"));
+        List list2 = ScriptProgram.rowsOf((ScriptValue)ScriptFormula.callBuiltin((String)"range", arrayList2, (ScriptContext)scriptContext), (int)1);
         if (list2 != null) {
             for (ScriptValue[] scriptValueArray : list2) {
                 builder.val("i", scriptValueArray.length > 0 ? scriptValueArray[0] : ScriptValue.NULL);
@@ -118,14 +124,17 @@ public final class Gomoku {
 
     public static ScriptValue isFull(ScriptContext.Builder builder) {
         ScriptContext scriptContext = builder.peek();
-        List list = ScriptProgram.resolveForRows((String)"range(0, BOARD_SIZE * BOARD_SIZE)", (ScriptContext)scriptContext, (int)1);
+        ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
+        arrayList.add(ScriptValue.of((double)0.0));
+        arrayList.add(ScriptValue.of((double)(scriptContext.getNum("BOARD_SIZE") * scriptContext.getNum("BOARD_SIZE"))));
+        List list = ScriptProgram.rowsOf((ScriptValue)ScriptFormula.callBuiltin((String)"range", arrayList, (ScriptContext)scriptContext), (int)1);
         if (list != null) {
             for (ScriptValue[] scriptValueArray : list) {
                 builder.val("i", scriptValueArray.length > 0 ? scriptValueArray[0] : ScriptValue.NULL);
-                ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-                arrayList.add(scriptContext.getClassOrVar("board"));
-                arrayList.add(scriptContext.getClassOrVar("i"));
-                if (!ScriptFormula.valuesEqual((ScriptValue)ScriptFormula.callBuiltin((String)"char_at", arrayList, (ScriptContext)scriptContext), (ScriptValue)scriptContext.getClassOrVar("CELL_EMPTY"))) continue;
+                ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
+                arrayList2.add(scriptContext.getClassOrVar("board"));
+                arrayList2.add(scriptContext.getClassOrVar("i"));
+                if (!ScriptFormula.valuesEqual((ScriptValue)ScriptFormula.callBuiltin((String)"char_at", arrayList2, (ScriptContext)scriptContext), (ScriptValue)scriptContext.getClassOrVar("CELL_EMPTY"))) continue;
                 return ScriptValue.of((boolean)false);
             }
         }
@@ -192,7 +201,7 @@ public final class Gomoku {
         arrayList.add(new ScriptValue.Array(arrayList5));
         ScriptValue.Array array = new ScriptValue.Array(arrayList);
         builder.val("dirs", (ScriptValue)array);
-        List list = ScriptProgram.resolveForRows((String)"dirs", (ScriptContext)scriptContext, (int)1);
+        List list = ScriptProgram.rowsOf((ScriptValue)array, (int)1);
         if (list != null) {
             for (ScriptValue[] scriptValueArray : list) {
                 Object object;
@@ -919,11 +928,17 @@ public final class Gomoku {
         ArrayList arrayList = new ArrayList();
         ScriptValue.Array array = new ScriptValue.Array(arrayList);
         builder.val("buttons", (ScriptValue)array);
-        List list = ScriptProgram.resolveForRows((String)"range(0, BOARD_SIZE)", (ScriptContext)scriptContext, (int)1);
+        ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
+        arrayList2.add(ScriptValue.of((double)0.0));
+        arrayList2.add(scriptContext.getClassOrVar("BOARD_SIZE"));
+        List list = ScriptProgram.rowsOf((ScriptValue)ScriptFormula.callBuiltin((String)"range", arrayList2, (ScriptContext)scriptContext), (int)1);
         if (list != null) {
             for (ScriptValue[] scriptValueArray : list) {
                 builder.val("r", scriptValueArray.length > 0 ? scriptValueArray[0] : ScriptValue.NULL);
-                List list2 = ScriptProgram.resolveForRows((String)"range(0, BOARD_SIZE)", (ScriptContext)scriptContext, (int)1);
+                ArrayList<ScriptValue> arrayList3 = new ArrayList<ScriptValue>();
+                arrayList3.add(ScriptValue.of((double)0.0));
+                arrayList3.add(scriptContext.getClassOrVar("BOARD_SIZE"));
+                List list2 = ScriptProgram.rowsOf((ScriptValue)ScriptFormula.callBuiltin((String)"range", arrayList3, (ScriptContext)scriptContext), (int)1);
                 if (list2 == null) continue;
                 for (ScriptValue[] scriptValueArray2 : list2) {
                     builder.val("c", scriptValueArray2.length > 0 ? scriptValueArray2[0] : ScriptValue.NULL);
@@ -935,21 +950,21 @@ public final class Gomoku {
                     builder.val("ch", scriptValue17);
                     ScriptValue scriptValue18 = bl ? ScriptValue.of((String)"games/gomoku.pf:on_noop") : ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)ScriptValue.of((String)"games/gomoku.pf:on_cell_click:"), (ScriptValue)scriptContext.getClassOrVar("gid")), (ScriptValue)ScriptValue.of((String)":")), (ScriptValue)scriptContext.getClassOrVar("r")), (ScriptValue)ScriptValue.of((String)":")), (ScriptValue)scriptContext.getClassOrVar("c"));
                     builder.val("cell_action", scriptValue18);
-                    ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
-                    arrayList2.add(ScriptValue.of((String)"label"));
+                    ArrayList<ScriptValue> arrayList4 = new ArrayList<ScriptValue>();
+                    arrayList4.add(ScriptValue.of((String)"label"));
                     ScriptContext.Builder builder8 = ScriptContext.builder().copyFrom(scriptContext);
                     builder8.val("ch", scriptValue17);
-                    arrayList2.add(Gomoku.cellGlyph(builder8));
-                    arrayList2.add(ScriptValue.of((String)"action"));
-                    arrayList2.add(scriptValue18);
-                    arrayList2.add(ScriptValue.of((String)"width"));
-                    arrayList2.add(scriptContext.getClassOrVar("CELL_WIDTH"));
-                    ScriptValue scriptValue19 = ScriptFormula.callBuiltin((String)"make_map", arrayList2, (ScriptContext)scriptContext);
+                    arrayList4.add(Gomoku.cellGlyph(builder8));
+                    arrayList4.add(ScriptValue.of((String)"action"));
+                    arrayList4.add(scriptValue18);
+                    arrayList4.add(ScriptValue.of((String)"width"));
+                    arrayList4.add(scriptContext.getClassOrVar("CELL_WIDTH"));
+                    ScriptValue scriptValue19 = ScriptFormula.callBuiltin((String)"make_map", arrayList4, (ScriptContext)scriptContext);
                     builder.val("btn", scriptValue19);
-                    ArrayList<ScriptValue> arrayList3 = new ArrayList<ScriptValue>();
-                    arrayList3.add(scriptContext.getClassOrVar("buttons"));
-                    arrayList3.add(scriptValue19);
-                    ScriptValue scriptValue20 = ScriptFormula.callBuiltin((String)"push", arrayList3, (ScriptContext)scriptContext);
+                    ArrayList<ScriptValue> arrayList5 = new ArrayList<ScriptValue>();
+                    arrayList5.add(scriptContext.getClassOrVar("buttons"));
+                    arrayList5.add(scriptValue19);
+                    ScriptValue scriptValue20 = ScriptFormula.callBuiltin((String)"push", arrayList5, (ScriptContext)scriptContext);
                     builder.val("buttons", scriptValue20);
                 }
             }
@@ -958,52 +973,52 @@ public final class Gomoku {
         builder.val("footer_label", scriptValue21);
         ScriptValue scriptValue22 = bl ? ScriptValue.of((String)"games/gomoku.pf:on_noop") : ScriptFormula.addPolymorphic((ScriptValue)ScriptValue.of((String)"games/gomoku.pf:on_resign:"), (ScriptValue)scriptContext.getClassOrVar("gid"));
         builder.val("footer_action", scriptValue22);
-        ArrayList<ScriptValue> arrayList4 = new ArrayList<ScriptValue>();
-        arrayList4.add(scriptContext.getClassOrVar("buttons"));
-        ArrayList<ScriptValue> arrayList5 = new ArrayList<ScriptValue>();
-        arrayList5.add(ScriptValue.of((String)"label"));
-        arrayList5.add(scriptValue21);
-        arrayList5.add(ScriptValue.of((String)"action"));
-        arrayList5.add(scriptValue22);
-        arrayList4.add(ScriptFormula.callBuiltin((String)"make_map", arrayList5, (ScriptContext)scriptContext));
-        ScriptValue scriptValue23 = ScriptFormula.callBuiltin((String)"push", arrayList4, (ScriptContext)scriptContext);
+        ArrayList<ScriptValue> arrayList6 = new ArrayList<ScriptValue>();
+        arrayList6.add(scriptContext.getClassOrVar("buttons"));
+        ArrayList<ScriptValue> arrayList7 = new ArrayList<ScriptValue>();
+        arrayList7.add(ScriptValue.of((String)"label"));
+        arrayList7.add(scriptValue21);
+        arrayList7.add(ScriptValue.of((String)"action"));
+        arrayList7.add(scriptValue22);
+        arrayList6.add(ScriptFormula.callBuiltin((String)"make_map", arrayList7, (ScriptContext)scriptContext));
+        ScriptValue scriptValue23 = ScriptFormula.callBuiltin((String)"push", arrayList6, (ScriptContext)scriptContext);
         builder.val("buttons", scriptValue23);
         ScriptValue scriptValue24 = ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)ScriptValue.of((String)"<gold>Gomoku <gray>- <yellow>"), (ScriptValue)scriptValue9), (ScriptValue)ScriptValue.of((String)" <gray>vs <yellow>")), (ScriptValue)scriptValue12);
         builder.val("title", scriptValue24);
-        ArrayList<ScriptValue> arrayList6 = new ArrayList<ScriptValue>();
-        arrayList6.add(scriptContext.getClassOrVar("viewer"));
-        ArrayList<ScriptValue> arrayList7 = new ArrayList<ScriptValue>();
-        arrayList7.add(scriptContext.getClassOrVar("Machine"));
-        arrayList7.add(scriptValue23);
-        arrayList7.add(scriptContext.getClassOrVar("BOARD_SIZE"));
         ArrayList<ScriptValue> arrayList8 = new ArrayList<ScriptValue>();
-        arrayList8.add(ScriptValue.of((boolean)(ScriptFormula.valuesEqualStr((ScriptValue)scriptValue15, (String)"active") ^ true)));
+        arrayList8.add(scriptContext.getClassOrVar("viewer"));
         ArrayList<ScriptValue> arrayList9 = new ArrayList<ScriptValue>();
+        arrayList9.add(scriptContext.getClassOrVar("Machine"));
+        arrayList9.add(scriptValue23);
+        arrayList9.add(scriptContext.getClassOrVar("BOARD_SIZE"));
+        ArrayList<ScriptValue> arrayList10 = new ArrayList<ScriptValue>();
+        arrayList10.add(ScriptValue.of((boolean)(ScriptFormula.valuesEqualStr((ScriptValue)scriptValue15, (String)"active") ^ true)));
+        ArrayList<ScriptValue> arrayList11 = new ArrayList<ScriptValue>();
         ScriptContext.Builder builder9 = ScriptContext.builder().copyFrom(scriptContext);
         builder9.val("status", scriptValue15);
         builder9.val("turn", scriptValue6);
         builder9.val("black", scriptValue9);
         builder9.val("white", scriptValue12);
-        arrayList9.add(Gomoku.statusLine(builder9));
-        ArrayList<ScriptValue> arrayList10 = new ArrayList<ScriptValue>();
+        arrayList11.add(Gomoku.statusLine(builder9));
+        ArrayList<ScriptValue> arrayList12 = new ArrayList<ScriptValue>();
         ScriptValue scriptValue25 = scriptContext.getClassOrVar("Images");
         if (scriptValue25 != ScriptValue.NULL) {
-            ArrayList<ScriptValue> arrayList11 = new ArrayList<ScriptValue>();
-            arrayList11.add(ScriptValue.of((String)"gomoku:ui"));
-            object2 = PolyDispatch.bootstrapCall("memberCall", "from", (ScriptValue)scriptValue25, arrayList11, (ScriptContext)scriptContext);
+            ArrayList<ScriptValue> arrayList13 = new ArrayList<ScriptValue>();
+            arrayList13.add(ScriptValue.of((String)"gomoku:ui"));
+            object2 = PolyDispatch.bootstrapCall("memberCall", "from", (ScriptValue)scriptValue25, arrayList13, (ScriptContext)scriptContext);
         } else {
             object2 = ScriptValue.NULL;
         }
-        arrayList10.add((ScriptValue)object2);
+        arrayList12.add((ScriptValue)object2);
         ScriptValue scriptValue26 = scriptContext.getClassOrVar("Dialog");
         if (scriptValue26 != ScriptValue.NULL) {
-            ArrayList<ScriptValue> arrayList12 = new ArrayList<ScriptValue>();
-            arrayList12.add(scriptValue24);
-            object = PolyDispatch.bootstrapCall("memberCall", "base", (ScriptValue)scriptValue26, arrayList12, (ScriptContext)scriptContext);
+            ArrayList<ScriptValue> arrayList14 = new ArrayList<ScriptValue>();
+            arrayList14.add(scriptValue24);
+            object = PolyDispatch.bootstrapCall("memberCall", "base", (ScriptValue)scriptValue26, arrayList14, (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
         }
-        PolyDispatch.bootstrapCall("memberCall", "show", (ScriptValue)PolyDispatch.bootstrapCall("memberCall", "as_multi_action", (ScriptValue)PolyDispatch.bootstrapCall("memberCall", "can_close_with_escape", (ScriptValue)PolyDispatch.bootstrapCall("memberCall", "body", (ScriptValue)PolyDispatch.bootstrapCall("memberCall", "body", (ScriptValue)object, arrayList10, (ScriptContext)scriptContext), arrayList9, (ScriptContext)scriptContext), arrayList8, (ScriptContext)scriptContext), arrayList7, (ScriptContext)scriptContext), arrayList6, (ScriptContext)scriptContext);
+        PolyDispatch.bootstrapCall("memberCall", "show", (ScriptValue)PolyDispatch.bootstrapCall("memberCall", "as_multi_action", (ScriptValue)PolyDispatch.bootstrapCall("memberCall", "can_close_with_escape", (ScriptValue)PolyDispatch.bootstrapCall("memberCall", "body", (ScriptValue)PolyDispatch.bootstrapCall("memberCall", "body", (ScriptValue)object, arrayList12, (ScriptContext)scriptContext), arrayList11, (ScriptContext)scriptContext), arrayList10, (ScriptContext)scriptContext), arrayList9, (ScriptContext)scriptContext), arrayList8, (ScriptContext)scriptContext);
         return ScriptValue.NULL;
     }
 
@@ -1896,11 +1911,17 @@ public final class Gomoku {
 
     public static ScriptValue findWinningMove(ScriptContext.Builder builder) {
         ScriptContext scriptContext = builder.peek();
-        List list = ScriptProgram.resolveForRows((String)"range(0, BOARD_SIZE)", (ScriptContext)scriptContext, (int)1);
+        ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
+        arrayList.add(ScriptValue.of((double)0.0));
+        arrayList.add(scriptContext.getClassOrVar("BOARD_SIZE"));
+        List list = ScriptProgram.rowsOf((ScriptValue)ScriptFormula.callBuiltin((String)"range", arrayList, (ScriptContext)scriptContext), (int)1);
         if (list != null) {
             for (ScriptValue[] scriptValueArray : list) {
                 builder.val("r", scriptValueArray.length > 0 ? scriptValueArray[0] : ScriptValue.NULL);
-                List list2 = ScriptProgram.resolveForRows((String)"range(0, BOARD_SIZE)", (ScriptContext)scriptContext, (int)1);
+                ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
+                arrayList2.add(ScriptValue.of((double)0.0));
+                arrayList2.add(scriptContext.getClassOrVar("BOARD_SIZE"));
+                List list2 = ScriptProgram.rowsOf((ScriptValue)ScriptFormula.callBuiltin((String)"range", arrayList2, (ScriptContext)scriptContext), (int)1);
                 if (list2 == null) continue;
                 for (ScriptValue[] scriptValueArray2 : list2) {
                     builder.val("c", scriptValueArray2.length > 0 ? scriptValueArray2[0] : ScriptValue.NULL);
@@ -1922,24 +1943,30 @@ public final class Gomoku {
                     builder4.val("col", scriptContext.getClassOrVar("c"));
                     builder4.val("color", scriptContext.getClassOrVar("color"));
                     if (!Gomoku.hasFive(builder4).asBool()) continue;
-                    ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-                    arrayList.add(scriptContext.getClassOrVar("r"));
-                    arrayList.add(scriptContext.getClassOrVar("c"));
-                    return new ScriptValue.Array(arrayList);
+                    ArrayList<ScriptValue> arrayList3 = new ArrayList<ScriptValue>();
+                    arrayList3.add(scriptContext.getClassOrVar("r"));
+                    arrayList3.add(scriptContext.getClassOrVar("c"));
+                    return new ScriptValue.Array(arrayList3);
                 }
             }
         }
-        ArrayList arrayList = new ArrayList();
-        return new ScriptValue.Array(arrayList);
+        ArrayList arrayList4 = new ArrayList();
+        return new ScriptValue.Array(arrayList4);
     }
 
     public static ScriptValue findAnyMove(ScriptContext.Builder builder) {
         ScriptContext scriptContext = builder.peek();
-        List list = ScriptProgram.resolveForRows((String)"range(0, BOARD_SIZE)", (ScriptContext)scriptContext, (int)1);
+        ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
+        arrayList.add(ScriptValue.of((double)0.0));
+        arrayList.add(scriptContext.getClassOrVar("BOARD_SIZE"));
+        List list = ScriptProgram.rowsOf((ScriptValue)ScriptFormula.callBuiltin((String)"range", arrayList, (ScriptContext)scriptContext), (int)1);
         if (list != null) {
             for (ScriptValue[] scriptValueArray : list) {
                 builder.val("r", scriptValueArray.length > 0 ? scriptValueArray[0] : ScriptValue.NULL);
-                List list2 = ScriptProgram.resolveForRows((String)"range(0, BOARD_SIZE)", (ScriptContext)scriptContext, (int)1);
+                ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
+                arrayList2.add(ScriptValue.of((double)0.0));
+                arrayList2.add(scriptContext.getClassOrVar("BOARD_SIZE"));
+                List list2 = ScriptProgram.rowsOf((ScriptValue)ScriptFormula.callBuiltin((String)"range", arrayList2, (ScriptContext)scriptContext), (int)1);
                 if (list2 == null) continue;
                 for (ScriptValue[] scriptValueArray2 : list2) {
                     builder.val("c", scriptValueArray2.length > 0 ? scriptValueArray2[0] : ScriptValue.NULL);
@@ -1948,15 +1975,15 @@ public final class Gomoku {
                     builder2.val("r", scriptContext.getClassOrVar("r"));
                     builder2.val("c", scriptContext.getClassOrVar("c"));
                     if (!ScriptFormula.valuesEqual((ScriptValue)Gomoku.cellAt(builder2), (ScriptValue)scriptContext.getClassOrVar("CELL_EMPTY"))) continue;
-                    ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-                    arrayList.add(scriptContext.getClassOrVar("r"));
-                    arrayList.add(scriptContext.getClassOrVar("c"));
-                    return new ScriptValue.Array(arrayList);
+                    ArrayList<ScriptValue> arrayList3 = new ArrayList<ScriptValue>();
+                    arrayList3.add(scriptContext.getClassOrVar("r"));
+                    arrayList3.add(scriptContext.getClassOrVar("c"));
+                    return new ScriptValue.Array(arrayList3);
                 }
             }
         }
-        ArrayList arrayList = new ArrayList();
-        return new ScriptValue.Array(arrayList);
+        ArrayList arrayList4 = new ArrayList();
+        return new ScriptValue.Array(arrayList4);
     }
 
     public static ScriptValue lineScore(ScriptContext.Builder builder) {
@@ -2020,7 +2047,7 @@ public final class Gomoku {
         double d = 0.0;
         ScriptValue scriptValue = ScriptValue.of((double)0.0);
         builder.val("total", scriptValue);
-        List list = ScriptProgram.resolveForRows((String)"dirs", (ScriptContext)scriptContext, (int)1);
+        List list = ScriptProgram.rowsOf((ScriptValue)array, (int)1);
         if (list != null) {
             for (ScriptValue[] scriptValueArray : list) {
                 Object object;
@@ -2098,24 +2125,36 @@ public final class Gomoku {
     public static ScriptValue hasNeighbor(ScriptContext.Builder var0) {
         block4: {
             var1_1 = var0.peek();
-            var2_2 = ScriptProgram.resolveForRows((String)"[-2, -1, 0, 1, 2]", (ScriptContext)var1_1, (int)1);
-            if (var2_2 == null) break block4;
-            for (ScriptValue[] var4_4 : var2_2) {
-                var0.val("dr", var4_4.length > 0 ? var4_4[0] : ScriptValue.NULL);
-                var5_5 = ScriptProgram.resolveForRows((String)"[-2, -1, 0, 1, 2]", (ScriptContext)var1_1, (int)1);
-                if (var5_5 == null) continue;
-                for (ScriptValue[] var7_7 : var5_5) {
-                    var0.val("dc", var7_7.length > 0 ? var7_7[0] : ScriptValue.NULL);
-                    var8_8 = ScriptFormula.addPolymorphic((ScriptValue)var1_1.getClassOrVar("r"), (ScriptValue)var1_1.getClassOrVar("dr"));
-                    var0.val("nr", var8_8);
-                    var9_9 = ScriptFormula.addPolymorphic((ScriptValue)var1_1.getClassOrVar("c"), (ScriptValue)var1_1.getClassOrVar("dc"));
-                    var0.val("nc", var9_9);
-                    if (!(((var8_8.asNum() >= 0.0 != false && var8_8.asNum() < var1_1.getNum("BOARD_SIZE") != false) != false && var9_9.asNum() >= 0.0 != false) != false && var9_9.asNum() < var1_1.getNum("BOARD_SIZE") != false)) ** GOTO lbl-1000
-                    var10_10 = ScriptContext.builder().copyFrom(var1_1);
-                    var10_10.val("board", var1_1.getClassOrVar("board"));
-                    var10_10.val("r", var8_8);
-                    var10_10.val("c", var9_9);
-                    if (ScriptFormula.valuesEqual((ScriptValue)Gomoku.cellAt(var10_10), (ScriptValue)var1_1.getClassOrVar("CELL_EMPTY")) ^ true) {
+            var5_2 = new ArrayList<ScriptValue>();
+            var5_2.add(ScriptValue.of((double)(-2.0)));
+            var5_2.add(ScriptValue.of((double)(-1.0)));
+            var5_2.add(ScriptValue.of((double)0.0));
+            var5_2.add(ScriptValue.of((double)1.0));
+            var5_2.add(ScriptValue.of((double)2.0));
+            var2_3 = ScriptProgram.rowsOf((ScriptValue)new ScriptValue.Array(var5_2), (int)1);
+            if (var2_3 == null) break block4;
+            for (ScriptValue[] var4_5 : var2_3) {
+                var0.val("dr", var4_5.length > 0 ? var4_5[0] : ScriptValue.NULL);
+                var9_9 = new ArrayList<ScriptValue>();
+                var9_9.add(ScriptValue.of((double)(-2.0)));
+                var9_9.add(ScriptValue.of((double)(-1.0)));
+                var9_9.add(ScriptValue.of((double)0.0));
+                var9_9.add(ScriptValue.of((double)1.0));
+                var9_9.add(ScriptValue.of((double)2.0));
+                var6_6 = ScriptProgram.rowsOf((ScriptValue)new ScriptValue.Array(var9_9), (int)1);
+                if (var6_6 == null) continue;
+                for (ScriptValue[] var8_8 : var6_6) {
+                    var0.val("dc", var8_8.length > 0 ? var8_8[0] : ScriptValue.NULL);
+                    var10_10 = ScriptFormula.addPolymorphic((ScriptValue)var1_1.getClassOrVar("r"), (ScriptValue)var1_1.getClassOrVar("dr"));
+                    var0.val("nr", var10_10);
+                    var11_11 = ScriptFormula.addPolymorphic((ScriptValue)var1_1.getClassOrVar("c"), (ScriptValue)var1_1.getClassOrVar("dc"));
+                    var0.val("nc", var11_11);
+                    if (!(((var10_10.asNum() >= 0.0 != false && var10_10.asNum() < var1_1.getNum("BOARD_SIZE") != false) != false && var11_11.asNum() >= 0.0 != false) != false && var11_11.asNum() < var1_1.getNum("BOARD_SIZE") != false)) ** GOTO lbl-1000
+                    var12_12 = ScriptContext.builder().copyFrom(var1_1);
+                    var12_12.val("board", var1_1.getClassOrVar("board"));
+                    var12_12.val("r", var10_10);
+                    var12_12.val("c", var11_11);
+                    if (ScriptFormula.valuesEqual((ScriptValue)Gomoku.cellAt(var12_12), (ScriptValue)var1_1.getClassOrVar("CELL_EMPTY")) ^ true) {
                         v0 = true;
                     } else lbl-1000:
                     // 2 sources
@@ -2140,53 +2179,62 @@ public final class Gomoku {
             var2_2 = false;
             var3_3 = ScriptValue.of((boolean)false);
             var0.val("any_stone", var3_3);
-            var4_4 = ScriptProgram.resolveForRows((String)"range(0, BOARD_SIZE * BOARD_SIZE)", (ScriptContext)var1_1, (int)1);
-            if (var4_4 != null) {
-                for (ScriptValue[] var6_6 : var4_4) {
-                    var0.val("i", var6_6.length > 0 ? var6_6[0] : ScriptValue.NULL);
-                    var7_7 = new ArrayList<ScriptValue>();
-                    var7_7.add(var1_1.getClassOrVar("board"));
-                    var7_7.add(var1_1.getClassOrVar("i"));
-                    if (!(ScriptFormula.valuesEqual((ScriptValue)ScriptFormula.callBuiltin((String)"char_at", var7_7, (ScriptContext)var1_1), (ScriptValue)var1_1.getClassOrVar("CELL_EMPTY")) ^ true)) continue;
-                    var8_8 = true;
-                    var9_9 = ScriptValue.of((boolean)true);
-                    var0.val("any_stone", var9_9);
+            var7_4 = new ArrayList<ScriptValue>();
+            var7_4.add(ScriptValue.of((double)0.0));
+            var7_4.add(ScriptValue.of((double)(var1_1.getNum("BOARD_SIZE") * var1_1.getNum("BOARD_SIZE"))));
+            var4_5 = ScriptProgram.rowsOf((ScriptValue)ScriptFormula.callBuiltin((String)"range", var7_4, (ScriptContext)var1_1), (int)1);
+            if (var4_5 != null) {
+                for (ScriptValue[] var6_7 : var4_5) {
+                    var0.val("i", var6_7.length > 0 ? var6_7[0] : ScriptValue.NULL);
+                    var8_8 = new ArrayList<ScriptValue>();
+                    var8_8.add(var1_1.getClassOrVar("board"));
+                    var8_8.add(var1_1.getClassOrVar("i"));
+                    if (!(ScriptFormula.valuesEqual((ScriptValue)ScriptFormula.callBuiltin((String)"char_at", var8_8, (ScriptContext)var1_1), (ScriptValue)var1_1.getClassOrVar("CELL_EMPTY")) ^ true)) continue;
+                    var9_9 = true;
+                    var10_10 = ScriptValue.of((boolean)true);
+                    var0.val("any_stone", var10_10);
                 }
             }
             if (var1_1.getBool("any_stone") ^ true) {
-                var10_10 = new ArrayList<ScriptValue>();
-                var11_11 = 2.0;
-                var10_10.add(ScriptValue.of((double)(2.0 == 0.0 ? 0.0 : var1_1.getNum("BOARD_SIZE") / var11_11)));
-                var13_12 = ScriptFormula.callBuiltin((String)"int", var10_10, (ScriptContext)var1_1);
-                var0.val("center", var13_12);
-                var14_13 = new ArrayList<ScriptValue.Array>();
-                var15_14 = new ArrayList<ScriptValue>();
-                var15_14.add(var13_12);
-                var15_14.add(var13_12);
-                var14_13.add(new ScriptValue.Array(var15_14));
-                return new ScriptValue.Array(var14_13);
+                var11_11 = new ArrayList<ScriptValue>();
+                var12_12 = 2.0;
+                var11_11.add(ScriptValue.of((double)(2.0 == 0.0 ? 0.0 : var1_1.getNum("BOARD_SIZE") / var12_12)));
+                var14_13 = ScriptFormula.callBuiltin((String)"int", var11_11, (ScriptContext)var1_1);
+                var0.val("center", var14_13);
+                var15_14 = new ArrayList<ScriptValue.Array>();
+                var16_15 = new ArrayList<ScriptValue>();
+                var16_15.add(var14_13);
+                var16_15.add(var14_13);
+                var15_14.add(new ScriptValue.Array(var16_15));
+                return new ScriptValue.Array(var15_14);
             }
-            var16_15 = new ArrayList<E>();
-            var17_16 = new ScriptValue.Array(var16_15);
-            var0.val("result", (ScriptValue)var17_16);
-            var18_17 = ScriptProgram.resolveForRows((String)"range(0, BOARD_SIZE)", (ScriptContext)var1_1, (int)1);
-            if (var18_17 == null) break block7;
-            for (ScriptValue[] var20_19 : var18_17) {
-                var0.val("r", var20_19.length > 0 ? var20_19[0] : ScriptValue.NULL);
-                var21_20 = ScriptProgram.resolveForRows((String)"range(0, BOARD_SIZE)", (ScriptContext)var1_1, (int)1);
-                if (var21_20 == null) continue;
-                for (ScriptValue[] var23_22 : var21_20) {
-                    var0.val("c", var23_22.length > 0 ? var23_22[0] : ScriptValue.NULL);
-                    var24_23 = ScriptContext.builder().copyFrom(var1_1);
-                    var24_23.val("board", var1_1.getClassOrVar("board"));
-                    var24_23.val("r", var1_1.getClassOrVar("r"));
-                    var24_23.val("c", var1_1.getClassOrVar("c"));
-                    if (!ScriptFormula.valuesEqual((ScriptValue)Gomoku.cellAt(var24_23), (ScriptValue)var1_1.getClassOrVar("CELL_EMPTY"))) ** GOTO lbl-1000
-                    var25_24 = ScriptContext.builder().copyFrom(var1_1);
-                    var25_24.val("board", var1_1.getClassOrVar("board"));
-                    var25_24.val("r", var1_1.getClassOrVar("r"));
-                    var25_24.val("c", var1_1.getClassOrVar("c"));
-                    if (Gomoku.hasNeighbor(var25_24).asBool()) {
+            var17_16 = new ArrayList<E>();
+            var18_17 = new ScriptValue.Array(var17_16);
+            var0.val("result", (ScriptValue)var18_17);
+            var22_18 = new ArrayList<ScriptValue>();
+            var22_18.add(ScriptValue.of((double)0.0));
+            var22_18.add(var1_1.getClassOrVar("BOARD_SIZE"));
+            var19_19 = ScriptProgram.rowsOf((ScriptValue)ScriptFormula.callBuiltin((String)"range", var22_18, (ScriptContext)var1_1), (int)1);
+            if (var19_19 == null) break block7;
+            for (ScriptValue[] var21_21 : var19_19) {
+                var0.val("r", var21_21.length > 0 ? var21_21[0] : ScriptValue.NULL);
+                var26_25 = new ArrayList<ScriptValue>();
+                var26_25.add(ScriptValue.of((double)0.0));
+                var26_25.add(var1_1.getClassOrVar("BOARD_SIZE"));
+                var23_22 = ScriptProgram.rowsOf((ScriptValue)ScriptFormula.callBuiltin((String)"range", var26_25, (ScriptContext)var1_1), (int)1);
+                if (var23_22 == null) continue;
+                for (ScriptValue[] var25_24 : var23_22) {
+                    var0.val("c", var25_24.length > 0 ? var25_24[0] : ScriptValue.NULL);
+                    var27_26 = ScriptContext.builder().copyFrom(var1_1);
+                    var27_26.val("board", var1_1.getClassOrVar("board"));
+                    var27_26.val("r", var1_1.getClassOrVar("r"));
+                    var27_26.val("c", var1_1.getClassOrVar("c"));
+                    if (!ScriptFormula.valuesEqual((ScriptValue)Gomoku.cellAt(var27_26), (ScriptValue)var1_1.getClassOrVar("CELL_EMPTY"))) ** GOTO lbl-1000
+                    var28_27 = ScriptContext.builder().copyFrom(var1_1);
+                    var28_27.val("board", var1_1.getClassOrVar("board"));
+                    var28_27.val("r", var1_1.getClassOrVar("r"));
+                    var28_27.val("c", var1_1.getClassOrVar("c"));
+                    if (Gomoku.hasNeighbor(var28_27).asBool()) {
                         v0 = true;
                     } else lbl-1000:
                     // 2 sources
@@ -2195,14 +2243,14 @@ public final class Gomoku {
                         v0 = false;
                     }
                     if (!v0) continue;
-                    var26_25 = new ArrayList<Object>();
-                    var26_25.add(var1_1.getClassOrVar("result"));
-                    var27_26 = new ArrayList<ScriptValue>();
-                    var27_26.add(var1_1.getClassOrVar("r"));
-                    var27_26.add(var1_1.getClassOrVar("c"));
-                    var26_25.add(new ScriptValue.Array(var27_26));
-                    var28_27 = ScriptFormula.callBuiltin((String)"push", var26_25, (ScriptContext)var1_1);
-                    var0.val("result", var28_27);
+                    var29_28 = new ArrayList<Object>();
+                    var29_28.add(var1_1.getClassOrVar("result"));
+                    var30_29 = new ArrayList<ScriptValue>();
+                    var30_29.add(var1_1.getClassOrVar("r"));
+                    var30_29.add(var1_1.getClassOrVar("c"));
+                    var29_28.add(new ScriptValue.Array(var30_29));
+                    var31_30 = ScriptFormula.callBuiltin((String)"push", var29_28, (ScriptContext)var1_1);
+                    var0.val("result", var31_30);
                 }
             }
         }
@@ -2223,24 +2271,30 @@ public final class Gomoku {
     public static ScriptValue findAdjacentMove(ScriptContext.Builder var0) {
         block4: {
             var1_1 = var0.peek();
-            var2_2 = ScriptProgram.resolveForRows((String)"range(0, BOARD_SIZE)", (ScriptContext)var1_1, (int)1);
-            if (var2_2 == null) break block4;
-            for (ScriptValue[] var4_4 : var2_2) {
-                var0.val("r", var4_4.length > 0 ? var4_4[0] : ScriptValue.NULL);
-                var5_5 = ScriptProgram.resolveForRows((String)"range(0, BOARD_SIZE)", (ScriptContext)var1_1, (int)1);
-                if (var5_5 == null) continue;
-                for (ScriptValue[] var7_7 : var5_5) {
-                    var0.val("c", var7_7.length > 0 ? var7_7[0] : ScriptValue.NULL);
-                    var8_8 = ScriptContext.builder().copyFrom(var1_1);
-                    var8_8.val("board", var1_1.getClassOrVar("board"));
-                    var8_8.val("r", var1_1.getClassOrVar("r"));
-                    var8_8.val("c", var1_1.getClassOrVar("c"));
-                    if (!ScriptFormula.valuesEqual((ScriptValue)Gomoku.cellAt(var8_8), (ScriptValue)var1_1.getClassOrVar("CELL_EMPTY"))) ** GOTO lbl-1000
-                    var9_9 = ScriptContext.builder().copyFrom(var1_1);
-                    var9_9.val("board", var1_1.getClassOrVar("board"));
-                    var9_9.val("r", var1_1.getClassOrVar("r"));
-                    var9_9.val("c", var1_1.getClassOrVar("c"));
-                    if (Gomoku.hasNeighbor(var9_9).asBool()) {
+            var5_2 = new ArrayList<ScriptValue>();
+            var5_2.add(ScriptValue.of((double)0.0));
+            var5_2.add(var1_1.getClassOrVar("BOARD_SIZE"));
+            var2_3 = ScriptProgram.rowsOf((ScriptValue)ScriptFormula.callBuiltin((String)"range", var5_2, (ScriptContext)var1_1), (int)1);
+            if (var2_3 == null) break block4;
+            for (ScriptValue[] var4_5 : var2_3) {
+                var0.val("r", var4_5.length > 0 ? var4_5[0] : ScriptValue.NULL);
+                var9_9 = new ArrayList<ScriptValue>();
+                var9_9.add(ScriptValue.of((double)0.0));
+                var9_9.add(var1_1.getClassOrVar("BOARD_SIZE"));
+                var6_6 = ScriptProgram.rowsOf((ScriptValue)ScriptFormula.callBuiltin((String)"range", var9_9, (ScriptContext)var1_1), (int)1);
+                if (var6_6 == null) continue;
+                for (ScriptValue[] var8_8 : var6_6) {
+                    var0.val("c", var8_8.length > 0 ? var8_8[0] : ScriptValue.NULL);
+                    var10_10 = ScriptContext.builder().copyFrom(var1_1);
+                    var10_10.val("board", var1_1.getClassOrVar("board"));
+                    var10_10.val("r", var1_1.getClassOrVar("r"));
+                    var10_10.val("c", var1_1.getClassOrVar("c"));
+                    if (!ScriptFormula.valuesEqual((ScriptValue)Gomoku.cellAt(var10_10), (ScriptValue)var1_1.getClassOrVar("CELL_EMPTY"))) ** GOTO lbl-1000
+                    var11_11 = ScriptContext.builder().copyFrom(var1_1);
+                    var11_11.val("board", var1_1.getClassOrVar("board"));
+                    var11_11.val("r", var1_1.getClassOrVar("r"));
+                    var11_11.val("c", var1_1.getClassOrVar("c"));
+                    if (Gomoku.hasNeighbor(var11_11).asBool()) {
                         v0 = true;
                     } else lbl-1000:
                     // 2 sources
@@ -2249,15 +2303,15 @@ public final class Gomoku {
                         v0 = false;
                     }
                     if (!v0) continue;
-                    var10_10 = new ArrayList<ScriptValue>();
-                    var10_10.add(var1_1.getClassOrVar("r"));
-                    var10_10.add(var1_1.getClassOrVar("c"));
-                    return new ScriptValue.Array(var10_10);
+                    var12_12 = new ArrayList<ScriptValue>();
+                    var12_12.add(var1_1.getClassOrVar("r"));
+                    var12_12.add(var1_1.getClassOrVar("c"));
+                    return new ScriptValue.Array(var12_12);
                 }
             }
         }
-        var11_11 = new ArrayList<E>();
-        return new ScriptValue.Array(var11_11);
+        var13_13 = new ArrayList<E>();
+        return new ScriptValue.Array(var13_13);
     }
 
     public static ScriptValue botMoveEasy(ScriptContext.Builder builder) {
@@ -2282,7 +2336,7 @@ public final class Gomoku {
         double d3 = -1.0;
         ScriptValue scriptValue4 = ScriptValue.of((double)d3);
         builder.val("best_score", scriptValue4);
-        List list = ScriptProgram.resolveForRows((String)"candidates", (ScriptContext)scriptContext, (int)1);
+        List list = ScriptProgram.rowsOf((ScriptValue)scriptValue, (int)1);
         if (list != null) {
             for (ScriptValue[] scriptValueArray : list) {
                 Object object;
@@ -2360,7 +2414,7 @@ public final class Gomoku {
         double d4 = 0.0;
         ScriptValue scriptValue5 = ScriptValue.of((double)0.0);
         builder.val("considered", scriptValue5);
-        List list = ScriptProgram.resolveForRows((String)"candidates", (ScriptContext)scriptContext, (int)1);
+        List list = ScriptProgram.rowsOf((ScriptValue)scriptValue, (int)1);
         if (list != null) {
             for (ScriptValue[] scriptValueArray : list) {
                 Object object;
@@ -2421,7 +2475,7 @@ public final class Gomoku {
                 double d6 = 0.0;
                 ScriptValue scriptValue15 = ScriptValue.of((double)0.0);
                 builder.val("opp_considered", scriptValue15);
-                List list2 = ScriptProgram.resolveForRows((String)"opp_candidates", (ScriptContext)scriptContext, (int)1);
+                List list2 = ScriptProgram.rowsOf((ScriptValue)scriptValue13, (int)1);
                 if (list2 != null) {
                     for (ScriptValue[] scriptValueArray2 : list2) {
                         Object object3;
