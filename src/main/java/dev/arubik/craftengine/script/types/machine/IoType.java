@@ -94,13 +94,15 @@ public final class IoType {
 
     public static void register() {
         PolyTypeRegistry.define("Io")
+            // Not TypeCodecs.listOf even though propertyTyped now exists: the elements are plain
+            // strings, not Obj-wrapped PolyType instances, and no string-list codec exists.
             .property("types", obj -> {
                 List<ScriptValue> names = new ArrayList<>();
                 for (IOConfiguration.IOType t : IOConfiguration.IOType.values())
                     names.add(ScriptValue.of(t.name().toLowerCase(Locale.ROOT)));
                 return new ScriptValue.Array(names);
             })
-            .property("configured", obj -> ScriptValue.of(ref(obj).read() != null))
+            .propertyTyped("configured", TypeCodecs.BOOL, (IoRef r) -> r.read() != null)
 
             // Arg0 (the IO type name) is decoded with TypeCodecs.RAW rather than STRING: the
             // type(ScriptValue) helper below does more than a plain asStr() — it also
@@ -206,9 +208,5 @@ public final class IoType {
 
     public static ScriptValue wrap(MachineType.MachineRef machine) {
         return machine == null ? ScriptValue.NULL : ScriptValue.ofObj("Io", new IoRef(machine));
-    }
-
-    private static IoRef ref(Object obj) {
-        return (IoRef) obj;
     }
 }

@@ -8,6 +8,7 @@
  *  dev.arubik.craftengine.script.PolyType$PropertyHandler
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler1
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler2
+ *  dev.arubik.craftengine.script.PolyType$TypedPropertyHandler
  *  dev.arubik.craftengine.script.ScriptValue
  *  dev.arubik.craftengine.script.ScriptValue$Obj
  */
@@ -32,8 +33,9 @@ public class PolyClassMap {
     private static volatile PolyType.TypedMethodHandler2 h$8;
     private static volatile PolyType.MethodHandler m$9;
     private static volatile PolyType.PropertyHandler p$10;
-    private static volatile PolyType.PropertyHandler p$11;
+    private static volatile PolyType.TypedPropertyHandler tp$11;
     private static volatile PolyType.PropertyHandler p$12;
+    private static volatile PolyType.PropertyHandler p$13;
 
     public static void refresh() {
         h$0 = (PolyType.TypedMethodHandler2)PolyClassRuntime.resolveTypedHandler((String)"Map", (String)"with", (String)"SR:R");
@@ -47,8 +49,9 @@ public class PolyClassMap {
         h$8 = (PolyType.TypedMethodHandler2)PolyClassRuntime.resolveTypedHandler((String)"Map", (String)"switch", (String)"SR:R");
         m$9 = PolyClassRuntime.resolveMethodHandler((String)"Map", (String)"switch");
         p$10 = PolyClassRuntime.resolvePropertyHandler((String)"Map", (String)"size");
-        p$11 = PolyClassRuntime.resolvePropertyHandler((String)"Map", (String)"keys");
-        p$12 = PolyClassRuntime.resolvePropertyHandler((String)"Map", (String)"values");
+        tp$11 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Map", (String)"size", (String)"D");
+        p$12 = PolyClassRuntime.resolvePropertyHandler((String)"Map", (String)"keys");
+        p$13 = PolyClassRuntime.resolvePropertyHandler((String)"Map", (String)"values");
     }
 
     public ScriptValue tm$0_with(String string, ScriptValue scriptValue) {
@@ -128,16 +131,23 @@ public class PolyClassMap {
         return PolyClassRuntime.genericProperty((String)"Map", (String)"size", (Object)this.instance);
     }
 
-    public ScriptValue pg$11_keys() {
-        if (p$11 != null) {
-            return p$11.get(this.instance);
+    public double tg$11_size() {
+        if (tp$11 != null) {
+            return (Double)tp$11.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Map", (String)"size", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$12_keys() {
+        if (p$12 != null) {
+            return p$12.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Map", (String)"keys", (Object)this.instance);
     }
 
-    public ScriptValue pg$12_values() {
-        if (p$12 != null) {
-            return p$12.get(this.instance);
+    public ScriptValue pg$13_values() {
+        if (p$13 != null) {
+            return p$13.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Map", (String)"values", (Object)this.instance);
     }

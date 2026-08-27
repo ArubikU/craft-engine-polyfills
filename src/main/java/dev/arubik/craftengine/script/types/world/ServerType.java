@@ -66,7 +66,7 @@ public final class ServerType {
             // timestamp makes expiry checkable at any time (including right when someone tries to
             // act on the stale state), while a TaskManager.schedule(...) cleanup actually reclaims
             // the entry once nobody's looking.
-            .property("time", obj -> ScriptValue.of((double) (System.currentTimeMillis() / 1000L)))
+            .propertyTyped("time", TypeCodecs.DOUBLE, obj -> (double) (System.currentTimeMillis() / 1000L))
             // General escape hatch letting a script trigger any other registered command as console —
             // e.g. a `/cmds`-defined command wanting to chain into another command without a player context.
             .methodTyped1("exec_command", TypeCodecs.STRING, TypeCodecs.BOOL, false,

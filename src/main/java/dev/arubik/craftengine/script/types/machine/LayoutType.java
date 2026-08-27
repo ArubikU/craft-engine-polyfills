@@ -57,11 +57,13 @@ public final class LayoutType {
 
     public static void register() {
         PolyTypeRegistry.define("Layout")
-            .property("open", obj -> ScriptValue.of(ref(obj).layout() != null))
-            .property("size", obj -> {
-                MachineLayout l = ref(obj).layout();
-                return ScriptValue.of(l == null ? 0 : l.getSize());
+            .propertyTyped("open", TypeCodecs.BOOL, (LayoutRef r) -> r.layout() != null)
+            .propertyTyped("size", TypeCodecs.DOUBLE, (LayoutRef r) -> {
+                MachineLayout l = r.layout();
+                return (double) (l == null ? 0 : l.getSize());
             })
+            // Stays a hand-built Array: the elements are raw slot NUMBERS, not Obj-wrapped PolyType
+            // instances, so TypeCodecs.listOf would decode/encode them to nothing.
             .property("locked_slots", obj -> {
                 MachineLayout l = ref(obj).layout();
                 List<ScriptValue> out = new ArrayList<>();
@@ -125,7 +127,8 @@ public final class LayoutType {
                     return t == null ? "" : t.name().toLowerCase(Locale.ROOT);
                 })
 
-            /** Every slot of a kind. */
+            /** Every slot of a kind. Return stays RAW: an Array of raw slot NUMBERS, not of
+             *  Obj-wrapped PolyType instances, so TypeCodecs.listOf cannot express it. */
             .methodTyped1("slots_of_type", TypeCodecs.STRING, TypeCodecs.RAW, new ScriptValue.Array(new ArrayList<>()),
                 (LayoutRef ref, String name) -> {
                     MachineLayout l = ref.layout();

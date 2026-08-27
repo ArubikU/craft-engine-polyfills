@@ -7,6 +7,7 @@
  *  dev.arubik.craftengine.script.PolyType$MethodHandler
  *  dev.arubik.craftengine.script.PolyType$PropertyHandler
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler1
+ *  dev.arubik.craftengine.script.PolyType$TypedPropertyHandler
  *  dev.arubik.craftengine.script.ScriptValue
  *  dev.arubik.craftengine.script.ScriptValue$Obj
  */
@@ -30,8 +31,11 @@ extends PolyClassEvent {
     private static volatile PolyType.MethodHandler m$6;
     private static volatile PolyType.PropertyHandler p$7;
     private static volatile PolyType.PropertyHandler p$8;
-    private static volatile PolyType.PropertyHandler p$9;
+    private static volatile PolyType.TypedPropertyHandler tp$9;
     private static volatile PolyType.PropertyHandler p$10;
+    private static volatile PolyType.TypedPropertyHandler tp$11;
+    private static volatile PolyType.PropertyHandler p$12;
+    private static volatile PolyType.TypedPropertyHandler tp$13;
 
     public static void refresh() {
         h$0 = (PolyType.TypedMethodHandler1)PolyClassRuntime.resolveTypedHandler((String)"PlayerDeathEvent", (String)"set_keep_inventory", (String)"Z:Z");
@@ -43,8 +47,11 @@ extends PolyClassEvent {
         m$6 = PolyClassRuntime.resolveMethodHandler((String)"PlayerDeathEvent", (String)"set_death_message");
         p$7 = PolyClassRuntime.resolvePropertyHandler((String)"PlayerDeathEvent", (String)"drops");
         p$8 = PolyClassRuntime.resolvePropertyHandler((String)"PlayerDeathEvent", (String)"death_message");
-        p$9 = PolyClassRuntime.resolvePropertyHandler((String)"PlayerDeathEvent", (String)"keep_inventory");
-        p$10 = PolyClassRuntime.resolvePropertyHandler((String)"PlayerDeathEvent", (String)"exp");
+        tp$9 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"PlayerDeathEvent", (String)"death_message", (String)"S");
+        p$10 = PolyClassRuntime.resolvePropertyHandler((String)"PlayerDeathEvent", (String)"keep_inventory");
+        tp$11 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"PlayerDeathEvent", (String)"keep_inventory", (String)"Z");
+        p$12 = PolyClassRuntime.resolvePropertyHandler((String)"PlayerDeathEvent", (String)"exp");
+        tp$13 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"PlayerDeathEvent", (String)"exp", (String)"D");
     }
 
     public boolean tm$0_set_keep_inventory(boolean bl) {
@@ -110,18 +117,39 @@ extends PolyClassEvent {
         return PolyClassRuntime.genericProperty((String)"PlayerDeathEvent", (String)"death_message", (Object)this.instance);
     }
 
-    public ScriptValue pg$9_keep_inventory() {
-        if (p$9 != null) {
-            return p$9.get(this.instance);
+    public String tg$9_death_message() {
+        if (tp$9 != null) {
+            return (String)tp$9.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"PlayerDeathEvent", (String)"death_message", (Object)this.instance).asStr();
+    }
+
+    public ScriptValue pg$10_keep_inventory() {
+        if (p$10 != null) {
+            return p$10.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"PlayerDeathEvent", (String)"keep_inventory", (Object)this.instance);
     }
 
-    public ScriptValue pg$10_exp() {
-        if (p$10 != null) {
-            return p$10.get(this.instance);
+    public boolean tg$11_keep_inventory() {
+        if (tp$11 != null) {
+            return (Boolean)tp$11.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"PlayerDeathEvent", (String)"keep_inventory", (Object)this.instance).asBool();
+    }
+
+    public ScriptValue pg$12_exp() {
+        if (p$12 != null) {
+            return p$12.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"PlayerDeathEvent", (String)"exp", (Object)this.instance);
+    }
+
+    public double tg$13_exp() {
+        if (tp$13 != null) {
+            return (Double)tp$13.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"PlayerDeathEvent", (String)"exp", (Object)this.instance).asNum();
     }
 
     public PolyClassPlayerDeathEvent(Object object) {

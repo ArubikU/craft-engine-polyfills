@@ -8,6 +8,7 @@
  *  dev.arubik.craftengine.script.PolyType$PropertyHandler
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler0
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler1
+ *  dev.arubik.craftengine.script.PolyType$TypedPropertyHandler
  *  dev.arubik.craftengine.script.ScriptValue
  *  dev.arubik.craftengine.script.ScriptValue$Obj
  */
@@ -26,7 +27,9 @@ public class PolyClassEvent {
     private static volatile PolyType.TypedMethodHandler1 h$2;
     private static volatile PolyType.MethodHandler m$3;
     private static volatile PolyType.PropertyHandler p$4;
-    private static volatile PolyType.PropertyHandler p$5;
+    private static volatile PolyType.TypedPropertyHandler tp$5;
+    private static volatile PolyType.PropertyHandler p$6;
+    private static volatile PolyType.TypedPropertyHandler tp$7;
 
     public static void refresh() {
         h$0 = (PolyType.TypedMethodHandler0)PolyClassRuntime.resolveTypedHandler((String)"Event", (String)"cancel", (String)":Z");
@@ -34,7 +37,9 @@ public class PolyClassEvent {
         h$2 = (PolyType.TypedMethodHandler1)PolyClassRuntime.resolveTypedHandler((String)"Event", (String)"set_cancelled", (String)"Z:Z");
         m$3 = PolyClassRuntime.resolveMethodHandler((String)"Event", (String)"set_cancelled");
         p$4 = PolyClassRuntime.resolvePropertyHandler((String)"Event", (String)"cancelled");
-        p$5 = PolyClassRuntime.resolvePropertyHandler((String)"Event", (String)"type");
+        tp$5 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Event", (String)"cancelled", (String)"Z");
+        p$6 = PolyClassRuntime.resolvePropertyHandler((String)"Event", (String)"type");
+        tp$7 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Event", (String)"type", (String)"S");
     }
 
     public boolean tm$0_cancel() {
@@ -72,11 +77,25 @@ public class PolyClassEvent {
         return PolyClassRuntime.genericProperty((String)"Event", (String)"cancelled", (Object)this.instance);
     }
 
-    public ScriptValue pg$5_type() {
-        if (p$5 != null) {
-            return p$5.get(this.instance);
+    public boolean tg$5_cancelled() {
+        if (tp$5 != null) {
+            return (Boolean)tp$5.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Event", (String)"cancelled", (Object)this.instance).asBool();
+    }
+
+    public ScriptValue pg$6_type() {
+        if (p$6 != null) {
+            return p$6.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Event", (String)"type", (Object)this.instance);
+    }
+
+    public String tg$7_type() {
+        if (tp$7 != null) {
+            return (String)tp$7.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Event", (String)"type", (Object)this.instance).asStr();
     }
 
     public PolyClassEvent(Object object) {

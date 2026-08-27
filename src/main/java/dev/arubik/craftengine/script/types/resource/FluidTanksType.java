@@ -18,9 +18,11 @@ public final class FluidTanksType {
 
     private static void registerFor(String typeName) {
         PolyTypeRegistry.define(typeName)
-            .property("total_level", obj -> ScriptValue.of(tanks(obj).values().stream().mapToDouble(t -> t[0]).sum()))
-            .property("total_capacity", obj -> ScriptValue.of(tanks(obj).values().stream().mapToDouble(t -> t[1]).sum()))
-            .property("count", obj -> ScriptValue.of(tanks(obj).size()))
+            .propertyTyped("total_level", TypeCodecs.DOUBLE,
+                (Map<String, double[]> m) -> m.values().stream().mapToDouble(t -> t[0]).sum())
+            .propertyTyped("total_capacity", TypeCodecs.DOUBLE,
+                (Map<String, double[]> m) -> m.values().stream().mapToDouble(t -> t[1]).sum())
+            .propertyTyped("count", TypeCodecs.DOUBLE, (Map<String, double[]> m) -> (double) m.size())
             // Every method here takes an OPTIONAL tank-name argument: when it is absent, resolve()
             // doesn't short-circuit, it still runs (falling back to the map's first entry). That is
             // exactly the methodTypedOptN shape — a null default for the name reproduces the
@@ -58,9 +60,6 @@ public final class FluidTanksType {
     public static ScriptValue wrap(String typeName, Map<String, double[]> tanks) {
         return tanks == null || tanks.isEmpty() ? ScriptValue.NULL : ScriptValue.ofObj(typeName, tanks);
     }
-
-    @SuppressWarnings("unchecked")
-    private static Map<String, double[]> tanks(Object obj) { return (Map<String, double[]>) obj; }
 
     /** {@code name} is null only when the caller omitted the tank-name argument entirely — a
      *  missing name falls back to the map's first entry, never to a fixed zero tank. */

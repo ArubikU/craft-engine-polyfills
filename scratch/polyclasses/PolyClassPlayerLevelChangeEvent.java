@@ -5,6 +5,7 @@
  *  dev.arubik.craftengine.script.PolyClass
  *  dev.arubik.craftengine.script.PolyClassRuntime
  *  dev.arubik.craftengine.script.PolyType$PropertyHandler
+ *  dev.arubik.craftengine.script.PolyType$TypedPropertyHandler
  *  dev.arubik.craftengine.script.ScriptValue
  *  dev.arubik.craftengine.script.ScriptValue$Obj
  */
@@ -19,11 +20,15 @@ import dev.arubik.craftengine.script.ScriptValue;
 public class PolyClassPlayerLevelChangeEvent
 extends PolyClassEvent {
     private static volatile PolyType.PropertyHandler p$0;
-    private static volatile PolyType.PropertyHandler p$1;
+    private static volatile PolyType.TypedPropertyHandler tp$1;
+    private static volatile PolyType.PropertyHandler p$2;
+    private static volatile PolyType.TypedPropertyHandler tp$3;
 
     public static void refresh() {
         p$0 = PolyClassRuntime.resolvePropertyHandler((String)"PlayerLevelChangeEvent", (String)"old_level");
-        p$1 = PolyClassRuntime.resolvePropertyHandler((String)"PlayerLevelChangeEvent", (String)"new_level");
+        tp$1 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"PlayerLevelChangeEvent", (String)"old_level", (String)"D");
+        p$2 = PolyClassRuntime.resolvePropertyHandler((String)"PlayerLevelChangeEvent", (String)"new_level");
+        tp$3 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"PlayerLevelChangeEvent", (String)"new_level", (String)"D");
     }
 
     public ScriptValue pg$0_old_level() {
@@ -33,11 +38,25 @@ extends PolyClassEvent {
         return PolyClassRuntime.genericProperty((String)"PlayerLevelChangeEvent", (String)"old_level", (Object)this.instance);
     }
 
-    public ScriptValue pg$1_new_level() {
-        if (p$1 != null) {
-            return p$1.get(this.instance);
+    public double tg$1_old_level() {
+        if (tp$1 != null) {
+            return (Double)tp$1.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"PlayerLevelChangeEvent", (String)"old_level", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$2_new_level() {
+        if (p$2 != null) {
+            return p$2.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"PlayerLevelChangeEvent", (String)"new_level", (Object)this.instance);
+    }
+
+    public double tg$3_new_level() {
+        if (tp$3 != null) {
+            return (Double)tp$3.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"PlayerLevelChangeEvent", (String)"new_level", (Object)this.instance).asNum();
     }
 
     public PolyClassPlayerLevelChangeEvent(Object object) {

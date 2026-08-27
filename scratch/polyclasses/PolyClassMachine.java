@@ -6,25 +6,27 @@
  *  dev.arubik.craftengine.script.PolyClassRuntime
  *  dev.arubik.craftengine.script.PolyType$MethodHandler
  *  dev.arubik.craftengine.script.PolyType$PropertyHandler
+ *  dev.arubik.craftengine.script.PolyType$TypeCodec
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler0
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler1
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler2
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler3
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler4
+ *  dev.arubik.craftengine.script.PolyType$TypedPropertyHandler
  *  dev.arubik.craftengine.script.ScriptValue
  *  dev.arubik.craftengine.script.ScriptValue$Obj
  */
 package dev.arubik.craftengine.script;
 
 import dev.arubik.craftengine.script.PolyClass;
-import dev.arubik.craftengine.script.PolyClassBlock_v6;
+import dev.arubik.craftengine.script.PolyClassBlock;
 import dev.arubik.craftengine.script.PolyClassRuntime;
 import dev.arubik.craftengine.script.PolyType;
 import dev.arubik.craftengine.script.ScriptValue;
 import java.util.List;
 
 public class PolyClassMachine
-extends PolyClassBlock_v6 {
+extends PolyClassBlock {
     private static volatile PolyType.TypedMethodHandler3 h$0;
     private static volatile PolyType.MethodHandler m$1;
     private static volatile PolyType.TypedMethodHandler2 h$2;
@@ -112,6 +114,7 @@ extends PolyClassBlock_v6 {
     private static volatile PolyType.TypedMethodHandler1 h$84;
     private static volatile PolyType.MethodHandler m$85;
     private static volatile PolyType.TypedMethodHandler1 h$86;
+    private static volatile PolyType.TypeCodec c$86_r;
     private static volatile PolyType.MethodHandler m$87;
     private static volatile PolyType.TypedMethodHandler2 h$88;
     private static volatile PolyType.MethodHandler m$89;
@@ -144,59 +147,98 @@ extends PolyClassBlock_v6 {
     private static volatile PolyType.TypedMethodHandler3 h$116;
     private static volatile PolyType.MethodHandler m$117;
     private static volatile PolyType.PropertyHandler p$118;
-    private static volatile PolyType.PropertyHandler p$119;
+    private static volatile PolyType.TypedPropertyHandler tp$119;
     private static volatile PolyType.PropertyHandler p$120;
     private static volatile PolyType.PropertyHandler p$121;
-    private static volatile PolyType.PropertyHandler p$122;
+    private static volatile PolyType.TypedPropertyHandler tp$122;
     private static volatile PolyType.PropertyHandler p$123;
-    private static volatile PolyType.PropertyHandler p$124;
+    private static volatile PolyType.TypedPropertyHandler tp$124;
     private static volatile PolyType.PropertyHandler p$125;
-    private static volatile PolyType.PropertyHandler p$126;
+    private static volatile PolyType.TypedPropertyHandler tp$126;
     private static volatile PolyType.PropertyHandler p$127;
-    private static volatile PolyType.PropertyHandler p$128;
+    private static volatile PolyType.TypedPropertyHandler tp$128;
     private static volatile PolyType.PropertyHandler p$129;
-    private static volatile PolyType.PropertyHandler p$130;
+    private static volatile PolyType.TypedPropertyHandler tp$130;
     private static volatile PolyType.PropertyHandler p$131;
-    private static volatile PolyType.PropertyHandler p$132;
+    private static volatile PolyType.TypedPropertyHandler tp$132;
     private static volatile PolyType.PropertyHandler p$133;
-    private static volatile PolyType.PropertyHandler p$134;
+    private static volatile PolyType.TypedPropertyHandler tp$134;
     private static volatile PolyType.PropertyHandler p$135;
-    private static volatile PolyType.PropertyHandler p$136;
+    private static volatile PolyType.TypedPropertyHandler tp$136;
     private static volatile PolyType.PropertyHandler p$137;
     private static volatile PolyType.PropertyHandler p$138;
     private static volatile PolyType.PropertyHandler p$139;
     private static volatile PolyType.PropertyHandler p$140;
-    private static volatile PolyType.PropertyHandler p$141;
+    private static volatile PolyType.TypedPropertyHandler tp$141;
     private static volatile PolyType.PropertyHandler p$142;
-    private static volatile PolyType.PropertyHandler p$143;
+    private static volatile PolyType.TypedPropertyHandler tp$143;
     private static volatile PolyType.PropertyHandler p$144;
-    private static volatile PolyType.PropertyHandler p$145;
+    private static volatile PolyType.TypedPropertyHandler tp$145;
     private static volatile PolyType.PropertyHandler p$146;
     private static volatile PolyType.PropertyHandler p$147;
-    private static volatile PolyType.PropertyHandler p$148;
+    private static volatile PolyType.TypedPropertyHandler tp$148;
     private static volatile PolyType.PropertyHandler p$149;
-    private static volatile PolyType.PropertyHandler p$150;
+    private static volatile PolyType.TypedPropertyHandler tp$150;
     private static volatile PolyType.PropertyHandler p$151;
-    private static volatile PolyType.PropertyHandler p$152;
+    private static volatile PolyType.TypedPropertyHandler tp$152;
     private static volatile PolyType.PropertyHandler p$153;
-    private static volatile PolyType.PropertyHandler p$154;
+    private static volatile PolyType.TypedPropertyHandler tp$154;
     private static volatile PolyType.PropertyHandler p$155;
-    private static volatile PolyType.PropertyHandler p$156;
+    private static volatile PolyType.TypedPropertyHandler tp$156;
     private static volatile PolyType.PropertyHandler p$157;
     private static volatile PolyType.PropertyHandler p$158;
     private static volatile PolyType.PropertyHandler p$159;
-    private static volatile PolyType.PropertyHandler p$160;
+    private static volatile PolyType.TypedPropertyHandler tp$160;
     private static volatile PolyType.PropertyHandler p$161;
     private static volatile PolyType.PropertyHandler p$162;
-    private static volatile PolyType.PropertyHandler p$163;
+    private static volatile PolyType.TypedPropertyHandler tp$163;
     private static volatile PolyType.PropertyHandler p$164;
-    private static volatile PolyType.PropertyHandler p$165;
+    private static volatile PolyType.TypedPropertyHandler tp$165;
     private static volatile PolyType.PropertyHandler p$166;
-    private static volatile PolyType.PropertyHandler p$167;
+    private static volatile PolyType.TypedPropertyHandler tp$167;
     private static volatile PolyType.PropertyHandler p$168;
-    private static volatile PolyType.PropertyHandler p$169;
+    private static volatile PolyType.TypedPropertyHandler tp$169;
     private static volatile PolyType.PropertyHandler p$170;
     private static volatile PolyType.PropertyHandler p$171;
+    private static volatile PolyType.TypedPropertyHandler tp$172;
+    private static volatile PolyType.PropertyHandler p$173;
+    private static volatile PolyType.TypedPropertyHandler tp$174;
+    private static volatile PolyType.PropertyHandler p$175;
+    private static volatile PolyType.TypedPropertyHandler tp$176;
+    private static volatile PolyType.PropertyHandler p$177;
+    private static volatile PolyType.PropertyHandler p$178;
+    private static volatile PolyType.TypedPropertyHandler tp$179;
+    private static volatile PolyType.PropertyHandler p$180;
+    private static volatile PolyType.TypedPropertyHandler tp$181;
+    private static volatile PolyType.PropertyHandler p$182;
+    private static volatile PolyType.TypedPropertyHandler tp$183;
+    private static volatile PolyType.PropertyHandler p$184;
+    private static volatile PolyType.PropertyHandler p$185;
+    private static volatile PolyType.PropertyHandler p$186;
+    private static volatile PolyType.TypedPropertyHandler tp$187;
+    private static volatile PolyType.PropertyHandler p$188;
+    private static volatile PolyType.TypedPropertyHandler tp$189;
+    private static volatile PolyType.PropertyHandler p$190;
+    private static volatile PolyType.PropertyHandler p$191;
+    private static volatile PolyType.PropertyHandler p$192;
+    private static volatile PolyType.PropertyHandler p$193;
+    private static volatile PolyType.TypedPropertyHandler tp$194;
+    private static volatile PolyType.PropertyHandler p$195;
+    private static volatile PolyType.TypedPropertyHandler tp$196;
+    private static volatile PolyType.PropertyHandler p$197;
+    private static volatile PolyType.TypedPropertyHandler tp$198;
+    private static volatile PolyType.PropertyHandler p$199;
+    private static volatile PolyType.TypedPropertyHandler tp$200;
+    private static volatile PolyType.PropertyHandler p$201;
+    private static volatile PolyType.TypedPropertyHandler tp$202;
+    private static volatile PolyType.PropertyHandler p$203;
+    private static volatile PolyType.TypedPropertyHandler tp$204;
+    private static volatile PolyType.PropertyHandler p$205;
+    private static volatile PolyType.TypedPropertyHandler tp$206;
+    private static volatile PolyType.PropertyHandler p$207;
+    private static volatile PolyType.TypedPropertyHandler tp$208;
+    private static volatile PolyType.PropertyHandler p$209;
+    private static volatile PolyType.TypedPropertyHandler tp$210;
 
     public static void refresh() {
         h$0 = (PolyType.TypedMethodHandler3)PolyClassRuntime.resolveTypedHandler((String)"Machine", (String)"spawn_display", (String)"SRD:R");
@@ -285,7 +327,8 @@ extends PolyClassBlock_v6 {
         m$83 = PolyClassRuntime.resolveMethodHandler((String)"Machine", (String)"set_typed");
         h$84 = (PolyType.TypedMethodHandler1)PolyClassRuntime.resolveTypedHandler((String)"Machine", (String)"set_overclock", (String)"D:Z");
         m$85 = PolyClassRuntime.resolveMethodHandler((String)"Machine", (String)"set_overclock");
-        h$86 = (PolyType.TypedMethodHandler1)PolyClassRuntime.resolveTypedHandler((String)"Machine", (String)"blocks_in_range", (String)"D:R");
+        h$86 = (PolyType.TypedMethodHandler1)PolyClassRuntime.resolveTypedHandler((String)"Machine", (String)"blocks_in_range", (String)"D:L");
+        c$86_r = PolyClassRuntime.resolveListCodec((String)"Machine", (String)"blocks_in_range", (int)-1);
         m$87 = PolyClassRuntime.resolveMethodHandler((String)"Machine", (String)"blocks_in_range");
         h$88 = (PolyType.TypedMethodHandler2)PolyClassRuntime.resolveTypedHandler((String)"Machine", (String)"consume_gas", (String)"SD:Z");
         m$89 = PolyClassRuntime.resolveMethodHandler((String)"Machine", (String)"consume_gas");
@@ -318,59 +361,98 @@ extends PolyClassBlock_v6 {
         h$116 = (PolyType.TypedMethodHandler3)PolyClassRuntime.resolveTypedHandler((String)"Machine", (String)"to_item", (String)"SZZ:R");
         m$117 = PolyClassRuntime.resolveMethodHandler((String)"Machine", (String)"to_item");
         p$118 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"is_multi_cell");
-        p$119 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"container");
-        p$120 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"has_contraption");
-        p$121 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"energy_max_output");
-        p$122 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"energy_stored");
-        p$123 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"axis");
-        p$124 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"facing_dy");
-        p$125 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"facing_dz");
-        p$126 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"facing_dx");
-        p$127 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"last_transfer_tick");
-        p$128 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"facing_block");
-        p$129 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"gas_tanks");
-        p$130 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"block");
-        p$131 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"current_page");
-        p$132 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"page_count");
-        p$133 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"generation");
-        p$134 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"recipes");
-        p$135 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"progress_percent");
-        p$136 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"efficiency");
-        p$137 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"ticks_alive");
-        p$138 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"source_distance");
-        p$139 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"overclock_limit");
-        p$140 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"belt");
-        p$141 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"io");
-        p$142 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"energy_real_output");
-        p$143 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"working_recipe");
-        p$144 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"energy_capacity");
-        p$145 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"cell_count");
-        p$146 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"network_capacity");
-        p$147 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"meter_state");
-        p$148 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"redstone");
-        p$149 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"overclock");
-        p$150 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"energy_max_input");
-        p$151 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"energy_per_tick");
-        p$152 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"fluid_tanks");
-        p$153 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"energy_real_input");
-        p$154 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"rename_text");
-        p$155 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"rpm_network");
-        p$156 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"pos");
-        p$157 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"matching_recipe");
-        p$158 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"max_progress");
-        p$159 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"network_stress");
-        p$160 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"contraption");
-        p$161 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"bars");
-        p$162 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"layout");
-        p$163 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"max_burn_time");
-        p$164 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"burn_time");
-        p$165 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"is_overstressed");
-        p$166 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"x");
-        p$167 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"y");
-        p$168 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"progress");
-        p$169 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"z");
-        p$170 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"activated");
-        p$171 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"owner_uuid");
+        tp$119 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Machine", (String)"is_multi_cell", (String)"Z");
+        p$120 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"container");
+        p$121 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"has_contraption");
+        tp$122 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Machine", (String)"has_contraption", (String)"Z");
+        p$123 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"energy_max_output");
+        tp$124 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Machine", (String)"energy_max_output", (String)"D");
+        p$125 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"energy_stored");
+        tp$126 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Machine", (String)"energy_stored", (String)"D");
+        p$127 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"axis");
+        tp$128 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Machine", (String)"axis", (String)"S");
+        p$129 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"facing_dy");
+        tp$130 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Machine", (String)"facing_dy", (String)"D");
+        p$131 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"facing_dz");
+        tp$132 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Machine", (String)"facing_dz", (String)"D");
+        p$133 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"facing_dx");
+        tp$134 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Machine", (String)"facing_dx", (String)"D");
+        p$135 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"last_transfer_tick");
+        tp$136 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Machine", (String)"last_transfer_tick", (String)"D");
+        p$137 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"facing_block");
+        p$138 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"gas_tanks");
+        p$139 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"block");
+        p$140 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"current_page");
+        tp$141 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Machine", (String)"current_page", (String)"D");
+        p$142 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"page_count");
+        tp$143 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Machine", (String)"page_count", (String)"D");
+        p$144 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"generation");
+        tp$145 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Machine", (String)"generation", (String)"D");
+        p$146 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"recipes");
+        p$147 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"progress_percent");
+        tp$148 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Machine", (String)"progress_percent", (String)"D");
+        p$149 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"efficiency");
+        tp$150 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Machine", (String)"efficiency", (String)"D");
+        p$151 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"ticks_alive");
+        tp$152 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Machine", (String)"ticks_alive", (String)"D");
+        p$153 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"source_distance");
+        tp$154 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Machine", (String)"source_distance", (String)"D");
+        p$155 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"overclock_limit");
+        tp$156 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Machine", (String)"overclock_limit", (String)"D");
+        p$157 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"belt");
+        p$158 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"io");
+        p$159 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"energy_real_output");
+        tp$160 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Machine", (String)"energy_real_output", (String)"D");
+        p$161 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"working_recipe");
+        p$162 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"energy_capacity");
+        tp$163 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Machine", (String)"energy_capacity", (String)"D");
+        p$164 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"cell_count");
+        tp$165 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Machine", (String)"cell_count", (String)"D");
+        p$166 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"network_capacity");
+        tp$167 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Machine", (String)"network_capacity", (String)"D");
+        p$168 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"meter_state");
+        tp$169 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Machine", (String)"meter_state", (String)"D");
+        p$170 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"redstone");
+        p$171 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"overclock");
+        tp$172 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Machine", (String)"overclock", (String)"D");
+        p$173 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"energy_max_input");
+        tp$174 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Machine", (String)"energy_max_input", (String)"D");
+        p$175 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"energy_per_tick");
+        tp$176 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Machine", (String)"energy_per_tick", (String)"D");
+        p$177 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"fluid_tanks");
+        p$178 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"energy_real_input");
+        tp$179 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Machine", (String)"energy_real_input", (String)"D");
+        p$180 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"rename_text");
+        tp$181 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Machine", (String)"rename_text", (String)"S");
+        p$182 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"rpm_network");
+        tp$183 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Machine", (String)"rpm_network", (String)"D");
+        p$184 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"pos");
+        p$185 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"matching_recipe");
+        p$186 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"max_progress");
+        tp$187 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Machine", (String)"max_progress", (String)"D");
+        p$188 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"network_stress");
+        tp$189 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Machine", (String)"network_stress", (String)"D");
+        p$190 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"contraption");
+        p$191 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"bars");
+        p$192 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"layout");
+        p$193 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"max_burn_time");
+        tp$194 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Machine", (String)"max_burn_time", (String)"D");
+        p$195 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"burn_time");
+        tp$196 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Machine", (String)"burn_time", (String)"D");
+        p$197 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"is_overstressed");
+        tp$198 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Machine", (String)"is_overstressed", (String)"Z");
+        p$199 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"x");
+        tp$200 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Machine", (String)"x", (String)"D");
+        p$201 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"y");
+        tp$202 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Machine", (String)"y", (String)"D");
+        p$203 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"progress");
+        tp$204 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Machine", (String)"progress", (String)"D");
+        p$205 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"z");
+        tp$206 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Machine", (String)"z", (String)"D");
+        p$207 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"activated");
+        tp$208 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Machine", (String)"activated", (String)"Z");
+        p$209 = PolyClassRuntime.resolvePropertyHandler((String)"Machine", (String)"owner_uuid");
+        tp$210 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Machine", (String)"owner_uuid", (String)"S");
     }
 
     public ScriptValue tm$0_spawn_display(String string, ScriptValue scriptValue, double d) {
@@ -976,8 +1058,8 @@ extends PolyClassBlock_v6 {
     }
 
     public ScriptValue tm$86_blocks_in_range(double d) {
-        if (h$86 != null) {
-            return (ScriptValue)h$86.call(this.instance, (Object)d);
+        if (h$86 != null && c$86_r != null) {
+            return c$86_r.encode(h$86.call(this.instance, (Object)d));
         }
         return PolyClassRuntime.genericCall((String)"Machine", (String)"blocks_in_range", (Object)this.instance, (ScriptValue[])new ScriptValue[]{ScriptValue.of((double)d)});
     }
@@ -1206,375 +1288,648 @@ extends PolyClassBlock_v6 {
         return PolyClassRuntime.genericProperty((String)"Machine", (String)"is_multi_cell", (Object)this.instance);
     }
 
-    public ScriptValue pg$119_container() {
-        if (p$119 != null) {
-            return p$119.get(this.instance);
+    public boolean tg$119_is_multi_cell() {
+        if (tp$119 != null) {
+            return (Boolean)tp$119.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Machine", (String)"is_multi_cell", (Object)this.instance).asBool();
+    }
+
+    public ScriptValue pg$120_container() {
+        if (p$120 != null) {
+            return p$120.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Machine", (String)"container", (Object)this.instance);
     }
 
-    public ScriptValue pg$120_has_contraption() {
-        if (p$120 != null) {
-            return p$120.get(this.instance);
+    public ScriptValue pg$121_has_contraption() {
+        if (p$121 != null) {
+            return p$121.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Machine", (String)"has_contraption", (Object)this.instance);
     }
 
-    public ScriptValue pg$121_energy_max_output() {
-        if (p$121 != null) {
-            return p$121.get(this.instance);
+    public boolean tg$122_has_contraption() {
+        if (tp$122 != null) {
+            return (Boolean)tp$122.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Machine", (String)"has_contraption", (Object)this.instance).asBool();
+    }
+
+    public ScriptValue pg$123_energy_max_output() {
+        if (p$123 != null) {
+            return p$123.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Machine", (String)"energy_max_output", (Object)this.instance);
     }
 
-    public ScriptValue pg$122_energy_stored() {
-        if (p$122 != null) {
-            return p$122.get(this.instance);
+    public double tg$124_energy_max_output() {
+        if (tp$124 != null) {
+            return (Double)tp$124.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Machine", (String)"energy_max_output", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$125_energy_stored() {
+        if (p$125 != null) {
+            return p$125.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Machine", (String)"energy_stored", (Object)this.instance);
     }
 
-    public ScriptValue pg$123_axis() {
-        if (p$123 != null) {
-            return p$123.get(this.instance);
+    public double tg$126_energy_stored() {
+        if (tp$126 != null) {
+            return (Double)tp$126.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Machine", (String)"energy_stored", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$127_axis() {
+        if (p$127 != null) {
+            return p$127.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Machine", (String)"axis", (Object)this.instance);
     }
 
-    public ScriptValue pg$124_facing_dy() {
-        if (p$124 != null) {
-            return p$124.get(this.instance);
+    public String tg$128_axis() {
+        if (tp$128 != null) {
+            return (String)tp$128.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Machine", (String)"axis", (Object)this.instance).asStr();
+    }
+
+    public ScriptValue pg$129_facing_dy() {
+        if (p$129 != null) {
+            return p$129.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Machine", (String)"facing_dy", (Object)this.instance);
     }
 
-    public ScriptValue pg$125_facing_dz() {
-        if (p$125 != null) {
-            return p$125.get(this.instance);
+    public double tg$130_facing_dy() {
+        if (tp$130 != null) {
+            return (Double)tp$130.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Machine", (String)"facing_dy", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$131_facing_dz() {
+        if (p$131 != null) {
+            return p$131.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Machine", (String)"facing_dz", (Object)this.instance);
     }
 
-    public ScriptValue pg$126_facing_dx() {
-        if (p$126 != null) {
-            return p$126.get(this.instance);
+    public double tg$132_facing_dz() {
+        if (tp$132 != null) {
+            return (Double)tp$132.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Machine", (String)"facing_dz", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$133_facing_dx() {
+        if (p$133 != null) {
+            return p$133.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Machine", (String)"facing_dx", (Object)this.instance);
     }
 
-    public ScriptValue pg$127_last_transfer_tick() {
-        if (p$127 != null) {
-            return p$127.get(this.instance);
+    public double tg$134_facing_dx() {
+        if (tp$134 != null) {
+            return (Double)tp$134.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Machine", (String)"facing_dx", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$135_last_transfer_tick() {
+        if (p$135 != null) {
+            return p$135.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Machine", (String)"last_transfer_tick", (Object)this.instance);
     }
 
-    public ScriptValue pg$128_facing_block() {
-        if (p$128 != null) {
-            return p$128.get(this.instance);
+    public double tg$136_last_transfer_tick() {
+        if (tp$136 != null) {
+            return (Double)tp$136.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Machine", (String)"last_transfer_tick", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$137_facing_block() {
+        if (p$137 != null) {
+            return p$137.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Machine", (String)"facing_block", (Object)this.instance);
     }
 
-    public ScriptValue pg$129_gas_tanks() {
-        if (p$129 != null) {
-            return p$129.get(this.instance);
+    public ScriptValue pg$138_gas_tanks() {
+        if (p$138 != null) {
+            return p$138.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Machine", (String)"gas_tanks", (Object)this.instance);
     }
 
-    public ScriptValue pg$130_block() {
-        if (p$130 != null) {
-            return p$130.get(this.instance);
+    public ScriptValue pg$139_block() {
+        if (p$139 != null) {
+            return p$139.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Machine", (String)"block", (Object)this.instance);
     }
 
-    public ScriptValue pg$131_current_page() {
-        if (p$131 != null) {
-            return p$131.get(this.instance);
+    public ScriptValue pg$140_current_page() {
+        if (p$140 != null) {
+            return p$140.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Machine", (String)"current_page", (Object)this.instance);
     }
 
-    public ScriptValue pg$132_page_count() {
-        if (p$132 != null) {
-            return p$132.get(this.instance);
+    public double tg$141_current_page() {
+        if (tp$141 != null) {
+            return (Double)tp$141.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Machine", (String)"current_page", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$142_page_count() {
+        if (p$142 != null) {
+            return p$142.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Machine", (String)"page_count", (Object)this.instance);
     }
 
-    public ScriptValue pg$133_generation() {
-        if (p$133 != null) {
-            return p$133.get(this.instance);
+    public double tg$143_page_count() {
+        if (tp$143 != null) {
+            return (Double)tp$143.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Machine", (String)"page_count", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$144_generation() {
+        if (p$144 != null) {
+            return p$144.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Machine", (String)"generation", (Object)this.instance);
     }
 
-    public ScriptValue pg$134_recipes() {
-        if (p$134 != null) {
-            return p$134.get(this.instance);
+    public double tg$145_generation() {
+        if (tp$145 != null) {
+            return (Double)tp$145.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Machine", (String)"generation", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$146_recipes() {
+        if (p$146 != null) {
+            return p$146.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Machine", (String)"recipes", (Object)this.instance);
     }
 
-    public ScriptValue pg$135_progress_percent() {
-        if (p$135 != null) {
-            return p$135.get(this.instance);
+    public ScriptValue pg$147_progress_percent() {
+        if (p$147 != null) {
+            return p$147.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Machine", (String)"progress_percent", (Object)this.instance);
     }
 
-    public ScriptValue pg$136_efficiency() {
-        if (p$136 != null) {
-            return p$136.get(this.instance);
+    public double tg$148_progress_percent() {
+        if (tp$148 != null) {
+            return (Double)tp$148.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Machine", (String)"progress_percent", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$149_efficiency() {
+        if (p$149 != null) {
+            return p$149.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Machine", (String)"efficiency", (Object)this.instance);
     }
 
-    public ScriptValue pg$137_ticks_alive() {
-        if (p$137 != null) {
-            return p$137.get(this.instance);
+    public double tg$150_efficiency() {
+        if (tp$150 != null) {
+            return (Double)tp$150.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Machine", (String)"efficiency", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$151_ticks_alive() {
+        if (p$151 != null) {
+            return p$151.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Machine", (String)"ticks_alive", (Object)this.instance);
     }
 
-    public ScriptValue pg$138_source_distance() {
-        if (p$138 != null) {
-            return p$138.get(this.instance);
+    public double tg$152_ticks_alive() {
+        if (tp$152 != null) {
+            return (Double)tp$152.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Machine", (String)"ticks_alive", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$153_source_distance() {
+        if (p$153 != null) {
+            return p$153.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Machine", (String)"source_distance", (Object)this.instance);
     }
 
-    public ScriptValue pg$139_overclock_limit() {
-        if (p$139 != null) {
-            return p$139.get(this.instance);
+    public double tg$154_source_distance() {
+        if (tp$154 != null) {
+            return (Double)tp$154.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Machine", (String)"source_distance", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$155_overclock_limit() {
+        if (p$155 != null) {
+            return p$155.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Machine", (String)"overclock_limit", (Object)this.instance);
     }
 
-    public ScriptValue pg$140_belt() {
-        if (p$140 != null) {
-            return p$140.get(this.instance);
+    public double tg$156_overclock_limit() {
+        if (tp$156 != null) {
+            return (Double)tp$156.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Machine", (String)"overclock_limit", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$157_belt() {
+        if (p$157 != null) {
+            return p$157.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Machine", (String)"belt", (Object)this.instance);
     }
 
-    public ScriptValue pg$141_io() {
-        if (p$141 != null) {
-            return p$141.get(this.instance);
+    public ScriptValue pg$158_io() {
+        if (p$158 != null) {
+            return p$158.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Machine", (String)"io", (Object)this.instance);
     }
 
-    public ScriptValue pg$142_energy_real_output() {
-        if (p$142 != null) {
-            return p$142.get(this.instance);
+    public ScriptValue pg$159_energy_real_output() {
+        if (p$159 != null) {
+            return p$159.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Machine", (String)"energy_real_output", (Object)this.instance);
     }
 
-    public ScriptValue pg$143_working_recipe() {
-        if (p$143 != null) {
-            return p$143.get(this.instance);
+    public double tg$160_energy_real_output() {
+        if (tp$160 != null) {
+            return (Double)tp$160.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Machine", (String)"energy_real_output", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$161_working_recipe() {
+        if (p$161 != null) {
+            return p$161.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Machine", (String)"working_recipe", (Object)this.instance);
     }
 
-    public ScriptValue pg$144_energy_capacity() {
-        if (p$144 != null) {
-            return p$144.get(this.instance);
+    public ScriptValue pg$162_energy_capacity() {
+        if (p$162 != null) {
+            return p$162.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Machine", (String)"energy_capacity", (Object)this.instance);
     }
 
-    public ScriptValue pg$145_cell_count() {
-        if (p$145 != null) {
-            return p$145.get(this.instance);
+    public double tg$163_energy_capacity() {
+        if (tp$163 != null) {
+            return (Double)tp$163.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Machine", (String)"energy_capacity", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$164_cell_count() {
+        if (p$164 != null) {
+            return p$164.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Machine", (String)"cell_count", (Object)this.instance);
     }
 
-    public ScriptValue pg$146_network_capacity() {
-        if (p$146 != null) {
-            return p$146.get(this.instance);
+    public double tg$165_cell_count() {
+        if (tp$165 != null) {
+            return (Double)tp$165.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Machine", (String)"cell_count", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$166_network_capacity() {
+        if (p$166 != null) {
+            return p$166.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Machine", (String)"network_capacity", (Object)this.instance);
     }
 
-    public ScriptValue pg$147_meter_state() {
-        if (p$147 != null) {
-            return p$147.get(this.instance);
+    public double tg$167_network_capacity() {
+        if (tp$167 != null) {
+            return (Double)tp$167.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Machine", (String)"network_capacity", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$168_meter_state() {
+        if (p$168 != null) {
+            return p$168.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Machine", (String)"meter_state", (Object)this.instance);
     }
 
-    public ScriptValue pg$148_redstone() {
-        if (p$148 != null) {
-            return p$148.get(this.instance);
+    public double tg$169_meter_state() {
+        if (tp$169 != null) {
+            return (Double)tp$169.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Machine", (String)"meter_state", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$170_redstone() {
+        if (p$170 != null) {
+            return p$170.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Machine", (String)"redstone", (Object)this.instance);
     }
 
-    public ScriptValue pg$149_overclock() {
-        if (p$149 != null) {
-            return p$149.get(this.instance);
+    public ScriptValue pg$171_overclock() {
+        if (p$171 != null) {
+            return p$171.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Machine", (String)"overclock", (Object)this.instance);
     }
 
-    public ScriptValue pg$150_energy_max_input() {
-        if (p$150 != null) {
-            return p$150.get(this.instance);
+    public double tg$172_overclock() {
+        if (tp$172 != null) {
+            return (Double)tp$172.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Machine", (String)"overclock", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$173_energy_max_input() {
+        if (p$173 != null) {
+            return p$173.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Machine", (String)"energy_max_input", (Object)this.instance);
     }
 
-    public ScriptValue pg$151_energy_per_tick() {
-        if (p$151 != null) {
-            return p$151.get(this.instance);
+    public double tg$174_energy_max_input() {
+        if (tp$174 != null) {
+            return (Double)tp$174.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Machine", (String)"energy_max_input", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$175_energy_per_tick() {
+        if (p$175 != null) {
+            return p$175.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Machine", (String)"energy_per_tick", (Object)this.instance);
     }
 
-    public ScriptValue pg$152_fluid_tanks() {
-        if (p$152 != null) {
-            return p$152.get(this.instance);
+    public double tg$176_energy_per_tick() {
+        if (tp$176 != null) {
+            return (Double)tp$176.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Machine", (String)"energy_per_tick", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$177_fluid_tanks() {
+        if (p$177 != null) {
+            return p$177.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Machine", (String)"fluid_tanks", (Object)this.instance);
     }
 
-    public ScriptValue pg$153_energy_real_input() {
-        if (p$153 != null) {
-            return p$153.get(this.instance);
+    public ScriptValue pg$178_energy_real_input() {
+        if (p$178 != null) {
+            return p$178.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Machine", (String)"energy_real_input", (Object)this.instance);
     }
 
-    public ScriptValue pg$154_rename_text() {
-        if (p$154 != null) {
-            return p$154.get(this.instance);
+    public double tg$179_energy_real_input() {
+        if (tp$179 != null) {
+            return (Double)tp$179.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Machine", (String)"energy_real_input", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$180_rename_text() {
+        if (p$180 != null) {
+            return p$180.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Machine", (String)"rename_text", (Object)this.instance);
     }
 
-    public ScriptValue pg$155_rpm_network() {
-        if (p$155 != null) {
-            return p$155.get(this.instance);
+    public String tg$181_rename_text() {
+        if (tp$181 != null) {
+            return (String)tp$181.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Machine", (String)"rename_text", (Object)this.instance).asStr();
+    }
+
+    public ScriptValue pg$182_rpm_network() {
+        if (p$182 != null) {
+            return p$182.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Machine", (String)"rpm_network", (Object)this.instance);
     }
 
-    public ScriptValue pg$156_pos() {
-        if (p$156 != null) {
-            return p$156.get(this.instance);
+    public double tg$183_rpm_network() {
+        if (tp$183 != null) {
+            return (Double)tp$183.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Machine", (String)"rpm_network", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$184_pos() {
+        if (p$184 != null) {
+            return p$184.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Machine", (String)"pos", (Object)this.instance);
     }
 
-    public ScriptValue pg$157_matching_recipe() {
-        if (p$157 != null) {
-            return p$157.get(this.instance);
+    public ScriptValue pg$185_matching_recipe() {
+        if (p$185 != null) {
+            return p$185.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Machine", (String)"matching_recipe", (Object)this.instance);
     }
 
-    public ScriptValue pg$158_max_progress() {
-        if (p$158 != null) {
-            return p$158.get(this.instance);
+    public ScriptValue pg$186_max_progress() {
+        if (p$186 != null) {
+            return p$186.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Machine", (String)"max_progress", (Object)this.instance);
     }
 
-    public ScriptValue pg$159_network_stress() {
-        if (p$159 != null) {
-            return p$159.get(this.instance);
+    public double tg$187_max_progress() {
+        if (tp$187 != null) {
+            return (Double)tp$187.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Machine", (String)"max_progress", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$188_network_stress() {
+        if (p$188 != null) {
+            return p$188.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Machine", (String)"network_stress", (Object)this.instance);
     }
 
-    public ScriptValue pg$160_contraption() {
-        if (p$160 != null) {
-            return p$160.get(this.instance);
+    public double tg$189_network_stress() {
+        if (tp$189 != null) {
+            return (Double)tp$189.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Machine", (String)"network_stress", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$190_contraption() {
+        if (p$190 != null) {
+            return p$190.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Machine", (String)"contraption", (Object)this.instance);
     }
 
-    public ScriptValue pg$161_bars() {
-        if (p$161 != null) {
-            return p$161.get(this.instance);
+    public ScriptValue pg$191_bars() {
+        if (p$191 != null) {
+            return p$191.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Machine", (String)"bars", (Object)this.instance);
     }
 
-    public ScriptValue pg$162_layout() {
-        if (p$162 != null) {
-            return p$162.get(this.instance);
+    public ScriptValue pg$192_layout() {
+        if (p$192 != null) {
+            return p$192.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Machine", (String)"layout", (Object)this.instance);
     }
 
-    public ScriptValue pg$163_max_burn_time() {
-        if (p$163 != null) {
-            return p$163.get(this.instance);
+    public ScriptValue pg$193_max_burn_time() {
+        if (p$193 != null) {
+            return p$193.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Machine", (String)"max_burn_time", (Object)this.instance);
     }
 
-    public ScriptValue pg$164_burn_time() {
-        if (p$164 != null) {
-            return p$164.get(this.instance);
+    public double tg$194_max_burn_time() {
+        if (tp$194 != null) {
+            return (Double)tp$194.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Machine", (String)"max_burn_time", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$195_burn_time() {
+        if (p$195 != null) {
+            return p$195.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Machine", (String)"burn_time", (Object)this.instance);
     }
 
-    public ScriptValue pg$165_is_overstressed() {
-        if (p$165 != null) {
-            return p$165.get(this.instance);
+    public double tg$196_burn_time() {
+        if (tp$196 != null) {
+            return (Double)tp$196.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Machine", (String)"burn_time", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$197_is_overstressed() {
+        if (p$197 != null) {
+            return p$197.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Machine", (String)"is_overstressed", (Object)this.instance);
     }
 
-    public ScriptValue pg$166_x() {
-        if (p$166 != null) {
-            return p$166.get(this.instance);
+    public boolean tg$198_is_overstressed() {
+        if (tp$198 != null) {
+            return (Boolean)tp$198.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Machine", (String)"is_overstressed", (Object)this.instance).asBool();
+    }
+
+    public ScriptValue pg$199_x() {
+        if (p$199 != null) {
+            return p$199.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Machine", (String)"x", (Object)this.instance);
     }
 
-    public ScriptValue pg$167_y() {
-        if (p$167 != null) {
-            return p$167.get(this.instance);
+    public double tg$200_x() {
+        if (tp$200 != null) {
+            return (Double)tp$200.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Machine", (String)"x", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$201_y() {
+        if (p$201 != null) {
+            return p$201.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Machine", (String)"y", (Object)this.instance);
     }
 
-    public ScriptValue pg$168_progress() {
-        if (p$168 != null) {
-            return p$168.get(this.instance);
+    public double tg$202_y() {
+        if (tp$202 != null) {
+            return (Double)tp$202.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Machine", (String)"y", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$203_progress() {
+        if (p$203 != null) {
+            return p$203.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Machine", (String)"progress", (Object)this.instance);
     }
 
-    public ScriptValue pg$169_z() {
-        if (p$169 != null) {
-            return p$169.get(this.instance);
+    public double tg$204_progress() {
+        if (tp$204 != null) {
+            return (Double)tp$204.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Machine", (String)"progress", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$205_z() {
+        if (p$205 != null) {
+            return p$205.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Machine", (String)"z", (Object)this.instance);
     }
 
-    public ScriptValue pg$170_activated() {
-        if (p$170 != null) {
-            return p$170.get(this.instance);
+    public double tg$206_z() {
+        if (tp$206 != null) {
+            return (Double)tp$206.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Machine", (String)"z", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$207_activated() {
+        if (p$207 != null) {
+            return p$207.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Machine", (String)"activated", (Object)this.instance);
     }
 
-    public ScriptValue pg$171_owner_uuid() {
-        if (p$171 != null) {
-            return p$171.get(this.instance);
+    public boolean tg$208_activated() {
+        if (tp$208 != null) {
+            return (Boolean)tp$208.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Machine", (String)"activated", (Object)this.instance).asBool();
+    }
+
+    public ScriptValue pg$209_owner_uuid() {
+        if (p$209 != null) {
+            return p$209.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Machine", (String)"owner_uuid", (Object)this.instance);
+    }
+
+    public String tg$210_owner_uuid() {
+        if (tp$210 != null) {
+            return (String)tp$210.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Machine", (String)"owner_uuid", (Object)this.instance).asStr();
     }
 
     public PolyClassMachine(Object object) {

@@ -7,6 +7,7 @@
  *  dev.arubik.craftengine.script.PolyType$MethodHandler
  *  dev.arubik.craftengine.script.PolyType$PropertyHandler
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler1
+ *  dev.arubik.craftengine.script.PolyType$TypedPropertyHandler
  *  dev.arubik.craftengine.script.ScriptValue
  *  dev.arubik.craftengine.script.ScriptValue$Obj
  */
@@ -24,11 +25,13 @@ extends PolyClassEvent {
     private static volatile PolyType.TypedMethodHandler1 h$0;
     private static volatile PolyType.MethodHandler m$1;
     private static volatile PolyType.PropertyHandler p$2;
+    private static volatile PolyType.TypedPropertyHandler tp$3;
 
     public static void refresh() {
         h$0 = (PolyType.TypedMethodHandler1)PolyClassRuntime.resolveTypedHandler((String)"BroadcastMessageEvent", (String)"set_message", (String)"S:Z");
         m$1 = PolyClassRuntime.resolveMethodHandler((String)"BroadcastMessageEvent", (String)"set_message");
         p$2 = PolyClassRuntime.resolvePropertyHandler((String)"BroadcastMessageEvent", (String)"message");
+        tp$3 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"BroadcastMessageEvent", (String)"message", (String)"S");
     }
 
     public boolean tm$0_set_message(String string) {
@@ -50,6 +53,13 @@ extends PolyClassEvent {
             return p$2.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"BroadcastMessageEvent", (String)"message", (Object)this.instance);
+    }
+
+    public String tg$3_message() {
+        if (tp$3 != null) {
+            return (String)tp$3.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"BroadcastMessageEvent", (String)"message", (Object)this.instance).asStr();
     }
 
     public PolyClassBroadcastMessageEvent(Object object) {

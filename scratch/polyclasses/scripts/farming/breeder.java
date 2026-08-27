@@ -95,10 +95,10 @@ public final class Breeder {
             }
             var11_10 = v0 /* !! */ ;
             var0.val("animals", var11_10);
-            var12_11 = ScriptProgram.rowsOf((ScriptValue)var11_10, (int)1);
+            var12_11 = ScriptProgram.elementsOf((ScriptValue)var11_10);
             if (var12_11 == null) break block14;
-            for (ScriptValue[] var14_13 : var12_11) {
-                var0.val("animal", var14_13.length > 0 ? var14_13[0] : ScriptValue.NULL);
+            for (ScriptValue var14_13 : var12_11) {
+                var0.val("animal", var14_13);
                 var15_14 = var1_1.getClassOrVar("animal");
                 if (!((var15_14 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "is_alive", (ScriptValue)var15_14, (ScriptContext)var1_1) : ScriptValue.NULL).asBool() != false && ((var16_15 = var1_1.getClassOrVar("animal")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "is_animal", (ScriptValue)var16_15, (ScriptContext)var1_1) : ScriptValue.NULL).asBool() != false)) ** GOTO lbl-1000
                 var17_16 = var1_1.getClassOrVar("animal");
@@ -130,15 +130,15 @@ public final class Breeder {
                 var0.val("fed", var24_23);
                 var28_27 = new ArrayList<ScriptValue>();
                 var28_27.add(ScriptValue.of((double)9.0));
-                var25_24 = ScriptProgram.rowsOf((ScriptValue)ScriptFormula.callBuiltin((String)"range", var28_27, (ScriptContext)var1_1), (int)1);
+                var25_24 = ScriptProgram.elementsOf((ScriptValue)ScriptFormula.callBuiltin((String)"range", var28_27, (ScriptContext)var1_1));
                 if (var25_24 == null) continue;
-                for (ScriptValue[] var27_26 : var25_24) {
-                    var0.val("i", var27_26.length > 0 ? var27_26[0] : ScriptValue.NULL);
+                for (ScriptValue var27_26 : var25_24) {
+                    var0.val("i", var27_26);
                     if (!(var1_1.getBool("fed") ^ true)) continue;
                     var29_28 = new ArrayList<ScriptValue>();
                     var29_28.add(var1_1.getClassOrVar("i"));
                     var30_29 = var1_1.getClassOrVar("Machine");
-                    var32_31 = PolyDispatch.bootstrapCall("memberCall", "get_item", (ScriptValue)(var30_29 != ScriptValue.NULL ? ((var31_30 = PolyClassMachine.ofGuarded((ScriptValue)var30_29)) != null ? var31_30.pg$119_container() : PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)var30_29, (ScriptContext)var1_1)) : ScriptValue.NULL), var29_28, (ScriptContext)var1_1);
+                    var32_31 = PolyDispatch.bootstrapCall("memberCall", "get_item", (ScriptValue)(var30_29 != ScriptValue.NULL ? ((var31_30 = PolyClassMachine.ofGuarded((ScriptValue)var30_29)) != null ? var31_30.pg$120_container() : PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)var30_29, (ScriptContext)var1_1)) : ScriptValue.NULL), var29_28, (ScriptContext)var1_1);
                     var0.val("item", (ScriptValue)var32_31);
                     var33_32 = new ArrayList<CallSite>();
                     var33_32.add(var32_31);

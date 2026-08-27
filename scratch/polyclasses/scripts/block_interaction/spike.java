@@ -86,14 +86,14 @@ public final class Spike {
                 var18_18 = new ArrayList<ScriptValue>();
                 var18_18.add(ScriptValue.of((double)0.0));
                 var19_19 = var1_1.getClassOrVar("Machine");
-                var21_21 = PolyDispatch.bootstrapCall("memberCall", "get_item", (ScriptValue)(var19_19 != ScriptValue.NULL ? ((var20_20 = PolyClassMachine.ofGuarded((ScriptValue)var19_19)) != null ? var20_20.pg$119_container() : PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)var19_19, (ScriptContext)var1_1)) : ScriptValue.NULL), var18_18, (ScriptContext)var1_1);
+                var21_21 = PolyDispatch.bootstrapCall("memberCall", "get_item", (ScriptValue)(var19_19 != ScriptValue.NULL ? ((var20_20 = PolyClassMachine.ofGuarded((ScriptValue)var19_19)) != null ? var20_20.pg$120_container() : PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)var19_19, (ScriptContext)var1_1)) : ScriptValue.NULL), var18_18, (ScriptContext)var1_1);
                 var0.val("weapon", (ScriptValue)var21_21);
                 var22_22 = new ArrayList<CallSite>();
                 var22_22.add(var21_21);
                 var24_24 = ScriptFormula.callBuiltin((String)"is_empty", var22_22, (ScriptContext)var1_1).asBool() != false ? ScriptValue.of((double)2.0) : ((var23_23 = var1_1.getClassOrVar("weapon")) != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "attack_damage", (ScriptValue)var23_23, (ScriptContext)var1_1) : ScriptValue.NULL);
                 var0.val("base_dmg", var24_24);
                 var25_25 = var1_1.getClassOrVar("Machine");
-                var27_27 = var25_25 != ScriptValue.NULL ? ((var26_26 = PolyClassMachine.ofGuarded((ScriptValue)var25_25)) != null ? var26_26.pg$171_owner_uuid() : PolyDispatch.bootstrapGet("memberGet", "owner_uuid", (ScriptValue)var25_25, (ScriptContext)var1_1)) : ScriptValue.NULL;
+                var27_27 = var25_25 != ScriptValue.NULL ? ((var26_26 = PolyClassMachine.ofGuarded((ScriptValue)var25_25)) != null ? var26_26.pg$209_owner_uuid() : PolyDispatch.bootstrapGet("memberGet", "owner_uuid", (ScriptValue)var25_25, (ScriptContext)var1_1)) : ScriptValue.NULL;
                 var0.val("owner_id", var27_27);
                 var28_28 = var1_1.getClassOrVar("Machine");
                 if (var28_28 != ScriptValue.NULL) {
@@ -114,10 +114,10 @@ public final class Spike {
                 var36_35 = 0.0;
                 var38_36 = ScriptValue.of((double)0.0);
                 var0.val("hit_count", var38_36);
-                var39_37 = ScriptProgram.rowsOf((ScriptValue)var35_34, (int)1);
+                var39_37 = ScriptProgram.elementsOf((ScriptValue)var35_34);
                 if (var39_37 == null) break block24;
-                for (ScriptValue[] var41_39 : var39_37) {
-                    var0.val("entity", var41_39.length > 0 ? var41_39[0] : ScriptValue.NULL);
+                for (ScriptValue var41_39 : var39_37) {
+                    var0.val("entity", var41_39);
                     var42_40 = var1_1.getClassOrVar("entity");
                     if (!(var42_40 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "is_alive", (ScriptValue)var42_40, (ScriptContext)var1_1) : ScriptValue.NULL).asBool()) ** GOTO lbl-1000
                     var43_41 = new ArrayList<ScriptValue>();

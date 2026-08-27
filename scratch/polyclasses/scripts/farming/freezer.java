@@ -63,10 +63,10 @@ public final class Freezer {
             }
             var11_10 = v0 /* !! */ ;
             var0.val("blocks", var11_10);
-            var12_11 = ScriptProgram.rowsOf((ScriptValue)var11_10, (int)1);
+            var12_11 = ScriptProgram.elementsOf((ScriptValue)var11_10);
             if (var12_11 != null) {
-                for (ScriptValue[] var14_13 : var12_11) {
-                    var0.val("block", var14_13.length > 0 ? var14_13[0] : ScriptValue.NULL);
+                for (ScriptValue var14_13 : var12_11) {
+                    var0.val("block", var14_13);
                     var15_14 = var1_1.getClassOrVar("WATER_TO_ICE");
                     if (var15_14 != ScriptValue.NULL) {
                         var16_15 = new ArrayList<ScriptValue>();
@@ -107,10 +107,10 @@ public final class Freezer {
             }
             var31_29 = v2 /* !! */ ;
             var0.val("entities", var31_29);
-            var32_30 = ScriptProgram.rowsOf((ScriptValue)var31_29, (int)1);
+            var32_30 = ScriptProgram.elementsOf((ScriptValue)var31_29);
             if (var32_30 == null) break block16;
-            for (ScriptValue[] var34_32 : var32_30) {
-                var0.val("entity", var34_32.length > 0 ? var34_32[0] : ScriptValue.NULL);
+            for (ScriptValue var34_32 : var32_30) {
+                var0.val("entity", var34_32);
                 var35_33 = var1_1.getClassOrVar("entity");
                 if (!(var35_33 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "is_alive", (ScriptValue)var35_33, (ScriptContext)var1_1) : ScriptValue.NULL).asBool()) ** GOTO lbl-1000
                 var36_34 = new ArrayList<ScriptValue>();

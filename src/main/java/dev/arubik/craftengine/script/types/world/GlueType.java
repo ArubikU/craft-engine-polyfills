@@ -78,13 +78,18 @@ public final class GlueType {
              * Every block glued to this one, transitively — the exact set a bearing would carry.
              * An unglued block yields just itself, matching GlueRegistry.structureAt.
              */
-            .methodTyped1("structure", TypeCodecs.RAW, TypeCodecs.RAW, new ScriptValue.Array(List.of()),
+            // Return codec declares the element type: every element is a Block, so the handler
+            // returns the real List<BlockType.BlockRef> and the codec does the ofObj("Block", ...)
+            // wrapping BlockType.wrap used to do by hand (level/pos are both non-null here, so
+            // wrap's NULL branch was unreachable and the encoding is identical).
+            .methodTyped1("structure", TypeCodecs.RAW,
+                TypeCodecs.listOf("Block", BlockType.BlockRef.class), List.of(),
                 (Object obj, ScriptValue arg) -> {
                     BlockType.BlockRef r = blockRef(arg);
-                    List<ScriptValue> out = new ArrayList<>();
-                    if (r == null) return new ScriptValue.Array(out);
-                    for (BlockPos p : structure(r)) out.add(BlockType.wrap(r.level(), p));
-                    return new ScriptValue.Array(out);
+                    List<BlockType.BlockRef> out = new ArrayList<>();
+                    if (r == null) return out;
+                    for (BlockPos p : structure(r)) out.add(new BlockType.BlockRef(r.level(), p));
+                    return out;
                 })
             /** How many blocks that structure holds. Cheaper than materialising it. */
             .methodTyped1("size", TypeCodecs.RAW, TypeCodecs.DOUBLE, 0.0,

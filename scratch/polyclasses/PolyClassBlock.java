@@ -6,11 +6,13 @@
  *  dev.arubik.craftengine.script.PolyClassRuntime
  *  dev.arubik.craftengine.script.PolyType$MethodHandler
  *  dev.arubik.craftengine.script.PolyType$PropertyHandler
+ *  dev.arubik.craftengine.script.PolyType$TypeCodec
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler0
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler1
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler2
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler3
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler6
+ *  dev.arubik.craftengine.script.PolyType$TypedPropertyHandler
  *  dev.arubik.craftengine.script.ScriptValue
  *  dev.arubik.craftengine.script.ScriptValue$Obj
  */
@@ -29,6 +31,7 @@ public class PolyClassBlock {
     private static volatile PolyType.TypedMethodHandler3 h$2;
     private static volatile PolyType.MethodHandler m$3;
     private static volatile PolyType.TypedMethodHandler0 h$4;
+    private static volatile PolyType.TypeCodec c$4_r;
     private static volatile PolyType.MethodHandler m$5;
     private static volatile PolyType.TypedMethodHandler1 h$6;
     private static volatile PolyType.MethodHandler m$7;
@@ -63,40 +66,58 @@ public class PolyClassBlock {
     private static volatile PolyType.TypedMethodHandler1 h$36;
     private static volatile PolyType.MethodHandler m$37;
     private static volatile PolyType.PropertyHandler p$38;
-    private static volatile PolyType.PropertyHandler p$39;
+    private static volatile PolyType.TypedPropertyHandler tp$39;
     private static volatile PolyType.PropertyHandler p$40;
     private static volatile PolyType.PropertyHandler p$41;
     private static volatile PolyType.PropertyHandler p$42;
-    private static volatile PolyType.PropertyHandler p$43;
+    private static volatile PolyType.TypedPropertyHandler tp$43;
     private static volatile PolyType.PropertyHandler p$44;
-    private static volatile PolyType.PropertyHandler p$45;
+    private static volatile PolyType.TypedPropertyHandler tp$45;
     private static volatile PolyType.PropertyHandler p$46;
     private static volatile PolyType.PropertyHandler p$47;
     private static volatile PolyType.PropertyHandler p$48;
-    private static volatile PolyType.PropertyHandler p$49;
+    private static volatile PolyType.TypedPropertyHandler tp$49;
     private static volatile PolyType.PropertyHandler p$50;
     private static volatile PolyType.PropertyHandler p$51;
-    private static volatile PolyType.PropertyHandler p$52;
+    private static volatile PolyType.TypedPropertyHandler tp$52;
     private static volatile PolyType.PropertyHandler p$53;
-    private static volatile PolyType.PropertyHandler p$54;
+    private static volatile PolyType.TypedPropertyHandler tp$54;
     private static volatile PolyType.PropertyHandler p$55;
-    private static volatile PolyType.PropertyHandler p$56;
+    private static volatile PolyType.TypedPropertyHandler tp$56;
     private static volatile PolyType.PropertyHandler p$57;
-    private static volatile PolyType.PropertyHandler p$58;
+    private static volatile PolyType.TypedPropertyHandler tp$58;
     private static volatile PolyType.PropertyHandler p$59;
-    private static volatile PolyType.PropertyHandler p$60;
+    private static volatile PolyType.TypedPropertyHandler tp$60;
     private static volatile PolyType.PropertyHandler p$61;
     private static volatile PolyType.PropertyHandler p$62;
-    private static volatile PolyType.PropertyHandler p$63;
+    private static volatile PolyType.TypedPropertyHandler tp$63;
     private static volatile PolyType.PropertyHandler p$64;
-    private static volatile PolyType.PropertyHandler p$65;
+    private static volatile PolyType.TypedPropertyHandler tp$65;
+    private static volatile PolyType.PropertyHandler p$66;
+    private static volatile PolyType.PropertyHandler p$67;
+    private static volatile PolyType.PropertyHandler p$68;
+    private static volatile PolyType.TypedPropertyHandler tp$69;
+    private static volatile PolyType.PropertyHandler p$70;
+    private static volatile PolyType.TypedPropertyHandler tp$71;
+    private static volatile PolyType.PropertyHandler p$72;
+    private static volatile PolyType.PropertyHandler p$73;
+    private static volatile PolyType.TypedPropertyHandler tp$74;
+    private static volatile PolyType.PropertyHandler p$75;
+    private static volatile PolyType.TypedPropertyHandler tp$76;
+    private static volatile PolyType.PropertyHandler p$77;
+    private static volatile PolyType.PropertyHandler p$78;
+    private static volatile PolyType.PropertyHandler p$79;
+    private static volatile PolyType.TypedPropertyHandler tp$80;
+    private static volatile PolyType.PropertyHandler p$81;
+    private static volatile PolyType.TypedPropertyHandler tp$82;
 
     public static void refresh() {
         h$0 = (PolyType.TypedMethodHandler1)PolyClassRuntime.resolveTypedHandler((String)"Block", (String)"cycle_prop", (String)"S:Z");
         m$1 = PolyClassRuntime.resolveMethodHandler((String)"Block", (String)"cycle_prop");
         h$2 = (PolyType.TypedMethodHandler3)PolyClassRuntime.resolveTypedHandler((String)"Block", (String)"offset", (String)"DDD:R");
         m$3 = PolyClassRuntime.resolveMethodHandler((String)"Block", (String)"offset");
-        h$4 = (PolyType.TypedMethodHandler0)PolyClassRuntime.resolveTypedHandler((String)"Block", (String)"glue_structure", (String)":R");
+        h$4 = (PolyType.TypedMethodHandler0)PolyClassRuntime.resolveTypedHandler((String)"Block", (String)"glue_structure", (String)":L");
+        c$4_r = PolyClassRuntime.resolveListCodec((String)"Block", (String)"glue_structure", (int)-1);
         m$5 = PolyClassRuntime.resolveMethodHandler((String)"Block", (String)"glue_structure");
         h$6 = (PolyType.TypedMethodHandler1)PolyClassRuntime.resolveTypedHandler((String)"Block", (String)"is_player_looking", (String)"R:Z");
         m$7 = PolyClassRuntime.resolveMethodHandler((String)"Block", (String)"is_player_looking");
@@ -131,33 +152,50 @@ public class PolyClassBlock {
         h$36 = (PolyType.TypedMethodHandler1)PolyClassRuntime.resolveTypedHandler((String)"Block", (String)"relative", (String)"S:R");
         m$37 = PolyClassRuntime.resolveMethodHandler((String)"Block", (String)"relative");
         p$38 = PolyClassRuntime.resolvePropertyHandler((String)"Block", (String)"powered");
-        p$39 = PolyClassRuntime.resolvePropertyHandler((String)"Block", (String)"metadata_types");
-        p$40 = PolyClassRuntime.resolvePropertyHandler((String)"Block", (String)"fluid_flow");
-        p$41 = PolyClassRuntime.resolvePropertyHandler((String)"Block", (String)"combined_light");
-        p$42 = PolyClassRuntime.resolvePropertyHandler((String)"Block", (String)"is_source_fluid");
-        p$43 = PolyClassRuntime.resolvePropertyHandler((String)"Block", (String)"world");
-        p$44 = PolyClassRuntime.resolvePropertyHandler((String)"Block", (String)"pos");
-        p$45 = PolyClassRuntime.resolvePropertyHandler((String)"Block", (String)"sky_light");
-        p$46 = PolyClassRuntime.resolvePropertyHandler((String)"Block", (String)"facing_block");
-        p$47 = PolyClassRuntime.resolvePropertyHandler((String)"Block", (String)"is_custom");
-        p$48 = PolyClassRuntime.resolvePropertyHandler((String)"Block", (String)"id");
-        p$49 = PolyClassRuntime.resolvePropertyHandler((String)"Block", (String)"is_air");
-        p$50 = PolyClassRuntime.resolvePropertyHandler((String)"Block", (String)"has_fluid");
-        p$51 = PolyClassRuntime.resolvePropertyHandler((String)"Block", (String)"is_water");
-        p$52 = PolyClassRuntime.resolvePropertyHandler((String)"Block", (String)"metadata_type");
-        p$53 = PolyClassRuntime.resolvePropertyHandler((String)"Block", (String)"block_light");
-        p$54 = PolyClassRuntime.resolvePropertyHandler((String)"Block", (String)"hardness");
-        p$55 = PolyClassRuntime.resolvePropertyHandler((String)"Block", (String)"block_state");
-        p$56 = PolyClassRuntime.resolvePropertyHandler((String)"Block", (String)"get_metadata");
-        p$57 = PolyClassRuntime.resolvePropertyHandler((String)"Block", (String)"light_level");
-        p$58 = PolyClassRuntime.resolvePropertyHandler((String)"Block", (String)"biome");
-        p$59 = PolyClassRuntime.resolvePropertyHandler((String)"Block", (String)"machine");
-        p$60 = PolyClassRuntime.resolvePropertyHandler((String)"Block", (String)"is_container");
-        p$61 = PolyClassRuntime.resolvePropertyHandler((String)"Block", (String)"is_glued");
-        p$62 = PolyClassRuntime.resolvePropertyHandler((String)"Block", (String)"face_blocks");
-        p$63 = PolyClassRuntime.resolvePropertyHandler((String)"Block", (String)"location");
-        p$64 = PolyClassRuntime.resolvePropertyHandler((String)"Block", (String)"vanilla_id");
-        p$65 = PolyClassRuntime.resolvePropertyHandler((String)"Block", (String)"redstone");
+        tp$39 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Block", (String)"powered", (String)"Z");
+        p$40 = PolyClassRuntime.resolvePropertyHandler((String)"Block", (String)"metadata_types");
+        p$41 = PolyClassRuntime.resolvePropertyHandler((String)"Block", (String)"fluid_flow");
+        p$42 = PolyClassRuntime.resolvePropertyHandler((String)"Block", (String)"combined_light");
+        tp$43 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Block", (String)"combined_light", (String)"D");
+        p$44 = PolyClassRuntime.resolvePropertyHandler((String)"Block", (String)"is_source_fluid");
+        tp$45 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Block", (String)"is_source_fluid", (String)"Z");
+        p$46 = PolyClassRuntime.resolvePropertyHandler((String)"Block", (String)"world");
+        p$47 = PolyClassRuntime.resolvePropertyHandler((String)"Block", (String)"pos");
+        p$48 = PolyClassRuntime.resolvePropertyHandler((String)"Block", (String)"sky_light");
+        tp$49 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Block", (String)"sky_light", (String)"D");
+        p$50 = PolyClassRuntime.resolvePropertyHandler((String)"Block", (String)"facing_block");
+        p$51 = PolyClassRuntime.resolvePropertyHandler((String)"Block", (String)"is_custom");
+        tp$52 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Block", (String)"is_custom", (String)"Z");
+        p$53 = PolyClassRuntime.resolvePropertyHandler((String)"Block", (String)"id");
+        tp$54 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Block", (String)"id", (String)"S");
+        p$55 = PolyClassRuntime.resolvePropertyHandler((String)"Block", (String)"is_air");
+        tp$56 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Block", (String)"is_air", (String)"Z");
+        p$57 = PolyClassRuntime.resolvePropertyHandler((String)"Block", (String)"has_fluid");
+        tp$58 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Block", (String)"has_fluid", (String)"Z");
+        p$59 = PolyClassRuntime.resolvePropertyHandler((String)"Block", (String)"is_water");
+        tp$60 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Block", (String)"is_water", (String)"Z");
+        p$61 = PolyClassRuntime.resolvePropertyHandler((String)"Block", (String)"metadata_type");
+        p$62 = PolyClassRuntime.resolvePropertyHandler((String)"Block", (String)"block_light");
+        tp$63 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Block", (String)"block_light", (String)"D");
+        p$64 = PolyClassRuntime.resolvePropertyHandler((String)"Block", (String)"hardness");
+        tp$65 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Block", (String)"hardness", (String)"D");
+        p$66 = PolyClassRuntime.resolvePropertyHandler((String)"Block", (String)"block_state");
+        p$67 = PolyClassRuntime.resolvePropertyHandler((String)"Block", (String)"get_metadata");
+        p$68 = PolyClassRuntime.resolvePropertyHandler((String)"Block", (String)"light_level");
+        tp$69 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Block", (String)"light_level", (String)"D");
+        p$70 = PolyClassRuntime.resolvePropertyHandler((String)"Block", (String)"biome");
+        tp$71 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Block", (String)"biome", (String)"S");
+        p$72 = PolyClassRuntime.resolvePropertyHandler((String)"Block", (String)"machine");
+        p$73 = PolyClassRuntime.resolvePropertyHandler((String)"Block", (String)"is_container");
+        tp$74 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Block", (String)"is_container", (String)"Z");
+        p$75 = PolyClassRuntime.resolvePropertyHandler((String)"Block", (String)"is_glued");
+        tp$76 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Block", (String)"is_glued", (String)"Z");
+        p$77 = PolyClassRuntime.resolvePropertyHandler((String)"Block", (String)"face_blocks");
+        p$78 = PolyClassRuntime.resolvePropertyHandler((String)"Block", (String)"location");
+        p$79 = PolyClassRuntime.resolvePropertyHandler((String)"Block", (String)"vanilla_id");
+        tp$80 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Block", (String)"vanilla_id", (String)"S");
+        p$81 = PolyClassRuntime.resolvePropertyHandler((String)"Block", (String)"redstone");
+        tp$82 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Block", (String)"redstone", (String)"D");
     }
 
     public boolean tm$0_cycle_prop(String string) {
@@ -189,8 +227,8 @@ public class PolyClassBlock {
     }
 
     public ScriptValue tm$4_glue_structure() {
-        if (h$4 != null) {
-            return (ScriptValue)h$4.call(this.instance);
+        if (h$4 != null && c$4_r != null) {
+            return c$4_r.encode(h$4.call(this.instance));
         }
         return PolyClassRuntime.genericCall((String)"Block", (String)"glue_structure", (Object)this.instance, (ScriptValue[])new ScriptValue[0]);
     }
@@ -433,193 +471,312 @@ public class PolyClassBlock {
         return PolyClassRuntime.genericProperty((String)"Block", (String)"powered", (Object)this.instance);
     }
 
-    public ScriptValue pg$39_metadata_types() {
-        if (p$39 != null) {
-            return p$39.get(this.instance);
+    public boolean tg$39_powered() {
+        if (tp$39 != null) {
+            return (Boolean)tp$39.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Block", (String)"powered", (Object)this.instance).asBool();
+    }
+
+    public ScriptValue pg$40_metadata_types() {
+        if (p$40 != null) {
+            return p$40.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Block", (String)"metadata_types", (Object)this.instance);
     }
 
-    public ScriptValue pg$40_fluid_flow() {
-        if (p$40 != null) {
-            return p$40.get(this.instance);
+    public ScriptValue pg$41_fluid_flow() {
+        if (p$41 != null) {
+            return p$41.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Block", (String)"fluid_flow", (Object)this.instance);
     }
 
-    public ScriptValue pg$41_combined_light() {
-        if (p$41 != null) {
-            return p$41.get(this.instance);
+    public ScriptValue pg$42_combined_light() {
+        if (p$42 != null) {
+            return p$42.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Block", (String)"combined_light", (Object)this.instance);
     }
 
-    public ScriptValue pg$42_is_source_fluid() {
-        if (p$42 != null) {
-            return p$42.get(this.instance);
+    public double tg$43_combined_light() {
+        if (tp$43 != null) {
+            return (Double)tp$43.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Block", (String)"combined_light", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$44_is_source_fluid() {
+        if (p$44 != null) {
+            return p$44.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Block", (String)"is_source_fluid", (Object)this.instance);
     }
 
-    public ScriptValue pg$43_world() {
-        if (p$43 != null) {
-            return p$43.get(this.instance);
+    public boolean tg$45_is_source_fluid() {
+        if (tp$45 != null) {
+            return (Boolean)tp$45.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Block", (String)"is_source_fluid", (Object)this.instance).asBool();
+    }
+
+    public ScriptValue pg$46_world() {
+        if (p$46 != null) {
+            return p$46.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Block", (String)"world", (Object)this.instance);
     }
 
-    public ScriptValue pg$44_pos() {
-        if (p$44 != null) {
-            return p$44.get(this.instance);
+    public ScriptValue pg$47_pos() {
+        if (p$47 != null) {
+            return p$47.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Block", (String)"pos", (Object)this.instance);
     }
 
-    public ScriptValue pg$45_sky_light() {
-        if (p$45 != null) {
-            return p$45.get(this.instance);
+    public ScriptValue pg$48_sky_light() {
+        if (p$48 != null) {
+            return p$48.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Block", (String)"sky_light", (Object)this.instance);
     }
 
-    public ScriptValue pg$46_facing_block() {
-        if (p$46 != null) {
-            return p$46.get(this.instance);
+    public double tg$49_sky_light() {
+        if (tp$49 != null) {
+            return (Double)tp$49.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Block", (String)"sky_light", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$50_facing_block() {
+        if (p$50 != null) {
+            return p$50.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Block", (String)"facing_block", (Object)this.instance);
     }
 
-    public ScriptValue pg$47_is_custom() {
-        if (p$47 != null) {
-            return p$47.get(this.instance);
+    public ScriptValue pg$51_is_custom() {
+        if (p$51 != null) {
+            return p$51.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Block", (String)"is_custom", (Object)this.instance);
     }
 
-    public ScriptValue pg$48_id() {
-        if (p$48 != null) {
-            return p$48.get(this.instance);
+    public boolean tg$52_is_custom() {
+        if (tp$52 != null) {
+            return (Boolean)tp$52.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Block", (String)"is_custom", (Object)this.instance).asBool();
+    }
+
+    public ScriptValue pg$53_id() {
+        if (p$53 != null) {
+            return p$53.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Block", (String)"id", (Object)this.instance);
     }
 
-    public ScriptValue pg$49_is_air() {
-        if (p$49 != null) {
-            return p$49.get(this.instance);
+    public String tg$54_id() {
+        if (tp$54 != null) {
+            return (String)tp$54.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Block", (String)"id", (Object)this.instance).asStr();
+    }
+
+    public ScriptValue pg$55_is_air() {
+        if (p$55 != null) {
+            return p$55.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Block", (String)"is_air", (Object)this.instance);
     }
 
-    public ScriptValue pg$50_has_fluid() {
-        if (p$50 != null) {
-            return p$50.get(this.instance);
+    public boolean tg$56_is_air() {
+        if (tp$56 != null) {
+            return (Boolean)tp$56.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Block", (String)"is_air", (Object)this.instance).asBool();
+    }
+
+    public ScriptValue pg$57_has_fluid() {
+        if (p$57 != null) {
+            return p$57.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Block", (String)"has_fluid", (Object)this.instance);
     }
 
-    public ScriptValue pg$51_is_water() {
-        if (p$51 != null) {
-            return p$51.get(this.instance);
+    public boolean tg$58_has_fluid() {
+        if (tp$58 != null) {
+            return (Boolean)tp$58.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Block", (String)"has_fluid", (Object)this.instance).asBool();
+    }
+
+    public ScriptValue pg$59_is_water() {
+        if (p$59 != null) {
+            return p$59.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Block", (String)"is_water", (Object)this.instance);
     }
 
-    public ScriptValue pg$52_metadata_type() {
-        if (p$52 != null) {
-            return p$52.get(this.instance);
+    public boolean tg$60_is_water() {
+        if (tp$60 != null) {
+            return (Boolean)tp$60.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Block", (String)"is_water", (Object)this.instance).asBool();
+    }
+
+    public ScriptValue pg$61_metadata_type() {
+        if (p$61 != null) {
+            return p$61.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Block", (String)"metadata_type", (Object)this.instance);
     }
 
-    public ScriptValue pg$53_block_light() {
-        if (p$53 != null) {
-            return p$53.get(this.instance);
+    public ScriptValue pg$62_block_light() {
+        if (p$62 != null) {
+            return p$62.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Block", (String)"block_light", (Object)this.instance);
     }
 
-    public ScriptValue pg$54_hardness() {
-        if (p$54 != null) {
-            return p$54.get(this.instance);
+    public double tg$63_block_light() {
+        if (tp$63 != null) {
+            return (Double)tp$63.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Block", (String)"block_light", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$64_hardness() {
+        if (p$64 != null) {
+            return p$64.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Block", (String)"hardness", (Object)this.instance);
     }
 
-    public ScriptValue pg$55_block_state() {
-        if (p$55 != null) {
-            return p$55.get(this.instance);
+    public double tg$65_hardness() {
+        if (tp$65 != null) {
+            return (Double)tp$65.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Block", (String)"hardness", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$66_block_state() {
+        if (p$66 != null) {
+            return p$66.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Block", (String)"block_state", (Object)this.instance);
     }
 
-    public ScriptValue pg$56_get_metadata() {
-        if (p$56 != null) {
-            return p$56.get(this.instance);
+    public ScriptValue pg$67_get_metadata() {
+        if (p$67 != null) {
+            return p$67.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Block", (String)"get_metadata", (Object)this.instance);
     }
 
-    public ScriptValue pg$57_light_level() {
-        if (p$57 != null) {
-            return p$57.get(this.instance);
+    public ScriptValue pg$68_light_level() {
+        if (p$68 != null) {
+            return p$68.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Block", (String)"light_level", (Object)this.instance);
     }
 
-    public ScriptValue pg$58_biome() {
-        if (p$58 != null) {
-            return p$58.get(this.instance);
+    public double tg$69_light_level() {
+        if (tp$69 != null) {
+            return (Double)tp$69.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Block", (String)"light_level", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$70_biome() {
+        if (p$70 != null) {
+            return p$70.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Block", (String)"biome", (Object)this.instance);
     }
 
-    public ScriptValue pg$59_machine() {
-        if (p$59 != null) {
-            return p$59.get(this.instance);
+    public String tg$71_biome() {
+        if (tp$71 != null) {
+            return (String)tp$71.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Block", (String)"biome", (Object)this.instance).asStr();
+    }
+
+    public ScriptValue pg$72_machine() {
+        if (p$72 != null) {
+            return p$72.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Block", (String)"machine", (Object)this.instance);
     }
 
-    public ScriptValue pg$60_is_container() {
-        if (p$60 != null) {
-            return p$60.get(this.instance);
+    public ScriptValue pg$73_is_container() {
+        if (p$73 != null) {
+            return p$73.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Block", (String)"is_container", (Object)this.instance);
     }
 
-    public ScriptValue pg$61_is_glued() {
-        if (p$61 != null) {
-            return p$61.get(this.instance);
+    public boolean tg$74_is_container() {
+        if (tp$74 != null) {
+            return (Boolean)tp$74.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Block", (String)"is_container", (Object)this.instance).asBool();
+    }
+
+    public ScriptValue pg$75_is_glued() {
+        if (p$75 != null) {
+            return p$75.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Block", (String)"is_glued", (Object)this.instance);
     }
 
-    public ScriptValue pg$62_face_blocks() {
-        if (p$62 != null) {
-            return p$62.get(this.instance);
+    public boolean tg$76_is_glued() {
+        if (tp$76 != null) {
+            return (Boolean)tp$76.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Block", (String)"is_glued", (Object)this.instance).asBool();
+    }
+
+    public ScriptValue pg$77_face_blocks() {
+        if (p$77 != null) {
+            return p$77.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Block", (String)"face_blocks", (Object)this.instance);
     }
 
-    public ScriptValue pg$63_location() {
-        if (p$63 != null) {
-            return p$63.get(this.instance);
+    public ScriptValue pg$78_location() {
+        if (p$78 != null) {
+            return p$78.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Block", (String)"location", (Object)this.instance);
     }
 
-    public ScriptValue pg$64_vanilla_id() {
-        if (p$64 != null) {
-            return p$64.get(this.instance);
+    public ScriptValue pg$79_vanilla_id() {
+        if (p$79 != null) {
+            return p$79.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Block", (String)"vanilla_id", (Object)this.instance);
     }
 
-    public ScriptValue pg$65_redstone() {
-        if (p$65 != null) {
-            return p$65.get(this.instance);
+    public String tg$80_vanilla_id() {
+        if (tp$80 != null) {
+            return (String)tp$80.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Block", (String)"vanilla_id", (Object)this.instance).asStr();
+    }
+
+    public ScriptValue pg$81_redstone() {
+        if (p$81 != null) {
+            return p$81.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Block", (String)"redstone", (Object)this.instance);
+    }
+
+    public double tg$82_redstone() {
+        if (tp$82 != null) {
+            return (Double)tp$82.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Block", (String)"redstone", (Object)this.instance).asNum();
     }
 
     public PolyClassBlock(Object object) {

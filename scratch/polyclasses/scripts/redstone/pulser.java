@@ -85,7 +85,7 @@ public final class Pulser {
         ScriptValue scriptValue6 = object2;
         builder.val("prev", scriptValue6);
         ScriptValue scriptValue7 = scriptContext.getClassOrVar("Machine");
-        Object object6 = scriptValue7 != ScriptValue.NULL ? ((polyClassMachine = PolyClassMachine.ofGuarded((ScriptValue)scriptValue7)) != null ? polyClassMachine.pg$148_redstone() : PolyDispatch.bootstrapGet("memberGet", "redstone", (ScriptValue)scriptValue7, (ScriptContext)scriptContext)) : ScriptValue.NULL;
+        Object object6 = scriptValue7 != ScriptValue.NULL ? ((polyClassMachine = PolyClassMachine.ofGuarded((ScriptValue)scriptValue7)) != null ? polyClassMachine.pg$170_redstone() : PolyDispatch.bootstrapGet("memberGet", "redstone", (ScriptValue)scriptValue7, (ScriptContext)scriptContext)) : ScriptValue.NULL;
         double d = object6.asNum() > 0.0 ? 1.0 : 0.0;
         ScriptValue scriptValue8 = ScriptValue.of((double)d);
         builder.val("cur", scriptValue8);

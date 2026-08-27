@@ -5,6 +5,7 @@
  *  dev.arubik.craftengine.script.PolyClass
  *  dev.arubik.craftengine.script.PolyClassRuntime
  *  dev.arubik.craftengine.script.PolyType$PropertyHandler
+ *  dev.arubik.craftengine.script.PolyType$TypedPropertyHandler
  *  dev.arubik.craftengine.script.ScriptValue
  *  dev.arubik.craftengine.script.ScriptValue$Obj
  */
@@ -19,13 +20,17 @@ import dev.arubik.craftengine.script.ScriptValue;
 public class PolyClassFurnaceExtractEvent
 extends PolyClassEvent {
     private static volatile PolyType.PropertyHandler p$0;
-    private static volatile PolyType.PropertyHandler p$1;
+    private static volatile PolyType.TypedPropertyHandler tp$1;
     private static volatile PolyType.PropertyHandler p$2;
+    private static volatile PolyType.TypedPropertyHandler tp$3;
+    private static volatile PolyType.PropertyHandler p$4;
 
     public static void refresh() {
         p$0 = PolyClassRuntime.resolvePropertyHandler((String)"FurnaceExtractEvent", (String)"item_type");
-        p$1 = PolyClassRuntime.resolvePropertyHandler((String)"FurnaceExtractEvent", (String)"item_amount");
-        p$2 = PolyClassRuntime.resolvePropertyHandler((String)"FurnaceExtractEvent", (String)"player");
+        tp$1 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"FurnaceExtractEvent", (String)"item_type", (String)"S");
+        p$2 = PolyClassRuntime.resolvePropertyHandler((String)"FurnaceExtractEvent", (String)"item_amount");
+        tp$3 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"FurnaceExtractEvent", (String)"item_amount", (String)"D");
+        p$4 = PolyClassRuntime.resolvePropertyHandler((String)"FurnaceExtractEvent", (String)"player");
     }
 
     public ScriptValue pg$0_item_type() {
@@ -35,16 +40,30 @@ extends PolyClassEvent {
         return PolyClassRuntime.genericProperty((String)"FurnaceExtractEvent", (String)"item_type", (Object)this.instance);
     }
 
-    public ScriptValue pg$1_item_amount() {
-        if (p$1 != null) {
-            return p$1.get(this.instance);
+    public String tg$1_item_type() {
+        if (tp$1 != null) {
+            return (String)tp$1.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"FurnaceExtractEvent", (String)"item_type", (Object)this.instance).asStr();
+    }
+
+    public ScriptValue pg$2_item_amount() {
+        if (p$2 != null) {
+            return p$2.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"FurnaceExtractEvent", (String)"item_amount", (Object)this.instance);
     }
 
-    public ScriptValue pg$2_player() {
-        if (p$2 != null) {
-            return p$2.get(this.instance);
+    public double tg$3_item_amount() {
+        if (tp$3 != null) {
+            return (Double)tp$3.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"FurnaceExtractEvent", (String)"item_amount", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$4_player() {
+        if (p$4 != null) {
+            return p$4.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"FurnaceExtractEvent", (String)"player", (Object)this.instance);
     }

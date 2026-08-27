@@ -7,6 +7,7 @@
  *  dev.arubik.craftengine.script.PolyType$MethodHandler
  *  dev.arubik.craftengine.script.PolyType$PropertyHandler
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler1
+ *  dev.arubik.craftengine.script.PolyType$TypedPropertyHandler
  *  dev.arubik.craftengine.script.ScriptValue
  *  dev.arubik.craftengine.script.ScriptValue$Obj
  */
@@ -26,7 +27,9 @@ extends PolyClassEvent {
     private static volatile PolyType.PropertyHandler p$2;
     private static volatile PolyType.PropertyHandler p$3;
     private static volatile PolyType.PropertyHandler p$4;
-    private static volatile PolyType.PropertyHandler p$5;
+    private static volatile PolyType.TypedPropertyHandler tp$5;
+    private static volatile PolyType.PropertyHandler p$6;
+    private static volatile PolyType.TypedPropertyHandler tp$7;
 
     public static void refresh() {
         h$0 = (PolyType.TypedMethodHandler1)PolyClassRuntime.resolveTypedHandler((String)"PlayerFishEvent", (String)"set_exp", (String)"D:Z");
@@ -34,7 +37,9 @@ extends PolyClassEvent {
         p$2 = PolyClassRuntime.resolvePropertyHandler((String)"PlayerFishEvent", (String)"caught");
         p$3 = PolyClassRuntime.resolvePropertyHandler((String)"PlayerFishEvent", (String)"hook");
         p$4 = PolyClassRuntime.resolvePropertyHandler((String)"PlayerFishEvent", (String)"state");
-        p$5 = PolyClassRuntime.resolvePropertyHandler((String)"PlayerFishEvent", (String)"exp");
+        tp$5 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"PlayerFishEvent", (String)"state", (String)"S");
+        p$6 = PolyClassRuntime.resolvePropertyHandler((String)"PlayerFishEvent", (String)"exp");
+        tp$7 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"PlayerFishEvent", (String)"exp", (String)"D");
     }
 
     public boolean tm$0_set_exp(double d) {
@@ -72,11 +77,25 @@ extends PolyClassEvent {
         return PolyClassRuntime.genericProperty((String)"PlayerFishEvent", (String)"state", (Object)this.instance);
     }
 
-    public ScriptValue pg$5_exp() {
-        if (p$5 != null) {
-            return p$5.get(this.instance);
+    public String tg$5_state() {
+        if (tp$5 != null) {
+            return (String)tp$5.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"PlayerFishEvent", (String)"state", (Object)this.instance).asStr();
+    }
+
+    public ScriptValue pg$6_exp() {
+        if (p$6 != null) {
+            return p$6.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"PlayerFishEvent", (String)"exp", (Object)this.instance);
+    }
+
+    public double tg$7_exp() {
+        if (tp$7 != null) {
+            return (Double)tp$7.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"PlayerFishEvent", (String)"exp", (Object)this.instance).asNum();
     }
 
     public PolyClassPlayerFishEvent(Object object) {

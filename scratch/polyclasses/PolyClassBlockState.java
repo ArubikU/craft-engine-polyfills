@@ -7,6 +7,7 @@
  *  dev.arubik.craftengine.script.PolyType$MethodHandler
  *  dev.arubik.craftengine.script.PolyType$PropertyHandler
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler1
+ *  dev.arubik.craftengine.script.PolyType$TypedPropertyHandler
  *  dev.arubik.craftengine.script.ScriptValue
  *  dev.arubik.craftengine.script.ScriptValue$Obj
  */
@@ -28,8 +29,10 @@ public class PolyClassBlockState {
     private static volatile PolyType.MethodHandler m$5;
     private static volatile PolyType.PropertyHandler p$6;
     private static volatile PolyType.PropertyHandler p$7;
-    private static volatile PolyType.PropertyHandler p$8;
+    private static volatile PolyType.TypedPropertyHandler tp$8;
     private static volatile PolyType.PropertyHandler p$9;
+    private static volatile PolyType.TypedPropertyHandler tp$10;
+    private static volatile PolyType.PropertyHandler p$11;
 
     public static void refresh() {
         h$0 = (PolyType.TypedMethodHandler1)PolyClassRuntime.resolveTypedHandler((String)"BlockState", (String)"get", (String)"S:S");
@@ -40,8 +43,10 @@ public class PolyClassBlockState {
         m$5 = PolyClassRuntime.resolveMethodHandler((String)"BlockState", (String)"has");
         p$6 = PolyClassRuntime.resolvePropertyHandler((String)"BlockState", (String)"property_names");
         p$7 = PolyClassRuntime.resolvePropertyHandler((String)"BlockState", (String)"id");
-        p$8 = PolyClassRuntime.resolvePropertyHandler((String)"BlockState", (String)"is_air");
-        p$9 = PolyClassRuntime.resolvePropertyHandler((String)"BlockState", (String)"properties");
+        tp$8 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"BlockState", (String)"id", (String)"S");
+        p$9 = PolyClassRuntime.resolvePropertyHandler((String)"BlockState", (String)"is_air");
+        tp$10 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"BlockState", (String)"is_air", (String)"Z");
+        p$11 = PolyClassRuntime.resolvePropertyHandler((String)"BlockState", (String)"properties");
     }
 
     public String tm$0_get(String string) {
@@ -100,16 +105,30 @@ public class PolyClassBlockState {
         return PolyClassRuntime.genericProperty((String)"BlockState", (String)"id", (Object)this.instance);
     }
 
-    public ScriptValue pg$8_is_air() {
-        if (p$8 != null) {
-            return p$8.get(this.instance);
+    public String tg$8_id() {
+        if (tp$8 != null) {
+            return (String)tp$8.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"BlockState", (String)"id", (Object)this.instance).asStr();
+    }
+
+    public ScriptValue pg$9_is_air() {
+        if (p$9 != null) {
+            return p$9.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"BlockState", (String)"is_air", (Object)this.instance);
     }
 
-    public ScriptValue pg$9_properties() {
-        if (p$9 != null) {
-            return p$9.get(this.instance);
+    public boolean tg$10_is_air() {
+        if (tp$10 != null) {
+            return (Boolean)tp$10.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"BlockState", (String)"is_air", (Object)this.instance).asBool();
+    }
+
+    public ScriptValue pg$11_properties() {
+        if (p$11 != null) {
+            return p$11.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"BlockState", (String)"properties", (Object)this.instance);
     }

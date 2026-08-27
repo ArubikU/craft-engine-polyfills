@@ -7,6 +7,7 @@
  *  dev.arubik.craftengine.script.PolyType$MethodHandler
  *  dev.arubik.craftengine.script.PolyType$PropertyHandler
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler1
+ *  dev.arubik.craftengine.script.PolyType$TypedPropertyHandler
  *  dev.arubik.craftengine.script.ScriptValue
  *  dev.arubik.craftengine.script.ScriptValue$Obj
  */
@@ -27,9 +28,13 @@ public class PolyClassWorkbench {
     private static volatile PolyType.TypedMethodHandler1 h$4;
     private static volatile PolyType.MethodHandler m$5;
     private static volatile PolyType.PropertyHandler p$6;
-    private static volatile PolyType.PropertyHandler p$7;
+    private static volatile PolyType.TypedPropertyHandler tp$7;
     private static volatile PolyType.PropertyHandler p$8;
-    private static volatile PolyType.PropertyHandler p$9;
+    private static volatile PolyType.TypedPropertyHandler tp$9;
+    private static volatile PolyType.PropertyHandler p$10;
+    private static volatile PolyType.TypedPropertyHandler tp$11;
+    private static volatile PolyType.PropertyHandler p$12;
+    private static volatile PolyType.TypedPropertyHandler tp$13;
 
     public static void refresh() {
         h$0 = (PolyType.TypedMethodHandler1)PolyClassRuntime.resolveTypedHandler((String)"Workbench", (String)"output", (String)"D:R");
@@ -39,9 +44,13 @@ public class PolyClassWorkbench {
         h$4 = (PolyType.TypedMethodHandler1)PolyClassRuntime.resolveTypedHandler((String)"Workbench", (String)"tool", (String)"D:R");
         m$5 = PolyClassRuntime.resolveMethodHandler((String)"Workbench", (String)"tool");
         p$6 = PolyClassRuntime.resolvePropertyHandler((String)"Workbench", (String)"width");
-        p$7 = PolyClassRuntime.resolvePropertyHandler((String)"Workbench", (String)"total_inputs");
-        p$8 = PolyClassRuntime.resolvePropertyHandler((String)"Workbench", (String)"total_outputs");
-        p$9 = PolyClassRuntime.resolvePropertyHandler((String)"Workbench", (String)"height");
+        tp$7 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Workbench", (String)"width", (String)"D");
+        p$8 = PolyClassRuntime.resolvePropertyHandler((String)"Workbench", (String)"total_inputs");
+        tp$9 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Workbench", (String)"total_inputs", (String)"D");
+        p$10 = PolyClassRuntime.resolvePropertyHandler((String)"Workbench", (String)"total_outputs");
+        tp$11 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Workbench", (String)"total_outputs", (String)"D");
+        p$12 = PolyClassRuntime.resolvePropertyHandler((String)"Workbench", (String)"height");
+        tp$13 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Workbench", (String)"height", (String)"D");
     }
 
     public ScriptValue tm$0_output(double d) {
@@ -93,25 +102,53 @@ public class PolyClassWorkbench {
         return PolyClassRuntime.genericProperty((String)"Workbench", (String)"width", (Object)this.instance);
     }
 
-    public ScriptValue pg$7_total_inputs() {
-        if (p$7 != null) {
-            return p$7.get(this.instance);
+    public double tg$7_width() {
+        if (tp$7 != null) {
+            return (Double)tp$7.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Workbench", (String)"width", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$8_total_inputs() {
+        if (p$8 != null) {
+            return p$8.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Workbench", (String)"total_inputs", (Object)this.instance);
     }
 
-    public ScriptValue pg$8_total_outputs() {
-        if (p$8 != null) {
-            return p$8.get(this.instance);
+    public double tg$9_total_inputs() {
+        if (tp$9 != null) {
+            return (Double)tp$9.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Workbench", (String)"total_inputs", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$10_total_outputs() {
+        if (p$10 != null) {
+            return p$10.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Workbench", (String)"total_outputs", (Object)this.instance);
     }
 
-    public ScriptValue pg$9_height() {
-        if (p$9 != null) {
-            return p$9.get(this.instance);
+    public double tg$11_total_outputs() {
+        if (tp$11 != null) {
+            return (Double)tp$11.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Workbench", (String)"total_outputs", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$12_height() {
+        if (p$12 != null) {
+            return p$12.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Workbench", (String)"height", (Object)this.instance);
+    }
+
+    public double tg$13_height() {
+        if (tp$13 != null) {
+            return (Double)tp$13.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Workbench", (String)"height", (Object)this.instance).asNum();
     }
 
     public PolyClassWorkbench(Object object) {

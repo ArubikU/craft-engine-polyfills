@@ -50,7 +50,8 @@ public final class BarsType {
                         return sub != null ? ScriptValue.of(sub) : ScriptValue.NULL;
                     } catch (Throwable ignored) { return ScriptValue.NULL; }
                 })
-            // Bars.list() → Array of bar id strings
+            // Bars.list() → Array of bar id strings — stays RAW: elements are plain strings, not
+            // PolyType instances, so TypeCodecs.listOf has nothing to declare here.
             .methodTyped0("list", TypeCodecs.RAW,
                 (AbstractMachineBlockEntity m) -> {
                     try {

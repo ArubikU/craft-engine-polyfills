@@ -24,6 +24,8 @@ public final class PolyType {
     // a FUTURE JIT specialization can additionally consult this map to skip ScriptValue coercion
     // entirely for a method that opted in. Never read by anything today except resolveTypedMethod.
     private final Map<String, TypedMethodDescriptor> typedMethods = new ConcurrentHashMap<>();
+    /** Typed PROPERTY metadata, the counterpart of typedMethods — see propertyTyped. */
+    private final Map<String, TypedPropertyDescriptor> typedProperties = new ConcurrentHashMap<>();
     private DefaultPropertyHandler defaultProperty = null;
     private DefaultMethodHandler defaultMethod = null;
 
@@ -37,9 +39,56 @@ public final class PolyType {
 
     public PolyType property(String name, PropertyHandler handler) {
         properties.put(name, handler);
+        // Same consistency rule as method(...): an untyped registration must not leave a stale typed
+        // descriptor behind advertising a shape that no longer applies.
+        typedProperties.remove(name);
         PolyTypeRegistry.notifyMutation();
         return this;
     }
+
+    /**
+     * A property with a DECLARED type, the counterpart of {@code methodTypedN}.
+     *
+     * <p>Until this existed, every property was erased on both sides — {@code ScriptValue
+     * get(Object)} — so a property returning a uniform list of one PolyType had no way to say so,
+     * and neither did a plain numeric one. That was the single thing blocking most of the list
+     * typing in this codebase: {@code Machine.recipes}, {@code EntityExplodeEvent.block_list},
+     * {@code ContraptionManager.all_contraptions} are all properties.
+     *
+     * <pre>
+     * .propertyTyped("blocks", TypeCodecs.listOf("Block", BlockRef.class),
+     *         (StructureGrowWrapper w) -&gt; w.blocks())     // a real List&lt;BlockRef&gt;
+     * .propertyTyped("x", TypeCodecs.DOUBLE, (MachineRef m) -&gt; m.x())   // a real double
+     * </pre>
+     *
+     * <p>Like the typed method registrations, this installs a conforming untyped handler into
+     * {@code properties} as well, so every existing dispatch path is unaffected; the descriptor is
+     * additional information for {@link PolyClassGenerator} to specialise on.
+     */
+    public <I, R> PolyType propertyTyped(String name, TypeCodec<R> ret, TypedPropertyHandler<I, R> handler) {
+        properties.put(name, instance -> ret.encode(handler.get(cast(instance))));
+        typedProperties.put(name, new TypedPropertyDescriptor(name, ret, handler));
+        PolyTypeRegistry.notifyMutation();
+        return this;
+    }
+
+    /** Walks the parent chain like {@link #resolveProperty}, but for typed-registration metadata.
+     *  Null for any property registered only through the untyped {@code .property(...)} API. */
+    public TypedPropertyDescriptor resolveTypedProperty(String prop) {
+        TypedPropertyDescriptor d = typedProperties.get(prop);
+        if (d != null) return d;
+        if (parent != null) return parent.resolveTypedProperty(prop);
+        return null;
+    }
+
+    @FunctionalInterface
+    public interface TypedPropertyHandler<I, R> {
+        R get(I instance);
+    }
+
+    /** {@link TypedMethodDescriptor}'s property counterpart — a property takes no arguments, so
+     *  only the return codec and the handler are recorded. */
+    public record TypedPropertyDescriptor(String name, TypeCodec<?> returnType, Object handler) {}
 
     public PolyType method(String name, MethodHandler handler) {
         methods.put(name, handler);
@@ -62,6 +111,7 @@ public final class PolyType {
 
     public PolyType replaceProperty(String name, PropertyHandler handler) {
         properties.put(name, handler);
+        typedProperties.remove(name); // see property(...) — keep the two maps consistent
         PolyTypeRegistry.notifyMutation();
         return this;
     }

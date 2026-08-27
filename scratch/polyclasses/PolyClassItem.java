@@ -10,6 +10,7 @@
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler1
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler2
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler3
+ *  dev.arubik.craftengine.script.PolyType$TypedPropertyHandler
  *  dev.arubik.craftengine.script.ScriptValue
  *  dev.arubik.craftengine.script.ScriptValue$Obj
  */
@@ -77,32 +78,56 @@ public class PolyClassItem {
     private static volatile PolyType.TypedMethodHandler1 h$51;
     private static volatile PolyType.MethodHandler m$52;
     private static volatile PolyType.PropertyHandler p$53;
-    private static volatile PolyType.PropertyHandler p$54;
+    private static volatile PolyType.TypedPropertyHandler tp$54;
     private static volatile PolyType.PropertyHandler p$55;
-    private static volatile PolyType.PropertyHandler p$56;
+    private static volatile PolyType.TypedPropertyHandler tp$56;
     private static volatile PolyType.PropertyHandler p$57;
     private static volatile PolyType.PropertyHandler p$58;
     private static volatile PolyType.PropertyHandler p$59;
-    private static volatile PolyType.PropertyHandler p$60;
+    private static volatile PolyType.TypedPropertyHandler tp$60;
     private static volatile PolyType.PropertyHandler p$61;
-    private static volatile PolyType.PropertyHandler p$62;
+    private static volatile PolyType.TypedPropertyHandler tp$62;
     private static volatile PolyType.PropertyHandler p$63;
-    private static volatile PolyType.PropertyHandler p$64;
+    private static volatile PolyType.TypedPropertyHandler tp$64;
     private static volatile PolyType.PropertyHandler p$65;
-    private static volatile PolyType.PropertyHandler p$66;
+    private static volatile PolyType.TypedPropertyHandler tp$66;
     private static volatile PolyType.PropertyHandler p$67;
-    private static volatile PolyType.PropertyHandler p$68;
+    private static volatile PolyType.TypedPropertyHandler tp$68;
     private static volatile PolyType.PropertyHandler p$69;
-    private static volatile PolyType.PropertyHandler p$70;
+    private static volatile PolyType.TypedPropertyHandler tp$70;
     private static volatile PolyType.PropertyHandler p$71;
-    private static volatile PolyType.PropertyHandler p$72;
+    private static volatile PolyType.TypedPropertyHandler tp$72;
     private static volatile PolyType.PropertyHandler p$73;
-    private static volatile PolyType.PropertyHandler p$74;
+    private static volatile PolyType.TypedPropertyHandler tp$74;
     private static volatile PolyType.PropertyHandler p$75;
-    private static volatile PolyType.PropertyHandler p$76;
+    private static volatile PolyType.TypedPropertyHandler tp$76;
     private static volatile PolyType.PropertyHandler p$77;
-    private static volatile PolyType.PropertyHandler p$78;
+    private static volatile PolyType.TypedPropertyHandler tp$78;
     private static volatile PolyType.PropertyHandler p$79;
+    private static volatile PolyType.TypedPropertyHandler tp$80;
+    private static volatile PolyType.PropertyHandler p$81;
+    private static volatile PolyType.TypedPropertyHandler tp$82;
+    private static volatile PolyType.PropertyHandler p$83;
+    private static volatile PolyType.TypedPropertyHandler tp$84;
+    private static volatile PolyType.PropertyHandler p$85;
+    private static volatile PolyType.TypedPropertyHandler tp$86;
+    private static volatile PolyType.PropertyHandler p$87;
+    private static volatile PolyType.TypedPropertyHandler tp$88;
+    private static volatile PolyType.PropertyHandler p$89;
+    private static volatile PolyType.TypedPropertyHandler tp$90;
+    private static volatile PolyType.PropertyHandler p$91;
+    private static volatile PolyType.TypedPropertyHandler tp$92;
+    private static volatile PolyType.PropertyHandler p$93;
+    private static volatile PolyType.PropertyHandler p$94;
+    private static volatile PolyType.TypedPropertyHandler tp$95;
+    private static volatile PolyType.PropertyHandler p$96;
+    private static volatile PolyType.TypedPropertyHandler tp$97;
+    private static volatile PolyType.PropertyHandler p$98;
+    private static volatile PolyType.TypedPropertyHandler tp$99;
+    private static volatile PolyType.PropertyHandler p$100;
+    private static volatile PolyType.TypedPropertyHandler tp$101;
+    private static volatile PolyType.PropertyHandler p$102;
+    private static volatile PolyType.TypedPropertyHandler tp$103;
 
     public static void refresh() {
         h$0 = (PolyType.TypedMethodHandler1)PolyClassRuntime.resolveTypedHandler((String)"Item", (String)"with_name", (String)"S:R");
@@ -159,32 +184,56 @@ public class PolyClassItem {
         h$51 = (PolyType.TypedMethodHandler1)PolyClassRuntime.resolveTypedHandler((String)"Item", (String)"get_script", (String)"S:S");
         m$52 = PolyClassRuntime.resolveMethodHandler((String)"Item", (String)"get_script");
         p$53 = PolyClassRuntime.resolvePropertyHandler((String)"Item", (String)"armor_value");
-        p$54 = PolyClassRuntime.resolvePropertyHandler((String)"Item", (String)"damage");
-        p$55 = PolyClassRuntime.resolvePropertyHandler((String)"Item", (String)"nbt");
-        p$56 = PolyClassRuntime.resolvePropertyHandler((String)"Item", (String)"lore");
-        p$57 = PolyClassRuntime.resolvePropertyHandler((String)"Item", (String)"is_food");
-        p$58 = PolyClassRuntime.resolvePropertyHandler((String)"Item", (String)"attack_damage");
-        p$59 = PolyClassRuntime.resolvePropertyHandler((String)"Item", (String)"attack_speed");
-        p$60 = PolyClassRuntime.resolvePropertyHandler((String)"Item", (String)"type");
-        p$61 = PolyClassRuntime.resolvePropertyHandler((String)"Item", (String)"max_count");
-        p$62 = PolyClassRuntime.resolvePropertyHandler((String)"Item", (String)"is_stackable");
-        p$63 = PolyClassRuntime.resolvePropertyHandler((String)"Item", (String)"is_tool");
-        p$64 = PolyClassRuntime.resolvePropertyHandler((String)"Item", (String)"has_nbt");
-        p$65 = PolyClassRuntime.resolvePropertyHandler((String)"Item", (String)"is_custom");
-        p$66 = PolyClassRuntime.resolvePropertyHandler((String)"Item", (String)"food_value");
-        p$67 = PolyClassRuntime.resolvePropertyHandler((String)"Item", (String)"is_armor");
-        p$68 = PolyClassRuntime.resolvePropertyHandler((String)"Item", (String)"id");
-        p$69 = PolyClassRuntime.resolvePropertyHandler((String)"Item", (String)"is_empty");
-        p$70 = PolyClassRuntime.resolvePropertyHandler((String)"Item", (String)"custom_model_data");
-        p$71 = PolyClassRuntime.resolvePropertyHandler((String)"Item", (String)"amount");
-        p$72 = PolyClassRuntime.resolvePropertyHandler((String)"Item", (String)"is_weapon");
-        p$73 = PolyClassRuntime.resolvePropertyHandler((String)"Item", (String)"count");
-        p$74 = PolyClassRuntime.resolvePropertyHandler((String)"Item", (String)"enchantments");
-        p$75 = PolyClassRuntime.resolvePropertyHandler((String)"Item", (String)"block_id");
-        p$76 = PolyClassRuntime.resolvePropertyHandler((String)"Item", (String)"max_damage");
-        p$77 = PolyClassRuntime.resolvePropertyHandler((String)"Item", (String)"name");
-        p$78 = PolyClassRuntime.resolvePropertyHandler((String)"Item", (String)"vanilla_id");
-        p$79 = PolyClassRuntime.resolvePropertyHandler((String)"Item", (String)"rarity");
+        tp$54 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Item", (String)"armor_value", (String)"D");
+        p$55 = PolyClassRuntime.resolvePropertyHandler((String)"Item", (String)"damage");
+        tp$56 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Item", (String)"damage", (String)"D");
+        p$57 = PolyClassRuntime.resolvePropertyHandler((String)"Item", (String)"nbt");
+        p$58 = PolyClassRuntime.resolvePropertyHandler((String)"Item", (String)"lore");
+        p$59 = PolyClassRuntime.resolvePropertyHandler((String)"Item", (String)"is_food");
+        tp$60 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Item", (String)"is_food", (String)"Z");
+        p$61 = PolyClassRuntime.resolvePropertyHandler((String)"Item", (String)"attack_damage");
+        tp$62 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Item", (String)"attack_damage", (String)"D");
+        p$63 = PolyClassRuntime.resolvePropertyHandler((String)"Item", (String)"attack_speed");
+        tp$64 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Item", (String)"attack_speed", (String)"D");
+        p$65 = PolyClassRuntime.resolvePropertyHandler((String)"Item", (String)"type");
+        tp$66 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Item", (String)"type", (String)"S");
+        p$67 = PolyClassRuntime.resolvePropertyHandler((String)"Item", (String)"max_count");
+        tp$68 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Item", (String)"max_count", (String)"D");
+        p$69 = PolyClassRuntime.resolvePropertyHandler((String)"Item", (String)"is_stackable");
+        tp$70 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Item", (String)"is_stackable", (String)"Z");
+        p$71 = PolyClassRuntime.resolvePropertyHandler((String)"Item", (String)"is_tool");
+        tp$72 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Item", (String)"is_tool", (String)"Z");
+        p$73 = PolyClassRuntime.resolvePropertyHandler((String)"Item", (String)"has_nbt");
+        tp$74 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Item", (String)"has_nbt", (String)"Z");
+        p$75 = PolyClassRuntime.resolvePropertyHandler((String)"Item", (String)"is_custom");
+        tp$76 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Item", (String)"is_custom", (String)"Z");
+        p$77 = PolyClassRuntime.resolvePropertyHandler((String)"Item", (String)"food_value");
+        tp$78 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Item", (String)"food_value", (String)"D");
+        p$79 = PolyClassRuntime.resolvePropertyHandler((String)"Item", (String)"is_armor");
+        tp$80 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Item", (String)"is_armor", (String)"Z");
+        p$81 = PolyClassRuntime.resolvePropertyHandler((String)"Item", (String)"id");
+        tp$82 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Item", (String)"id", (String)"S");
+        p$83 = PolyClassRuntime.resolvePropertyHandler((String)"Item", (String)"is_empty");
+        tp$84 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Item", (String)"is_empty", (String)"Z");
+        p$85 = PolyClassRuntime.resolvePropertyHandler((String)"Item", (String)"custom_model_data");
+        tp$86 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Item", (String)"custom_model_data", (String)"D");
+        p$87 = PolyClassRuntime.resolvePropertyHandler((String)"Item", (String)"amount");
+        tp$88 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Item", (String)"amount", (String)"D");
+        p$89 = PolyClassRuntime.resolvePropertyHandler((String)"Item", (String)"is_weapon");
+        tp$90 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Item", (String)"is_weapon", (String)"Z");
+        p$91 = PolyClassRuntime.resolvePropertyHandler((String)"Item", (String)"count");
+        tp$92 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Item", (String)"count", (String)"D");
+        p$93 = PolyClassRuntime.resolvePropertyHandler((String)"Item", (String)"enchantments");
+        p$94 = PolyClassRuntime.resolvePropertyHandler((String)"Item", (String)"block_id");
+        tp$95 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Item", (String)"block_id", (String)"S");
+        p$96 = PolyClassRuntime.resolvePropertyHandler((String)"Item", (String)"max_damage");
+        tp$97 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Item", (String)"max_damage", (String)"D");
+        p$98 = PolyClassRuntime.resolvePropertyHandler((String)"Item", (String)"name");
+        tp$99 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Item", (String)"name", (String)"S");
+        p$100 = PolyClassRuntime.resolvePropertyHandler((String)"Item", (String)"vanilla_id");
+        tp$101 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Item", (String)"vanilla_id", (String)"S");
+        p$102 = PolyClassRuntime.resolvePropertyHandler((String)"Item", (String)"rarity");
+        tp$103 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Item", (String)"rarity", (String)"S");
     }
 
     public ScriptValue tm$0_with_name(String string) {
@@ -565,186 +614,354 @@ public class PolyClassItem {
         return PolyClassRuntime.genericProperty((String)"Item", (String)"armor_value", (Object)this.instance);
     }
 
-    public ScriptValue pg$54_damage() {
-        if (p$54 != null) {
-            return p$54.get(this.instance);
+    public double tg$54_armor_value() {
+        if (tp$54 != null) {
+            return (Double)tp$54.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Item", (String)"armor_value", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$55_damage() {
+        if (p$55 != null) {
+            return p$55.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Item", (String)"damage", (Object)this.instance);
     }
 
-    public ScriptValue pg$55_nbt() {
-        if (p$55 != null) {
-            return p$55.get(this.instance);
+    public double tg$56_damage() {
+        if (tp$56 != null) {
+            return (Double)tp$56.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Item", (String)"damage", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$57_nbt() {
+        if (p$57 != null) {
+            return p$57.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Item", (String)"nbt", (Object)this.instance);
     }
 
-    public ScriptValue pg$56_lore() {
-        if (p$56 != null) {
-            return p$56.get(this.instance);
+    public ScriptValue pg$58_lore() {
+        if (p$58 != null) {
+            return p$58.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Item", (String)"lore", (Object)this.instance);
     }
 
-    public ScriptValue pg$57_is_food() {
-        if (p$57 != null) {
-            return p$57.get(this.instance);
+    public ScriptValue pg$59_is_food() {
+        if (p$59 != null) {
+            return p$59.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Item", (String)"is_food", (Object)this.instance);
     }
 
-    public ScriptValue pg$58_attack_damage() {
-        if (p$58 != null) {
-            return p$58.get(this.instance);
+    public boolean tg$60_is_food() {
+        if (tp$60 != null) {
+            return (Boolean)tp$60.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Item", (String)"is_food", (Object)this.instance).asBool();
+    }
+
+    public ScriptValue pg$61_attack_damage() {
+        if (p$61 != null) {
+            return p$61.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Item", (String)"attack_damage", (Object)this.instance);
     }
 
-    public ScriptValue pg$59_attack_speed() {
-        if (p$59 != null) {
-            return p$59.get(this.instance);
+    public double tg$62_attack_damage() {
+        if (tp$62 != null) {
+            return (Double)tp$62.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Item", (String)"attack_damage", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$63_attack_speed() {
+        if (p$63 != null) {
+            return p$63.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Item", (String)"attack_speed", (Object)this.instance);
     }
 
-    public ScriptValue pg$60_type() {
-        if (p$60 != null) {
-            return p$60.get(this.instance);
+    public double tg$64_attack_speed() {
+        if (tp$64 != null) {
+            return (Double)tp$64.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Item", (String)"attack_speed", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$65_type() {
+        if (p$65 != null) {
+            return p$65.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Item", (String)"type", (Object)this.instance);
     }
 
-    public ScriptValue pg$61_max_count() {
-        if (p$61 != null) {
-            return p$61.get(this.instance);
+    public String tg$66_type() {
+        if (tp$66 != null) {
+            return (String)tp$66.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Item", (String)"type", (Object)this.instance).asStr();
+    }
+
+    public ScriptValue pg$67_max_count() {
+        if (p$67 != null) {
+            return p$67.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Item", (String)"max_count", (Object)this.instance);
     }
 
-    public ScriptValue pg$62_is_stackable() {
-        if (p$62 != null) {
-            return p$62.get(this.instance);
+    public double tg$68_max_count() {
+        if (tp$68 != null) {
+            return (Double)tp$68.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Item", (String)"max_count", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$69_is_stackable() {
+        if (p$69 != null) {
+            return p$69.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Item", (String)"is_stackable", (Object)this.instance);
     }
 
-    public ScriptValue pg$63_is_tool() {
-        if (p$63 != null) {
-            return p$63.get(this.instance);
+    public boolean tg$70_is_stackable() {
+        if (tp$70 != null) {
+            return (Boolean)tp$70.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Item", (String)"is_stackable", (Object)this.instance).asBool();
+    }
+
+    public ScriptValue pg$71_is_tool() {
+        if (p$71 != null) {
+            return p$71.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Item", (String)"is_tool", (Object)this.instance);
     }
 
-    public ScriptValue pg$64_has_nbt() {
-        if (p$64 != null) {
-            return p$64.get(this.instance);
+    public boolean tg$72_is_tool() {
+        if (tp$72 != null) {
+            return (Boolean)tp$72.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Item", (String)"is_tool", (Object)this.instance).asBool();
+    }
+
+    public ScriptValue pg$73_has_nbt() {
+        if (p$73 != null) {
+            return p$73.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Item", (String)"has_nbt", (Object)this.instance);
     }
 
-    public ScriptValue pg$65_is_custom() {
-        if (p$65 != null) {
-            return p$65.get(this.instance);
+    public boolean tg$74_has_nbt() {
+        if (tp$74 != null) {
+            return (Boolean)tp$74.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Item", (String)"has_nbt", (Object)this.instance).asBool();
+    }
+
+    public ScriptValue pg$75_is_custom() {
+        if (p$75 != null) {
+            return p$75.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Item", (String)"is_custom", (Object)this.instance);
     }
 
-    public ScriptValue pg$66_food_value() {
-        if (p$66 != null) {
-            return p$66.get(this.instance);
+    public boolean tg$76_is_custom() {
+        if (tp$76 != null) {
+            return (Boolean)tp$76.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Item", (String)"is_custom", (Object)this.instance).asBool();
+    }
+
+    public ScriptValue pg$77_food_value() {
+        if (p$77 != null) {
+            return p$77.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Item", (String)"food_value", (Object)this.instance);
     }
 
-    public ScriptValue pg$67_is_armor() {
-        if (p$67 != null) {
-            return p$67.get(this.instance);
+    public double tg$78_food_value() {
+        if (tp$78 != null) {
+            return (Double)tp$78.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Item", (String)"food_value", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$79_is_armor() {
+        if (p$79 != null) {
+            return p$79.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Item", (String)"is_armor", (Object)this.instance);
     }
 
-    public ScriptValue pg$68_id() {
-        if (p$68 != null) {
-            return p$68.get(this.instance);
+    public boolean tg$80_is_armor() {
+        if (tp$80 != null) {
+            return (Boolean)tp$80.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Item", (String)"is_armor", (Object)this.instance).asBool();
+    }
+
+    public ScriptValue pg$81_id() {
+        if (p$81 != null) {
+            return p$81.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Item", (String)"id", (Object)this.instance);
     }
 
-    public ScriptValue pg$69_is_empty() {
-        if (p$69 != null) {
-            return p$69.get(this.instance);
+    public String tg$82_id() {
+        if (tp$82 != null) {
+            return (String)tp$82.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Item", (String)"id", (Object)this.instance).asStr();
+    }
+
+    public ScriptValue pg$83_is_empty() {
+        if (p$83 != null) {
+            return p$83.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Item", (String)"is_empty", (Object)this.instance);
     }
 
-    public ScriptValue pg$70_custom_model_data() {
-        if (p$70 != null) {
-            return p$70.get(this.instance);
+    public boolean tg$84_is_empty() {
+        if (tp$84 != null) {
+            return (Boolean)tp$84.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Item", (String)"is_empty", (Object)this.instance).asBool();
+    }
+
+    public ScriptValue pg$85_custom_model_data() {
+        if (p$85 != null) {
+            return p$85.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Item", (String)"custom_model_data", (Object)this.instance);
     }
 
-    public ScriptValue pg$71_amount() {
-        if (p$71 != null) {
-            return p$71.get(this.instance);
+    public double tg$86_custom_model_data() {
+        if (tp$86 != null) {
+            return (Double)tp$86.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Item", (String)"custom_model_data", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$87_amount() {
+        if (p$87 != null) {
+            return p$87.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Item", (String)"amount", (Object)this.instance);
     }
 
-    public ScriptValue pg$72_is_weapon() {
-        if (p$72 != null) {
-            return p$72.get(this.instance);
+    public double tg$88_amount() {
+        if (tp$88 != null) {
+            return (Double)tp$88.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Item", (String)"amount", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$89_is_weapon() {
+        if (p$89 != null) {
+            return p$89.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Item", (String)"is_weapon", (Object)this.instance);
     }
 
-    public ScriptValue pg$73_count() {
-        if (p$73 != null) {
-            return p$73.get(this.instance);
+    public boolean tg$90_is_weapon() {
+        if (tp$90 != null) {
+            return (Boolean)tp$90.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Item", (String)"is_weapon", (Object)this.instance).asBool();
+    }
+
+    public ScriptValue pg$91_count() {
+        if (p$91 != null) {
+            return p$91.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Item", (String)"count", (Object)this.instance);
     }
 
-    public ScriptValue pg$74_enchantments() {
-        if (p$74 != null) {
-            return p$74.get(this.instance);
+    public double tg$92_count() {
+        if (tp$92 != null) {
+            return (Double)tp$92.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Item", (String)"count", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$93_enchantments() {
+        if (p$93 != null) {
+            return p$93.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Item", (String)"enchantments", (Object)this.instance);
     }
 
-    public ScriptValue pg$75_block_id() {
-        if (p$75 != null) {
-            return p$75.get(this.instance);
+    public ScriptValue pg$94_block_id() {
+        if (p$94 != null) {
+            return p$94.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Item", (String)"block_id", (Object)this.instance);
     }
 
-    public ScriptValue pg$76_max_damage() {
-        if (p$76 != null) {
-            return p$76.get(this.instance);
+    public String tg$95_block_id() {
+        if (tp$95 != null) {
+            return (String)tp$95.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Item", (String)"block_id", (Object)this.instance).asStr();
+    }
+
+    public ScriptValue pg$96_max_damage() {
+        if (p$96 != null) {
+            return p$96.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Item", (String)"max_damage", (Object)this.instance);
     }
 
-    public ScriptValue pg$77_name() {
-        if (p$77 != null) {
-            return p$77.get(this.instance);
+    public double tg$97_max_damage() {
+        if (tp$97 != null) {
+            return (Double)tp$97.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Item", (String)"max_damage", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$98_name() {
+        if (p$98 != null) {
+            return p$98.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Item", (String)"name", (Object)this.instance);
     }
 
-    public ScriptValue pg$78_vanilla_id() {
-        if (p$78 != null) {
-            return p$78.get(this.instance);
+    public String tg$99_name() {
+        if (tp$99 != null) {
+            return (String)tp$99.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Item", (String)"name", (Object)this.instance).asStr();
+    }
+
+    public ScriptValue pg$100_vanilla_id() {
+        if (p$100 != null) {
+            return p$100.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Item", (String)"vanilla_id", (Object)this.instance);
     }
 
-    public ScriptValue pg$79_rarity() {
-        if (p$79 != null) {
-            return p$79.get(this.instance);
+    public String tg$101_vanilla_id() {
+        if (tp$101 != null) {
+            return (String)tp$101.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Item", (String)"vanilla_id", (Object)this.instance).asStr();
+    }
+
+    public ScriptValue pg$102_rarity() {
+        if (p$102 != null) {
+            return p$102.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Item", (String)"rarity", (Object)this.instance);
+    }
+
+    public String tg$103_rarity() {
+        if (tp$103 != null) {
+            return (String)tp$103.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Item", (String)"rarity", (Object)this.instance).asStr();
     }
 
     public PolyClassItem(Object object) {

@@ -712,6 +712,21 @@ public final class ScriptFormula {
 
     /** {@code +}'s real polymorphic semantics: string concatenation if EITHER side is a {@link
      *  ScriptValue.Str}, numeric addition otherwise. */
+    /**
+     * The string rendering of a number, split out of {@link ScriptValue#asStr} so a compiled
+     * string concatenation can render a {@code double} operand WITHOUT allocating the
+     * {@link ScriptValue.Num} that would otherwise exist only to have {@code asStr()} called on it.
+     *
+     * <p>Must stay byte-identical to {@code asStr}'s {@code Num} branch — that branch now delegates
+     * here, so there is one implementation rather than two that could drift.
+     */
+    public static String numToStr(double v) {
+        if (v == Math.floor(v) && !Double.isInfinite(v) && Math.abs(v) < 1e15) {
+            return String.valueOf((long) v);
+        }
+        return String.valueOf(v);
+    }
+
     public static ScriptValue addPolymorphic(ScriptValue lv, ScriptValue rv) {
         if (lv instanceof ScriptValue.Str || rv instanceof ScriptValue.Str) {
             return ScriptValue.of(lv.asStr() + rv.asStr());

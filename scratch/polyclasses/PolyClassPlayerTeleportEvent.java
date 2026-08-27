@@ -7,6 +7,7 @@
  *  dev.arubik.craftengine.script.PolyType$MethodHandler
  *  dev.arubik.craftengine.script.PolyType$PropertyHandler
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler1
+ *  dev.arubik.craftengine.script.PolyType$TypedPropertyHandler
  *  dev.arubik.craftengine.script.ScriptValue
  *  dev.arubik.craftengine.script.ScriptValue$Obj
  */
@@ -24,15 +25,17 @@ extends PolyClassEvent {
     private static volatile PolyType.TypedMethodHandler1 h$0;
     private static volatile PolyType.MethodHandler m$1;
     private static volatile PolyType.PropertyHandler p$2;
-    private static volatile PolyType.PropertyHandler p$3;
+    private static volatile PolyType.TypedPropertyHandler tp$3;
     private static volatile PolyType.PropertyHandler p$4;
+    private static volatile PolyType.PropertyHandler p$5;
 
     public static void refresh() {
         h$0 = (PolyType.TypedMethodHandler1)PolyClassRuntime.resolveTypedHandler((String)"PlayerTeleportEvent", (String)"set_to", (String)"R:Z");
         m$1 = PolyClassRuntime.resolveMethodHandler((String)"PlayerTeleportEvent", (String)"set_to");
         p$2 = PolyClassRuntime.resolvePropertyHandler((String)"PlayerTeleportEvent", (String)"cause");
-        p$3 = PolyClassRuntime.resolvePropertyHandler((String)"PlayerTeleportEvent", (String)"from");
-        p$4 = PolyClassRuntime.resolvePropertyHandler((String)"PlayerTeleportEvent", (String)"to");
+        tp$3 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"PlayerTeleportEvent", (String)"cause", (String)"S");
+        p$4 = PolyClassRuntime.resolvePropertyHandler((String)"PlayerTeleportEvent", (String)"from");
+        p$5 = PolyClassRuntime.resolvePropertyHandler((String)"PlayerTeleportEvent", (String)"to");
     }
 
     public boolean tm$0_set_to(ScriptValue scriptValue) {
@@ -56,16 +59,23 @@ extends PolyClassEvent {
         return PolyClassRuntime.genericProperty((String)"PlayerTeleportEvent", (String)"cause", (Object)this.instance);
     }
 
-    public ScriptValue pg$3_from() {
-        if (p$3 != null) {
-            return p$3.get(this.instance);
+    public String tg$3_cause() {
+        if (tp$3 != null) {
+            return (String)tp$3.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"PlayerTeleportEvent", (String)"cause", (Object)this.instance).asStr();
+    }
+
+    public ScriptValue pg$4_from() {
+        if (p$4 != null) {
+            return p$4.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"PlayerTeleportEvent", (String)"from", (Object)this.instance);
     }
 
-    public ScriptValue pg$4_to() {
-        if (p$4 != null) {
-            return p$4.get(this.instance);
+    public ScriptValue pg$5_to() {
+        if (p$5 != null) {
+            return p$5.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"PlayerTeleportEvent", (String)"to", (Object)this.instance);
     }

@@ -7,7 +7,6 @@ import dev.arubik.craftengine.fluid.FluidType;
 import dev.arubik.craftengine.machine.MachineRedstone;
 import dev.arubik.craftengine.machine.block.entity.AbstractMachineBlockEntity;
 import dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity;
-import dev.arubik.craftengine.script.types.primitive.VectorType;
 import dev.arubik.craftengine.script.types.world.BlockType;
 import dev.arubik.craftengine.script.types.entity.EntityType;
 import dev.arubik.craftengine.script.PolyTypeRegistry;
@@ -136,10 +135,13 @@ public final class MachineType {
     public static void register() {
         PolyTypeRegistry.define("Machine", "Block")
             // --- Properties ---
-            .property("pos", obj -> VectorType.wrap(ref(obj).pos().getX() + 0.5, ref(obj).pos().getY() + 0.5, ref(obj).pos().getZ() + 0.5))
-            .property("x", obj -> ScriptValue.of(ref(obj).pos().getX()))
-            .property("y", obj -> ScriptValue.of(ref(obj).pos().getY()))
-            .property("z", obj -> ScriptValue.of(ref(obj).pos().getZ()))
+            // VectorType.wrap(x,y,z) is exactly ofObj("Vector", new Vector3d(x,y,z)) — the polyType
+            // codec re-boxes the same way, so this is the identical value.
+            .propertyTyped("pos", TypeCodecs.polyType("Vector", Vector3d.class),
+                (MachineRef m) -> new Vector3d(m.pos().getX() + 0.5, m.pos().getY() + 0.5, m.pos().getZ() + 0.5))
+            .propertyTyped("x", TypeCodecs.DOUBLE, (MachineRef m) -> (double) m.pos().getX())
+            .propertyTyped("y", TypeCodecs.DOUBLE, (MachineRef m) -> (double) m.pos().getY())
+            .propertyTyped("z", TypeCodecs.DOUBLE, (MachineRef m) -> (double) m.pos().getZ())
             // Machine.facing and Machine.raw_facing were removed (along with the bare "facing"
             // script global — see ScriptContext.Builder) — two overlapping named properties for
             // "which way is this block facing" (one collapsed/effective, one raw) was exactly the
@@ -164,12 +166,10 @@ public final class MachineType {
             // capability on their BlockBehavior (the same hopper-compat hook funnels/pipes already
             // resolve through). Using the shared helper is what makes this property correct for
             // BOTH shapes instead of only the common one.
-            .property("container", obj -> {
-                MachineRef m = ref(obj);
-                return dev.arubik.craftengine.pipe.item.ItemTransferHelper.getContainer(m.level(), m.pos())
-                        .<ScriptValue>map(dev.arubik.craftengine.script.types.util.ContainerType::wrap)
-                        .orElse(ScriptValue.NULL);
-            })
+            .propertyTyped("container",
+                TypeCodecs.polyType("Container", net.minecraft.world.Container.class),
+                (MachineRef m) -> dev.arubik.craftengine.pipe.item.ItemTransferHelper
+                        .getContainer(m.level(), m.pos()).orElse(null))
             // The world tick something last actually moved an item into/out of this machine's
             // exposed container (see AbstractMachineBlockEntity.TransferTrackingContainer) — -1 if
             // never. Only ever gets stamped for a machine using on_get_container; a plain machine
@@ -177,10 +177,10 @@ public final class MachineType {
             // read cross-machine via Block.machine — e.g. a contraption-mounted Portable Storage
             // Interface checking a STATIONARY partner's value to decide whether to keep holding the
             // contraption still while a transfer might still be in flight.
-            .property("last_transfer_tick", obj -> {
-                PersistentBlockEntity be = ref(obj).blockEntity();
-                if (be instanceof AbstractMachineBlockEntity machine) return ScriptValue.of(machine.getLastTransferTick());
-                return ScriptValue.of(-1);
+            .propertyTyped("last_transfer_tick", TypeCodecs.DOUBLE, (MachineRef m) -> {
+                PersistentBlockEntity be = m.blockEntity();
+                if (be instanceof AbstractMachineBlockEntity machine) return (double) machine.getLastTransferTick();
+                return -1.0;
             })
             // The old Machine.set_state was a near-duplicate of Block.set_property that additionally
             // fired on_property_change (itself renamed from on_state_change) — removed; that hook
@@ -320,75 +320,71 @@ public final class MachineType {
                         return true;
                     } catch (Throwable ignored) { return false; }
                 })
-            .property("current_page", obj -> {
-                if (!(ref(obj).blockEntity() instanceof dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity dm)) return ScriptValue.of(0.0);
-                return ScriptValue.of(dm.currentPage());
+            .propertyTyped("current_page", TypeCodecs.DOUBLE, (MachineRef m) -> {
+                if (!(m.blockEntity() instanceof dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity dm)) return 0.0;
+                return (double) dm.currentPage();
             })
-            .property("page_count", obj -> {
-                if (!(ref(obj).blockEntity() instanceof dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity dm)) return ScriptValue.of(0.0);
-                return ScriptValue.of(dm.pageCount());
+            .propertyTyped("page_count", TypeCodecs.DOUBLE, (MachineRef m) -> {
+                if (!(m.blockEntity() instanceof dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity dm)) return 0.0;
+                return (double) dm.pageCount();
             })
             // Multi-cell structure (an auto-placing shape declared on the BLOCK's own "cells"
             // config, see MultiCellGeometry#parseCells — NOT a MachineDefinition concept, so this
             // just reflects whatever the block behavior actually set on this core). A script always
             // runs against the CORE (parts forward interaction/scripts to it), so there's no
             // separate "am I a part" accessor needed here.
-            .property("is_multi_cell", obj -> {
-                if (!(ref(obj).blockEntity() instanceof dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity dm)) return ScriptValue.of(false);
-                return ScriptValue.of(dm.cellCount() > 0);
+            .propertyTyped("is_multi_cell", TypeCodecs.BOOL, (MachineRef m) -> {
+                if (!(m.blockEntity() instanceof dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity dm)) return false;
+                return dm.cellCount() > 0;
             })
-            .property("cell_count", obj -> {
-                if (!(ref(obj).blockEntity() instanceof dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity dm)) return ScriptValue.of(0.0);
-                return ScriptValue.of(dm.cellCount());
+            .propertyTyped("cell_count", TypeCodecs.DOUBLE, (MachineRef m) -> {
+                if (!(m.blockEntity() instanceof dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity dm)) return 0.0;
+                return (double) dm.cellCount();
             })
             // ticks_alive: how many server ticks this block has been loaded (persisted via NBT)
-            .property("ticks_alive", obj -> {
-                PersistentBlockEntity be = ref(obj).blockEntity();
+            .propertyTyped("ticks_alive", TypeCodecs.DOUBLE, (MachineRef m) -> {
+                PersistentBlockEntity be = m.blockEntity();
                 if (be instanceof dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity dm)
-                    return ScriptValue.of((double) dm.ticksAlive());
-                return ScriptValue.of(0.0);
+                    return (double) dm.ticksAlive();
+                return 0.0;
             })
             // rpm_network: in-memory Long network id (0 = not in network)
-            .property("rpm_network", obj -> {
-                PersistentBlockEntity be = ref(obj).blockEntity();
-                if (!(be instanceof dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity dm)) return ScriptValue.of(0.0);
-                return ScriptValue.of((double) dm.rpmNetworkId());
+            .propertyTyped("rpm_network", TypeCodecs.DOUBLE, (MachineRef m) -> {
+                PersistentBlockEntity be = m.blockEntity();
+                if (!(be instanceof dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity dm)) return 0.0;
+                return (double) dm.rpmNetworkId();
             })
             // source_distance: 0 = primary source, MAX_INT = not connected
-            .property("source_distance", obj -> {
-                PersistentBlockEntity be = ref(obj).blockEntity();
+            .propertyTyped("source_distance", TypeCodecs.DOUBLE, (MachineRef m) -> {
+                PersistentBlockEntity be = m.blockEntity();
                 if (be instanceof dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity dm)
-                    return ScriptValue.of(dm.sourceDistance());
-                return ScriptValue.of(Integer.MAX_VALUE);
+                    return (double) dm.sourceDistance();
+                return (double) Integer.MAX_VALUE;
             })
             // Shorthands for common block state properties used in renderer "when" expressions
-            .property("axis", obj -> {
-                MachineRef m = ref(obj);
-                String v = BlockType.readProperty(m.level().getBlockState(m.pos()), "axis");
-                return v != null ? ScriptValue.of(v) : ScriptValue.NULL;
-            })
-            .property("activated", obj -> {
-                MachineRef m = ref(obj);
-                String v = BlockType.readProperty(m.level().getBlockState(m.pos()), "activated");
-                return ScriptValue.of("true".equals(v));
-            })
-            .property("facing_block", obj -> {
-                MachineRef m = ref(obj);
-                return BlockType.wrap(m.level(), m.facingBlockPos());
-            })
+            // STRING encodes a Java null back to NULL, so the null branch is unchanged.
+            .propertyTyped("axis", TypeCodecs.STRING,
+                (MachineRef m) -> BlockType.readProperty(m.level().getBlockState(m.pos()), "axis"))
+            .propertyTyped("activated", TypeCodecs.BOOL,
+                (MachineRef m) -> "true".equals(BlockType.readProperty(m.level().getBlockState(m.pos()), "activated")))
+            .propertyTyped("facing_block", TypeCodecs.polyType("Block", BlockType.BlockRef.class),
+                (MachineRef m) -> {
+                    BlockPos target = m.facingBlockPos();
+                    return m.level() == null ? null : new BlockType.BlockRef(m.level(), target);
+                })
             // Machine.block — this machine's OWN position as a Block wrapper. Lets a script read a
             // RAW blockstate property directly (Machine.block.get_state("facing")) when it needs
             // the actual stored value rather than the derived Machine.facing — e.g. a button-style
             // face-split block (see AbstractMachineBlockEntity#getFacing) collapses face=floor/
             // ceiling down to plain up/down, discarding exactly the stored horizontal "facing" a
             // shaft renderer needs to know which axis to protrude along.
-            .property("block", obj -> {
-                MachineRef m = ref(obj);
-                return BlockType.wrap(m.level(), m.pos());
-            })
+            .propertyTyped("block", TypeCodecs.polyType("Block", BlockType.BlockRef.class),
+                (MachineRef m) -> m.level() == null || m.pos() == null ? null : new BlockType.BlockRef(m.level(), m.pos()))
 
 
             // --- Methods: Entity interaction ---
+            // Return stays RAW: EntityType.wrap picks one of NINE PolyType names per element
+            // ("Player"/"Animal"/"Mob"/"LivingEntity"/"ItemEntity"/... ) — not one element type.
             .methodTypedOpt1("nearby_entities", TypeCodecs.DOUBLE, 5.0, TypeCodecs.RAW,
                 (MachineRef m, Double radius) -> {
                     Vec3 center = Vec3.atCenterOf(m.pos());
@@ -753,6 +749,8 @@ public final class MachineType {
             // target's raw coordinates in the WRONG level instead. For a standalone (non-
             // contraption) drill the two levels are the same object anyway, so this changes
             // nothing for the common case.
+            // Return stays RAW: it is either NULL (still breaking) or an Array of ScriptValue.Item
+            // drops — Items are not Obj-wrapped PolyType instances, so listOf cannot express it.
             .methodTyped2("tick_break", TypeCodecs.RAW, TypeCodecs.DOUBLE, TypeCodecs.RAW, ScriptValue.NULL,
                 (MachineRef m, ScriptValue blockArg, Double speedArg) -> {
                     int speed = speedArg.intValue();
@@ -794,40 +792,44 @@ public final class MachineType {
 
             // --- Methods: Contraption stall ---
             // Machine.contraption — lazy-cached contraption reference. Reconnects by UUID on restart.
-            .property("contraption", obj -> {
-                var cl = ref(obj).getContraption();
-                return cl != null ? dev.arubik.craftengine.script.types.world.ContraptionType.wrap(cl) : ScriptValue.NULL;
-            })
+            // ContraptionType.wrap only ever produces an Obj("Contraption", cl) for a ContraptionLevel
+            // — which getContraption() already returns — so the polyType codec re-boxes identically.
+            .propertyTyped("contraption",
+                TypeCodecs.polyType("Contraption", dev.arubik.craftengine.contraption.core.ContraptionLevel.class),
+                (MachineRef m) -> m.getContraption())
             // Machine.has_contraption — true if contraption is live
-            .property("has_contraption", obj -> ScriptValue.of(ref(obj).getContraption() != null))
+            .propertyTyped("has_contraption", TypeCodecs.BOOL, (MachineRef m) -> m.getContraption() != null)
             // Machine.bars — Bars type to read bar stats (fluid, progress, etc.)
-            .property("bars", obj -> {
-                PersistentBlockEntity be = ref(obj).blockEntity();
-                if (be instanceof dev.arubik.craftengine.machine.block.entity.AbstractMachineBlockEntity m)
-                    return BarsType.wrap(m);
-                return ScriptValue.NULL;
-            })
-            // Machine.recipes — Array of Recipe for this machine type
-            .property("recipes", obj -> {
-                PersistentBlockEntity be = ref(obj).blockEntity();
-                if (!(be instanceof dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity dm)) return new ScriptValue.Array(java.util.List.of());
-                java.util.List<ScriptValue> list = new java.util.ArrayList<>();
-                for (var r : dev.arubik.craftengine.machine.recipe.loader.RecipeManager.getRecipes(dm.getMachineIdPublic()))
-                    list.add(RecipeType.wrap(r));
-                return new ScriptValue.Array(list);
-            })
+            .propertyTyped("bars", TypeCodecs.polyType("Bars", AbstractMachineBlockEntity.class),
+                (MachineRef m) -> m.blockEntity() instanceof AbstractMachineBlockEntity be ? be : null)
+            // Machine.recipes — Array of Recipe for this machine type. Every element comes from
+            // RecipeManager.getRecipes, a List<AbstractProcessingRecipe> — one uniform element type
+            // (never the VanillaRecipeRef half of the "Recipe" PolyType) — so the list codec's own
+            // ofObj("Recipe", element) wrapping is exactly what RecipeType.wrap did per element.
+            .propertyTyped("recipes",
+                TypeCodecs.listOf("Recipe", dev.arubik.craftengine.machine.recipe.AbstractProcessingRecipe.class),
+                (MachineRef m) -> {
+                    PersistentBlockEntity be = m.blockEntity();
+                    if (!(be instanceof dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity dm))
+                        return java.util.List.of();
+                    return dev.arubik.craftengine.machine.recipe.loader.RecipeManager.getRecipes(dm.getMachineIdPublic());
+                })
             // Machine.working_recipe — current processing recipe or NULL
-            .property("working_recipe", obj -> {
-                PersistentBlockEntity be = ref(obj).blockEntity();
-                if (!(be instanceof dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity dm)) return ScriptValue.NULL;
-                try { return RecipeType.wrap(dm.getCurrentRecipe()); } catch (Throwable ignored) { return ScriptValue.NULL; }
-            })
+            .propertyTyped("working_recipe",
+                TypeCodecs.polyType("Recipe", dev.arubik.craftengine.machine.recipe.AbstractProcessingRecipe.class),
+                (MachineRef m) -> {
+                    PersistentBlockEntity be = m.blockEntity();
+                    if (!(be instanceof dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity dm)) return null;
+                    try { return dm.getCurrentRecipe(); } catch (Throwable ignored) { return null; }
+                })
             // Machine.matching_recipe — first recipe matching current inventory or NULL
-            .property("matching_recipe", obj -> {
-                PersistentBlockEntity be = ref(obj).blockEntity();
-                if (!(be instanceof dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity dm)) return ScriptValue.NULL;
-                try { return RecipeType.wrap(dm.findMatchingRecipe()); } catch (Throwable ignored) { return ScriptValue.NULL; }
-            })
+            .propertyTyped("matching_recipe",
+                TypeCodecs.polyType("Recipe", dev.arubik.craftengine.machine.recipe.AbstractProcessingRecipe.class),
+                (MachineRef m) -> {
+                    PersistentBlockEntity be = m.blockEntity();
+                    if (!(be instanceof dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity dm)) return null;
+                    try { return dm.findMatchingRecipe(); } catch (Throwable ignored) { return null; }
+                })
             // Machine.connect_contraption() — force reconnect from str_flag UUID, returns contraption or NULL
             .methodTyped0("connect_contraption", TypeCodecs.RAW,
                 (MachineRef m) -> {
@@ -869,48 +871,49 @@ public final class MachineType {
             // (matches the "polyfills:progress" bar's barStat("progress") source exactly), exposed
             // to scripts so a layout item (e.g. recipe_info.pf) can show a live "% done" without
             // needing its own separate progress-tracking convention.
-            .property("progress", obj -> {
-                PersistentBlockEntity be = ref(obj).blockEntity();
-                if (!(be instanceof AbstractMachineBlockEntity machine)) return ScriptValue.of(0);
-                return ScriptValue.of(machine.getProgress());
+            .propertyTyped("progress", TypeCodecs.DOUBLE, (MachineRef m) -> {
+                PersistentBlockEntity be = m.blockEntity();
+                if (!(be instanceof AbstractMachineBlockEntity machine)) return 0.0;
+                return (double) machine.getProgress();
             })
-            .property("max_progress", obj -> {
-                PersistentBlockEntity be = ref(obj).blockEntity();
-                if (!(be instanceof AbstractMachineBlockEntity machine)) return ScriptValue.of(0);
-                return ScriptValue.of(Math.max(1, machine.getMaxProgress()));
+            .propertyTyped("max_progress", TypeCodecs.DOUBLE, (MachineRef m) -> {
+                PersistentBlockEntity be = m.blockEntity();
+                if (!(be instanceof AbstractMachineBlockEntity machine)) return 0.0;
+                return (double) Math.max(1, machine.getMaxProgress());
             })
-            .property("progress_percent", obj -> {
-                PersistentBlockEntity be = ref(obj).blockEntity();
-                if (!(be instanceof AbstractMachineBlockEntity machine)) return ScriptValue.of(0.0);
-                return ScriptValue.of(100.0 * machine.getProgress() / Math.max(1, machine.getMaxProgress()));
+            .propertyTyped("progress_percent", TypeCodecs.DOUBLE, (MachineRef m) -> {
+                PersistentBlockEntity be = m.blockEntity();
+                if (!(be instanceof AbstractMachineBlockEntity machine)) return 0.0;
+                return 100.0 * machine.getProgress() / Math.max(1, machine.getMaxProgress());
             })
-            .property("is_overstressed", obj -> {
-                PersistentBlockEntity be = ref(obj).blockEntity();
-                if (!(be instanceof dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity dm)) return ScriptValue.of(false);
+            .propertyTyped("is_overstressed", TypeCodecs.BOOL, (MachineRef m) -> {
+                PersistentBlockEntity be = m.blockEntity();
+                if (!(be instanceof dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity dm)) return false;
                 dev.arubik.craftengine.rotation.RpmNetwork net = dev.arubik.craftengine.rotation.RpmNetwork.get(dm.rpmNetworkId());
-                return ScriptValue.of(net != null && net.isOverStressed());
+                return net != null && net.isOverStressed();
             })
-            .property("network_capacity", obj -> {
-                PersistentBlockEntity be = ref(obj).blockEntity();
-                if (!(be instanceof dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity dm)) return ScriptValue.of(0.0);
+            .propertyTyped("network_capacity", TypeCodecs.DOUBLE, (MachineRef m) -> {
+                PersistentBlockEntity be = m.blockEntity();
+                if (!(be instanceof dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity dm)) return 0.0;
                 dev.arubik.craftengine.rotation.RpmNetwork net = dev.arubik.craftengine.rotation.RpmNetwork.get(dm.rpmNetworkId());
-                return ScriptValue.of(net != null ? net.totalCapacity() : 0.0);
+                return net != null ? (double) net.totalCapacity() : 0.0;
             })
-            .property("network_stress", obj -> {
-                PersistentBlockEntity be = ref(obj).blockEntity();
-                if (!(be instanceof dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity dm)) return ScriptValue.of(0.0);
+            .propertyTyped("network_stress", TypeCodecs.DOUBLE, (MachineRef m) -> {
+                PersistentBlockEntity be = m.blockEntity();
+                if (!(be instanceof dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity dm)) return 0.0;
                 dev.arubik.craftengine.rotation.RpmNetwork net = dev.arubik.craftengine.rotation.RpmNetwork.get(dm.rpmNetworkId());
-                return ScriptValue.of(net != null ? net.totalStress() : 0.0);
+                return net != null ? (double) net.totalStress() : 0.0;
             })
 
             // --- Properties: redstone port ---
             // Returns a Redstone object (.input/.output/.powered/.set(n)/.on()/.off()).
             // It coerces numerically to the INPUT level, so the older `Machine.redstone > 0`
             // and `power = Machine.redstone` usages keep working unchanged.
-            .property("redstone", obj -> RedstoneType.wrap(ref(obj)))
-            .property("facing_dx", obj -> ScriptValue.of(ref(obj).facingDirection().getStepX()))
-            .property("facing_dy", obj -> ScriptValue.of(ref(obj).facingDirection().getStepY()))
-            .property("facing_dz", obj -> ScriptValue.of(ref(obj).facingDirection().getStepZ()))
+            .propertyTyped("redstone", TypeCodecs.polyType("Redstone", RedstoneType.RedstoneRef.class),
+                (MachineRef m) -> m == null ? null : new RedstoneType.RedstoneRef(m))
+            .propertyTyped("facing_dx", TypeCodecs.DOUBLE, (MachineRef m) -> (double) m.facingDirection().getStepX())
+            .propertyTyped("facing_dy", TypeCodecs.DOUBLE, (MachineRef m) -> (double) m.facingDirection().getStepY())
+            .propertyTyped("facing_dz", TypeCodecs.DOUBLE, (MachineRef m) -> (double) m.facingDirection().getStepZ())
 
             // --- Generic TypedKey storage — get_typed(key, type) picks any registered type by name
             // ("int"/"double"/"bool"/"string"/"byte_array"/"item"/"vector"/a custom-registered
@@ -963,10 +966,8 @@ public final class MachineType {
             // Belt itself is null-safe: it's always a valid script value even when the block there
             // isn't (or is no longer) a conveyor — its is_full/has_item/peek/etc. just answer "no
             // belt here" (full=true, has_item=false, peek=empty) rather than throwing.
-            .property("belt", obj -> {
-                MachineRef m = ref(obj);
-                return dev.arubik.craftengine.script.types.machine.BeltType.wrap(m.level(), m.pos());
-            })
+            .propertyTyped("belt", TypeCodecs.polyType("Belt", BeltType.BeltRef.class),
+                (MachineRef m) -> m.level() == null || m.pos() == null ? null : new BeltType.BeltRef(m.level(), m.pos()))
             // belt_at(dx,dy,dz) — Belt at an arbitrary offset, for a machine whose relevant conveyor
             // segment isn't its own position (e.g. the one it's facing, or one block below it).
             .methodTyped3("belt_at", TypeCodecs.DOUBLE, TypeCodecs.DOUBLE, TypeCodecs.DOUBLE, TypeCodecs.RAW,
@@ -1007,35 +1008,30 @@ public final class MachineType {
 
             // --- Overclock properties & methods ---
             // Machine.overclock → current overclock fraction (-1.0 to limit)
-            .property("overclock", obj -> {
-                MachineRef m = ref(obj);
-                if (!(m.blockEntity() instanceof dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity dm)) return ScriptValue.of(0.0);
-                return ScriptValue.of(dm.getOverclock());
+            .propertyTyped("overclock", TypeCodecs.DOUBLE, (MachineRef m) -> {
+                if (!(m.blockEntity() instanceof dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity dm)) return 0.0;
+                return (double) dm.getOverclock();
             })
             // Machine.overclock_limit → current max overclock (from upgrades)
-            .property("overclock_limit", obj -> {
-                MachineRef m = ref(obj);
-                if (!(m.blockEntity() instanceof dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity dm)) return ScriptValue.of(0.0);
-                return ScriptValue.of(dm.getOverclockLimit());
+            .propertyTyped("overclock_limit", TypeCodecs.DOUBLE, (MachineRef m) -> {
+                if (!(m.blockEntity() instanceof dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity dm)) return 0.0;
+                return dm.getOverclockLimit();
             })
             // Machine.efficiency → current fuel efficiency fraction (from upgrades)
-            .property("efficiency", obj -> {
-                MachineRef m = ref(obj);
-                if (!(m.blockEntity() instanceof dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity dm)) return ScriptValue.of(0.0);
-                return ScriptValue.of(dm.getFuelEfficiency());
+            .propertyTyped("efficiency", TypeCodecs.DOUBLE, (MachineRef m) -> {
+                if (!(m.blockEntity() instanceof dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity dm)) return 0.0;
+                return dm.getFuelEfficiency();
             })
             // Machine.generation → current generation bonus fraction (from upgrades)
-            .property("generation", obj -> {
-                MachineRef m = ref(obj);
-                if (!(m.blockEntity() instanceof dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity dm)) return ScriptValue.of(0.0);
-                return ScriptValue.of(dm.getGeneration());
+            .propertyTyped("generation", TypeCodecs.DOUBLE, (MachineRef m) -> {
+                if (!(m.blockEntity() instanceof dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity dm)) return 0.0;
+                return dm.getGeneration();
             })
             // Machine.meter_state → integer 0..72 mapped from overclock (-1..+limit) — for clock_N icon names
-            .property("meter_state", obj -> {
-                MachineRef m = ref(obj);
-                if (!(m.blockEntity() instanceof dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity dm)) return ScriptValue.of(36);
+            .propertyTyped("meter_state", TypeCodecs.DOUBLE, (MachineRef m) -> {
+                if (!(m.blockEntity() instanceof dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity dm)) return 36.0;
                 int s = (int) Math.round((dm.getOverclock() + 1.0) / 5.0 * 72.0);
-                return ScriptValue.of(Math.max(0, Math.min(72, s)));
+                return (double) Math.max(0, Math.min(72, s));
             })
             // Machine.set_overclock(value) → set overclock fraction directly
             .methodTyped1("set_overclock", TypeCodecs.DOUBLE, TypeCodecs.BOOL, false,
@@ -1085,12 +1081,14 @@ public final class MachineType {
             // "left", "right") resolved against the block's facing, or the axis names
             // ("axis_pos", "axis_neg"). Returns 0 when the face is not an output.
             // Machine.layout -> runtime control over the open menu's slots.
-            .property("layout", obj -> LayoutType.wrap(ref(obj)))
+            .propertyTyped("layout", TypeCodecs.polyType("Layout", LayoutType.LayoutRef.class),
+                (MachineRef m) -> m == null ? null : new LayoutType.LayoutRef(m))
             // Machine.io -> the machine's IO port map, editable at runtime.
             // Lets a script build its IO on the fly for any type instead of it being frozen in the
             // machine JSON: a pipe whose faces the player configures, a machine that opens an
             // output only once a recipe finishes, and so on.
-            .property("io", obj -> IoType.wrap(ref(obj)))
+            .propertyTyped("io", TypeCodecs.polyType("Io", IoType.IoRef.class),
+                (MachineRef m) -> m == null ? null : new IoType.IoRef(m))
             .methodTyped1("rpm_out", TypeCodecs.STRING, TypeCodecs.DOUBLE, 0.0,
                 (MachineRef m, String faceName) -> {
                     if (!(m.blockEntity() instanceof dev.arubik.craftengine.machine.block.entity.DataMachineBlockEntity dm))
@@ -1187,6 +1185,9 @@ public final class MachineType {
                     return false;
                 })
             // gas_tanks → Array of Map{name, level, capacity, contents_name, color}
+            // Stays untyped: the elements are Maps built per tank, not instances of one PolyType
+            // that TypeCodecs.listOf could re-box — same call this codebase already makes for
+            // RecipeOutputs.fluids/.gases.
             .property("gas_tanks", obj -> {
                 MachineRef m = ref(obj);
                 if (!(m.blockEntity() instanceof dev.arubik.craftengine.machine.block.entity.AbstractMachineBlockEntity machine)) return new ScriptValue.Array(java.util.List.of());
@@ -1275,6 +1276,7 @@ public final class MachineType {
                     return false;
                 })
             // fluid_tanks → Array of Map{name, level, capacity, contents_name, color}
+            // Stays untyped for the same reason as gas_tanks above (Map elements, not one PolyType).
             .property("fluid_tanks", obj -> {
                 MachineRef m = ref(obj);
                 if (!(m.blockEntity() instanceof dev.arubik.craftengine.machine.block.entity.AbstractMachineBlockEntity machine)) return new ScriptValue.Array(java.util.List.of());
@@ -1332,20 +1334,17 @@ public final class MachineType {
             // furnace-style item fuel, e.g. coal), mirroring energy_stored/energy_capacity's shape
             // so a script (recipe_info.pf) can show "is this recipe waiting on fuel" without
             // reaching for anything burn-specific. 0/0 for a machine that doesn't burn fuel at all.
-            .property("burn_time", obj -> {
-                MachineRef m = ref(obj);
-                if (!(m.blockEntity() instanceof AbstractMachineBlockEntity machine)) return ScriptValue.of(0);
-                return ScriptValue.of(machine.getBurnTime());
+            .propertyTyped("burn_time", TypeCodecs.DOUBLE, (MachineRef m) -> {
+                if (!(m.blockEntity() instanceof AbstractMachineBlockEntity machine)) return 0.0;
+                return (double) machine.getBurnTime();
             })
-            .property("max_burn_time", obj -> {
-                MachineRef m = ref(obj);
-                if (!(m.blockEntity() instanceof AbstractMachineBlockEntity machine)) return ScriptValue.of(0);
-                return ScriptValue.of(machine.getMaxBurnTime());
+            .propertyTyped("max_burn_time", TypeCodecs.DOUBLE, (MachineRef m) -> {
+                if (!(m.blockEntity() instanceof AbstractMachineBlockEntity machine)) return 0.0;
+                return (double) machine.getMaxBurnTime();
             })
-            .property("energy_stored", obj -> {
-                MachineRef m = ref(obj);
-                if (!(m.blockEntity() instanceof AbstractMachineBlockEntity machine)) return ScriptValue.of(0);
-                return ScriptValue.of(machine.getStoredEnergyForCarrier());
+            .propertyTyped("energy_stored", TypeCodecs.DOUBLE, (MachineRef m) -> {
+                if (!(m.blockEntity() instanceof AbstractMachineBlockEntity machine)) return 0.0;
+                return (double) machine.getStoredEnergyForCarrier();
             })
             // consume_energy(amount) — an internal cost for a script-driven ACTION (a teleport, an
             // ability, ...), not a transfer to/from a neighbour, so it deliberately bypasses the
@@ -1360,40 +1359,34 @@ public final class MachineType {
                     machine.setStoredEnergyRaw(m.level(), machine.getStoredEnergyForCarrier() - amount);
                     return true;
                 })
-            .property("energy_capacity", obj -> {
-                MachineRef m = ref(obj);
-                if (!(m.blockEntity() instanceof AbstractMachineBlockEntity machine)) return ScriptValue.of(0);
-                return ScriptValue.of(machine.energyCapacity());
+            .propertyTyped("energy_capacity", TypeCodecs.DOUBLE, (MachineRef m) -> {
+                if (!(m.blockEntity() instanceof AbstractMachineBlockEntity machine)) return 0.0;
+                return (double) machine.energyCapacity();
             })
-            .property("energy_max_input", obj -> {
-                MachineRef m = ref(obj);
-                if (!(m.blockEntity() instanceof AbstractMachineBlockEntity machine)) return ScriptValue.of(0);
-                return ScriptValue.of(machine.energyMaxInput());
+            .propertyTyped("energy_max_input", TypeCodecs.DOUBLE, (MachineRef m) -> {
+                if (!(m.blockEntity() instanceof AbstractMachineBlockEntity machine)) return 0.0;
+                return (double) machine.energyMaxInput();
             })
-            .property("energy_max_output", obj -> {
-                MachineRef m = ref(obj);
-                if (!(m.blockEntity() instanceof AbstractMachineBlockEntity machine)) return ScriptValue.of(0);
-                return ScriptValue.of(machine.energyMaxOutput());
+            .propertyTyped("energy_max_output", TypeCodecs.DOUBLE, (MachineRef m) -> {
+                if (!(m.blockEntity() instanceof AbstractMachineBlockEntity machine)) return 0.0;
+                return (double) machine.energyMaxOutput();
             })
-            .property("energy_per_tick", obj -> {
-                MachineRef m = ref(obj);
-                if (!(m.blockEntity() instanceof AbstractMachineBlockEntity machine)) return ScriptValue.of(0);
-                return ScriptValue.of(machine.energyPerTick());
+            .propertyTyped("energy_per_tick", TypeCodecs.DOUBLE, (MachineRef m) -> {
+                if (!(m.blockEntity() instanceof AbstractMachineBlockEntity machine)) return 0.0;
+                return (double) machine.energyPerTick();
             })
             // Measured, not configured: max_input/max_output/per_tick are CAPS this machine
             // declares — real_input/real_output are what the network ACTUALLY moved through this
             // node on its last EnergyEngine step (see EnergyEngine#lastDelta). Pull the generator
             // feeding this cell off the network and real_input drops to 0 next tick even though
             // max_input/capacity haven't changed at all.
-            .property("energy_real_input", obj -> {
-                MachineRef m = ref(obj);
+            .propertyTyped("energy_real_input", TypeCodecs.DOUBLE, (MachineRef m) -> {
                 int delta = dev.arubik.craftengine.fluid.graph.EnergyEngine.lastDelta(m.pos());
-                return ScriptValue.of(Math.max(0, delta));
+                return (double) Math.max(0, delta);
             })
-            .property("energy_real_output", obj -> {
-                MachineRef m = ref(obj);
+            .propertyTyped("energy_real_output", TypeCodecs.DOUBLE, (MachineRef m) -> {
                 int delta = dev.arubik.craftengine.fluid.graph.EnergyEngine.lastDelta(m.pos());
-                return ScriptValue.of(Math.max(0, -delta));
+                return (double) Math.max(0, -delta);
             })
             .methodTyped1("set_energy_per_tick", TypeCodecs.DOUBLE, TypeCodecs.BOOL, false,
                 (MachineRef m, Double value) -> {
@@ -1429,19 +1422,20 @@ public final class MachineType {
                 })
 
             // --- Methods: blocks_in_range, break_block, place_block_at ---
-            .methodTypedOpt1("blocks_in_range", TypeCodecs.DOUBLE, 3.0, TypeCodecs.RAW,
+            .methodTypedOpt1("blocks_in_range", TypeCodecs.DOUBLE, 3.0,
+                TypeCodecs.listOf("Block", BlockType.BlockRef.class),
                 (MachineRef m, Double radiusArg) -> {
                     int radius = radiusArg.intValue();
-                    java.util.List<ScriptValue> blocks = new java.util.ArrayList<>();
+                    java.util.List<BlockType.BlockRef> blocks = new java.util.ArrayList<>();
                     BlockPos center = m.pos();
                     for (int dx = -radius; dx <= radius; dx++)
                         for (int dy = -radius; dy <= radius; dy++)
                             for (int dz = -radius; dz <= radius; dz++) {
                                 BlockPos p = center.offset(dx, dy, dz);
                                 if (!m.level().getBlockState(p).isAir())
-                                    blocks.add(BlockType.wrap(m.level(), p));
+                                    blocks.add(new BlockType.BlockRef(m.level(), p));
                             }
-                    return new ScriptValue.Array(blocks);
+                    return blocks;
                 })
             // break_block(block)/place_block_at(dx,dy,dz,item) removed — both hand-rolled logic that
             // now lives on the Block value itself (see BlockType.break_and_drop/place_from_item),
@@ -1468,13 +1462,12 @@ public final class MachineType {
                     }
                     return false;
                 })
-            .property("owner_uuid", obj -> {
-                MachineRef m = ref(obj);
+            // STRING encodes a Java null back to NULL, so both null branches are unchanged.
+            .propertyTyped("owner_uuid", TypeCodecs.STRING, (MachineRef m) -> {
                 PersistentBlockEntity be = m.blockEntity();
-                if (be == null) return ScriptValue.NULL;
+                if (be == null) return null;
                 TypedKey<String> key = TypedKey.of("polyfills", "machine_owner_uuid", NbtType.STRING);
-                String val = be.get(key);
-                return val != null ? ScriptValue.of(val) : ScriptValue.NULL;
+                return be.get(key);
             })
             // owner_uuid was also registered as a .method() here with an identical body — dead code,
             // nothing ever called Machine.owner_uuid() with parens; the .property above is the only
@@ -1533,16 +1526,16 @@ public final class MachineType {
             // (e.g. to price a custom repair/combine recipe by name) without needing a real anvil
             // recipe to be registered. "" if nobody has an anvil-type page of this machine open,
             // or the open page isn't an anvil.
-            .property("rename_text", obj -> {
-                PersistentBlockEntity be = ref(obj).blockEntity();
+            .propertyTyped("rename_text", TypeCodecs.STRING, (MachineRef ref) -> {
+                PersistentBlockEntity be = ref.blockEntity();
                 if (be instanceof dev.arubik.craftengine.machine.block.entity.AbstractMachineBlockEntity m) {
                     var openMenu = m.getOpenMenuOrNull();
                     if (openMenu != null && openMenu.getInventory() instanceof org.bukkit.inventory.AnvilInventory anvil) {
                         String text = anvil.getRenameText();
-                        return ScriptValue.of(text != null ? text : "");
+                        return text != null ? text : "";
                     }
                 }
-                return ScriptValue.of("");
+                return "";
             });
     }
 

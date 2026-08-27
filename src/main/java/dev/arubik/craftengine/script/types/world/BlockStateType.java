@@ -33,18 +33,20 @@ public final class BlockStateType {
     public static void register() {
         PolyTypeRegistry.define("BlockState")
             // id — CE id if available, else vanilla namespaced key
-            .property("id", obj -> {
-                BlockStateRef r = ref(obj);
+            // ref(obj) is a plain `(BlockStateRef) obj` cast, so BlockStateRef is the typed
+            // instance parameter directly (as the methodTypedN registrations below already use).
+            .propertyTyped("id", TypeCodecs.STRING, (BlockStateRef r) -> {
                 if (r.ce() != null) {
-                    try { return ScriptValue.of(((BlockDefinition) r.ce().owner().value()).id().toString()); }
+                    try { return ((BlockDefinition) r.ce().owner().value()).id().toString(); }
                     catch (Throwable ignored) {}
                 }
-                return ScriptValue.of(BuiltInRegistries.BLOCK.getKey(r.nms().getBlock()).toString());
+                return BuiltInRegistries.BLOCK.getKey(r.nms().getBlock()).toString();
             })
-            .property("is_air", obj -> ScriptValue.of(ref(obj).nms().isAir()))
+            .propertyTyped("is_air", TypeCodecs.BOOL, (BlockStateRef r) -> r.nms().isAir())
             // properties — Map of all property name→value (CE overrides vanilla)
-            .property("properties", obj -> {
-                BlockStateRef r = ref(obj);
+            // RAW: a Map value — MapType.wrap boxes it as Obj("Map", ...), which is neither a
+            // scalar nor a list of PolyType instances.
+            .propertyTyped("properties", TypeCodecs.RAW, (BlockStateRef r) -> {
                 LinkedHashMap<String, ScriptValue> map = new LinkedHashMap<>();
                 for (var prop : r.nms().getProperties()) {
                     map.put(prop.getName(), ScriptValue.of(r.nms().getValue(prop).toString()));
@@ -56,9 +58,10 @@ public final class BlockStateType {
                 }
                 return MapType.wrap(map);
             })
-            // property_names — Array of all vanilla property names (CE adds same names, so no extras needed)
-            .property("property_names", obj -> {
-                BlockStateRef r = ref(obj);
+            // property_names — Array of all vanilla property names (CE adds same names, so no extras needed).
+            // RAW, not TypeCodecs.listOf: elements are plain strings, not PolyType instances — a
+            // list codec would silently drop every one of them.
+            .propertyTyped("property_names", TypeCodecs.RAW, (BlockStateRef r) -> {
                 List<ScriptValue> names = new ArrayList<>();
                 for (var prop : r.nms().getProperties()) names.add(ScriptValue.of(prop.getName()));
                 return new ScriptValue.Array(names);
@@ -89,5 +92,7 @@ public final class BlockStateType {
         return ScriptValue.ofObj("BlockState", new BlockStateRef(nms, ce));
     }
 
-    private static BlockStateRef ref(Object obj) { return (BlockStateRef) obj; }
+    // ref(Object) — the old `(BlockStateRef) obj` cast helper — was removed: every property is now
+    // propertyTyped with a BlockStateRef instance parameter (every method was already methodTypedN),
+    // so the typed registration's own generic cast does the identical conversion.
 }

@@ -8,6 +8,7 @@
  *  dev.arubik.craftengine.script.PolyType$PropertyHandler
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler0
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler1
+ *  dev.arubik.craftengine.script.PolyType$TypedPropertyHandler
  *  dev.arubik.craftengine.script.ScriptValue
  *  dev.arubik.craftengine.script.ScriptValue$Obj
  */
@@ -34,10 +35,15 @@ public class PolyClassRedstone {
     private static volatile PolyType.TypedMethodHandler1 h$10;
     private static volatile PolyType.MethodHandler m$11;
     private static volatile PolyType.PropertyHandler p$12;
-    private static volatile PolyType.PropertyHandler p$13;
+    private static volatile PolyType.TypedPropertyHandler tp$13;
     private static volatile PolyType.PropertyHandler p$14;
-    private static volatile PolyType.PropertyHandler p$15;
+    private static volatile PolyType.TypedPropertyHandler tp$15;
     private static volatile PolyType.PropertyHandler p$16;
+    private static volatile PolyType.TypedPropertyHandler tp$17;
+    private static volatile PolyType.PropertyHandler p$18;
+    private static volatile PolyType.TypedPropertyHandler tp$19;
+    private static volatile PolyType.PropertyHandler p$20;
+    private static volatile PolyType.TypedPropertyHandler tp$21;
 
     public static void refresh() {
         h$0 = (PolyType.TypedMethodHandler1)PolyClassRuntime.resolveTypedHandler((String)"Redstone", (String)"set", (String)"D:Z");
@@ -53,10 +59,15 @@ public class PolyClassRedstone {
         h$10 = (PolyType.TypedMethodHandler1)PolyClassRuntime.resolveTypedHandler((String)"Redstone", (String)"on", (String)"D:Z");
         m$11 = PolyClassRuntime.resolveMethodHandler((String)"Redstone", (String)"on");
         p$12 = PolyClassRuntime.resolvePropertyHandler((String)"Redstone", (String)"output");
-        p$13 = PolyClassRuntime.resolvePropertyHandler((String)"Redstone", (String)"input");
-        p$14 = PolyClassRuntime.resolvePropertyHandler((String)"Redstone", (String)"emitting");
-        p$15 = PolyClassRuntime.resolvePropertyHandler((String)"Redstone", (String)"powered");
-        p$16 = PolyClassRuntime.resolvePropertyHandler((String)"Redstone", (String)"max");
+        tp$13 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Redstone", (String)"output", (String)"D");
+        p$14 = PolyClassRuntime.resolvePropertyHandler((String)"Redstone", (String)"input");
+        tp$15 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Redstone", (String)"input", (String)"D");
+        p$16 = PolyClassRuntime.resolvePropertyHandler((String)"Redstone", (String)"emitting");
+        tp$17 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Redstone", (String)"emitting", (String)"Z");
+        p$18 = PolyClassRuntime.resolvePropertyHandler((String)"Redstone", (String)"powered");
+        tp$19 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Redstone", (String)"powered", (String)"Z");
+        p$20 = PolyClassRuntime.resolvePropertyHandler((String)"Redstone", (String)"max");
+        tp$21 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Redstone", (String)"max", (String)"D");
     }
 
     public boolean tm$0_set(double d) {
@@ -150,32 +161,67 @@ public class PolyClassRedstone {
         return PolyClassRuntime.genericProperty((String)"Redstone", (String)"output", (Object)this.instance);
     }
 
-    public ScriptValue pg$13_input() {
-        if (p$13 != null) {
-            return p$13.get(this.instance);
+    public double tg$13_output() {
+        if (tp$13 != null) {
+            return (Double)tp$13.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Redstone", (String)"output", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$14_input() {
+        if (p$14 != null) {
+            return p$14.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Redstone", (String)"input", (Object)this.instance);
     }
 
-    public ScriptValue pg$14_emitting() {
-        if (p$14 != null) {
-            return p$14.get(this.instance);
+    public double tg$15_input() {
+        if (tp$15 != null) {
+            return (Double)tp$15.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Redstone", (String)"input", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$16_emitting() {
+        if (p$16 != null) {
+            return p$16.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Redstone", (String)"emitting", (Object)this.instance);
     }
 
-    public ScriptValue pg$15_powered() {
-        if (p$15 != null) {
-            return p$15.get(this.instance);
+    public boolean tg$17_emitting() {
+        if (tp$17 != null) {
+            return (Boolean)tp$17.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Redstone", (String)"emitting", (Object)this.instance).asBool();
+    }
+
+    public ScriptValue pg$18_powered() {
+        if (p$18 != null) {
+            return p$18.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Redstone", (String)"powered", (Object)this.instance);
     }
 
-    public ScriptValue pg$16_max() {
-        if (p$16 != null) {
-            return p$16.get(this.instance);
+    public boolean tg$19_powered() {
+        if (tp$19 != null) {
+            return (Boolean)tp$19.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Redstone", (String)"powered", (Object)this.instance).asBool();
+    }
+
+    public ScriptValue pg$20_max() {
+        if (p$20 != null) {
+            return p$20.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Redstone", (String)"max", (Object)this.instance);
+    }
+
+    public double tg$21_max() {
+        if (tp$21 != null) {
+            return (Double)tp$21.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Redstone", (String)"max", (Object)this.instance).asNum();
     }
 
     public PolyClassRedstone(Object object) {

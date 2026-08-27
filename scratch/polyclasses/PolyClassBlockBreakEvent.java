@@ -7,6 +7,7 @@
  *  dev.arubik.craftengine.script.PolyType$MethodHandler
  *  dev.arubik.craftengine.script.PolyType$PropertyHandler
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler1
+ *  dev.arubik.craftengine.script.PolyType$TypedPropertyHandler
  *  dev.arubik.craftengine.script.ScriptValue
  *  dev.arubik.craftengine.script.ScriptValue$Obj
  */
@@ -26,9 +27,11 @@ extends PolyClassEvent {
     private static volatile PolyType.TypedMethodHandler1 h$2;
     private static volatile PolyType.MethodHandler m$3;
     private static volatile PolyType.PropertyHandler p$4;
-    private static volatile PolyType.PropertyHandler p$5;
+    private static volatile PolyType.TypedPropertyHandler tp$5;
     private static volatile PolyType.PropertyHandler p$6;
     private static volatile PolyType.PropertyHandler p$7;
+    private static volatile PolyType.PropertyHandler p$8;
+    private static volatile PolyType.TypedPropertyHandler tp$9;
 
     public static void refresh() {
         h$0 = (PolyType.TypedMethodHandler1)PolyClassRuntime.resolveTypedHandler((String)"BlockBreakEvent", (String)"set_drop_items", (String)"Z:Z");
@@ -36,9 +39,11 @@ extends PolyClassEvent {
         h$2 = (PolyType.TypedMethodHandler1)PolyClassRuntime.resolveTypedHandler((String)"BlockBreakEvent", (String)"set_exp_to_drop", (String)"D:Z");
         m$3 = PolyClassRuntime.resolveMethodHandler((String)"BlockBreakEvent", (String)"set_exp_to_drop");
         p$4 = PolyClassRuntime.resolvePropertyHandler((String)"BlockBreakEvent", (String)"drop_items");
-        p$5 = PolyClassRuntime.resolvePropertyHandler((String)"BlockBreakEvent", (String)"block");
-        p$6 = PolyClassRuntime.resolvePropertyHandler((String)"BlockBreakEvent", (String)"player");
-        p$7 = PolyClassRuntime.resolvePropertyHandler((String)"BlockBreakEvent", (String)"exp_to_drop");
+        tp$5 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"BlockBreakEvent", (String)"drop_items", (String)"Z");
+        p$6 = PolyClassRuntime.resolvePropertyHandler((String)"BlockBreakEvent", (String)"block");
+        p$7 = PolyClassRuntime.resolvePropertyHandler((String)"BlockBreakEvent", (String)"player");
+        p$8 = PolyClassRuntime.resolvePropertyHandler((String)"BlockBreakEvent", (String)"exp_to_drop");
+        tp$9 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"BlockBreakEvent", (String)"exp_to_drop", (String)"D");
     }
 
     public boolean tm$0_set_drop_items(boolean bl) {
@@ -76,25 +81,39 @@ extends PolyClassEvent {
         return PolyClassRuntime.genericProperty((String)"BlockBreakEvent", (String)"drop_items", (Object)this.instance);
     }
 
-    public ScriptValue pg$5_block() {
-        if (p$5 != null) {
-            return p$5.get(this.instance);
+    public boolean tg$5_drop_items() {
+        if (tp$5 != null) {
+            return (Boolean)tp$5.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"BlockBreakEvent", (String)"drop_items", (Object)this.instance).asBool();
+    }
+
+    public ScriptValue pg$6_block() {
+        if (p$6 != null) {
+            return p$6.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"BlockBreakEvent", (String)"block", (Object)this.instance);
     }
 
-    public ScriptValue pg$6_player() {
-        if (p$6 != null) {
-            return p$6.get(this.instance);
+    public ScriptValue pg$7_player() {
+        if (p$7 != null) {
+            return p$7.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"BlockBreakEvent", (String)"player", (Object)this.instance);
     }
 
-    public ScriptValue pg$7_exp_to_drop() {
-        if (p$7 != null) {
-            return p$7.get(this.instance);
+    public ScriptValue pg$8_exp_to_drop() {
+        if (p$8 != null) {
+            return p$8.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"BlockBreakEvent", (String)"exp_to_drop", (Object)this.instance);
+    }
+
+    public double tg$9_exp_to_drop() {
+        if (tp$9 != null) {
+            return (Double)tp$9.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"BlockBreakEvent", (String)"exp_to_drop", (Object)this.instance).asNum();
     }
 
     public PolyClassBlockBreakEvent(Object object) {

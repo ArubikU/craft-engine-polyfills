@@ -5,6 +5,7 @@
  *  dev.arubik.craftengine.script.PolyClass
  *  dev.arubik.craftengine.script.PolyClassRuntime
  *  dev.arubik.craftengine.script.PolyType$MethodHandler
+ *  dev.arubik.craftengine.script.PolyType$TypeCodec
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler1
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler2
  *  dev.arubik.craftengine.script.ScriptValue
@@ -27,6 +28,7 @@ public class PolyClassGlue {
     private static volatile PolyType.TypedMethodHandler2 h$4;
     private static volatile PolyType.MethodHandler m$5;
     private static volatile PolyType.TypedMethodHandler1 h$6;
+    private static volatile PolyType.TypeCodec c$6_r;
     private static volatile PolyType.MethodHandler m$7;
 
     public static void refresh() {
@@ -36,7 +38,8 @@ public class PolyClassGlue {
         m$3 = PolyClassRuntime.resolveMethodHandler((String)"Glue", (String)"is_glued");
         h$4 = (PolyType.TypedMethodHandler2)PolyClassRuntime.resolveTypedHandler((String)"Glue", (String)"count", (String)"RS:D");
         m$5 = PolyClassRuntime.resolveMethodHandler((String)"Glue", (String)"count");
-        h$6 = (PolyType.TypedMethodHandler1)PolyClassRuntime.resolveTypedHandler((String)"Glue", (String)"structure", (String)"R:R");
+        h$6 = (PolyType.TypedMethodHandler1)PolyClassRuntime.resolveTypedHandler((String)"Glue", (String)"structure", (String)"R:L");
+        c$6_r = PolyClassRuntime.resolveListCodec((String)"Glue", (String)"structure", (int)-1);
         m$7 = PolyClassRuntime.resolveMethodHandler((String)"Glue", (String)"structure");
     }
 
@@ -83,8 +86,8 @@ public class PolyClassGlue {
     }
 
     public ScriptValue tm$6_structure(ScriptValue scriptValue) {
-        if (h$6 != null) {
-            return (ScriptValue)h$6.call(this.instance, (Object)scriptValue);
+        if (h$6 != null && c$6_r != null) {
+            return c$6_r.encode(h$6.call(this.instance, (Object)scriptValue));
         }
         return PolyClassRuntime.genericCall((String)"Glue", (String)"structure", (Object)this.instance, (ScriptValue[])new ScriptValue[]{scriptValue});
     }

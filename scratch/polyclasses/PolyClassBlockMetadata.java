@@ -5,6 +5,7 @@
  *  dev.arubik.craftengine.script.PolyClass
  *  dev.arubik.craftengine.script.PolyClassRuntime
  *  dev.arubik.craftengine.script.PolyType$PropertyHandler
+ *  dev.arubik.craftengine.script.PolyType$TypedPropertyHandler
  *  dev.arubik.craftengine.script.ScriptValue
  *  dev.arubik.craftengine.script.ScriptValue$Obj
  */
@@ -18,13 +19,17 @@ import dev.arubik.craftengine.script.ScriptValue;
 public class PolyClassBlockMetadata {
     protected final Object instance;
     private static volatile PolyType.PropertyHandler p$0;
-    private static volatile PolyType.PropertyHandler p$1;
+    private static volatile PolyType.TypedPropertyHandler tp$1;
     private static volatile PolyType.PropertyHandler p$2;
+    private static volatile PolyType.PropertyHandler p$3;
+    private static volatile PolyType.TypedPropertyHandler tp$4;
 
     public static void refresh() {
         p$0 = PolyClassRuntime.resolvePropertyHandler((String)"BlockMetadata", (String)"custom_name");
-        p$1 = PolyClassRuntime.resolvePropertyHandler((String)"BlockMetadata", (String)"pos");
-        p$2 = PolyClassRuntime.resolvePropertyHandler((String)"BlockMetadata", (String)"type");
+        tp$1 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"BlockMetadata", (String)"custom_name", (String)"S");
+        p$2 = PolyClassRuntime.resolvePropertyHandler((String)"BlockMetadata", (String)"pos");
+        p$3 = PolyClassRuntime.resolvePropertyHandler((String)"BlockMetadata", (String)"type");
+        tp$4 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"BlockMetadata", (String)"type", (String)"S");
     }
 
     public ScriptValue pg$0_custom_name() {
@@ -34,18 +39,32 @@ public class PolyClassBlockMetadata {
         return PolyClassRuntime.genericProperty((String)"BlockMetadata", (String)"custom_name", (Object)this.instance);
     }
 
-    public ScriptValue pg$1_pos() {
-        if (p$1 != null) {
-            return p$1.get(this.instance);
+    public String tg$1_custom_name() {
+        if (tp$1 != null) {
+            return (String)tp$1.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"BlockMetadata", (String)"custom_name", (Object)this.instance).asStr();
+    }
+
+    public ScriptValue pg$2_pos() {
+        if (p$2 != null) {
+            return p$2.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"BlockMetadata", (String)"pos", (Object)this.instance);
     }
 
-    public ScriptValue pg$2_type() {
-        if (p$2 != null) {
-            return p$2.get(this.instance);
+    public ScriptValue pg$3_type() {
+        if (p$3 != null) {
+            return p$3.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"BlockMetadata", (String)"type", (Object)this.instance);
+    }
+
+    public String tg$4_type() {
+        if (tp$4 != null) {
+            return (String)tp$4.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"BlockMetadata", (String)"type", (Object)this.instance).asStr();
     }
 
     public PolyClassBlockMetadata(Object object) {

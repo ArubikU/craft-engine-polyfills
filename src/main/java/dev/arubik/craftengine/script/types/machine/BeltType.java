@@ -1,7 +1,6 @@
 package dev.arubik.craftengine.script.types.machine;
 
 import dev.arubik.craftengine.conveyor.belt.ConveyorBlockEntity;
-import dev.arubik.craftengine.script.types.primitive.VectorType;
 import dev.arubik.craftengine.script.types.world.BlockType;
 import dev.arubik.craftengine.script.PolyTypeRegistry;
 import dev.arubik.craftengine.script.ScriptValue;
@@ -18,11 +17,15 @@ public final class BeltType {
 
     public static void register() {
         PolyTypeRegistry.define("Belt")
-            .property("x",   obj -> ScriptValue.of(ref(obj).pos().getX()))
-            .property("y",   obj -> ScriptValue.of(ref(obj).pos().getY()))
-            .property("z",   obj -> ScriptValue.of(ref(obj).pos().getZ()))
-            .property("pos", obj -> VectorType.wrap(ref(obj).pos().getX(), ref(obj).pos().getY(), ref(obj).pos().getZ()))
-            .property("block", obj -> BlockType.wrap(ref(obj).level(), ref(obj).pos()))
+            .propertyTyped("x", TypeCodecs.DOUBLE, (BeltRef r) -> (double) r.pos().getX())
+            .propertyTyped("y", TypeCodecs.DOUBLE, (BeltRef r) -> (double) r.pos().getY())
+            .propertyTyped("z", TypeCodecs.DOUBLE, (BeltRef r) -> (double) r.pos().getZ())
+            .propertyTyped("pos", TypeCodecs.polyType("Vector", org.joml.Vector3d.class),
+                (BeltRef r) -> new org.joml.Vector3d(r.pos().getX(), r.pos().getY(), r.pos().getZ()))
+            // BlockType.wrap's null guard is preserved by returning null (which the codec encodes
+            // back to NULL) rather than a BlockRef with a null half.
+            .propertyTyped("block", TypeCodecs.polyType("Block", BlockType.BlockRef.class),
+                (BeltRef r) -> r.level() == null || r.pos() == null ? null : new BlockType.BlockRef(r.level(), r.pos()))
             .methodTyped0("get_block", TypeCodecs.RAW, (BeltRef obj) -> BlockType.wrap(obj.level(), obj.pos()))
             // exists — whether a REAL conveyor is actually at this position. Machine.belt_at(...)
             // (unlike container_at) always returns a non-null Belt wrapper for any loaded position,
@@ -31,56 +34,58 @@ public final class BeltType {
             // exactly right for a caller only reading THOSE, but indistinguishable from "belt full"
             // if a caller needs to know "is there even a belt here at all" (e.g. a funnel deciding
             // between holding at a full belt vs dropping into open air) without this.
-            .property("exists", obj -> ScriptValue.of(conveyor(obj) != null))
+            // conveyor(obj) is a live block-entity LOOKUP, not a cast, so the instance stays Object
+            // on every property below that calls it — same rule the methods here already follow.
+            .propertyTyped("exists", TypeCodecs.BOOL, (Object obj) -> conveyor(obj) != null)
             // is_full — whether this belt segment has no room to accept a new item at all.
-            .property("is_full", obj -> {
+            .propertyTyped("is_full", TypeCodecs.BOOL, (Object obj) -> {
                 ConveyorBlockEntity belt = conveyor(obj);
-                return ScriptValue.of(belt == null || belt.isFull());
+                return belt == null || belt.isFull();
             })
             // has_item — whether this segment is currently carrying an item at its front (exit) slot
             // — the one a machine sitting over/beside this segment would actually interact with.
             // TRUE as soon as an item enters this segment at all, even mid-transit — see `progress`
             // for how far along that item actually is.
-            .property("has_item", obj -> {
+            .propertyTyped("has_item", TypeCodecs.BOOL, (Object obj) -> {
                 ConveyorBlockEntity belt = conveyor(obj);
-                return ScriptValue.of(belt != null && belt.peekCarried() != null && !belt.peekCarried().getType().isAir());
+                return belt != null && belt.peekCarried() != null && !belt.peekCarried().getType().isAir();
             })
             // progress — how far along its own travel the front carried item is, 0..1 (1.0 = fully
             // arrived at this segment's exit, stalled because the next tile won't accept it yet);
             // -1 if nothing is carried. A machine pulling from a side-adjacent feeding belt (not one
             // it sits directly on) should gate on this (e.g. progress >= 0.99), not just has_item,
             // or it'll snatch an item still mid-transit toward some OTHER destination.
-            .property("progress", obj -> {
+            .propertyTyped("progress", TypeCodecs.DOUBLE, (Object obj) -> {
                 ConveyorBlockEntity belt = conveyor(obj);
-                return ScriptValue.of(belt == null ? -1.0 : belt.frontProgress());
+                return belt == null ? -1.0 : (double) belt.frontProgress();
             })
             // rpm — this segment's own current effective RPM (0 if stalled/no belt there).
-            .property("rpm", obj -> {
+            .propertyTyped("rpm", TypeCodecs.DOUBLE, (Object obj) -> {
                 ConveyorBlockEntity belt = conveyor(obj);
-                return ScriptValue.of(belt == null ? 0.0 : belt.effectiveRpm());
+                return belt == null ? 0.0 : (double) belt.effectiveRpm();
             })
             // speed — the actual per-tick progress increment (0..1) this segment is moving items
             // at right now, respecting its own belt_types speed formula/base_travel_ticks (see
             // BeltRuntime#progressPerTick) — not just a function of rpm, since a belt_types entry
             // can override the rpm->speed relationship entirely. What a neighbor (e.g. a funnel)
             // should read instead of hardcoding its own travel cadence.
-            .property("speed", obj -> {
+            .propertyTyped("speed", TypeCodecs.DOUBLE, (Object obj) -> {
                 ConveyorBlockEntity belt = conveyor(obj);
-                return ScriptValue.of(belt == null ? 0.0 : belt.currentProgressPerTick());
+                return belt == null ? 0.0 : (double) belt.currentProgressPerTick();
             })
             // height — this segment's own carry height (0..1, block-local).
-            .property("height", obj -> {
+            .propertyTyped("height", TypeCodecs.DOUBLE, (Object obj) -> {
                 ConveyorBlockEntity belt = conveyor(obj);
-                return ScriptValue.of(belt == null
+                return belt == null
                         ? (double) dev.arubik.craftengine.conveyor.belt.ConveyorMath.BELT_TOP_Y
-                        : belt.carryHeight());
+                        : (double) belt.carryHeight();
             })
             // item_scale — this segment's own item display scale.
-            .property("item_scale", obj -> {
+            .propertyTyped("item_scale", TypeCodecs.DOUBLE, (Object obj) -> {
                 ConveyorBlockEntity belt = conveyor(obj);
-                return ScriptValue.of(belt == null
+                return belt == null
                         ? (double) dev.arubik.craftengine.conveyor.belt.BeltType.BeltProperties.DEFAULT_ITEM_SCALE
-                        : belt.itemScale());
+                        : (double) belt.itemScale();
             })
             // peek() — the item currently at this segment's front slot, WITHOUT removing it (an
             // empty Item if none). Use with replace()/take() to intercept it.
@@ -134,23 +139,28 @@ public final class BeltType {
                     return ScriptValue.ofItem(leftover == null ? net.minecraft.world.item.ItemStack.EMPTY : CraftItemStack.asNMSCopy(leftover));
                 })
             // slot_count — how many items this segment can carry in transit at once.
-            .property("slot_count", obj -> {
+            .propertyTyped("slot_count", TypeCodecs.DOUBLE, (Object obj) -> {
                 ConveyorBlockEntity belt = conveyor(obj);
-                return ScriptValue.of(belt == null ? 0 : belt.slotCount());
+                return (double) (belt == null ? 0 : belt.slotCount());
             })
             // get_belt_items() -> Array of BeltItem, one per OCCUPIED slot (any position along the
             // segment, not just the front) — for a caller that needs to see everything in transit,
             // not just whatever's nearest the exit. Empty array if nothing's carried or the block
             // isn't (or is no longer) a conveyor.
-            .methodTyped0("get_belt_items", TypeCodecs.RAW, (BeltRef r) -> {
-                ConveyorBlockEntity belt = conveyor(r);
-                if (belt == null) return new ScriptValue.Array(java.util.List.of());
-                java.util.List<ScriptValue> result = new java.util.ArrayList<>();
-                for (int i = 0; i < belt.slotCount(); i++) {
-                    if (!belt.isSlotEmpty(i)) result.add(BeltItemType.wrap(new BeltItemType.BeltItemRef(r, i)));
-                }
-                return new ScriptValue.Array(result);
-            })
+            // Return codec declares the element type: every element is a BeltItem, so the handler
+            // returns the real List<BeltItemRef> and the codec does the ofObj("BeltItem", ...)
+            // wrapping BeltItemType.wrap used to do by hand (the refs are freshly constructed and
+            // never null, so the encoding is identical).
+            .methodTyped0("get_belt_items", TypeCodecs.listOf("BeltItem", BeltItemType.BeltItemRef.class),
+                (BeltRef r) -> {
+                    ConveyorBlockEntity belt = conveyor(r);
+                    if (belt == null) return java.util.List.of();
+                    java.util.List<BeltItemType.BeltItemRef> result = new java.util.ArrayList<>();
+                    for (int i = 0; i < belt.slotCount(); i++) {
+                        if (!belt.isSlotEmpty(i)) result.add(new BeltItemType.BeltItemRef(r, i));
+                    }
+                    return result;
+                })
             // get_belt_item(index) -> BeltItem at that specific slot, NULL if out of range or empty.
             .methodTyped1("get_belt_item", TypeCodecs.DOUBLE, TypeCodecs.RAW, ScriptValue.NULL,
                 (BeltRef r, Double idxArg) -> {

@@ -713,6 +713,10 @@ final class ScriptClassCompiler {
      *  break/continue exactly, just as real branches instead of caught exceptions. */
     private static boolean emitFor(MethodVisitor mv, ScriptProgram.Statement.ForStatement fs, MethodCtx mc) {
         List<String> vars = fs.vars();
+        // A single-variable for iterates elements directly (no per-element ScriptValue[] wrapper);
+        // multi-variable (map destructuring) still needs rows. The inline-iterable path is the only
+        // one that can choose — the text fallback goes through resolveForRows, which always rows.
+        boolean singleVar = vars.size() == 1;
         int rowsSlot = mc.alloc();
         int iterSlot = mc.alloc();
         int rowSlot = mc.alloc();
@@ -723,13 +727,23 @@ final class ScriptClassCompiler {
         // every single execution of the loop.
         ScriptBytecodeCompiler.Expr iter =
                 ScriptBytecodeCompiler.tryParse(fs.iterExpr(), mc.resolver, mc.varHint);
+        // Only the inline path can hand back bare elements; the text fallback goes through
+        // resolveForRows, which always produces rows.
+        boolean elementsDirect = singleVar && iter != null;
         if (iter != null) {
             ScriptBytecodeCompiler.Ctx ic = new ScriptBytecodeCompiler.Ctx(mc.sharedCtxSlot, mc.nextSlot);
             ScriptBytecodeCompiler.toAny(iter).emit(mv, ic);
             mc.nextSlot = ic.next;
-            emitIntConst(mv, vars.size());
-            mv.visitMethodInsn(INVOKESTATIC, PROGRAM, "rowsOf",
-                    "(L" + VALUE + ";I)L" + LIST + ";", false);
+            if (singleVar) {
+                // One loop variable: iterate the elements directly. rowsOf would wrap each one in
+                // a throwaway ScriptValue[] — an array allocation per element per tick.
+                mv.visitMethodInsn(INVOKESTATIC, PROGRAM, "elementsOf",
+                        "(L" + VALUE + ";)L" + LIST + ";", false);
+            } else {
+                emitIntConst(mv, vars.size());
+                mv.visitMethodInsn(INVOKESTATIC, PROGRAM, "rowsOf",
+                        "(L" + VALUE + ";I)L" + LIST + ";", false);
+            }
         } else {
             // The compiler can't represent this iterable expression — hand the source text to the
             // interpreter's own resolver, exactly as before.
@@ -758,7 +772,8 @@ final class ScriptClassCompiler {
 
         mv.visitVarInsn(ALOAD, iterSlot);
         mv.visitMethodInsn(INVOKEINTERFACE, ITERATOR, "next", "()Ljava/lang/Object;", true);
-        mv.visitTypeInsn(CHECKCAST, "[L" + VALUE + ";");
+        // elementsOf yields the values themselves; rowsOf yields a ScriptValue[] per row.
+        mv.visitTypeInsn(CHECKCAST, elementsDirect ? VALUE : "[L" + VALUE + ";");
         mv.visitVarInsn(ASTORE, rowSlot);
 
         // The loop runs a dynamic number of times, so the body's own writes can't be assumed — but
@@ -771,7 +786,16 @@ final class ScriptClassCompiler {
         mc.cachedVars.clear();
         mc.cachedVars.putAll(loopSurviving);
 
-        for (int i = 0; i < vars.size(); i++) {
+        if (elementsDirect) {
+            // The element IS the value — no array, no bounds check.
+            mv.visitVarInsn(ALOAD, 0);
+            mv.visitLdcInsn(vars.get(0));
+            mv.visitVarInsn(ALOAD, rowSlot);
+            mv.visitMethodInsn(INVOKEVIRTUAL, BUILDER, "val",
+                    "(Ljava/lang/String;L" + VALUE + ";)L" + BUILDER + ";", false);
+            mv.visitInsn(POP);
+        }
+        for (int i = 0; !elementsDirect && i < vars.size(); i++) {
             mv.visitVarInsn(ALOAD, 0);
             mv.visitLdcInsn(vars.get(i));
             Label useNull = new Label(), haveVal = new Label();

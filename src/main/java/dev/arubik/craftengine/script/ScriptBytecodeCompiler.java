@@ -433,8 +433,168 @@ final class ScriptBytecodeCompiler {
         }
     }
 
+    /**
+     * {@code Name.prop} — the bare-identifier FIRST hop of a property read. Its declared type is
+     * ANY, but when the property carries a scalar {@code propertyTyped} registration it can also
+     * emit itself as a native {@code double}/{@code boolean}/{@code String}, which is what {@link
+     * #toNum}/{@link #toBool}/{@code toStr} ask for. Same motivation as {@link VarRead}: a read that
+     * feeds arithmetic should compile to {@code double rpm = m.rpm()}, not to a {@code ScriptValue}
+     * local whose only use is one {@code asNum()}.
+     *
+     * <p>All three arms — null receiver, wrong receiver type, and the fast typed accessor — converge
+     * on the native type, and the first two get there by the SAME {@code asNum}/{@code asBool}/{@code
+     * asStr} the boxed form would have had applied to it. So the fused emission is equivalent to
+     * {@code emit()} followed by that coercion, by construction rather than by assumption.
+     */
+    static final class PropRead extends BaseExpr {
+        final String name, prop;
+        private final String wrapperName, propJavaName;
+        /** The native accessor, or null when this property has no scalar typed registration. */
+        final PolyClassGenerator.TypedMemberRef nativeRef;
+
+        PropRead(String name, String prop, String wrapperName, String propJavaName,
+                 PolyClassGenerator.TypedMemberRef nativeRef) {
+            super(Type.ANY);
+            this.name = name;
+            this.prop = prop;
+            this.wrapperName = wrapperName;
+            this.propJavaName = propJavaName;
+            this.nativeRef = nativeRef;
+        }
+
+        @Override public void emit(MethodVisitor mv, Ctx c) { emitAs(mv, c, null, null, null); }
+
+        /** Emits the read with the native accessor {@link #nativeRef} names, coercing the two slow
+         *  arms with {@code accessor} (one of {@code asNum}/{@code asBool}/{@code asStr}). */
+        void emitFused(MethodVisitor mv, Ctx c, String accessor, String returnDesc) {
+            emitAs(mv, c, nativeRef.javaName(), accessor, returnDesc);
+        }
+
+        private void emitAs(MethodVisitor mv, Ctx c, String javaName, String accessor, String returnDesc) {
+            String desc = returnDesc != null ? returnDesc : "L" + VALUE + ";";
+            int svSlot = c.allocRef();
+            P.emitResolveInstanceOrVar(mv, c, name, svSlot);
+            mv.visitVarInsn(ALOAD, svSlot);
+            P.emitGetNull(mv);
+            Label isNullL = new Label(), endL = new Label();
+            mv.visitJumpInsn(IF_ACMPEQ, isNullL);
+
+            if (propJavaName != null) {
+                Label fallbackL = new Label(), fastL = new Label();
+                // One call does the receiver check and the unboxing, and the local it lands in is
+                // the PolyClass itself — `PolyClassMachine m = PolyClassMachine.ofGuarded(sv)` —
+                // rather than a raw Object plus an inlined type-check chain. Null means "not this
+                // type", which takes the generic path.
+                int pcSlot = c.allocRef();
+                mv.visitVarInsn(ALOAD, svSlot);
+                mv.visitMethodInsn(INVOKESTATIC, wrapperName, "ofGuarded",
+                        "(L" + VALUE + ";)L" + wrapperName + ";", false);
+                mv.visitVarInsn(ASTORE, pcSlot);
+                mv.visitVarInsn(ALOAD, pcSlot);
+                mv.visitJumpInsn(IFNULL, fallbackL);
+                mv.visitVarInsn(ALOAD, pcSlot);
+                mv.visitMethodInsn(INVOKEVIRTUAL, wrapperName,
+                        javaName != null ? javaName : propJavaName, "()" + desc, false);
+                mv.visitJumpInsn(GOTO, fastL);
+                mv.visitLabel(fallbackL);
+                mv.visitVarInsn(ALOAD, svSlot);
+                mv.visitVarInsn(ALOAD, c.ctxSlot);
+                P.emitDynamicGet(mv, prop);
+                if (accessor != null) mv.visitMethodInsn(INVOKEINTERFACE, VALUE, accessor, "()" + desc, true);
+                mv.visitLabel(fastL);
+            } else {
+                mv.visitVarInsn(ALOAD, svSlot);
+                mv.visitVarInsn(ALOAD, c.ctxSlot);
+                P.emitDynamicGet(mv, prop);
+                if (accessor != null) mv.visitMethodInsn(INVOKEINTERFACE, VALUE, accessor, "()" + desc, true);
+            }
+
+            mv.visitJumpInsn(GOTO, endL);
+            mv.visitLabel(isNullL);
+            P.emitGetNull(mv);
+            if (accessor != null) mv.visitMethodInsn(INVOKEINTERFACE, VALUE, accessor, "()" + desc, true);
+            mv.visitLabel(endL);
+        }
+    }
+
+    /**
+     * A string concatenation whose parts are appended to one {@link StringBuilder} as native Java
+     * Strings, with a single {@code ScriptValue.of} at the very end.
+     *
+     * <p>Equivalence with the nested {@code addPolymorphic} calls it replaces: once any operand is a
+     * Str, {@code addPolymorphic} is {@code ScriptValue.of(lv.asStr() + rv.asStr())} and its result
+     * is another Str, so the next {@code +} takes the same branch — the whole chain is
+     * {@code asStr()} of each part, joined. Each part here is rendered by the SAME {@code asStr}
+     * (fused to a native accessor where one exists, and via {@link ScriptFormula#numToStr} for a
+     * statically-numeric part, which is that method's Num branch verbatim).
+     *
+     * <p>Parts are evaluated strictly left to right, exactly as the nested calls did — any side
+     * effect in an operand keeps its order.
+     */
+    static final class StrConcat extends BaseExpr {
+        private final List<Expr> parts;
+        StrConcat(List<Expr> parts) { super(Type.ANY); this.parts = parts; }
+
+        /** Flattens a nested concatenation so `a + b + c` builds ONE StringBuilder, not one per +. */
+        static void flattenInto(Expr e, List<Expr> out) {
+            if (e instanceof StrConcat sc) out.addAll(sc.parts);
+            else out.add(e);
+        }
+
+        @Override public void emit(MethodVisitor mv, Ctx c) {
+            mv.visitTypeInsn(NEW, "java/lang/StringBuilder");
+            mv.visitInsn(DUP);
+            mv.visitMethodInsn(INVOKESPECIAL, "java/lang/StringBuilder", "<init>", "()V", false);
+            for (Expr part : parts) {
+                emitPartAsString(mv, c, part);
+                mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/StringBuilder", "append",
+                        "(Ljava/lang/String;)Ljava/lang/StringBuilder;", false);
+            }
+            mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/StringBuilder", "toString",
+                    "()Ljava/lang/String;", false);
+            mv.visitMethodInsn(INVOKESTATIC, VALUE, "of", "(Ljava/lang/String;)L" + VALUE + ";", true);
+        }
+
+        /** Leaves one native {@code String} on the stack — the part's {@code asStr()}, without
+         *  boxing it into a ScriptValue wherever a fused accessor makes that possible. */
+        private static void emitPartAsString(MethodVisitor mv, Ctx c, Expr part) {
+            if (part instanceof StrLiteral lit) {
+                mv.visitLdcInsn(lit.value);
+                return;
+            }
+            if (part instanceof VarRead v) {
+                v.emitFused(mv, c, "getStr", "Ljava/lang/String;");
+                return;
+            }
+            if (part instanceof PropRead p && p.nativeRef != null
+                    && p.nativeRef.retKind() == PolyClassGenerator.Kind.STRING) {
+                p.emitFused(mv, c, "asStr", "Ljava/lang/String;");
+                return;
+            }
+            if (part.type() == Type.NUM) {
+                part.emit(mv, c);
+                mv.visitMethodInsn(INVOKESTATIC, FORMULA, "numToStr", "(D)Ljava/lang/String;", false);
+                return;
+            }
+            if (part.type() == Type.BOOL) {
+                part.emit(mv, c);
+                mv.visitMethodInsn(INVOKESTATIC, "java/lang/String", "valueOf",
+                        "(Z)Ljava/lang/String;", false);
+                return;
+            }
+            toAny(part).emit(mv, c);
+            mv.visitMethodInsn(INVOKEINTERFACE, VALUE, "asStr", "()Ljava/lang/String;", true);
+        }
+    }
+
     static Expr toNum(Expr e) {
         if (e.type() == Type.NUM) return e;
+        if (e instanceof PropRead p && p.nativeRef != null
+                && p.nativeRef.retKind() == PolyClassGenerator.Kind.DOUBLE) {
+            return new BaseExpr(Type.NUM) {
+                @Override public void emit(MethodVisitor mv, Ctx c) { p.emitFused(mv, c, "asNum", "D"); }
+            };
+        }
         if (e instanceof VarRead v) {
             return new BaseExpr(Type.NUM) {
                 @Override public void emit(MethodVisitor mv, Ctx c) { v.emitFused(mv, c, "getNum", "D"); }
@@ -457,6 +617,12 @@ final class ScriptBytecodeCompiler {
 
     static Expr toBool(Expr e) {
         if (e.type() == Type.BOOL) return e;
+        if (e instanceof PropRead p && p.nativeRef != null
+                && p.nativeRef.retKind() == PolyClassGenerator.Kind.BOOL) {
+            return new BaseExpr(Type.BOOL) {
+                @Override public void emit(MethodVisitor mv, Ctx c) { p.emitFused(mv, c, "asBool", "Z"); }
+            };
+        }
         if (e instanceof VarRead v) {
             return new BaseExpr(Type.BOOL) {
                 @Override public void emit(MethodVisitor mv, Ctx c) { v.emitFused(mv, c, "getBool", "Z"); }
@@ -737,6 +903,26 @@ final class ScriptBytecodeCompiler {
                     // Excludes the literal "null", where the two genuinely differ: valuesEqualStr
                     // reports false for a NULL receiver, while asStr() renders it as the string
                     // "null" and would report true.
+                    // Same for a STRING-typed property read — `Block.id == "minecraft:oak_log"`.
+                    // Its own null-receiver arm renders NULL via asStr() exactly as the boxed form
+                    // would, so the "null" literal is excluded here for the same reason.
+                    if (otherRaw instanceof PropRead p && p.nativeRef != null
+                            && p.nativeRef.retKind() == PolyClassGenerator.Kind.STRING
+                            && !"null".equals(lit.value)) {
+                        return new BaseExpr(Type.BOOL) {
+                            @Override public void emit(MethodVisitor mv, Ctx c) {
+                                p.emitFused(mv, c, "asStr", "Ljava/lang/String;");
+                                mv.visitLdcInsn(lit.value);
+                                mv.visitMethodInsn(INVOKESTATIC, "java/util/Objects", "equals",
+                                        "(Ljava/lang/Object;Ljava/lang/Object;)Z", false);
+                                if (negate) {
+                                    mv.visitInsn(ICONST_1);
+                                    mv.visitInsn(IXOR);
+                                }
+                            }
+                        };
+                    }
+
                     if (otherRaw instanceof VarRead v && !"null".equals(lit.value)) {
                         return new BaseExpr(Type.BOOL) {
                             @Override public void emit(MethodVisitor mv, Ctx c) {
@@ -839,7 +1025,36 @@ final class ScriptBytecodeCompiler {
             return left;
         }
 
+        /**
+         * Is this expression's value certain to be a {@link ScriptValue.Str}? That is what makes
+         * {@code addPolymorphic} statically decidable: its very first test is {@code lv instanceof
+         * Str || rv instanceof Str}, so ONE known-Str operand fixes the whole operation as string
+         * concatenation. Only shapes that can never produce anything else count — a literal, a
+         * concatenation (Java {@code +} on Strings never yields null, so {@code ScriptValue.of}
+         * always gives a Str), or a property whose registered codec is {@link TypeCodecs#STRING}.
+         *
+         * <p>A STRING codec CAN encode Java null to {@code NULL}, which is not a Str — so that case
+         * is excluded by having {@link StrConcat} render its parts with {@code asStr()}, which is
+         * exactly what {@code addPolymorphic} would have done to the same value.
+         */
+        private static boolean isKnownStr(Expr e) {
+            return e instanceof StrLiteral || e instanceof StrConcat
+                    || (e instanceof PropRead p && p.nativeRef != null
+                        && p.nativeRef.retKind() == PolyClassGenerator.Kind.STRING);
+        }
+
         private static Expr addExpr(Expr left, Expr right) {
+            // `"prefix" + gid + ":" + x` is a chain of left-associative adds, every one of them
+            // statically a concatenation. Compiling each as addPolymorphic means one ScriptValue for
+            // every literal, every operand, and every intermediate result — for a string that only
+            // ever becomes a key. One StringBuilder over the flattened parts is the same string with
+            // none of that.
+            if (isKnownStr(left) || isKnownStr(right)) {
+                List<Expr> parts = new ArrayList<>();
+                StrConcat.flattenInto(left, parts);
+                StrConcat.flattenInto(right, parts);
+                return new StrConcat(parts);
+            }
             if (left.type() != Type.ANY && right.type() != Type.ANY) {
                 Expr l = toNum(left), r = toNum(right);
                 return new BaseExpr(Type.NUM) {
@@ -1579,48 +1794,12 @@ final class ScriptBytecodeCompiler {
             PolyClassGenerator.GeneratedPolyClass generated = PolyClassGenerator.getOrGenerate(name);
             String propJavaName = generated != null ? generated.properties().get(prop) : null;
             String wrapperName = propJavaName != null ? generated.internalName() : null;
-            return new BaseExpr(Type.ANY) {
-                @Override public void emit(MethodVisitor mv, Ctx c) {
-                    int svSlot = c.allocRef();
-                    emitResolveInstanceOrVar(mv, c, name, svSlot);
-                    mv.visitVarInsn(ALOAD, svSlot);
-                    emitGetNull(mv);
-                    Label isNullL = new Label(), endL = new Label();
-                    mv.visitJumpInsn(IF_ACMPEQ, isNullL);
-
-                    if (propJavaName != null) {
-                        Label fallbackL = new Label(), fastL = new Label();
-                        // One call does the receiver check and the unboxing, and the local it lands
-                        // in is the PolyClass itself — `PolyClassMachine m = PolyClassMachine
-                        // .ofGuarded(sv)` — rather than a raw Object plus an inlined type-check
-                        // chain. Null means "not this type", which takes the generic path.
-                        int pcSlot = c.allocRef();
-                        mv.visitVarInsn(ALOAD, svSlot);
-                        mv.visitMethodInsn(INVOKESTATIC, wrapperName, "ofGuarded",
-                                "(L" + VALUE + ";)L" + wrapperName + ";", false);
-                        mv.visitVarInsn(ASTORE, pcSlot);
-                        mv.visitVarInsn(ALOAD, pcSlot);
-                        mv.visitJumpInsn(IFNULL, fallbackL);
-                        mv.visitVarInsn(ALOAD, pcSlot);
-                        mv.visitMethodInsn(INVOKEVIRTUAL, wrapperName, propJavaName, "()L" + VALUE + ";", false);
-                        mv.visitJumpInsn(GOTO, fastL);
-                        mv.visitLabel(fallbackL);
-                        mv.visitVarInsn(ALOAD, svSlot);
-                        mv.visitVarInsn(ALOAD, c.ctxSlot);
-                        emitDynamicGet(mv, prop);
-                        mv.visitLabel(fastL);
-                    } else {
-                        mv.visitVarInsn(ALOAD, svSlot);
-                        mv.visitVarInsn(ALOAD, c.ctxSlot);
-                        emitDynamicGet(mv, prop);
-                    }
-
-                    mv.visitJumpInsn(GOTO, endL);
-                    mv.visitLabel(isNullL);
-                    emitGetNull(mv);
-                    mv.visitLabel(endL);
-                }
-            };
+            // A propertyTyped registration with a scalar codec also generated a native-returning
+            // accessor. It is not used by emit() — this node's declared type is still ANY — but
+            // toNum/toBool/toStr fuse into it, which is where the boxing actually disappears.
+            PolyClassGenerator.TypedMemberRef nativeRef =
+                    generated != null ? generated.typedProperties().get(prop) : null;
+            return new PropRead(name, prop, wrapperName, propJavaName, nativeRef);
         }
 
         /** {@code Name.method(args)} — same resolve-then-null-guard shape as {@link
@@ -1989,7 +2168,7 @@ final class ScriptBytecodeCompiler {
          *  open-coded as getClassInstance, a NULL compare, a branch, and a getVar, which is four
          *  statements and a jump in the generated code for what is one question with one answer;
          *  {@link ScriptContext#getClassOrVar} is that exact sequence, moved where it belongs. */
-        private static void emitResolveInstanceOrVar(MethodVisitor mv, Ctx c, String name, int svSlot) {
+        static void emitResolveInstanceOrVar(MethodVisitor mv, Ctx c, String name, int svSlot) {
             mv.visitVarInsn(ALOAD, c.ctxSlot);
             mv.visitLdcInsn(name);
             mv.visitMethodInsn(INVOKEVIRTUAL, CTX, "getClassOrVar", "(Ljava/lang/String;)L" + VALUE + ";", false);
@@ -2024,12 +2203,12 @@ final class ScriptBytecodeCompiler {
 
         /** Stack: {@code ..., ScriptValue receiver, ScriptContext} -&gt; {@code ..., ScriptValue}.
          *  The property counterpart of {@link #emitDynamicCall}. */
-        private static void emitDynamicGet(MethodVisitor mv, String prop) {
+        static void emitDynamicGet(MethodVisitor mv, String prop) {
             mv.visitInvokeDynamicInsn("memberGet",
                     "(L" + VALUE + ";L" + CTX + ";)L" + VALUE + ";", BSM_GET, prop);
         }
 
-        private static void emitGetNull(MethodVisitor mv) {
+        static void emitGetNull(MethodVisitor mv) {
             mv.visitFieldInsn(GETSTATIC, VALUE, "NULL", "L" + VALUE + ";");
         }
     }

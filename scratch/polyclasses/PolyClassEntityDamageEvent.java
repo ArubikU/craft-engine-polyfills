@@ -7,6 +7,7 @@
  *  dev.arubik.craftengine.script.PolyType$MethodHandler
  *  dev.arubik.craftengine.script.PolyType$PropertyHandler
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler1
+ *  dev.arubik.craftengine.script.PolyType$TypedPropertyHandler
  *  dev.arubik.craftengine.script.ScriptValue
  *  dev.arubik.craftengine.script.ScriptValue$Obj
  */
@@ -24,15 +25,19 @@ extends PolyClassEvent {
     private static volatile PolyType.TypedMethodHandler1 h$0;
     private static volatile PolyType.MethodHandler m$1;
     private static volatile PolyType.PropertyHandler p$2;
-    private static volatile PolyType.PropertyHandler p$3;
+    private static volatile PolyType.TypedPropertyHandler tp$3;
     private static volatile PolyType.PropertyHandler p$4;
+    private static volatile PolyType.TypedPropertyHandler tp$5;
+    private static volatile PolyType.PropertyHandler p$6;
 
     public static void refresh() {
         h$0 = (PolyType.TypedMethodHandler1)PolyClassRuntime.resolveTypedHandler((String)"EntityDamageEvent", (String)"set_damage", (String)"D:Z");
         m$1 = PolyClassRuntime.resolveMethodHandler((String)"EntityDamageEvent", (String)"set_damage");
         p$2 = PolyClassRuntime.resolvePropertyHandler((String)"EntityDamageEvent", (String)"damage");
-        p$3 = PolyClassRuntime.resolvePropertyHandler((String)"EntityDamageEvent", (String)"cause");
-        p$4 = PolyClassRuntime.resolvePropertyHandler((String)"EntityDamageEvent", (String)"entity");
+        tp$3 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"EntityDamageEvent", (String)"damage", (String)"D");
+        p$4 = PolyClassRuntime.resolvePropertyHandler((String)"EntityDamageEvent", (String)"cause");
+        tp$5 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"EntityDamageEvent", (String)"cause", (String)"S");
+        p$6 = PolyClassRuntime.resolvePropertyHandler((String)"EntityDamageEvent", (String)"entity");
     }
 
     public boolean tm$0_set_damage(double d) {
@@ -56,16 +61,30 @@ extends PolyClassEvent {
         return PolyClassRuntime.genericProperty((String)"EntityDamageEvent", (String)"damage", (Object)this.instance);
     }
 
-    public ScriptValue pg$3_cause() {
-        if (p$3 != null) {
-            return p$3.get(this.instance);
+    public double tg$3_damage() {
+        if (tp$3 != null) {
+            return (Double)tp$3.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"EntityDamageEvent", (String)"damage", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$4_cause() {
+        if (p$4 != null) {
+            return p$4.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"EntityDamageEvent", (String)"cause", (Object)this.instance);
     }
 
-    public ScriptValue pg$4_entity() {
-        if (p$4 != null) {
-            return p$4.get(this.instance);
+    public String tg$5_cause() {
+        if (tp$5 != null) {
+            return (String)tp$5.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"EntityDamageEvent", (String)"cause", (Object)this.instance).asStr();
+    }
+
+    public ScriptValue pg$6_entity() {
+        if (p$6 != null) {
+            return p$6.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"EntityDamageEvent", (String)"entity", (Object)this.instance);
     }

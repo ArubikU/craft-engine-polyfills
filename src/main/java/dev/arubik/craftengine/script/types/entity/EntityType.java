@@ -1,6 +1,5 @@
 package dev.arubik.craftengine.script.types.entity;
 
-import dev.arubik.craftengine.script.types.primitive.VectorType;
 import dev.arubik.craftengine.script.types.world.LocationType;
 import dev.arubik.craftengine.script.PolyTypeRegistry;
 import dev.arubik.craftengine.script.ScriptValue;
@@ -16,6 +15,7 @@ import net.minecraft.world.entity.item.FallingBlockEntity;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.phys.Vec3;
+import org.joml.Vector3d;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -30,38 +30,56 @@ public final class EntityType {
      *  side reads. */
     private static final String TYPED_PREFIX = "tkey_";
 
+    /** The PolyType names below are FIXED — unlike {@link #wrap}, which picks a different name per
+     *  entity subclass, {@code VectorType.wrap}/{@code LocationType.wrap}/{@code MapType.wrap} each
+     *  box under one constant name, so a PolyCodec reproduces them exactly. */
+    private static final dev.arubik.craftengine.script.PolyType.TypeCodec<Vector3d> VECTOR_CODEC =
+            TypeCodecs.polyType("Vector", Vector3d.class);
+    private static final dev.arubik.craftengine.script.PolyType.TypeCodec<LocationType.LocationRef> LOCATION_CODEC =
+            TypeCodecs.polyType("Location", LocationType.LocationRef.class);
+    /** Erasure gives no {@code Map<String, ScriptValue>.class}; the unavoidable cast lives here once
+     *  (same pattern as SQLDriverType.MAP_ELEMENT). */
+    @SuppressWarnings("unchecked")
+    private static final dev.arubik.craftengine.script.PolyType.TypeCodec<java.util.Map<String, ScriptValue>> MAP_CODEC =
+            TypeCodecs.polyType("Map", (Class<java.util.Map<String, ScriptValue>>) (Class<?>) java.util.Map.class);
+
     public static void register() {
         // ---- Base Entity — only what ALL entities share -------------------------
         PolyTypeRegistry.define("Entity")
-            .property("type",     obj -> ScriptValue.of(BuiltInRegistries.ENTITY_TYPE.getKey(entity(obj).getType()).toString()))
-            .property("pos",      obj -> { Vec3 p = entity(obj).position(); return VectorType.wrap(p.x, p.y, p.z); })
-            .property("x",        obj -> ScriptValue.of(entity(obj).getX()))
-            .property("y",        obj -> ScriptValue.of(entity(obj).getY()))
-            .property("z",        obj -> ScriptValue.of(entity(obj).getZ()))
-            .property("yaw",      obj -> ScriptValue.of(entity(obj).getYRot()))
-            .property("pitch",    obj -> ScriptValue.of(entity(obj).getXRot()))
-            .property("is_alive",   obj -> ScriptValue.of(entity(obj).isAlive()))
-            .property("is_living",  obj -> ScriptValue.of(entity(obj) instanceof LivingEntity))
-            .property("is_animal",  obj -> ScriptValue.of(entity(obj) instanceof Animal))
-            .property("world", obj -> {
-                if (entity(obj).level() instanceof net.minecraft.server.level.ServerLevel sl)
-                    return dev.arubik.craftengine.script.types.world.WorldType.wrap(sl);
-                return ScriptValue.NULL;
-            })
-            .property("is_on_ground", obj -> ScriptValue.of(entity(obj).onGround()))
-            .property("is_in_water",  obj -> ScriptValue.of(entity(obj).isInWater()))
-            .property("is_sneaking",  obj -> ScriptValue.of(entity(obj).isShiftKeyDown()))
-            .property("is_sprinting", obj -> ScriptValue.of(entity(obj).isSprinting()))
-            .property("is_silent",    obj -> ScriptValue.of(entity(obj).isSilent()))
-            .property("is_invisible", obj -> ScriptValue.of(entity(obj).isInvisible()))
-            .property("velocity",   obj -> { Vec3 v = entity(obj).getDeltaMovement(); return VectorType.wrap(v.x, v.y, v.z); })
-            .property("velocity_x", obj -> ScriptValue.of(entity(obj).getDeltaMovement().x))
-            .property("velocity_y", obj -> ScriptValue.of(entity(obj).getDeltaMovement().y))
-            .property("velocity_z", obj -> ScriptValue.of(entity(obj).getDeltaMovement().z))
-            .property("uuid",     obj -> ScriptValue.of(entity(obj).getUUID().toString()))
-            .property("name",     obj -> ScriptValue.of(entity(obj).getName().getString()))
-            .property("tick_age", obj -> ScriptValue.of(entity(obj).tickCount))
-            .property("location", obj -> LocationType.wrapEntity(entity(obj)))
+            .propertyTyped("type", TypeCodecs.STRING,
+                (Entity e) -> BuiltInRegistries.ENTITY_TYPE.getKey(e.getType()).toString())
+            // VECTOR_CODEC / LOCATION_CODEC re-box under exactly the name VectorType.wrap /
+            // LocationType.wrap already used ("Vector" / "Location"), so the produced ScriptValue is
+            // byte-for-byte the old one — see those constants below.
+            .propertyTyped("pos", VECTOR_CODEC,
+                (Entity e) -> { Vec3 p = e.position(); return new Vector3d(p.x, p.y, p.z); })
+            .propertyTyped("x", TypeCodecs.DOUBLE, (Entity e) -> e.getX())
+            .propertyTyped("y", TypeCodecs.DOUBLE, (Entity e) -> e.getY())
+            .propertyTyped("z", TypeCodecs.DOUBLE, (Entity e) -> e.getZ())
+            .propertyTyped("yaw", TypeCodecs.DOUBLE, (Entity e) -> (double) e.getYRot())
+            .propertyTyped("pitch", TypeCodecs.DOUBLE, (Entity e) -> (double) e.getXRot())
+            .propertyTyped("is_alive", TypeCodecs.BOOL, (Entity e) -> e.isAlive())
+            .propertyTyped("is_living", TypeCodecs.BOOL, (Entity e) -> e instanceof LivingEntity)
+            .propertyTyped("is_animal", TypeCodecs.BOOL, (Entity e) -> e instanceof Animal)
+            // WorldType.wrap(level) is ofObj("World", level) with a null guard; PolyCodec.encode is
+            // the same null guard, so returning null here reproduces the old ScriptValue.NULL branch.
+            .propertyTyped("world", TypeCodecs.polyType("World", ServerLevel.class),
+                (Entity e) -> e.level() instanceof ServerLevel sl ? sl : null)
+            .propertyTyped("is_on_ground", TypeCodecs.BOOL, (Entity e) -> e.onGround())
+            .propertyTyped("is_in_water", TypeCodecs.BOOL, (Entity e) -> e.isInWater())
+            .propertyTyped("is_sneaking", TypeCodecs.BOOL, (Entity e) -> e.isShiftKeyDown())
+            .propertyTyped("is_sprinting", TypeCodecs.BOOL, (Entity e) -> e.isSprinting())
+            .propertyTyped("is_silent", TypeCodecs.BOOL, (Entity e) -> e.isSilent())
+            .propertyTyped("is_invisible", TypeCodecs.BOOL, (Entity e) -> e.isInvisible())
+            .propertyTyped("velocity", VECTOR_CODEC,
+                (Entity e) -> { Vec3 v = e.getDeltaMovement(); return new Vector3d(v.x, v.y, v.z); })
+            .propertyTyped("velocity_x", TypeCodecs.DOUBLE, (Entity e) -> e.getDeltaMovement().x)
+            .propertyTyped("velocity_y", TypeCodecs.DOUBLE, (Entity e) -> e.getDeltaMovement().y)
+            .propertyTyped("velocity_z", TypeCodecs.DOUBLE, (Entity e) -> e.getDeltaMovement().z)
+            .propertyTyped("uuid", TypeCodecs.STRING, (Entity e) -> e.getUUID().toString())
+            .propertyTyped("name", TypeCodecs.STRING, (Entity e) -> e.getName().getString())
+            .propertyTyped("tick_age", TypeCodecs.DOUBLE, (Entity e) -> (double) e.tickCount)
+            .propertyTyped("location", LOCATION_CODEC, (Entity e) -> locationRef(e))
             // Left untyped: original requires args.size() == 1 EXACTLY (an extra arg falls through
             // to the 0.0 default) — methodTypedN's onMissingArgs only guards a MINIMUM arg count,
             // so it can't reproduce the "too many args" branch of this exact check.
@@ -124,9 +142,11 @@ public final class EntityType {
             // Fall-distance control — the Bukkit-mirror side is stable across NMS internals, unlike
             // the raw `fallDistance` field's visibility/type, which has moved around between
             // versions. Used by e.g. a jetpack's thrust logic to keep the ensuing landing damage-free.
-            .property("fall_distance", obj -> {
-                try { return ScriptValue.of(entity(obj).getBukkitEntity().getFallDistance()); }
-                catch (Throwable ignored) { return ScriptValue.of(0.0); }
+            // Instance stays `Object` with the cast INSIDE the try: declaring (Entity e) would move
+            // the cast outside it, so a wrong-typed instance would throw instead of falling back to 0.
+            .propertyTyped("fall_distance", TypeCodecs.DOUBLE, (Object obj) -> {
+                try { return (double) entity(obj).getBukkitEntity().getFallDistance(); }
+                catch (Throwable ignored) { return 0.0; }
             })
             .methodTyped0("reset_fall_distance", TypeCodecs.BOOL,
                 (Entity e) -> {
@@ -203,17 +223,20 @@ public final class EntityType {
 
         // ---- LivingEntity extends Entity ----------------------------------------
         PolyTypeRegistry.define("LivingEntity", "Entity")
-            .property("health",       obj -> ScriptValue.of(living(obj).getHealth()))
-            .property("max_health",   obj -> ScriptValue.of(living(obj).getMaxHealth()))
-            .property("is_on_fire",   obj -> ScriptValue.of(living(obj).isOnFire()))
-            .property("fire_ticks",   obj -> ScriptValue.of(living(obj).getRemainingFireTicks()))
-            .property("frozen_ticks", obj -> ScriptValue.of(living(obj).getTicksFrozen()))
-            .property("armor",        obj -> ScriptValue.of(living(obj).getArmorValue()))
+            .propertyTyped("health", TypeCodecs.DOUBLE, (LivingEntity le) -> (double) le.getHealth())
+            .propertyTyped("max_health", TypeCodecs.DOUBLE, (LivingEntity le) -> (double) le.getMaxHealth())
+            .propertyTyped("is_on_fire", TypeCodecs.BOOL, (LivingEntity le) -> le.isOnFire())
+            .propertyTyped("fire_ticks", TypeCodecs.DOUBLE, (LivingEntity le) -> (double) le.getRemainingFireTicks())
+            .propertyTyped("frozen_ticks", TypeCodecs.DOUBLE, (LivingEntity le) -> (double) le.getTicksFrozen())
+            .propertyTyped("armor", TypeCodecs.DOUBLE, (LivingEntity le) -> (double) le.getArmorValue())
+            // main_hand/off_hand stay untyped: ScriptValue.ofItem produces the distinct ScriptValue
+            // .Item variant, not an Obj — no codec here encodes to it, and switching to one would
+            // break every `instanceof ScriptValue.Item` consumer downstream.
             .property("main_hand",    obj -> ScriptValue.ofItem(living(obj).getMainHandItem()))
             .property("off_hand",     obj -> ScriptValue.ofItem(living(obj).getOffhandItem()))
-            .property("is_dead",      obj -> ScriptValue.of(!living(obj).isAlive()))
-            .property("last_damage",  obj -> ScriptValue.of(living(obj).getLastDamageSource() != null ?
-                living(obj).getLastDamageSource().typeHolder().getRegisteredName() : ""))
+            .propertyTyped("is_dead", TypeCodecs.BOOL, (LivingEntity le) -> !le.isAlive())
+            .propertyTyped("last_damage", TypeCodecs.STRING, (LivingEntity le) ->
+                le.getLastDamageSource() != null ? le.getLastDamageSource().typeHolder().getRegisteredName() : "")
             // fire/freeze take an OPTIONAL tick count substituted with a default (60 / 140) when
             // omitted, after which execution continues unconditionally and the side effect still
             // happens — the methodTypedOptN shape, NOT methodTypedN's onMissingArgs short-circuit
@@ -256,8 +279,9 @@ public final class EntityType {
                     }
                     return true;
                 })
-            .property("equipment", obj -> {
-                LivingEntity le = living(obj);
+            // The MAP's own encoding is typed ("Map" is fixed); its VALUES stay ScriptValue.Item —
+            // MapType holds a Map<String, ScriptValue>, so the Item variant is preserved as-is.
+            .propertyTyped("equipment", MAP_CODEC, (LivingEntity le) -> {
                 java.util.LinkedHashMap<String, ScriptValue> eq = new java.util.LinkedHashMap<>();
                 eq.put("main_hand", ScriptValue.ofItem(le.getMainHandItem()));
                 eq.put("off_hand",  ScriptValue.ofItem(le.getOffhandItem()));
@@ -265,7 +289,7 @@ public final class EntityType {
                 eq.put("chest", ScriptValue.ofItem(le.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.CHEST)));
                 eq.put("legs",  ScriptValue.ofItem(le.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.LEGS)));
                 eq.put("feet",  ScriptValue.ofItem(le.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.FEET)));
-                return dev.arubik.craftengine.script.types.primitive.MapType.wrap(eq);
+                return eq;
             })
             .methodTyped2("set_equipment", TypeCodecs.STRING, TypeCodecs.RAW, TypeCodecs.BOOL, false,
                 (LivingEntity le, String slotName, ScriptValue itemArg) -> {
@@ -286,28 +310,33 @@ public final class EntityType {
 
         // ---- Mob extends LivingEntity -------------------------------------------
         PolyTypeRegistry.define("Mob", "LivingEntity")
-            .property("can_pickup_loot", obj -> ScriptValue.of(mob(obj).canPickUpLoot()))
-            .property("is_aggressive",   obj -> {
-                try { return ScriptValue.of(mob(obj).isAggressive()); } catch (Throwable ignored) { return ScriptValue.of(false); }
+            .propertyTyped("can_pickup_loot", TypeCodecs.BOOL, (Mob m) -> m.canPickUpLoot())
+            // Object instance + cast inside the try — see fall_distance above.
+            .propertyTyped("is_aggressive", TypeCodecs.BOOL, (Object obj) -> {
+                try { return mob(obj).isAggressive(); } catch (Throwable ignored) { return false; }
             })
-            .property("target_uuid", obj -> {
-                LivingEntity tgt = mob(obj).getTarget();
-                return tgt != null ? ScriptValue.of(tgt.getUUID().toString()) : ScriptValue.NULL;
+            // STRING encodes a Java null back to ScriptValue.NULL (ScriptValue.of(String) null-guards),
+            // reproducing the old explicit NULL branch exactly.
+            .propertyTyped("target_uuid", TypeCodecs.STRING, (Mob m) -> {
+                LivingEntity tgt = m.getTarget();
+                return tgt != null ? tgt.getUUID().toString() : null;
             })
-            .property("has_target", obj -> ScriptValue.of(mob(obj).getTarget() != null));
+            .propertyTyped("has_target", TypeCodecs.BOOL, (Mob m) -> m.getTarget() != null);
 
         // ---- Animal extends Mob -------------------------------------------------
         PolyTypeRegistry.define("Animal", "Mob")
-            .property("is_animal",    obj -> ScriptValue.of(true))
-            .property("age",          obj -> ScriptValue.of(animal(obj).getAge()))
-            .property("in_love_time", obj -> ScriptValue.of(animal(obj).getInLoveTime()))
-            .property("is_baby",      obj -> ScriptValue.of(animal(obj).isBaby()))
-            .property("is_in_love",   obj -> ScriptValue.of(animal(obj).isInLove()));
+            // Constant true — the instance is never touched, so it stays Object (no cast at all).
+            .propertyTyped("is_animal", TypeCodecs.BOOL, (Object obj) -> true)
+            .propertyTyped("age", TypeCodecs.DOUBLE, (Animal a) -> (double) a.getAge())
+            .propertyTyped("in_love_time", TypeCodecs.DOUBLE, (Animal a) -> (double) a.getInLoveTime())
+            .propertyTyped("is_baby", TypeCodecs.BOOL, (Animal a) -> a.isBaby())
+            .propertyTyped("is_in_love", TypeCodecs.BOOL, (Animal a) -> a.isInLove());
 
         // ---- ItemEntity extends Entity ------------------------------------------
         PolyTypeRegistry.define("ItemEntity", "Entity")
+            // `item` stays untyped — ScriptValue.Item variant, see main_hand above.
             .property("item",         obj -> ScriptValue.ofItem(itemEntity(obj).getItem()))
-            .property("pickup_delay", obj -> ScriptValue.of(itemEntity(obj).pickupDelay))
+            .propertyTyped("pickup_delay", TypeCodecs.DOUBLE, (ItemEntity ie) -> (double) ie.pickupDelay)
             // onMissingArgs=true matches the original's "empty args -> no-op, still return true".
             .methodTyped1("set_item", TypeCodecs.RAW, TypeCodecs.BOOL, true,
                 (ItemEntity ie, ScriptValue v) -> {
@@ -317,26 +346,28 @@ public final class EntityType {
 
         // ---- ExperienceOrb extends Entity ----------------------------------------
         PolyTypeRegistry.define("ExperienceOrb", "Entity")
-            .property("value",    obj -> ScriptValue.of(expOrb(obj).getValue()))
-            .property("xp_value", obj -> ScriptValue.of(expOrb(obj).getValue()));
+            .propertyTyped("value", TypeCodecs.DOUBLE, (ExperienceOrb o) -> (double) o.getValue())
+            .propertyTyped("xp_value", TypeCodecs.DOUBLE, (ExperienceOrb o) -> (double) o.getValue());
 
         // ---- Projectile extends Entity ------------------------------------------
         PolyTypeRegistry.define("Projectile", "Entity")
-            .property("owner_uuid", obj -> {
+            // Object instance + cast inside the try (see fall_distance); a null string encodes back
+            // to ScriptValue.NULL, matching both old NULL branches.
+            .propertyTyped("owner_uuid", TypeCodecs.STRING, (Object obj) -> {
                 try {
                     var owner = ((Projectile) obj).getOwner();
-                    return owner != null ? ScriptValue.of(owner.getUUID().toString()) : ScriptValue.NULL;
-                } catch (Throwable ignored) { return ScriptValue.NULL; }
+                    return owner != null ? owner.getUUID().toString() : null;
+                } catch (Throwable ignored) { return null; }
             });
 
         // ---- FallingBlock extends Entity ----------------------------------------
         PolyTypeRegistry.define("FallingBlock", "Entity")
-            .property("block_id", obj -> {
+            .propertyTyped("block_id", TypeCodecs.STRING, (Object obj) -> {
                 try {
-                    return ScriptValue.of(BuiltInRegistries.BLOCK.getKey(((FallingBlockEntity) obj).getBlockState().getBlock()).toString());
-                } catch (Throwable ignored) { return ScriptValue.of("minecraft:air"); }
+                    return BuiltInRegistries.BLOCK.getKey(((FallingBlockEntity) obj).getBlockState().getBlock()).toString();
+                } catch (Throwable ignored) { return "minecraft:air"; }
             })
-            .property("time", obj -> ScriptValue.of(((FallingBlockEntity) obj).time));
+            .propertyTyped("time", TypeCodecs.DOUBLE, (FallingBlockEntity fb) -> (double) fb.time);
     }
 
     /** Wrap to the most specific registered type. */
@@ -353,6 +384,11 @@ public final class EntityType {
         return ScriptValue.ofObj("Entity", entity);
     }
 
+    /** Deliberately NOT replaceable by {@code TypeCodecs.listOf("Entity", Entity.class)} at its call
+     *  sites: {@link #wrap} is POLYMORPHIC — it picks "Player"/"Animal"/"Mob"/"ItemEntity"/... per
+     *  element, so a script gets each entity's most specific PolyType and its subtype-only members.
+     *  A single listOf codec re-boxes every element under ONE fixed name, which would flatten all of
+     *  those to plain "Entity" and silently strip those members. */
     public static ScriptValue wrapList(List<? extends Entity> entities) {
         if (entities == null || entities.isEmpty()) return new ScriptValue.Array(List.of());
         List<ScriptValue> list = new ArrayList<>(entities.size());
@@ -456,12 +492,19 @@ public final class EntityType {
         } catch (Throwable ignored) { return false; }
     }
 
+    /** The {@code location} property's typed body. Goes through {@link LocationType#wrapEntity} on
+     *  purpose — it carries the contraption sub-level -> real-world projection — and then unwraps the
+     *  LocationRef the LOCATION_CODEC re-boxes under the very same "Location" name. A NULL from
+     *  wrapEntity (non-ServerLevel) becomes null here and encodes back to NULL. */
+    private static LocationType.LocationRef locationRef(Entity e) {
+        return LocationType.wrapEntity(e) instanceof ScriptValue.Obj o
+                && o.instance() instanceof LocationType.LocationRef ref ? ref : null;
+    }
+
     private static Entity        entity(Object obj)     { return (Entity) obj; }
     private static LivingEntity  living(Object obj)     { return (LivingEntity) obj; }
     private static Mob           mob(Object obj)        { return (Mob) obj; }
-    private static Animal        animal(Object obj)     { return (Animal) obj; }
     private static ItemEntity    itemEntity(Object obj) { return (ItemEntity) obj; }
-    private static ExperienceOrb expOrb(Object obj)     { return (ExperienceOrb) obj; }
 
     /** Resolves a bare or namespaced potion-effect id ("slow_falling" / "minecraft:slow_falling")
      *  to its registry {@link net.minecraft.core.Holder}, or null if unknown. */

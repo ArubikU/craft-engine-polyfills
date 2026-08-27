@@ -404,6 +404,37 @@ public final class ScriptProgram {
      * difference between a string-keyed formula lookup per loop and a direct call on
      * {@code PolyClassMachine}.
      */
+    /**
+     * The single-variable case of {@link #rowsOf} — {@code for x in xs} — returning the elements
+     * THEMSELVES instead of wrapping each one in a one-element {@code ScriptValue[]}.
+     *
+     * <p>That wrapper was an array allocation per element per loop, purely to carry one value: a
+     * 500-block contraption scan allocated 500 throwaway arrays every tick. Nearly every {@code for}
+     * in the shipped scripts binds one variable, so this is the common path, and for an
+     * {@code Array} iterable it now allocates nothing at all — the existing element list is handed
+     * back as-is.
+     *
+     * <p>Returns null for a non-iterable, exactly as {@link #rowsOf} does, so the caller's
+     * "skip the loop entirely" branch is unchanged.
+     */
+    public static List<ScriptValue> elementsOf(ScriptValue iterable) {
+        try {
+            if (iterable instanceof ScriptValue.Obj o && "Map".equals(o.typeName())
+                    && o.instance() instanceof Map<?, ?> rawMap) {
+                List<ScriptValue> keys = new ArrayList<>(rawMap.size());
+                for (Object k : rawMap.keySet()) keys.add(ScriptValue.of(String.valueOf(k)));
+                return keys;
+            }
+            return switch (iterable) {
+                case ScriptValue.Array a -> a.elements();
+                case ScriptValue.Null ignored -> null;
+                default -> List.of(iterable);
+            };
+        } catch (Throwable ignored) {
+            return null;
+        }
+    }
+
     public static List<ScriptValue[]> rowsOf(ScriptValue iterable, int varCount) {
         try {
             if (iterable instanceof ScriptValue.Obj o && "Map".equals(o.typeName())

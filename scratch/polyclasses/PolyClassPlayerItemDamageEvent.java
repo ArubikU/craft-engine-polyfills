@@ -7,6 +7,7 @@
  *  dev.arubik.craftengine.script.PolyType$MethodHandler
  *  dev.arubik.craftengine.script.PolyType$PropertyHandler
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler1
+ *  dev.arubik.craftengine.script.PolyType$TypedPropertyHandler
  *  dev.arubik.craftengine.script.ScriptValue
  *  dev.arubik.craftengine.script.ScriptValue$Obj
  */
@@ -24,13 +25,15 @@ extends PolyClassEvent {
     private static volatile PolyType.TypedMethodHandler1 h$0;
     private static volatile PolyType.MethodHandler m$1;
     private static volatile PolyType.PropertyHandler p$2;
-    private static volatile PolyType.PropertyHandler p$3;
+    private static volatile PolyType.TypedPropertyHandler tp$3;
+    private static volatile PolyType.PropertyHandler p$4;
 
     public static void refresh() {
         h$0 = (PolyType.TypedMethodHandler1)PolyClassRuntime.resolveTypedHandler((String)"PlayerItemDamageEvent", (String)"set_damage", (String)"D:Z");
         m$1 = PolyClassRuntime.resolveMethodHandler((String)"PlayerItemDamageEvent", (String)"set_damage");
         p$2 = PolyClassRuntime.resolvePropertyHandler((String)"PlayerItemDamageEvent", (String)"damage");
-        p$3 = PolyClassRuntime.resolvePropertyHandler((String)"PlayerItemDamageEvent", (String)"item");
+        tp$3 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"PlayerItemDamageEvent", (String)"damage", (String)"D");
+        p$4 = PolyClassRuntime.resolvePropertyHandler((String)"PlayerItemDamageEvent", (String)"item");
     }
 
     public boolean tm$0_set_damage(double d) {
@@ -54,9 +57,16 @@ extends PolyClassEvent {
         return PolyClassRuntime.genericProperty((String)"PlayerItemDamageEvent", (String)"damage", (Object)this.instance);
     }
 
-    public ScriptValue pg$3_item() {
-        if (p$3 != null) {
-            return p$3.get(this.instance);
+    public double tg$3_damage() {
+        if (tp$3 != null) {
+            return (Double)tp$3.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"PlayerItemDamageEvent", (String)"damage", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$4_item() {
+        if (p$4 != null) {
+            return p$4.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"PlayerItemDamageEvent", (String)"item", (Object)this.instance);
     }

@@ -19,7 +19,10 @@ public final class MapType {
     @SuppressWarnings("unchecked")
     public static void register() {
         PolyTypeRegistry.define("Map")
-            .property("size", obj -> ScriptValue.of(map(obj).size()))
+            .propertyTyped("size", TypeCodecs.DOUBLE, (Object obj) -> (double) map(obj).size())
+            // keys/values stay hand-built even now that propertyTyped exists: a Map's keys are plain
+            // strings while its values are arbitrary heterogeneous ScriptValues — neither is one
+            // PolyType's instances, so TypeCodecs.listOf cannot describe them.
             .property("keys", obj -> {
                 List<ScriptValue> keys = map(obj).keySet().stream()
                         .map(ScriptValue::of)

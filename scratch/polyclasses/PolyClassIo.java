@@ -9,6 +9,7 @@
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler0
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler1
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler2
+ *  dev.arubik.craftengine.script.PolyType$TypedPropertyHandler
  *  dev.arubik.craftengine.script.ScriptValue
  *  dev.arubik.craftengine.script.ScriptValue$Obj
  */
@@ -43,7 +44,8 @@ public class PolyClassIo {
     private static volatile PolyType.TypedMethodHandler2 h$18;
     private static volatile PolyType.MethodHandler m$19;
     private static volatile PolyType.PropertyHandler p$20;
-    private static volatile PolyType.PropertyHandler p$21;
+    private static volatile PolyType.TypedPropertyHandler tp$21;
+    private static volatile PolyType.PropertyHandler p$22;
 
     public static void refresh() {
         h$0 = (PolyType.TypedMethodHandler2)PolyClassRuntime.resolveTypedHandler((String)"Io", (String)"allow", (String)"RS:Z");
@@ -67,7 +69,8 @@ public class PolyClassIo {
         h$18 = (PolyType.TypedMethodHandler2)PolyClassRuntime.resolveTypedHandler((String)"Io", (String)"deny_input", (String)"RS:Z");
         m$19 = PolyClassRuntime.resolveMethodHandler((String)"Io", (String)"deny_input");
         p$20 = PolyClassRuntime.resolvePropertyHandler((String)"Io", (String)"configured");
-        p$21 = PolyClassRuntime.resolvePropertyHandler((String)"Io", (String)"types");
+        tp$21 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Io", (String)"configured", (String)"Z");
+        p$22 = PolyClassRuntime.resolvePropertyHandler((String)"Io", (String)"types");
     }
 
     public boolean tm$0_allow(ScriptValue scriptValue, String string) {
@@ -217,9 +220,16 @@ public class PolyClassIo {
         return PolyClassRuntime.genericProperty((String)"Io", (String)"configured", (Object)this.instance);
     }
 
-    public ScriptValue pg$21_types() {
-        if (p$21 != null) {
-            return p$21.get(this.instance);
+    public boolean tg$21_configured() {
+        if (tp$21 != null) {
+            return (Boolean)tp$21.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Io", (String)"configured", (Object)this.instance).asBool();
+    }
+
+    public ScriptValue pg$22_types() {
+        if (p$22 != null) {
+            return p$22.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Io", (String)"types", (Object)this.instance);
     }

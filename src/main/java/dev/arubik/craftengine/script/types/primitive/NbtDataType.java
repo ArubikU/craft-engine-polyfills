@@ -38,6 +38,8 @@ public final class NbtDataType {
         return tag == null ? ScriptValue.NULL : ScriptValue.ofObj("NbtData", tag);
     }
 
+    // Not a PolyType registration and not TypeCodecs.listOf material: a ListTag's elements are
+    // whatever the NBT holds (numbers, strings, nested compounds/lists), never one PolyType.
     public static ScriptValue tagToValue(Tag tag) {
         if (tag == null) return ScriptValue.NULL;
         if (tag instanceof NumericTag nt) return ScriptValue.of(nt.doubleValue());

@@ -98,12 +98,9 @@ public sealed interface ScriptValue {
     default String asStr() {
         return switch (this) {
             case Str s -> s.value();
-            case Num n -> {
-                double v = n.value();
-                if (v == Math.floor(v) && !Double.isInfinite(v) && Math.abs(v) < 1e15)
-                    yield String.valueOf((long) v);
-                yield String.valueOf(v);
-            }
+            // Shared with the compiler's string-concat path, which renders a raw double without
+            // allocating a Num first — see ScriptFormula.numToStr.
+            case Num n -> ScriptFormula.numToStr(n.value());
             case Bool b -> String.valueOf(b.value());
             case Null ignored -> "null";
             default -> "?";

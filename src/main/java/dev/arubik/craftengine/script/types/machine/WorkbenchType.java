@@ -14,10 +14,12 @@ public final class WorkbenchType {
 
     public static void register() {
         PolyTypeRegistry.define("Workbench")
-            .property("width",         obj -> ScriptValue.of(ref(obj).def().layout().gridWidth()))
-            .property("height",        obj -> ScriptValue.of(ref(obj).def().layout().gridHeight()))
-            .property("total_inputs",  obj -> ScriptValue.of(ref(obj).def().layout().inputSlots().length))
-            .property("total_outputs", obj -> ScriptValue.of(ref(obj).def().layout().outputSlots().size()))
+            .propertyTyped("width", TypeCodecs.DOUBLE, (WorkbenchRef r) -> (double) r.def().layout().gridWidth())
+            .propertyTyped("height", TypeCodecs.DOUBLE, (WorkbenchRef r) -> (double) r.def().layout().gridHeight())
+            .propertyTyped("total_inputs", TypeCodecs.DOUBLE,
+                (WorkbenchRef r) -> (double) r.def().layout().inputSlots().length)
+            .propertyTyped("total_outputs", TypeCodecs.DOUBLE,
+                (WorkbenchRef r) -> (double) r.def().layout().outputSlots().size())
             // Migrated to methodTypedOpt1: idx is a single OPTIONAL argument defaulting to 0 when
             // omitted (the old `args.isEmpty() ? 0 : ...`) with the body still running — exactly
             // what methodTypedOptN models (methodTyped1's onMissingArgs would instead skip the body
@@ -57,6 +59,4 @@ public final class WorkbenchType {
         ItemStack s = slots[slot];
         return (s == null || s.isEmpty()) ? ScriptValue.NULL : ScriptValue.ofItem(s);
     }
-
-    private static WorkbenchRef ref(Object obj) { return (WorkbenchRef) obj; }
 }

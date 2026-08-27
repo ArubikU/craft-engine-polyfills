@@ -7,6 +7,7 @@
  *  dev.arubik.craftengine.script.PolyType$MethodHandler
  *  dev.arubik.craftengine.script.PolyType$PropertyHandler
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler1
+ *  dev.arubik.craftengine.script.PolyType$TypedPropertyHandler
  *  dev.arubik.craftengine.script.ScriptValue
  *  dev.arubik.craftengine.script.ScriptValue$Obj
  */
@@ -25,12 +26,14 @@ extends PolyClassEntity {
     private static volatile PolyType.MethodHandler m$1;
     private static volatile PolyType.PropertyHandler p$2;
     private static volatile PolyType.PropertyHandler p$3;
+    private static volatile PolyType.TypedPropertyHandler tp$4;
 
     public static void refresh() {
         h$0 = (PolyType.TypedMethodHandler1)PolyClassRuntime.resolveTypedHandler((String)"ItemEntity", (String)"set_item", (String)"R:Z");
         m$1 = PolyClassRuntime.resolveMethodHandler((String)"ItemEntity", (String)"set_item");
         p$2 = PolyClassRuntime.resolvePropertyHandler((String)"ItemEntity", (String)"item");
         p$3 = PolyClassRuntime.resolvePropertyHandler((String)"ItemEntity", (String)"pickup_delay");
+        tp$4 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"ItemEntity", (String)"pickup_delay", (String)"D");
     }
 
     public boolean tm$0_set_item(ScriptValue scriptValue) {
@@ -59,6 +62,13 @@ extends PolyClassEntity {
             return p$3.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"ItemEntity", (String)"pickup_delay", (Object)this.instance);
+    }
+
+    public double tg$4_pickup_delay() {
+        if (tp$4 != null) {
+            return (Double)tp$4.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"ItemEntity", (String)"pickup_delay", (Object)this.instance).asNum();
     }
 
     public PolyClassItemEntity(Object object) {

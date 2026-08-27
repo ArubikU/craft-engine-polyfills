@@ -149,6 +149,8 @@ public final class NetworkType {
             // `type` took its TYPE_SIGNAL default, so the first disjunct already covered it. Dropping
             // it changes nothing and leaves a condition that needs no argument count — so the null
             // sentinel on `channel` (see register above) is all this needs. RAW return: an Array.
+            // The return CANNOT be a TypeCodecs.listOf — its element type is branch-dependent:
+            // "signal" yields Obj-wrapped "Block" values, every other type yields raw UUID strings.
             .methodTypedOpt2("query", TypeCodecs.DOUBLE, (Double) null,
                 TypeCodecs.STRING, NetworkRegistry.TYPE_SIGNAL, TypeCodecs.RAW,
                 (NetworkRef r, Double channelArg, String type) -> {

@@ -45,7 +45,7 @@ public final class Gomoku {
         ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
         arrayList.add(scriptContext.getClassOrVar("name2"));
         if (ScriptFormula.valuesEqualStr((ScriptValue)ScriptFormula.callBuiltin((String)"lower", arrayList, (ScriptContext)scriptContext), (String)"bot")) {
-            return ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)ScriptValue.of((String)"gomoku_"), (ScriptValue)scriptContext.getClassOrVar("name1")), (ScriptValue)ScriptValue.of((String)"_bot"));
+            return ScriptValue.of((String)("gomoku_" + scriptContext.getStr("name1") + "_bot"));
         }
         ArrayList<ScriptValue.Array> arrayList2 = new ArrayList<ScriptValue.Array>();
         ArrayList<ScriptValue> arrayList3 = new ArrayList<ScriptValue>();
@@ -54,25 +54,25 @@ public final class Gomoku {
         arrayList2.add(new ScriptValue.Array(arrayList3));
         ScriptValue scriptValue = ScriptFormula.callBuiltin((String)"sort_strs", arrayList2, (ScriptContext)scriptContext);
         builder.val("pair", scriptValue);
-        ScriptValue scriptValue2 = ScriptValue.of((String)"gomoku_");
-        ScriptValue scriptValue3 = scriptContext.getClassOrVar("pair");
-        if (scriptValue3 != ScriptValue.NULL) {
+        StringBuilder stringBuilder = new StringBuilder().append("gomoku_");
+        ScriptValue scriptValue2 = scriptContext.getClassOrVar("pair");
+        if (scriptValue2 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList4 = new ArrayList<ScriptValue>();
             arrayList4.add(ScriptValue.of((double)0.0));
-            object2 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue3, arrayList4, (ScriptContext)scriptContext);
+            object2 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue2, arrayList4, (ScriptContext)scriptContext);
         } else {
             object2 = ScriptValue.NULL;
         }
-        ScriptValue scriptValue4 = ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)scriptValue2, (ScriptValue)object2), (ScriptValue)ScriptValue.of((String)"_"));
-        ScriptValue scriptValue5 = scriptContext.getClassOrVar("pair");
-        if (scriptValue5 != ScriptValue.NULL) {
+        StringBuilder stringBuilder2 = stringBuilder.append(object2.asStr()).append("_");
+        ScriptValue scriptValue3 = scriptContext.getClassOrVar("pair");
+        if (scriptValue3 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList5 = new ArrayList<ScriptValue>();
             arrayList5.add(ScriptValue.of((double)1.0));
-            object = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue5, arrayList5, (ScriptContext)scriptContext);
+            object = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue3, arrayList5, (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
         }
-        return ScriptFormula.addPolymorphic((ScriptValue)scriptValue4, (ScriptValue)object);
+        return ScriptValue.of((String)stringBuilder2.append(object.asStr()).toString());
     }
 
     public static ScriptValue emptyBoard(ScriptContext.Builder builder) {
@@ -82,25 +82,25 @@ public final class Gomoku {
         ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
         arrayList.add(ScriptValue.of((double)0.0));
         arrayList.add(scriptContext.getClassOrVar("BOARD_SIZE"));
-        List list = ScriptProgram.rowsOf((ScriptValue)ScriptFormula.callBuiltin((String)"range", arrayList, (ScriptContext)scriptContext), (int)1);
+        List list = ScriptProgram.elementsOf((ScriptValue)ScriptFormula.callBuiltin((String)"range", arrayList, (ScriptContext)scriptContext));
         if (list != null) {
-            for (ScriptValue[] scriptValueArray : list) {
-                builder.val("i", scriptValueArray.length > 0 ? scriptValueArray[0] : ScriptValue.NULL);
-                ScriptValue scriptValue2 = ScriptFormula.addPolymorphic((ScriptValue)scriptContext.getClassOrVar("row"), (ScriptValue)scriptContext.getClassOrVar("CELL_EMPTY"));
-                builder.val("row", scriptValue2);
+            for (ScriptValue scriptValue2 : list) {
+                builder.val("i", scriptValue2);
+                ScriptValue scriptValue3 = ScriptFormula.addPolymorphic((ScriptValue)scriptContext.getClassOrVar("row"), (ScriptValue)scriptContext.getClassOrVar("CELL_EMPTY"));
+                builder.val("row", scriptValue3);
             }
         }
-        ScriptValue scriptValue3 = ScriptValue.of((String)"");
-        builder.val("board", scriptValue3);
+        ScriptValue scriptValue4 = ScriptValue.of((String)"");
+        builder.val("board", scriptValue4);
         ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
         arrayList2.add(ScriptValue.of((double)0.0));
         arrayList2.add(scriptContext.getClassOrVar("BOARD_SIZE"));
-        List list2 = ScriptProgram.rowsOf((ScriptValue)ScriptFormula.callBuiltin((String)"range", arrayList2, (ScriptContext)scriptContext), (int)1);
+        List list2 = ScriptProgram.elementsOf((ScriptValue)ScriptFormula.callBuiltin((String)"range", arrayList2, (ScriptContext)scriptContext));
         if (list2 != null) {
-            for (ScriptValue[] scriptValueArray : list2) {
-                builder.val("i", scriptValueArray.length > 0 ? scriptValueArray[0] : ScriptValue.NULL);
-                ScriptValue scriptValue4 = ScriptFormula.addPolymorphic((ScriptValue)scriptContext.getClassOrVar("board"), (ScriptValue)scriptContext.getClassOrVar("row"));
-                builder.val("board", scriptValue4);
+            for (ScriptValue scriptValue5 : list2) {
+                builder.val("i", scriptValue5);
+                ScriptValue scriptValue6 = ScriptFormula.addPolymorphic((ScriptValue)scriptContext.getClassOrVar("board"), (ScriptValue)scriptContext.getClassOrVar("row"));
+                builder.val("board", scriptValue6);
             }
         }
         return scriptContext.getClassOrVar("board");
@@ -137,10 +137,10 @@ public final class Gomoku {
         ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
         arrayList.add(ScriptValue.of((double)0.0));
         arrayList.add(ScriptValue.of((double)(scriptContext.getNum("BOARD_SIZE") * scriptContext.getNum("BOARD_SIZE"))));
-        List list = ScriptProgram.rowsOf((ScriptValue)ScriptFormula.callBuiltin((String)"range", arrayList, (ScriptContext)scriptContext), (int)1);
+        List list = ScriptProgram.elementsOf((ScriptValue)ScriptFormula.callBuiltin((String)"range", arrayList, (ScriptContext)scriptContext));
         if (list != null) {
-            for (ScriptValue[] scriptValueArray : list) {
-                builder.val("i", scriptValueArray.length > 0 ? scriptValueArray[0] : ScriptValue.NULL);
+            for (ScriptValue scriptValue : list) {
+                builder.val("i", scriptValue);
                 ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
                 arrayList2.add(scriptContext.getClassOrVar("board"));
                 arrayList2.add(scriptContext.getClassOrVar("i"));
@@ -211,51 +211,51 @@ public final class Gomoku {
         arrayList.add(new ScriptValue.Array(arrayList5));
         ScriptValue.Array array = new ScriptValue.Array(arrayList);
         builder.val("dirs", (ScriptValue)array);
-        List list = ScriptProgram.rowsOf((ScriptValue)array, (int)1);
+        List list = ScriptProgram.elementsOf((ScriptValue)array);
         if (list != null) {
-            for (ScriptValue[] scriptValueArray : list) {
+            for (ScriptValue scriptValue : list) {
                 Object object;
                 Object object2;
-                builder.val("d", scriptValueArray.length > 0 ? scriptValueArray[0] : ScriptValue.NULL);
-                ScriptValue scriptValue = scriptContext.getClassOrVar("d");
-                if (scriptValue != ScriptValue.NULL) {
+                builder.val("d", scriptValue);
+                ScriptValue scriptValue2 = scriptContext.getClassOrVar("d");
+                if (scriptValue2 != ScriptValue.NULL) {
                     ArrayList<ScriptValue> arrayList6 = new ArrayList<ScriptValue>();
                     arrayList6.add(ScriptValue.of((double)0.0));
-                    object2 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue, arrayList6, (ScriptContext)scriptContext);
+                    object2 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue2, arrayList6, (ScriptContext)scriptContext);
                 } else {
                     object2 = ScriptValue.NULL;
                 }
-                ScriptValue scriptValue2 = object2;
-                builder.val("dr", scriptValue2);
-                ScriptValue scriptValue3 = scriptContext.getClassOrVar("d");
-                if (scriptValue3 != ScriptValue.NULL) {
+                ScriptValue scriptValue3 = object2;
+                builder.val("dr", scriptValue3);
+                ScriptValue scriptValue4 = scriptContext.getClassOrVar("d");
+                if (scriptValue4 != ScriptValue.NULL) {
                     ArrayList<ScriptValue> arrayList7 = new ArrayList<ScriptValue>();
                     arrayList7.add(ScriptValue.of((double)1.0));
-                    object = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue3, arrayList7, (ScriptContext)scriptContext);
+                    object = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue4, arrayList7, (ScriptContext)scriptContext);
                 } else {
                     object = ScriptValue.NULL;
                 }
-                ScriptValue scriptValue4 = object;
-                builder.val("dc", scriptValue4);
-                ScriptValue scriptValue5 = ScriptValue.of((double)1.0);
+                ScriptValue scriptValue5 = object;
+                builder.val("dc", scriptValue5);
+                ScriptValue scriptValue6 = ScriptValue.of((double)1.0);
                 ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
                 builder2.val("board", scriptContext.getClassOrVar("board"));
                 builder2.val("row", scriptContext.getClassOrVar("row"));
                 builder2.val("col", scriptContext.getClassOrVar("col"));
-                builder2.val("dr", scriptValue2);
-                builder2.val("dc", scriptValue4);
+                builder2.val("dr", scriptValue3);
+                builder2.val("dc", scriptValue5);
                 builder2.val("color", scriptContext.getClassOrVar("color"));
-                ScriptValue scriptValue6 = ScriptFormula.addPolymorphic((ScriptValue)scriptValue5, (ScriptValue)Gomoku.countDir(builder2));
+                ScriptValue scriptValue7 = ScriptFormula.addPolymorphic((ScriptValue)scriptValue6, (ScriptValue)Gomoku.countDir(builder2));
                 ScriptContext.Builder builder3 = ScriptContext.builder().copyFrom(scriptContext);
                 builder3.val("board", scriptContext.getClassOrVar("board"));
                 builder3.val("row", scriptContext.getClassOrVar("row"));
                 builder3.val("col", scriptContext.getClassOrVar("col"));
-                builder3.val("dr", ScriptValue.of((double)(-scriptValue2.asNum())));
-                builder3.val("dc", ScriptValue.of((double)(-scriptValue4.asNum())));
+                builder3.val("dr", ScriptValue.of((double)(-scriptValue3.asNum())));
+                builder3.val("dc", ScriptValue.of((double)(-scriptValue5.asNum())));
                 builder3.val("color", scriptContext.getClassOrVar("color"));
-                ScriptValue scriptValue7 = ScriptFormula.addPolymorphic((ScriptValue)scriptValue6, (ScriptValue)Gomoku.countDir(builder3));
-                builder.val("total", scriptValue7);
-                if (!(scriptValue7.asNum() >= scriptContext.getNum("WIN_LEN"))) continue;
+                ScriptValue scriptValue8 = ScriptFormula.addPolymorphic((ScriptValue)scriptValue7, (ScriptValue)Gomoku.countDir(builder3));
+                builder.val("total", scriptValue8);
+                if (!(scriptValue8.asNum() >= scriptContext.getNum("WIN_LEN"))) continue;
                 return ScriptValue.of((boolean)true);
             }
         }
@@ -264,37 +264,37 @@ public final class Gomoku {
 
     public static ScriptValue boardKey(ScriptContext.Builder builder) {
         ScriptContext scriptContext = builder.peek();
-        return ScriptFormula.addPolymorphic((ScriptValue)ScriptValue.of((String)"gmk_board_"), (ScriptValue)scriptContext.getClassOrVar("gid"));
+        return ScriptValue.of((String)("gmk_board_" + scriptContext.getStr("gid")));
     }
 
     public static ScriptValue turnKey(ScriptContext.Builder builder) {
         ScriptContext scriptContext = builder.peek();
-        return ScriptFormula.addPolymorphic((ScriptValue)ScriptValue.of((String)"gmk_turn_"), (ScriptValue)scriptContext.getClassOrVar("gid"));
+        return ScriptValue.of((String)("gmk_turn_" + scriptContext.getStr("gid")));
     }
 
     public static ScriptValue blackKey(ScriptContext.Builder builder) {
         ScriptContext scriptContext = builder.peek();
-        return ScriptFormula.addPolymorphic((ScriptValue)ScriptValue.of((String)"gmk_black_"), (ScriptValue)scriptContext.getClassOrVar("gid"));
+        return ScriptValue.of((String)("gmk_black_" + scriptContext.getStr("gid")));
     }
 
     public static ScriptValue whiteKey(ScriptContext.Builder builder) {
         ScriptContext scriptContext = builder.peek();
-        return ScriptFormula.addPolymorphic((ScriptValue)ScriptValue.of((String)"gmk_white_"), (ScriptValue)scriptContext.getClassOrVar("gid"));
+        return ScriptValue.of((String)("gmk_white_" + scriptContext.getStr("gid")));
     }
 
     public static ScriptValue botKey(ScriptContext.Builder builder) {
         ScriptContext scriptContext = builder.peek();
-        return ScriptFormula.addPolymorphic((ScriptValue)ScriptValue.of((String)"gmk_bot_"), (ScriptValue)scriptContext.getClassOrVar("gid"));
+        return ScriptValue.of((String)("gmk_bot_" + scriptContext.getStr("gid")));
     }
 
     public static ScriptValue difficultyKey(ScriptContext.Builder builder) {
         ScriptContext scriptContext = builder.peek();
-        return ScriptFormula.addPolymorphic((ScriptValue)ScriptValue.of((String)"gmk_diff_"), (ScriptValue)scriptContext.getClassOrVar("gid"));
+        return ScriptValue.of((String)("gmk_diff_" + scriptContext.getStr("gid")));
     }
 
     public static ScriptValue statusKey(ScriptContext.Builder builder) {
         ScriptContext scriptContext = builder.peek();
-        return ScriptFormula.addPolymorphic((ScriptValue)ScriptValue.of((String)"gmk_status_"), (ScriptValue)scriptContext.getClassOrVar("gid"));
+        return ScriptValue.of((String)("gmk_status_" + scriptContext.getStr("gid")));
     }
 
     public static ScriptValue isBotGame(ScriptContext.Builder builder) {
@@ -396,7 +396,7 @@ public final class Gomoku {
             PolyClassPlayer polyClassPlayer5;
             ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
             ScriptValue scriptValue4 = scriptContext.getClassOrVar("Player");
-            builder2.val("name1", (ScriptValue)(scriptValue4 != ScriptValue.NULL ? ((polyClassPlayer5 = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue4)) != null ? polyClassPlayer5.pg$48_name() : PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue4, (ScriptContext)scriptContext)) : ScriptValue.NULL));
+            builder2.val("name1", (ScriptValue)(scriptValue4 != ScriptValue.NULL ? ((polyClassPlayer5 = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue4)) != null ? polyClassPlayer5.pg$67_name() : PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue4, (ScriptContext)scriptContext)) : ScriptValue.NULL));
             builder2.val("name2", scriptContext.getClassOrVar("BOT_NAME"));
             ScriptValue scriptValue5 = Gomoku.makeGameId(builder2);
             builder.val("gid", scriptValue5);
@@ -473,7 +473,7 @@ public final class Gomoku {
         ScriptValue scriptValue12 = scriptContext.getClassOrVar("target");
         Object object8 = scriptValue12 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue12, (ScriptContext)scriptContext) : ScriptValue.NULL;
         ScriptValue scriptValue13 = scriptContext.getClassOrVar("Player");
-        Object object9 = scriptValue13 != ScriptValue.NULL ? ((polyClassPlayer3 = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue13)) != null ? polyClassPlayer3.pg$48_name() : PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue13, (ScriptContext)scriptContext)) : ScriptValue.NULL;
+        Object object9 = scriptValue13 != ScriptValue.NULL ? ((polyClassPlayer3 = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue13)) != null ? polyClassPlayer3.pg$67_name() : PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue13, (ScriptContext)scriptContext)) : ScriptValue.NULL;
         if (ScriptFormula.valuesEqual((ScriptValue)object8, (ScriptValue)object9)) {
             ScriptValue scriptValue14 = scriptContext.getClassOrVar("Player");
             if (scriptValue14 != ScriptValue.NULL) {
@@ -495,7 +495,7 @@ public final class Gomoku {
         }
         ScriptContext.Builder builder6 = ScriptContext.builder().copyFrom(scriptContext);
         ScriptValue scriptValue15 = scriptContext.getClassOrVar("Player");
-        builder6.val("name1", (ScriptValue)(scriptValue15 != ScriptValue.NULL ? ((polyClassPlayer2 = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue15)) != null ? polyClassPlayer2.pg$48_name() : PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue15, (ScriptContext)scriptContext)) : ScriptValue.NULL));
+        builder6.val("name1", (ScriptValue)(scriptValue15 != ScriptValue.NULL ? ((polyClassPlayer2 = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue15)) != null ? polyClassPlayer2.pg$67_name() : PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue15, (ScriptContext)scriptContext)) : ScriptValue.NULL));
         ScriptValue scriptValue16 = scriptContext.getClassOrVar("target");
         builder6.val("name2", (ScriptValue)(scriptValue16 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue16, (ScriptContext)scriptContext) : ScriptValue.NULL));
         ScriptValue scriptValue17 = Gomoku.makeGameId(builder6);
@@ -503,7 +503,7 @@ public final class Gomoku {
         ScriptContext.Builder builder7 = ScriptContext.builder().copyFrom(scriptContext);
         builder7.val("gid", scriptValue17);
         ScriptValue scriptValue18 = scriptContext.getClassOrVar("Player");
-        builder7.val("starter", (ScriptValue)(scriptValue18 != ScriptValue.NULL ? ((polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue18)) != null ? polyClassPlayer.pg$48_name() : PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue18, (ScriptContext)scriptContext)) : ScriptValue.NULL));
+        builder7.val("starter", (ScriptValue)(scriptValue18 != ScriptValue.NULL ? ((polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue18)) != null ? polyClassPlayer.pg$67_name() : PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue18, (ScriptContext)scriptContext)) : ScriptValue.NULL));
         ScriptValue scriptValue19 = scriptContext.getClassOrVar("target");
         builder7.val("opponent", (ScriptValue)(scriptValue19 != ScriptValue.NULL ? PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue19, (ScriptContext)scriptContext) : ScriptValue.NULL));
         builder7.val("is_bot", ScriptValue.of((boolean)false));
@@ -549,14 +549,14 @@ public final class Gomoku {
         ScriptContext scriptContext = builder.peek();
         ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
         ScriptValue scriptValue = scriptContext.getClassOrVar("Player");
-        builder2.val("name1", (ScriptValue)(scriptValue != ScriptValue.NULL ? ((polyClassPlayer2 = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue)) != null ? polyClassPlayer2.pg$48_name() : PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue, (ScriptContext)scriptContext)) : ScriptValue.NULL));
+        builder2.val("name1", (ScriptValue)(scriptValue != ScriptValue.NULL ? ((polyClassPlayer2 = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue)) != null ? polyClassPlayer2.pg$67_name() : PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue, (ScriptContext)scriptContext)) : ScriptValue.NULL));
         builder2.val("name2", scriptContext.getClassOrVar("BOT_NAME"));
         ScriptValue scriptValue2 = Gomoku.makeGameId(builder2);
         builder.val("gid", scriptValue2);
         ScriptContext.Builder builder3 = ScriptContext.builder().copyFrom(scriptContext);
         builder3.val("gid", scriptValue2);
         ScriptValue scriptValue3 = scriptContext.getClassOrVar("Player");
-        builder3.val("starter", (ScriptValue)(scriptValue3 != ScriptValue.NULL ? ((polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue3)) != null ? polyClassPlayer.pg$48_name() : PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue3, (ScriptContext)scriptContext)) : ScriptValue.NULL));
+        builder3.val("starter", (ScriptValue)(scriptValue3 != ScriptValue.NULL ? ((polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue3)) != null ? polyClassPlayer.pg$67_name() : PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue3, (ScriptContext)scriptContext)) : ScriptValue.NULL));
         builder3.val("opponent", scriptContext.getClassOrVar("BOT_NAME"));
         builder3.val("is_bot", ScriptValue.of((boolean)true));
         builder3.val("difficulty", scriptContext.getClassOrVar("difficulty"));
@@ -756,10 +756,10 @@ public final class Gomoku {
     public static ScriptValue statusLine(ScriptContext.Builder builder) {
         ScriptContext scriptContext = builder.peek();
         if (scriptContext.getStr("status").equals("black_win")) {
-            return ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)ScriptValue.of((String)"<gold>"), (ScriptValue)scriptContext.getClassOrVar("black")), (ScriptValue)ScriptValue.of((String)" <white>wins!"));
+            return ScriptValue.of((String)("<gold>" + scriptContext.getStr("black") + " <white>wins!"));
         }
         if (scriptContext.getStr("status").equals("white_win")) {
-            return ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)ScriptValue.of((String)"<gold>"), (ScriptValue)scriptContext.getClassOrVar("white")), (ScriptValue)ScriptValue.of((String)" <white>wins!"));
+            return ScriptValue.of((String)("<gold>" + scriptContext.getStr("white") + " <white>wins!"));
         }
         if (scriptContext.getStr("status").equals("draw")) {
             return ScriptValue.of((String)"<yellow>Draw - the board is full.");
@@ -935,65 +935,65 @@ public final class Gomoku {
         ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
         arrayList2.add(ScriptValue.of((double)0.0));
         arrayList2.add(scriptContext.getClassOrVar("BOARD_SIZE"));
-        List list = ScriptProgram.rowsOf((ScriptValue)ScriptFormula.callBuiltin((String)"range", arrayList2, (ScriptContext)scriptContext), (int)1);
+        List list = ScriptProgram.elementsOf((ScriptValue)ScriptFormula.callBuiltin((String)"range", arrayList2, (ScriptContext)scriptContext));
         if (list != null) {
-            for (ScriptValue[] scriptValueArray : list) {
-                builder.val("r", scriptValueArray.length > 0 ? scriptValueArray[0] : ScriptValue.NULL);
+            for (ScriptValue scriptValue17 : list) {
+                builder.val("r", scriptValue17);
                 ArrayList<ScriptValue> arrayList3 = new ArrayList<ScriptValue>();
                 arrayList3.add(ScriptValue.of((double)0.0));
                 arrayList3.add(scriptContext.getClassOrVar("BOARD_SIZE"));
-                List list2 = ScriptProgram.rowsOf((ScriptValue)ScriptFormula.callBuiltin((String)"range", arrayList3, (ScriptContext)scriptContext), (int)1);
+                List list2 = ScriptProgram.elementsOf((ScriptValue)ScriptFormula.callBuiltin((String)"range", arrayList3, (ScriptContext)scriptContext));
                 if (list2 == null) continue;
-                for (ScriptValue[] scriptValueArray2 : list2) {
-                    builder.val("c", scriptValueArray2.length > 0 ? scriptValueArray2[0] : ScriptValue.NULL);
+                for (ScriptValue scriptValue18 : list2) {
+                    builder.val("c", scriptValue18);
                     ScriptContext.Builder builder7 = ScriptContext.builder().copyFrom(scriptContext);
                     builder7.val("board", scriptValue3);
                     builder7.val("r", scriptContext.getClassOrVar("r"));
                     builder7.val("c", scriptContext.getClassOrVar("c"));
-                    ScriptValue scriptValue17 = Gomoku.cellAt(builder7);
-                    builder.val("ch", scriptValue17);
-                    ScriptValue scriptValue18 = bl ? ScriptValue.of((String)"games/gomoku.pf:on_noop") : ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)ScriptValue.of((String)"games/gomoku.pf:on_cell_click:"), (ScriptValue)scriptContext.getClassOrVar("gid")), (ScriptValue)ScriptValue.of((String)":")), (ScriptValue)scriptContext.getClassOrVar("r")), (ScriptValue)ScriptValue.of((String)":")), (ScriptValue)scriptContext.getClassOrVar("c"));
-                    builder.val("cell_action", scriptValue18);
+                    ScriptValue scriptValue19 = Gomoku.cellAt(builder7);
+                    builder.val("ch", scriptValue19);
+                    ScriptValue scriptValue20 = bl ? ScriptValue.of((String)"games/gomoku.pf:on_noop") : ScriptValue.of((String)("games/gomoku.pf:on_cell_click:" + scriptContext.getStr("gid") + ":" + scriptContext.getStr("r") + ":" + scriptContext.getStr("c")));
+                    builder.val("cell_action", scriptValue20);
                     ArrayList<ScriptValue> arrayList4 = new ArrayList<ScriptValue>();
                     arrayList4.add(ScriptValue.of((String)"label"));
                     ScriptContext.Builder builder8 = ScriptContext.builder().copyFrom(scriptContext);
-                    builder8.val("ch", scriptValue17);
+                    builder8.val("ch", scriptValue19);
                     arrayList4.add(Gomoku.cellGlyph(builder8));
                     arrayList4.add(ScriptValue.of((String)"action"));
-                    arrayList4.add(scriptValue18);
+                    arrayList4.add(scriptValue20);
                     arrayList4.add(ScriptValue.of((String)"width"));
                     arrayList4.add(scriptContext.getClassOrVar("CELL_WIDTH"));
-                    ScriptValue scriptValue19 = ScriptFormula.callBuiltin((String)"make_map", arrayList4, (ScriptContext)scriptContext);
-                    builder.val("btn", scriptValue19);
+                    ScriptValue scriptValue21 = ScriptFormula.callBuiltin((String)"make_map", arrayList4, (ScriptContext)scriptContext);
+                    builder.val("btn", scriptValue21);
                     ArrayList<ScriptValue> arrayList5 = new ArrayList<ScriptValue>();
                     arrayList5.add(scriptContext.getClassOrVar("buttons"));
-                    arrayList5.add(scriptValue19);
-                    ScriptValue scriptValue20 = ScriptFormula.callBuiltin((String)"push", arrayList5, (ScriptContext)scriptContext);
-                    builder.val("buttons", scriptValue20);
+                    arrayList5.add(scriptValue21);
+                    ScriptValue scriptValue22 = ScriptFormula.callBuiltin((String)"push", arrayList5, (ScriptContext)scriptContext);
+                    builder.val("buttons", scriptValue22);
                 }
             }
         }
-        ScriptValue scriptValue21 = bl ? ScriptValue.of((String)"<gray>Leave") : ScriptValue.of((String)"<red>Resign");
-        builder.val("footer_label", scriptValue21);
-        ScriptValue scriptValue22 = bl ? ScriptValue.of((String)"games/gomoku.pf:on_noop") : ScriptFormula.addPolymorphic((ScriptValue)ScriptValue.of((String)"games/gomoku.pf:on_resign:"), (ScriptValue)scriptContext.getClassOrVar("gid"));
-        builder.val("footer_action", scriptValue22);
+        ScriptValue scriptValue23 = bl ? ScriptValue.of((String)"<gray>Leave") : ScriptValue.of((String)"<red>Resign");
+        builder.val("footer_label", scriptValue23);
+        ScriptValue scriptValue24 = bl ? ScriptValue.of((String)"games/gomoku.pf:on_noop") : ScriptValue.of((String)("games/gomoku.pf:on_resign:" + scriptContext.getStr("gid")));
+        builder.val("footer_action", scriptValue24);
         ArrayList<ScriptValue> arrayList6 = new ArrayList<ScriptValue>();
         arrayList6.add(scriptContext.getClassOrVar("buttons"));
         ArrayList<ScriptValue> arrayList7 = new ArrayList<ScriptValue>();
         arrayList7.add(ScriptValue.of((String)"label"));
-        arrayList7.add(scriptValue21);
+        arrayList7.add(scriptValue23);
         arrayList7.add(ScriptValue.of((String)"action"));
-        arrayList7.add(scriptValue22);
+        arrayList7.add(scriptValue24);
         arrayList6.add(ScriptFormula.callBuiltin((String)"make_map", arrayList7, (ScriptContext)scriptContext));
-        ScriptValue scriptValue23 = ScriptFormula.callBuiltin((String)"push", arrayList6, (ScriptContext)scriptContext);
-        builder.val("buttons", scriptValue23);
-        ScriptValue scriptValue24 = ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)ScriptValue.of((String)"<gold>Gomoku <gray>- <yellow>"), (ScriptValue)scriptValue9), (ScriptValue)ScriptValue.of((String)" <gray>vs <yellow>")), (ScriptValue)scriptValue12);
-        builder.val("title", scriptValue24);
+        ScriptValue scriptValue25 = ScriptFormula.callBuiltin((String)"push", arrayList6, (ScriptContext)scriptContext);
+        builder.val("buttons", scriptValue25);
+        ScriptValue scriptValue26 = ScriptValue.of((String)("<gold>Gomoku <gray>- <yellow>" + scriptValue9.asStr() + " <gray>vs <yellow>" + scriptValue12.asStr()));
+        builder.val("title", scriptValue26);
         ArrayList<ScriptValue> arrayList8 = new ArrayList<ScriptValue>();
         arrayList8.add(scriptContext.getClassOrVar("viewer"));
         ArrayList<ScriptValue> arrayList9 = new ArrayList<ScriptValue>();
         arrayList9.add(scriptContext.getClassOrVar("Machine"));
-        arrayList9.add(scriptValue23);
+        arrayList9.add(scriptValue25);
         arrayList9.add(scriptContext.getClassOrVar("BOARD_SIZE"));
         ArrayList<ScriptValue> arrayList10 = new ArrayList<ScriptValue>();
         arrayList10.add(ScriptValue.of((boolean)(ScriptFormula.valuesEqualStr((ScriptValue)scriptValue15, (String)"active") ^ true)));
@@ -1005,20 +1005,20 @@ public final class Gomoku {
         builder9.val("white", scriptValue12);
         arrayList11.add(Gomoku.statusLine(builder9));
         ArrayList<ScriptValue> arrayList12 = new ArrayList<ScriptValue>();
-        ScriptValue scriptValue25 = scriptContext.getClassOrVar("Images");
-        if (scriptValue25 != ScriptValue.NULL) {
+        ScriptValue scriptValue27 = scriptContext.getClassOrVar("Images");
+        if (scriptValue27 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList13 = new ArrayList<ScriptValue>();
             arrayList13.add(ScriptValue.of((String)"gomoku:ui"));
-            object2 = PolyDispatch.bootstrapCall("memberCall", "from", (ScriptValue)scriptValue25, arrayList13, (ScriptContext)scriptContext);
+            object2 = PolyDispatch.bootstrapCall("memberCall", "from", (ScriptValue)scriptValue27, arrayList13, (ScriptContext)scriptContext);
         } else {
             object2 = ScriptValue.NULL;
         }
         arrayList12.add((ScriptValue)object2);
-        ScriptValue scriptValue26 = scriptContext.getClassOrVar("Dialog");
-        if (scriptValue26 != ScriptValue.NULL) {
+        ScriptValue scriptValue28 = scriptContext.getClassOrVar("Dialog");
+        if (scriptValue28 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList14 = new ArrayList<ScriptValue>();
-            arrayList14.add(scriptValue24);
-            object = PolyDispatch.bootstrapCall("memberCall", "base", (ScriptValue)scriptValue26, arrayList14, (ScriptContext)scriptContext);
+            arrayList14.add(scriptValue26);
+            object = PolyDispatch.bootstrapCall("memberCall", "base", (ScriptValue)scriptValue28, arrayList14, (ScriptContext)scriptContext);
         } else {
             object = ScriptValue.NULL;
         }
@@ -1083,7 +1083,7 @@ public final class Gomoku {
             ScriptValue scriptValue6 = object2;
             builder.val("white", scriptValue6);
             ScriptValue scriptValue7 = scriptContext.getClassOrVar("Player");
-            ScriptValue scriptValue8 = ScriptFormula.valuesEqual((ScriptValue)(scriptValue7 != ScriptValue.NULL ? ((polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue7)) != null ? polyClassPlayer.pg$48_name() : PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue7, (ScriptContext)scriptContext)) : ScriptValue.NULL), (ScriptValue)scriptValue3) ? scriptValue6 : scriptValue3;
+            ScriptValue scriptValue8 = ScriptFormula.valuesEqual((ScriptValue)(scriptValue7 != ScriptValue.NULL ? ((polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue7)) != null ? polyClassPlayer.pg$67_name() : PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue7, (ScriptContext)scriptContext)) : ScriptValue.NULL), (ScriptValue)scriptValue3) ? scriptValue6 : scriptValue3;
             builder.val("other_name", scriptValue8);
             ScriptValue scriptValue9 = scriptContext.getClassOrVar("Server");
             if (scriptValue9 != ScriptValue.NULL) {
@@ -1366,7 +1366,7 @@ public final class Gomoku {
                 builder.val("winner", scriptValue18);
                 ScriptContext.Builder builder9 = ScriptContext.builder().copyFrom(scriptContext);
                 builder9.val("gid", scriptContext.getClassOrVar("gid"));
-                builder9.val("message", ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)ScriptValue.of((String)"<gold>\u2726 <white>"), (ScriptValue)scriptValue18), (ScriptValue)ScriptValue.of((String)" wins the Gomoku match!")));
+                builder9.val("message", ScriptValue.of((String)("<gold>\u2726 <white>" + scriptValue18.asStr() + " wins the Gomoku match!")));
                 Gomoku.notifyBothChat(builder9);
                 return ScriptValue.NULL;
             }
@@ -1431,7 +1431,7 @@ public final class Gomoku {
             ScriptValue scriptValue26 = scriptContext.getClassOrVar("TaskManager");
             if (scriptValue26 != ScriptValue.NULL) {
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-                arrayList.add(ScriptFormula.addPolymorphic((ScriptValue)ScriptValue.of((String)"games/gomoku.pf:bot_move:"), (ScriptValue)scriptContext.getClassOrVar("gid")));
+                arrayList.add(ScriptValue.of((String)("games/gomoku.pf:bot_move:" + scriptContext.getStr("gid"))));
                 arrayList.add(ScriptValue.of((double)15.0));
                 v8 = PolyDispatch.bootstrapCall("memberCall", "schedule", (ScriptValue)scriptValue26, arrayList, (ScriptContext)scriptContext);
             } else {
@@ -1536,7 +1536,7 @@ public final class Gomoku {
                 PolyClassPlayer polyClassPlayer4;
                 ScriptValue scriptValue9;
                 ArrayList<ScriptValue> arrayList5 = new ArrayList<ScriptValue>();
-                arrayList5.add(ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)ScriptValue.of((String)"games/gomoku.pf:refresh_board:"), (ScriptValue)scriptContext.getClassOrVar("gid")), (ScriptValue)ScriptValue.of((String)":")), (ScriptValue)((scriptValue9 = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? ((polyClassPlayer4 = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue9)) != null ? polyClassPlayer4.pg$48_name() : PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue9, (ScriptContext)scriptContext)) : ScriptValue.NULL)));
+                arrayList5.add(ScriptValue.of((String)("games/gomoku.pf:refresh_board:" + scriptContext.getStr("gid") + ":" + ((scriptValue9 = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? ((polyClassPlayer4 = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue9)) != null ? polyClassPlayer4.tg$68_name() : PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue9, (ScriptContext)scriptContext).asStr()) : ScriptValue.NULL.asStr()))));
                 arrayList5.add(ScriptValue.of((double)0.0));
                 v2 = PolyDispatch.bootstrapCall("memberCall", "schedule", (ScriptValue)scriptValue8, arrayList5, (ScriptContext)scriptContext);
             } else {
@@ -1613,12 +1613,12 @@ public final class Gomoku {
         ScriptValue scriptValue19 = ScriptValue.of((String)"");
         builder.val("my_color", scriptValue19);
         ScriptValue scriptValue20 = scriptContext.getClassOrVar("Player");
-        Object object11 = scriptValue20 != ScriptValue.NULL ? ((polyClassPlayer2 = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue20)) != null ? polyClassPlayer2.pg$48_name() : PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue20, (ScriptContext)scriptContext)) : ScriptValue.NULL;
+        Object object11 = scriptValue20 != ScriptValue.NULL ? ((polyClassPlayer2 = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue20)) != null ? polyClassPlayer2.pg$67_name() : PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue20, (ScriptContext)scriptContext)) : ScriptValue.NULL;
         if (ScriptFormula.valuesEqual((ScriptValue)object11, (ScriptValue)scriptValue12)) {
             ScriptValue scriptValue21 = scriptContext.getClassOrVar("CELL_BLACK");
             builder.val("my_color", scriptValue21);
         }
-        Object object12 = (scriptValue = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? ((polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue)) != null ? polyClassPlayer.pg$48_name() : PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue, (ScriptContext)scriptContext)) : ScriptValue.NULL;
+        Object object12 = (scriptValue = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? ((polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue)) != null ? polyClassPlayer.pg$67_name() : PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue, (ScriptContext)scriptContext)) : ScriptValue.NULL;
         if (ScriptFormula.valuesEqual((ScriptValue)object12, (ScriptValue)scriptValue15)) {
             ScriptValue scriptValue22 = scriptContext.getClassOrVar("CELL_WHITE");
             builder.val("my_color", scriptValue22);
@@ -1664,7 +1664,7 @@ public final class Gomoku {
                 PolyClassPlayer polyClassPlayer7;
                 ScriptValue scriptValue26;
                 ArrayList<ScriptValue> arrayList11 = new ArrayList<ScriptValue>();
-                arrayList11.add(ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)ScriptValue.of((String)"games/gomoku.pf:refresh_board:"), (ScriptValue)scriptContext.getClassOrVar("gid")), (ScriptValue)ScriptValue.of((String)":")), (ScriptValue)((scriptValue26 = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? ((polyClassPlayer7 = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue26)) != null ? polyClassPlayer7.pg$48_name() : PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue26, (ScriptContext)scriptContext)) : ScriptValue.NULL)));
+                arrayList11.add(ScriptValue.of((String)("games/gomoku.pf:refresh_board:" + scriptContext.getStr("gid") + ":" + ((scriptValue26 = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? ((polyClassPlayer7 = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue26)) != null ? polyClassPlayer7.tg$68_name() : PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue26, (ScriptContext)scriptContext).asStr()) : ScriptValue.NULL.asStr()))));
                 arrayList11.add(ScriptValue.of((double)0.0));
                 v10 = PolyDispatch.bootstrapCall("memberCall", "schedule", (ScriptValue)scriptValue25, arrayList11, (ScriptContext)scriptContext);
             } else {
@@ -1720,7 +1720,7 @@ public final class Gomoku {
                 PolyClassPlayer polyClassPlayer9;
                 ScriptValue scriptValue32;
                 ArrayList<ScriptValue> arrayList14 = new ArrayList<ScriptValue>();
-                arrayList14.add(ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)ScriptValue.of((String)"games/gomoku.pf:refresh_board:"), (ScriptValue)scriptContext.getClassOrVar("gid")), (ScriptValue)ScriptValue.of((String)":")), (ScriptValue)((scriptValue32 = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? ((polyClassPlayer9 = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue32)) != null ? polyClassPlayer9.pg$48_name() : PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue32, (ScriptContext)scriptContext)) : ScriptValue.NULL)));
+                arrayList14.add(ScriptValue.of((String)("games/gomoku.pf:refresh_board:" + scriptContext.getStr("gid") + ":" + ((scriptValue32 = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? ((polyClassPlayer9 = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue32)) != null ? polyClassPlayer9.tg$68_name() : PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue32, (ScriptContext)scriptContext).asStr()) : ScriptValue.NULL.asStr()))));
                 arrayList14.add(ScriptValue.of((double)0.0));
                 v13 = PolyDispatch.bootstrapCall("memberCall", "schedule", (ScriptValue)scriptValue31, arrayList14, (ScriptContext)scriptContext);
             } else {
@@ -1739,7 +1739,7 @@ public final class Gomoku {
             PolyClassPlayer polyClassPlayer10;
             ScriptValue scriptValue34;
             ArrayList<ScriptValue> arrayList15 = new ArrayList<ScriptValue>();
-            arrayList15.add(ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)ScriptValue.of((String)"games/gomoku.pf:refresh_board:"), (ScriptValue)scriptContext.getClassOrVar("gid")), (ScriptValue)ScriptValue.of((String)":")), (ScriptValue)((scriptValue34 = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? ((polyClassPlayer10 = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue34)) != null ? polyClassPlayer10.pg$48_name() : PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue34, (ScriptContext)scriptContext)) : ScriptValue.NULL)));
+            arrayList15.add(ScriptValue.of((String)("games/gomoku.pf:refresh_board:" + scriptContext.getStr("gid") + ":" + ((scriptValue34 = scriptContext.getClassOrVar("Player")) != ScriptValue.NULL ? ((polyClassPlayer10 = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue34)) != null ? polyClassPlayer10.tg$68_name() : PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)scriptValue34, (ScriptContext)scriptContext).asStr()) : ScriptValue.NULL.asStr()))));
             arrayList15.add(ScriptValue.of((double)0.0));
             v14 = PolyDispatch.bootstrapCall("memberCall", "schedule", (ScriptValue)scriptValue33, arrayList15, (ScriptContext)scriptContext);
         } else {
@@ -1835,10 +1835,10 @@ public final class Gomoku {
         var34_34 = v3 /* !! */ ;
         var0.val("white", var34_34);
         var35_35 = var1_1.getClassOrVar("Player");
-        v4 /* !! */  = var35_35 != ScriptValue.NULL ? ((var36_36 = PolyClassPlayer.ofGuarded((ScriptValue)var35_35)) != null ? var36_36.pg$48_name() : PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)var35_35, (ScriptContext)var1_1)) : ScriptValue.NULL;
+        v4 /* !! */  = var35_35 != ScriptValue.NULL ? ((var36_36 = PolyClassPlayer.ofGuarded((ScriptValue)var35_35)) != null ? var36_36.pg$67_name() : PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)var35_35, (ScriptContext)var1_1)) : ScriptValue.NULL;
         if (!(ScriptFormula.valuesEqual((ScriptValue)v4 /* !! */ , (ScriptValue)var25_25) ^ true)) ** GOTO lbl-1000
         var37_37 = var1_1.getClassOrVar("Player");
-        v5 /* !! */  = var37_37 != ScriptValue.NULL ? ((var38_38 = PolyClassPlayer.ofGuarded((ScriptValue)var37_37)) != null ? var38_38.pg$48_name() : PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)var37_37, (ScriptContext)var1_1)) : ScriptValue.NULL;
+        v5 /* !! */  = var37_37 != ScriptValue.NULL ? ((var38_38 = PolyClassPlayer.ofGuarded((ScriptValue)var37_37)) != null ? var38_38.pg$67_name() : PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)var37_37, (ScriptContext)var1_1)) : ScriptValue.NULL;
         if (ScriptFormula.valuesEqual((ScriptValue)v5 /* !! */ , (ScriptValue)var34_34) ^ true) {
             v6 = true;
         } else lbl-1000:
@@ -1865,7 +1865,7 @@ public final class Gomoku {
             return ScriptValue.NULL;
         }
         var45_45 = var1_1.getClassOrVar("Player");
-        var47_47 = ScriptFormula.valuesEqual((ScriptValue)(var45_45 != ScriptValue.NULL ? ((var46_46 = PolyClassPlayer.ofGuarded((ScriptValue)var45_45)) != null ? var46_46.pg$48_name() : PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)var45_45, (ScriptContext)var1_1)) : ScriptValue.NULL), (ScriptValue)var25_25);
+        var47_47 = ScriptFormula.valuesEqual((ScriptValue)(var45_45 != ScriptValue.NULL ? ((var46_46 = PolyClassPlayer.ofGuarded((ScriptValue)var45_45)) != null ? var46_46.pg$67_name() : PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)var45_45, (ScriptContext)var1_1)) : ScriptValue.NULL), (ScriptValue)var25_25);
         var48_48 = ScriptValue.of((boolean)var47_47);
         var0.val("resigner_is_black", var48_48);
         var49_49 = var1_1.getClassOrVar("Server");
@@ -1893,7 +1893,7 @@ public final class Gomoku {
         var59_59 = ScriptContext.builder().copyFrom(var1_1);
         var59_59.val("gid", var1_1.getClassOrVar("gid"));
         var60_60 = var1_1.getClassOrVar("Player");
-        var59_59.val("message", ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)ScriptValue.of((String)"<yellow>"), (ScriptValue)(var60_60 != ScriptValue.NULL ? ((var61_61 = PolyClassPlayer.ofGuarded((ScriptValue)var60_60)) != null ? var61_61.pg$48_name() : PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)var60_60, (ScriptContext)var1_1)) : ScriptValue.NULL)), (ScriptValue)ScriptValue.of((String)" resigned. <gold>")), (ScriptValue)var58_58), (ScriptValue)ScriptValue.of((String)" wins!")));
+        var59_59.val("message", ScriptValue.of((String)("<yellow>" + (var60_60 != ScriptValue.NULL ? ((var61_61 = PolyClassPlayer.ofGuarded((ScriptValue)var60_60)) != null ? var61_61.tg$68_name() : PolyDispatch.bootstrapGet("memberGet", "name", (ScriptValue)var60_60, (ScriptContext)var1_1).asStr()) : ScriptValue.NULL.asStr()) + " resigned. <gold>" + var58_58.asStr() + " wins!")));
         Gomoku.notifyBothChat(var59_59);
         var62_62 = ScriptContext.builder().copyFrom(var1_1);
         var62_62.val("gid", var1_1.getClassOrVar("gid"));
@@ -1911,17 +1911,17 @@ public final class Gomoku {
         ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
         arrayList.add(ScriptValue.of((double)0.0));
         arrayList.add(scriptContext.getClassOrVar("BOARD_SIZE"));
-        List list = ScriptProgram.rowsOf((ScriptValue)ScriptFormula.callBuiltin((String)"range", arrayList, (ScriptContext)scriptContext), (int)1);
+        List list = ScriptProgram.elementsOf((ScriptValue)ScriptFormula.callBuiltin((String)"range", arrayList, (ScriptContext)scriptContext));
         if (list != null) {
-            for (ScriptValue[] scriptValueArray : list) {
-                builder.val("r", scriptValueArray.length > 0 ? scriptValueArray[0] : ScriptValue.NULL);
+            for (ScriptValue scriptValue : list) {
+                builder.val("r", scriptValue);
                 ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
                 arrayList2.add(ScriptValue.of((double)0.0));
                 arrayList2.add(scriptContext.getClassOrVar("BOARD_SIZE"));
-                List list2 = ScriptProgram.rowsOf((ScriptValue)ScriptFormula.callBuiltin((String)"range", arrayList2, (ScriptContext)scriptContext), (int)1);
+                List list2 = ScriptProgram.elementsOf((ScriptValue)ScriptFormula.callBuiltin((String)"range", arrayList2, (ScriptContext)scriptContext));
                 if (list2 == null) continue;
-                for (ScriptValue[] scriptValueArray2 : list2) {
-                    builder.val("c", scriptValueArray2.length > 0 ? scriptValueArray2[0] : ScriptValue.NULL);
+                for (ScriptValue scriptValue2 : list2) {
+                    builder.val("c", scriptValue2);
                     ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
                     builder2.val("board", scriptContext.getClassOrVar("board"));
                     builder2.val("r", scriptContext.getClassOrVar("r"));
@@ -1932,10 +1932,10 @@ public final class Gomoku {
                     builder3.val("r", scriptContext.getClassOrVar("r"));
                     builder3.val("c", scriptContext.getClassOrVar("c"));
                     builder3.val("val", scriptContext.getClassOrVar("color"));
-                    ScriptValue scriptValue = Gomoku.boardSet(builder3);
-                    builder.val("trial", scriptValue);
+                    ScriptValue scriptValue3 = Gomoku.boardSet(builder3);
+                    builder.val("trial", scriptValue3);
                     ScriptContext.Builder builder4 = ScriptContext.builder().copyFrom(scriptContext);
-                    builder4.val("board", scriptValue);
+                    builder4.val("board", scriptValue3);
                     builder4.val("row", scriptContext.getClassOrVar("r"));
                     builder4.val("col", scriptContext.getClassOrVar("c"));
                     builder4.val("color", scriptContext.getClassOrVar("color"));
@@ -1956,17 +1956,17 @@ public final class Gomoku {
         ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
         arrayList.add(ScriptValue.of((double)0.0));
         arrayList.add(scriptContext.getClassOrVar("BOARD_SIZE"));
-        List list = ScriptProgram.rowsOf((ScriptValue)ScriptFormula.callBuiltin((String)"range", arrayList, (ScriptContext)scriptContext), (int)1);
+        List list = ScriptProgram.elementsOf((ScriptValue)ScriptFormula.callBuiltin((String)"range", arrayList, (ScriptContext)scriptContext));
         if (list != null) {
-            for (ScriptValue[] scriptValueArray : list) {
-                builder.val("r", scriptValueArray.length > 0 ? scriptValueArray[0] : ScriptValue.NULL);
+            for (ScriptValue scriptValue : list) {
+                builder.val("r", scriptValue);
                 ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
                 arrayList2.add(ScriptValue.of((double)0.0));
                 arrayList2.add(scriptContext.getClassOrVar("BOARD_SIZE"));
-                List list2 = ScriptProgram.rowsOf((ScriptValue)ScriptFormula.callBuiltin((String)"range", arrayList2, (ScriptContext)scriptContext), (int)1);
+                List list2 = ScriptProgram.elementsOf((ScriptValue)ScriptFormula.callBuiltin((String)"range", arrayList2, (ScriptContext)scriptContext));
                 if (list2 == null) continue;
-                for (ScriptValue[] scriptValueArray2 : list2) {
-                    builder.val("c", scriptValueArray2.length > 0 ? scriptValueArray2[0] : ScriptValue.NULL);
+                for (ScriptValue scriptValue2 : list2) {
+                    builder.val("c", scriptValue2);
                     ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
                     builder2.val("board", scriptContext.getClassOrVar("board"));
                     builder2.val("r", scriptContext.getClassOrVar("r"));
@@ -2044,73 +2044,73 @@ public final class Gomoku {
         double d = 0.0;
         ScriptValue scriptValue = ScriptValue.of((double)0.0);
         builder.val("total", scriptValue);
-        List list = ScriptProgram.rowsOf((ScriptValue)array, (int)1);
+        List list = ScriptProgram.elementsOf((ScriptValue)array);
         if (list != null) {
-            for (ScriptValue[] scriptValueArray : list) {
+            for (ScriptValue scriptValue2 : list) {
                 Object object;
                 Object object2;
-                builder.val("d", scriptValueArray.length > 0 ? scriptValueArray[0] : ScriptValue.NULL);
-                ScriptValue scriptValue2 = scriptContext.getClassOrVar("d");
-                if (scriptValue2 != ScriptValue.NULL) {
+                builder.val("d", scriptValue2);
+                ScriptValue scriptValue3 = scriptContext.getClassOrVar("d");
+                if (scriptValue3 != ScriptValue.NULL) {
                     ArrayList<ScriptValue> arrayList6 = new ArrayList<ScriptValue>();
                     arrayList6.add(ScriptValue.of((double)0.0));
-                    object2 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue2, arrayList6, (ScriptContext)scriptContext);
+                    object2 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue3, arrayList6, (ScriptContext)scriptContext);
                 } else {
                     object2 = ScriptValue.NULL;
                 }
-                ScriptValue scriptValue3 = object2;
-                builder.val("dr", scriptValue3);
-                ScriptValue scriptValue4 = scriptContext.getClassOrVar("d");
-                if (scriptValue4 != ScriptValue.NULL) {
+                ScriptValue scriptValue4 = object2;
+                builder.val("dr", scriptValue4);
+                ScriptValue scriptValue5 = scriptContext.getClassOrVar("d");
+                if (scriptValue5 != ScriptValue.NULL) {
                     ArrayList<ScriptValue> arrayList7 = new ArrayList<ScriptValue>();
                     arrayList7.add(ScriptValue.of((double)1.0));
-                    object = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue4, arrayList7, (ScriptContext)scriptContext);
+                    object = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue5, arrayList7, (ScriptContext)scriptContext);
                 } else {
                     object = ScriptValue.NULL;
                 }
-                ScriptValue scriptValue5 = object;
-                builder.val("dc", scriptValue5);
+                ScriptValue scriptValue6 = object;
+                builder.val("dc", scriptValue6);
                 ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
                 builder2.val("board", scriptContext.getClassOrVar("board"));
                 builder2.val("row", scriptContext.getClassOrVar("row"));
                 builder2.val("col", scriptContext.getClassOrVar("col"));
-                builder2.val("dr", scriptValue3);
-                builder2.val("dc", scriptValue5);
+                builder2.val("dr", scriptValue4);
+                builder2.val("dc", scriptValue6);
                 builder2.val("color", scriptContext.getClassOrVar("color"));
-                ScriptValue scriptValue6 = Gomoku.countDir(builder2);
-                builder.val("fwd", scriptValue6);
+                ScriptValue scriptValue7 = Gomoku.countDir(builder2);
+                builder.val("fwd", scriptValue7);
                 ScriptContext.Builder builder3 = ScriptContext.builder().copyFrom(scriptContext);
                 builder3.val("board", scriptContext.getClassOrVar("board"));
                 builder3.val("row", scriptContext.getClassOrVar("row"));
                 builder3.val("col", scriptContext.getClassOrVar("col"));
-                builder3.val("dr", ScriptValue.of((double)(-scriptValue3.asNum())));
-                builder3.val("dc", ScriptValue.of((double)(-scriptValue5.asNum())));
+                builder3.val("dr", ScriptValue.of((double)(-scriptValue4.asNum())));
+                builder3.val("dc", ScriptValue.of((double)(-scriptValue6.asNum())));
                 builder3.val("color", scriptContext.getClassOrVar("color"));
-                ScriptValue scriptValue7 = Gomoku.countDir(builder3);
-                builder.val("bwd", scriptValue7);
-                ScriptValue scriptValue8 = ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)ScriptValue.of((double)1.0), (ScriptValue)scriptValue6), (ScriptValue)scriptValue7);
-                builder.val("count", scriptValue8);
+                ScriptValue scriptValue8 = Gomoku.countDir(builder3);
+                builder.val("bwd", scriptValue8);
+                ScriptValue scriptValue9 = ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)ScriptValue.of((double)1.0), (ScriptValue)scriptValue7), (ScriptValue)scriptValue8);
+                builder.val("count", scriptValue9);
                 ScriptContext.Builder builder4 = ScriptContext.builder().copyFrom(scriptContext);
                 builder4.val("board", scriptContext.getClassOrVar("board"));
-                builder4.val("r", ScriptFormula.addPolymorphic((ScriptValue)scriptContext.getClassOrVar("row"), (ScriptValue)ScriptValue.of((double)(scriptValue3.asNum() * ScriptFormula.addPolymorphic((ScriptValue)scriptValue6, (ScriptValue)ScriptValue.of((double)1.0)).asNum()))));
-                builder4.val("c", ScriptFormula.addPolymorphic((ScriptValue)scriptContext.getClassOrVar("col"), (ScriptValue)ScriptValue.of((double)(scriptValue5.asNum() * ScriptFormula.addPolymorphic((ScriptValue)scriptValue6, (ScriptValue)ScriptValue.of((double)1.0)).asNum()))));
-                ScriptValue scriptValue9 = Gomoku.isOpenCell(builder4);
-                builder.val("end1_open", scriptValue9);
+                builder4.val("r", ScriptFormula.addPolymorphic((ScriptValue)scriptContext.getClassOrVar("row"), (ScriptValue)ScriptValue.of((double)(scriptValue4.asNum() * ScriptFormula.addPolymorphic((ScriptValue)scriptValue7, (ScriptValue)ScriptValue.of((double)1.0)).asNum()))));
+                builder4.val("c", ScriptFormula.addPolymorphic((ScriptValue)scriptContext.getClassOrVar("col"), (ScriptValue)ScriptValue.of((double)(scriptValue6.asNum() * ScriptFormula.addPolymorphic((ScriptValue)scriptValue7, (ScriptValue)ScriptValue.of((double)1.0)).asNum()))));
+                ScriptValue scriptValue10 = Gomoku.isOpenCell(builder4);
+                builder.val("end1_open", scriptValue10);
                 ScriptContext.Builder builder5 = ScriptContext.builder().copyFrom(scriptContext);
                 builder5.val("board", scriptContext.getClassOrVar("board"));
-                builder5.val("r", ScriptValue.of((double)(scriptContext.getNum("row") - scriptValue3.asNum() * ScriptFormula.addPolymorphic((ScriptValue)scriptValue7, (ScriptValue)ScriptValue.of((double)1.0)).asNum())));
-                builder5.val("c", ScriptValue.of((double)(scriptContext.getNum("col") - scriptValue5.asNum() * ScriptFormula.addPolymorphic((ScriptValue)scriptValue7, (ScriptValue)ScriptValue.of((double)1.0)).asNum())));
-                ScriptValue scriptValue10 = Gomoku.isOpenCell(builder5);
-                builder.val("end2_open", scriptValue10);
-                double d2 = (scriptValue9.asBool() ? 1.0 : 0.0) + (scriptValue10.asBool() ? 1.0 : 0.0);
-                ScriptValue scriptValue11 = ScriptValue.of((double)d2);
-                builder.val("open_ends", scriptValue11);
-                ScriptValue scriptValue12 = scriptContext.getClassOrVar("total");
+                builder5.val("r", ScriptValue.of((double)(scriptContext.getNum("row") - scriptValue4.asNum() * ScriptFormula.addPolymorphic((ScriptValue)scriptValue8, (ScriptValue)ScriptValue.of((double)1.0)).asNum())));
+                builder5.val("c", ScriptValue.of((double)(scriptContext.getNum("col") - scriptValue6.asNum() * ScriptFormula.addPolymorphic((ScriptValue)scriptValue8, (ScriptValue)ScriptValue.of((double)1.0)).asNum())));
+                ScriptValue scriptValue11 = Gomoku.isOpenCell(builder5);
+                builder.val("end2_open", scriptValue11);
+                double d2 = (scriptValue10.asBool() ? 1.0 : 0.0) + (scriptValue11.asBool() ? 1.0 : 0.0);
+                ScriptValue scriptValue12 = ScriptValue.of((double)d2);
+                builder.val("open_ends", scriptValue12);
+                ScriptValue scriptValue13 = scriptContext.getClassOrVar("total");
                 ScriptContext.Builder builder6 = ScriptContext.builder().copyFrom(scriptContext);
-                builder6.val("count", scriptValue8);
+                builder6.val("count", scriptValue9);
                 builder6.val("open_ends", ScriptValue.of((double)d2));
-                ScriptValue scriptValue13 = ScriptFormula.addPolymorphic((ScriptValue)scriptValue12, (ScriptValue)Gomoku.lineScore(builder6));
-                builder.val("total", scriptValue13);
+                ScriptValue scriptValue14 = ScriptFormula.addPolymorphic((ScriptValue)scriptValue13, (ScriptValue)Gomoku.lineScore(builder6));
+                builder.val("total", scriptValue14);
             }
         }
         return scriptContext.getClassOrVar("total");
@@ -2128,20 +2128,20 @@ public final class Gomoku {
             var5_2.add(ScriptValue.of((double)0.0));
             var5_2.add(ScriptValue.of((double)1.0));
             var5_2.add(ScriptValue.of((double)2.0));
-            var2_3 = ScriptProgram.rowsOf((ScriptValue)new ScriptValue.Array(var5_2), (int)1);
+            var2_3 = ScriptProgram.elementsOf((ScriptValue)new ScriptValue.Array(var5_2));
             if (var2_3 == null) break block4;
-            for (ScriptValue[] var4_5 : var2_3) {
-                var0.val("dr", var4_5.length > 0 ? var4_5[0] : ScriptValue.NULL);
+            for (ScriptValue var4_5 : var2_3) {
+                var0.val("dr", var4_5);
                 var9_9 = new ArrayList<ScriptValue>();
                 var9_9.add(ScriptValue.of((double)(-2.0)));
                 var9_9.add(ScriptValue.of((double)(-1.0)));
                 var9_9.add(ScriptValue.of((double)0.0));
                 var9_9.add(ScriptValue.of((double)1.0));
                 var9_9.add(ScriptValue.of((double)2.0));
-                var6_6 = ScriptProgram.rowsOf((ScriptValue)new ScriptValue.Array(var9_9), (int)1);
+                var6_6 = ScriptProgram.elementsOf((ScriptValue)new ScriptValue.Array(var9_9));
                 if (var6_6 == null) continue;
-                for (ScriptValue[] var8_8 : var6_6) {
-                    var0.val("dc", var8_8.length > 0 ? var8_8[0] : ScriptValue.NULL);
+                for (ScriptValue var8_8 : var6_6) {
+                    var0.val("dc", var8_8);
                     var10_10 = ScriptFormula.addPolymorphic((ScriptValue)var1_1.getClassOrVar("r"), (ScriptValue)var1_1.getClassOrVar("dr"));
                     var0.val("nr", var10_10);
                     var11_11 = ScriptFormula.addPolymorphic((ScriptValue)var1_1.getClassOrVar("c"), (ScriptValue)var1_1.getClassOrVar("dc"));
@@ -2179,10 +2179,10 @@ public final class Gomoku {
             var7_4 = new ArrayList<ScriptValue>();
             var7_4.add(ScriptValue.of((double)0.0));
             var7_4.add(ScriptValue.of((double)(var1_1.getNum("BOARD_SIZE") * var1_1.getNum("BOARD_SIZE"))));
-            var4_5 = ScriptProgram.rowsOf((ScriptValue)ScriptFormula.callBuiltin((String)"range", var7_4, (ScriptContext)var1_1), (int)1);
+            var4_5 = ScriptProgram.elementsOf((ScriptValue)ScriptFormula.callBuiltin((String)"range", var7_4, (ScriptContext)var1_1));
             if (var4_5 != null) {
-                for (ScriptValue[] var6_7 : var4_5) {
-                    var0.val("i", var6_7.length > 0 ? var6_7[0] : ScriptValue.NULL);
+                for (ScriptValue var6_7 : var4_5) {
+                    var0.val("i", var6_7);
                     var8_8 = new ArrayList<ScriptValue>();
                     var8_8.add(var1_1.getClassOrVar("board"));
                     var8_8.add(var1_1.getClassOrVar("i"));
@@ -2211,17 +2211,17 @@ public final class Gomoku {
             var22_18 = new ArrayList<ScriptValue>();
             var22_18.add(ScriptValue.of((double)0.0));
             var22_18.add(var1_1.getClassOrVar("BOARD_SIZE"));
-            var19_19 = ScriptProgram.rowsOf((ScriptValue)ScriptFormula.callBuiltin((String)"range", var22_18, (ScriptContext)var1_1), (int)1);
+            var19_19 = ScriptProgram.elementsOf((ScriptValue)ScriptFormula.callBuiltin((String)"range", var22_18, (ScriptContext)var1_1));
             if (var19_19 == null) break block7;
-            for (ScriptValue[] var21_21 : var19_19) {
-                var0.val("r", var21_21.length > 0 ? var21_21[0] : ScriptValue.NULL);
+            for (ScriptValue var21_21 : var19_19) {
+                var0.val("r", var21_21);
                 var26_25 = new ArrayList<ScriptValue>();
                 var26_25.add(ScriptValue.of((double)0.0));
                 var26_25.add(var1_1.getClassOrVar("BOARD_SIZE"));
-                var23_22 = ScriptProgram.rowsOf((ScriptValue)ScriptFormula.callBuiltin((String)"range", var26_25, (ScriptContext)var1_1), (int)1);
+                var23_22 = ScriptProgram.elementsOf((ScriptValue)ScriptFormula.callBuiltin((String)"range", var26_25, (ScriptContext)var1_1));
                 if (var23_22 == null) continue;
-                for (ScriptValue[] var25_24 : var23_22) {
-                    var0.val("c", var25_24.length > 0 ? var25_24[0] : ScriptValue.NULL);
+                for (ScriptValue var25_24 : var23_22) {
+                    var0.val("c", var25_24);
                     var27_26 = ScriptContext.builder().copyFrom(var1_1);
                     var27_26.val("board", var1_1.getClassOrVar("board"));
                     var27_26.val("r", var1_1.getClassOrVar("r"));
@@ -2271,17 +2271,17 @@ public final class Gomoku {
             var5_2 = new ArrayList<ScriptValue>();
             var5_2.add(ScriptValue.of((double)0.0));
             var5_2.add(var1_1.getClassOrVar("BOARD_SIZE"));
-            var2_3 = ScriptProgram.rowsOf((ScriptValue)ScriptFormula.callBuiltin((String)"range", var5_2, (ScriptContext)var1_1), (int)1);
+            var2_3 = ScriptProgram.elementsOf((ScriptValue)ScriptFormula.callBuiltin((String)"range", var5_2, (ScriptContext)var1_1));
             if (var2_3 == null) break block4;
-            for (ScriptValue[] var4_5 : var2_3) {
-                var0.val("r", var4_5.length > 0 ? var4_5[0] : ScriptValue.NULL);
+            for (ScriptValue var4_5 : var2_3) {
+                var0.val("r", var4_5);
                 var9_9 = new ArrayList<ScriptValue>();
                 var9_9.add(ScriptValue.of((double)0.0));
                 var9_9.add(var1_1.getClassOrVar("BOARD_SIZE"));
-                var6_6 = ScriptProgram.rowsOf((ScriptValue)ScriptFormula.callBuiltin((String)"range", var9_9, (ScriptContext)var1_1), (int)1);
+                var6_6 = ScriptProgram.elementsOf((ScriptValue)ScriptFormula.callBuiltin((String)"range", var9_9, (ScriptContext)var1_1));
                 if (var6_6 == null) continue;
-                for (ScriptValue[] var8_8 : var6_6) {
-                    var0.val("c", var8_8.length > 0 ? var8_8[0] : ScriptValue.NULL);
+                for (ScriptValue var8_8 : var6_6) {
+                    var0.val("c", var8_8);
                     var10_10 = ScriptContext.builder().copyFrom(var1_1);
                     var10_10.val("board", var1_1.getClassOrVar("board"));
                     var10_10.val("r", var1_1.getClassOrVar("r"));
@@ -2333,90 +2333,12 @@ public final class Gomoku {
         double d3 = -1.0;
         ScriptValue scriptValue4 = ScriptValue.of((double)d3);
         builder.val("best_score", scriptValue4);
-        List list = ScriptProgram.rowsOf((ScriptValue)scriptValue, (int)1);
+        List list = ScriptProgram.elementsOf((ScriptValue)scriptValue);
         if (list != null) {
-            for (ScriptValue[] scriptValueArray : list) {
+            for (ScriptValue scriptValue5 : list) {
                 Object object;
                 Object object2;
-                builder.val("cell", scriptValueArray.length > 0 ? scriptValueArray[0] : ScriptValue.NULL);
-                ScriptValue scriptValue5 = scriptContext.getClassOrVar("cell");
-                if (scriptValue5 != ScriptValue.NULL) {
-                    ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-                    arrayList.add(ScriptValue.of((double)0.0));
-                    object2 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue5, arrayList, (ScriptContext)scriptContext);
-                } else {
-                    object2 = ScriptValue.NULL;
-                }
-                ScriptValue scriptValue6 = object2;
-                builder.val("r", scriptValue6);
-                ScriptValue scriptValue7 = scriptContext.getClassOrVar("cell");
-                if (scriptValue7 != ScriptValue.NULL) {
-                    ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-                    arrayList.add(ScriptValue.of((double)1.0));
-                    object = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue7, arrayList, (ScriptContext)scriptContext);
-                } else {
-                    object = ScriptValue.NULL;
-                }
-                ScriptValue scriptValue8 = object;
-                builder.val("c", scriptValue8);
-                ScriptContext.Builder builder3 = ScriptContext.builder().copyFrom(scriptContext);
-                ScriptContext.Builder builder4 = ScriptContext.builder().copyFrom(scriptContext);
-                builder4.val("board", scriptContext.getClassOrVar("board"));
-                builder4.val("row", scriptValue6);
-                builder4.val("col", scriptValue8);
-                builder4.val("color", scriptContext.getClassOrVar("color"));
-                builder3.val("offense", Gomoku.evaluateCell(builder4));
-                ScriptContext.Builder builder5 = ScriptContext.builder().copyFrom(scriptContext);
-                builder5.val("board", scriptContext.getClassOrVar("board"));
-                builder5.val("row", scriptValue6);
-                builder5.val("col", scriptValue8);
-                builder5.val("color", scriptContext.getClassOrVar("opponent"));
-                builder3.val("defense", Gomoku.evaluateCell(builder5));
-                ScriptValue scriptValue9 = Gomoku.combinedScore(builder3);
-                builder.val("score", scriptValue9);
-                if (!(scriptValue9.asNum() > scriptContext.getNum("best_score"))) continue;
-                ScriptValue scriptValue10 = scriptValue9;
-                builder.val("best_score", scriptValue10);
-                ScriptValue scriptValue11 = scriptValue6;
-                builder.val("best_r", scriptValue11);
-                ScriptValue scriptValue12 = scriptValue8;
-                builder.val("best_c", scriptValue12);
-            }
-        }
-        if (scriptContext.getNum("best_r") < 0.0) {
-            ArrayList arrayList = new ArrayList();
-            return new ScriptValue.Array(arrayList);
-        }
-        ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-        arrayList.add(scriptContext.getClassOrVar("best_r"));
-        arrayList.add(scriptContext.getClassOrVar("best_c"));
-        return new ScriptValue.Array(arrayList);
-    }
-
-    public static ScriptValue botMoveHard(ScriptContext.Builder builder) {
-        ScriptContext scriptContext = builder.peek();
-        ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
-        builder2.val("board", scriptContext.getClassOrVar("board"));
-        ScriptValue scriptValue = Gomoku.findCandidates(builder2);
-        builder.val("candidates", scriptValue);
-        double d = -999999.0;
-        ScriptValue scriptValue2 = ScriptValue.of((double)d);
-        builder.val("best_net", scriptValue2);
-        double d2 = -1.0;
-        ScriptValue scriptValue3 = ScriptValue.of((double)d2);
-        builder.val("best_r", scriptValue3);
-        double d3 = -1.0;
-        ScriptValue scriptValue4 = ScriptValue.of((double)d3);
-        builder.val("best_c", scriptValue4);
-        double d4 = 0.0;
-        ScriptValue scriptValue5 = ScriptValue.of((double)0.0);
-        builder.val("considered", scriptValue5);
-        List list = ScriptProgram.rowsOf((ScriptValue)scriptValue, (int)1);
-        if (list != null) {
-            for (ScriptValue[] scriptValueArray : list) {
-                Object object;
-                Object object2;
-                builder.val("cell", scriptValueArray.length > 0 ? scriptValueArray[0] : ScriptValue.NULL);
+                builder.val("cell", scriptValue5);
                 ScriptValue scriptValue6 = scriptContext.getClassOrVar("cell");
                 if (scriptValue6 != ScriptValue.NULL) {
                     ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
@@ -2451,87 +2373,165 @@ public final class Gomoku {
                 builder5.val("color", scriptContext.getClassOrVar("opponent"));
                 builder3.val("defense", Gomoku.evaluateCell(builder5));
                 ScriptValue scriptValue10 = Gomoku.combinedScore(builder3);
-                builder.val("my_score", scriptValue10);
-                if (!(scriptValue10.asNum() >= 40.0 && scriptContext.getNum("considered") < 8.0)) continue;
-                ScriptValue scriptValue11 = ScriptFormula.addPolymorphic((ScriptValue)scriptContext.getClassOrVar("considered"), (ScriptValue)ScriptValue.of((double)1.0));
-                builder.val("considered", scriptValue11);
+                builder.val("score", scriptValue10);
+                if (!(scriptValue10.asNum() > scriptContext.getNum("best_score"))) continue;
+                ScriptValue scriptValue11 = scriptValue10;
+                builder.val("best_score", scriptValue11);
+                ScriptValue scriptValue12 = scriptValue7;
+                builder.val("best_r", scriptValue12);
+                ScriptValue scriptValue13 = scriptValue9;
+                builder.val("best_c", scriptValue13);
+            }
+        }
+        if (scriptContext.getNum("best_r") < 0.0) {
+            ArrayList arrayList = new ArrayList();
+            return new ScriptValue.Array(arrayList);
+        }
+        ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
+        arrayList.add(scriptContext.getClassOrVar("best_r"));
+        arrayList.add(scriptContext.getClassOrVar("best_c"));
+        return new ScriptValue.Array(arrayList);
+    }
+
+    public static ScriptValue botMoveHard(ScriptContext.Builder builder) {
+        ScriptContext scriptContext = builder.peek();
+        ScriptContext.Builder builder2 = ScriptContext.builder().copyFrom(scriptContext);
+        builder2.val("board", scriptContext.getClassOrVar("board"));
+        ScriptValue scriptValue = Gomoku.findCandidates(builder2);
+        builder.val("candidates", scriptValue);
+        double d = -999999.0;
+        ScriptValue scriptValue2 = ScriptValue.of((double)d);
+        builder.val("best_net", scriptValue2);
+        double d2 = -1.0;
+        ScriptValue scriptValue3 = ScriptValue.of((double)d2);
+        builder.val("best_r", scriptValue3);
+        double d3 = -1.0;
+        ScriptValue scriptValue4 = ScriptValue.of((double)d3);
+        builder.val("best_c", scriptValue4);
+        double d4 = 0.0;
+        ScriptValue scriptValue5 = ScriptValue.of((double)0.0);
+        builder.val("considered", scriptValue5);
+        List list = ScriptProgram.elementsOf((ScriptValue)scriptValue);
+        if (list != null) {
+            for (ScriptValue scriptValue6 : list) {
+                Object object;
+                Object object2;
+                builder.val("cell", scriptValue6);
+                ScriptValue scriptValue7 = scriptContext.getClassOrVar("cell");
+                if (scriptValue7 != ScriptValue.NULL) {
+                    ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
+                    arrayList.add(ScriptValue.of((double)0.0));
+                    object2 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue7, arrayList, (ScriptContext)scriptContext);
+                } else {
+                    object2 = ScriptValue.NULL;
+                }
+                ScriptValue scriptValue8 = object2;
+                builder.val("r", scriptValue8);
+                ScriptValue scriptValue9 = scriptContext.getClassOrVar("cell");
+                if (scriptValue9 != ScriptValue.NULL) {
+                    ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
+                    arrayList.add(ScriptValue.of((double)1.0));
+                    object = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue9, arrayList, (ScriptContext)scriptContext);
+                } else {
+                    object = ScriptValue.NULL;
+                }
+                ScriptValue scriptValue10 = object;
+                builder.val("c", scriptValue10);
+                ScriptContext.Builder builder3 = ScriptContext.builder().copyFrom(scriptContext);
+                ScriptContext.Builder builder4 = ScriptContext.builder().copyFrom(scriptContext);
+                builder4.val("board", scriptContext.getClassOrVar("board"));
+                builder4.val("row", scriptValue8);
+                builder4.val("col", scriptValue10);
+                builder4.val("color", scriptContext.getClassOrVar("color"));
+                builder3.val("offense", Gomoku.evaluateCell(builder4));
+                ScriptContext.Builder builder5 = ScriptContext.builder().copyFrom(scriptContext);
+                builder5.val("board", scriptContext.getClassOrVar("board"));
+                builder5.val("row", scriptValue8);
+                builder5.val("col", scriptValue10);
+                builder5.val("color", scriptContext.getClassOrVar("opponent"));
+                builder3.val("defense", Gomoku.evaluateCell(builder5));
+                ScriptValue scriptValue11 = Gomoku.combinedScore(builder3);
+                builder.val("my_score", scriptValue11);
+                if (!(scriptValue11.asNum() >= 40.0 && scriptContext.getNum("considered") < 8.0)) continue;
+                ScriptValue scriptValue12 = ScriptFormula.addPolymorphic((ScriptValue)scriptContext.getClassOrVar("considered"), (ScriptValue)ScriptValue.of((double)1.0));
+                builder.val("considered", scriptValue12);
                 ScriptContext.Builder builder6 = ScriptContext.builder().copyFrom(scriptContext);
                 builder6.val("board", scriptContext.getClassOrVar("board"));
-                builder6.val("r", scriptValue7);
-                builder6.val("c", scriptValue9);
+                builder6.val("r", scriptValue8);
+                builder6.val("c", scriptValue10);
                 builder6.val("val", scriptContext.getClassOrVar("color"));
-                ScriptValue scriptValue12 = Gomoku.boardSet(builder6);
-                builder.val("trial", scriptValue12);
+                ScriptValue scriptValue13 = Gomoku.boardSet(builder6);
+                builder.val("trial", scriptValue13);
                 ScriptContext.Builder builder7 = ScriptContext.builder().copyFrom(scriptContext);
-                builder7.val("board", scriptValue12);
-                ScriptValue scriptValue13 = Gomoku.findCandidates(builder7);
-                builder.val("opp_candidates", scriptValue13);
+                builder7.val("board", scriptValue13);
+                ScriptValue scriptValue14 = Gomoku.findCandidates(builder7);
+                builder.val("opp_candidates", scriptValue14);
                 double d5 = 0.0;
-                ScriptValue scriptValue14 = ScriptValue.of((double)0.0);
-                builder.val("opp_best", scriptValue14);
-                double d6 = 0.0;
                 ScriptValue scriptValue15 = ScriptValue.of((double)0.0);
-                builder.val("opp_considered", scriptValue15);
-                List list2 = ScriptProgram.rowsOf((ScriptValue)scriptValue13, (int)1);
+                builder.val("opp_best", scriptValue15);
+                double d6 = 0.0;
+                ScriptValue scriptValue16 = ScriptValue.of((double)0.0);
+                builder.val("opp_considered", scriptValue16);
+                List list2 = ScriptProgram.elementsOf((ScriptValue)scriptValue14);
                 if (list2 != null) {
-                    for (ScriptValue[] scriptValueArray2 : list2) {
+                    for (ScriptValue scriptValue17 : list2) {
                         Object object3;
                         Object object4;
-                        builder.val("ocell", scriptValueArray2.length > 0 ? scriptValueArray2[0] : ScriptValue.NULL);
-                        ScriptValue scriptValue16 = ScriptFormula.addPolymorphic((ScriptValue)scriptContext.getClassOrVar("opp_considered"), (ScriptValue)ScriptValue.of((double)1.0));
-                        builder.val("opp_considered", scriptValue16);
-                        if (!(scriptValue16.asNum() <= 30.0)) continue;
-                        ScriptValue scriptValue17 = scriptContext.getClassOrVar("ocell");
-                        if (scriptValue17 != ScriptValue.NULL) {
-                            ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-                            arrayList.add(ScriptValue.of((double)0.0));
-                            object4 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue17, arrayList, (ScriptContext)scriptContext);
-                        } else {
-                            object4 = ScriptValue.NULL;
-                        }
-                        ScriptValue scriptValue18 = object4;
-                        builder.val("orow", scriptValue18);
+                        builder.val("ocell", scriptValue17);
+                        ScriptValue scriptValue18 = ScriptFormula.addPolymorphic((ScriptValue)scriptContext.getClassOrVar("opp_considered"), (ScriptValue)ScriptValue.of((double)1.0));
+                        builder.val("opp_considered", scriptValue18);
+                        if (!(scriptValue18.asNum() <= 30.0)) continue;
                         ScriptValue scriptValue19 = scriptContext.getClassOrVar("ocell");
                         if (scriptValue19 != ScriptValue.NULL) {
                             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
+                            arrayList.add(ScriptValue.of((double)0.0));
+                            object4 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue19, arrayList, (ScriptContext)scriptContext);
+                        } else {
+                            object4 = ScriptValue.NULL;
+                        }
+                        ScriptValue scriptValue20 = object4;
+                        builder.val("orow", scriptValue20);
+                        ScriptValue scriptValue21 = scriptContext.getClassOrVar("ocell");
+                        if (scriptValue21 != ScriptValue.NULL) {
+                            ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                             arrayList.add(ScriptValue.of((double)1.0));
-                            object3 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue19, arrayList, (ScriptContext)scriptContext);
+                            object3 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue21, arrayList, (ScriptContext)scriptContext);
                         } else {
                             object3 = ScriptValue.NULL;
                         }
-                        ScriptValue scriptValue20 = object3;
-                        builder.val("ocol", scriptValue20);
+                        ScriptValue scriptValue22 = object3;
+                        builder.val("ocol", scriptValue22);
                         ScriptContext.Builder builder8 = ScriptContext.builder().copyFrom(scriptContext);
                         ScriptContext.Builder builder9 = ScriptContext.builder().copyFrom(scriptContext);
-                        builder9.val("board", scriptValue12);
-                        builder9.val("row", scriptValue18);
-                        builder9.val("col", scriptValue20);
+                        builder9.val("board", scriptValue13);
+                        builder9.val("row", scriptValue20);
+                        builder9.val("col", scriptValue22);
                         builder9.val("color", scriptContext.getClassOrVar("opponent"));
                         builder8.val("offense", Gomoku.evaluateCell(builder9));
                         ScriptContext.Builder builder10 = ScriptContext.builder().copyFrom(scriptContext);
-                        builder10.val("board", scriptValue12);
-                        builder10.val("row", scriptValue18);
-                        builder10.val("col", scriptValue20);
+                        builder10.val("board", scriptValue13);
+                        builder10.val("row", scriptValue20);
+                        builder10.val("col", scriptValue22);
                         builder10.val("color", scriptContext.getClassOrVar("color"));
                         builder8.val("defense", Gomoku.evaluateCell(builder10));
-                        ScriptValue scriptValue21 = Gomoku.combinedScore(builder8);
-                        builder.val("reply", scriptValue21);
-                        if (!(scriptValue21.asNum() > scriptContext.getNum("opp_best"))) continue;
-                        ScriptValue scriptValue22 = scriptValue21;
-                        builder.val("opp_best", scriptValue22);
+                        ScriptValue scriptValue23 = Gomoku.combinedScore(builder8);
+                        builder.val("reply", scriptValue23);
+                        if (!(scriptValue23.asNum() > scriptContext.getNum("opp_best"))) continue;
+                        ScriptValue scriptValue24 = scriptValue23;
+                        builder.val("opp_best", scriptValue24);
                     }
                 }
-                double d7 = scriptValue10.asNum() - scriptContext.getNum("opp_best") * 0.9;
-                ScriptValue scriptValue23 = ScriptValue.of((double)d7);
-                builder.val("net", scriptValue23);
+                double d7 = scriptValue11.asNum() - scriptContext.getNum("opp_best") * 0.9;
+                ScriptValue scriptValue25 = ScriptValue.of((double)d7);
+                builder.val("net", scriptValue25);
                 if (!(d7 > scriptContext.getNum("best_net"))) continue;
                 double d8 = d7;
-                ScriptValue scriptValue24 = ScriptValue.of((double)d8);
-                builder.val("best_net", scriptValue24);
-                ScriptValue scriptValue25 = scriptValue7;
-                builder.val("best_r", scriptValue25);
-                ScriptValue scriptValue26 = scriptValue9;
-                builder.val("best_c", scriptValue26);
+                ScriptValue scriptValue26 = ScriptValue.of((double)d8);
+                builder.val("best_net", scriptValue26);
+                ScriptValue scriptValue27 = scriptValue8;
+                builder.val("best_r", scriptValue27);
+                ScriptValue scriptValue28 = scriptValue10;
+                builder.val("best_c", scriptValue28);
             }
         }
         if (scriptContext.getNum("best_r") < 0.0) {
@@ -2688,7 +2688,7 @@ public final class Gomoku {
         ScriptValue scriptValue9 = scriptContext.getClassOrVar("TaskManager");
         if (scriptValue9 != ScriptValue.NULL) {
             ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
-            arrayList.add(ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)ScriptValue.of((String)"games/gomoku.pf:bot_compute_move:"), (ScriptValue)scriptContext.getClassOrVar("gid")), (ScriptValue)ScriptValue.of((String)":")), (ScriptValue)scriptValue7), (ScriptValue)ScriptValue.of((String)":")), (ScriptValue)scriptValue8));
+            arrayList.add(ScriptValue.of((String)("games/gomoku.pf:bot_compute_move:" + scriptContext.getStr("gid") + ":" + scriptValue7.asStr() + ":" + scriptValue8.asStr())));
             arrayList.add(ScriptValue.of((double)0.0));
             v3 = PolyDispatch.bootstrapCall("memberCall", "schedule_async", (ScriptValue)scriptValue9, arrayList, (ScriptContext)scriptContext);
         } else {
@@ -2715,25 +2715,25 @@ public final class Gomoku {
             Object object;
             Object object2;
             ArrayList<ScriptValue> arrayList2 = new ArrayList<ScriptValue>();
-            ScriptValue scriptValue3 = ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)ScriptValue.of((String)"games/gomoku.pf:bot_apply_move:"), (ScriptValue)scriptContext.getClassOrVar("gid")), (ScriptValue)ScriptValue.of((String)":"));
-            ScriptValue scriptValue4 = scriptContext.getClassOrVar("move");
-            if (scriptValue4 != ScriptValue.NULL) {
+            StringBuilder stringBuilder = new StringBuilder().append("games/gomoku.pf:bot_apply_move:").append(scriptContext.getStr("gid")).append(":");
+            ScriptValue scriptValue3 = scriptContext.getClassOrVar("move");
+            if (scriptValue3 != ScriptValue.NULL) {
                 ArrayList<ScriptValue> arrayList3 = new ArrayList<ScriptValue>();
                 arrayList3.add(ScriptValue.of((double)0.0));
-                object2 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue4, arrayList3, (ScriptContext)scriptContext);
+                object2 = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue3, arrayList3, (ScriptContext)scriptContext);
             } else {
                 object2 = ScriptValue.NULL;
             }
-            ScriptValue scriptValue5 = ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)scriptValue3, (ScriptValue)object2), (ScriptValue)ScriptValue.of((String)":"));
-            ScriptValue scriptValue6 = scriptContext.getClassOrVar("move");
-            if (scriptValue6 != ScriptValue.NULL) {
+            StringBuilder stringBuilder2 = stringBuilder.append(object2.asStr()).append(":");
+            ScriptValue scriptValue4 = scriptContext.getClassOrVar("move");
+            if (scriptValue4 != ScriptValue.NULL) {
                 ArrayList<ScriptValue> arrayList4 = new ArrayList<ScriptValue>();
                 arrayList4.add(ScriptValue.of((double)1.0));
-                object = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue6, arrayList4, (ScriptContext)scriptContext);
+                object = PolyDispatch.bootstrapCall("memberCall", "get", (ScriptValue)scriptValue4, arrayList4, (ScriptContext)scriptContext);
             } else {
                 object = ScriptValue.NULL;
             }
-            arrayList2.add(ScriptFormula.addPolymorphic((ScriptValue)scriptValue5, (ScriptValue)object));
+            arrayList2.add(ScriptValue.of((String)stringBuilder2.append(object.asStr()).toString()));
             arrayList2.add(ScriptValue.of((double)0.0));
             v4 = PolyDispatch.bootstrapCall("memberCall", "schedule", (ScriptValue)scriptValue2, arrayList2, (ScriptContext)scriptContext);
         } else {

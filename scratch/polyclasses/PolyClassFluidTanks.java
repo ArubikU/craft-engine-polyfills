@@ -8,6 +8,7 @@
  *  dev.arubik.craftengine.script.PolyType$PropertyHandler
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler1
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler2
+ *  dev.arubik.craftengine.script.PolyType$TypedPropertyHandler
  *  dev.arubik.craftengine.script.ScriptValue
  *  dev.arubik.craftengine.script.ScriptValue$Obj
  */
@@ -36,8 +37,11 @@ public class PolyClassFluidTanks {
     private static volatile PolyType.TypedMethodHandler1 h$12;
     private static volatile PolyType.MethodHandler m$13;
     private static volatile PolyType.PropertyHandler p$14;
-    private static volatile PolyType.PropertyHandler p$15;
+    private static volatile PolyType.TypedPropertyHandler tp$15;
     private static volatile PolyType.PropertyHandler p$16;
+    private static volatile PolyType.TypedPropertyHandler tp$17;
+    private static volatile PolyType.PropertyHandler p$18;
+    private static volatile PolyType.TypedPropertyHandler tp$19;
 
     public static void refresh() {
         h$0 = (PolyType.TypedMethodHandler1)PolyClassRuntime.resolveTypedHandler((String)"FluidTanks", (String)"is_full", (String)"S:Z");
@@ -55,8 +59,11 @@ public class PolyClassFluidTanks {
         h$12 = (PolyType.TypedMethodHandler1)PolyClassRuntime.resolveTypedHandler((String)"FluidTanks", (String)"fraction", (String)"S:D");
         m$13 = PolyClassRuntime.resolveMethodHandler((String)"FluidTanks", (String)"fraction");
         p$14 = PolyClassRuntime.resolvePropertyHandler((String)"FluidTanks", (String)"total_level");
-        p$15 = PolyClassRuntime.resolvePropertyHandler((String)"FluidTanks", (String)"count");
-        p$16 = PolyClassRuntime.resolvePropertyHandler((String)"FluidTanks", (String)"total_capacity");
+        tp$15 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"FluidTanks", (String)"total_level", (String)"D");
+        p$16 = PolyClassRuntime.resolvePropertyHandler((String)"FluidTanks", (String)"count");
+        tp$17 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"FluidTanks", (String)"count", (String)"D");
+        p$18 = PolyClassRuntime.resolvePropertyHandler((String)"FluidTanks", (String)"total_capacity");
+        tp$19 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"FluidTanks", (String)"total_capacity", (String)"D");
     }
 
     public boolean tm$0_is_full(String string) {
@@ -164,18 +171,39 @@ public class PolyClassFluidTanks {
         return PolyClassRuntime.genericProperty((String)"FluidTanks", (String)"total_level", (Object)this.instance);
     }
 
-    public ScriptValue pg$15_count() {
-        if (p$15 != null) {
-            return p$15.get(this.instance);
+    public double tg$15_total_level() {
+        if (tp$15 != null) {
+            return (Double)tp$15.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"FluidTanks", (String)"total_level", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$16_count() {
+        if (p$16 != null) {
+            return p$16.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"FluidTanks", (String)"count", (Object)this.instance);
     }
 
-    public ScriptValue pg$16_total_capacity() {
-        if (p$16 != null) {
-            return p$16.get(this.instance);
+    public double tg$17_count() {
+        if (tp$17 != null) {
+            return (Double)tp$17.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"FluidTanks", (String)"count", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$18_total_capacity() {
+        if (p$18 != null) {
+            return p$18.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"FluidTanks", (String)"total_capacity", (Object)this.instance);
+    }
+
+    public double tg$19_total_capacity() {
+        if (tp$19 != null) {
+            return (Double)tp$19.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"FluidTanks", (String)"total_capacity", (Object)this.instance).asNum();
     }
 
     public PolyClassFluidTanks(Object object) {

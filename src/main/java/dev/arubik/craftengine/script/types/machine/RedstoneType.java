@@ -54,13 +54,13 @@ public final class RedstoneType {
     public static void register() {
         PolyTypeRegistry.define("Redstone")
             // --- Properties ---
-            .property("input", obj -> ScriptValue.of(ref(obj).input()))
-            .property("output", obj -> ScriptValue.of(ref(obj).output()))
+            .propertyTyped("input", TypeCodecs.DOUBLE, (RedstoneRef r) -> (double) r.input())
+            .propertyTyped("output", TypeCodecs.DOUBLE, (RedstoneRef r) -> (double) r.output())
             /** True when anything is powering this block. */
-            .property("powered", obj -> ScriptValue.of(ref(obj).input() > 0))
+            .propertyTyped("powered", TypeCodecs.BOOL, (RedstoneRef r) -> r.input() > 0)
             /** True when this block is emitting. */
-            .property("emitting", obj -> ScriptValue.of(ref(obj).output() > 0))
-            .property("max", obj -> ScriptValue.of(MachineRedstone.MAX_POWER))
+            .propertyTyped("emitting", TypeCodecs.BOOL, (RedstoneRef r) -> r.output() > 0)
+            .propertyTyped("max", TypeCodecs.DOUBLE, (RedstoneRef r) -> (double) MachineRedstone.MAX_POWER)
 
             // --- Methods ---
             .methodTyped1("set", TypeCodecs.DOUBLE, TypeCodecs.BOOL, false,
@@ -88,9 +88,5 @@ public final class RedstoneType {
     public static ScriptValue wrap(MachineType.MachineRef machine) {
         if (machine == null) return ScriptValue.NULL;
         return ScriptValue.ofObj("Redstone", new RedstoneRef(machine));
-    }
-
-    private static RedstoneRef ref(Object obj) {
-        return (RedstoneRef) obj;
     }
 }

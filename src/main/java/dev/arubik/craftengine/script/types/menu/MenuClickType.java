@@ -17,8 +17,8 @@ public final class MenuClickType {
 
     public static void register() {
         PolyTypeRegistry.define("MenuClick")
-            .property("slot", obj -> ScriptValue.of(inv(obj).slot()))
-            .property("click_type", obj -> ScriptValue.of(inv(obj).clickType()))
+            .propertyTyped("slot", TypeCodecs.DOUBLE, (MenuClickInvocation inv) -> (double) inv.slot())
+            .propertyTyped("click_type", TypeCodecs.STRING, (MenuClickInvocation inv) -> inv.clickType())
             .methodTyped1("get", TypeCodecs.STRING, TypeCodecs.RAW, ScriptValue.NULL,
                 (MenuClickInvocation inv, String key) -> inv.get(key))
             .methodTyped1("has", TypeCodecs.STRING, TypeCodecs.BOOL, false,
@@ -29,6 +29,4 @@ public final class MenuClickType {
         if (invocation == null) return ScriptValue.NULL;
         return ScriptValue.ofObj("MenuClick", invocation);
     }
-
-    private static MenuClickInvocation inv(Object obj) { return (MenuClickInvocation) obj; }
 }

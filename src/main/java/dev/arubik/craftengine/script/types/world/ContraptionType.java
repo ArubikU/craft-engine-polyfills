@@ -26,20 +26,20 @@ public final class ContraptionType {
 
     public static void register() {
         PolyTypeRegistry.define("Contraption")
-            .property("is_contraption", obj -> ScriptValue.of(obj != null))
-            .property("block_count",    obj -> ScriptValue.of(cl(obj).blockCount()))
+            .propertyTyped("is_contraption", TypeCodecs.BOOL,   (ContraptionLevel obj) -> obj != null)
+            .propertyTyped("block_count",    TypeCodecs.DOUBLE, (ContraptionLevel obj) -> (double) obj.blockCount())
             // Total mass of every block in the structure (WeightBlockBehavior.weightOf per block,
             // same figure the physics solver uses for inertia) — for a script that wants to scale
             // stress/su cost with how much the contraption is actually made of, e.g. a rotational
             // bearing motor charging su by weight instead of by a fixed rate.
-            .property("weight", obj -> {
-                try { return ScriptValue.of(MassModel.of(cl(obj)).totalMass()); }
-                catch (Throwable ignored) { return ScriptValue.of(0.0); }
+            .propertyTyped("weight", TypeCodecs.DOUBLE, (ContraptionLevel obj) -> {
+                try { return MassModel.of(obj).totalMass(); }
+                catch (Throwable ignored) { return 0.0; }
             })
-            .property("yaw",   obj -> ScriptValue.of(Math.toDegrees(cl(obj).realYawRadians())))
-            .property("pitch", obj -> ScriptValue.of(Math.toDegrees(cl(obj).realPitchRadians())))
-            .property("roll",  obj -> ScriptValue.of(Math.toDegrees(cl(obj).realRollRadians())))
-            .property("scale", obj -> ScriptValue.of(cl(obj).realScaleFactor()))
+            .propertyTyped("yaw",   TypeCodecs.DOUBLE, (ContraptionLevel obj) -> Math.toDegrees(obj.realYawRadians()))
+            .propertyTyped("pitch", TypeCodecs.DOUBLE, (ContraptionLevel obj) -> Math.toDegrees(obj.realPitchRadians()))
+            .propertyTyped("roll",  TypeCodecs.DOUBLE, (ContraptionLevel obj) -> Math.toDegrees(obj.realRollRadians()))
+            .propertyTyped("scale", TypeCodecs.DOUBLE, (ContraptionLevel obj) -> obj.realScaleFactor())
             // Three fallback sources, in order:
             //   1. a real PhysicsWorld body's velocity (linear/vehicle/phys bearing types);
             //   2. ContraptionState#lastDeltaX/Y/Z — the velocity ContraptionEngine#stepKinematics
@@ -56,58 +56,64 @@ public final class ContraptionType {
             // Without ALL three, a drill riding a minecart or a script-driven lift always saw 0/
             // false here regardless of how fast it was actually moving, identical to the
             // contraption.rpm gap set_spin() had for the rotational case.
-            .property("speed", obj -> {
+            .propertyTyped("speed", TypeCodecs.DOUBLE, (ContraptionLevel obj) -> {
                 try {
-                    var entity = ContraptionWorlds.entityOf(cl(obj)).orElse(null);
+                    var entity = ContraptionWorlds.entityOf(obj).orElse(null);
                     if (entity != null) {
-                        if (PhysicsWorld.isHeld(entity.state().id())) return ScriptValue.of(0.0);
+                        if (PhysicsWorld.isHeld(entity.state().id())) return 0.0;
                         var body = PhysicsWorld.bodyOf(entity.state().id());
-                        if (body != null) return ScriptValue.of(body.body.linearVelocity.length());
+                        if (body != null) return body.body.linearVelocity.length();
                         var st = entity.state();
                         double dx = st.lastDeltaX(), dy = st.lastDeltaY(), dz = st.lastDeltaZ();
                         double behaviorSpeed = Math.sqrt(dx * dx + dy * dy + dz * dz);
-                        if (behaviorSpeed > 0.001) return ScriptValue.of(behaviorSpeed);
+                        if (behaviorSpeed > 0.001) return behaviorSpeed;
                         long now = net.minecraft.server.MinecraftServer.getServer().getTickCount();
                         if (st.scriptMoveRecent(now, SCRIPT_MOVE_GRACE_TICKS)) {
                             double sx = st.lastScriptMoveSpeedX(), sy = st.lastScriptMoveSpeedY(), sz = st.lastScriptMoveSpeedZ();
-                            return ScriptValue.of(Math.sqrt(sx * sx + sy * sy + sz * sz));
+                            return Math.sqrt(sx * sx + sy * sy + sz * sz);
                         }
                     }
                 } catch (Throwable ignored) {}
-                return ScriptValue.of(0.0);
+                return 0.0;
             })
-            .property("rider_count", obj -> {
+            .propertyTyped("rider_count", TypeCodecs.DOUBLE, (ContraptionLevel obj) -> {
                 try {
-                    var entity = ContraptionWorlds.entityOf(cl(obj)).orElse(null);
-                    if (entity != null) return ScriptValue.of(entity.state().seatedRiders().size());
+                    var entity = ContraptionWorlds.entityOf(obj).orElse(null);
+                    if (entity != null) return (double) entity.state().seatedRiders().size();
                 } catch (Throwable ignored) {}
-                return ScriptValue.of(0.0);
+                return 0.0;
             })
-            .property("is_held", obj -> {
+            .propertyTyped("is_held", TypeCodecs.BOOL, (ContraptionLevel obj) -> {
                 try {
-                    var entity = ContraptionWorlds.entityOf(cl(obj)).orElse(null);
-                    if (entity != null) return ScriptValue.of(PhysicsWorld.isHeld(entity.state().id()));
+                    var entity = ContraptionWorlds.entityOf(obj).orElse(null);
+                    if (entity != null) return PhysicsWorld.isHeld(entity.state().id());
                 } catch (Throwable ignored) {}
-                return ScriptValue.of(false);
+                return false;
             })
-            .property("x", obj -> {
-                try { return ScriptValue.of(cl(obj).realWorldPositionOf(new BlockPos(0, 0, 0)).x); }
+            // x/y/z stay TypeCodecs.RAW rather than DOUBLE: each returns ScriptValue.NULL (not a
+            // number) when realWorldPositionOf throws, and DOUBLE has no way to express that —
+            // encoding a null Double would NPE instead. RAW.encode is identity, so behaviour is
+            // byte-for-byte unchanged.
+            .propertyTyped("x", TypeCodecs.RAW, (ContraptionLevel obj) -> {
+                try { return ScriptValue.of(obj.realWorldPositionOf(new BlockPos(0, 0, 0)).x); }
                 catch (Throwable ignored) { return ScriptValue.NULL; }
             })
-            .property("y", obj -> {
-                try { return ScriptValue.of(cl(obj).realWorldPositionOf(new BlockPos(0, 0, 0)).y); }
+            .propertyTyped("y", TypeCodecs.RAW, (ContraptionLevel obj) -> {
+                try { return ScriptValue.of(obj.realWorldPositionOf(new BlockPos(0, 0, 0)).y); }
                 catch (Throwable ignored) { return ScriptValue.NULL; }
             })
-            .property("z", obj -> {
-                try { return ScriptValue.of(cl(obj).realWorldPositionOf(new BlockPos(0, 0, 0)).z); }
+            .propertyTyped("z", TypeCodecs.RAW, (ContraptionLevel obj) -> {
+                try { return ScriptValue.of(obj.realWorldPositionOf(new BlockPos(0, 0, 0)).z); }
                 catch (Throwable ignored) { return ScriptValue.NULL; }
             })
-            .property("anchor_entity", obj -> {
+            // anchor_entity stays RAW: EntityType.wrap picks the PolyType name PER ENTITY
+            // ("Player"/"Animal"/"Mob"/...), so no single polyType name describes it.
+            .propertyTyped("anchor_entity", TypeCodecs.RAW, (ContraptionLevel obj) -> {
                 try {
-                    var cEntity = ContraptionWorlds.entityOf(cl(obj)).orElse(null);
+                    var cEntity = ContraptionWorlds.entityOf(obj).orElse(null);
                     if (cEntity != null) {
                         java.util.UUID anchorId = cEntity.state().anchorEntityId();
-                        if (anchorId != null && cl(obj).realLevel() instanceof net.minecraft.server.level.ServerLevel rl) {
+                        if (anchorId != null && obj.realLevel() instanceof net.minecraft.server.level.ServerLevel rl) {
                             net.minecraft.world.entity.Entity anchor = rl.getEntity(anchorId);
                             if (anchor != null) return EntityType.wrap(anchor);
                         }
@@ -115,12 +121,12 @@ public final class ContraptionType {
                 } catch (Throwable ignored) {}
                 return ScriptValue.NULL;
             })
-            .property("has_anchor_entity", obj -> {
+            .propertyTyped("has_anchor_entity", TypeCodecs.BOOL, (ContraptionLevel obj) -> {
                 try {
-                    var cEntity = ContraptionWorlds.entityOf(cl(obj)).orElse(null);
-                    if (cEntity != null) return ScriptValue.of(cEntity.state().anchorEntityId() != null);
+                    var cEntity = ContraptionWorlds.entityOf(obj).orElse(null);
+                    if (cEntity != null) return cEntity.state().anchorEntityId() != null;
                 } catch (Throwable ignored) {}
-                return ScriptValue.of(false);
+                return false;
             })
             // See Contraption.speed's javadoc above for the three fallback sources (physics body,
             // ContraptionState#lastDelta from ANY attached MovementBehavior — e.g. a minecart
@@ -150,24 +156,27 @@ public final class ContraptionType {
                     } catch (Throwable ignored) {}
                     return false;
                 })
-            .property("uuid", obj -> {
+            // STRING, not RAW: TypeCodecs.STRING.encode delegates to ScriptValue.of(String), which
+            // maps a null String to ScriptValue.NULL — exactly the old "no entity / threw" result.
+            .propertyTyped("uuid", TypeCodecs.STRING, (ContraptionLevel obj) -> {
                 try {
-                    var entity = ContraptionWorlds.entityOf(cl(obj)).orElse(null);
-                    if (entity != null) return ScriptValue.of(entity.state().id().toString());
+                    var entity = ContraptionWorlds.entityOf(obj).orElse(null);
+                    if (entity != null) return entity.state().id().toString();
                 } catch (Throwable ignored) {}
-                return ScriptValue.NULL;
+                return null;
             })
-            .property("real_world", obj -> {
-                if (cl(obj).realLevel() instanceof net.minecraft.server.level.ServerLevel rl)
-                    return WorldType.wrap(rl);
-                return ScriptValue.NULL;
-            })
-            .property("contraption_world", obj -> ScriptValue.ofObj("ContraptionWorld", cl(obj)))
+            // polyType("World", ...): PolyCodec.encode is ScriptValue.ofObj("World", v) for a
+            // non-null value and ScriptValue.NULL for null — identical to WorldType.wrap.
+            .propertyTyped("real_world", TypeCodecs.polyType("World", net.minecraft.server.level.ServerLevel.class),
+                (ContraptionLevel obj) -> obj.realLevel() instanceof net.minecraft.server.level.ServerLevel rl ? rl : null)
+            .propertyTyped("contraption_world", TypeCodecs.polyType("ContraptionWorld", ContraptionLevel.class),
+                (ContraptionLevel obj) -> obj)
             // Combined pushable STORAGE+OUTPUT container across the whole contraption — see
             // ContraptionContainerView's javadoc. Built fresh every access (cheap), so a script
             // calling e.g. Machine.contraption.container.push(item) every tick always sees the
             // contraption's current blocks/contents, not a stale snapshot from assembly time.
-            .property("container", obj -> ScriptValue.ofObj("ContraptionContainer", ContraptionContainerView.build(cl(obj))))
+            .propertyTyped("container", TypeCodecs.polyType("ContraptionContainer", ContraptionContainerView.class),
+                (ContraptionLevel obj) -> ContraptionContainerView.build(obj))
             // --- Motion control ---
             // Both teleport() and move() below no-op (but still return true, i.e. "acknowledged")
             // while Contraption.hold() is active — the same reasoning as set_spin()'s held check:
@@ -477,22 +486,24 @@ public final class ContraptionType {
                     } catch (Throwable ignored) {}
                     return false;
                 })
-            .property("rpm", obj -> {
+            .propertyTyped("rpm", TypeCodecs.DOUBLE, (ContraptionLevel obj) -> {
                 try {
-                    var entity = ContraptionWorlds.entityOf(cl(obj)).orElse(null);
-                    if (entity != null) return ScriptValue.of(entity.state().globalRpm());
+                    var entity = ContraptionWorlds.entityOf(obj).orElse(null);
+                    if (entity != null) return (double) entity.state().globalRpm();
                 } catch (Throwable ignored) {}
-                return ScriptValue.of(0.0);
+                return 0.0;
             })
-            .property("velocity", obj -> {
+            // polyType("Vector", Vector3d) — VectorType.wrap(x,y,z) is exactly
+            // ScriptValue.ofObj("Vector", new Vector3d(x,y,z)), and PolyCodec encodes null to NULL.
+            .propertyTyped("velocity", TypeCodecs.polyType("Vector", Vector3d.class), (ContraptionLevel obj) -> {
                 try {
-                    var entity = ContraptionWorlds.entityOf(cl(obj)).orElse(null);
+                    var entity = ContraptionWorlds.entityOf(obj).orElse(null);
                     if (entity != null) {
                         var body = PhysicsWorld.bodyOf(entity.state().id());
-                        if (body != null) return VectorType.wrap(body.body.linearVelocity.x, body.body.linearVelocity.y, body.body.linearVelocity.z);
+                        if (body != null) return new Vector3d(body.body.linearVelocity.x, body.body.linearVelocity.y, body.body.linearVelocity.z);
                     }
                 } catch (Throwable ignored) {}
-                return ScriptValue.NULL;
+                return null;
             })
             // real_direction(dx,dy,dz) → the real-world direction NAME ("north".."down") that a
             // LOCAL direction (e.g. Machine.facing_dx/dy/dz) currently points to once the
@@ -559,21 +570,27 @@ public final class ContraptionType {
             // forces each position's virtual chunk ready before reading it (see ensureChunkReady's
             // other callers, ContraptionInteractionListener/ContraptionFurnitureCapture) since
             // nothing else keeps them loaded for a periodic action_script to query later.
-            .methodTyped0("blocks", TypeCodecs.RAW,
+            // Return codec declares the element type: every element is an Obj("Block", BlockRef)
+            // exactly as BlockType.wrap builds it, so the handler hands back a real List<BlockRef>
+            // and TypeCodecs.listOf does the wrapping (no hand-built ScriptValue.Array here — that
+            // would double-wrap).
+            .methodTyped0("blocks", TypeCodecs.listOf("Block", BlockType.BlockRef.class),
                 (ContraptionLevel obj) -> {
                     try {
                         java.util.Set<BlockPos> positions = obj.localPositions();
                         net.minecraft.server.level.ServerLevel fakeLevel = obj.serverLevel();
-                        java.util.List<ScriptValue> list = new java.util.ArrayList<>(positions.size());
+                        java.util.List<BlockType.BlockRef> list = new java.util.ArrayList<>(positions.size());
                         for (BlockPos bp : positions) {
                             try { obj.ensureChunkReady(bp); } catch (Throwable ignored) {}
                             if (!obj.getBlockState(bp).isAir())
-                                list.add(BlockType.wrap(fakeLevel, bp));
+                                list.add(new BlockType.BlockRef(fakeLevel, bp));
                         }
-                        return new ScriptValue.Array(list);
-                    } catch (Throwable ignored) { return new ScriptValue.Array(java.util.List.of()); }
+                        return list;
+                    } catch (Throwable ignored) { return java.util.List.of(); }
                 })
             // entities() → Array of EntityType for entities inside the contraption's own level.
+            // NOT typed with listOf: EntityType.wrap picks the PolyType name PER ENTITY
+            // ("Player"/"Animal"/"Mob"/"ItemEntity"/...), so this is a mixed-PolyType array.
             .methodTyped0("entities", TypeCodecs.RAW,
                 (ContraptionLevel obj) -> {
                     try {
@@ -587,17 +604,16 @@ public final class ContraptionType {
 
         // ContraptionWorld extends World — full contraption-level API
         PolyTypeRegistry.define("ContraptionWorld", "World")
-            .property("is_contraption",  obj -> ScriptValue.of(true))
-            .property("block_count",     obj -> ScriptValue.of(cl(obj).blockCount()))
-            .property("yaw",   obj -> ScriptValue.of(Math.toDegrees(cl(obj).realYawRadians())))
-            .property("pitch", obj -> ScriptValue.of(Math.toDegrees(cl(obj).realPitchRadians())))
-            .property("roll",  obj -> ScriptValue.of(Math.toDegrees(cl(obj).realRollRadians())))
-            .property("scale", obj -> ScriptValue.of(cl(obj).realScaleFactor()))
-            .property("real_world", obj -> {
-                if (cl(obj).realLevel() instanceof net.minecraft.server.level.ServerLevel rl) return WorldType.wrap(rl);
-                return ScriptValue.NULL;
-            })
-            .property("container", obj -> ScriptValue.ofObj("ContraptionContainer", ContraptionContainerView.build(cl(obj))))
+            .propertyTyped("is_contraption",  TypeCodecs.BOOL,   (ContraptionLevel obj) -> true)
+            .propertyTyped("block_count",     TypeCodecs.DOUBLE, (ContraptionLevel obj) -> (double) obj.blockCount())
+            .propertyTyped("yaw",   TypeCodecs.DOUBLE, (ContraptionLevel obj) -> Math.toDegrees(obj.realYawRadians()))
+            .propertyTyped("pitch", TypeCodecs.DOUBLE, (ContraptionLevel obj) -> Math.toDegrees(obj.realPitchRadians()))
+            .propertyTyped("roll",  TypeCodecs.DOUBLE, (ContraptionLevel obj) -> Math.toDegrees(obj.realRollRadians()))
+            .propertyTyped("scale", TypeCodecs.DOUBLE, (ContraptionLevel obj) -> obj.realScaleFactor())
+            .propertyTyped("real_world", TypeCodecs.polyType("World", net.minecraft.server.level.ServerLevel.class),
+                (ContraptionLevel obj) -> obj.realLevel() instanceof net.minecraft.server.level.ServerLevel rl ? rl : null)
+            .propertyTyped("container", TypeCodecs.polyType("ContraptionContainer", ContraptionContainerView.class),
+                (ContraptionLevel obj) -> ContraptionContainerView.build(obj))
             // real_pos(x,y,z) → Vec3 in real-world coords
             .methodTyped3("real_pos", TypeCodecs.DOUBLE, TypeCodecs.DOUBLE, TypeCodecs.DOUBLE, TypeCodecs.RAW, ScriptValue.NULL,
                 (ContraptionLevel obj, Double xArg, Double yArg, Double zArg) -> {
@@ -665,21 +681,23 @@ public final class ContraptionType {
             // its virtual chunks, so by the time a periodic action_script queried them they'd gone
             // unloaded and getBlockState quietly answered air for every position. Force each
             // position's chunk ready before reading it, same as those other two callers already do.
-            .methodTyped0("blocks", TypeCodecs.RAW,
+            // Element type declared — see Contraption.blocks()'s identical note above.
+            .methodTyped0("blocks", TypeCodecs.listOf("Block", BlockType.BlockRef.class),
                 (ContraptionLevel obj) -> {
                     try {
                         java.util.Set<BlockPos> positions = obj.localPositions();
                         net.minecraft.server.level.ServerLevel fakeLevel = obj.serverLevel();
-                        java.util.List<ScriptValue> list = new java.util.ArrayList<>(positions.size());
+                        java.util.List<BlockType.BlockRef> list = new java.util.ArrayList<>(positions.size());
                         for (BlockPos bp : positions) {
                             try { obj.ensureChunkReady(bp); } catch (Throwable ignored) {}
                             if (!obj.getBlockState(bp).isAir())
-                                list.add(BlockType.wrap(fakeLevel, bp));
+                                list.add(new BlockType.BlockRef(fakeLevel, bp));
                         }
-                        return new ScriptValue.Array(list);
-                    } catch (Throwable ignored) { return new ScriptValue.Array(java.util.List.of()); }
+                        return list;
+                    } catch (Throwable ignored) { return java.util.List.of(); }
                 })
             // entities() → Array of EntityType for entities inside contraption
+            // NOT typed with listOf: mixed PolyTypes per entity — see Contraption.entities() above.
             .methodTyped0("entities", TypeCodecs.RAW,
                 (ContraptionLevel obj) -> {
                     try {
@@ -733,7 +751,10 @@ public final class ContraptionType {
         return ScriptValue.NULL;
     }
 
-    private static ContraptionLevel cl(Object obj) { return (ContraptionLevel) obj; }
+    // cl(Object) — the old `(ContraptionLevel) obj` cast helper — was removed: every property here
+    // is now propertyTyped with a ContraptionLevel instance parameter (and every method was already
+    // methodTypedN), so propertyTyped/methodTypedN's own generic cast performs the identical
+    // conversion and the helper became dead code.
 
     // holderKey(ScriptValue) — the old hold()/release() key-normalizer (a plain v.asStr()
     // passthrough) — was removed: both methods are now methodTyped1 with TypeCodecs.STRING, whose

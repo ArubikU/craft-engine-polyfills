@@ -5,7 +5,6 @@ import dev.arubik.craftengine.chainery.ChainEngine;
 import dev.arubik.craftengine.script.PolyTypeRegistry;
 import dev.arubik.craftengine.script.ScriptValue;
 import dev.arubik.craftengine.script.TypeCodecs;
-import dev.arubik.craftengine.script.types.primitive.VectorType;
 import org.bukkit.Bukkit;
 
 /**
@@ -16,22 +15,33 @@ public final class ChainType {
 
     private ChainType() {}
 
+    /** Return codec for the {@code a}/{@code b} endpoint properties — same fixed "Vector" name
+     *  {@code VectorType.wrap} boxes under. */
+    private static final dev.arubik.craftengine.script.PolyType.TypeCodec<org.joml.Vector3d> VECTOR_CODEC =
+            TypeCodecs.polyType("Vector", org.joml.Vector3d.class);
+
     public static void register() {
         PolyTypeRegistry.define("Chain")
-            .property("id", obj -> ScriptValue.of(chain(obj).id.toString()))
-            .property("blocks", obj -> ScriptValue.of(chain(obj).blocks))
-            .property("rest_length", obj -> ScriptValue.of(chain(obj).restLength()))
-            .property("world", obj -> {
-                org.bukkit.World w = Bukkit.getWorld(chain(obj).worldId);
-                return w != null ? ScriptValue.of(w.getName()) : ScriptValue.NULL;
+            .propertyTyped("id", TypeCodecs.STRING, (Chain c) -> c.id.toString())
+            // blocks is an int; ScriptValue.of(int) already widened to of(double), so DOUBLE here is
+            // the identical ScriptValue.Num.
+            .propertyTyped("blocks", TypeCodecs.DOUBLE, (Chain c) -> (double) c.blocks)
+            .propertyTyped("rest_length", TypeCodecs.DOUBLE, (Chain c) -> c.restLength())
+            // `world` is the world's NAME (a string), not a World object; STRING encodes a Java null
+            // back to ScriptValue.NULL, reproducing the old unknown-world branch exactly.
+            .propertyTyped("world", TypeCodecs.STRING, (Chain c) -> {
+                org.bukkit.World w = Bukkit.getWorld(c.worldId);
+                return w != null ? w.getName() : null;
             })
-            .property("a", obj -> {
-                net.minecraft.core.BlockPos p = chain(obj).a;
-                return VectorType.wrap(p.getX() + 0.5, p.getY() + 0.5, p.getZ() + 0.5);
+            // VectorType.wrap(x,y,z) is ofObj("Vector", new Vector3d(x,y,z)) — one FIXED PolyType
+            // name, so VECTOR_CODEC reproduces it exactly.
+            .propertyTyped("a", VECTOR_CODEC, (Chain c) -> {
+                net.minecraft.core.BlockPos p = c.a;
+                return new org.joml.Vector3d(p.getX() + 0.5, p.getY() + 0.5, p.getZ() + 0.5);
             })
-            .property("b", obj -> {
-                net.minecraft.core.BlockPos p = chain(obj).b;
-                return VectorType.wrap(p.getX() + 0.5, p.getY() + 0.5, p.getZ() + 0.5);
+            .propertyTyped("b", VECTOR_CODEC, (Chain c) -> {
+                net.minecraft.core.BlockPos p = c.b;
+                return new org.joml.Vector3d(p.getX() + 0.5, p.getY() + 0.5, p.getZ() + 0.5);
             })
             // Persistent per-chain data (int/string) — the same "0"/"" absent-default convention as
             // Machine/Server/World's *_flag family, backed directly by Chain's own typed NBT
@@ -53,5 +63,4 @@ public final class ChainType {
         return ScriptValue.ofObj("Chain", chain);
     }
 
-    private static Chain chain(Object obj) { return (Chain) obj; }
 }

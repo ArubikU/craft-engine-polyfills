@@ -157,6 +157,8 @@ final class PolyClassGenerator {
     private static final String METHOD_HANDLER = "dev/arubik/craftengine/script/PolyType$MethodHandler";
     private static final String PROPERTY_HANDLER = "dev/arubik/craftengine/script/PolyType$PropertyHandler";
     private static final String TYPE_CODEC = "dev/arubik/craftengine/script/PolyType$TypeCodec";
+    private static final String TYPED_PROPERTY_HANDLER =
+            "dev/arubik/craftengine/script/PolyType$TypedPropertyHandler";
     private static final String[] TYPED_HANDLER_IFACE = {
             "dev/arubik/craftengine/script/PolyType$TypedMethodHandler0",
             "dev/arubik/craftengine/script/PolyType$TypedMethodHandler1",
@@ -213,19 +215,28 @@ final class PolyClassGenerator {
      *  property). */
     record TypedMemberRef(String javaName, String descriptor, Kind[] argKinds, Kind retKind) {}
 
-    /** The generated wrapper for one {@link PolyType}. The three maps are keyed by SCRIPT-level
-     *  member name and give the generated Java method to call. */
+    /** The {@code argKinds} of a property: it takes none. Shared rather than allocated per member. */
+    private static final Kind[] NO_ARGS = new Kind[0];
+
     /**
-     * The generated wrapper for one {@link PolyType}. The three member maps are keyed by
-     * SCRIPT-level name and give the generated Java method to call; they include INHERITED members
-     * (pointing at the parent class's generated method, reachable by ordinary virtual dispatch)
-     * as well as this type's own.
+     * The generated wrapper for one {@link PolyType}. The member maps are keyed by SCRIPT-level
+     * name and give the generated Java method to call; they include INHERITED members (pointing at
+     * the parent class's generated method, reachable by ordinary virtual dispatch) as well as this
+     * type's own.
+     *
+     * <p>{@code properties} always has an entry for every readable property — the erased
+     * {@code ()ScriptValue} accessor. {@code typedProperties} has an entry only for those registered
+     * via {@code propertyTyped} with a scalar codec, and points at an ADDITIONAL accessor whose
+     * return type is the native one ({@code ()D}, {@code ()Z}, {@code ()Ljava/lang/String;}). A call
+     * site that wants a primitive should prefer it; both accessors are always present, so nothing has
+     * to fall back when a type is untyped.
      *
      * <p>{@code instanceOwner} is the internal name of the class that actually DECLARES the
      * {@code instance} field — the root of the generated hierarchy, since only it declares one.
      */
     record GeneratedPolyClass(String internalName, Map<String, TypedMemberRef> typedMethods,
                                Map<String, String> untypedMethods, Map<String, String> properties,
+                               Map<String, TypedMemberRef> typedProperties,
                                java.util.Set<String> memberSet, String instanceOwner) {}
 
     /**
@@ -312,10 +323,12 @@ final class PolyClassGenerator {
             Map<String, TypedMemberRef> typedRefs = new LinkedHashMap<>();
             Map<String, String> untypedRefs = new LinkedHashMap<>();
             Map<String, String> propRefs = new LinkedHashMap<>();
+            Map<String, TypedMemberRef> typedPropRefs = new LinkedHashMap<>();
             if (parent != null) {
                 typedRefs.putAll(parent.typedMethods());
                 untypedRefs.putAll(parent.untypedMethods());
                 propRefs.putAll(parent.properties());
+                typedPropRefs.putAll(parent.typedProperties());
             }
             int[] counter = {0};
 
@@ -408,6 +421,36 @@ final class PolyClassGenerator {
                 String javaName = "pg$" + idx + "_" + sanitize(propName);
                 emitPropertyMethod(cw, className, instanceOwner, javaName, typeName, propName, field);
                 propRefs.put(propName, javaName);
+
+                // A scalar propertyTyped registration ALSO gets a native-returning accessor, so a
+                // call site that wants a double/boolean/String never materialises the ScriptValue.
+                // RAW is skipped (its native return IS ScriptValue — the erased accessor already is
+                // that method) and so is LIST (the erased one encodes to an Array, which is what the
+                // one consumer of a property, dotPropertyGet, feeds onward anyway).
+                PolyType.TypedPropertyDescriptor tpd = type.resolveTypedProperty(propName);
+                Kind pKind = tpd != null ? kindOf(tpd.returnType()) : Kind.UNKNOWN;
+                if (pKind == Kind.DOUBLE || pKind == Kind.BOOL || pKind == Kind.STRING) {
+                    int tidx = counter[0]++;
+                    String tfield = "tp$" + tidx;
+                    cw.visitField(ACC_PRIVATE | ACC_STATIC | ACC_VOLATILE, tfield,
+                            "L" + TYPED_PROPERTY_HANDLER + ";", null, null).visitEnd();
+                    refresh.visitLdcInsn(typeName);
+                    refresh.visitLdcInsn(propName);
+                    refresh.visitLdcInsn(String.valueOf(PolyClassRuntime.kindChar(pKind)));
+                    refresh.visitMethodInsn(INVOKESTATIC, RUNTIME, "resolveTypedPropertyHandler",
+                            "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/Object;", false);
+                    refresh.visitTypeInsn(CHECKCAST, TYPED_PROPERTY_HANDLER);
+                    refresh.visitFieldInsn(PUTSTATIC, className, tfield, "L" + TYPED_PROPERTY_HANDLER + ";");
+
+                    String tjavaName = "tg$" + tidx + "_" + sanitize(propName);
+                    String tdesc = emitTypedPropertyMethod(cw, className, instanceOwner, tjavaName,
+                            typeName, propName, tfield, pKind);
+                    typedPropRefs.put(propName, new TypedMemberRef(tjavaName, tdesc, NO_ARGS, pKind));
+                } else {
+                    // An override that dropped the typed form must not leave the parent's native
+                    // accessor visible for this type — same shape-override rule the methods follow.
+                    typedPropRefs.remove(propName);
+                }
             }
 
             refresh.visitInsn(RETURN);
@@ -503,7 +546,7 @@ final class PolyClassGenerator {
                     + " (" + typedRefs.size() + " typed, " + untypedRefs.size() + " untyped, "
                     + propRefs.size() + " properties)");
             return new GeneratedPolyClass(className, Map.copyOf(typedRefs), Map.copyOf(untypedRefs),
-                    Map.copyOf(propRefs), memberSetOf(type), instanceOwner);
+                    Map.copyOf(propRefs), Map.copyOf(typedPropRefs), memberSetOf(type), instanceOwner);
         } catch (Throwable t) {
             LOG.log(Level.WARNING, t, () -> "[CEPolyfills] [JIT] failed to generate PolyClass for " + typeName
                     + " — falling back to generic dispatch");
@@ -724,6 +767,64 @@ final class PolyClassGenerator {
         mv.visitInsn(ARETURN);
         mv.visitMaxs(0, 0);
         mv.visitEnd();
+    }
+
+    /**
+     * {@code double name()} / {@code boolean name()} / {@code String name()} — a property read that
+     * hands back the native value the {@code propertyTyped} handler produced, never boxing it into a
+     * {@code ScriptValue} on the way.
+     *
+     * <p>The slow path is the same {@link PolyClassRuntime#genericProperty} the erased accessor takes,
+     * coerced to this method's return type. It is reached when the handler field is null, which
+     * {@link PolyClassRuntime#resolveTypedPropertyHandler} arranges whenever the CURRENT registration
+     * no longer has this property's return kind — so a re-registration that changes a property from
+     * DOUBLE to STRING degrades to the generic read rather than to a {@code ClassCastException}.
+     */
+    private static String emitTypedPropertyMethod(ClassWriter cw, String className, String instanceOwner,
+                                                   String javaName, String typeName, String scriptName,
+                                                   String field, Kind kind) {
+        String desc = "()" + jvmType(kind);
+        MethodVisitor mv = cw.visitMethod(ACC_PUBLIC, javaName, desc, null, null);
+        mv.visitCode();
+        Label slow = new Label();
+        mv.visitFieldInsn(GETSTATIC, className, field, "L" + TYPED_PROPERTY_HANDLER + ";");
+        mv.visitJumpInsn(IFNULL, slow);
+        mv.visitFieldInsn(GETSTATIC, className, field, "L" + TYPED_PROPERTY_HANDLER + ";");
+        mv.visitVarInsn(ALOAD, 0);
+        mv.visitFieldInsn(GETFIELD, instanceOwner, "instance", "Ljava/lang/Object;");
+        mv.visitMethodInsn(INVOKEINTERFACE, TYPED_PROPERTY_HANDLER, "get",
+                "(Ljava/lang/Object;)Ljava/lang/Object;", true);
+        switch (kind) {
+            case DOUBLE -> {
+                mv.visitTypeInsn(CHECKCAST, "java/lang/Double");
+                mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Double", "doubleValue", "()D", false);
+            }
+            case BOOL -> {
+                mv.visitTypeInsn(CHECKCAST, "java/lang/Boolean");
+                mv.visitMethodInsn(INVOKEVIRTUAL, "java/lang/Boolean", "booleanValue", "()Z", false);
+            }
+            case STRING -> mv.visitTypeInsn(CHECKCAST, STRING);
+            default -> throw new IllegalStateException("emitTypedPropertyMethod(" + kind + ")");
+        }
+        mv.visitInsn(returnOpcode(kind));
+
+        mv.visitLabel(slow);
+        mv.visitLdcInsn(typeName);
+        mv.visitLdcInsn(scriptName);
+        mv.visitVarInsn(ALOAD, 0);
+        mv.visitFieldInsn(GETFIELD, instanceOwner, "instance", "Ljava/lang/Object;");
+        mv.visitMethodInsn(INVOKESTATIC, RUNTIME, "genericProperty",
+                "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;)L" + VALUE + ";", false);
+        switch (kind) {
+            case DOUBLE -> mv.visitMethodInsn(INVOKEINTERFACE, VALUE, "asNum", "()D", true);
+            case BOOL -> mv.visitMethodInsn(INVOKEINTERFACE, VALUE, "asBool", "()Z", true);
+            case STRING -> mv.visitMethodInsn(INVOKEINTERFACE, VALUE, "asStr", "()Ljava/lang/String;", true);
+            default -> throw new IllegalStateException("emitTypedPropertyMethod(" + kind + ")");
+        }
+        mv.visitInsn(returnOpcode(kind));
+        mv.visitMaxs(0, 0);
+        mv.visitEnd();
+        return desc;
     }
 
     /** Debug aid: with {@code -Dcraftengine.polyclass.dump=<dir>}, writes every generated class to

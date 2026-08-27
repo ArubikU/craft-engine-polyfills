@@ -5,6 +5,7 @@
  *  dev.arubik.craftengine.script.PolyClass
  *  dev.arubik.craftengine.script.PolyClassRuntime
  *  dev.arubik.craftengine.script.PolyType$PropertyHandler
+ *  dev.arubik.craftengine.script.PolyType$TypedPropertyHandler
  *  dev.arubik.craftengine.script.ScriptValue
  *  dev.arubik.craftengine.script.ScriptValue$Obj
  */
@@ -20,14 +21,20 @@ public class PolyClassBrewEvent
 extends PolyClassEvent {
     private static volatile PolyType.PropertyHandler p$0;
     private static volatile PolyType.PropertyHandler p$1;
-    private static volatile PolyType.PropertyHandler p$2;
+    private static volatile PolyType.TypedPropertyHandler tp$2;
     private static volatile PolyType.PropertyHandler p$3;
+    private static volatile PolyType.TypedPropertyHandler tp$4;
+    private static volatile PolyType.PropertyHandler p$5;
+    private static volatile PolyType.TypedPropertyHandler tp$6;
 
     public static void refresh() {
         p$0 = PolyClassRuntime.resolvePropertyHandler((String)"BrewEvent", (String)"ingredient");
         p$1 = PolyClassRuntime.resolvePropertyHandler((String)"BrewEvent", (String)"fuel_level");
-        p$2 = PolyClassRuntime.resolvePropertyHandler((String)"BrewEvent", (String)"results_count");
-        p$3 = PolyClassRuntime.resolvePropertyHandler((String)"BrewEvent", (String)"contents_size");
+        tp$2 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"BrewEvent", (String)"fuel_level", (String)"D");
+        p$3 = PolyClassRuntime.resolvePropertyHandler((String)"BrewEvent", (String)"results_count");
+        tp$4 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"BrewEvent", (String)"results_count", (String)"D");
+        p$5 = PolyClassRuntime.resolvePropertyHandler((String)"BrewEvent", (String)"contents_size");
+        tp$6 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"BrewEvent", (String)"contents_size", (String)"D");
     }
 
     public ScriptValue pg$0_ingredient() {
@@ -44,18 +51,39 @@ extends PolyClassEvent {
         return PolyClassRuntime.genericProperty((String)"BrewEvent", (String)"fuel_level", (Object)this.instance);
     }
 
-    public ScriptValue pg$2_results_count() {
-        if (p$2 != null) {
-            return p$2.get(this.instance);
+    public double tg$2_fuel_level() {
+        if (tp$2 != null) {
+            return (Double)tp$2.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"BrewEvent", (String)"fuel_level", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$3_results_count() {
+        if (p$3 != null) {
+            return p$3.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"BrewEvent", (String)"results_count", (Object)this.instance);
     }
 
-    public ScriptValue pg$3_contents_size() {
-        if (p$3 != null) {
-            return p$3.get(this.instance);
+    public double tg$4_results_count() {
+        if (tp$4 != null) {
+            return (Double)tp$4.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"BrewEvent", (String)"results_count", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$5_contents_size() {
+        if (p$5 != null) {
+            return p$5.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"BrewEvent", (String)"contents_size", (Object)this.instance);
+    }
+
+    public double tg$6_contents_size() {
+        if (tp$6 != null) {
+            return (Double)tp$6.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"BrewEvent", (String)"contents_size", (Object)this.instance).asNum();
     }
 
     public PolyClassBrewEvent(Object object) {

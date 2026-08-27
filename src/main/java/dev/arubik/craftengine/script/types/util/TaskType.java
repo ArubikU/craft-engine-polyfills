@@ -18,7 +18,7 @@ public final class TaskType {
 
     public static void register() {
         PolyTypeRegistry.define("Task")
-            .property("id", obj -> ScriptValue.of(inv(obj).id()))
+            .propertyTyped("id", TypeCodecs.STRING, (TaskInvocation inv) -> inv.id())
             .methodTyped1("get", TypeCodecs.STRING, TypeCodecs.RAW, ScriptValue.NULL,
                 (TaskInvocation inv, String key) -> inv.get(key))
             .methodTyped1("has", TypeCodecs.STRING, TypeCodecs.BOOL, false,
@@ -29,6 +29,4 @@ public final class TaskType {
         if (invocation == null) return ScriptValue.NULL;
         return ScriptValue.ofObj("Task", invocation);
     }
-
-    private static TaskInvocation inv(Object obj) { return (TaskInvocation) obj; }
 }

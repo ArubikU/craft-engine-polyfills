@@ -3,6 +3,7 @@ package dev.arubik.craftengine.script.types.primitive;
 import dev.arubik.craftengine.script.PolyTypeRegistry;
 import dev.arubik.craftengine.script.ScriptBuiltins;
 import dev.arubik.craftengine.script.ScriptValue;
+import dev.arubik.craftengine.script.TypeCodecs;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Rarity;
@@ -113,6 +114,19 @@ public final class DataComponentTypes {
     // =========================================================================
     // INDIVIDUAL TYPE REGISTRATIONS
     // =========================================================================
+    //
+    // Scalar properties below use propertyTyped with DOUBLE/BOOL/STRING — behaviour-identical to the
+    // old untyped form (ScriptValue.of(int) already widened to of(double), and STRING encodes a Java
+    // null back to ScriptValue.NULL exactly like the old catch branches returned it).
+    //
+    // The lambdas deliberately keep `Object obj` plus the ORIGINAL cast inside the try block: moving
+    // the cast into the handler's declared parameter type would make a wrong-typed instance throw a
+    // ClassCastException outside the try, losing the fallback value every one of these relies on.
+    //
+    // None of the ScriptValue.Array sites below can declare an element type with
+    // TypeCodecs.listOf: every element is a raw scalar (double, bool, string) rather than an
+    // Obj-wrapped PolyType instance, which is the only shape listOf can encode or decode — so those
+    // stay on the untyped .property API.
 
     private static void registerCustomModelData() {
         PolyTypeRegistry.define("CustomModelDataComponent")
@@ -136,10 +150,10 @@ public final class DataComponentTypes {
                     return new ScriptValue.Array(cmd.colors().stream().map(c -> (ScriptValue) ScriptValue.of(c.intValue())).toList()); }
                 catch (Throwable e) { return new ScriptValue.Array(List.of()); }
             })
-            .property("value",   obj -> {
+            .propertyTyped("value", TypeCodecs.DOUBLE, (Object obj) -> {
                 try { var cmd = (net.minecraft.world.item.component.CustomModelData) obj;
-                    return cmd.floats().isEmpty() ? ScriptValue.of(0) : ScriptValue.of(cmd.floats().get(0).doubleValue()); }
-                catch (Throwable e) { return ScriptValue.of(0); }
+                    return cmd.floats().isEmpty() ? 0.0 : cmd.floats().get(0).doubleValue(); }
+                catch (Throwable e) { return 0.0; }
             });
     }
 
@@ -152,83 +166,86 @@ public final class DataComponentTypes {
                         .map(c -> (ScriptValue) ScriptValue.of(c.getString())).toList());
                 } catch (Throwable e) { return new ScriptValue.Array(List.of()); }
             })
-            .property("size", obj -> {
-                try { return ScriptValue.of(((net.minecraft.world.item.component.ItemLore) obj).lines().size()); }
-                catch (Throwable e) { return ScriptValue.of(0); }
+            .propertyTyped("size", TypeCodecs.DOUBLE, (Object obj) -> {
+                try { return (double) ((net.minecraft.world.item.component.ItemLore) obj).lines().size(); }
+                catch (Throwable e) { return 0.0; }
             });
     }
 
     private static void registerCustomData() {
         PolyTypeRegistry.define("CustomDataComponent")
+            // Stays untyped: NbtDataType.wrap returns NULL for a null tag, and TypeCodecs.polyType
+            // would need the handler to hand back a CompoundTag — doable, but the null-tag branch is
+            // exactly what wrap() already encodes, so there is nothing to gain and a shape to lose.
             .property("nbt", obj -> {
                 try { return NbtDataType.wrap(((net.minecraft.world.item.component.CustomData) obj).copyTag()); }
                 catch (Throwable e) { return ScriptValue.NULL; }
             })
-            .property("is_empty", obj -> {
-                try { return ScriptValue.of(((net.minecraft.world.item.component.CustomData) obj).isEmpty()); }
-                catch (Throwable e) { return ScriptValue.of(true); }
+            .propertyTyped("is_empty", TypeCodecs.BOOL, (Object obj) -> {
+                try { return ((net.minecraft.world.item.component.CustomData) obj).isEmpty(); }
+                catch (Throwable e) { return true; }
             });
     }
 
     private static void registerCustomName() {
         PolyTypeRegistry.define("CustomNameComponent")
-            .property("text",  obj -> { try { return ScriptValue.of(((net.minecraft.network.chat.Component) obj).getString()); } catch (Throwable e) { return ScriptValue.NULL; } })
-            .property("value", obj -> { try { return ScriptValue.of(((net.minecraft.network.chat.Component) obj).getString()); } catch (Throwable e) { return ScriptValue.NULL; } });
+            .propertyTyped("text",  TypeCodecs.STRING, (Object obj) -> { try { return ((net.minecraft.network.chat.Component) obj).getString(); } catch (Throwable e) { return null; } })
+            .propertyTyped("value", TypeCodecs.STRING, (Object obj) -> { try { return ((net.minecraft.network.chat.Component) obj).getString(); } catch (Throwable e) { return null; } });
     }
 
     private static void registerItemName() {
         PolyTypeRegistry.define("ItemNameComponent")
-            .property("text",  obj -> { try { return ScriptValue.of(((net.minecraft.network.chat.Component) obj).getString()); } catch (Throwable e) { return ScriptValue.NULL; } })
-            .property("value", obj -> { try { return ScriptValue.of(((net.minecraft.network.chat.Component) obj).getString()); } catch (Throwable e) { return ScriptValue.NULL; } });
+            .propertyTyped("text",  TypeCodecs.STRING, (Object obj) -> { try { return ((net.minecraft.network.chat.Component) obj).getString(); } catch (Throwable e) { return null; } })
+            .propertyTyped("value", TypeCodecs.STRING, (Object obj) -> { try { return ((net.minecraft.network.chat.Component) obj).getString(); } catch (Throwable e) { return null; } });
     }
 
     private static void registerItemModel() {
         PolyTypeRegistry.define("ItemModelComponent")
-            .property("id",    obj -> { try { return ScriptValue.of(obj.toString()); } catch (Throwable e) { return ScriptValue.NULL; } })
-            .property("value", obj -> { try { return ScriptValue.of(obj.toString()); } catch (Throwable e) { return ScriptValue.NULL; } });
+            .propertyTyped("id",    TypeCodecs.STRING, (Object obj) -> { try { return obj.toString(); } catch (Throwable e) { return null; } })
+            .propertyTyped("value", TypeCodecs.STRING, (Object obj) -> { try { return obj.toString(); } catch (Throwable e) { return null; } });
     }
 
     private static void registerRarity() {
         PolyTypeRegistry.define("RarityComponent")
-            .property("value", obj -> { try { return ScriptValue.of(((Rarity) obj).name().toLowerCase(Locale.ROOT)); } catch (Throwable e) { return ScriptValue.of("common"); } });
+            .propertyTyped("value", TypeCodecs.STRING, (Object obj) -> { try { return ((Rarity) obj).name().toLowerCase(Locale.ROOT); } catch (Throwable e) { return "common"; } });
     }
 
     private static void registerDamage() {
         PolyTypeRegistry.define("DamageComponent")
-            .property("value", obj -> { try { return ScriptValue.of(((Integer) obj).doubleValue()); } catch (Throwable e) { return ScriptValue.of(0); } });
+            .propertyTyped("value", TypeCodecs.DOUBLE, (Object obj) -> { try { return ((Integer) obj).doubleValue(); } catch (Throwable e) { return 0.0; } });
     }
 
     private static void registerMaxDamage() {
         PolyTypeRegistry.define("MaxDamageComponent")
-            .property("value", obj -> { try { return ScriptValue.of(((Integer) obj).doubleValue()); } catch (Throwable e) { return ScriptValue.of(0); } });
+            .propertyTyped("value", TypeCodecs.DOUBLE, (Object obj) -> { try { return ((Integer) obj).doubleValue(); } catch (Throwable e) { return 0.0; } });
     }
 
     private static void registerMaxStackSize() {
         PolyTypeRegistry.define("MaxStackSizeComponent")
-            .property("value", obj -> { try { return ScriptValue.of(((Integer) obj).doubleValue()); } catch (Throwable e) { return ScriptValue.of(64); } });
+            .propertyTyped("value", TypeCodecs.DOUBLE, (Object obj) -> { try { return ((Integer) obj).doubleValue(); } catch (Throwable e) { return 64.0; } });
     }
 
     private static void registerRepairCost() {
         PolyTypeRegistry.define("RepairCostComponent")
-            .property("value", obj -> { try { return ScriptValue.of(((Integer) obj).doubleValue()); } catch (Throwable e) { return ScriptValue.of(0); } });
+            .propertyTyped("value", TypeCodecs.DOUBLE, (Object obj) -> { try { return ((Integer) obj).doubleValue(); } catch (Throwable e) { return 0.0; } });
     }
 
     private static void registerOminousBottleAmplifier() {
         PolyTypeRegistry.define("OminousBottleAmplifierComponent")
-            .property("value", obj -> { try { return ScriptValue.of(((Integer) obj).doubleValue()); } catch (Throwable e) { return ScriptValue.of(0); } });
+            .propertyTyped("value", TypeCodecs.DOUBLE, (Object obj) -> { try { return ((Integer) obj).doubleValue(); } catch (Throwable e) { return 0.0; } });
     }
 
     private static void registerEnchantmentGlintOverride() {
         PolyTypeRegistry.define("EnchantmentGlintOverrideComponent")
-            .property("value", obj -> { try { return ScriptValue.of((Boolean) obj); } catch (Throwable e) { return ScriptValue.of(false); } });
+            // `b != null && b` rather than a bare cast: the old form unboxed inside the try, so a null
+            // instance produced `false` via the catch. Returning a null Boolean here would instead NPE
+            // in the codec's encode, outside the try.
+            .propertyTyped("value", TypeCodecs.BOOL, (Object obj) -> { try { Boolean b = (Boolean) obj; return b != null && b; } catch (Throwable e) { return false; } });
     }
 
     private static void registerEnchantments() {
         PolyTypeRegistry.define("EnchantmentsComponent")
-            .property("show_in_tooltip", obj -> {
-                try { return ScriptValue.of(true); }
-                catch (Throwable e) { return ScriptValue.of(true); }
-            })
+            .propertyTyped("show_in_tooltip", TypeCodecs.BOOL, (Object obj) -> true)
             .property("entries", obj -> {
                 try {
                     var enc = (net.minecraft.world.item.enchantment.ItemEnchantments) obj;
@@ -238,19 +255,16 @@ public final class DataComponentTypes {
                     return new ScriptValue.Array(ls);
                 } catch (Throwable e) { return new ScriptValue.Array(List.of()); }
             })
-            .property("size", obj -> {
-                try { return ScriptValue.of(((net.minecraft.world.item.enchantment.ItemEnchantments) obj).size()); }
-                catch (Throwable e) { return ScriptValue.of(0); }
+            .propertyTyped("size", TypeCodecs.DOUBLE, (Object obj) -> {
+                try { return (double) ((net.minecraft.world.item.enchantment.ItemEnchantments) obj).size(); }
+                catch (Throwable e) { return 0.0; }
             });
     }
 
     private static void registerStoredEnchantments() {
         // Same structure as EnchantmentsComponent but different type name
         PolyTypeRegistry.define("StoredEnchantmentsComponent")
-            .property("show_in_tooltip", obj -> {
-                try { return ScriptValue.of(true); }
-                catch (Throwable e) { return ScriptValue.of(true); }
-            })
+            .propertyTyped("show_in_tooltip", TypeCodecs.BOOL, (Object obj) -> true)
             .property("entries", obj -> {
                 try {
                     var enc = (net.minecraft.world.item.enchantment.ItemEnchantments) obj;
@@ -264,251 +278,252 @@ public final class DataComponentTypes {
 
     private static void registerFood() {
         PolyTypeRegistry.define("FoodComponent")
-            .property("nutrition",      obj -> { try { return ScriptValue.of(((net.minecraft.world.food.FoodProperties) obj).nutrition()); } catch (Throwable e) { return ScriptValue.of(0); } })
-            .property("saturation",     obj -> { try { return ScriptValue.of(((net.minecraft.world.food.FoodProperties) obj).saturation()); } catch (Throwable e) { return ScriptValue.of(0); } })
-            .property("can_always_eat", obj -> { try { return ScriptValue.of(((net.minecraft.world.food.FoodProperties) obj).canAlwaysEat()); } catch (Throwable e) { return ScriptValue.of(false); } });
+            .propertyTyped("nutrition",      TypeCodecs.DOUBLE, (Object obj) -> { try { return (double) ((net.minecraft.world.food.FoodProperties) obj).nutrition(); } catch (Throwable e) { return 0.0; } })
+            .propertyTyped("saturation",     TypeCodecs.DOUBLE, (Object obj) -> { try { return (double) ((net.minecraft.world.food.FoodProperties) obj).saturation(); } catch (Throwable e) { return 0.0; } })
+            .propertyTyped("can_always_eat", TypeCodecs.BOOL,   (Object obj) -> { try { return ((net.minecraft.world.food.FoodProperties) obj).canAlwaysEat(); } catch (Throwable e) { return false; } });
     }
 
     private static void registerTool() {
         PolyTypeRegistry.define("ToolComponent")
-            .property("default_mining_speed", obj -> { try { return ScriptValue.of(((net.minecraft.world.item.component.Tool) obj).defaultMiningSpeed()); } catch (Throwable e) { return ScriptValue.of(1.0); } })
-            .property("damage_per_block",     obj -> { try { return ScriptValue.of(((net.minecraft.world.item.component.Tool) obj).damagePerBlock()); } catch (Throwable e) { return ScriptValue.of(0); } })
-            .property("rules_count",          obj -> { try { return ScriptValue.of(((net.minecraft.world.item.component.Tool) obj).rules().size()); } catch (Throwable e) { return ScriptValue.of(0); } });
+            .propertyTyped("default_mining_speed", TypeCodecs.DOUBLE, (Object obj) -> { try { return (double) ((net.minecraft.world.item.component.Tool) obj).defaultMiningSpeed(); } catch (Throwable e) { return 1.0; } })
+            .propertyTyped("damage_per_block",     TypeCodecs.DOUBLE, (Object obj) -> { try { return (double) ((net.minecraft.world.item.component.Tool) obj).damagePerBlock(); } catch (Throwable e) { return 0.0; } })
+            .propertyTyped("rules_count",          TypeCodecs.DOUBLE, (Object obj) -> { try { return (double) ((net.minecraft.world.item.component.Tool) obj).rules().size(); } catch (Throwable e) { return 0.0; } });
     }
 
     private static void registerEnchantable() {
         PolyTypeRegistry.define("EnchantableComponent")
-            .property("value", obj -> { try { return ScriptValue.of(((net.minecraft.world.item.enchantment.Enchantable) obj).value()); } catch (Throwable e) { return ScriptValue.of(0); } });
+            .propertyTyped("value", TypeCodecs.DOUBLE, (Object obj) -> { try { return (double) ((net.minecraft.world.item.enchantment.Enchantable) obj).value(); } catch (Throwable e) { return 0.0; } });
     }
 
     private static void registerDyedColor() {
         PolyTypeRegistry.define("DyedColorComponent")
-            .property("rgb",              obj -> { try { return ScriptValue.of(((net.minecraft.world.item.component.DyedItemColor) obj).rgb()); } catch (Throwable e) { return ScriptValue.of(0); } });
+            .propertyTyped("rgb",              TypeCodecs.DOUBLE, (Object obj) -> { try { return (double) ((net.minecraft.world.item.component.DyedItemColor) obj).rgb(); } catch (Throwable e) { return 0.0; } });
     }
 
     private static void registerMapColor() {
         PolyTypeRegistry.define("MapColorComponent")
-            .property("rgb",   obj -> { try { return ScriptValue.of(((net.minecraft.world.item.component.MapItemColor) obj).rgb()); } catch (Throwable e) { return ScriptValue.of(0); } })
-            .property("value", obj -> { try { return ScriptValue.of(((net.minecraft.world.item.component.MapItemColor) obj).rgb()); } catch (Throwable e) { return ScriptValue.of(0); } });
+            .propertyTyped("rgb",   TypeCodecs.DOUBLE, (Object obj) -> { try { return (double) ((net.minecraft.world.item.component.MapItemColor) obj).rgb(); } catch (Throwable e) { return 0.0; } })
+            .propertyTyped("value", TypeCodecs.DOUBLE, (Object obj) -> { try { return (double) ((net.minecraft.world.item.component.MapItemColor) obj).rgb(); } catch (Throwable e) { return 0.0; } });
     }
 
     private static void registerTooltipDisplay() {
         PolyTypeRegistry.define("TooltipDisplayComponent")
-            .property("hide_tooltip", obj -> { try { return ScriptValue.of(((net.minecraft.world.item.component.TooltipDisplay) obj).hideTooltip()); } catch (Throwable e) { return ScriptValue.of(false); } });
+            .propertyTyped("hide_tooltip", TypeCodecs.BOOL, (Object obj) -> { try { return ((net.minecraft.world.item.component.TooltipDisplay) obj).hideTooltip(); } catch (Throwable e) { return false; } });
     }
 
     private static void registerUnbreakable() {
         PolyTypeRegistry.define("UnbreakableComponent")
-            .property("show_in_tooltip", obj -> { try { return ScriptValue.of(true); } catch (Throwable e) { return ScriptValue.of(true); } });
+            .propertyTyped("show_in_tooltip", TypeCodecs.BOOL, (Object obj) -> true);
     }
 
     private static void registerDamageResistant() {
         PolyTypeRegistry.define("DamageResistantComponent")
-            .property("types", obj -> { try { return ScriptValue.of(((net.minecraft.world.item.component.DamageResistant) obj).types().location().toString()); } catch (Throwable e) { return ScriptValue.NULL; } });
+            .propertyTyped("types", TypeCodecs.STRING, (Object obj) -> { try { return ((net.minecraft.world.item.component.DamageResistant) obj).types().location().toString(); } catch (Throwable e) { return null; } });
     }
 
     private static void registerAttributeModifiers() {
         PolyTypeRegistry.define("AttributeModifiersComponent")
-            .property("show_in_tooltip", obj -> { try { return ScriptValue.of(true); } catch (Throwable e) { return ScriptValue.of(true); } })
-            .property("size", obj -> { try { return ScriptValue.of(((net.minecraft.world.item.component.ItemAttributeModifiers) obj).modifiers().size()); } catch (Throwable e) { return ScriptValue.of(0); } });
+            .propertyTyped("show_in_tooltip", TypeCodecs.BOOL, (Object obj) -> true)
+            .propertyTyped("size", TypeCodecs.DOUBLE, (Object obj) -> { try { return (double) ((net.minecraft.world.item.component.ItemAttributeModifiers) obj).modifiers().size(); } catch (Throwable e) { return 0.0; } });
     }
 
     private static void registerPotionContents() {
         PolyTypeRegistry.define("PotionContentsComponent")
+            // Left untyped: this one is genuinely two shapes — a number when the color is present,
+            // NULL when it isn't. No scalar codec can express that (rule: mixed-shape stays untyped).
             .property("custom_color", obj -> {
                 try {
                     var pc = (net.minecraft.world.item.alchemy.PotionContents) obj;
                     return pc.customColor().isPresent() ? ScriptValue.of(pc.customColor().orElse(-1)) : ScriptValue.NULL;
                 } catch (Throwable e) { return ScriptValue.NULL; }
             })
-            .property("potion", obj -> {
+            // Typed despite the absent case: STRING encodes a Java null straight back to
+            // ScriptValue.NULL, which is exactly what the old branch returned.
+            .propertyTyped("potion", TypeCodecs.STRING, (Object obj) -> {
                 try {
                     var pc = (net.minecraft.world.item.alchemy.PotionContents) obj;
                     return pc.potion().isPresent()
-                        ? ScriptValue.of(pc.potion().get().unwrapKey().map(Object::toString).orElse("?"))
-                        : ScriptValue.NULL;
-                } catch (Throwable e) { return ScriptValue.NULL; }
+                        ? pc.potion().get().unwrapKey().map(Object::toString).orElse("?")
+                        : null;
+                } catch (Throwable e) { return null; }
             });
     }
 
     private static void registerPotionDurationScale() {
         PolyTypeRegistry.define("PotionDurationScaleComponent")
-            .property("value", obj -> { try { return ScriptValue.of(((Float) obj).doubleValue()); } catch (Throwable e) { return ScriptValue.of(1.0); } });
+            .propertyTyped("value", TypeCodecs.DOUBLE, (Object obj) -> { try { return ((Float) obj).doubleValue(); } catch (Throwable e) { return 1.0; } });
     }
 
     private static void registerBundleContents() {
         PolyTypeRegistry.define("BundleContentsComponent")
-            .property("size",   obj -> { try { return ScriptValue.of(((net.minecraft.world.item.component.BundleContents) obj).size()); } catch (Throwable e) { return ScriptValue.of(0); } })
-            .property("weight", obj -> { try { return ScriptValue.of(((net.minecraft.world.item.component.BundleContents) obj).weight().doubleValue()); } catch (Throwable e) { return ScriptValue.of(0.0); } });
+            .propertyTyped("size",   TypeCodecs.DOUBLE, (Object obj) -> { try { return (double) ((net.minecraft.world.item.component.BundleContents) obj).size(); } catch (Throwable e) { return 0.0; } })
+            .propertyTyped("weight", TypeCodecs.DOUBLE, (Object obj) -> { try { return ((net.minecraft.world.item.component.BundleContents) obj).weight().doubleValue(); } catch (Throwable e) { return 0.0; } });
     }
 
     private static void registerContainer() {
         PolyTypeRegistry.define("ContainerComponent")
-            .property("size", obj -> {
-                try { return ScriptValue.of(((net.minecraft.world.item.component.ItemContainerContents) obj).items.stream().filter(i -> !i.isEmpty()).count()); }
-                catch (Throwable e) { return ScriptValue.of(0); }
+            .propertyTyped("size", TypeCodecs.DOUBLE, (Object obj) -> {
+                try { return (double) ((net.minecraft.world.item.component.ItemContainerContents) obj).items.stream().filter(i -> !i.isEmpty()).count(); }
+                catch (Throwable e) { return 0.0; }
             });
     }
 
     private static void registerChargedProjectiles() {
         PolyTypeRegistry.define("ChargedProjectilesComponent")
-            .property("size",     obj -> { try { return ScriptValue.of(((net.minecraft.world.item.component.ChargedProjectiles) obj).getItems().size()); } catch (Throwable e) { return ScriptValue.of(0); } })
-            .property("is_empty", obj -> { try { return ScriptValue.of(((net.minecraft.world.item.component.ChargedProjectiles) obj).getItems().isEmpty()); } catch (Throwable e) { return ScriptValue.of(true); } });
+            .propertyTyped("size",     TypeCodecs.DOUBLE, (Object obj) -> { try { return (double) ((net.minecraft.world.item.component.ChargedProjectiles) obj).getItems().size(); } catch (Throwable e) { return 0.0; } })
+            .propertyTyped("is_empty", TypeCodecs.BOOL,   (Object obj) -> { try { return ((net.minecraft.world.item.component.ChargedProjectiles) obj).getItems().isEmpty(); } catch (Throwable e) { return true; } });
     }
 
     private static void registerWrittenBookContent() {
         PolyTypeRegistry.define("WrittenBookContentComponent")
-            .property("title",      obj -> { try { return ScriptValue.of(((net.minecraft.world.item.component.WrittenBookContent) obj).title().raw()); } catch (Throwable e) { return ScriptValue.NULL; } })
-            .property("author",     obj -> { try { return ScriptValue.of(((net.minecraft.world.item.component.WrittenBookContent) obj).author()); } catch (Throwable e) { return ScriptValue.NULL; } })
-            .property("generation", obj -> { try { return ScriptValue.of(((net.minecraft.world.item.component.WrittenBookContent) obj).generation()); } catch (Throwable e) { return ScriptValue.of(0); } })
-            .property("page_count", obj -> { try { return ScriptValue.of(((net.minecraft.world.item.component.WrittenBookContent) obj).pages().size()); } catch (Throwable e) { return ScriptValue.of(0); } });
+            .propertyTyped("title",      TypeCodecs.STRING, (Object obj) -> { try { return ((net.minecraft.world.item.component.WrittenBookContent) obj).title().raw(); } catch (Throwable e) { return null; } })
+            .propertyTyped("author",     TypeCodecs.STRING, (Object obj) -> { try { return ((net.minecraft.world.item.component.WrittenBookContent) obj).author(); } catch (Throwable e) { return null; } })
+            .propertyTyped("generation", TypeCodecs.DOUBLE, (Object obj) -> { try { return (double) ((net.minecraft.world.item.component.WrittenBookContent) obj).generation(); } catch (Throwable e) { return 0.0; } })
+            .propertyTyped("page_count", TypeCodecs.DOUBLE, (Object obj) -> { try { return (double) ((net.minecraft.world.item.component.WrittenBookContent) obj).pages().size(); } catch (Throwable e) { return 0.0; } });
     }
 
     private static void registerWritableBookContent() {
         PolyTypeRegistry.define("WritableBookContentComponent")
-            .property("page_count", obj -> { try { return ScriptValue.of(((net.minecraft.world.item.component.WritableBookContent) obj).pages().size()); } catch (Throwable e) { return ScriptValue.of(0); } });
+            .propertyTyped("page_count", TypeCodecs.DOUBLE, (Object obj) -> { try { return (double) ((net.minecraft.world.item.component.WritableBookContent) obj).pages().size(); } catch (Throwable e) { return 0.0; } });
     }
 
     private static void registerProfile() {
         PolyTypeRegistry.define("ProfileComponent")
-            .property("name", obj -> {
+            .propertyTyped("name", TypeCodecs.STRING, (Object obj) -> {
                 try {
                     var p = (net.minecraft.world.item.component.ResolvableProfile) obj;
-                    return p.name().isPresent() ? ScriptValue.of(p.name().get()) : ScriptValue.NULL;
-                } catch (Throwable e) { return ScriptValue.NULL; }
+                    return p.name().isPresent() ? p.name().get() : null;
+                } catch (Throwable e) { return null; }
             });
     }
 
     private static void registerNoteBlockSound() {
         PolyTypeRegistry.define("NoteBlockSoundComponent")
-            .property("id",    obj -> { try { return ScriptValue.of(obj.toString()); } catch (Throwable e) { return ScriptValue.NULL; } })
-            .property("value", obj -> { try { return ScriptValue.of(obj.toString()); } catch (Throwable e) { return ScriptValue.NULL; } });
+            .propertyTyped("id",    TypeCodecs.STRING, (Object obj) -> { try { return obj.toString(); } catch (Throwable e) { return null; } })
+            .propertyTyped("value", TypeCodecs.STRING, (Object obj) -> { try { return obj.toString(); } catch (Throwable e) { return null; } });
     }
 
     private static void registerBaseColor() {
         PolyTypeRegistry.define("BaseColorComponent")
-            .property("value", obj -> { try { return ScriptValue.of(obj.toString().toLowerCase(Locale.ROOT)); } catch (Throwable e) { return ScriptValue.NULL; } });
+            .propertyTyped("value", TypeCodecs.STRING, (Object obj) -> { try { return obj.toString().toLowerCase(Locale.ROOT); } catch (Throwable e) { return null; } });
     }
 
     private static void registerBannerPatterns() {
         PolyTypeRegistry.define("BannerPatternsComponent")
-            .property("size", obj -> {
-                try { return ScriptValue.of(((net.minecraft.world.level.block.entity.BannerPatternLayers) obj).layers().size()); }
-                catch (Throwable e) { return ScriptValue.of(0); }
+            .propertyTyped("size", TypeCodecs.DOUBLE, (Object obj) -> {
+                try { return (double) ((net.minecraft.world.level.block.entity.BannerPatternLayers) obj).layers().size(); }
+                catch (Throwable e) { return 0.0; }
             });
     }
 
     private static void registerMapId() {
         PolyTypeRegistry.define("MapIdComponent")
-            .property("id",    obj -> { try { return ScriptValue.of(((net.minecraft.world.level.saveddata.maps.MapId) obj).id()); } catch (Throwable e) { return ScriptValue.of(0); } })
-            .property("value", obj -> { try { return ScriptValue.of(((net.minecraft.world.level.saveddata.maps.MapId) obj).id()); } catch (Throwable e) { return ScriptValue.of(0); } });
+            .propertyTyped("id",    TypeCodecs.DOUBLE, (Object obj) -> { try { return (double) ((net.minecraft.world.level.saveddata.maps.MapId) obj).id(); } catch (Throwable e) { return 0.0; } })
+            .propertyTyped("value", TypeCodecs.DOUBLE, (Object obj) -> { try { return (double) ((net.minecraft.world.level.saveddata.maps.MapId) obj).id(); } catch (Throwable e) { return 0.0; } });
     }
 
     private static void registerFireworkExplosion() {
         PolyTypeRegistry.define("FireworkExplosionComponent")
-            .property("has_trail",   obj -> { try { return ScriptValue.of(((net.minecraft.world.item.component.FireworkExplosion) obj).hasTrail()); } catch (Throwable e) { return ScriptValue.of(false); } })
-            .property("has_twinkle", obj -> { try { return ScriptValue.of(((net.minecraft.world.item.component.FireworkExplosion) obj).hasTwinkle()); } catch (Throwable e) { return ScriptValue.of(false); } })
-            .property("shape",       obj -> { try { return ScriptValue.of(((net.minecraft.world.item.component.FireworkExplosion) obj).shape().getSerializedName()); } catch (Throwable e) { return ScriptValue.NULL; } });
+            .propertyTyped("has_trail",   TypeCodecs.BOOL,   (Object obj) -> { try { return ((net.minecraft.world.item.component.FireworkExplosion) obj).hasTrail(); } catch (Throwable e) { return false; } })
+            .propertyTyped("has_twinkle", TypeCodecs.BOOL,   (Object obj) -> { try { return ((net.minecraft.world.item.component.FireworkExplosion) obj).hasTwinkle(); } catch (Throwable e) { return false; } })
+            .propertyTyped("shape",       TypeCodecs.STRING, (Object obj) -> { try { return ((net.minecraft.world.item.component.FireworkExplosion) obj).shape().getSerializedName(); } catch (Throwable e) { return null; } });
     }
 
     private static void registerFireworks() {
         PolyTypeRegistry.define("FireworksComponent")
-            .property("flight_duration", obj -> { try { return ScriptValue.of(((net.minecraft.world.item.component.Fireworks) obj).flightDuration()); } catch (Throwable e) { return ScriptValue.of(1); } })
-            .property("explosion_count", obj -> { try { return ScriptValue.of(((net.minecraft.world.item.component.Fireworks) obj).explosions().size()); } catch (Throwable e) { return ScriptValue.of(0); } });
+            .propertyTyped("flight_duration", TypeCodecs.DOUBLE, (Object obj) -> { try { return (double) ((net.minecraft.world.item.component.Fireworks) obj).flightDuration(); } catch (Throwable e) { return 1.0; } })
+            .propertyTyped("explosion_count", TypeCodecs.DOUBLE, (Object obj) -> { try { return (double) ((net.minecraft.world.item.component.Fireworks) obj).explosions().size(); } catch (Throwable e) { return 0.0; } });
     }
 
     private static void registerTrim() {
         PolyTypeRegistry.define("TrimComponent")
-            .property("material", obj -> {
+            .propertyTyped("material", TypeCodecs.STRING, (Object obj) -> {
                 try {
                     var t = (net.minecraft.world.item.equipment.trim.ArmorTrim) obj;
-                    return ScriptValue.of(t.material().unwrapKey().map(Object::toString).orElse("?"));
-                } catch (Throwable e) { return ScriptValue.NULL; }
+                    return t.material().unwrapKey().map(Object::toString).orElse("?");
+                } catch (Throwable e) { return null; }
             })
-            .property("pattern", obj -> {
+            .propertyTyped("pattern", TypeCodecs.STRING, (Object obj) -> {
                 try {
                     var t = (net.minecraft.world.item.equipment.trim.ArmorTrim) obj;
-                    return ScriptValue.of(t.pattern().unwrapKey().map(Object::toString).orElse("?"));
-                } catch (Throwable e) { return ScriptValue.NULL; }
+                    return t.pattern().unwrapKey().map(Object::toString).orElse("?");
+                } catch (Throwable e) { return null; }
             });
     }
 
     private static void registerLodestoneTracker() {
         PolyTypeRegistry.define("LodestoneTrackerComponent")
-            .property("tracked", obj -> { try { return ScriptValue.of(((net.minecraft.world.item.component.LodestoneTracker) obj).tracked()); } catch (Throwable e) { return ScriptValue.of(false); } })
-            .property("has_target", obj -> { try { return ScriptValue.of(((net.minecraft.world.item.component.LodestoneTracker) obj).target().isPresent()); } catch (Throwable e) { return ScriptValue.of(false); } });
+            .propertyTyped("tracked",    TypeCodecs.BOOL, (Object obj) -> { try { return ((net.minecraft.world.item.component.LodestoneTracker) obj).tracked(); } catch (Throwable e) { return false; } })
+            .propertyTyped("has_target", TypeCodecs.BOOL, (Object obj) -> { try { return ((net.minecraft.world.item.component.LodestoneTracker) obj).target().isPresent(); } catch (Throwable e) { return false; } });
     }
 
     private static void registerSuspiciousStewEffects() {
         PolyTypeRegistry.define("SuspiciousStewEffectsComponent")
-            .property("size", obj -> { try { return ScriptValue.of(((net.minecraft.world.item.component.SuspiciousStewEffects) obj).effects().size()); } catch (Throwable e) { return ScriptValue.of(0); } });
+            .propertyTyped("size", TypeCodecs.DOUBLE, (Object obj) -> { try { return (double) ((net.minecraft.world.item.component.SuspiciousStewEffects) obj).effects().size(); } catch (Throwable e) { return 0.0; } });
     }
 
     private static void registerBees() {
         PolyTypeRegistry.define("BeesComponent")
-            .property("size", obj -> {
-                try { return ScriptValue.of(((java.util.List<?>) obj).size()); }
-                catch (Throwable e) { return ScriptValue.of(0); }
+            .propertyTyped("size", TypeCodecs.DOUBLE, (Object obj) -> {
+                try { return (double) ((java.util.List<?>) obj).size(); }
+                catch (Throwable e) { return 0.0; }
             });
     }
 
     private static void registerBlockState() {
         PolyTypeRegistry.define("BlockStateComponent")
-            .property("size", obj -> {
-                try { return ScriptValue.of(((net.minecraft.world.item.component.BlockItemStateProperties) obj).properties().size()); }
-                catch (Throwable e) { return ScriptValue.of(0); }
+            .propertyTyped("size", TypeCodecs.DOUBLE, (Object obj) -> {
+                try { return (double) ((net.minecraft.world.item.component.BlockItemStateProperties) obj).properties().size(); }
+                catch (Throwable e) { return 0.0; }
             });
     }
 
     private static void registerInstrument() {
         PolyTypeRegistry.define("InstrumentComponent")
-            .property("id", obj -> {
+            .propertyTyped("id", TypeCodecs.STRING, (Object obj) -> {
                 try {
                     var h = (net.minecraft.core.Holder<?>) obj;
-                    return ScriptValue.of(h.unwrapKey().map(Object::toString).orElse("?"));
-                } catch (Throwable e) { return ScriptValue.NULL; }
+                    return h.unwrapKey().map(Object::toString).orElse("?");
+                } catch (Throwable e) { return null; }
             });
     }
 
     private static void registerJukeboxPlayable() {
         PolyTypeRegistry.define("JukeboxPlayableComponent")
-            .property("show_in_tooltip", obj -> {
-                try { return ScriptValue.of(true); }
-                catch (Throwable e) { return ScriptValue.of(true); }
-            });
+            .propertyTyped("show_in_tooltip", TypeCodecs.BOOL, (Object obj) -> true);
     }
 
     private static void registerDeathProtection() {
         PolyTypeRegistry.define("DeathProtectionComponent")
-            .property("effect_count", obj -> {
-                try { return ScriptValue.of(((net.minecraft.world.item.component.DeathProtection) obj).deathEffects().size()); }
-                catch (Throwable e) { return ScriptValue.of(0); }
+            .propertyTyped("effect_count", TypeCodecs.DOUBLE, (Object obj) -> {
+                try { return (double) ((net.minecraft.world.item.component.DeathProtection) obj).deathEffects().size(); }
+                catch (Throwable e) { return 0.0; }
             });
     }
 
     private static void registerPotDecorations() {
         PolyTypeRegistry.define("PotDecorationsComponent")
-            .property("size", obj -> { try { return ScriptValue.of(4); } catch (Throwable e) { return ScriptValue.of(4); } });
+            .propertyTyped("size", TypeCodecs.DOUBLE, (Object obj) -> 4.0);
     }
 
     private static void registerMapDecorations() {
         PolyTypeRegistry.define("MapDecorationsComponent")
-            .property("size", obj -> {
-                try { return ScriptValue.of(((net.minecraft.world.item.component.MapDecorations) obj).decorations().size()); }
-                catch (Throwable e) { return ScriptValue.of(0); }
+            .propertyTyped("size", TypeCodecs.DOUBLE, (Object obj) -> {
+                try { return (double) ((net.minecraft.world.item.component.MapDecorations) obj).decorations().size(); }
+                catch (Throwable e) { return 0.0; }
             });
     }
 
     private static void registerTropicalFishPattern() {
         PolyTypeRegistry.define("TropicalFishPatternComponent")
-            .property("value", obj -> { try { return ScriptValue.of(obj.toString()); } catch (Throwable e) { return ScriptValue.NULL; } });
+            .propertyTyped("value", TypeCodecs.STRING, (Object obj) -> { try { return obj.toString(); } catch (Throwable e) { return null; } });
     }
 
     private static void registerRecipes() {
         PolyTypeRegistry.define("RecipesComponent")
-            .property("size", obj -> {
-                try { return ScriptValue.of(((java.util.List<?>) obj).size()); }
-                catch (Throwable e) { return ScriptValue.of(0); }
+            .propertyTyped("size", TypeCodecs.DOUBLE, (Object obj) -> {
+                try { return (double) ((java.util.List<?>) obj).size(); }
+                catch (Throwable e) { return 0.0; }
             });
     }
 
@@ -516,14 +531,14 @@ public final class DataComponentTypes {
     @SuppressWarnings("rawtypes")
     private static void registerMarker(String typeName, net.minecraft.core.component.DataComponentType type) {
         PolyTypeRegistry.define(typeName)
-            .property("value", obj -> ScriptValue.of(true));
+            .propertyTyped("value", TypeCodecs.BOOL, (Object obj) -> true);
     }
 
     /** Register any component as opaque (just wraps the NMS value, limited property access). */
     @SuppressWarnings("rawtypes")
     private static void registerOpaque(String typeName, net.minecraft.core.component.DataComponentType type) {
         PolyTypeRegistry.define(typeName)
-            .property("value", obj -> ScriptValue.of(obj != null));
+            .propertyTyped("value", TypeCodecs.BOOL, (Object obj) -> obj != null);
     }
 
     /** Try to register an opaque component by field name (handles missing 1.21.4+ components). */

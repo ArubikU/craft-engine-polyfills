@@ -8,6 +8,7 @@
  *  dev.arubik.craftengine.script.PolyType$PropertyHandler
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler1
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler2
+ *  dev.arubik.craftengine.script.PolyType$TypedPropertyHandler
  *  dev.arubik.craftengine.script.ScriptValue
  *  dev.arubik.craftengine.script.ScriptValue$Obj
  */
@@ -27,6 +28,7 @@ extends PolyClassEvent {
     private static volatile PolyType.TypedMethodHandler1 h$2;
     private static volatile PolyType.MethodHandler m$3;
     private static volatile PolyType.PropertyHandler p$4;
+    private static volatile PolyType.TypedPropertyHandler tp$5;
 
     public static void refresh() {
         h$0 = (PolyType.TypedMethodHandler2)PolyClassRuntime.resolveTypedHandler((String)"BukkitEvent", (String)"set", (String)"SR:Z");
@@ -34,6 +36,7 @@ extends PolyClassEvent {
         h$2 = (PolyType.TypedMethodHandler1)PolyClassRuntime.resolveTypedHandler((String)"BukkitEvent", (String)"get", (String)"S:R");
         m$3 = PolyClassRuntime.resolveMethodHandler((String)"BukkitEvent", (String)"get");
         p$4 = PolyClassRuntime.resolvePropertyHandler((String)"BukkitEvent", (String)"class_name");
+        tp$5 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"BukkitEvent", (String)"class_name", (String)"S");
     }
 
     public boolean tm$0_set(String string, ScriptValue scriptValue) {
@@ -69,6 +72,13 @@ extends PolyClassEvent {
             return p$4.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"BukkitEvent", (String)"class_name", (Object)this.instance);
+    }
+
+    public String tg$5_class_name() {
+        if (tp$5 != null) {
+            return (String)tp$5.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"BukkitEvent", (String)"class_name", (Object)this.instance).asStr();
     }
 
     public PolyClassBukkitEvent(Object object) {

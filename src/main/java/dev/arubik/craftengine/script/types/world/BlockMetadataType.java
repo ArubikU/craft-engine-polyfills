@@ -3,7 +3,6 @@ package dev.arubik.craftengine.script.types.world;
 import dev.arubik.craftengine.script.PolyTypeRegistry;
 import dev.arubik.craftengine.script.ScriptValue;
 import dev.arubik.craftengine.script.TypeCodecs;
-import dev.arubik.craftengine.script.types.primitive.VectorType;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.Container;
@@ -39,51 +38,68 @@ public final class BlockMetadataType {
     private BlockMetadataType() {}
 
     public static void register() {
+        // ref(obj) here IS a plain `(MetaRef) obj` cast, so MetaRef can be the typed instance
+        // parameter directly (unlike BlockType.ref, which also converts a MachineRef).
         PolyTypeRegistry.define("BlockMetadata")
-            .property("type", obj -> ScriptValue.of(kindOf(ref(obj).be())))
-            .property("pos", obj -> {
-                BlockPos p = ref(obj).pos();
-                return VectorType.wrap(p.getX(), p.getY(), p.getZ());
+            .propertyTyped("type", TypeCodecs.STRING, (MetaRef m) -> kindOf(m.be()))
+            // polyType("Vector", Vector3d) — VectorType.wrap(x,y,z) is exactly
+            // ScriptValue.ofObj("Vector", new Vector3d(x,y,z)).
+            .propertyTyped("pos", TypeCodecs.polyType("Vector", org.joml.Vector3d.class), (MetaRef m) -> {
+                BlockPos p = m.pos();
+                return new org.joml.Vector3d(p.getX(), p.getY(), p.getZ());
             })
-            .property("custom_name", obj -> {
-                if (ref(obj).be() instanceof Nameable n && n.hasCustomName()) {
-                    return ScriptValue.of(n.getName().getString());
+            // STRING, not RAW: TypeCodecs.STRING.encode delegates to ScriptValue.of(String), which
+            // maps a null String to ScriptValue.NULL — exactly the old "not Nameable / no custom
+            // name" branch.
+            .propertyTyped("custom_name", TypeCodecs.STRING, (MetaRef m) -> {
+                if (m.be() instanceof Nameable n && n.hasCustomName()) {
+                    return n.getName().getString();
                 }
-                return ScriptValue.NULL;
+                return null;
             });
 
         PolyTypeRegistry.define("SignSide")
-            .property("lines", obj -> {
-                SignText text = ((SignSideRef) obj).text();
+            // RAW, not listOf: the elements are raw strings, not Objs of any PolyType — a list
+            // codec would silently drop every one of them.
+            .propertyTyped("lines", TypeCodecs.RAW, (SignSideRef ref) -> {
+                SignText text = ref.text();
                 List<ScriptValue> lines = new ArrayList<>(4);
                 for (int i = 0; i < 4; i++) {
                     lines.add(ScriptValue.of(text.getMessage(i, false).getString()));
                 }
                 return new ScriptValue.Array(lines);
             })
-            .property("color", obj -> ScriptValue.of(((SignSideRef) obj).text().getColor().getName()))
-            .property("glowing", obj -> ScriptValue.of(((SignSideRef) obj).text().hasGlowingText()));
+            .propertyTyped("color", TypeCodecs.STRING, (SignSideRef ref) -> ref.text().getColor().getName())
+            .propertyTyped("glowing", TypeCodecs.BOOL, (SignSideRef ref) -> ref.text().hasGlowingText());
 
         PolyTypeRegistry.define("SignMetadata", "BlockMetadata")
-            .property("front", obj -> {
-                if (ref(obj).be() instanceof SignBlockEntity sign) {
-                    return ScriptValue.ofObj("SignSide", new SignSideRef(sign.getFrontText()));
+            // polyType("SignSide", SignSideRef) — PolyCodec.encode is ofObj("SignSide", v) for a
+            // non-null value and NULL for null, matching the old non-sign branch exactly.
+            .propertyTyped("front", TypeCodecs.polyType("SignSide", SignSideRef.class), (MetaRef m) -> {
+                if (m.be() instanceof SignBlockEntity sign) {
+                    return new SignSideRef(sign.getFrontText());
                 }
-                return ScriptValue.NULL;
+                return null;
             })
-            .property("back", obj -> {
-                if (ref(obj).be() instanceof SignBlockEntity sign) {
-                    return ScriptValue.ofObj("SignSide", new SignSideRef(sign.getBackText()));
+            .propertyTyped("back", TypeCodecs.polyType("SignSide", SignSideRef.class), (MetaRef m) -> {
+                if (m.be() instanceof SignBlockEntity sign) {
+                    return new SignSideRef(sign.getBackText());
                 }
-                return ScriptValue.NULL;
+                return null;
             })
-            .property("is_waxed", obj -> ScriptValue.of(
-                    ref(obj).be() instanceof SignBlockEntity sign && sign.isWaxed()));
+            .propertyTyped("is_waxed", TypeCodecs.BOOL, (MetaRef m) ->
+                    m.be() instanceof SignBlockEntity sign && sign.isWaxed());
 
         PolyTypeRegistry.define("ContainerMetadata", "BlockMetadata")
-            .property("size", obj -> ScriptValue.of(container(obj) != null ? container(obj).getContainerSize() : 0))
-            .property("is_empty", obj -> ScriptValue.of(container(obj) == null || container(obj).isEmpty()))
-            .property("items", obj -> {
+            // container(obj) does more than a plain cast (it re-derives the Container view from the
+            // block entity each call, see below), so it is still called explicitly inside these
+            // bodies — the typed instance parameter is just the MetaRef ref(obj) would have cast to.
+            .propertyTyped("size", TypeCodecs.DOUBLE, (MetaRef m) ->
+                    (double) (container(m) != null ? container(m).getContainerSize() : 0))
+            .propertyTyped("is_empty", TypeCodecs.BOOL, (MetaRef m) -> container(m) == null || container(m).isEmpty())
+            // RAW, not listOf: the elements are ScriptValue.Item (ScriptValue.ofItem), a distinct
+            // ScriptValue variant rather than an Obj of any PolyType — listOf would re-box them.
+            .propertyTyped("items", TypeCodecs.RAW, (MetaRef obj) -> {
                 Container c = container(obj);
                 List<ScriptValue> items = new ArrayList<>(c != null ? c.getContainerSize() : 0);
                 if (c != null) {
@@ -104,47 +120,53 @@ public final class BlockMetadataType {
                 });
 
         PolyTypeRegistry.define("SkullMetadata", "BlockMetadata")
-            .property("owner_name", obj -> {
+            // STRING with a null return — encodes to NULL exactly like the old explicit
+            // ScriptValue.NULL branches (see BlockMetadata.custom_name above).
+            .propertyTyped("owner_name", TypeCodecs.STRING, (MetaRef obj) -> {
                 var profile = ownerProfile(obj);
-                if (profile == null) return ScriptValue.NULL;
-                String name = profile.name().orElse(null);
-                return name != null ? ScriptValue.of(name) : ScriptValue.NULL;
+                if (profile == null) return null;
+                return profile.name().orElse(null);
             })
-            .property("owner_uuid", obj -> {
+            .propertyTyped("owner_uuid", TypeCodecs.STRING, (MetaRef obj) -> {
                 var profile = ownerProfile(obj);
                 java.util.UUID id = profile != null ? reflectOptionalUuid(profile) : null;
-                return id != null ? ScriptValue.of(id.toString()) : ScriptValue.NULL;
+                return id != null ? id.toString() : null;
             })
-            .property("has_owner", obj -> ScriptValue.of(ownerProfile(obj) != null));
+            .propertyTyped("has_owner", TypeCodecs.BOOL, (MetaRef obj) -> ownerProfile(obj) != null);
 
         PolyTypeRegistry.define("BannerMetadata", "BlockMetadata")
-            .property("base_color", obj -> ScriptValue.of(
-                    ref(obj).be() instanceof BannerBlockEntity banner ? banner.getBaseColor().getName() : "white"))
-            .property("pattern_count", obj -> ScriptValue.of(
-                    ref(obj).be() instanceof BannerBlockEntity banner ? banner.getPatterns().layers().size() : 0));
+            .propertyTyped("base_color", TypeCodecs.STRING, (MetaRef m) ->
+                    m.be() instanceof BannerBlockEntity banner ? banner.getBaseColor().getName() : "white")
+            .propertyTyped("pattern_count", TypeCodecs.DOUBLE, (MetaRef m) ->
+                    (double) (m.be() instanceof BannerBlockEntity banner ? banner.getPatterns().layers().size() : 0));
 
         // LecternBlockEntity.getBook() is a long-stable public accessor (comparators have always
         // read it directly) — no reflection needed, unlike the others below.
         PolyTypeRegistry.define("LecternMetadata", "BlockMetadata")
-            .property("book", obj -> ref(obj).be() instanceof net.minecraft.world.level.block.entity.LecternBlockEntity l
+            // RAW: ScriptValue.ofItem yields the distinct ScriptValue.Item variant (not an Obj of
+            // any PolyType), so no polyType/list codec applies — RAW.encode is identity.
+            .propertyTyped("book", TypeCodecs.RAW, (MetaRef m) ->
+                    m.be() instanceof net.minecraft.world.level.block.entity.LecternBlockEntity l
                     ? ScriptValue.ofItem(l.getBook()) : ScriptValue.NULL)
-            .property("has_book", obj -> ScriptValue.of(
-                    ref(obj).be() instanceof net.minecraft.world.level.block.entity.LecternBlockEntity l && !l.getBook().isEmpty()));
+            .propertyTyped("has_book", TypeCodecs.BOOL, (MetaRef m) ->
+                    m.be() instanceof net.minecraft.world.level.block.entity.LecternBlockEntity l && !l.getBook().isEmpty());
 
         // JukeboxBlockEntity's record-item accessor name has changed across MC versions
         // ("getRecord"/"getTheItem"/a Container-style getItem(0)) — reflect defensively, same
         // reasoning as the ResolvableProfile helpers above.
         PolyTypeRegistry.define("JukeboxMetadata", "BlockMetadata")
-            .property("record", obj -> {
-                var item = reflectItemStack(ref(obj).be(), "getRecord", "getTheItem", "getItem");
+            // RAW for the same reason as LecternMetadata.book above (ScriptValue.Item variant).
+            .propertyTyped("record", TypeCodecs.RAW, (MetaRef m) -> {
+                var item = reflectItemStack(m.be(), "getRecord", "getTheItem", "getItem");
                 return item != null ? ScriptValue.ofItem(item) : ScriptValue.NULL;
             })
-            .property("is_playing", obj -> ScriptValue.of(reflectBool(ref(obj).be(), "isRecordPlaying")));
+            .propertyTyped("is_playing", TypeCodecs.BOOL, (MetaRef m) -> reflectBool(m.be(), "isRecordPlaying"));
 
         // BeehiveBlockEntity's occupant-count accessor is likewise not a stable/simple name across
         // versions — reflect for it too.
         PolyTypeRegistry.define("BeehiveMetadata", "BlockMetadata")
-            .property("bee_count", obj -> ScriptValue.of(reflectInt(ref(obj).be(), "getOccupantCount", "getBeeCount")));
+            .propertyTyped("bee_count", TypeCodecs.DOUBLE, (MetaRef m) ->
+                    (double) reflectInt(m.be(), "getOccupantCount", "getBeeCount"));
     }
 
     /**
@@ -211,6 +233,8 @@ public final class BlockMetadataType {
      * type, but the array shape is future-proof for a block-entity kind modeled under two child
      * types at once).
      */
+    // Backs Block.metadata_types, which is registered with TypeCodecs.RAW: its elements are plain
+    // type-NAME strings, not Objs of any PolyType, so no list codec applies.
     public static ScriptValue metadataTypesOf(ServerLevel level, BlockPos pos) {
         BlockEntity be = beAt(level, pos);
         if (be == null) return new ScriptValue.Array(List.of());

@@ -155,16 +155,20 @@ public final class EventType {
 
     public static void register() {
         PolyTypeRegistry.define("Event")
-            .property("type", obj -> ScriptValue.of(event(obj).type()))
-            .property("cancelled", obj -> ScriptValue.of(event(obj).isCancelled()))
+            .propertyTyped("type", TypeCodecs.STRING, (ScriptEvent e) -> e.type())
+            .propertyTyped("cancelled", TypeCodecs.BOOL, (ScriptEvent e) -> e.isCancelled())
             .methodTyped0("cancel", TypeCodecs.BOOL, (ScriptEvent e) -> { e.setCancelled(true); return true; })
             .methodTypedOpt1("set_cancelled", TypeCodecs.BOOL, false, TypeCodecs.BOOL,
                 (ScriptEvent e, Boolean cancelled) -> { e.setCancelled(cancelled); return true; });
 
         PolyTypeRegistry.define("BreakEvent", "Event")
-            .property("drops", obj -> {
+            // TypeCodecs.RAW, not TypeCodecs.listOf: the elements are ScriptValue.Item, not
+            // Obj-wrapped PolyType instances, so no PolyType name exists to declare — and listOf
+            // would re-box each element as an Obj, breaking every `instanceof ScriptValue.Item`
+            // consumer. The array stays hand-built inside a RAW-returning typed handler.
+            .propertyTyped("drops", TypeCodecs.RAW, (BreakEvent e) -> {
                 List<ScriptValue> out = new ArrayList<>();
-                for (ItemStack s : ((BreakEvent) obj).drops()) out.add(ScriptValue.ofItem(s));
+                for (ItemStack s : e.drops()) out.add(ScriptValue.ofItem(s));
                 return new ScriptValue.Array(out);
             })
             // set_drops(item, item, ...) — replaces the DEFAULT drops (this event's own container
@@ -197,20 +201,23 @@ public final class EventType {
         // function across several hooks can branch on it; other_entity/amount are null/0 when the
         // firing hook doesn't have one.
         PolyTypeRegistry.define("ItemActionEvent", "Event")
-            .property("other_entity", obj -> {
-                var e = ((ItemActionEvent) obj).otherEntity();
+            // RAW, not TypeCodecs.polyType("Entity", ...): EntityType.wrap picks the PolyType name
+            // per entity (Player/Animal/Mob/ItemEntity/...), so pinning it to one name would strip
+            // every subtype member.
+            .propertyTyped("other_entity", TypeCodecs.RAW, (ItemActionEvent ev) -> {
+                var e = ev.otherEntity();
                 return e == null ? ScriptValue.NULL
                         : dev.arubik.craftengine.script.types.entity.EntityType.wrap(e);
             })
-            .property("amount", obj -> {
-                Double a = ((ItemActionEvent) obj).amount();
-                return ScriptValue.of(a == null ? 0.0 : a);
+            .propertyTyped("amount", TypeCodecs.DOUBLE, (ItemActionEvent ev) -> {
+                Double a = ev.amount();
+                return a == null ? 0.0 : a;
             })
             // clicked_block — the Block right-clicked (on_right_click only, null off-block). Combine
             // with clicked_face + Block.place_custom for "place a different custom block depending
             // on which face was clicked" placement routing, entirely from a script.
-            .property("clicked_block", obj -> {
-                var b = ((ItemActionEvent) obj).clickedBlock();
+            .propertyTyped("clicked_block", TypeCodecs.RAW, (ItemActionEvent ev) -> {
+                var b = ev.clickedBlock();
                 if (b == null) return ScriptValue.NULL;
                 try {
                     net.minecraft.server.level.ServerLevel level =
@@ -220,48 +227,51 @@ public final class EventType {
                 } catch (Throwable ignored) { return ScriptValue.NULL; }
             })
             // clicked_face — which face of clicked_block was clicked ("north".."down"), null if none.
-            .property("clicked_face", obj -> {
-                var f = ((ItemActionEvent) obj).clickedFace();
-                return f == null ? ScriptValue.NULL : ScriptValue.of(f.name().toLowerCase(java.util.Locale.ROOT));
+            // A null face still reaches a script as NULL, not the string "null": TypeCodecs.STRING
+            // encodes via ScriptValue.of(String), which maps a Java null to ScriptValue.NULL.
+            .propertyTyped("clicked_face", TypeCodecs.STRING, (ItemActionEvent ev) -> {
+                var f = ev.clickedFace();
+                return f == null ? null : f.name().toLowerCase(java.util.Locale.ROOT);
             });
 
         // Right/left-click interactions — machines' on_right_click/on_left_click and items' click
         // hooks alike.
         PolyTypeRegistry.define("InteractEvent", "Event")
-            .property("hand", obj -> {
-                String h = ((InteractEvent) obj).hand();
-                return h == null ? ScriptValue.NULL : ScriptValue.of(h);
-            });
+            // The explicit null check is redundant under TypeCodecs.STRING — ScriptValue.of(null)
+            // already yields ScriptValue.NULL — so a plain hand() is exactly equivalent.
+            .propertyTyped("hand", TypeCodecs.STRING, (InteractEvent e) -> e.hand());
 
         // on_pipe_transfer — read-only mirror of the type/payload/direction/mode already bound as
         // separate classes (kept for back-compat), plus a real cancel().
         PolyTypeRegistry.define("TransferEvent", "Event")
-            .property("transfer_type", obj -> ScriptValue.of(((TransferEvent) obj).transferType()))
-            .property("payload", obj -> ((TransferEvent) obj).payload())
-            .property("direction", obj -> ScriptValue.of(((TransferEvent) obj).direction()))
-            .property("mode", obj -> ScriptValue.of(((TransferEvent) obj).mode()));
+            .propertyTyped("transfer_type", TypeCodecs.STRING, (TransferEvent w) -> w.transferType())
+            .propertyTyped("payload", TypeCodecs.RAW, (TransferEvent w) -> w.payload())
+            .propertyTyped("direction", TypeCodecs.STRING, (TransferEvent w) -> w.direction())
+            .propertyTyped("mode", TypeCodecs.STRING, (TransferEvent w) -> w.mode());
 
         // A menu button's "file.pf:function" script action.
         PolyTypeRegistry.define("ButtonEvent", "Event")
-            .property("slot", obj -> ScriptValue.of(((ButtonEvent) obj).slot()))
-            .property("click_type", obj -> ScriptValue.of(((ButtonEvent) obj).clickType()));
+            .propertyTyped("slot", TypeCodecs.DOUBLE, (ButtonEvent w) -> (double) w.slot())
+            .propertyTyped("click_type", TypeCodecs.STRING, (ButtonEvent w) -> w.clickType());
 
         // A GHOST slot's set-script — cancel() rejects the click (see MenuSlotType#GHOST).
         PolyTypeRegistry.define("GhostSlotEvent", "Event")
-            .property("slot", obj -> ScriptValue.of(((GhostSlotEvent) obj).slot()))
-            .property("clicked_id", obj -> ScriptValue.of(((GhostSlotEvent) obj).clickedId()))
-            .property("click_type", obj -> ScriptValue.of(((GhostSlotEvent) obj).clickType()));
+            .propertyTyped("slot", TypeCodecs.DOUBLE, (GhostSlotEvent w) -> (double) w.slot())
+            .propertyTyped("clicked_id", TypeCodecs.STRING, (GhostSlotEvent w) -> w.clickedId())
+            .propertyTyped("click_type", TypeCodecs.STRING, (GhostSlotEvent w) -> w.clickType());
 
         // A multiblock's on_form/on_disassemble — event.type distinguishes the two.
         PolyTypeRegistry.define("FormEvent", "Event");
 
         // on_render — see RenderEvent's javadoc for why cancel() is a no-op here.
         PolyTypeRegistry.define("RenderEvent", "Event")
-            .property("holder", obj -> {
-                Entity e = ((RenderEvent) obj).holder();
+            // RAW, not polyType("Entity", ...) — EntityType.wrap is per-entity polymorphic, see the
+            // other_entity note on ItemActionEvent.
+            .propertyTyped("holder", TypeCodecs.RAW, (RenderEvent ev) -> {
+                Entity e = ev.holder();
                 return e == null ? ScriptValue.NULL : dev.arubik.craftengine.script.types.entity.EntityType.wrap(e);
             })
-            .property("slot", obj -> ScriptValue.of(((RenderEvent) obj).slot()));
+            .propertyTyped("slot", TypeCodecs.DOUBLE, (RenderEvent w) -> (double) w.slot());
 
         // ---- Dedicated wrappers for the common vanilla PLAYER events (see each ScriptEvent
         // subclass's own javadoc for what it's for) — richly typed alternatives to BukkitEvent's
@@ -269,22 +279,23 @@ public final class EventType {
         // automatically over BukkitEventWrapper by GenericEventBridge#buildContext whenever the
         // runtime event type matches one of these; anything else still falls back to BukkitEvent.
         PolyTypeRegistry.define("PlayerJoinEvent", "Event")
-            .property("join_message", obj -> ScriptValue.of(((PlayerJoinWrapper) obj).joinMessage()))
+            .propertyTyped("join_message", TypeCodecs.STRING, (PlayerJoinWrapper w) -> w.joinMessage())
             .methodTypedOpt1("set_join_message", TypeCodecs.STRING, "", TypeCodecs.BOOL,
                 (PlayerJoinWrapper w, String msg) -> { w.setJoinMessage(msg); return true; });
 
         PolyTypeRegistry.define("PlayerQuitEvent", "Event")
-            .property("quit_message", obj -> ScriptValue.of(((PlayerQuitWrapper) obj).quitMessage()))
+            .propertyTyped("quit_message", TypeCodecs.STRING, (PlayerQuitWrapper w) -> w.quitMessage())
             .methodTypedOpt1("set_quit_message", TypeCodecs.STRING, "", TypeCodecs.BOOL,
                 (PlayerQuitWrapper w, String msg) -> { w.setQuitMessage(msg); return true; });
 
         PolyTypeRegistry.define("PlayerDeathEvent", "Event")
-            .property("death_message", obj -> ScriptValue.of(((PlayerDeathWrapper) obj).deathMessage()))
+            .propertyTyped("death_message", TypeCodecs.STRING, (PlayerDeathWrapper w) -> w.deathMessage())
             .methodTypedOpt1("set_death_message", TypeCodecs.STRING, "", TypeCodecs.BOOL,
                 (PlayerDeathWrapper w, String msg) -> { w.setDeathMessage(msg); return true; })
-            .property("drops", obj -> {
+            // RAW, not TypeCodecs.listOf — ScriptValue.Item elements, same as BreakEvent.drops above.
+            .propertyTyped("drops", TypeCodecs.RAW, (PlayerDeathWrapper w) -> {
                 List<ScriptValue> out = new ArrayList<>();
-                for (ItemStack s : ((PlayerDeathWrapper) obj).drops()) out.add(ScriptValue.ofItem(s));
+                for (ItemStack s : w.drops()) out.add(ScriptValue.ofItem(s));
                 return new ScriptValue.Array(out);
             })
             // Left untyped: IRREDUCIBLY variadic — same "one array OR a flat series of items"
@@ -306,113 +317,112 @@ public final class EventType {
                 ((PlayerDeathWrapper) obj).setDrops(drops);
                 return ScriptValue.of(true);
             })
-            .property("keep_inventory", obj -> ScriptValue.of(((PlayerDeathWrapper) obj).keepInventory()))
+            .propertyTyped("keep_inventory", TypeCodecs.BOOL, (PlayerDeathWrapper w) -> w.keepInventory())
             .methodTypedOpt1("set_keep_inventory", TypeCodecs.BOOL, false, TypeCodecs.BOOL,
                 (PlayerDeathWrapper w, Boolean keep) -> { w.setKeepInventory(keep); return true; })
-            .property("exp", obj -> ScriptValue.of(((PlayerDeathWrapper) obj).exp()))
+            .propertyTyped("exp", TypeCodecs.DOUBLE, (PlayerDeathWrapper w) -> (double) w.exp())
             .methodTypedOpt1("set_exp", TypeCodecs.DOUBLE, 0.0, TypeCodecs.BOOL,
                 (PlayerDeathWrapper w, Double exp) -> { w.setExp(exp.intValue()); return true; });
 
         PolyTypeRegistry.define("PlayerRespawnEvent", "Event")
-            .property("respawn_location", obj -> ((PlayerRespawnWrapper) obj).respawnLocation())
+            .propertyTyped("respawn_location", TypeCodecs.RAW, (PlayerRespawnWrapper w) -> w.respawnLocation())
             .methodTyped1("set_respawn_location", TypeCodecs.RAW, TypeCodecs.BOOL, true,
                 (PlayerRespawnWrapper w, ScriptValue loc) -> { w.setRespawnLocation(loc); return true; });
 
         PolyTypeRegistry.define("PlayerMoveEvent", "Event")
-            .property("from", obj -> ((PlayerMoveWrapper) obj).from())
-            .property("to", obj -> ((PlayerMoveWrapper) obj).to())
+            .propertyTyped("from", TypeCodecs.RAW, (PlayerMoveWrapper w) -> w.from())
+            .propertyTyped("to", TypeCodecs.RAW, (PlayerMoveWrapper w) -> w.to())
             .methodTyped1("set_to", TypeCodecs.RAW, TypeCodecs.BOOL, true,
                 (PlayerMoveWrapper w, ScriptValue to) -> { w.setTo(to); return true; });
 
         PolyTypeRegistry.define("PlayerTeleportEvent", "Event")
-            .property("from", obj -> ((PlayerTeleportWrapper) obj).from())
-            .property("to", obj -> ((PlayerTeleportWrapper) obj).to())
-            .property("cause", obj -> ScriptValue.of(((PlayerTeleportWrapper) obj).cause()))
+            .propertyTyped("from", TypeCodecs.RAW, (PlayerTeleportWrapper w) -> w.from())
+            .propertyTyped("to", TypeCodecs.RAW, (PlayerTeleportWrapper w) -> w.to())
+            .propertyTyped("cause", TypeCodecs.STRING, (PlayerTeleportWrapper w) -> w.cause())
             .methodTyped1("set_to", TypeCodecs.RAW, TypeCodecs.BOOL, true,
                 (PlayerTeleportWrapper w, ScriptValue to) -> { w.setTo(to); return true; });
 
         PolyTypeRegistry.define("PlayerInteractEvent", "Event")
-            .property("action", obj -> ScriptValue.of(((PlayerInteractWrapper) obj).action()))
-            .property("hand", obj -> {
-                String h = ((PlayerInteractWrapper) obj).hand();
-                return h == null ? ScriptValue.NULL : ScriptValue.of(h);
-            })
-            .property("clicked_block", obj -> ((PlayerInteractWrapper) obj).clickedBlock())
-            .property("item", obj -> ((PlayerInteractWrapper) obj).item());
+            .propertyTyped("action", TypeCodecs.STRING, (PlayerInteractWrapper w) -> w.action())
+            // Null hand still encodes to NULL under TypeCodecs.STRING — see InteractEvent.hand.
+            .propertyTyped("hand", TypeCodecs.STRING, (PlayerInteractWrapper w) -> w.hand())
+            .propertyTyped("clicked_block", TypeCodecs.RAW, (PlayerInteractWrapper w) -> w.clickedBlock())
+            .propertyTyped("item", TypeCodecs.RAW, (PlayerInteractWrapper w) -> w.item());
 
         PolyTypeRegistry.define("AsyncChatEvent", "Event")
-            .property("message", obj -> ScriptValue.of(((AsyncChatWrapper) obj).message()))
+            .propertyTyped("message", TypeCodecs.STRING, (AsyncChatWrapper w) -> w.message())
             .methodTypedOpt1("set_message", TypeCodecs.STRING, "", TypeCodecs.BOOL,
                 (AsyncChatWrapper w, String msg) -> { w.setMessage(msg); return true; });
 
         PolyTypeRegistry.define("PlayerCommandPreprocessEvent", "Event")
-            .property("message", obj -> ScriptValue.of(((PlayerCommandPreprocessWrapper) obj).message()))
+            .propertyTyped("message", TypeCodecs.STRING, (PlayerCommandPreprocessWrapper w) -> w.message())
             .methodTypedOpt1("set_message", TypeCodecs.STRING, "", TypeCodecs.BOOL,
                 (PlayerCommandPreprocessWrapper w, String msg) -> { w.setMessage(msg); return true; });
 
         PolyTypeRegistry.define("PlayerLevelChangeEvent", "Event")
-            .property("old_level", obj -> ScriptValue.of(((PlayerLevelChangeWrapper) obj).oldLevel()))
-            .property("new_level", obj -> ScriptValue.of(((PlayerLevelChangeWrapper) obj).newLevel()));
+            .propertyTyped("old_level", TypeCodecs.DOUBLE, (PlayerLevelChangeWrapper w) -> (double) w.oldLevel())
+            .propertyTyped("new_level", TypeCodecs.DOUBLE, (PlayerLevelChangeWrapper w) -> (double) w.newLevel());
 
         PolyTypeRegistry.define("PlayerExpChangeEvent", "Event")
-            .property("amount", obj -> ScriptValue.of(((PlayerExpChangeWrapper) obj).amount()))
+            .propertyTyped("amount", TypeCodecs.DOUBLE, (PlayerExpChangeWrapper w) -> (double) w.amount())
             .methodTypedOpt1("set_amount", TypeCodecs.DOUBLE, 0.0, TypeCodecs.BOOL,
                 (PlayerExpChangeWrapper w, Double amount) -> { w.setAmount(amount.intValue()); return true; });
 
         PolyTypeRegistry.define("PlayerToggleSneakEvent", "Event")
-            .property("is_sneaking", obj -> ScriptValue.of(((PlayerToggleSneakWrapper) obj).isSneaking()));
+            .propertyTyped("is_sneaking", TypeCodecs.BOOL, (PlayerToggleSneakWrapper w) -> w.isSneaking());
 
         PolyTypeRegistry.define("PlayerToggleSprintEvent", "Event")
-            .property("is_sprinting", obj -> ScriptValue.of(((PlayerToggleSprintWrapper) obj).isSprinting()));
+            .propertyTyped("is_sprinting", TypeCodecs.BOOL, (PlayerToggleSprintWrapper w) -> w.isSprinting());
 
         PolyTypeRegistry.define("PlayerToggleFlightEvent", "Event")
-            .property("is_flying", obj -> ScriptValue.of(((PlayerToggleFlightWrapper) obj).isFlying()));
+            .propertyTyped("is_flying", TypeCodecs.BOOL, (PlayerToggleFlightWrapper w) -> w.isFlying());
 
         PolyTypeRegistry.define("PlayerBedEnterEvent", "Event")
-            .property("bed", obj -> ((PlayerBedEnterWrapper) obj).bed())
-            .property("bed_enter_result", obj -> ScriptValue.of(((PlayerBedEnterWrapper) obj).bedEnterResult()));
+            .propertyTyped("bed", TypeCodecs.RAW, (PlayerBedEnterWrapper w) -> w.bed())
+            .propertyTyped("bed_enter_result", TypeCodecs.STRING, (PlayerBedEnterWrapper w) -> w.bedEnterResult());
 
         PolyTypeRegistry.define("PlayerBedLeaveEvent", "Event")
-            .property("bed", obj -> ((PlayerBedLeaveWrapper) obj).bed());
+            .propertyTyped("bed", TypeCodecs.RAW, (PlayerBedLeaveWrapper w) -> w.bed());
 
         PolyTypeRegistry.define("PlayerGameModeChangeEvent", "Event")
-            .property("new_game_mode", obj -> ScriptValue.of(((PlayerGameModeChangeWrapper) obj).newGameMode()));
+            .propertyTyped("new_game_mode", TypeCodecs.STRING, (PlayerGameModeChangeWrapper w) -> w.newGameMode());
 
         PolyTypeRegistry.define("PlayerKickEvent", "Event")
-            .property("reason", obj -> ScriptValue.of(((PlayerKickWrapper) obj).reason()))
+            .propertyTyped("reason", TypeCodecs.STRING, (PlayerKickWrapper w) -> w.reason())
             .methodTypedOpt1("set_reason", TypeCodecs.STRING, "", TypeCodecs.BOOL,
                 (PlayerKickWrapper w, String reason) -> { w.setReason(reason); return true; });
 
         PolyTypeRegistry.define("PlayerItemConsumeEvent", "Event")
-            .property("item", obj -> ((PlayerItemConsumeWrapper) obj).item())
+            .propertyTyped("item", TypeCodecs.RAW, (PlayerItemConsumeWrapper w) -> w.item())
             .methodTyped1("set_item", TypeCodecs.RAW, TypeCodecs.BOOL, true,
                 (PlayerItemConsumeWrapper w, ScriptValue item) -> { w.setItem(item); return true; });
 
         PolyTypeRegistry.define("PlayerDropItemEvent", "Event")
-            .property("item_drop", obj -> ((PlayerDropItemWrapper) obj).itemDrop());
+            .propertyTyped("item_drop", TypeCodecs.RAW, (PlayerDropItemWrapper w) -> w.itemDrop());
 
         PolyTypeRegistry.define("EntityPickupItemEvent", "Event")
-            .property("item", obj -> ((EntityPickupItemWrapper) obj).item())
-            .property("remaining", obj -> ScriptValue.of(((EntityPickupItemWrapper) obj).remaining()));
+            .propertyTyped("item", TypeCodecs.RAW, (EntityPickupItemWrapper w) -> w.item())
+            .propertyTyped("remaining", TypeCodecs.DOUBLE, (EntityPickupItemWrapper w) -> (double) w.remaining());
 
         PolyTypeRegistry.define("PlayerPortalEvent", "Event")
-            .property("from", obj -> ((PlayerPortalWrapper) obj).from())
-            .property("to", obj -> ((PlayerPortalWrapper) obj).to())
-            .property("cause", obj -> ScriptValue.of(((PlayerPortalWrapper) obj).cause()))
+            .propertyTyped("from", TypeCodecs.RAW, (PlayerPortalWrapper w) -> w.from())
+            .propertyTyped("to", TypeCodecs.RAW, (PlayerPortalWrapper w) -> w.to())
+            .propertyTyped("cause", TypeCodecs.STRING, (PlayerPortalWrapper w) -> w.cause())
             .methodTyped1("set_to", TypeCodecs.RAW, TypeCodecs.BOOL, true,
                 (PlayerPortalWrapper w, ScriptValue to) -> { w.setTo(to); return true; });
 
         PolyTypeRegistry.define("PlayerChangedWorldEvent", "Event")
-            .property("from_world", obj -> ((PlayerChangedWorldWrapper) obj).fromWorld());
+            .propertyTyped("from_world", TypeCodecs.RAW, (PlayerChangedWorldWrapper w) -> w.fromWorld());
 
         // ---- Dedicated wrappers for the common vanilla ENTITY events — same idea as the PLAYER
         // batch above, for events that fire on entities in general (mobs included) rather than only
         // on players.
         PolyTypeRegistry.define("EntityDeathEvent", "Event")
-            .property("entity", obj -> ((EntityDeathWrapper) obj).entity())
-            .property("drops", obj -> {
+            .propertyTyped("entity", TypeCodecs.RAW, (EntityDeathWrapper w) -> w.entity())
+            // RAW, not TypeCodecs.listOf — ScriptValue.Item elements, same as BreakEvent.drops above.
+            .propertyTyped("drops", TypeCodecs.RAW, (EntityDeathWrapper w) -> {
                 List<ScriptValue> out = new ArrayList<>();
-                for (ItemStack s : ((EntityDeathWrapper) obj).drops()) out.add(ScriptValue.ofItem(s));
+                for (ItemStack s : w.drops()) out.add(ScriptValue.ofItem(s));
                 return new ScriptValue.Array(out);
             })
             // Left untyped: IRREDUCIBLY variadic — same "one array OR a flat series of items"
@@ -434,183 +444,192 @@ public final class EventType {
                 ((EntityDeathWrapper) obj).setDrops(drops);
                 return ScriptValue.of(true);
             })
-            .property("dropped_exp", obj -> ScriptValue.of(((EntityDeathWrapper) obj).droppedExp()))
+            .propertyTyped("dropped_exp", TypeCodecs.DOUBLE, (EntityDeathWrapper w) -> (double) w.droppedExp())
             .methodTypedOpt1("set_dropped_exp", TypeCodecs.DOUBLE, 0.0, TypeCodecs.BOOL,
                 (EntityDeathWrapper w, Double exp) -> { w.setDroppedExp(exp.intValue()); return true; });
 
         PolyTypeRegistry.define("EntityDamageEvent", "Event")
-            .property("entity", obj -> ((EntityDamageWrapper) obj).entity())
-            .property("damage", obj -> ScriptValue.of(((EntityDamageWrapper) obj).damage()))
+            .propertyTyped("entity", TypeCodecs.RAW, (EntityDamageWrapper w) -> w.entity())
+            .propertyTyped("damage", TypeCodecs.DOUBLE, (EntityDamageWrapper w) -> (double) w.damage())
             .methodTypedOpt1("set_damage", TypeCodecs.DOUBLE, 0.0, TypeCodecs.BOOL,
                 (EntityDamageWrapper w, Double damage) -> { w.setDamage(damage); return true; })
-            .property("cause", obj -> ScriptValue.of(((EntityDamageWrapper) obj).cause()));
+            .propertyTyped("cause", TypeCodecs.STRING, (EntityDamageWrapper w) -> w.cause());
 
         PolyTypeRegistry.define("EntityDamageByEntityEvent", "EntityDamageEvent")
-            .property("damager", obj -> ((EntityDamageByEntityWrapper) obj).damager());
+            .propertyTyped("damager", TypeCodecs.RAW, (EntityDamageByEntityWrapper w) -> w.damager());
 
         PolyTypeRegistry.define("EntityTargetEvent", "Event")
-            .property("target", obj -> ((EntityTargetWrapper) obj).target())
+            .propertyTyped("target", TypeCodecs.RAW, (EntityTargetWrapper w) -> w.target())
             .methodTypedOpt1("set_target", TypeCodecs.RAW, ScriptValue.NULL, TypeCodecs.BOOL,
                 (EntityTargetWrapper w, ScriptValue target) -> { w.setTarget(target); return true; })
-            .property("reason", obj -> ScriptValue.of(((EntityTargetWrapper) obj).reason()));
+            .propertyTyped("reason", TypeCodecs.STRING, (EntityTargetWrapper w) -> w.reason());
 
         PolyTypeRegistry.define("EntityTameEvent", "Event")
-            .property("owner", obj -> ((EntityTameWrapper) obj).owner());
+            .propertyTyped("owner", TypeCodecs.RAW, (EntityTameWrapper w) -> w.owner());
 
         PolyTypeRegistry.define("EntityExplodeEvent", "Event")
-            .property("location", obj -> ((EntityExplodeWrapper) obj).location())
-            .property("block_list", obj -> new ScriptValue.Array(((EntityExplodeWrapper) obj).blockList()))
-            .property("yield", obj -> ScriptValue.of(((EntityExplodeWrapper) obj).yield()))
+            .propertyTyped("location", TypeCodecs.RAW, (EntityExplodeWrapper w) -> w.location())
+            // RAW, not TypeCodecs.listOf: the elements ARE uniform "Block" Objs, but the wrapper
+            // hands back an already-boxed List<ScriptValue> (BlockType.wrap does the boxing, and may
+            // yield NULL for a block it can't resolve). listOf wants the real List<BlockRef> and
+            // silently drops every element that isn't one, so it would not be behaviour-preserving
+            // here. Typing this properly needs a raw-typed accessor on the wrapper first — same for
+            // every other array-valued property below.
+            .propertyTyped("block_list", TypeCodecs.RAW,
+                (EntityExplodeWrapper w) -> new ScriptValue.Array(w.blockList()))
+            .propertyTyped("yield", TypeCodecs.DOUBLE, (EntityExplodeWrapper w) -> (double) w.yield())
             .methodTypedOpt1("set_yield", TypeCodecs.DOUBLE, 0.0, TypeCodecs.BOOL,
                 (EntityExplodeWrapper w, Double y) -> { w.setYield(y.floatValue()); return true; });
 
         PolyTypeRegistry.define("EntityCombustEvent", "Event")
-            .property("duration", obj -> ScriptValue.of(((EntityCombustWrapper) obj).duration()))
+            .propertyTyped("duration", TypeCodecs.DOUBLE, (EntityCombustWrapper w) -> (double) w.duration())
             .methodTypedOpt1("set_duration", TypeCodecs.DOUBLE, 0.0, TypeCodecs.BOOL,
                 (EntityCombustWrapper w, Double duration) -> { w.setDuration(duration); return true; });
 
         PolyTypeRegistry.define("EntityRegainHealthEvent", "Event")
-            .property("amount", obj -> ScriptValue.of(((EntityRegainHealthWrapper) obj).amount()))
+            .propertyTyped("amount", TypeCodecs.DOUBLE, (EntityRegainHealthWrapper w) -> (double) w.amount())
             .methodTypedOpt1("set_amount", TypeCodecs.DOUBLE, 0.0, TypeCodecs.BOOL,
                 (EntityRegainHealthWrapper w, Double amount) -> { w.setAmount(amount); return true; })
-            .property("reason", obj -> ScriptValue.of(((EntityRegainHealthWrapper) obj).reason()));
+            .propertyTyped("reason", TypeCodecs.STRING, (EntityRegainHealthWrapper w) -> w.reason());
 
         PolyTypeRegistry.define("EntityTeleportEvent", "Event")
-            .property("from", obj -> ((EntityTeleportWrapper) obj).from())
-            .property("to", obj -> ((EntityTeleportWrapper) obj).to())
+            .propertyTyped("from", TypeCodecs.RAW, (EntityTeleportWrapper w) -> w.from())
+            .propertyTyped("to", TypeCodecs.RAW, (EntityTeleportWrapper w) -> w.to())
             .methodTyped1("set_to", TypeCodecs.RAW, TypeCodecs.BOOL, true,
                 (EntityTeleportWrapper w, ScriptValue to) -> { w.setTo(to); return true; });
 
         PolyTypeRegistry.define("EntitySpawnEvent", "Event")
-            .property("entity", obj -> ((EntitySpawnWrapper) obj).entity())
-            .property("location", obj -> ((EntitySpawnWrapper) obj).location());
+            .propertyTyped("entity", TypeCodecs.RAW, (EntitySpawnWrapper w) -> w.entity())
+            .propertyTyped("location", TypeCodecs.RAW, (EntitySpawnWrapper w) -> w.location());
 
         PolyTypeRegistry.define("EntityShootBowEvent", "Event")
-            .property("projectile", obj -> ((EntityShootBowWrapper) obj).projectile())
-            .property("force", obj -> ScriptValue.of(((EntityShootBowWrapper) obj).force()))
-            .property("consume_item", obj -> ScriptValue.of(((EntityShootBowWrapper) obj).consumeItem()))
+            .propertyTyped("projectile", TypeCodecs.RAW, (EntityShootBowWrapper w) -> w.projectile())
+            .propertyTyped("force", TypeCodecs.DOUBLE, (EntityShootBowWrapper w) -> (double) w.force())
+            .propertyTyped("consume_item", TypeCodecs.BOOL, (EntityShootBowWrapper w) -> w.consumeItem())
             .methodTypedOpt1("set_consume_item", TypeCodecs.BOOL, false, TypeCodecs.BOOL,
                 (EntityShootBowWrapper w, Boolean consume) -> { w.setConsumeItem(consume); return true; });
 
         PolyTypeRegistry.define("EntityChangeBlockEvent", "Event")
-            .property("block", obj -> ((EntityChangeBlockWrapper) obj).block())
-            .property("to", obj -> ScriptValue.of(((EntityChangeBlockWrapper) obj).to()));
+            .propertyTyped("block", TypeCodecs.RAW, (EntityChangeBlockWrapper w) -> w.block())
+            .propertyTyped("to", TypeCodecs.STRING, (EntityChangeBlockWrapper w) -> w.to());
 
         PolyTypeRegistry.define("EntityPotionEffectEvent", "Event")
-            .property("entity", obj -> ((EntityPotionEffectWrapper) obj).entity())
-            .property("cause", obj -> ScriptValue.of(((EntityPotionEffectWrapper) obj).cause()))
-            .property("action", obj -> ScriptValue.of(((EntityPotionEffectWrapper) obj).action()));
+            .propertyTyped("entity", TypeCodecs.RAW, (EntityPotionEffectWrapper w) -> w.entity())
+            .propertyTyped("cause", TypeCodecs.STRING, (EntityPotionEffectWrapper w) -> w.cause())
+            .propertyTyped("action", TypeCodecs.STRING, (EntityPotionEffectWrapper w) -> w.action());
 
         PolyTypeRegistry.define("EntityBreedEvent", "Event")
-            .property("mother", obj -> ((EntityBreedWrapper) obj).mother())
-            .property("father", obj -> ((EntityBreedWrapper) obj).father())
-            .property("breeder", obj -> ((EntityBreedWrapper) obj).breeder())
-            .property("child", obj -> ((EntityBreedWrapper) obj).child());
+            .propertyTyped("mother", TypeCodecs.RAW, (EntityBreedWrapper w) -> w.mother())
+            .propertyTyped("father", TypeCodecs.RAW, (EntityBreedWrapper w) -> w.father())
+            .propertyTyped("breeder", TypeCodecs.RAW, (EntityBreedWrapper w) -> w.breeder())
+            .propertyTyped("child", TypeCodecs.RAW, (EntityBreedWrapper w) -> w.child());
 
         PolyTypeRegistry.define("CreatureSpawnEvent", "Event")
-            .property("entity", obj -> ((CreatureSpawnWrapper) obj).entity())
-            .property("reason", obj -> ScriptValue.of(((CreatureSpawnWrapper) obj).reason()));
+            .propertyTyped("entity", TypeCodecs.RAW, (CreatureSpawnWrapper w) -> w.entity())
+            .propertyTyped("reason", TypeCodecs.STRING, (CreatureSpawnWrapper w) -> w.reason());
 
         PolyTypeRegistry.define("EntityToggleGlideEvent", "Event")
-            .property("is_gliding", obj -> ScriptValue.of(((EntityToggleGlideWrapper) obj).isGliding()));
+            .propertyTyped("is_gliding", TypeCodecs.BOOL, (EntityToggleGlideWrapper w) -> w.isGliding());
 
         PolyTypeRegistry.define("EntityKnockbackEvent", "Event")
-            .property("cause", obj -> ScriptValue.of(((EntityKnockbackWrapper) obj).cause()))
-            .property("knockback", obj -> ((EntityKnockbackWrapper) obj).knockback())
+            .propertyTyped("cause", TypeCodecs.STRING, (EntityKnockbackWrapper w) -> w.cause())
+            .propertyTyped("knockback", TypeCodecs.RAW, (EntityKnockbackWrapper w) -> w.knockback())
             .methodTyped1("set_knockback", TypeCodecs.RAW, TypeCodecs.BOOL, true,
                 (EntityKnockbackWrapper w, ScriptValue kb) -> { w.setKnockback(kb); return true; });
 
         // ---- Dedicated wrappers for the common vanilla BLOCK events — same idea as the PLAYER and
         // ENTITY batches above, for events that fire on a world block rather than a player/entity.
         PolyTypeRegistry.define("BlockBreakEvent", "Event")
-            .property("block", obj -> ((BlockBreakWrapper) obj).block())
-            .property("player", obj -> ((BlockBreakWrapper) obj).player())
-            .property("drop_items", obj -> ScriptValue.of(((BlockBreakWrapper) obj).dropItems()))
+            .propertyTyped("block", TypeCodecs.RAW, (BlockBreakWrapper w) -> w.block())
+            .propertyTyped("player", TypeCodecs.RAW, (BlockBreakWrapper w) -> w.player())
+            .propertyTyped("drop_items", TypeCodecs.BOOL, (BlockBreakWrapper w) -> w.dropItems())
             .methodTypedOpt1("set_drop_items", TypeCodecs.BOOL, false, TypeCodecs.BOOL,
                 (BlockBreakWrapper w, Boolean drop) -> { w.setDropItems(drop); return true; })
-            .property("exp_to_drop", obj -> ScriptValue.of(((BlockBreakWrapper) obj).expToDrop()))
+            .propertyTyped("exp_to_drop", TypeCodecs.DOUBLE, (BlockBreakWrapper w) -> (double) w.expToDrop())
             .methodTypedOpt1("set_exp_to_drop", TypeCodecs.DOUBLE, 0.0, TypeCodecs.BOOL,
                 (BlockBreakWrapper w, Double exp) -> { w.setExpToDrop(exp.intValue()); return true; });
 
         PolyTypeRegistry.define("BlockPlaceEvent", "Event")
-            .property("block", obj -> ((BlockPlaceWrapper) obj).block())
-            .property("player", obj -> ((BlockPlaceWrapper) obj).player())
-            .property("block_placed_against", obj -> ((BlockPlaceWrapper) obj).blockPlacedAgainst())
-            .property("can_build", obj -> ScriptValue.of(((BlockPlaceWrapper) obj).canBuild()));
+            .propertyTyped("block", TypeCodecs.RAW, (BlockPlaceWrapper w) -> w.block())
+            .propertyTyped("player", TypeCodecs.RAW, (BlockPlaceWrapper w) -> w.player())
+            .propertyTyped("block_placed_against", TypeCodecs.RAW, (BlockPlaceWrapper w) -> w.blockPlacedAgainst())
+            .propertyTyped("can_build", TypeCodecs.BOOL, (BlockPlaceWrapper w) -> w.canBuild());
 
         // BlockMultiPlaceEvent IS-A BlockPlaceEvent (both the Bukkit event and this wrapper), so it
         // extends "BlockPlaceEvent" and inherits block/player/block_placed_against/can_build for free.
         PolyTypeRegistry.define("BlockMultiPlaceEvent", "BlockPlaceEvent");
 
         PolyTypeRegistry.define("BlockBurnEvent", "Event")
-            .property("block", obj -> ((BlockBurnWrapper) obj).block())
-            .property("ignition_source", obj -> ((BlockBurnWrapper) obj).ignitionSource());
+            .propertyTyped("block", TypeCodecs.RAW, (BlockBurnWrapper w) -> w.block())
+            .propertyTyped("ignition_source", TypeCodecs.RAW, (BlockBurnWrapper w) -> w.ignitionSource());
 
         PolyTypeRegistry.define("BlockExplodeEvent", "Event")
-            .property("block", obj -> ((BlockExplodeWrapper) obj).block())
-            .property("block_list", obj -> new ScriptValue.Array(((BlockExplodeWrapper) obj).blockList()))
-            .property("yield", obj -> ScriptValue.of(((BlockExplodeWrapper) obj).yield()))
+            .propertyTyped("block", TypeCodecs.RAW, (BlockExplodeWrapper w) -> w.block())
+            // RAW rather than listOf — already-boxed Objs, see EntityExplodeEvent.block_list.
+            .propertyTyped("block_list", TypeCodecs.RAW,
+                (BlockExplodeWrapper w) -> new ScriptValue.Array(w.blockList()))
+            .propertyTyped("yield", TypeCodecs.DOUBLE, (BlockExplodeWrapper w) -> (double) w.yield())
             .methodTypedOpt1("set_yield", TypeCodecs.DOUBLE, 0.0, TypeCodecs.BOOL,
                 (BlockExplodeWrapper w, Double y) -> { w.setYield(y.floatValue()); return true; });
 
         PolyTypeRegistry.define("BlockIgniteEvent", "Event")
-            .property("block", obj -> ((BlockIgniteWrapper) obj).block())
-            .property("cause", obj -> ScriptValue.of(((BlockIgniteWrapper) obj).cause()))
-            .property("ignition_source_entity", obj -> ((BlockIgniteWrapper) obj).ignitionSourceEntity());
+            .propertyTyped("block", TypeCodecs.RAW, (BlockIgniteWrapper w) -> w.block())
+            .propertyTyped("cause", TypeCodecs.STRING, (BlockIgniteWrapper w) -> w.cause())
+            .propertyTyped("ignition_source_entity", TypeCodecs.RAW, (BlockIgniteWrapper w) -> w.ignitionSourceEntity());
 
         PolyTypeRegistry.define("BlockFadeEvent", "Event")
-            .property("block", obj -> ((BlockFadeWrapper) obj).block())
-            .property("new_state", obj -> ScriptValue.of(((BlockFadeWrapper) obj).newStateMaterial()));
+            .propertyTyped("block", TypeCodecs.RAW, (BlockFadeWrapper w) -> w.block())
+            .propertyTyped("new_state", TypeCodecs.STRING, (BlockFadeWrapper w) -> w.newStateMaterial());
 
         // BlockGrowEvent -> BlockFormEvent -> BlockSpreadEvent form a real Java hierarchy on both
         // the Bukkit event side and this wrapper side, so each PolyType extends the previous one and
         // inherits block/new_state for free; BlockSpreadEvent adds "source".
         PolyTypeRegistry.define("BlockGrowEvent", "Event")
-            .property("block", obj -> ((BlockGrowWrapper) obj).block())
-            .property("new_state", obj -> ScriptValue.of(((BlockGrowWrapper) obj).newStateMaterial()));
+            .propertyTyped("block", TypeCodecs.RAW, (BlockGrowWrapper w) -> w.block())
+            .propertyTyped("new_state", TypeCodecs.STRING, (BlockGrowWrapper w) -> w.newStateMaterial());
 
         PolyTypeRegistry.define("BlockFormEvent", "BlockGrowEvent");
 
         PolyTypeRegistry.define("BlockSpreadEvent", "BlockFormEvent")
-            .property("source", obj -> ((BlockSpreadWrapper) obj).source());
+            .propertyTyped("source", TypeCodecs.RAW, (BlockSpreadWrapper w) -> w.source());
 
         PolyTypeRegistry.define("BlockRedstoneEvent", "Event")
-            .property("block", obj -> ((BlockRedstoneWrapper) obj).block())
-            .property("old_current", obj -> ScriptValue.of(((BlockRedstoneWrapper) obj).oldCurrent()))
-            .property("new_current", obj -> ScriptValue.of(((BlockRedstoneWrapper) obj).newCurrent()))
+            .propertyTyped("block", TypeCodecs.RAW, (BlockRedstoneWrapper w) -> w.block())
+            .propertyTyped("old_current", TypeCodecs.DOUBLE, (BlockRedstoneWrapper w) -> (double) w.oldCurrent())
+            .propertyTyped("new_current", TypeCodecs.DOUBLE, (BlockRedstoneWrapper w) -> (double) w.newCurrent())
             .methodTypedOpt1("set_new_current", TypeCodecs.DOUBLE, 0.0, TypeCodecs.BOOL,
                 (BlockRedstoneWrapper w, Double current) -> { w.setNewCurrent(current.intValue()); return true; });
 
         PolyTypeRegistry.define("BlockPistonExtendEvent", "Event")
-            .property("block", obj -> ((BlockPistonExtendWrapper) obj).block())
-            .property("direction", obj -> ScriptValue.of(((BlockPistonExtendWrapper) obj).direction()))
-            .property("length", obj -> ScriptValue.of(((BlockPistonExtendWrapper) obj).length()));
+            .propertyTyped("block", TypeCodecs.RAW, (BlockPistonExtendWrapper w) -> w.block())
+            .propertyTyped("direction", TypeCodecs.STRING, (BlockPistonExtendWrapper w) -> w.direction())
+            .propertyTyped("length", TypeCodecs.DOUBLE, (BlockPistonExtendWrapper w) -> (double) w.length());
 
         PolyTypeRegistry.define("BlockPistonRetractEvent", "Event")
-            .property("block", obj -> ((BlockPistonRetractWrapper) obj).block())
-            .property("direction", obj -> ScriptValue.of(((BlockPistonRetractWrapper) obj).direction()));
+            .propertyTyped("block", TypeCodecs.RAW, (BlockPistonRetractWrapper w) -> w.block())
+            .propertyTyped("direction", TypeCodecs.STRING, (BlockPistonRetractWrapper w) -> w.direction());
 
         PolyTypeRegistry.define("BlockDispenseEvent", "Event")
-            .property("block", obj -> ((BlockDispenseWrapper) obj).block())
-            .property("item", obj -> ((BlockDispenseWrapper) obj).item())
-            .property("velocity", obj -> ((BlockDispenseWrapper) obj).velocity())
+            .propertyTyped("block", TypeCodecs.RAW, (BlockDispenseWrapper w) -> w.block())
+            .propertyTyped("item", TypeCodecs.RAW, (BlockDispenseWrapper w) -> w.item())
+            .propertyTyped("velocity", TypeCodecs.RAW, (BlockDispenseWrapper w) -> w.velocity())
             .methodTyped1("set_velocity", TypeCodecs.RAW, TypeCodecs.BOOL, true,
                 (BlockDispenseWrapper w, ScriptValue v) -> { w.setVelocity(v); return true; });
 
         PolyTypeRegistry.define("BlockDamageEvent", "Event")
-            .property("block", obj -> ((BlockDamageWrapper) obj).block())
-            .property("player", obj -> ((BlockDamageWrapper) obj).player())
-            .property("instabreak", obj -> ScriptValue.of(((BlockDamageWrapper) obj).instabreak()))
+            .propertyTyped("block", TypeCodecs.RAW, (BlockDamageWrapper w) -> w.block())
+            .propertyTyped("player", TypeCodecs.RAW, (BlockDamageWrapper w) -> w.player())
+            .propertyTyped("instabreak", TypeCodecs.BOOL, (BlockDamageWrapper w) -> w.instabreak())
             .methodTypedOpt1("set_instabreak", TypeCodecs.BOOL, false, TypeCodecs.BOOL,
                 (BlockDamageWrapper w, Boolean instabreak) -> { w.setInstabreak(instabreak); return true; });
 
         PolyTypeRegistry.define("BlockPhysicsEvent", "Event")
-            .property("block", obj -> ((BlockPhysicsWrapper) obj).block())
-            .property("changed_type", obj -> ScriptValue.of(((BlockPhysicsWrapper) obj).changedTypeMaterial()));
+            .propertyTyped("block", TypeCodecs.RAW, (BlockPhysicsWrapper w) -> w.block())
+            .propertyTyped("changed_type", TypeCodecs.STRING, (BlockPhysicsWrapper w) -> w.changedTypeMaterial());
 
         PolyTypeRegistry.define("SignChangeEvent", "Event")
-            .property("block", obj -> ((SignChangeWrapper) obj).block())
-            .property("player", obj -> ((SignChangeWrapper) obj).player())
+            .propertyTyped("block", TypeCodecs.RAW, (SignChangeWrapper w) -> w.block())
+            .propertyTyped("player", TypeCodecs.RAW, (SignChangeWrapper w) -> w.player())
             .methodTypedOpt1("get_line", TypeCodecs.DOUBLE, 0.0, TypeCodecs.STRING,
                 (SignChangeWrapper w, Double idx) -> w.getLine(idx.intValue()))
             .methodTyped2("set_line", TypeCodecs.DOUBLE, TypeCodecs.STRING, TypeCodecs.BOOL, false,
@@ -623,215 +642,219 @@ public final class EventType {
         // PLAYER/ENTITY/BLOCK batches above, for menu clicks, furnaces, brewing, and dropped-item
         // entities.
         PolyTypeRegistry.define("InventoryClickEvent", "Event")
-            .property("slot", obj -> ScriptValue.of(((InventoryClickWrapper) obj).slot()))
-            .property("raw_slot", obj -> ScriptValue.of(((InventoryClickWrapper) obj).rawSlot()))
-            .property("current_item", obj -> ((InventoryClickWrapper) obj).currentItem())
+            .propertyTyped("slot", TypeCodecs.DOUBLE, (InventoryClickWrapper w) -> (double) w.slot())
+            .propertyTyped("raw_slot", TypeCodecs.DOUBLE, (InventoryClickWrapper w) -> (double) w.rawSlot())
+            .propertyTyped("current_item", TypeCodecs.RAW, (InventoryClickWrapper w) -> w.currentItem())
             .methodTypedOpt1("set_current_item", TypeCodecs.RAW, ScriptValue.NULL, TypeCodecs.BOOL,
                 (InventoryClickWrapper w, ScriptValue item) -> { w.setCurrentItem(item); return true; })
-            .property("cursor", obj -> ((InventoryClickWrapper) obj).cursor())
+            .propertyTyped("cursor", TypeCodecs.RAW, (InventoryClickWrapper w) -> w.cursor())
             .methodTypedOpt1("set_cursor", TypeCodecs.RAW, ScriptValue.NULL, TypeCodecs.BOOL,
                 (InventoryClickWrapper w, ScriptValue cursor) -> { w.setCursor(cursor); return true; })
-            .property("click_type", obj -> ScriptValue.of(((InventoryClickWrapper) obj).clickType()))
-            .property("action", obj -> ScriptValue.of(((InventoryClickWrapper) obj).action()))
-            .property("who_clicked", obj -> ((InventoryClickWrapper) obj).whoClicked());
+            .propertyTyped("click_type", TypeCodecs.STRING, (InventoryClickWrapper w) -> w.clickType())
+            .propertyTyped("action", TypeCodecs.STRING, (InventoryClickWrapper w) -> w.action())
+            .propertyTyped("who_clicked", TypeCodecs.RAW, (InventoryClickWrapper w) -> w.whoClicked());
 
         // CraftItemEvent IS-A InventoryClickEvent (both the Bukkit event and this wrapper), so it
         // extends "InventoryClickEvent" and inherits slot/current_item/who_clicked/... for free.
         PolyTypeRegistry.define("CraftItemEvent", "InventoryClickEvent")
-            .property("recipe_result", obj -> ((CraftItemWrapper) obj).recipeResult());
+            .propertyTyped("recipe_result", TypeCodecs.RAW, (CraftItemWrapper w) -> w.recipeResult());
 
         PolyTypeRegistry.define("InventoryDragEvent", "Event")
-            .property("cursor", obj -> ((InventoryDragWrapper) obj).cursor())
+            .propertyTyped("cursor", TypeCodecs.RAW, (InventoryDragWrapper w) -> w.cursor())
             .methodTyped1("set_cursor", TypeCodecs.RAW, TypeCodecs.BOOL, true,
                 (InventoryDragWrapper w, ScriptValue c) -> { w.setCursor(c); return true; })
-            .property("old_cursor", obj -> ((InventoryDragWrapper) obj).oldCursor())
-            .property("who_clicked", obj -> ((InventoryDragWrapper) obj).whoClicked());
+            .propertyTyped("old_cursor", TypeCodecs.RAW, (InventoryDragWrapper w) -> w.oldCursor())
+            .propertyTyped("who_clicked", TypeCodecs.RAW, (InventoryDragWrapper w) -> w.whoClicked());
 
         PolyTypeRegistry.define("InventoryOpenEvent", "Event")
-            .property("player", obj -> ((InventoryOpenWrapper) obj).player());
+            .propertyTyped("player", TypeCodecs.RAW, (InventoryOpenWrapper w) -> w.player());
 
         PolyTypeRegistry.define("InventoryCloseEvent", "Event")
-            .property("player", obj -> ((InventoryCloseWrapper) obj).player());
+            .propertyTyped("player", TypeCodecs.RAW, (InventoryCloseWrapper w) -> w.player());
 
         PolyTypeRegistry.define("InventoryMoveItemEvent", "Event")
-            .property("item", obj -> ((InventoryMoveItemWrapper) obj).item())
+            .propertyTyped("item", TypeCodecs.RAW, (InventoryMoveItemWrapper w) -> w.item())
             .methodTyped1("set_item", TypeCodecs.RAW, TypeCodecs.BOOL, true,
                 (InventoryMoveItemWrapper w, ScriptValue item) -> { w.setItem(item); return true; })
-            .property("source", obj -> ScriptValue.of(((InventoryMoveItemWrapper) obj).source()))
-            .property("destination", obj -> ScriptValue.of(((InventoryMoveItemWrapper) obj).destination()))
-            .property("initiator", obj -> ScriptValue.of(((InventoryMoveItemWrapper) obj).initiator()));
+            .propertyTyped("source", TypeCodecs.STRING, (InventoryMoveItemWrapper w) -> w.source())
+            .propertyTyped("destination", TypeCodecs.STRING, (InventoryMoveItemWrapper w) -> w.destination())
+            .propertyTyped("initiator", TypeCodecs.STRING, (InventoryMoveItemWrapper w) -> w.initiator());
 
         PolyTypeRegistry.define("FurnaceBurnEvent", "Event")
-            .property("fuel", obj -> ((FurnaceBurnWrapper) obj).fuel())
-            .property("burn_time", obj -> ScriptValue.of(((FurnaceBurnWrapper) obj).burnTime()))
+            .propertyTyped("fuel", TypeCodecs.RAW, (FurnaceBurnWrapper w) -> w.fuel())
+            .propertyTyped("burn_time", TypeCodecs.DOUBLE, (FurnaceBurnWrapper w) -> (double) w.burnTime())
             .methodTypedOpt1("set_burn_time", TypeCodecs.DOUBLE, 0.0, TypeCodecs.BOOL,
                 (FurnaceBurnWrapper w, Double ticks) -> { w.setBurnTime(ticks.intValue()); return true; })
-            .property("burning", obj -> ScriptValue.of(((FurnaceBurnWrapper) obj).burning()));
+            .propertyTyped("burning", TypeCodecs.BOOL, (FurnaceBurnWrapper w) -> w.burning());
 
         PolyTypeRegistry.define("FurnaceSmeltEvent", "Event")
-            .property("source", obj -> ((FurnaceSmeltWrapper) obj).source())
-            .property("result", obj -> ((FurnaceSmeltWrapper) obj).result())
+            .propertyTyped("source", TypeCodecs.RAW, (FurnaceSmeltWrapper w) -> w.source())
+            .propertyTyped("result", TypeCodecs.RAW, (FurnaceSmeltWrapper w) -> w.result())
             .methodTyped1("set_result", TypeCodecs.RAW, TypeCodecs.BOOL, true,
                 (FurnaceSmeltWrapper w, ScriptValue result) -> { w.setResult(result); return true; });
 
         PolyTypeRegistry.define("FurnaceExtractEvent", "Event")
-            .property("player", obj -> ((FurnaceExtractWrapper) obj).player())
-            .property("item_type", obj -> ScriptValue.of(((FurnaceExtractWrapper) obj).itemType()))
-            .property("item_amount", obj -> ScriptValue.of(((FurnaceExtractWrapper) obj).itemAmount()));
+            .propertyTyped("player", TypeCodecs.RAW, (FurnaceExtractWrapper w) -> w.player())
+            .propertyTyped("item_type", TypeCodecs.STRING, (FurnaceExtractWrapper w) -> w.itemType())
+            .propertyTyped("item_amount", TypeCodecs.DOUBLE, (FurnaceExtractWrapper w) -> (double) w.itemAmount());
 
         // BrewEvent — see BrewWrapper's javadoc for why "contents"/"source" from the task description
         // became contents_size/ingredient instead (no full BrewerInventory wrapper type, and no real
         // getSource() accessor on the raw event).
         PolyTypeRegistry.define("BrewEvent", "Event")
-            .property("contents_size", obj -> ScriptValue.of(((BrewWrapper) obj).contentsSize()))
-            .property("ingredient", obj -> ((BrewWrapper) obj).ingredient())
-            .property("results_count", obj -> ScriptValue.of(((BrewWrapper) obj).resultsCount()))
-            .property("fuel_level", obj -> ScriptValue.of(((BrewWrapper) obj).fuelLevel()));
+            .propertyTyped("contents_size", TypeCodecs.DOUBLE, (BrewWrapper w) -> (double) w.contentsSize())
+            .propertyTyped("ingredient", TypeCodecs.RAW, (BrewWrapper w) -> w.ingredient())
+            .propertyTyped("results_count", TypeCodecs.DOUBLE, (BrewWrapper w) -> (double) w.resultsCount())
+            .propertyTyped("fuel_level", TypeCodecs.DOUBLE, (BrewWrapper w) -> (double) w.fuelLevel());
 
         PolyTypeRegistry.define("PrepareItemCraftEvent", "Event")
-            .property("result", obj -> ((PrepareItemCraftWrapper) obj).result())
+            .propertyTyped("result", TypeCodecs.RAW, (PrepareItemCraftWrapper w) -> w.result())
             .methodTypedOpt1("set_result", TypeCodecs.RAW, ScriptValue.NULL, TypeCodecs.BOOL,
                 (PrepareItemCraftWrapper w, ScriptValue result) -> { w.setResult(result); return true; });
 
         PolyTypeRegistry.define("ItemSpawnEvent", "Event")
-            .property("entity", obj -> ((ItemSpawnWrapper) obj).entity())
-            .property("item", obj -> ((ItemSpawnWrapper) obj).item());
+            .propertyTyped("entity", TypeCodecs.RAW, (ItemSpawnWrapper w) -> w.entity())
+            .propertyTyped("item", TypeCodecs.RAW, (ItemSpawnWrapper w) -> w.item());
 
         PolyTypeRegistry.define("ItemDespawnEvent", "Event")
-            .property("entity", obj -> ((ItemDespawnWrapper) obj).entity())
-            .property("item", obj -> ((ItemDespawnWrapper) obj).item());
+            .propertyTyped("entity", TypeCodecs.RAW, (ItemDespawnWrapper w) -> w.entity())
+            .propertyTyped("item", TypeCodecs.RAW, (ItemDespawnWrapper w) -> w.item());
 
         PolyTypeRegistry.define("ItemMergeEvent", "Event")
-            .property("entity", obj -> ((ItemMergeWrapper) obj).entity())
-            .property("target", obj -> ((ItemMergeWrapper) obj).target());
+            .propertyTyped("entity", TypeCodecs.RAW, (ItemMergeWrapper w) -> w.entity())
+            .propertyTyped("target", TypeCodecs.RAW, (ItemMergeWrapper w) -> w.target());
 
         PolyTypeRegistry.define("PlayerSwapHandItemsEvent", "Event")
-            .property("main_hand_item", obj -> ((PlayerSwapHandItemsWrapper) obj).mainHandItem())
+            .propertyTyped("main_hand_item", TypeCodecs.RAW, (PlayerSwapHandItemsWrapper w) -> w.mainHandItem())
             .methodTypedOpt1("set_main_hand_item", TypeCodecs.RAW, ScriptValue.NULL, TypeCodecs.BOOL,
                 (PlayerSwapHandItemsWrapper w, ScriptValue item) -> { w.setMainHandItem(item); return true; })
-            .property("off_hand_item", obj -> ((PlayerSwapHandItemsWrapper) obj).offHandItem())
+            .propertyTyped("off_hand_item", TypeCodecs.RAW, (PlayerSwapHandItemsWrapper w) -> w.offHandItem())
             .methodTypedOpt1("set_off_hand_item", TypeCodecs.RAW, ScriptValue.NULL, TypeCodecs.BOOL,
                 (PlayerSwapHandItemsWrapper w, ScriptValue item) -> { w.setOffHandItem(item); return true; });
 
         PolyTypeRegistry.define("PlayerItemBreakEvent", "Event")
-            .property("broken_item", obj -> ((PlayerItemBreakWrapper) obj).brokenItem());
+            .propertyTyped("broken_item", TypeCodecs.RAW, (PlayerItemBreakWrapper w) -> w.brokenItem());
 
         PolyTypeRegistry.define("PlayerItemDamageEvent", "Event")
-            .property("item", obj -> ((PlayerItemDamageWrapper) obj).item())
-            .property("damage", obj -> ScriptValue.of(((PlayerItemDamageWrapper) obj).damage()))
+            .propertyTyped("item", TypeCodecs.RAW, (PlayerItemDamageWrapper w) -> w.item())
+            .propertyTyped("damage", TypeCodecs.DOUBLE, (PlayerItemDamageWrapper w) -> (double) w.damage())
             .methodTypedOpt1("set_damage", TypeCodecs.DOUBLE, 0.0, TypeCodecs.BOOL,
                 (PlayerItemDamageWrapper w, Double damage) -> { w.setDamage(damage.intValue()); return true; });
 
         PolyTypeRegistry.define("PlayerArmorStandManipulateEvent", "Event")
-            .property("armor_stand", obj -> ((PlayerArmorStandManipulateWrapper) obj).armorStand())
-            .property("player_item", obj -> ((PlayerArmorStandManipulateWrapper) obj).playerItem())
-            .property("armor_stand_item", obj -> ((PlayerArmorStandManipulateWrapper) obj).armorStandItem());
+            .propertyTyped("armor_stand", TypeCodecs.RAW, (PlayerArmorStandManipulateWrapper w) -> w.armorStand())
+            .propertyTyped("player_item", TypeCodecs.RAW, (PlayerArmorStandManipulateWrapper w) -> w.playerItem())
+            .propertyTyped("armor_stand_item", TypeCodecs.RAW, (PlayerArmorStandManipulateWrapper w) -> w.armorStandItem());
 
         // ---- Dedicated wrappers for the common vanilla VEHICLE events — same idea as the batches
         // above, for minecarts/boats and anything else implementing Vehicle.
         PolyTypeRegistry.define("VehicleEnterEvent", "Event")
-            .property("vehicle", obj -> ((VehicleEnterWrapper) obj).vehicle())
-            .property("entered", obj -> ((VehicleEnterWrapper) obj).entered());
+            .propertyTyped("vehicle", TypeCodecs.RAW, (VehicleEnterWrapper w) -> w.vehicle())
+            .propertyTyped("entered", TypeCodecs.RAW, (VehicleEnterWrapper w) -> w.entered());
 
         PolyTypeRegistry.define("VehicleExitEvent", "Event")
-            .property("vehicle", obj -> ((VehicleExitWrapper) obj).vehicle())
-            .property("exited", obj -> ((VehicleExitWrapper) obj).exited());
+            .propertyTyped("vehicle", TypeCodecs.RAW, (VehicleExitWrapper w) -> w.vehicle())
+            .propertyTyped("exited", TypeCodecs.RAW, (VehicleExitWrapper w) -> w.exited());
 
         PolyTypeRegistry.define("VehicleDamageEvent", "Event")
-            .property("vehicle", obj -> ((VehicleDamageWrapper) obj).vehicle())
-            .property("attacker", obj -> ((VehicleDamageWrapper) obj).attacker())
-            .property("damage", obj -> ScriptValue.of(((VehicleDamageWrapper) obj).damage()))
+            .propertyTyped("vehicle", TypeCodecs.RAW, (VehicleDamageWrapper w) -> w.vehicle())
+            .propertyTyped("attacker", TypeCodecs.RAW, (VehicleDamageWrapper w) -> w.attacker())
+            .propertyTyped("damage", TypeCodecs.DOUBLE, (VehicleDamageWrapper w) -> (double) w.damage())
             .methodTypedOpt1("set_damage", TypeCodecs.DOUBLE, 0.0, TypeCodecs.BOOL,
                 (VehicleDamageWrapper w, Double damage) -> { w.setDamage(damage); return true; });
 
         PolyTypeRegistry.define("VehicleDestroyEvent", "Event")
-            .property("vehicle", obj -> ((VehicleDestroyWrapper) obj).vehicle())
-            .property("attacker", obj -> ((VehicleDestroyWrapper) obj).attacker());
+            .propertyTyped("vehicle", TypeCodecs.RAW, (VehicleDestroyWrapper w) -> w.vehicle())
+            .propertyTyped("attacker", TypeCodecs.RAW, (VehicleDestroyWrapper w) -> w.attacker());
 
         // VehicleCollisionEvent itself is abstract and not instantiable, so there's no PolyType for
         // it directly — VehicleBlockCollisionEvent/VehicleEntityCollisionEvent each extend "Event"
         // directly instead (see VehicleBlockCollisionWrapper's javadoc for why the block variant
         // isn't Cancellable while the entity variant is).
         PolyTypeRegistry.define("VehicleBlockCollisionEvent", "Event")
-            .property("vehicle", obj -> ((VehicleBlockCollisionWrapper) obj).vehicle())
-            .property("block", obj -> ((VehicleBlockCollisionWrapper) obj).block());
+            .propertyTyped("vehicle", TypeCodecs.RAW, (VehicleBlockCollisionWrapper w) -> w.vehicle())
+            .propertyTyped("block", TypeCodecs.RAW, (VehicleBlockCollisionWrapper w) -> w.block());
 
         PolyTypeRegistry.define("VehicleEntityCollisionEvent", "Event")
-            .property("vehicle", obj -> ((VehicleEntityCollisionWrapper) obj).vehicle())
-            .property("entity", obj -> ((VehicleEntityCollisionWrapper) obj).entity());
+            .propertyTyped("vehicle", TypeCodecs.RAW, (VehicleEntityCollisionWrapper w) -> w.vehicle())
+            .propertyTyped("entity", TypeCodecs.RAW, (VehicleEntityCollisionWrapper w) -> w.entity());
 
         PolyTypeRegistry.define("VehicleMoveEvent", "Event")
-            .property("vehicle", obj -> ((VehicleMoveWrapper) obj).vehicle())
-            .property("from", obj -> ((VehicleMoveWrapper) obj).from())
-            .property("to", obj -> ((VehicleMoveWrapper) obj).to());
+            .propertyTyped("vehicle", TypeCodecs.RAW, (VehicleMoveWrapper w) -> w.vehicle())
+            .propertyTyped("from", TypeCodecs.RAW, (VehicleMoveWrapper w) -> w.from())
+            .propertyTyped("to", TypeCodecs.RAW, (VehicleMoveWrapper w) -> w.to());
 
         PolyTypeRegistry.define("VehicleCreateEvent", "Event")
-            .property("vehicle", obj -> ((VehicleCreateWrapper) obj).vehicle());
+            .propertyTyped("vehicle", TypeCodecs.RAW, (VehicleCreateWrapper w) -> w.vehicle());
 
         // ---- Dedicated wrappers for the common vanilla WEATHER/WORLD events — same idea as the
         // batches above, for rain/thunder/lightning and world/chunk lifecycle.
         PolyTypeRegistry.define("WeatherChangeEvent", "Event")
-            .property("world", obj -> ((WeatherChangeWrapper) obj).world())
-            .property("to_weather_state", obj -> ScriptValue.of(((WeatherChangeWrapper) obj).toWeatherState()));
+            .propertyTyped("world", TypeCodecs.RAW, (WeatherChangeWrapper w) -> w.world())
+            .propertyTyped("to_weather_state", TypeCodecs.BOOL, (WeatherChangeWrapper w) -> w.toWeatherState());
 
         PolyTypeRegistry.define("ThunderChangeEvent", "Event")
-            .property("world", obj -> ((ThunderChangeWrapper) obj).world())
-            .property("to_thunder_state", obj -> ScriptValue.of(((ThunderChangeWrapper) obj).toThunderState()));
+            .propertyTyped("world", TypeCodecs.RAW, (ThunderChangeWrapper w) -> w.world())
+            .propertyTyped("to_thunder_state", TypeCodecs.BOOL, (ThunderChangeWrapper w) -> w.toThunderState());
 
         PolyTypeRegistry.define("LightningStrikeEvent", "Event")
-            .property("lightning", obj -> ((LightningStrikeWrapper) obj).lightning())
-            .property("cause", obj -> ScriptValue.of(((LightningStrikeWrapper) obj).cause()));
+            .propertyTyped("lightning", TypeCodecs.RAW, (LightningStrikeWrapper w) -> w.lightning())
+            .propertyTyped("cause", TypeCodecs.STRING, (LightningStrikeWrapper w) -> w.cause());
 
         PolyTypeRegistry.define("WorldLoadEvent", "Event")
-            .property("world", obj -> ((WorldLoadWrapper) obj).world());
+            .propertyTyped("world", TypeCodecs.RAW, (WorldLoadWrapper w) -> w.world());
 
         PolyTypeRegistry.define("WorldUnloadEvent", "Event")
-            .property("world", obj -> ((WorldUnloadWrapper) obj).world());
+            .propertyTyped("world", TypeCodecs.RAW, (WorldUnloadWrapper w) -> w.world());
 
         PolyTypeRegistry.define("WorldSaveEvent", "Event")
-            .property("world", obj -> ((WorldSaveWrapper) obj).world());
+            .propertyTyped("world", TypeCodecs.RAW, (WorldSaveWrapper w) -> w.world());
 
         PolyTypeRegistry.define("ChunkLoadEvent", "Event")
-            .property("world", obj -> ((ChunkLoadWrapper) obj).world())
-            .property("chunk_x", obj -> ScriptValue.of(((ChunkLoadWrapper) obj).chunkX()))
-            .property("chunk_z", obj -> ScriptValue.of(((ChunkLoadWrapper) obj).chunkZ()))
-            .property("is_new", obj -> ScriptValue.of(((ChunkLoadWrapper) obj).isNew()));
+            .propertyTyped("world", TypeCodecs.RAW, (ChunkLoadWrapper w) -> w.world())
+            .propertyTyped("chunk_x", TypeCodecs.DOUBLE, (ChunkLoadWrapper w) -> (double) w.chunkX())
+            .propertyTyped("chunk_z", TypeCodecs.DOUBLE, (ChunkLoadWrapper w) -> (double) w.chunkZ())
+            .propertyTyped("is_new", TypeCodecs.BOOL, (ChunkLoadWrapper w) -> w.isNew());
 
         PolyTypeRegistry.define("ChunkUnloadEvent", "Event")
-            .property("world", obj -> ((ChunkUnloadWrapper) obj).world())
-            .property("chunk_x", obj -> ScriptValue.of(((ChunkUnloadWrapper) obj).chunkX()))
-            .property("chunk_z", obj -> ScriptValue.of(((ChunkUnloadWrapper) obj).chunkZ()));
+            .propertyTyped("world", TypeCodecs.RAW, (ChunkUnloadWrapper w) -> w.world())
+            .propertyTyped("chunk_x", TypeCodecs.DOUBLE, (ChunkUnloadWrapper w) -> (double) w.chunkX())
+            .propertyTyped("chunk_z", TypeCodecs.DOUBLE, (ChunkUnloadWrapper w) -> (double) w.chunkZ());
 
         PolyTypeRegistry.define("SpawnChangeEvent", "Event")
-            .property("world", obj -> ((SpawnChangeWrapper) obj).world())
-            .property("previous_location", obj -> ((SpawnChangeWrapper) obj).previousLocation());
+            .propertyTyped("world", TypeCodecs.RAW, (SpawnChangeWrapper w) -> w.world())
+            .propertyTyped("previous_location", TypeCodecs.RAW, (SpawnChangeWrapper w) -> w.previousLocation());
 
         PolyTypeRegistry.define("PortalCreateEvent", "Event")
-            .property("world", obj -> ((PortalCreateWrapper) obj).world())
-            .property("reason", obj -> ScriptValue.of(((PortalCreateWrapper) obj).reason()))
-            .property("blocks", obj -> new ScriptValue.Array(((PortalCreateWrapper) obj).blocks()));
+            .propertyTyped("world", TypeCodecs.RAW, (PortalCreateWrapper w) -> w.world())
+            .propertyTyped("reason", TypeCodecs.STRING, (PortalCreateWrapper w) -> w.reason())
+            // RAW rather than listOf — already-boxed Objs, see EntityExplodeEvent.block_list.
+            .propertyTyped("blocks", TypeCodecs.RAW,
+                (PortalCreateWrapper w) -> new ScriptValue.Array(w.blocks()));
 
         PolyTypeRegistry.define("StructureGrowEvent", "Event")
-            .property("location", obj -> ((StructureGrowWrapper) obj).location())
-            .property("player", obj -> ((StructureGrowWrapper) obj).player())
-            .property("blocks", obj -> new ScriptValue.Array(((StructureGrowWrapper) obj).blocks()));
+            .propertyTyped("location", TypeCodecs.RAW, (StructureGrowWrapper w) -> w.location())
+            .propertyTyped("player", TypeCodecs.RAW, (StructureGrowWrapper w) -> w.player())
+            // RAW rather than listOf — already-boxed Objs, see EntityExplodeEvent.block_list.
+            .propertyTyped("blocks", TypeCodecs.RAW,
+                (StructureGrowWrapper w) -> new ScriptValue.Array(w.blocks()));
 
         // ---- SERVER events + remaining "other" player events.
         PolyTypeRegistry.define("ServerCommandEvent", "Event")
-            .property("command", obj -> ScriptValue.of(((ServerCommandEventWrapper) obj).command()))
-            .property("sender_name", obj -> ScriptValue.of(((ServerCommandEventWrapper) obj).senderName()))
+            .propertyTyped("command", TypeCodecs.STRING, (ServerCommandEventWrapper w) -> w.command())
+            .propertyTyped("sender_name", TypeCodecs.STRING, (ServerCommandEventWrapper w) -> w.senderName())
             .methodTypedOpt1("set_command", TypeCodecs.STRING, "", TypeCodecs.BOOL,
                 (ServerCommandEventWrapper w, String command) -> { w.setCommand(command); return true; });
 
         PolyTypeRegistry.define("PluginEnableEvent", "Event")
-            .property("plugin_name", obj -> ScriptValue.of(((PluginEnableEventWrapper) obj).pluginName()));
+            .propertyTyped("plugin_name", TypeCodecs.STRING, (PluginEnableEventWrapper w) -> w.pluginName());
 
         PolyTypeRegistry.define("PluginDisableEvent", "Event")
-            .property("plugin_name", obj -> ScriptValue.of(((PluginDisableEventWrapper) obj).pluginName()));
+            .propertyTyped("plugin_name", TypeCodecs.STRING, (PluginDisableEventWrapper w) -> w.pluginName());
 
         PolyTypeRegistry.define("TabCompleteEvent", "Event")
-            .property("buffer", obj -> ScriptValue.of(((TabCompleteEventWrapper) obj).buffer()))
-            .property("completions", obj -> ((TabCompleteEventWrapper) obj).completions())
+            .propertyTyped("buffer", TypeCodecs.STRING, (TabCompleteEventWrapper w) -> w.buffer())
+            .propertyTyped("completions", TypeCodecs.RAW, (TabCompleteEventWrapper w) -> w.completions())
             // Left untyped: IRREDUCIBLY variadic — the whole args list IS the completion list, and
             // TabCompleteEventWrapper.setCompletions accepts both set_completions([a, b]) and the
             // flat set_completions(a, b, c). A single methodTypedOpt1(RAW, ...) slot binds only
@@ -843,61 +866,61 @@ public final class EventType {
             });
 
         PolyTypeRegistry.define("PlayerAdvancementDoneEvent", "Event")
-            .property("advancement_key", obj -> ScriptValue.of(((PlayerAdvancementDoneWrapper) obj).advancementKey()));
+            .propertyTyped("advancement_key", TypeCodecs.STRING, (PlayerAdvancementDoneWrapper w) -> w.advancementKey());
 
         PolyTypeRegistry.define("PlayerStatisticIncrementEvent", "Event")
-            .property("statistic", obj -> ScriptValue.of(((PlayerStatisticIncrementWrapper) obj).statistic()))
-            .property("previous_value", obj -> ScriptValue.of(((PlayerStatisticIncrementWrapper) obj).previousValue()))
-            .property("new_value", obj -> ScriptValue.of(((PlayerStatisticIncrementWrapper) obj).newValue()));
+            .propertyTyped("statistic", TypeCodecs.STRING, (PlayerStatisticIncrementWrapper w) -> w.statistic())
+            .propertyTyped("previous_value", TypeCodecs.DOUBLE, (PlayerStatisticIncrementWrapper w) -> (double) w.previousValue())
+            .propertyTyped("new_value", TypeCodecs.DOUBLE, (PlayerStatisticIncrementWrapper w) -> (double) w.newValue());
 
         PolyTypeRegistry.define("PlayerRiptideEvent", "Event")
-            .property("item", obj -> ((PlayerRiptideWrapper) obj).item())
-            .property("velocity", obj -> ((PlayerRiptideWrapper) obj).velocity());
+            .propertyTyped("item", TypeCodecs.RAW, (PlayerRiptideWrapper w) -> w.item())
+            .propertyTyped("velocity", TypeCodecs.RAW, (PlayerRiptideWrapper w) -> w.velocity());
 
         PolyTypeRegistry.define("PlayerVelocityEvent", "Event")
-            .property("velocity", obj -> ((PlayerVelocityWrapper) obj).velocity())
+            .propertyTyped("velocity", TypeCodecs.RAW, (PlayerVelocityWrapper w) -> w.velocity())
             .methodTyped1("set_velocity", TypeCodecs.RAW, TypeCodecs.BOOL, true,
                 (PlayerVelocityWrapper w, ScriptValue v) -> { w.setVelocity(v); return true; });
 
         PolyTypeRegistry.define("PlayerShearEntityEvent", "Event")
-            .property("entity", obj -> ((PlayerShearEntityWrapper) obj).entity())
-            .property("item", obj -> ((PlayerShearEntityWrapper) obj).item());
+            .propertyTyped("entity", TypeCodecs.RAW, (PlayerShearEntityWrapper w) -> w.entity())
+            .propertyTyped("item", TypeCodecs.RAW, (PlayerShearEntityWrapper w) -> w.item());
 
         PolyTypeRegistry.define("PlayerBucketFillEvent", "Event")
-            .property("block_clicked", obj -> ((PlayerBucketFillWrapper) obj).blockClicked())
-            .property("item_stack", obj -> ((PlayerBucketFillWrapper) obj).itemStack());
+            .propertyTyped("block_clicked", TypeCodecs.RAW, (PlayerBucketFillWrapper w) -> w.blockClicked())
+            .propertyTyped("item_stack", TypeCodecs.RAW, (PlayerBucketFillWrapper w) -> w.itemStack());
 
         PolyTypeRegistry.define("PlayerBucketEmptyEvent", "Event")
-            .property("block_clicked", obj -> ((PlayerBucketEmptyWrapper) obj).blockClicked())
-            .property("item_stack", obj -> ((PlayerBucketEmptyWrapper) obj).itemStack());
+            .propertyTyped("block_clicked", TypeCodecs.RAW, (PlayerBucketEmptyWrapper w) -> w.blockClicked())
+            .propertyTyped("item_stack", TypeCodecs.RAW, (PlayerBucketEmptyWrapper w) -> w.itemStack());
 
         PolyTypeRegistry.define("PlayerEggThrowEvent", "Event")
-            .property("egg", obj -> ((PlayerEggThrowWrapper) obj).egg())
-            .property("hatching", obj -> ScriptValue.of(((PlayerEggThrowWrapper) obj).hatching()))
+            .propertyTyped("egg", TypeCodecs.RAW, (PlayerEggThrowWrapper w) -> w.egg())
+            .propertyTyped("hatching", TypeCodecs.BOOL, (PlayerEggThrowWrapper w) -> w.hatching())
             .methodTypedOpt1("set_hatching", TypeCodecs.BOOL, false, TypeCodecs.BOOL,
                 (PlayerEggThrowWrapper w, Boolean hatching) -> { w.setHatching(hatching); return true; });
 
         PolyTypeRegistry.define("PlayerFishEvent", "Event")
-            .property("state", obj -> ScriptValue.of(((PlayerFishWrapper) obj).state()))
-            .property("caught", obj -> ((PlayerFishWrapper) obj).caught())
-            .property("hook", obj -> ((PlayerFishWrapper) obj).hook())
-            .property("exp", obj -> ScriptValue.of(((PlayerFishWrapper) obj).exp()))
+            .propertyTyped("state", TypeCodecs.STRING, (PlayerFishWrapper w) -> w.state())
+            .propertyTyped("caught", TypeCodecs.RAW, (PlayerFishWrapper w) -> w.caught())
+            .propertyTyped("hook", TypeCodecs.RAW, (PlayerFishWrapper w) -> w.hook())
+            .propertyTyped("exp", TypeCodecs.DOUBLE, (PlayerFishWrapper w) -> (double) w.exp())
             .methodTypedOpt1("set_exp", TypeCodecs.DOUBLE, 0.0, TypeCodecs.BOOL,
                 (PlayerFishWrapper w, Double exp) -> { w.setExp(exp.intValue()); return true; });
 
         PolyTypeRegistry.define("BroadcastMessageEvent", "Event")
-            .property("message", obj -> ScriptValue.of(((BroadcastMessageEventWrapper) obj).message()))
+            .propertyTyped("message", TypeCodecs.STRING, (BroadcastMessageEventWrapper w) -> w.message())
             .methodTypedOpt1("set_message", TypeCodecs.STRING, "", TypeCodecs.BOOL,
                 (BroadcastMessageEventWrapper w, String msg) -> { w.setMessage(msg); return true; });
 
         PolyTypeRegistry.define("PlayerElytraBoostEvent", "Event")
-            .property("item", obj -> ((PlayerElytraBoostWrapper) obj).item())
-            .property("should_consume", obj -> ScriptValue.of(((PlayerElytraBoostWrapper) obj).shouldConsume()))
+            .propertyTyped("item", TypeCodecs.RAW, (PlayerElytraBoostWrapper w) -> w.item())
+            .propertyTyped("should_consume", TypeCodecs.BOOL, (PlayerElytraBoostWrapper w) -> w.shouldConsume())
             .methodTypedOpt1("set_should_consume", TypeCodecs.BOOL, false, TypeCodecs.BOOL,
                 (PlayerElytraBoostWrapper w, Boolean consume) -> { w.setShouldConsume(consume); return true; });
 
         PolyTypeRegistry.define("PlayerAnimationEvent", "Event")
-            .property("animation_type", obj -> ScriptValue.of(((PlayerAnimationWrapper) obj).animationType()));
+            .propertyTyped("animation_type", TypeCodecs.STRING, (PlayerAnimationWrapper w) -> w.animationType());
 
         // Generic wrapper around ANY Bukkit/Paper event — the {@code /events} JSON-configured bridge
         // (see dev.arubik.craftengine.events.GenericEventBridge) binds this as {@code event} instead
@@ -912,7 +935,8 @@ public final class EventType {
         // exception escape — a missing getter, a security exception, a type mismatch, anything —
         // it would otherwise propagate into and disrupt whatever else is listening to that event.
         PolyTypeRegistry.define("BukkitEvent", "Event")
-            .property("class_name", obj -> ScriptValue.of(bukkit(obj).raw().getClass().getSimpleName()))
+            .propertyTyped("class_name", TypeCodecs.STRING,
+                (BukkitEventWrapper w) -> w.raw().getClass().getSimpleName())
             .methodTyped1("get", TypeCodecs.STRING, TypeCodecs.RAW, ScriptValue.NULL,
                 (BukkitEventWrapper w, String prop) -> {
                     try {
@@ -930,8 +954,6 @@ public final class EventType {
                     }
                 });
     }
-
-    private static BukkitEventWrapper bukkit(Object obj) { return (BukkitEventWrapper) obj; }
 
     private static ScriptValue bukkitGet(org.bukkit.event.Event raw, String property) {
         String capitalized = capitalize(property);
@@ -1146,6 +1168,4 @@ public final class EventType {
         };
         return ScriptValue.ofObj(typeName, e);
     }
-
-    private static ScriptEvent event(Object obj) { return (ScriptEvent) obj; }
 }

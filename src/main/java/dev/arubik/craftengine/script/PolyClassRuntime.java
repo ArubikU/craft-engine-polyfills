@@ -103,6 +103,32 @@ public final class PolyClassRuntime {
         return type != null ? type.resolveMethod(method) : null;
     }
 
+    /**
+     * The typed handler for {@code typeName.prop}, but ONLY if its currently-registered return kind
+     * still matches {@code retSig} — the single kind character the calling wrapper's native accessor
+     * was generated for. Any mismatch returns null, which routes that accessor through
+     * {@link #genericProperty}. Same contract as {@link #resolveTypedHandler}, one character wide
+     * because a property takes no arguments.
+     */
+    public static Object resolveTypedPropertyHandler(String typeName, String prop, String retSig) {
+        PolyType type = PolyTypeRegistry.get(typeName);
+        if (type == null) return null;
+        PolyType.TypedPropertyDescriptor d = type.resolveTypedProperty(prop);
+        if (d == null || retSig.length() != 1) return null;
+        if (kindCharOf(d.returnType()) != retSig.charAt(0)) return null;
+        return d.handler();
+    }
+
+    /** The codec of a typed property, for a wrapper whose return needs decoding inside it (a
+     *  {@link TypeCodecs.WrappedCodec}). Re-resolved by name on every refresh, for the same reason
+     *  {@link #resolveListCodec} is. */
+    public static PolyType.TypeCodec<?> resolveTypedPropertyCodec(String typeName, String prop) {
+        PolyType type = PolyTypeRegistry.get(typeName);
+        if (type == null) return null;
+        PolyType.TypedPropertyDescriptor d = type.resolveTypedProperty(prop);
+        return d != null && d.returnType() instanceof TypeCodecs.WrappedCodec ? d.returnType() : null;
+    }
+
     /** Resolves the property handler for {@code typeName.prop}, or null. */
     public static PolyType.PropertyHandler resolvePropertyHandler(String typeName, String prop) {
         PolyType type = PolyTypeRegistry.get(typeName);

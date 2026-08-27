@@ -8,6 +8,7 @@
  *  dev.arubik.craftengine.script.PolyType$PropertyHandler
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler0
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler1
+ *  dev.arubik.craftengine.script.PolyType$TypedPropertyHandler
  *  dev.arubik.craftengine.script.ScriptValue
  *  dev.arubik.craftengine.script.ScriptValue$Obj
  */
@@ -38,8 +39,10 @@ public class PolyClassLayout {
     private static volatile PolyType.TypedMethodHandler0 h$14;
     private static volatile PolyType.MethodHandler m$15;
     private static volatile PolyType.PropertyHandler p$16;
-    private static volatile PolyType.PropertyHandler p$17;
+    private static volatile PolyType.TypedPropertyHandler tp$17;
     private static volatile PolyType.PropertyHandler p$18;
+    private static volatile PolyType.PropertyHandler p$19;
+    private static volatile PolyType.TypedPropertyHandler tp$20;
 
     public static void refresh() {
         h$0 = (PolyType.TypedMethodHandler1)PolyClassRuntime.resolveTypedHandler((String)"Layout", (String)"is_locked", (String)"D:Z");
@@ -59,8 +62,10 @@ public class PolyClassLayout {
         h$14 = (PolyType.TypedMethodHandler0)PolyClassRuntime.resolveTypedHandler((String)"Layout", (String)"unlock_all", (String)":Z");
         m$15 = PolyClassRuntime.resolveMethodHandler((String)"Layout", (String)"unlock_all");
         p$16 = PolyClassRuntime.resolvePropertyHandler((String)"Layout", (String)"size");
-        p$17 = PolyClassRuntime.resolvePropertyHandler((String)"Layout", (String)"locked_slots");
-        p$18 = PolyClassRuntime.resolvePropertyHandler((String)"Layout", (String)"open");
+        tp$17 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Layout", (String)"size", (String)"D");
+        p$18 = PolyClassRuntime.resolvePropertyHandler((String)"Layout", (String)"locked_slots");
+        p$19 = PolyClassRuntime.resolvePropertyHandler((String)"Layout", (String)"open");
+        tp$20 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Layout", (String)"open", (String)"Z");
     }
 
     public boolean tm$0_is_locked(double d) {
@@ -182,18 +187,32 @@ public class PolyClassLayout {
         return PolyClassRuntime.genericProperty((String)"Layout", (String)"size", (Object)this.instance);
     }
 
-    public ScriptValue pg$17_locked_slots() {
-        if (p$17 != null) {
-            return p$17.get(this.instance);
+    public double tg$17_size() {
+        if (tp$17 != null) {
+            return (Double)tp$17.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Layout", (String)"size", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$18_locked_slots() {
+        if (p$18 != null) {
+            return p$18.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Layout", (String)"locked_slots", (Object)this.instance);
     }
 
-    public ScriptValue pg$18_open() {
-        if (p$18 != null) {
-            return p$18.get(this.instance);
+    public ScriptValue pg$19_open() {
+        if (p$19 != null) {
+            return p$19.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Layout", (String)"open", (Object)this.instance);
+    }
+
+    public boolean tg$20_open() {
+        if (tp$20 != null) {
+            return (Boolean)tp$20.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Layout", (String)"open", (Object)this.instance).asBool();
     }
 
     public PolyClassLayout(Object object) {

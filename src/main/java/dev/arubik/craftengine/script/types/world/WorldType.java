@@ -23,14 +23,14 @@ public final class WorldType {
 
     public static void register() {
         PolyTypeRegistry.define("World")
-            .property("time",         obj -> ScriptValue.of(level(obj).getDayTime()))
-            .property("day_time",     obj -> ScriptValue.of(level(obj).getDayTime() % 24000))
-            .property("is_day",       obj -> ScriptValue.of(level(obj).getDayTime() % 24000 < 12000))
-            .property("is_night",     obj -> ScriptValue.of(level(obj).getDayTime() % 24000 >= 12000))
-            .property("is_raining",   obj -> ScriptValue.of(level(obj).isRaining()))
-            .property("is_thundering",obj -> ScriptValue.of(level(obj).isThundering()))
-            .property("name",         obj -> ScriptValue.of(level(obj).dimension().identifier().toString()))
-            .property("seed",         obj -> ScriptValue.of((double) level(obj).getSeed()))
+            .propertyTyped("time",         TypeCodecs.DOUBLE, (ServerLevel l) -> (double) l.getDayTime())
+            .propertyTyped("day_time",     TypeCodecs.DOUBLE, (ServerLevel l) -> (double) (l.getDayTime() % 24000))
+            .propertyTyped("is_day",       TypeCodecs.BOOL,   (ServerLevel l) -> l.getDayTime() % 24000 < 12000)
+            .propertyTyped("is_night",     TypeCodecs.BOOL,   (ServerLevel l) -> l.getDayTime() % 24000 >= 12000)
+            .propertyTyped("is_raining",   TypeCodecs.BOOL,   (ServerLevel l) -> l.isRaining())
+            .propertyTyped("is_thundering",TypeCodecs.BOOL,   (ServerLevel l) -> l.isThundering())
+            .propertyTyped("name",         TypeCodecs.STRING, (ServerLevel l) -> l.dimension().identifier().toString())
+            .propertyTyped("seed",         TypeCodecs.DOUBLE, (ServerLevel l) -> (double) l.getSeed())
             // location(x, y, z) -> Location IN THIS world — the missing link for anything that
             // resolved a target World via world(name) (see ScriptFormula) and now needs an actual
             // Location to hand to Entity.teleport_to (cross-dimension teleport).
@@ -95,7 +95,10 @@ public final class WorldType {
                         return true;
                     } catch (Throwable e) { return false; }
                 })
-            // entities_in_range(x, y, z, radius) → Array<Entity>
+            // entities_in_range(x, y, z, radius) → Array<Entity>. Stays RAW rather than
+            // TypeCodecs.listOf: EntityType.wrap picks the PolyType name PER ELEMENT ("Player",
+            // "Animal", "Mob", "ItemEntity", ...), so no single polyTypeName describes the list —
+            // declaring one would re-box every element under it and change behaviour.
             .methodTyped4("entities_in_range", TypeCodecs.DOUBLE, TypeCodecs.DOUBLE, TypeCodecs.DOUBLE, TypeCodecs.DOUBLE, TypeCodecs.RAW,
                 new ScriptValue.Array(java.util.List.of()),
                 (ServerLevel obj, Double xArg, Double yArg, Double zArg, Double rArg) -> {

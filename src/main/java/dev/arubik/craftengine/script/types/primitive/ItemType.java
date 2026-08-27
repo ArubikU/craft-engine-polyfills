@@ -103,54 +103,63 @@ public final class ItemType {
             // A CraftEngine custom item reports its CE id ("cml:crate_acacia"); only a plain
             // vanilla item falls back to the registry key. Without this, every CE item sharing a
             // base material (usually paper) had the same id and no filter could tell them apart.
-            .property("id",       obj -> {
-                String ce = customItemId(stack(obj));
-                return ScriptValue.of(ce != null ? ce : BuiltInRegistries.ITEM.getKey(stack(obj).getItem()).toString());
+            // A handler below takes `ItemStack s` directly wherever the original had NO try/catch —
+            // the instance cast then happens in the lambda's own bridge instead of in stack(obj),
+            // throwing the identical ClassCastException at the identical point. Where the original
+            // DID wrap stack(obj) in a try, the parameter stays `Object` and stack(obj) stays inside
+            // that try, so a wrong-typed instance still yields the fallback rather than propagating.
+            .propertyTyped("id", TypeCodecs.STRING, (ItemStack s) -> {
+                String ce = customItemId(s);
+                return ce != null ? ce : BuiltInRegistries.ITEM.getKey(s.getItem()).toString();
             })
             /** The vanilla material backing this item, ignoring any CE identity. */
-            .property("vanilla_id", obj -> ScriptValue.of(BuiltInRegistries.ITEM.getKey(stack(obj).getItem()).toString()))
-            .property("is_custom", obj -> ScriptValue.of(customItemId(stack(obj)) != null))
+            .propertyTyped("vanilla_id", TypeCodecs.STRING, (ItemStack s) -> BuiltInRegistries.ITEM.getKey(s.getItem()).toString())
+            .propertyTyped("is_custom", TypeCodecs.BOOL, (ItemStack s) -> customItemId(s) != null)
             /**
              * The block this item places, for an item carrying a CE block_item behavior.
              * Falls back to {@code id} so a comparison against Block.id still works for the
              * common case where the item and the block share an id.
              */
-            .property("block_id", obj -> {
-                String b = placedBlockId(stack(obj));
-                if (b != null) return ScriptValue.of(b);
-                String ce = customItemId(stack(obj));
-                return ScriptValue.of(ce != null ? ce : BuiltInRegistries.ITEM.getKey(stack(obj).getItem()).toString());
+            .propertyTyped("block_id", TypeCodecs.STRING, (ItemStack s) -> {
+                String b = placedBlockId(s);
+                if (b != null) return b;
+                String ce = customItemId(s);
+                return ce != null ? ce : BuiltInRegistries.ITEM.getKey(s.getItem()).toString();
             })
-            .property("count",    obj -> ScriptValue.of(stack(obj).getCount()))
-            .property("max_count",obj -> ScriptValue.of(stack(obj).getMaxStackSize()))
-            .property("is_empty", obj -> ScriptValue.of(stack(obj).isEmpty()))
-            .property("damage",   obj -> ScriptValue.of(stack(obj).getDamageValue()))
-            .property("max_damage",obj->ScriptValue.of(stack(obj).getMaxDamage()))
-            .property("name",     obj -> ScriptValue.of(stack(obj).getHoverName().getString()))
-            .property("is_stackable", obj -> ScriptValue.of(stack(obj).isStackable()))
-            .property("rarity",   obj -> {
-                try { return ScriptValue.of(stack(obj).getRarity().name().toLowerCase()); }
-                catch (Throwable ignored) { return ScriptValue.of("common"); }
+            .propertyTyped("count",       TypeCodecs.DOUBLE, (ItemStack s) -> (double) s.getCount())
+            .propertyTyped("max_count",   TypeCodecs.DOUBLE, (ItemStack s) -> (double) s.getMaxStackSize())
+            .propertyTyped("is_empty",    TypeCodecs.BOOL,   (ItemStack s) -> s.isEmpty())
+            .propertyTyped("damage",      TypeCodecs.DOUBLE, (ItemStack s) -> (double) s.getDamageValue())
+            .propertyTyped("max_damage",  TypeCodecs.DOUBLE, (ItemStack s) -> (double) s.getMaxDamage())
+            .propertyTyped("name",        TypeCodecs.STRING, (ItemStack s) -> s.getHoverName().getString())
+            .propertyTyped("is_stackable",TypeCodecs.BOOL,   (ItemStack s) -> s.isStackable())
+            .propertyTyped("rarity", TypeCodecs.STRING, (Object obj) -> {
+                try { return stack(obj).getRarity().name().toLowerCase(); }
+                catch (Throwable ignored) { return "common"; }
             })
-            .property("food_value", obj -> {
+            .propertyTyped("food_value", TypeCodecs.DOUBLE, (Object obj) -> {
                 try {
                     var food = stack(obj).get(DataComponents.FOOD);
-                    return food != null ? ScriptValue.of(food.nutrition()) : ScriptValue.of(0);
-                } catch (Throwable ignored) { return ScriptValue.of(0); }
+                    return food != null ? (double) food.nutrition() : 0.0;
+                } catch (Throwable ignored) { return 0.0; }
             })
-            .property("custom_model_data", obj -> {
+            .propertyTyped("custom_model_data", TypeCodecs.DOUBLE, (Object obj) -> {
                 try {
                     CustomModelData cmd = stack(obj).get(DataComponents.CUSTOM_MODEL_DATA);
-                    if (cmd == null) return ScriptValue.of(0);
-                    return ScriptValue.of(!cmd.floats().isEmpty() ? cmd.floats().get(0) : 0.0);
-                } catch (Throwable ignored) { return ScriptValue.of(0); }
+                    if (cmd == null) return 0.0;
+                    // Same binary numeric promotion the original ternary performed: the Float
+                    // unboxes and widens to double before ScriptValue.of(double) ever saw it.
+                    return !cmd.floats().isEmpty() ? (double) cmd.floats().get(0) : 0.0;
+                } catch (Throwable ignored) { return 0.0; }
             })
-            .property("has_nbt", obj -> {
+            .propertyTyped("has_nbt", TypeCodecs.BOOL, (Object obj) -> {
                 try {
                     var cd = stack(obj).get(DataComponents.CUSTOM_DATA);
-                    return ScriptValue.of(cd != null && !cd.isEmpty());
-                } catch (Throwable ignored) { return ScriptValue.of(false); }
+                    return cd != null && !cd.isEmpty();
+                } catch (Throwable ignored) { return false; }
             })
+            // Untypeable: NbtDataType.wrap yields either an "NbtData" Obj or NULL, and no scalar
+            // codec expresses that pair.
             .property("nbt", obj -> {
                 try {
                     var cd = stack(obj).get(DataComponents.CUSTOM_DATA);
@@ -159,6 +168,8 @@ public final class ItemType {
                     return NbtDataType.wrap(tag);
                 } catch (Throwable ignored) { return ScriptValue.NULL; }
             })
+            // Untypeable even with propertyTyped: the elements are raw "name:level" strings, not
+            // Objs of any PolyType, so TypeCodecs.listOf would silently drop every one of them.
             .property("enchantments", obj -> {
                 try {
                     ItemEnchantments enc = stack(obj).get(DataComponents.ENCHANTMENTS);
@@ -175,57 +186,59 @@ public final class ItemType {
                 } catch (Throwable ignored) { return new ScriptValue.Array(List.of()); }
             })
             // aliases
-            .property("type",   obj -> ScriptValue.of(BuiltInRegistries.ITEM.getKey(stack(obj).getItem()).toString()))
-            .property("amount", obj -> ScriptValue.of(stack(obj).getCount()))
+            .propertyTyped("type",   TypeCodecs.STRING, (ItemStack s) -> BuiltInRegistries.ITEM.getKey(s.getItem()).toString())
+            .propertyTyped("amount", TypeCodecs.DOUBLE, (ItemStack s) -> (double) s.getCount())
             // item category helpers — use item tags
-            .property("is_food",   obj -> ScriptValue.of(stack(obj).get(DataComponents.FOOD) != null))
-            .property("is_weapon", obj -> ScriptValue.of(
-                stack(obj).is(net.minecraft.tags.ItemTags.SWORDS)
-                || stack(obj).is(net.minecraft.tags.ItemTags.AXES)))
-            .property("is_tool", obj -> ScriptValue.of(
-                stack(obj).is(net.minecraft.tags.ItemTags.PICKAXES)
-                || stack(obj).is(net.minecraft.tags.ItemTags.SHOVELS)
-                || stack(obj).is(net.minecraft.tags.ItemTags.HOES)
-                || stack(obj).is(net.minecraft.tags.ItemTags.AXES)))
-            .property("is_armor", obj -> ScriptValue.of(
-                stack(obj).is(net.minecraft.tags.ItemTags.HEAD_ARMOR)
-                || stack(obj).is(net.minecraft.tags.ItemTags.CHEST_ARMOR)
-                || stack(obj).is(net.minecraft.tags.ItemTags.LEG_ARMOR)
-                || stack(obj).is(net.minecraft.tags.ItemTags.FOOT_ARMOR)))
+            .propertyTyped("is_food",   TypeCodecs.BOOL, (ItemStack s) -> s.get(DataComponents.FOOD) != null)
+            .propertyTyped("is_weapon", TypeCodecs.BOOL, (ItemStack s) ->
+                s.is(net.minecraft.tags.ItemTags.SWORDS)
+                || s.is(net.minecraft.tags.ItemTags.AXES))
+            .propertyTyped("is_tool", TypeCodecs.BOOL, (ItemStack s) ->
+                s.is(net.minecraft.tags.ItemTags.PICKAXES)
+                || s.is(net.minecraft.tags.ItemTags.SHOVELS)
+                || s.is(net.minecraft.tags.ItemTags.HOES)
+                || s.is(net.minecraft.tags.ItemTags.AXES))
+            .propertyTyped("is_armor", TypeCodecs.BOOL, (ItemStack s) ->
+                s.is(net.minecraft.tags.ItemTags.HEAD_ARMOR)
+                || s.is(net.minecraft.tags.ItemTags.CHEST_ARMOR)
+                || s.is(net.minecraft.tags.ItemTags.LEG_ARMOR)
+                || s.is(net.minecraft.tags.ItemTags.FOOT_ARMOR))
             // attack / tool attributes via DataComponents
-            .property("attack_damage", obj -> {
+            .propertyTyped("attack_damage", TypeCodecs.DOUBLE, (Object obj) -> {
                 try {
                     var attrMods = stack(obj).get(DataComponents.ATTRIBUTE_MODIFIERS);
-                    if (attrMods == null) return ScriptValue.of(0.0);
+                    if (attrMods == null) return 0.0;
                     for (var entry : attrMods.modifiers()) {
                         if (entry.attribute().value() == net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE.value())
-                            return ScriptValue.of(entry.modifier().amount());
+                            return entry.modifier().amount();
                     }
                 } catch (Throwable ignored) {}
-                return ScriptValue.of(0.0);
+                return 0.0;
             })
-            .property("attack_speed", obj -> {
+            .propertyTyped("attack_speed", TypeCodecs.DOUBLE, (Object obj) -> {
                 try {
                     var attrMods = stack(obj).get(DataComponents.ATTRIBUTE_MODIFIERS);
-                    if (attrMods == null) return ScriptValue.of(0.0);
+                    if (attrMods == null) return 0.0;
                     for (var entry : attrMods.modifiers()) {
                         if (entry.attribute().value() == net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_SPEED.value())
-                            return ScriptValue.of(entry.modifier().amount());
+                            return entry.modifier().amount();
                     }
                 } catch (Throwable ignored) {}
-                return ScriptValue.of(0.0);
+                return 0.0;
             })
-            .property("armor_value", obj -> {
+            .propertyTyped("armor_value", TypeCodecs.DOUBLE, (Object obj) -> {
                 try {
                     var attrMods = stack(obj).get(DataComponents.ATTRIBUTE_MODIFIERS);
-                    if (attrMods == null) return ScriptValue.of(0.0);
+                    if (attrMods == null) return 0.0;
                     for (var entry : attrMods.modifiers()) {
                         if (entry.attribute().value() == net.minecraft.world.entity.ai.attributes.Attributes.ARMOR.value())
-                            return ScriptValue.of(entry.modifier().amount());
+                            return entry.modifier().amount();
                     }
                 } catch (Throwable ignored) {}
-                return ScriptValue.of(0.0);
+                return 0.0;
             })
+            // Untypeable even with propertyTyped: the elements are raw strings, which
+            // TypeCodecs.listOf cannot carry.
             .property("lore", obj -> {
                 try {
                     var lore = stack(obj).get(DataComponents.LORE);

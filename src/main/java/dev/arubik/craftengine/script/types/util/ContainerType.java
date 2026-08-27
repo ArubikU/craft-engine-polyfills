@@ -25,8 +25,8 @@ public final class ContainerType {
 
     public static void register() {
         PolyTypeRegistry.define("Container")
-            .property("size", obj -> ScriptValue.of(c(obj).getContainerSize()))
-            .property("is_empty", obj -> ScriptValue.of(c(obj).isEmpty()))
+            .propertyTyped("size", TypeCodecs.DOUBLE, (Container c) -> (double) c.getContainerSize())
+            .propertyTyped("is_empty", TypeCodecs.BOOL, (Container c) -> c.isEmpty())
             .methodTyped1("get_item", TypeCodecs.DOUBLE, TypeCodecs.RAW, ScriptValue.NULL,
                 (Container container, Double iArg) -> {
                     int i = iArg.intValue();
@@ -187,8 +187,6 @@ public final class ContainerType {
     public static ScriptValue wrap(Container container) {
         return container == null ? ScriptValue.NULL : ScriptValue.ofObj("Container", container);
     }
-
-    private static Container c(Object obj) { return (Container) obj; }
 
     /** Accepts the same shapes as {@code Machine.push_item_to_inventory}: a script Item value, or a
      *  raw ItemStack Obj. Returns null (not EMPTY) when the arg isn't an item at all. */

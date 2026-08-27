@@ -24,19 +24,22 @@ public final class MultiBlockType {
 
     public static void register() {
         PolyTypeRegistry.define("MultiBlock")
-            .property("rel_x",        obj -> ScriptValue.of(ref(obj).relX()))
-            .property("rel_y",        obj -> ScriptValue.of(ref(obj).relY()))
-            .property("rel_z",        obj -> ScriptValue.of(ref(obj).relZ()))
-            .property("is_master",    obj -> ScriptValue.of(ref(obj).isMaster()))
-            .property("is_core_part", obj -> ScriptValue.of(ref(obj).isMaster()))
-            .property("is_part",      obj -> ScriptValue.of(!ref(obj).isMaster()))
-            .property("part_count",   obj -> ScriptValue.of(ref(obj).partCount()))
-            .property("formed",       obj -> ScriptValue.of(ref(obj).formed()))
-            .property("part_id",      obj -> ScriptValue.of(Math.abs(ref(obj).relX() * 100 + ref(obj).relY() * 10 + ref(obj).relZ())))
-            .property("core_block",   obj -> {
-                MultiBlockRef r = ref(obj);
-                return (r.level() != null && r.corePos() != null) ? BlockType.wrap(r.level(), r.corePos()) : ScriptValue.NULL;
-            })
+            .propertyTyped("rel_x",        TypeCodecs.DOUBLE, (MultiBlockRef r) -> (double) r.relX())
+            .propertyTyped("rel_y",        TypeCodecs.DOUBLE, (MultiBlockRef r) -> (double) r.relY())
+            .propertyTyped("rel_z",        TypeCodecs.DOUBLE, (MultiBlockRef r) -> (double) r.relZ())
+            .propertyTyped("is_master",    TypeCodecs.BOOL,   (MultiBlockRef r) -> r.isMaster())
+            .propertyTyped("is_core_part", TypeCodecs.BOOL,   (MultiBlockRef r) -> r.isMaster())
+            .propertyTyped("is_part",      TypeCodecs.BOOL,   (MultiBlockRef r) -> !r.isMaster())
+            .propertyTyped("part_count",   TypeCodecs.DOUBLE, (MultiBlockRef r) -> (double) r.partCount())
+            .propertyTyped("formed",       TypeCodecs.BOOL,   (MultiBlockRef r) -> r.formed())
+            .propertyTyped("part_id",      TypeCodecs.DOUBLE,
+                (MultiBlockRef r) -> (double) Math.abs(r.relX() * 100 + r.relY() * 10 + r.relZ()))
+            // BlockType.wrap's own null guard is the null check already in front of it here, so
+            // constructing the BlockRef directly (null when either half is missing, which the codec
+            // encodes back to NULL) is exactly the old result.
+            .propertyTyped("core_block", TypeCodecs.polyType("Block", BlockType.BlockRef.class),
+                (MultiBlockRef r) -> (r.level() != null && r.corePos() != null)
+                        ? new BlockType.BlockRef(r.level(), r.corePos()) : null)
             .methodTyped3("is_at", TypeCodecs.DOUBLE, TypeCodecs.DOUBLE, TypeCodecs.DOUBLE, TypeCodecs.BOOL, false,
                 (MultiBlockRef r, Double x, Double y, Double z) ->
                     (int) (double) x == r.relX() && (int) (double) y == r.relY() && (int) (double) z == r.relZ())
@@ -110,6 +113,4 @@ public final class MultiBlockType {
                                    ServerLevel level, BlockPos corePos, String coreFacing) {
         return ScriptValue.ofObj("MultiBlock", new MultiBlockRef(relX, relY, relZ, isMaster, partCount, formed, level, corePos, coreFacing));
     }
-
-    private static MultiBlockRef ref(Object obj) { return (MultiBlockRef) obj; }
 }

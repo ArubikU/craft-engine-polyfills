@@ -7,6 +7,7 @@
  *  dev.arubik.craftengine.script.PolyType$MethodHandler
  *  dev.arubik.craftengine.script.PolyType$PropertyHandler
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler1
+ *  dev.arubik.craftengine.script.PolyType$TypedPropertyHandler
  *  dev.arubik.craftengine.script.ScriptValue
  *  dev.arubik.craftengine.script.ScriptValue$Obj
  */
@@ -25,12 +26,14 @@ extends PolyClassEvent {
     private static volatile PolyType.MethodHandler m$1;
     private static volatile PolyType.PropertyHandler p$2;
     private static volatile PolyType.PropertyHandler p$3;
+    private static volatile PolyType.TypedPropertyHandler tp$4;
 
     public static void refresh() {
         h$0 = (PolyType.TypedMethodHandler1)PolyClassRuntime.resolveTypedHandler((String)"PlayerEggThrowEvent", (String)"set_hatching", (String)"Z:Z");
         m$1 = PolyClassRuntime.resolveMethodHandler((String)"PlayerEggThrowEvent", (String)"set_hatching");
         p$2 = PolyClassRuntime.resolvePropertyHandler((String)"PlayerEggThrowEvent", (String)"egg");
         p$3 = PolyClassRuntime.resolvePropertyHandler((String)"PlayerEggThrowEvent", (String)"hatching");
+        tp$4 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"PlayerEggThrowEvent", (String)"hatching", (String)"Z");
     }
 
     public boolean tm$0_set_hatching(boolean bl) {
@@ -59,6 +62,13 @@ extends PolyClassEvent {
             return p$3.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"PlayerEggThrowEvent", (String)"hatching", (Object)this.instance);
+    }
+
+    public boolean tg$4_hatching() {
+        if (tp$4 != null) {
+            return (Boolean)tp$4.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"PlayerEggThrowEvent", (String)"hatching", (Object)this.instance).asBool();
     }
 
     public PolyClassPlayerEggThrowEvent(Object object) {

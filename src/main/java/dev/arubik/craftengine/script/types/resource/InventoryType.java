@@ -19,7 +19,9 @@ public final class InventoryType {
 
     public static void register() {
         PolyTypeRegistry.define("Inventory")
-            .property("size",     obj -> ScriptValue.of(slots(obj).length))
+            .propertyTyped("size", TypeCodecs.DOUBLE, (ItemStack[] s) -> (double) s.length)
+            // Stays untyped: TypeCodecs.listOf only survives Obj-wrapped PolyType instances, and
+            // these elements are ScriptValue.Item values (ofItem) — a distinct ScriptValue variant.
             .property("contents", obj -> {
                 List<ScriptValue> list = new ArrayList<>();
                 for (ItemStack s : slots(obj)) if (!s.isEmpty()) list.add(ScriptValue.ofItem(s));
@@ -31,7 +33,9 @@ public final class InventoryType {
                     return (n >= 0 && n < obj.length) ? ScriptValue.ofItem(obj[n]) : ScriptValue.NULL;
                 })
             // slots(...) — variadic (accepts any number of index args), doesn't fit the fixed-arity
-            // methodTypedN shape.
+            // methodTypedN shape. Its elements are ScriptValue.Item values (ofItem) rather than
+            // Obj-wrapped PolyType instances, so TypeCodecs.listOf("Item", ...) would not encode
+            // the same value anyway.
             .method("slots", (obj, args) -> {
                 ItemStack[] s = slots(obj);
                 List<ScriptValue> result = new ArrayList<>();

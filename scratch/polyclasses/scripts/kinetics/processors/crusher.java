@@ -102,15 +102,15 @@ public final class Crusher {
         ScriptValue scriptValue11 = ScriptValue.of((double)0.0);
         builder.val("upgrade_bonus", scriptValue11);
         ScriptValue scriptValue12 = scriptContext.getClassOrVar("Upgrades");
-        List list = ScriptProgram.rowsOf((ScriptValue)(scriptValue12 != ScriptValue.NULL ? ((polyClassUpgrades = PolyClassUpgrades.ofGuarded((ScriptValue)scriptValue12)) != null ? polyClassUpgrades.pg$9_inventory() : PolyDispatch.bootstrapGet("memberGet", "inventory", (ScriptValue)scriptValue12, (ScriptContext)scriptContext)) : ScriptValue.NULL), (int)1);
+        List list = ScriptProgram.elementsOf((ScriptValue)(scriptValue12 != ScriptValue.NULL ? ((polyClassUpgrades = PolyClassUpgrades.ofGuarded((ScriptValue)scriptValue12)) != null ? polyClassUpgrades.pg$10_inventory() : PolyDispatch.bootstrapGet("memberGet", "inventory", (ScriptValue)scriptValue12, (ScriptContext)scriptContext)) : ScriptValue.NULL));
         if (list != null) {
-            for (ScriptValue[] scriptValueArray : list) {
-                builder.val("item", scriptValueArray.length > 0 ? scriptValueArray[0] : ScriptValue.NULL);
-                ScriptValue scriptValue13 = scriptContext.getClassOrVar("upgrade_bonus");
+            for (ScriptValue scriptValue13 : list) {
+                builder.val("item", scriptValue13);
+                ScriptValue scriptValue14 = scriptContext.getClassOrVar("upgrade_bonus");
                 ArrayList<ScriptValue> arrayList = new ArrayList<ScriptValue>();
                 arrayList.add(scriptContext.getClassOrVar("item"));
-                ScriptValue scriptValue14 = ScriptFormula.addPolymorphic((ScriptValue)scriptValue13, (ScriptValue)ScriptFormula.callBuiltin((String)"item_count", arrayList, (ScriptContext)scriptContext));
-                builder.val("upgrade_bonus", scriptValue14);
+                ScriptValue scriptValue15 = ScriptFormula.addPolymorphic((ScriptValue)scriptValue14, (ScriptValue)ScriptFormula.callBuiltin((String)"item_count", arrayList, (ScriptContext)scriptContext));
+                builder.val("upgrade_bonus", scriptValue15);
             }
         }
         FILE_SCOPE = builder.build();

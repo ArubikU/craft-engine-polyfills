@@ -5,6 +5,7 @@
  *  dev.arubik.craftengine.script.PolyClass
  *  dev.arubik.craftengine.script.PolyClassRuntime
  *  dev.arubik.craftengine.script.PolyType$PropertyHandler
+ *  dev.arubik.craftengine.script.PolyType$TypedPropertyHandler
  *  dev.arubik.craftengine.script.ScriptValue
  *  dev.arubik.craftengine.script.ScriptValue$Obj
  */
@@ -20,12 +21,16 @@ public class PolyClassChunkUnloadEvent
 extends PolyClassEvent {
     private static volatile PolyType.PropertyHandler p$0;
     private static volatile PolyType.PropertyHandler p$1;
-    private static volatile PolyType.PropertyHandler p$2;
+    private static volatile PolyType.TypedPropertyHandler tp$2;
+    private static volatile PolyType.PropertyHandler p$3;
+    private static volatile PolyType.TypedPropertyHandler tp$4;
 
     public static void refresh() {
         p$0 = PolyClassRuntime.resolvePropertyHandler((String)"ChunkUnloadEvent", (String)"world");
         p$1 = PolyClassRuntime.resolvePropertyHandler((String)"ChunkUnloadEvent", (String)"chunk_x");
-        p$2 = PolyClassRuntime.resolvePropertyHandler((String)"ChunkUnloadEvent", (String)"chunk_z");
+        tp$2 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"ChunkUnloadEvent", (String)"chunk_x", (String)"D");
+        p$3 = PolyClassRuntime.resolvePropertyHandler((String)"ChunkUnloadEvent", (String)"chunk_z");
+        tp$4 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"ChunkUnloadEvent", (String)"chunk_z", (String)"D");
     }
 
     public ScriptValue pg$0_world() {
@@ -42,11 +47,25 @@ extends PolyClassEvent {
         return PolyClassRuntime.genericProperty((String)"ChunkUnloadEvent", (String)"chunk_x", (Object)this.instance);
     }
 
-    public ScriptValue pg$2_chunk_z() {
-        if (p$2 != null) {
-            return p$2.get(this.instance);
+    public double tg$2_chunk_x() {
+        if (tp$2 != null) {
+            return (Double)tp$2.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"ChunkUnloadEvent", (String)"chunk_x", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$3_chunk_z() {
+        if (p$3 != null) {
+            return p$3.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"ChunkUnloadEvent", (String)"chunk_z", (Object)this.instance);
+    }
+
+    public double tg$4_chunk_z() {
+        if (tp$4 != null) {
+            return (Double)tp$4.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"ChunkUnloadEvent", (String)"chunk_z", (Object)this.instance).asNum();
     }
 
     public PolyClassChunkUnloadEvent(Object object) {

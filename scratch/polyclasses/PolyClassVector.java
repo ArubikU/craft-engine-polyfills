@@ -8,6 +8,7 @@
  *  dev.arubik.craftengine.script.PolyType$PropertyHandler
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler0
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler1
+ *  dev.arubik.craftengine.script.PolyType$TypedPropertyHandler
  *  dev.arubik.craftengine.script.ScriptValue
  *  dev.arubik.craftengine.script.ScriptValue$Obj
  */
@@ -32,10 +33,15 @@ public class PolyClassVector {
     private static volatile PolyType.TypedMethodHandler1 h$8;
     private static volatile PolyType.MethodHandler m$9;
     private static volatile PolyType.PropertyHandler p$10;
-    private static volatile PolyType.PropertyHandler p$11;
+    private static volatile PolyType.TypedPropertyHandler tp$11;
     private static volatile PolyType.PropertyHandler p$12;
-    private static volatile PolyType.PropertyHandler p$13;
+    private static volatile PolyType.TypedPropertyHandler tp$13;
     private static volatile PolyType.PropertyHandler p$14;
+    private static volatile PolyType.TypedPropertyHandler tp$15;
+    private static volatile PolyType.PropertyHandler p$16;
+    private static volatile PolyType.TypedPropertyHandler tp$17;
+    private static volatile PolyType.PropertyHandler p$18;
+    private static volatile PolyType.TypedPropertyHandler tp$19;
 
     public static void refresh() {
         m$0 = PolyClassRuntime.resolveMethodHandler((String)"Vector", (String)"add");
@@ -49,10 +55,15 @@ public class PolyClassVector {
         h$8 = (PolyType.TypedMethodHandler1)PolyClassRuntime.resolveTypedHandler((String)"Vector", (String)"scale", (String)"D:R");
         m$9 = PolyClassRuntime.resolveMethodHandler((String)"Vector", (String)"scale");
         p$10 = PolyClassRuntime.resolvePropertyHandler((String)"Vector", (String)"x");
-        p$11 = PolyClassRuntime.resolvePropertyHandler((String)"Vector", (String)"length");
-        p$12 = PolyClassRuntime.resolvePropertyHandler((String)"Vector", (String)"y");
-        p$13 = PolyClassRuntime.resolvePropertyHandler((String)"Vector", (String)"z");
-        p$14 = PolyClassRuntime.resolvePropertyHandler((String)"Vector", (String)"length_sq");
+        tp$11 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Vector", (String)"x", (String)"D");
+        p$12 = PolyClassRuntime.resolvePropertyHandler((String)"Vector", (String)"length");
+        tp$13 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Vector", (String)"length", (String)"D");
+        p$14 = PolyClassRuntime.resolvePropertyHandler((String)"Vector", (String)"y");
+        tp$15 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Vector", (String)"y", (String)"D");
+        p$16 = PolyClassRuntime.resolvePropertyHandler((String)"Vector", (String)"z");
+        tp$17 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Vector", (String)"z", (String)"D");
+        p$18 = PolyClassRuntime.resolvePropertyHandler((String)"Vector", (String)"length_sq");
+        tp$19 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Vector", (String)"length_sq", (String)"D");
     }
 
     public ScriptValue um$0_add(List list) {
@@ -132,32 +143,67 @@ public class PolyClassVector {
         return PolyClassRuntime.genericProperty((String)"Vector", (String)"x", (Object)this.instance);
     }
 
-    public ScriptValue pg$11_length() {
-        if (p$11 != null) {
-            return p$11.get(this.instance);
+    public double tg$11_x() {
+        if (tp$11 != null) {
+            return (Double)tp$11.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Vector", (String)"x", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$12_length() {
+        if (p$12 != null) {
+            return p$12.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Vector", (String)"length", (Object)this.instance);
     }
 
-    public ScriptValue pg$12_y() {
-        if (p$12 != null) {
-            return p$12.get(this.instance);
+    public double tg$13_length() {
+        if (tp$13 != null) {
+            return (Double)tp$13.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Vector", (String)"length", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$14_y() {
+        if (p$14 != null) {
+            return p$14.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Vector", (String)"y", (Object)this.instance);
     }
 
-    public ScriptValue pg$13_z() {
-        if (p$13 != null) {
-            return p$13.get(this.instance);
+    public double tg$15_y() {
+        if (tp$15 != null) {
+            return (Double)tp$15.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Vector", (String)"y", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$16_z() {
+        if (p$16 != null) {
+            return p$16.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Vector", (String)"z", (Object)this.instance);
     }
 
-    public ScriptValue pg$14_length_sq() {
-        if (p$14 != null) {
-            return p$14.get(this.instance);
+    public double tg$17_z() {
+        if (tp$17 != null) {
+            return (Double)tp$17.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Vector", (String)"z", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$18_length_sq() {
+        if (p$18 != null) {
+            return p$18.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Vector", (String)"length_sq", (Object)this.instance);
+    }
+
+    public double tg$19_length_sq() {
+        if (tp$19 != null) {
+            return (Double)tp$19.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Vector", (String)"length_sq", (Object)this.instance).asNum();
     }
 
     public PolyClassVector(Object object) {

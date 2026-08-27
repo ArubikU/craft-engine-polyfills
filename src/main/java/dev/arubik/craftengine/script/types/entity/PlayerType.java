@@ -51,14 +51,17 @@ public final class PlayerType {
             .methodTyped2("has_typed", TypeCodecs.STRING, TypeCodecs.STRING, TypeCodecs.BOOL, false,
                 (Player p, String key, String type) ->
                     dev.arubik.craftengine.util.PlayerFlags.hasTyped(p.getUUID(), TYPED_PREFIX + key))
-            .property("food_level", obj -> ScriptValue.of(player(obj).getFoodData().getFoodLevel()))
-            .property("saturation", obj -> ScriptValue.of(player(obj).getFoodData().getSaturationLevel()))
-            .property("xp_level", obj -> ScriptValue.of(player(obj).experienceLevel))
-            .property("xp_progress", obj -> ScriptValue.of(player(obj).experienceProgress))
+            // Scalars below: ScriptValue.of(int)/of(float) already widened to of(double), so the
+            // explicit (double) casts here produce the identical ScriptValue.Num.
+            .propertyTyped("food_level", TypeCodecs.DOUBLE, (Player p) -> (double) p.getFoodData().getFoodLevel())
+            .propertyTyped("saturation", TypeCodecs.DOUBLE, (Player p) -> (double) p.getFoodData().getSaturationLevel())
+            .propertyTyped("xp_level", TypeCodecs.DOUBLE, (Player p) -> (double) p.experienceLevel)
+            .propertyTyped("xp_progress", TypeCodecs.DOUBLE, (Player p) -> (double) p.experienceProgress)
             // total_exp/give_exp/take_exp/has_exp — a ready-made "currency" for any feature that
             // wants a cost/reward without this addon inventing its own economy or depending on an
             // external Vault-style plugin (e.g. /warps' create/teleport/sponsor-slot costs).
-            .property("total_exp", obj -> ScriptValue.of(((org.bukkit.entity.Player) player(obj).getBukkitEntity()).getTotalExperience()))
+            .propertyTyped("total_exp", TypeCodecs.DOUBLE,
+                (Player p) -> (double) ((org.bukkit.entity.Player) p.getBukkitEntity()).getTotalExperience())
             .methodTyped1("give_exp", TypeCodecs.DOUBLE, TypeCodecs.BOOL, false,
                 (Player p, Double amount) -> {
                     try {
@@ -104,15 +107,11 @@ public final class PlayerType {
                         return ((org.bukkit.entity.Player) p.getBukkitEntity()).hasPermission(node);
                     } catch (Throwable t) { return false; }
                 })
-            .property("gamemode", obj -> {
-                if (player(obj) instanceof ServerPlayer sp) {
-                    return ScriptValue.of(sp.gameMode.getGameModeForPlayer().getName());
-                }
-                return ScriptValue.of("survival");
-            })
-            .property("is_flying", obj -> ScriptValue.of(player(obj).getAbilities().flying))
-            .property("is_creative", obj -> ScriptValue.of(player(obj).getAbilities().instabuild))
-            .property("allow_flight", obj -> ScriptValue.of(player(obj).getAbilities().mayfly))
+            .propertyTyped("gamemode", TypeCodecs.STRING, (Player p) ->
+                p instanceof ServerPlayer sp ? sp.gameMode.getGameModeForPlayer().getName() : "survival")
+            .propertyTyped("is_flying", TypeCodecs.BOOL, (Player p) -> p.getAbilities().flying)
+            .propertyTyped("is_creative", TypeCodecs.BOOL, (Player p) -> p.getAbilities().instabuild)
+            .propertyTyped("allow_flight", TypeCodecs.BOOL, (Player p) -> p.getAbilities().mayfly)
             // Generic vanilla-flight-ability toggles — not jetpack-specific. A script gates when
             // to grant/revoke these (fuel checks, equip state, etc.); this class never hardcodes
             // what any particular item does with them.
@@ -129,6 +128,8 @@ public final class PlayerType {
                     syncAbilities(p);
                     return true;
                 })
+            // main_hand/off_hand stay untyped: ScriptValue.ofItem yields the ScriptValue.Item variant,
+            // which no codec here encodes to — converting would break `instanceof ScriptValue.Item`.
             .property("main_hand", obj -> ScriptValue.ofItem(player(obj).getMainHandItem()))
             .property("off_hand", obj -> ScriptValue.ofItem(player(obj).getOffhandItem()))
             .methodTyped1("send_message", TypeCodecs.STRING, TypeCodecs.BOOL, false,

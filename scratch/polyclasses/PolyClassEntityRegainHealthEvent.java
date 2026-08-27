@@ -7,6 +7,7 @@
  *  dev.arubik.craftengine.script.PolyType$MethodHandler
  *  dev.arubik.craftengine.script.PolyType$PropertyHandler
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler1
+ *  dev.arubik.craftengine.script.PolyType$TypedPropertyHandler
  *  dev.arubik.craftengine.script.ScriptValue
  *  dev.arubik.craftengine.script.ScriptValue$Obj
  */
@@ -24,13 +25,17 @@ extends PolyClassEvent {
     private static volatile PolyType.TypedMethodHandler1 h$0;
     private static volatile PolyType.MethodHandler m$1;
     private static volatile PolyType.PropertyHandler p$2;
-    private static volatile PolyType.PropertyHandler p$3;
+    private static volatile PolyType.TypedPropertyHandler tp$3;
+    private static volatile PolyType.PropertyHandler p$4;
+    private static volatile PolyType.TypedPropertyHandler tp$5;
 
     public static void refresh() {
         h$0 = (PolyType.TypedMethodHandler1)PolyClassRuntime.resolveTypedHandler((String)"EntityRegainHealthEvent", (String)"set_amount", (String)"D:Z");
         m$1 = PolyClassRuntime.resolveMethodHandler((String)"EntityRegainHealthEvent", (String)"set_amount");
         p$2 = PolyClassRuntime.resolvePropertyHandler((String)"EntityRegainHealthEvent", (String)"reason");
-        p$3 = PolyClassRuntime.resolvePropertyHandler((String)"EntityRegainHealthEvent", (String)"amount");
+        tp$3 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"EntityRegainHealthEvent", (String)"reason", (String)"S");
+        p$4 = PolyClassRuntime.resolvePropertyHandler((String)"EntityRegainHealthEvent", (String)"amount");
+        tp$5 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"EntityRegainHealthEvent", (String)"amount", (String)"D");
     }
 
     public boolean tm$0_set_amount(double d) {
@@ -54,11 +59,25 @@ extends PolyClassEvent {
         return PolyClassRuntime.genericProperty((String)"EntityRegainHealthEvent", (String)"reason", (Object)this.instance);
     }
 
-    public ScriptValue pg$3_amount() {
-        if (p$3 != null) {
-            return p$3.get(this.instance);
+    public String tg$3_reason() {
+        if (tp$3 != null) {
+            return (String)tp$3.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"EntityRegainHealthEvent", (String)"reason", (Object)this.instance).asStr();
+    }
+
+    public ScriptValue pg$4_amount() {
+        if (p$4 != null) {
+            return p$4.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"EntityRegainHealthEvent", (String)"amount", (Object)this.instance);
+    }
+
+    public double tg$5_amount() {
+        if (tp$5 != null) {
+            return (Double)tp$5.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"EntityRegainHealthEvent", (String)"amount", (Object)this.instance).asNum();
     }
 
     public PolyClassEntityRegainHealthEvent(Object object) {

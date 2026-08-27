@@ -6,6 +6,7 @@
  *  dev.arubik.craftengine.script.PolyClassRuntime
  *  dev.arubik.craftengine.script.PolyType$MethodHandler
  *  dev.arubik.craftengine.script.PolyType$PropertyHandler
+ *  dev.arubik.craftengine.script.PolyType$TypedPropertyHandler
  *  dev.arubik.craftengine.script.ScriptValue
  *  dev.arubik.craftengine.script.ScriptValue$Obj
  */
@@ -23,11 +24,13 @@ extends PolyClassEvent {
     private static volatile PolyType.MethodHandler m$0;
     private static volatile PolyType.PropertyHandler p$1;
     private static volatile PolyType.PropertyHandler p$2;
+    private static volatile PolyType.TypedPropertyHandler tp$3;
 
     public static void refresh() {
         m$0 = PolyClassRuntime.resolveMethodHandler((String)"TabCompleteEvent", (String)"set_completions");
         p$1 = PolyClassRuntime.resolvePropertyHandler((String)"TabCompleteEvent", (String)"completions");
         p$2 = PolyClassRuntime.resolvePropertyHandler((String)"TabCompleteEvent", (String)"buffer");
+        tp$3 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"TabCompleteEvent", (String)"buffer", (String)"S");
     }
 
     public ScriptValue um$0_set_completions(List list) {
@@ -49,6 +52,13 @@ extends PolyClassEvent {
             return p$2.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"TabCompleteEvent", (String)"buffer", (Object)this.instance);
+    }
+
+    public String tg$3_buffer() {
+        if (tp$3 != null) {
+            return (String)tp$3.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"TabCompleteEvent", (String)"buffer", (Object)this.instance).asStr();
     }
 
     public PolyClassTabCompleteEvent(Object object) {

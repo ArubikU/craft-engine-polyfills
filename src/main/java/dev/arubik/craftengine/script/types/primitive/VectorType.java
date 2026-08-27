@@ -12,11 +12,11 @@ public final class VectorType {
 
     public static void register() {
         PolyTypeRegistry.define("Vector")
-            .property("x", obj -> ScriptValue.of(vec(obj).x))
-            .property("y", obj -> ScriptValue.of(vec(obj).y))
-            .property("z", obj -> ScriptValue.of(vec(obj).z))
-            .property("length", obj -> ScriptValue.of(vec(obj).length()))
-            .property("length_sq", obj -> ScriptValue.of(vec(obj).lengthSquared()))
+            .propertyTyped("x", TypeCodecs.DOUBLE, (Vector3d v) -> v.x)
+            .propertyTyped("y", TypeCodecs.DOUBLE, (Vector3d v) -> v.y)
+            .propertyTyped("z", TypeCodecs.DOUBLE, (Vector3d v) -> v.z)
+            .propertyTyped("length", TypeCodecs.DOUBLE, (Vector3d v) -> v.length())
+            .propertyTyped("length_sq", TypeCodecs.DOUBLE, (Vector3d v) -> v.lengthSquared())
             // add(x,y,z) OR add(otherVector) — NOT migrated to methodTyped: two genuinely different
             // arg-count shapes dispatched dynamically off args.size() (3 numbers vs. 1 object), which
             // methodTypedN's single fixed arity/codec list per registration can't express. Left untyped.

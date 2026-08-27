@@ -21,7 +21,7 @@ public final class BeltItemType {
 
     public static void register() {
         PolyTypeRegistry.define("BeltItem")
-            .property("index", obj -> ScriptValue.of(ref(obj).index()))
+            .propertyTyped("index", TypeCodecs.DOUBLE, (BeltItemRef r) -> (double) r.index())
             // item — the ItemStack in this slot, or an empty Item if it was taken/cleared since
             // this BeltItem was obtained (the underlying slot may have moved on).
             .property("item", obj -> {
@@ -32,24 +32,26 @@ public final class BeltItemType {
             })
             // progress — 0..1 how far along its own travel this specific item is (1.0 = fully
             // arrived at the segment's exit) — -1 if the slot is empty/out of range.
-            .property("progress", obj -> {
+            .propertyTyped("progress", TypeCodecs.DOUBLE, (Object obj) -> {
                 ConveyorBlockEntity belt = conveyor(obj);
-                return ScriptValue.of(belt == null ? -1.0 : belt.slotProgress(ref(obj).index()));
+                return belt == null ? -1.0 : (double) belt.slotProgress(ref(obj).index());
             })
             // jitter — the random per-item Y-rotation (radians) this slot's display was given on
             // entry, purely cosmetic (visual variety). 0 if empty/out of range.
-            .property("jitter", obj -> {
+            .propertyTyped("jitter", TypeCodecs.DOUBLE, (Object obj) -> {
                 ConveyorBlockEntity belt = conveyor(obj);
-                return ScriptValue.of(belt == null ? 0.0 : belt.slotJitter(ref(obj).index()));
+                return belt == null ? 0.0 : (double) belt.slotJitter(ref(obj).index());
             })
             // entry_dir — the world direction ("north"/"south"/"east"/"west"/"up"/"down") this
             // item entered FROM, i.e. the side of the PREVIOUS segment it came off of — null if
             // empty/out of range/not recorded.
-            .property("entry_dir", obj -> {
+            // STRING encodes a Java null back to ScriptValue.NULL, so the two null branches below are
+            // byte-for-byte the old ScriptValue.NULL results.
+            .propertyTyped("entry_dir", TypeCodecs.STRING, (Object obj) -> {
                 ConveyorBlockEntity belt = conveyor(obj);
-                if (belt == null) return ScriptValue.NULL;
+                if (belt == null) return null;
                 var dir = belt.slotEntryDir(ref(obj).index());
-                return dir == null ? ScriptValue.NULL : ScriptValue.of(dir.name().toLowerCase(java.util.Locale.ROOT));
+                return dir == null ? null : dir.name().toLowerCase(java.util.Locale.ROOT);
             })
             // take() -> Item. Removes and returns whatever is in THIS slot specifically (unlike
             // Belt.take(), which always targets the front/furthest-advanced slot regardless of

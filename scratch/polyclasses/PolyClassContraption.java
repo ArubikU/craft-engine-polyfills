@@ -6,11 +6,13 @@
  *  dev.arubik.craftengine.script.PolyClassRuntime
  *  dev.arubik.craftengine.script.PolyType$MethodHandler
  *  dev.arubik.craftengine.script.PolyType$PropertyHandler
+ *  dev.arubik.craftengine.script.PolyType$TypeCodec
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler0
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler1
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler2
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler3
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler4
+ *  dev.arubik.craftengine.script.PolyType$TypedPropertyHandler
  *  dev.arubik.craftengine.script.ScriptValue
  *  dev.arubik.craftengine.script.ScriptValue$Obj
  */
@@ -49,6 +51,7 @@ public class PolyClassContraption {
     private static volatile PolyType.TypedMethodHandler1 h$22;
     private static volatile PolyType.MethodHandler m$23;
     private static volatile PolyType.TypedMethodHandler0 h$24;
+    private static volatile PolyType.TypeCodec c$24_r;
     private static volatile PolyType.MethodHandler m$25;
     private static volatile PolyType.TypedMethodHandler1 h$26;
     private static volatile PolyType.MethodHandler m$27;
@@ -79,24 +82,37 @@ public class PolyClassContraption {
     private static volatile PolyType.PropertyHandler p$52;
     private static volatile PolyType.PropertyHandler p$53;
     private static volatile PolyType.PropertyHandler p$54;
-    private static volatile PolyType.PropertyHandler p$55;
+    private static volatile PolyType.TypedPropertyHandler tp$55;
     private static volatile PolyType.PropertyHandler p$56;
-    private static volatile PolyType.PropertyHandler p$57;
+    private static volatile PolyType.TypedPropertyHandler tp$57;
     private static volatile PolyType.PropertyHandler p$58;
-    private static volatile PolyType.PropertyHandler p$59;
+    private static volatile PolyType.TypedPropertyHandler tp$59;
     private static volatile PolyType.PropertyHandler p$60;
-    private static volatile PolyType.PropertyHandler p$61;
+    private static volatile PolyType.TypedPropertyHandler tp$61;
     private static volatile PolyType.PropertyHandler p$62;
     private static volatile PolyType.PropertyHandler p$63;
     private static volatile PolyType.PropertyHandler p$64;
-    private static volatile PolyType.PropertyHandler p$65;
+    private static volatile PolyType.TypedPropertyHandler tp$65;
     private static volatile PolyType.PropertyHandler p$66;
-    private static volatile PolyType.PropertyHandler p$67;
+    private static volatile PolyType.TypedPropertyHandler tp$67;
     private static volatile PolyType.PropertyHandler p$68;
-    private static volatile PolyType.PropertyHandler p$69;
+    private static volatile PolyType.TypedPropertyHandler tp$69;
     private static volatile PolyType.PropertyHandler p$70;
-    private static volatile PolyType.PropertyHandler p$71;
+    private static volatile PolyType.TypedPropertyHandler tp$71;
     private static volatile PolyType.PropertyHandler p$72;
+    private static volatile PolyType.TypedPropertyHandler tp$73;
+    private static volatile PolyType.PropertyHandler p$74;
+    private static volatile PolyType.PropertyHandler p$75;
+    private static volatile PolyType.PropertyHandler p$76;
+    private static volatile PolyType.TypedPropertyHandler tp$77;
+    private static volatile PolyType.PropertyHandler p$78;
+    private static volatile PolyType.PropertyHandler p$79;
+    private static volatile PolyType.TypedPropertyHandler tp$80;
+    private static volatile PolyType.PropertyHandler p$81;
+    private static volatile PolyType.PropertyHandler p$82;
+    private static volatile PolyType.TypedPropertyHandler tp$83;
+    private static volatile PolyType.PropertyHandler p$84;
+    private static volatile PolyType.TypedPropertyHandler tp$85;
 
     public static void refresh() {
         h$0 = (PolyType.TypedMethodHandler3)PolyClassRuntime.resolveTypedHandler((String)"Contraption", (String)"get_block", (String)"DDD:R");
@@ -123,7 +139,8 @@ public class PolyClassContraption {
         m$21 = PolyClassRuntime.resolveMethodHandler((String)"Contraption", (String)"has_riders");
         h$22 = (PolyType.TypedMethodHandler1)PolyClassRuntime.resolveTypedHandler((String)"Contraption", (String)"set_roll", (String)"D:Z");
         m$23 = PolyClassRuntime.resolveMethodHandler((String)"Contraption", (String)"set_roll");
-        h$24 = (PolyType.TypedMethodHandler0)PolyClassRuntime.resolveTypedHandler((String)"Contraption", (String)"blocks", (String)":R");
+        h$24 = (PolyType.TypedMethodHandler0)PolyClassRuntime.resolveTypedHandler((String)"Contraption", (String)"blocks", (String)":L");
+        c$24_r = PolyClassRuntime.resolveListCodec((String)"Contraption", (String)"blocks", (int)-1);
         m$25 = PolyClassRuntime.resolveMethodHandler((String)"Contraption", (String)"blocks");
         h$26 = (PolyType.TypedMethodHandler1)PolyClassRuntime.resolveTypedHandler((String)"Contraption", (String)"set_scale", (String)"D:Z");
         m$27 = PolyClassRuntime.resolveMethodHandler((String)"Contraption", (String)"set_scale");
@@ -154,24 +171,37 @@ public class PolyClassContraption {
         p$52 = PolyClassRuntime.resolvePropertyHandler((String)"Contraption", (String)"container");
         p$53 = PolyClassRuntime.resolvePropertyHandler((String)"Contraption", (String)"contraption_world");
         p$54 = PolyClassRuntime.resolvePropertyHandler((String)"Contraption", (String)"roll");
-        p$55 = PolyClassRuntime.resolvePropertyHandler((String)"Contraption", (String)"is_contraption");
-        p$56 = PolyClassRuntime.resolvePropertyHandler((String)"Contraption", (String)"scale");
-        p$57 = PolyClassRuntime.resolvePropertyHandler((String)"Contraption", (String)"weight");
-        p$58 = PolyClassRuntime.resolvePropertyHandler((String)"Contraption", (String)"velocity");
-        p$59 = PolyClassRuntime.resolvePropertyHandler((String)"Contraption", (String)"anchor_entity");
-        p$60 = PolyClassRuntime.resolvePropertyHandler((String)"Contraption", (String)"uuid");
-        p$61 = PolyClassRuntime.resolvePropertyHandler((String)"Contraption", (String)"yaw");
-        p$62 = PolyClassRuntime.resolvePropertyHandler((String)"Contraption", (String)"speed");
-        p$63 = PolyClassRuntime.resolvePropertyHandler((String)"Contraption", (String)"rpm");
-        p$64 = PolyClassRuntime.resolvePropertyHandler((String)"Contraption", (String)"has_anchor_entity");
-        p$65 = PolyClassRuntime.resolvePropertyHandler((String)"Contraption", (String)"real_world");
-        p$66 = PolyClassRuntime.resolvePropertyHandler((String)"Contraption", (String)"x");
-        p$67 = PolyClassRuntime.resolvePropertyHandler((String)"Contraption", (String)"rider_count");
-        p$68 = PolyClassRuntime.resolvePropertyHandler((String)"Contraption", (String)"y");
-        p$69 = PolyClassRuntime.resolvePropertyHandler((String)"Contraption", (String)"block_count");
-        p$70 = PolyClassRuntime.resolvePropertyHandler((String)"Contraption", (String)"z");
-        p$71 = PolyClassRuntime.resolvePropertyHandler((String)"Contraption", (String)"pitch");
-        p$72 = PolyClassRuntime.resolvePropertyHandler((String)"Contraption", (String)"is_held");
+        tp$55 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Contraption", (String)"roll", (String)"D");
+        p$56 = PolyClassRuntime.resolvePropertyHandler((String)"Contraption", (String)"is_contraption");
+        tp$57 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Contraption", (String)"is_contraption", (String)"Z");
+        p$58 = PolyClassRuntime.resolvePropertyHandler((String)"Contraption", (String)"scale");
+        tp$59 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Contraption", (String)"scale", (String)"D");
+        p$60 = PolyClassRuntime.resolvePropertyHandler((String)"Contraption", (String)"weight");
+        tp$61 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Contraption", (String)"weight", (String)"D");
+        p$62 = PolyClassRuntime.resolvePropertyHandler((String)"Contraption", (String)"velocity");
+        p$63 = PolyClassRuntime.resolvePropertyHandler((String)"Contraption", (String)"anchor_entity");
+        p$64 = PolyClassRuntime.resolvePropertyHandler((String)"Contraption", (String)"uuid");
+        tp$65 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Contraption", (String)"uuid", (String)"S");
+        p$66 = PolyClassRuntime.resolvePropertyHandler((String)"Contraption", (String)"yaw");
+        tp$67 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Contraption", (String)"yaw", (String)"D");
+        p$68 = PolyClassRuntime.resolvePropertyHandler((String)"Contraption", (String)"speed");
+        tp$69 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Contraption", (String)"speed", (String)"D");
+        p$70 = PolyClassRuntime.resolvePropertyHandler((String)"Contraption", (String)"rpm");
+        tp$71 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Contraption", (String)"rpm", (String)"D");
+        p$72 = PolyClassRuntime.resolvePropertyHandler((String)"Contraption", (String)"has_anchor_entity");
+        tp$73 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Contraption", (String)"has_anchor_entity", (String)"Z");
+        p$74 = PolyClassRuntime.resolvePropertyHandler((String)"Contraption", (String)"real_world");
+        p$75 = PolyClassRuntime.resolvePropertyHandler((String)"Contraption", (String)"x");
+        p$76 = PolyClassRuntime.resolvePropertyHandler((String)"Contraption", (String)"rider_count");
+        tp$77 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Contraption", (String)"rider_count", (String)"D");
+        p$78 = PolyClassRuntime.resolvePropertyHandler((String)"Contraption", (String)"y");
+        p$79 = PolyClassRuntime.resolvePropertyHandler((String)"Contraption", (String)"block_count");
+        tp$80 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Contraption", (String)"block_count", (String)"D");
+        p$81 = PolyClassRuntime.resolvePropertyHandler((String)"Contraption", (String)"z");
+        p$82 = PolyClassRuntime.resolvePropertyHandler((String)"Contraption", (String)"pitch");
+        tp$83 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Contraption", (String)"pitch", (String)"D");
+        p$84 = PolyClassRuntime.resolvePropertyHandler((String)"Contraption", (String)"is_held");
+        tp$85 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Contraption", (String)"is_held", (String)"Z");
     }
 
     public ScriptValue tm$0_get_block(double d, double d2, double d3) {
@@ -343,8 +373,8 @@ public class PolyClassContraption {
     }
 
     public ScriptValue tm$24_blocks() {
-        if (h$24 != null) {
-            return (ScriptValue)h$24.call(this.instance);
+        if (h$24 != null && c$24_r != null) {
+            return c$24_r.encode(h$24.call(this.instance));
         }
         return PolyClassRuntime.genericCall((String)"Contraption", (String)"blocks", (Object)this.instance, (ScriptValue[])new ScriptValue[0]);
     }
@@ -559,130 +589,221 @@ public class PolyClassContraption {
         return PolyClassRuntime.genericProperty((String)"Contraption", (String)"roll", (Object)this.instance);
     }
 
-    public ScriptValue pg$55_is_contraption() {
-        if (p$55 != null) {
-            return p$55.get(this.instance);
+    public double tg$55_roll() {
+        if (tp$55 != null) {
+            return (Double)tp$55.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Contraption", (String)"roll", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$56_is_contraption() {
+        if (p$56 != null) {
+            return p$56.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Contraption", (String)"is_contraption", (Object)this.instance);
     }
 
-    public ScriptValue pg$56_scale() {
-        if (p$56 != null) {
-            return p$56.get(this.instance);
+    public boolean tg$57_is_contraption() {
+        if (tp$57 != null) {
+            return (Boolean)tp$57.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Contraption", (String)"is_contraption", (Object)this.instance).asBool();
+    }
+
+    public ScriptValue pg$58_scale() {
+        if (p$58 != null) {
+            return p$58.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Contraption", (String)"scale", (Object)this.instance);
     }
 
-    public ScriptValue pg$57_weight() {
-        if (p$57 != null) {
-            return p$57.get(this.instance);
+    public double tg$59_scale() {
+        if (tp$59 != null) {
+            return (Double)tp$59.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Contraption", (String)"scale", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$60_weight() {
+        if (p$60 != null) {
+            return p$60.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Contraption", (String)"weight", (Object)this.instance);
     }
 
-    public ScriptValue pg$58_velocity() {
-        if (p$58 != null) {
-            return p$58.get(this.instance);
+    public double tg$61_weight() {
+        if (tp$61 != null) {
+            return (Double)tp$61.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Contraption", (String)"weight", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$62_velocity() {
+        if (p$62 != null) {
+            return p$62.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Contraption", (String)"velocity", (Object)this.instance);
     }
 
-    public ScriptValue pg$59_anchor_entity() {
-        if (p$59 != null) {
-            return p$59.get(this.instance);
+    public ScriptValue pg$63_anchor_entity() {
+        if (p$63 != null) {
+            return p$63.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Contraption", (String)"anchor_entity", (Object)this.instance);
     }
 
-    public ScriptValue pg$60_uuid() {
-        if (p$60 != null) {
-            return p$60.get(this.instance);
+    public ScriptValue pg$64_uuid() {
+        if (p$64 != null) {
+            return p$64.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Contraption", (String)"uuid", (Object)this.instance);
     }
 
-    public ScriptValue pg$61_yaw() {
-        if (p$61 != null) {
-            return p$61.get(this.instance);
+    public String tg$65_uuid() {
+        if (tp$65 != null) {
+            return (String)tp$65.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Contraption", (String)"uuid", (Object)this.instance).asStr();
+    }
+
+    public ScriptValue pg$66_yaw() {
+        if (p$66 != null) {
+            return p$66.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Contraption", (String)"yaw", (Object)this.instance);
     }
 
-    public ScriptValue pg$62_speed() {
-        if (p$62 != null) {
-            return p$62.get(this.instance);
+    public double tg$67_yaw() {
+        if (tp$67 != null) {
+            return (Double)tp$67.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Contraption", (String)"yaw", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$68_speed() {
+        if (p$68 != null) {
+            return p$68.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Contraption", (String)"speed", (Object)this.instance);
     }
 
-    public ScriptValue pg$63_rpm() {
-        if (p$63 != null) {
-            return p$63.get(this.instance);
+    public double tg$69_speed() {
+        if (tp$69 != null) {
+            return (Double)tp$69.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Contraption", (String)"speed", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$70_rpm() {
+        if (p$70 != null) {
+            return p$70.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Contraption", (String)"rpm", (Object)this.instance);
     }
 
-    public ScriptValue pg$64_has_anchor_entity() {
-        if (p$64 != null) {
-            return p$64.get(this.instance);
+    public double tg$71_rpm() {
+        if (tp$71 != null) {
+            return (Double)tp$71.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Contraption", (String)"rpm", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$72_has_anchor_entity() {
+        if (p$72 != null) {
+            return p$72.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Contraption", (String)"has_anchor_entity", (Object)this.instance);
     }
 
-    public ScriptValue pg$65_real_world() {
-        if (p$65 != null) {
-            return p$65.get(this.instance);
+    public boolean tg$73_has_anchor_entity() {
+        if (tp$73 != null) {
+            return (Boolean)tp$73.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Contraption", (String)"has_anchor_entity", (Object)this.instance).asBool();
+    }
+
+    public ScriptValue pg$74_real_world() {
+        if (p$74 != null) {
+            return p$74.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Contraption", (String)"real_world", (Object)this.instance);
     }
 
-    public ScriptValue pg$66_x() {
-        if (p$66 != null) {
-            return p$66.get(this.instance);
+    public ScriptValue pg$75_x() {
+        if (p$75 != null) {
+            return p$75.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Contraption", (String)"x", (Object)this.instance);
     }
 
-    public ScriptValue pg$67_rider_count() {
-        if (p$67 != null) {
-            return p$67.get(this.instance);
+    public ScriptValue pg$76_rider_count() {
+        if (p$76 != null) {
+            return p$76.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Contraption", (String)"rider_count", (Object)this.instance);
     }
 
-    public ScriptValue pg$68_y() {
-        if (p$68 != null) {
-            return p$68.get(this.instance);
+    public double tg$77_rider_count() {
+        if (tp$77 != null) {
+            return (Double)tp$77.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Contraption", (String)"rider_count", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$78_y() {
+        if (p$78 != null) {
+            return p$78.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Contraption", (String)"y", (Object)this.instance);
     }
 
-    public ScriptValue pg$69_block_count() {
-        if (p$69 != null) {
-            return p$69.get(this.instance);
+    public ScriptValue pg$79_block_count() {
+        if (p$79 != null) {
+            return p$79.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Contraption", (String)"block_count", (Object)this.instance);
     }
 
-    public ScriptValue pg$70_z() {
-        if (p$70 != null) {
-            return p$70.get(this.instance);
+    public double tg$80_block_count() {
+        if (tp$80 != null) {
+            return (Double)tp$80.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Contraption", (String)"block_count", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$81_z() {
+        if (p$81 != null) {
+            return p$81.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Contraption", (String)"z", (Object)this.instance);
     }
 
-    public ScriptValue pg$71_pitch() {
-        if (p$71 != null) {
-            return p$71.get(this.instance);
+    public ScriptValue pg$82_pitch() {
+        if (p$82 != null) {
+            return p$82.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Contraption", (String)"pitch", (Object)this.instance);
     }
 
-    public ScriptValue pg$72_is_held() {
-        if (p$72 != null) {
-            return p$72.get(this.instance);
+    public double tg$83_pitch() {
+        if (tp$83 != null) {
+            return (Double)tp$83.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Contraption", (String)"pitch", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$84_is_held() {
+        if (p$84 != null) {
+            return p$84.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Contraption", (String)"is_held", (Object)this.instance);
+    }
+
+    public boolean tg$85_is_held() {
+        if (tp$85 != null) {
+            return (Boolean)tp$85.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Contraption", (String)"is_held", (Object)this.instance).asBool();
     }
 
     public PolyClassContraption(Object object) {

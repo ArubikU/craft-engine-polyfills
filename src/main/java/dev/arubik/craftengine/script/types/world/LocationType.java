@@ -18,23 +18,25 @@ public final class LocationType {
 
     public static void register() {
         PolyTypeRegistry.define("Location")
-            .property("x",       obj -> ScriptValue.of(ref(obj).x()))
-            .property("y",       obj -> ScriptValue.of(ref(obj).y()))
-            .property("z",       obj -> ScriptValue.of(ref(obj).z()))
-            .property("block_x", obj -> ScriptValue.of(Math.floor(ref(obj).x())))
-            .property("block_y", obj -> ScriptValue.of(Math.floor(ref(obj).y())))
-            .property("block_z", obj -> ScriptValue.of(Math.floor(ref(obj).z())))
-            .property("world",   obj -> {
-                ServerLevel lvl = ref(obj).level();
-                return lvl != null ? WorldType.wrap(lvl) : ScriptValue.NULL;
-            })
-            .property("biome",   obj -> {
-                LocationRef r = ref(obj);
-                if (r.level() == null) return ScriptValue.NULL;
+            // ref(obj) is a plain `(LocationRef) obj` cast, so LocationRef is the typed instance
+            // parameter directly.
+            .propertyTyped("x",       TypeCodecs.DOUBLE, (LocationRef r) -> r.x())
+            .propertyTyped("y",       TypeCodecs.DOUBLE, (LocationRef r) -> r.y())
+            .propertyTyped("z",       TypeCodecs.DOUBLE, (LocationRef r) -> r.z())
+            .propertyTyped("block_x", TypeCodecs.DOUBLE, (LocationRef r) -> Math.floor(r.x()))
+            .propertyTyped("block_y", TypeCodecs.DOUBLE, (LocationRef r) -> Math.floor(r.y()))
+            .propertyTyped("block_z", TypeCodecs.DOUBLE, (LocationRef r) -> Math.floor(r.z()))
+            // polyType("World", ServerLevel) — identical to WorldType.wrap (ofObj for non-null,
+            // NULL for null), so the explicit null branch collapses into the codec.
+            .propertyTyped("world",   TypeCodecs.polyType("World", ServerLevel.class), (LocationRef r) -> r.level())
+            // STRING with a null return — ScriptValue.of(String) maps null to NULL, exactly the
+            // old ScriptValue.NULL branches.
+            .propertyTyped("biome",   TypeCodecs.STRING, (LocationRef r) -> {
+                if (r.level() == null) return null;
                 try {
                     var biome = r.level().getBiome(new BlockPos((int) r.x(), (int) r.y(), (int) r.z()));
-                    return ScriptValue.of(biome.unwrapKey().map(Object::toString).orElse("unknown"));
-                } catch (Throwable ignored) { return ScriptValue.NULL; }
+                    return biome.unwrapKey().map(Object::toString).orElse("unknown");
+                } catch (Throwable ignored) { return null; }
             })
             // Typed via null sentinels on all three slots: no codec decodes a PRESENT argument to
             // Java null (asNum() is primitive-backed, boxed only on return), and arguments are
@@ -86,5 +88,7 @@ public final class LocationType {
         return ScriptValue.NULL;
     }
 
-    private static LocationRef ref(Object obj) { return (LocationRef) obj; }
+    // ref(Object) — the old `(LocationRef) obj` cast helper — was removed: every property is now
+    // propertyTyped with a LocationRef instance parameter (every method was already methodTypedN),
+    // so the typed registration's own generic cast does the identical conversion.
 }

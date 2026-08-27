@@ -7,6 +7,7 @@
  *  dev.arubik.craftengine.script.PolyType$MethodHandler
  *  dev.arubik.craftengine.script.PolyType$PropertyHandler
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler1
+ *  dev.arubik.craftengine.script.PolyType$TypedPropertyHandler
  *  dev.arubik.craftengine.script.ScriptValue
  *  dev.arubik.craftengine.script.ScriptValue$Obj
  */
@@ -24,13 +25,15 @@ extends PolyClassEvent {
     private static volatile PolyType.TypedMethodHandler1 h$0;
     private static volatile PolyType.MethodHandler m$1;
     private static volatile PolyType.PropertyHandler p$2;
-    private static volatile PolyType.PropertyHandler p$3;
+    private static volatile PolyType.TypedPropertyHandler tp$3;
+    private static volatile PolyType.PropertyHandler p$4;
 
     public static void refresh() {
         h$0 = (PolyType.TypedMethodHandler1)PolyClassRuntime.resolveTypedHandler((String)"EntityKnockbackEvent", (String)"set_knockback", (String)"R:Z");
         m$1 = PolyClassRuntime.resolveMethodHandler((String)"EntityKnockbackEvent", (String)"set_knockback");
         p$2 = PolyClassRuntime.resolvePropertyHandler((String)"EntityKnockbackEvent", (String)"cause");
-        p$3 = PolyClassRuntime.resolvePropertyHandler((String)"EntityKnockbackEvent", (String)"knockback");
+        tp$3 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"EntityKnockbackEvent", (String)"cause", (String)"S");
+        p$4 = PolyClassRuntime.resolvePropertyHandler((String)"EntityKnockbackEvent", (String)"knockback");
     }
 
     public boolean tm$0_set_knockback(ScriptValue scriptValue) {
@@ -54,9 +57,16 @@ extends PolyClassEvent {
         return PolyClassRuntime.genericProperty((String)"EntityKnockbackEvent", (String)"cause", (Object)this.instance);
     }
 
-    public ScriptValue pg$3_knockback() {
-        if (p$3 != null) {
-            return p$3.get(this.instance);
+    public String tg$3_cause() {
+        if (tp$3 != null) {
+            return (String)tp$3.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"EntityKnockbackEvent", (String)"cause", (Object)this.instance).asStr();
+    }
+
+    public ScriptValue pg$4_knockback() {
+        if (p$4 != null) {
+            return p$4.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"EntityKnockbackEvent", (String)"knockback", (Object)this.instance);
     }

@@ -35,11 +35,12 @@ public final class RegistryCollectionType {
 
     public static void register() {
         PolyTypeRegistry.define("RegistryCollection")
-            .property("size", obj -> {
-                try { return ScriptValue.of(ref(obj).get().keySet().size()); }
-                catch (Throwable ignored) { return ScriptValue.of(0); }
+            .propertyTyped("size", TypeCodecs.DOUBLE, (Ref r) -> {
+                try { return (double) r.get().keySet().size(); }
+                catch (Throwable ignored) { return 0.0; }
             })
-            // all() -> Array<Str> — every id currently registered.
+            // all() -> Array<Str> — every id currently registered. Stays RAW: elements are plain
+            // strings, not PolyType instances, so TypeCodecs.listOf does not apply.
             .methodTyped0("all", TypeCodecs.RAW,
                 (Ref r) -> {
                     try {
@@ -71,5 +72,7 @@ public final class RegistryCollectionType {
         return ScriptValue.ofObj("RegistryCollection", new Ref(supplier));
     }
 
-    private static Ref ref(Object obj) { return (Ref) obj; }
+    // ref(Object) — the old `(Ref) obj` cast helper — was removed: `size` is now propertyTyped with
+    // a Ref instance parameter (every method was already methodTypedN), so the typed registration's
+    // own generic cast does the identical conversion.
 }

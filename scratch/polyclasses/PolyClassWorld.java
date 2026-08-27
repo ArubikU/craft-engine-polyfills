@@ -13,6 +13,7 @@
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler5
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler6
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler9
+ *  dev.arubik.craftengine.script.PolyType$TypedPropertyHandler
  *  dev.arubik.craftengine.script.ScriptValue
  *  dev.arubik.craftengine.script.ScriptValue$Obj
  */
@@ -53,13 +54,21 @@ public class PolyClassWorld {
     private static volatile PolyType.TypedMethodHandler3 h$24;
     private static volatile PolyType.MethodHandler m$25;
     private static volatile PolyType.PropertyHandler p$26;
-    private static volatile PolyType.PropertyHandler p$27;
+    private static volatile PolyType.TypedPropertyHandler tp$27;
     private static volatile PolyType.PropertyHandler p$28;
-    private static volatile PolyType.PropertyHandler p$29;
+    private static volatile PolyType.TypedPropertyHandler tp$29;
     private static volatile PolyType.PropertyHandler p$30;
-    private static volatile PolyType.PropertyHandler p$31;
+    private static volatile PolyType.TypedPropertyHandler tp$31;
     private static volatile PolyType.PropertyHandler p$32;
-    private static volatile PolyType.PropertyHandler p$33;
+    private static volatile PolyType.TypedPropertyHandler tp$33;
+    private static volatile PolyType.PropertyHandler p$34;
+    private static volatile PolyType.TypedPropertyHandler tp$35;
+    private static volatile PolyType.PropertyHandler p$36;
+    private static volatile PolyType.TypedPropertyHandler tp$37;
+    private static volatile PolyType.PropertyHandler p$38;
+    private static volatile PolyType.TypedPropertyHandler tp$39;
+    private static volatile PolyType.PropertyHandler p$40;
+    private static volatile PolyType.TypedPropertyHandler tp$41;
 
     public static void refresh() {
         h$0 = (PolyType.TypedMethodHandler4)PolyClassRuntime.resolveTypedHandler((String)"World", (String)"get_block", (String)"DDDZ:R");
@@ -89,13 +98,21 @@ public class PolyClassWorld {
         h$24 = (PolyType.TypedMethodHandler3)PolyClassRuntime.resolveTypedHandler((String)"World", (String)"get_light", (String)"DDD:R");
         m$25 = PolyClassRuntime.resolveMethodHandler((String)"World", (String)"get_light");
         p$26 = PolyClassRuntime.resolvePropertyHandler((String)"World", (String)"is_night");
-        p$27 = PolyClassRuntime.resolvePropertyHandler((String)"World", (String)"seed");
-        p$28 = PolyClassRuntime.resolvePropertyHandler((String)"World", (String)"name");
-        p$29 = PolyClassRuntime.resolvePropertyHandler((String)"World", (String)"is_day");
-        p$30 = PolyClassRuntime.resolvePropertyHandler((String)"World", (String)"time");
-        p$31 = PolyClassRuntime.resolvePropertyHandler((String)"World", (String)"day_time");
-        p$32 = PolyClassRuntime.resolvePropertyHandler((String)"World", (String)"is_raining");
-        p$33 = PolyClassRuntime.resolvePropertyHandler((String)"World", (String)"is_thundering");
+        tp$27 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"World", (String)"is_night", (String)"Z");
+        p$28 = PolyClassRuntime.resolvePropertyHandler((String)"World", (String)"seed");
+        tp$29 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"World", (String)"seed", (String)"D");
+        p$30 = PolyClassRuntime.resolvePropertyHandler((String)"World", (String)"name");
+        tp$31 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"World", (String)"name", (String)"S");
+        p$32 = PolyClassRuntime.resolvePropertyHandler((String)"World", (String)"is_day");
+        tp$33 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"World", (String)"is_day", (String)"Z");
+        p$34 = PolyClassRuntime.resolvePropertyHandler((String)"World", (String)"time");
+        tp$35 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"World", (String)"time", (String)"D");
+        p$36 = PolyClassRuntime.resolvePropertyHandler((String)"World", (String)"day_time");
+        tp$37 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"World", (String)"day_time", (String)"D");
+        p$38 = PolyClassRuntime.resolvePropertyHandler((String)"World", (String)"is_raining");
+        tp$39 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"World", (String)"is_raining", (String)"Z");
+        p$40 = PolyClassRuntime.resolvePropertyHandler((String)"World", (String)"is_thundering");
+        tp$41 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"World", (String)"is_thundering", (String)"Z");
     }
 
     public ScriptValue tm$0_get_block(double d, double d2, double d3, boolean bl) {
@@ -287,53 +304,109 @@ public class PolyClassWorld {
         return PolyClassRuntime.genericProperty((String)"World", (String)"is_night", (Object)this.instance);
     }
 
-    public ScriptValue pg$27_seed() {
-        if (p$27 != null) {
-            return p$27.get(this.instance);
+    public boolean tg$27_is_night() {
+        if (tp$27 != null) {
+            return (Boolean)tp$27.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"World", (String)"is_night", (Object)this.instance).asBool();
+    }
+
+    public ScriptValue pg$28_seed() {
+        if (p$28 != null) {
+            return p$28.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"World", (String)"seed", (Object)this.instance);
     }
 
-    public ScriptValue pg$28_name() {
-        if (p$28 != null) {
-            return p$28.get(this.instance);
+    public double tg$29_seed() {
+        if (tp$29 != null) {
+            return (Double)tp$29.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"World", (String)"seed", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$30_name() {
+        if (p$30 != null) {
+            return p$30.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"World", (String)"name", (Object)this.instance);
     }
 
-    public ScriptValue pg$29_is_day() {
-        if (p$29 != null) {
-            return p$29.get(this.instance);
+    public String tg$31_name() {
+        if (tp$31 != null) {
+            return (String)tp$31.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"World", (String)"name", (Object)this.instance).asStr();
+    }
+
+    public ScriptValue pg$32_is_day() {
+        if (p$32 != null) {
+            return p$32.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"World", (String)"is_day", (Object)this.instance);
     }
 
-    public ScriptValue pg$30_time() {
-        if (p$30 != null) {
-            return p$30.get(this.instance);
+    public boolean tg$33_is_day() {
+        if (tp$33 != null) {
+            return (Boolean)tp$33.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"World", (String)"is_day", (Object)this.instance).asBool();
+    }
+
+    public ScriptValue pg$34_time() {
+        if (p$34 != null) {
+            return p$34.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"World", (String)"time", (Object)this.instance);
     }
 
-    public ScriptValue pg$31_day_time() {
-        if (p$31 != null) {
-            return p$31.get(this.instance);
+    public double tg$35_time() {
+        if (tp$35 != null) {
+            return (Double)tp$35.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"World", (String)"time", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$36_day_time() {
+        if (p$36 != null) {
+            return p$36.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"World", (String)"day_time", (Object)this.instance);
     }
 
-    public ScriptValue pg$32_is_raining() {
-        if (p$32 != null) {
-            return p$32.get(this.instance);
+    public double tg$37_day_time() {
+        if (tp$37 != null) {
+            return (Double)tp$37.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"World", (String)"day_time", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$38_is_raining() {
+        if (p$38 != null) {
+            return p$38.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"World", (String)"is_raining", (Object)this.instance);
     }
 
-    public ScriptValue pg$33_is_thundering() {
-        if (p$33 != null) {
-            return p$33.get(this.instance);
+    public boolean tg$39_is_raining() {
+        if (tp$39 != null) {
+            return (Boolean)tp$39.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"World", (String)"is_raining", (Object)this.instance).asBool();
+    }
+
+    public ScriptValue pg$40_is_thundering() {
+        if (p$40 != null) {
+            return p$40.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"World", (String)"is_thundering", (Object)this.instance);
+    }
+
+    public boolean tg$41_is_thundering() {
+        if (tp$41 != null) {
+            return (Boolean)tp$41.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"World", (String)"is_thundering", (Object)this.instance).asBool();
     }
 
     public PolyClassWorld(Object object) {

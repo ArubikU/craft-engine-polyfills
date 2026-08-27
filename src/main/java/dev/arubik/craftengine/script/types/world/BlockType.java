@@ -97,111 +97,140 @@ public final class BlockType {
 
     public static void register() {
         PolyTypeRegistry.define("Block")
-            .property("id", obj -> {
+            // Every property below keeps `Object` as its instance parameter and calls ref(obj)
+            // inside the body: ref() is NOT a plain cast (it also converts a MachineRef, since
+            // Machine inherits these members from Block — see ref()'s doc), so that conversion must
+            // not be delegated to propertyTyped's generic cast.
+            .propertyTyped("id", TypeCodecs.STRING, (Object obj) -> {
                 BlockState bs = ref(obj).state();
                 // A CraftEngine custom block reports its CE id ("cml:crate_acacia"), not the
                 // vanilla block it is backed by. The backing id is useless for identification:
                 // every CE block sharing a base block would compare equal to every other.
                 String ce = customBlockId(bs);
-                if (ce != null) return ScriptValue.of(ce);
-                return ScriptValue.of(BuiltInRegistries.BLOCK.getKey(bs.getBlock()).toString());
+                if (ce != null) return ce;
+                return BuiltInRegistries.BLOCK.getKey(bs.getBlock()).toString();
             })
             /** The vanilla block backing this position, regardless of any CE block on top of it. */
-            .property("vanilla_id", obj -> ScriptValue.of(
-                    BuiltInRegistries.BLOCK.getKey(ref(obj).state().getBlock()).toString()))
-            .property("is_custom", obj -> ScriptValue.of(customBlockId(ref(obj).state()) != null))
+            .propertyTyped("vanilla_id", TypeCodecs.STRING, (Object obj) ->
+                    BuiltInRegistries.BLOCK.getKey(ref(obj).state().getBlock()).toString())
+            .propertyTyped("is_custom", TypeCodecs.BOOL, (Object obj) -> customBlockId(ref(obj).state()) != null)
             /** Whether super glue attaches this block to anything — see the Glue singleton. */
-            .property("is_glued", obj -> {
+            .propertyTyped("is_glued", TypeCodecs.BOOL, (Object obj) -> {
                 try {
                     BlockRef r = ref(obj);
-                    return ScriptValue.of(dev.arubik.craftengine.contraption.glue.GlueRegistry
-                            .graphFor(r.level().dimension()).hasNode(r.pos()));
-                } catch (Throwable ignored) { return ScriptValue.of(false); }
+                    return dev.arubik.craftengine.contraption.glue.GlueRegistry
+                            .graphFor(r.level().dimension()).hasNode(r.pos());
+                } catch (Throwable ignored) { return false; }
             })
             /** Every block glued to this one — what a bearing anchored here would carry. */
             // Migrated to methodTyped0 — instance kept as Object (not BlockRef) because ref(obj)
             // does more than a plain cast (it also accepts a MachineRef, since Machine inherits
             // this method from Block — see ref()'s doc), so that conversion must stay inside the
             // body rather than being delegated to methodTypedN's generic cast.
-            .methodTyped0("glue_structure", TypeCodecs.RAW, (Object obj) -> {
-                java.util.List<ScriptValue> out = new java.util.ArrayList<>();
+            // Return codec declares the element type: every element is an Obj("Block", BlockRef),
+            // so the handler returns a real List<BlockRef> and TypeCodecs.listOf wraps it.
+            .methodTyped0("glue_structure", TypeCodecs.listOf("Block", BlockRef.class), (Object obj) -> {
+                java.util.List<BlockRef> out = new java.util.ArrayList<>();
                 try {
                     BlockRef r = ref(obj);
                     for (net.minecraft.core.BlockPos p : dev.arubik.craftengine.contraption.glue.GlueRegistry
                             .structureAt(r.level().dimension(), r.pos())) {
-                        out.add(wrap(r.level(), p));
+                        out.add(new BlockRef(r.level(), p));
                     }
                 } catch (Throwable ignored) {}
-                return new ScriptValue.Array(out);
+                return out;
             })
-            .property("is_air", obj -> ScriptValue.of(ref(obj).state().isAir()))
+            .propertyTyped("is_air", TypeCodecs.BOOL, (Object obj) -> ref(obj).state().isAir())
             // Whether this block is a storage endpoint (vanilla container OR a custom block
             // exposing WorldlyContainerHolder) as opposed to another pipe segment or plain air —
             // lets a pipe's own panel script tell "this face touches a chest" from "this face
             // touches another pipe" (see item_pipe_panel.pf's cycle_mode: pipe-to-pipe should only
             // ever be Disabled/Both, the Input/Output split only means something toward a container).
-            .property("is_container", obj -> {
+            .propertyTyped("is_container", TypeCodecs.BOOL, (Object obj) -> {
                 BlockRef r = ref(obj);
-                return ScriptValue.of(dev.arubik.craftengine.pipe.item.ItemTransferHelper
-                        .getContainer(r.level(), r.pos()).isPresent());
+                return dev.arubik.craftengine.pipe.item.ItemTransferHelper
+                        .getContainer(r.level(), r.pos()).isPresent();
             })
-            .property("hardness", obj -> {
+            .propertyTyped("hardness", TypeCodecs.DOUBLE, (Object obj) -> {
                 BlockRef r = ref(obj);
-                return ScriptValue.of(r.state().getDestroySpeed(r.level(), r.pos()));
+                return (double) r.state().getDestroySpeed(r.level(), r.pos());
             })
-            .property("light_level", obj -> ScriptValue.of(ref(obj).state().getLightEmission()))
+            .propertyTyped("light_level", TypeCodecs.DOUBLE, (Object obj) -> (double) ref(obj).state().getLightEmission())
             // The biome id AT this position ("minecraft:plains", ...) — a position-dependent
             // lookup, so it lives here (where a level+pos are already on hand) rather than on
             // Registry.biomes, which is deliberately just an id list with no coordinate concept.
-            .property("biome", obj -> {
+            .propertyTyped("biome", TypeCodecs.STRING, (Object obj) -> {
                 BlockRef r = ref(obj);
                 try {
                     var holder = r.level().getBiome(r.pos());
-                    return ScriptValue.of(holder.unwrapKey()
+                    return holder.unwrapKey()
                             .map(k -> k.identifier().toString())
-                            .orElse("unknown"));
-                } catch (Throwable ignored) { return ScriptValue.of("unknown"); }
+                            .orElse("unknown");
+                } catch (Throwable ignored) { return "unknown"; }
             })
-            .property("pos", obj -> {
+            // polyType("Vector", Vector3d) — VectorType.wrap(x,y,z) is exactly
+            // ScriptValue.ofObj("Vector", new Vector3d(x,y,z)).
+            .propertyTyped("pos", TypeCodecs.polyType("Vector", org.joml.Vector3d.class), (Object obj) -> {
                 BlockPos p = ref(obj).pos();
-                return VectorType.wrap(p.getX(), p.getY(), p.getZ());
+                return new org.joml.Vector3d(p.getX(), p.getY(), p.getZ());
             })
-            .property("redstone", obj -> {
+            .propertyTyped("redstone", TypeCodecs.DOUBLE, (Object obj) -> {
                 BlockRef r = ref(obj);
-                return ScriptValue.of(r.level().getBestNeighborSignal(r.pos()));
+                return (double) r.level().getBestNeighborSignal(r.pos());
             })
-            .property("powered", obj -> {
+            .propertyTyped("powered", TypeCodecs.BOOL, (Object obj) -> {
                 BlockRef r = ref(obj);
-                return ScriptValue.of(r.level().getBestNeighborSignal(r.pos()) > 0);
+                return r.level().getBestNeighborSignal(r.pos()) > 0;
             })
             // get_metadata — the real block entity at this position (sign text, container
             // contents, skull owner, banner pattern, ...) as a type-appropriate script object,
             // e.g. block.get_metadata.front.lines[0]. NULL when there's no block entity here,
             // or its kind isn't modeled — see BlockMetadataType.
-            .property("get_metadata", obj -> BlockMetadataType.metadataOf(ref(obj).level(), ref(obj).pos()))
+            // RAW: metadataOf picks a DIFFERENT BlockMetadata child PolyType per block entity
+            // ("SignMetadata", "ContainerMetadata", ...) and returns NULL for an unmodeled one, so
+            // no single polyType name describes it.
+            .propertyTyped("get_metadata", TypeCodecs.RAW, (Object obj) -> BlockMetadataType.metadataOf(ref(obj).level(), ref(obj).pos()))
             // metadata_type — which single BlockMetadata child type get_metadata would return
             // (e.g. "SignMetadata"), or NULL — for branching on a block's kind without paying for
             // the full metadata object first.
-            .property("metadata_type", obj -> BlockMetadataType.metadataTypeOf(ref(obj).level(), ref(obj).pos()))
+            // RAW: metadataTypeOf itself returns a ScriptValue that is a Str on one branch and NULL
+            // on two others — STRING would need the helper's own return type changed.
+            .propertyTyped("metadata_type", TypeCodecs.RAW, (Object obj) -> BlockMetadataType.metadataTypeOf(ref(obj).level(), ref(obj).pos()))
             // metadata_types — every modeled type name applicable to this block, most specific
             // first, as an Array (empty when nothing is modeled for it).
-            .property("metadata_types", obj -> BlockMetadataType.metadataTypesOf(ref(obj).level(), ref(obj).pos()))
+            // RAW, not listOf: the elements are plain type-NAME strings, not Objs of any PolyType —
+            // a list codec would silently drop every one of them.
+            .propertyTyped("metadata_types", TypeCodecs.RAW, (Object obj) -> BlockMetadataType.metadataTypesOf(ref(obj).level(), ref(obj).pos()))
             // machine — this block wrapped as a "Machine" (see MachineType), for a script that
             // found some OTHER machine block (via real_block, block_at, facing_block, ...) and
             // wants to read/write its typed data or call its Machine.* methods directly. NULL if
             // there's no data-driven machine block entity actually here.
-            .property("machine", obj -> {
+            // polyType("Machine", MachineRef): MachineType.wrap is exactly
+            // ScriptValue.ofObj("Machine", new MachineRef(level, pos, facing, be)) with no null
+            // handling of its own, and PolyCodec encodes a null instance to NULL — matching the
+            // old "no machine block entity here" branch.
+            .propertyTyped("machine", TypeCodecs.polyType("Machine",
+                    dev.arubik.craftengine.script.types.machine.MachineType.MachineRef.class), (Object obj) -> {
                 BlockRef r = ref(obj);
                 var be = dev.arubik.craftengine.block.entity.BukkitBlockEntityTypes.getIfLoaded(r.level(), r.pos());
                 if (be != null && be.controller instanceof dev.arubik.craftengine.block.entity.PersistentBlockEntity pbe) {
-                    return dev.arubik.craftengine.script.types.machine.MachineType.wrap(r.level(), r.pos(), "north", pbe);
+                    return new dev.arubik.craftengine.script.types.machine.MachineType.MachineRef(r.level(), r.pos(), "north", pbe);
                 }
-                return ScriptValue.NULL;
+                return null;
             })
-            .property("world", obj -> WorldType.wrap(ref(obj).level()))
-            .property("location", obj -> LocationType.wrap(ref(obj).level(), ref(obj).pos().getX(), ref(obj).pos().getY(), ref(obj).pos().getZ()))
+            // polyType("World", ServerLevel) — identical to WorldType.wrap (ofObj for non-null,
+            // NULL for null).
+            .propertyTyped("world", TypeCodecs.polyType("World", ServerLevel.class), (Object obj) -> ref(obj).level())
+            // RAW, not polyType("Location", ...): LocationType.wrap is not a bare ofObj — for a
+            // ContraptionLevel it first projects the local coordinates into the real world and may
+            // re-target the LocationRef at a different level. Typing this would mean duplicating
+            // that projection here.
+            .propertyTyped("location", TypeCodecs.RAW, (Object obj) ->
+                    LocationType.wrap(ref(obj).level(), ref(obj).pos().getX(), ref(obj).pos().getY(), ref(obj).pos().getZ()))
             // block_state — full BlockState wrapper (CE + vanilla properties, CE priority)
-            .property("block_state", obj -> BlockStateType.wrap(ref(obj).state()))
+            // RAW, not polyType("BlockState", ...): BlockStateType.wrap also resolves the CE
+            // ImmutableBlockState to build its BlockStateRef, which polyType's encode can't do.
+            .propertyTyped("block_state", TypeCodecs.RAW, (Object obj) -> BlockStateType.wrap(ref(obj).state()))
             // CE-aware (readProperty checks the CraftEngine custom block state FIRST, falling back
             // to vanilla) — a disguised custom block's OWN properties (e.g. the saw's "facing"/
             // "face") live on its ImmutableBlockState, not the raw NMS state its disguise reports
@@ -273,9 +302,9 @@ public final class BlockType {
                 return false;
             })
             // combined_light — max of block+sky light at this position
-            .property("combined_light", obj -> ScriptValue.of(ref(obj).level().getMaxLocalRawBrightness(ref(obj).pos())))
-            .property("block_light",    obj -> ScriptValue.of(ref(obj).level().getBrightness(LightLayer.BLOCK, ref(obj).pos())))
-            .property("sky_light",      obj -> ScriptValue.of(ref(obj).level().getBrightness(LightLayer.SKY, ref(obj).pos())))
+            .propertyTyped("combined_light", TypeCodecs.DOUBLE, (Object obj) -> (double) ref(obj).level().getMaxLocalRawBrightness(ref(obj).pos()))
+            .propertyTyped("block_light",    TypeCodecs.DOUBLE, (Object obj) -> (double) ref(obj).level().getBrightness(LightLayer.BLOCK, ref(obj).pos()))
+            .propertyTyped("sky_light",      TypeCodecs.DOUBLE, (Object obj) -> (double) ref(obj).level().getBrightness(LightLayer.SKY, ref(obj).pos()))
             // apply_bone_meal() → bool — grows the plant/crop
             // Migrated to methodTyped0.
             .methodTyped0("apply_bone_meal", TypeCodecs.BOOL, (Object obj) -> {
@@ -296,6 +325,8 @@ public final class BlockType {
             // OTHER than the machine's own; since the caller already holds that Block value (from
             // Machine.facing_block, World.get_block, ...), it just calls this directly now.
             // Migrated to methodTyped0.
+            // NOT typed with listOf: elements are ScriptValue.Item (ScriptValue.ofItem), a distinct
+            // ScriptValue variant, not an Obj of any PolyType — listOf would re-box them as Obj.
             .methodTyped0("break_and_drop", TypeCodecs.RAW, (Object obj) -> {
                 BlockRef r = ref(obj);
                 try {
@@ -365,13 +396,18 @@ public final class BlockType {
                 return wrap(r.level(), r.pos().offset(dx, dy, dz));
             })
             // facing_block — block this block faces, using CE or vanilla "facing" property
-            .property("facing_block", obj -> {
+            // polyType("Block", BlockRef): wrap(level,pos) is ofObj("Block", new BlockRef(level,pos))
+            // guarded on null level/pos — neither can be null on this path (r comes from a live
+            // BlockRef, and relative() never returns null) — and PolyCodec encodes null to NULL,
+            // matching the no-facing branch.
+            .propertyTyped("facing_block", TypeCodecs.polyType("Block", BlockRef.class), (Object obj) -> {
                 BlockRef r = ref(obj);
                 net.minecraft.core.Direction dir = readFacingDirection(r.state());
-                return dir != null ? wrap(r.level(), r.pos().relative(dir)) : ScriptValue.NULL;
+                return dir != null ? new BlockRef(r.level(), r.pos().relative(dir)) : null;
             })
             // face_blocks — map of direction → adjacent block for all 6 faces
-            .property("face_blocks", obj -> {
+            // RAW: a Map value, not a list or a scalar — MapType.wrap boxes it as Obj("Map", ...).
+            .propertyTyped("face_blocks", TypeCodecs.RAW, (Object obj) -> {
                 BlockRef r = ref(obj);
                 java.util.LinkedHashMap<String, ScriptValue> map = new java.util.LinkedHashMap<>();
                 for (net.minecraft.core.Direction dir : net.minecraft.core.Direction.values()) {
@@ -488,6 +524,8 @@ public final class BlockType {
             // Migrated to methodTypedOpt1: radius is optional WITH a real default (4) used to
             // compute an actual result when omitted, not an early-return sentinel — precisely the
             // methodTypedOptN shape (methodTyped1's onMissingArgs would short-circuit instead).
+            // NOT typed with listOf: EntityType.wrap picks the PolyType name PER ENTITY
+            // ("Player"/"Animal"/"Mob"/...), so this is a mixed-PolyType array.
             .methodTypedOpt1("entities", TypeCodecs.DOUBLE, 4.0, TypeCodecs.RAW,
                 (Object obj, Double radiusArg) -> {
                 BlockRef r = ref(obj);
@@ -559,39 +597,41 @@ public final class BlockType {
             })
             // ---- Fluid properties ----
             // has_fluid → true if the block has any non-empty fluid (water, lava, etc.)
-            .property("has_fluid", obj -> {
+            .propertyTyped("has_fluid", TypeCodecs.BOOL, (Object obj) -> {
                 try {
                     BlockRef r = ref(obj);
                     net.minecraft.world.level.material.FluidState fs = r.level().getFluidState(r.pos());
-                    return ScriptValue.of(!fs.isEmpty());
-                } catch (Throwable ignored) { return ScriptValue.of(false); }
+                    return !fs.isEmpty();
+                } catch (Throwable ignored) { return false; }
             })
             // is_water → true if the fluid at this position is water (flowing or source)
-            .property("is_water", obj -> {
+            .propertyTyped("is_water", TypeCodecs.BOOL, (Object obj) -> {
                 try {
                     BlockRef r = ref(obj);
                     net.minecraft.world.level.material.FluidState fs = r.level().getFluidState(r.pos());
-                    return ScriptValue.of(!fs.isEmpty()
-                        && fs.getType() instanceof net.minecraft.world.level.material.WaterFluid);
-                } catch (Throwable ignored) { return ScriptValue.of(false); }
+                    return !fs.isEmpty()
+                        && fs.getType() instanceof net.minecraft.world.level.material.WaterFluid;
+                } catch (Throwable ignored) { return false; }
             })
             // is_source_fluid → true if the fluid at this position is a source block
-            .property("is_source_fluid", obj -> {
+            .propertyTyped("is_source_fluid", TypeCodecs.BOOL, (Object obj) -> {
                 try {
                     BlockRef r = ref(obj);
                     net.minecraft.world.level.material.FluidState fs = r.level().getFluidState(r.pos());
-                    return ScriptValue.of(!fs.isEmpty() && fs.isSource());
-                } catch (Throwable ignored) { return ScriptValue.of(false); }
+                    return !fs.isEmpty() && fs.isSource();
+                } catch (Throwable ignored) { return false; }
             })
             // fluid_flow → Vec3 of the flow direction (x,y,z). Zero vector if no fluid or source.
-            .property("fluid_flow", obj -> {
+            // polyType("Vector", Vector3d) — see `pos` above; the zero-vector fallbacks become a
+            // real new Vector3d(0,0,0), exactly what VectorType.wrap(0,0,0) built.
+            .propertyTyped("fluid_flow", TypeCodecs.polyType("Vector", org.joml.Vector3d.class), (Object obj) -> {
                 try {
                     BlockRef r = ref(obj);
                     net.minecraft.world.level.material.FluidState fs = r.level().getFluidState(r.pos());
-                    if (fs.isEmpty()) return VectorType.wrap(0, 0, 0);
+                    if (fs.isEmpty()) return new org.joml.Vector3d(0, 0, 0);
                     net.minecraft.world.phys.Vec3 flow = fs.getFlow(r.level(), r.pos());
-                    return VectorType.wrap(flow.x, flow.y, flow.z);
-                } catch (Throwable ignored) { return VectorType.wrap(0, 0, 0); }
+                    return new org.joml.Vector3d(flow.x, flow.y, flow.z);
+                } catch (Throwable ignored) { return new org.joml.Vector3d(0, 0, 0); }
             })
             // Migrated to methodTypedOpt3: only soundId is required — vol/pitch are optional
             // trailing args each with their own real default (1.0f) and the body still runs when

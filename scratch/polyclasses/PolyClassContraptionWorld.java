@@ -6,9 +6,11 @@
  *  dev.arubik.craftengine.script.PolyClassRuntime
  *  dev.arubik.craftengine.script.PolyType$MethodHandler
  *  dev.arubik.craftengine.script.PolyType$PropertyHandler
+ *  dev.arubik.craftengine.script.PolyType$TypeCodec
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler0
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler3
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler6
+ *  dev.arubik.craftengine.script.PolyType$TypedPropertyHandler
  *  dev.arubik.craftengine.script.ScriptValue
  *  dev.arubik.craftengine.script.ScriptValue$Obj
  */
@@ -30,6 +32,7 @@ extends PolyClassWorld {
     private static volatile PolyType.TypedMethodHandler0 h$4;
     private static volatile PolyType.MethodHandler m$5;
     private static volatile PolyType.TypedMethodHandler0 h$6;
+    private static volatile PolyType.TypeCodec c$6_r;
     private static volatile PolyType.MethodHandler m$7;
     private static volatile PolyType.TypedMethodHandler3 h$8;
     private static volatile PolyType.MethodHandler m$9;
@@ -40,11 +43,17 @@ extends PolyClassWorld {
     private static volatile PolyType.PropertyHandler p$14;
     private static volatile PolyType.PropertyHandler p$15;
     private static volatile PolyType.PropertyHandler p$16;
-    private static volatile PolyType.PropertyHandler p$17;
+    private static volatile PolyType.TypedPropertyHandler tp$17;
     private static volatile PolyType.PropertyHandler p$18;
-    private static volatile PolyType.PropertyHandler p$19;
+    private static volatile PolyType.TypedPropertyHandler tp$19;
     private static volatile PolyType.PropertyHandler p$20;
-    private static volatile PolyType.PropertyHandler p$21;
+    private static volatile PolyType.TypedPropertyHandler tp$21;
+    private static volatile PolyType.PropertyHandler p$22;
+    private static volatile PolyType.TypedPropertyHandler tp$23;
+    private static volatile PolyType.PropertyHandler p$24;
+    private static volatile PolyType.TypedPropertyHandler tp$25;
+    private static volatile PolyType.PropertyHandler p$26;
+    private static volatile PolyType.TypedPropertyHandler tp$27;
 
     public static void refresh() {
         h$0 = (PolyType.TypedMethodHandler3)PolyClassRuntime.resolveTypedHandler((String)"ContraptionWorld", (String)"get_block", (String)"DDD:R");
@@ -53,7 +62,8 @@ extends PolyClassWorld {
         m$3 = PolyClassRuntime.resolveMethodHandler((String)"ContraptionWorld", (String)"real_pos");
         h$4 = (PolyType.TypedMethodHandler0)PolyClassRuntime.resolveTypedHandler((String)"ContraptionWorld", (String)"entities", (String)":R");
         m$5 = PolyClassRuntime.resolveMethodHandler((String)"ContraptionWorld", (String)"entities");
-        h$6 = (PolyType.TypedMethodHandler0)PolyClassRuntime.resolveTypedHandler((String)"ContraptionWorld", (String)"blocks", (String)":R");
+        h$6 = (PolyType.TypedMethodHandler0)PolyClassRuntime.resolveTypedHandler((String)"ContraptionWorld", (String)"blocks", (String)":L");
+        c$6_r = PolyClassRuntime.resolveListCodec((String)"ContraptionWorld", (String)"blocks", (int)-1);
         m$7 = PolyClassRuntime.resolveMethodHandler((String)"ContraptionWorld", (String)"blocks");
         h$8 = (PolyType.TypedMethodHandler3)PolyClassRuntime.resolveTypedHandler((String)"ContraptionWorld", (String)"real_block", (String)"DDD:R");
         m$9 = PolyClassRuntime.resolveMethodHandler((String)"ContraptionWorld", (String)"real_block");
@@ -64,11 +74,17 @@ extends PolyClassWorld {
         p$14 = PolyClassRuntime.resolvePropertyHandler((String)"ContraptionWorld", (String)"container");
         p$15 = PolyClassRuntime.resolvePropertyHandler((String)"ContraptionWorld", (String)"real_world");
         p$16 = PolyClassRuntime.resolvePropertyHandler((String)"ContraptionWorld", (String)"is_contraption");
-        p$17 = PolyClassRuntime.resolvePropertyHandler((String)"ContraptionWorld", (String)"roll");
-        p$18 = PolyClassRuntime.resolvePropertyHandler((String)"ContraptionWorld", (String)"scale");
-        p$19 = PolyClassRuntime.resolvePropertyHandler((String)"ContraptionWorld", (String)"block_count");
-        p$20 = PolyClassRuntime.resolvePropertyHandler((String)"ContraptionWorld", (String)"pitch");
-        p$21 = PolyClassRuntime.resolvePropertyHandler((String)"ContraptionWorld", (String)"yaw");
+        tp$17 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"ContraptionWorld", (String)"is_contraption", (String)"Z");
+        p$18 = PolyClassRuntime.resolvePropertyHandler((String)"ContraptionWorld", (String)"roll");
+        tp$19 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"ContraptionWorld", (String)"roll", (String)"D");
+        p$20 = PolyClassRuntime.resolvePropertyHandler((String)"ContraptionWorld", (String)"scale");
+        tp$21 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"ContraptionWorld", (String)"scale", (String)"D");
+        p$22 = PolyClassRuntime.resolvePropertyHandler((String)"ContraptionWorld", (String)"block_count");
+        tp$23 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"ContraptionWorld", (String)"block_count", (String)"D");
+        p$24 = PolyClassRuntime.resolvePropertyHandler((String)"ContraptionWorld", (String)"pitch");
+        tp$25 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"ContraptionWorld", (String)"pitch", (String)"D");
+        p$26 = PolyClassRuntime.resolvePropertyHandler((String)"ContraptionWorld", (String)"yaw");
+        tp$27 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"ContraptionWorld", (String)"yaw", (String)"D");
     }
 
     public ScriptValue tm$0_get_block(double d, double d2, double d3) {
@@ -115,8 +131,8 @@ extends PolyClassWorld {
     }
 
     public ScriptValue tm$6_blocks() {
-        if (h$6 != null) {
-            return (ScriptValue)h$6.call(this.instance);
+        if (h$6 != null && c$6_r != null) {
+            return c$6_r.encode(h$6.call(this.instance));
         }
         return PolyClassRuntime.genericCall((String)"ContraptionWorld", (String)"blocks", (Object)this.instance, (ScriptValue[])new ScriptValue[0]);
     }
@@ -191,39 +207,81 @@ extends PolyClassWorld {
         return PolyClassRuntime.genericProperty((String)"ContraptionWorld", (String)"is_contraption", (Object)this.instance);
     }
 
-    public ScriptValue pg$17_roll() {
-        if (p$17 != null) {
-            return p$17.get(this.instance);
+    public boolean tg$17_is_contraption() {
+        if (tp$17 != null) {
+            return (Boolean)tp$17.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"ContraptionWorld", (String)"is_contraption", (Object)this.instance).asBool();
+    }
+
+    public ScriptValue pg$18_roll() {
+        if (p$18 != null) {
+            return p$18.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"ContraptionWorld", (String)"roll", (Object)this.instance);
     }
 
-    public ScriptValue pg$18_scale() {
-        if (p$18 != null) {
-            return p$18.get(this.instance);
+    public double tg$19_roll() {
+        if (tp$19 != null) {
+            return (Double)tp$19.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"ContraptionWorld", (String)"roll", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$20_scale() {
+        if (p$20 != null) {
+            return p$20.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"ContraptionWorld", (String)"scale", (Object)this.instance);
     }
 
-    public ScriptValue pg$19_block_count() {
-        if (p$19 != null) {
-            return p$19.get(this.instance);
+    public double tg$21_scale() {
+        if (tp$21 != null) {
+            return (Double)tp$21.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"ContraptionWorld", (String)"scale", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$22_block_count() {
+        if (p$22 != null) {
+            return p$22.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"ContraptionWorld", (String)"block_count", (Object)this.instance);
     }
 
-    public ScriptValue pg$20_pitch() {
-        if (p$20 != null) {
-            return p$20.get(this.instance);
+    public double tg$23_block_count() {
+        if (tp$23 != null) {
+            return (Double)tp$23.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"ContraptionWorld", (String)"block_count", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$24_pitch() {
+        if (p$24 != null) {
+            return p$24.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"ContraptionWorld", (String)"pitch", (Object)this.instance);
     }
 
-    public ScriptValue pg$21_yaw() {
-        if (p$21 != null) {
-            return p$21.get(this.instance);
+    public double tg$25_pitch() {
+        if (tp$25 != null) {
+            return (Double)tp$25.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"ContraptionWorld", (String)"pitch", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$26_yaw() {
+        if (p$26 != null) {
+            return p$26.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"ContraptionWorld", (String)"yaw", (Object)this.instance);
+    }
+
+    public double tg$27_yaw() {
+        if (tp$27 != null) {
+            return (Double)tp$27.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"ContraptionWorld", (String)"yaw", (Object)this.instance).asNum();
     }
 
     public PolyClassContraptionWorld(Object object) {

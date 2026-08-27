@@ -7,6 +7,7 @@
  *  dev.arubik.craftengine.script.PolyType$MethodHandler
  *  dev.arubik.craftengine.script.PolyType$PropertyHandler
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler1
+ *  dev.arubik.craftengine.script.PolyType$TypedPropertyHandler
  *  dev.arubik.craftengine.script.ScriptValue
  *  dev.arubik.craftengine.script.ScriptValue$Obj
  */
@@ -27,11 +28,15 @@ extends PolyClassEvent {
     private static volatile PolyType.MethodHandler m$3;
     private static volatile PolyType.PropertyHandler p$4;
     private static volatile PolyType.PropertyHandler p$5;
-    private static volatile PolyType.PropertyHandler p$6;
+    private static volatile PolyType.TypedPropertyHandler tp$6;
     private static volatile PolyType.PropertyHandler p$7;
     private static volatile PolyType.PropertyHandler p$8;
-    private static volatile PolyType.PropertyHandler p$9;
+    private static volatile PolyType.TypedPropertyHandler tp$9;
     private static volatile PolyType.PropertyHandler p$10;
+    private static volatile PolyType.TypedPropertyHandler tp$11;
+    private static volatile PolyType.PropertyHandler p$12;
+    private static volatile PolyType.TypedPropertyHandler tp$13;
+    private static volatile PolyType.PropertyHandler p$14;
 
     public static void refresh() {
         h$0 = (PolyType.TypedMethodHandler1)PolyClassRuntime.resolveTypedHandler((String)"InventoryClickEvent", (String)"set_current_item", (String)"R:Z");
@@ -40,11 +45,15 @@ extends PolyClassEvent {
         m$3 = PolyClassRuntime.resolveMethodHandler((String)"InventoryClickEvent", (String)"set_cursor");
         p$4 = PolyClassRuntime.resolvePropertyHandler((String)"InventoryClickEvent", (String)"cursor");
         p$5 = PolyClassRuntime.resolvePropertyHandler((String)"InventoryClickEvent", (String)"click_type");
-        p$6 = PolyClassRuntime.resolvePropertyHandler((String)"InventoryClickEvent", (String)"current_item");
-        p$7 = PolyClassRuntime.resolvePropertyHandler((String)"InventoryClickEvent", (String)"raw_slot");
-        p$8 = PolyClassRuntime.resolvePropertyHandler((String)"InventoryClickEvent", (String)"action");
-        p$9 = PolyClassRuntime.resolvePropertyHandler((String)"InventoryClickEvent", (String)"slot");
-        p$10 = PolyClassRuntime.resolvePropertyHandler((String)"InventoryClickEvent", (String)"who_clicked");
+        tp$6 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"InventoryClickEvent", (String)"click_type", (String)"S");
+        p$7 = PolyClassRuntime.resolvePropertyHandler((String)"InventoryClickEvent", (String)"current_item");
+        p$8 = PolyClassRuntime.resolvePropertyHandler((String)"InventoryClickEvent", (String)"raw_slot");
+        tp$9 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"InventoryClickEvent", (String)"raw_slot", (String)"D");
+        p$10 = PolyClassRuntime.resolvePropertyHandler((String)"InventoryClickEvent", (String)"action");
+        tp$11 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"InventoryClickEvent", (String)"action", (String)"S");
+        p$12 = PolyClassRuntime.resolvePropertyHandler((String)"InventoryClickEvent", (String)"slot");
+        tp$13 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"InventoryClickEvent", (String)"slot", (String)"D");
+        p$14 = PolyClassRuntime.resolvePropertyHandler((String)"InventoryClickEvent", (String)"who_clicked");
     }
 
     public boolean tm$0_set_current_item(ScriptValue scriptValue) {
@@ -89,37 +98,65 @@ extends PolyClassEvent {
         return PolyClassRuntime.genericProperty((String)"InventoryClickEvent", (String)"click_type", (Object)this.instance);
     }
 
-    public ScriptValue pg$6_current_item() {
-        if (p$6 != null) {
-            return p$6.get(this.instance);
+    public String tg$6_click_type() {
+        if (tp$6 != null) {
+            return (String)tp$6.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"InventoryClickEvent", (String)"click_type", (Object)this.instance).asStr();
+    }
+
+    public ScriptValue pg$7_current_item() {
+        if (p$7 != null) {
+            return p$7.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"InventoryClickEvent", (String)"current_item", (Object)this.instance);
     }
 
-    public ScriptValue pg$7_raw_slot() {
-        if (p$7 != null) {
-            return p$7.get(this.instance);
+    public ScriptValue pg$8_raw_slot() {
+        if (p$8 != null) {
+            return p$8.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"InventoryClickEvent", (String)"raw_slot", (Object)this.instance);
     }
 
-    public ScriptValue pg$8_action() {
-        if (p$8 != null) {
-            return p$8.get(this.instance);
+    public double tg$9_raw_slot() {
+        if (tp$9 != null) {
+            return (Double)tp$9.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"InventoryClickEvent", (String)"raw_slot", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$10_action() {
+        if (p$10 != null) {
+            return p$10.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"InventoryClickEvent", (String)"action", (Object)this.instance);
     }
 
-    public ScriptValue pg$9_slot() {
-        if (p$9 != null) {
-            return p$9.get(this.instance);
+    public String tg$11_action() {
+        if (tp$11 != null) {
+            return (String)tp$11.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"InventoryClickEvent", (String)"action", (Object)this.instance).asStr();
+    }
+
+    public ScriptValue pg$12_slot() {
+        if (p$12 != null) {
+            return p$12.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"InventoryClickEvent", (String)"slot", (Object)this.instance);
     }
 
-    public ScriptValue pg$10_who_clicked() {
-        if (p$10 != null) {
-            return p$10.get(this.instance);
+    public double tg$13_slot() {
+        if (tp$13 != null) {
+            return (Double)tp$13.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"InventoryClickEvent", (String)"slot", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$14_who_clicked() {
+        if (p$14 != null) {
+            return p$14.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"InventoryClickEvent", (String)"who_clicked", (Object)this.instance);
     }

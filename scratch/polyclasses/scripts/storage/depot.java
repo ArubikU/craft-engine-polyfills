@@ -47,10 +47,10 @@ public final class Depot {
         var4_3 = ScriptValue.of((double)9.0);
         var0.val("SIZE", var4_3);
         var5_4 = var1_1.getClassOrVar("Player");
-        var7_6 = var5_4 != ScriptValue.NULL ? ((var6_5 = PolyClassPlayer.ofGuarded((ScriptValue)var5_4)) != null ? var6_5.pg$47_main_hand() : PolyDispatch.bootstrapGet("memberGet", "main_hand", (ScriptValue)var5_4, (ScriptContext)var1_1)) : ScriptValue.NULL;
+        var7_6 = var5_4 != ScriptValue.NULL ? ((var6_5 = PolyClassPlayer.ofGuarded((ScriptValue)var5_4)) != null ? var6_5.pg$48_main_hand() : PolyDispatch.bootstrapGet("memberGet", "main_hand", (ScriptValue)var5_4, (ScriptContext)var1_1)) : ScriptValue.NULL;
         var0.val("held", var7_6);
         var8_7 = var1_1.getClassOrVar("Player");
-        if ((var8_7 != ScriptValue.NULL ? ((var9_8 = PolyClassPlayer.ofGuarded((ScriptValue)var8_7)) != null ? var9_8.pg$38_is_sneaking() : PolyDispatch.bootstrapGet("memberGet", "is_sneaking", (ScriptValue)var8_7, (ScriptContext)var1_1)) : ScriptValue.NULL).asBool()) ** GOTO lbl-1000
+        if (var8_7 != ScriptValue.NULL ? ((var9_8 = PolyClassPlayer.ofGuarded((ScriptValue)var8_7)) != null ? var9_8.tg$49_is_sneaking() : PolyDispatch.bootstrapGet("memberGet", "is_sneaking", (ScriptValue)var8_7, (ScriptContext)var1_1).asBool()) : ScriptValue.NULL.asBool()) ** GOTO lbl-1000
         var10_9 = new ArrayList<ScriptValue>();
         var10_9.add(var7_6);
         if (!ScriptFormula.callBuiltin((String)"is_empty", var10_9, (ScriptContext)var1_1).asBool()) {
@@ -64,17 +64,17 @@ public final class Depot {
         if (v0) {
             var14_10 = new ArrayList<ScriptValue>();
             var14_10.add(ScriptValue.of((double)var2_2));
-            var11_11 = ScriptProgram.rowsOf((ScriptValue)ScriptFormula.callBuiltin((String)"range", var14_10, (ScriptContext)var1_1), (int)1);
+            var11_11 = ScriptProgram.elementsOf((ScriptValue)ScriptFormula.callBuiltin((String)"range", var14_10, (ScriptContext)var1_1));
             if (var11_11 != null) {
-                for (ScriptValue[] var13_13 : var11_11) {
-                    var0.val("i", var13_13.length > 0 ? var13_13[0] : ScriptValue.NULL);
+                for (ScriptValue var13_13 : var11_11) {
+                    var0.val("i", var13_13);
                     var15_14 = var2_2 - 1.0 - var1_1.getNum("i");
                     var17_15 = ScriptValue.of((double)var15_14);
                     var0.val("ri", var17_15);
                     var18_16 = new ArrayList<ScriptValue>();
                     var18_16.add(ScriptValue.of((double)var15_14));
                     var19_17 = var1_1.getClassOrVar("Machine");
-                    var21_19 = PolyDispatch.bootstrapCall("memberCall", "get_item", (ScriptValue)(var19_17 != ScriptValue.NULL ? ((var20_18 = PolyClassMachine.ofGuarded((ScriptValue)var19_17)) != null ? var20_18.pg$119_container() : PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)var19_17, (ScriptContext)var1_1)) : ScriptValue.NULL), var18_16, (ScriptContext)var1_1);
+                    var21_19 = PolyDispatch.bootstrapCall("memberCall", "get_item", (ScriptValue)(var19_17 != ScriptValue.NULL ? ((var20_18 = PolyClassMachine.ofGuarded((ScriptValue)var19_17)) != null ? var20_18.pg$120_container() : PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)var19_17, (ScriptContext)var1_1)) : ScriptValue.NULL), var18_16, (ScriptContext)var1_1);
                     var0.val("slot_item", (ScriptValue)var21_19);
                     var22_20 = new ArrayList<CallSite>();
                     var22_20.add(var21_19);
@@ -99,7 +99,7 @@ public final class Depot {
                     var30_28.add(var21_19);
                     var29_27.add(ScriptFormula.callBuiltin((String)"item_count", var30_28, (ScriptContext)var1_1));
                     var31_29 = var1_1.getClassOrVar("Machine");
-                    PolyDispatch.bootstrapCall("memberCall", "remove_item", (ScriptValue)(var31_29 != ScriptValue.NULL ? ((var32_30 = PolyClassMachine.ofGuarded((ScriptValue)var31_29)) != null ? var32_30.pg$119_container() : PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)var31_29, (ScriptContext)var1_1)) : ScriptValue.NULL), var29_27, (ScriptContext)var1_1);
+                    PolyDispatch.bootstrapCall("memberCall", "remove_item", (ScriptValue)(var31_29 != ScriptValue.NULL ? ((var32_30 = PolyClassMachine.ofGuarded((ScriptValue)var31_29)) != null ? var32_30.pg$120_container() : PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)var31_29, (ScriptContext)var1_1)) : ScriptValue.NULL), var29_27, (ScriptContext)var1_1);
                     break;
                 }
             }
@@ -111,7 +111,7 @@ public final class Depot {
             var35_33 = new ArrayList<ScriptValue>();
             var35_33.add(var7_6);
             var36_34 = var1_1.getClassOrVar("Machine");
-            var38_36 = PolyDispatch.bootstrapCall("memberCall", "push", (ScriptValue)(var36_34 != ScriptValue.NULL ? ((var37_35 = PolyClassMachine.ofGuarded((ScriptValue)var36_34)) != null ? var37_35.pg$119_container() : PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)var36_34, (ScriptContext)var1_1)) : ScriptValue.NULL), var35_33, (ScriptContext)var1_1);
+            var38_36 = PolyDispatch.bootstrapCall("memberCall", "push", (ScriptValue)(var36_34 != ScriptValue.NULL ? ((var37_35 = PolyClassMachine.ofGuarded((ScriptValue)var36_34)) != null ? var37_35.pg$120_container() : PolyDispatch.bootstrapGet("memberGet", "container", (ScriptValue)var36_34, (ScriptContext)var1_1)) : ScriptValue.NULL), var35_33, (ScriptContext)var1_1);
             var0.val("leftover", (ScriptValue)var38_36);
             v2 = var34_32.asNum();
             var39_37 = new ArrayList<CallSite>();

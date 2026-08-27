@@ -7,6 +7,7 @@
  *  dev.arubik.craftengine.script.PolyType$MethodHandler
  *  dev.arubik.craftengine.script.PolyType$PropertyHandler
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler1
+ *  dev.arubik.craftengine.script.PolyType$TypedPropertyHandler
  *  dev.arubik.craftengine.script.ScriptValue
  *  dev.arubik.craftengine.script.ScriptValue$Obj
  */
@@ -24,15 +25,19 @@ extends PolyClassEvent {
     private static volatile PolyType.TypedMethodHandler1 h$0;
     private static volatile PolyType.MethodHandler m$1;
     private static volatile PolyType.PropertyHandler p$2;
-    private static volatile PolyType.PropertyHandler p$3;
+    private static volatile PolyType.TypedPropertyHandler tp$3;
     private static volatile PolyType.PropertyHandler p$4;
+    private static volatile PolyType.TypedPropertyHandler tp$5;
+    private static volatile PolyType.PropertyHandler p$6;
 
     public static void refresh() {
         h$0 = (PolyType.TypedMethodHandler1)PolyClassRuntime.resolveTypedHandler((String)"EntityShootBowEvent", (String)"set_consume_item", (String)"Z:Z");
         m$1 = PolyClassRuntime.resolveMethodHandler((String)"EntityShootBowEvent", (String)"set_consume_item");
         p$2 = PolyClassRuntime.resolvePropertyHandler((String)"EntityShootBowEvent", (String)"consume_item");
-        p$3 = PolyClassRuntime.resolvePropertyHandler((String)"EntityShootBowEvent", (String)"force");
-        p$4 = PolyClassRuntime.resolvePropertyHandler((String)"EntityShootBowEvent", (String)"projectile");
+        tp$3 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"EntityShootBowEvent", (String)"consume_item", (String)"Z");
+        p$4 = PolyClassRuntime.resolvePropertyHandler((String)"EntityShootBowEvent", (String)"force");
+        tp$5 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"EntityShootBowEvent", (String)"force", (String)"D");
+        p$6 = PolyClassRuntime.resolvePropertyHandler((String)"EntityShootBowEvent", (String)"projectile");
     }
 
     public boolean tm$0_set_consume_item(boolean bl) {
@@ -56,16 +61,30 @@ extends PolyClassEvent {
         return PolyClassRuntime.genericProperty((String)"EntityShootBowEvent", (String)"consume_item", (Object)this.instance);
     }
 
-    public ScriptValue pg$3_force() {
-        if (p$3 != null) {
-            return p$3.get(this.instance);
+    public boolean tg$3_consume_item() {
+        if (tp$3 != null) {
+            return (Boolean)tp$3.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"EntityShootBowEvent", (String)"consume_item", (Object)this.instance).asBool();
+    }
+
+    public ScriptValue pg$4_force() {
+        if (p$4 != null) {
+            return p$4.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"EntityShootBowEvent", (String)"force", (Object)this.instance);
     }
 
-    public ScriptValue pg$4_projectile() {
-        if (p$4 != null) {
-            return p$4.get(this.instance);
+    public double tg$5_force() {
+        if (tp$5 != null) {
+            return (Double)tp$5.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"EntityShootBowEvent", (String)"force", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$6_projectile() {
+        if (p$6 != null) {
+            return p$6.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"EntityShootBowEvent", (String)"projectile", (Object)this.instance);
     }

@@ -9,6 +9,7 @@
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler0
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler1
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler2
+ *  dev.arubik.craftengine.script.PolyType$TypedPropertyHandler
  *  dev.arubik.craftengine.script.ScriptValue
  *  dev.arubik.craftengine.script.ScriptValue$Obj
  */
@@ -39,7 +40,9 @@ public class PolyClassContainer {
     private static volatile PolyType.TypedMethodHandler2 h$14;
     private static volatile PolyType.MethodHandler m$15;
     private static volatile PolyType.PropertyHandler p$16;
-    private static volatile PolyType.PropertyHandler p$17;
+    private static volatile PolyType.TypedPropertyHandler tp$17;
+    private static volatile PolyType.PropertyHandler p$18;
+    private static volatile PolyType.TypedPropertyHandler tp$19;
 
     public static void refresh() {
         h$0 = (PolyType.TypedMethodHandler1)PolyClassRuntime.resolveTypedHandler((String)"Container", (String)"get_item", (String)"D:R");
@@ -59,7 +62,9 @@ public class PolyClassContainer {
         h$14 = (PolyType.TypedMethodHandler2)PolyClassRuntime.resolveTypedHandler((String)"Container", (String)"pull_item", (String)"RD:R");
         m$15 = PolyClassRuntime.resolveMethodHandler((String)"Container", (String)"pull_item");
         p$16 = PolyClassRuntime.resolvePropertyHandler((String)"Container", (String)"size");
-        p$17 = PolyClassRuntime.resolvePropertyHandler((String)"Container", (String)"is_empty");
+        tp$17 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Container", (String)"size", (String)"D");
+        p$18 = PolyClassRuntime.resolvePropertyHandler((String)"Container", (String)"is_empty");
+        tp$19 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Container", (String)"is_empty", (String)"Z");
     }
 
     public ScriptValue tm$0_get_item(double d) {
@@ -181,11 +186,25 @@ public class PolyClassContainer {
         return PolyClassRuntime.genericProperty((String)"Container", (String)"size", (Object)this.instance);
     }
 
-    public ScriptValue pg$17_is_empty() {
-        if (p$17 != null) {
-            return p$17.get(this.instance);
+    public double tg$17_size() {
+        if (tp$17 != null) {
+            return (Double)tp$17.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Container", (String)"size", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$18_is_empty() {
+        if (p$18 != null) {
+            return p$18.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Container", (String)"is_empty", (Object)this.instance);
+    }
+
+    public boolean tg$19_is_empty() {
+        if (tp$19 != null) {
+            return (Boolean)tp$19.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Container", (String)"is_empty", (Object)this.instance).asBool();
     }
 
     public PolyClassContainer(Object object) {

@@ -18,9 +18,9 @@ public final class CmdType {
 
     public static void register() {
         PolyTypeRegistry.define("Cmd")
-            .property("name", obj -> ScriptValue.of(inv(obj).commandName()))
-            .property("sender_name", obj -> ScriptValue.of(inv(obj).senderName()))
-            .property("is_player", obj -> ScriptValue.of(inv(obj).isPlayer()))
+            .propertyTyped("name", TypeCodecs.STRING, (CmdInvocation inv) -> inv.commandName())
+            .propertyTyped("sender_name", TypeCodecs.STRING, (CmdInvocation inv) -> inv.senderName())
+            .propertyTyped("is_player", TypeCodecs.BOOL, (CmdInvocation inv) -> inv.isPlayer())
             .methodTyped1("arg", TypeCodecs.STRING, TypeCodecs.RAW, ScriptValue.NULL,
                 (CmdInvocation obj, String key) -> obj.arg(key))
             .methodTyped1("has_arg", TypeCodecs.STRING, TypeCodecs.BOOL, false,
@@ -36,6 +36,4 @@ public final class CmdType {
         if (invocation == null) return ScriptValue.NULL;
         return ScriptValue.ofObj("Cmd", invocation);
     }
-
-    private static CmdInvocation inv(Object obj) { return (CmdInvocation) obj; }
 }

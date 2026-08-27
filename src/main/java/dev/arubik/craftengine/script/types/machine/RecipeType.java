@@ -29,19 +29,34 @@ public final class RecipeType {
 
     public static void register() {
         PolyTypeRegistry.define("Recipe")
-            .property("processing_time", obj -> obj instanceof VanillaRecipeRef v
-                    ? ScriptValue.of(v.processingTimeTicks())
-                    : ScriptValue.of(recipe(obj).getProcessTime()))
-            .property("su_cost",         obj -> obj instanceof VanillaRecipeRef ? ScriptValue.of(0) : ScriptValue.of(recipe(obj).getSuCost()))
-            .property("min_rpm",         obj -> obj instanceof VanillaRecipeRef ? ScriptValue.of(0) : ScriptValue.of(recipe(obj).getMinRpm()))
-            .property("fuel_required",   obj -> obj instanceof VanillaRecipeRef ? ScriptValue.of(false) : ScriptValue.of(recipe(obj).isFuelRequired()))
+            // The INSTANCE stays Object on every one of these: "Recipe" is registered for two
+            // unrelated Java classes (AbstractProcessingRecipe and VanillaRecipeRef), which the
+            // bodies themselves discriminate — only the RETURN is uniform enough to declare.
+            .propertyTyped("processing_time", TypeCodecs.DOUBLE, (Object obj) -> obj instanceof VanillaRecipeRef v
+                    ? (double) v.processingTimeTicks()
+                    : (double) recipe(obj).getProcessTime())
+            .propertyTyped("su_cost",       TypeCodecs.DOUBLE,
+                (Object obj) -> obj instanceof VanillaRecipeRef ? 0.0 : (double) recipe(obj).getSuCost())
+            .propertyTyped("min_rpm",       TypeCodecs.DOUBLE,
+                (Object obj) -> obj instanceof VanillaRecipeRef ? 0.0 : (double) recipe(obj).getMinRpm())
+            .propertyTyped("fuel_required", TypeCodecs.BOOL,
+                (Object obj) -> obj instanceof VanillaRecipeRef ? false : recipe(obj).isFuelRequired())
             // CraftEnergy (Forge-Energy-alike) drawn from the machine's own buffer every tick this
             // recipe processes — 0 for a recipe with no energy requirement at all, same optionality
             // as fuel_required.
-            .property("energy_cost",     obj -> obj instanceof VanillaRecipeRef ? ScriptValue.of(0) : ScriptValue.of(recipe(obj).getEnergyCost()))
+            .propertyTyped("energy_cost", TypeCodecs.DOUBLE,
+                (Object obj) -> obj instanceof VanillaRecipeRef ? 0.0 : (double) recipe(obj).getEnergyCost())
             // Vanilla recipe id ("minecraft:stone_bricks_from_stonecutting") — NULL for this
             // addon's own AbstractProcessingRecipe, which has no equivalent registry id concept.
-            .property("id", obj -> obj instanceof VanillaRecipeRef v ? ScriptValue.of(v.id()) : ScriptValue.NULL)
+            // A Java null encodes back to ScriptValue.NULL, same as the old explicit branch (and as
+            // ScriptValue.of(String) already did for a null id).
+            .propertyTyped("id", TypeCodecs.STRING,
+                (Object obj) -> obj instanceof VanillaRecipeRef v ? v.id() : null)
+            // inputs/outputs/output_chances stay hand-built Arrays even though propertyTyped now
+            // exists: their elements are ScriptValue.Item / raw numbers, not Obj-wrapped PolyType
+            // instances — TypeCodecs.listOf cannot express either (it keeps only Obj elements, and
+            // Item is a distinct ScriptValue variant every `instanceof ScriptValue.Item` consumer
+            // downstream depends on).
             .property("inputs", obj -> {
                 if (obj instanceof VanillaRecipeRef v) {
                     return new ScriptValue.Array(v.input().isEmpty()

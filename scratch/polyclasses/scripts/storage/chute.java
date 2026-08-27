@@ -35,20 +35,19 @@ public final class Chute {
 
     /*
      * Unable to fully structure code
-     * Could not resolve type clashes
      */
     public static ScriptValue onRightClick(ScriptContext.Builder var0) {
         block3: {
             var1_1 = var0.peek();
             var2_2 = var1_1.getClassOrVar("Player");
-            v0 /* !! */  = var2_2 != ScriptValue.NULL ? ((var3_3 = PolyClassPlayer.ofGuarded((ScriptValue)var2_2)) != null ? var3_3.pg$38_is_sneaking() : PolyDispatch.bootstrapGet("memberGet", "is_sneaking", (ScriptValue)var2_2, (ScriptContext)var1_1)) : ScriptValue.NULL;
-            if (v0 /* !! */ .asBool()) {
+            v0 = var2_2 != ScriptValue.NULL ? ((var3_3 = PolyClassPlayer.ofGuarded((ScriptValue)var2_2)) != null ? var3_3.tg$49_is_sneaking() : PolyDispatch.bootstrapGet("memberGet", "is_sneaking", (ScriptValue)var2_2, (ScriptContext)var1_1).asBool()) : ScriptValue.NULL.asBool();
+            if (v0) {
                 var4_4 = ScriptContext.builder().copyFrom(ChuteUtils.fileScope()).copyFrom(var1_1);
                 ChuteUtils._chuteCycleFacing((ScriptContext.Builder)var4_4);
                 return ScriptValue.NULL;
             }
             var5_5 = var1_1.getClassOrVar("Player");
-            var7_7 = var5_5 != ScriptValue.NULL ? ((var6_6 = PolyClassPlayer.ofGuarded((ScriptValue)var5_5)) != null ? var6_6.pg$47_main_hand() : PolyDispatch.bootstrapGet("memberGet", "main_hand", (ScriptValue)var5_5, (ScriptContext)var1_1)) : ScriptValue.NULL;
+            var7_7 = var5_5 != ScriptValue.NULL ? ((var6_6 = PolyClassPlayer.ofGuarded((ScriptValue)var5_5)) != null ? var6_6.pg$48_main_hand() : PolyDispatch.bootstrapGet("memberGet", "main_hand", (ScriptValue)var5_5, (ScriptContext)var1_1)) : ScriptValue.NULL;
             var0.val("held", var7_7);
             var8_8 = new ArrayList<ScriptValue>();
             var8_8.add(var7_7);

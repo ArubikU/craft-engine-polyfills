@@ -5,6 +5,7 @@
  *  dev.arubik.craftengine.script.PolyClass
  *  dev.arubik.craftengine.script.PolyClassRuntime
  *  dev.arubik.craftengine.script.PolyType$PropertyHandler
+ *  dev.arubik.craftengine.script.PolyType$TypedPropertyHandler
  *  dev.arubik.craftengine.script.ScriptValue
  *  dev.arubik.craftengine.script.ScriptValue$Obj
  */
@@ -19,9 +20,11 @@ import dev.arubik.craftengine.script.ScriptValue;
 public class PolyClassPlayerAdvancementDoneEvent
 extends PolyClassEvent {
     private static volatile PolyType.PropertyHandler p$0;
+    private static volatile PolyType.TypedPropertyHandler tp$1;
 
     public static void refresh() {
         p$0 = PolyClassRuntime.resolvePropertyHandler((String)"PlayerAdvancementDoneEvent", (String)"advancement_key");
+        tp$1 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"PlayerAdvancementDoneEvent", (String)"advancement_key", (String)"S");
     }
 
     public ScriptValue pg$0_advancement_key() {
@@ -29,6 +32,13 @@ extends PolyClassEvent {
             return p$0.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"PlayerAdvancementDoneEvent", (String)"advancement_key", (Object)this.instance);
+    }
+
+    public String tg$1_advancement_key() {
+        if (tp$1 != null) {
+            return (String)tp$1.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"PlayerAdvancementDoneEvent", (String)"advancement_key", (Object)this.instance).asStr();
     }
 
     public PolyClassPlayerAdvancementDoneEvent(Object object) {

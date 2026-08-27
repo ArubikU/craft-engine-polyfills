@@ -39,6 +39,14 @@ public final class SQLDriverType {
 
     public static final Object INSTANCE = new Object();
 
+    /** The Java class a "Map" PolyType instance really is — {@code MapType.wrap} boxes a
+     *  {@code Map<String, ScriptValue>}. Held as a constant purely so the unavoidable cast to a
+     *  parameterized {@code Class} (erasure gives no {@code Map<String, ScriptValue>.class}) sits in
+     *  one annotated place instead of at each {@code TypeCodecs.listOf("Map", ...)} call. */
+    @SuppressWarnings("unchecked")
+    private static final Class<Map<String, ScriptValue>> MAP_ELEMENT =
+            (Class<Map<String, ScriptValue>>) (Class<?>) Map.class;
+
     private SQLDriverType() {}
 
     public static void register() {
@@ -72,19 +80,24 @@ public final class SQLDriverType {
             // has no way to know a BLOB column is really an Item). Params is a real Array here
             // (same reason query_async's is) since the column-types map is a third fixed argument.
             // Any column not listed in the map still decodes the normal generic way.
-            .methodTyped3("query_typed", TypeCodecs.STRING, TypeCodecs.RAW, TypeCodecs.RAW, TypeCodecs.RAW,
-                    new ScriptValue.Array(List.of()),
+            // The rows themselves ARE uniform even though a row's COLUMN values are not: every
+            // element is one "Map" PolyType instance (rowToMap is MapType.wrap of a
+            // LinkedHashMap<String, ScriptValue>), so the return is a real List<Map> and
+            // TypeCodecs.listOf does the Obj-wrapping — the per-column heterogeneity lives one
+            // level down, INSIDE each Map's ScriptValue values, where it costs nothing here.
+            .methodTyped3("query_typed", TypeCodecs.STRING, TypeCodecs.RAW, TypeCodecs.RAW,
+                    TypeCodecs.listOf("Map", MAP_ELEMENT), List.of(),
                     (Object obj, String sql, ScriptValue paramsArg, ScriptValue columnTypesArg) -> {
                         List<Object> params = arrayToJdbcParams(paramsArg);
                         Map<String, String> columnTypes = mapArg(columnTypesArg);
                         try {
                             List<Map<String, Object>> rows = SQLDriver.query(sql, params);
-                            List<ScriptValue> out = new ArrayList<>(rows.size());
-                            for (Map<String, Object> row : rows) out.add(rowToMap(row, columnTypes));
-                            return new ScriptValue.Array(out);
+                            List<Map<String, ScriptValue>> out = new ArrayList<>(rows.size());
+                            for (Map<String, Object> row : rows) out.add(rowToRawMap(row, columnTypes));
+                            return out;
                         } catch (Throwable t) {
                             CraftEnginePolyfills.instance().getLogger().log(Level.WARNING, "[SQL] query_typed threw", t);
-                            return new ScriptValue.Array(List.of());
+                            return List.of();
                         }
                     })
             // SQL.execute("UPDATE t SET x = ? WHERE id = ?", x, id) -> affected row count
@@ -381,13 +394,21 @@ public final class SQLDriverType {
      *  {@code byte[]} for a BLOB, IS the primitive that codec expects), everything else falls back
      *  to the generic guess. */
     private static ScriptValue rowToMap(Map<String, Object> row, Map<String, String> columnTypes) {
+        return dev.arubik.craftengine.script.types.primitive.MapType.wrap(rowToRawMap(row, columnTypes));
+    }
+
+    /** The same row decode as {@link #rowToMap}, stopping one step short: the raw
+     *  {@code Map<String, ScriptValue>} that {@code MapType.wrap} would box as a "Map" PolyType.
+     *  {@code query_typed} declares {@code TypeCodecs.listOf("Map", ...)} as its return codec, so it
+     *  needs the unwrapped map — the codec does the boxing that {@code rowToMap} does by hand. */
+    private static Map<String, ScriptValue> rowToRawMap(Map<String, Object> row, Map<String, String> columnTypes) {
         Map<String, ScriptValue> out = new LinkedHashMap<>();
         for (Map.Entry<String, Object> e : row.entrySet()) {
             String typeName = columnTypes.get(e.getKey());
             TypedKeyBridge.Codec codec = typeName == null ? null : TypedKeyBridge.resolve(typeName);
             out.put(e.getKey(), codec != null ? codec.fromStorage(e.getValue()) : jdbcToScript(e.getValue()));
         }
-        return dev.arubik.craftengine.script.types.primitive.MapType.wrap(out);
+        return out;
     }
 
     /** Unwraps a script "Map" value (from {@code make_map(...)}) into a plain {@code

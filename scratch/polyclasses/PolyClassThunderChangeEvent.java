@@ -5,6 +5,7 @@
  *  dev.arubik.craftengine.script.PolyClass
  *  dev.arubik.craftengine.script.PolyClassRuntime
  *  dev.arubik.craftengine.script.PolyType$PropertyHandler
+ *  dev.arubik.craftengine.script.PolyType$TypedPropertyHandler
  *  dev.arubik.craftengine.script.ScriptValue
  *  dev.arubik.craftengine.script.ScriptValue$Obj
  */
@@ -20,10 +21,12 @@ public class PolyClassThunderChangeEvent
 extends PolyClassEvent {
     private static volatile PolyType.PropertyHandler p$0;
     private static volatile PolyType.PropertyHandler p$1;
+    private static volatile PolyType.TypedPropertyHandler tp$2;
 
     public static void refresh() {
         p$0 = PolyClassRuntime.resolvePropertyHandler((String)"ThunderChangeEvent", (String)"world");
         p$1 = PolyClassRuntime.resolvePropertyHandler((String)"ThunderChangeEvent", (String)"to_thunder_state");
+        tp$2 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"ThunderChangeEvent", (String)"to_thunder_state", (String)"Z");
     }
 
     public ScriptValue pg$0_world() {
@@ -38,6 +41,13 @@ extends PolyClassEvent {
             return p$1.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"ThunderChangeEvent", (String)"to_thunder_state", (Object)this.instance);
+    }
+
+    public boolean tg$2_to_thunder_state() {
+        if (tp$2 != null) {
+            return (Boolean)tp$2.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"ThunderChangeEvent", (String)"to_thunder_state", (Object)this.instance).asBool();
     }
 
     public PolyClassThunderChangeEvent(Object object) {

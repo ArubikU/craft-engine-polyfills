@@ -9,6 +9,7 @@
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler1
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler2
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler3
+ *  dev.arubik.craftengine.script.PolyType$TypedPropertyHandler
  *  dev.arubik.craftengine.script.ScriptValue
  *  dev.arubik.craftengine.script.ScriptValue$Obj
  */
@@ -39,6 +40,7 @@ public class PolyClassServer {
     private static volatile PolyType.TypedMethodHandler1 h$14;
     private static volatile PolyType.MethodHandler m$15;
     private static volatile PolyType.PropertyHandler p$16;
+    private static volatile PolyType.TypedPropertyHandler tp$17;
 
     public static void refresh() {
         h$0 = (PolyType.TypedMethodHandler3)PolyClassRuntime.resolveTypedHandler((String)"Server", (String)"set_typed", (String)"SSR:Z");
@@ -58,6 +60,7 @@ public class PolyClassServer {
         h$14 = (PolyType.TypedMethodHandler1)PolyClassRuntime.resolveTypedHandler((String)"Server", (String)"exec_command", (String)"S:Z");
         m$15 = PolyClassRuntime.resolveMethodHandler((String)"Server", (String)"exec_command");
         p$16 = PolyClassRuntime.resolvePropertyHandler((String)"Server", (String)"time");
+        tp$17 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Server", (String)"time", (String)"D");
     }
 
     public boolean tm$0_set_typed(String string, String string2, ScriptValue scriptValue) {
@@ -177,6 +180,13 @@ public class PolyClassServer {
             return p$16.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Server", (String)"time", (Object)this.instance);
+    }
+
+    public double tg$17_time() {
+        if (tp$17 != null) {
+            return (Double)tp$17.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Server", (String)"time", (Object)this.instance).asNum();
     }
 
     public PolyClassServer(Object object) {

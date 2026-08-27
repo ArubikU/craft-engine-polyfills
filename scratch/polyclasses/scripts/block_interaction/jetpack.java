@@ -82,7 +82,7 @@ public final class Jetpack {
         if (scriptValue5 != ScriptValue.NULL) {
             ScriptValue.Obj obj;
             Object object5;
-            ScriptValue scriptValue6 = ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)ScriptFormula.addPolymorphic((ScriptValue)ScriptValue.of((String)"<aqua>Jetpack equipped <gray>("), (ScriptValue)scriptValue2), (ScriptValue)ScriptValue.of((String)"/")), (ScriptValue)scriptValue4), (ScriptValue)ScriptValue.of((String)" gas) - jump to rise, sneak to descend, let go to hover."));
+            ScriptValue scriptValue6 = ScriptValue.of((String)("<aqua>Jetpack equipped <gray>(" + scriptValue2.asStr() + "/" + scriptValue4.asStr() + " gas) - jump to rise, sneak to descend, let go to hover."));
             if (scriptValue5 instanceof ScriptValue.Obj && (object5 = (obj = (ScriptValue.Obj)scriptValue5).instance()) != null && !(object5 instanceof PolyClass) && obj.typeName().equals("Player")) {
                 PolyClassPlayer polyClassPlayer = new PolyClassPlayer(object5);
                 v2 = ScriptValue.of((boolean)polyClassPlayer.tm$42_send_message(scriptValue6.asStr()));
@@ -127,11 +127,11 @@ public final class Jetpack {
             PolyClassPlayer polyClassPlayer4;
             ScriptContext scriptContext = builder.peek();
             ScriptValue scriptValue = scriptContext.getClassOrVar("Player");
-            boolean bl = (scriptValue != ScriptValue.NULL ? ((polyClassPlayer4 = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue)) != null ? polyClassPlayer4.pg$40_is_on_ground() : PolyDispatch.bootstrapGet("memberGet", "is_on_ground", (ScriptValue)scriptValue, (ScriptContext)scriptContext)) : ScriptValue.NULL).asBool() ^ true;
+            boolean bl = (scriptValue != ScriptValue.NULL ? ((polyClassPlayer4 = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue)) != null ? polyClassPlayer4.tg$53_is_on_ground() : PolyDispatch.bootstrapGet("memberGet", "is_on_ground", (ScriptValue)scriptValue, (ScriptContext)scriptContext).asBool()) : ScriptValue.NULL.asBool()) ^ true;
             ScriptValue scriptValue2 = ScriptValue.of((boolean)bl);
             builder.val("airborne", scriptValue2);
             ScriptValue scriptValue3 = scriptContext.getClassOrVar("Player");
-            ScriptValue scriptValue4 = scriptValue3 != ScriptValue.NULL ? ((polyClassPlayer3 = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue3)) != null ? polyClassPlayer3.pg$38_is_sneaking() : PolyDispatch.bootstrapGet("memberGet", "is_sneaking", (ScriptValue)scriptValue3, (ScriptContext)scriptContext)) : ScriptValue.NULL;
+            ScriptValue scriptValue4 = scriptValue3 != ScriptValue.NULL ? ((polyClassPlayer3 = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue3)) != null ? polyClassPlayer3.pg$48_is_sneaking() : PolyDispatch.bootstrapGet("memberGet", "is_sneaking", (ScriptValue)scriptValue3, (ScriptContext)scriptContext)) : ScriptValue.NULL;
             builder.val("descending", scriptValue4);
             ScriptValue scriptValue5 = scriptContext.getClassOrVar("jumped");
             builder.val("ascending", scriptValue5);
@@ -163,7 +163,7 @@ public final class Jetpack {
                 return ScriptValue.NULL;
             }
             ScriptValue scriptValue9 = scriptContext.getClassOrVar("Player");
-            ScriptValue scriptValue10 = scriptValue9 != ScriptValue.NULL ? ((polyClassPlayer2 = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue9)) != null ? polyClassPlayer2.pg$42_velocity() : PolyDispatch.bootstrapGet("memberGet", "velocity", (ScriptValue)scriptValue9, (ScriptContext)scriptContext)) : ScriptValue.NULL;
+            ScriptValue scriptValue10 = scriptValue9 != ScriptValue.NULL ? ((polyClassPlayer2 = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue9)) != null ? polyClassPlayer2.pg$56_velocity() : PolyDispatch.bootstrapGet("memberGet", "velocity", (ScriptValue)scriptValue9, (ScriptContext)scriptContext)) : ScriptValue.NULL;
             builder.val("v", scriptValue10);
             if (ScriptFormula.valuesEqual((ScriptValue)scriptValue5, (ScriptValue)scriptValue4)) {
                 ScriptValue scriptValue11 = scriptContext.getClassOrVar("v");
@@ -310,7 +310,7 @@ public final class Jetpack {
                 v12 = ScriptValue.NULL;
             }
             ScriptValue scriptValue40 = scriptContext.getClassOrVar("Player");
-            ScriptValue scriptValue41 = scriptValue40 != ScriptValue.NULL ? ((polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue40)) != null ? polyClassPlayer.pg$32_pos() : PolyDispatch.bootstrapGet("memberGet", "pos", (ScriptValue)scriptValue40, (ScriptContext)scriptContext)) : ScriptValue.NULL;
+            ScriptValue scriptValue41 = scriptValue40 != ScriptValue.NULL ? ((polyClassPlayer = PolyClassPlayer.ofGuarded((ScriptValue)scriptValue40)) != null ? polyClassPlayer.pg$37_pos() : PolyDispatch.bootstrapGet("memberGet", "pos", (ScriptValue)scriptValue40, (ScriptContext)scriptContext)) : ScriptValue.NULL;
             builder.val("pos", scriptValue41);
             ScriptValue scriptValue42 = scriptContext.getClassOrVar("World");
             if (scriptValue42 != ScriptValue.NULL) {

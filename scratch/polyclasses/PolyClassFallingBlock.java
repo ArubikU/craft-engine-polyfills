@@ -5,6 +5,7 @@
  *  dev.arubik.craftengine.script.PolyClass
  *  dev.arubik.craftengine.script.PolyClassRuntime
  *  dev.arubik.craftengine.script.PolyType$PropertyHandler
+ *  dev.arubik.craftengine.script.PolyType$TypedPropertyHandler
  *  dev.arubik.craftengine.script.ScriptValue
  *  dev.arubik.craftengine.script.ScriptValue$Obj
  */
@@ -19,11 +20,15 @@ import dev.arubik.craftengine.script.ScriptValue;
 public class PolyClassFallingBlock
 extends PolyClassEntity {
     private static volatile PolyType.PropertyHandler p$0;
-    private static volatile PolyType.PropertyHandler p$1;
+    private static volatile PolyType.TypedPropertyHandler tp$1;
+    private static volatile PolyType.PropertyHandler p$2;
+    private static volatile PolyType.TypedPropertyHandler tp$3;
 
     public static void refresh() {
         p$0 = PolyClassRuntime.resolvePropertyHandler((String)"FallingBlock", (String)"time");
-        p$1 = PolyClassRuntime.resolvePropertyHandler((String)"FallingBlock", (String)"block_id");
+        tp$1 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"FallingBlock", (String)"time", (String)"D");
+        p$2 = PolyClassRuntime.resolvePropertyHandler((String)"FallingBlock", (String)"block_id");
+        tp$3 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"FallingBlock", (String)"block_id", (String)"S");
     }
 
     public ScriptValue pg$0_time() {
@@ -33,11 +38,25 @@ extends PolyClassEntity {
         return PolyClassRuntime.genericProperty((String)"FallingBlock", (String)"time", (Object)this.instance);
     }
 
-    public ScriptValue pg$1_block_id() {
-        if (p$1 != null) {
-            return p$1.get(this.instance);
+    public double tg$1_time() {
+        if (tp$1 != null) {
+            return (Double)tp$1.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"FallingBlock", (String)"time", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$2_block_id() {
+        if (p$2 != null) {
+            return p$2.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"FallingBlock", (String)"block_id", (Object)this.instance);
+    }
+
+    public String tg$3_block_id() {
+        if (tp$3 != null) {
+            return (String)tp$3.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"FallingBlock", (String)"block_id", (Object)this.instance).asStr();
     }
 
     public PolyClassFallingBlock(Object object) {

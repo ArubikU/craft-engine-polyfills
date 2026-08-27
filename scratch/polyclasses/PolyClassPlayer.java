@@ -12,20 +12,21 @@
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler3
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler4
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler5
+ *  dev.arubik.craftengine.script.PolyType$TypedPropertyHandler
  *  dev.arubik.craftengine.script.ScriptValue
  *  dev.arubik.craftengine.script.ScriptValue$Obj
  */
 package dev.arubik.craftengine.script;
 
 import dev.arubik.craftengine.script.PolyClass;
-import dev.arubik.craftengine.script.PolyClassLivingEntity_v2;
+import dev.arubik.craftengine.script.PolyClassLivingEntity;
 import dev.arubik.craftengine.script.PolyClassRuntime;
 import dev.arubik.craftengine.script.PolyType;
 import dev.arubik.craftengine.script.ScriptValue;
 import java.util.List;
 
 public class PolyClassPlayer
-extends PolyClassLivingEntity_v2 {
+extends PolyClassLivingEntity {
     private static volatile PolyType.TypedMethodHandler4 h$0;
     private static volatile PolyType.MethodHandler m$1;
     private static volatile PolyType.TypedMethodHandler1 h$2;
@@ -73,16 +74,25 @@ extends PolyClassLivingEntity_v2 {
     private static volatile PolyType.TypedMethodHandler5 h$44;
     private static volatile PolyType.MethodHandler m$45;
     private static volatile PolyType.PropertyHandler p$46;
-    private static volatile PolyType.PropertyHandler p$47;
+    private static volatile PolyType.TypedPropertyHandler tp$47;
     private static volatile PolyType.PropertyHandler p$48;
     private static volatile PolyType.PropertyHandler p$49;
-    private static volatile PolyType.PropertyHandler p$50;
+    private static volatile PolyType.TypedPropertyHandler tp$50;
     private static volatile PolyType.PropertyHandler p$51;
-    private static volatile PolyType.PropertyHandler p$52;
+    private static volatile PolyType.TypedPropertyHandler tp$52;
     private static volatile PolyType.PropertyHandler p$53;
-    private static volatile PolyType.PropertyHandler p$54;
+    private static volatile PolyType.TypedPropertyHandler tp$54;
     private static volatile PolyType.PropertyHandler p$55;
     private static volatile PolyType.PropertyHandler p$56;
+    private static volatile PolyType.TypedPropertyHandler tp$57;
+    private static volatile PolyType.PropertyHandler p$58;
+    private static volatile PolyType.TypedPropertyHandler tp$59;
+    private static volatile PolyType.PropertyHandler p$60;
+    private static volatile PolyType.TypedPropertyHandler tp$61;
+    private static volatile PolyType.PropertyHandler p$62;
+    private static volatile PolyType.TypedPropertyHandler tp$63;
+    private static volatile PolyType.PropertyHandler p$64;
+    private static volatile PolyType.TypedPropertyHandler tp$65;
 
     public static void refresh() {
         h$0 = (PolyType.TypedMethodHandler4)PolyClassRuntime.resolveTypedHandler((String)"Player", (String)"show_bossbar", (String)"SDSS:Z");
@@ -132,16 +142,25 @@ extends PolyClassLivingEntity_v2 {
         h$44 = (PolyType.TypedMethodHandler5)PolyClassRuntime.resolveTypedHandler((String)"Player", (String)"send_title", (String)"SSDDD:Z");
         m$45 = PolyClassRuntime.resolveMethodHandler((String)"Player", (String)"send_title");
         p$46 = PolyClassRuntime.resolvePropertyHandler((String)"Player", (String)"saturation");
-        p$47 = PolyClassRuntime.resolvePropertyHandler((String)"Player", (String)"main_hand");
-        p$48 = PolyClassRuntime.resolvePropertyHandler((String)"Player", (String)"is_flying");
-        p$49 = PolyClassRuntime.resolvePropertyHandler((String)"Player", (String)"is_creative");
-        p$50 = PolyClassRuntime.resolvePropertyHandler((String)"Player", (String)"allow_flight");
-        p$51 = PolyClassRuntime.resolvePropertyHandler((String)"Player", (String)"off_hand");
-        p$52 = PolyClassRuntime.resolvePropertyHandler((String)"Player", (String)"xp_level");
-        p$53 = PolyClassRuntime.resolvePropertyHandler((String)"Player", (String)"xp_progress");
-        p$54 = PolyClassRuntime.resolvePropertyHandler((String)"Player", (String)"food_level");
-        p$55 = PolyClassRuntime.resolvePropertyHandler((String)"Player", (String)"gamemode");
-        p$56 = PolyClassRuntime.resolvePropertyHandler((String)"Player", (String)"total_exp");
+        tp$47 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Player", (String)"saturation", (String)"D");
+        p$48 = PolyClassRuntime.resolvePropertyHandler((String)"Player", (String)"main_hand");
+        p$49 = PolyClassRuntime.resolvePropertyHandler((String)"Player", (String)"is_flying");
+        tp$50 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Player", (String)"is_flying", (String)"Z");
+        p$51 = PolyClassRuntime.resolvePropertyHandler((String)"Player", (String)"is_creative");
+        tp$52 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Player", (String)"is_creative", (String)"Z");
+        p$53 = PolyClassRuntime.resolvePropertyHandler((String)"Player", (String)"allow_flight");
+        tp$54 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Player", (String)"allow_flight", (String)"Z");
+        p$55 = PolyClassRuntime.resolvePropertyHandler((String)"Player", (String)"off_hand");
+        p$56 = PolyClassRuntime.resolvePropertyHandler((String)"Player", (String)"xp_level");
+        tp$57 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Player", (String)"xp_level", (String)"D");
+        p$58 = PolyClassRuntime.resolvePropertyHandler((String)"Player", (String)"xp_progress");
+        tp$59 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Player", (String)"xp_progress", (String)"D");
+        p$60 = PolyClassRuntime.resolvePropertyHandler((String)"Player", (String)"food_level");
+        tp$61 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Player", (String)"food_level", (String)"D");
+        p$62 = PolyClassRuntime.resolvePropertyHandler((String)"Player", (String)"gamemode");
+        tp$63 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Player", (String)"gamemode", (String)"S");
+        p$64 = PolyClassRuntime.resolvePropertyHandler((String)"Player", (String)"total_exp");
+        tp$65 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Player", (String)"total_exp", (String)"D");
     }
 
     public boolean tm$0_show_bossbar(String string, double d, String string2, String string3) {
@@ -473,74 +492,137 @@ extends PolyClassLivingEntity_v2 {
         return PolyClassRuntime.genericProperty((String)"Player", (String)"saturation", (Object)this.instance);
     }
 
-    public ScriptValue pg$47_main_hand() {
-        if (p$47 != null) {
-            return p$47.get(this.instance);
+    public double tg$47_saturation() {
+        if (tp$47 != null) {
+            return (Double)tp$47.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Player", (String)"saturation", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$48_main_hand() {
+        if (p$48 != null) {
+            return p$48.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Player", (String)"main_hand", (Object)this.instance);
     }
 
-    public ScriptValue pg$48_is_flying() {
-        if (p$48 != null) {
-            return p$48.get(this.instance);
+    public ScriptValue pg$49_is_flying() {
+        if (p$49 != null) {
+            return p$49.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Player", (String)"is_flying", (Object)this.instance);
     }
 
-    public ScriptValue pg$49_is_creative() {
-        if (p$49 != null) {
-            return p$49.get(this.instance);
+    public boolean tg$50_is_flying() {
+        if (tp$50 != null) {
+            return (Boolean)tp$50.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Player", (String)"is_flying", (Object)this.instance).asBool();
+    }
+
+    public ScriptValue pg$51_is_creative() {
+        if (p$51 != null) {
+            return p$51.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Player", (String)"is_creative", (Object)this.instance);
     }
 
-    public ScriptValue pg$50_allow_flight() {
-        if (p$50 != null) {
-            return p$50.get(this.instance);
+    public boolean tg$52_is_creative() {
+        if (tp$52 != null) {
+            return (Boolean)tp$52.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Player", (String)"is_creative", (Object)this.instance).asBool();
+    }
+
+    public ScriptValue pg$53_allow_flight() {
+        if (p$53 != null) {
+            return p$53.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Player", (String)"allow_flight", (Object)this.instance);
     }
 
-    public ScriptValue pg$51_off_hand() {
-        if (p$51 != null) {
-            return p$51.get(this.instance);
+    public boolean tg$54_allow_flight() {
+        if (tp$54 != null) {
+            return (Boolean)tp$54.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Player", (String)"allow_flight", (Object)this.instance).asBool();
+    }
+
+    public ScriptValue pg$55_off_hand() {
+        if (p$55 != null) {
+            return p$55.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Player", (String)"off_hand", (Object)this.instance);
     }
 
-    public ScriptValue pg$52_xp_level() {
-        if (p$52 != null) {
-            return p$52.get(this.instance);
+    public ScriptValue pg$56_xp_level() {
+        if (p$56 != null) {
+            return p$56.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Player", (String)"xp_level", (Object)this.instance);
     }
 
-    public ScriptValue pg$53_xp_progress() {
-        if (p$53 != null) {
-            return p$53.get(this.instance);
+    public double tg$57_xp_level() {
+        if (tp$57 != null) {
+            return (Double)tp$57.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Player", (String)"xp_level", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$58_xp_progress() {
+        if (p$58 != null) {
+            return p$58.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Player", (String)"xp_progress", (Object)this.instance);
     }
 
-    public ScriptValue pg$54_food_level() {
-        if (p$54 != null) {
-            return p$54.get(this.instance);
+    public double tg$59_xp_progress() {
+        if (tp$59 != null) {
+            return (Double)tp$59.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Player", (String)"xp_progress", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$60_food_level() {
+        if (p$60 != null) {
+            return p$60.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Player", (String)"food_level", (Object)this.instance);
     }
 
-    public ScriptValue pg$55_gamemode() {
-        if (p$55 != null) {
-            return p$55.get(this.instance);
+    public double tg$61_food_level() {
+        if (tp$61 != null) {
+            return (Double)tp$61.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Player", (String)"food_level", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$62_gamemode() {
+        if (p$62 != null) {
+            return p$62.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Player", (String)"gamemode", (Object)this.instance);
     }
 
-    public ScriptValue pg$56_total_exp() {
-        if (p$56 != null) {
-            return p$56.get(this.instance);
+    public String tg$63_gamemode() {
+        if (tp$63 != null) {
+            return (String)tp$63.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Player", (String)"gamemode", (Object)this.instance).asStr();
+    }
+
+    public ScriptValue pg$64_total_exp() {
+        if (p$64 != null) {
+            return p$64.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Player", (String)"total_exp", (Object)this.instance);
+    }
+
+    public double tg$65_total_exp() {
+        if (tp$65 != null) {
+            return (Double)tp$65.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Player", (String)"total_exp", (Object)this.instance).asNum();
     }
 
     public PolyClassPlayer(Object object) {

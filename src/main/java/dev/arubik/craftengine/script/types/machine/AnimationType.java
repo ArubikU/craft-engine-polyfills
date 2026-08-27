@@ -175,13 +175,13 @@ public final class AnimationType {
                 })
 
             // ---- Properties ----
-            .property("playing",  obj -> ScriptValue.of(anim(obj).isPlaying()))
-            .property("paused",   obj -> ScriptValue.of(anim(obj).isPaused()))
-            .property("looping",  obj -> ScriptValue.of(anim(obj).isLooping()))
-            .property("tick",     obj -> ScriptValue.of((double) anim(obj).currentTick()))
-            .property("duration", obj -> ScriptValue.of((double) anim(obj).duration()))
-            .property("progress", obj -> ScriptValue.of((double) anim(obj).progress()))
-            .property("speed",    obj -> ScriptValue.of((double) anim(obj).speed()));
+            .propertyTyped("playing",  TypeCodecs.BOOL,   (ScriptAnimation a) -> a.isPlaying())
+            .propertyTyped("paused",   TypeCodecs.BOOL,   (ScriptAnimation a) -> a.isPaused())
+            .propertyTyped("looping",  TypeCodecs.BOOL,   (ScriptAnimation a) -> a.isLooping())
+            .propertyTyped("tick",     TypeCodecs.DOUBLE, (ScriptAnimation a) -> (double) a.currentTick())
+            .propertyTyped("duration", TypeCodecs.DOUBLE, (ScriptAnimation a) -> (double) a.duration())
+            .propertyTyped("progress", TypeCodecs.DOUBLE, (ScriptAnimation a) -> (double) a.progress())
+            .propertyTyped("speed",    TypeCodecs.DOUBLE, (ScriptAnimation a) -> (double) a.speed());
     }
 
     // ===================================================================
@@ -194,7 +194,6 @@ public final class AnimationType {
     // INTERNAL HELPERS
     // ===================================================================
 
-    private static ScriptAnimation anim(Object obj) { return (ScriptAnimation) obj; }
 
     private static Map<String, ScriptAnimation.DisplayState> parseDisplays(ScriptValue val) {
         Map<String, ScriptAnimation.DisplayState> out = new LinkedHashMap<>();

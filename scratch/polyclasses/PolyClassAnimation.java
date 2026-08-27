@@ -10,6 +10,7 @@
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler1
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler3
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler4
+ *  dev.arubik.craftengine.script.PolyType$TypedPropertyHandler
  *  dev.arubik.craftengine.script.ScriptValue
  *  dev.arubik.craftengine.script.ScriptValue$Obj
  */
@@ -58,12 +59,19 @@ public class PolyClassAnimation {
     private static volatile PolyType.TypedMethodHandler1 h$32;
     private static volatile PolyType.MethodHandler m$33;
     private static volatile PolyType.PropertyHandler p$34;
-    private static volatile PolyType.PropertyHandler p$35;
+    private static volatile PolyType.TypedPropertyHandler tp$35;
     private static volatile PolyType.PropertyHandler p$36;
-    private static volatile PolyType.PropertyHandler p$37;
+    private static volatile PolyType.TypedPropertyHandler tp$37;
     private static volatile PolyType.PropertyHandler p$38;
-    private static volatile PolyType.PropertyHandler p$39;
+    private static volatile PolyType.TypedPropertyHandler tp$39;
     private static volatile PolyType.PropertyHandler p$40;
+    private static volatile PolyType.TypedPropertyHandler tp$41;
+    private static volatile PolyType.PropertyHandler p$42;
+    private static volatile PolyType.TypedPropertyHandler tp$43;
+    private static volatile PolyType.PropertyHandler p$44;
+    private static volatile PolyType.TypedPropertyHandler tp$45;
+    private static volatile PolyType.PropertyHandler p$46;
+    private static volatile PolyType.TypedPropertyHandler tp$47;
 
     public static void refresh() {
         h$0 = (PolyType.TypedMethodHandler0)PolyClassRuntime.resolveTypedHandler((String)"Animation", (String)"play", (String)":R");
@@ -101,12 +109,19 @@ public class PolyClassAnimation {
         h$32 = (PolyType.TypedMethodHandler1)PolyClassRuntime.resolveTypedHandler((String)"Animation", (String)"on_end", (String)"S:R");
         m$33 = PolyClassRuntime.resolveMethodHandler((String)"Animation", (String)"on_end");
         p$34 = PolyClassRuntime.resolvePropertyHandler((String)"Animation", (String)"duration");
-        p$35 = PolyClassRuntime.resolvePropertyHandler((String)"Animation", (String)"paused");
-        p$36 = PolyClassRuntime.resolvePropertyHandler((String)"Animation", (String)"looping");
-        p$37 = PolyClassRuntime.resolvePropertyHandler((String)"Animation", (String)"progress");
-        p$38 = PolyClassRuntime.resolvePropertyHandler((String)"Animation", (String)"playing");
-        p$39 = PolyClassRuntime.resolvePropertyHandler((String)"Animation", (String)"tick");
-        p$40 = PolyClassRuntime.resolvePropertyHandler((String)"Animation", (String)"speed");
+        tp$35 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Animation", (String)"duration", (String)"D");
+        p$36 = PolyClassRuntime.resolvePropertyHandler((String)"Animation", (String)"paused");
+        tp$37 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Animation", (String)"paused", (String)"Z");
+        p$38 = PolyClassRuntime.resolvePropertyHandler((String)"Animation", (String)"looping");
+        tp$39 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Animation", (String)"looping", (String)"Z");
+        p$40 = PolyClassRuntime.resolvePropertyHandler((String)"Animation", (String)"progress");
+        tp$41 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Animation", (String)"progress", (String)"D");
+        p$42 = PolyClassRuntime.resolvePropertyHandler((String)"Animation", (String)"playing");
+        tp$43 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Animation", (String)"playing", (String)"Z");
+        p$44 = PolyClassRuntime.resolvePropertyHandler((String)"Animation", (String)"tick");
+        tp$45 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Animation", (String)"tick", (String)"D");
+        p$46 = PolyClassRuntime.resolvePropertyHandler((String)"Animation", (String)"speed");
+        tp$47 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Animation", (String)"speed", (String)"D");
     }
 
     public ScriptValue tm$0_play() {
@@ -354,46 +369,95 @@ public class PolyClassAnimation {
         return PolyClassRuntime.genericProperty((String)"Animation", (String)"duration", (Object)this.instance);
     }
 
-    public ScriptValue pg$35_paused() {
-        if (p$35 != null) {
-            return p$35.get(this.instance);
+    public double tg$35_duration() {
+        if (tp$35 != null) {
+            return (Double)tp$35.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Animation", (String)"duration", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$36_paused() {
+        if (p$36 != null) {
+            return p$36.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Animation", (String)"paused", (Object)this.instance);
     }
 
-    public ScriptValue pg$36_looping() {
-        if (p$36 != null) {
-            return p$36.get(this.instance);
+    public boolean tg$37_paused() {
+        if (tp$37 != null) {
+            return (Boolean)tp$37.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Animation", (String)"paused", (Object)this.instance).asBool();
+    }
+
+    public ScriptValue pg$38_looping() {
+        if (p$38 != null) {
+            return p$38.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Animation", (String)"looping", (Object)this.instance);
     }
 
-    public ScriptValue pg$37_progress() {
-        if (p$37 != null) {
-            return p$37.get(this.instance);
+    public boolean tg$39_looping() {
+        if (tp$39 != null) {
+            return (Boolean)tp$39.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Animation", (String)"looping", (Object)this.instance).asBool();
+    }
+
+    public ScriptValue pg$40_progress() {
+        if (p$40 != null) {
+            return p$40.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Animation", (String)"progress", (Object)this.instance);
     }
 
-    public ScriptValue pg$38_playing() {
-        if (p$38 != null) {
-            return p$38.get(this.instance);
+    public double tg$41_progress() {
+        if (tp$41 != null) {
+            return (Double)tp$41.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Animation", (String)"progress", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$42_playing() {
+        if (p$42 != null) {
+            return p$42.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Animation", (String)"playing", (Object)this.instance);
     }
 
-    public ScriptValue pg$39_tick() {
-        if (p$39 != null) {
-            return p$39.get(this.instance);
+    public boolean tg$43_playing() {
+        if (tp$43 != null) {
+            return (Boolean)tp$43.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Animation", (String)"playing", (Object)this.instance).asBool();
+    }
+
+    public ScriptValue pg$44_tick() {
+        if (p$44 != null) {
+            return p$44.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Animation", (String)"tick", (Object)this.instance);
     }
 
-    public ScriptValue pg$40_speed() {
-        if (p$40 != null) {
-            return p$40.get(this.instance);
+    public double tg$45_tick() {
+        if (tp$45 != null) {
+            return (Double)tp$45.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Animation", (String)"tick", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$46_speed() {
+        if (p$46 != null) {
+            return p$46.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Animation", (String)"speed", (Object)this.instance);
+    }
+
+    public double tg$47_speed() {
+        if (tp$47 != null) {
+            return (Double)tp$47.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Animation", (String)"speed", (Object)this.instance).asNum();
     }
 
     public PolyClassAnimation(Object object) {

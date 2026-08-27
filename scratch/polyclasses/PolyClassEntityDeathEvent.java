@@ -7,6 +7,7 @@
  *  dev.arubik.craftengine.script.PolyType$MethodHandler
  *  dev.arubik.craftengine.script.PolyType$PropertyHandler
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler1
+ *  dev.arubik.craftengine.script.PolyType$TypedPropertyHandler
  *  dev.arubik.craftengine.script.ScriptValue
  *  dev.arubik.craftengine.script.ScriptValue$Obj
  */
@@ -26,7 +27,8 @@ extends PolyClassEvent {
     private static volatile PolyType.MethodHandler m$2;
     private static volatile PolyType.PropertyHandler p$3;
     private static volatile PolyType.PropertyHandler p$4;
-    private static volatile PolyType.PropertyHandler p$5;
+    private static volatile PolyType.TypedPropertyHandler tp$5;
+    private static volatile PolyType.PropertyHandler p$6;
 
     public static void refresh() {
         h$0 = (PolyType.TypedMethodHandler1)PolyClassRuntime.resolveTypedHandler((String)"EntityDeathEvent", (String)"set_dropped_exp", (String)"D:Z");
@@ -34,7 +36,8 @@ extends PolyClassEvent {
         m$2 = PolyClassRuntime.resolveMethodHandler((String)"EntityDeathEvent", (String)"set_drops");
         p$3 = PolyClassRuntime.resolvePropertyHandler((String)"EntityDeathEvent", (String)"drops");
         p$4 = PolyClassRuntime.resolvePropertyHandler((String)"EntityDeathEvent", (String)"dropped_exp");
-        p$5 = PolyClassRuntime.resolvePropertyHandler((String)"EntityDeathEvent", (String)"entity");
+        tp$5 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"EntityDeathEvent", (String)"dropped_exp", (String)"D");
+        p$6 = PolyClassRuntime.resolvePropertyHandler((String)"EntityDeathEvent", (String)"entity");
     }
 
     public boolean tm$0_set_dropped_exp(double d) {
@@ -72,9 +75,16 @@ extends PolyClassEvent {
         return PolyClassRuntime.genericProperty((String)"EntityDeathEvent", (String)"dropped_exp", (Object)this.instance);
     }
 
-    public ScriptValue pg$5_entity() {
-        if (p$5 != null) {
-            return p$5.get(this.instance);
+    public double tg$5_dropped_exp() {
+        if (tp$5 != null) {
+            return (Double)tp$5.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"EntityDeathEvent", (String)"dropped_exp", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$6_entity() {
+        if (p$6 != null) {
+            return p$6.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"EntityDeathEvent", (String)"entity", (Object)this.instance);
     }

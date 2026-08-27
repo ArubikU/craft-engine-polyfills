@@ -106,15 +106,18 @@ public final class ChainManagerType {
                     return ChainType.wrap(ChainRegistry.at(level.getWorld().getUID(), pos));
                 })
             // chains_at(World, x, y, z) -> Array<Chain> (every chain anchored there — an anchor can host several)
+            // Return codec declares the element type: every element is an Obj("Chain", Chain) as
+            // ChainType.wrap builds it, so the handler returns a real List<Chain> and
+            // TypeCodecs.listOf does the wrapping.
             .methodTyped4("chains_at", TypeCodecs.RAW, TypeCodecs.DOUBLE, TypeCodecs.DOUBLE, TypeCodecs.DOUBLE,
-                TypeCodecs.RAW, new ScriptValue.Array(List.of()),
+                TypeCodecs.listOf("Chain", Chain.class), List.<Chain>of(),
                 (Object obj, ScriptValue worldVal, Double x, Double y, Double z) -> {
                     ServerLevel level = worldOf(worldVal);
-                    if (level == null) return new ScriptValue.Array(List.of());
+                    if (level == null) return List.<Chain>of();
                     BlockPos pos = new BlockPos((int) (double) x, (int) (double) y, (int) (double) z);
-                    List<ScriptValue> out = new ArrayList<>();
-                    for (Chain c : ChainRegistry.chainsAt(level.getWorld().getUID(), pos)) out.add(ChainType.wrap(c));
-                    return new ScriptValue.Array(out);
+                    List<Chain> out = new ArrayList<>();
+                    for (Chain c : ChainRegistry.chainsAt(level.getWorld().getUID(), pos)) out.add(c);
+                    return out;
                 })
             // count_at(World, x, y, z) -> int
             .methodTyped4("count_at", TypeCodecs.RAW, TypeCodecs.DOUBLE, TypeCodecs.DOUBLE, TypeCodecs.DOUBLE,
@@ -126,11 +129,12 @@ public final class ChainManagerType {
                     return (double) ChainRegistry.countAt(level.getWorld().getUID(), pos);
                 })
             // all() -> Array<Chain> — every live chain, any world
-            .methodTyped0("all", TypeCodecs.RAW,
+            // Element type declared — see chains_at above.
+            .methodTyped0("all", TypeCodecs.listOf("Chain", Chain.class),
                 (Object obj) -> {
-                    List<ScriptValue> out = new ArrayList<>();
-                    for (Chain c : ChainRegistry.all()) out.add(ChainType.wrap(c));
-                    return new ScriptValue.Array(out);
+                    List<Chain> out = new ArrayList<>();
+                    for (Chain c : ChainRegistry.all()) out.add(c);
+                    return out;
                 });
     }
 

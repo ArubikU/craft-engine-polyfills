@@ -5,6 +5,7 @@
  *  dev.arubik.craftengine.script.PolyClass
  *  dev.arubik.craftengine.script.PolyClassRuntime
  *  dev.arubik.craftengine.script.PolyType$PropertyHandler
+ *  dev.arubik.craftengine.script.PolyType$TypedPropertyHandler
  *  dev.arubik.craftengine.script.ScriptValue
  *  dev.arubik.craftengine.script.ScriptValue$Obj
  */
@@ -21,13 +22,17 @@ extends PolyClassEvent {
     private static volatile PolyType.PropertyHandler p$0;
     private static volatile PolyType.PropertyHandler p$1;
     private static volatile PolyType.PropertyHandler p$2;
-    private static volatile PolyType.PropertyHandler p$3;
+    private static volatile PolyType.TypedPropertyHandler tp$3;
+    private static volatile PolyType.PropertyHandler p$4;
+    private static volatile PolyType.TypedPropertyHandler tp$5;
 
     public static void refresh() {
         p$0 = PolyClassRuntime.resolvePropertyHandler((String)"PlayerInteractEvent", (String)"clicked_block");
         p$1 = PolyClassRuntime.resolvePropertyHandler((String)"PlayerInteractEvent", (String)"item");
         p$2 = PolyClassRuntime.resolvePropertyHandler((String)"PlayerInteractEvent", (String)"action");
-        p$3 = PolyClassRuntime.resolvePropertyHandler((String)"PlayerInteractEvent", (String)"hand");
+        tp$3 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"PlayerInteractEvent", (String)"action", (String)"S");
+        p$4 = PolyClassRuntime.resolvePropertyHandler((String)"PlayerInteractEvent", (String)"hand");
+        tp$5 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"PlayerInteractEvent", (String)"hand", (String)"S");
     }
 
     public ScriptValue pg$0_clicked_block() {
@@ -51,11 +56,25 @@ extends PolyClassEvent {
         return PolyClassRuntime.genericProperty((String)"PlayerInteractEvent", (String)"action", (Object)this.instance);
     }
 
-    public ScriptValue pg$3_hand() {
-        if (p$3 != null) {
-            return p$3.get(this.instance);
+    public String tg$3_action() {
+        if (tp$3 != null) {
+            return (String)tp$3.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"PlayerInteractEvent", (String)"action", (Object)this.instance).asStr();
+    }
+
+    public ScriptValue pg$4_hand() {
+        if (p$4 != null) {
+            return p$4.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"PlayerInteractEvent", (String)"hand", (Object)this.instance);
+    }
+
+    public String tg$5_hand() {
+        if (tp$5 != null) {
+            return (String)tp$5.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"PlayerInteractEvent", (String)"hand", (Object)this.instance).asStr();
     }
 
     public PolyClassPlayerInteractEvent(Object object) {

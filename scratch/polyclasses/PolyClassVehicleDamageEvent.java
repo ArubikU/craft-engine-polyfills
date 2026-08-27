@@ -7,6 +7,7 @@
  *  dev.arubik.craftengine.script.PolyType$MethodHandler
  *  dev.arubik.craftengine.script.PolyType$PropertyHandler
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler1
+ *  dev.arubik.craftengine.script.PolyType$TypedPropertyHandler
  *  dev.arubik.craftengine.script.ScriptValue
  *  dev.arubik.craftengine.script.ScriptValue$Obj
  */
@@ -24,15 +25,17 @@ extends PolyClassEvent {
     private static volatile PolyType.TypedMethodHandler1 h$0;
     private static volatile PolyType.MethodHandler m$1;
     private static volatile PolyType.PropertyHandler p$2;
-    private static volatile PolyType.PropertyHandler p$3;
+    private static volatile PolyType.TypedPropertyHandler tp$3;
     private static volatile PolyType.PropertyHandler p$4;
+    private static volatile PolyType.PropertyHandler p$5;
 
     public static void refresh() {
         h$0 = (PolyType.TypedMethodHandler1)PolyClassRuntime.resolveTypedHandler((String)"VehicleDamageEvent", (String)"set_damage", (String)"D:Z");
         m$1 = PolyClassRuntime.resolveMethodHandler((String)"VehicleDamageEvent", (String)"set_damage");
         p$2 = PolyClassRuntime.resolvePropertyHandler((String)"VehicleDamageEvent", (String)"damage");
-        p$3 = PolyClassRuntime.resolvePropertyHandler((String)"VehicleDamageEvent", (String)"attacker");
-        p$4 = PolyClassRuntime.resolvePropertyHandler((String)"VehicleDamageEvent", (String)"vehicle");
+        tp$3 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"VehicleDamageEvent", (String)"damage", (String)"D");
+        p$4 = PolyClassRuntime.resolvePropertyHandler((String)"VehicleDamageEvent", (String)"attacker");
+        p$5 = PolyClassRuntime.resolvePropertyHandler((String)"VehicleDamageEvent", (String)"vehicle");
     }
 
     public boolean tm$0_set_damage(double d) {
@@ -56,16 +59,23 @@ extends PolyClassEvent {
         return PolyClassRuntime.genericProperty((String)"VehicleDamageEvent", (String)"damage", (Object)this.instance);
     }
 
-    public ScriptValue pg$3_attacker() {
-        if (p$3 != null) {
-            return p$3.get(this.instance);
+    public double tg$3_damage() {
+        if (tp$3 != null) {
+            return (Double)tp$3.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"VehicleDamageEvent", (String)"damage", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$4_attacker() {
+        if (p$4 != null) {
+            return p$4.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"VehicleDamageEvent", (String)"attacker", (Object)this.instance);
     }
 
-    public ScriptValue pg$4_vehicle() {
-        if (p$4 != null) {
-            return p$4.get(this.instance);
+    public ScriptValue pg$5_vehicle() {
+        if (p$5 != null) {
+            return p$5.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"VehicleDamageEvent", (String)"vehicle", (Object)this.instance);
     }

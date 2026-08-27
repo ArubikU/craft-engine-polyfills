@@ -7,6 +7,7 @@
  *  dev.arubik.craftengine.script.PolyType$MethodHandler
  *  dev.arubik.craftengine.script.PolyType$PropertyHandler
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler1
+ *  dev.arubik.craftengine.script.PolyType$TypedPropertyHandler
  *  dev.arubik.craftengine.script.ScriptValue
  *  dev.arubik.craftengine.script.ScriptValue$Obj
  */
@@ -24,15 +25,17 @@ extends PolyClassEvent {
     private static volatile PolyType.TypedMethodHandler1 h$0;
     private static volatile PolyType.MethodHandler m$1;
     private static volatile PolyType.PropertyHandler p$2;
-    private static volatile PolyType.PropertyHandler p$3;
+    private static volatile PolyType.TypedPropertyHandler tp$3;
     private static volatile PolyType.PropertyHandler p$4;
+    private static volatile PolyType.PropertyHandler p$5;
 
     public static void refresh() {
         h$0 = (PolyType.TypedMethodHandler1)PolyClassRuntime.resolveTypedHandler((String)"BlockDamageEvent", (String)"set_instabreak", (String)"Z:Z");
         m$1 = PolyClassRuntime.resolveMethodHandler((String)"BlockDamageEvent", (String)"set_instabreak");
         p$2 = PolyClassRuntime.resolvePropertyHandler((String)"BlockDamageEvent", (String)"instabreak");
-        p$3 = PolyClassRuntime.resolvePropertyHandler((String)"BlockDamageEvent", (String)"block");
-        p$4 = PolyClassRuntime.resolvePropertyHandler((String)"BlockDamageEvent", (String)"player");
+        tp$3 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"BlockDamageEvent", (String)"instabreak", (String)"Z");
+        p$4 = PolyClassRuntime.resolvePropertyHandler((String)"BlockDamageEvent", (String)"block");
+        p$5 = PolyClassRuntime.resolvePropertyHandler((String)"BlockDamageEvent", (String)"player");
     }
 
     public boolean tm$0_set_instabreak(boolean bl) {
@@ -56,16 +59,23 @@ extends PolyClassEvent {
         return PolyClassRuntime.genericProperty((String)"BlockDamageEvent", (String)"instabreak", (Object)this.instance);
     }
 
-    public ScriptValue pg$3_block() {
-        if (p$3 != null) {
-            return p$3.get(this.instance);
+    public boolean tg$3_instabreak() {
+        if (tp$3 != null) {
+            return (Boolean)tp$3.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"BlockDamageEvent", (String)"instabreak", (Object)this.instance).asBool();
+    }
+
+    public ScriptValue pg$4_block() {
+        if (p$4 != null) {
+            return p$4.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"BlockDamageEvent", (String)"block", (Object)this.instance);
     }
 
-    public ScriptValue pg$4_player() {
-        if (p$4 != null) {
-            return p$4.get(this.instance);
+    public ScriptValue pg$5_player() {
+        if (p$5 != null) {
+            return p$5.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"BlockDamageEvent", (String)"player", (Object)this.instance);
     }

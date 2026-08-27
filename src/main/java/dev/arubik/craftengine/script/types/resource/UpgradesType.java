@@ -22,7 +22,9 @@ public final class UpgradesType {
 
     public static void register() {
         PolyTypeRegistry.define("Upgrades")
-            .property("total", obj -> ScriptValue.of(ref(obj).total()))
+            .propertyTyped("total", TypeCodecs.DOUBLE, (UpgradesRef r) -> (double) r.total())
+            // Stays untyped: TypeCodecs.listOf only survives Obj-wrapped PolyType instances, and
+            // these elements are ScriptValue.Item values (ofItem) — a distinct ScriptValue variant.
             .property("inventory", obj -> {
                 ItemStack[] inv = ref(obj).inventory();
                 if (inv == null) return new ScriptValue.Array(List.of());

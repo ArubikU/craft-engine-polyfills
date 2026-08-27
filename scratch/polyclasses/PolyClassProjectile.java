@@ -5,6 +5,7 @@
  *  dev.arubik.craftengine.script.PolyClass
  *  dev.arubik.craftengine.script.PolyClassRuntime
  *  dev.arubik.craftengine.script.PolyType$PropertyHandler
+ *  dev.arubik.craftengine.script.PolyType$TypedPropertyHandler
  *  dev.arubik.craftengine.script.ScriptValue
  *  dev.arubik.craftengine.script.ScriptValue$Obj
  */
@@ -19,9 +20,11 @@ import dev.arubik.craftengine.script.ScriptValue;
 public class PolyClassProjectile
 extends PolyClassEntity {
     private static volatile PolyType.PropertyHandler p$0;
+    private static volatile PolyType.TypedPropertyHandler tp$1;
 
     public static void refresh() {
         p$0 = PolyClassRuntime.resolvePropertyHandler((String)"Projectile", (String)"owner_uuid");
+        tp$1 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Projectile", (String)"owner_uuid", (String)"S");
     }
 
     public ScriptValue pg$0_owner_uuid() {
@@ -29,6 +32,13 @@ extends PolyClassEntity {
             return p$0.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Projectile", (String)"owner_uuid", (Object)this.instance);
+    }
+
+    public String tg$1_owner_uuid() {
+        if (tp$1 != null) {
+            return (String)tp$1.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Projectile", (String)"owner_uuid", (Object)this.instance).asStr();
     }
 
     public PolyClassProjectile(Object object) {

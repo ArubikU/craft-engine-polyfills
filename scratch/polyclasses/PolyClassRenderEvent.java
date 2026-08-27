@@ -5,6 +5,7 @@
  *  dev.arubik.craftengine.script.PolyClass
  *  dev.arubik.craftengine.script.PolyClassRuntime
  *  dev.arubik.craftengine.script.PolyType$PropertyHandler
+ *  dev.arubik.craftengine.script.PolyType$TypedPropertyHandler
  *  dev.arubik.craftengine.script.ScriptValue
  *  dev.arubik.craftengine.script.ScriptValue$Obj
  */
@@ -20,10 +21,12 @@ public class PolyClassRenderEvent
 extends PolyClassEvent {
     private static volatile PolyType.PropertyHandler p$0;
     private static volatile PolyType.PropertyHandler p$1;
+    private static volatile PolyType.TypedPropertyHandler tp$2;
 
     public static void refresh() {
         p$0 = PolyClassRuntime.resolvePropertyHandler((String)"RenderEvent", (String)"holder");
         p$1 = PolyClassRuntime.resolvePropertyHandler((String)"RenderEvent", (String)"slot");
+        tp$2 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"RenderEvent", (String)"slot", (String)"D");
     }
 
     public ScriptValue pg$0_holder() {
@@ -38,6 +41,13 @@ extends PolyClassEvent {
             return p$1.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"RenderEvent", (String)"slot", (Object)this.instance);
+    }
+
+    public double tg$2_slot() {
+        if (tp$2 != null) {
+            return (Double)tp$2.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"RenderEvent", (String)"slot", (Object)this.instance).asNum();
     }
 
     public PolyClassRenderEvent(Object object) {

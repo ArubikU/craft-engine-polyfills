@@ -29,7 +29,7 @@ import java.util.UUID;
  * this addon offers (Vault, LuckPerms, WorldGuard, WorldEdit/FAWE, Dynmap, BlueMap, MythicMobs,
  * PlaceholderAPI, Citizens, GriefPrevention, DecentHolograms, DiscordSRV), each reachable as
  * {@code Plugins.<name>} rather than its own separate global.
- * Adding a brand-new bridge later only means one more {@code .property(...)} line here — every
+ * Adding a brand-new bridge later only means one more {@code .propertyTyped(...)} line here — every
  * OTHER call site that binds a script's globals (there are many — see each site's own {@code
  * bindCommonNamespaces}) never needs to change, since they all already bind {@code Plugins} once.
  *
@@ -54,21 +54,24 @@ public final class PluginsType {
 
     public static void register() {
         PolyTypeRegistry.define("Plugins")
-            .property("vault", obj -> ScriptValue.ofObj("VaultBridge", VaultEconomy.class))
-            .property("luckperms", obj -> ScriptValue.ofObj("LuckPermsBridge", LuckPermsSupport.class))
-            .property("worldguard", obj -> ScriptValue.ofObj("WorldGuardBridge", WorldGuardSupport.class))
-            .property("worldedit", obj -> ScriptValue.ofObj("WorldEditBridge", WorldEditSupport.class))
-            .property("dynmap", obj -> ScriptValue.ofObj("DynmapBridge", DynmapSupport.class))
-            .property("bluemap", obj -> ScriptValue.ofObj("BlueMapBridge", BlueMapSupport.class))
-            .property("mythicmobs", obj -> ScriptValue.ofObj("MythicMobsBridge", MythicMobsSupport.class))
-            .property("placeholderapi", obj -> ScriptValue.ofObj("PlaceholderApiBridge", PlaceholderSupport.class))
-            .property("citizens", obj -> ScriptValue.ofObj("CitizensBridge", CitizensSupport.class))
-            .property("griefprevention", obj -> ScriptValue.ofObj("GriefPreventionBridge", GriefPreventionSupport.class))
-            .property("decentholograms", obj -> ScriptValue.ofObj("DecentHologramsBridge", DecentHologramsSupport.class))
-            .property("discordsrv", obj -> ScriptValue.ofObj("DiscordSrvBridge", DiscordSrvSupport.class));
+            // Each bridge namespace has a FIXED PolyType name and a fixed singleton instance (the
+            // support class's own Class object — these bridges are stateless statics), so bridgeCodec
+            // re-boxes it under exactly the name the old ScriptValue.ofObj used.
+            .propertyTyped("vault", bridgeCodec("VaultBridge"), (Object obj) -> VaultEconomy.class)
+            .propertyTyped("luckperms", bridgeCodec("LuckPermsBridge"), (Object obj) -> LuckPermsSupport.class)
+            .propertyTyped("worldguard", bridgeCodec("WorldGuardBridge"), (Object obj) -> WorldGuardSupport.class)
+            .propertyTyped("worldedit", bridgeCodec("WorldEditBridge"), (Object obj) -> WorldEditSupport.class)
+            .propertyTyped("dynmap", bridgeCodec("DynmapBridge"), (Object obj) -> DynmapSupport.class)
+            .propertyTyped("bluemap", bridgeCodec("BlueMapBridge"), (Object obj) -> BlueMapSupport.class)
+            .propertyTyped("mythicmobs", bridgeCodec("MythicMobsBridge"), (Object obj) -> MythicMobsSupport.class)
+            .propertyTyped("placeholderapi", bridgeCodec("PlaceholderApiBridge"), (Object obj) -> PlaceholderSupport.class)
+            .propertyTyped("citizens", bridgeCodec("CitizensBridge"), (Object obj) -> CitizensSupport.class)
+            .propertyTyped("griefprevention", bridgeCodec("GriefPreventionBridge"), (Object obj) -> GriefPreventionSupport.class)
+            .propertyTyped("decentholograms", bridgeCodec("DecentHologramsBridge"), (Object obj) -> DecentHologramsSupport.class)
+            .propertyTyped("discordsrv", bridgeCodec("DiscordSrvBridge"), (Object obj) -> DiscordSrvSupport.class);
 
         PolyTypeRegistry.define("VaultBridge")
-            .property("is_available", obj -> ScriptValue.of(VaultEconomy.isAvailable()))
+            .propertyTyped("is_available", TypeCodecs.BOOL, (Object obj) -> VaultEconomy.isAvailable())
             .methodTyped1("balance", TypeCodecs.RAW, TypeCodecs.DOUBLE, 0.0,
                 (Object obj, ScriptValue p) -> VaultEconomy.balance(offlinePlayer(p)))
             .methodTyped2("has", TypeCodecs.RAW, TypeCodecs.DOUBLE, TypeCodecs.BOOL, false,
@@ -86,7 +89,7 @@ public final class PluginsType {
             .methodTyped0("currency_name_singular", TypeCodecs.STRING, (Object obj) -> VaultEconomy.currencyNameSingular())
             // ---- Vault's Permission/Chat services — the permission-plugin-agnostic counterpart
             // of LuckPermsBridge (works with WHATEVER Vault is hooked into, not just LuckPerms).
-            .property("permission_available", obj -> ScriptValue.of(VaultPermission.isAvailable()))
+            .propertyTyped("permission_available", TypeCodecs.BOOL, (Object obj) -> VaultPermission.isAvailable())
             .methodTyped2("has_permission", TypeCodecs.RAW, TypeCodecs.STRING, TypeCodecs.BOOL, false,
                 (Object obj, ScriptValue p, String node) -> VaultPermission.has(bukkitPlayer(p), node))
             .methodTyped2("add_permission", TypeCodecs.RAW, TypeCodecs.STRING, TypeCodecs.BOOL, false,
@@ -101,6 +104,11 @@ public final class PluginsType {
                 (Object obj, ScriptValue p, String group) -> VaultPermission.removeGroup(bukkitPlayer(p), group))
             .methodTyped1("primary_group", TypeCodecs.RAW, TypeCodecs.STRING, "",
                 (Object obj, ScriptValue p) -> VaultPermission.primaryGroup(bukkitPlayer(p)))
+            // Return stays RAW, not TypeCodecs.listOf: the elements are bare group-name STRINGS
+            // (ScriptValue.of(g) -> a Str), not Obj-wrapped PolyType instances. listOf only decodes
+            // and re-boxes Objs, so declaring one here would hand scripts an empty array. Every
+            // other string-array return in this file (LuckPerms groups/group_parents, WorldGuard
+            // regions_at, and the shared stringListToArray helper) is the same shape.
             .methodTyped1("groups", TypeCodecs.RAW, TypeCodecs.RAW, new ScriptValue.Array(java.util.List.of()),
                 (Object obj, ScriptValue p) -> {
                     String[] groups = VaultPermission.groups(bukkitPlayer(p));
@@ -108,7 +116,7 @@ public final class PluginsType {
                     for (String g : groups) out.add(ScriptValue.of(g));
                     return new ScriptValue.Array(out);
                 })
-            .property("chat_available", obj -> ScriptValue.of(VaultChat.isAvailable()))
+            .propertyTyped("chat_available", TypeCodecs.BOOL, (Object obj) -> VaultChat.isAvailable())
             .methodTyped1("prefix", TypeCodecs.RAW, TypeCodecs.STRING, "",
                 (Object obj, ScriptValue p) -> VaultChat.prefix(bukkitPlayer(p)))
             .methodTyped2("set_prefix", TypeCodecs.RAW, TypeCodecs.STRING, TypeCodecs.BOOL, false,
@@ -119,11 +127,12 @@ public final class PluginsType {
                 (Object obj, ScriptValue p, String suffix) -> VaultChat.setSuffix(bukkitPlayer(p), suffix));
 
         PolyTypeRegistry.define("LuckPermsBridge")
-            .property("is_available", obj -> ScriptValue.of(LuckPermsSupport.isAvailable()))
+            .propertyTyped("is_available", TypeCodecs.BOOL, (Object obj) -> LuckPermsSupport.isAvailable())
             .methodTyped1("primary_group", TypeCodecs.RAW, TypeCodecs.STRING, "",
                 (Object obj, ScriptValue p) -> LuckPermsSupport.primaryGroup(uuidOf(p)))
             .methodTyped2("set_primary_group", TypeCodecs.RAW, TypeCodecs.STRING, TypeCodecs.BOOL, false,
                 (Object obj, ScriptValue p, String group) -> LuckPermsSupport.setPrimaryGroup(uuidOf(p), group))
+            // RAW, not listOf — bare strings, see VaultPermissionBridge.groups above.
             .methodTyped1("groups", TypeCodecs.RAW, TypeCodecs.RAW, new ScriptValue.Array(java.util.List.of()),
                 (Object obj, ScriptValue p) -> stringListToArray(LuckPermsSupport.groups(uuidOf(p))))
             .methodTyped2("has_group", TypeCodecs.RAW, TypeCodecs.STRING, TypeCodecs.BOOL, false,
@@ -164,15 +173,17 @@ public final class PluginsType {
                 })
             .methodTyped2("remove_group_permission", TypeCodecs.STRING, TypeCodecs.STRING, TypeCodecs.BOOL, false,
                 (Object obj, String group, String node) -> LuckPermsSupport.removeGroupPermission(group, node))
+            // RAW, not listOf — bare strings, see VaultPermissionBridge.groups above.
             .methodTyped1("group_parents", TypeCodecs.STRING, TypeCodecs.RAW, new ScriptValue.Array(java.util.List.of()),
                 (Object obj, String group) -> stringListToArray(LuckPermsSupport.groupParents(group)));
 
         PolyTypeRegistry.define("WorldGuardBridge")
-            .property("is_available", obj -> ScriptValue.of(WorldGuardSupport.isAvailable()))
+            .propertyTyped("is_available", TypeCodecs.BOOL, (Object obj) -> WorldGuardSupport.isAvailable())
             // register_flag(name, type) — call once from a script's __init__(); see
             // WorldGuardSupport#registerFlag's own javadoc for the load-order caveat.
             .methodTyped2("register_flag", TypeCodecs.STRING, TypeCodecs.STRING, TypeCodecs.BOOL, false,
                 (Object obj, String name, String type) -> WorldGuardSupport.registerFlag(name, type))
+            // RAW, not listOf — bare region-id strings, see VaultPermissionBridge.groups above.
             .methodTyped4("regions_at", TypeCodecs.RAW, TypeCodecs.DOUBLE, TypeCodecs.DOUBLE, TypeCodecs.DOUBLE,
                 TypeCodecs.RAW, new ScriptValue.Array(java.util.List.of()),
                 (Object obj, ScriptValue world, Double x, Double y, Double z) -> {
@@ -202,8 +213,8 @@ public final class PluginsType {
                 (Object obj, ScriptValue player, Double x, Double y, Double z) -> WorldGuardSupport.canBuild(bukkitPlayer(player), x, y, z));
 
         PolyTypeRegistry.define("WorldEditBridge")
-            .property("is_available", obj -> ScriptValue.of(WorldEditSupport.isAvailable()))
-            .property("is_fawe", obj -> ScriptValue.of(WorldEditSupport.isFawe()))
+            .propertyTyped("is_available", TypeCodecs.BOOL, (Object obj) -> WorldEditSupport.isAvailable())
+            .propertyTyped("is_fawe", TypeCodecs.BOOL, (Object obj) -> WorldEditSupport.isFawe())
             .methodTyped1("get_selection", TypeCodecs.RAW, TypeCodecs.RAW, ScriptValue.NULL,
                 (Object obj, ScriptValue p) -> {
                     Map<String, Object> selection = WorldEditSupport.getSelection(bukkitPlayer(p));
@@ -223,7 +234,7 @@ public final class PluginsType {
                 });
 
         PolyTypeRegistry.define("DynmapBridge")
-            .property("is_available", obj -> ScriptValue.of(DynmapSupport.isAvailable()))
+            .propertyTyped("is_available", TypeCodecs.BOOL, (Object obj) -> DynmapSupport.isAvailable())
             // add_marker(setId, setLabel, markerId, label, world, x, y, z, icon?) — 8 required args
             // plus an optional 9th, so methodTypedOpt9. The `z` slot's null Double default is the
             // "fewer than 8 args" sentinel (arguments are positional, so it is the LAST required
@@ -243,7 +254,7 @@ public final class PluginsType {
                 (Object obj, String setId, String markerId) -> DynmapSupport.removeMarker(setId, markerId));
 
         PolyTypeRegistry.define("BlueMapBridge")
-            .property("is_available", obj -> ScriptValue.of(BlueMapSupport.isAvailable()))
+            .propertyTyped("is_available", TypeCodecs.BOOL, (Object obj) -> BlueMapSupport.isAvailable())
             // add_marker(mapId, setId, setLabel, markerId, label, x, y, z) — 8 required args, past
             // methodTyped7's 7-arg max, so methodTypedOpt8 with the `z` slot's null Double default
             // as the "fewer than 8 args" sentinel (arguments are positional, so it is the LAST
@@ -261,7 +272,7 @@ public final class PluginsType {
                 (Object obj, String mapId, String setId, String markerId) -> BlueMapSupport.removeMarker(mapId, setId, markerId));
 
         PolyTypeRegistry.define("MythicMobsBridge")
-            .property("is_available", obj -> ScriptValue.of(MythicMobsSupport.isAvailable()))
+            .propertyTyped("is_available", TypeCodecs.BOOL, (Object obj) -> MythicMobsSupport.isAvailable())
             // spawn_mob(mobType, world, x, y, z, level?) — 5 required args plus an optional 6th, so
             // methodTypedOpt6. The `z` slot's null Double default replaces locationArg(args, 1)'s
             // own "args.size() < 5" test exactly (arguments are positional, so z is the LAST slot
@@ -313,7 +324,7 @@ public final class PluginsType {
                 });
 
         PolyTypeRegistry.define("CitizensBridge")
-            .property("is_available", obj -> ScriptValue.of(CitizensSupport.isAvailable()))
+            .propertyTyped("is_available", TypeCodecs.BOOL, (Object obj) -> CitizensSupport.isAvailable())
             .methodTyped1("is_npc", TypeCodecs.RAW, TypeCodecs.BOOL, false,
                 (Object obj, ScriptValue e) -> CitizensSupport.isNpc(bukkitEntity(e)))
             .methodTyped1("npc_id", TypeCodecs.RAW, TypeCodecs.DOUBLE, -1.0,
@@ -336,7 +347,7 @@ public final class PluginsType {
                 (Object obj, ScriptValue e) -> CitizensSupport.removeNpc(bukkitEntity(e)));
 
         PolyTypeRegistry.define("GriefPreventionBridge")
-            .property("is_available", obj -> ScriptValue.of(GriefPreventionSupport.isAvailable()))
+            .propertyTyped("is_available", TypeCodecs.BOOL, (Object obj) -> GriefPreventionSupport.isAvailable())
             // is_claimed(world, x, y, z) — locationArg(args,0) returns null (=> false, since it's
             // ORed with nothing) whenever args.size() < 4, matching methodTyped4's onMissingArgs.
             .methodTyped4("is_claimed", TypeCodecs.RAW, TypeCodecs.DOUBLE, TypeCodecs.DOUBLE, TypeCodecs.DOUBLE,
@@ -368,7 +379,7 @@ public final class PluginsType {
                 });
 
         PolyTypeRegistry.define("DecentHologramsBridge")
-            .property("is_available", obj -> ScriptValue.of(DecentHologramsSupport.isAvailable()))
+            .propertyTyped("is_available", TypeCodecs.BOOL, (Object obj) -> DecentHologramsSupport.isAvailable())
             // create(id, world, x, y, z, ...lines) — trailing lore lines are collected via
             // stringArgList's unbounded "rest of the args, arrays flattened" scan. Arity is NOT the
             // blocker (methodTypedOpt now reaches 10 slots): no FIXED slot count, however large, can
@@ -390,7 +401,7 @@ public final class PluginsType {
                 (Object obj, String id) -> DecentHologramsSupport.exists(id));
 
         PolyTypeRegistry.define("DiscordSrvBridge")
-            .property("is_available", obj -> ScriptValue.of(DiscordSrvSupport.isAvailable()))
+            .propertyTyped("is_available", TypeCodecs.BOOL, (Object obj) -> DiscordSrvSupport.isAvailable())
             .methodTyped2("send_message", TypeCodecs.STRING, TypeCodecs.STRING, TypeCodecs.BOOL, false,
                 (Object obj, String channel, String message) -> DiscordSrvSupport.sendMessage(channel, message))
             .methodTyped1("send_to_main_channel", TypeCodecs.STRING, TypeCodecs.BOOL, false,
@@ -404,7 +415,7 @@ public final class PluginsType {
                 });
 
         PolyTypeRegistry.define("PlaceholderApiBridge")
-            .property("is_available", obj -> ScriptValue.of(PlaceholderSupport.isAvailable()))
+            .propertyTyped("is_available", TypeCodecs.BOOL, (Object obj) -> PlaceholderSupport.isAvailable())
             .methodTyped2("set", TypeCodecs.RAW, TypeCodecs.STRING, TypeCodecs.STRING, "",
                 (Object obj, ScriptValue p, String text) -> PlaceholderSupport.set(offlinePlayer(p), text))
             .methodTyped1("set_global", TypeCodecs.STRING, TypeCodecs.STRING, "",
@@ -415,6 +426,15 @@ public final class PluginsType {
                 (Object obj, String identifier, String target) -> PlaceholderSupport.registerPlaceholder(identifier, target))
             .methodTyped1("unregister_placeholder", TypeCodecs.STRING, TypeCodecs.BOOL, false,
                 (Object obj, String identifier) -> PlaceholderSupport.unregisterPlaceholder(identifier));
+    }
+
+    /** Return codec for one {@code Plugins.<name>} bridge namespace. The "instance" every bridge is
+     *  boxed around is that support class's own {@code Class} object (the bridges hold no state —
+     *  they are all-static), so the codec's instance type is {@code Class}; erasure gives no
+     *  {@code Class<Class<?>>} literal, hence the single cast here rather than one per call site. */
+    @SuppressWarnings("unchecked")
+    private static dev.arubik.craftengine.script.PolyType.TypeCodec<Class<?>> bridgeCodec(String polyTypeName) {
+        return TypeCodecs.polyType(polyTypeName, (Class<Class<?>>) (Class<?>) Class.class);
     }
 
     // ---- ScriptValue <-> Bukkit extraction helpers ---------------------------------------------

@@ -44,23 +44,26 @@ public final class RecipeCollectionType {
             // getRecipes() by type + a manual matches() check ourselves.
             // obj cast: original used `obj instanceof Ref ref` — treated the same as the plain-cast
             // helpers other migrated types use (e.g. ContraptionType#cl), since every instance of
-            // this PolyType is always created via RecipeCollectionType#wrap. Return codec is
-            // TypeCodecs.RAW (identity passthrough) since this returns a ScriptValue.Array, not a
-            // primitive.
-            .methodTyped1("for_input", TypeCodecs.STRING, TypeCodecs.RAW, new ScriptValue.Array(List.of()),
+            // this PolyType is always created via RecipeCollectionType#wrap. The return codec
+            // DECLARES the element type — every element is a "Recipe"-wrapped VanillaRecipeRef
+            // (RecipeType#wrapVanilla), so the handler returns a real List and the codec does the
+            // ScriptValue.Array wrapping instead of this body building it by hand.
+            .methodTyped1("for_input", TypeCodecs.STRING,
+                TypeCodecs.listOf("Recipe", RecipeType.VanillaRecipeRef.class),
+                List.<RecipeType.VanillaRecipeRef>of(),
                 (Ref ref, String itemId) -> {
                     try {
                         MinecraftServer server = MinecraftServer.getServer();
-                        if (server == null) return new ScriptValue.Array(List.of());
+                        if (server == null) return List.<RecipeType.VanillaRecipeRef>of();
                         Item item = BuiltInRegistries.ITEM.getValue(Identifier.parse(itemId));
-                        if (item == null) return new ScriptValue.Array(List.of());
+                        if (item == null) return List.<RecipeType.VanillaRecipeRef>of();
                         ItemStack single = new ItemStack(item, 1);
                         SingleRecipeInput input = new SingleRecipeInput(single);
                         ServerLevel level = server.overworld();
-                        if (level == null) return new ScriptValue.Array(List.of());
+                        if (level == null) return List.<RecipeType.VanillaRecipeRef>of();
                         RecipeManager rm = server.getRecipeManager();
 
-                        List<ScriptValue> out = new ArrayList<>();
+                        List<RecipeType.VanillaRecipeRef> out = new ArrayList<>();
                         for (RecipeHolder<?> holder : rm.getRecipes()) {
                             Recipe<?> recipe = holder.value();
                             if (recipe.getType() != ref.nmsType()) continue;
@@ -78,11 +81,11 @@ public final class RecipeCollectionType {
                             int time = recipe instanceof AbstractCookingRecipe cooking ? cooking.cookingTime() : 0;
                             RecipeType.VanillaRecipeRef vref = new RecipeType.VanillaRecipeRef(
                                     holder.id().identifier().toString(), single.copy(), result, time);
-                            out.add(RecipeType.wrapVanilla(vref));
+                            out.add(vref);
                         }
-                        return new ScriptValue.Array(out);
+                        return out;
                     } catch (Throwable ignored) {
-                        return new ScriptValue.Array(List.of());
+                        return List.<RecipeType.VanillaRecipeRef>of();
                     }
                 });
     }

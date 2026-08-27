@@ -2,6 +2,7 @@ package dev.arubik.craftengine.script.types.machine;
 
 import dev.arubik.craftengine.script.PolyTypeRegistry;
 import dev.arubik.craftengine.script.ScriptValue;
+import dev.arubik.craftengine.script.TypeCodecs;
 
 import java.util.List;
 
@@ -22,13 +23,16 @@ public final class RecipeOutputsType {
                           List<ResourceAmount> gases, float experience) {}
 
     public static void register() {
+        // None of these arrays can declare an element type with TypeCodecs.listOf, propertyTyped
+        // notwithstanding: `items` holds pre-built heterogeneous ScriptValues, and fluids/gases hold
+        // Maps rather than one PolyType's instances.
         PolyTypeRegistry.define("RecipeOutputs")
             .property("items", obj -> new ScriptValue.Array(r(obj).items()))
             .property("fluids", obj -> new ScriptValue.Array(r(obj).fluids().stream()
                     .map(RecipeOutputsType::resourceMap).toList()))
             .property("gases", obj -> new ScriptValue.Array(r(obj).gases().stream()
                     .map(RecipeOutputsType::resourceMap).toList()))
-            .property("experience", obj -> ScriptValue.of(r(obj).experience()));
+            .propertyTyped("experience", TypeCodecs.DOUBLE, (Result res) -> (double) res.experience());
     }
 
     private static ScriptValue resourceMap(ResourceAmount ra) {

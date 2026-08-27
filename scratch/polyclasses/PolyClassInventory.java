@@ -7,6 +7,7 @@
  *  dev.arubik.craftengine.script.PolyType$MethodHandler
  *  dev.arubik.craftengine.script.PolyType$PropertyHandler
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler1
+ *  dev.arubik.craftengine.script.PolyType$TypedPropertyHandler
  *  dev.arubik.craftengine.script.ScriptValue
  *  dev.arubik.craftengine.script.ScriptValue$Obj
  */
@@ -28,7 +29,8 @@ public class PolyClassInventory {
     private static volatile PolyType.TypedMethodHandler1 h$5;
     private static volatile PolyType.MethodHandler m$6;
     private static volatile PolyType.PropertyHandler p$7;
-    private static volatile PolyType.PropertyHandler p$8;
+    private static volatile PolyType.TypedPropertyHandler tp$8;
+    private static volatile PolyType.PropertyHandler p$9;
 
     public static void refresh() {
         m$0 = PolyClassRuntime.resolveMethodHandler((String)"Inventory", (String)"slots");
@@ -39,7 +41,8 @@ public class PolyClassInventory {
         h$5 = (PolyType.TypedMethodHandler1)PolyClassRuntime.resolveTypedHandler((String)"Inventory", (String)"has", (String)"S:Z");
         m$6 = PolyClassRuntime.resolveMethodHandler((String)"Inventory", (String)"has");
         p$7 = PolyClassRuntime.resolvePropertyHandler((String)"Inventory", (String)"size");
-        p$8 = PolyClassRuntime.resolvePropertyHandler((String)"Inventory", (String)"contents");
+        tp$8 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Inventory", (String)"size", (String)"D");
+        p$9 = PolyClassRuntime.resolvePropertyHandler((String)"Inventory", (String)"contents");
     }
 
     public ScriptValue um$0_slots(List list) {
@@ -98,9 +101,16 @@ public class PolyClassInventory {
         return PolyClassRuntime.genericProperty((String)"Inventory", (String)"size", (Object)this.instance);
     }
 
-    public ScriptValue pg$8_contents() {
-        if (p$8 != null) {
-            return p$8.get(this.instance);
+    public double tg$8_size() {
+        if (tp$8 != null) {
+            return (Double)tp$8.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Inventory", (String)"size", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$9_contents() {
+        if (p$9 != null) {
+            return p$9.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Inventory", (String)"contents", (Object)this.instance);
     }

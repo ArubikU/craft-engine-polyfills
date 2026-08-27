@@ -11,6 +11,7 @@
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler2
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler3
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler5
+ *  dev.arubik.craftengine.script.PolyType$TypedPropertyHandler
  *  dev.arubik.craftengine.script.ScriptValue
  *  dev.arubik.craftengine.script.ScriptValue$Obj
  */
@@ -40,6 +41,7 @@ public class PolyClassContraptionManager {
     private static volatile PolyType.MethodHandler m$13;
     private static volatile PolyType.PropertyHandler p$14;
     private static volatile PolyType.PropertyHandler p$15;
+    private static volatile PolyType.TypedPropertyHandler tp$16;
 
     public static void refresh() {
         h$0 = (PolyType.TypedMethodHandler3)PolyClassRuntime.resolveTypedHandler((String)"ContraptionManager", (String)"create_bearing", (String)"RRS:R");
@@ -58,6 +60,7 @@ public class PolyClassContraptionManager {
         m$13 = PolyClassRuntime.resolveMethodHandler((String)"ContraptionManager", (String)"kill");
         p$14 = PolyClassRuntime.resolvePropertyHandler((String)"ContraptionManager", (String)"all_contraptions");
         p$15 = PolyClassRuntime.resolvePropertyHandler((String)"ContraptionManager", (String)"count");
+        tp$16 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"ContraptionManager", (String)"count", (String)"D");
     }
 
     public ScriptValue tm$0_create_bearing(ScriptValue scriptValue, ScriptValue scriptValue2, String string) {
@@ -170,6 +173,13 @@ public class PolyClassContraptionManager {
             return p$15.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"ContraptionManager", (String)"count", (Object)this.instance);
+    }
+
+    public double tg$16_count() {
+        if (tp$16 != null) {
+            return (Double)tp$16.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"ContraptionManager", (String)"count", (Object)this.instance).asNum();
     }
 
     public PolyClassContraptionManager(Object object) {

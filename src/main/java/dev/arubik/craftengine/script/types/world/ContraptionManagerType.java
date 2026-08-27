@@ -34,15 +34,23 @@ public final class ContraptionManagerType {
     public static void register() {
         PolyTypeRegistry.define("ContraptionManager")
             // --- Query ---
-            .property("all_contraptions", obj -> {
-                List<ScriptValue> result = new ArrayList<>();
-                for (ContraptionEntity entity : ContraptionManager.all()) {
-                    if (entity.state().level() instanceof dev.arubik.craftengine.contraption.core.ContraptionLevel cl)
-                        result.add(ContraptionType.wrap(cl));
-                }
-                return new ScriptValue.Array(result);
-            })
-            .property("count", obj -> ScriptValue.of(ContraptionManager.all().size()))
+            // Every element IS one PolyType ("Contraption"), and propertyTyped can now say so:
+            // ContraptionType.wrap(cl) is ScriptValue.ofObj("Contraption", cl) once its instanceof
+            // guard passes — and it always passes here, because the loop's own pattern match has
+            // already narrowed the value to a ContraptionLevel. So the handler hands back a real
+            // List<ContraptionLevel> and TypeCodecs.listOf does the identical wrapping (no
+            // hand-built ScriptValue.Array — that would double-wrap).
+            .propertyTyped("all_contraptions",
+                TypeCodecs.listOf("Contraption", dev.arubik.craftengine.contraption.core.ContraptionLevel.class),
+                obj -> {
+                    List<dev.arubik.craftengine.contraption.core.ContraptionLevel> result = new ArrayList<>();
+                    for (ContraptionEntity entity : ContraptionManager.all()) {
+                        if (entity.state().level() instanceof dev.arubik.craftengine.contraption.core.ContraptionLevel cl)
+                            result.add(cl);
+                    }
+                    return result;
+                })
+            .propertyTyped("count", TypeCodecs.DOUBLE, obj -> (double) ContraptionManager.all().size())
             .methodTyped1("get", TypeCodecs.STRING, TypeCodecs.RAW, ScriptValue.NULL,
                 (Object obj, String idStr) -> {
                     try {

@@ -5,6 +5,7 @@
  *  dev.arubik.craftengine.script.PolyClass
  *  dev.arubik.craftengine.script.PolyClassRuntime
  *  dev.arubik.craftengine.script.PolyType$PropertyHandler
+ *  dev.arubik.craftengine.script.PolyType$TypedPropertyHandler
  *  dev.arubik.craftengine.script.ScriptValue
  *  dev.arubik.craftengine.script.ScriptValue$Obj
  */
@@ -19,9 +20,11 @@ import dev.arubik.craftengine.script.ScriptValue;
 public class PolyClassPlayerToggleFlightEvent
 extends PolyClassEvent {
     private static volatile PolyType.PropertyHandler p$0;
+    private static volatile PolyType.TypedPropertyHandler tp$1;
 
     public static void refresh() {
         p$0 = PolyClassRuntime.resolvePropertyHandler((String)"PlayerToggleFlightEvent", (String)"is_flying");
+        tp$1 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"PlayerToggleFlightEvent", (String)"is_flying", (String)"Z");
     }
 
     public ScriptValue pg$0_is_flying() {
@@ -29,6 +32,13 @@ extends PolyClassEvent {
             return p$0.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"PlayerToggleFlightEvent", (String)"is_flying", (Object)this.instance);
+    }
+
+    public boolean tg$1_is_flying() {
+        if (tp$1 != null) {
+            return (Boolean)tp$1.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"PlayerToggleFlightEvent", (String)"is_flying", (Object)this.instance).asBool();
     }
 
     public PolyClassPlayerToggleFlightEvent(Object object) {

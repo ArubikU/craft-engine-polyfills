@@ -7,6 +7,7 @@
  *  dev.arubik.craftengine.script.PolyType$MethodHandler
  *  dev.arubik.craftengine.script.PolyType$PropertyHandler
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler1
+ *  dev.arubik.craftengine.script.PolyType$TypedPropertyHandler
  *  dev.arubik.craftengine.script.ScriptValue
  *  dev.arubik.craftengine.script.ScriptValue$Obj
  */
@@ -29,7 +30,8 @@ public class PolyClassUpgrades {
     private static volatile PolyType.TypedMethodHandler1 h$6;
     private static volatile PolyType.MethodHandler m$7;
     private static volatile PolyType.PropertyHandler p$8;
-    private static volatile PolyType.PropertyHandler p$9;
+    private static volatile PolyType.TypedPropertyHandler tp$9;
+    private static volatile PolyType.PropertyHandler p$10;
 
     public static void refresh() {
         h$0 = (PolyType.TypedMethodHandler1)PolyClassRuntime.resolveTypedHandler((String)"Upgrades", (String)"get", (String)"S:D");
@@ -41,7 +43,8 @@ public class PolyClassUpgrades {
         h$6 = (PolyType.TypedMethodHandler1)PolyClassRuntime.resolveTypedHandler((String)"Upgrades", (String)"has", (String)"S:Z");
         m$7 = PolyClassRuntime.resolveMethodHandler((String)"Upgrades", (String)"has");
         p$8 = PolyClassRuntime.resolvePropertyHandler((String)"Upgrades", (String)"total");
-        p$9 = PolyClassRuntime.resolvePropertyHandler((String)"Upgrades", (String)"inventory");
+        tp$9 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"Upgrades", (String)"total", (String)"D");
+        p$10 = PolyClassRuntime.resolvePropertyHandler((String)"Upgrades", (String)"inventory");
     }
 
     public double tm$0_get(String string) {
@@ -107,9 +110,16 @@ public class PolyClassUpgrades {
         return PolyClassRuntime.genericProperty((String)"Upgrades", (String)"total", (Object)this.instance);
     }
 
-    public ScriptValue pg$9_inventory() {
-        if (p$9 != null) {
-            return p$9.get(this.instance);
+    public double tg$9_total() {
+        if (tp$9 != null) {
+            return (Double)tp$9.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"Upgrades", (String)"total", (Object)this.instance).asNum();
+    }
+
+    public ScriptValue pg$10_inventory() {
+        if (p$10 != null) {
+            return p$10.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"Upgrades", (String)"inventory", (Object)this.instance);
     }

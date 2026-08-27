@@ -7,6 +7,7 @@
  *  dev.arubik.craftengine.script.PolyType$MethodHandler
  *  dev.arubik.craftengine.script.PolyType$PropertyHandler
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler1
+ *  dev.arubik.craftengine.script.PolyType$TypedPropertyHandler
  *  dev.arubik.craftengine.script.ScriptValue
  *  dev.arubik.craftengine.script.ScriptValue$Obj
  */
@@ -25,16 +26,22 @@ extends PolyClassEvent {
     private static volatile PolyType.MethodHandler m$1;
     private static volatile PolyType.PropertyHandler p$2;
     private static volatile PolyType.PropertyHandler p$3;
-    private static volatile PolyType.PropertyHandler p$4;
+    private static volatile PolyType.TypedPropertyHandler tp$4;
     private static volatile PolyType.PropertyHandler p$5;
+    private static volatile PolyType.TypedPropertyHandler tp$6;
+    private static volatile PolyType.PropertyHandler p$7;
+    private static volatile PolyType.TypedPropertyHandler tp$8;
 
     public static void refresh() {
         h$0 = (PolyType.TypedMethodHandler1)PolyClassRuntime.resolveTypedHandler((String)"InventoryMoveItemEvent", (String)"set_item", (String)"R:Z");
         m$1 = PolyClassRuntime.resolveMethodHandler((String)"InventoryMoveItemEvent", (String)"set_item");
         p$2 = PolyClassRuntime.resolvePropertyHandler((String)"InventoryMoveItemEvent", (String)"item");
         p$3 = PolyClassRuntime.resolvePropertyHandler((String)"InventoryMoveItemEvent", (String)"initiator");
-        p$4 = PolyClassRuntime.resolvePropertyHandler((String)"InventoryMoveItemEvent", (String)"destination");
-        p$5 = PolyClassRuntime.resolvePropertyHandler((String)"InventoryMoveItemEvent", (String)"source");
+        tp$4 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"InventoryMoveItemEvent", (String)"initiator", (String)"S");
+        p$5 = PolyClassRuntime.resolvePropertyHandler((String)"InventoryMoveItemEvent", (String)"destination");
+        tp$6 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"InventoryMoveItemEvent", (String)"destination", (String)"S");
+        p$7 = PolyClassRuntime.resolvePropertyHandler((String)"InventoryMoveItemEvent", (String)"source");
+        tp$8 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"InventoryMoveItemEvent", (String)"source", (String)"S");
     }
 
     public boolean tm$0_set_item(ScriptValue scriptValue) {
@@ -65,18 +72,39 @@ extends PolyClassEvent {
         return PolyClassRuntime.genericProperty((String)"InventoryMoveItemEvent", (String)"initiator", (Object)this.instance);
     }
 
-    public ScriptValue pg$4_destination() {
-        if (p$4 != null) {
-            return p$4.get(this.instance);
+    public String tg$4_initiator() {
+        if (tp$4 != null) {
+            return (String)tp$4.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"InventoryMoveItemEvent", (String)"initiator", (Object)this.instance).asStr();
+    }
+
+    public ScriptValue pg$5_destination() {
+        if (p$5 != null) {
+            return p$5.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"InventoryMoveItemEvent", (String)"destination", (Object)this.instance);
     }
 
-    public ScriptValue pg$5_source() {
-        if (p$5 != null) {
-            return p$5.get(this.instance);
+    public String tg$6_destination() {
+        if (tp$6 != null) {
+            return (String)tp$6.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"InventoryMoveItemEvent", (String)"destination", (Object)this.instance).asStr();
+    }
+
+    public ScriptValue pg$7_source() {
+        if (p$7 != null) {
+            return p$7.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"InventoryMoveItemEvent", (String)"source", (Object)this.instance);
+    }
+
+    public String tg$8_source() {
+        if (tp$8 != null) {
+            return (String)tp$8.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"InventoryMoveItemEvent", (String)"source", (Object)this.instance).asStr();
     }
 
     public PolyClassInventoryMoveItemEvent(Object object) {

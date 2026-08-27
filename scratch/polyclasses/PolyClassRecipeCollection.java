@@ -5,6 +5,7 @@
  *  dev.arubik.craftengine.script.PolyClass
  *  dev.arubik.craftengine.script.PolyClassRuntime
  *  dev.arubik.craftengine.script.PolyType$MethodHandler
+ *  dev.arubik.craftengine.script.PolyType$TypeCodec
  *  dev.arubik.craftengine.script.PolyType$TypedMethodHandler1
  *  dev.arubik.craftengine.script.ScriptValue
  *  dev.arubik.craftengine.script.ScriptValue$Obj
@@ -20,16 +21,18 @@ import java.util.List;
 public class PolyClassRecipeCollection {
     protected final Object instance;
     private static volatile PolyType.TypedMethodHandler1 h$0;
+    private static volatile PolyType.TypeCodec c$0_r;
     private static volatile PolyType.MethodHandler m$1;
 
     public static void refresh() {
-        h$0 = (PolyType.TypedMethodHandler1)PolyClassRuntime.resolveTypedHandler((String)"RecipeCollection", (String)"for_input", (String)"S:R");
+        h$0 = (PolyType.TypedMethodHandler1)PolyClassRuntime.resolveTypedHandler((String)"RecipeCollection", (String)"for_input", (String)"S:L");
+        c$0_r = PolyClassRuntime.resolveListCodec((String)"RecipeCollection", (String)"for_input", (int)-1);
         m$1 = PolyClassRuntime.resolveMethodHandler((String)"RecipeCollection", (String)"for_input");
     }
 
     public ScriptValue tm$0_for_input(String string) {
-        if (h$0 != null) {
-            return (ScriptValue)h$0.call(this.instance, (Object)string);
+        if (h$0 != null && c$0_r != null) {
+            return c$0_r.encode(h$0.call(this.instance, (Object)string));
         }
         return PolyClassRuntime.genericCall((String)"RecipeCollection", (String)"for_input", (Object)this.instance, (ScriptValue[])new ScriptValue[]{ScriptValue.of((String)string)});
     }

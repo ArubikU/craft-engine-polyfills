@@ -5,6 +5,7 @@
  *  dev.arubik.craftengine.script.PolyClass
  *  dev.arubik.craftengine.script.PolyClassRuntime
  *  dev.arubik.craftengine.script.PolyType$PropertyHandler
+ *  dev.arubik.craftengine.script.PolyType$TypedPropertyHandler
  *  dev.arubik.craftengine.script.ScriptValue
  *  dev.arubik.craftengine.script.ScriptValue$Obj
  */
@@ -19,11 +20,13 @@ import dev.arubik.craftengine.script.ScriptValue;
 public class PolyClassBlockGrowEvent
 extends PolyClassEvent {
     private static volatile PolyType.PropertyHandler p$0;
-    private static volatile PolyType.PropertyHandler p$1;
+    private static volatile PolyType.TypedPropertyHandler tp$1;
+    private static volatile PolyType.PropertyHandler p$2;
 
     public static void refresh() {
         p$0 = PolyClassRuntime.resolvePropertyHandler((String)"BlockGrowEvent", (String)"new_state");
-        p$1 = PolyClassRuntime.resolvePropertyHandler((String)"BlockGrowEvent", (String)"block");
+        tp$1 = (PolyType.TypedPropertyHandler)PolyClassRuntime.resolveTypedPropertyHandler((String)"BlockGrowEvent", (String)"new_state", (String)"S");
+        p$2 = PolyClassRuntime.resolvePropertyHandler((String)"BlockGrowEvent", (String)"block");
     }
 
     public ScriptValue pg$0_new_state() {
@@ -33,9 +36,16 @@ extends PolyClassEvent {
         return PolyClassRuntime.genericProperty((String)"BlockGrowEvent", (String)"new_state", (Object)this.instance);
     }
 
-    public ScriptValue pg$1_block() {
-        if (p$1 != null) {
-            return p$1.get(this.instance);
+    public String tg$1_new_state() {
+        if (tp$1 != null) {
+            return (String)tp$1.get(this.instance);
+        }
+        return PolyClassRuntime.genericProperty((String)"BlockGrowEvent", (String)"new_state", (Object)this.instance).asStr();
+    }
+
+    public ScriptValue pg$2_block() {
+        if (p$2 != null) {
+            return p$2.get(this.instance);
         }
         return PolyClassRuntime.genericProperty((String)"BlockGrowEvent", (String)"block", (Object)this.instance);
     }
