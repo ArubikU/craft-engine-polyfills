@@ -1104,6 +1104,70 @@ final class ScriptBytecodeCompiler {
                             }
                         };
                     }
+                    // push(array, value) — args.get(0)'s RUNTIME shape decides everything (the
+                    // real registration itself branches on "is arg0 actually an Array"), so unlike
+                    // the dot-call PolyType specialization this needs a runtime guard, not a
+                    // compile-time name lookup — general on purpose: works for push(rows, x),
+                    // push(local_var, x), push(some_call(), x), any array-producing expression.
+                    // Both args are evaluated into locals FIRST (matching callBuiltin's own
+                    // eager-evaluate-every-arg order) so the guard check doesn't re-evaluate a0
+                    // and risk a double side effect.
+                    if ("push".equals(name) && args.size() == 2 && ScriptBuiltins.get("push") != null) {
+                        Expr a0 = toAny(args.get(0)), a1 = toAny(args.get(1));
+                        return new BaseExpr(Type.ANY) {
+                            @Override public void emit(MethodVisitor mv, Ctx c) {
+                                int a0Slot = c.allocRef(), a1Slot = c.allocRef();
+                                a0.emit(mv, c);
+                                mv.visitVarInsn(ASTORE, a0Slot);
+                                a1.emit(mv, c);
+                                mv.visitVarInsn(ASTORE, a1Slot);
+
+                                Label fallbackL = new Label(), doneL = new Label();
+                                mv.visitVarInsn(ALOAD, a0Slot);
+                                mv.visitTypeInsn(INSTANCEOF, ARRAY_VALUE);
+                                mv.visitJumpInsn(IFEQ, fallbackL);
+
+                                mv.visitTypeInsn(NEW, ARRAYLIST);
+                                mv.visitInsn(DUP);
+                                mv.visitVarInsn(ALOAD, a0Slot);
+                                mv.visitTypeInsn(CHECKCAST, ARRAY_VALUE);
+                                mv.visitMethodInsn(INVOKEVIRTUAL, ARRAY_VALUE, "elements", "()L" + LIST + ";", false);
+                                mv.visitMethodInsn(INVOKESPECIAL, ARRAYLIST, "<init>", "(Ljava/util/Collection;)V", false);
+                                int newListSlot = c.allocRef();
+                                mv.visitVarInsn(ASTORE, newListSlot);
+                                mv.visitVarInsn(ALOAD, newListSlot);
+                                mv.visitVarInsn(ALOAD, a1Slot);
+                                mv.visitMethodInsn(INVOKEINTERFACE, LIST, "add", "(Ljava/lang/Object;)Z", true);
+                                mv.visitInsn(POP);
+                                mv.visitTypeInsn(NEW, ARRAY_VALUE);
+                                mv.visitInsn(DUP);
+                                mv.visitVarInsn(ALOAD, newListSlot);
+                                mv.visitMethodInsn(INVOKESPECIAL, ARRAY_VALUE, "<init>", "(L" + LIST + ";)V", false);
+                                mv.visitJumpInsn(GOTO, doneL);
+
+                                mv.visitLabel(fallbackL);
+                                int argsListSlot = c.allocRef();
+                                mv.visitTypeInsn(NEW, ARRAYLIST);
+                                mv.visitInsn(DUP);
+                                mv.visitMethodInsn(INVOKESPECIAL, ARRAYLIST, "<init>", "()V", false);
+                                mv.visitVarInsn(ASTORE, argsListSlot);
+                                mv.visitVarInsn(ALOAD, argsListSlot);
+                                mv.visitVarInsn(ALOAD, a0Slot);
+                                mv.visitMethodInsn(INVOKEINTERFACE, LIST, "add", "(Ljava/lang/Object;)Z", true);
+                                mv.visitInsn(POP);
+                                mv.visitVarInsn(ALOAD, argsListSlot);
+                                mv.visitVarInsn(ALOAD, a1Slot);
+                                mv.visitMethodInsn(INVOKEINTERFACE, LIST, "add", "(Ljava/lang/Object;)Z", true);
+                                mv.visitInsn(POP);
+                                mv.visitLdcInsn("push");
+                                mv.visitVarInsn(ALOAD, argsListSlot);
+                                mv.visitVarInsn(ALOAD, c.ctxSlot);
+                                mv.visitMethodInsn(INVOKESTATIC, FORMULA, "callBuiltin",
+                                        "(Ljava/lang/String;L" + LIST + ";L" + CTX + ";)L" + VALUE + ";", false);
+                                mv.visitLabel(doneL);
+                            }
+                        };
+                    }
                     if (resolver != null) {
                         LocalTarget lt = resolver.resolve(name);
                         if (lt != null) return localCall(lt, args);
